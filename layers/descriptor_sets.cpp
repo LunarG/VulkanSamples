@@ -498,9 +498,9 @@ uint32_t cvdescriptorset::DescriptorSet::GetStorageUpdates(const std::map<uint32
                 for (uint32_t i = 0; i < p_layout_->GetDescriptorCountFromBinding(binding); ++i) {
                     if (descriptors_[start_idx + i]->updated) {
                         auto bufferview = static_cast<TexelDescriptor *>(descriptors_[start_idx + i].get())->GetBufferView();
-                        auto bv_info = getBufferViewInfo(device_data_, bufferview);
-                        if (bv_info) {
-                            buffer_set->insert(bv_info->buffer);
+                        auto bv_state = getBufferViewState(device_data_, bufferview);
+                        if (bv_state) {
+                            buffer_set->insert(bv_state->create_info.buffer);
                             num_updates++;
                         }
                     }
@@ -972,9 +972,9 @@ void cvdescriptorset::TexelDescriptor::CopyUpdate(const Descriptor *src) {
 }
 
 void cvdescriptorset::TexelDescriptor::BindCommandBuffer(const core_validation::layer_data *dev_data, GLOBAL_CB_NODE *cb_node) {
-    auto bv_info = getBufferViewInfo(dev_data, buffer_view_);
-    if (bv_info) {
-        auto buffer_node = getBufferNode(dev_data, bv_info->buffer);
+    auto bv_state = getBufferViewState(dev_data, buffer_view_);
+    if (bv_state) {
+        auto buffer_node = getBufferNode(dev_data, bv_state->create_info.buffer);
         if (buffer_node)
             core_validation::AddCommandBufferBindingBuffer(dev_data, cb_node, buffer_node);
     }
@@ -1273,14 +1273,14 @@ bool cvdescriptorset::DescriptorSet::VerifyWriteUpdateContents(const VkWriteDesc
     case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER: {
         for (uint32_t di = 0; di < update->descriptorCount; ++di) {
             auto buffer_view = update->pTexelBufferView[di];
-            auto bv_info = getBufferViewInfo(device_data_, buffer_view);
-            if (!bv_info) {
+            auto bv_state = getBufferViewState(device_data_, buffer_view);
+            if (!bv_state) {
                 std::stringstream error_str;
                 error_str << "Attempted write update to texel buffer descriptor with invalid buffer view: " << buffer_view;
                 *error = error_str.str();
                 return false;
             }
-            auto buffer = bv_info->buffer;
+            auto buffer = bv_state->create_info.buffer;
             if (!ValidateBufferUsage(getBufferNode(device_data_, buffer), update->descriptorType, error)) {
                 std::stringstream error_str;
                 error_str << "Attempted write update to texel buffer descriptor failed due to: " << error->c_str();
@@ -1374,14 +1374,14 @@ bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescri
     case TexelBuffer: {
         for (uint32_t di = 0; di < update->descriptorCount; ++di) {
             auto buffer_view = static_cast<TexelDescriptor *>(src_set->descriptors_[index + di].get())->GetBufferView();
-            auto bv_info = getBufferViewInfo(device_data_, buffer_view);
-            if (!bv_info) {
+            auto bv_state = getBufferViewState(device_data_, buffer_view);
+            if (!bv_state) {
                 std::stringstream error_str;
                 error_str << "Attempted copy update to texel buffer descriptor with invalid buffer view: " << buffer_view;
                 *error = error_str.str();
                 return false;
             }
-            auto buffer = bv_info->buffer;
+            auto buffer = bv_state->create_info.buffer;
             if (!ValidateBufferUsage(getBufferNode(device_data_, buffer), type, error)) {
                 std::stringstream error_str;
                 error_str << "Attempted copy update to texel buffer descriptor failed due to: " << error->c_str();

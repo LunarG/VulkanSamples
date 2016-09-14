@@ -115,7 +115,7 @@ struct layer_data {
     unordered_map<VkSampler, unique_ptr<SAMPLER_NODE>> samplerMap;
     unordered_map<VkImageView, unique_ptr<IMAGE_VIEW_STATE>> imageViewMap;
     unordered_map<VkImage, unique_ptr<IMAGE_NODE>> imageMap;
-    unordered_map<VkBufferView, unique_ptr<VkBufferViewCreateInfo>> bufferViewMap;
+    unordered_map<VkBufferView, unique_ptr<BUFFER_VIEW_STATE>> bufferViewMap;
     unordered_map<VkBuffer, unique_ptr<BUFFER_NODE>> bufferMap;
     unordered_map<VkPipeline, PIPELINE_NODE *> pipelineMap;
     unordered_map<VkCommandPool, COMMAND_POOL_NODE> commandPoolMap;
@@ -302,7 +302,7 @@ VkSwapchainKHR getSwapchainFromImage(const layer_data *dev_data, VkImage image) 
     return img_it->second;
 }
 // Return buffer node ptr for specified buffer or else NULL
-VkBufferViewCreateInfo *getBufferViewInfo(const layer_data *my_data, VkBufferView buffer_view) {
+BUFFER_VIEW_STATE *getBufferViewState(const layer_data *my_data, VkBufferView buffer_view) {
     auto bv_it = my_data->bufferViewMap.find(buffer_view);
     if (bv_it == my_data->bufferViewMap.end()) {
         return nullptr;
@@ -5612,9 +5612,9 @@ DestroyBufferView(VkDevice device, VkBufferView bufferView, const VkAllocationCa
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
 
     std::unique_lock<std::mutex> lock(global_lock);
-    auto item = dev_data->bufferViewMap.find(bufferView);
-    if (item != dev_data->bufferViewMap.end()) {
-        dev_data->bufferViewMap.erase(item);
+    auto view_state = getBufferViewState(dev_data, bufferView);
+    if (view_state) {
+        dev_data->bufferViewMap.erase(bufferView);
     }
     lock.unlock();
     dev_data->device_dispatch_table->DestroyBufferView(device, bufferView, pAllocator);
@@ -6106,7 +6106,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateBufferView(VkDevice device, const VkBufferV
     VkResult result = dev_data->device_dispatch_table->CreateBufferView(device, pCreateInfo, pAllocator, pView);
     if (VK_SUCCESS == result) {
         lock.lock();
-        dev_data->bufferViewMap[*pView] = unique_ptr<VkBufferViewCreateInfo>(new VkBufferViewCreateInfo(*pCreateInfo));
+        dev_data->bufferViewMap[*pView] = unique_ptr<BUFFER_VIEW_STATE>(new BUFFER_VIEW_STATE(*pView, pCreateInfo));
         lock.unlock();
     }
     return result;

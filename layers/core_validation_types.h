@@ -160,6 +160,18 @@ class BUFFER_NODE : public BASE_NODE {
           createInfo(rh_obj.createInfo){};
 };
 
+class BUFFER_VIEW_STATE : public BASE_NODE {
+  public:
+    using BASE_NODE::in_use;
+    VkBufferView buffer_view;
+    VkBufferViewCreateInfo create_info;
+    BUFFER_VIEW_STATE() : buffer_view(VK_NULL_HANDLE), create_info{} {};
+    BUFFER_VIEW_STATE(VkBufferView bv, const VkBufferViewCreateInfo *ci) : buffer_view(bv), create_info(*ci){};
+    BUFFER_VIEW_STATE(const BUFFER_VIEW_STATE &rh_obj) : buffer_view(rh_obj.buffer_view), create_info(rh_obj.create_info) {
+        in_use.store(rh_obj.in_use.load());
+    };
+};
+
 struct SAMPLER_NODE : public BASE_NODE {
     VkSampler sampler;
     VkSamplerCreateInfo createInfo;
@@ -659,7 +671,7 @@ DESCRIPTOR_POOL_NODE *getPoolNode(const layer_data *, const VkDescriptorPool);
 BUFFER_NODE *getBufferNode(const layer_data *, VkBuffer);
 IMAGE_NODE *getImageNode(const layer_data *, VkImage);
 DEVICE_MEM_INFO *getMemObjInfo(const layer_data *, VkDeviceMemory);
-VkBufferViewCreateInfo *getBufferViewInfo(const layer_data *, VkBufferView);
+BUFFER_VIEW_STATE *getBufferViewState(const layer_data *, VkBufferView);
 SAMPLER_NODE *getSamplerNode(const layer_data *, VkSampler);
 IMAGE_VIEW_STATE *getImageViewState(const layer_data *, VkImageView);
 VkSwapchainKHR getSwapchainFromImage(const layer_data *, VkImage);
