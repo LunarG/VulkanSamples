@@ -511,6 +511,7 @@ struct loader_icd *loader_get_icd_and_device(const VkDevice device,
                                              uint32_t *icd_index);
 void loader_init_dispatch_dev_ext(struct loader_instance *inst,
                                   struct loader_device *dev);
+VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL loader_gpa_device_internal(VkDevice device, const char *pName);
 void *loader_dev_ext_gpa(struct loader_instance *inst, const char *funcName);
 void *loader_get_dev_ext_trampoline(uint32_t index);
 struct loader_instance *loader_get_instance(const VkInstance instance);

@@ -721,7 +721,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(
      * dedicated trampoline code for these*/
     loader_init_device_extension_dispatch_table(
         &dev->loader_dispatch,
-        dev->loader_dispatch.core_dispatch.GetDeviceProcAddr, *pDevice);
+        loader_gpa_device_internal, *pDevice);
 
 out:
 

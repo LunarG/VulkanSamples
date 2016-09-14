@@ -221,7 +221,7 @@ terminator_DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface,
                 struct loader_icd *icd = &ptr_instance->icds[i];
                 if (NULL != icd->DestroySurfaceKHR &&
                     NULL != (void *)icd_surface->real_icd_surfaces[i]) {
-                    icd->DestroySurfaceKHR(instance,
+                    icd->DestroySurfaceKHR(icd->instance,
                                            icd_surface->real_icd_surfaces[i],
                                            pAllocator);
                     icd_surface->real_icd_surfaces[i] = (VkSurfaceKHR)NULL;
@@ -490,7 +490,6 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_vkCreateSwapchainKHR(
     uint32_t icd_index = 0;
     struct loader_device *dev;
     struct loader_icd *icd = loader_get_icd_and_device(device, &dev, &icd_index);
-    PFN_vkCreateSwapchainKHR CreateSwapchainKHR;
     if (NULL != icd &&
         NULL != icd->CreateSwapchainKHR) {
         // Android doesn't have to worry about multiple ICD scenario, but the rest do.
@@ -506,7 +505,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_vkCreateSwapchainKHR(
                 if (NULL == pCreateCopy) {
                     return VK_ERROR_OUT_OF_HOST_MEMORY;
                 }
-                memcpy(pCreateCopy, pCreateInfo, sizeof(VkIcdSurface));
+                memcpy(pCreateCopy, pCreateInfo, sizeof(VkSwapchainCreateInfoKHR));
                 pCreateCopy->surface =
                     icd_surface->real_icd_surfaces[icd_index];
                 return icd->CreateSwapchainKHR(device, pCreateCopy, pAllocator, pSwapchain);
@@ -631,7 +630,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateWin32SurfaceKHR(
             struct loader_icd *icd = &ptr_instance->icds[i];
             if (NULL != icd->CreateWin32SurfaceKHR) {
                 vkRes = icd->CreateWin32SurfaceKHR(
-                    instance, pCreateInfo, pAllocator,
+                    icd->instance, pCreateInfo, pAllocator,
                     &pIcdSurface->real_icd_surfaces[i]);
                 if (VK_SUCCESS != vkRes) {
                     goto out;
@@ -651,7 +650,7 @@ out:
                 if (NULL != pIcdSurface->real_icd_surfaces[i] &&
                     NULL != icd->DestroySurfaceKHR) {
                     icd->DestroySurfaceKHR(
-                        instance, pIcdSurface->real_icd_surfaces[i], pAllocator);
+                        icd->instance, pIcdSurface->real_icd_surfaces[i], pAllocator);
                 }
             }
             loader_instance_heap_free(ptr_instance, pIcdSurface->real_icd_surfaces);
@@ -775,7 +774,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateMirSurfaceKHR(
             struct loader_icd *icd = &ptr_instance->icds[i];
             if (NULL != icd->CreateMirSurfaceKHR) {
                 vkRes = icd->CreateMirSurfaceKHR(
-                    instance, pCreateInfo, pAllocator,
+                    icd->instance, pCreateInfo, pAllocator,
                     &pIcdSurface->real_icd_surfaces[i]);
                 if (VK_SUCCESS != vkRes) {
                     goto out;
@@ -795,7 +794,7 @@ out:
                 if (NULL != pIcdSurface->real_icd_surfaces[i] &&
                     NULL != icd->DestroySurfaceKHR) {
                     icd->DestroySurfaceKHR(
-                        instance, pIcdSurface->real_icd_surfaces[i], pAllocator);
+                        icd->instance, pIcdSurface->real_icd_surfaces[i], pAllocator);
                 }
             }
             loader_instance_heap_free(ptr_instance, pIcdSurface->real_icd_surfaces);
@@ -922,7 +921,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateWaylandSurfaceKHR(
             struct loader_icd *icd = &ptr_instance->icds[i];
             if (NULL != icd->CreateWaylandSurfaceKHR) {
                 vkRes = icd->CreateWaylandSurfaceKHR(
-                    instance, pCreateInfo, pAllocator,
+                    icd->instance, pCreateInfo, pAllocator,
                     &pIcdSurface->real_icd_surfaces[i]);
                 if (VK_SUCCESS != vkRes) {
                     goto out;
@@ -942,7 +941,7 @@ out:
                 if (NULL != pIcdSurface->real_icd_surfaces[i] &&
                     NULL != icd->DestroySurfaceKHR) {
                     icd->DestroySurfaceKHR(
-                        instance, pIcdSurface->real_icd_surfaces[i], pAllocator);
+                        icd->instance, pIcdSurface->real_icd_surfaces[i], pAllocator);
                 }
             }
             loader_instance_heap_free(ptr_instance, pIcdSurface->real_icd_surfaces);
@@ -1070,7 +1069,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateXcbSurfaceKHR(
             struct loader_icd *icd = &ptr_instance->icds[i];
             if (NULL != icd->CreateXcbSurfaceKHR) {
                 vkRes = icd->CreateXcbSurfaceKHR(
-                    instance, pCreateInfo, pAllocator,
+                    icd->instance, pCreateInfo, pAllocator,
                     &pIcdSurface->real_icd_surfaces[i]);
                 if (VK_SUCCESS != vkRes) {
                     goto out;
@@ -1090,7 +1089,7 @@ out:
                 if (NULL != pIcdSurface->real_icd_surfaces[i] &&
                     NULL != icd->DestroySurfaceKHR) {
                     icd->DestroySurfaceKHR(
-                        instance, pIcdSurface->real_icd_surfaces[i], pAllocator);
+                        icd->instance, pIcdSurface->real_icd_surfaces[i], pAllocator);
                 }
             }
             loader_instance_heap_free(ptr_instance, pIcdSurface->real_icd_surfaces);
@@ -1217,7 +1216,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateXlibSurfaceKHR(
             struct loader_icd *icd = &ptr_instance->icds[i];
             if (NULL != icd->CreateXlibSurfaceKHR) {
                 vkRes = icd->CreateXlibSurfaceKHR(
-                    instance, pCreateInfo, pAllocator,
+                    icd->instance, pCreateInfo, pAllocator,
                     &pIcdSurface->real_icd_surfaces[i]);
                 if (VK_SUCCESS != vkRes) {
                     goto out;
@@ -1237,7 +1236,7 @@ out:
                 if (NULL != pIcdSurface->real_icd_surfaces[i] &&
                     NULL != icd->DestroySurfaceKHR) {
                     icd->DestroySurfaceKHR(
-                        instance, pIcdSurface->real_icd_surfaces[i], pAllocator);
+                        icd->instance, pIcdSurface->real_icd_surfaces[i], pAllocator);
                 }
             }
             loader_instance_heap_free(ptr_instance, pIcdSurface->real_icd_surfaces);

@@ -3244,7 +3244,7 @@ loader_gpa_instance_internal(VkInstance inst, const char *pName) {
 }
 
 
-static VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
+VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
 loader_gpa_device_internal(VkDevice device, const char *pName) {
     struct loader_device *dev;
     struct loader_icd *icd = loader_get_icd_and_device(device, &dev, NULL);
