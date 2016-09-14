@@ -186,6 +186,18 @@ class IMAGE_NODE : public BASE_NODE {
     };
 };
 
+class IMAGE_VIEW_STATE : public BASE_NODE {
+  public:
+    using BASE_NODE::in_use;
+    VkImageView image_view;
+    VkImageViewCreateInfo create_info;
+    IMAGE_VIEW_STATE() : image_view(VK_NULL_HANDLE), create_info{} {};
+    IMAGE_VIEW_STATE(VkImageView iv, const VkImageViewCreateInfo *ci) : image_view(iv), create_info(*ci){};
+    IMAGE_VIEW_STATE(const IMAGE_VIEW_STATE &rh_obj) : image_view(rh_obj.image_view), create_info(rh_obj.create_info) {
+        in_use.store(rh_obj.in_use.load());
+    };
+};
+
 // Simple struct to hold handle and type of object so they can be uniquely identified and looked up in appropriate map
 // TODO : Unify this with VK_OBJECT above
 struct MT_OBJ_HANDLE_TYPE {
@@ -649,7 +661,7 @@ IMAGE_NODE *getImageNode(const layer_data *, VkImage);
 DEVICE_MEM_INFO *getMemObjInfo(const layer_data *, VkDeviceMemory);
 VkBufferViewCreateInfo *getBufferViewInfo(const layer_data *, VkBufferView);
 SAMPLER_NODE *getSamplerNode(const layer_data *, VkSampler);
-VkImageViewCreateInfo *getImageViewData(const layer_data *, VkImageView);
+IMAGE_VIEW_STATE *getImageViewState(const layer_data *, VkImageView);
 VkSwapchainKHR getSwapchainFromImage(const layer_data *, VkImage);
 SWAPCHAIN_NODE *getSwapchainNode(const layer_data *, VkSwapchainKHR);
 void invalidateCommandBuffers(std::unordered_set<GLOBAL_CB_NODE *>, VK_OBJECT);

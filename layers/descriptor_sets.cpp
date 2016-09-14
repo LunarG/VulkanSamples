@@ -431,20 +431,21 @@ bool cvdescriptorset::DescriptorSet::ValidateDrawState(const std::map<uint32_t, 
                                 : static_cast<ImageDescriptor *>(descriptors_[i].get())->GetImageView();
                         auto reqs = binding_pair.second;
 
-                        auto image_view_data = getImageViewData(device_data_, image_view);
-                        assert(image_view_data);
+                        auto image_view_state = getImageViewState(device_data_, image_view);
+                        assert(image_view_state);
+                        auto image_view_ci = image_view_state->create_info;
 
-                        if ((reqs & DESCRIPTOR_REQ_ALL_VIEW_TYPE_BITS) && (~reqs & (1 << image_view_data->viewType))) {
+                        if ((reqs & DESCRIPTOR_REQ_ALL_VIEW_TYPE_BITS) && (~reqs & (1 << image_view_ci.viewType))) {
                             // bad view type
                             std::stringstream error_str;
                             error_str << "Descriptor in binding #" << binding << " at global descriptor index " << i
                                       << " requires an image view of type " << string_descriptor_req_view_type(reqs)
-                                      << " but got " << string_VkImageViewType(image_view_data->viewType) << ".";
+                                      << " but got " << string_VkImageViewType(image_view_ci.viewType) << ".";
                             *error = error_str.str();
                             return false;
                         }
 
-                        auto image_node = getImageNode(device_data_, image_view_data->image);
+                        auto image_node = getImageNode(device_data_, image_view_ci.image);
                         assert(image_node);
 
                         if ((reqs & DESCRIPTOR_REQ_SINGLE_SAMPLE) &&
@@ -670,8 +671,8 @@ bool cvdescriptorset::ValidateSampler(const VkSampler sampler, const core_valida
 bool cvdescriptorset::ValidateImageUpdate(VkImageView image_view, VkImageLayout image_layout, VkDescriptorType type,
                                           const core_validation::layer_data *dev_data,
                                           std::string *error) {
-    auto iv_data = getImageViewData(dev_data, image_view);
-    if (!iv_data) {
+    auto iv_state = getImageViewState(dev_data, image_view);
+    if (!iv_state) {
         std::stringstream error_str;
         error_str << "Invalid VkImageView: " << image_view;
         *error = error_str.str();
@@ -680,8 +681,8 @@ bool cvdescriptorset::ValidateImageUpdate(VkImageView image_view, VkImageLayout 
     // Note that when an imageview is created, we validated that memory is bound so no need to re-check here
     // Validate that imageLayout is compatible with aspect_mask and image format
     //  and validate that image usage bits are correct for given usage
-    VkImageAspectFlags aspect_mask = iv_data->subresourceRange.aspectMask;
-    VkImage image = iv_data->image;
+    VkImageAspectFlags aspect_mask = iv_state->create_info.subresourceRange.aspectMask;
+    VkImage image = iv_state->create_info.image;
     VkFormat format = VK_FORMAT_MAX_ENUM;
     VkImageUsageFlags usage = 0;
     auto image_node = getImageNode(dev_data, image);
@@ -877,9 +878,9 @@ void cvdescriptorset::ImageSamplerDescriptor::BindCommandBuffer(const core_valid
             core_validation::AddCommandBufferBindingSampler(cb_node, sampler_node);
     }
     // Add binding for image
-    auto iv_data = getImageViewData(dev_data, image_view_);
-    if (iv_data) {
-        auto image_node = getImageNode(dev_data, iv_data->image);
+    auto iv_state = getImageViewState(dev_data, image_view_);
+    if (iv_state) {
+        auto image_node = getImageNode(dev_data, iv_state->create_info.image);
         if (image_node)
             core_validation::AddCommandBufferBindingImage(dev_data, cb_node, image_node);
     }
@@ -910,9 +911,9 @@ void cvdescriptorset::ImageDescriptor::CopyUpdate(const Descriptor *src) {
 
 void cvdescriptorset::ImageDescriptor::BindCommandBuffer(const core_validation::layer_data *dev_data, GLOBAL_CB_NODE *cb_node) {
     // Add binding for image
-    auto iv_data = getImageViewData(dev_data, image_view_);
-    if (iv_data) {
-        auto image_node = getImageNode(dev_data, iv_data->image);
+    auto iv_state = getImageViewState(dev_data, image_view_);
+    if (iv_state) {
+        auto image_node = getImageNode(dev_data, iv_state->create_info.image);
         if (image_node)
             core_validation::AddCommandBufferBindingImage(dev_data, cb_node, image_node);
     }

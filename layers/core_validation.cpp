@@ -113,7 +113,7 @@ struct layer_data {
     unordered_set<VkCommandBuffer> globalInFlightCmdBuffers;
     // Layer specific data
     unordered_map<VkSampler, unique_ptr<SAMPLER_NODE>> samplerMap;
-    unordered_map<VkImageView, unique_ptr<VkImageViewCreateInfo>> imageViewMap;
+    unordered_map<VkImageView, unique_ptr<IMAGE_VIEW_STATE>> imageViewMap;
     unordered_map<VkImage, unique_ptr<IMAGE_NODE>> imageMap;
     unordered_map<VkBufferView, unique_ptr<VkBufferViewCreateInfo>> bufferViewMap;
     unordered_map<VkBuffer, unique_ptr<BUFFER_NODE>> bufferMap;
@@ -253,8 +253,8 @@ struct shader_module {
 // TODO : This can be much smarter, using separate locks for separate global data
 static std::mutex global_lock;
 
-// Return ImageViewCreateInfo ptr for specified imageView or else NULL
-VkImageViewCreateInfo *getImageViewData(const layer_data *dev_data, VkImageView image_view) {
+// Return IMAGE_VIEW_STATE ptr for specified imageView or else NULL
+IMAGE_VIEW_STATE *getImageViewState(const layer_data *dev_data, VkImageView image_view) {
     auto iv_it = dev_data->imageViewMap.find(image_view);
     if (iv_it == dev_data->imageViewMap.end()) {
         return nullptr;
@@ -3703,10 +3703,10 @@ template <class OBJECT, class LAYOUT> void SetLayout(OBJECT *pObject, VkImage im
 }
 
 void SetLayout(const layer_data *dev_data, GLOBAL_CB_NODE *pCB, VkImageView imageView, const VkImageLayout &layout) {
-    auto iv_data = getImageViewData(dev_data, imageView);
-    assert(iv_data);
-    const VkImage &image = iv_data->image;
-    const VkImageSubresourceRange &subRange = iv_data->subresourceRange;
+    auto view_state = getImageViewState(dev_data, imageView);
+    assert(view_state);
+    const VkImage &image = view_state->create_info.image;
+    const VkImageSubresourceRange &subRange = view_state->create_info.subresourceRange;
     // TODO: Do not iterate over every possibility - consolidate where possible
     for (uint32_t j = 0; j < subRange.levelCount; j++) {
         uint32_t level = subRange.baseMipLevel + j;
@@ -3717,7 +3717,7 @@ void SetLayout(const layer_data *dev_data, GLOBAL_CB_NODE *pCB, VkImageView imag
             // the aspectMask is ignored and both are used. Verify that the extra implicit layout
             // is OK for descriptor set layout validation
             if (subRange.aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) {
-                if (vk_format_is_depth_and_stencil(iv_data->format)) {
+                if (vk_format_is_depth_and_stencil(view_state->create_info.format)) {
                     sub.aspectMask |= (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
                 }
             }
@@ -6184,9 +6184,9 @@ static bool PreCallValidateCreateImageView(layer_data *dev_data, const VkImageVi
     return skip_call;
 }
 
-static inline void PostCallRecordCreateImageView(layer_data *dev_data, const VkImageViewCreateInfo *pCreateInfo, VkImageView *pView) {
-    dev_data->imageViewMap[*pView] = unique_ptr<VkImageViewCreateInfo>(new VkImageViewCreateInfo(*pCreateInfo));
-    ResolveRemainingLevelsLayers(dev_data, &dev_data->imageViewMap[*pView].get()->subresourceRange, pCreateInfo->image);
+static inline void PostCallRecordCreateImageView(layer_data *dev_data, const VkImageViewCreateInfo *pCreateInfo, VkImageView view) {
+    dev_data->imageViewMap[view] = unique_ptr<IMAGE_VIEW_STATE>(new IMAGE_VIEW_STATE(view, pCreateInfo));
+    ResolveRemainingLevelsLayers(dev_data, &dev_data->imageViewMap[view].get()->create_info.subresourceRange, pCreateInfo->image);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateImageView(VkDevice device, const VkImageViewCreateInfo *pCreateInfo,
@@ -6200,7 +6200,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImageView(VkDevice device, const VkImageVie
     VkResult result = dev_data->device_dispatch_table->CreateImageView(device, pCreateInfo, pAllocator, pView);
     if (VK_SUCCESS == result) {
         lock.lock();
-        PostCallRecordCreateImageView(dev_data, pCreateInfo, pView);
+        PostCallRecordCreateImageView(dev_data, pCreateInfo, *pView);
         lock.unlock();
     }
 
@@ -7361,11 +7361,11 @@ static bool markStoreImagesAndBuffersAsWritten(layer_data *dev_data, GLOBAL_CB_N
     bool skip_call = false;
 
     for (auto imageView : pCB->updateImages) {
-        auto iv_data = getImageViewData(dev_data, imageView);
-        if (!iv_data)
+        auto view_state = getImageViewState(dev_data, imageView);
+        if (!view_state)
             continue;
 
-        auto img_node = getImageNode(dev_data, iv_data->image);
+        auto img_node = getImageNode(dev_data, view_state->create_info.image);
         assert(img_node);
         std::function<bool()> function = [=]() {
             SetImageMemoryValid(dev_data, img_node, true);
@@ -9079,9 +9079,9 @@ static bool MatchUsage(layer_data *dev_data, uint32_t count, const VkAttachmentR
             // Attachment counts are verified elsewhere, but prevent an invalid access
             if (attachments[attach].attachment < fbci->attachmentCount) {
                 const VkImageView *image_view = &fbci->pAttachments[attachments[attach].attachment];
-                VkImageViewCreateInfo *ivci = getImageViewData(dev_data, *image_view);
-                if (ivci != nullptr) {
-                    const VkImageCreateInfo *ici = &getImageNode(dev_data, ivci->image)->createInfo;
+                auto view_state = getImageViewState(dev_data, *image_view);
+                if (view_state) {
+                    const VkImageCreateInfo *ici = &getImageNode(dev_data, view_state->create_info.image)->createInfo;
                     if (ici != nullptr) {
                         if ((ici->usage & usage_flag) == 0) {
                             skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
@@ -9124,18 +9124,19 @@ static bool ValidateFramebufferCreateInfo(layer_data *dev_data, const VkFramebuf
             // attachmentCounts match, so make sure corresponding attachment details line up
             const VkImageView *image_views = pCreateInfo->pAttachments;
             for (uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i) {
-                VkImageViewCreateInfo *ivci = getImageViewData(dev_data, image_views[i]);
-                if (ivci->format != rpci->pAttachments[i].format) {
+                auto view_state = getImageViewState(dev_data, image_views[i]);
+                auto ivci = view_state->create_info;
+                if (ivci.format != rpci->pAttachments[i].format) {
                     skip_call |= log_msg(
                         dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
                         reinterpret_cast<const uint64_t &>(pCreateInfo->renderPass), __LINE__, DRAWSTATE_RENDERPASS_INCOMPATIBLE,
                         "DS", "vkCreateFramebuffer(): VkFramebufferCreateInfo attachment #%u has format of %s that does not match "
                               "the format of "
                               "%s used by the corresponding attachment for renderPass (0x%" PRIxLEAST64 ").",
-                        i, string_VkFormat(ivci->format), string_VkFormat(rpci->pAttachments[i].format),
+                        i, string_VkFormat(ivci.format), string_VkFormat(rpci->pAttachments[i].format),
                         reinterpret_cast<const uint64_t &>(pCreateInfo->renderPass));
                 }
-                const VkImageCreateInfo *ici = &getImageNode(dev_data, ivci->image)->createInfo;
+                const VkImageCreateInfo *ici = &getImageNode(dev_data, ivci.image)->createInfo;
                 if (ici->samples != rpci->pAttachments[i].samples) {
                     skip_call |= log_msg(
                         dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
@@ -9146,17 +9147,17 @@ static bool ValidateFramebufferCreateInfo(layer_data *dev_data, const VkFramebuf
                         reinterpret_cast<const uint64_t &>(pCreateInfo->renderPass));
                 }
                 // Verify that view only has a single mip level
-                if (ivci->subresourceRange.levelCount != 1) {
+                if (ivci.subresourceRange.levelCount != 1) {
                     skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                                          __LINE__, DRAWSTATE_INVALID_FRAMEBUFFER_CREATE_INFO, "DS",
                                          "vkCreateFramebuffer(): VkFramebufferCreateInfo attachment #%u has mip levelCount of %u "
                                          "but only a single mip level (levelCount ==  1) is allowed when creating a Framebuffer.",
-                                         i, ivci->subresourceRange.levelCount);
+                                         i, ivci.subresourceRange.levelCount);
                 }
-                const uint32_t mip_level = ivci->subresourceRange.baseMipLevel;
+                const uint32_t mip_level = ivci.subresourceRange.baseMipLevel;
                 uint32_t mip_width = max(1u, ici->extent.width >> mip_level);
                 uint32_t mip_height = max(1u, ici->extent.height >> mip_level);
-                if ((ivci->subresourceRange.layerCount < pCreateInfo->layers) || (mip_width < pCreateInfo->width) ||
+                if ((ivci.subresourceRange.layerCount < pCreateInfo->layers) || (mip_width < pCreateInfo->width) ||
                     (mip_height < pCreateInfo->height)) {
                     skip_call |=
                         log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__,
@@ -9169,13 +9170,13 @@ static bool ValidateFramebufferCreateInfo(layer_data *dev_data, const VkFramebuf
                                 "width: %u, %u\n"
                                 "height: %u, %u\n"
                                 "layerCount: %u, %u\n",
-                                i, ivci->subresourceRange.baseMipLevel, i, mip_width, pCreateInfo->width, mip_height,
-                                pCreateInfo->height, ivci->subresourceRange.layerCount, pCreateInfo->layers);
+                                i, ivci.subresourceRange.baseMipLevel, i, mip_width, pCreateInfo->width, mip_height,
+                                pCreateInfo->height, ivci.subresourceRange.layerCount, pCreateInfo->layers);
                 }
-                if (((ivci->components.r != VK_COMPONENT_SWIZZLE_IDENTITY) && (ivci->components.r != VK_COMPONENT_SWIZZLE_R)) ||
-                    ((ivci->components.g != VK_COMPONENT_SWIZZLE_IDENTITY) && (ivci->components.g != VK_COMPONENT_SWIZZLE_G)) ||
-                    ((ivci->components.b != VK_COMPONENT_SWIZZLE_IDENTITY) && (ivci->components.b != VK_COMPONENT_SWIZZLE_B)) ||
-                    ((ivci->components.a != VK_COMPONENT_SWIZZLE_IDENTITY) && (ivci->components.a != VK_COMPONENT_SWIZZLE_A))) {
+                if (((ivci.components.r != VK_COMPONENT_SWIZZLE_IDENTITY) && (ivci.components.r != VK_COMPONENT_SWIZZLE_R)) ||
+                    ((ivci.components.g != VK_COMPONENT_SWIZZLE_IDENTITY) && (ivci.components.g != VK_COMPONENT_SWIZZLE_G)) ||
+                    ((ivci.components.b != VK_COMPONENT_SWIZZLE_IDENTITY) && (ivci.components.b != VK_COMPONENT_SWIZZLE_B)) ||
+                    ((ivci.components.a != VK_COMPONENT_SWIZZLE_IDENTITY) && (ivci.components.a != VK_COMPONENT_SWIZZLE_A))) {
                     skip_call |= log_msg(
                         dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__,
                         DRAWSTATE_INVALID_FRAMEBUFFER_CREATE_INFO, "DS",
@@ -9185,8 +9186,8 @@ static bool ValidateFramebufferCreateInfo(layer_data *dev_data, const VkFramebuf
                         "g swizzle = %s\n"
                         "b swizzle = %s\n"
                         "a swizzle = %s\n",
-                        i, string_VkComponentSwizzle(ivci->components.r), string_VkComponentSwizzle(ivci->components.g),
-                        string_VkComponentSwizzle(ivci->components.b), string_VkComponentSwizzle(ivci->components.a));
+                        i, string_VkComponentSwizzle(ivci.components.r), string_VkComponentSwizzle(ivci.components.g),
+                        string_VkComponentSwizzle(ivci.components.b), string_VkComponentSwizzle(ivci.components.a));
                 }
             }
         }
@@ -9247,13 +9248,13 @@ static void PostCallRecordCreateFramebuffer(layer_data *dev_data, const VkFrameb
 
     for (uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i) {
         VkImageView view = pCreateInfo->pAttachments[i];
-        auto view_data = getImageViewData(dev_data, view);
-        if (!view_data) {
+        auto view_state = getImageViewState(dev_data, view);
+        if (!view_state) {
             continue;
         }
         MT_FB_ATTACHMENT_INFO fb_info;
-        fb_info.mem = getImageNode(dev_data, view_data->image)->mem;
-        fb_info.image = view_data->image;
+        fb_info.mem = getImageNode(dev_data, view_state->create_info.image)->mem;
+        fb_info.image = view_state->create_info.image;
         fb_node->attachments.push_back(fb_info);
     }
     dev_data->frameBufferMap[fb] = std::move(fb_node);
@@ -9393,19 +9394,20 @@ static bool ValidateDependencies(const layer_data *my_data, FRAMEBUFFER_NODE con
                 overlapping_attachments[j].push_back(i);
                 continue;
             }
-            auto view_data_i = getImageViewData(my_data, viewi);
-            auto view_data_j = getImageViewData(my_data, viewj);
-            if (!view_data_i || !view_data_j) {
+            auto view_state_i = getImageViewState(my_data, viewi);
+            auto view_state_j = getImageViewState(my_data, viewj);
+            if (!view_state_i || !view_state_j) {
                 continue;
             }
-            if (view_data_i->image == view_data_j->image &&
-                isRegionOverlapping(view_data_i->subresourceRange, view_data_j->subresourceRange)) {
+            auto view_ci_i = view_state_i->create_info;
+            auto view_ci_j = view_state_j->create_info;
+            if (view_ci_i.image == view_ci_j.image && isRegionOverlapping(view_ci_i.subresourceRange, view_ci_j.subresourceRange)) {
                 overlapping_attachments[i].push_back(j);
                 overlapping_attachments[j].push_back(i);
                 continue;
             }
-            auto image_data_i = getImageNode(my_data, view_data_i->image);
-            auto image_data_j = getImageNode(my_data, view_data_j->image);
+            auto image_data_i = getImageNode(my_data, view_ci_i.image);
+            auto image_data_j = getImageNode(my_data, view_ci_j.image);
             if (!image_data_i || !image_data_j) {
                 continue;
             }
@@ -9971,10 +9973,10 @@ static bool VerifyFramebufferAndRenderPassLayouts(layer_data *dev_data, GLOBAL_C
     }
     for (uint32_t i = 0; i < pRenderPassInfo->attachmentCount; ++i) {
         const VkImageView &image_view = framebufferInfo.pAttachments[i];
-        auto image_data = getImageViewData(dev_data, image_view);
-        assert(image_data);
-        const VkImage &image = image_data->image;
-        const VkImageSubresourceRange &subRange = image_data->subresourceRange;
+        auto view_state = getImageViewState(dev_data, image_view);
+        assert(view_state);
+        const VkImage &image = view_state->create_info.image;
+        const VkImageSubresourceRange &subRange = view_state->create_info.subresourceRange;
         IMAGE_CMD_BUF_LAYOUT_NODE newNode = {pRenderPassInfo->pAttachments[i].initialLayout,
                                              pRenderPassInfo->pAttachments[i].initialLayout};
         // TODO: Do not iterate over every possibility - consolidate where possible
