@@ -176,7 +176,7 @@ class QUERY_POOL_NODE : public BASE_NODE {
     VkQueryPoolCreateInfo createInfo;
 };
 
-class FRAMEBUFFER_NODE : BASE_NODE {
+class FRAMEBUFFER_NODE : public BASE_NODE {
   public:
     using BASE_NODE::in_use;
     using BASE_NODE::cb_bindings;
@@ -196,7 +196,7 @@ typedef struct stencil_data {
 } CBStencilData;
 
 // Track command pools and their command buffers
-struct COMMAND_POOL_NODE {
+struct COMMAND_POOL_NODE : public BASE_NODE {
     VkCommandPoolCreateFlags createFlags;
     uint32_t queueFamilyIndex;
     // TODO: why is this std::list?

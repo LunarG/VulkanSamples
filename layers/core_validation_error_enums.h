@@ -62,11 +62,17 @@ enum DRAW_STATE_ERROR {
     DRAWSTATE_INVALID_BARRIER,               // Invalid Barrier
     DRAWSTATE_INVALID_BUFFER,                // Invalid Buffer
     DRAWSTATE_INVALID_IMAGE,                 // Invalid Image
+    DRAWSTATE_INVALID_BUFFER_VIEW,           // Invalid BufferView
+    DRAWSTATE_INVALID_IMAGE_VIEW,            // Invalid ImageView
     DRAWSTATE_INVALID_QUERY,                 // Invalid Query
     DRAWSTATE_INVALID_QUERY_POOL,            // Invalid QueryPool
+    DRAWSTATE_INVALID_DESCRIPTOR_POOL,       // Invalid DescriptorPool
+    DRAWSTATE_INVALID_COMMAND_POOL,          // Invalid CommandPool
     DRAWSTATE_INVALID_FENCE,                 // Invalid Fence
     DRAWSTATE_INVALID_EVENT,                 // Invalid Event
     DRAWSTATE_INVALID_SAMPLER,               // Invalid Sampler
+    DRAWSTATE_INVALID_FRAMEBUFFER,           // Invalid Framebuffer
+    DRAWSTATE_INVALID_DEVICE_MEMORY,         // Invalid DeviceMemory
     DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS,       // binding in vkCmdBindVertexData() too
                                              // large for PSO's
                                              // pVertexBindingDescriptions array

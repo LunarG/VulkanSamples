@@ -108,7 +108,7 @@ enum descriptor_req {
     DESCRIPTOR_REQ_MULTI_SAMPLE = DESCRIPTOR_REQ_SINGLE_SAMPLE << 1,
 };
 
-struct DESCRIPTOR_POOL_NODE {
+struct DESCRIPTOR_POOL_NODE : BASE_NODE {
     VkDescriptorPool pool;
     uint32_t maxSets;       // Max descriptor sets allowed in this pool
     uint32_t availableSets; // Available descriptor sets in this pool
@@ -244,7 +244,7 @@ struct MEMORY_RANGE {
 };
 
 // Data struct for tracking memory object
-struct DEVICE_MEM_INFO {
+struct DEVICE_MEM_INFO : public BASE_NODE {
     void *object; // Dispatchable object used to create this memory (device of swapchain)
     bool global_valid; // If allocation is mapped, set to "true" to be picked up by subsequently bound ranges
     VkDeviceMemory mem;
@@ -318,7 +318,7 @@ struct DAGNode {
     std::vector<uint32_t> next;
 };
 
-struct RENDER_PASS_NODE {
+struct RENDER_PASS_NODE : public BASE_NODE {
     VkRenderPass renderPass;
     VkRenderPassCreateInfo const *pCreateInfo;
     std::vector<bool> hasSelfDependency;

@@ -448,6 +448,10 @@ static const char *object_type_to_string(VkDebugReportObjectTypeEXT type) {
         return "image";
     case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT:
         return "buffer";
+    case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT:
+        return "image view";
+    case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT:
+        return "buffer view";
     case VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT:
         return "swapchain";
     case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT:
@@ -458,10 +462,18 @@ static const char *object_type_to_string(VkDebugReportObjectTypeEXT type) {
         return "event";
     case VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT:
         return "query pool";
+    case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT:
+        return "descriptor pool";
+    case VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT:
+        return "command pool";
     case VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT:
         return "pipeline";
     case VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT:
         return "sampler";
+    case VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT:
+        return "renderpass";
+    case VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT:
+        return "device memory";
     case VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT:
         return "semaphore";
     default:
@@ -3932,6 +3944,74 @@ static bool addCmd(layer_data *my_data, GLOBAL_CB_NODE *pCB, const CMD_TYPE cmd,
     }
     return skip_call;
 }
+// For given object struct return a ptr of BASE_NODE type for its wrapping struct
+BASE_NODE *GetStateStructPtrFromObject(layer_data *dev_data, VK_OBJECT object_struct) {
+    BASE_NODE *base_ptr = nullptr;
+    switch (object_struct.type) {
+    case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT: {
+        base_ptr = getSetNode(dev_data, reinterpret_cast<VkDescriptorSet &>(object_struct.handle));
+        break;
+    }
+    case VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT: {
+        base_ptr = getSamplerNode(dev_data, reinterpret_cast<VkSampler &>(object_struct.handle));
+        break;
+    }
+    case VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT: {
+        base_ptr = getQueryPoolNode(dev_data, reinterpret_cast<VkQueryPool &>(object_struct.handle));
+        break;
+    }
+    case VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT: {
+        base_ptr = getPipeline(dev_data, reinterpret_cast<VkPipeline &>(object_struct.handle));
+        break;
+    }
+    case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT: {
+        base_ptr = getBufferNode(dev_data, reinterpret_cast<VkBuffer &>(object_struct.handle));
+        break;
+    }
+    case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT: {
+        base_ptr = getBufferViewState(dev_data, reinterpret_cast<VkBufferView &>(object_struct.handle));
+        break;
+    }
+    case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT: {
+        base_ptr = getImageNode(dev_data, reinterpret_cast<VkImage &>(object_struct.handle));
+        break;
+    }
+    case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT: {
+        base_ptr = getImageViewState(dev_data, reinterpret_cast<VkImageView &>(object_struct.handle));
+        break;
+    }
+    case VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT: {
+        base_ptr = getEventNode(dev_data, reinterpret_cast<VkEvent &>(object_struct.handle));
+        break;
+    }
+    case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT: {
+        base_ptr = getPoolNode(dev_data, reinterpret_cast<VkDescriptorPool &>(object_struct.handle));
+        break;
+    }
+    case VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT: {
+        base_ptr = getCommandPoolNode(dev_data, reinterpret_cast<VkCommandPool &>(object_struct.handle));
+        break;
+    }
+    case VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT: {
+        base_ptr = getFramebuffer(dev_data, reinterpret_cast<VkFramebuffer &>(object_struct.handle));
+        break;
+    }
+    case VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT: {
+        base_ptr = getRenderPass(dev_data, reinterpret_cast<VkRenderPass &>(object_struct.handle));
+        break;
+    }
+    case VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT: {
+        base_ptr = getMemObjInfo(dev_data, reinterpret_cast<VkDeviceMemory &>(object_struct.handle));
+        break;
+    }
+    default:
+        // TODO : Any other objects to be handled here?
+        assert(0);
+        break;
+    }
+    return base_ptr;
+}
+
 // Tie the VK_OBJECT to the cmd buffer which includes:
 //  Add object_binding to cmd buffer
 //  Add cb_binding to object
@@ -3941,52 +4021,9 @@ static void addCommandBufferBinding(std::unordered_set<GLOBAL_CB_NODE *> *cb_bin
 }
 // For a given object, if cb_node is in that objects cb_bindings, remove cb_node
 static void removeCommandBufferBinding(layer_data *dev_data, VK_OBJECT const *object, GLOBAL_CB_NODE *cb_node) {
-    switch (object->type) {
-    case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT: {
-        auto img_node = getImageNode(dev_data, reinterpret_cast<const VkImage &>(object->handle));
-        if (img_node)
-            img_node->cb_bindings.erase(cb_node);
-        break;
-    }
-    case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT: {
-        auto buf_node = getBufferNode(dev_data, reinterpret_cast<const VkBuffer &>(object->handle));
-        if (buf_node)
-            buf_node->cb_bindings.erase(cb_node);
-        break;
-    }
-    case VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT: {
-        auto evt_node = getEventNode(dev_data, reinterpret_cast<const VkEvent &>(object->handle));
-        if (evt_node)
-            evt_node->cb_bindings.erase(cb_node);
-        break;
-    }
-    case VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT: {
-        auto qp_node = getQueryPoolNode(dev_data, reinterpret_cast<const VkQueryPool &>(object->handle));
-        if (qp_node)
-            qp_node->cb_bindings.erase(cb_node);
-        break;
-    }
-    case VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT: {
-        auto pipe_node = getPipeline(dev_data, reinterpret_cast<const VkPipeline &>(object->handle));
-        if (pipe_node)
-            pipe_node->cb_bindings.erase(cb_node);
-        break;
-    }
-    case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT: {
-        auto set_node = getSetNode(dev_data, reinterpret_cast<const VkDescriptorSet &>(object->handle));
-        if (set_node)
-            set_node->RemoveBoundCommandBuffer(cb_node);
-        break;
-    }
-    case VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT: {
-        auto sampler_node = getSamplerNode(dev_data, reinterpret_cast<const VkSampler &>(object->handle));
-        if (sampler_node)
-            sampler_node->cb_bindings.erase(cb_node);
-        break;
-    }
-    default:
-        assert(0); // unhandled object type
-    }
+    BASE_NODE *base_obj = GetStateStructPtrFromObject(dev_data, *object);
+    if (base_obj)
+        base_obj->cb_bindings.erase(cb_node);
 }
 // Reset the command buffer state
 //  Maintain the createInfo and set state to CB_NEW, but clear all other state
@@ -4531,14 +4568,49 @@ static bool ValidateAndIncrementBoundObjects(layer_data *dev_data, GLOBAL_CB_NOD
             error_code = DRAWSTATE_INVALID_BUFFER;
             break;
         }
+        case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT: {
+            base_obj = getBufferViewState(dev_data, reinterpret_cast<VkBufferView &>(obj.handle));
+            error_code = DRAWSTATE_INVALID_BUFFER_VIEW;
+            break;
+        }
         case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT: {
             base_obj = getImageNode(dev_data, reinterpret_cast<VkImage &>(obj.handle));
             error_code = DRAWSTATE_INVALID_IMAGE;
             break;
         }
+        case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT: {
+            base_obj = getImageViewState(dev_data, reinterpret_cast<VkImageView &>(obj.handle));
+            error_code = DRAWSTATE_INVALID_IMAGE_VIEW;
+            break;
+        }
         case VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT: {
             base_obj = getEventNode(dev_data, reinterpret_cast<VkEvent &>(obj.handle));
             error_code = DRAWSTATE_INVALID_EVENT;
+            break;
+        }
+        case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT: {
+            base_obj = getPoolNode(dev_data, reinterpret_cast<VkDescriptorPool &>(obj.handle));
+            error_code = DRAWSTATE_INVALID_DESCRIPTOR_POOL;
+            break;
+        }
+        case VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT: {
+            base_obj = getCommandPoolNode(dev_data, reinterpret_cast<VkCommandPool &>(obj.handle));
+            error_code = DRAWSTATE_INVALID_COMMAND_POOL;
+            break;
+        }
+        case VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT: {
+            base_obj = getFramebuffer(dev_data, reinterpret_cast<VkFramebuffer &>(obj.handle));
+            error_code = DRAWSTATE_INVALID_FRAMEBUFFER;
+            break;
+        }
+        case VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT: {
+            base_obj = getRenderPass(dev_data, reinterpret_cast<VkRenderPass &>(obj.handle));
+            error_code = DRAWSTATE_INVALID_RENDERPASS;
+            break;
+        }
+        case VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT: {
+            base_obj = getMemObjInfo(dev_data, reinterpret_cast<VkDeviceMemory &>(obj.handle));
+            error_code = DRAWSTATE_INVALID_DEVICE_MEMORY;
             break;
         }
         default:
@@ -4625,39 +4697,7 @@ static inline void removeInFlightCmdBuffer(layer_data *dev_data, VkCommandBuffer
 static void DecrementBoundResources(layer_data *dev_data, GLOBAL_CB_NODE const *cb_node) {
     BASE_NODE *base_obj = nullptr;
     for (auto obj : cb_node->object_bindings) {
-        switch (obj.type) {
-        case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT: {
-            base_obj = getSetNode(dev_data, reinterpret_cast<VkDescriptorSet &>(obj.handle));
-            break;
-        }
-        case VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT: {
-            base_obj = getSamplerNode(dev_data, reinterpret_cast<VkSampler &>(obj.handle));
-            break;
-        }
-        case VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT: {
-            base_obj = getQueryPoolNode(dev_data, reinterpret_cast<VkQueryPool &>(obj.handle));
-            break;
-        }
-        case VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT: {
-            base_obj = getPipeline(dev_data, reinterpret_cast<VkPipeline &>(obj.handle));
-            break;
-        }
-        case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT: {
-            base_obj = getBufferNode(dev_data, reinterpret_cast<VkBuffer &>(obj.handle));
-            break;
-        }
-        case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT: {
-            base_obj = getImageNode(dev_data, reinterpret_cast<VkImage &>(obj.handle));
-            break;
-        }
-        case VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT: {
-            base_obj = getEventNode(dev_data, reinterpret_cast<VkEvent &>(obj.handle));
-            break;
-        }
-        default:
-            // TODO : Merge handling of other objects types into this code
-            break;
-        }
+        base_obj = GetStateStructPtrFromObject(dev_data, obj);
         if (base_obj) {
             base_obj->in_use.fetch_sub(1);
         }
