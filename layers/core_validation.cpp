@@ -4623,60 +4623,43 @@ static inline void removeInFlightCmdBuffer(layer_data *dev_data, VkCommandBuffer
 
 // Decrement in-use count for objects bound to command buffer
 static void DecrementBoundResources(layer_data *dev_data, GLOBAL_CB_NODE const *cb_node) {
+    BASE_NODE *base_obj = nullptr;
     for (auto obj : cb_node->object_bindings) {
         switch (obj.type) {
         case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT: {
-            auto set_node = getSetNode(dev_data, reinterpret_cast<VkDescriptorSet &>(obj.handle));
-            if (set_node) {
-                set_node->in_use.fetch_sub(1);
-            }
+            base_obj = getSetNode(dev_data, reinterpret_cast<VkDescriptorSet &>(obj.handle));
             break;
         }
         case VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT: {
-            auto sampler_node = getSamplerNode(dev_data, reinterpret_cast<VkSampler &>(obj.handle));
-            if (sampler_node) {
-                sampler_node->in_use.fetch_sub(1);
-            }
+            base_obj = getSamplerNode(dev_data, reinterpret_cast<VkSampler &>(obj.handle));
             break;
         }
         case VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT: {
-            auto qp_node = getQueryPoolNode(dev_data, reinterpret_cast<VkQueryPool &>(obj.handle));
-            if (qp_node) {
-                qp_node->in_use.fetch_sub(1);
-            }
+            base_obj = getQueryPoolNode(dev_data, reinterpret_cast<VkQueryPool &>(obj.handle));
             break;
         }
         case VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT: {
-            auto pipe_node = getPipeline(dev_data, reinterpret_cast<VkPipeline &>(obj.handle));
-            if (pipe_node) {
-                pipe_node->in_use.fetch_sub(1);
-            }
+            base_obj = getPipeline(dev_data, reinterpret_cast<VkPipeline &>(obj.handle));
             break;
         }
         case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT: {
-            auto buff_node = getBufferNode(dev_data, reinterpret_cast<VkBuffer &>(obj.handle));
-            if (buff_node) {
-                buff_node->in_use.fetch_sub(1);
-            }
+            base_obj = getBufferNode(dev_data, reinterpret_cast<VkBuffer &>(obj.handle));
             break;
         }
         case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT: {
-            auto image_node = getImageNode(dev_data, reinterpret_cast<VkImage &>(obj.handle));
-            if (image_node) {
-                image_node->in_use.fetch_sub(1);
-            }
+            base_obj = getImageNode(dev_data, reinterpret_cast<VkImage &>(obj.handle));
             break;
         }
         case VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT: {
-            auto event_node = getEventNode(dev_data, reinterpret_cast<VkEvent &>(obj.handle));
-            if (event_node) {
-                event_node->in_use.fetch_sub(1);
-            }
+            base_obj = getEventNode(dev_data, reinterpret_cast<VkEvent &>(obj.handle));
             break;
         }
         default:
             // TODO : Merge handling of other objects types into this code
             break;
+        }
+        if (base_obj) {
+            base_obj->in_use.fetch_sub(1);
         }
     }
 }
