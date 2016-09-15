@@ -2719,7 +2719,6 @@ static bool validate_pipeline_shader_stage(debug_report_data *report_data,
     bool pass = true;
     auto module_it = shaderModuleMap.find(pStage->module);
     auto module = *out_module = module_it->second.get();
-    pass &= validate_specialization_offsets(report_data, pStage);
 
     /* find the entrypoint */
     auto entrypoint = *out_entrypoint = find_entrypoint(module, pStage->pName, pStage->stage);
@@ -2728,7 +2727,7 @@ static bool validate_pipeline_shader_stage(debug_report_data *report_data,
                     __LINE__, SHADER_CHECKER_MISSING_ENTRYPOINT, "SC",
                     "No entrypoint found named `%s` for stage %s", pStage->pName,
                     string_VkShaderStageFlagBits(pStage->stage))) {
-            pass = false;
+            return false;   // no point continuing beyond here, any analysis is just going to be garbage.
         }
     }
 
@@ -2743,7 +2742,7 @@ static bool validate_pipeline_shader_stage(debug_report_data *report_data,
 
     auto pipelineLayout = pipeline->pipeline_layout;
 
-    /* validate push constant usage */
+    pass &= validate_specialization_offsets(report_data, pStage);
     pass &= validate_push_constant_usage(report_data, &pipelineLayout.push_constant_ranges, module, accessible_ids, pStage->stage);
 
     /* validate descriptor use */
@@ -2854,6 +2853,10 @@ static bool validate_and_capture_pipeline_shader_state(debug_report_data *report
                                                &shaders[stage_id], &entrypoints[stage_id],
                                                enabledFeatures, shaderModuleMap);
     }
+
+    // if the shader stages are no good individually, cross-stage validation is pointless.
+    if (!pass)
+        return false;
 
     vi = pCreateInfo->pVertexInputState;
 
@@ -3420,6 +3423,20 @@ static bool verifyPipelineCreateState(layer_data *my_data, const VkDevice device
                                          "vkCmdSetScissor().",
                                          pPipeline->graphicsPipelineCI.pViewportState->scissorCount);
                 }
+            }
+        }
+
+        // If rasterization is not disabled, and subpass uses a depth/stencil
+        // attachment, pDepthStencilState must be a pointer to a valid structure
+        auto subpass_desc = renderPass ? &renderPass->pCreateInfo->pSubpasses[pPipeline->graphicsPipelineCI.subpass] : nullptr;
+        if (subpass_desc && subpass_desc->pDepthStencilAttachment &&
+            subpass_desc->pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
+            if (!pPipeline->graphicsPipelineCI.pDepthStencilState) {
+                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                     __LINE__, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
+                                     "Invalid Pipeline CreateInfo State: "
+                                     "pDepthStencilState is NULL when rasterization is enabled and subpass uses a "
+                                     "depth/stencil attachment");
             }
         }
     }
@@ -11221,7 +11238,7 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumeratePhysicalDevices(VkInstance instance, uin
             my_data->instance_dispatch_table->EnumeratePhysicalDevices(instance, pPhysicalDeviceCount, pPhysicalDevices);
         if (NULL == pPhysicalDevices) {
             my_data->instance_state->physical_devices_count = *pPhysicalDeviceCount;
-        } else { // Save physical devices
+        } else if (result == VK_SUCCESS){ // Save physical devices
             for (uint32_t i = 0; i < *pPhysicalDeviceCount; i++) {
                 layer_data *phy_dev_data = get_my_data_ptr(get_dispatch_key(pPhysicalDevices[i]), layer_data_map);
                 phy_dev_data->physical_device_state = unique_ptr<PHYSICAL_DEVICE_STATE>(new PHYSICAL_DEVICE_STATE());
