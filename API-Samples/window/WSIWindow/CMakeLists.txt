@@ -53,9 +53,19 @@ endif()
 #=================================================================
 
 #=========================Find Vulkan SDK=========================        # Get Path from the VULKAN_SDK environment variable.
+if(NOT DEFINED ENV{VULKAN_SDK})
+    message("===============================================")
+    message("WARNING: VULKAN_SDK env-variable was not found!")
+    message("   Validation layers will not be available.    ")
+    message("===============================================")
+    set(ENV{VULKAN_SDK} "${CMAKE_CURRENT_SOURCE_DIR}/vulkan")             # Plan-B: If VULKAN_SDK is not set, use local copy,
+endif()
+
+#set(VULKAN_SDK $ENV{VULKAN_SDK} CACHE PATH "Path to the Vulkan's SDK." PARENT_SCOPE)   # Give user a chance to change it, using cmake-gui.
 set(VULKAN_SDK $ENV{VULKAN_SDK} CACHE PATH "Path to the Vulkan's SDK.")   # Give user a chance to change it, using cmake-gui.
 #=================================================================
-include_directories("${VULKAN_SDK}/include")
+#include_directories("${VULKAN_SDK}/include")
+target_include_directories(${LIBRARY_NAME} PUBLIC "${VULKAN_SDK}/include")
 
 if(WIN32)
     target_link_libraries(${LIBRARY_NAME} "${VULKAN_SDK}/bin/vulkan-1.lib")

@@ -17,7 +17,7 @@
 #endif
 
 #include <stdio.h>
-#include <vulkan/vulkan.h>
+//#include <vulkan/vulkan.h>
 
 #include "CInstance.h"
 #include "keycodes.h"
