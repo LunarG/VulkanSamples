@@ -6669,18 +6669,13 @@ TEST_F(VkLayerTest, InvalidCmdBufferBufferDestroyed) {
                      "due to a buffer dependency being destroyed.");
     ASSERT_NO_FATAL_FAILURE(InitState());
 
-    VkImageObj image(m_device);
-    image.init(128, 128, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-               VK_IMAGE_TILING_OPTIMAL, 0);
-    ASSERT_TRUE(image.initialized());
-
     VkBuffer buffer;
     VkDeviceMemory mem;
     VkMemoryRequirements mem_reqs;
 
     VkBufferCreateInfo buf_info = {};
     buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    buf_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    buf_info.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     buf_info.size = 256;
     buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     VkResult err = vkCreateBuffer(m_device->device(), &buf_info, NULL, &buffer);
@@ -6703,18 +6698,8 @@ TEST_F(VkLayerTest, InvalidCmdBufferBufferDestroyed) {
     err = vkBindBufferMemory(m_device->device(), buffer, mem, 0);
     ASSERT_VK_SUCCESS(err);
 
-    VkBufferImageCopy region = {};
-    region.bufferRowLength = 128;
-    region.bufferImageHeight = 128;
-    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-
-    region.imageSubresource.layerCount = 1;
-    region.imageExtent.height = 4;
-    region.imageExtent.width = 4;
-    region.imageExtent.depth = 1;
     m_commandBuffer->BeginCommandBuffer();
-    vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer, image.handle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
-                           &region);
+    vkCmdFillBuffer(m_commandBuffer->GetBufferHandle(), buffer, 0, VK_WHOLE_SIZE, 0);
     m_commandBuffer->EndCommandBuffer();
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, " that is invalid because bound buffer ");
