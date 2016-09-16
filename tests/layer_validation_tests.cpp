@@ -4333,6 +4333,7 @@ TEST_F(VkLayerTest, StencilLoadOp) {
     VkAttachmentDescription att = {};
     VkAttachmentReference ref = {};
     att.format = depth_stencil_fmt;
+    att.samples = VK_SAMPLE_COUNT_1_BIT;
     att.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     att.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     att.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
