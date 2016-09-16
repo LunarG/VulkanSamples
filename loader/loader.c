@@ -1653,6 +1653,10 @@ static bool loader_icd_init_entrys(struct loader_icd *icd, VkInstance inst,
     LOOKUP_GIPA(CreateXlibSurfaceKHR, false);
     LOOKUP_GIPA(GetPhysicalDeviceXlibPresentationSupportKHR, false);
 #endif
+#ifdef VK_USE_PLATFORM_MIR_KHR
+    LOOKUP_GIPA(CreateMirSurfaceKHR, false);
+    LOOKUP_GIPA(GetPhysicalDeviceMirPresentationSupportKHR, false);
+#endif
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
     LOOKUP_GIPA(CreateWaylandSurfaceKHR, false);
     LOOKUP_GIPA(GetPhysicalDeviceWaylandPresentationSupportKHR, false);
@@ -3243,6 +3247,22 @@ loader_gpa_instance_internal(VkInstance inst, const char *pName) {
     return NULL;
 }
 
+void loader_override_terminating_device_proc(
+    VkDevice device, struct loader_dev_dispatch_table *disp_table) {
+    struct loader_device *dev;
+    struct loader_icd *icd = loader_get_icd_and_device(device, &dev, NULL);
+
+    // Certain device entry-points still need to go through a terminator before
+    // hitting the ICD.  This could be for several reasons, but the main one
+    // is currently unwrapping an object before passing the appropriate info
+    // along to the ICD.
+    if ((PFN_vkVoidFunction)disp_table->core_dispatch.CreateSwapchainKHR ==
+        (PFN_vkVoidFunction)icd->GetDeviceProcAddr(device,
+                                                   "vkCreateSwapchainKHR")) {
+        disp_table->core_dispatch.CreateSwapchainKHR =
+            terminator_vkCreateSwapchainKHR;
+    }
+}
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
 loader_gpa_device_internal(VkDevice device, const char *pName) {

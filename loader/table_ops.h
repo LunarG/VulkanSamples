@@ -541,7 +541,7 @@ loader_lookup_device_dispatch_table(const VkLayerDispatchTable *table,
         return (void *)table->CmdExecuteCommands;
 
     if (!strcmp(name, "CreateSwapchainKHR")) {
-        // For CreateSwapChainKHR we need to use the entry and terminator
+        // For CreateSwapChainKHR we need to use trampoline and terminator
         // functions to properly unwrap the SurfaceKHR object.
         return (void *)vkCreateSwapchainKHR;
     }

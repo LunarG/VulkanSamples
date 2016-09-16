@@ -713,15 +713,20 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(
 
     *pDevice = dev->device;
 
-    /* initialize any device extension dispatch entry's from the instance list*/
+    // Initialize any device extension dispatch entry's from the instance list
     loader_init_dispatch_dev_ext(inst, dev);
 
-    /* initialize WSI device extensions as part of core dispatch since loader
-     * has
-     * dedicated trampoline code for these*/
+    // Initialize WSI device extensions as part of core dispatch since loader
+    // has dedicated trampoline code for these*/
     loader_init_device_extension_dispatch_table(
         &dev->loader_dispatch,
-        loader_gpa_device_internal, *pDevice);
+        dev->loader_dispatch.core_dispatch.GetDeviceProcAddr, *pDevice);
+
+    // The loader needs to override some terminating device procs.  Usually,
+    // these are device procs which need to go through a loader terminator.
+    // This needs to occur if the loader needs to perform some work prior
+    // to passing the work along to the ICD.
+    loader_override_terminating_device_proc(*pDevice, &dev->loader_dispatch);
 
 out:
 

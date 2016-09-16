@@ -592,7 +592,7 @@ from the most recent interface version.
 
 ##### Version Negotiation Between Loader and ICDs
 
-All ICDs  (supporting interface version 2 or higher) must export the following
+All ICDs (supporting interface version 2 or higher) must export the following
 function that is used for determination of the interface version that will be used.
 This entry point is not a part of the Vulkan API itself, only a private interface
 between the loader and ICDs.
@@ -633,11 +633,31 @@ instead of VK_SUCCESS then the loader will treat the ICD as incompatible
 and will not load it for use.  In this case the application will not see the ICDs vkPhysicalDevice
 during enumeration.
 
+##### Loader Version 3 Interface Changes
+
+The primary change occuring in version 3 of the loader/ICD interface is to allow an ICD to
+handle Creation/Destruction of their own KHR_surfaces.  Up until this point, the loader created
+a surface object that was used by all ICDs.  However, some ICDs may want to provide their
+own surface handles.  If an ICD chooses to enable this support, they must export support for
+version 3 of the Loader/ICD interface as well as any Vulkan command that uses a KHR_surface handle,
+such as:
+- vkCreateXXXSurfaceKHR (where XXX is the platform specific identifier [i.e.CreateWin32SurfaceKHR for Windows])
+- vkDestroySurfaceKHR
+- vkCreateSwapchainKHR
+- vkGetPhysicalDeviceSurfaceSupportKHR
+- vkGetPhysicalDeviceSurfaceCapabilitiesKHR
+- vkGetPhysicalDeviceSurfaceFormatsKHR
+- vkGetPhysicalDeviceSurfacePresentModesKHR
+
+An ICD can still choose to not take advantage of this functionality by simply not exposing the
+above the vkCreateXXXSurfaceKHR and vkDestroySurfaceKHR commands.
+
 ##### Loader Version 2 Interface Requirements
 
-Version 2 interface has requirements in three areas: 1) ICD Vulkan entry point discovery,
-2) KHR_surface related requirements in the WSI extensions, 3) Vulkan dispatchable object
-creation requirements.
+Version 2 interface has requirements in three areas:
+ 1. ICD Vulkan entry point discovery,
+ 2. KHR_surface related requirements in the WSI extensions,
+ 3. Vulkan dispatchable object creation requirements.
 
 ######  ICD Vulkan entry point discovery
 All ICDs must export the following function that is used for discovery of ICD Vulkan entry points.
