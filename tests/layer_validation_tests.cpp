@@ -7564,20 +7564,22 @@ TEST_F(VkLayerTest, InvalidPipeline) {
     // call vkCmdBindPipeline w/ false Pipeline
     uint64_t fake_pipeline_handle = 0xbaad6001;
     VkPipeline bad_pipeline = reinterpret_cast<VkPipeline &>(fake_pipeline_handle);
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Invalid Pipeline Object 0xbaad6001");
     ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Invalid Pipeline Object 0xbaad6001");
     BeginCommandBuffer();
     vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, bad_pipeline);
     m_errorMonitor->VerifyFound();
+
     // Now issue a draw call with no pipeline bound
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "At Draw/Dispatch time no valid VkPipeline is bound!");
-
-    BeginCommandBuffer();
     Draw(1, 0, 0, 0);
     m_errorMonitor->VerifyFound();
+
     // Finally same check once more but with Dispatch/Compute
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "At Draw/Dispatch time no valid VkPipeline is bound!");
-    BeginCommandBuffer();
+    vkCmdEndRenderPass(m_commandBuffer->GetBufferHandle()); // must be outside renderpass
     vkCmdDispatch(m_commandBuffer->GetBufferHandle(), 0, 0, 0);
     m_errorMonitor->VerifyFound();
 }
