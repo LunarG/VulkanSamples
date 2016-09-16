@@ -7069,9 +7069,6 @@ TEST_F(VkLayerTest, InvalidCmdBufferPipelineDestroyed) {
     vp_state_ci.scissorCount = 1;
     VkRect2D scissors = {}; // Dummy scissors to point to
     vp_state_ci.pScissors = &scissors;
-    // No dynamic state
-    VkPipelineDynamicStateCreateInfo dyn_state_ci = {};
-    dyn_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 
     VkPipelineShaderStageCreateInfo shaderStages[2];
     memset(&shaderStages, 0, 2 * sizeof(VkPipelineShaderStageCreateInfo));
@@ -7091,6 +7088,8 @@ TEST_F(VkLayerTest, InvalidCmdBufferPipelineDestroyed) {
 
     VkPipelineRasterizationStateCreateInfo rs_ci = {};
     rs_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rs_ci.rasterizerDiscardEnable = true;
+    rs_ci.lineWidth = 1.0f;
 
     VkPipelineColorBlendAttachmentState att = {};
     att.blendEnable = VK_FALSE;
@@ -7110,7 +7109,6 @@ TEST_F(VkLayerTest, InvalidCmdBufferPipelineDestroyed) {
     gp_ci.pViewportState = &vp_state_ci;
     gp_ci.pRasterizationState = &rs_ci;
     gp_ci.pColorBlendState = &cb_ci;
-    gp_ci.pDynamicState = &dyn_state_ci;
     gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
     gp_ci.layout = pipeline_layout;
     gp_ci.renderPass = renderPass();
