@@ -119,8 +119,9 @@ class ErrorMonitor {
     ErrorMonitor() {
         test_platform_thread_create_mutex(&m_mutex);
         test_platform_thread_lock_mutex(&m_mutex);
-        m_msgFlags = VK_DEBUG_REPORT_INFORMATION_BIT_EXT;
+        m_msgFlags = VK_DEBUG_REPORT_ERROR_BIT_EXT;
         m_bailout = NULL;
+        m_desiredMsgSet = false;
         test_platform_thread_unlock_mutex(&m_mutex);
     }
 
@@ -134,6 +135,7 @@ class ErrorMonitor {
         m_desiredMsg = msgString;
         m_msgFound = VK_FALSE;
         m_msgFlags = msgFlags;
+        m_desiredMsgSet = true;
         test_platform_thread_unlock_mutex(&m_mutex);
     }
 
@@ -144,7 +146,7 @@ class ErrorMonitor {
             *m_bailout = true;
         }
         string errorString(msgString);
-        if (errorString.find(m_desiredMsg) != string::npos) {
+        if (m_desiredMsgSet && errorString.find(m_desiredMsg) != string::npos) {
             if (m_msgFound) { // If multiple matches, don't lose all but the last!
                 m_otherMsgs.push_back(m_failureMsg);
             }
@@ -212,6 +214,7 @@ class ErrorMonitor {
     test_platform_thread_mutex m_mutex;
     bool *m_bailout;
     VkBool32 m_msgFound;
+    bool m_desiredMsgSet;
 };
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL myDbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType, uint64_t srcObject,
