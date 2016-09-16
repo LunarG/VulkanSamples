@@ -2240,11 +2240,7 @@ static bool isDynamic(const PIPELINE_NODE *pPipeline, const VkDynamicState state
 
 // Validate state stored as flags at time of draw call
 static bool validate_draw_state_flags(layer_data *dev_data, GLOBAL_CB_NODE *pCB, const PIPELINE_NODE *pPipe, bool indexedDraw) {
-    bool result;
-    result = validate_status(dev_data, pCB, CBSTATUS_VIEWPORT_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT, DRAWSTATE_VIEWPORT_NOT_BOUND,
-                             "Dynamic viewport state not set for this command buffer");
-    result |= validate_status(dev_data, pCB, CBSTATUS_SCISSOR_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT, DRAWSTATE_SCISSOR_NOT_BOUND,
-                              "Dynamic scissor state not set for this command buffer");
+    bool result = false;
     if (pPipe->graphicsPipelineCI.pInputAssemblyState &&
         ((pPipe->graphicsPipelineCI.pInputAssemblyState->topology == VK_PRIMITIVE_TOPOLOGY_LINE_LIST) ||
          (pPipe->graphicsPipelineCI.pInputAssemblyState->topology == VK_PRIMITIVE_TOPOLOGY_LINE_STRIP))) {
@@ -4073,12 +4069,6 @@ static void set_cb_pso_status(GLOBAL_CB_NODE *pCB, const PIPELINE_NODE *pPipe) {
         CBStatusFlags psoDynStateMask = CBSTATUS_ALL;
         for (uint32_t i = 0; i < pPipe->graphicsPipelineCI.pDynamicState->dynamicStateCount; i++) {
             switch (pPipe->graphicsPipelineCI.pDynamicState->pDynamicStates[i]) {
-            case VK_DYNAMIC_STATE_VIEWPORT:
-                psoDynStateMask &= ~CBSTATUS_VIEWPORT_SET;
-                break;
-            case VK_DYNAMIC_STATE_SCISSOR:
-                psoDynStateMask &= ~CBSTATUS_SCISSOR_SET;
-                break;
             case VK_DYNAMIC_STATE_LINE_WIDTH:
                 psoDynStateMask &= ~CBSTATUS_LINE_WIDTH_SET;
                 break;
@@ -7020,7 +7010,6 @@ CmdSetViewport(VkCommandBuffer commandBuffer, uint32_t firstViewport, uint32_t v
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         skip_call |= addCmd(dev_data, pCB, CMD_SETVIEWPORTSTATE, "vkCmdSetViewport()");
-        pCB->status |= CBSTATUS_VIEWPORT_SET;
         pCB->viewportMask |= ((1u<<viewportCount) - 1u) << firstViewport;
     }
     lock.unlock();
@@ -7036,7 +7025,6 @@ CmdSetScissor(VkCommandBuffer commandBuffer, uint32_t firstScissor, uint32_t sci
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         skip_call |= addCmd(dev_data, pCB, CMD_SETSCISSORSTATE, "vkCmdSetScissor()");
-        pCB->status |= CBSTATUS_SCISSOR_SET;
         pCB->scissorMask |= ((1u<<scissorCount) - 1u) << firstScissor;
     }
     lock.unlock();

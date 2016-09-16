@@ -402,17 +402,15 @@ typedef VkFlags CBStatusFlags;
 enum CBStatusFlagBits {
     // clang-format off
     CBSTATUS_NONE                   = 0x00000000,   // No status is set
-    CBSTATUS_VIEWPORT_SET           = 0x00000001,   // Viewport has been set
-    CBSTATUS_LINE_WIDTH_SET         = 0x00000002,   // Line width has been set
-    CBSTATUS_DEPTH_BIAS_SET         = 0x00000004,   // Depth bias has been set
-    CBSTATUS_BLEND_CONSTANTS_SET    = 0x00000008,   // Blend constants state has been set
-    CBSTATUS_DEPTH_BOUNDS_SET       = 0x00000010,   // Depth bounds state object has been set
-    CBSTATUS_STENCIL_READ_MASK_SET  = 0x00000020,   // Stencil read mask has been set
-    CBSTATUS_STENCIL_WRITE_MASK_SET = 0x00000040,   // Stencil write mask has been set
-    CBSTATUS_STENCIL_REFERENCE_SET  = 0x00000080,   // Stencil reference has been set
-    CBSTATUS_SCISSOR_SET            = 0x00000100,   // Scissor has been set
-    CBSTATUS_INDEX_BUFFER_BOUND     = 0x00000200,   // Index buffer has been set
-    CBSTATUS_ALL                    = 0x000001FF,   // All dynamic state set (intentionally exclude index buffer)
+    CBSTATUS_LINE_WIDTH_SET         = 0x00000001,   // Line width has been set
+    CBSTATUS_DEPTH_BIAS_SET         = 0x00000002,   // Depth bias has been set
+    CBSTATUS_BLEND_CONSTANTS_SET    = 0x00000004,   // Blend constants state has been set
+    CBSTATUS_DEPTH_BOUNDS_SET       = 0x00000008,   // Depth bounds state object has been set
+    CBSTATUS_STENCIL_READ_MASK_SET  = 0x00000010,   // Stencil read mask has been set
+    CBSTATUS_STENCIL_WRITE_MASK_SET = 0x00000020,   // Stencil write mask has been set
+    CBSTATUS_STENCIL_REFERENCE_SET  = 0x00000040,   // Stencil reference has been set
+    CBSTATUS_INDEX_BUFFER_BOUND     = 0x00000080,   // Index buffer has been set
+    CBSTATUS_ALL                    = 0x0000007F,   // All dynamic state set (intentionally exclude index buffer)
     // clang-format on
 };
 
