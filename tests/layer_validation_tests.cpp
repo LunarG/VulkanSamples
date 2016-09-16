@@ -383,7 +383,8 @@ void VkLayerTest::VKTriangleTest(const char *vertShaderText, const char *fragSha
 
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    VkConstantBufferObj constantBuffer(m_device, bufSize * 2, sizeof(float), (const void *)&data);
+    VkConstantBufferObj constantBuffer(m_device, bufSize * 2, sizeof(float), (const void *)&data,
+                                       VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 
     VkShaderObj vs(m_device, vertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
     VkShaderObj ps(m_device, fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
