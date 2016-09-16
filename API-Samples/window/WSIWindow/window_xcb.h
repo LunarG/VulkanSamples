@@ -160,7 +160,7 @@ void Window_xcb::CreateSurface(VkInstance instance){
 }
 
 EventType Window_xcb::GetEvent(){
-    EventType event;
+    EventType event={};
 
     //--Char event--
     static char buf[4]={};
@@ -205,12 +205,13 @@ EventType Window_xcb::GetEvent(){
             }
             case XCB_CONFIGURE_NOTIFY:{                            // Window Reshape (move or resize)
                 if (!(e.response_type & 128)) break;               // only respond if message was sent with "SendEvent", (or x,y will be 0,0)
-                auto& e=*(xcb_configure_notify_event_t*)x_event;
-                event=ShapeEvent(e.x,e.y,e.width,e.height);
+                auto& e=*(xcb_configure_notify_event_t*)x_event;                
+                //if(e.x!=shape.x || e.y!=shape.y || e.width!=shape.width || e.height!=shape.height)
+                if(has_focus) event=ShapeEvent(e.x,e.y,e.width,e.height);
                 break;
             }
-            case XCB_FOCUS_IN  : event=FocusEvent(true);   break;                    //window gained focus
-            case XCB_FOCUS_OUT : event=FocusEvent(false);  break;                    //window lost focus
+            case XCB_FOCUS_IN  : if(!has_focus) event=FocusEvent(true);   break;     //window gained focus
+            case XCB_FOCUS_OUT : if( has_focus) event=FocusEvent(false);  break;     //window lost focus
 
             default:
                 //printf("EVENT: %d",(x_event->response_type & ~0x80));  //get event numerical value

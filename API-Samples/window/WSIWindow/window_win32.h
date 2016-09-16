@@ -33,6 +33,7 @@ class Window_win32 : public WindowImpl{
     HINSTANCE hInstance;
     HWND      hWnd;
     //bool ShapeMode;
+    FIFO<EventType, 4> eventFIFO;  //Event message queue buffer (max 4 items)
 
     void CreateSurface(VkInstance instance);
 public:
@@ -91,6 +92,9 @@ Window_win32::Window_win32(CInstance& inst, const char* title, uint width, uint 
         hInstance,            // hInstance
         NULL);                // no extra parameters
     assert(hWnd && "Failed to create a window.");
+
+    CreateSurface(inst);
+    eventFIFO.push(ShapeEvent(0, 0, width, height));
 }
 
 Window_win32::~Window_win32(){
@@ -99,7 +103,7 @@ Window_win32::~Window_win32(){
 
 void Window_win32::CreateSurface(VkInstance instance){
     VkWin32SurfaceCreateInfoKHR win32_createInfo;
-    win32_createInfo.sType      = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
+    win32_createInfo.sType      = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
     win32_createInfo.pNext      = NULL;
     win32_createInfo.flags      = 0;
     win32_createInfo.hinstance  = hInstance;
@@ -116,6 +120,7 @@ EventType Window_win32::GetEvent(){
     //static int ctr = 0; char spin[] = { '|','/','~','\\' }; printf("%c\r", spin[(ctr++) & 3]);  fflush(stdout);
 
     //EventType event;
+    if (!eventFIFO.isEmpty()) return *eventFIFO.pop();
 
     MSG msg = {};
     //running = (GetMessage(&msg, NULL, 0, 0)>0); 

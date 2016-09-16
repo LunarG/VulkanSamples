@@ -22,8 +22,7 @@ public:
     CPointer Pointers[MAX_POINTERS];
     MTouchEvent LastEvent;
 
-    //void Clear(){ memset(this,0,sizeof(this)); }
-    void Clear(){ }
+    void Clear(){ memset(this,0,sizeof(this)); }
 
     void Set(char id,eMouseAction act,float x,float y) {
         if (id >= MAX_POINTERS)return;  // Exit if too many fingers
@@ -59,6 +58,7 @@ const unsigned char ANDROID_TO_HID[256] = {
 class Window_android : public WindowImpl{
     android_app* app=0;
     CMTouch MTouch;
+    FIFO<EventType,4> eventFIFO;  //Event message queue buffer (max 4 items)
 
     void SetTitle(const char* title){};  //TODO : Set window title?
 
@@ -76,13 +76,12 @@ class Window_android : public WindowImpl{
 public:
     Window_android(CInstance& inst, const char* title, uint width, uint height) {
         instance = &inst;
-        shape.width = width;
-        shape.height = height;
+        shape.width  = 0;//width;
+        shape.height = 0;//height;
         running = true;
         //printf("Creating Android-Window...\n");
         app = Android_App;
 //return;
-
         //---Wait for window to be created AND gain focus---
         //bool hasFocus = false;
         while (!has_focus) {
@@ -93,7 +92,12 @@ public:
                 int8_t cmd = android_app_read_cmd(app);
                 android_app_pre_exec_cmd(app, cmd);
                 if (app->onAppCmd != NULL) app->onAppCmd(app, cmd);
-                if (cmd == APP_CMD_GAINED_FOCUS) FocusEvent(true);
+                if (cmd == APP_CMD_INIT_WINDOW ) {
+                    shape.width = ANativeWindow_getWidth(app->window);
+                    shape.height = ANativeWindow_getHeight(app->window);
+                    eventFIFO.push(ShapeEvent(0,0,shape.width,shape.height));      //post shape-event
+                }
+                if (cmd == APP_CMD_GAINED_FOCUS) eventFIFO.push(FocusEvent(true)); //post focus-event
                 android_app_post_exec_cmd(app, cmd);
             }
         }
@@ -108,6 +112,8 @@ public:
     EventType GetEvent(){
         EventType event={};
 //return {EventType::NONE};
+
+        if(!eventFIFO.isEmpty()) return *eventFIFO.pop();  //pop message from message queue buffer
 
         //--Char event--
         static char buf[4]={};

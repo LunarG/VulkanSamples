@@ -26,10 +26,14 @@ class MyWindow : public WSIWindow{
 
     //--Window move/resize event handler--
     void OnShapeEvent(int16_t x, int16_t y, uint16_t width, uint16_t height){
-        printf("Shape: x=%4d y=%4d width=%4d height=%4d\n",x,y,width, height);
+        printf("Shape: x=%d y=%d width=%4d height=%4d\n",x,y,width, height);
     }
-};
 
+    void OnFocusEvent(bool hasFocus){
+        printf("Focus: %s\n", hasFocus ? "True" : "False");
+    }
+
+};
 
 int main(int argc, char *argv[]){
     setbuf(stdout, NULL);          //Prevent printf buffering in QtCreator

@@ -24,14 +24,17 @@ EventType WindowImpl::TextEvent(const char* str) {
 EventType WindowImpl::ShapeEvent(int16_t x, int16_t y, uint16_t width, uint16_t height) {
     shape={x,y,width,height};
     EventType e={EventType::SHAPE};
+    //printf("shape: %d %d %d %d",x,y,width,height);
     e.shape={x,y,width,height};
     return e;
 }
 
 EventType WindowImpl::FocusEvent(bool hasFocus) {
     has_focus = hasFocus;
-    printf("has_focus=%s\n", has_focus ? "True" : "False");
-    return{ EventType::NONE };
+    //printf("has_focus=%s\n", has_focus ? "True" : "False");
+    EventType e={EventType::FOCUS};
+    e.focus.hasFocus=hasFocus;
+    return e;
 }
 //----------
 void WindowImpl::TextInput(bool enabled){ textinput=enabled; }

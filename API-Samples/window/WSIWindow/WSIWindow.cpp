@@ -50,6 +50,7 @@ bool WSIWindow::ProcessEvents(){
            case EventType::KEY   :OnKeyEvent  (e.key.action, e.key.keycode);                         break;
            case EventType::TEXT  :OnTextEvent (e.text.str);                                          break;
            case EventType::SHAPE :OnShapeEvent(e.shape.x, e.shape.y, e.shape.width, e.shape.height); break;
+           case EventType::FOCUS :OnFocusEvent(e.focus.hasFocus);                                    break;
            default: break;
        }
        e=pimpl->GetEvent();

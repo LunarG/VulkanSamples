@@ -16,7 +16,7 @@
   #include <native.h>
 #endif
 
-#include <stdio.h>
+//#include <stdio.h>
 //#include <vulkan/vulkan.h>
 
 #include "CInstance.h"
@@ -55,6 +55,7 @@ public:
     virtual void OnKeyEvent  (eKeyAction   action, uint8_t keycode){}                     //Callback for keyboard events (keycodes)
     virtual void OnTextEvent (const char* str){}                                          //Callback for text typed events (text)
     virtual void OnShapeEvent(int16_t x, int16_t y, uint16_t width, uint16_t height){}    //Callback for window move/resize events
+    virtual void OnFocusEvent(bool hasFocus){}                                            //Callback for window gain/lose focus events
 };
 //==============================================================
 
