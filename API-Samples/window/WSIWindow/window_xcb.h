@@ -116,9 +116,6 @@ Window_xcb::Window_xcb(CInstance& inst, const char* title, uint width, uint heig
     //--
     free(reply);
 
-    SetTitle(title);
-    CreateSurface(*instance);
-
     //---Keyboard input---
     k_ctx = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
     //xkb_rule_names names = {NULL,"pc105","is","dvorak","terminate:ctrl_alt_bksp"};
@@ -126,6 +123,10 @@ Window_xcb::Window_xcb(CInstance& inst, const char* title, uint width, uint heig
     k_keymap = xkb_keymap_new_from_names(k_ctx, NULL, XKB_KEYMAP_COMPILE_NO_FLAGS);  //use current keyboard settings
     k_state = xkb_state_new(k_keymap);
     //--------------------
+
+    SetTitle(title);
+    CreateSurface(*instance);
+    eventFIFO.push(ShapeEvent(0,0,width,height));  //ShapeEvent BEFORE focus, for consistency with win32 and android
 }
 
 Window_xcb::~Window_xcb(){
@@ -161,12 +162,8 @@ void Window_xcb::CreateSurface(VkInstance instance){
 
 EventType Window_xcb::GetEvent(){
     EventType event={};
-
-    //--Char event--
-    static char buf[4]={};
-    static bool charEvent=false;
-    if(charEvent){ charEvent=false;  return TextEvent(buf); }
-    //--------------
+    static char buf[4]={};                             //store char for text event
+    if(!eventFIFO.isEmpty()) return *eventFIFO.pop();  //pop message from message queue buffer
 
     xcb_generic_event_t* x_event;
     if (x_event = xcb_poll_for_event(xcb_connection)) {
@@ -183,10 +180,9 @@ EventType Window_xcb::GetEvent(){
             case XCB_KEY_PRESS:{
                 uint8_t keycode=EVDEV_TO_HID[btn];
                 event=KeyEvent(keyDOWN,keycode);                                     //key pressed event
-                buf[0]=0;
                 xkb_state_key_get_utf8(k_state,btn,buf,sizeof(buf));
-                charEvent=!!buf[0];                                                  //text typed event
                 xkb_state_update_key(k_state,btn,XKB_KEY_DOWN);
+                if(buf[0]) eventFIFO.push(TextEvent(buf));                           //text typed event (store in FIFO for next run)
                 break;
             }
             case XCB_KEY_RELEASE:{
@@ -205,8 +201,8 @@ EventType Window_xcb::GetEvent(){
             }
             case XCB_CONFIGURE_NOTIFY:{                            // Window Reshape (move or resize)
                 if (!(e.response_type & 128)) break;               // only respond if message was sent with "SendEvent", (or x,y will be 0,0)
-                auto& e=*(xcb_configure_notify_event_t*)x_event;                
-                //if(e.x!=shape.x || e.y!=shape.y || e.width!=shape.width || e.height!=shape.height)
+                auto& e=*(xcb_configure_notify_event_t*)x_event;
+                //if(has_focus and (e.x!=shape.x || e.y!=shape.y || e.width!=shape.width || e.height!=shape.height))
                 if(has_focus) event=ShapeEvent(e.x,e.y,e.width,e.height);
                 break;
             }

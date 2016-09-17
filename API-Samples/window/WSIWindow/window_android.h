@@ -58,7 +58,6 @@ const unsigned char ANDROID_TO_HID[256] = {
 class Window_android : public WindowImpl{
     android_app* app=0;
     CMTouch MTouch;
-    FIFO<EventType,4> eventFIFO;  //Event message queue buffer (max 4 items)
 
     void SetTitle(const char* title){};  //TODO : Set window title?
 
