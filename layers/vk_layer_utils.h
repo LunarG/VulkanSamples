@@ -111,6 +111,7 @@ bool vk_format_is_uint(VkFormat format);
 bool vk_format_is_float(VkFormat format);
 bool vk_format_is_srgb(VkFormat format);
 bool vk_format_is_compressed(VkFormat format);
+VkExtent2D vk_format_compressed_block_size(VkFormat format);
 size_t vk_format_get_size(VkFormat format);
 unsigned int vk_format_get_channel_count(VkFormat format);
 VkFormatCompatibilityClass vk_format_get_compatibility_class(VkFormat format);
