@@ -6124,11 +6124,21 @@ DestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer, const VkAllocatio
 VKAPI_ATTR void VKAPI_CALL
 DestroyRenderPass(VkDevice device, VkRenderPass renderPass, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    bool skip = false;
     std::unique_lock<std::mutex> lock(global_lock);
-    dev_data->renderPassMap.erase(renderPass);
-    // TODO: leaking all the guts of the renderpass node here!
-    lock.unlock();
-    dev_data->device_dispatch_table->DestroyRenderPass(device, renderPass, pAllocator);
+    auto rp_state = getRenderPass(dev_data, renderPass);
+    if (rp_state) {
+        VK_OBJECT obj_struct = {reinterpret_cast<uint64_t &>(renderPass), VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT};
+        skip |= ValidateObjectNotInUse(dev_data, rp_state, obj_struct);
+        // Any bound cmd buffers are now invalid
+        invalidateCommandBuffers(rp_state->cb_bindings, obj_struct);
+    }
+    if (!skip) {
+        // TODO: leaking all the guts of the renderpass node here!
+        dev_data->renderPassMap.erase(renderPass);
+        lock.unlock();
+        dev_data->device_dispatch_table->DestroyRenderPass(device, renderPass, pAllocator);
+    }
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateBuffer(VkDevice device, const VkBufferCreateInfo *pCreateInfo,
