@@ -880,9 +880,7 @@ void cvdescriptorset::ImageSamplerDescriptor::BindCommandBuffer(const core_valid
     // Add binding for image
     auto iv_state = getImageViewState(dev_data, image_view_);
     if (iv_state) {
-        auto image_node = getImageNode(dev_data, iv_state->create_info.image);
-        if (image_node)
-            core_validation::AddCommandBufferBindingImage(dev_data, cb_node, image_node);
+        core_validation::AddCommandBufferBindingImageView(dev_data, cb_node, iv_state);
     }
 }
 
@@ -913,9 +911,7 @@ void cvdescriptorset::ImageDescriptor::BindCommandBuffer(const core_validation::
     // Add binding for image
     auto iv_state = getImageViewState(dev_data, image_view_);
     if (iv_state) {
-        auto image_node = getImageNode(dev_data, iv_state->create_info.image);
-        if (image_node)
-            core_validation::AddCommandBufferBindingImage(dev_data, cb_node, image_node);
+        core_validation::AddCommandBufferBindingImageView(dev_data, cb_node, iv_state);
     }
 }
 

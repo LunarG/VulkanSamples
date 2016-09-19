@@ -586,6 +586,19 @@ void AddCommandBufferBindingImage(const layer_data *dev_data, GLOBAL_CB_NODE *cb
     img_node->cb_bindings.insert(cb_node);
 }
 
+// Create binding link between given image view node and its image with command buffer node
+void AddCommandBufferBindingImageView(const layer_data *dev_data, GLOBAL_CB_NODE *cb_node, IMAGE_VIEW_STATE *view_state) {
+    // First add bindings for imageView
+    view_state->cb_bindings.insert(cb_node);
+    auto image_node = getImageNode(dev_data, view_state->create_info.image);
+    cb_node->object_bindings.insert(
+        {reinterpret_cast<uint64_t &>(view_state->image_view), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT});
+    // Add bindings for image within imageView
+    if (image_node) {
+        AddCommandBufferBindingImage(dev_data, cb_node, image_node);
+    }
+}
+
 // Create binding link between given buffer node and command buffer node
 void AddCommandBufferBindingBuffer(const layer_data *dev_data, GLOBAL_CB_NODE *cb_node, BUFFER_NODE *buff_node) {
     // First update CB binding in MemObj mini CB list
@@ -6767,15 +6780,7 @@ static void AddFramebufferBinding(layer_data *dev_data, GLOBAL_CB_NODE *cb_state
     for (auto attachment : fb_state->attachments) {
         auto view_state = attachment.view_state;
         if (view_state) {
-            addCommandBufferBinding(
-                &view_state->cb_bindings,
-                {reinterpret_cast<uint64_t &>(view_state->image_view), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT}, cb_state);
-        }
-        auto img_node = getImageNode(dev_data, attachment.image);
-        if (img_node) {
-            addCommandBufferBinding(&img_node->cb_bindings,
-                                    {reinterpret_cast<uint64_t &>(img_node->image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT},
-                                    cb_state);
+            AddCommandBufferBindingImageView(dev_data, cb_state, view_state);
         }
         auto rp_state = getRenderPass(dev_data, fb_state->createInfo.renderPass);
         if (rp_state) {
