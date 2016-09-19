@@ -5798,9 +5798,21 @@ GetImageMemoryRequirements(VkDevice device, VkImage image, VkMemoryRequirements 
 
 VKAPI_ATTR void VKAPI_CALL
 DestroyImageView(VkDevice device, VkImageView imageView, const VkAllocationCallbacks *pAllocator) {
-    // TODO : Clean up any internal data structures using this obj.
-    get_my_data_ptr(get_dispatch_key(device), layer_data_map)
-        ->device_dispatch_table->DestroyImageView(device, imageView, pAllocator);
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    bool skip = false;
+    std::unique_lock<std::mutex> lock(global_lock);
+    auto view_state = getImageViewState(dev_data, imageView);
+    if (view_state) {
+        VK_OBJECT obj_struct = {reinterpret_cast<uint64_t &>(imageView), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT};
+        skip |= ValidateObjectNotInUse(dev_data, view_state, obj_struct);
+        // Any bound cmd buffers are now invalid
+        invalidateCommandBuffers(view_state->cb_bindings, obj_struct);
+    }
+    if (!skip) {
+        dev_data->imageViewMap.erase(imageView);
+        lock.unlock();
+        dev_data->device_dispatch_table->DestroyImageView(device, imageView, pAllocator);
+    }
 }
 
 VKAPI_ATTR void VKAPI_CALL
