@@ -31,6 +31,16 @@ public:
         P.x=x;  P.y=y;
         LastEvent={act,x,y,id};
     }
+
+    EventType Event(eMouseAction action, float x, float y, uint8_t id) {
+        if (id >= MAX_POINTERS)return {};  // Exit if too many fingers
+        CPointer& P=Pointers[id];
+        if(action) P.active=(action==mDOWN);
+        P.x=x;  P.y=y;
+        EventType e={EventType::TOUCH};
+        e.touch={action,x,y,id};
+        return e;
+    }
 };
 //========================================================
 
@@ -92,8 +102,8 @@ public:
                 android_app_pre_exec_cmd(app, cmd);
                 if (app->onAppCmd != NULL) app->onAppCmd(app, cmd);
                 if (cmd == APP_CMD_INIT_WINDOW ) {
-                    shape.width = ANativeWindow_getWidth(app->window);
-                    shape.height = ANativeWindow_getHeight(app->window);
+                    shape.width  = (uint16_t)ANativeWindow_getWidth (app->window);
+                    shape.height = (uint16_t)ANativeWindow_getHeight(app->window);
                     eventFIFO.push(ShapeEvent(0,0,shape.width,shape.height));      //post shape-event
                 }
                 if (cmd == APP_CMD_GAINED_FOCUS) eventFIFO.push(FocusEvent(true)); //post focus-event
@@ -110,16 +120,8 @@ public:
 
     EventType GetEvent(){
         EventType event={};
-//return {EventType::NONE};
-
+        static char buf[4]={};                             //store char for text event
         if(!eventFIFO.isEmpty()) return *eventFIFO.pop();  //pop message from message queue buffer
-
-        //--Char event--
-        static char buf[4]={};
-        static bool charEvent=false;
-        if(charEvent){ charEvent=false;  return TextEvent(buf); }
-        //--------------
-
 
         int events=0;
         struct android_poll_source* source;
@@ -137,6 +139,7 @@ public:
             switch(cmd){
                 case APP_CMD_GAINED_FOCUS: event=FocusEvent(true);  break;
                 case APP_CMD_LOST_FOCUS  : event=FocusEvent(false); break;
+                default:break;
             }
             android_app_post_exec_cmd(app, cmd);
         }else if(id==LOOPER_ID_INPUT) {
@@ -158,42 +161,44 @@ public:
                     //printf("key action:%d keycode=%d",a_action,keycode);
                     switch(a_action) {
                         case AKEY_EVENT_ACTION_DOWN:{
-                            //int32_t keycode  = AKeyEvent_getKeyCode(a_event);
                             int metaState = AKeyEvent_getMetaState(a_event);
                             int unicode = GetUnicodeChar(AKEY_EVENT_ACTION_DOWN, keycode, metaState);
                             (int&)buf=unicode;
-                            event=KeyEvent(keyDOWN,hidcode);                                     //key pressed event
-                            charEvent=!!buf[0];                                                  //text typed event
+                            event=KeyEvent(keyDOWN,hidcode);            //key pressed event (returned on this run)
+                            if(buf[0]) eventFIFO.push(TextEvent(buf));  //text typed event  (store in FIFO for next run)
                             break;
                         }
                         case AKEY_EVENT_ACTION_UP:{
-                            event=KeyEvent(keyUP  ,hidcode);                                     //key released event
+                            event=KeyEvent(keyUP,hidcode);              //key released event
+                            break;
                         }
+                        default:break;
                     }
 
                 }else
                 if (type == AINPUT_EVENT_TYPE_MOTION) {  //TOUCH-SCREEN
                     int32_t a_action = AMotionEvent_getAction(a_event);
                     int  action=(a_action&255);   //get action-code from bottom 8 bits
-                    MTouch.count=AMotionEvent_getPointerCount(a_event);
+                    MTouch.count=(int)AMotionEvent_getPointerCount(a_event);
                     if(action==AMOTION_EVENT_ACTION_MOVE) {
                         forCount(MTouch.count) {
-                            char id = AMotionEvent_getPointerId(a_event, i);
+                            uint8_t finger_id = (uint8_t)AMotionEvent_getPointerId(a_event, i);
                             float x = AMotionEvent_getX(a_event, i);
                             float y = AMotionEvent_getY(a_event, i);
-                            MTouch.Set(id, mMOVE, x, y);
+                            event=MTouch.Event(mMOVE,x,y,finger_id);
                         }
                     }else{
-                        int  inx =(a_action>>8); //get index from top 24 bits
-                        int  id  =AMotionEvent_getPointerId(a_event,inx);
-                        float x = AMotionEvent_getX(a_event, inx);
-                        float y = AMotionEvent_getY(a_event, inx);
+                        size_t   inx =(size_t)(a_action>>8); //get index from top 24 bits
+                        uint8_t  finger_id = (uint8_t)AMotionEvent_getPointerId(a_event,inx);
+                        float x        = AMotionEvent_getX(a_event, inx);
+                        float y        = AMotionEvent_getY(a_event, inx);
                         switch (action) {
                             case AMOTION_EVENT_ACTION_POINTER_DOWN:
-                            case AMOTION_EVENT_ACTION_DOWN      :  MTouch.Set(id,mDOWN,x,y);  break;
+                            case AMOTION_EVENT_ACTION_DOWN      :  event=MTouch.Event(mDOWN,x,y,finger_id);  break;
                             case AMOTION_EVENT_ACTION_POINTER_UP:
-                            case AMOTION_EVENT_ACTION_UP        :  MTouch.Set(id,mUP  ,x,y);  break;
-                            case AMOTION_EVENT_ACTION_CANCEL    :  MTouch.Clear();            break;
+                            case AMOTION_EVENT_ACTION_UP        :  event=MTouch.Event(mUP  ,x,y,finger_id);  break;
+                            case AMOTION_EVENT_ACTION_CANCEL    :  MTouch.Clear();                           break;
+                            default:break;
                         }
                     }
 /*
@@ -207,15 +212,13 @@ public:
                         ,P2.active?"*":" ",P2.x,P2.y);
                     //--------------------------------
 */
-                    //---Emulate mouse from MTouch---
-                    MTouchEvent te=MTouch.LastEvent;
-                    if(te.id==0){  //only use first pointer
-                        event=MouseEvent(te.act,te.x,te.y,1);
+/*
+                    //----------------------Emulate mouse from touch events-----------------------------
+                    if(event.tag==EventType::TOUCH && event.touch.id==0){  //if one-finger touch
+                        eventFIFO.push(MouseEvent(event.touch.action, event.touch.x, event.touch.y, 1));
                     }
-                    //-------------------------------
-
-                    //printf("%f x %f\n",x,y);
-                    //event=MouseEvent(mMOVE,x,y,1);
+                    //----------------------------------------------------------------------------------
+*/
                     handled=0;
                 }
                 AInputQueue_finishEvent(app->inputQueue, a_event, handled);
@@ -232,7 +235,6 @@ public:
             running=false;
             return {EventType::NONE};
         }
-
         return {EventType::NONE};
     };
 

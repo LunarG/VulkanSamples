@@ -9,8 +9,8 @@
 // Multi-window support
 // Documentation
 // Keyboard: function to get native keycode
-// Android: window resize events
-
+// Android: window resize events (WIP)
+// Split OnShapeEvent into OnResizeEvent and OnMoveEvent?
 
 #ifdef ANDROID
   #include <native.h>
@@ -56,6 +56,7 @@ public:
     virtual void OnTextEvent (const char* str){}                                          //Callback for text typed events (text)
     virtual void OnShapeEvent(int16_t x, int16_t y, uint16_t width, uint16_t height){}    //Callback for window move/resize events
     virtual void OnFocusEvent(bool hasFocus){}                                            //Callback for window gain/lose focus events
+    virtual void OnTouchEvent(eMouseAction action, float x, float y, uint8_t id){}        //Callback for Multi-touch events
 };
 //==============================================================
 

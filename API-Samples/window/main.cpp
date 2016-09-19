@@ -33,6 +33,12 @@ class MyWindow : public WSIWindow{
         printf("Focus: %s\n", hasFocus ? "True" : "False");
     }
 
+    //--Multi-touch event handler--
+    void OnTouchEvent(eMouseAction action, float x, float y, uint8_t id){
+        const char* type[]={"move","down","up  "};
+        printf("Touch: %s %4.0f x %4.0f Finger id:%d\n",type[action],x,y,id);
+    }
+
 };
 
 int main(int argc, char *argv[]){

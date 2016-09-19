@@ -17,14 +17,14 @@ public:
 
 //========================Event Message=========================
 struct EventType{
-    enum{NONE, MOUSE, KEY, TEXT, SHAPE, FOCUS, MTOUCH} tag;
+    enum{NONE, MOUSE, KEY, TEXT, SHAPE, FOCUS, TOUCH} tag;
     union{
         struct {eMouseAction action; int16_t x; int16_t y; uint8_t btn;}mouse;  // mouse move/click
         struct {eKeyAction   action; uint8_t keycode;}key;                      // Keyboard key state
         struct {const char* str;}text;                                          // Text entered
         struct {int16_t x; int16_t y; uint16_t width; uint16_t height;}shape;   // Window move/resize
         struct {bool hasFocus;}focus;                                           // Window gained/lost focus
-        struct {eMouseAction action; float x; float y; uint8_t id;}mtouch;      // multi-touch screen
+        struct {eMouseAction action; float x; float y; uint8_t id;}touch;       // multi-touch screen
     };
     void Clear(){tag=NONE;}
 };
