@@ -7720,11 +7720,10 @@ static inline bool IsExtentEqual(const VkExtent3D *extent, const VkExtent3D *oth
 // Returns the image extent of a specific subresource.
 static inline VkExtent3D GetImageSubresourceExtent(const IMAGE_NODE *img, const VkImageSubresourceLayers *subresource) {
     const uint32_t mip = subresource->mipLevel;
-    const float reciprocal = (1.0f / static_cast<float>(1 << mip));
     VkExtent3D extent = img->createInfo.extent;
-    extent.width = std::max(1U, static_cast<uint32_t>(std::floor(extent.width * reciprocal)));
-    extent.height = std::max(1U, static_cast<uint32_t>(std::floor(extent.height * reciprocal)));
-    extent.depth = std::max(1U, static_cast<uint32_t>(std::floor(extent.depth * reciprocal)));
+    extent.width = std::max(1U, extent.width >> mip);
+    extent.height = std::max(1U, extent.height >> mip);
+    extent.depth = std::max(1U, extent.depth >> mip);
     return extent;
 }
 
