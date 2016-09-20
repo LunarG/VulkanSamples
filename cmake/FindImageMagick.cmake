@@ -231,6 +231,8 @@ FOREACH(component ${ImageMagick_FIND_COMPONENTS}
     )
 
     IF(component STREQUAL "Magick++")
+        # unset cached variable that assumes header parameter never changes
+        UNSET(ImageMagick_MagickWand_INCLUDE_DIR CACHE)
 
         # Try top folder first
         FIND_IMAGEMAGICK_API(Magick++ <NONE> Magick++.h
@@ -252,6 +254,8 @@ FOREACH(component ${ImageMagick_FIND_COMPONENTS}
         ENDIF()
 
     ELSEIF(component STREQUAL "MagickWand")
+        # unset cached variable that assumes header parameter never changes
+        UNSET(ImageMagick_MagickWand_INCLUDE_DIR CACHE)
 
         # Try top folder first
         FIND_IMAGEMAGICK_API(MagickWand <NONE> MagickWand.h
