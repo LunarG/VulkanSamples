@@ -246,7 +246,7 @@ FOREACH(component ${ImageMagick_FIND_COMPONENTS}
             )
         ENDIF()
 
-        IF(NOT ImageMagick_MagickWand_INCLUDE_DIR OR NOT ImageMagick_MagickWand_LIBRARY)
+        IF(NOT ImageMagick_Magick++_INCLUDE_DIR OR NOT ImageMagick_Magick++_LIBRARY)
             # Look for Magick++.h, in the magick sub-folder
             FIND_IMAGEMAGICK_API(Magick++ magick magick/Magick++.h
                 Magick++ CORE_RL_Magick++_ Magick++-6.Q16 Magick++-Q16 Magick++-6.Q8 Magick++-Q8 Magick++-6.Q16HDRI Magick++-Q16HDRI Magick++-6.Q8HDRI Magick++-Q8HDRI
