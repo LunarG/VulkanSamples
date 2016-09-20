@@ -5205,6 +5205,20 @@ static inline bool verifyWaitFenceState(layer_data *dev_data, VkFence fence, con
     return skip_call;
 }
 
+static bool RetireFence(layer_data *dev_data, VkFence fence) {
+    auto pFence = getFenceNode(dev_data, fence);
+    if (pFence->signaler.first != VK_NULL_HANDLE) {
+        /* Fence signaller is a queue -- use this as proof that prior operations
+         * on that queue have completed.
+         */
+        return RetireWorkOnQueue(dev_data,
+                                 getQueueNode(dev_data, pFence->signaler.first),
+                                 pFence->signaler.second);
+    }
+
+    return false;
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL
 WaitForFences(VkDevice device, uint32_t fenceCount, const VkFence *pFences, VkBool32 waitAll, uint64_t timeout) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -5225,12 +5239,7 @@ WaitForFences(VkDevice device, uint32_t fenceCount, const VkFence *pFences, VkBo
         // When we know that all fences are complete we can clean/remove their CBs
         if (waitAll || fenceCount == 1) {
             for (uint32_t i = 0; i < fenceCount; i++) {
-                auto pFence = getFenceNode(dev_data, pFences[i]);
-                if (pFence->signaler.first != VK_NULL_HANDLE) {
-                    skip_call |= RetireWorkOnQueue(dev_data,
-                                                   getQueueNode(dev_data, pFence->signaler.first),
-                                                   pFence->signaler.second);
-                }
+                skip_call |= RetireFence(dev_data, pFences[i]);
             }
         }
         // NOTE : Alternate case not handled here is when some fences have completed. In
@@ -5256,12 +5265,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetFenceStatus(VkDevice device, VkFence fence) {
     VkResult result = dev_data->device_dispatch_table->GetFenceStatus(device, fence);
     lock.lock();
     if (result == VK_SUCCESS) {
-        auto pFence = getFenceNode(dev_data, fence);
-        if (pFence->signaler.first != VK_NULL_HANDLE) {
-            skip_call |= RetireWorkOnQueue(dev_data,
-                                           getQueueNode(dev_data, pFence->signaler.first),
-                                           pFence->signaler.second);
-        }
+        skip_call |= RetireFence(fence);
     }
     lock.unlock();
     if (skip_call)
