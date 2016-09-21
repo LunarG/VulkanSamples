@@ -71,7 +71,6 @@ There are also a few shell and Python scripts that run test collections (eg,
 
 Some demos that can be found in the dbuild/demos directory are:
 - vulkaninfo: report GPU properties
-- tri: a textured triangle (which is animated to demonstrate Z-clipping)
 - cube: a textured spinning cube
 - smoke/smoke: A "smoke" test using a more complex Vulkan demo
 
@@ -183,11 +182,8 @@ cd demos/android
 android update project -s -p . -t "android-23"
 ndk-build
 ant -buildfile cube debug
-ant -buildfile tri debug
 adb install ./cube/bin/NativeActivity-debug.apk
-adb install ./tri/bin/NativeActivity-debug.apk
 adb shell am start com.example.Cube/android.app.NativeActivity
-adb shell am start com.example.Tri/android.app.NativeActivity
 ```
 To build, install, and run Cube with validation layers, first build layers using steps above, then run:
 ```
