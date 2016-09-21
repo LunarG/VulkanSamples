@@ -71,7 +71,7 @@ if %do_64%==1 (
     echo Generating 64-bit CMake files for Visual Studio %VS_VERSION%
     cmake -G "Visual Studio %VS_VERSION% Win64" ..
     echo Building 64-bit Debug 
-    msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Debug /verbosity:quiet
+    msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Debug /maxcpucount /verbosity:quiet
     if errorlevel 1 (
        echo.
        echo 64-bit Debug build failed!
@@ -80,7 +80,7 @@ if %do_64%==1 (
     )   
    
     echo Building 64-bit Release 
-    msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Release /verbosity:quiet
+    msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Release /maxcpucount /verbosity:quiet
     if errorlevel 1 (
        echo.
        echo 64-bit Release build failed!
@@ -101,7 +101,7 @@ if %do_32%==1 (
     echo Generating 32-bit CMake files for Visual Studio %VS_VERSION%
     cmake -G "Visual Studio %VS_VERSION%" ..
     echo Building 32-bit Debug 
-    msbuild ALL_BUILD.vcxproj /p:Platform=x86 /p:Configuration=Debug /verbosity:quiet
+    msbuild ALL_BUILD.vcxproj /p:Platform=x86 /p:Configuration=Debug /maxcpucount /verbosity:quiet
     if errorlevel 1 (
        echo.
        echo 32-bit Debug build failed!
@@ -110,7 +110,7 @@ if %do_32%==1 (
     )   
        
     echo Building 32-bit Release 
-    msbuild ALL_BUILD.vcxproj /p:Platform=x86 /p:Configuration=Release /verbosity:quiet
+    msbuild ALL_BUILD.vcxproj /p:Platform=x86 /p:Configuration=Release /maxcpucount /verbosity:quiet
     if errorlevel 1 (
        echo.
        echo 32-bit Release build failed!
