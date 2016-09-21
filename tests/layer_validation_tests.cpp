@@ -6869,6 +6869,96 @@ TEST_F(VkLayerTest, InvalidCmdBufferFramebufferImageDestroyed) {
     vkFreeMemory(m_device->device(), image_memory, nullptr);
 }
 
+TEST_F(VkLayerTest, FramebufferImageInUseDestroyedSignaled) {
+    TEST_DESCRIPTION("Delete in-use image that's child of framebuffer.");
+    VkFormatProperties format_properties;
+    VkResult err = VK_SUCCESS;
+    vkGetPhysicalDeviceFormatProperties(gpu(), VK_FORMAT_B8G8R8A8_UNORM, &format_properties);
+    if (!(format_properties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
+        return;
+    }
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkImageCreateInfo image_ci = {};
+    image_ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_ci.pNext = NULL;
+    image_ci.imageType = VK_IMAGE_TYPE_2D;
+    image_ci.format = VK_FORMAT_B8G8R8A8_UNORM;
+    image_ci.extent.width = 256;
+    image_ci.extent.height = 256;
+    image_ci.extent.depth = 1;
+    image_ci.mipLevels = 1;
+    image_ci.arrayLayers = 1;
+    image_ci.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
+    image_ci.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    image_ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    image_ci.flags = 0;
+    VkImage image;
+    ASSERT_VK_SUCCESS(vkCreateImage(m_device->handle(), &image_ci, NULL, &image));
+
+    VkMemoryRequirements memory_reqs;
+    VkDeviceMemory image_memory;
+    bool pass;
+    VkMemoryAllocateInfo memory_info = {};
+    memory_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    memory_info.pNext = NULL;
+    memory_info.allocationSize = 0;
+    memory_info.memoryTypeIndex = 0;
+    vkGetImageMemoryRequirements(m_device->device(), image, &memory_reqs);
+    memory_info.allocationSize = memory_reqs.size;
+    pass = m_device->phy().set_memory_type(memory_reqs.memoryTypeBits, &memory_info, 0);
+    ASSERT_TRUE(pass);
+    err = vkAllocateMemory(m_device->device(), &memory_info, NULL, &image_memory);
+    ASSERT_VK_SUCCESS(err);
+    err = vkBindImageMemory(m_device->device(), image, image_memory, 0);
+    ASSERT_VK_SUCCESS(err);
+
+    VkImageViewCreateInfo ivci = {
+        VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        nullptr,
+        0,
+        image,
+        VK_IMAGE_VIEW_TYPE_2D,
+        VK_FORMAT_B8G8R8A8_UNORM,
+        {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A},
+        {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1},
+    };
+    VkImageView view;
+    err = vkCreateImageView(m_device->device(), &ivci, nullptr, &view);
+    ASSERT_VK_SUCCESS(err);
+
+    VkFramebufferCreateInfo fci = {VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr, 0, m_renderPass, 1, &view, 256, 256, 1};
+    VkFramebuffer fb;
+    err = vkCreateFramebuffer(m_device->device(), &fci, nullptr, &fb);
+    ASSERT_VK_SUCCESS(err);
+
+    // Just use default renderpass with our framebuffer
+    m_renderPassBeginInfo.framebuffer = fb;
+    // Create Null cmd buffer for submit
+    BeginCommandBuffer();
+    EndCommandBuffer();
+    // Submit cmd buffer to put it (and attached imageView) in-flight
+    VkSubmitInfo submit_info = {};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &m_commandBuffer->handle();
+    // Submit cmd buffer to put framebuffer and children in-flight
+    vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
+    // Destroy image attached to framebuffer while in-flight
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Cannot delete image 0x");
+    vkDestroyImage(m_device->device(), image, NULL);
+    m_errorMonitor->VerifyFound();
+    // Wait for queue to complete so we can safely destroy image and other objects
+    vkQueueWaitIdle(m_device->m_queue);
+    vkDestroyImage(m_device->device(), image, NULL);
+    vkDestroyFramebuffer(m_device->device(), fb, nullptr);
+    vkDestroyImageView(m_device->device(), view, nullptr);
+    vkFreeMemory(m_device->device(), image_memory, nullptr);
+}
+
 TEST_F(VkLayerTest, ImageMemoryNotBound) {
     TEST_DESCRIPTION("Attempt to draw with an image which has not had memory bound to it.");
     ASSERT_NO_FATAL_FAILURE(InitState());
