@@ -20,6 +20,7 @@
 * Author: Ian Elliott <ian@LunarG.com>
 * Author: Jon Ashburn <jon@lunarg.com>
 * Author: Gwan-gyeong Mun <elongbug@gmail.com>
+* Author: Tony Barbour <tony@LunarG.com>
 */
 
 #define _GNU_SOURCE
@@ -50,6 +51,9 @@
 #define DEMO_TEXTURE_COUNT 1
 #define APP_SHORT_NAME "cube"
 #define APP_LONG_NAME "The Vulkan Cube Demo Program"
+
+// Allow a maximum of two outstanding presentation operations.
+#define FRAME_LAG 2
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
@@ -319,9 +323,9 @@ struct demo {
     VkQueue present_queue;
     uint32_t graphics_queue_family_index;
     uint32_t present_queue_family_index;
-    VkSemaphore image_acquired_semaphore;
-    VkSemaphore draw_complete_semaphore;
-    VkSemaphore image_ownership_semaphore;
+    VkSemaphore image_acquired_semaphores[FRAME_LAG];
+    VkSemaphore draw_complete_semaphores[FRAME_LAG];
+    VkSemaphore image_ownership_semaphores[FRAME_LAG];
     VkPhysicalDeviceProperties gpu_props;
     VkQueueFamilyProperties *queue_props;
     VkPhysicalDeviceMemoryProperties memory_properties;
@@ -351,6 +355,9 @@ struct demo {
     uint32_t swapchainImageCount;
     VkSwapchainKHR swapchain;
     SwapchainBuffers *buffers;
+    VkFence fences[FRAME_LAG];
+    bool fencesInited[FRAME_LAG];
+    int frame_index;
 
     VkCommandPool cmd_pool;
     VkCommandPool present_cmd_pool;
@@ -745,13 +752,25 @@ void demo_update_data_buffer(struct demo *demo) {
 static void demo_draw(struct demo *demo) {
     VkResult U_ASSERT_ONLY err;
 
+    if (demo->fencesInited[demo->frame_index])
+    {
+        // Ensure no more than FRAME_LAG presentations are outstanding
+        vkWaitForFences(demo->device, 1, &demo->fences[demo->frame_index], VK_TRUE, UINT64_MAX);
+        vkResetFences(demo->device, 1, &demo->fences[demo->frame_index]);
+    }
+
     // Get the index of the next available swapchain image:
     err = demo->fpAcquireNextImageKHR(demo->device, demo->swapchain, UINT64_MAX,
-                                      demo->image_acquired_semaphore, (VkFence)0,
+                                      demo->image_acquired_semaphores[demo->frame_index], demo->fences[demo->frame_index],
                                       &demo->current_buffer);
+    demo->fencesInited[demo->frame_index] = true;
+
     if (err == VK_ERROR_OUT_OF_DATE_KHR) {
         // demo->swapchain is out of date (e.g. the window was resized) and
         // must be recreated:
+        demo->frame_index += 1;
+        demo->frame_index %= FRAME_LAG;
+
         demo_resize(demo);
         demo_draw(demo);
         return;
@@ -773,11 +792,11 @@ static void demo_draw(struct demo *demo) {
     submit_info.pWaitDstStageMask = &pipe_stage_flags;
     pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     submit_info.waitSemaphoreCount = 1;
-    submit_info.pWaitSemaphores = &demo->image_acquired_semaphore;
+    submit_info.pWaitSemaphores = &demo->image_acquired_semaphores[demo->frame_index];
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &demo->buffers[demo->current_buffer].cmd;
     submit_info.signalSemaphoreCount = 1;
-    submit_info.pSignalSemaphores = &demo->draw_complete_semaphore;
+    submit_info.pSignalSemaphores = &demo->draw_complete_semaphores[demo->frame_index];
     err = vkQueueSubmit(demo->graphics_queue, 1, &submit_info, nullFence);
     assert(!err);
 
@@ -787,12 +806,12 @@ static void demo_draw(struct demo *demo) {
         // semaphore and signalling the ownership released semaphore when finished
         pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         submit_info.waitSemaphoreCount = 1;
-        submit_info.pWaitSemaphores = &demo->draw_complete_semaphore;
+        submit_info.pWaitSemaphores = &demo->draw_complete_semaphores[demo->frame_index];
         submit_info.commandBufferCount = 1;
         submit_info.pCommandBuffers =
             &demo->buffers[demo->current_buffer].graphics_to_present_cmd;
         submit_info.signalSemaphoreCount = 1;
-        submit_info.pSignalSemaphores = &demo->image_ownership_semaphore;
+        submit_info.pSignalSemaphores = &demo->image_ownership_semaphores[demo->frame_index];
         err = vkQueueSubmit(demo->present_queue, 1, &submit_info, nullFence);
         assert(!err);
     }
@@ -804,14 +823,17 @@ static void demo_draw(struct demo *demo) {
         .pNext = NULL,
         .waitSemaphoreCount = 1,
         .pWaitSemaphores = (demo->separate_present_queue)
-                               ? &demo->image_ownership_semaphore
-                               : &demo->draw_complete_semaphore,
+                               ? &demo->image_ownership_semaphores[demo->frame_index]
+                               : &demo->draw_complete_semaphores[demo->frame_index],
         .swapchainCount = 1,
         .pSwapchains = &demo->swapchain,
         .pImageIndices = &demo->current_buffer,
     };
 
     err = demo->fpQueuePresentKHR(demo->present_queue, &present);
+    demo->frame_index += 1;
+    demo->frame_index %= FRAME_LAG;
+
     if (err == VK_ERROR_OUT_OF_DATE_KHR) {
         // demo->swapchain is out of date (e.g. the window was resized) and
         // must be recreated:
@@ -872,21 +894,11 @@ static void demo_prepare_buffers(struct demo *demo) {
         demo->height = surfCapabilities.currentExtent.height;
     }
 
-    // If mailbox mode is available, use it, as is the lowest-latency non-
-    // tearing mode.  If not, try IMMEDIATE which will usually be available,
-    // and is fastest (though it tears).  If not, fall back to FIFO which is
-    // always available.
+    // The FIFO present mode is guaranteed by the spec to be supported
+    // and to have no tearing.  MAILBOX is another option, but for fast
+    // rendering apps we could use a lot of gpu power rendering frames
+    // that are discarded and never displayed
     VkPresentModeKHR swapchainPresentMode = VK_PRESENT_MODE_FIFO_KHR;
-    for (size_t i = 0; i < presentModeCount; i++) {
-        if (presentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
-            swapchainPresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
-            break;
-        }
-        if ((swapchainPresentMode != VK_PRESENT_MODE_MAILBOX_KHR) &&
-            (presentModes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR)) {
-            swapchainPresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
-        }
-    }
 
     // Determine the number of VkImage's to use in the swap chain.
     // Application desires to only acquire 1 image at a time (which is
@@ -995,7 +1007,6 @@ static void demo_prepare_buffers(struct demo *demo) {
             demo, demo->buffers[i].image, VK_IMAGE_ASPECT_COLOR_BIT,
             VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, 0);
     }
-
 
     if (NULL != presentModes) {
         free(presentModes);
@@ -1948,6 +1959,19 @@ static void demo_cleanup(struct demo *demo) {
     demo->prepared = false;
     vkDeviceWaitIdle(demo->device);
 
+    // Wait for fences from present operations
+    for (i = 0; i < FRAME_LAG; i++) {
+        if (demo->fencesInited[i]) {
+            vkWaitForFences(demo->device, 1, &demo->fences[i], VK_TRUE, UINT64_MAX);
+        }
+        vkDestroyFence(demo->device, demo->fences[i], NULL);
+        vkDestroySemaphore(demo->device, demo->image_acquired_semaphores[i], NULL);
+        vkDestroySemaphore(demo->device, demo->draw_complete_semaphores[i], NULL);
+        if (demo->separate_present_queue) {
+            vkDestroySemaphore(demo->device, demo->image_ownership_semaphores[i], NULL);
+        }
+    }
+
     for (i = 0; i < demo->swapchainImageCount; i++) {
         vkDestroyFramebuffer(demo->device, demo->framebuffers[i], NULL);
     }
@@ -1981,15 +2005,11 @@ static void demo_cleanup(struct demo *demo) {
                              &demo->buffers[i].cmd);
     }
     free(demo->buffers);
-
     free(demo->queue_props);
-
     vkDestroyCommandPool(demo->device, demo->cmd_pool, NULL);
-    vkDestroySemaphore(demo->device, demo->image_acquired_semaphore, NULL);
-    vkDestroySemaphore(demo->device, demo->draw_complete_semaphore, NULL);
+
     if (demo->separate_present_queue) {
         vkDestroyCommandPool(demo->device, demo->present_cmd_pool, NULL);
-        vkDestroySemaphore(demo->device, demo->image_ownership_semaphore, NULL);
     }
     vkDestroyDevice(demo->device, NULL);
     if (demo->validate) {
@@ -3047,19 +3067,32 @@ static void demo_init_vk_swapchain(struct demo *demo) {
         .pNext = NULL,
         .flags = 0,
     };
-    err = vkCreateSemaphore(demo->device, &semaphoreCreateInfo, NULL,
-                            &demo->image_acquired_semaphore);
-    assert(!err);
 
-    err = vkCreateSemaphore(demo->device, &semaphoreCreateInfo, NULL,
-                            &demo->draw_complete_semaphore);
-    assert(!err);
-
-    if (demo->separate_present_queue) {
+    // Create fences that we can use to throttle if we get too far
+    // ahead of the image presents
+    VkFenceCreateInfo fence_ci = {
+        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+        .pNext = NULL,
+        .flags = 0
+    };
+    for (uint32_t i = 0; i < FRAME_LAG; i++) {
+        vkCreateFence(demo->device, &fence_ci, NULL, &demo->fences[i]);
+        demo->fencesInited[i] = false;
         err = vkCreateSemaphore(demo->device, &semaphoreCreateInfo, NULL,
-                                &demo->image_ownership_semaphore);
+                                &demo->image_acquired_semaphores[i]);
         assert(!err);
+
+        err = vkCreateSemaphore(demo->device, &semaphoreCreateInfo, NULL,
+                                &demo->draw_complete_semaphores[i]);
+        assert(!err);
+
+        if (demo->separate_present_queue) {
+            err = vkCreateSemaphore(demo->device, &semaphoreCreateInfo, NULL,
+                                    &demo->image_ownership_semaphores[i]);
+            assert(!err);
+        }
     }
+    demo->frame_index = 0;
 
     // Get Memory information and properties
     vkGetPhysicalDeviceMemoryProperties(demo->gpu, &demo->memory_properties);
@@ -3180,8 +3213,8 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
     demo->width = 500;
     demo->height = 500;
 
-    demo->spin_angle = 0.01f;
-    demo->spin_increment = 0.01f;
+    demo->spin_angle = 4.0f;
+    demo->spin_increment = 0.2f;
     demo->pause = false;
 
     mat4x4_perspective(demo->projection_matrix, (float)degreesToRadians(45.0f),
