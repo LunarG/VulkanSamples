@@ -35,6 +35,7 @@
 #include "test_common.h"
 #include "vk_layer_config.h"
 #include "vkrenderframework.h"
+#include <unordered_set>
 
 #define GLM_FORCE_RADIANS
 #include "glm/glm.hpp"
@@ -130,9 +131,9 @@ class ErrorMonitor {
     void SetDesiredFailureMsg(VkFlags msgFlags, const char *msgString) {
         // also discard all collected messages to this point
         test_platform_thread_lock_mutex(&m_mutex);
-        m_failureMsg.clear();
+        m_failureMsgs.clear();
         m_otherMsgs.clear();
-        m_desiredMsg = msgString;
+        m_desiredMsgs.insert(msgString);
         m_msgFound = VK_FALSE;
         m_msgFlags = msgFlags;
         m_desiredMsgSet = true;
@@ -146,14 +147,20 @@ class ErrorMonitor {
             *m_bailout = true;
         }
         string errorString(msgString);
-        if (m_desiredMsgSet && errorString.find(m_desiredMsg) != string::npos) {
-            if (m_msgFound) { // If multiple matches, don't lose all but the last!
-                m_otherMsgs.push_back(m_failureMsg);
+        bool found_expected = false;
+        for (auto desired_msg : m_desiredMsgs) {
+            if (errorString.find(desired_msg) != string::npos) {
+                found_expected = true;
+                m_failureMsgs.insert(errorString);
+                m_msgFound = VK_TRUE;
+                result = VK_TRUE;
+                // We only want one match for each expected error so remove from set here
+                // Since we're about the break the loop it's ok to remove from set we're iterating over
+                m_desiredMsgs.erase(desired_msg);
+                break;
             }
-            m_failureMsg = errorString;
-            m_msgFound = VK_TRUE;
-            result = VK_TRUE;
-        } else {
+        }
+        if (!found_expected) {
             printf("Unexpected: %s\n", msgString);
             m_otherMsgs.push_back(errorString);
         }
@@ -162,8 +169,6 @@ class ErrorMonitor {
     }
 
     vector<string> GetOtherFailureMsgs(void) { return m_otherMsgs; }
-
-    string GetFailureMsg(void) { return m_failureMsg; }
 
     VkDebugReportFlagsEXT GetMessageFlags(void) { return m_msgFlags; }
 
@@ -189,27 +194,29 @@ class ErrorMonitor {
     }
 
     void VerifyFound() {
-        // Not seeing the desired message is a failure. /Before/ throwing, dump
-        // any other messages.
+        // Not seeing the desired message is a failure. /Before/ throwing, dump any other messages.
         if (!DesiredMsgFound()) {
             DumpFailureMsgs();
-            FAIL() << "Did not receive expected error '" << m_desiredMsg << "'";
+            for (auto desired_msg : m_desiredMsgs) {
+                FAIL() << "Did not receive expected error '" << desired_msg << "'";
+            }
         }
     }
 
     void VerifyNotFound() {
-        // ExpectSuccess() configured us to match anything. Any error is a
-        // failure.
+        // ExpectSuccess() configured us to match anything. Any error is a failure.
         if (DesiredMsgFound()) {
             DumpFailureMsgs();
-            FAIL() << "Expected to succeed but got error: " << GetFailureMsg();
+            for (auto msg : m_failureMsgs) {
+                FAIL() << "Expected to succeed but got error: " << msg;
+            }
         }
     }
 
   private:
     VkFlags m_msgFlags;
-    string m_desiredMsg;
-    string m_failureMsg;
+    std::unordered_set<string> m_desiredMsgs;
+    std::unordered_set<string> m_failureMsgs;
     vector<string> m_otherMsgs;
     test_platform_thread_mutex m_mutex;
     bool *m_bailout;
