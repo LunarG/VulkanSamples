@@ -2,16 +2,16 @@
 
 # WSI-Window
 
->WSI-Window provides a simple, cross-platform interface for creating a Vulkan window in C++.
->It also handles keyboard and mouse input, and provides a simple and consistent interface across all supported platforms.  Its goal is to take care of all the platform-specific complexities of setting up a Vulkan environment, so you can quickly get started on writing great Vulkan code. :)
->Also, WSI-Window simplifies porting Vulkan apps between platforms.
+>WSI-Window provides a simple cross-platform interface for creating a Vulkan window in C++.
+>It also handles keyboard, mouse and touch-screen input, using query or event handler functions.  Its goal is to take care of all the platform-specific complexities of setting up a Vulkan environment, so you can quickly get started on writing great Vulkan code. :)
 
-![LunarG Logo](./question.png "Platforms")
+
+![LunarG Logo](./platforms.png "Platforms")
 
 ## Supported platforms 
- - Windows      (Done)
- - Linux XCB    (Done)
- - Android      (WIP)
+ - Windows
+ - Linux XCB
+ - Android
 
 #### Todo (Contributions welcome)
  - Apple OS X / iOS
@@ -26,14 +26,44 @@
  - Mouse input
  - Keyboard input (keycodes or localized text)
  - Window management (Todo: Full-screen mode)
+ - Multi-touch input (currently on Android only)
 
 #### Todo (Contributions welcome)
- - Multi-touch input
+ - Multi-touch input on desktop
  - Sensors input? (Android)
  - Joystick input?
 
-## Classes
+## Platform Setup
+### Windows
+Install the Vulkan SDK, CMake and Visual Studio.  
+Use cmake-gui to load CMakeLists.txt, and generate the Visual Studio project.  
+Use Visual Studio to compile and run the sample project.
 
+### Linux
+Unpack the Vulkan SDK, preferrably to your home directory.  
+Ensure that you have the VULKAN_SDK environment variable set up, to point to the Vulkan SDK's x86_64 subdirectory.  
+On Ubuntu, you can do this by adding the following line to your ~/.profile file:  
+
+ `export VULKAN_SDK="$HOME/VulkanSDK/1.0.26.0/x86_64"`
+ 
+Use CMake to load the CMakeLists.txt file and generate project files for your favorite IDE.  
+Alternatively, use Qt Creator to load the CMakeLists.txt file directly.  
+You should now be able to compile and run the sample project.
+ 
+
+### Android (using Ubuntu as host)
+
+Install Android Studio 2.2 or later, including the NDK.
+Use Android Studio -> File -> New -> Import Project... to import the included Android Studio project.
+If you see Gradle errors, run the clear.sh script, to delete auto-generated files, and try again.
+Connect your device via USB, compile and run the sample project.  
+
+For debugging purposes, "printf" output is routed to Android Studio's Android Monitor -> logcat tab.  
+
+Resource files can be added to your APK, by creating an "Assets" folder in the project's root directory.  
+"fopen" will see this Assets folder as its current working directory, but will be in read-only mode.
+
+## Classes
 
 ### CInstance class
 The CInstance class creates a VkInstance, and loads appropriate platform-specific WSI Surface extensions.  
@@ -45,17 +75,22 @@ The following extensions are loaded where available:
 
 
 ### WSIWindow class
-The WSIWindow class creates a Vulkan window, and provides function calls to query keyboard and mouse state, as well as callbacks, to notify you of system events. (window / keyboard / mouse)
+The WSIWindow class creates a Vulkan window, and provides function calls to query keyboard and mouse state, as well as callbacks, to notify you of system events. (window / keyboard / mouse /touch-screen)
 #### The following query functions are provided:
- - GetKeyState : Get the current state of the specified keyboard key. (see "keycodes.h" for a list of key codes.)  
- - GetBtnState : Get the state of the specified mouse button (1-3)  
- - GetMousePos : Get the current mouse position (x,y) within this window.
+ - `GetKeyState :` Get the current state of the specified keyboard key. (see "keycodes.h" for a list of key codes.)  
+ - `GetBtnState :` Get the state of the specified mouse button (1-5)  
+ - `GetMousePos :` Get the current mouse position (x,y) within this window.  
+ - `ShowKeyboard:` On Android, show the Soft-keyboard, and enable OnTextEvent.  
+ - `Close .  .  . :` Close the window."
+
 
 #### The following event callbacks are provided:
- - OnMouseEvent : Mouse movement and button clicks
- - OnKeyEvent : Keyboard key-press and key-release events
- - OnTextEvent : Keyboard Text input, using OS keyboard layout and language settings.
- - OnShapeEvent : Window move / resize events
+ - `OnMouseEvent :` Mouse movement and button clicks
+ - `OnKeyEvent . :` Keyboard key-press and key-release events
+ - `OnTextEvent. :` Keyboard Text input, using OS keyboard layout and language settings.
+ - `OnShapeEvent :` Window move / resize events
+ - `OnFocusEvent :` Window gained / lost focus
+ - `OnTouchEvent :` Touch-screen events, tracking up to 10 fingers.
 
 ## Examples
 ### Example 1: Create a Vulkan instance and load extensions.

@@ -38,8 +38,9 @@ bool WSIWindow::GetBtnState(uint8_t  btn){ return pimpl->BtnState(btn); }
 void WSIWindow::GetMousePos(int16_t& x, int16_t& y){ pimpl->MousePos(x,y); }
 void WSIWindow::Close()    { pimpl->Close(); }
 
-void WSIWindow::SetTextInput(bool enabled){ pimpl->TextInput(enabled);};          //Enable OnTextEvent, (and on Android, show the soft-keyboard)
-bool WSIWindow::GetTextInput(){return pimpl->textinput;}                          //Returns true if text input is enabled (and on android, keyboard is visible.)
+//void WSIWindow::SetTextInput(bool enabled){ pimpl->TextInput(enabled);}           //Enable OnTextEvent, (and on Android, show the soft-keyboard)
+//bool WSIWindow::GetTextInput(){return pimpl->textinput;}                          //Returns true if text input is enabled (and on android, keyboard is visible.)
+void WSIWindow::ShowKeyboard(bool enabled){ pimpl->TextInput(enabled);}            //On Android, show the soft-keyboard,
 
 bool WSIWindow::ProcessEvents(){
     EventType e=pimpl->GetEvent();

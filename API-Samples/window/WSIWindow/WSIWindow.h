@@ -43,8 +43,11 @@ public:
     bool GetBtnState(uint8_t  btn);               //Returns true if specified mouse button is pressed (button 1-5)
     void GetMousePos(int16_t& x, int16_t& y);     //Get mouse (x,y) coordinate within window client area
     void Close();                                 //Close the window
-    void SetTextInput(bool enabled);              //Enable OnTextEvent, (and on Android, show the soft-keyboard)
-    bool GetTextInput();                          //Returns true if text input is enabled (and on android, keyboard is visible.)
+    //void SetTextInput(bool enabled);              //Enable OnTextEvent, (and on Android, show the soft-keyboard)
+    //bool GetTextInput();                          //Returns true if text input is enabled (and on android, keyboard is visible.)
+    void ShowKeyboard(bool enabled);              //on Android, show the soft-keyboard.
+
+
 
 
     //bool PollEvent();

@@ -1,7 +1,32 @@
-#include "WSIWindow.h"
-//#include <stdio.h>
+/*
+*--------------------------------------------------------------------------
+* Copyright (c) 2015-2016 The Khronos Group Inc.
+* Copyright (c) 2015-2016 Valve Corporation
+* Copyright (c) 2015-2016 LunarG, Inc.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*
+* Author: Rene Lindsay <rene@lunarg.com>
+*
+*--------------------------------------------------------------------------
+*
+* This sample project demonstates how to use SWIWindow to create a Vulkan window,
+* and add event handlers for window, keyboard, mouse and multi-touchscreen events.
+* It works on Windows, Linux and Android.
+*
+*/
 
-using namespace std;
+#include "WSIWindow.h"
 
 //-- EVENT HANDLERS --
 class MyWindow : public WSIWindow{
@@ -47,9 +72,9 @@ int main(int argc, char *argv[]){
 
     CInstance Inst;                             //Create a Vulkan Instance
     MyWindow Window(Inst,"LunarG",640,480);     //Create a Vulkan window
-    Window.SetTextInput(true);                  //Show soft-keyboard on Android
+    Window.ShowKeyboard(true);                  //Show soft-keyboard on Android
 
-    while(Window.ProcessEvents()){
+    while(Window.ProcessEvents()){              //Main event loop, runs until window is closed.
         bool KeyPressed = Window.GetKeyState(KEY_LeftShift);
         if (KeyPressed) printf("LEFT SHIFT PRESSED\r");
     }
