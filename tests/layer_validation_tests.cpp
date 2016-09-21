@@ -7651,6 +7651,168 @@ TEST_F(VkLayerTest, InvalidCmdBufferDescriptorSetImageSamplerDestroyed) {
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
 
+TEST_F(VkLayerTest, DescriptorImageUpdateNoMemoryBound) {
+    TEST_DESCRIPTION("Attempt an image descriptor set update where image's bound memory has been freed.");
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkDescriptorPoolSize ds_type_count = {};
+    ds_type_count.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    ds_type_count.descriptorCount = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+    ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    ds_pool_ci.pNext = NULL;
+    ds_pool_ci.maxSets = 1;
+    ds_pool_ci.poolSizeCount = 1;
+    ds_pool_ci.pPoolSizes = &ds_type_count;
+
+    VkDescriptorPool ds_pool;
+    VkResult err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+    dsl_binding.binding = 0;
+    dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    dsl_binding.descriptorCount = 1;
+    dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+    dsl_binding.pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+    ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    ds_layout_ci.pNext = NULL;
+    ds_layout_ci.bindingCount = 1;
+    ds_layout_ci.pBindings = &dsl_binding;
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSet descriptorSet;
+    VkDescriptorSetAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    alloc_info.descriptorSetCount = 1;
+    alloc_info.descriptorPool = ds_pool;
+    alloc_info.pSetLayouts = &ds_layout;
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+    pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_ci.pNext = NULL;
+    pipeline_layout_ci.setLayoutCount = 1;
+    pipeline_layout_ci.pSetLayouts = &ds_layout;
+
+    VkPipelineLayout pipeline_layout;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    // Create images to update the descriptor with
+    VkImage image;
+    const VkFormat tex_format = VK_FORMAT_B8G8R8A8_UNORM;
+    const int32_t tex_width = 32;
+    const int32_t tex_height = 32;
+    VkImageCreateInfo image_create_info = {};
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.pNext = NULL;
+    image_create_info.imageType = VK_IMAGE_TYPE_2D;
+    image_create_info.format = tex_format;
+    image_create_info.extent.width = tex_width;
+    image_create_info.extent.height = tex_height;
+    image_create_info.extent.depth = 1;
+    image_create_info.mipLevels = 1;
+    image_create_info.arrayLayers = 1;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+    image_create_info.flags = 0;
+    err = vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
+    ASSERT_VK_SUCCESS(err);
+    // Initially bind memory to avoid error at bind view time. We'll break binding before update.
+    VkMemoryRequirements memory_reqs;
+    VkDeviceMemory image_memory;
+    bool pass;
+    VkMemoryAllocateInfo memory_info = {};
+    memory_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    memory_info.pNext = NULL;
+    memory_info.allocationSize = 0;
+    memory_info.memoryTypeIndex = 0;
+    vkGetImageMemoryRequirements(m_device->device(), image, &memory_reqs);
+    // Allocate enough memory for image
+    memory_info.allocationSize = memory_reqs.size;
+    pass = m_device->phy().set_memory_type(memory_reqs.memoryTypeBits, &memory_info, 0);
+    ASSERT_TRUE(pass);
+    err = vkAllocateMemory(m_device->device(), &memory_info, NULL, &image_memory);
+    ASSERT_VK_SUCCESS(err);
+    err = vkBindImageMemory(m_device->device(), image, image_memory, 0);
+    ASSERT_VK_SUCCESS(err);
+
+    VkImageViewCreateInfo image_view_create_info = {};
+    image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    image_view_create_info.image = image;
+    image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    image_view_create_info.format = tex_format;
+    image_view_create_info.subresourceRange.layerCount = 1;
+    image_view_create_info.subresourceRange.baseMipLevel = 0;
+    image_view_create_info.subresourceRange.levelCount = 1;
+    image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+    VkImageView view;
+    err = vkCreateImageView(m_device->device(), &image_view_create_info, NULL, &view);
+    ASSERT_VK_SUCCESS(err);
+    // Create Samplers
+    VkSamplerCreateInfo sampler_ci = {};
+    sampler_ci.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    sampler_ci.pNext = NULL;
+    sampler_ci.magFilter = VK_FILTER_NEAREST;
+    sampler_ci.minFilter = VK_FILTER_NEAREST;
+    sampler_ci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+    sampler_ci.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sampler_ci.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sampler_ci.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sampler_ci.mipLodBias = 1.0;
+    sampler_ci.anisotropyEnable = VK_FALSE;
+    sampler_ci.maxAnisotropy = 1;
+    sampler_ci.compareEnable = VK_FALSE;
+    sampler_ci.compareOp = VK_COMPARE_OP_NEVER;
+    sampler_ci.minLod = 1.0;
+    sampler_ci.maxLod = 1.0;
+    sampler_ci.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+    sampler_ci.unnormalizedCoordinates = VK_FALSE;
+    VkSampler sampler;
+    err = vkCreateSampler(m_device->device(), &sampler_ci, NULL, &sampler);
+    ASSERT_VK_SUCCESS(err);
+    // Update descriptor with image and sampler
+    VkDescriptorImageInfo img_info = {};
+    img_info.sampler = sampler;
+    img_info.imageView = view;
+    img_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    VkWriteDescriptorSet descriptor_write;
+    memset(&descriptor_write, 0, sizeof(descriptor_write));
+    descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptor_write.dstSet = descriptorSet;
+    descriptor_write.dstBinding = 0;
+    descriptor_write.descriptorCount = 1;
+    descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    descriptor_write.pImageInfo = &img_info;
+    // Break memory binding and attempt update
+    vkFreeMemory(m_device->device(), image_memory, nullptr);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         " used with no memory bound. Memory should be bound by calling vkBindImageMemory() and ");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "vkUpdateDescriptorsSets() failed write update validation for Descriptor Set 0x");
+    vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
+    m_errorMonitor->VerifyFound();
+    // Cleanup
+    vkDestroyImage(m_device->device(), image, NULL);
+    vkDestroySampler(m_device->device(), sampler, NULL);
+    vkDestroyImageView(m_device->device(), view, NULL);
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
+}
+
 TEST_F(VkLayerTest, InvalidPipeline) {
     // Attempt to bind an invalid Pipeline to a valid Command Buffer
     // ObjectTracker should catch this.
