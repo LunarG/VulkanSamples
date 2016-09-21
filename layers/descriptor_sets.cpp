@@ -690,8 +690,10 @@ bool cvdescriptorset::ValidateImageUpdate(VkImageView image_view, VkImageLayout 
         format = image_node->createInfo.format;
         usage = image_node->createInfo.usage;
         // Validate that memory is bound to image
-        if (ValidateMemoryIsBoundToImage(dev_data, image_node, "vkUpdateDescriptorSets()"))
+        if (ValidateMemoryIsBoundToImage(dev_data, image_node, "vkUpdateDescriptorSets()")) {
+            *error = "No memory bound to image.";
             return false;
+        }
     } else {
         // Also need to check the swapchains.
         auto swapchain = getSwapchainFromImage(dev_data, image);
@@ -1184,8 +1186,10 @@ bool cvdescriptorset::DescriptorSet::ValidateBufferUpdate(VkDescriptorBufferInfo
         *error = error_str.str();
         return false;
     }
-    if (ValidateMemoryIsBoundToBuffer(device_data_, buffer_node, "vkUpdateDescriptorSets()"))
+    if (ValidateMemoryIsBoundToBuffer(device_data_, buffer_node, "vkUpdateDescriptorSets()")) {
+        *error = "No memory bound to buffer.";
         return false;
+    }
     // Verify usage bits
     if (!ValidateBufferUsage(buffer_node, type, error)) {
         // error will have been updated by ValidateBufferUsage()

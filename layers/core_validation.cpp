@@ -633,8 +633,8 @@ static void clear_cmd_buf_and_mem_references(layer_data *dev_data, const VkComma
     clear_cmd_buf_and_mem_references(dev_data, getCBNode(dev_data, cb));
 }
 
-// For given MemObjInfo, report Obj & CB bindings
-static bool reportMemReferencesAndCleanUp(layer_data *dev_data, DEVICE_MEM_INFO *pMemObjInfo) {
+// For given MemObjInfo, report Obj & CB bindings. Clear any object bindings.
+static bool ReportMemReferencesAndCleanUp(layer_data *dev_data, DEVICE_MEM_INFO *pMemObjInfo) {
     bool skip_call = false;
     size_t cmdBufRefCount = pMemObjInfo->command_buffer_bindings.size();
     size_t objRefCount = pMemObjInfo->obj_bindings.size();
@@ -662,6 +662,24 @@ static bool reportMemReferencesAndCleanUp(layer_data *dev_data, DEVICE_MEM_INFO 
             log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, obj.type, obj.handle, __LINE__,
                     MEMTRACK_FREED_MEM_REF, "MEM", "VK Object 0x%" PRIxLEAST64 " still has a reference to mem obj 0x%" PRIxLEAST64,
                     obj.handle, (uint64_t)pMemObjInfo->mem);
+            // Clear mem binding for bound objects
+            switch (obj.type) {
+            case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT: {
+                auto image_node = getImageNode(dev_data, reinterpret_cast<VkImage &>(obj.handle));
+                assert(image_node); // Any destroyed images should already be removed from bindings
+                image_node->mem = VK_NULL_HANDLE;
+                break;
+            }
+            case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT: {
+                auto buff_node = getBufferNode(dev_data, reinterpret_cast<VkBuffer &>(obj.handle));
+                assert(buff_node); // Any destroyed buffers should already be removed from bindings
+                buff_node->mem = VK_NULL_HANDLE;
+                break;
+            }
+            default:
+                // Should only have buffer or image objects bound to memory
+                assert(0);
+            }
         }
         // Clear the list of hanging references
         pMemObjInfo->obj_bindings.clear();
@@ -688,10 +706,9 @@ static bool freeMemObjInfo(layer_data *dev_data, void *object, VkDeviceMemory me
                 clear_cmd_buf_and_mem_references(dev_data, cb);
             }
         }
-
-        // Now verify that no references to this mem obj remain and remove bindings
+        // Now check for any remaining references to this mem obj and remove bindings
         if (pInfo->command_buffer_bindings.size() || pInfo->obj_bindings.size()) {
-            skip_call |= reportMemReferencesAndCleanUp(dev_data, pInfo);
+            skip_call |= ReportMemReferencesAndCleanUp(dev_data, pInfo);
         }
         // Delete mem obj info
         dev_data->memObjMap.erase(dev_data->memObjMap.find(mem));
@@ -742,8 +759,9 @@ bool ValidateMemoryIsBoundToImage(const layer_data *dev_data, const IMAGE_NODE *
         if (0 == image_node->mem) {
             result = log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                              reinterpret_cast<const uint64_t &>(image_node->image), __LINE__, MEMTRACK_OBJECT_NOT_BOUND, "MEM",
-                             "%s: VkImage object 0x%" PRIxLEAST64 " used without first calling vkBindImageMemory.", api_name,
-                             reinterpret_cast<const uint64_t &>(image_node->image));
+                             "%s: VkImage object 0x%" PRIxLEAST64 " used with no memory bound. Memory should be bound by calling "
+                             "vkBindImageMemory() and then the bound memory must not be freed prior to this operation.",
+                             api_name, reinterpret_cast<const uint64_t &>(image_node->image));
         }
     }
     return result;
@@ -756,8 +774,9 @@ bool ValidateMemoryIsBoundToBuffer(const layer_data *dev_data, const BUFFER_NODE
         if (0 == buffer_node->mem) {
             result = log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
                              reinterpret_cast<const uint64_t &>(buffer_node->buffer), __LINE__, MEMTRACK_OBJECT_NOT_BOUND, "MEM",
-                             "%s: VkBuffer object 0x%" PRIxLEAST64 " used without first calling vkBindBufferMemory.", api_name,
-                             reinterpret_cast<const uint64_t &>(buffer_node->buffer));
+                             "%s: VkBuffer object 0x%" PRIxLEAST64 " used with no memory bound. Memory should be bound by calling "
+                             "vkBindImageMemory() and then the bound memory must not be freed prior to this operation.",
+                             api_name, reinterpret_cast<const uint64_t &>(buffer_node->buffer));
         }
     }
     return result;
@@ -5627,10 +5646,11 @@ static void RemoveMemoryRange(uint64_t handle, DEVICE_MEM_INFO *mem_info, bool i
     }
     erase_range->aliases.clear();
     mem_info->bound_ranges.erase(handle);
-    if (is_image)
+    if (is_image) {
         mem_info->bound_images.erase(handle);
-    else
+    } else {
         mem_info->bound_buffers.erase(handle);
+    }
 }
 
 static void RemoveBufferMemoryRange(uint64_t handle, DEVICE_MEM_INFO *mem_info) { RemoveMemoryRange(handle, mem_info, false); }
