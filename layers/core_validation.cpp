@@ -580,19 +580,19 @@ void AddCommandBufferBindingImage(const layer_data *dev_data, GLOBAL_CB_NODE *cb
             // Now update CBInfo's Mem reference list
             cb_node->memObjs.insert(img_node->mem);
         }
+        // Now update cb binding for image
         cb_node->object_bindings.insert({reinterpret_cast<uint64_t &>(img_node->image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT});
+        img_node->cb_bindings.insert(cb_node);
     }
-    // Now update cb binding for image
-    img_node->cb_bindings.insert(cb_node);
 }
 
 // Create binding link between given image view node and its image with command buffer node
 void AddCommandBufferBindingImageView(const layer_data *dev_data, GLOBAL_CB_NODE *cb_node, IMAGE_VIEW_STATE *view_state) {
     // First add bindings for imageView
     view_state->cb_bindings.insert(cb_node);
-    auto image_node = getImageNode(dev_data, view_state->create_info.image);
     cb_node->object_bindings.insert(
         {reinterpret_cast<uint64_t &>(view_state->image_view), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT});
+    auto image_node = getImageNode(dev_data, view_state->create_info.image);
     // Add bindings for image within imageView
     if (image_node) {
         AddCommandBufferBindingImage(dev_data, cb_node, image_node);
@@ -5675,13 +5675,16 @@ DestroyBufferView(VkDevice device, VkBufferView bufferView, const VkAllocationCa
 
 VKAPI_ATTR void VKAPI_CALL DestroyImage(VkDevice device, VkImage image, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-
+    bool skip = false;
     std::unique_lock<std::mutex> lock(global_lock);
     auto img_node = getImageNode(dev_data, image);
     if (img_node) {
+        VK_OBJECT obj_struct = {reinterpret_cast<uint64_t &>(img_node->image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT};
         // Any bound cmd buffers are now invalid
-        invalidateCommandBuffers(img_node->cb_bindings,
-                                 {reinterpret_cast<uint64_t &>(img_node->image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT});
+        invalidateCommandBuffers(img_node->cb_bindings, obj_struct);
+        skip |= ValidateObjectNotInUse(dev_data, img_node, obj_struct);
+    }
+    if (!skip) {
         // Clean up memory mapping, bindings and range references for image
         auto mem_info = getMemObjInfo(dev_data, img_node->mem);
         if (mem_info) {
@@ -5690,16 +5693,17 @@ VKAPI_ATTR void VKAPI_CALL DestroyImage(VkDevice device, VkImage image, const Vk
         }
         // Remove image from imageMap
         dev_data->imageMap.erase(img_node->image);
-    }
-    const auto& subEntry = dev_data->imageSubresourceMap.find(image);
-    if (subEntry != dev_data->imageSubresourceMap.end()) {
-        for (const auto& pair : subEntry->second) {
-            dev_data->imageLayoutMap.erase(pair);
+
+        const auto &subEntry = dev_data->imageSubresourceMap.find(image);
+        if (subEntry != dev_data->imageSubresourceMap.end()) {
+            for (const auto &pair : subEntry->second) {
+                dev_data->imageLayoutMap.erase(pair);
+            }
+            dev_data->imageSubresourceMap.erase(subEntry);
         }
-        dev_data->imageSubresourceMap.erase(subEntry);
+        lock.unlock();
+        dev_data->device_dispatch_table->DestroyImage(device, image, pAllocator);
     }
-    lock.unlock();
-    dev_data->device_dispatch_table->DestroyImage(device, image, pAllocator);
 }
 
 static bool ValidateMemoryTypes(const layer_data *dev_data, const DEVICE_MEM_INFO *mem_info, const uint32_t memory_type_bits,
