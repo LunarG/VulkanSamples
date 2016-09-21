@@ -5215,8 +5215,13 @@ static bool RetireFence(layer_data *dev_data, VkFence fence) {
                                  getQueueNode(dev_data, pFence->signaler.first),
                                  pFence->signaler.second);
     }
-
-    return false;
+    else {
+        /* Fence signaller is the WSI. We're not tracking what the WSI op
+         * actually /was/ in CV yet, but we need to mark the fence as retired.
+         */
+        pFence->state = FENCE_RETIRED;
+        return false;
+    }
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL
@@ -5265,7 +5270,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetFenceStatus(VkDevice device, VkFence fence) {
     VkResult result = dev_data->device_dispatch_table->GetFenceStatus(device, fence);
     lock.lock();
     if (result == VK_SUCCESS) {
-        skip_call |= RetireFence(fence);
+        skip_call |= RetireFence(dev_data, fence);
     }
     lock.unlock();
     if (skip_call)
