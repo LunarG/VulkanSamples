@@ -689,6 +689,9 @@ bool cvdescriptorset::ValidateImageUpdate(VkImageView image_view, VkImageLayout 
     if (image_node) {
         format = image_node->createInfo.format;
         usage = image_node->createInfo.usage;
+        // Validate that memory is bound to image
+        if (ValidateMemoryIsBoundToImage(dev_data, image_node, "vkUpdateDescriptorSets()"))
+            return false;
     } else {
         // Also need to check the swapchains.
         auto swapchain = getSwapchainFromImage(dev_data, image);
