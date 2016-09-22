@@ -11290,6 +11290,22 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
             }
         }
 
+        for (uint32_t i = 0; i < pPresentInfo->swapchainCount; ++i) {
+            // Note: this is imperfect, in that we can get confused about what
+            // did or didn't succeed-- but if the app does that, it's confused
+            // itself just as much.
+            auto local_result = pPresentInfo->pResults ? pPresentInfo->pResults[i] : result;
+
+            if (local_result != VK_SUCCESS && local_result != VK_SUBOPTIMAL_KHR)
+                continue; // this present didn't actually happen.
+
+            // Mark the image as having been released to the WSI
+            auto swapchain_data = getSwapchainNode(dev_data, pPresentInfo->pSwapchains[i]);
+            auto image = swapchain_data->images[pPresentInfo->pImageIndices[i]];
+            auto image_node = getImageNode(dev_data, image);
+            image_node->acquired = false;
+        }
+
         // Note: even though presentation is directed to a queue, there is no
         // direct ordering between QP and subsequent work, so QP (and its
         // semaphore waits) /never/ participate in any completion proof.
@@ -11353,6 +11369,12 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
             pSemaphore->signaled = true;
             pSemaphore->signaler.first = VK_NULL_HANDLE;
         }
+
+        // Mark the image as acquired.
+        auto swapchain_data = getSwapchainNode(dev_data, swapchain);
+        auto image = swapchain_data->images[*pImageIndex];
+        auto image_node = getImageNode(dev_data, image);
+        image_node->acquired = true;
     }
     lock.unlock();
 
