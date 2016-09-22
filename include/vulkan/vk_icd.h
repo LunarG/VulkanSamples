@@ -111,6 +111,12 @@ typedef struct {
 } VkIcdSurfaceXlib;
 #endif // VK_USE_PLATFORM_XLIB_KHR
 
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+typedef struct {
+    ANativeWindow* window;
+} VkIcdSurfaceAndroid;
+#endif //VK_USE_PLATFORM_ANDROID_KHR
+
 typedef struct {
     VkIcdSurfaceBase base;
     VkDisplayModeKHR displayMode;
