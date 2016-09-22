@@ -46,22 +46,16 @@ if(WIN32)
 endif()
 #=================================================================
 #=============================ANDROID=============================
-# Note: Android currently has its own CMakeLists.txt in the Android/app folder.
-if(ANDROID)
-    add_definitions(-DVK_USE_PLATFORM_ANDROID_KHR)
-endif()
+# Note: Android has its own CMakeLists.txt in the Android/app folder.
+#if(ANDROID)
+#    add_definitions(-DVK_USE_PLATFORM_ANDROID_KHR)
+#endif()
 #=================================================================
 
 #=========================Find Vulkan SDK=========================        # Get Path from the VULKAN_SDK environment variable.
 if(NOT DEFINED ENV{VULKAN_SDK})
-    message("===============================================")
     message("WARNING: VULKAN_SDK env-variable was not found!")
-    message("   Validation layers will not be available.    ")
-    message("===============================================")
-    set(ENV{VULKAN_SDK} "${CMAKE_CURRENT_SOURCE_DIR}/vulkan")             # Plan-B: If VULKAN_SDK is not set, use local copy,
 endif()
-
-#set(VULKAN_SDK $ENV{VULKAN_SDK} CACHE PATH "Path to the Vulkan's SDK." PARENT_SCOPE)   # Give user a chance to change it, using cmake-gui.
 set(VULKAN_SDK $ENV{VULKAN_SDK} CACHE PATH "Path to the Vulkan's SDK.")   # Give user a chance to change it, using cmake-gui.
 #=================================================================
 #include_directories("${VULKAN_SDK}/include")

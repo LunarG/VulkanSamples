@@ -41,13 +41,16 @@ Use Visual Studio to compile and run the sample project.
 
 ### Linux
 Unpack the Vulkan SDK, preferrably to your home directory.  
-Ensure that you have the VULKAN_SDK environment variable set up, to point to the Vulkan SDK's x86_64 subdirectory.  
-On Ubuntu, you can do this by adding the following line to your ~/.profile file:  
 
- `export VULKAN_SDK="$HOME/VulkanSDK/1.0.26.0/x86_64"`
+Use Qt-Creator to load the CMakeLists.txt project file directly, 
+or use CMake to generate project files for your favourite IDE.  
+
+Ensure that you have the VULKAN_SDK environment variable set up, to point to the Vulkan SDK.  
+On Ubuntu, this can be done globally by adding the following line to your ~/.profile file:  
+  
+  `export VULKAN_SDK="$HOME/VulkanSDK/1.0.26.0/x86_64"`
  
-Use CMake to load the CMakeLists.txt file and generate project files for your favorite IDE.  
-Alternatively, use Qt Creator to load the CMakeLists.txt file directly.  
+Or you may set VULKAN_SDK locally in Qt-Creator, cmake-gui, or your favourite IDE.  
 You should now be able to compile and run the sample project.
  
 
