@@ -152,12 +152,10 @@ class BUFFER_NODE : public BASE_NODE {
     VkDeviceSize memOffset;
     VkDeviceSize memSize; // Note: may differ from createInfo::size
     VkBufferCreateInfo createInfo;
-    BUFFER_NODE() : buffer(VK_NULL_HANDLE), mem(VK_NULL_HANDLE), memOffset(0), memSize(0), createInfo{} { in_use.store(0); };
     BUFFER_NODE(VkBuffer buff, const VkBufferCreateInfo *pCreateInfo)
         : buffer(buff), mem(VK_NULL_HANDLE), memOffset(0), memSize(0), createInfo(*pCreateInfo){};
-    BUFFER_NODE(const BUFFER_NODE &rh_obj)
-        : buffer(rh_obj.buffer), mem(rh_obj.mem), memOffset(rh_obj.memOffset), memSize(rh_obj.memSize),
-          createInfo(rh_obj.createInfo){};
+
+    BUFFER_NODE(BUFFER_NODE const &rh_obj) = delete;
 };
 
 class BUFFER_VIEW_STATE : public BASE_NODE {
@@ -187,14 +185,10 @@ class IMAGE_NODE : public BASE_NODE {
     bool valid; // If this is a swapchain image backing memory track valid here as it doesn't have DEVICE_MEM_INFO
     VkDeviceSize memOffset;
     VkDeviceSize memSize;
-    IMAGE_NODE() : image(VK_NULL_HANDLE), createInfo{}, mem(VK_NULL_HANDLE), valid(false), memOffset(0), memSize(0){};
     IMAGE_NODE(VkImage img, const VkImageCreateInfo *pCreateInfo)
         : image(img), createInfo(*pCreateInfo), mem(VK_NULL_HANDLE), valid(false), memOffset(0), memSize(0){};
-    IMAGE_NODE(const IMAGE_NODE &rh_obj)
-        : image(rh_obj.image), createInfo(rh_obj.createInfo), mem(rh_obj.mem), valid(rh_obj.valid), memOffset(rh_obj.memOffset),
-          memSize(rh_obj.memSize) {
-        in_use.store(rh_obj.in_use.load());
-    };
+
+    IMAGE_NODE(IMAGE_NODE const &rh_obj) = delete;
 };
 
 class IMAGE_VIEW_STATE : public BASE_NODE {
@@ -293,7 +287,7 @@ enum DRAW_TYPE {
 
 class IMAGE_CMD_BUF_LAYOUT_NODE {
   public:
-    IMAGE_CMD_BUF_LAYOUT_NODE() {}
+    IMAGE_CMD_BUF_LAYOUT_NODE() = default;
     IMAGE_CMD_BUF_LAYOUT_NODE(VkImageLayout initialLayoutInput, VkImageLayout layoutInput)
         : initialLayout(initialLayoutInput), layout(layoutInput) {}
 
