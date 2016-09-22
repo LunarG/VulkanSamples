@@ -1,3 +1,30 @@
+/*
+*--------------------------------------------------------------------------
+* Copyright (c) 2015-2016 The Khronos Group Inc.
+* Copyright (c) 2015-2016 Valve Corporation
+* Copyright (c) 2015-2016 LunarG, Inc.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*
+* Author: Rene Lindsay <rene@lunarg.com>
+*
+*--------------------------------------------------------------------------
+* FIFO Buffer is used in the few cases where event messages need to be buffered.
+* EventType contains a union struct of all possible message types that may be retured by PollEvent.
+* WindowImpl is the abstraction layer base class for the platform-specific windowing code.
+*--------------------------------------------------------------------------
+*/
+
 #ifndef WINDOWIMPL_H
 #define WINDOWIMPL_H
 
@@ -22,7 +49,7 @@ public:
 
 //========================Event Message=========================
 struct EventType{
-    enum{NONE, MOUSE, KEY, TEXT, SHAPE, FOCUS, TOUCH} tag;
+    enum{NONE, MOUSE, KEY, TEXT, SHAPE, FOCUS, TOUCH} tag;                      // event type
     union{
         struct {eMouseAction action; int16_t x; int16_t y; uint8_t btn;}mouse;  // mouse move/click
         struct {eKeyAction   action; uint8_t keycode;}key;                      // Keyboard key state

@@ -76,18 +76,22 @@ The following extensions are loaded where available:
  > `VK_KHR_xcb_surface . . ` (On Linux)  
  > `VK_KHR_android_surface ` (On Android)  
 
-
 ### WSIWindow class
-The WSIWindow class creates a Vulkan window, and provides function calls to query keyboard and mouse state, as well as callbacks, to notify you of system events. (window / keyboard / mouse /touch-screen)
+The WSIWindow class creates a Vulkan window, and provides function calls to query keyboard and mouse state, as well as callbacks, to notify you of system events. (window / keyboard / mouse / touch-screen)
 #### The following query functions are provided:
+ - `GetWinPos . :` Get the window's current position, relative to the top-left corner of the display  
+ - `GetWinSize. :` Get the window's current width and height.
  - `GetKeyState :` Get the current state of the specified keyboard key. (see "keycodes.h" for a list of key codes.)  
  - `GetBtnState :` Get the state of the specified mouse button (1-5)  
  - `GetMousePos :` Get the current mouse position (x,y) within this window.  
- - `ShowKeyboard:` On Android, show the Soft-keyboard, and enable OnTextEvent.  
- - `Close .  .  . :` Close the window."
 
+#### The following control functions are provided:
+ - `ShowKeyboard. :` On Android, show the Soft-keyboard, and enable OnTextEvent.  
+ - `Close . . . . :` Close the window.  
+ - `PollEvent . . :` Fetch one event from the message queue, for processing.  
+ - `ProcessEvents :` Fetch all events from the message queue, and dispatch to event handlers.
 
-#### The following event callbacks are provided:
+#### The following event handler callbacks are provided:
  - `OnMouseEvent :` Mouse movement and button clicks
  - `OnKeyEvent . :` Keyboard key-press and key-release events
  - `OnTextEvent. :` Keyboard Text input, using OS keyboard layout and language settings.

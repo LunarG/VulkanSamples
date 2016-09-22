@@ -17,13 +17,12 @@
 * limitations under the License.
 *
 * Author: Rene Lindsay <rene@lunarg.com>
-* (See: http://www.freebsddiary.org/APC/usb_hid_usages.php)
 *
 *--------------------------------------------------------------------------
 *
 *  This class creates a Vulkan window and provides the main event processing loop.
 *  It provides functions for querying the current state of the window, keyboard,
-*  and mouse.  Events may be processed via polling or callbacks.
+*  and mouse. Also, events may be processed via either polling or callbacks.
 *
 *  For polling, use the "PollEvent" function to return one event at a time,
 *  and process, using a case statement.  For an example, see the "ProcessEvents" implementation.
