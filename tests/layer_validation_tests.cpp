@@ -7006,7 +7006,7 @@ TEST_F(VkLayerTest, ImageMemoryNotBound) {
 
     // Introduce error, do not call vkBindImageMemory(m_device->device(), image, image_mem, 0);
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         " used with no memory bound. Memory should be bound by calling vkBindImageMemory() and ");
+                                         " used with no memory bound. Memory should be bound by calling vkBindImageMemory().");
 
     m_commandBuffer->BeginCommandBuffer();
     VkClearColorValue ccv;
@@ -7065,7 +7065,7 @@ TEST_F(VkLayerTest, BufferMemoryNotBound) {
 
     // Introduce failure by not calling vkBindBufferMemory(m_device->device(), buffer, mem, 0);
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         " used with no memory bound. Memory should be bound by calling vkBindImageMemory() and ");
+                                         " used with no memory bound. Memory should be bound by calling vkBindBufferMemory().");
     VkBufferImageCopy region = {};
     region.bufferRowLength = 128;
     region.bufferImageHeight = 128;
@@ -7803,7 +7803,7 @@ TEST_F(VkLayerTest, DescriptorImageUpdateNoMemoryBound) {
     // Break memory binding and attempt update
     vkFreeMemory(m_device->device(), image_memory, nullptr);
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         " used with no memory bound. Memory should be bound by calling vkBindImageMemory() and ");
+                                         " previously bound memory was freed. Memory must not be freed prior to this operation.");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "vkUpdateDescriptorsSets() failed write update validation for Descriptor Set 0x");
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
@@ -7993,12 +7993,11 @@ TEST_F(VkLayerTest, InvalidBufferViewObject) {
 }
 
 TEST_F(VkLayerTest, CreateBufferViewNoMemoryBoundToBuffer) {
-    TEST_DESCRIPTION("Attempt to create a buffer view with a buffer that has"
-                     " no memory bound to it.");
+    TEST_DESCRIPTION("Attempt to create a buffer view with a buffer that has no memory bound to it.");
 
     VkResult err;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         " used with no memory bound. Memory should be bound by calling vkBindImageMemory() and ");
+                                         " used with no memory bound. Memory should be bound by calling vkBindBufferMemory().");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
@@ -8204,7 +8203,7 @@ TEST_F(VkLayerTest, DescriptorBufferUpdateNoMemoryBound) {
                      "that doesn't have memory bound");
     VkResult err;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         " used with no memory bound. Memory should be bound by calling vkBindImageMemory() and ");
+                                         " used with no memory bound. Memory should be bound by calling vkBindBufferMemory().");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "vkUpdateDescriptorsSets() failed write update validation for Descriptor Set 0x");
 
@@ -16004,7 +16003,7 @@ TEST_F(VkLayerTest, InvalidImageView) {
 TEST_F(VkLayerTest, CreateImageViewNoMemoryBoundToImage) {
     VkResult err;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         " used with no memory bound. Memory should be bound by calling vkBindImageMemory() and ");
+                                         " used with no memory bound. Memory should be bound by calling vkBindImageMemory().");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
