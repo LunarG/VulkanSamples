@@ -189,6 +189,16 @@ adb install ./tri/bin/NativeActivity-debug.apk
 adb shell am start com.example.Cube/android.app.NativeActivity
 adb shell am start com.example.Tri/android.app.NativeActivity
 ```
+To build, install, and run the Smoke demo for Android, run the following, and any
+prompts that come back from the script:
+```
+./update_external_sources.sh --glslang
+cd demos/smoke/android
+export ANDROID_SDK_HOME=<path to Android/Sdk>
+export ANDROID_NDK_HOME=<path to Android/Sdk/ndk-bundle>
+./build-and-install
+adb shell am start com.example.Smoke/android.app.NativeActivity
+```
 
 ## Ninja Builds - All Platforms
 The [Qt Creator IDE](https://qt.io/download-open-source/#section-2) can open a root CMakeList.txt as a project directly, and it provides tools within Creator to configure and generate Vulkan SDK build files for one to many targets concurrently, resolving configuration issues as needed. Alternatively, when invoking CMake use the -G Codeblocks Ninja option to generate Ninja build files to be used as project files for QtCreator
