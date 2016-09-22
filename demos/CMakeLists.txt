@@ -44,23 +44,19 @@ if(WIN32)
     endforeach()
 
     add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/tri-vert.spv
-       COMMAND ${GLSLANG_VALIDATOR} -s -V ${PROJECT_SOURCE_DIR}/demos/tri.vert
-       COMMAND move vert.spv ${CMAKE_BINARY_DIR}/demos/tri-vert.spv
+       COMMAND ${GLSLANG_VALIDATOR} -s -V -o ${CMAKE_BINARY_DIR}/demos/tri-vert.spv ${PROJECT_SOURCE_DIR}/demos/tri.vert
        DEPENDS tri.vert ${GLSLANG_VALIDATOR}
        )
     add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/tri-frag.spv
-       COMMAND ${GLSLANG_VALIDATOR} -s -V ${PROJECT_SOURCE_DIR}/demos/tri.frag
-       COMMAND move frag.spv ${CMAKE_BINARY_DIR}/demos/tri-frag.spv
+       COMMAND ${GLSLANG_VALIDATOR} -s -V -o ${CMAKE_BINARY_DIR}/demos/tri-frag.spv ${PROJECT_SOURCE_DIR}/demos/tri.frag
        DEPENDS tri.frag ${GLSLANG_VALIDATOR}
        )
     add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/cube-vert.spv
-       COMMAND ${GLSLANG_VALIDATOR} -s -V ${PROJECT_SOURCE_DIR}/demos/cube.vert
-       COMMAND move vert.spv ${CMAKE_BINARY_DIR}/demos/cube-vert.spv
+       COMMAND ${GLSLANG_VALIDATOR} -s -V -o ${CMAKE_BINARY_DIR}/demos/cube-vert.spv ${PROJECT_SOURCE_DIR}/demos/cube.vert
        DEPENDS cube.vert ${GLSLANG_VALIDATOR}
        )
     add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/cube-frag.spv
-       COMMAND ${GLSLANG_VALIDATOR} -s -V ${PROJECT_SOURCE_DIR}/demos/cube.frag
-       COMMAND move frag.spv ${CMAKE_BINARY_DIR}/demos/cube-frag.spv
+       COMMAND ${GLSLANG_VALIDATOR} -s -V -o ${CMAKE_BINARY_DIR}/demos/cube-frag.spv ${PROJECT_SOURCE_DIR}/demos/cube.frag
        DEPENDS cube.frag ${GLSLANG_VALIDATOR}
        )
    file(COPY cube.vcxproj.user DESTINATION ${CMAKE_BINARY_DIR}/demos)
