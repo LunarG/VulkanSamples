@@ -146,7 +146,6 @@ struct DESCRIPTOR_POOL_NODE : BASE_NODE {
 
 class BUFFER_NODE : public BASE_NODE {
   public:
-    using BASE_NODE::in_use;
     VkBuffer buffer;
     VkDeviceMemory mem;
     VkDeviceSize memOffset;
@@ -178,7 +177,6 @@ struct SAMPLER_NODE : public BASE_NODE {
 
 class IMAGE_NODE : public BASE_NODE {
   public:
-    using BASE_NODE::in_use;
     VkImage image;
     VkImageCreateInfo createInfo;
     VkDeviceMemory mem;

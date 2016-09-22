@@ -148,14 +148,12 @@ class FENCE_NODE {
 
 class SEMAPHORE_NODE : public BASE_NODE {
   public:
-    using BASE_NODE::in_use;
     std::pair<VkQueue, uint64_t> signaler;
     bool signaled;
 };
 
 class EVENT_NODE : public BASE_NODE {
   public:
-    using BASE_NODE::in_use;
     int write_in_use;
     bool needsSignaled;
     VkPipelineStageFlags stageMask;
@@ -179,8 +177,6 @@ class QUERY_POOL_NODE : public BASE_NODE {
 
 class FRAMEBUFFER_NODE : public BASE_NODE {
   public:
-    using BASE_NODE::in_use;
-    using BASE_NODE::cb_bindings;
     VkFramebuffer framebuffer;
     safe_VkFramebufferCreateInfo createInfo;
     safe_VkRenderPassCreateInfo renderPassCreateInfo;
