@@ -54,6 +54,7 @@ class MyWindow : public WSIWindow{
         printf("Shape: x=%d y=%d width=%4d height=%4d\n",x,y,width, height);
     }
 
+    //--Window gained/lost focus--
     void OnFocusEvent(bool hasFocus){
         printf("Focus: %s\n", hasFocus ? "True" : "False");
     }

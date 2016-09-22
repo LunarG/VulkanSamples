@@ -40,7 +40,7 @@ Use cmake-gui to load CMakeLists.txt, and generate the Visual Studio project.
 Use Visual Studio to compile and run the sample project.
 
 ### Linux
-Unpack the Vulkan SDK, preferrably to your home directory.  
+Install the Vulkan SDK, preferrably to your home directory.  
 
 Use Qt-Creator to load the CMakeLists.txt project file directly, 
 or use CMake to generate project files for your favourite IDE.  

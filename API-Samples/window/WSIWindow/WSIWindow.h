@@ -65,15 +65,15 @@ public:
     WSIWindow(CInstance& inst, const char* title, uint width, uint height);
     virtual ~WSIWindow();
     //--State query functions--
-    void GetWinPos(int16_t& x, int16_t& y);            // Get the window's x,y position
+    void GetWinPos(int16_t& x, int16_t& y);            // Get the window's x,y position, relative to top-left
     void GetWinSize(int16_t& width, int16_t& height);  // Get the window's width and height
     bool GetKeyState(const eKeycode key);              // Returns true if specified key is pressed. (see keycodes.h)
     bool GetBtnState(const uint8_t  btn);              // Returns true if specified mouse button is pressed (button 1-5)
     void GetMousePos(int16_t& x, int16_t& y);          // Get mouse (x,y) coordinate within window client area
+
     //--Control functions--
     void ShowKeyboard(bool enabled);                   // on Android, show the soft-keyboard.
     void Close();                                      // Close the window
-    //--Main process loop--
     EventType PollEvent();                             // Return a single event from the queue (lower-level alternative to using "ProcessEvents")
     bool ProcessEvents();                              // Poll for events, and call appropriate event handlers. Returns false if window is being closed.
 

@@ -56,7 +56,7 @@ endif()
 if(NOT DEFINED ENV{VULKAN_SDK})
     message("WARNING: VULKAN_SDK env-variable was not found!")
 endif()
-set(VULKAN_SDK $ENV{VULKAN_SDK} CACHE PATH "Path to the Vulkan's SDK.")   # Give user a chance to change it, using cmake-gui.
+set(VULKAN_SDK $ENV{VULKAN_SDK} CACHE PATH "Path to the Vulkan SDK.")     # Give user a chance to change it, using cmake-gui.
 #=================================================================
 #include_directories("${VULKAN_SDK}/include")
 target_include_directories(${LIBRARY_NAME} PUBLIC "${VULKAN_SDK}/include")
