@@ -11314,6 +11314,14 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
     bool skip_call = false;
 
     std::unique_lock<std::mutex> lock(global_lock);
+
+    if (fence == VK_NULL_HANDLE && semaphore == VK_NULL_HANDLE) {
+        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                             reinterpret_cast<uint64_t &>(device), __LINE__, DRAWSTATE_NO_SYNC_FOR_ACQUIRE, "DS",
+                             "vkAcquireNextImageKHR: Semaphore and fence cannot both be VK_NULL_HANDLE. There would be no way "
+                             "to determine the completion of this operation.");
+    }
+
     auto pSemaphore = getSemaphoreNode(dev_data, semaphore);
     if (pSemaphore && pSemaphore->signaled) {
         skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,

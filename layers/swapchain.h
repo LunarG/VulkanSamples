@@ -73,7 +73,6 @@ enum SWAPCHAIN_ERROR {
                                                 // vkGetPhysicalDeviceQueueFamilyProperties()
     SWAPCHAIN_SURFACE_NOT_SUPPORTED_WITH_QUEUE, // A surface is not supported by a given queueFamilyIndex, as seen by
                                                 // vkGetPhysicalDeviceSurfaceSupportKHR()
-    SWAPCHAIN_NO_SYNC_FOR_ACQUIRE,      // vkAcquireNextImageKHR should be called with a valid semaphore and/or fence
     SWAPCHAIN_GET_SUPPORTED_DISPLAYS_WITHOUT_QUERY,     // vkGetDisplayPlaneSupportedDisplaysKHR should be called after querying 
                                                         // device display plane properties
     SWAPCHAIN_PLANE_INDEX_TOO_LARGE,    // a planeIndex value is larger than what vkGetDisplayPlaneSupportedDisplaysKHR returns

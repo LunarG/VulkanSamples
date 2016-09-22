@@ -235,6 +235,7 @@ enum DRAW_STATE_ERROR {
                                              // granularity
     DRAWSTATE_PUSH_CONSTANTS_ERROR,          // Push constants exceed maxPushConstantSize
     DRAWSTATE_INVALID_SUBPASS_INDEX,         // Stepping beyond last subpass, or not reaching it
+    DRAWSTATE_NO_SYNC_FOR_ACQUIRE,           // AcquireNextImageKHR with no sync object
 };
 
 // Shader Checker ERROR codes

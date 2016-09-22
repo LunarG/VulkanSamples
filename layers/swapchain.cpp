@@ -2089,13 +2089,6 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
                              "vkAcquireNextImageKHR() called even though the %s extension was not enabled for this VkDevice.",
                              VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     }
-    if ((semaphore == VK_NULL_HANDLE) && (fence == VK_NULL_HANDLE)) {
-        skip_call |=
-            log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                    reinterpret_cast<uint64_t>(device), __LINE__, SWAPCHAIN_NO_SYNC_FOR_ACQUIRE, swapchain_layer_name,
-                    "vkAcquireNextImageKHR() called with both the semaphore and fence parameters set to VK_NULL_HANDLE (at "
-                    "least one should be used).");
-    }
     SwpSwapchain *pSwapchain = NULL;
     {
         auto it = my_data->swapchainMap.find(swapchain);
