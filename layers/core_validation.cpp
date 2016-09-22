@@ -11254,19 +11254,36 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
 
     for (uint32_t i = 0; i < pPresentInfo->swapchainCount; ++i) {
         auto swapchain_data = getSwapchainNode(dev_data, pPresentInfo->pSwapchains[i]);
-        if (swapchain_data && pPresentInfo->pImageIndices[i] < swapchain_data->images.size()) {
-            VkImage image = swapchain_data->images[pPresentInfo->pImageIndices[i]];
-            skip_call |= ValidateImageMemoryIsValid(dev_data, getImageNode(dev_data, image), "vkQueuePresentKHR()");
-            vector<VkImageLayout> layouts;
-            if (FindLayouts(dev_data, image, layouts)) {
-                for (auto layout : layouts) {
-                    if (layout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
-                        skip_call |=
-                                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT,
-                                        reinterpret_cast<uint64_t &>(queue), __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                                        "Images passed to present must be in layout "
-                                        "VK_IMAGE_LAYOUT_PRESENT_SRC_KHR but is in %s",
-                                        string_VkImageLayout(layout));
+        if (swapchain_data) {
+            if (pPresentInfo->pImageIndices[i] >= swapchain_data->images.size()) {
+                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
+                                     reinterpret_cast<uint64_t const &>(pPresentInfo->pSwapchains[i]), __LINE__, DRAWSTATE_INVALID_SWAPCHAIN_IMAGE,
+                                     "DS", "vkQueuePresentKHR: Swapchain image index too large (%u). There are only %u images in this swapchain.",
+                                     pPresentInfo->pImageIndices[i], (uint32_t)swapchain_data->images.size());
+            }
+            else {
+                auto image = swapchain_data->images[pPresentInfo->pImageIndices[i]];
+                auto image_node = getImageNode(dev_data, image);
+                skip_call |= ValidateImageMemoryIsValid(dev_data, image_node, "vkQueuePresentKHR()");
+
+                if (!image_node->acquired) {
+                    skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
+                                         reinterpret_cast<uint64_t const &>(pPresentInfo->pSwapchains[i]), __LINE__, DRAWSTATE_SWAPCHAIN_IMAGE_NOT_ACQUIRED,
+                                         "DS", "vkQueuePresentKHR: Swapchain image index %u has not been acquired.",
+                                         pPresentInfo->pImageIndices[i]);
+                }
+
+                vector<VkImageLayout> layouts;
+                if (FindLayouts(dev_data, image, layouts)) {
+                    for (auto layout : layouts) {
+                        if (layout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
+                            skip_call |=
+                                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT,
+                                            reinterpret_cast<uint64_t &>(queue), __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                                            "Images passed to present must be in layout "
+                                            "VK_IMAGE_LAYOUT_PRESENT_SRC_KHR but is in %s",
+                                            string_VkImageLayout(layout));
+                        }
                     }
                 }
             }
