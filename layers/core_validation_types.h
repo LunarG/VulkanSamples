@@ -162,7 +162,6 @@ class BUFFER_NODE : public BASE_NODE {
 
 class BUFFER_VIEW_STATE : public BASE_NODE {
   public:
-    using BASE_NODE::in_use;
     VkBufferView buffer_view;
     VkBufferViewCreateInfo create_info;
     BUFFER_VIEW_STATE() : buffer_view(VK_NULL_HANDLE), create_info{} {};
@@ -200,7 +199,6 @@ class IMAGE_NODE : public BASE_NODE {
 
 class IMAGE_VIEW_STATE : public BASE_NODE {
   public:
-    using BASE_NODE::in_use;
     VkImageView image_view;
     VkImageViewCreateInfo create_info;
     IMAGE_VIEW_STATE() : image_view(VK_NULL_HANDLE), create_info{} {};
