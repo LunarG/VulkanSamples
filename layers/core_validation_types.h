@@ -315,35 +315,12 @@ struct RENDER_PASS_NODE : public BASE_NODE {
     VkRenderPassCreateInfo const *pCreateInfo;
     std::vector<bool> hasSelfDependency;
     std::vector<DAGNode> subpassToNode;
-    std::vector<std::vector<VkFormat>> subpassColorFormats;
     std::vector<MT_PASS_ATTACHMENT_INFO> attachments;
     std::unordered_map<uint32_t, bool> attachment_first_read;
     std::unordered_map<uint32_t, VkImageLayout> attachment_first_layout;
 
-    RENDER_PASS_NODE(VkRenderPassCreateInfo const *pCreateInfo) : pCreateInfo(pCreateInfo) {
-        uint32_t i;
-
-        subpassColorFormats.reserve(pCreateInfo->subpassCount);
-        for (i = 0; i < pCreateInfo->subpassCount; i++) {
-            const VkSubpassDescription *subpass = &pCreateInfo->pSubpasses[i];
-            std::vector<VkFormat> color_formats;
-            uint32_t j;
-
-            color_formats.reserve(subpass->colorAttachmentCount);
-            for (j = 0; j < subpass->colorAttachmentCount; j++) {
-                const uint32_t att = subpass->pColorAttachments[j].attachment;
-
-                if (att != VK_ATTACHMENT_UNUSED) {
-                    color_formats.push_back(pCreateInfo->pAttachments[att].format);
-                }
-                else {
-                    color_formats.push_back(VK_FORMAT_UNDEFINED);
-                }
-            }
-
-            subpassColorFormats.push_back(color_formats);
-        }
-    }
+    RENDER_PASS_NODE(VkRenderPassCreateInfo const *pCreateInfo)
+        : pCreateInfo(pCreateInfo) {}
 };
 
 // Cmd Buffer Tracking
