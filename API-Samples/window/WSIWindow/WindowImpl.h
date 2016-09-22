@@ -44,7 +44,7 @@ protected:
     CInstance* instance;
     VkSurfaceKHR surface;
     FIFO<EventType,4> eventFIFO;                        //Event message queue buffer (max 4 items)
-    struct shape_t {int16_t x; int16_t y; uint16_t width; uint16_t height;}shape;  // window shape
+
     EventType MouseEvent(eMouseAction action, int16_t x, int16_t y, uint8_t btn);  // Mouse event
     EventType KeyEvent  (eKeyAction action, uint8_t key);                          // Keyboard event
     EventType TextEvent (const char* str);                                         // Text event
@@ -54,6 +54,8 @@ public:
     bool running;
     bool textinput;
     bool has_focus;
+    struct shape_t {int16_t x; int16_t y; uint16_t width; uint16_t height;}shape;  // window shape
+
     WindowImpl() : instance(0), running(false), textinput(false), has_focus(false){}
     virtual ~WindowImpl() {}
     virtual void Close() { running = false; }

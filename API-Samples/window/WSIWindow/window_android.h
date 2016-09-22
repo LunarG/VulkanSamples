@@ -20,17 +20,7 @@ class CMTouch{
 public:
     int count;
     CPointer Pointers[MAX_POINTERS];
-    MTouchEvent LastEvent;
-
     void Clear(){ memset(this,0,sizeof(this)); }
-
-    void Set(char id,eMouseAction act,float x,float y) {
-        if (id >= MAX_POINTERS)return;  // Exit if too many fingers
-        CPointer& P=Pointers[id];
-        if(act) P.active=(act==mDOWN);
-        P.x=x;  P.y=y;
-        LastEvent={act,x,y,id};
-    }
 
     EventType Event(eMouseAction action, float x, float y, uint8_t id) {
         if (id >= MAX_POINTERS)return {};  // Exit if too many fingers
