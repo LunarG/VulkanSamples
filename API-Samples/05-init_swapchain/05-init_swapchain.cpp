@@ -195,21 +195,8 @@ int sample_main(int argc, char *argv[]) {
         swapchainExtent = surfCapabilities.currentExtent;
     }
 
-    // If mailbox mode is available, use it, as is the lowest-latency non-
-    // tearing mode.  If not, try IMMEDIATE which will usually be available,
-    // and is fastest (though it tears).  If not, fall back to FIFO which is
-    // always available.
+    // The FIFO present mode is guaranteed by the spec to be supported
     VkPresentModeKHR swapchainPresentMode = VK_PRESENT_MODE_FIFO_KHR;
-    for (size_t i = 0; i < presentModeCount; i++) {
-        if (presentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
-            swapchainPresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
-            break;
-        }
-        if ((swapchainPresentMode != VK_PRESENT_MODE_MAILBOX_KHR) &&
-            (presentModes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR)) {
-            swapchainPresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
-        }
-    }
 
     // Determine the number of VkImage's to use in the swap chain.
     // We need to acquire only 1 presentable image at at time.
