@@ -181,10 +181,11 @@ class IMAGE_NODE : public BASE_NODE {
     VkImageCreateInfo createInfo;
     VkDeviceMemory mem;
     bool valid; // If this is a swapchain image backing memory track valid here as it doesn't have DEVICE_MEM_INFO
+    bool acquired;  // If this is a swapchain image, has it been acquired by the app.
     VkDeviceSize memOffset;
     VkDeviceSize memSize;
     IMAGE_NODE(VkImage img, const VkImageCreateInfo *pCreateInfo)
-        : image(img), createInfo(*pCreateInfo), mem(VK_NULL_HANDLE), valid(false), memOffset(0), memSize(0){};
+        : image(img), createInfo(*pCreateInfo), mem(VK_NULL_HANDLE), valid(false), acquired(false), memOffset(0), memSize(0){};
 
     IMAGE_NODE(IMAGE_NODE const &rh_obj) = delete;
 };
