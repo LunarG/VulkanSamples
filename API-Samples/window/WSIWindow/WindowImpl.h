@@ -1,7 +1,12 @@
 #ifndef WINDOWIMPL_H
 #define WINDOWIMPL_H
 
-#include "WSIWindow.h"
+#include "CInstance.h"
+#include "keycodes.h"
+
+typedef unsigned int uint;
+enum eMouseAction{ mMOVE, mDOWN, mUP };
+enum eKeyAction  { keyDOWN, keyUP };
 
 //======================== FIFO Buffer =========================
 template <typename T,uint SIZE> class FIFO{

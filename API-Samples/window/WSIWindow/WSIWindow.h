@@ -16,27 +16,16 @@
   #include <native.h>
 #endif
 
-//#include <stdio.h>
-//#include <vulkan/vulkan.h>
-
-#include "CInstance.h"
-#include "keycodes.h"
+#include "WindowImpl.h"
 
 #ifndef WSIWINDOW_H
 #define WSIWINDOW_H
-
-typedef unsigned int uint;
-enum eMouseAction{ mMOVE, mDOWN, mUP };
-enum eKeyAction  { keyDOWN, keyUP };
-
-class WindowImpl;
 
 //===========================WSIWindow==========================
 class WSIWindow{
     WindowImpl* pimpl;
 public:
     WSIWindow(CInstance& inst, const char* title, uint width, uint height);
-    //WSIWindow(const char* title,uint width,uint height);
     virtual ~WSIWindow();
 
     bool GetKeyState(eKeycode key);               //Returns true if specified key is pressed. (see keycodes.h)
@@ -47,11 +36,8 @@ public:
     //bool GetTextInput();                          //Returns true if text input is enabled (and on android, keyboard is visible.)
     void ShowKeyboard(bool enabled);              //on Android, show the soft-keyboard.
 
-
-
-
-    //bool PollEvent();
-    bool ProcessEvents();                         //Process keyboard and mouse events, and calls appropriate event handlers.
+    EventType PollEvent();                        //Return a single event from the queue (lower-level alternative to using "ProcessEvents")
+    bool ProcessEvents();                         //Process keyboard and mouse events, and calls appropriate event handlers. Returns false if window is being closed.
 
     //-- Virtual Functions as event handlers --
     virtual void OnMouseEvent(eMouseAction action, int16_t x, int16_t y, uint8_t btn){}   //Callback for mouse events

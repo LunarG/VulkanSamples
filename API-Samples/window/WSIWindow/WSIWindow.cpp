@@ -1,6 +1,4 @@
 #include "WSIWindow.h"
-#include "WindowImpl.h"
-
 #include "window_xcb.h"
 #include "window_win32.h"
 #include "window_android.h"
@@ -41,6 +39,8 @@ void WSIWindow::Close()    { pimpl->Close(); }
 //void WSIWindow::SetTextInput(bool enabled){ pimpl->TextInput(enabled);}           //Enable OnTextEvent, (and on Android, show the soft-keyboard)
 //bool WSIWindow::GetTextInput(){return pimpl->textinput;}                          //Returns true if text input is enabled (and on android, keyboard is visible.)
 void WSIWindow::ShowKeyboard(bool enabled){ pimpl->TextInput(enabled);}            //On Android, show the soft-keyboard,
+
+EventType WSIWindow::PollEvent(){return pimpl->GetEvent();}
 
 bool WSIWindow::ProcessEvents(){
     EventType e=pimpl->GetEvent();
