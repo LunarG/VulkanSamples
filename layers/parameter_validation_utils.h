@@ -174,7 +174,7 @@ bool validate_array(debug_report_data *report_data, const char *apiName, const P
     bool skip_call = false;
 
     // Count parameters not tagged as optional cannot be 0
-    if ((count == 0) && countRequired) {
+    if (countRequired && (count == 0)) {
         skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                             REQUIRED_PARAMETER, LayerName, "%s: parameter %s must be greater than 0", apiName,
                             countName.get_name().c_str());
