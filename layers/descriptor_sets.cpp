@@ -1359,6 +1359,7 @@ bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescri
                 return false;
             }
         }
+        break;
     }
     case Image: {
         for (uint32_t di = 0; di < update->descriptorCount; ++di) {
