@@ -5711,14 +5711,20 @@ VKAPI_ATTR void VKAPI_CALL DestroyBuffer(VkDevice device, VkBuffer buffer,
 VKAPI_ATTR void VKAPI_CALL
 DestroyBufferView(VkDevice device, VkBufferView bufferView, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-
+    bool skip = false;
     std::unique_lock<std::mutex> lock(global_lock);
     auto view_state = getBufferViewState(dev_data, bufferView);
     if (view_state) {
-        dev_data->bufferViewMap.erase(bufferView);
+        VK_OBJECT obj_struct = {reinterpret_cast<uint64_t &>(bufferView), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT};
+        skip |= ValidateObjectNotInUse(dev_data, view_state, obj_struct);
+        // Any bound cmd buffers are now invalid
+        invalidateCommandBuffers(view_state->cb_bindings, obj_struct);
     }
-    lock.unlock();
-    dev_data->device_dispatch_table->DestroyBufferView(device, bufferView, pAllocator);
+    if (!skip) {
+        dev_data->bufferViewMap.erase(bufferView);
+        lock.unlock();
+        dev_data->device_dispatch_table->DestroyBufferView(device, bufferView, pAllocator);
+    }
 }
 
 VKAPI_ATTR void VKAPI_CALL DestroyImage(VkDevice device, VkImage image, const VkAllocationCallbacks *pAllocator) {
