@@ -10025,18 +10025,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
         render_pass->renderPass = *pRenderPass;
         render_pass->hasSelfDependency = has_self_dependency;
         render_pass->subpassToNode = subpass_to_node;
-#if MTMERGESOURCE
-        // MTMTODO : Merge with code from above to eliminate duplication
-        for (uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i) {
-            VkAttachmentDescription desc = pCreateInfo->pAttachments[i];
-            MT_PASS_ATTACHMENT_INFO pass_info;
-            pass_info.load_op = desc.loadOp;
-            pass_info.store_op = desc.storeOp;
-            pass_info.stencil_load_op = desc.stencilLoadOp;
-            pass_info.stencil_store_op = desc.stencilStoreOp;
-            pass_info.attachment = i;
-            render_pass->attachments.push_back(pass_info);
-        }
+
         // TODO: Maybe fill list and then copy instead of locking
         std::unordered_map<uint32_t, bool> &attachment_first_read = render_pass->attachment_first_read;
         std::unordered_map<uint32_t, VkImageLayout> &attachment_first_layout = render_pass->attachment_first_layout;
@@ -10064,7 +10053,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
                 }
             }
         }
-#endif
+
         dev_data->renderPassMap[*pRenderPass] = render_pass;
     }
     return result;
@@ -10247,11 +10236,11 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
         if (renderPass) {
             uint32_t clear_op_size = 0; // Make sure pClearValues is at least as large as last LOAD_OP_CLEAR
             cb_node->activeFramebuffer = pRenderPassBegin->framebuffer;
-            for (size_t i = 0; i < renderPass->attachments.size(); ++i) {
+            for (size_t i = 0; i < renderPass->pCreateInfo->attachmentCount; ++i) {
                 MT_FB_ATTACHMENT_INFO &fb_info = framebuffer->attachments[i];
-                VkFormat format = renderPass->pCreateInfo->pAttachments[renderPass->attachments[i].attachment].format;
-                if (FormatSpecificLoadAndStoreOpSettings(format, renderPass->attachments[i].load_op,
-                                                         renderPass->attachments[i].stencil_load_op,
+                auto pAttachment = &renderPass->pCreateInfo->pAttachments[i];
+                if (FormatSpecificLoadAndStoreOpSettings(pAttachment->format, pAttachment->loadOp,
+                                                         pAttachment->stencilLoadOp,
                                                          VK_ATTACHMENT_LOAD_OP_CLEAR)) {
                     clear_op_size = static_cast<uint32_t>(i) + 1;
                     std::function<bool()> function = [=]() {
@@ -10259,16 +10248,16 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
                         return false;
                     };
                     cb_node->validate_functions.push_back(function);
-                } else if (FormatSpecificLoadAndStoreOpSettings(format, renderPass->attachments[i].load_op,
-                                                                renderPass->attachments[i].stencil_load_op,
+                } else if (FormatSpecificLoadAndStoreOpSettings(pAttachment->format, pAttachment->loadOp,
+                                                                pAttachment->stencilLoadOp,
                                                                 VK_ATTACHMENT_LOAD_OP_DONT_CARE)) {
                     std::function<bool()> function = [=]() {
                         SetImageMemoryValid(dev_data, getImageNode(dev_data, fb_info.image), false);
                         return false;
                     };
                     cb_node->validate_functions.push_back(function);
-                } else if (FormatSpecificLoadAndStoreOpSettings(format, renderPass->attachments[i].load_op,
-                                                                renderPass->attachments[i].stencil_load_op,
+                } else if (FormatSpecificLoadAndStoreOpSettings(pAttachment->format, pAttachment->loadOp,
+                                                                pAttachment->stencilLoadOp,
                                                                 VK_ATTACHMENT_LOAD_OP_LOAD)) {
                     std::function<bool()> function = [=]() {
                         return ValidateImageMemoryIsValid(dev_data, getImageNode(dev_data, fb_info.image),
@@ -10276,7 +10265,7 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
                     };
                     cb_node->validate_functions.push_back(function);
                 }
-                if (renderPass->attachment_first_read[renderPass->attachments[i].attachment]) {
+                if (renderPass->attachment_first_read[i]) {
                     std::function<bool()> function = [=]() {
                         return ValidateImageMemoryIsValid(dev_data, getImageNode(dev_data, fb_info.image),
                                                           "vkCmdBeginRenderPass()");
@@ -10374,18 +10363,18 @@ VKAPI_ATTR void VKAPI_CALL CmdEndRenderPass(VkCommandBuffer commandBuffer) {
                             "vkCmdEndRenderPass(): Called before reaching final subpass");
             }
 
-            for (size_t i = 0; i < pRPNode->attachments.size(); ++i) {
+            for (size_t i = 0; i < pRPNode->pCreateInfo->attachmentCount; ++i) {
                 MT_FB_ATTACHMENT_INFO &fb_info = framebuffer->attachments[i];
-                VkFormat format = pRPNode->pCreateInfo->pAttachments[pRPNode->attachments[i].attachment].format;
-                if (FormatSpecificLoadAndStoreOpSettings(format, pRPNode->attachments[i].store_op,
-                                                         pRPNode->attachments[i].stencil_store_op, VK_ATTACHMENT_STORE_OP_STORE)) {
+                auto pAttachment = &pRPNode->pCreateInfo->pAttachments[i];
+                if (FormatSpecificLoadAndStoreOpSettings(pAttachment->format, pAttachment->storeOp,
+                                                         pAttachment->stencilStoreOp, VK_ATTACHMENT_STORE_OP_STORE)) {
                     std::function<bool()> function = [=]() {
                         SetImageMemoryValid(dev_data, getImageNode(dev_data, fb_info.image), true);
                         return false;
                     };
                     pCB->validate_functions.push_back(function);
-                } else if (FormatSpecificLoadAndStoreOpSettings(format, pRPNode->attachments[i].store_op,
-                                                                pRPNode->attachments[i].stencil_store_op,
+                } else if (FormatSpecificLoadAndStoreOpSettings(pAttachment->format, pAttachment->storeOp,
+                                                                pAttachment->stencilStoreOp,
                                                                 VK_ATTACHMENT_STORE_OP_DONT_CARE)) {
                     std::function<bool()> function = [=]() {
                         SetImageMemoryValid(dev_data, getImageNode(dev_data, fb_info.image), false);

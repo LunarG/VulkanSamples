@@ -288,14 +288,6 @@ class IMAGE_CMD_BUF_LAYOUT_NODE {
     VkImageLayout layout;
 };
 
-struct MT_PASS_ATTACHMENT_INFO {
-    uint32_t attachment;
-    VkAttachmentLoadOp load_op;
-    VkAttachmentStoreOp store_op;
-    VkAttachmentLoadOp stencil_load_op;
-    VkAttachmentStoreOp stencil_store_op;
-};
-
 // Store the DAG.
 struct DAGNode {
     uint32_t pass;
@@ -308,7 +300,6 @@ struct RENDER_PASS_NODE : public BASE_NODE {
     VkRenderPassCreateInfo const *pCreateInfo;
     std::vector<bool> hasSelfDependency;
     std::vector<DAGNode> subpassToNode;
-    std::vector<MT_PASS_ATTACHMENT_INFO> attachments;
     std::unordered_map<uint32_t, bool> attachment_first_read;
     std::unordered_map<uint32_t, VkImageLayout> attachment_first_layout;
 
