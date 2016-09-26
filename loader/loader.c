@@ -4442,49 +4442,53 @@ terminator_EnumeratePhysicalDevices(VkInstance instance,
         icd = icd->next;
     }
 
-    *pPhysicalDeviceCount = inst->total_gpu_count;
-    if (!pPhysicalDevices) {
-        return res;
-    }
+    uint32_t copy_count = inst->total_gpu_count;
 
-    /* Initialize the output pPhysicalDevices  with wrapped loader terminator
-     * physicalDevice objects; save this list of wrapped objects in instance
-     * struct for later cleanup and use by trampoline code */
-    uint32_t j, idx = 0;
-    uint32_t copy_count = 0;
+    if (NULL != pPhysicalDevices) {
+        // Initialize the output pPhysicalDevices with wrapped loader
+        // terminator physicalDevice objects; save this list of
+        // wrapped objects in instance struct for later cleanup and
+        // use by trampoline code
+        uint32_t j, idx = 0;
 
-    copy_count = (inst->total_gpu_count < *pPhysicalDeviceCount)
-                     ? inst->total_gpu_count
-                     : *pPhysicalDeviceCount;
+        if (copy_count > *pPhysicalDeviceCount) {
+            copy_count = *pPhysicalDeviceCount;
+        }
 
-    if (inst->phys_devs_term)
-        loader_instance_heap_free(inst, inst->phys_devs_term);
-    inst->phys_devs_term = loader_instance_heap_alloc(
-        inst, sizeof(struct loader_physical_device) * copy_count,
-        VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-    if (!inst->phys_devs_term)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
+        if (inst->phys_devs_term) {
+            loader_instance_heap_free(inst, inst->phys_devs_term);
+        }
 
-    for (i = 0; idx < copy_count && i < inst->total_icd_count; i++) {
+        if (copy_count > 0) {
+            inst->phys_devs_term = loader_instance_heap_alloc(
+                inst, sizeof(struct loader_physical_device) * copy_count,
+                VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+            if (!inst->phys_devs_term) {
+                return VK_ERROR_OUT_OF_HOST_MEMORY;
+            }
+        }
 
-        for (j = 0; j < phys_devs[i].count && idx < copy_count; j++) {
-            loader_set_dispatch((void *)&inst->phys_devs_term[idx], inst->disp);
-            inst->phys_devs_term[idx].this_icd = phys_devs[i].this_icd;
-            inst->phys_devs_term[idx].icd_index = i;
-            inst->phys_devs_term[idx].phys_dev = phys_devs[i].phys_devs[j];
-            pPhysicalDevices[idx] =
-                (VkPhysicalDevice)&inst->phys_devs_term[idx];
-            idx++;
+        for (i = 0; idx < copy_count && i < inst->total_icd_count; i++) {
+            for (j = 0; j < phys_devs[i].count && idx < copy_count; j++) {
+                loader_set_dispatch((void *)&inst->phys_devs_term[idx],
+                                    inst->disp);
+                inst->phys_devs_term[idx].this_icd = phys_devs[i].this_icd;
+                inst->phys_devs_term[idx].icd_index = i;
+                inst->phys_devs_term[idx].phys_dev = phys_devs[i].phys_devs[j];
+                pPhysicalDevices[idx] =
+                    (VkPhysicalDevice)&inst->phys_devs_term[idx];
+                idx++;
+            }
+        }
+
+        if (copy_count < inst->total_gpu_count) {
+            inst->total_gpu_count = copy_count;
+            res = VK_INCOMPLETE;
         }
     }
+
     *pPhysicalDeviceCount = copy_count;
 
-    // TODO: Is phys_devs being leaked?
-
-    if (copy_count < inst->total_gpu_count) {
-        inst->total_gpu_count = copy_count;
-        return VK_INCOMPLETE;
-    }
     return res;
 }
 
