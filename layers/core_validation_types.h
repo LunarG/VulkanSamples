@@ -297,14 +297,14 @@ struct DAGNode {
 
 struct RENDER_PASS_NODE : public BASE_NODE {
     VkRenderPass renderPass;
-    VkRenderPassCreateInfo const *pCreateInfo;
+    safe_VkRenderPassCreateInfo createInfo;
     std::vector<bool> hasSelfDependency;
     std::vector<DAGNode> subpassToNode;
     std::unordered_map<uint32_t, bool> attachment_first_read;
     std::unordered_map<uint32_t, VkImageLayout> attachment_first_layout;
 
     RENDER_PASS_NODE(VkRenderPassCreateInfo const *pCreateInfo)
-        : pCreateInfo(pCreateInfo) {}
+        : createInfo(pCreateInfo) {}
 };
 
 // Cmd Buffer Tracking
