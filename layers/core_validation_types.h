@@ -161,11 +161,8 @@ class BUFFER_VIEW_STATE : public BASE_NODE {
   public:
     VkBufferView buffer_view;
     VkBufferViewCreateInfo create_info;
-    BUFFER_VIEW_STATE() : buffer_view(VK_NULL_HANDLE), create_info{} {};
     BUFFER_VIEW_STATE(VkBufferView bv, const VkBufferViewCreateInfo *ci) : buffer_view(bv), create_info(*ci){};
-    BUFFER_VIEW_STATE(const BUFFER_VIEW_STATE &rh_obj) : buffer_view(rh_obj.buffer_view), create_info(rh_obj.create_info) {
-        in_use.store(rh_obj.in_use.load());
-    };
+    BUFFER_VIEW_STATE(const BUFFER_VIEW_STATE &rh_obj) = delete;
 };
 
 struct SAMPLER_NODE : public BASE_NODE {
@@ -194,11 +191,8 @@ class IMAGE_VIEW_STATE : public BASE_NODE {
   public:
     VkImageView image_view;
     VkImageViewCreateInfo create_info;
-    IMAGE_VIEW_STATE() : image_view(VK_NULL_HANDLE), create_info{} {};
     IMAGE_VIEW_STATE(VkImageView iv, const VkImageViewCreateInfo *ci) : image_view(iv), create_info(*ci){};
-    IMAGE_VIEW_STATE(const IMAGE_VIEW_STATE &rh_obj) : image_view(rh_obj.image_view), create_info(rh_obj.create_info) {
-        in_use.store(rh_obj.in_use.load());
-    };
+    IMAGE_VIEW_STATE(const IMAGE_VIEW_STATE &rh_obj) = delete;
 };
 
 // Simple struct to hold handle and type of object so they can be uniquely identified and looked up in appropriate map
