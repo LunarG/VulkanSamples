@@ -120,8 +120,8 @@ The Draw State portion of the core validation layer tracks state leading into Dr
 | NA | Enum used for errors in the layer itself. This does not indicate an app issue, but instead a bug in the layer. | INTERNAL_ERROR | | TODO | None |
 | NA | Enum used when VK_LAYER_LUNARG_core_validation attempts to allocate memory for its own internal use and is unable to. | OUT_OF_MEMORY | | TODO | None |
 | Bad subpass indexing | Must not step beyond last subpass in a renderpass instance, and must reach the last subpass before CmdEndRenderPass. | INVALID_SUBPASS_INDEX | vkCmdNextSubpass | RenderPassExcessiveNextSubpass | NA |
-| Proper synchronization of acquired images | vkAcquireNextImageKHR should be called with a valid semaphore and/or fence | NO_SYNC_FOR_ACQUIRE | vkAcquireNextImageKHR | TODO | None |
-| Swapchain image index too large | Validates that an image index is within the number of images in a swapchain | INVALID_SWAPCHAIN_IMAGE | vkQueuePresentKHR | VkWsiEnabledLayerTest.TestEnabledWsi | None |
+| Proper synchronization of acquired images | vkAcquireNextImageKHR should be called with a valid semaphore and/or fence | SWAPCHAIN_NO_SYNC_FOR_ACQUIRE | vkAcquireNextImageKHR | TODO | None |
+| Swapchain image index too large | Validates that an image index is within the number of images in a swapchain | SWAPCHAIN_INVALID_IMAGE | vkQueuePresentKHR | VkWsiEnabledLayerTest.TestEnabledWsi | None |
 | Can't present a non-owned image | Validates that application only presents images that it owns | SWAPCHAIN_IMAGE_NOT_ACQUIRED | vkQueuePresentKHR | TODO | None |
 
 ### VK_LAYER_LUNARG_core_validation Draw State Pending Work
