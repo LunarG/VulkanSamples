@@ -22,7 +22,7 @@
 ## Features
  - Create a Vulkan instance.
  - Load WSI Surface extensions
- - Create a Vulkan window. (one or more)
+ - Create a Vulkan window.
  - Mouse input
  - Keyboard input (keycodes or localized text)
  - Window management (Todo: Full-screen mode)
@@ -78,8 +78,8 @@ The following extensions are loaded where available:
 
 ### WSIWindow class
 The WSIWindow class creates a Vulkan window, and provides function calls to query keyboard and mouse state, as well as callbacks, to notify you of system events. (window / keyboard / mouse / touch-screen)
-The WSIWindow constructor requires a CInstance parameter, as well as the window's title, width and height.  These dimensions only apply to Windows and Linux, but are ignored on Android.
-However, right after window creation, the OnShapeEvent callback will be triggered, to return the actual window dimensions.
+The WSIWindow constructor requires a CInstance parameter, as well as the window's title, width and height.  These dimensions only apply to Linux and Windows, but are ignored on Android.
+However, right after window creation, the OnResizeEvent callback will be triggered, to return the actual window dimensions.
 
 #### The following query functions are provided:
  - `GetWinPos . :` Get the window's current position, relative to the top-left corner of the display  
@@ -98,13 +98,13 @@ However, right after window creation, the OnShapeEvent callback will be triggere
  - `OnMouseEvent :` Mouse movement and button clicks
  - `OnKeyEvent . :` Keyboard key-press and key-release events
  - `OnTextEvent. :` Keyboard Text input, using OS keyboard layout and language settings.
- - `OnShapeEvent :` Window move / resize events
+ - `OnMoveEvent. :` Window move events
+ - `OnResizeEvent:` Window resize events
  - `OnFocusEvent :` Window gained / lost focus
  - `OnTouchEvent :` Touch-screen events, tracking up to 10 fingers.
 
 ## Examples
 ### Example 1: Create a Vulkan instance and load extensions.
-        #include <stdio.h>
         #include "WSIWindow.h"
 
         int main(){
@@ -114,7 +114,6 @@ However, right after window creation, the OnShapeEvent callback will be triggere
         }
 
 ### Example 2: Create a Vulkan window.
-        #include <stdio.h>
         #include "WSIWindow.h"
 
         int main(){
@@ -125,7 +124,6 @@ However, right after window creation, the OnShapeEvent callback will be triggere
         }
 
 ### Example 3: Query the state of a keyboard key
-        #include <stdio.h>
         #include "WSIWindow.h"
 
         int main(){
@@ -143,7 +141,6 @@ However, right after window creation, the OnShapeEvent callback will be triggere
 >and override the virtual functions for the appropriate events. (see WSIWindow.h)  
 
 
-        #include <stdio.h>
         #include "WSIWindow.h"
 
         class MyWindow : public WSIWindow{
@@ -166,9 +163,9 @@ However, right after window creation, the OnShapeEvent callback will be triggere
                 printf("Text: %s\n",str);
             }
 
-            //--Window move/resize event handler--
-            void OnShapeEvent(int16_t x, int16_t y, uint16_t width, uint16_t height){
-                printf("Shape: x=%4d y=%4d width=%4d height=%4d\n",x,y,width, height);
+            //--Window resize event handler--
+            void OnResizeEvent(uint16_t width, uint16_t height){
+                printf("Window Resize: width=%4d height=%4d\n",width, height);
             }
         };
 
