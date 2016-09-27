@@ -49,12 +49,13 @@ public:
 
 //========================Event Message=========================
 struct EventType{
-    enum{NONE, MOUSE, KEY, TEXT, SHAPE, FOCUS, TOUCH} tag;                      // event type
+    enum{NONE, MOUSE, KEY, TEXT, MOVE, RESIZE, FOCUS, TOUCH}tag;                // event type
     union{
         struct {eMouseAction action; int16_t x; int16_t y; uint8_t btn;}mouse;  // mouse move/click
         struct {eKeyAction   action; uint8_t keycode;}key;                      // Keyboard key state
         struct {const char* str;}text;                                          // Text entered
-        struct {int16_t x; int16_t y; uint16_t width; uint16_t height;}shape;   // Window move/resize
+        struct {int16_t x; int16_t y;}move;                                     // Window move
+        struct {uint16_t width; uint16_t height;}resize;                        // Window resize
         struct {bool hasFocus;}focus;                                           // Window gained/lost focus
         struct {eMouseAction action; float x; float y; uint8_t id;}touch;       // multi-touch screen
     };
@@ -75,7 +76,8 @@ protected:
     EventType MouseEvent(eMouseAction action, int16_t x, int16_t y, uint8_t btn);  // Mouse event
     EventType KeyEvent  (eKeyAction action, uint8_t key);                          // Keyboard event
     EventType TextEvent (const char* str);                                         // Text event
-    EventType ShapeEvent(int16_t x, int16_t y, uint16_t width, uint16_t height);   // Window move/resize
+    EventType MoveEvent  (int16_t x, int16_t y);                                   // Window moved
+    EventType ResizeEvent(uint16_t width, uint16_t height);                        // Window resized
     EventType FocusEvent(bool hasFocus);                                           // Window gained/lost focus  TODO: Expose this as an event?
 public:
     bool running;

@@ -49,9 +49,14 @@ class MyWindow : public WSIWindow{
         printf("Text: %s\n",str);
     }
 
-    //--Window move/resize event handler--
-    void OnShapeEvent(int16_t x, int16_t y, uint16_t width, uint16_t height){
-        printf("Shape: x=%d y=%d width=%4d height=%4d\n",x,y,width, height);
+    //--Window move event handler--
+    void OnMoveEvent(int16_t x, int16_t y){
+        printf("Window Move: x=%d y=%d\n",x,y);
+    }
+
+    //--Window resize event handler--
+    void OnResizeEvent(uint16_t width, uint16_t height){
+        printf("Window Resize: width=%4d height=%4d\n",width, height);
     }
 
     //--Window gained/lost focus--

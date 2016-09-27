@@ -150,7 +150,8 @@ Window_xcb::Window_xcb(CInstance& inst, const char* title, uint width, uint heig
 
     SetTitle(title);
     CreateSurface(*instance);
-    eventFIFO.push(ShapeEvent(0,0,width,height));  //ShapeEvent BEFORE focus, for consistency with win32 and android
+    //eventFIFO.push(ShapeEvent(0,0,width,height));  //ShapeEvent BEFORE focus, for consistency with win32 and android
+    eventFIFO.push(ResizeEvent(width,height));       //ResizeEvent BEFORE focus, for consistency with win32 and android
 }
 
 Window_xcb::~Window_xcb(){
@@ -181,7 +182,7 @@ void Window_xcb::CreateSurface(VkInstance instance){
     err = vkCreateXcbSurfaceKHR(instance, &xcb_createInfo, NULL, &surface);
     VKERRCHECK(err);
     //assert(!err);
-    printf("Surface created\n"); fflush(stdout);
+    printf("Vulkan Surface created\n"); fflush(stdout);
 }
 
 EventType Window_xcb::GetEvent(){
@@ -196,7 +197,6 @@ EventType Window_xcb::GetEvent(){
         int16_t my =e.event_y;
         uint8_t btn=e.detail;
         uint8_t bestBtn=BtnState(1) ? 1 : BtnState(2) ? 2 : BtnState(3) ? 3 : 0;
-        //printf("%d %d\n",x_event->response_type,x_event->response_type & ~0x80);  //get event numerical value
         switch(x_event->response_type & ~0x80) {
             case XCB_MOTION_NOTIFY : event=MouseEvent(mMOVE,mx,my,bestBtn);  break;  //mouse move
             case XCB_BUTTON_PRESS  : event=MouseEvent(mDOWN,mx,my,btn);      break;  //mouse btn press
@@ -226,8 +226,10 @@ EventType Window_xcb::GetEvent(){
             case XCB_CONFIGURE_NOTIFY:{                            // Window Reshape (move or resize)
                 if (!(e.response_type & 128)) break;               // only respond if message was sent with "SendEvent", (or x,y will be 0,0)
                 auto& e=*(xcb_configure_notify_event_t*)x_event;
-                //if(has_focus and (e.x!=shape.x || e.y!=shape.y || e.width!=shape.width || e.height!=shape.height))
-                if(has_focus) event=ShapeEvent(e.x,e.y,e.width,e.height);
+                if(has_focus){
+                    if(e.width!=shape.width || e.height!=shape.height) event=ResizeEvent(e.width,e.height);  //window resized
+                    else if(e.x!=shape.x || e.y!=shape.y)              event=MoveEvent(e.x,e.y);             //window moved
+                }
                 break;
             }
             case XCB_FOCUS_IN  : if(!has_focus) event=FocusEvent(true);   break;     //window gained focus

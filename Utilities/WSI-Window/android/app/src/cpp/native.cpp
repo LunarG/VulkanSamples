@@ -1,7 +1,7 @@
 #include "native.h"
 
 android_app* Android_App=0;                //Android native-actvity state
-
+/*
 //--------------------TEMP------------------------
 //--Window event handler--
 static void handle_cmd(struct android_app* app, int32_t cmd) {
@@ -40,14 +40,14 @@ static int32_t handle_input(struct android_app* app, AInputEvent* event) {
     return 0;
 }
 //------------------------------------------------
-
+*/
 //====================Main====================
 int main(int argc, char *argv[]);          //Forward declaration of main function
 
 void android_main(struct android_app* state) {
     printf("Native Activity\n");
     app_dummy();                           // Make sure glue isn't stripped
-    state->onAppCmd     = handle_cmd;      // Register window event callback  (Temporary)
+    //state->onAppCmd     = handle_cmd;      // Register window event callback  (Temporary)
     //state->onInputEvent = handle_input;    // Register input event callback   (Temporary)
     Android_App=state;                     // Pass android app state to window_andoid.cpp
 

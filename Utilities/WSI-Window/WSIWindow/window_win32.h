@@ -134,7 +134,7 @@ void Window_win32::CreateSurface(VkInstance instance){
     win32_createInfo.hwnd       = hWnd;
     VkResult err = vkCreateWin32SurfaceKHR(instance, &win32_createInfo, NULL, &surface);
     VKERRCHECK(err);
-    printf("Surface created\n"); fflush(stdout);
+    printf("Vulkan Surface created\n"); fflush(stdout);
 }
 
 #define WM_RESHAPE (WM_USER+0)

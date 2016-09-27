@@ -47,11 +47,17 @@ EventType WindowImpl::TextEvent(const char* str) {
     return e;
 }
 
-EventType WindowImpl::ShapeEvent(int16_t x, int16_t y, uint16_t width, uint16_t height) {
-    shape={x,y,width,height};
-    EventType e={EventType::SHAPE};
-    //printf("shape: %d %d %d %d",x,y,width,height);
-    e.shape={x,y,width,height};
+EventType WindowImpl::MoveEvent(int16_t x, int16_t y) {
+    shape.x=x; shape.y=y;
+    EventType e={EventType::MOVE};
+    e.move={x,y};
+    return e;
+}
+
+EventType WindowImpl::ResizeEvent(uint16_t width, uint16_t height) {
+    shape.width=width; shape.height=height;
+    EventType e={EventType::RESIZE};
+    e.resize={width,height};
     return e;
 }
 

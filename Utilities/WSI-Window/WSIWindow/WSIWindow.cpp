@@ -72,12 +72,13 @@ bool WSIWindow::ProcessEvents(){
     while(e.tag!=EventType::NONE){
 //     Using Virtual functions for event handlers
        switch(e.tag){
-           case EventType::MOUSE :OnMouseEvent(e.mouse.action, e.mouse.x, e.mouse.y, e.mouse.btn);   break;
-           case EventType::KEY   :OnKeyEvent  (e.key.action, e.key.keycode);                         break;
-           case EventType::TEXT  :OnTextEvent (e.text.str);                                          break;
-           case EventType::SHAPE :OnShapeEvent(e.shape.x, e.shape.y, e.shape.width, e.shape.height); break;
-           case EventType::FOCUS :OnFocusEvent(e.focus.hasFocus);                                    break;
-           case EventType::TOUCH :OnTouchEvent(e.touch.action, e.touch.x, e.touch.y, e.touch.id);    break;
+           case EventType::MOUSE :OnMouseEvent (e.mouse.action, e.mouse.x, e.mouse.y, e.mouse.btn);   break;
+           case EventType::KEY   :OnKeyEvent   (e.key.action, e.key.keycode);                         break;
+           case EventType::TEXT  :OnTextEvent  (e.text.str);                                          break;
+           case EventType::MOVE  :OnMoveEvent  (e.move.x, e.move.y);                                  break;
+           case EventType::RESIZE:OnResizeEvent(e.resize.width, e.resize.height);                     break;
+           case EventType::FOCUS :OnFocusEvent (e.focus.hasFocus);                                    break;
+           case EventType::TOUCH :OnTouchEvent (e.touch.action, e.touch.x, e.touch.y, e.touch.id);    break;
            default: break;
        }
        e=pimpl->GetEvent();

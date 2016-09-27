@@ -78,12 +78,13 @@ public:
     bool ProcessEvents();                              // Poll for events, and call appropriate event handlers. Returns false if window is being closed.
 
     //-- Virtual Functions as event handlers --
-    virtual void OnMouseEvent(eMouseAction action, int16_t x, int16_t y, uint8_t btn){}  // Callback for mouse events
-    virtual void OnKeyEvent  (eKeyAction   action, uint8_t keycode){}                    // Callback for keyboard events (keycodes)
-    virtual void OnTextEvent (const char* str){}                                         // Callback for text typed events (text)
-    virtual void OnShapeEvent(int16_t x, int16_t y, uint16_t width, uint16_t height){}   // Callback for window move/resize events
-    virtual void OnFocusEvent(bool hasFocus){}                                           // Callback for window gain/lose focus events
-    virtual void OnTouchEvent(eMouseAction action, float x, float y, uint8_t id){}       // Callback for Multi-touch events
+    virtual void OnMouseEvent (eMouseAction action, int16_t x, int16_t y, uint8_t btn){}  // Callback for mouse events
+    virtual void OnKeyEvent   (eKeyAction   action, uint8_t keycode){}                    // Callback for keyboard events (keycodes)
+    virtual void OnTextEvent  (const char* str){}                                         // Callback for text typed events (text)
+    virtual void OnMoveEvent  (int16_t x, int16_t y){}                                    // Callback for window move events
+    virtual void OnResizeEvent(uint16_t width, uint16_t height){}                         // Callback for window resize events
+    virtual void OnFocusEvent (bool hasFocus){}                                           // Callback for window gain/lose focus events
+    virtual void OnTouchEvent (eMouseAction action, float x, float y, uint8_t id){}       // Callback for Multi-touch events
 };
 //==============================================================
 

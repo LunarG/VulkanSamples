@@ -93,7 +93,7 @@ class Window_android : public WindowImpl{
         android_createInfo.window = app->window;
         VkResult err=vkCreateAndroidSurfaceKHR(instance, &android_createInfo, NULL, &surface);
         VKERRCHECK(err);
-        printf("Surface created\n");
+        printf("Vulkan Surface created\n");
     }
 
 public:
@@ -104,9 +104,8 @@ public:
         running = true;
         //printf("Creating Android-Window...\n");
         app = Android_App;
-//return;
+
         //---Wait for window to be created AND gain focus---
-        //bool hasFocus = false;
         while (!has_focus) {
             int events = 0;
             struct android_poll_source *source;
@@ -118,7 +117,7 @@ public:
                 if (cmd == APP_CMD_INIT_WINDOW ) {
                     shape.width  = (uint16_t)ANativeWindow_getWidth (app->window);
                     shape.height = (uint16_t)ANativeWindow_getHeight(app->window);
-                    eventFIFO.push(ShapeEvent(0,0,shape.width,shape.height));      //post shape-event
+                    eventFIFO.push(ResizeEvent(shape.width,shape.height));         //post window-resize event
                 }
                 if (cmd == APP_CMD_GAINED_FOCUS) eventFIFO.push(FocusEvent(true)); //post focus-event
                 android_app_post_exec_cmd(app, cmd);
@@ -215,17 +214,6 @@ public:
                             default:break;
                         }
                     }
-/*
-                    //--Test: check first 3 pointers--
-                    CPointer& P0=MTouch.Pointers[0];
-                    CPointer& P1=MTouch.Pointers[1];
-                    CPointer& P2=MTouch.Pointers[2];
-                    printf("0:%s %4.0fx%4.0f   1:%s %4.0fx%4.0f  2:%s %4.0fx%4.0f ...\n"
-                        ,P0.active?"*":" ",P0.x,P0.y
-                        ,P1.active?"*":" ",P1.x,P1.y
-                        ,P2.active?"*":" ",P2.x,P2.y);
-                    //--------------------------------
-*/
 /*
                     //----------------------Emulate mouse from touch events-----------------------------
                     if(event.tag==EventType::TOUCH && event.touch.id==0){  //if one-finger touch
