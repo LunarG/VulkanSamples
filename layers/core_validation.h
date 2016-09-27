@@ -60,6 +60,16 @@
 #include <list>
 #include <deque>
 
+/*
+ * CHECK_DISABLED struct is a container for bools that can block validation checks from being performed.
+ * The end goal is to have all checks guarded by a bool. The bools are all "false" by default meaning that all checks
+ * are enabled. At CreateInstance time, the user can use the VK_EXT_validation_flags extension to pass in enum values
+ * of VkValidationCheckEXT that will selectively disable checks.
+ */
+struct CHECK_DISABLED {
+    bool command_buffer_state;
+};
+
 #if MTMERGE
 
 /*
@@ -211,7 +221,8 @@ struct INSTANCE_STATE {
     // Track the call state and array size for physical devices
     CALL_STATE vkEnumeratePhysicalDevicesState;
     uint32_t physical_devices_count;
-    INSTANCE_STATE() : vkEnumeratePhysicalDevicesState(UNCALLED), physical_devices_count(0) {};
+    CHECK_DISABLED disabled;
+    INSTANCE_STATE() : vkEnumeratePhysicalDevicesState(UNCALLED), physical_devices_count(0), disabled{} {};
 };
 
 struct PHYSICAL_DEVICE_STATE {
