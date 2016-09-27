@@ -150,7 +150,6 @@ Window_xcb::Window_xcb(CInstance& inst, const char* title, uint width, uint heig
 
     SetTitle(title);
     CreateSurface(*instance);
-    //eventFIFO.push(ShapeEvent(0,0,width,height));  //ShapeEvent BEFORE focus, for consistency with win32 and android
     eventFIFO.push(ResizeEvent(width,height));       //ResizeEvent BEFORE focus, for consistency with win32 and android
 }
 
