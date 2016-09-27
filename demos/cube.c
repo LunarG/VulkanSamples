@@ -451,6 +451,20 @@ dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
     if (!demo->suppress_popups)
         MessageBox(NULL, message, "Alert", MB_OK);
     in_callback = false;
+#elif defined(ANDROID)
+    if (msgFlags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT) {
+        __android_log_print(ANDROID_LOG_INFO,  "Cube", "%s", message);
+    } else if (msgFlags & VK_DEBUG_REPORT_WARNING_BIT_EXT) {
+        __android_log_print(ANDROID_LOG_WARN,  "Cube", "%s", message);
+    } else if (msgFlags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT) {
+        __android_log_print(ANDROID_LOG_WARN,  "Cube", "%s", message);
+    } else if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
+        __android_log_print(ANDROID_LOG_ERROR, "Cube", "%s", message);
+    } else if (msgFlags & VK_DEBUG_REPORT_DEBUG_BIT_EXT) {
+        __android_log_print(ANDROID_LOG_DEBUG, "Cube", "%s", message);
+    } else {
+        __android_log_print(ANDROID_LOG_INFO,  "Cube", "%s", message);
+    }
 #else
     printf("%s\n", message);
     fflush(stdout);
@@ -3309,6 +3323,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
 #include <android/log.h>
 #include <android_native_app_glue.h>
+#include "android_util.h"
+
 static bool initialized = false;
 static bool active = false;
 struct demo demo;
@@ -3334,7 +3350,25 @@ static void processCommand(struct android_app* app, int32_t cmd) {
                 if (demo.prepared) {
                     demo_cleanup(&demo);
                 }
-                demo_init(&demo, 0, NULL);
+
+                // Parse Intents into argc, argv
+                // Use the following key to send arguments, i.e.
+                // --es args "--validate"
+                const char key[] = "args";
+                char* appTag = (char*) "Cube";
+                int argc = 0;
+                char** argv = get_args(app, key, appTag, &argc);
+
+                __android_log_print(ANDROID_LOG_INFO, appTag, "argc = %i", argc);
+                for (int i = 0; i < argc; i++)
+                    __android_log_print(ANDROID_LOG_INFO, appTag, "argv[%i] = %s", i, argv[i]);
+
+                demo_init(&demo, argc, argv);
+
+                // Free the argv malloc'd by get_args
+                for (int i = 0; i < argc; i++)
+                    free(argv[i]);
+
                 demo.window = (void*)app->window;
                 demo_init_vk_swapchain(&demo);
                 demo_prepare(&demo);
