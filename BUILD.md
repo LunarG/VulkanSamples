@@ -189,6 +189,16 @@ adb install ./tri/bin/NativeActivity-debug.apk
 adb shell am start com.example.Cube/android.app.NativeActivity
 adb shell am start com.example.Tri/android.app.NativeActivity
 ```
+To build, install, and run Cube with validation layers, first build layers using steps above, then run:
+```
+cd demos/android
+android update project -s -p . -t "android-23"
+ndk-build -j
+ant -buildfile cube-with-layers debug
+adb install ./cube-with-layers/bin/NativeActivity-debug.apk
+adb shell am start -a android.intent.action.MAIN -c android-intent.category.LAUNCH -n com.example.CubeWithLayers/android.app.NativeActivity --es args "--validate"
+```
+
 To build, install, and run the Smoke demo for Android, run the following, and any
 prompts that come back from the script:
 ```
