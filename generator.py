@@ -2580,6 +2580,7 @@ class ThreadOutputGenerator(OutputGenerator):
                     else:
                         # externsync can list members to synchronize
                         for member in externsync.split(","):
+                            member = str(member).replace("::", "->")
                             paramdecl += '    ' + functionprefix + 'WriteObject(my_data, ' + member + ');\n'
                 else:
                     paramtype = param.find('type')
@@ -3256,6 +3257,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                 result = len.split(',')[0]
             else:
                 result = len
+            result = str(result).replace('::', '->')
         return result
     #
     # Retrieve the type and name for a parameter
