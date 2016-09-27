@@ -140,9 +140,6 @@ void Window_win32::CreateSurface(VkInstance instance){
 #define WM_RESHAPE (WM_USER+0)
 
 EventType Window_win32::GetEvent(){
-    //printf(".\r");
-    //static int ctr = 0; char spin[] = { '|','/','~','\\' }; printf("%c\r", spin[(ctr++) & 3]);  fflush(stdout);
-
     //EventType event;
     if (!eventFIFO.isEmpty()) return *eventFIFO.pop();
 
