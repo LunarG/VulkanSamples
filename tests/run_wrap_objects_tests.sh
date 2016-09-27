@@ -111,14 +111,15 @@ fi
 echo "Middle insertion test PASSED"
 
 # Run the layer validation tests with and without the wrap-objects layer. Diff the results.
-diff \
-   <(GTEST_PRINT_TIME=0 \
-      ./vk_layer_validation_tests) \
-   <(GTEST_PRINT_TIME=0 \
-      VK_LAYER_PATH=$VK_LAYER_PATH:`pwd`/layers \
-      LD_LIBRARY_PATH=$LD_LIBRARY_PATH:`pwd`/layers \
-      VK_INSTANCE_LAYERS=VK_LAYER_LUNARG_wrap_objects \
-      ./vk_layer_validation_tests)
+# Filter out the "Unexpected:" lines because they contain varying object handles.
+GTEST_PRINT_TIME=0 \
+   ./vk_layer_validation_tests | grep -v "^Unexpected: " > unwrapped.out
+GTEST_PRINT_TIME=0 \
+   VK_LAYER_PATH=$VK_LAYER_PATH:`pwd`/layers \
+   LD_LIBRARY_PATH=$LD_LIBRARY_PATH:`pwd`/layers \
+   VK_INSTANCE_LAYERS=VK_LAYER_LUNARG_wrap_objects \
+   ./vk_layer_validation_tests | grep -v "^Unexpected: " > wrapped.out
+diff unwrapped.out wrapped.out
 ec=$?
 
 if [ $ec -eq 1 ]
