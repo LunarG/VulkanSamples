@@ -118,7 +118,7 @@ Window_win32::Window_win32(CInstance& inst, const char* title, uint width, uint 
     assert(hWnd && "Failed to create a window.");
 
     CreateSurface(inst);
-    eventFIFO.push(ShapeEvent(0, 0, width, height));
+    eventFIFO.push(ResizeEvent(width, height));
 }
 
 Window_win32::~Window_win32(){
@@ -213,8 +213,15 @@ EventType Window_win32::GetEvent(){
             case WM_ACTIVATE: return FocusEvent(msg.wParam != WA_INACTIVE);
 
             case WM_RESHAPE: { 
-                RECT r; GetWindowRect(hWnd, &r);
-                return ShapeEvent((int16_t)r.left, (int16_t)r.top, (uint16_t)(r.right - r.left), (uint16_t)(r.bottom - r.top));
+                RECT r; GetClientRect(hWnd, &r);
+                uint16_t w = (uint16_t)(r.right - r.left);
+                uint16_t h = (uint16_t)(r.bottom - r.top);
+                if (w != shape.width || h != shape.height)  return ResizeEvent(w, h);  //window resized
+
+                GetWindowRect(hWnd, &r);
+                int16_t  x = (int16_t)r.left;
+                int16_t  y = (int16_t)r.top;
+                if(x != shape.x || y != shape.y)            return MoveEvent  (x, y);  //window moved
             }
 /*
             case WM_NCLBUTTONDOWN: {  //Start window move/resize
