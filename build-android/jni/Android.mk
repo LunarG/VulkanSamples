@@ -43,6 +43,7 @@ LOCAL_C_INCLUDES += $(SRC_DIR)/include \
 LOCAL_STATIC_LIBRARIES += layer_utils SPIRV-Tools-prebuilt
 LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR
 LOCAL_LDLIBS    := -llog
+LOCAL_LDFLAGS   += -Wl,-Bsymbolic
 include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
@@ -56,6 +57,7 @@ LOCAL_C_INCLUDES += $(SRC_DIR)/include \
 LOCAL_STATIC_LIBRARIES += layer_utils
 LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR
 LOCAL_LDLIBS    := -llog
+LOCAL_LDFLAGS   += -Wl,-Bsymbolic
 include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
@@ -69,6 +71,7 @@ LOCAL_C_INCLUDES += $(SRC_DIR)/include \
 LOCAL_STATIC_LIBRARIES += layer_utils
 LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR
 LOCAL_LDLIBS    := -llog
+LOCAL_LDFLAGS   += -Wl,-Bsymbolic
 include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
@@ -82,6 +85,7 @@ LOCAL_C_INCLUDES += $(SRC_DIR)/include \
 LOCAL_STATIC_LIBRARIES += layer_utils
 LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR
 LOCAL_LDLIBS    := -llog
+LOCAL_LDFLAGS   += -Wl,-Bsymbolic
 include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
@@ -95,6 +99,7 @@ LOCAL_C_INCLUDES += $(SRC_DIR)/include \
 LOCAL_STATIC_LIBRARIES += layer_utils
 LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR
 LOCAL_LDLIBS    := -llog
+LOCAL_LDFLAGS   += -Wl,-Bsymbolic
 include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
@@ -109,6 +114,7 @@ LOCAL_C_INCLUDES += $(SRC_DIR)/include \
 LOCAL_STATIC_LIBRARIES += layer_utils
 LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR
 LOCAL_LDLIBS    := -llog
+LOCAL_LDFLAGS   += -Wl,-Bsymbolic
 include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
@@ -122,6 +128,7 @@ LOCAL_C_INCLUDES += $(SRC_DIR)/include \
 LOCAL_STATIC_LIBRARIES += layer_utils
 LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR
 LOCAL_LDLIBS    := -llog
+LOCAL_LDFLAGS   += -Wl,-Bsymbolic
 include $(BUILD_SHARED_LIBRARY)
 
 # Pull in prebuilt shaderc
@@ -183,6 +190,7 @@ LOCAL_STATIC_LIBRARIES := googletest_main layer_utils
 LOCAL_SHARED_LIBRARIES += shaderc-prebuilt glslang-prebuilt OGLCompiler-prebuilt OSDependent-prebuilt HLSL-prebuilt shaderc_util-prebuilt SPIRV-prebuilt SPIRV-Tools-prebuilt
 LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR --include=$(SRC_DIR)/common/vulkan_wrapper.h
 LOCAL_LDLIBS := -llog
+LOCAL_LDFLAGS   += -Wl,-Bsymbolic
 include $(BUILD_EXECUTABLE)
 
 # Note: The following module is similar in name to the executable, but differs so that loader won't enumerate the resulting .so
