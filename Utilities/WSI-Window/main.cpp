@@ -33,14 +33,14 @@ class MyWindow : public WSIWindow{
     using WSIWindow::WSIWindow;     //Inherit base constructor
 
     //--Mouse event handler--
-    void OnMouseEvent(eMouseAction action, int16_t x, int16_t y, uint8_t btn){
-        const char* type[]={"move","down","up  "};
+    void OnMouseEvent(eAction action, int16_t x, int16_t y, uint8_t btn){
+        const char* type[]={"up  ","down","move"};
         printf("Mouse: %s %d x %d Btn:%d\n",type[action],x,y,btn);
     }
 
     //--Keyboard event handler--
-    void OnKeyEvent(eKeyAction action,uint8_t keycode){
-        const char* type[]={"down","up  "};
+    void OnKeyEvent(eAction action,uint8_t keycode){
+        const char* type[]={"up  ","down"};
         printf("Key: %s keycode:%d\n",type[action],keycode);
     }
 
@@ -65,8 +65,8 @@ class MyWindow : public WSIWindow{
     }
 
     //--Multi-touch event handler--
-    void OnTouchEvent(eMouseAction action, float x, float y, uint8_t id){
-        const char* type[]={"move","down","up  "};
+    void OnTouchEvent(eAction action, float x, float y, uint8_t id){
+        const char* type[]={"up  ","down","move"};
         printf("Touch: %s %4.0f x %4.0f Finger id:%d\n",type[action],x,y,id);
     }
 

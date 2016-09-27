@@ -186,26 +186,26 @@ EventType Window_win32::GetEvent(){
         uint8_t bestBtn=BtnState(1) ? 1 : BtnState(2) ? 2 :BtnState(3) ? 3 : 0;
         switch (msg.message) {
             //--Mouse events--
-            case WM_MOUSEMOVE  : return MouseEvent(mMOVE,x,y,bestBtn);
-            case WM_LBUTTONDOWN: return MouseEvent(mDOWN,x,y,1);
-            case WM_MBUTTONDOWN: return MouseEvent(mDOWN,x,y,2);
-            case WM_RBUTTONDOWN: return MouseEvent(mDOWN,x,y,3);
-            case WM_LBUTTONUP  : return MouseEvent(mUP  ,x,y,1);
-            case WM_MBUTTONUP  : return MouseEvent(mUP  ,x,y,2);
-            case WM_RBUTTONUP  : return MouseEvent(mUP  ,x,y,3);
+            case WM_MOUSEMOVE  : return MouseEvent(eMOVE,x,y,bestBtn);
+            case WM_LBUTTONDOWN: return MouseEvent(eDOWN,x,y,1);
+            case WM_MBUTTONDOWN: return MouseEvent(eDOWN,x,y,2);
+            case WM_RBUTTONDOWN: return MouseEvent(eDOWN,x,y,3);
+            case WM_LBUTTONUP  : return MouseEvent(eUP  ,x,y,1);
+            case WM_MBUTTONUP  : return MouseEvent(eUP  ,x,y,2);
+            case WM_RBUTTONUP  : return MouseEvent(eUP  ,x,y,3);
             //--Mouse wheel events--
             case WM_MOUSEWHEEL: {
                 uint8_t wheel = (GET_WHEEL_DELTA_WPARAM(msg.wParam) > 0) ? 4 : 5;
                 POINT point = { x,y };
                 ScreenToClient(msg.hwnd, &point);
-                return{ EventType::MOUSE,{ mDOWN,(int16_t)point.x, (int16_t)point.y, wheel } };
+                return{ EventType::MOUSE,{ eDOWN,(int16_t)point.x, (int16_t)point.y, wheel } };
             }
             //--Keyboard events--
-            case WM_KEYDOWN   : return KeyEvent(keyDOWN, WIN32_TO_HID[msg.wParam]);
-            case WM_KEYUP     : return KeyEvent(keyUP  , WIN32_TO_HID[msg.wParam]);
-            case WM_SYSKEYDOWN: {MSG discard; GetMessage(&discard, NULL, 0, 0);        //Alt-key triggers a WM_MOUSEMOVE message... Discard it.
-                                return KeyEvent(keyDOWN, WIN32_TO_HID[msg.wParam]); }  //+alt key
-            case WM_SYSKEYUP  : return KeyEvent(keyUP  , WIN32_TO_HID[msg.wParam]);    //+alt key
+            case WM_KEYDOWN   : return KeyEvent(eDOWN, WIN32_TO_HID[msg.wParam]);
+            case WM_KEYUP     : return KeyEvent(eUP  , WIN32_TO_HID[msg.wParam]);
+            case WM_SYSKEYDOWN: {MSG discard; GetMessage(&discard, NULL, 0, 0);      //Alt-key triggers a WM_MOUSEMOVE message... Discard it.
+                                return KeyEvent(eDOWN, WIN32_TO_HID[msg.wParam]); }  //+alt key
+            case WM_SYSKEYUP  : return KeyEvent(eUP  , WIN32_TO_HID[msg.wParam]);    //+alt key
 
             //--Char event--
             case WM_CHAR: { strncpy_s(buf, (const char*)&msg.wParam, 4);  return TextEvent(buf); } //return UTF8 code of key pressed

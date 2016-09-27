@@ -198,12 +198,12 @@ EventType Window_xcb::GetEvent(){
         uint8_t btn=e.detail;
         uint8_t bestBtn=BtnState(1) ? 1 : BtnState(2) ? 2 : BtnState(3) ? 3 : 0;
         switch(x_event->response_type & ~0x80) {
-            case XCB_MOTION_NOTIFY : event=MouseEvent(mMOVE,mx,my,bestBtn);  break;  //mouse move
-            case XCB_BUTTON_PRESS  : event=MouseEvent(mDOWN,mx,my,btn);      break;  //mouse btn press
-            case XCB_BUTTON_RELEASE: event=MouseEvent(mUP  ,mx,my,btn);      break;  //mouse btn release
+            case XCB_MOTION_NOTIFY : event=MouseEvent(eMOVE,mx,my,bestBtn);  break;  //mouse move
+            case XCB_BUTTON_PRESS  : event=MouseEvent(eDOWN,mx,my,btn);      break;  //mouse btn press
+            case XCB_BUTTON_RELEASE: event=MouseEvent(eUP  ,mx,my,btn);      break;  //mouse btn release
             case XCB_KEY_PRESS:{
                 uint8_t keycode=EVDEV_TO_HID[btn];
-                event=KeyEvent(keyDOWN,keycode);                                     //key pressed event
+                event=KeyEvent(eDOWN,keycode);                                       //key pressed event
                 xkb_state_key_get_utf8(k_state,btn,buf,sizeof(buf));
                 xkb_state_update_key(k_state,btn,XKB_KEY_DOWN);
                 if(buf[0]) eventFIFO.push(TextEvent(buf));                           //text typed event (store in FIFO for next run)
@@ -211,7 +211,7 @@ EventType Window_xcb::GetEvent(){
             }
             case XCB_KEY_RELEASE:{
                 uint8_t keycode=EVDEV_TO_HID[btn];
-                event=KeyEvent(keyUP,keycode);                                       //key released event
+                event=KeyEvent(eUP,keycode);                                         //key released event
                 xkb_state_update_key(k_state,btn,XKB_KEY_UP);
                 break;
             }

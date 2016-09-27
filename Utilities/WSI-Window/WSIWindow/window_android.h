@@ -37,7 +37,7 @@
 
 //======================MULTI-TOUCH=======================  TODO: Move MTouch to WindowImpl, and expose events.
 struct CPointer{bool active; float x; float y;};
-struct MTouchEvent{eMouseAction act; float x; float y; char id;};
+struct MTouchEvent{eAction act; float x; float y; char id;};
 
 class CMTouch{
     static const int MAX_POINTERS=10;  //Max 10 fingers
@@ -46,10 +46,10 @@ public:
     CPointer Pointers[MAX_POINTERS];
     void Clear(){ memset(this,0,sizeof(this)); }
 
-    EventType Event(eMouseAction action, float x, float y, uint8_t id) {
+    EventType Event(eAction action, float x, float y, uint8_t id) {
         if (id >= MAX_POINTERS)return {};  // Exit if too many fingers
         CPointer& P=Pointers[id];
-        if(action) P.active=(action==mDOWN);
+        if(action!=eMOVE) P.active=(action==eDOWN);
         P.x=x;  P.y=y;
         EventType e={EventType::TOUCH};
         e.touch={action,x,y,id};
@@ -177,12 +177,12 @@ public:
                             int metaState = AKeyEvent_getMetaState(a_event);
                             int unicode = GetUnicodeChar(AKEY_EVENT_ACTION_DOWN, keycode, metaState);
                             (int&)buf=unicode;
-                            event=KeyEvent(keyDOWN,hidcode);            //key pressed event (returned on this run)
+                            event=KeyEvent(eDOWN,hidcode);              //key pressed event (returned on this run)
                             if(buf[0]) eventFIFO.push(TextEvent(buf));  //text typed event  (store in FIFO for next run)
                             break;
                         }
                         case AKEY_EVENT_ACTION_UP:{
-                            event=KeyEvent(keyUP,hidcode);              //key released event
+                            event=KeyEvent(eUP,hidcode);                //key released event
                             break;
                         }
                         default:break;
@@ -198,7 +198,7 @@ public:
                             uint8_t finger_id = (uint8_t)AMotionEvent_getPointerId(a_event, i);
                             float x = AMotionEvent_getX(a_event, i);
                             float y = AMotionEvent_getY(a_event, i);
-                            event=MTouch.Event(mMOVE,x,y,finger_id);
+                            event=MTouch.Event(eMOVE,x,y,finger_id);
                         }
                     }else{
                         size_t   inx =(size_t)(a_action>>8); //get index from top 24 bits
@@ -207,9 +207,9 @@ public:
                         float y        = AMotionEvent_getY(a_event, inx);
                         switch (action) {
                             case AMOTION_EVENT_ACTION_POINTER_DOWN:
-                            case AMOTION_EVENT_ACTION_DOWN      :  event=MTouch.Event(mDOWN,x,y,finger_id);  break;
+                            case AMOTION_EVENT_ACTION_DOWN      :  event=MTouch.Event(eDOWN,x,y,finger_id);  break;
                             case AMOTION_EVENT_ACTION_POINTER_UP:
-                            case AMOTION_EVENT_ACTION_UP        :  event=MTouch.Event(mUP  ,x,y,finger_id);  break;
+                            case AMOTION_EVENT_ACTION_UP        :  event=MTouch.Event(eUP  ,x,y,finger_id);  break;
                             case AMOTION_EVENT_ACTION_CANCEL    :  MTouch.Clear();                           break;
                             default:break;
                         }
