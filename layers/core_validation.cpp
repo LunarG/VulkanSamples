@@ -8289,13 +8289,13 @@ VKAPI_ATTR void VKAPI_CALL CmdClearAttachments(VkCommandBuffer commandBuffer, ui
         // Warn if this is issued prior to Draw Cmd and clearing the entire attachment
         if (!hasDrawCmd(pCB) && (pCB->activeRenderPassBeginInfo.renderArea.extent.width == pRects[0].rect.extent.width) &&
             (pCB->activeRenderPassBeginInfo.renderArea.extent.height == pRects[0].rect.extent.height)) {
-            // TODO : commandBuffer should be srcObj
             // There are times where app needs to use ClearAttachments (generally when reusing a buffer inside of a render pass)
             // Can we make this warning more specific? I'd like to avoid triggering this test if we can tell it's a use that must
             // call CmdClearAttachments
             // Otherwise this seems more like a performance warning.
             skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
-                                 VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, 0, DRAWSTATE_CLEAR_CMD_BEFORE_DRAW, "DS",
+                                 VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t &>(commandBuffer),
+                                 0, DRAWSTATE_CLEAR_CMD_BEFORE_DRAW, "DS",
                                  "vkCmdClearAttachments() issued on CB object 0x%" PRIxLEAST64 " prior to any Draw Cmds."
                                  " It is recommended you use RenderPass LOAD_OP_CLEAR on Attachments prior to any Draw.",
                                  (uint64_t)(commandBuffer));
