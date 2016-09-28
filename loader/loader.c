@@ -4035,7 +4035,7 @@ VkResult loader_validate_instance_extensions(
         /* Not in global list, search layer extension lists */
         for (uint32_t j = 0; j < pCreateInfo->enabledLayerCount; j++) {
             layer_prop = loader_get_layer_property(
-                pCreateInfo->ppEnabledLayerNames[i], instance_layer);
+                pCreateInfo->ppEnabledLayerNames[j], instance_layer);
             if (!layer_prop) {
                 /* Should NOT get here, loader_validate_layers
                  * should have already filtered this case out.
