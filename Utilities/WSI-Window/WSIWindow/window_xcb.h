@@ -29,6 +29,16 @@
 #include <xkbcommon/xkbcommon.h>  //  keyboard
 #include <string.h>               //  for strlen
 
+//-----------------------------------------------
+
+#include <X11/Xlib-xcb.h>
+#include <X11/Xlib.h>
+#include <X11/extensions/XInput2.h>
+
+//-----------------------------------------------
+
+
+
 #if defined(NDEBUG) && defined(__GNUC__)
  #define U_ASSERT_ONLY __attribute__((unused))
 #else
@@ -90,6 +100,7 @@ Window_xcb::Window_xcb(CInstance& inst, const char* title, uint width, uint heig
     running=true;
 
     printf("Creating XCB-Window...\n"); fflush(stdout);
+/*
     //--Init Connection--
     int scr;
     xcb_connection = xcb_connect(NULL, &scr);
@@ -99,6 +110,30 @@ Window_xcb::Window_xcb(CInstance& inst, const char* title, uint width, uint heig
     while(scr-- > 0) xcb_screen_next(&iter);
     xcb_screen = iter.data;
     //-------------------
+*/
+    //----XLib-XCB----
+    Display *dpy = XOpenDisplay(NULL);        assert(dpy && "Failed to open Display");
+    xcb_connection = XGetXCBConnection(dpy);  assert(dpy && "Failed to open XCB connection");
+    const xcb_setup_t*   setup = xcb_get_setup(xcb_connection);
+    setup  = xcb_get_setup (xcb_connection);
+    xcb_screen = (xcb_setup_roots_iterator (setup)).data;
+    //----------------
+
+
+// check the version of XInput
+/*
+{
+    int rc;
+    int major = 2;
+    int minor = 3;
+    rc = XIQueryVersion(dpy, &major, &minor);
+    if (rc != Success){
+        printf("No XI2 support. (%d.%d only)\n", major, minor);
+        exit(1);
+    }
+}
+*/
+
 
     //--
     uint32_t value_mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
