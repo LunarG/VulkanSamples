@@ -5136,6 +5136,33 @@ VKAPI_ATTR void VKAPI_CALL CmdDebugMarkerInsertEXT(VkCommandBuffer commandBuffer
     }
 }
 
+// VK_NV_external_memory_capabilities Extension
+VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceExternalImageFormatPropertiesNV(
+    VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type, VkImageTiling tiling, VkImageUsageFlags usage,
+    VkImageCreateFlags flags, VkExternalMemoryHandleTypeFlagsNV externalHandleType,
+    VkExternalImageFormatPropertiesNV *pExternalImageFormatProperties) {
+
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skip_call = false;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    assert(my_data != NULL);
+
+    skip_call |= parameter_validation_vkGetPhysicalDeviceExternalImageFormatPropertiesNV(
+        my_data->report_data, format, type, tiling, usage, flags, externalHandleType, pExternalImageFormatProperties);
+
+    if (!skip_call) {
+        result = get_dispatch_table(pc_instance_table_map, physicalDevice)
+                     ->GetPhysicalDeviceExternalImageFormatPropertiesNV(physicalDevice, format, type, tiling, usage, flags,
+                                                                        externalHandleType, pExternalImageFormatProperties);
+
+        validate_result(my_data->report_data, "vkGetPhysicalDeviceExternalImageFormatPropertiesNV", result);
+    }
+
+    return result;
+}
+
+
+
 
 static PFN_vkVoidFunction intercept_core_instance_command(const char *name);
 
@@ -5216,6 +5243,7 @@ static PFN_vkVoidFunction intercept_core_instance_command(const char *name) {
         {"vkEnumerateDeviceLayerProperties", reinterpret_cast<PFN_vkVoidFunction>(EnumerateDeviceLayerProperties)},
         {"vkEnumerateInstanceExtensionProperties", reinterpret_cast<PFN_vkVoidFunction>(EnumerateInstanceExtensionProperties)},
         {"vkEnumerateDeviceExtensionProperties", reinterpret_cast<PFN_vkVoidFunction>(EnumerateDeviceExtensionProperties)},
+        {"vkGetPhysicalDeviceExternalImageFormatPropertiesNV", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceExternalImageFormatPropertiesNV) },
     };
 
     for (size_t i = 0; i < ARRAY_SIZE(core_instance_commands); i++) {
