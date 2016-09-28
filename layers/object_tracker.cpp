@@ -3662,6 +3662,23 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceExternalImageFormatPropertiesNV(
     return result;
 }
 
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+// VK_NV_external_memory_win32 Extension
+VKAPI_ATTR VkResult VKAPI_CALL GetMemoryWin32HandleNV(VkDevice device, VkDeviceMemory memory,
+                                                      VkExternalMemoryHandleTypeFlagsNV handleType, HANDLE *pHandle) {
+    bool skip_call = VK_FALSE;
+    std::unique_lock<std::mutex> lock(global_lock);
+    skip_call |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
+    skip_call |= ValidateObject(device, memory, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, false);
+    lock.unlock();
+    if (skip_call) {
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+    }
+    VkResult result = get_dispatch_table(ot_device_table_map, device)->GetMemoryWin32HandleNV(device, memory, handleType, pHandle);
+    return result;
+}
+#endif // VK_USE_PLATFORM_WIN32_KHR
+
 static inline PFN_vkVoidFunction InterceptCoreDeviceCommand(const char *name) {
     if (!name || name[0] != 'v' || name[1] != 'k')
         return NULL;
@@ -3919,6 +3936,10 @@ static inline PFN_vkVoidFunction InterceptCoreDeviceCommand(const char *name) {
         return (PFN_vkVoidFunction)CmdDebugMarkerEndEXT;
     if (!strcmp(name, "CmdDebugMarkerInsertEXT"))
         return (PFN_vkVoidFunction)CmdDebugMarkerInsertEXT;
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+    if (!strcmp(name, "GetMemoryWin32HandleNV"))
+        return (PFN_vkVoidFunction)GetMemoryWin32HandleNV;
+#endif // VK_USE_PLATFORM_WIN32_KHR
 
     return NULL;
 }
