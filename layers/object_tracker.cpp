@@ -3642,6 +3642,26 @@ VKAPI_ATTR void VKAPI_CALL CmdDebugMarkerInsertEXT(VkCommandBuffer commandBuffer
     }
 }
 
+// VK_NV_external_memory_capabilities Extension
+VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceExternalImageFormatPropertiesNV(
+    VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type, VkImageTiling tiling, VkImageUsageFlags usage,
+    VkImageCreateFlags flags, VkExternalMemoryHandleTypeFlagsNV externalHandleType,
+    VkExternalImageFormatPropertiesNV *pExternalImageFormatProperties) {
+
+    bool skip_call = false;
+    {
+        std::lock_guard<std::mutex> lock(global_lock);
+        skip_call |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false);
+    }
+    if (skip_call) {
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+    }
+    VkResult result = get_dispatch_table(ot_instance_table_map, physicalDevice)
+                          ->GetPhysicalDeviceExternalImageFormatPropertiesNV(physicalDevice, format, type, tiling, usage, flags,
+                                                                             externalHandleType, pExternalImageFormatProperties);
+    return result;
+}
+
 static inline PFN_vkVoidFunction InterceptCoreDeviceCommand(const char *name) {
     if (!name || name[0] != 'v' || name[1] != 'k')
         return NULL;
@@ -3937,6 +3957,8 @@ static inline PFN_vkVoidFunction InterceptCoreInstanceCommand(const char *name) 
         return (PFN_vkVoidFunction)EnumerateDeviceLayerProperties;
     if (!strcmp(name, "GetPhysicalDeviceSparseImageFormatProperties"))
         return (PFN_vkVoidFunction)GetPhysicalDeviceSparseImageFormatProperties;
+    if (!strcmp(name, "GetPhysicalDeviceExternalImageFormatPropertiesNV"))
+        return (PFN_vkVoidFunction)GetPhysicalDeviceExternalImageFormatPropertiesNV;
 
     return NULL;
 }
