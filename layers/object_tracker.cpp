@@ -3679,6 +3679,36 @@ VKAPI_ATTR VkResult VKAPI_CALL GetMemoryWin32HandleNV(VkDevice device, VkDeviceM
 }
 #endif // VK_USE_PLATFORM_WIN32_KHR
 
+// VK_AMD_draw_indirect_count Extension
+VKAPI_ATTR void VKAPI_CALL CmdDrawIndirectCountAMD(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset,
+                                                   VkBuffer countBuffer, VkDeviceSize countBufferOffset, uint32_t maxDrawCount,
+                                                   uint32_t stride) {
+    bool skip_call = VK_FALSE;
+    std::unique_lock<std::mutex> lock(global_lock);
+    skip_call |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
+    skip_call |= ValidateObject(commandBuffer, buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, false);
+    lock.unlock();
+    if (!skip_call) {
+        get_dispatch_table(ot_device_table_map, commandBuffer)
+            ->CmdDrawIndirectCountAMD(commandBuffer, buffer, offset, countBuffer, countBufferOffset, maxDrawCount, stride);
+    }
+}
+
+VKAPI_ATTR void VKAPI_CALL CmdDrawIndexedIndirectCountAMD(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset,
+                                                          VkBuffer countBuffer, VkDeviceSize countBufferOffset,
+                                                          uint32_t maxDrawCount, uint32_t stride) {
+    bool skip_call = VK_FALSE;
+    std::unique_lock<std::mutex> lock(global_lock);
+    skip_call |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
+    skip_call |= ValidateObject(commandBuffer, buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, false);
+    lock.unlock();
+    if (!skip_call) {
+        get_dispatch_table(ot_device_table_map, commandBuffer)
+            ->CmdDrawIndexedIndirectCountAMD(commandBuffer, buffer, offset, countBuffer, countBufferOffset, maxDrawCount, stride);
+    }
+}
+
+
 static inline PFN_vkVoidFunction InterceptCoreDeviceCommand(const char *name) {
     if (!name || name[0] != 'v' || name[1] != 'k')
         return NULL;
@@ -3940,6 +3970,10 @@ static inline PFN_vkVoidFunction InterceptCoreDeviceCommand(const char *name) {
     if (!strcmp(name, "GetMemoryWin32HandleNV"))
         return (PFN_vkVoidFunction)GetMemoryWin32HandleNV;
 #endif // VK_USE_PLATFORM_WIN32_KHR
+    if (!strcmp(name, "CmdDrawIndirectCountAMD"))
+        return (PFN_vkVoidFunction)CmdDrawIndirectCountAMD;
+    if (!strcmp(name, "CmdDrawIndexedIndirectCountAMD"))
+        return (PFN_vkVoidFunction)CmdDrawIndexedIndirectCountAMD;
 
     return NULL;
 }
