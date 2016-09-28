@@ -5721,22 +5721,39 @@ VKAPI_ATTR void VKAPI_CALL DestroyBuffer(VkDevice device, VkBuffer buffer,
     }
 }
 
+static bool PreCallValidateDestroyBufferView(layer_data *dev_data, VkBufferView buffer_view, BUFFER_VIEW_STATE **buffer_view_state,
+                                             VK_OBJECT *obj_struct) {
+    bool skip = false;
+    *buffer_view_state = getBufferViewState(dev_data, buffer_view);
+    if (buffer_view_state) {
+        *obj_struct = {reinterpret_cast<uint64_t &>(buffer_view), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT};
+        skip |= ValidateObjectNotInUse(dev_data, *buffer_view_state, *obj_struct);
+    }
+    return skip;
+}
+
+static void PostCallRecordDestroyBufferView(layer_data *dev_data, VkBufferView buffer_view, BUFFER_VIEW_STATE *buffer_view_state,
+                                            VK_OBJECT obj_struct) {
+    dev_data->bufferViewMap.erase(buffer_view);
+    // Any bound cmd buffers are now invalid
+    invalidateCommandBuffers(buffer_view_state->cb_bindings, obj_struct);
+}
+
 VKAPI_ATTR void VKAPI_CALL
 DestroyBufferView(VkDevice device, VkBufferView bufferView, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    bool skip = false;
     std::unique_lock<std::mutex> lock(global_lock);
-    auto view_state = getBufferViewState(dev_data, bufferView);
-    if (view_state) {
-        VK_OBJECT obj_struct = {reinterpret_cast<uint64_t &>(bufferView), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT};
-        skip |= ValidateObjectNotInUse(dev_data, view_state, obj_struct);
-        // Any bound cmd buffers are now invalid
-        invalidateCommandBuffers(view_state->cb_bindings, obj_struct);
-    }
+    // Common data objects use pre & post call
+    BUFFER_VIEW_STATE *buffer_view_state = nullptr;
+    VK_OBJECT obj_struct;
+    // Validate state before calling down chain, update common data if we'll be calling down chain
+    bool skip = PreCallValidateDestroyBufferView(dev_data, bufferView, &buffer_view_state, &obj_struct);
     if (!skip) {
-        dev_data->bufferViewMap.erase(bufferView);
         lock.unlock();
         dev_data->device_dispatch_table->DestroyBufferView(device, bufferView, pAllocator);
+        lock.lock();
+        // We made call so update state
+        PostCallRecordDestroyBufferView(dev_data, bufferView, buffer_view_state, obj_struct);
     }
 }
 
