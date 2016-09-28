@@ -5404,6 +5404,8 @@ VKAPI_ATTR void VKAPI_CALL DestroyFence(VkDevice device, VkFence fence, const Vk
 
 // For given obj node, if it is use, flag a validation error and return callback result, else return false
 bool ValidateObjectNotInUse(const layer_data *dev_data, BASE_NODE *obj_node, VK_OBJECT obj_struct) {
+    if (dev_data->instance_state->disabled.object_in_use)
+        return false;
     bool skip = false;
     if (obj_node->in_use.load()) {
         skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, obj_struct.type, obj_struct.handle, __LINE__,
@@ -5723,6 +5725,8 @@ VKAPI_ATTR void VKAPI_CALL DestroyBuffer(VkDevice device, VkBuffer buffer,
 
 static bool PreCallValidateDestroyBufferView(layer_data *dev_data, VkBufferView buffer_view, BUFFER_VIEW_STATE **buffer_view_state,
                                              VK_OBJECT *obj_struct) {
+    if (dev_data->instance_state->disabled.destroy_buffer_view)
+        return false;
     bool skip = false;
     *buffer_view_state = getBufferViewState(dev_data, buffer_view);
     if (buffer_view_state) {

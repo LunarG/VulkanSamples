@@ -68,6 +68,8 @@
  */
 struct CHECK_DISABLED {
     bool command_buffer_state;
+    bool destroy_buffer_view; // Skip validation at DestroyBufferView time
+    bool object_in_use;       // Skip all object in_use checking
 };
 
 #if MTMERGE
