@@ -3180,6 +3180,14 @@ static bool validatePipelineDrawtimeState(layer_data const *my_data,
                         reinterpret_cast<uint64_t &>(pCB->activeRenderPass->renderPass), reinterpret_cast<uint64_t &>(pPipeline),
                         reinterpret_cast<const uint64_t &>(pPipeline->graphicsPipelineCI.renderPass), err_string.c_str());
         }
+
+        if (pPipeline->graphicsPipelineCI.subpass != pCB->activeSubpass) {
+            skip_call |=
+                log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
+                        reinterpret_cast<uint64_t const &>(pPipeline->pipeline), __LINE__, DRAWSTATE_RENDERPASS_INCOMPATIBLE, "DS",
+                        "Pipeline was built for subpass %u but used in subpass %u", pPipeline->graphicsPipelineCI.subpass,
+                        pCB->activeSubpass);
+        }
     }
     // TODO : Add more checks here
 

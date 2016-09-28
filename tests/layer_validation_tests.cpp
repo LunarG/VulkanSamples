@@ -4100,6 +4100,121 @@ TEST_F(VkLayerTest, RenderPassSubpassZeroTransitionsApplied) {
     vkDestroyImageView(m_device->device(), view, nullptr);
 }
 
+TEST_F(VkLayerTest, RenderPassPipelineSubpassMismatch) {
+    TEST_DESCRIPTION("Use a pipeline for the wrong subpass in a render pass instance");
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    // A renderpass with two subpasses, both writing the same attachment.
+    VkAttachmentDescription attach[] = {
+        { 0, VK_FORMAT_R8G8B8A8_UNORM, VK_SAMPLE_COUNT_1_BIT,
+            VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+        },
+    };
+    VkAttachmentReference ref = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+    VkSubpassDescription subpasses[] = {
+        { 0, VK_PIPELINE_BIND_POINT_GRAPHICS, 0, nullptr,
+            1, &ref, nullptr, nullptr, 0, nullptr },
+        { 0, VK_PIPELINE_BIND_POINT_GRAPHICS, 0, nullptr,
+            1, &ref, nullptr, nullptr, 0, nullptr },
+    };
+    VkSubpassDependency dep = {
+        0, 1,
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        VK_DEPENDENCY_BY_REGION_BIT
+    };
+    VkRenderPassCreateInfo rpci = {
+        VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, nullptr,
+        0, 1, attach, 2, subpasses, 1, &dep
+    };
+    VkRenderPass rp;
+    VkResult err = vkCreateRenderPass(m_device->device(), &rpci, nullptr, &rp);
+    ASSERT_VK_SUCCESS(err);
+
+    VkImageObj image(m_device);
+    image.init_no_layout(32, 32, VK_FORMAT_R8G8B8A8_UNORM,
+                         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                         VK_IMAGE_TILING_OPTIMAL, 0);
+    VkImageView imageView = image.targetView(VK_FORMAT_R8G8B8A8_UNORM);
+
+    VkFramebufferCreateInfo fbci = {
+        VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr,
+        0, rp, 1, &imageView, 32, 32, 1
+    };
+    VkFramebuffer fb;
+    err = vkCreateFramebuffer(m_device->device(), &fbci, nullptr, &fb);
+    ASSERT_VK_SUCCESS(err);
+
+    char const *vsSource =
+        "#version 450\n"
+        "void main() { gl_Position = vec4(1); }\n";
+    char const *fsSource =
+        "#version 450\n"
+        "layout(location=0) out vec4 color;\n"
+        "void main() { color = vec4(1); }\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+    VkPipelineObj pipe(m_device);
+    pipe.AddColorAttachment();
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+    VkViewport view_port = {};
+    m_viewports.push_back(view_port);
+    pipe.SetViewport(m_viewports);
+    VkRect2D rect = {};
+    m_scissors.push_back(rect);
+    pipe.SetScissor(m_scissors);
+
+    VkPipelineLayoutCreateInfo plci = {
+        VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, nullptr,
+        0, 0, nullptr, 0, nullptr
+    };
+    VkPipelineLayout pl;
+    err = vkCreatePipelineLayout(m_device->device(), &plci, nullptr, &pl);
+    ASSERT_VK_SUCCESS(err);
+    pipe.CreateVKPipeline(pl, rp);
+
+    BeginCommandBuffer();
+
+    VkRenderPassBeginInfo rpbi = {
+        VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr,
+        rp, fb, { { 0, 0, }, { 32, 32 } }, 0, nullptr
+    };
+
+    // subtest 1: bind in the wrong subpass
+    vkCmdBeginRenderPass(m_commandBuffer->handle(), &rpbi, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdNextSubpass(m_commandBuffer->handle(), VK_SUBPASS_CONTENTS_INLINE);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "built for subpass 0 but used in subpass 1");
+    vkCmdBindPipeline(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
+    vkCmdDraw(m_commandBuffer->handle(), 3, 1, 0, 0);
+    m_errorMonitor->VerifyFound();
+
+    vkCmdEndRenderPass(m_commandBuffer->handle());
+
+    // subtest 2: bind in correct subpass, then transition to next subpass
+    vkCmdBeginRenderPass(m_commandBuffer->handle(), &rpbi, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBindPipeline(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
+    vkCmdNextSubpass(m_commandBuffer->handle(), VK_SUBPASS_CONTENTS_INLINE);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "built for subpass 0 but used in subpass 1");
+    vkCmdDraw(m_commandBuffer->handle(), 3, 1, 0, 0);
+    m_errorMonitor->VerifyFound();
+
+    vkCmdEndRenderPass(m_commandBuffer->handle());
+
+    EndCommandBuffer();
+
+    vkDestroyPipelineLayout(m_device->device(), pl, nullptr);
+    vkDestroyFramebuffer(m_device->device(), fb, nullptr);
+    vkDestroyRenderPass(m_device->device(), rp, nullptr);
+}
+
 TEST_F(VkLayerTest, DepthStencilLayoutTransitionForDepthOnlyImageview) {
     TEST_DESCRIPTION("Validate that when an imageView of a depth/stencil image "
                      "is used as a depth/stencil framebuffer attachment, the "
