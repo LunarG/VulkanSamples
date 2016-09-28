@@ -621,6 +621,19 @@ void AddCommandBufferBindingBuffer(const layer_data *dev_data, GLOBAL_CB_NODE *c
     buff_node->cb_bindings.insert(cb_node);
 }
 
+// Create binding link between given buffer view node and its buffer with command buffer node
+void AddCommandBufferBindingBufferView(const layer_data *dev_data, GLOBAL_CB_NODE *cb_node, BUFFER_VIEW_STATE *view_state) {
+    // First add bindings for bufferView
+    view_state->cb_bindings.insert(cb_node);
+    cb_node->object_bindings.insert(
+        {reinterpret_cast<uint64_t &>(view_state->buffer_view), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT});
+    auto buffer_node = getBufferNode(dev_data, view_state->create_info.buffer);
+    // Add bindings for buffer within bufferView
+    if (buffer_node) {
+        AddCommandBufferBindingBuffer(dev_data, cb_node, buffer_node);
+    }
+}
+
 // For every mem obj bound to particular CB, free bindings related to that CB
 static void clear_cmd_buf_and_mem_references(layer_data *dev_data, GLOBAL_CB_NODE *pCBNode) {
     if (pCBNode) {

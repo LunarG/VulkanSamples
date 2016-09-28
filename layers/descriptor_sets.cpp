@@ -975,9 +975,7 @@ void cvdescriptorset::TexelDescriptor::CopyUpdate(const Descriptor *src) {
 void cvdescriptorset::TexelDescriptor::BindCommandBuffer(const core_validation::layer_data *dev_data, GLOBAL_CB_NODE *cb_node) {
     auto bv_state = getBufferViewState(dev_data, buffer_view_);
     if (bv_state) {
-        auto buffer_node = getBufferNode(dev_data, bv_state->create_info.buffer);
-        if (buffer_node)
-            core_validation::AddCommandBufferBindingBuffer(dev_data, cb_node, buffer_node);
+        core_validation::AddCommandBufferBindingBufferView(dev_data, cb_node, bv_state);
     }
 }
 
