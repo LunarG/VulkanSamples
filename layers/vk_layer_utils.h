@@ -90,8 +90,8 @@ typedef enum VkStringErrorFlagBits {
 } VkStringErrorFlagBits;
 typedef VkFlags VkStringErrorFlags;
 
-void layer_debug_actions(debug_report_data* report_data, std::vector<VkDebugReportCallbackEXT> &logging_callback,
-    const VkAllocationCallbacks *pAllocator, const char* layer_identifier);
+VK_LAYER_EXPORT void layer_debug_actions(debug_report_data *report_data, std::vector<VkDebugReportCallbackEXT> &logging_callback,
+                                         const VkAllocationCallbacks *pAllocator, const char *layer_identifier);
 
 static inline bool vk_format_is_undef(VkFormat format) { return (format == VK_FORMAT_UNDEFINED); }
 
@@ -104,20 +104,20 @@ static inline bool vk_format_is_color(VkFormat format) {
     return !(vk_format_is_undef(format) || vk_format_is_depth_or_stencil(format));
 }
 
-bool vk_format_is_norm(VkFormat format);
-bool vk_format_is_int(VkFormat format);
-bool vk_format_is_sint(VkFormat format);
-bool vk_format_is_uint(VkFormat format);
-bool vk_format_is_float(VkFormat format);
-bool vk_format_is_srgb(VkFormat format);
-bool vk_format_is_compressed(VkFormat format);
-VkExtent2D vk_format_compressed_block_size(VkFormat format);
-size_t vk_format_get_size(VkFormat format);
-unsigned int vk_format_get_channel_count(VkFormat format);
-VkFormatCompatibilityClass vk_format_get_compatibility_class(VkFormat format);
-VkDeviceSize vk_safe_modulo(VkDeviceSize dividend, VkDeviceSize divisor);
-VkStringErrorFlags vk_string_validate(const int max_length, const char *char_array);
-bool white_list(const char *item, const char *whitelist);
+VK_LAYER_EXPORT bool vk_format_is_norm(VkFormat format);
+VK_LAYER_EXPORT bool vk_format_is_int(VkFormat format);
+VK_LAYER_EXPORT bool vk_format_is_sint(VkFormat format);
+VK_LAYER_EXPORT bool vk_format_is_uint(VkFormat format);
+VK_LAYER_EXPORT bool vk_format_is_float(VkFormat format);
+VK_LAYER_EXPORT bool vk_format_is_srgb(VkFormat format);
+VK_LAYER_EXPORT bool vk_format_is_compressed(VkFormat format);
+VK_LAYER_EXPORT VkExtent2D vk_format_compressed_block_size(VkFormat format);
+VK_LAYER_EXPORT size_t vk_format_get_size(VkFormat format);
+VK_LAYER_EXPORT unsigned int vk_format_get_channel_count(VkFormat format);
+VK_LAYER_EXPORT VkFormatCompatibilityClass vk_format_get_compatibility_class(VkFormat format);
+VK_LAYER_EXPORT VkDeviceSize vk_safe_modulo(VkDeviceSize dividend, VkDeviceSize divisor);
+VK_LAYER_EXPORT VkStringErrorFlags vk_string_validate(const int max_length, const char *char_array);
+VK_LAYER_EXPORT bool white_list(const char *item, const char *whitelist);
 
 static inline int u_ffs(int val) {
 #ifdef WIN32
