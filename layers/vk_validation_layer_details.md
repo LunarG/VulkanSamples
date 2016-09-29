@@ -274,6 +274,7 @@ The VK_LAYER_LUNARG_object_tracker layer maintains a record of all Vulkan object
 | Unknown object  | Internal layer errors when it attempts to update use count for an object that's not in its internal tracking datastructures. | UNKNOWN_OBJECT |  | CreateUnknownObject | NA |
 | Correct Command Pool | Validates that command buffers in a FreeCommandBuffers call were all created in the specified commandPool | COMMAND_POOL_MISMATCH | vkFreeCommandBuffers | InvalidCommandPoolConsistency | NA |
 | Correct Descriptor Pool | Validates that descriptor sets in a FreeDescriptorSets call were all created in the specified descriptorPool | DESCRIPTOR_POOL_MISMATCH | vkFreeDescriptorSets | InvalidDescriptorPoolConsistency | NA |
+| Inconsistent Allocators | Validates that a custom allocator is either provided for both create and destroy, or neither. | ALLOCATOR_MISMATCH | | TODO | None |
 | NA | Enum used for informational messages | NONE | | TODO | None |
 | NA | Enum used for errors in the layer itself. This does not indicate an app issue, but instead a bug in the layer. | INTERNAL_ERROR | | TODO | None |
 

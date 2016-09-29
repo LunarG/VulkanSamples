@@ -277,11 +277,13 @@ static void CreateNonDispatchableObject(T1 dispatchable_object, T2 object, VkDeb
 }
 
 template <typename T1, typename T2>
-static void DestroyDispatchableObject(T1 dispatchable_object, T2 object, VkDebugReportObjectTypeEXT object_type) {
+static void DestroyDispatchableObject(T1 dispatchable_object, T2 object, VkDebugReportObjectTypeEXT object_type, bool custom_allocator) {
     layer_data *instance_data = get_my_data_ptr(get_dispatch_key(dispatchable_object), layer_data_map);
 
     uint64_t object_handle = reinterpret_cast<uint64_t>(object);
 
+    // TODO: This function produces errors, but doesn't compose well with either
+    // a call down the chain or its own state updates
     auto item = instance_data->object_map[object_type].find(object_handle);
     if (item != instance_data->object_map[object_type].end()) {
 
@@ -297,6 +299,15 @@ static void DestroyDispatchableObject(T1 dispatchable_object, T2 object, VkDebug
                 object_name[pNode->object_type], reinterpret_cast<uint64_t>(object), instance_data->num_total_objects,
                 instance_data->num_objects[pNode->object_type], object_name[pNode->object_type]);
 
+        auto allocated_with_custom = pNode->status & OBJSTATUS_CUSTOM_ALLOCATOR;
+        if (custom_allocator ^ allocated_with_custom) {
+            log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, object_type, object_handle, __LINE__,
+                    OBJTRACK_ALLOCATOR_MISMATCH, LayerName,
+                    "Custom allocator %sspecified while destroying %s obj 0x%" PRIxLEAST64 " but %sspecified at creation",
+                    (custom_allocator ? "" : "not "), object_name[object_type], object_handle,
+                    (allocated_with_custom ? "" : "not "));
+        }
+
         delete pNode;
         instance_data->object_map[object_type].erase(item);
     } else {
@@ -308,7 +319,7 @@ static void DestroyDispatchableObject(T1 dispatchable_object, T2 object, VkDebug
 }
 
 template <typename T1, typename T2>
-static void DestroyNonDispatchableObject(T1 dispatchable_object, T2 object, VkDebugReportObjectTypeEXT object_type) {
+static void DestroyNonDispatchableObject(T1 dispatchable_object, T2 object, VkDebugReportObjectTypeEXT object_type, bool custom_allocator) {
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(dispatchable_object), layer_data_map);
 
     uint64_t object_handle = reinterpret_cast<uint64_t &>(object);
@@ -327,6 +338,15 @@ static void DestroyNonDispatchableObject(T1 dispatchable_object, T2 object, VkDe
                 "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%" PRIu64 " total objs remain & %" PRIu64 " %s objs).",
                 object_name[pNode->object_type], reinterpret_cast<uint64_t &>(object), device_data->num_total_objects,
                 device_data->num_objects[pNode->object_type], object_name[pNode->object_type]);
+
+        auto allocated_with_custom = pNode->status & OBJSTATUS_CUSTOM_ALLOCATOR;
+        if (custom_allocator ^ allocated_with_custom) {
+            log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, object_type, object_handle, __LINE__,
+                    OBJTRACK_ALLOCATOR_MISMATCH, LayerName,
+                    "Custom allocator %sspecified while destroying %s obj 0x%" PRIxLEAST64 " but %sspecified at creation",
+                    (custom_allocator ? "" : "not "), object_name[object_type], object_handle,
+                    (allocated_with_custom ? "" : "not "));
+        }
 
         delete pNode;
         device_data->object_map[object_type].erase(item);
@@ -404,7 +424,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
 
     ValidateDispatchableObject(instance, instance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, false);
 
-    DestroyDispatchableObject(instance, instance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT);
+    DestroyDispatchableObject(instance, instance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pAllocator);
     // Report any remaining objects in LL
 
     for (auto iit = instance_data->object_map[VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT].begin();
@@ -474,7 +494,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
 
     std::unique_lock<std::mutex> lock(global_lock);
     ValidateDispatchableObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
-    DestroyDispatchableObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT);
+    DestroyDispatchableObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, pAllocator);
 
     // Report any remaining objects associated with this VkDevice object in LL
     DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT);
@@ -866,7 +886,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyFence(VkDevice device, VkFence fence, const Vk
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyNonDispatchableObject(device, fence, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT);
+        DestroyNonDispatchableObject(device, fence, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, pAllocator);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyFence(device, fence, pAllocator);
 }
@@ -954,7 +974,7 @@ VKAPI_ATTR void VKAPI_CALL DestroySemaphore(VkDevice device, VkSemaphore semapho
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyNonDispatchableObject(device, semaphore, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT);
+        DestroyNonDispatchableObject(device, semaphore, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT, pAllocator);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroySemaphore(device, semaphore, pAllocator);
 }
@@ -991,7 +1011,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyEvent(VkDevice device, VkEvent event, const Vk
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyNonDispatchableObject(device, event, VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT);
+        DestroyNonDispatchableObject(device, event, VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT, pAllocator);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyEvent(device, event, pAllocator);
 }
@@ -1070,7 +1090,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyQueryPool(VkDevice device, VkQueryPool queryPo
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyNonDispatchableObject(device, queryPool, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT);
+        DestroyNonDispatchableObject(device, queryPool, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, pAllocator);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyQueryPool(device, queryPool, pAllocator);
 }
@@ -1123,7 +1143,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyBuffer(VkDevice device, VkBuffer buffer, const
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyNonDispatchableObject(device, buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT);
+        DestroyNonDispatchableObject(device, buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, pAllocator);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyBuffer(device, buffer, pAllocator);
 }
@@ -1163,7 +1183,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyBufferView(VkDevice device, VkBufferView buffe
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyNonDispatchableObject(device, bufferView, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT);
+        DestroyNonDispatchableObject(device, bufferView, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT, pAllocator);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyBufferView(device, bufferView, pAllocator);
 }
@@ -1200,7 +1220,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyImage(VkDevice device, VkImage image, const Vk
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyNonDispatchableObject(device, image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT);
+        DestroyNonDispatchableObject(device, image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, pAllocator);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyImage(device, image, pAllocator);
 }
@@ -1254,7 +1274,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyImageView(VkDevice device, VkImageView imageVi
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyNonDispatchableObject(device, imageView, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT);
+        DestroyNonDispatchableObject(device, imageView, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT, pAllocator);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyImageView(device, imageView, pAllocator);
 }
@@ -1293,7 +1313,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyShaderModule(VkDevice device, VkShaderModule s
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyNonDispatchableObject(device, shaderModule, VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT);
+        DestroyNonDispatchableObject(device, shaderModule, VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT, pAllocator);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyShaderModule(device, shaderModule, pAllocator);
 }
@@ -1332,7 +1352,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyPipelineCache(VkDevice device, VkPipelineCache
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyNonDispatchableObject(device, pipelineCache, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT);
+        DestroyNonDispatchableObject(device, pipelineCache, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT, pAllocator);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyPipelineCache(device, pipelineCache, pAllocator);
 }
@@ -1387,7 +1407,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyPipeline(VkDevice device, VkPipeline pipeline,
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyNonDispatchableObject(device, pipeline, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT);
+        DestroyNonDispatchableObject(device, pipeline, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, pAllocator);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyPipeline(device, pipeline, pAllocator);
 }
@@ -1434,7 +1454,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyPipelineLayout(VkDevice device, VkPipelineLayo
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyNonDispatchableObject(device, pipelineLayout, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT);
+        DestroyNonDispatchableObject(device, pipelineLayout, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT, pAllocator);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyPipelineLayout(device, pipelineLayout, pAllocator);
 }
@@ -1471,7 +1491,7 @@ VKAPI_ATTR void VKAPI_CALL DestroySampler(VkDevice device, VkSampler sampler, co
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyNonDispatchableObject(device, sampler, VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT);
+        DestroyNonDispatchableObject(device, sampler, VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT, pAllocator);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroySampler(device, sampler, pAllocator);
 }
@@ -1525,7 +1545,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyDescriptorSetLayout(VkDevice device, VkDescrip
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyNonDispatchableObject(device, descriptorSetLayout, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT);
+        DestroyNonDispatchableObject(device, descriptorSetLayout, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT, pAllocator);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyDescriptorSetLayout(device, descriptorSetLayout, pAllocator);
 }
@@ -1680,7 +1700,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyFramebuffer(VkDevice device, VkFramebuffer fra
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyNonDispatchableObject(device, framebuffer, VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT);
+        DestroyNonDispatchableObject(device, framebuffer, VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT, pAllocator);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyFramebuffer(device, framebuffer, pAllocator);
 }
@@ -1718,7 +1738,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyRenderPass(VkDevice device, VkRenderPass rende
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyNonDispatchableObject(device, renderPass, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT);
+        DestroyNonDispatchableObject(device, renderPass, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, pAllocator);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyRenderPass(device, renderPass, pAllocator);
 }
@@ -2571,7 +2591,7 @@ VKAPI_ATTR void VKAPI_CALL DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR s
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyNonDispatchableObject(instance, surface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT);
+        DestroyNonDispatchableObject(instance, surface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, pAllocator);
     }
     get_dispatch_table(ot_instance_table_map, instance)->DestroySurfaceKHR(instance, surface, pAllocator);
 }
@@ -2994,7 +3014,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyDebugReportCallbackEXT(VkInstance instance, Vk
     pInstanceTable->DestroyDebugReportCallbackEXT(instance, msgCallback, pAllocator);
     layer_data *instance_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     layer_destroy_msg_callback(instance_data->report_data, msgCallback, pAllocator);
-    DestroyNonDispatchableObject(instance, msgCallback, VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT);
+    DestroyNonDispatchableObject(instance, msgCallback, VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT, pAllocator);
 }
 
 VKAPI_ATTR void VKAPI_CALL DebugReportMessageEXT(VkInstance instance, VkDebugReportFlagsEXT flags,
@@ -3293,7 +3313,7 @@ VKAPI_ATTR void VKAPI_CALL FreeMemory(VkDevice device, VkDeviceMemory memory, co
     get_dispatch_table(ot_device_table_map, device)->FreeMemory(device, memory, pAllocator);
 
     lock.lock();
-    DestroyNonDispatchableObject(device, memory, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT);
+    DestroyNonDispatchableObject(device, memory, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, pAllocator);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL MapMemory(VkDevice device, VkDeviceMemory memory, VkDeviceSize offset, VkDeviceSize size,
@@ -3409,7 +3429,7 @@ VKAPI_ATTR void VKAPI_CALL FreeCommandBuffers(VkDevice device, VkCommandPool com
     }
 
     for (uint32_t i = 0; i < commandBufferCount; i++) {
-        DestroyDispatchableObject(device, pCommandBuffers[i], VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT);
+        DestroyDispatchableObject(device, pCommandBuffers[i], VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false);
     }
 
     lock.unlock();
@@ -3434,7 +3454,7 @@ VKAPI_ATTR void VKAPI_CALL DestroySwapchainKHR(VkDevice device, VkSwapchainKHR s
             ++itr;
         }
     }
-    DestroyNonDispatchableObject(device, swapchain, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT);
+    DestroyNonDispatchableObject(device, swapchain, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, pAllocator);
     lock.unlock();
 
     get_dispatch_table(ot_device_table_map, device)->DestroySwapchainKHR(device, swapchain, pAllocator);
@@ -3452,7 +3472,7 @@ VKAPI_ATTR VkResult VKAPI_CALL FreeDescriptorSets(VkDevice device, VkDescriptorP
     }
 
     for (uint32_t i = 0; i < descriptorSetCount; i++) {
-        DestroyNonDispatchableObject(device, pDescriptorSets[i], VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT);
+        DestroyNonDispatchableObject(device, pDescriptorSets[i], VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, false);
     }
 
     lock.unlock();
@@ -3484,10 +3504,10 @@ VKAPI_ATTR void VKAPI_CALL DestroyDescriptorPool(VkDevice device, VkDescriptorPo
         auto del_itr = itr++;
         if (pNode->parent_object == reinterpret_cast<uint64_t &>(descriptorPool)) {
             DestroyNonDispatchableObject(device, (VkDescriptorSet)((*del_itr).first),
-                                         VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT);
+                                         VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, false);
         }
     }
-    DestroyNonDispatchableObject(device, descriptorPool, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT);
+    DestroyNonDispatchableObject(device, descriptorPool, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT, pAllocator);
     lock.unlock();
     get_dispatch_table(ot_device_table_map, device)->DestroyDescriptorPool(device, descriptorPool, pAllocator);
 }
@@ -3513,10 +3533,10 @@ VKAPI_ATTR void VKAPI_CALL DestroyCommandPool(VkDevice device, VkCommandPool com
         if (pNode->parent_object == reinterpret_cast<uint64_t &>(commandPool)) {
             skip_call |= ValidateCommandBuffer(device, commandPool, reinterpret_cast<VkCommandBuffer>((*del_itr).first));
             DestroyDispatchableObject(device, reinterpret_cast<VkCommandBuffer>((*del_itr).first),
-                                      VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT);
+                                      VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false);
         }
     }
-    DestroyNonDispatchableObject(device, commandPool, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT);
+    DestroyNonDispatchableObject(device, commandPool, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT, pAllocator);
     lock.unlock();
     get_dispatch_table(ot_device_table_map, device)->DestroyCommandPool(device, commandPool, pAllocator);
 }
