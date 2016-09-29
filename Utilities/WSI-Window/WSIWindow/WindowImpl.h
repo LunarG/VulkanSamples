@@ -1,6 +1,5 @@
 /*
 *--------------------------------------------------------------------------
-* Copyright (c) 2015-2016 The Khronos Group Inc.
 * Copyright (c) 2015-2016 Valve Corporation
 * Copyright (c) 2015-2016 LunarG, Inc.
 *
@@ -34,7 +33,7 @@
 typedef unsigned int uint;
 enum eAction { eUP, eDOWN, eMOVE };                                       // keyboard / mouse / touchscreen actions
 
-//======================== FIFO Buffer =========================
+//======================== FIFO Buffer =========================          // Used for event message queue
 template <typename T,uint SIZE> class FIFO{
     int head, tail;
     T buf[SIZE]={};
