@@ -58,8 +58,6 @@ enum SWAPCHAIN_ERROR {
                                         // than pCreateInfo->surface
     SWAPCHAIN_DESTROY_SWAP_DIFF_DEVICE, // Called vkDestroySwapchainKHR() with a different VkDevice than vkCreateSwapchainKHR()
     SWAPCHAIN_APP_ACQUIRES_TOO_MANY_IMAGES, // vkAcquireNextImageKHR() asked for more images than are available
-    SWAPCHAIN_INDEX_TOO_LARGE,          // Index is too large for swapchain
-    SWAPCHAIN_INDEX_NOT_IN_USE,         // vkQueuePresentKHR() given index that is not acquired by app
     SWAPCHAIN_BAD_BOOL,                 // VkBool32 that doesn't have value of VK_TRUE or VK_FALSE (e.g. is a non-zero form of true)
     SWAPCHAIN_PRIOR_COUNT,              // Query must be called first to get value of pCount, then called second time
     SWAPCHAIN_INVALID_COUNT,            // Second time a query called, the pCount value didn't match first time
@@ -73,7 +71,6 @@ enum SWAPCHAIN_ERROR {
                                                 // vkGetPhysicalDeviceQueueFamilyProperties()
     SWAPCHAIN_SURFACE_NOT_SUPPORTED_WITH_QUEUE, // A surface is not supported by a given queueFamilyIndex, as seen by
                                                 // vkGetPhysicalDeviceSurfaceSupportKHR()
-    SWAPCHAIN_NO_SYNC_FOR_ACQUIRE,      // vkAcquireNextImageKHR should be called with a valid semaphore and/or fence
     SWAPCHAIN_GET_SUPPORTED_DISPLAYS_WITHOUT_QUERY,     // vkGetDisplayPlaneSupportedDisplaysKHR should be called after querying 
                                                         // device display plane properties
     SWAPCHAIN_PLANE_INDEX_TOO_LARGE,    // a planeIndex value is larger than what vkGetDisplayPlaneSupportedDisplaysKHR returns

@@ -13,7 +13,7 @@ del /Q /F vsversion.tmp
 setlocal EnableDelayedExpansion
 set errorCode=0
 set BUILD_DIR=%~dp0
-set BASE_DIR=%BUILD_DIR%external
+set BASE_DIR="%BUILD_DIR%external"
 set GLSLANG_DIR=%BASE_DIR%\glslang
 set SPIRV_TOOLS_DIR=%BASE_DIR%\spirv-tools
 

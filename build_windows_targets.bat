@@ -70,14 +70,14 @@ REM 64-bit build
 REM *******************************************
 if %do_64%==1 (
     pushd build
-
-    echo Building 64-bit Debug  
-    REM msbuild doesn't seem to see the dependency between the Overlay sample and layer_utils
+    echo Generating 64-bit CMake files for Visual Studio %VS_VERSION%
+    cmake -G "Visual Studio %VS_VERSION% Win64" ..
+    echo Building 64-bit Debug 
     pushd layers
     msbuild generate_vk_layer_helpers.vcxproj /p:Platform=x64 /p:Configuration=Debug /verbosity:quiet
     msbuild VkLayer_utils.vcxproj /p:Platform=x64 /p:Configuration=Debug /verbosity:quiet
     popd
-    msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Debug /verbosity:quiet
+    msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Debug /maxcpucount /verbosity:quiet
     if errorlevel 1 (
        echo.
        echo 64-bit Debug build failed!
@@ -91,7 +91,6 @@ if %do_64%==1 (
     msbuild generate_vk_layer_helpers.vcxproj /p:Platform=x64 /p:Configuration=Release /verbosity:quiet
     msbuild VkLayer_utils.vcxproj /p:Platform=x64 /p:Configuration=Release /verbosity:quiet
     popd
-    msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Release /verbosity:quiet
     if errorlevel 1 (
        echo.
        echo 64-bit Release build failed!
@@ -106,14 +105,14 @@ REM 32-bit build
 REM *******************************************
 if %do_32%==1 (
     pushd build32
-
-    echo Building 32-bit Debug
-    REM msbuild doesn't seem to see the dependency between the Overlay sample and layer_utils
+    echo Generating 32-bit CMake files for Visual Studio %VS_VERSION%
+    cmake -G "Visual Studio %VS_VERSION%" ..
+    echo Building 32-bit Debug 
     pushd layers
     msbuild generate_vk_layer_helpers.vcxproj /p:Platform=x86 /p:Configuration=Debug /verbosity:quiet
     msbuild VkLayer_utils.vcxproj /p:Platform=x86 /p:Configuration=Debug /verbosity:quiet
     popd
-    msbuild ALL_BUILD.vcxproj /p:Platform=x86 /p:Configuration=Debug /verbosity:quiet
+    msbuild ALL_BUILD.vcxproj /p:Platform=x86 /p:Configuration=Debug /maxcpucount /verbosity:quiet
     if errorlevel 1 (
        echo.
        echo 32-bit Debug build failed!

@@ -20,6 +20,7 @@
 * Author: Ian Elliott <ian@LunarG.com>
 * Author: Jon Ashburn <jon@lunarg.com>
 * Author: Gwan-gyeong Mun <elongbug@gmail.com>
+* Author: Tony Barbour <tony@LunarG.com>
 */
 
 #define _GNU_SOURCE
@@ -50,6 +51,9 @@
 #define DEMO_TEXTURE_COUNT 1
 #define APP_SHORT_NAME "cube"
 #define APP_LONG_NAME "The Vulkan Cube Demo Program"
+
+// Allow a maximum of two outstanding presentation operations.
+#define FRAME_LAG 2
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
@@ -276,6 +280,7 @@ BreakCallback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
 typedef struct {
     VkImage image;
     VkCommandBuffer cmd;
+    VkCommandBuffer graphics_to_present_cmd;
     VkImageView view;
 } SwapchainBuffers;
 
@@ -309,6 +314,7 @@ struct demo {
     bool prepared;
     bool use_staging_buffer;
     bool use_xlib;
+    bool separate_present_queue;
 
     VkInstance inst;
     VkPhysicalDevice gpu;
@@ -317,8 +323,9 @@ struct demo {
     VkQueue present_queue;
     uint32_t graphics_queue_family_index;
     uint32_t present_queue_family_index;
-    VkSemaphore image_acquired_semaphore;
-    VkSemaphore draw_complete_semaphore;
+    VkSemaphore image_acquired_semaphores[FRAME_LAG];
+    VkSemaphore draw_complete_semaphores[FRAME_LAG];
+    VkSemaphore image_ownership_semaphores[FRAME_LAG];
     VkPhysicalDeviceProperties gpu_props;
     VkQueueFamilyProperties *queue_props;
     VkPhysicalDeviceMemoryProperties memory_properties;
@@ -348,8 +355,12 @@ struct demo {
     uint32_t swapchainImageCount;
     VkSwapchainKHR swapchain;
     SwapchainBuffers *buffers;
+    VkFence fences[FRAME_LAG];
+    bool fencesInited[FRAME_LAG];
+    int frame_index;
 
     VkCommandPool cmd_pool;
+    VkCommandPool present_cmd_pool;
 
     struct {
         VkFormat format;
@@ -404,47 +415,77 @@ struct demo {
     PFN_vkDebugReportMessageEXT DebugReportMessage;
 
     uint32_t current_buffer;
-    uint32_t queue_count;
+    uint32_t queue_family_count;
 };
 
 VKAPI_ATTR VkBool32 VKAPI_CALL
 dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
     uint64_t srcObject, size_t location, int32_t msgCode,
     const char *pLayerPrefix, const char *pMsg, void *pUserData) {
+
+    // clang-format off
     char *message = (char *)malloc(strlen(pMsg) + 100);
 
     assert(message);
 
-    if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
-        sprintf(message, "ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode,
-            pMsg);
+    // We know we're submitting queues without fences, ignore this
+    if (strstr(pMsg, "vkQueueSubmit parameter, VkFence fence, is null pointer"))
+        return false;
+
+    if (msgFlags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT) {
+        sprintf(message, "INFORMATION: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
         validation_error = 1;
     } else if (msgFlags & VK_DEBUG_REPORT_WARNING_BIT_EXT) {
-        // We know that we're submitting queues without fences, ignore this
-        // warning
-        if (strstr(pMsg,
-            "vkQueueSubmit parameter, VkFence fence, is null pointer")) {
-            return false;
-        }
-        sprintf(message, "WARNING: [%s] Code %d : %s", pLayerPrefix, msgCode,
-            pMsg);
+        sprintf(message, "WARNING: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
+        validation_error = 1;
+    } else if (msgFlags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT) {
+        sprintf(message, "PERFOERMANCE WARNING: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
+        validation_error = 1;
+    } else if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
+        sprintf(message, "ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
+        validation_error = 1;
+    } else if (msgFlags & VK_DEBUG_REPORT_DEBUG_BIT_EXT) {
+        sprintf(message, "DEBUG: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
         validation_error = 1;
     } else {
+        sprintf(message, "INFORMATION: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
         validation_error = 1;
-        return false;
     }
 
 #ifdef _WIN32
+
     in_callback = true;
     struct demo *demo = (struct demo*) pUserData;
     if (!demo->suppress_popups)
         MessageBox(NULL, message, "Alert", MB_OK);
     in_callback = false;
+
+#elif defined(ANDROID)
+
+    if (msgFlags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT) {
+        __android_log_print(ANDROID_LOG_INFO,  APP_SHORT_NAME, "%s", message);
+    } else if (msgFlags & VK_DEBUG_REPORT_WARNING_BIT_EXT) {
+        __android_log_print(ANDROID_LOG_WARN,  APP_SHORT_NAME, "%s", message);
+    } else if (msgFlags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT) {
+        __android_log_print(ANDROID_LOG_WARN,  APP_SHORT_NAME, "%s", message);
+    } else if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
+        __android_log_print(ANDROID_LOG_ERROR, APP_SHORT_NAME, "%s", message);
+    } else if (msgFlags & VK_DEBUG_REPORT_DEBUG_BIT_EXT) {
+        __android_log_print(ANDROID_LOG_DEBUG, APP_SHORT_NAME, "%s", message);
+    } else {
+        __android_log_print(ANDROID_LOG_INFO,  APP_SHORT_NAME, "%s", message);
+    }
+
 #else
+
     printf("%s\n", message);
     fflush(stdout);
+
 #endif
+
     free(message);
+
+    //clang-format on
 
     /*
     * false indicates that layer should not bail-out of an
@@ -612,14 +653,12 @@ static void demo_draw_build_cmd(struct demo *demo, VkCommandBuffer cmd_buf) {
     err = vkBeginCommandBuffer(cmd_buf, &cmd_buf_info);
     assert(!err);
 
-    // We can use LAYOUT_UNDEFINED as a wildcard here because we don't care what
-    // happens to the previous contents of the image
     VkImageMemoryBarrier image_memory_barrier = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
         .pNext = NULL,
         .srcAccessMask = 0,
         .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-        .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
         .newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -653,10 +692,66 @@ static void demo_draw_build_cmd(struct demo *demo, VkCommandBuffer cmd_buf) {
     vkCmdSetScissor(cmd_buf, 0, 1, &scissor);
     vkCmdDraw(cmd_buf, 12 * 3, 1, 0, 0);
     // Note that ending the renderpass changes the image's layout from
-    // COLOR_ATTACHEMENT_OPTIMAL to PRESENT_SRC_KHR
+    // COLOR_ATTACHMENT_OPTIMAL to PRESENT_SRC_KHR
     vkCmdEndRenderPass(cmd_buf);
 
+    if (demo->separate_present_queue) {
+        // We have to transfer ownership from the graphics queue family to the
+        // present queue family to be able to present.  Note that we don't have
+        // to transfer from present queue family back to graphics queue family at
+        // the start of the next frame because we don't care about the image's
+        // contents at that point.
+        VkImageMemoryBarrier image_ownership_barrier = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+            .pNext = NULL,
+            .srcAccessMask = 0,
+            .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            .oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+            .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+            .srcQueueFamilyIndex = demo->graphics_queue_family_index,
+            .dstQueueFamilyIndex = demo->present_queue_family_index,
+            .image = demo->buffers[demo->current_buffer].image,
+            .subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}};
+
+        vkCmdPipelineBarrier(cmd_buf,
+                             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0,
+                             0, NULL, 0, NULL, 1, &image_ownership_barrier);
+    }
     err = vkEndCommandBuffer(cmd_buf);
+    assert(!err);
+}
+
+void demo_build_image_ownership_cmd(struct demo *demo, int i) {
+    VkResult U_ASSERT_ONLY err;
+
+    const VkCommandBufferBeginInfo cmd_buf_info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .pNext = NULL,
+        .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
+        .pInheritanceInfo = NULL,
+    };
+    err = vkBeginCommandBuffer(demo->buffers[i].graphics_to_present_cmd,
+                               &cmd_buf_info);
+    assert(!err);
+
+    VkImageMemoryBarrier image_ownership_barrier = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        .pNext = NULL,
+        .srcAccessMask = 0,
+        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        .oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+        .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+        .srcQueueFamilyIndex = demo->graphics_queue_family_index,
+        .dstQueueFamilyIndex = demo->present_queue_family_index,
+        .image = demo->buffers[i].image,
+        .subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}};
+
+    vkCmdPipelineBarrier(demo->buffers[i].graphics_to_present_cmd,
+                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0,
+                         NULL, 0, NULL, 1, &image_ownership_barrier);
+    err = vkEndCommandBuffer(demo->buffers[i].graphics_to_present_cmd);
     assert(!err);
 }
 
@@ -687,13 +782,25 @@ void demo_update_data_buffer(struct demo *demo) {
 static void demo_draw(struct demo *demo) {
     VkResult U_ASSERT_ONLY err;
 
+    if (demo->fencesInited[demo->frame_index])
+    {
+        // Ensure no more than FRAME_LAG presentations are outstanding
+        vkWaitForFences(demo->device, 1, &demo->fences[demo->frame_index], VK_TRUE, UINT64_MAX);
+        vkResetFences(demo->device, 1, &demo->fences[demo->frame_index]);
+    }
+
     // Get the index of the next available swapchain image:
     err = demo->fpAcquireNextImageKHR(demo->device, demo->swapchain, UINT64_MAX,
-                                      demo->image_acquired_semaphore, (VkFence)0,
+                                      demo->image_acquired_semaphores[demo->frame_index], demo->fences[demo->frame_index],
                                       &demo->current_buffer);
+    demo->fencesInited[demo->frame_index] = true;
+
     if (err == VK_ERROR_OUT_OF_DATE_KHR) {
         // demo->swapchain is out of date (e.g. the window was resized) and
         // must be recreated:
+        demo->frame_index += 1;
+        demo->frame_index %= FRAME_LAG;
+
         demo_resize(demo);
         demo_draw(demo);
         return;
@@ -703,39 +810,60 @@ static void demo_draw(struct demo *demo) {
     } else {
         assert(!err);
     }
-
     // Wait for the image acquired semaphore to be signaled to ensure
     // that the image won't be rendered to until the presentation
     // engine has fully released ownership to the application, and it is
     // okay to render to the image.
     VkFence nullFence = VK_NULL_HANDLE;
-    VkPipelineStageFlags pipe_stage_flags =
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    VkSubmitInfo submit_info = {
-        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .pNext = NULL,
-        .waitSemaphoreCount = 1,
-        .pWaitSemaphores = &demo->image_acquired_semaphore,
-        .pWaitDstStageMask = &pipe_stage_flags,
-        .commandBufferCount = 1,
-        .pCommandBuffers = &demo->buffers[demo->current_buffer].cmd,
-        .signalSemaphoreCount = 1,
-        .pSignalSemaphores = &demo->draw_complete_semaphore};
-
+    VkPipelineStageFlags pipe_stage_flags;
+    VkSubmitInfo submit_info;
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.pNext = NULL;
+    submit_info.pWaitDstStageMask = &pipe_stage_flags;
+    pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    submit_info.waitSemaphoreCount = 1;
+    submit_info.pWaitSemaphores = &demo->image_acquired_semaphores[demo->frame_index];
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &demo->buffers[demo->current_buffer].cmd;
+    submit_info.signalSemaphoreCount = 1;
+    submit_info.pSignalSemaphores = &demo->draw_complete_semaphores[demo->frame_index];
     err = vkQueueSubmit(demo->graphics_queue, 1, &submit_info, nullFence);
     assert(!err);
 
+    if (demo->separate_present_queue) {
+        // If we are using separate queues, change image ownership to the
+        // present queue before presenting, waiting for the draw complete
+        // semaphore and signalling the ownership released semaphore when finished
+        pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        submit_info.waitSemaphoreCount = 1;
+        submit_info.pWaitSemaphores = &demo->draw_complete_semaphores[demo->frame_index];
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers =
+            &demo->buffers[demo->current_buffer].graphics_to_present_cmd;
+        submit_info.signalSemaphoreCount = 1;
+        submit_info.pSignalSemaphores = &demo->image_ownership_semaphores[demo->frame_index];
+        err = vkQueueSubmit(demo->present_queue, 1, &submit_info, nullFence);
+        assert(!err);
+    }
+
+    // If we are using separate queues we have to wait for image ownership,
+    // otherwise wait for draw complete
     VkPresentInfoKHR present = {
         .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
         .pNext = NULL,
         .waitSemaphoreCount = 1,
-        .pWaitSemaphores = &demo->draw_complete_semaphore,
+        .pWaitSemaphores = (demo->separate_present_queue)
+                               ? &demo->image_ownership_semaphores[demo->frame_index]
+                               : &demo->draw_complete_semaphores[demo->frame_index],
         .swapchainCount = 1,
         .pSwapchains = &demo->swapchain,
         .pImageIndices = &demo->current_buffer,
     };
 
     err = demo->fpQueuePresentKHR(demo->present_queue, &present);
+    demo->frame_index += 1;
+    demo->frame_index %= FRAME_LAG;
+
     if (err == VK_ERROR_OUT_OF_DATE_KHR) {
         // demo->swapchain is out of date (e.g. the window was resized) and
         // must be recreated:
@@ -796,21 +924,11 @@ static void demo_prepare_buffers(struct demo *demo) {
         demo->height = surfCapabilities.currentExtent.height;
     }
 
-    // If mailbox mode is available, use it, as is the lowest-latency non-
-    // tearing mode.  If not, try IMMEDIATE which will usually be available,
-    // and is fastest (though it tears).  If not, fall back to FIFO which is
-    // always available.
+    // The FIFO present mode is guaranteed by the spec to be supported
+    // and to have no tearing.  MAILBOX is another option, but for fast
+    // rendering apps we could use a lot of gpu power rendering frames
+    // that are discarded and never displayed
     VkPresentModeKHR swapchainPresentMode = VK_PRESENT_MODE_FIFO_KHR;
-    for (size_t i = 0; i < presentModeCount; i++) {
-        if (presentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
-            swapchainPresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
-            break;
-        }
-        if ((swapchainPresentMode != VK_PRESENT_MODE_MAILBOX_KHR) &&
-            (presentModes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR)) {
-            swapchainPresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
-        }
-    }
 
     // Determine the number of VkImage's to use in the swap chain.
     // Application desires to only acquire 1 image at a time (which is
@@ -855,17 +973,6 @@ static void demo_prepare_buffers(struct demo *demo) {
         .clipped = true,
     };
     uint32_t i;
-    uint32_t queueFamilyIndices[2] = {(uint32_t) demo->graphics_queue_family_index, (uint32_t) demo->present_queue_family_index};
-    if (demo->graphics_queue_family_index != demo->present_queue_family_index)
-    {
-        // If the graphics and present queues are from different queue families, we either have to
-        // explicitly transfer ownership of images between the queues, or we have to create the swapchain
-        // with imageSharingMode as VK_SHARING_MODE_CONCURRENT
-        swapchain_ci.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-        swapchain_ci.queueFamilyIndexCount = 2;
-        swapchain_ci.pQueueFamilyIndices = queueFamilyIndices;
-    }
-
     err = demo->fpCreateSwapchainKHR(demo->device, &swapchain_ci, NULL,
                                      &demo->swapchain);
     assert(!err);
@@ -922,8 +1029,14 @@ static void demo_prepare_buffers(struct demo *demo) {
         err = vkCreateImageView(demo->device, &color_image_view, NULL,
                                 &demo->buffers[i].view);
         assert(!err);
-    }
 
+        // The draw loop will be expecting the presentable images to be in
+        // LAYOUT_PRESENT_SRC_KHR
+        // since that's how they're left at the end of every frame.
+        demo_set_image_layout(
+            demo, demo->buffers[i].image, VK_IMAGE_ASPECT_COLOR_BIT,
+            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, 0);
+    }
 
     if (NULL != presentModes) {
         free(presentModes);
@@ -1825,6 +1938,31 @@ static void demo_prepare(struct demo *demo) {
         assert(!err);
     }
 
+    if (demo->separate_present_queue) {
+        const VkCommandPoolCreateInfo cmd_pool_info = {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+            .pNext = NULL,
+            .queueFamilyIndex = demo->present_queue_family_index,
+            .flags = 0,
+        };
+        err = vkCreateCommandPool(demo->device, &cmd_pool_info, NULL,
+                                  &demo->present_cmd_pool);
+        assert(!err);
+        const VkCommandBufferAllocateInfo cmd = {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+            .pNext = NULL,
+            .commandPool = demo->present_cmd_pool,
+            .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+            .commandBufferCount = 1,
+        };
+        for (uint32_t i = 0; i < demo->swapchainImageCount; i++) {
+            err = vkAllocateCommandBuffers(
+                demo->device, &cmd, &demo->buffers[i].graphics_to_present_cmd);
+            assert(!err);
+            demo_build_image_ownership_cmd(demo, i);
+        }
+    }
+
     demo_prepare_descriptor_pool(demo);
     demo_prepare_descriptor_set(demo);
 
@@ -1850,6 +1988,19 @@ static void demo_cleanup(struct demo *demo) {
 
     demo->prepared = false;
     vkDeviceWaitIdle(demo->device);
+
+    // Wait for fences from present operations
+    for (i = 0; i < FRAME_LAG; i++) {
+        if (demo->fencesInited[i]) {
+            vkWaitForFences(demo->device, 1, &demo->fences[i], VK_TRUE, UINT64_MAX);
+        }
+        vkDestroyFence(demo->device, demo->fences[i], NULL);
+        vkDestroySemaphore(demo->device, demo->image_acquired_semaphores[i], NULL);
+        vkDestroySemaphore(demo->device, demo->draw_complete_semaphores[i], NULL);
+        if (demo->separate_present_queue) {
+            vkDestroySemaphore(demo->device, demo->image_ownership_semaphores[i], NULL);
+        }
+    }
 
     for (i = 0; i < demo->swapchainImageCount; i++) {
         vkDestroyFramebuffer(demo->device, demo->framebuffers[i], NULL);
@@ -1884,12 +2035,12 @@ static void demo_cleanup(struct demo *demo) {
                              &demo->buffers[i].cmd);
     }
     free(demo->buffers);
-
     free(demo->queue_props);
-
     vkDestroyCommandPool(demo->device, demo->cmd_pool, NULL);
-    vkDestroySemaphore(demo->device, demo->image_acquired_semaphore, NULL);
-    vkDestroySemaphore(demo->device, demo->draw_complete_semaphore, NULL);
+
+    if (demo->separate_present_queue) {
+        vkDestroyCommandPool(demo->device, demo->present_cmd_pool, NULL);
+    }
     vkDestroyDevice(demo->device, NULL);
     if (demo->validate) {
         demo->DestroyDebugReportCallback(demo->inst, demo->msg_callback, NULL);
@@ -1966,6 +2117,9 @@ static void demo_resize(struct demo *demo) {
                              &demo->buffers[i].cmd);
     }
     vkDestroyCommandPool(demo->device, demo->cmd_pool, NULL);
+    if (demo->separate_present_queue) {
+        vkDestroyCommandPool(demo->device, demo->present_cmd_pool, NULL);
+    }
     free(demo->buffers);
 
     // Second, re-perform the demo_prepare() function, which will re-create the
@@ -2725,22 +2879,15 @@ static void demo_init_vk(struct demo *demo) {
     vkGetPhysicalDeviceProperties(demo->gpu, &demo->gpu_props);
 
     /* Call with NULL data to get count */
-    vkGetPhysicalDeviceQueueFamilyProperties(demo->gpu, &demo->queue_count,
-                                             NULL);
-    assert(demo->queue_count >= 1);
+    vkGetPhysicalDeviceQueueFamilyProperties(demo->gpu,
+                                             &demo->queue_family_count, NULL);
+    assert(demo->queue_family_count >= 1);
 
     demo->queue_props = (VkQueueFamilyProperties *)malloc(
-        demo->queue_count * sizeof(VkQueueFamilyProperties));
-    vkGetPhysicalDeviceQueueFamilyProperties(demo->gpu, &demo->queue_count,
-                                             demo->queue_props);
-    // Find a queue that supports gfx
-    uint32_t gfx_queue_idx = 0;
-    for (gfx_queue_idx = 0; gfx_queue_idx < demo->queue_count;
-         gfx_queue_idx++) {
-        if (demo->queue_props[gfx_queue_idx].queueFlags & VK_QUEUE_GRAPHICS_BIT)
-            break;
-    }
-    assert(gfx_queue_idx < demo->queue_count);
+        demo->queue_family_count * sizeof(VkQueueFamilyProperties));
+    vkGetPhysicalDeviceQueueFamilyProperties(
+        demo->gpu, &demo->queue_family_count, demo->queue_props);
+
     // Query fine-grained feature support for this device.
     //  If app has specific feature requirements it should check supported
     //  features based on this query
@@ -2757,18 +2904,19 @@ static void demo_init_vk(struct demo *demo) {
 static void demo_create_device(struct demo *demo) {
     VkResult U_ASSERT_ONLY err;
     float queue_priorities[1] = {0.0};
-    const VkDeviceQueueCreateInfo queue = {
-        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-        .pNext = NULL,
-        .queueFamilyIndex = demo->graphics_queue_family_index,
-        .queueCount = 1,
-        .pQueuePriorities = queue_priorities};
+    VkDeviceQueueCreateInfo queues[2];
+    queues[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    queues[0].pNext = NULL;
+    queues[0].queueFamilyIndex = demo->graphics_queue_family_index;
+    queues[0].queueCount = 1;
+    queues[0].pQueuePriorities = queue_priorities;
+    queues[0].flags = 0;
 
     VkDeviceCreateInfo device = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
         .pNext = NULL,
         .queueCreateInfoCount = 1,
-        .pQueueCreateInfos = &queue,
+        .pQueueCreateInfos = queues,
         .enabledLayerCount = 0,
         .ppEnabledLayerNames = NULL,
         .enabledExtensionCount = demo->enabled_extension_count,
@@ -2776,7 +2924,15 @@ static void demo_create_device(struct demo *demo) {
         .pEnabledFeatures =
             NULL, // If specific features are required, pass them in here
     };
-
+    if (demo->separate_present_queue) {
+        queues[1].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        queues[1].pNext = NULL;
+        queues[1].queueFamilyIndex = demo->present_queue_family_index;
+        queues[1].queueCount = 1;
+        queues[1].pQueuePriorities = queue_priorities;
+        queues[1].flags = 0;
+        device.queueCreateInfoCount = 2;
+    }
     err = vkCreateDevice(demo->gpu, &device, NULL, &demo->device);
     assert(!err);
 }
@@ -2844,36 +3000,53 @@ static void demo_init_vk_swapchain(struct demo *demo) {
 
     // Iterate over each queue to learn whether it supports presenting:
     VkBool32 *supportsPresent =
-        (VkBool32 *)malloc(demo->queue_count * sizeof(VkBool32));
-    for (i = 0; i < demo->queue_count; i++) {
+        (VkBool32 *)malloc(demo->queue_family_count * sizeof(VkBool32));
+    for (i = 0; i < demo->queue_family_count; i++) {
         demo->fpGetPhysicalDeviceSurfaceSupportKHR(demo->gpu, i, demo->surface,
                                                    &supportsPresent[i]);
     }
 
     // Search for a graphics and a present queue in the array of queue
     // families, try to find one that supports both
-    uint32_t graphicsQueueNodeIndex = UINT32_MAX;
-    uint32_t presentQueueNodeIndex = UINT32_MAX;
-    for (i = 0; i < demo->queue_count; i++) {
-        if ((demo->queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0
-                && graphicsQueueNodeIndex == UINT32_MAX) {
-            graphicsQueueNodeIndex = i;
-        }
+    uint32_t graphicsQueueFamilyIndex = UINT32_MAX;
+    uint32_t presentQueueFamilyIndex = UINT32_MAX;
+    for (i = 0; i < demo->queue_family_count; i++) {
+        if ((demo->queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0) {
+            if (graphicsQueueFamilyIndex == UINT32_MAX) {
+                graphicsQueueFamilyIndex = i;
+            }
 
-        if (supportsPresent[i] == VK_TRUE && presentQueueNodeIndex == UINT32_MAX) {
-            presentQueueNodeIndex = i;
+            if (supportsPresent[i] == VK_TRUE) {
+                graphicsQueueFamilyIndex = i;
+                presentQueueFamilyIndex = i;
+                break;
+            }
+        }
+    }
+
+    if (presentQueueFamilyIndex == UINT32_MAX) {
+        // If didn't find a queue that supports both graphics and present, then
+        // find a separate present queue.
+        for (size_t i = 0; i < demo->queue_family_count; ++i) {
+            if (supportsPresent[i] == VK_TRUE) {
+                presentQueueFamilyIndex = i;
+                break;
+            }
         }
     }
 
     // Generate error if could not find both a graphics and a present queue
-    if (graphicsQueueNodeIndex == UINT32_MAX ||
-        presentQueueNodeIndex == UINT32_MAX) {
+    if (graphicsQueueFamilyIndex == UINT32_MAX ||
+        presentQueueFamilyIndex == UINT32_MAX) {
         ERR_EXIT("Could not find both graphics and present queues\n",
                  "Swapchain Initialization Failure");
     }
 
-    demo->graphics_queue_family_index = graphicsQueueNodeIndex;
-    demo->present_queue_family_index = presentQueueNodeIndex;
+    demo->graphics_queue_family_index = graphicsQueueFamilyIndex;
+    demo->present_queue_family_index = presentQueueFamilyIndex;
+    demo->separate_present_queue =
+        (demo->graphics_queue_family_index != demo->present_queue_family_index);
+    free(supportsPresent);
 
     demo_create_device(demo);
 
@@ -2886,7 +3059,7 @@ static void demo_init_vk_swapchain(struct demo *demo) {
     vkGetDeviceQueue(demo->device, demo->graphics_queue_family_index, 0,
                      &demo->graphics_queue);
 
-    if (demo->graphics_queue_family_index == demo->present_queue_family_index) {
+    if (!demo->separate_present_queue) {
         demo->present_queue = demo->graphics_queue;
     } else {
         vkGetDeviceQueue(demo->device, demo->present_queue_family_index, 0,
@@ -2924,13 +3097,32 @@ static void demo_init_vk_swapchain(struct demo *demo) {
         .pNext = NULL,
         .flags = 0,
     };
-    err = vkCreateSemaphore(demo->device, &semaphoreCreateInfo, NULL,
-                            &demo->image_acquired_semaphore);
-    assert(!err);
 
-    err = vkCreateSemaphore(demo->device, &semaphoreCreateInfo, NULL,
-                            &demo->draw_complete_semaphore);
-    assert(!err);
+    // Create fences that we can use to throttle if we get too far
+    // ahead of the image presents
+    VkFenceCreateInfo fence_ci = {
+        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+        .pNext = NULL,
+        .flags = 0
+    };
+    for (uint32_t i = 0; i < FRAME_LAG; i++) {
+        vkCreateFence(demo->device, &fence_ci, NULL, &demo->fences[i]);
+        demo->fencesInited[i] = false;
+        err = vkCreateSemaphore(demo->device, &semaphoreCreateInfo, NULL,
+                                &demo->image_acquired_semaphores[i]);
+        assert(!err);
+
+        err = vkCreateSemaphore(demo->device, &semaphoreCreateInfo, NULL,
+                                &demo->draw_complete_semaphores[i]);
+        assert(!err);
+
+        if (demo->separate_present_queue) {
+            err = vkCreateSemaphore(demo->device, &semaphoreCreateInfo, NULL,
+                                    &demo->image_ownership_semaphores[i]);
+            assert(!err);
+        }
+    }
+    demo->frame_index = 0;
 
     // Get Memory information and properties
     vkGetPhysicalDeviceMemoryProperties(demo->gpu, &demo->memory_properties);
@@ -3033,6 +3225,9 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
             continue;
         }
 
+#if defined(ANDROID)
+        ERR_EXIT("Usage: cube [--validate]\n", "Usage");
+#else
         fprintf(stderr, "Usage:\n  %s [--use_staging] [--validate] [--break] "
 #if defined(VK_USE_PLATFORM_XLIB_KHR)
                         "[--xlib] "
@@ -3041,6 +3236,7 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
                 APP_SHORT_NAME);
         fflush(stderr);
         exit(1);
+#endif
     }
 
     if (!demo->use_xlib)
@@ -3051,8 +3247,8 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
     demo->width = 500;
     demo->height = 500;
 
-    demo->spin_angle = 0.01f;
-    demo->spin_increment = 0.01f;
+    demo->spin_angle = 4.0f;
+    demo->spin_increment = 0.2f;
     demo->pause = false;
 
     mat4x4_perspective(demo->projection_matrix, (float)degreesToRadians(45.0f),
@@ -3147,6 +3343,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
 #include <android/log.h>
 #include <android_native_app_glue.h>
+#include "android_util.h"
+
 static bool initialized = false;
 static bool active = false;
 struct demo demo;
@@ -3172,7 +3370,25 @@ static void processCommand(struct android_app* app, int32_t cmd) {
                 if (demo.prepared) {
                     demo_cleanup(&demo);
                 }
-                demo_init(&demo, 0, NULL);
+
+                // Parse Intents into argc, argv
+                // Use the following key to send arguments, i.e.
+                // --es args "--validate"
+                const char key[] = "args";
+                char* appTag = (char*) APP_SHORT_NAME;
+                int argc = 0;
+                char** argv = get_args(app, key, appTag, &argc);
+
+                __android_log_print(ANDROID_LOG_INFO, appTag, "argc = %i", argc);
+                for (int i = 0; i < argc; i++)
+                    __android_log_print(ANDROID_LOG_INFO, appTag, "argv[%i] = %s", i, argv[i]);
+
+                demo_init(&demo, argc, argv);
+
+                // Free the argv malloc'd by get_args
+                for (int i = 0; i < argc; i++)
+                    free(argv[i]);
+
                 demo.window = (void*)app->window;
                 demo_init_vk_swapchain(&demo);
                 demo_prepare(&demo);

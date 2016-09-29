@@ -66,8 +66,6 @@ later on this page.
 
 >        cube
 >        cube --validate
->        tri
->        tri --validate
 >        smoke
 >        smoke --validate
 >        vulkaninfo

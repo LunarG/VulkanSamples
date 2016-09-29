@@ -431,20 +431,21 @@ bool cvdescriptorset::DescriptorSet::ValidateDrawState(const std::map<uint32_t, 
                                 : static_cast<ImageDescriptor *>(descriptors_[i].get())->GetImageView();
                         auto reqs = binding_pair.second;
 
-                        auto image_view_data = getImageViewData(device_data_, image_view);
-                        assert(image_view_data);
+                        auto image_view_state = getImageViewState(device_data_, image_view);
+                        assert(image_view_state);
+                        auto image_view_ci = image_view_state->create_info;
 
-                        if ((reqs & DESCRIPTOR_REQ_ALL_VIEW_TYPE_BITS) && (~reqs & (1 << image_view_data->viewType))) {
+                        if ((reqs & DESCRIPTOR_REQ_ALL_VIEW_TYPE_BITS) && (~reqs & (1 << image_view_ci.viewType))) {
                             // bad view type
                             std::stringstream error_str;
                             error_str << "Descriptor in binding #" << binding << " at global descriptor index " << i
                                       << " requires an image view of type " << string_descriptor_req_view_type(reqs)
-                                      << " but got " << string_VkImageViewType(image_view_data->viewType) << ".";
+                                      << " but got " << string_VkImageViewType(image_view_ci.viewType) << ".";
                             *error = error_str.str();
                             return false;
                         }
 
-                        auto image_node = getImageNode(device_data_, image_view_data->image);
+                        auto image_node = getImageNode(device_data_, image_view_ci.image);
                         assert(image_node);
 
                         if ((reqs & DESCRIPTOR_REQ_SINGLE_SAMPLE) &&
@@ -497,9 +498,9 @@ uint32_t cvdescriptorset::DescriptorSet::GetStorageUpdates(const std::map<uint32
                 for (uint32_t i = 0; i < p_layout_->GetDescriptorCountFromBinding(binding); ++i) {
                     if (descriptors_[start_idx + i]->updated) {
                         auto bufferview = static_cast<TexelDescriptor *>(descriptors_[start_idx + i].get())->GetBufferView();
-                        auto bv_info = getBufferViewInfo(device_data_, bufferview);
-                        if (bv_info) {
-                            buffer_set->insert(bv_info->buffer);
+                        auto bv_state = getBufferViewState(device_data_, bufferview);
+                        if (bv_state) {
+                            buffer_set->insert(bv_state->create_info.buffer);
                             num_updates++;
                         }
                     }
@@ -670,8 +671,8 @@ bool cvdescriptorset::ValidateSampler(const VkSampler sampler, const core_valida
 bool cvdescriptorset::ValidateImageUpdate(VkImageView image_view, VkImageLayout image_layout, VkDescriptorType type,
                                           const core_validation::layer_data *dev_data,
                                           std::string *error) {
-    auto iv_data = getImageViewData(dev_data, image_view);
-    if (!iv_data) {
+    auto iv_state = getImageViewState(dev_data, image_view);
+    if (!iv_state) {
         std::stringstream error_str;
         error_str << "Invalid VkImageView: " << image_view;
         *error = error_str.str();
@@ -680,14 +681,19 @@ bool cvdescriptorset::ValidateImageUpdate(VkImageView image_view, VkImageLayout 
     // Note that when an imageview is created, we validated that memory is bound so no need to re-check here
     // Validate that imageLayout is compatible with aspect_mask and image format
     //  and validate that image usage bits are correct for given usage
-    VkImageAspectFlags aspect_mask = iv_data->subresourceRange.aspectMask;
-    VkImage image = iv_data->image;
+    VkImageAspectFlags aspect_mask = iv_state->create_info.subresourceRange.aspectMask;
+    VkImage image = iv_state->create_info.image;
     VkFormat format = VK_FORMAT_MAX_ENUM;
     VkImageUsageFlags usage = 0;
     auto image_node = getImageNode(dev_data, image);
     if (image_node) {
         format = image_node->createInfo.format;
         usage = image_node->createInfo.usage;
+        // Validate that memory is bound to image
+        if (ValidateMemoryIsBoundToImage(dev_data, image_node, "vkUpdateDescriptorSets()")) {
+            *error = "No memory bound to image.";
+            return false;
+        }
     } else {
         // Also need to check the swapchains.
         auto swapchain = getSwapchainFromImage(dev_data, image);
@@ -877,11 +883,9 @@ void cvdescriptorset::ImageSamplerDescriptor::BindCommandBuffer(const core_valid
             core_validation::AddCommandBufferBindingSampler(cb_node, sampler_node);
     }
     // Add binding for image
-    auto iv_data = getImageViewData(dev_data, image_view_);
-    if (iv_data) {
-        auto image_node = getImageNode(dev_data, iv_data->image);
-        if (image_node)
-            core_validation::AddCommandBufferBindingImage(dev_data, cb_node, image_node);
+    auto iv_state = getImageViewState(dev_data, image_view_);
+    if (iv_state) {
+        core_validation::AddCommandBufferBindingImageView(dev_data, cb_node, iv_state);
     }
 }
 
@@ -910,11 +914,9 @@ void cvdescriptorset::ImageDescriptor::CopyUpdate(const Descriptor *src) {
 
 void cvdescriptorset::ImageDescriptor::BindCommandBuffer(const core_validation::layer_data *dev_data, GLOBAL_CB_NODE *cb_node) {
     // Add binding for image
-    auto iv_data = getImageViewData(dev_data, image_view_);
-    if (iv_data) {
-        auto image_node = getImageNode(dev_data, iv_data->image);
-        if (image_node)
-            core_validation::AddCommandBufferBindingImage(dev_data, cb_node, image_node);
+    auto iv_state = getImageViewState(dev_data, image_view_);
+    if (iv_state) {
+        core_validation::AddCommandBufferBindingImageView(dev_data, cb_node, iv_state);
     }
 }
 
@@ -971,11 +973,9 @@ void cvdescriptorset::TexelDescriptor::CopyUpdate(const Descriptor *src) {
 }
 
 void cvdescriptorset::TexelDescriptor::BindCommandBuffer(const core_validation::layer_data *dev_data, GLOBAL_CB_NODE *cb_node) {
-    auto bv_info = getBufferViewInfo(dev_data, buffer_view_);
-    if (bv_info) {
-        auto buffer_node = getBufferNode(dev_data, bv_info->buffer);
-        if (buffer_node)
-            core_validation::AddCommandBufferBindingBuffer(dev_data, cb_node, buffer_node);
+    auto bv_state = getBufferViewState(dev_data, buffer_view_);
+    if (bv_state) {
+        core_validation::AddCommandBufferBindingBufferView(dev_data, cb_node, bv_state);
     }
 }
 
@@ -1184,8 +1184,10 @@ bool cvdescriptorset::DescriptorSet::ValidateBufferUpdate(VkDescriptorBufferInfo
         *error = error_str.str();
         return false;
     }
-    if (ValidateMemoryIsBoundToBuffer(device_data_, buffer_node, "vkUpdateDescriptorSets()"))
+    if (ValidateMemoryIsBoundToBuffer(device_data_, buffer_node, "vkUpdateDescriptorSets()")) {
+        *error = "No memory bound to buffer.";
         return false;
+    }
     // Verify usage bits
     if (!ValidateBufferUsage(buffer_node, type, error)) {
         // error will have been updated by ValidateBufferUsage()
@@ -1272,14 +1274,14 @@ bool cvdescriptorset::DescriptorSet::VerifyWriteUpdateContents(const VkWriteDesc
     case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER: {
         for (uint32_t di = 0; di < update->descriptorCount; ++di) {
             auto buffer_view = update->pTexelBufferView[di];
-            auto bv_info = getBufferViewInfo(device_data_, buffer_view);
-            if (!bv_info) {
+            auto bv_state = getBufferViewState(device_data_, buffer_view);
+            if (!bv_state) {
                 std::stringstream error_str;
                 error_str << "Attempted write update to texel buffer descriptor with invalid buffer view: " << buffer_view;
                 *error = error_str.str();
                 return false;
             }
-            auto buffer = bv_info->buffer;
+            auto buffer = bv_state->create_info.buffer;
             if (!ValidateBufferUsage(getBufferNode(device_data_, buffer), update->descriptorType, error)) {
                 std::stringstream error_str;
                 error_str << "Attempted write update to texel buffer descriptor failed due to: " << error->c_str();
@@ -1355,6 +1357,7 @@ bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescri
                 return false;
             }
         }
+        break;
     }
     case Image: {
         for (uint32_t di = 0; di < update->descriptorCount; ++di) {
@@ -1373,14 +1376,14 @@ bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescri
     case TexelBuffer: {
         for (uint32_t di = 0; di < update->descriptorCount; ++di) {
             auto buffer_view = static_cast<TexelDescriptor *>(src_set->descriptors_[index + di].get())->GetBufferView();
-            auto bv_info = getBufferViewInfo(device_data_, buffer_view);
-            if (!bv_info) {
+            auto bv_state = getBufferViewState(device_data_, buffer_view);
+            if (!bv_state) {
                 std::stringstream error_str;
                 error_str << "Attempted copy update to texel buffer descriptor with invalid buffer view: " << buffer_view;
                 *error = error_str.str();
                 return false;
             }
-            auto buffer = bv_info->buffer;
+            auto buffer = bv_state->create_info.buffer;
             if (!ValidateBufferUsage(getBufferNode(device_data_, buffer), type, error)) {
                 std::stringstream error_str;
                 error_str << "Attempted copy update to texel buffer descriptor failed due to: " << error->c_str();

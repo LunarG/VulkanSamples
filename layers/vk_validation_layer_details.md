@@ -91,6 +91,12 @@ The Draw State portion of the core validation layer tracks state leading into Dr
 | Verify Memory Buffer Not Deleted | Validate Command Buffer not submitted with deleted memory buffer | INVALID_BUFFER | vkQueueSubmit | VertexBufferInvalid | None |
 | Verify Image Not Deleted | Validate Command Buffer not submitted with deleted image | INVALID_IMAGE | vkQueueSubmit | TODO | Write test (or record here if we already have one) |
 | Verify Query Pool Not Deleted | Validate Command Buffer not submitted with deleted query pool | INVALID_QUERY_POOL | vkQueueSubmit | TODO | Write test (or record here if we already have one) |
+| Verify BufferView Not Deleted | Validate Command Buffer not submitted with deleted buffer view | INVALID_BUFFER_VIEW | vkQueueSubmit | TODO | Write test (or record here if we already have one) |
+| Verify ImageView Not Deleted | Validate Command Buffer not submitted with deleted image view | INVALID_IMAGE_VIEW | vkQueueSubmit | TODO | Write test (or record here if we already have one) |
+| Verify DescriptorPool Not Deleted | Validate Command Buffer not submitted with deleted descriptor pool | INVALID_DESCRIPTOR_POOL | vkQueueSubmit | TODO | Write test (or record here if we already have one) |
+| Verify CommandPool Not Deleted | Validate Command Buffer not submitted with deleted command pool | INVALID_COMMAND_POOL | vkQueueSubmit | TODO | Write test (or record here if we already have one) |
+| Verify Framebuffer Not Deleted | Validate Command Buffer not submitted with deleted framebuffer | INVALID_FRAMEBUFFER | vkQueueSubmit | TODO | Write test (or record here if we already have one) |
+| Verify DeviceMemory Not Deleted | Validate Command Buffer not submitted with deleted device memory | INVALID_DEVICE_MEMORY | vkQueueSubmit | TODO | Write test (or record here if we already have one) |
 | Verify Memory Buffer Destroy | Validate memory buffers are not destroyed more than once | DOUBLE_DESTROY | vkDestroyBuffer | VertexBufferInvalid | None |
 | Verify Object Not In Use | Validate that object being freed or modified is not in use | OBJECT_INUSE | vkDestroyBuffer vkFreeDescriptorSets vkUpdateDescriptorSets vkDestroySemaphore | InUseDestroyedSignaled InvalidCmdBufferDescriptorSetImageSamplerDestroyed | NA |
 | Verify Get Queries| Validate that queries are properly setup, initialized and synchronized | INVALID_QUERY | vkGetFenceStatus vkQueueWaitIdle vkWaitForFences vkDeviceWaitIdle vkCmdBeginQuery vkCmdEndQuery | InvalidQueueIndexInvalidQuery | May need to check existing case against object_tracker and remove any redundant checks. Then write tests for remaining case. Currently there are 8 cases for this check with 1 each in cleanInFlightCmdBuffer(), EndCommandBuffer(), CmdEndQuery(), validateQuery(), and 4 cases in GetQueryPoolResults() |
@@ -114,6 +120,9 @@ The Draw State portion of the core validation layer tracks state leading into Dr
 | NA | Enum used for errors in the layer itself. This does not indicate an app issue, but instead a bug in the layer. | INTERNAL_ERROR | | TODO | None |
 | NA | Enum used when VK_LAYER_LUNARG_core_validation attempts to allocate memory for its own internal use and is unable to. | OUT_OF_MEMORY | | TODO | None |
 | Bad subpass indexing | Must not step beyond last subpass in a renderpass instance, and must reach the last subpass before CmdEndRenderPass. | INVALID_SUBPASS_INDEX | vkCmdNextSubpass | RenderPassExcessiveNextSubpass | NA |
+| Proper synchronization of acquired images | vkAcquireNextImageKHR should be called with a valid semaphore and/or fence | SWAPCHAIN_NO_SYNC_FOR_ACQUIRE | vkAcquireNextImageKHR | TODO | None |
+| Swapchain image index too large | Validates that an image index is within the number of images in a swapchain | SWAPCHAIN_INVALID_IMAGE | vkQueuePresentKHR | VkWsiEnabledLayerTest.TestEnabledWsi | None |
+| Can't present a non-owned image | Validates that application only presents images that it owns | SWAPCHAIN_IMAGE_NOT_ACQUIRED | vkQueuePresentKHR | TODO | None |
 
 ### VK_LAYER_LUNARG_core_validation Draw State Pending Work
 
@@ -342,8 +351,6 @@ This layer is a work in progress. VK_LAYER_LUNARG_swapchain layer is intended to
 | vkCreateSwapchainKHR(pCreateInfo->oldSwapchain and pCreateInfo->surface) | pCreateInfo->surface must match pCreateInfo->oldSwapchain's surface | CREATE_SWAP_DIFF_SURFACE | vkCreateSwapchainKHR | TODO | None |
 | Use same device for swapchain | Validates that vkDestroySwapchainKHR() called with the same VkDevice as vkCreateSwapchainKHR() | DESTROY_SWAP_DIFF_DEVICE | vkCreateSwapchainKHR vkDestroySwapchainKHR | TODO | None |
 | Don't acquire too many images | Validates that app never tries to acquire too many swapchain images at a time | APP_ACQUIRES_TOO_MANY_IMAGES | vkAcquireNextImageKHR | TODO | None |
-| Index too large | Validates that an image index is within the number of images in a swapchain | INDEX_TOO_LARGE | vkQueuePresentKHR | VkWsiEnabledLayerTest.TestEnabledWsi | None |
-| Can't present a non-owned image | Validates that application only presents images that it owns | INDEX_NOT_IN_USE | vkQueuePresentKHR | TODO | None |
 | A VkBool32 must have values of VK_TRUE or VK_FALSE | Validates that a VkBool32 must have values of VK_TRUE or VK_FALSE | BAD_BOOL | vkCreateSwapchainKHR | TODO | None |
 | pCount must be set by the API before the other pointer is non-NULL | Validates that app queries for the value of pCount before trying to set it | PRIOR_COUNT | vkGetPhysicalDeviceSurfaceFormatsKHR vkGetPhysicalDeviceSurfacePresentModesKHR vkGetSwapchainImagesKHR | VkWsiEnabledLayerTest.TestEnabledWsi | None |
 | pCount must point to same value regardless of whether other pointer is NULL | Validates that app doesn't change value of pCount returned by a query | INVALID_COUNT | vkGetPhysicalDeviceSurfaceFormatsKHR vkGetPhysicalDeviceSurfacePresentModesKHR vkGetSwapchainImagesKHR | VkWsiEnabledLayerTest.TestEnabledWsi | None |
@@ -354,7 +361,6 @@ This layer is a work in progress. VK_LAYER_LUNARG_swapchain layer is intended to
 | Valid use of queueFamilyIndex | Validates that a queueFamilyIndex not used before vkGetPhysicalDeviceQueueFamilyProperties() was called | DID_NOT_QUERY_QUEUE_FAMILIES | vkGetPhysicalDeviceSurfaceSupportKHR | TODO | None |
 | Valid queueFamilyIndex value | Validates that a queueFamilyIndex value is less-than pQueueFamilyPropertyCount returned by vkGetPhysicalDeviceQueueFamilyProperties | QUEUE_FAMILY_INDEX_TOO_LARGE | vkGetPhysicalDeviceSurfaceSupportKHR | TODO | None |
 | Supported combination of queue and surface | Validates that the surface associated with a swapchain was seen to support the queueFamilyIndex of a given queue | SURFACE_NOT_SUPPORTED_WITH_QUEUE | vkQueuePresentKHR | TODO | None |
-| Proper synchronization of acquired images | vkAcquireNextImageKHR should be called with a valid semaphore and/or fence | NO_SYNC_FOR_ACQUIRE | vkAcquireNextImageKHR | TODO | None |
 | Potential use before query | Validates that Display Plane Properties are queried before getting supported Display Planes | GET_SUPPORTED_DISPLAYS_WITHOUT_QUERY | vkGetPhysicalDeviceSurfaceSupportKHR | TODO | actually: vkGetDisplayPlaneSupportedDisplaysKHR |
 | Index too large | Validates index is in range of phys device display plane props | PLANE_INDEX_TOO_LARGE | vkGetPhysicalDeviceSurfaceSupportKHR | TODO | actually: vkGetDisplayPlaneSupportedDisplaysKHR |
 | Index too large | Validates index is in range of phys device display plane props | PLANE_INDEX_TOO_LARGE | vkGetPhysicalDeviceSurfaceSupportKHR | TODO | actually: vkGetDisplayPlaneCapabilitiesKHR |

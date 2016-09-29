@@ -21,6 +21,7 @@ if (WIN32)
                 COMMAND copy ${src_json} ${dst_json}
                 VERBATIM
                 )
+                add_dependencies(${config_file}-json ${config_file})
         endforeach(config_file)
     endif()
 else()
@@ -42,13 +43,12 @@ if (WIN32)
         DEPENDS ${PROJECT_SOURCE_DIR}/vk-generate.py ${PROJECT_SOURCE_DIR}/vulkan.py
     )
     add_library(VkLayer_${target} SHARED ${ARGN} VkLayer_${target}.def)
-    add_dependencies(VkLayer_${target} generate_vk_layer_helpers)
-    set_target_properties(VkLayer_${target} PROPERTIES LINK_FLAGS "/DEF:${CMAKE_CURRENT_BINARY_DIR}/VkLayer_${target}.def")
+    add_dependencies(VkLayer_${target} generate_tests_dispatch_table_helper VkLayer_utils)
     endmacro()
 else()
     macro(add_vk_layer target)
     add_library(VkLayer_${target} SHARED ${ARGN})
-    add_dependencies(VkLayer_${target} generate_vk_layer_helpers)
+    add_dependencies(VkLayer_${target} generate_tests_dispatch_table_helper VkLayer_utils)
     set_target_properties(VkLayer_${target} PROPERTIES LINK_FLAGS "-Wl,-Bsymbolic")
     install(TARGETS VkLayer_${target} DESTINATION ${PROJECT_BINARY_DIR}/install_staging)
     endmacro()
@@ -59,6 +59,7 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/../../layers
     ${CMAKE_CURRENT_SOURCE_DIR}/../../loader
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include/vulkan
+    ${CMAKE_CURRENT_BINARY_DIR}
     ${CMAKE_CURRENT_BINARY_DIR}/../../layers
 )
 
@@ -75,6 +76,10 @@ endif()
 add_custom_command(OUTPUT vk_dispatch_table_helper.h
     COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/vk-generate.py ${DisplayServer} dispatch-table-ops layer > vk_dispatch_table_helper.h
     DEPENDS ${PROJECT_SOURCE_DIR}/vk-generate.py ${PROJECT_SOURCE_DIR}/vulkan.py)
+
+add_custom_target(generate_tests_dispatch_table_helper DEPENDS
+    vk_dispatch_table_helper.h
+)
 
 set (WRAP_SRCS
        wrap_objects.cpp

@@ -1,7 +1,5 @@
 /*
- * Copyright (c) 2015-2016 The Khronos Group Inc.
- * Copyright (c) 2015-2016 Valve Corporation
- * Copyright (c) 2015-2016 LunarG, Inc.
+ * Copyright (c) 2016 Google, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +12,21 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Relicensed from the WTFPL (http://www.wtfpl.net/faq/).
  */
-/*
- * Fragment shader for tri demo
- */
-#version 400
-#extension GL_ARB_separate_shader_objects : enable
-#extension GL_ARB_shading_language_420pack : enable
-layout (binding = 0) uniform sampler2D tex;
-layout (location = 0) in vec2 texcoord;
-layout (location = 0) out vec4 uFragColor;
-void main() {
-   uFragColor = texture(tex, texcoord);
-}
+
+#ifndef ANDROID_UTIL_H
+#define ANDROID_UTIL_H
+
+#ifdef __cplusplus
+    extern "C" {
+#endif
+
+char** get_args(struct android_app* app, const char* intent_extra_data_key, const char* appTag, int* count);
+
+#ifdef __cplusplus
+    }
+#endif
+
+#endif

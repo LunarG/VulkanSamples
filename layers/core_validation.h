@@ -60,6 +60,18 @@
 #include <list>
 #include <deque>
 
+/*
+ * CHECK_DISABLED struct is a container for bools that can block validation checks from being performed.
+ * The end goal is to have all checks guarded by a bool. The bools are all "false" by default meaning that all checks
+ * are enabled. At CreateInstance time, the user can use the VK_EXT_validation_flags extension to pass in enum values
+ * of VkValidationCheckEXT that will selectively disable checks.
+ */
+struct CHECK_DISABLED {
+    bool command_buffer_state;
+    bool destroy_buffer_view; // Skip validation at DestroyBufferView time
+    bool object_in_use;       // Skip all object in_use checking
+};
+
 #if MTMERGE
 
 /*
@@ -94,6 +106,7 @@
 // TODO : Could potentially store a list of freed mem allocs to flag when they're incorrectly used
 
 struct MT_FB_ATTACHMENT_INFO {
+    IMAGE_VIEW_STATE *view_state;
     VkImage image;
     VkDeviceMemory mem;
 };
@@ -147,14 +160,12 @@ class FENCE_NODE {
 
 class SEMAPHORE_NODE : public BASE_NODE {
   public:
-    using BASE_NODE::in_use;
     std::pair<VkQueue, uint64_t> signaler;
     bool signaled;
 };
 
 class EVENT_NODE : public BASE_NODE {
   public:
-    using BASE_NODE::in_use;
     int write_in_use;
     bool needsSignaled;
     VkPipelineStageFlags stageMask;
@@ -176,10 +187,8 @@ class QUERY_POOL_NODE : public BASE_NODE {
     VkQueryPoolCreateInfo createInfo;
 };
 
-class FRAMEBUFFER_NODE : BASE_NODE {
+class FRAMEBUFFER_NODE : public BASE_NODE {
   public:
-    using BASE_NODE::in_use;
-    using BASE_NODE::cb_bindings;
     VkFramebuffer framebuffer;
     safe_VkFramebufferCreateInfo createInfo;
     safe_VkRenderPassCreateInfo renderPassCreateInfo;
@@ -196,7 +205,7 @@ typedef struct stencil_data {
 } CBStencilData;
 
 // Track command pools and their command buffers
-struct COMMAND_POOL_NODE {
+struct COMMAND_POOL_NODE : public BASE_NODE {
     VkCommandPoolCreateFlags createFlags;
     uint32_t queueFamilyIndex;
     // TODO: why is this std::list?
@@ -214,7 +223,8 @@ struct INSTANCE_STATE {
     // Track the call state and array size for physical devices
     CALL_STATE vkEnumeratePhysicalDevicesState;
     uint32_t physical_devices_count;
-    INSTANCE_STATE() : vkEnumeratePhysicalDevicesState(UNCALLED), physical_devices_count(0) {};
+    CHECK_DISABLED disabled;
+    INSTANCE_STATE() : vkEnumeratePhysicalDevicesState(UNCALLED), physical_devices_count(0), disabled{} {};
 };
 
 struct PHYSICAL_DEVICE_STATE {

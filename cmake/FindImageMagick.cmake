@@ -91,16 +91,16 @@ function(FIND_REGISTRY)
         GET_FILENAME_COMPONENT(IM_BIN_PATH  
           [HKEY_LOCAL_MACHINE\\SOFTWARE\\ImageMagick\\Current;BinPath]
           ABSOLUTE CACHE)
-          
+
       # Otherwise, the WOW6432Node returned a string, assume 32-bit build on 64-bit OS and use that string.
       else()
 
         GET_FILENAME_COMPONENT(IM_BIN_PATH  
           [HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\ImageMagick\\Current;BinPath]
           ABSOLUTE CACHE)
-        
+
       endif()
-      
+
     endif()
 
     set (IMAGEMAGIC_REG_PATH ${IM_BIN_PATH} PARENT_SCOPE)
@@ -113,24 +113,32 @@ function(FIND_REGISTRY)
     set (IMAGEMAGIC_REG_PATH "" PARENT_SCOPE)
     set (IMAGEMAGIC_REGINCLUDE_PATH "" PARENT_SCOPE)
     set (IMAGEMAGIC_REGLIB_PATH "" PARENT_SCOPE)
-    
+
   endif()
+
 endfunction()
 
 
 #---------------------------------------------------------------------
 # Helper functions
 #---------------------------------------------------------------------
-FUNCTION(FIND_IMAGEMAGICK_API component header)
+FUNCTION(FIND_IMAGEMAGICK_API component path header)
   SET(ImageMagick_${component}_FOUND FALSE PARENT_SCOPE)
 
+  # NOTE: My experience is that Windows uses the PATHs
+  #       variables, while Linux uses the PATH_SUFFIXES.
+  #       You can't add sub-directories to the PATH_SUFFIXES
+  #       because it messes up the ImageMagick Include
+  #       paths that are returned.  Instead, you have to
+  #       call this FIND_IMAGEMAGICK_API for each separate
+  #       possible sub-folder.
   FIND_PATH(ImageMagick_${component}_INCLUDE_DIR
     NAMES ${header}
     PATHS
       ${ImageMagick_INCLUDE_DIRS}
       ${IMAGEMAGIC_REGINCLUDE_PATH}
     PATH_SUFFIXES
-      ImageMagick ImageMagick-6
+      ImageMagick ImageMagick-6 ImageMagick-7
     DOC "Path to the ImageMagick include dir."
     )
   FIND_PATH(ImageMagick_${component}_ARCH_INCLUDE_DIR
@@ -139,7 +147,7 @@ FUNCTION(FIND_IMAGEMAGICK_API component header)
       ${ImageMagick_INCLUDE_DIRS}
       ${IMAGEMAGIC_REGINCLUDE_PATH}
     PATH_SUFFIXES
-      ImageMagick ImageMagick-6
+      ImageMagick ImageMagick-6 ImageMagick-7
     DOC "Path to the ImageMagick arch-specific include dir."
     )
   FIND_LIBRARY(ImageMagick_${component}_LIBRARY
@@ -149,17 +157,28 @@ FUNCTION(FIND_IMAGEMAGICK_API component header)
     DOC "Path to the ImageMagick Magick++ library."
     )
 
-  IF(ImageMagick_${component}_INCLUDE_DIR AND ImageMagick_${component}_LIBRARY)
 
+  IF (ImageMagick_${component}_INCLUDE_DIR AND ImageMagick_${component}_LIBRARY)
     SET(ImageMagick_${component}_FOUND TRUE PARENT_SCOPE)
+
     LIST(APPEND ImageMagick_INCLUDE_DIRS
       ${ImageMagick_${component}_INCLUDE_DIR}
       )
-    IF(EXISTS ${ImageMagick_${component}_ARCH_INCLUDE_DIR})
+
+    # Only add the path if it's not the special string "<NONE>"
+    IF(NOT path STREQUAL "<NONE>")
+       LIST(APPEND ImageMagick_INCLUDE_DIRS
+         ${ImageMagick_${component}_INCLUDE_DIR}/${path}
+       )
+    ENDIF()
+
+    # Add the architecture include path if it exists
+    IF (ImageMagick_${component}_ARCH_INCLUDE_DIR)
       LIST(APPEND ImageMagick_INCLUDE_DIRS
         ${ImageMagick_${component}_ARCH_INCLUDE_DIR}
         )
-    ENDIF(EXISTS ${ImageMagick_${component}_ARCH_INCLUDE_DIR})
+    ENDIF()
+
     LIST(REMOVE_DUPLICATES ImageMagick_INCLUDE_DIRS)
     SET(ImageMagick_INCLUDE_DIRS ${ImageMagick_INCLUDE_DIRS} PARENT_SCOPE)
 
@@ -167,7 +186,7 @@ FUNCTION(FIND_IMAGEMAGICK_API component header)
       ${ImageMagick_${component}_LIBRARY}
       )
     SET(ImageMagick_LIBRARIES ${ImageMagick_LIBRARIES} PARENT_SCOPE)
-  ENDIF(ImageMagick_${component}_INCLUDE_DIR AND ImageMagick_${component}_LIBRARY)
+  ENDIF()
 
 ENDFUNCTION(FIND_IMAGEMAGICK_API)
 
@@ -210,34 +229,92 @@ FOREACH(component ${ImageMagick_FIND_COMPONENTS}
     # DEPRECATED: forced components for backward compatibility
     convert mogrify import montage composite
     )
-  IF(component STREQUAL "Magick++")
-    FIND_IMAGEMAGICK_API(Magick++ Magick++.h
-      Magick++ CORE_RL_Magick++_ Magick++-6.Q16 Magick++-Q16 Magick++-6.Q8 Magick++-Q8 Magick++-6.Q16HDRI Magick++-Q16HDRI Magick++-6.Q8HDRI Magick++-Q8HDRI
-      )
-  ELSEIF(component STREQUAL "MagickWand")
-    FIND_IMAGEMAGICK_API(MagickWand wand/MagickWand.h
-      Wand MagickWand CORE_RL_wand_ MagickWand-6.Q16 MagickWand-Q16 MagickWand-6.Q8 MagickWand-Q8 MagickWand-6.Q16HDRI MagickWand-Q16HDRI MagickWand-6.Q8HDRI MagickWand-Q8HDRI
-      )
-  ELSEIF(component STREQUAL "MagickCore")
-    FIND_IMAGEMAGICK_API(MagickCore magick/MagickCore.h
-      Magick MagickCore CORE_RL_magick_ MagickCore-6.Q16 MagickCore-Q16 MagickCore-6.Q8 MagickCore-Q8 MagickCore-6.Q16HDRI MagickCore-Q16HDRI MagickCore-6.Q8HDRI MagickCore-Q8HDRI
-      )
-  ELSE(component STREQUAL "Magick++")
-    IF(ImageMagick_EXECUTABLE_DIR)
-      FIND_IMAGEMAGICK_EXE(${component})
-    ENDIF(ImageMagick_EXECUTABLE_DIR)
-  ENDIF(component STREQUAL "Magick++")
-  
-  IF(NOT ImageMagick_${component}_FOUND)
-    LIST(FIND ImageMagick_FIND_COMPONENTS ${component} is_requested)
-    IF(is_requested GREATER -1)
-      SET(ImageMagick_FOUND FALSE)
-    ENDIF(is_requested GREATER -1)
-  ENDIF(NOT ImageMagick_${component}_FOUND)
-ENDFOREACH(component)
 
-SET(ImageMagick_INCLUDE_DIRS ${ImageMagick_INCLUDE_DIRS})
-SET(ImageMagick_LIBRARIES ${ImageMagick_LIBRARIES})
+    IF(component STREQUAL "Magick++")
+        # unset cached variable that assumes header parameter never changes
+        UNSET(ImageMagick_MagickWand_INCLUDE_DIR CACHE)
+
+        # Try top folder first
+        FIND_IMAGEMAGICK_API(Magick++ <NONE> Magick++.h
+            Magick++ CORE_RL_Magick++_ Magick++-6.Q16 Magick++-Q16 Magick++-6.Q8 Magick++-Q8 Magick++-6.Q16HDRI Magick++-Q16HDRI Magick++-6.Q8HDRI Magick++-Q8HDRI
+        )
+
+        IF(NOT ImageMagick_Magick++_INCLUDE_DIR OR NOT ImageMagick_Magick++_LIBRARY)
+            # Look for Magick++.h, in the magick++ sub-folder
+            FIND_IMAGEMAGICK_API(Magick++ magick++ magick++/Magick++.h
+                Magick++ CORE_RL_Magick++_ Magick++-6.Q16 Magick++-Q16 Magick++-6.Q8 Magick++-Q8 Magick++-6.Q16HDRI Magick++-Q16HDRI Magick++-6.Q8HDRI Magick++-Q8HDRI
+            )
+        ENDIF()
+
+        IF(NOT ImageMagick_Magick++_INCLUDE_DIR OR NOT ImageMagick_Magick++_LIBRARY)
+            # Look for Magick++.h, in the magick sub-folder
+            FIND_IMAGEMAGICK_API(Magick++ magick magick/Magick++.h
+                Magick++ CORE_RL_Magick++_ Magick++-6.Q16 Magick++-Q16 Magick++-6.Q8 Magick++-Q8 Magick++-6.Q16HDRI Magick++-Q16HDRI Magick++-6.Q8HDRI Magick++-Q8HDRI
+            )
+        ENDIF()
+
+    ELSEIF(component STREQUAL "MagickWand")
+        # unset cached variable that assumes header parameter never changes
+        UNSET(ImageMagick_MagickWand_INCLUDE_DIR CACHE)
+
+        # Try top folder first
+        FIND_IMAGEMAGICK_API(MagickWand <NONE> MagickWand.h
+           Wand MagickWand CORE_RL_wand_ CORE_RL_MagickWand_ MagickWand-6.Q16 MagickWand-Q16 MagickWand-6.Q8 MagickWand-Q8 MagickWand-6.Q16HDRI MagickWand-Q16HDRI MagickWand-6.Q8HDRI MagickWand-Q8HDRI
+        )
+
+        IF(NOT ImageMagick_MagickWand_INCLUDE_DIR OR NOT ImageMagick_MagickWand_LIBRARY)
+            # Look for MagickWand.h in the wand sub-folder
+            FIND_IMAGEMAGICK_API(MagickWand wand wand/MagickWand.h
+              Wand MagickWand CORE_RL_wand_ CORE_RL_MagickWand_ MagickWand-6.Q16 MagickWand-Q16 MagickWand-6.Q8 MagickWand-Q8 MagickWand-6.Q16HDRI MagickWand-Q16HDRI MagickWand-6.Q8HDRI MagickWand-Q8HDRI
+            )
+        ENDIF()
+
+        IF(NOT ImageMagick_MagickWand_INCLUDE_DIR OR NOT ImageMagick_MagickWand_LIBRARY)
+            # Look for MagickWand.h he MagickWand sub-folder
+            FIND_IMAGEMAGICK_API(MagickWand MagickWand MagickWand/MagickWand.h
+              Wand MagickWand CORE_RL_wand_ CORE_RL_MagickWand_ MagickWand-6.Q16 MagickWand-Q16 MagickWand-6.Q8 MagickWand-Q8 MagickWand-6.Q16HDRI MagickWand-Q16HDRI MagickWand-6.Q8HDRI MagickWand-Q8HDRI
+            )
+        ENDIF()
+
+        IF(NOT ImageMagick_MagickWand_INCLUDE_DIR OR NOT ImageMagick_MagickWand_LIBRARY)
+            # Look for MagickWand.h he magick sub-folder
+            FIND_IMAGEMAGICK_API(MagickWand magick magick/MagickWand.h
+              Wand MagickWand CORE_RL_wand_ CORE_RL_MagickWand_ MagickWand-6.Q16 MagickWand-Q16 MagickWand-6.Q8 MagickWand-Q8 MagickWand-6.Q16HDRI MagickWand-Q16HDRI MagickWand-6.Q8HDRI MagickWand-Q8HDRI
+            )
+        ENDIF()
+
+    ELSEIF(component STREQUAL "MagickCore")
+
+        # Try top folder first
+        FIND_IMAGEMAGICK_API(MagickCore <NONE> MagickCore.h
+          Magick MagickCore CORE_RL_magick_ CORE_RL_MagickCore_ MagickCore-6.Q16 MagickCore-Q16 MagickCore-6.Q8 MagickCore-Q8 MagickCore-6.Q16HDRI MagickCore-Q16HDRI MagickCore-6.Q8HDRI MagickCore-Q8HDRI
+        )
+
+        IF(NOT ImageMagick_MagickCore_INCLUDE_DIR OR NOT ImageMagick_MagickCore_LIBRARY)
+            # Look for MagickCore.h, in the MagickCore sub-folder
+            FIND_IMAGEMAGICK_API(MagickCore MagickCore MagickCore/MagickCore.h
+              Magick MagickCore CORE_RL_magick_ CORE_RL_MagickCore_ MagickCore-6.Q16 MagickCore-Q16 MagickCore-6.Q8 MagickCore-Q8 MagickCore-6.Q16HDRI MagickCore-Q16HDRI MagickCore-6.Q8HDRI MagickCore-Q8HDRI
+            )
+        ENDIF()
+
+        IF(NOT ImageMagick_MagickCore_INCLUDE_DIR OR NOT ImageMagick_MagickCore_LIBRARY)
+            # Look for MagickCore.h, in the magick sub-folder
+            FIND_IMAGEMAGICK_API(MagickCore magick magick/MagickCore.h
+              Magick MagickCore CORE_RL_magick_ CORE_RL_MagickCore_ MagickCore-6.Q16 MagickCore-Q16 MagickCore-6.Q8 MagickCore-Q8 MagickCore-6.Q16HDRI MagickCore-Q16HDRI MagickCore-6.Q8HDRI MagickCore-Q8HDRI
+            )
+        ENDIF()
+
+    ENDIF()
+  
+    IF(NOT ImageMagick_${component}_FOUND)
+
+        LIST(FIND ImageMagick_FIND_COMPONENTS ${component} is_requested)
+        IF(is_requested GREATER -1)
+            SET(ImageMagick_FOUND FALSE)
+        ENDIF(is_requested GREATER -1)
+
+    ENDIF(NOT ImageMagick_${component}_FOUND)
+ENDFOREACH(component)
 
 #---------------------------------------------------------------------
 # Standard Package Output
@@ -264,7 +341,7 @@ SET(IMAGEMAGICK_MONTAGE_EXECUTABLE   ${ImageMagick_montage_EXECUTABLE}
     CACHE FILEPATH "Path to ImageMagick's montage executable.")
 SET(IMAGEMAGICK_COMPOSITE_EXECUTABLE ${ImageMagick_composite_EXECUTABLE}
     CACHE FILEPATH "Path to ImageMagick's composite executable.")
-    
+
 MARK_AS_ADVANCED(
   IMAGEMAGICK_BINARY_PATH
   IMAGEMAGICK_CONVERT_EXECUTABLE

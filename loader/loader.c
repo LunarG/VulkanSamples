@@ -412,7 +412,7 @@ vkSetInstanceDispatch(VkInstance instance, void *object) {
 VKAPI_ATTR VkResult VKAPI_CALL
 vkSetDeviceDispatch(VkDevice device, void *object) {
     struct loader_device *dev;
-    struct loader_icd *icd = loader_get_icd_and_device(device, &dev);
+    struct loader_icd *icd = loader_get_icd_and_device(device, &dev, NULL);
 
     if (!icd) {
         return VK_ERROR_INITIALIZATION_FAILED;
@@ -1243,8 +1243,10 @@ out:
 }
 
 struct loader_icd *loader_get_icd_and_device(const VkDevice device,
-                                             struct loader_device **found_dev) {
+                                             struct loader_device **found_dev,
+                                             uint32_t *icd_index) {
     *found_dev = NULL;
+    uint32_t index = 0;
     for (struct loader_instance *inst = loader.instances; inst;
          inst = inst->next) {
         for (struct loader_icd *icd = inst->icds; icd; icd = icd->next) {
@@ -1255,8 +1257,12 @@ struct loader_icd *loader_get_icd_and_device(const VkDevice device,
                 if (loader_get_dispatch(dev->device) ==
                     loader_get_dispatch(device)) {
                     *found_dev = dev;
+                    if (NULL != icd_index) {
+                        *icd_index = index;
+                    }
                     return icd;
                 }
+            index++;
         }
     }
     return NULL;
@@ -1634,16 +1640,25 @@ static bool loader_icd_init_entrys(struct loader_icd *icd, VkInstance inst,
     LOOKUP_GIPA(CreateDisplayModeKHR, false);
     LOOKUP_GIPA(GetDisplayPlaneCapabilitiesKHR, false);
     LOOKUP_GIPA(DestroySurfaceKHR, false);
+    LOOKUP_GIPA(CreateSwapchainKHR, false);
 #ifdef VK_USE_PLATFORM_WIN32_KHR
+    LOOKUP_GIPA(CreateWin32SurfaceKHR, false);
     LOOKUP_GIPA(GetPhysicalDeviceWin32PresentationSupportKHR, false);
 #endif
 #ifdef VK_USE_PLATFORM_XCB_KHR
+    LOOKUP_GIPA(CreateXcbSurfaceKHR, false);
     LOOKUP_GIPA(GetPhysicalDeviceXcbPresentationSupportKHR, false);
 #endif
 #ifdef VK_USE_PLATFORM_XLIB_KHR
+    LOOKUP_GIPA(CreateXlibSurfaceKHR, false);
     LOOKUP_GIPA(GetPhysicalDeviceXlibPresentationSupportKHR, false);
 #endif
+#ifdef VK_USE_PLATFORM_MIR_KHR
+    LOOKUP_GIPA(CreateMirSurfaceKHR, false);
+    LOOKUP_GIPA(GetPhysicalDeviceMirPresentationSupportKHR, false);
+#endif
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
+    LOOKUP_GIPA(CreateWaylandSurfaceKHR, false);
     LOOKUP_GIPA(GetPhysicalDeviceWaylandPresentationSupportKHR, false);
 #endif
     LOOKUP_GIPA(GetPhysicalDeviceExternalImageFormatPropertiesNV, false);
@@ -3232,10 +3247,36 @@ loader_gpa_instance_internal(VkInstance inst, const char *pName) {
     return NULL;
 }
 
-static VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
+void loader_override_terminating_device_proc(
+    VkDevice device, struct loader_dev_dispatch_table *disp_table) {
+    struct loader_device *dev;
+    struct loader_icd *icd = loader_get_icd_and_device(device, &dev, NULL);
+
+    // Certain device entry-points still need to go through a terminator before
+    // hitting the ICD.  This could be for several reasons, but the main one
+    // is currently unwrapping an object before passing the appropriate info
+    // along to the ICD.
+    if ((PFN_vkVoidFunction)disp_table->core_dispatch.CreateSwapchainKHR ==
+        (PFN_vkVoidFunction)icd->GetDeviceProcAddr(device,
+                                                   "vkCreateSwapchainKHR")) {
+        disp_table->core_dispatch.CreateSwapchainKHR =
+            terminator_vkCreateSwapchainKHR;
+    }
+}
+
+VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
 loader_gpa_device_internal(VkDevice device, const char *pName) {
     struct loader_device *dev;
-    struct loader_icd *icd = loader_get_icd_and_device(device, &dev);
+    struct loader_icd *icd = loader_get_icd_and_device(device, &dev, NULL);
+
+    // Certain device entry-points still need to go through a terminator before
+    // hitting the ICD.  This could be for several reasons, but the main one
+    // is currently unwrapping an object before passing the appropriate info
+    // along to the ICD.
+    if (!strcmp(pName, "vkCreateSwapchainKHR")) {
+        return (PFN_vkVoidFunction)terminator_vkCreateSwapchainKHR;
+    }
+
     return icd->GetDeviceProcAddr(device, pName);
 }
 
@@ -3994,7 +4035,7 @@ VkResult loader_validate_instance_extensions(
         /* Not in global list, search layer extension lists */
         for (uint32_t j = 0; j < pCreateInfo->enabledLayerCount; j++) {
             layer_prop = loader_get_layer_property(
-                pCreateInfo->ppEnabledLayerNames[i], instance_layer);
+                pCreateInfo->ppEnabledLayerNames[j], instance_layer);
             if (!layer_prop) {
                 /* Should NOT get here, loader_validate_layers
                  * should have already filtered this case out.
@@ -4401,48 +4442,53 @@ terminator_EnumeratePhysicalDevices(VkInstance instance,
         icd = icd->next;
     }
 
-    *pPhysicalDeviceCount = inst->total_gpu_count;
-    if (!pPhysicalDevices) {
-        return res;
-    }
+    uint32_t copy_count = inst->total_gpu_count;
 
-    /* Initialize the output pPhysicalDevices  with wrapped loader terminator
-     * physicalDevice objects; save this list of wrapped objects in instance
-     * struct for later cleanup and use by trampoline code */
-    uint32_t j, idx = 0;
-    uint32_t copy_count = 0;
+    if (NULL != pPhysicalDevices) {
+        // Initialize the output pPhysicalDevices with wrapped loader
+        // terminator physicalDevice objects; save this list of
+        // wrapped objects in instance struct for later cleanup and
+        // use by trampoline code
+        uint32_t j, idx = 0;
 
-    copy_count = (inst->total_gpu_count < *pPhysicalDeviceCount)
-                     ? inst->total_gpu_count
-                     : *pPhysicalDeviceCount;
+        if (copy_count > *pPhysicalDeviceCount) {
+            copy_count = *pPhysicalDeviceCount;
+        }
 
-    if (inst->phys_devs_term)
-        loader_instance_heap_free(inst, inst->phys_devs_term);
-    inst->phys_devs_term = loader_instance_heap_alloc(
-        inst, sizeof(struct loader_physical_device) * copy_count,
-        VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-    if (!inst->phys_devs_term)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
+        if (inst->phys_devs_term) {
+            loader_instance_heap_free(inst, inst->phys_devs_term);
+        }
 
-    for (i = 0; idx < copy_count && i < inst->total_icd_count; i++) {
+        if (copy_count > 0) {
+            inst->phys_devs_term = loader_instance_heap_alloc(
+                inst, sizeof(struct loader_physical_device) * copy_count,
+                VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+            if (!inst->phys_devs_term) {
+                return VK_ERROR_OUT_OF_HOST_MEMORY;
+            }
+        }
 
-        for (j = 0; j < phys_devs[i].count && idx < copy_count; j++) {
-            loader_set_dispatch((void *)&inst->phys_devs_term[idx], inst->disp);
-            inst->phys_devs_term[idx].this_icd = phys_devs[i].this_icd;
-            inst->phys_devs_term[idx].phys_dev = phys_devs[i].phys_devs[j];
-            pPhysicalDevices[idx] =
-                (VkPhysicalDevice)&inst->phys_devs_term[idx];
-            idx++;
+        for (i = 0; idx < copy_count && i < inst->total_icd_count; i++) {
+            for (j = 0; j < phys_devs[i].count && idx < copy_count; j++) {
+                loader_set_dispatch((void *)&inst->phys_devs_term[idx],
+                                    inst->disp);
+                inst->phys_devs_term[idx].this_icd = phys_devs[i].this_icd;
+                inst->phys_devs_term[idx].icd_index = i;
+                inst->phys_devs_term[idx].phys_dev = phys_devs[i].phys_devs[j];
+                pPhysicalDevices[idx] =
+                    (VkPhysicalDevice)&inst->phys_devs_term[idx];
+                idx++;
+            }
+        }
+
+        if (copy_count < inst->total_gpu_count) {
+            inst->total_gpu_count = copy_count;
+            res = VK_INCOMPLETE;
         }
     }
+
     *pPhysicalDeviceCount = copy_count;
 
-    // TODO: Is phys_devs being leaked?
-
-    if (copy_count < inst->total_gpu_count) {
-        inst->total_gpu_count = copy_count;
-        return VK_INCOMPLETE;
-    }
     return res;
 }
 

@@ -293,8 +293,6 @@ void PerformAllocateDescriptorSets(const VkDescriptorSetAllocateInfo *, const Vk
  */
 class DescriptorSet : public BASE_NODE {
   public:
-    using BASE_NODE::in_use;
-    using BASE_NODE::cb_bindings;
     DescriptorSet(const VkDescriptorSet, const DescriptorSetLayout *, const core_validation::layer_data *);
     ~DescriptorSet();
     // A number of common Get* functions that return data based on layout from which this set was created
