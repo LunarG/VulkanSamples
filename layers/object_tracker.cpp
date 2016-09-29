@@ -243,7 +243,7 @@ static void CreateSwapchainImageObject(VkDevice dispatchable_object, VkImage swa
 }
 
 template <typename T1, typename T2>
-static void CreateDispatchableObject(T1 dispatchable_object, T2 object, VkDebugReportObjectTypeEXT object_type) {
+static void CreateDispatchableObject(T1 dispatchable_object, T2 object, VkDebugReportObjectTypeEXT object_type, bool custom_allocator) {
     layer_data *instance_data = get_my_data_ptr(get_dispatch_key(dispatchable_object), layer_data_map);
 
     log_msg(instance_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, object_type, reinterpret_cast<uint64_t>(object),
@@ -252,7 +252,7 @@ static void CreateDispatchableObject(T1 dispatchable_object, T2 object, VkDebugR
 
     OBJTRACK_NODE *pNewObjNode = new OBJTRACK_NODE;
     pNewObjNode->object_type = object_type;
-    pNewObjNode->status = OBJSTATUS_NONE;
+    pNewObjNode->status = custom_allocator ? OBJSTATUS_CUSTOM_ALLOCATOR : OBJSTATUS_NONE;
     pNewObjNode->handle = reinterpret_cast<uint64_t>(object);
     instance_data->object_map[object_type][reinterpret_cast<uint64_t>(object)] = pNewObjNode;
     instance_data->num_objects[object_type]++;
@@ -260,7 +260,7 @@ static void CreateDispatchableObject(T1 dispatchable_object, T2 object, VkDebugR
 }
 
 template <typename T1, typename T2>
-static void CreateNonDispatchableObject(T1 dispatchable_object, T2 object, VkDebugReportObjectTypeEXT object_type) {
+static void CreateNonDispatchableObject(T1 dispatchable_object, T2 object, VkDebugReportObjectTypeEXT object_type, bool custom_allocator) {
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(dispatchable_object), layer_data_map);
 
     log_msg(device_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, object_type, reinterpret_cast<uint64_t &>(object),
@@ -269,7 +269,7 @@ static void CreateNonDispatchableObject(T1 dispatchable_object, T2 object, VkDeb
 
     OBJTRACK_NODE *pNewObjNode = new OBJTRACK_NODE;
     pNewObjNode->object_type = object_type;
-    pNewObjNode->status = OBJSTATUS_NONE;
+    pNewObjNode->status = custom_allocator ? OBJSTATUS_CUSTOM_ALLOCATOR : OBJSTATUS_NONE;
     pNewObjNode->handle = reinterpret_cast<uint64_t &>(object);
     device_data->object_map[object_type][reinterpret_cast<uint64_t &>(object)] = pNewObjNode;
     device_data->num_objects[object_type]++;
@@ -676,7 +676,7 @@ VKAPI_ATTR VkResult VKAPI_CALL AllocateMemory(VkDevice device, const VkMemoryAll
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateNonDispatchableObject(device, *pMemory, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT);
+            CreateNonDispatchableObject(device, *pMemory, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, pAllocator);
         }
     }
     return result;
@@ -848,7 +848,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateFence(VkDevice device, const VkFenceCreateI
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateNonDispatchableObject(device, *pFence, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT);
+            CreateNonDispatchableObject(device, *pFence, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, pAllocator);
         }
     }
     return result;
@@ -936,7 +936,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSemaphore(VkDevice device, const VkSemaphor
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateNonDispatchableObject(device, *pSemaphore, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT);
+            CreateNonDispatchableObject(device, *pSemaphore, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT, pAllocator);
         }
     }
     return result;
@@ -973,7 +973,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateEvent(VkDevice device, const VkEventCreateI
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateNonDispatchableObject(device, *pEvent, VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT);
+            CreateNonDispatchableObject(device, *pEvent, VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT, pAllocator);
         }
     }
     return result;
@@ -1052,7 +1052,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateQueryPool(VkDevice device, const VkQueryPoo
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateNonDispatchableObject(device, *pQueryPool, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT);
+            CreateNonDispatchableObject(device, *pQueryPool, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, pAllocator);
         }
     }
     return result;
@@ -1105,7 +1105,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateBuffer(VkDevice device, const VkBufferCreat
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateNonDispatchableObject(device, *pBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT);
+            CreateNonDispatchableObject(device, *pBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, pAllocator);
         }
     }
     return result;
@@ -1145,7 +1145,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateBufferView(VkDevice device, const VkBufferV
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateNonDispatchableObject(device, *pView, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT);
+            CreateNonDispatchableObject(device, *pView, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT, pAllocator);
         }
     }
     return result;
@@ -1182,7 +1182,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateI
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateNonDispatchableObject(device, *pImage, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT);
+            CreateNonDispatchableObject(device, *pImage, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, pAllocator);
         }
     }
     return result;
@@ -1236,7 +1236,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImageView(VkDevice device, const VkImageVie
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateNonDispatchableObject(device, *pView, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT);
+            CreateNonDispatchableObject(device, *pView, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT, pAllocator);
         }
     }
     return result;
@@ -1274,7 +1274,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateShaderModule(VkDevice device, const VkShade
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateNonDispatchableObject(device, *pShaderModule, VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT);
+            CreateNonDispatchableObject(device, *pShaderModule, VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT, pAllocator);
         }
     }
     return result;
@@ -1313,7 +1313,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreatePipelineCache(VkDevice device, const VkPipe
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateNonDispatchableObject(device, *pPipelineCache, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT);
+            CreateNonDispatchableObject(device, *pPipelineCache, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT, pAllocator);
         }
     }
     return result;
@@ -1415,7 +1415,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreatePipelineLayout(VkDevice device, const VkPip
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateNonDispatchableObject(device, *pPipelineLayout, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT);
+            CreateNonDispatchableObject(device, *pPipelineLayout, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT, pAllocator);
         }
     }
     return result;
@@ -1453,7 +1453,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSampler(VkDevice device, const VkSamplerCre
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateNonDispatchableObject(device, *pSampler, VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT);
+            CreateNonDispatchableObject(device, *pSampler, VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT, pAllocator);
         }
     }
     return result;
@@ -1505,7 +1505,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorSetLayout(VkDevice device, const 
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateNonDispatchableObject(device, *pSetLayout, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT);
+            CreateNonDispatchableObject(device, *pSetLayout, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT, pAllocator);
         }
     }
     return result;
@@ -1545,7 +1545,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorPool(VkDevice device, const VkDes
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateNonDispatchableObject(device, *pDescriptorPool, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT);
+            CreateNonDispatchableObject(device, *pDescriptorPool, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT, pAllocator);
         }
     }
     return result;
@@ -1662,7 +1662,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateFramebuffer(VkDevice device, const VkFrameb
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateNonDispatchableObject(device, *pFramebuffer, VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT);
+            CreateNonDispatchableObject(device, *pFramebuffer, VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT, pAllocator);
         }
     }
     return result;
@@ -1700,7 +1700,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateNonDispatchableObject(device, *pRenderPass, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT);
+            CreateNonDispatchableObject(device, *pRenderPass, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, pAllocator);
         }
     }
     return result;
@@ -1751,7 +1751,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateCommandPool(VkDevice device, const VkComman
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateNonDispatchableObject(device, *pCommandPool, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT);
+            CreateNonDispatchableObject(device, *pCommandPool, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT, pAllocator);
         }
     }
     return result;
@@ -2668,7 +2668,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device, const VkSwapc
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateNonDispatchableObject(device, *pSwapchain, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT);
+            CreateNonDispatchableObject(device, *pSwapchain, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, pAllocator);
         }
     }
     return result;
@@ -2735,7 +2735,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateWin32SurfaceKHR(VkInstance instance, const 
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateNonDispatchableObject(instance, *pSurface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT);
+            CreateNonDispatchableObject(instance, *pSurface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, pAllocator);
         }
     }
     return result;
@@ -2774,7 +2774,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateXcbSurfaceKHR(VkInstance instance, const Vk
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateNonDispatchableObject(instance, *pSurface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT);
+            CreateNonDispatchableObject(instance, *pSurface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, pAllocator);
         }
     }
     return result;
@@ -2814,7 +2814,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateXlibSurfaceKHR(VkInstance instance, const V
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateNonDispatchableObject(instance, *pSurface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT);
+            CreateNonDispatchableObject(instance, *pSurface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, pAllocator);
         }
     }
     return result;
@@ -2854,7 +2854,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateMirSurfaceKHR(VkInstance instance, const Vk
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateNonDispatchableObject(instance, *pSurface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT);
+            CreateNonDispatchableObject(instance, *pSurface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, pAllocator);
         }
     }
     return result;
@@ -2893,7 +2893,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateWaylandSurfaceKHR(VkInstance instance, cons
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateNonDispatchableObject(instance, *pSurface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT);
+            CreateNonDispatchableObject(instance, *pSurface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, pAllocator);
         }
     }
     return result;
@@ -2933,7 +2933,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateAndroidSurfaceKHR(VkInstance instance, cons
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateNonDispatchableObject(instance, *pSurface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT);
+            CreateNonDispatchableObject(instance, *pSurface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, pAllocator);
         }
     }
     return result;
@@ -2967,7 +2967,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSharedSwapchainsKHR(VkDevice device, uint32
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
             for (i = 0; i < swapchainCount; i++) {
-                CreateNonDispatchableObject(device, pSwapchains[i], VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT);
+                CreateNonDispatchableObject(device, pSwapchains[i], VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, pAllocator);
             }
         }
     }
@@ -2983,7 +2983,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDebugReportCallbackEXT(VkInstance instance,
     if (VK_SUCCESS == result) {
         layer_data *instance_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
         result = layer_create_msg_callback(instance_data->report_data, false, pCreateInfo, pAllocator, pCallback);
-        CreateNonDispatchableObject(instance, *pCallback, VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT);
+        CreateNonDispatchableObject(instance, *pCallback, VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT, pAllocator);
     }
     return result;
 }
@@ -3190,7 +3190,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physicalDevice, con
     initDeviceTable(*pDevice, fpGetDeviceProcAddr, ot_device_table_map);
 
     CheckDeviceRegisterExtensions(pCreateInfo, *pDevice);
-    CreateDispatchableObject(*pDevice, *pDevice, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT);
+    CreateDispatchableObject(*pDevice, *pDevice, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, pAllocator);
 
     return result;
 }
@@ -3244,7 +3244,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateInstance(const VkInstanceCreateInfo *pCreat
     InitObjectTracker(instance_data, pAllocator);
     CheckInstanceRegisterExtensions(pCreateInfo, *pInstance);
 
-    CreateDispatchableObject(*pInstance, *pInstance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT);
+    CreateDispatchableObject(*pInstance, *pInstance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pAllocator);
 
     return result;
 }
@@ -3264,7 +3264,7 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumeratePhysicalDevices(VkInstance instance, uin
     if (result == VK_SUCCESS) {
         if (pPhysicalDevices) {
             for (uint32_t i = 0; i < *pPhysicalDeviceCount; i++) {
-                CreateDispatchableObject(instance, pPhysicalDevices[i], VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT);
+                CreateDispatchableObject(instance, pPhysicalDevices[i], VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false);
             }
         }
     }
@@ -3584,7 +3584,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
     lock.lock();
     if (result == VK_SUCCESS) {
         for (uint32_t idx2 = 0; idx2 < createInfoCount; ++idx2) {
-            CreateNonDispatchableObject(device, pPipelines[idx2], VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT);
+            CreateNonDispatchableObject(device, pPipelines[idx2], VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, pAllocator);
         }
     }
     lock.unlock();
@@ -3625,7 +3625,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateComputePipelines(VkDevice device, VkPipelin
     lock.lock();
     if (result == VK_SUCCESS) {
         for (uint32_t idx1 = 0; idx1 < createInfoCount; ++idx1) {
-            CreateNonDispatchableObject(device, pPipelines[idx1], VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT);
+            CreateNonDispatchableObject(device, pPipelines[idx1], VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, pAllocator);
         }
     }
     lock.unlock();

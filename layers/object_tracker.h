@@ -39,6 +39,7 @@ enum OBJECT_TRACK_ERROR {
     OBJTRACK_INVALID_OBJECT,           // Object used that has never been created
     OBJTRACK_DESCRIPTOR_POOL_MISMATCH, // Descriptor Pools specified incorrectly
     OBJTRACK_COMMAND_POOL_MISMATCH,    // Command Pools specified incorrectly
+    OBJTRACK_ALLOCATOR_MISMATCH,       // Created with custom allocator but destroyed without
 };
 
 // Object Status -- used to track state of individual objects
@@ -52,6 +53,7 @@ enum ObjectStatusFlagBits {
     OBJSTATUS_DEPTH_STENCIL_BOUND = 0x00000010,      // Viewport state object has been bound
     OBJSTATUS_GPU_MEM_MAPPED = 0x00000020,           // Memory object is currently mapped
     OBJSTATUS_COMMAND_BUFFER_SECONDARY = 0x00000040, // Command Buffer is of type SECONDARY
+    OBJSTATUS_CUSTOM_ALLOCATOR = 0x00000080,         // Allocated with custom allocator
 };
 
 // Object and state information structure
