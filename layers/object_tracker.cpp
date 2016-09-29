@@ -1498,14 +1498,25 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorPool(VkDevice device, const VkDes
 VKAPI_ATTR VkResult VKAPI_CALL ResetDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool,
                                                    VkDescriptorPoolResetFlags flags) {
     bool skip_call = false;
-    {
-        std::lock_guard<std::mutex> lock(global_lock);
-        skip_call |= ValidateObject(device, descriptorPool, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT, false);
-        skip_call |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
-    }
+    std::unique_lock<std::mutex> lock(global_lock);
+    layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    skip_call |= ValidateObject(device, descriptorPool, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT, false);
+    skip_call |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
     if (skip_call) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
+    // A DescriptorPool's descriptor sets are implicitly deleted when the pool is reset.
+    // Remove this pool's descriptor sets from our descriptorSet map.
+    auto itr = device_data->object_map[VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT].begin();
+    while (itr != device_data->object_map[VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT].end()) {
+        OBJTRACK_NODE *pNode = (*itr).second;
+        auto del_itr = itr++;
+        if (pNode->parent_object == reinterpret_cast<uint64_t &>(descriptorPool)) {
+            DestroyObject(device, (VkDescriptorSet)((*del_itr).first),
+                                         VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, false);
+        }
+    }
+    lock.unlock();
     VkResult result = get_dispatch_table(ot_device_table_map, device)->ResetDescriptorPool(device, descriptorPool, flags);
     return result;
 }
