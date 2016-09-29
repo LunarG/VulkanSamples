@@ -1,6 +1,5 @@
 /*
 *--------------------------------------------------------------------------
-* Copyright (c) 2015-2016 The Khronos Group Inc.
 * Copyright (c) 2015-2016 Valve Corporation
 * Copyright (c) 2015-2016 LunarG, Inc.
 *
@@ -162,7 +161,7 @@ enum eKeycode{
     KEY_Mute       = 127,
     KEY_VolumeUp   = 128,
     KEY_VolumeDown = 129,
-    KEY_LeftControl = 224,
+    KEY_LeftControl = 224,  //WARNING : Android has no Ctrl keys.
     KEY_LeftShift   = 225,
     KEY_LeftAlt     = 226,
     KEY_LeftGUI     = 227,

@@ -1,6 +1,5 @@
 /*
 *--------------------------------------------------------------------------
-* Copyright (c) 2015-2016 The Khronos Group Inc.
 * Copyright (c) 2015-2016 Valve Corporation
 * Copyright (c) 2015-2016 LunarG, Inc.
 *
@@ -47,6 +46,7 @@
 // Keyboard: function to get native keycode
 // Android: window resize events (WIP)
 // Set window size / position
+// Enable Validation Layers
 
 #ifdef ANDROID
   #include <native.h>
@@ -57,6 +57,7 @@
 #ifndef WSIWINDOW_H
 #define WSIWINDOW_H
 
+
 //===========================WSIWindow==========================
 class WSIWindow{
     WindowImpl* pimpl;
@@ -64,8 +65,8 @@ public:
     WSIWindow(CInstance& inst, const char* title, uint width, uint height);
     virtual ~WSIWindow();
     //--State query functions--
-    void GetWinPos(int16_t& x, int16_t& y);            // Get the window's x,y position, relative to top-left
-    void GetWinSize(int16_t& width, int16_t& height);  // Get the window's width and height
+    void GetWinPos  (int16_t& x, int16_t& y);          // Get the window's x,y position, relative to top-left
+    void GetWinSize (int16_t& width, int16_t& height); // Get the window's width and height
     bool GetKeyState(const eKeycode key);              // Returns true if specified key is pressed. (see keycodes.h)
     bool GetBtnState(const uint8_t  btn);              // Returns true if specified mouse button is pressed (button 1-5)
     void GetMousePos(int16_t& x, int16_t& y);          // Get mouse (x,y) coordinate within window client area

@@ -1,6 +1,5 @@
 /*
 *--------------------------------------------------------------------------
-* Copyright (c) 2015-2016 The Khronos Group Inc.
 * Copyright (c) 2015-2016 Valve Corporation
 * Copyright (c) 2015-2016 LunarG, Inc.
 *
@@ -20,7 +19,7 @@
 *
 *--------------------------------------------------------------------------
 *
-* This sample project demonstates how to use SWIWindow to create a Vulkan window,
+* This sample project demonstrates how to use SWIWindow to create a Vulkan window,
 * and add event handlers for window, keyboard, mouse and multi-touchscreen events.
 * It works on Windows, Linux and Android.
 *

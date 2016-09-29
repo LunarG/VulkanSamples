@@ -1,6 +1,5 @@
 /*
 *--------------------------------------------------------------------------
-* Copyright (c) 2015-2016 The Khronos Group Inc.
 * Copyright (c) 2015-2016 Valve Corporation
 * Copyright (c) 2015-2016 LunarG, Inc.
 *
@@ -76,11 +75,8 @@ class Window_xcb : public WindowImpl{
     void SetTitle(const char* title);
     void CreateSurface(VkInstance instance);
 public:
-
-    //Window_xcb(const char* title,uint width,uint height);
     Window_xcb(CInstance& inst, const char* title, uint width, uint height);
     virtual ~Window_xcb();
-    //bool PollEvent();
     EventType GetEvent();
 };
 //==============================================================
