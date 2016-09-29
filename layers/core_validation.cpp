@@ -8646,6 +8646,10 @@ static bool ValidateMaskBitsFromLayouts(const layer_data *my_data, VkCommandBuff
         skip_call |= ValidateMaskBits(my_data, cmdBuffer, accessMask, layout, VK_ACCESS_TRANSFER_READ_BIT, 0, type);
         break;
     }
+    case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR: {
+        skip_call |= ValidateMaskBits(my_data, cmdBuffer, accessMask, layout, VK_ACCESS_MEMORY_READ_BIT, 0, type);
+        break;
+    }
     case VK_IMAGE_LAYOUT_UNDEFINED: {
         if (accessMask != 0) {
             // TODO: Verify against Valid Use section spec
