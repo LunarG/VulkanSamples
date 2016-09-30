@@ -21,13 +21,14 @@ vkXXXXGetProcAddr is used internally by the Layers and Loader to initialize disp
 Layers can also be activated via the VK_INSTANCE_LAYERS environment variable.
 
 All validation layers work with the DEBUG_REPORT extension to provide validation feedback.
-When a validation layer is enabled, it will look for a vk_layer_settings.txt file to define
-its logging behavior, which can include sending output to a file, stdout, or debug output (Windows).
-Applications can also register debug callback functions via the DEBUG_REPORT extension to receive
-callbacks when validation events occur. Application callbacks are independent of settings in a
-vk_layer_settings.txt file which will be carried out separately. If no vk_layer_settings.txt
-file is present and no application callbacks are registered, error messages will be output
-through default logging callbacks.
+When a validation layer is enabled, it will look for a vk_layer_settings.txt file (see"Using
+Layers" section below for more details) to define its logging behavior, which can include
+sending output to a file, stdout, or debug output (Windows). Applications can also register
+debug callback functions via the DEBUG_REPORT extension to receive callbacks when validation
+events occur. Application callbacks are independent of settings in a vk_layer_settings.txt
+file which will be carried out separately. If no vk_layer_settings.txt file is present and
+no application callbacks are registered, error messages will be output through default
+logging callbacks.
 
 ### Layer library example code
 
@@ -72,9 +73,9 @@ layers/swapchain.cpp (name=`VK_LAYER_LUNARG_swapchain`) - Check that WSI extensi
     This is required for the Loader to be able to scan and enumerate your library.
     Alternatively, use the `VK_LAYER_PATH` environment variable to specify where the layer libraries reside.
 
-3. Create a vk_layer_settings.txt file in the same directory to specify how your layers should behave.
+3. To specify how your layers should behave, create a vk_layer_settings.txt file. This file can exist in the same directory as your app or in a directory given by the `VK_LAYER_SETTINGS_PATH` environment variable. Alternatively, you can use any filename you want if you set `VK_LAYER_SETTINGS_PATH` to the full path of the file, rather than the directory that contains it.
 
-    Model it after the following example:  [*vk_layer_settings.txt*](vk_layer_settings.txt)
+    Model the file after the following example:  [*vk_layer_settings.txt*](vk_layer_settings.txt)
 
 4. Specify which layers to activate using environment variables.
 
