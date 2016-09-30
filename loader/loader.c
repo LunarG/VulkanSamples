@@ -4457,6 +4457,7 @@ terminator_EnumeratePhysicalDevices(VkInstance instance,
 
         if (inst->phys_devs_term) {
             loader_instance_heap_free(inst, inst->phys_devs_term);
+            inst->phys_devs_term = NULL;
         }
 
         if (copy_count > 0) {
