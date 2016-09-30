@@ -67,6 +67,21 @@ else()
     endif()
 endif()
 
+# Add targets for JSON file install on Linux.
+# Need to remove the "./" from the library path before installing to /etc.
+if(UNIX)
+    foreach (config_file ${LAYER_JSON_FILES})
+        add_custom_target(${config_file}-staging-json ALL
+            COMMAND mkdir -p ${CMAKE_CURRENT_BINARY_DIR}/staging-json
+            COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/linux/${config_file}.json ${CMAKE_CURRENT_BINARY_DIR}/staging-json
+            COMMAND sed -i -e "/\"library_path\":/s$./libVkLayer$libVkLayer$" ${CMAKE_CURRENT_BINARY_DIR}/staging-json/${config_file}.json
+            VERBATIM
+            DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/linux/${config_file}.json
+            )
+        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/staging-json/${config_file}.json DESTINATION /etc/vulkan/explicit_layer.d)
+    endforeach(config_file)
+endif()
+
 if (WIN32)
     macro(add_vk_layer target)
     add_custom_command(OUTPUT VkLayer_${target}.def
@@ -83,7 +98,7 @@ else()
     target_link_Libraries(VkLayer_${target} VkLayer_utils)
     add_dependencies(VkLayer_${target} generate_dispatch_table_helper generate_vk_layer_helpers generate_enum_string_helper VkLayer_utils)
     set_target_properties(VkLayer_${target} PROPERTIES LINK_FLAGS "-Wl,-Bsymbolic")
-    install(TARGETS VkLayer_${target} DESTINATION ${PROJECT_BINARY_DIR}/install_staging)
+    install(TARGETS VkLayer_${target} DESTINATION lib)
     endmacro()
 endif()
 
@@ -176,7 +191,7 @@ if (WIN32)
     add_library(VkLayer_utils STATIC vk_layer_config.cpp vk_layer_extension_utils.cpp vk_layer_utils.cpp)
 else()
     add_library(VkLayer_utils SHARED vk_layer_config.cpp vk_layer_extension_utils.cpp vk_layer_utils.cpp)
-    install(TARGETS VkLayer_utils DESTINATION ${PROJECT_BINARY_DIR}/install_staging)
+    install(TARGETS VkLayer_utils DESTINATION lib)
 endif()
 
 add_vk_layer(core_validation core_validation.cpp vk_layer_table.cpp vk_safe_struct.cpp descriptor_sets.cpp)

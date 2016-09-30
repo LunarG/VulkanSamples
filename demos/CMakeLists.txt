@@ -114,3 +114,7 @@ endif()
 if (${CMAKE_SYSTEM_PROCESSOR} STREQUAL ${CMAKE_HOST_SYSTEM_PROCESSOR})
     add_subdirectory(smoke)
 endif()
+
+if(UNIX)
+    install(TARGETS vulkaninfo DESTINATION bin)
+endif()

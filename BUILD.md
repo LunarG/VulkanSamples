@@ -58,6 +58,44 @@ The `LoaderAndLayerInterface` document in the `loader` folder in this repository
 describes both how ICDs and layers should be properly
 packaged, and how developers can point to ICDs and layers within their builds.
 
+### Linux Install to System Directories
+
+Installing the files resulting from your build to the systems directories is optional since
+environment variables can usually be used instead to locate the binaries.
+There are also risks with interfering with binaries installed by packages.
+If you are certain that you would like to install your binaries to system directories,
+you can proceed with these instructions.
+
+Assuming that you've built the code as described above and the current directory is still `dbuild`,
+you can execute:
+
+```
+sudo make install
+```
+
+This command installs files to:
+
+* `/usr/local/lib`:  Vulkan loader and layers shared objects
+* `/usr/local/bin`:  vulkaninfo application
+* `/etc/vulkan/explicit_layer.d`:  Layer JSON files
+
+You may need to run `ldconfig` in order to refresh the system loader search cache on some Linux systems.
+
+The list of installed files appears in the build directory in a file named `install_manifest.txt`.
+You can easily remove the installed files with:
+
+```
+cat install_manifest.txt | sudo xargs rm
+```
+
+See the CMake documentation for details on using `DESTDIR` and `CMAKE_INSTALL_PREFIX` to customize
+your installation location.
+
+Note that some executables in this repository (e.g., `cube`) use the "rpath" linker directive
+to load the Vulkan loader from the build directory, `dbuild` in this example.
+This means that even after installing the loader to the system directories, these executables
+still use the loader from the build directory.
+
 ## Validation Test
 
 The test executables can be found in the dbuild/tests directory. 

@@ -50,7 +50,6 @@ else()
     add_library(VkLayer_${target} SHARED ${ARGN})
     add_dependencies(VkLayer_${target} generate_tests_dispatch_table_helper VkLayer_utils)
     set_target_properties(VkLayer_${target} PROPERTIES LINK_FLAGS "-Wl,-Bsymbolic")
-    install(TARGETS VkLayer_${target} DESTINATION ${PROJECT_BINARY_DIR}/install_staging)
     endmacro()
 endif()
 
