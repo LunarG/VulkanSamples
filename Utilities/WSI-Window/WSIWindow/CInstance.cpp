@@ -74,12 +74,11 @@ CExtensions::CExtensions(const char* layerName): count(0) , extProps(0) ,pickCou
     //Get Extension count for this layer, or global extensions, if layer_name=NULL
     VkResult err = vkEnumerateInstanceExtensionProperties(layerName, &count, NULL);
     VKERRCHECK(err);
-
+    
     extProps = (VkExtensionProperties*)malloc(count * sizeof(VkExtensionProperties));
     pickList = (const char**)malloc(count * sizeof(char*));
-    do{
-        err = vkEnumerateInstanceExtensionProperties(layerName, &count, extProps);
-    } while (err == VK_INCOMPLETE);    // repeat get until VK_INCOMPLETE goes away
+    //Repeat the fetch, until VK_INCOMPLETE goes away
+    while ((err = vkEnumerateInstanceExtensionProperties(layerName, &count, extProps)) == VK_INCOMPLETE) {}
     VKERRCHECK(err);
 }
 
@@ -111,17 +110,13 @@ bool CExtensions::Pick(const char* extName){
 
 void CExtensions::Print(){
   printf("Extension count:%d\n",count);
-  forCount(count){
-    printf("\t%s\n",extProps[i].extensionName);
-  }
+  forCount(count) printf("\t%s\n",extProps[i].extensionName);
   //for(auto& prop : *this) printf("%s\n",prop.extensionName);
 }
 
 void CExtensions::PrintPicked(){
   printf("Picked Extension count:%d\n",pickCount);
-  forCount(pickCount){
-    printf("\t%s\n",pickList[i]);
-  }
+  forCount(pickCount) printf("\t%s\n",pickList[i]);
   //for(auto& prop : *this) printf("%s\n",prop.extensionName);
 }
 
@@ -181,10 +176,8 @@ void CInstance::Create(CExtensions& extensions, const char* appName, const char*
     inst_info.ppEnabledExtensionNames = extensions.PickList();
     inst_info.enabledLayerCount = 0;
     inst_info.ppEnabledLayerNames = NULL;
+    VKERRCHECK(vkCreateInstance(&inst_info, NULL, &instance));
 
-    VkResult res;
-    res = vkCreateInstance(&inst_info, NULL, &instance);
-    VKERRCHECK(res);
     printf("Vulkan Instance created\n");
 }
 

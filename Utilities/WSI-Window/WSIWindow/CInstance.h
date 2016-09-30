@@ -63,10 +63,15 @@ const char* VkResultStr(VkResult err);  //Convert vulkan result code to a string
 //-------------------------Macros-----------------------------
 #define forCount(COUNT) for(uint i=0; i<COUNT; ++i)
 
-#define VKERRCHECK(VKRESULT) if(VKRESULT){                                  \
-                               printf("Error: %s ",VkResultStr(VKRESULT));  \
-                               assert(false);                               \
-                             }
+#ifdef NDEBUG
+  #define VKERRCHECK(VKRESULT) {VKRESULT;}  //in release mode, dont print VkResult strings.
+#else
+  #define VKERRCHECK(VKRESULT) { VkResult VKVAL=VKRESULT;                    \
+                                 if(VKVAL){                                  \
+                                   printf("Error: %s ",VkResultStr(VKVAL));  \
+                                   assert(false);                            \
+                               }}
+#endif
 //------------------------------------------------------------
 
 //template <class TYPE> struct TArray{
