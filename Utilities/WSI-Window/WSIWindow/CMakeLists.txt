@@ -21,10 +21,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         include_directories(${XCB_INCLUDE_DIRS})                 # /usr/include
         target_link_libraries(${LIBRARY_NAME} ${XCB_LIBRARIES})  # /usr/lib/x86_64-linux-gnu/libxcb.so
         #---XKB--- (keyboard)
-        #find_library(XKB "xkbcommon")                            # /usr/lib/x86_64-linux-gnu/
-        #target_link_libraries(${PROJECT_NAME} ${XKB})            # keyboard support as a static link library (adds 243Kb)
-        LINK_DIRECTORIES("/usr/lib/x86_64-linux-gnu/")
-        TARGET_LINK_LIBRARIES(${LIBRARY_NAME} "libxkbcommon.so")  #xkb keyboard support as a shared library
+        find_library(XKB "xkbcommon" DOC "XKB Keyboard library") # xkb keyboard support
+        target_link_libraries(${LIBRARY_NAME} ${XKB})            # /usr/lib/x86_64-linux-gnu/libxkbcommon.so
     endif()
 
 #    if (BUILD_WSI_XLIB_SUPPORT)
@@ -40,9 +38,13 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 #    endif()
 
 endif()
+#=================================================================
 #=============================WINDOWS=============================
 if(WIN32)
     add_definitions(-DVK_USE_PLATFORM_WIN32_KHR)
+    #set(VULKAN_SDK $ENV{VULKAN_SDK} CACHE PATH "Path to the Vulkan SDK.")
+    #target_link_libraries(${LIBRARY_NAME} "${VULKAN_SDK}/bin/vulkan-1.lib")
+    #target_include_directories(${LIBRARY_NAME} PUBLIC "${VULKAN_SDK}/include")
 endif()
 #=================================================================
 #=============================ANDROID=============================
@@ -51,18 +53,19 @@ endif()
 #    add_definitions(-DVK_USE_PLATFORM_ANDROID_KHR)
 #endif()
 #=================================================================
-
-#=========================Find Vulkan SDK=========================        # Get Path from the VULKAN_SDK environment variable.
-if(NOT DEFINED ENV{VULKAN_SDK})
-    message("WARNING: VULKAN_SDK env-variable was not found!")
-endif()
-set(VULKAN_SDK $ENV{VULKAN_SDK} CACHE PATH "Path to the Vulkan SDK.")     # Give user a chance to change it, using cmake-gui.
+#=======================Find Vulkan Loader========================
+find_library(VULKAN_LOADER vulkan   DOC "Path to Vulkan loader library.")
+find_library(VULKAN_LOADER vulkan   PATH "$ENV{VULKAN_SDK}/lib")             # Search in Vulkan SDK on Linux  : /lib/libvulkan.so
+find_library(VULKAN_LOADER vulkan-1 PATH "$ENV{VULKAN_SDK}/bin")             # Search in Vulkan SDK on Windows: /bin/vulkan-1.lib
+find_library(VULKAN_LOADER vulkan   PATH "../../../build/Default/loader")    # Search in VulkanSamples on Linux
+find_library(VULKAN_LOADER vulkan-1 PATH "../../../build/Default/loader")    # Search in VulkanSamples on Windows
+target_link_libraries(${LIBRARY_NAME} ${VULKAN_LOADER})                      # Link to loader
+message("Found VULKAN_LOADER  at: ${VULKAN_LOADER}")
 #=================================================================
-#include_directories("${VULKAN_SDK}/include")
-target_include_directories(${LIBRARY_NAME} PUBLIC "${VULKAN_SDK}/include")
-
-if(WIN32)
-    target_link_libraries(${LIBRARY_NAME} "${VULKAN_SDK}/bin/vulkan-1.lib")
-else()
-    target_link_libraries(${LIBRARY_NAME} "${VULKAN_SDK}/lib/libvulkan.so")
-endif()
+#=======================Find Vulkan Header========================
+find_path(VULKAN_INCLUDE vulkan/vulkan.h DOC "Path to Vulkan header file.")
+find_path(VULKAN_INCLUDE vulkan/vulkan.h PATH "$ENV{VULKAN_SDK}/include")  # Search in Vulkan SDK
+find_path(VULKAN_INCLUDE vulkan/vulkan.h PATH "../../../include")          # Search in VulkanSamples
+target_include_directories(${LIBRARY_NAME} PUBLIC "${VULKAN_INCLUDE}")     # include vulkan.h
+message("Found VULKAN_INCLUDE at: ${VULKAN_INCLUDE}")
+#=================================================================

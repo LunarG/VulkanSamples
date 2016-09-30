@@ -17,6 +17,8 @@
 *
 * Author: Rene Lindsay <rene@lunarg.com>
 *
+*/
+/*
 *--------------------------------------------------------------------------
 *
 *  This class creates a Vulkan window and provides the main event processing loop.
@@ -33,7 +35,7 @@
 *--------------------------------------------------------------------------
 */
 
-// NOTE: WSIWindow.h MUST be inculded BEFORE stdio.h, for printf to work correctly on Android.
+// NOTE: WSIWindow.h MUST be #inculded BEFORE stdio.h, for printf to work correctly on Android.
 
 // TODO:
 //
@@ -42,11 +44,14 @@
 // Multi-touch input (WIP in window_android.cpp)
 // Clipboard and IME
 // Multi-window support
-// Documentation
+// More Documentation
 // Keyboard: function to get native keycode
 // Android: window resize events (WIP)
 // Set window size / position
-// Enable Validation Layers
+// Enable Validation Layers via Debug-Report extension
+// Android: Add option to set render buffer size, smaller than window size. (ANativeWindow_SetBufferGeometry) (Dustin)
+// Android: Rotate screen according to width/height aspect ratio. (Dustin)
+// Desktop: Pick render device with flag: DONT_CARE / PERFORMANCE / INTEGRATED . ... (Mark Young)
 
 #ifdef ANDROID
   #include <native.h>
