@@ -69,8 +69,56 @@ const char* VkResultStr(VkResult err){
 
 //---------------------------------------------------------------
 
+
+//--------------------------PickList-----------------------------
+CPickList::CPickList(const char* layerName){
+    uint count=0;
+    VKERRCHECK(vkEnumerateInstanceExtensionProperties(layerName, &count, NULL));  //Get list size
+    items.resize(count);                                                          //allocate memory for list
+
+    VkResult err;                                             //Fetch list data.  If VK_INCOMPLETE, try again.
+    while ((err = vkEnumerateInstanceExtensionProperties(layerName, &count, items.data())) == VK_INCOMPLETE){}
+    VKERRCHECK(err);
+}
+
+int CPickList::IndexOf(const char* extName){
+    forCount(items.size())
+        if(!strcmp(extName, items[i].extensionName)) return i;
+    return -1;
+}
+
+bool CPickList::Pick(const char* extName){
+    int inx=IndexOf(extName);
+    if(inx==-1) return false;
+    for(const char* pickItem : pickList)
+        if(pickItem == items[inx].extensionName) return true;  //Check if item was already picked
+    pickList.push_back(items[inx].extensionName);              //if not, add item to pick-list
+    return true;
+}
+
+const char** CPickList::PickList() {return (const char**)pickList.data();}
+uint32_t     CPickList::PickCount(){return (uint32_t)pickList.size();}
+uint32_t     CPickList::Count()    {return (uint32_t)items.size();}
+
+void CPickList::Print(){
+  printf("Extensions picked: %d of %d\n",PickCount(),Count());
+  for(auto& item:items){
+      char* name=item.extensionName;
+      bool picked=false;
+      for(auto& pick:pickList) if(pick==name) picked=true;
+      printf("\t%s %s\n" cCLEAR,picked?"✓":cFAINT"x",name);
+  }
+}
+//---------------------------------------------------------------
+
+/*
 //-------------------------Extensions----------------------------
 CExtensions::CExtensions(const char* layerName): count(0) , extProps(0) ,pickCount(0){
+    LOGI("test INFO\n");
+    LOGW("test WARNING\n");
+    LOGE("test ERROR\n");
+
+
     //Get Extension count for this layer, or global extensions, if layer_name=NULL
     VkResult err = vkEnumerateInstanceExtensionProperties(layerName, &count, NULL);
     VKERRCHECK(err);
@@ -92,12 +140,12 @@ int CExtensions::IndexOf(const char* extName){
         if(!strcmp(extName, extProps[i].extensionName)) return i;
     return -1;
 }
-/*
+
 // Returns true if the named extension is in the list of extensions.
-bool CExtensions::Has(const char* extName){
-    return (IndexOf(extName)>=0);
-}
-*/
+//bool CExtensions::Has(const char* extName){
+//    return (IndexOf(extName)>=0);
+//}
+
 bool CExtensions::Pick(const char* extName){
     assert(pickCount<count);
     int inx=IndexOf(extName);
@@ -109,20 +157,24 @@ bool CExtensions::Pick(const char* extName){
 }
 
 void CExtensions::Print(){
-  printf("Extension count:%d\n",count);
-  forCount(count) printf("\t%s\n",extProps[i].extensionName);
-  //for(auto& prop : *this) printf("%s\n",prop.extensionName);
+  printf("Extensions picked: %d of %d\n",pickCount,count);
+  forCount(count){
+      char* name=extProps[i].extensionName;
+      bool picked=false;
+      forCount(pickCount) if(pickList[i]==name) picked=true;
+      printf("\t%s %s\n" cCLEAR,picked?"✓":cFAINT"x",name);
+  }
 }
-
-void CExtensions::PrintPicked(){
-  printf("Picked Extension count:%d\n",pickCount);
-  forCount(pickCount) printf("\t%s\n",pickList[i]);
-  //for(auto& prop : *this) printf("%s\n",prop.extensionName);
-}
-
-
+*/
 //---------------------------------------------------------------
 CInstance::CInstance(const char* appName, const char* engineName){
+
+//    CPickList lst;
+//    lst.Pick(VK_KHR_SURFACE_EXTENSION_NAME);
+//    lst.Print();
+
+
+
     CExtensions ext;
     if(ext.Pick(VK_KHR_SURFACE_EXTENSION_NAME)){
 #ifdef VK_USE_PLATFORM_WIN32_KHR
@@ -146,7 +198,8 @@ CInstance::CInstance(const char* appName, const char* engineName){
     }
 
     ext.Print();
-    ext.PrintPicked();
+    //ext.PrintPicked();
+
     assert(ext.PickCount()>=2);
     Create(ext, appName, engineName);
 }

@@ -71,6 +71,14 @@ public:
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 Window_win32::Window_win32(CInstance& inst, const char* title, uint width, uint height){
+    //---Enable VT100 terminal escape sequences--- (enables colored text in Windows 10+)
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    DWORD dwMode = 0;
+    GetConsoleMode(hOut, &dwMode);
+    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    SetConsoleMode(hOut, dwMode);
+    //--------------------------------------------
+
     instance=&inst;
     shape.width=width;
     shape.height=height;

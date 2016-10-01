@@ -26,17 +26,30 @@
 *--------------------------------------------------------------------------
 */
 
+#ifndef CINSTANCE_H
+#define CINSTANCE_H
+
+#if defined(__linux__)&& !defined(__ANDROID__)  //desktop only
+  #define __LINUX__ 1
+#endif
+
 #ifdef _WIN32
     #include <Windows.h>
     #ifndef VK_USE_PLATFORM_WIN32_KHR
     #define VK_USE_PLATFORM_WIN32_KHR
+    #endif
+    #ifdef WINVER < 0x0A00  /* Check Windows version (Win10+) */
+      #define ANSICODE(x)   /* Disable ANSI codes (too old)*/
+    #else
+      #define ANSICODE(x) x /* Enable ANSI codes */
     #endif
 #elif __ANDROID__
     #ifndef VK_USE_PLATFORM_ANDROID_KHR
     #define VK_USE_PLATFORM_ANDROID_KHR
     #endif
     #include <native.h>
-#elif __gnu_linux__
+    #define ANSICODE(x)
+#elif __LINUX__
 //    #if !defined(VK_USE_PLATFORM_XCB_KHR)  && \
 //        !defined(VK_USE_PLATFORM_XLIB_KHR) && \
 //        !defined(VK_USE_PLATFORM_MIR_KHR)  && \
@@ -44,42 +57,88 @@
 //        #define VK_USE_PLATFORM_XCB_KHR        //On Linux, default to XCB
 //    #endif
     #include <xkbcommon/xkbcommon.h>
+    #define ANSICODE(x) x
 #endif
 
 //----------------------------------------------------------------------------------
 
+//--ANSI escape codes to set terminal text colour-- eg. printf(cRED"Red text." cCLEAR);
+#define cFAINT     ANSICODE("\033[02m")
+#define cSTRIKEOUT ANSICODE("\033[09m")
+#define cRED       ANSICODE("\033[31m")
+#define cGREEN     ANSICODE("\033[32m")
+#define cYELLOW    ANSICODE("\033[33m")
+#define cBLUE      ANSICODE("\033[34m")
+#define cCLEAR     ANSICODE("\033[00m")
+//----------------------------------------------------------------------------------
 
-#ifndef CINSTANCE_H
-#define CINSTANCE_H
+#ifdef ANDROID
+  #include <jni.h>
+  #include <android/log.h>
+  #define LOG_TAG    "WSIWindow"                                                  // Android:
+  #define LOGI(...)    __android_log_print(ANDROID_LOG_INFO ,LOG_TAG,__VA_ARGS__) /* Prints Info in black   */
+  #define LOGW(...)    __android_log_print(ANDROID_LOG_WARN ,LOG_TAG,__VA_ARGS__) /* Prints Warnings in blue*/
+  #define LOGE(...)    __android_log_print(ANDROID_LOG_ERROR,LOG_TAG,__VA_ARGS__) /* Prints Errors in red   */
+  #define printf(...)  __android_log_print(ANDROID_LOG_INFO ,LOG_TAG,__VA_ARGS__)
+#else                                                                //Linux and Windows 10+: ( Older Windows only print in white.)
+  #define  LOGI(...)  printf(__VA_ARGS__)                            /*Prints Info in white     */
+  #define  LOGW(...) {printf(cYELLOW __VA_ARGS__); printf(cCLEAR);}  /*Prints Warnings in yellow*/
+  #define  LOGE(...) {printf(cRED    __VA_ARGS__); printf(cCLEAR);}  /*Prints Errors in red     */
+#endif
+
+
+
 
 #include <cstdlib>
 #include <stdio.h>
 #include <assert.h>
+#include <vector>
 #include <vulkan/vulkan.h>
+using namespace std;
 
 typedef unsigned int uint;
 const char* VkResultStr(VkResult err);  //Convert vulkan result code to a string.
 
 //-------------------------Macros-----------------------------
 #define forCount(COUNT) for(uint i=0; i<COUNT; ++i)
-
-#ifdef NDEBUG
-  #define VKERRCHECK(VKRESULT) {VKRESULT;}  //in release mode, dont print VkResult strings.
+//------------------------------------------------------------
+//-----Check VkResult for errors, and print error string------
+#ifdef NDEBUG  //in release mode, dont print VkResult strings.
+  #define VKERRCHECK(VKRESULT) {VKRESULT;}
 #else
-  #define VKERRCHECK(VKRESULT) { VkResult VKVAL=VKRESULT;                    \
-                                 if(VKVAL){                                  \
-                                   printf("Error: %s ",VkResultStr(VKVAL));  \
-                                   assert(false);                            \
+  #define VKERRCHECK(VKRESULT) { VkResult VKVAL=VKRESULT;                               \
+                                 if(VKVAL){                                             \
+                                   printf(cRED"Error: %s " cCLEAR,VkResultStr(VKVAL));  \
+                                   assert(false);                                       \
                                }}
 #endif
 //------------------------------------------------------------
+
+class CPickList{
+    vector<VkExtensionProperties> items;
+    vector<char*> pickList;
+public:
+    CPickList(const char* layerName=NULL);  //Gets global or layer extensions
+    int IndexOf(const char* Name);          //Returns the intex of the named extension, or -1 if not found.
+    bool Pick(const char* Name);            //Adds named extension to the pick list, or returns false if not found.
+    //char* Name(uint32_t index);
+    const char** PickList();                //Returns pick-list, to be passed to Vulkan
+    uint32_t PickCount();                   //Number of items picked
+    uint32_t Count();                       //Number of items to pick from
+    void Print();                           //Print PickList to console (for debug)
+};
+
+class CExtensions : public CPickList{
+    using CPickList::CPickList;     //Inherit base constructor
+};
+
 
 //template <class TYPE> struct TArray{
 //}
 
 //class Layers{
 //};
-
+/*
 class CExtensions{
     uint32_t count;                            //Number of extensions found
     VkExtensionProperties* extProps;           //Array of extensions
@@ -101,9 +160,8 @@ public:
     //bool Pick(int index);
     uint32_t PickCount(){return pickCount;}
     const char** PickList(){return pickList;}
-    void PrintPicked();
 };
-
+*/
 //------------------------------------------------------------
 
 class CInstance{
