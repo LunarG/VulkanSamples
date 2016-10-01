@@ -1,4 +1,4 @@
-/*
+﻿/*
 *--------------------------------------------------------------------------
 * Copyright (c) 2015-2016 The Khronos Group Inc.
 * Copyright (c) 2015-2016 Valve Corporation
@@ -106,7 +106,9 @@ void CPickList::Print(){
       char* name=item.extensionName;
       bool picked=false;
       for(auto& pick:pickList) if(pick==name) picked=true;
-      printf("\t%s %s\n" cCLEAR,picked?"✓":cFAINT"x",name);
+      //printf("\t%s %s\n" cCLEAR,picked?"✓":cFAINT"x",name);
+      printf("\t%s %s\n" cCLEAR, picked ? "\u2713" : cFAINT"x", name);
+
   }
 }
 //---------------------------------------------------------------
@@ -162,7 +164,7 @@ void CExtensions::Print(){
       char* name=extProps[i].extensionName;
       bool picked=false;
       forCount(pickCount) if(pickList[i]==name) picked=true;
-      printf("\t%s %s\n" cCLEAR,picked?"✓":cFAINT"x",name);
+      printf("\t%s %s\n" cCLEAR,picked?"âœ“":cFAINT"x",name);
   }
 }
 */

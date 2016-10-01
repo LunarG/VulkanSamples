@@ -24,12 +24,27 @@
 //==========================Win32===============================
 #ifdef VK_USE_PLATFORM_WIN32_KHR
 
+#ifndef WINDOW_WIN32
+#define WINDOW_WIN32
+
 #include "WindowImpl.h"
 #include <windowsx.h>             //   Mouse
 //#pragma warning(disable:4996)
 
-#ifndef WINDOW_WIN32
-#define WINDOW_WIN32
+//#ifdef _WIN32
+struct INITANSI {
+    INITANSI() {
+        HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+        DWORD dwMode = 0;
+        GetConsoleMode(hOut, &dwMode);
+        dwMode |= 0x0004; // ENABLE_VIRTUAL_TERMINAL_PROCESSING
+        SetConsoleMode(hOut, dwMode);
+        //printf(cRED "TEST");
+    }
+}INITANSI;
+//#endif
+
+
 
 // Convert native Win32 keyboard scancode to cross-platform USB HID code.
 const unsigned char WIN32_TO_HID[256] = {
@@ -72,11 +87,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 Window_win32::Window_win32(CInstance& inst, const char* title, uint width, uint height){
     //---Enable VT100 terminal escape sequences--- (enables colored text in Windows 10+)
-    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    DWORD dwMode = 0;
-    GetConsoleMode(hOut, &dwMode);
-    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-    SetConsoleMode(hOut, dwMode);
+    //HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    //DWORD dwMode = 0;
+    //GetConsoleMode(hOut, &dwMode);
+    //dwMode |= 0x0004; // ENABLE_VIRTUAL_TERMINAL_PROCESSING
+    //SetConsoleMode(hOut, dwMode);
     //--------------------------------------------
 
     instance=&inst;

@@ -38,11 +38,12 @@
     #ifndef VK_USE_PLATFORM_WIN32_KHR
     #define VK_USE_PLATFORM_WIN32_KHR
     #endif
-    #ifdef WINVER < 0x0A00  /* Check Windows version (Win10+) */
-      #define ANSICODE(x)   /* Disable ANSI codes (too old)*/
-    #else
+    // For Windows 10+, enable ANSI codes
+    //#if WINVER < 0x0A00
+      //#define ANSICODE(x)
+    //#else
       #define ANSICODE(x) x /* Enable ANSI codes */
-    #endif
+    //#endif
 #elif __ANDROID__
     #ifndef VK_USE_PLATFORM_ANDROID_KHR
     #define VK_USE_PLATFORM_ANDROID_KHR

@@ -78,6 +78,7 @@ int main(int argc, char *argv[]){
     CInstance Inst;                             //Create a Vulkan Instance
     MyWindow Window(Inst,"LunarG",640,480);     //Create a Vulkan window
     Window.ShowKeyboard(true);                  //Show soft-keyboard on Android
+    LOGW("TEST COLOR\n");
 
     while(Window.ProcessEvents()){              //Main event loop, runs until window is closed.
         bool KeyPressed = Window.GetKeyState(KEY_LeftShift);
