@@ -146,7 +146,6 @@ struct layer_data {
     // Device specific data
     PHYS_DEV_PROPERTIES_NODE phys_dev_properties = {};
     VkPhysicalDeviceMemoryProperties phys_dev_mem_props = {};
-    unique_ptr<PHYSICAL_DEVICE_STATE> physical_device_state = nullptr;
 
     unordered_map<VkPhysicalDevice, PHYSICAL_DEVICE_STATE> physical_device_map;
 };
@@ -4365,36 +4364,37 @@ static void checkDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo,
 }
 
 // Verify that queue family has been properly requested
-bool ValidateRequestedQueueFamilyProperties(layer_data *dev_data, const VkDeviceCreateInfo *create_info) {
+bool ValidateRequestedQueueFamilyProperties(layer_data *instance_data, VkPhysicalDevice gpu, const VkDeviceCreateInfo *create_info) {
     bool skip_call = false;
+    auto physical_device_state = getPhysicalDeviceState(instance_data, gpu);
     // First check is app has actually requested queueFamilyProperties
-    if (!dev_data->physical_device_state) {
-        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+    if (!physical_device_state) {
+        skip_call |= log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
                              0, __LINE__, DEVLIMITS_MUST_QUERY_COUNT, "DL",
                              "Invalid call to vkCreateDevice() w/o first calling vkEnumeratePhysicalDevices().");
-    } else if (QUERY_DETAILS != dev_data->physical_device_state->vkGetPhysicalDeviceQueueFamilyPropertiesState) {
+    } else if (QUERY_DETAILS != physical_device_state->vkGetPhysicalDeviceQueueFamilyPropertiesState) {
         // TODO: This is not called out as an invalid use in the spec so make more informative recommendation.
-        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT,
+        skip_call |= log_msg(instance_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT,
                              VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST,
                              "DL", "Call to vkCreateDevice() w/o first calling vkGetPhysicalDeviceQueueFamilyProperties().");
     } else {
         // Check that the requested queue properties are valid
         for (uint32_t i = 0; i < create_info->queueCreateInfoCount; i++) {
             uint32_t requestedIndex = create_info->pQueueCreateInfos[i].queueFamilyIndex;
-            if (dev_data->queue_family_properties.size() <=
+            if (instance_data->queue_family_properties.size() <=
                 requestedIndex) { // requested index is out of bounds for this physical device
                 skip_call |= log_msg(
-                    dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0,
+                    instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0,
                     __LINE__, DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST, "DL",
                     "Invalid queue create request in vkCreateDevice(). Invalid queueFamilyIndex %u requested.", requestedIndex);
             } else if (create_info->pQueueCreateInfos[i].queueCount >
-                       dev_data->queue_family_properties[requestedIndex]->queueCount) {
+                       instance_data->queue_family_properties[requestedIndex]->queueCount) {
                 skip_call |=
-                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                    log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
                             0, __LINE__, DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST, "DL",
                             "Invalid queue create request in vkCreateDevice(). QueueFamilyIndex %u only has %u queues, but "
                             "requested queueCount is %u.",
-                            requestedIndex, dev_data->queue_family_properties[requestedIndex]->queueCount,
+                            requestedIndex, instance_data->queue_family_properties[requestedIndex]->queueCount,
                             create_info->pQueueCreateInfos[i].queueCount);
             }
         }
@@ -4445,7 +4445,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu, const VkDevice
     if (pCreateInfo->pEnabledFeatures) {
         skip_call |= ValidateRequestedFeatures(my_instance_data, gpu, pCreateInfo->pEnabledFeatures);
     }
-    skip_call |= ValidateRequestedQueueFamilyProperties(my_instance_data, pCreateInfo);
+    skip_call |= ValidateRequestedQueueFamilyProperties(my_instance_data, gpu, pCreateInfo);
 
     if (skip_call) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -11422,14 +11422,15 @@ GetPhysicalDeviceQueueFamilyProperties(VkPhysicalDevice physicalDevice, uint32_t
     VkQueueFamilyProperties *pQueueFamilyProperties) {
     bool skip_call = false;
     layer_data *phy_dev_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
-    if (phy_dev_data->physical_device_state) {
-        if (NULL == pQueueFamilyProperties) {
-            phy_dev_data->physical_device_state->vkGetPhysicalDeviceQueueFamilyPropertiesState = QUERY_COUNT;
+    auto physical_device_state = getPhysicalDeviceState(phy_dev_data, physicalDevice);
+    if (physical_device_state) {
+        if (!pQueueFamilyProperties) {
+            physical_device_state->vkGetPhysicalDeviceQueueFamilyPropertiesState = QUERY_COUNT;
         }
         else {
             // Verify that for each physical device, this function is called first with NULL pQueueFamilyProperties ptr in order to
             // get count
-            if (UNCALLED == phy_dev_data->physical_device_state->vkGetPhysicalDeviceQueueFamilyPropertiesState) {
+            if (UNCALLED == physical_device_state->vkGetPhysicalDeviceQueueFamilyPropertiesState) {
                 skip_call |= log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT,
                     VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVLIMITS_MISSING_QUERY_COUNT, "DL",
                     "Call sequence has vkGetPhysicalDeviceQueueFamilyProperties() w/ non-NULL "
@@ -11437,7 +11438,7 @@ GetPhysicalDeviceQueueFamilyProperties(VkPhysicalDevice physicalDevice, uint32_t
                     "NULL pQueueFamilyProperties to query pCount.");
             }
             // Then verify that pCount that is passed in on second call matches what was returned
-            if (phy_dev_data->physical_device_state->queueFamilyPropertiesCount != *pCount) {
+            if (physical_device_state->queueFamilyPropertiesCount != *pCount) {
 
                 // TODO: this is not a requirement of the Valid Usage section for vkGetPhysicalDeviceQueueFamilyProperties, so
                 // provide as warning
@@ -11445,17 +11446,17 @@ GetPhysicalDeviceQueueFamilyProperties(VkPhysicalDevice physicalDevice, uint32_t
                     VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVLIMITS_COUNT_MISMATCH, "DL",
                     "Call to vkGetPhysicalDeviceQueueFamilyProperties() w/ pCount value %u, but actual count "
                     "supported by this physicalDevice is %u.",
-                    *pCount, phy_dev_data->physical_device_state->queueFamilyPropertiesCount);
+                    *pCount, physical_device_state->queueFamilyPropertiesCount);
             }
-            phy_dev_data->physical_device_state->vkGetPhysicalDeviceQueueFamilyPropertiesState = QUERY_DETAILS;
+            physical_device_state->vkGetPhysicalDeviceQueueFamilyPropertiesState = QUERY_DETAILS;
         }
         if (skip_call) {
             return;
         }
         phy_dev_data->instance_dispatch_table->GetPhysicalDeviceQueueFamilyProperties(physicalDevice, pCount,
             pQueueFamilyProperties);
-        if (NULL == pQueueFamilyProperties) {
-            phy_dev_data->physical_device_state->queueFamilyPropertiesCount = *pCount;
+        if (!pQueueFamilyProperties) {
+            physical_device_state->queueFamilyPropertiesCount = *pCount;
         }
         else { // Save queue family properties
             phy_dev_data->queue_family_properties.reserve(*pCount);
