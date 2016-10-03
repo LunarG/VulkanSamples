@@ -125,7 +125,6 @@ struct IMAGE_LAYOUT_NODE {
 class PHYS_DEV_PROPERTIES_NODE {
   public:
     VkPhysicalDeviceProperties properties;
-    VkPhysicalDeviceFeatures features;
     std::vector<VkQueueFamilyProperties> queue_family_properties;
 };
 

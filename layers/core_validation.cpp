@@ -140,6 +140,7 @@ struct layer_data {
     unordered_map<VkShaderModule, unique_ptr<shader_module>> shaderModuleMap;
     VkDevice device = VK_NULL_HANDLE;
 
+    VkPhysicalDeviceFeatures enabled_features = {};
     // Device specific data
     PHYS_DEV_PROPERTIES_NODE phys_dev_properties = {};
     VkPhysicalDeviceMemoryProperties phys_dev_mem_props = {};
@@ -3289,7 +3290,7 @@ static bool verifyLineWidth(layer_data *my_data, DRAW_STATE_ERROR dsError, const
     bool skip_call = false;
 
     // First check to see if the physical device supports wide lines.
-    if ((VK_FALSE == my_data->phys_dev_properties.features.wideLines) && (1.0f != lineWidth)) {
+    if ((VK_FALSE == my_data->enabled_features.wideLines) && (1.0f != lineWidth)) {
         skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, target, __LINE__,
                              dsError, "DS", "Attempt to set lineWidth to %f but physical device wideLines feature "
                                             "not supported/enabled so lineWidth must be 1.0f!",
@@ -3347,7 +3348,7 @@ static bool verifyPipelineCreateState(layer_data *my_data, const VkDevice device
     }
 
     if (pPipeline->graphicsPipelineCI.pColorBlendState != NULL) {
-        if (!my_data->phys_dev_properties.features.independentBlend) {
+        if (!my_data->enabled_features.independentBlend) {
             if (pPipeline->attachments.size() > 1) {
                 VkPipelineColorBlendAttachmentState *pAttachments = &pPipeline->attachments[0];
                 for (size_t i = 1; i < pPipeline->attachments.size(); i++) {
@@ -3365,7 +3366,7 @@ static bool verifyPipelineCreateState(layer_data *my_data, const VkDevice device
                 }
             }
         }
-        if (!my_data->phys_dev_properties.features.logicOp &&
+        if (!my_data->enabled_features.logicOp &&
             (pPipeline->graphicsPipelineCI.pColorBlendState->logicOpEnable != VK_FALSE)) {
             skip_call |=
                 log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
@@ -3385,7 +3386,7 @@ static bool verifyPipelineCreateState(layer_data *my_data, const VkDevice device
                              pPipeline->graphicsPipelineCI.subpass, renderPass->createInfo.subpassCount - 1);
     }
 
-    if (!validate_and_capture_pipeline_shader_state(my_data->report_data, pPipeline, &my_data->phys_dev_properties.features,
+    if (!validate_and_capture_pipeline_shader_state(my_data->report_data, pPipeline, &my_data->enabled_features,
                                                     my_data->shaderModuleMap)) {
         skip_call = true;
     }
@@ -4487,9 +4488,9 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu, const VkDevice
         gpu, &count, &my_device_data->phys_dev_properties.queue_family_properties[0]);
     // TODO: device limits should make sure these are compatible
     if (pCreateInfo->pEnabledFeatures) {
-        my_device_data->phys_dev_properties.features = *pCreateInfo->pEnabledFeatures;
+        my_device_data->enabled_features = *pCreateInfo->pEnabledFeatures;
     } else {
-        memset(&my_device_data->phys_dev_properties.features, 0, sizeof(VkPhysicalDeviceFeatures));
+        memset(&my_device_data->enabled_features, 0, sizeof(VkPhysicalDeviceFeatures));
     }
     // Store physical device mem limits into device layer_data struct
     my_instance_data->instance_dispatch_table->GetPhysicalDeviceMemoryProperties(gpu, &my_device_data->phys_dev_mem_props);
@@ -6512,7 +6513,7 @@ CreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t 
         // memcpy(&pPipeNode[i]->computePipelineCI, (const void *)&pCreateInfos[i], sizeof(VkComputePipelineCreateInfo));
 
         // TODO: Add Compute Pipeline Verification
-        skip_call |= !validate_compute_pipeline(dev_data->report_data, pPipeNode[i], &dev_data->phys_dev_properties.features,
+        skip_call |= !validate_compute_pipeline(dev_data->report_data, pPipeNode[i], &dev_data->enabled_features,
                                                 dev_data->shaderModuleMap);
         // skip_call |= verifyPipelineCreateState(dev_data, device, pPipeNode[i]);
     }
@@ -6967,7 +6968,7 @@ BeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo
                     }
                 }
                 if ((pInfo->occlusionQueryEnable == VK_FALSE ||
-                     dev_data->phys_dev_properties.features.occlusionQueryPrecise == VK_FALSE) &&
+                     dev_data->enabled_features.occlusionQueryPrecise == VK_FALSE) &&
                     (pInfo->queryFlags & VK_QUERY_CONTROL_PRECISE_BIT)) {
                     skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t>(commandBuffer),
@@ -10671,7 +10672,7 @@ CmdExecuteCommands(VkCommandBuffer commandBuffer, uint32_t commandBuffersCount, 
                     pCB->beginInfo.flags &= ~VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
                 }
             }
-            if (!pCB->activeQueries.empty() && !dev_data->phys_dev_properties.features.inheritedQueries) {
+            if (!pCB->activeQueries.empty() && !dev_data->enabled_features.inheritedQueries) {
                 skip_call |=
                     log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             reinterpret_cast<uint64_t>(pCommandBuffers[i]), __LINE__, DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
