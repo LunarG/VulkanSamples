@@ -38,12 +38,8 @@
     #ifndef VK_USE_PLATFORM_WIN32_KHR
     #define VK_USE_PLATFORM_WIN32_KHR
     #endif
-    // For Windows 10+, enable ANSI codes
-    //#if WINVER < 0x0A00
-      //#define ANSICODE(x)
-    //#else
+      //#define ANSICODE(x)   /* Disble ANSI codes */
       #define ANSICODE(x) x /* Enable ANSI codes */
-    //#endif
 #elif __ANDROID__
     #ifndef VK_USE_PLATFORM_ANDROID_KHR
     #define VK_USE_PLATFORM_ANDROID_KHR
@@ -73,20 +69,25 @@
 #define cCLEAR     ANSICODE("\033[00m")
 //----------------------------------------------------------------------------------
 
+#ifndef NDEBUG
 #ifdef ANDROID
   #include <jni.h>
   #include <android/log.h>
   #define LOG_TAG    "WSIWindow"                                                  // Android:
-  #define LOGI(...)    __android_log_print(ANDROID_LOG_INFO ,LOG_TAG,__VA_ARGS__) /* Prints Info in black   */
-  #define LOGW(...)    __android_log_print(ANDROID_LOG_WARN ,LOG_TAG,__VA_ARGS__) /* Prints Warnings in blue*/
-  #define LOGE(...)    __android_log_print(ANDROID_LOG_ERROR,LOG_TAG,__VA_ARGS__) /* Prints Errors in red   */
-  #define printf(...)  __android_log_print(ANDROID_LOG_INFO ,LOG_TAG,__VA_ARGS__)
-#else                                                                //Linux and Windows 10+: ( Older Windows only print in white.)
-  #define  LOGI(...)  printf(__VA_ARGS__)                            /*Prints Info in white     */
-  #define  LOGW(...) {printf(cYELLOW __VA_ARGS__); printf(cCLEAR);}  /*Prints Warnings in yellow*/
-  #define  LOGE(...) {printf(cRED    __VA_ARGS__); printf(cCLEAR);}  /*Prints Errors in red     */
+  #define LOGI(...)    __android_log_print(ANDROID_LOG_INFO ,LOG_TAG,__VA_ARGS__) /*   Prints Info in black      */
+  #define LOGW(...)    __android_log_print(ANDROID_LOG_WARN ,LOG_TAG,__VA_ARGS__) /*   Prints Warnings in blue   */
+  #define LOGE(...)    __android_log_print(ANDROID_LOG_ERROR,LOG_TAG,__VA_ARGS__) /*   Prints Errors in red      */
+  #define printf(...)  __android_log_print(ANDROID_LOG_INFO ,LOG_TAG,__VA_ARGS__) /*   printf output as log info */
+#else                                                                             // Linux and Windows 10+: ( Older Windows print in white only.)
+  #define  LOGI(...) {printf(__VA_ARGS__);}                                       /*   Prints Info in white      */
+  #define  LOGW(...) {printf(cYELLOW "WARNING: " __VA_ARGS__); printf(cCLEAR);}   /*   Prints Warnings in yellow */
+  #define  LOGE(...) {printf(cRED    "ERROR: "   __VA_ARGS__); printf(cCLEAR);}   /*   Prints Errors in red      */
 #endif
-
+#else    //Remove log messages in Release mode
+#define  LOGI(...)
+#define  LOGW(...)
+#define  LOGE(...)
+#endif
 
 
 
@@ -94,76 +95,116 @@
 #include <stdio.h>
 #include <assert.h>
 #include <vector>
+#include <string.h>
 #include <vulkan/vulkan.h>
 using namespace std;
 
 typedef unsigned int uint;
 const char* VkResultStr(VkResult err);  //Convert vulkan result code to a string.
 
-//-------------------------Macros-----------------------------
+//---------------------------Macros-------------------------------
 #define forCount(COUNT) for(uint i=0; i<COUNT; ++i)
-//------------------------------------------------------------
-//-----Check VkResult for errors, and print error string------
+//----------------------------------------------------------------
+
+//----Check VkResult for errors or warnings, and print string.----
+//    (VkResult is positive for warnings, negative for erors)
+
 #ifdef NDEBUG  //in release mode, dont print VkResult strings.
   #define VKERRCHECK(VKRESULT) {VKRESULT;}
 #else
-  #define VKERRCHECK(VKRESULT) { VkResult VKVAL=VKRESULT;                               \
-                                 if(VKVAL){                                             \
-                                   printf(cRED"Error: %s " cCLEAR,VkResultStr(VKVAL));  \
-                                   assert(false);                                       \
-                               }}
+  #define VKERRCHECK(VKRESULT) { VkResult VKVALUE=VKRESULT;              \
+                                 if(VKVALUE>0){                          \
+                                     LOGW("%s\n",VkResultStr(VKVALUE));  \
+                                 }else if(VKVALUE<0){                    \
+                                     LOGE("%s\n",VkResultStr(VKVALUE));  \
+                                     assert(false);                      \
+                                 };                                      \
+                               }
 #endif
-//------------------------------------------------------------
+//----------------------------------------------------------------
 
-class CPickList{
+//Repeatedly run vk function, until VkResult is not VK_INCOMPLETE
+#define VKCOMPLETE(VKRESULT) { VkResult VKVAL;                          \
+                               while((VKVAL=VKRESULT)==VK_INCOMPLETE){  \
+                                 LOGW("%s\n",VkResultStr(VKVAL));       \
+                               }                                        \
+                               VKERRCHECK(VKVAL);                       \
+                             }
+//----------------------------------------------------------------
+
+//--------------------------PickList------------------------------
+template <class TYPE> class TPickList{
+protected:
+    vector<TYPE> items;
+    vector<char*> pickList;
+public:
+    virtual char* itemName(uint32_t inx)=0;
+
+    int IndexOf(const char* name){
+        forCount(items.size())
+            if(!strcmp(name, itemName(i))) return i;
+        return -1;
+    }
+
+    bool Pick(const char* name){
+        int inx=IndexOf(name);
+        if(inx==-1) return false;
+        for(const char* pickItem : pickList)
+            if(pickItem == itemName(inx)) return true;  //Check if item was already picked
+        pickList.push_back(itemName(inx));              //if not, add item to pick-list
+        return true;
+    }
+
+    const char** PickList() {return (const char**)pickList.data();}
+    uint32_t     PickCount(){return (uint32_t)pickList.size();}
+    uint32_t     Count()    {return (uint32_t)items.size();}
+
+    void Print(const char* listName){
+      printf("%s picked: %d of %d\n",listName,PickCount(),Count());
+      forCount(Count()){
+          bool picked=false;
+          char* name=itemName(i);
+          for(auto& pick : pickList) if(pick==name) picked=true;
+          printf("\t%s %s\n" cCLEAR, picked ? "\u2713" : cFAINT"x", name);
+      }
+    }
+};
+//----------------------------------------------------------------
+
+struct CLayers: public TPickList<VkLayerProperties>{
+  CLayers();
+  char* itemName(uint32_t inx){return items[inx].layerName;}
+  void Print(){TPickList::Print("Layers");}
+};
+
+
+struct CExtensions : public TPickList<VkExtensionProperties>{
+    CExtensions(const char* layerName=NULL);
+    char* itemName(uint32_t inx){return items[inx].extensionName;}
+    void Print(){TPickList::Print("Extensions");}
+};
+
+
+/*
+class CExtensions{
     vector<VkExtensionProperties> items;
     vector<char*> pickList;
 public:
-    CPickList(const char* layerName=NULL);  //Gets global or layer extensions
-    int IndexOf(const char* Name);          //Returns the intex of the named extension, or -1 if not found.
-    bool Pick(const char* Name);            //Adds named extension to the pick list, or returns false if not found.
+    CExtensions(const char* layerName=NULL);  //Gets global or layer extensions
+    int IndexOf(const char* Name);            //Returns the index of the named extension, or -1 if not found.
+    bool Pick(const char* Name);              //Adds named extension to the pick list, or returns false if not found.
     //char* Name(uint32_t index);
-    const char** PickList();                //Returns pick-list, to be passed to Vulkan
-    uint32_t PickCount();                   //Number of items picked
-    uint32_t Count();                       //Number of items to pick from
-    void Print();                           //Print PickList to console (for debug)
+    const char** PickList();                  //Returns pick-list, to be passed to Vulkan
+    uint32_t PickCount();                     //Number of items picked
+    uint32_t Count();                         //Number of items to pick from
+    void Print();                             //Print PickList to console (for debug)
 };
-
-class CExtensions : public CPickList{
-    using CPickList::CPickList;     //Inherit base constructor
-};
-
-
-//template <class TYPE> struct TArray{
-//}
+*/
 
 //class Layers{
 //};
-/*
-class CExtensions{
-    uint32_t count;                            //Number of extensions found
-    VkExtensionProperties* extProps;           //Array of extensions
-    uint32_t pickCount;                        //Number of extensions picked
-    const char** pickList;                     //String-list of extensions
-public:
-    CExtensions(const char* layerName=NULL);   //Gets global or layer extensions
-    ~CExtensions();
-    void Print();                              //Print Extension names
-    int  Count(){ return count; }              //returns number of available extensions
-    VkExtensionProperties* begin() const {return  extProps;}         // for range-based for-loops
-    VkExtensionProperties*   end() const {return &extProps[count];}  //
-    VkExtensionProperties* operator[](const uint i) const { return (i<count) ? &extProps[i] : NULL; }
 
-    int IndexOf(const char* extName);          //Returns the intex of the named extension, or -1 if not found.
-
-    //bool Has(const char* extName);           //Returns true if named extension is in the list.
-    bool Pick(const char* extName);            //Adds named extension to the pick list, or returns false if not found.
-    //bool Pick(int index);
-    uint32_t PickCount(){return pickCount;}
-    const char** PickList(){return pickList;}
-};
-*/
-//------------------------------------------------------------
+//----------------------------------------------------------------
 
 class CInstance{
     VkInstance instance;

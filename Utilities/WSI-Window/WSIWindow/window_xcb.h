@@ -24,19 +24,13 @@
 //============================XCB===============================
 #ifdef VK_USE_PLATFORM_XCB_KHR
 
+#ifndef WINDOW_XCB
+#define WINDOW_XCB
+
 #include "WindowImpl.h"
 #include <xcb/xcb.h>              //  window
 #include <xkbcommon/xkbcommon.h>  //  keyboard
 #include <string.h>               //  for strlen
-
-#if defined(NDEBUG) && defined(__GNUC__)
- #define U_ASSERT_ONLY __attribute__((unused))
-#else
- #define U_ASSERT_ONLY
-#endif
-
-#ifndef WINDOW_XCB
-#define WINDOW_XCB
 
 // Convert native EVDEV key-code to cross-platform USB HID code.
 const unsigned char EVDEV_TO_HID[256] = {
@@ -167,16 +161,13 @@ void Window_xcb::SetTitle(const char* title){
 }
 
 void Window_xcb::CreateSurface(VkInstance instance){
-    VkResult U_ASSERT_ONLY err;
     VkXcbSurfaceCreateInfoKHR xcb_createInfo;
     xcb_createInfo.sType      = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
     xcb_createInfo.pNext      = NULL;
     xcb_createInfo.flags      = 0;
     xcb_createInfo.connection = xcb_connection;
     xcb_createInfo.window     = xcb_window;
-    err = vkCreateXcbSurfaceKHR(instance, &xcb_createInfo, NULL, &surface);
-    VKERRCHECK(err);
-    //assert(!err);
+    VKERRCHECK(vkCreateXcbSurfaceKHR(instance, &xcb_createInfo, NULL, &surface));
     printf("Vulkan Surface created\n"); fflush(stdout);
 }
 
