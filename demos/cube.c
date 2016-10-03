@@ -616,6 +616,10 @@ static void demo_set_image_layout(struct demo *demo, VkImage image,
             VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
     }
 
+    if (new_image_layout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
+        image_memory_barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    }
+
     VkImageMemoryBarrier *pmemory_barrier = &image_memory_barrier;
 
     VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
