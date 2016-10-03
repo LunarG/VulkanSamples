@@ -9485,7 +9485,7 @@ static bool FindDependency(const int index, const int dependent, const std::vect
     return false;
 }
 
-static bool CheckDependencyExists(const layer_data *my_data, const int subpass, const std::vector<uint32_t> &dependent_subpasses,
+static bool CheckDependencyExists(const layer_data *dev_data, const int subpass, const std::vector<uint32_t> &dependent_subpasses,
                                   const std::vector<DAGNode> &subpass_to_node, bool &skip_call) {
     bool result = true;
     // Loop through all subpasses that share the same attachment and make sure a dependency exists
@@ -9501,7 +9501,7 @@ static bool CheckDependencyExists(const layer_data *my_data, const int subpass, 
             std::unordered_set<uint32_t> processed_nodes;
             if (!(FindDependency(subpass, dependent_subpasses[k], subpass_to_node, processed_nodes) ||
                 FindDependency(dependent_subpasses[k], subpass, subpass_to_node, processed_nodes))) {
-                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
+                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
                                      __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
                                      "A dependency between subpasses %d and %d must exist but one is not specified.", subpass,
                                      dependent_subpasses[k]);
@@ -9512,7 +9512,7 @@ static bool CheckDependencyExists(const layer_data *my_data, const int subpass, 
     return result;
 }
 
-static bool CheckPreserved(const layer_data *my_data, const VkRenderPassCreateInfo *pCreateInfo, const int index,
+static bool CheckPreserved(const layer_data *dev_data, const VkRenderPassCreateInfo *pCreateInfo, const int index,
                            const uint32_t attachment, const std::vector<DAGNode> &subpass_to_node, int depth, bool &skip_call) {
     const DAGNode &node = subpass_to_node[index];
     // If this node writes to the attachment return true as next nodes need to preserve the attachment.
@@ -9528,7 +9528,7 @@ static bool CheckPreserved(const layer_data *my_data, const VkRenderPassCreateIn
     bool result = false;
     // Loop through previous nodes and see if any of them write to the attachment.
     for (auto elem : node.prev) {
-        result |= CheckPreserved(my_data, pCreateInfo, elem, attachment, subpass_to_node, depth + 1, skip_call);
+        result |= CheckPreserved(dev_data, pCreateInfo, elem, attachment, subpass_to_node, depth + 1, skip_call);
     }
     // If the attachment was written to by a previous node than this node needs to preserve it.
     if (result && depth > 0) {
@@ -9542,7 +9542,7 @@ static bool CheckPreserved(const layer_data *my_data, const VkRenderPassCreateIn
         }
         if (!has_preserved) {
             skip_call |=
-                log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                         DRAWSTATE_INVALID_RENDERPASS, "DS",
                         "Attachment %d is used by a later subpass and must be preserved in subpass %d.", attachment, index);
         }
@@ -9560,8 +9560,8 @@ bool isRegionOverlapping(VkImageSubresourceRange range1, VkImageSubresourceRange
             isRangeOverlapping(range1.baseArrayLayer, range1.layerCount, range2.baseArrayLayer, range2.layerCount));
 }
 
-static bool ValidateDependencies(const layer_data *my_data, FRAMEBUFFER_NODE const * framebuffer,
-                                 RENDER_PASS_NODE const * renderPass) {
+static bool ValidateDependencies(const layer_data *dev_data, FRAMEBUFFER_NODE const *framebuffer,
+                                 RENDER_PASS_NODE const *renderPass) {
     bool skip_call = false;
     auto const pFramebufferInfo = framebuffer->createInfo.ptr();
     auto const pCreateInfo = renderPass->createInfo.ptr();
@@ -9579,8 +9579,8 @@ static bool ValidateDependencies(const layer_data *my_data, FRAMEBUFFER_NODE con
                 overlapping_attachments[j].push_back(i);
                 continue;
             }
-            auto view_state_i = getImageViewState(my_data, viewi);
-            auto view_state_j = getImageViewState(my_data, viewj);
+            auto view_state_i = getImageViewState(dev_data, viewi);
+            auto view_state_j = getImageViewState(dev_data, viewj);
             if (!view_state_i || !view_state_j) {
                 continue;
             }
@@ -9591,8 +9591,8 @@ static bool ValidateDependencies(const layer_data *my_data, FRAMEBUFFER_NODE con
                 overlapping_attachments[j].push_back(i);
                 continue;
             }
-            auto image_data_i = getImageNode(my_data, view_ci_i.image);
-            auto image_data_j = getImageNode(my_data, view_ci_j.image);
+            auto image_data_i = getImageNode(dev_data, view_ci_i.image);
+            auto image_data_j = getImageNode(dev_data, view_ci_j.image);
             if (!image_data_i || !image_data_j) {
                 continue;
             }
@@ -9608,14 +9608,14 @@ static bool ValidateDependencies(const layer_data *my_data, FRAMEBUFFER_NODE con
         for (auto other_attachment : overlapping_attachments[i]) {
             if (!(pCreateInfo->pAttachments[attachment].flags & VK_ATTACHMENT_DESCRIPTION_MAY_ALIAS_BIT)) {
                 skip_call |=
-                    log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                             DRAWSTATE_INVALID_RENDERPASS, "DS", "Attachment %d aliases attachment %d but doesn't "
                                                                 "set VK_ATTACHMENT_DESCRIPTION_MAY_ALIAS_BIT.",
                             attachment, other_attachment);
             }
             if (!(pCreateInfo->pAttachments[other_attachment].flags & VK_ATTACHMENT_DESCRIPTION_MAY_ALIAS_BIT)) {
                 skip_call |=
-                    log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                             DRAWSTATE_INVALID_RENDERPASS, "DS", "Attachment %d aliases attachment %d but doesn't "
                                                                 "set VK_ATTACHMENT_DESCRIPTION_MAY_ALIAS_BIT.",
                             other_attachment, attachment);
@@ -9655,10 +9655,9 @@ static bool ValidateDependencies(const layer_data *my_data, FRAMEBUFFER_NODE con
 
             if (attachmentIndices.count(attachment)) {
                 skip_call |=
-                    log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0,
-                            0, __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
-                            "Cannot use same attachment (%u) as both color and depth output in same subpass (%u).",
-                            attachment, i);
+                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                            DRAWSTATE_INVALID_RENDERPASS, "DS",
+                            "Cannot use same attachment (%u) as both color and depth output in same subpass (%u).", attachment, i);
             }
         }
     }
@@ -9670,20 +9669,20 @@ static bool ValidateDependencies(const layer_data *my_data, FRAMEBUFFER_NODE con
             uint32_t attachment = subpass.pInputAttachments[j].attachment;
             if (attachment == VK_ATTACHMENT_UNUSED)
                 continue;
-            CheckDependencyExists(my_data, i, output_attachment_to_subpass[attachment], subpass_to_node, skip_call);
+            CheckDependencyExists(dev_data, i, output_attachment_to_subpass[attachment], subpass_to_node, skip_call);
         }
         // If the attachment is an output then all subpasses that use the attachment must have a dependency relationship
         for (uint32_t j = 0; j < subpass.colorAttachmentCount; ++j) {
             uint32_t attachment = subpass.pColorAttachments[j].attachment;
             if (attachment == VK_ATTACHMENT_UNUSED)
                 continue;
-            CheckDependencyExists(my_data, i, output_attachment_to_subpass[attachment], subpass_to_node, skip_call);
-            CheckDependencyExists(my_data, i, input_attachment_to_subpass[attachment], subpass_to_node, skip_call);
+            CheckDependencyExists(dev_data, i, output_attachment_to_subpass[attachment], subpass_to_node, skip_call);
+            CheckDependencyExists(dev_data, i, input_attachment_to_subpass[attachment], subpass_to_node, skip_call);
         }
         if (subpass.pDepthStencilAttachment && subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
             const uint32_t &attachment = subpass.pDepthStencilAttachment->attachment;
-            CheckDependencyExists(my_data, i, output_attachment_to_subpass[attachment], subpass_to_node, skip_call);
-            CheckDependencyExists(my_data, i, input_attachment_to_subpass[attachment], subpass_to_node, skip_call);
+            CheckDependencyExists(dev_data, i, output_attachment_to_subpass[attachment], subpass_to_node, skip_call);
+            CheckDependencyExists(dev_data, i, input_attachment_to_subpass[attachment], subpass_to_node, skip_call);
         }
     }
     // Loop through implicit dependencies, if this pass reads make sure the attachment is preserved for all passes after it was
@@ -9691,7 +9690,7 @@ static bool ValidateDependencies(const layer_data *my_data, FRAMEBUFFER_NODE con
     for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
         const VkSubpassDescription &subpass = pCreateInfo->pSubpasses[i];
         for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
-            CheckPreserved(my_data, pCreateInfo, i, subpass.pInputAttachments[j].attachment, subpass_to_node, 0, skip_call);
+            CheckPreserved(dev_data, pCreateInfo, i, subpass.pInputAttachments[j].attachment, subpass_to_node, 0, skip_call);
         }
     }
     return skip_call;
@@ -9716,7 +9715,7 @@ static bool ValidateLayoutVsAttachmentDescription(debug_report_data *report_data
     return skip_call;
 }
 
-static bool ValidateLayouts(const layer_data *my_data, VkDevice device, const VkRenderPassCreateInfo *pCreateInfo) {
+static bool ValidateLayouts(const layer_data *dev_data, VkDevice device, const VkRenderPassCreateInfo *pCreateInfo) {
     bool skip = false;
 
     // Track when we're observing the first use of an attachment
@@ -9737,22 +9736,20 @@ static bool ValidateLayouts(const layer_data *my_data, VkDevice device, const Vk
                 /* May not be optimal; TODO: reconsider this warning based on
                  * other constraints?
                  */
-                skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
-                                VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                                DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
+                                VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
                                 "Layout for color attachment is GENERAL but should be COLOR_ATTACHMENT_OPTIMAL.");
                 break;
 
             default:
-                skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                                DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
                                 "Layout for color attachment is %s but can only be COLOR_ATTACHMENT_OPTIMAL or GENERAL.",
                                 string_VkImageLayout(subpass.pColorAttachments[j].layout));
             }
 
             if (attach_first_use[attach_index]) {
-                skip |= ValidateLayoutVsAttachmentDescription(my_data->report_data, subpass.pColorAttachments[j].layout,
+                skip |= ValidateLayoutVsAttachmentDescription(dev_data->report_data, subpass.pColorAttachments[j].layout,
                                                               attach_index, pCreateInfo->pAttachments[attach_index]);
             }
             attach_first_use[attach_index] = false;
@@ -9769,17 +9766,15 @@ static bool ValidateLayouts(const layer_data *my_data, VkDevice device, const Vk
                  * other constraints? GENERAL can be better than doing a bunch
                  * of transitions.
                  */
-                skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
-                                VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                                DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
+                                VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
                                 "GENERAL layout for depth attachment may not give optimal performance.");
                 break;
 
             default:
                 /* No other layouts are acceptable */
-                skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                                DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
                                 "Layout for depth attachment is %s but can only be DEPTH_STENCIL_ATTACHMENT_OPTIMAL, "
                                 "DEPTH_STENCIL_READ_ONLY_OPTIMAL or GENERAL.",
                                 string_VkImageLayout(subpass.pDepthStencilAttachment->layout));
@@ -9787,7 +9782,7 @@ static bool ValidateLayouts(const layer_data *my_data, VkDevice device, const Vk
 
             auto attach_index = subpass.pDepthStencilAttachment->attachment;
             if (attach_first_use[attach_index]) {
-                skip |= ValidateLayoutVsAttachmentDescription(my_data->report_data, subpass.pDepthStencilAttachment->layout,
+                skip |= ValidateLayoutVsAttachmentDescription(dev_data->report_data, subpass.pDepthStencilAttachment->layout,
                                                               attach_index, pCreateInfo->pAttachments[attach_index]);
             }
             attach_first_use[attach_index] = false;
@@ -9807,22 +9802,21 @@ static bool ValidateLayouts(const layer_data *my_data, VkDevice device, const Vk
                 /* May not be optimal. TODO: reconsider this warning based on
                  * other constraints.
                  */
-                skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
-                                VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                                DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
+                                VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
                                 "Layout for input attachment is GENERAL but should be READ_ONLY_OPTIMAL.");
                 break;
 
             default:
                 /* No other layouts are acceptable */
-                skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                 DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
                                 "Layout for input attachment is %s but can only be READ_ONLY_OPTIMAL or GENERAL.",
                                 string_VkImageLayout(subpass.pInputAttachments[j].layout));
             }
 
             if (attach_first_use[attach_index]) {
-                skip |= ValidateLayoutVsAttachmentDescription(my_data->report_data, subpass.pInputAttachments[j].layout,
+                skip |= ValidateLayoutVsAttachmentDescription(dev_data->report_data, subpass.pInputAttachments[j].layout,
                                                               attach_index, pCreateInfo->pAttachments[attach_index]);
             }
             attach_first_use[attach_index] = false;
@@ -9831,7 +9825,7 @@ static bool ValidateLayouts(const layer_data *my_data, VkDevice device, const Vk
     return skip;
 }
 
-static bool CreatePassDAG(const layer_data *my_data, VkDevice device, const VkRenderPassCreateInfo *pCreateInfo,
+static bool CreatePassDAG(const layer_data *dev_data, VkDevice device, const VkRenderPassCreateInfo *pCreateInfo,
                           std::vector<DAGNode> &subpass_to_node, std::vector<bool> &has_self_dependency) {
     bool skip_call = false;
     for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
@@ -9843,7 +9837,7 @@ static bool CreatePassDAG(const layer_data *my_data, VkDevice device, const VkRe
         if (dependency.srcSubpass == VK_SUBPASS_EXTERNAL || dependency.dstSubpass == VK_SUBPASS_EXTERNAL) {
             if (dependency.srcSubpass == dependency.dstSubpass) {
                 skip_call |=
-                    log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                             DRAWSTATE_INVALID_RENDERPASS, "DS", "The src and dest subpasses cannot both be external.");
             }
 
@@ -9852,7 +9846,7 @@ static bool CreatePassDAG(const layer_data *my_data, VkDevice device, const VkRe
             // presence complicates other code.
             continue;
         } else if (dependency.srcSubpass > dependency.dstSubpass) {
-            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                  DRAWSTATE_INVALID_RENDERPASS, "DS",
                                  "Depedency graph must be specified such that an earlier pass cannot depend on a later pass.");
         } else if (dependency.srcSubpass == dependency.dstSubpass) {
@@ -9869,7 +9863,7 @@ static bool CreatePassDAG(const layer_data *my_data, VkDevice device, const VkRe
 VKAPI_ATTR VkResult VKAPI_CALL CreateShaderModule(VkDevice device, const VkShaderModuleCreateInfo *pCreateInfo,
                                                   const VkAllocationCallbacks *pAllocator,
                                                   VkShaderModule *pShaderModule) {
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     bool skip_call = false;
 
     /* Use SPIRV-Tools validator to try and catch any issues with the module itself */
@@ -9879,11 +9873,10 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateShaderModule(VkDevice device, const VkShade
 
     auto result = spvValidate(ctx, &binary, &diag);
     if (result != SPV_SUCCESS) {
-        skip_call |= log_msg(my_data->report_data,
-                             result == SPV_WARNING ? VK_DEBUG_REPORT_WARNING_BIT_EXT : VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                             VkDebugReportObjectTypeEXT(0), 0,
-                             __LINE__, SHADER_CHECKER_INCONSISTENT_SPIRV, "SC", "SPIR-V module not valid: %s",
-                             diag && diag->error ? diag->error : "(no error text)");
+        skip_call |=
+            log_msg(dev_data->report_data, result == SPV_WARNING ? VK_DEBUG_REPORT_WARNING_BIT_EXT : VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                    VkDebugReportObjectTypeEXT(0), 0, __LINE__, SHADER_CHECKER_INCONSISTENT_SPIRV, "SC",
+                    "SPIR-V module not valid: %s", diag && diag->error ? diag->error : "(no error text)");
     }
 
     spvDiagnosticDestroy(diag);
@@ -9892,11 +9885,11 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateShaderModule(VkDevice device, const VkShade
     if (skip_call)
         return VK_ERROR_VALIDATION_FAILED_EXT;
 
-    VkResult res = my_data->device_dispatch_table->CreateShaderModule(device, pCreateInfo, pAllocator, pShaderModule);
+    VkResult res = dev_data->device_dispatch_table->CreateShaderModule(device, pCreateInfo, pAllocator, pShaderModule);
 
     if (res == VK_SUCCESS) {
         std::lock_guard<std::mutex> lock(global_lock);
-        my_data->shaderModuleMap[*pShaderModule] = unique_ptr<shader_module>(new shader_module(pCreateInfo));
+        dev_data->shaderModuleMap[*pShaderModule] = unique_ptr<shader_module>(new shader_module(pCreateInfo));
     }
     return res;
 }
@@ -10142,10 +10135,10 @@ static void TransitionSubpassLayouts(layer_data *dev_data, GLOBAL_CB_NODE *pCB, 
     }
 }
 
-static bool validatePrimaryCommandBuffer(const layer_data *my_data, const GLOBAL_CB_NODE *pCB, const std::string &cmd_name) {
+static bool validatePrimaryCommandBuffer(const layer_data *dev_data, const GLOBAL_CB_NODE *pCB, const std::string &cmd_name) {
     bool skip_call = false;
     if (pCB->createInfo.level != VK_COMMAND_BUFFER_LEVEL_PRIMARY) {
-        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                              DRAWSTATE_INVALID_COMMAND_BUFFER, "DS", "Cannot execute command %s on a secondary command buffer.",
                              cmd_name.c_str());
     }
@@ -10168,15 +10161,15 @@ static void TransitionFinalSubpassLayouts(layer_data *dev_data, GLOBAL_CB_NODE *
     }
 }
 
-static bool VerifyRenderAreaBounds(const layer_data *my_data, const VkRenderPassBeginInfo *pRenderPassBegin) {
+static bool VerifyRenderAreaBounds(const layer_data *dev_data, const VkRenderPassBeginInfo *pRenderPassBegin) {
     bool skip_call = false;
-    const safe_VkFramebufferCreateInfo *pFramebufferInfo = &getFramebuffer(my_data, pRenderPassBegin->framebuffer)->createInfo;
+    const safe_VkFramebufferCreateInfo *pFramebufferInfo = &getFramebuffer(dev_data, pRenderPassBegin->framebuffer)->createInfo;
     if (pRenderPassBegin->renderArea.offset.x < 0 ||
         (pRenderPassBegin->renderArea.offset.x + pRenderPassBegin->renderArea.extent.width) > pFramebufferInfo->width ||
         pRenderPassBegin->renderArea.offset.y < 0 ||
         (pRenderPassBegin->renderArea.offset.y + pRenderPassBegin->renderArea.extent.height) > pFramebufferInfo->height) {
         skip_call |= static_cast<bool>(log_msg(
-            my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+            dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
             DRAWSTATE_INVALID_RENDER_AREA, "CORE",
             "Cannot execute a render pass with renderArea not within the bound of the "
             "framebuffer. RenderArea: x %d, y %d, width %d, height %d. Framebuffer: width %d, "
@@ -10769,53 +10762,54 @@ MapMemory(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize
 }
 
 VKAPI_ATTR void VKAPI_CALL UnmapMemory(VkDevice device, VkDeviceMemory mem) {
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     bool skip_call = false;
 
     std::unique_lock<std::mutex> lock(global_lock);
-    skip_call |= deleteMemRanges(my_data, mem);
+    skip_call |= deleteMemRanges(dev_data, mem);
     lock.unlock();
     if (!skip_call) {
-        my_data->device_dispatch_table->UnmapMemory(device, mem);
+        dev_data->device_dispatch_table->UnmapMemory(device, mem);
     }
 }
 
-static bool validateMemoryIsMapped(layer_data *my_data, const char *funcName, uint32_t memRangeCount,
+static bool validateMemoryIsMapped(layer_data *dev_data, const char *funcName, uint32_t memRangeCount,
                                    const VkMappedMemoryRange *pMemRanges) {
     bool skip_call = false;
     for (uint32_t i = 0; i < memRangeCount; ++i) {
-        auto mem_info = getMemObjInfo(my_data, pMemRanges[i].memory);
+        auto mem_info = getMemObjInfo(dev_data, pMemRanges[i].memory);
         if (mem_info) {
             if (mem_info->mem_range.offset > pMemRanges[i].offset) {
                 skip_call |=
-                    log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
+                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
                             (uint64_t)pMemRanges[i].memory, __LINE__, MEMTRACK_INVALID_MAP, "MEM",
                             "%s: Flush/Invalidate offset (" PRINTF_SIZE_T_SPECIFIER ") is less than Memory Object's offset "
                             "(" PRINTF_SIZE_T_SPECIFIER ").",
                             funcName, static_cast<size_t>(pMemRanges[i].offset), static_cast<size_t>(mem_info->mem_range.offset));
             }
 
-            const uint64_t my_dataTerminus = (mem_info->mem_range.size == VK_WHOLE_SIZE)
-                                                 ? mem_info->alloc_info.allocationSize
-                                                 : (mem_info->mem_range.offset + mem_info->mem_range.size);
-            if (pMemRanges[i].size != VK_WHOLE_SIZE && (my_dataTerminus < (pMemRanges[i].offset + pMemRanges[i].size))) {
-                skip_call |= log_msg(
-                    my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
-                    (uint64_t)pMemRanges[i].memory, __LINE__, MEMTRACK_INVALID_MAP, "MEM",
-                    "%s: Flush/Invalidate upper-bound (" PRINTF_SIZE_T_SPECIFIER ") exceeds the Memory Object's upper-bound "
-                    "(" PRINTF_SIZE_T_SPECIFIER ").",
-                    funcName, static_cast<size_t>(pMemRanges[i].offset + pMemRanges[i].size), static_cast<size_t>(my_dataTerminus));
+            const uint64_t dev_dataTerminus = (mem_info->mem_range.size == VK_WHOLE_SIZE)
+                                                  ? mem_info->alloc_info.allocationSize
+                                                  : (mem_info->mem_range.offset + mem_info->mem_range.size);
+            if (pMemRanges[i].size != VK_WHOLE_SIZE && (dev_dataTerminus < (pMemRanges[i].offset + pMemRanges[i].size))) {
+                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                     VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, (uint64_t)pMemRanges[i].memory, __LINE__,
+                                     MEMTRACK_INVALID_MAP, "MEM", "%s: Flush/Invalidate upper-bound (" PRINTF_SIZE_T_SPECIFIER
+                                                                  ") exceeds the Memory Object's upper-bound "
+                                                                  "(" PRINTF_SIZE_T_SPECIFIER ").",
+                                     funcName, static_cast<size_t>(pMemRanges[i].offset + pMemRanges[i].size),
+                                     static_cast<size_t>(dev_dataTerminus));
             }
         }
     }
     return skip_call;
 }
 
-static bool ValidateAndCopyNoncoherentMemoryToDriver(layer_data *my_data, uint32_t memRangeCount,
+static bool ValidateAndCopyNoncoherentMemoryToDriver(layer_data *dev_data, uint32_t memRangeCount,
                                                      const VkMappedMemoryRange *pMemRanges) {
     bool skip_call = false;
     for (uint32_t i = 0; i < memRangeCount; ++i) {
-        auto mem_info = getMemObjInfo(my_data, pMemRanges[i].memory);
+        auto mem_info = getMemObjInfo(dev_data, pMemRanges[i].memory);
         if (mem_info) {
             if (mem_info->shadow_copy) {
                 VkDeviceSize size = (mem_info->mem_range.size != VK_WHOLE_SIZE)
@@ -10825,7 +10819,7 @@ static bool ValidateAndCopyNoncoherentMemoryToDriver(layer_data *my_data, uint32
                 for (uint64_t j = 0; j < mem_info->shadow_pad_size; ++j) {
                     if (data[j] != NoncoherentMemoryFillValue) {
                         skip_call |= log_msg(
-                            my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
+                            dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
                             (uint64_t)pMemRanges[i].memory, __LINE__, MEMTRACK_INVALID_MAP, "MEM",
                             "Memory underflow was detected on mem obj 0x%" PRIxLEAST64, (uint64_t)pMemRanges[i].memory);
                     }
@@ -10833,7 +10827,7 @@ static bool ValidateAndCopyNoncoherentMemoryToDriver(layer_data *my_data, uint32
                 for (uint64_t j = (size + mem_info->shadow_pad_size); j < (2 * mem_info->shadow_pad_size + size); ++j) {
                     if (data[j] != NoncoherentMemoryFillValue) {
                         skip_call |= log_msg(
-                            my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
+                            dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
                             (uint64_t)pMemRanges[i].memory, __LINE__, MEMTRACK_INVALID_MAP, "MEM",
                             "Memory overflow was detected on mem obj 0x%" PRIxLEAST64, (uint64_t)pMemRanges[i].memory);
                     }
@@ -10845,10 +10839,10 @@ static bool ValidateAndCopyNoncoherentMemoryToDriver(layer_data *my_data, uint32
     return skip_call;
 }
 
-static void CopyNoncoherentMemoryFromDriver(layer_data *my_data, uint32_t memory_range_count,
+static void CopyNoncoherentMemoryFromDriver(layer_data *dev_data, uint32_t memory_range_count,
                                             const VkMappedMemoryRange *mem_ranges) {
     for (uint32_t i = 0; i < memory_range_count; ++i) {
-        auto mem_info = getMemObjInfo(my_data, mem_ranges[i].memory);
+        auto mem_info = getMemObjInfo(dev_data, mem_ranges[i].memory);
         if (mem_info && mem_info->shadow_copy) {
             VkDeviceSize size = (mem_info->mem_range.size != VK_WHOLE_SIZE)
                                     ? mem_info->mem_range.size
@@ -10863,14 +10857,14 @@ VkResult VKAPI_CALL
 FlushMappedMemoryRanges(VkDevice device, uint32_t memRangeCount, const VkMappedMemoryRange *pMemRanges) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip_call = false;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
 
     std::unique_lock<std::mutex> lock(global_lock);
-    skip_call |= ValidateAndCopyNoncoherentMemoryToDriver(my_data, memRangeCount, pMemRanges);
-    skip_call |= validateMemoryIsMapped(my_data, "vkFlushMappedMemoryRanges", memRangeCount, pMemRanges);
+    skip_call |= ValidateAndCopyNoncoherentMemoryToDriver(dev_data, memRangeCount, pMemRanges);
+    skip_call |= validateMemoryIsMapped(dev_data, "vkFlushMappedMemoryRanges", memRangeCount, pMemRanges);
     lock.unlock();
     if (!skip_call) {
-        result = my_data->device_dispatch_table->FlushMappedMemoryRanges(device, memRangeCount, pMemRanges);
+        result = dev_data->device_dispatch_table->FlushMappedMemoryRanges(device, memRangeCount, pMemRanges);
     }
     return result;
 }
@@ -10879,15 +10873,15 @@ VkResult VKAPI_CALL
 InvalidateMappedMemoryRanges(VkDevice device, uint32_t memRangeCount, const VkMappedMemoryRange *pMemRanges) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip_call = false;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
 
     std::unique_lock<std::mutex> lock(global_lock);
-    skip_call |= validateMemoryIsMapped(my_data, "vkInvalidateMappedMemoryRanges", memRangeCount, pMemRanges);
+    skip_call |= validateMemoryIsMapped(dev_data, "vkInvalidateMappedMemoryRanges", memRangeCount, pMemRanges);
     lock.unlock();
     if (!skip_call) {
-        result = my_data->device_dispatch_table->InvalidateMappedMemoryRanges(device, memRangeCount, pMemRanges);
+        result = dev_data->device_dispatch_table->InvalidateMappedMemoryRanges(device, memRangeCount, pMemRanges);
         // Update our shadow copy with modified driver data
-        CopyNoncoherentMemoryFromDriver(my_data, memRangeCount, pMemRanges);
+        CopyNoncoherentMemoryFromDriver(dev_data, memRangeCount, pMemRanges);
     }
     return result;
 }
@@ -11476,12 +11470,12 @@ GetPhysicalDeviceQueueFamilyProperties(VkPhysicalDevice physicalDevice, uint32_t
 VKAPI_ATTR VkResult VKAPI_CALL
 CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
                              const VkAllocationCallbacks *pAllocator, VkDebugReportCallbackEXT *pMsgCallback) {
-    instance_layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), instance_layer_data_map);
-    VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
+    instance_layer_data *instance_data = get_my_data_ptr(get_dispatch_key(instance), instance_layer_data_map);
+    VkLayerInstanceDispatchTable *pTable = instance_data->instance_dispatch_table;
     VkResult res = pTable->CreateDebugReportCallbackEXT(instance, pCreateInfo, pAllocator, pMsgCallback);
     if (VK_SUCCESS == res) {
         std::lock_guard<std::mutex> lock(global_lock);
-        res = layer_create_msg_callback(my_data->report_data, false, pCreateInfo, pAllocator, pMsgCallback);
+        res = layer_create_msg_callback(instance_data->report_data, false, pCreateInfo, pAllocator, pMsgCallback);
     }
     return res;
 }
@@ -11489,19 +11483,19 @@ CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCre
 VKAPI_ATTR void VKAPI_CALL DestroyDebugReportCallbackEXT(VkInstance instance,
                                                          VkDebugReportCallbackEXT msgCallback,
                                                          const VkAllocationCallbacks *pAllocator) {
-    instance_layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), instance_layer_data_map);
-    VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
+    instance_layer_data *instance_data = get_my_data_ptr(get_dispatch_key(instance), instance_layer_data_map);
+    VkLayerInstanceDispatchTable *pTable = instance_data->instance_dispatch_table;
     pTable->DestroyDebugReportCallbackEXT(instance, msgCallback, pAllocator);
     std::lock_guard<std::mutex> lock(global_lock);
-    layer_destroy_msg_callback(my_data->report_data, msgCallback, pAllocator);
+    layer_destroy_msg_callback(instance_data->report_data, msgCallback, pAllocator);
 }
 
 VKAPI_ATTR void VKAPI_CALL
 DebugReportMessageEXT(VkInstance instance, VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t object,
                       size_t location, int32_t msgCode, const char *pLayerPrefix, const char *pMsg) {
-    instance_layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), instance_layer_data_map);
-    my_data->instance_dispatch_table->DebugReportMessageEXT(instance, flags, objType, object, location, msgCode, pLayerPrefix,
-                                                            pMsg);
+    instance_layer_data *instance_data = get_my_data_ptr(get_dispatch_key(instance), instance_layer_data_map);
+    instance_data->instance_dispatch_table->DebugReportMessageEXT(instance, flags, objType, object, location, msgCode, pLayerPrefix,
+                                                                  pMsg);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL
@@ -11576,12 +11570,12 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance
 
     assert(instance);
 
-    instance_layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), instance_layer_data_map);
-    proc = debug_report_get_instance_proc_addr(my_data->report_data, funcName);
+    instance_layer_data *instance_data = get_my_data_ptr(get_dispatch_key(instance), instance_layer_data_map);
+    proc = debug_report_get_instance_proc_addr(instance_data->report_data, funcName);
     if (proc)
         return proc;
 
-    VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
+    VkLayerInstanceDispatchTable *pTable = instance_data->instance_dispatch_table;
     if (pTable->GetInstanceProcAddr == NULL)
         return NULL;
     return pTable->GetInstanceProcAddr(instance, funcName);
