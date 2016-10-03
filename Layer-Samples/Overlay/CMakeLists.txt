@@ -29,7 +29,7 @@ if (EXISTS "${CMAKE_SOURCE_DIR}/layers")
 else()
     set(LAYERS_LOC ${CMAKE_SOURCE_DIR}/../source)
     find_library(LAYER_UTILS_LIB NAMES VkLayer_utils
-        HINTS "${CMAKE_SOURCE_DIR}/../bin" "${CMAKE_SOURCE_DIR}/../x86_64/lib" )
+        HINTS "${CMAKE_SOURCE_DIR}/../bin" "${CMAKE_SOURCE_DIR}/../source/lib" )
 endif()
 
 set(UTILDIR "${CMAKE_SOURCE_DIR}/Layer-Samples/utils")
