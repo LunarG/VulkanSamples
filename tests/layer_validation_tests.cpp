@@ -13956,6 +13956,10 @@ TEST_F(VkLayerTest, ColorBlendLogicOpTests) {
     cb_ci.attachmentCount = 1;
     cb_ci.pAttachments = &att;
 
+    VkPipelineMultisampleStateCreateInfo ms_ci = {};
+    ms_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    ms_ci.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
     VkGraphicsPipelineCreateInfo gp_ci = {};
     gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     gp_ci.stageCount = 2;
@@ -13965,6 +13969,7 @@ TEST_F(VkLayerTest, ColorBlendLogicOpTests) {
     gp_ci.pViewportState = &vp_state_ci;
     gp_ci.pRasterizationState = &rs_ci;
     gp_ci.pColorBlendState = &cb_ci;
+    gp_ci.pMultisampleState = &ms_ci;
     gp_ci.pDynamicState = &dyn_state_ci;
     gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
     gp_ci.layout = pipeline_layout;
