@@ -98,16 +98,16 @@ struct shader_module;
 
 // TODO : Split this into separate structs for instance and device level data?
 struct layer_data {
-    VkInstance instance;
-    unique_ptr<INSTANCE_STATE> instance_state;
+    VkInstance instance = VK_NULL_HANDLE;
+    unique_ptr<INSTANCE_STATE> instance_state = nullptr;
 
 
-    debug_report_data *report_data;
+    debug_report_data *report_data = nullptr;
     std::vector<VkDebugReportCallbackEXT> logging_callback;
-    VkLayerDispatchTable *device_dispatch_table;
-    VkLayerInstanceDispatchTable *instance_dispatch_table;
+    VkLayerDispatchTable *device_dispatch_table = nullptr;
+    VkLayerInstanceDispatchTable *instance_dispatch_table = nullptr;
 
-    devExts device_extensions;
+    devExts device_extensions = {};
     unordered_set<VkQueue> queues;  // All queues under given device
     // Vector indices correspond to queueFamilyIndex
     vector<unique_ptr<VkQueueFamilyProperties>> queue_family_properties;
@@ -138,18 +138,13 @@ struct layer_data {
     unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> imageLayoutMap;
     unordered_map<VkRenderPass, unique_ptr<RENDER_PASS_NODE>> renderPassMap;
     unordered_map<VkShaderModule, unique_ptr<shader_module>> shaderModuleMap;
-    VkDevice device;
+    VkDevice device = VK_NULL_HANDLE;
 
     // Device specific data
-    PHYS_DEV_PROPERTIES_NODE phys_dev_properties;
-    VkPhysicalDeviceMemoryProperties phys_dev_mem_props;
-    VkPhysicalDeviceFeatures physical_device_features;
-    unique_ptr<PHYSICAL_DEVICE_STATE> physical_device_state;
-
-    layer_data()
-        : instance_state(nullptr), report_data(nullptr), device_dispatch_table(nullptr), instance_dispatch_table(nullptr),
-          device_extensions(), device(VK_NULL_HANDLE), phys_dev_properties{}, phys_dev_mem_props{}, physical_device_features{},
-          physical_device_state(nullptr){};
+    PHYS_DEV_PROPERTIES_NODE phys_dev_properties = {};
+    VkPhysicalDeviceMemoryProperties phys_dev_mem_props = {};
+    VkPhysicalDeviceFeatures physical_device_features = {};
+    unique_ptr<PHYSICAL_DEVICE_STATE> physical_device_state = nullptr;
 };
 
 // TODO : Do we need to guard access to layer_data_map w/ lock?
