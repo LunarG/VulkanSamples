@@ -13940,6 +13940,7 @@ TEST_F(VkLayerTest, ColorBlendLogicOpTests) {
 
     VkPipelineRasterizationStateCreateInfo rs_ci = {};
     rs_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rs_ci.lineWidth = 1.0f;
 
     VkPipelineColorBlendAttachmentState att = {};
     att.blendEnable = VK_FALSE;
