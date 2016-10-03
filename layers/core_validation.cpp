@@ -108,7 +108,7 @@ struct instance_layer_data {
 
 struct layer_data {
     debug_report_data *report_data = nullptr;
-    VkLayerDispatchTable *device_dispatch_table = nullptr;
+    VkLayerDispatchTable dispatch_table;
     unique_ptr<INSTANCE_STATE> instance_state = nullptr;
 
     devExts device_extensions = {};
@@ -4472,8 +4472,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu, const VkDevice
     my_device_data->instance_state = unique_ptr<INSTANCE_STATE>(new INSTANCE_STATE(*(my_instance_data->instance_state)));
     my_device_data->instance_data = my_instance_data;
     // Setup device dispatch table
-    my_device_data->device_dispatch_table = new VkLayerDispatchTable;
-    layer_init_device_dispatch_table(*pDevice, my_device_data->device_dispatch_table, fpGetDeviceProcAddr);
+    layer_init_device_dispatch_table(*pDevice, &my_device_data->dispatch_table, fpGetDeviceProcAddr);
     my_device_data->device = *pDevice;
 
     my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
@@ -4558,14 +4557,12 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
 #if DISPATCH_MAP_DEBUG
     fprintf(stderr, "Device: 0x%p, key: 0x%p\n", device, key);
 #endif
-    VkLayerDispatchTable *pDisp = dev_data->device_dispatch_table;
     if (!skip_call) {
-        pDisp->DestroyDevice(device, pAllocator);
+        dev_data->dispatch_table.DestroyDevice(device, pAllocator);
     }
 #else
-    dev_data->device_dispatch_table->DestroyDevice(device, pAllocator);
+    dev_data->dispatch_table.DestroyDevice(device, pAllocator);
 #endif
-    delete dev_data->device_dispatch_table;
     layer_data_map.erase(key);
 }
 
@@ -5106,7 +5103,7 @@ QueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits, V
 
     lock.unlock();
     if (!skip_call)
-        result = dev_data->device_dispatch_table->QueueSubmit(queue, submitCount, pSubmits, fence);
+        result = dev_data->dispatch_table.QueueSubmit(queue, submitCount, pSubmits, fence);
 
     return result;
 }
@@ -5114,7 +5111,7 @@ QueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits, V
 VKAPI_ATTR VkResult VKAPI_CALL AllocateMemory(VkDevice device, const VkMemoryAllocateInfo *pAllocateInfo,
                                               const VkAllocationCallbacks *pAllocator, VkDeviceMemory *pMemory) {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = my_data->device_dispatch_table->AllocateMemory(device, pAllocateInfo, pAllocator, pMemory);
+    VkResult result = my_data->dispatch_table.AllocateMemory(device, pAllocateInfo, pAllocator, pMemory);
     // TODO : Track allocations and overall size here
     std::lock_guard<std::mutex> lock(global_lock);
     add_mem_obj_info(my_data, device, *pMemory, pAllocateInfo);
@@ -5139,7 +5136,7 @@ FreeMemory(VkDevice device, VkDeviceMemory mem, const VkAllocationCallbacks *pAl
     printCBList(my_data);
     lock.unlock();
     if (!skip_call) {
-        my_data->device_dispatch_table->FreeMemory(device, mem, pAllocator);
+        my_data->dispatch_table.FreeMemory(device, mem, pAllocator);
     }
 }
 
@@ -5305,7 +5302,7 @@ WaitForFences(VkDevice device, uint32_t fenceCount, const VkFence *pFences, VkBo
     if (skip_call)
         return VK_ERROR_VALIDATION_FAILED_EXT;
 
-    VkResult result = dev_data->device_dispatch_table->WaitForFences(device, fenceCount, pFences, waitAll, timeout);
+    VkResult result = dev_data->dispatch_table.WaitForFences(device, fenceCount, pFences, waitAll, timeout);
 
     if (result == VK_SUCCESS) {
         lock.lock();
@@ -5335,7 +5332,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetFenceStatus(VkDevice device, VkFence fence) {
     if (skip_call)
         return VK_ERROR_VALIDATION_FAILED_EXT;
 
-    VkResult result = dev_data->device_dispatch_table->GetFenceStatus(device, fence);
+    VkResult result = dev_data->dispatch_table.GetFenceStatus(device, fence);
     lock.lock();
     if (result == VK_SUCCESS) {
         skip_call |= RetireFence(dev_data, fence);
@@ -5349,7 +5346,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetFenceStatus(VkDevice device, VkFence fence) {
 VKAPI_ATTR void VKAPI_CALL GetDeviceQueue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex,
                                                             VkQueue *pQueue) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    dev_data->device_dispatch_table->GetDeviceQueue(device, queueFamilyIndex, queueIndex, pQueue);
+    dev_data->dispatch_table.GetDeviceQueue(device, queueFamilyIndex, queueIndex, pQueue);
     std::lock_guard<std::mutex> lock(global_lock);
 
     // Add queue to tracking set only if it is new
@@ -5371,7 +5368,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueueWaitIdle(VkQueue queue) {
     lock.unlock();
     if (skip_call)
         return VK_ERROR_VALIDATION_FAILED_EXT;
-    VkResult result = dev_data->device_dispatch_table->QueueWaitIdle(queue);
+    VkResult result = dev_data->dispatch_table.QueueWaitIdle(queue);
     return result;
 }
 
@@ -5385,7 +5382,7 @@ VKAPI_ATTR VkResult VKAPI_CALL DeviceWaitIdle(VkDevice device) {
     lock.unlock();
     if (skip_call)
         return VK_ERROR_VALIDATION_FAILED_EXT;
-    VkResult result = dev_data->device_dispatch_table->DeviceWaitIdle(device);
+    VkResult result = dev_data->dispatch_table.DeviceWaitIdle(device);
     return result;
 }
 
@@ -5405,7 +5402,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyFence(VkDevice device, VkFence fence, const Vk
     lock.unlock();
 
     if (!skip_call)
-        dev_data->device_dispatch_table->DestroyFence(device, fence, pAllocator);
+        dev_data->dispatch_table.DestroyFence(device, fence, pAllocator);
 }
 
 // For given obj node, if it is use, flag a validation error and return callback result, else return false
@@ -5434,7 +5431,7 @@ DestroySemaphore(VkDevice device, VkSemaphore semaphore, const VkAllocationCallb
     if (!skip) {
         dev_data->semaphoreMap.erase(semaphore);
         lock.unlock();
-        dev_data->device_dispatch_table->DestroySemaphore(device, semaphore, pAllocator);
+        dev_data->dispatch_table.DestroySemaphore(device, semaphore, pAllocator);
     }
 }
 
@@ -5452,7 +5449,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyEvent(VkDevice device, VkEvent event, const Vk
     if (!skip) {
         dev_data->eventMap.erase(event);
         lock.unlock();
-        dev_data->device_dispatch_table->DestroyEvent(device, event, pAllocator);
+        dev_data->dispatch_table.DestroyEvent(device, event, pAllocator);
     }
 }
 
@@ -5471,7 +5468,7 @@ DestroyQueryPool(VkDevice device, VkQueryPool queryPool, const VkAllocationCallb
     if (!skip) {
         dev_data->queryPoolMap.erase(queryPool);
         lock.unlock();
-        dev_data->device_dispatch_table->DestroyQueryPool(device, queryPool, pAllocator);
+        dev_data->dispatch_table.DestroyQueryPool(device, queryPool, pAllocator);
     }
 }
 
@@ -5544,8 +5541,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetQueryPoolResults(VkDevice device, VkQueryPool 
     lock.unlock();
     if (skip_call)
         return VK_ERROR_VALIDATION_FAILED_EXT;
-    return dev_data->device_dispatch_table->GetQueryPoolResults(device, queryPool, firstQuery, queryCount, dataSize, pData, stride,
-                                                                flags);
+    return dev_data->dispatch_table.GetQueryPoolResults(device, queryPool, firstQuery, queryCount, dataSize, pData, stride, flags);
 }
 
 static bool validateIdleBuffer(const layer_data *my_data, VkBuffer buffer) {
@@ -5725,7 +5721,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyBuffer(VkDevice device, VkBuffer buffer,
             dev_data->bufferMap.erase(buff_node->buffer);
         }
         lock.unlock();
-        dev_data->device_dispatch_table->DestroyBuffer(device, buffer, pAllocator);
+        dev_data->dispatch_table.DestroyBuffer(device, buffer, pAllocator);
     }
 }
 
@@ -5760,7 +5756,7 @@ DestroyBufferView(VkDevice device, VkBufferView bufferView, const VkAllocationCa
     bool skip = PreCallValidateDestroyBufferView(dev_data, bufferView, &buffer_view_state, &obj_struct);
     if (!skip) {
         lock.unlock();
-        dev_data->device_dispatch_table->DestroyBufferView(device, bufferView, pAllocator);
+        dev_data->dispatch_table.DestroyBufferView(device, bufferView, pAllocator);
         lock.lock();
         // We made call so update state
         PostCallRecordDestroyBufferView(dev_data, bufferView, buffer_view_state, obj_struct);
@@ -5796,7 +5792,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyImage(VkDevice device, VkImage image, const Vk
             dev_data->imageSubresourceMap.erase(subEntry);
         }
         lock.unlock();
-        dev_data->device_dispatch_table->DestroyImage(device, image, pAllocator);
+        dev_data->dispatch_table.DestroyImage(device, image, pAllocator);
     }
 }
 
@@ -5825,7 +5821,7 @@ BindBufferMemory(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDeviceS
     auto buffer_node = getBufferNode(dev_data, buffer);
     if (buffer_node) {
         VkMemoryRequirements memRequirements;
-        dev_data->device_dispatch_table->GetBufferMemoryRequirements(device, buffer, &memRequirements);
+        dev_data->dispatch_table.GetBufferMemoryRequirements(device, buffer, &memRequirements);
         buffer_node->mem = mem;
         buffer_node->memOffset = memoryOffset;
         buffer_node->memSize = memRequirements.size;
@@ -5886,7 +5882,7 @@ BindBufferMemory(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDeviceS
     print_mem_list(dev_data);
     lock.unlock();
     if (!skip_call) {
-        result = dev_data->device_dispatch_table->BindBufferMemory(device, buffer, mem, memoryOffset);
+        result = dev_data->dispatch_table.BindBufferMemory(device, buffer, mem, memoryOffset);
     }
     return result;
 }
@@ -5896,7 +5892,7 @@ GetBufferMemoryRequirements(VkDevice device, VkBuffer buffer, VkMemoryRequiremen
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     // TODO : What to track here?
     //   Could potentially save returned mem requirements and validate values passed into BindBufferMemory
-    my_data->device_dispatch_table->GetBufferMemoryRequirements(device, buffer, pMemoryRequirements);
+    my_data->dispatch_table.GetBufferMemoryRequirements(device, buffer, pMemoryRequirements);
 }
 
 VKAPI_ATTR void VKAPI_CALL
@@ -5904,7 +5900,7 @@ GetImageMemoryRequirements(VkDevice device, VkImage image, VkMemoryRequirements 
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     // TODO : What to track here?
     //   Could potentially save returned mem requirements and validate values passed into BindImageMemory
-    my_data->device_dispatch_table->GetImageMemoryRequirements(device, image, pMemoryRequirements);
+    my_data->dispatch_table.GetImageMemoryRequirements(device, image, pMemoryRequirements);
 }
 
 VKAPI_ATTR void VKAPI_CALL
@@ -5922,7 +5918,7 @@ DestroyImageView(VkDevice device, VkImageView imageView, const VkAllocationCallb
     if (!skip) {
         dev_data->imageViewMap.erase(imageView);
         lock.unlock();
-        dev_data->device_dispatch_table->DestroyImageView(device, imageView, pAllocator);
+        dev_data->dispatch_table.DestroyImageView(device, imageView, pAllocator);
     }
 }
 
@@ -5934,7 +5930,7 @@ DestroyShaderModule(VkDevice device, VkShaderModule shaderModule, const VkAlloca
     my_data->shaderModuleMap.erase(shaderModule);
     lock.unlock();
 
-    my_data->device_dispatch_table->DestroyShaderModule(device, shaderModule, pAllocator);
+    my_data->dispatch_table.DestroyShaderModule(device, shaderModule, pAllocator);
 }
 
 VKAPI_ATTR void VKAPI_CALL
@@ -5952,7 +5948,7 @@ DestroyPipeline(VkDevice device, VkPipeline pipeline, const VkAllocationCallback
     if (!skip) {
         dev_data->pipelineMap.erase(pipeline);
         lock.unlock();
-        dev_data->device_dispatch_table->DestroyPipeline(device, pipeline, pAllocator);
+        dev_data->dispatch_table.DestroyPipeline(device, pipeline, pAllocator);
     }
 }
 
@@ -5963,7 +5959,7 @@ DestroyPipelineLayout(VkDevice device, VkPipelineLayout pipelineLayout, const Vk
     dev_data->pipelineLayoutMap.erase(pipelineLayout);
     lock.unlock();
 
-    dev_data->device_dispatch_table->DestroyPipelineLayout(device, pipelineLayout, pAllocator);
+    dev_data->dispatch_table.DestroyPipelineLayout(device, pipelineLayout, pAllocator);
 }
 
 VKAPI_ATTR void VKAPI_CALL
@@ -5981,7 +5977,7 @@ DestroySampler(VkDevice device, VkSampler sampler, const VkAllocationCallbacks *
     if (!skip) {
         dev_data->samplerMap.erase(sampler);
         lock.unlock();
-        dev_data->device_dispatch_table->DestroySampler(device, sampler, pAllocator);
+        dev_data->dispatch_table.DestroySampler(device, sampler, pAllocator);
     }
 }
 
@@ -5989,14 +5985,14 @@ VKAPI_ATTR void VKAPI_CALL
 DestroyDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout descriptorSetLayout, const VkAllocationCallbacks *pAllocator) {
     // TODO : Clean up any internal data structures using this obj.
     get_my_data_ptr(get_dispatch_key(device), layer_data_map)
-        ->device_dispatch_table->DestroyDescriptorSetLayout(device, descriptorSetLayout, pAllocator);
+        ->dispatch_table.DestroyDescriptorSetLayout(device, descriptorSetLayout, pAllocator);
 }
 
 VKAPI_ATTR void VKAPI_CALL
 DestroyDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool, const VkAllocationCallbacks *pAllocator) {
     // TODO : Clean up any internal data structures using this obj.
     get_my_data_ptr(get_dispatch_key(device), layer_data_map)
-        ->device_dispatch_table->DestroyDescriptorPool(device, descriptorPool, pAllocator);
+        ->dispatch_table.DestroyDescriptorPool(device, descriptorPool, pAllocator);
 }
 // Verify cmdBuffer in given cb_node is not in global in-flight set, and return skip_call result
 //  If this is a secondary command buffer, then make sure its primary is also in-flight
@@ -6070,7 +6066,7 @@ FreeCommandBuffers(VkDevice device, VkCommandPool commandPool, uint32_t commandB
     printCBList(dev_data);
     lock.unlock();
 
-    dev_data->device_dispatch_table->FreeCommandBuffers(device, commandPool, commandBufferCount, pCommandBuffers);
+    dev_data->dispatch_table.FreeCommandBuffers(device, commandPool, commandBufferCount, pCommandBuffers);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateCommandPool(VkDevice device, const VkCommandPoolCreateInfo *pCreateInfo,
@@ -6078,7 +6074,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateCommandPool(VkDevice device, const VkComman
                                                  VkCommandPool *pCommandPool) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
 
-    VkResult result = dev_data->device_dispatch_table->CreateCommandPool(device, pCreateInfo, pAllocator, pCommandPool);
+    VkResult result = dev_data->dispatch_table.CreateCommandPool(device, pCreateInfo, pAllocator, pCommandPool);
 
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
@@ -6092,7 +6088,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateQueryPool(VkDevice device, const VkQueryPoo
                                                const VkAllocationCallbacks *pAllocator, VkQueryPool *pQueryPool) {
 
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->CreateQueryPool(device, pCreateInfo, pAllocator, pQueryPool);
+    VkResult result = dev_data->dispatch_table.CreateQueryPool(device, pCreateInfo, pAllocator, pQueryPool);
     if (result == VK_SUCCESS) {
         std::lock_guard<std::mutex> lock(global_lock);
         QUERY_POOL_NODE *qp_node = &dev_data->queryPoolMap[*pQueryPool];
@@ -6134,7 +6130,7 @@ DestroyCommandPool(VkDevice device, VkCommandPool commandPool, const VkAllocatio
     dev_data->commandPoolMap.erase(commandPool);
     lock.unlock();
 
-    dev_data->device_dispatch_table->DestroyCommandPool(device, commandPool, pAllocator);
+    dev_data->dispatch_table.DestroyCommandPool(device, commandPool, pAllocator);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL
@@ -6150,7 +6146,7 @@ ResetCommandPool(VkDevice device, VkCommandPool commandPool, VkCommandPoolResetF
     if (skip_call)
         return VK_ERROR_VALIDATION_FAILED_EXT;
 
-    VkResult result = dev_data->device_dispatch_table->ResetCommandPool(device, commandPool, flags);
+    VkResult result = dev_data->dispatch_table.ResetCommandPool(device, commandPool, flags);
 
     // Reset all of the CBs allocated from this pool
     if (VK_SUCCESS == result) {
@@ -6181,7 +6177,7 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetFences(VkDevice device, uint32_t fenceCount,
     if (skip_call)
         return VK_ERROR_VALIDATION_FAILED_EXT;
 
-    VkResult result = dev_data->device_dispatch_table->ResetFences(device, fenceCount, pFences);
+    VkResult result = dev_data->dispatch_table.ResetFences(device, fenceCount, pFences);
 
     if (result == VK_SUCCESS) {
         lock.lock();
@@ -6216,7 +6212,7 @@ DestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer, const VkAllocatio
         dev_data->frameBufferMap.erase(fb_node->framebuffer);
     }
     lock.unlock();
-    dev_data->device_dispatch_table->DestroyFramebuffer(device, framebuffer, pAllocator);
+    dev_data->dispatch_table.DestroyFramebuffer(device, framebuffer, pAllocator);
 }
 
 VKAPI_ATTR void VKAPI_CALL
@@ -6234,7 +6230,7 @@ DestroyRenderPass(VkDevice device, VkRenderPass renderPass, const VkAllocationCa
     if (!skip) {
         dev_data->renderPassMap.erase(renderPass);
         lock.unlock();
-        dev_data->device_dispatch_table->DestroyRenderPass(device, renderPass, pAllocator);
+        dev_data->dispatch_table.DestroyRenderPass(device, renderPass, pAllocator);
     }
 }
 
@@ -6242,7 +6238,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateBuffer(VkDevice device, const VkBufferCreat
                                             const VkAllocationCallbacks *pAllocator, VkBuffer *pBuffer) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
 
-    VkResult result = dev_data->device_dispatch_table->CreateBuffer(device, pCreateInfo, pAllocator, pBuffer);
+    VkResult result = dev_data->dispatch_table.CreateBuffer(device, pCreateInfo, pAllocator, pBuffer);
 
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
@@ -6275,7 +6271,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateBufferView(VkDevice device, const VkBufferV
     lock.unlock();
     if (skip_call)
         return VK_ERROR_VALIDATION_FAILED_EXT;
-    VkResult result = dev_data->device_dispatch_table->CreateBufferView(device, pCreateInfo, pAllocator, pView);
+    VkResult result = dev_data->dispatch_table.CreateBufferView(device, pCreateInfo, pAllocator, pView);
     if (VK_SUCCESS == result) {
         lock.lock();
         dev_data->bufferViewMap[*pView] = unique_ptr<BUFFER_VIEW_STATE>(new BUFFER_VIEW_STATE(*pView, pCreateInfo));
@@ -6288,7 +6284,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateI
                                            const VkAllocationCallbacks *pAllocator, VkImage *pImage) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
 
-    VkResult result = dev_data->device_dispatch_table->CreateImage(device, pCreateInfo, pAllocator, pImage);
+    VkResult result = dev_data->dispatch_table.CreateImage(device, pCreateInfo, pAllocator, pImage);
 
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
@@ -6369,7 +6365,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImageView(VkDevice device, const VkImageVie
     lock.unlock();
     if (skip_call)
         return VK_ERROR_VALIDATION_FAILED_EXT;
-    VkResult result = dev_data->device_dispatch_table->CreateImageView(device, pCreateInfo, pAllocator, pView);
+    VkResult result = dev_data->dispatch_table.CreateImageView(device, pCreateInfo, pAllocator, pView);
     if (VK_SUCCESS == result) {
         lock.lock();
         PostCallRecordCreateImageView(dev_data, pCreateInfo, *pView);
@@ -6382,7 +6378,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImageView(VkDevice device, const VkImageVie
 VKAPI_ATTR VkResult VKAPI_CALL
 CreateFence(VkDevice device, const VkFenceCreateInfo *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkFence *pFence) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->CreateFence(device, pCreateInfo, pAllocator, pFence);
+    VkResult result = dev_data->dispatch_table.CreateFence(device, pCreateInfo, pAllocator, pFence);
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
         auto &fence_node = dev_data->fenceMap[*pFence];
@@ -6397,27 +6393,27 @@ CreateFence(VkDevice device, const VkFenceCreateInfo *pCreateInfo, const VkAlloc
 VKAPI_ATTR VkResult VKAPI_CALL CreatePipelineCache(VkDevice device, const VkPipelineCacheCreateInfo *pCreateInfo,
                                                    const VkAllocationCallbacks *pAllocator, VkPipelineCache *pPipelineCache) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->CreatePipelineCache(device, pCreateInfo, pAllocator, pPipelineCache);
+    VkResult result = dev_data->dispatch_table.CreatePipelineCache(device, pCreateInfo, pAllocator, pPipelineCache);
     return result;
 }
 
 VKAPI_ATTR void VKAPI_CALL
 DestroyPipelineCache(VkDevice device, VkPipelineCache pipelineCache, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    dev_data->device_dispatch_table->DestroyPipelineCache(device, pipelineCache, pAllocator);
+    dev_data->dispatch_table.DestroyPipelineCache(device, pipelineCache, pAllocator);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL
 GetPipelineCacheData(VkDevice device, VkPipelineCache pipelineCache, size_t *pDataSize, void *pData) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->GetPipelineCacheData(device, pipelineCache, pDataSize, pData);
+    VkResult result = dev_data->dispatch_table.GetPipelineCacheData(device, pipelineCache, pDataSize, pData);
     return result;
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL
 MergePipelineCaches(VkDevice device, VkPipelineCache dstCache, uint32_t srcCacheCount, const VkPipelineCache *pSrcCaches) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->MergePipelineCaches(device, dstCache, srcCacheCount, pSrcCaches);
+    VkResult result = dev_data->dispatch_table.MergePipelineCaches(device, dstCache, srcCacheCount, pSrcCaches);
     return result;
 }
 
@@ -6471,8 +6467,8 @@ CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t
 
     if (!skip_call) {
         lock.unlock();
-        result = dev_data->device_dispatch_table->CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pAllocator,
-                                                                          pPipelines);
+        result =
+            dev_data->dispatch_table.CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pAllocator, pPipelines);
         lock.lock();
         for (i = 0; i < count; i++) {
             pPipeNode[i]->pipeline = pPipelines[i];
@@ -6519,8 +6515,8 @@ CreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t 
 
     if (!skip_call) {
         lock.unlock();
-        result = dev_data->device_dispatch_table->CreateComputePipelines(device, pipelineCache, count, pCreateInfos, pAllocator,
-                                                                         pPipelines);
+        result =
+            dev_data->dispatch_table.CreateComputePipelines(device, pipelineCache, count, pCreateInfos, pAllocator, pPipelines);
         lock.lock();
         for (i = 0; i < count; i++) {
             pPipeNode[i]->pipeline = pPipelines[i];
@@ -6541,7 +6537,7 @@ CreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t 
 VKAPI_ATTR VkResult VKAPI_CALL CreateSampler(VkDevice device, const VkSamplerCreateInfo *pCreateInfo,
                                              const VkAllocationCallbacks *pAllocator, VkSampler *pSampler) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->CreateSampler(device, pCreateInfo, pAllocator, pSampler);
+    VkResult result = dev_data->dispatch_table.CreateSampler(device, pCreateInfo, pAllocator, pSampler);
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
         dev_data->samplerMap[*pSampler] = unique_ptr<SAMPLER_NODE>(new SAMPLER_NODE(pSampler, pCreateInfo));
@@ -6553,7 +6549,7 @@ VKAPI_ATTR VkResult VKAPI_CALL
 CreateDescriptorSetLayout(VkDevice device, const VkDescriptorSetLayoutCreateInfo *pCreateInfo,
                           const VkAllocationCallbacks *pAllocator, VkDescriptorSetLayout *pSetLayout) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->CreateDescriptorSetLayout(device, pCreateInfo, pAllocator, pSetLayout);
+    VkResult result = dev_data->dispatch_table.CreateDescriptorSetLayout(device, pCreateInfo, pAllocator, pSetLayout);
     if (VK_SUCCESS == result) {
         // TODOSC : Capture layout bindings set
         std::lock_guard<std::mutex> lock(global_lock);
@@ -6663,7 +6659,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreatePipelineLayout(VkDevice device, const VkPip
         }
     }
 
-    VkResult result = dev_data->device_dispatch_table->CreatePipelineLayout(device, pCreateInfo, pAllocator, pPipelineLayout);
+    VkResult result = dev_data->dispatch_table.CreatePipelineLayout(device, pCreateInfo, pAllocator, pPipelineLayout);
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
         PIPELINE_LAYOUT_NODE &plNode = dev_data->pipelineLayoutMap[*pPipelineLayout];
@@ -6684,7 +6680,7 @@ VKAPI_ATTR VkResult VKAPI_CALL
 CreateDescriptorPool(VkDevice device, const VkDescriptorPoolCreateInfo *pCreateInfo, const VkAllocationCallbacks *pAllocator,
                      VkDescriptorPool *pDescriptorPool) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->CreateDescriptorPool(device, pCreateInfo, pAllocator, pDescriptorPool);
+    VkResult result = dev_data->dispatch_table.CreateDescriptorPool(device, pCreateInfo, pAllocator, pDescriptorPool);
     if (VK_SUCCESS == result) {
         // Insert this pool into Global Pool LL at head
         if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT,
@@ -6710,7 +6706,7 @@ CreateDescriptorPool(VkDevice device, const VkDescriptorPoolCreateInfo *pCreateI
 VKAPI_ATTR VkResult VKAPI_CALL
 ResetDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool, VkDescriptorPoolResetFlags flags) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->ResetDescriptorPool(device, descriptorPool, flags);
+    VkResult result = dev_data->dispatch_table.ResetDescriptorPool(device, descriptorPool, flags);
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
         clearDescriptorPool(dev_data, device, descriptorPool, flags);
@@ -6745,7 +6741,7 @@ AllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo *pAllo
     if (skip_call)
         return VK_ERROR_VALIDATION_FAILED_EXT;
 
-    VkResult result = dev_data->device_dispatch_table->AllocateDescriptorSets(device, pAllocateInfo, pDescriptorSets);
+    VkResult result = dev_data->dispatch_table.AllocateDescriptorSets(device, pAllocateInfo, pDescriptorSets);
 
     if (VK_SUCCESS == result) {
         lock.lock();
@@ -6803,7 +6799,7 @@ FreeDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t co
 
     if (skip_call)
         return VK_ERROR_VALIDATION_FAILED_EXT;
-    VkResult result = dev_data->device_dispatch_table->FreeDescriptorSets(device, descriptorPool, count, pDescriptorSets);
+    VkResult result = dev_data->dispatch_table.FreeDescriptorSets(device, descriptorPool, count, pDescriptorSets);
     if (VK_SUCCESS == result) {
         lock.lock();
         PostCallRecordFreeDescriptorSets(dev_data, descriptorPool, count, pDescriptorSets);
@@ -6846,8 +6842,8 @@ UpdateDescriptorSets(VkDevice device, uint32_t descriptorWriteCount, const VkWri
                                                          pDescriptorCopies);
     lock.unlock();
     if (!skip_call) {
-        dev_data->device_dispatch_table->UpdateDescriptorSets(device, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount,
-                                                              pDescriptorCopies);
+        dev_data->dispatch_table.UpdateDescriptorSets(device, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount,
+                                                      pDescriptorCopies);
         lock.lock();
         // Since UpdateDescriptorSets() is void, nothing to check prior to updating state
         PostCallRecordUpdateDescriptorSets(dev_data, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount,
@@ -6858,7 +6854,7 @@ UpdateDescriptorSets(VkDevice device, uint32_t descriptorWriteCount, const VkWri
 VKAPI_ATTR VkResult VKAPI_CALL
 AllocateCommandBuffers(VkDevice device, const VkCommandBufferAllocateInfo *pCreateInfo, VkCommandBuffer *pCommandBuffer) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->AllocateCommandBuffers(device, pCreateInfo, pCommandBuffer);
+    VkResult result = dev_data->dispatch_table.AllocateCommandBuffers(device, pCreateInfo, pCommandBuffer);
     if (VK_SUCCESS == result) {
         std::unique_lock<std::mutex> lock(global_lock);
         auto pPool = getCommandPoolNode(dev_data, pCreateInfo->commandPool);
@@ -7036,7 +7032,7 @@ BeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo
     if (skip_call) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
-    VkResult result = dev_data->device_dispatch_table->BeginCommandBuffer(commandBuffer, pBeginInfo);
+    VkResult result = dev_data->dispatch_table.BeginCommandBuffer(commandBuffer, pBeginInfo);
 
     return result;
 }
@@ -7063,7 +7059,7 @@ VKAPI_ATTR VkResult VKAPI_CALL EndCommandBuffer(VkCommandBuffer commandBuffer) {
     }
     if (!skip_call) {
         lock.unlock();
-        result = dev_data->device_dispatch_table->EndCommandBuffer(commandBuffer);
+        result = dev_data->dispatch_table.EndCommandBuffer(commandBuffer);
         lock.lock();
         if (VK_SUCCESS == result) {
             pCB->state = CB_RECORDED;
@@ -7097,7 +7093,7 @@ ResetCommandBuffer(VkCommandBuffer commandBuffer, VkCommandBufferResetFlags flag
     lock.unlock();
     if (skip_call)
         return VK_ERROR_VALIDATION_FAILED_EXT;
-    VkResult result = dev_data->device_dispatch_table->ResetCommandBuffer(commandBuffer, flags);
+    VkResult result = dev_data->dispatch_table.ResetCommandBuffer(commandBuffer, flags);
     if (VK_SUCCESS == result) {
         lock.lock();
         dev_data->globalInFlightCmdBuffers.erase(commandBuffer);
@@ -7138,7 +7134,7 @@ CmdBindPipeline(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindP
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdBindPipeline(commandBuffer, pipelineBindPoint, pipeline);
+        dev_data->dispatch_table.CmdBindPipeline(commandBuffer, pipelineBindPoint, pipeline);
 }
 
 VKAPI_ATTR void VKAPI_CALL
@@ -7153,7 +7149,7 @@ CmdSetViewport(VkCommandBuffer commandBuffer, uint32_t firstViewport, uint32_t v
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdSetViewport(commandBuffer, firstViewport, viewportCount, pViewports);
+        dev_data->dispatch_table.CmdSetViewport(commandBuffer, firstViewport, viewportCount, pViewports);
 }
 
 VKAPI_ATTR void VKAPI_CALL
@@ -7168,7 +7164,7 @@ CmdSetScissor(VkCommandBuffer commandBuffer, uint32_t firstScissor, uint32_t sci
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdSetScissor(commandBuffer, firstScissor, scissorCount, pScissors);
+        dev_data->dispatch_table.CmdSetScissor(commandBuffer, firstScissor, scissorCount, pScissors);
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdSetLineWidth(VkCommandBuffer commandBuffer, float lineWidth) {
@@ -7192,7 +7188,7 @@ VKAPI_ATTR void VKAPI_CALL CmdSetLineWidth(VkCommandBuffer commandBuffer, float 
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdSetLineWidth(commandBuffer, lineWidth);
+        dev_data->dispatch_table.CmdSetLineWidth(commandBuffer, lineWidth);
 }
 
 VKAPI_ATTR void VKAPI_CALL
@@ -7207,8 +7203,7 @@ CmdSetDepthBias(VkCommandBuffer commandBuffer, float depthBiasConstantFactor, fl
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdSetDepthBias(commandBuffer, depthBiasConstantFactor, depthBiasClamp,
-                                                         depthBiasSlopeFactor);
+        dev_data->dispatch_table.CmdSetDepthBias(commandBuffer, depthBiasConstantFactor, depthBiasClamp, depthBiasSlopeFactor);
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdSetBlendConstants(VkCommandBuffer commandBuffer, const float blendConstants[4]) {
@@ -7222,7 +7217,7 @@ VKAPI_ATTR void VKAPI_CALL CmdSetBlendConstants(VkCommandBuffer commandBuffer, c
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdSetBlendConstants(commandBuffer, blendConstants);
+        dev_data->dispatch_table.CmdSetBlendConstants(commandBuffer, blendConstants);
 }
 
 VKAPI_ATTR void VKAPI_CALL
@@ -7237,7 +7232,7 @@ CmdSetDepthBounds(VkCommandBuffer commandBuffer, float minDepthBounds, float max
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdSetDepthBounds(commandBuffer, minDepthBounds, maxDepthBounds);
+        dev_data->dispatch_table.CmdSetDepthBounds(commandBuffer, minDepthBounds, maxDepthBounds);
 }
 
 VKAPI_ATTR void VKAPI_CALL
@@ -7252,7 +7247,7 @@ CmdSetStencilCompareMask(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceM
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdSetStencilCompareMask(commandBuffer, faceMask, compareMask);
+        dev_data->dispatch_table.CmdSetStencilCompareMask(commandBuffer, faceMask, compareMask);
 }
 
 VKAPI_ATTR void VKAPI_CALL
@@ -7267,7 +7262,7 @@ CmdSetStencilWriteMask(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMas
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdSetStencilWriteMask(commandBuffer, faceMask, writeMask);
+        dev_data->dispatch_table.CmdSetStencilWriteMask(commandBuffer, faceMask, writeMask);
 }
 
 VKAPI_ATTR void VKAPI_CALL
@@ -7282,7 +7277,7 @@ CmdSetStencilReference(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMas
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdSetStencilReference(commandBuffer, faceMask, reference);
+        dev_data->dispatch_table.CmdSetStencilReference(commandBuffer, faceMask, reference);
 }
 
 VKAPI_ATTR void VKAPI_CALL
@@ -7449,8 +7444,8 @@ CmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelin
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdBindDescriptorSets(commandBuffer, pipelineBindPoint, layout, firstSet, setCount,
-                                                               pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
+        dev_data->dispatch_table.CmdBindDescriptorSets(commandBuffer, pipelineBindPoint, layout, firstSet, setCount,
+                                                       pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
 }
 
 VKAPI_ATTR void VKAPI_CALL
@@ -7493,7 +7488,7 @@ CmdBindIndexBuffer(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize 
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdBindIndexBuffer(commandBuffer, buffer, offset, indexType);
+        dev_data->dispatch_table.CmdBindIndexBuffer(commandBuffer, buffer, offset, indexType);
 }
 
 void updateResourceTracking(GLOBAL_CB_NODE *pCB, uint32_t firstBinding, uint32_t bindingCount, const VkBuffer *pBuffers) {
@@ -7534,7 +7529,7 @@ VKAPI_ATTR void VKAPI_CALL CmdBindVertexBuffers(VkCommandBuffer commandBuffer, u
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdBindVertexBuffers(commandBuffer, firstBinding, bindingCount, pBuffers, pOffsets);
+        dev_data->dispatch_table.CmdBindVertexBuffers(commandBuffer, firstBinding, bindingCount, pBuffers, pOffsets);
 }
 
 /* expects global_lock to be held by caller */
@@ -7589,7 +7584,7 @@ VKAPI_ATTR void VKAPI_CALL CmdDraw(VkCommandBuffer commandBuffer, uint32_t verte
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdDraw(commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
+        dev_data->dispatch_table.CmdDraw(commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdDrawIndexed(VkCommandBuffer commandBuffer, uint32_t indexCount,
@@ -7616,8 +7611,7 @@ VKAPI_ATTR void VKAPI_CALL CmdDrawIndexed(VkCommandBuffer commandBuffer, uint32_
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdDrawIndexed(commandBuffer, indexCount, instanceCount, firstIndex, vertexOffset,
-                                                        firstInstance);
+        dev_data->dispatch_table.CmdDrawIndexed(commandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 }
 
 VKAPI_ATTR void VKAPI_CALL
@@ -7649,7 +7643,7 @@ CmdDrawIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize off
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdDrawIndirect(commandBuffer, buffer, offset, count, stride);
+        dev_data->dispatch_table.CmdDrawIndirect(commandBuffer, buffer, offset, count, stride);
 }
 
 VKAPI_ATTR void VKAPI_CALL
@@ -7683,7 +7677,7 @@ CmdDrawIndexedIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceS
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdDrawIndexedIndirect(commandBuffer, buffer, offset, count, stride);
+        dev_data->dispatch_table.CmdDrawIndexedIndirect(commandBuffer, buffer, offset, count, stride);
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdDispatch(VkCommandBuffer commandBuffer, uint32_t x, uint32_t y, uint32_t z) {
@@ -7699,7 +7693,7 @@ VKAPI_ATTR void VKAPI_CALL CmdDispatch(VkCommandBuffer commandBuffer, uint32_t x
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdDispatch(commandBuffer, x, y, z);
+        dev_data->dispatch_table.CmdDispatch(commandBuffer, x, y, z);
 }
 
 VKAPI_ATTR void VKAPI_CALL
@@ -7721,7 +7715,7 @@ CmdDispatchIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdDispatchIndirect(commandBuffer, buffer, offset);
+        dev_data->dispatch_table.CmdDispatchIndirect(commandBuffer, buffer, offset);
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer srcBuffer, VkBuffer dstBuffer,
@@ -7763,7 +7757,7 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, regionCount, pRegions);
+        dev_data->dispatch_table.CmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, regionCount, pRegions);
 }
 
 static bool VerifySourceImageLayout(layer_data *dev_data, GLOBAL_CB_NODE *cb_node, VkImage srcImage,
@@ -8069,8 +8063,8 @@ CmdCopyImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcI
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdCopyImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout,
-                                                      regionCount, pRegions);
+        dev_data->dispatch_table.CmdCopyImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount,
+                                              pRegions);
 }
 
 // Validate that an image's sampleCount matches the requirement for a specific API call
@@ -8125,8 +8119,8 @@ CmdBlitImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcI
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdBlitImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout,
-                                                      regionCount, pRegions, filter);
+        dev_data->dispatch_table.CmdBlitImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount,
+                                              pRegions, filter);
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdCopyBufferToImage(VkCommandBuffer commandBuffer, VkBuffer srcBuffer,
@@ -8169,8 +8163,7 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBufferToImage(VkCommandBuffer commandBuffer, V
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdCopyBufferToImage(commandBuffer, srcBuffer, dstImage, dstImageLayout, regionCount,
-                                                              pRegions);
+        dev_data->dispatch_table.CmdCopyBufferToImage(commandBuffer, srcBuffer, dstImage, dstImageLayout, regionCount, pRegions);
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdCopyImageToBuffer(VkCommandBuffer commandBuffer, VkImage srcImage,
@@ -8217,8 +8210,7 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyImageToBuffer(VkCommandBuffer commandBuffer, V
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdCopyImageToBuffer(commandBuffer, srcImage, srcImageLayout, dstBuffer, regionCount,
-                                                              pRegions);
+        dev_data->dispatch_table.CmdCopyImageToBuffer(commandBuffer, srcImage, srcImageLayout, dstBuffer, regionCount, pRegions);
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdUpdateBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer,
@@ -8249,7 +8241,7 @@ VKAPI_ATTR void VKAPI_CALL CmdUpdateBuffer(VkCommandBuffer commandBuffer, VkBuff
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdUpdateBuffer(commandBuffer, dstBuffer, dstOffset, dataSize, pData);
+        dev_data->dispatch_table.CmdUpdateBuffer(commandBuffer, dstBuffer, dstOffset, dataSize, pData);
 }
 
 VKAPI_ATTR void VKAPI_CALL
@@ -8280,7 +8272,7 @@ CmdFillBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize ds
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdFillBuffer(commandBuffer, dstBuffer, dstOffset, size, data);
+        dev_data->dispatch_table.CmdFillBuffer(commandBuffer, dstBuffer, dstOffset, size, data);
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdClearAttachments(VkCommandBuffer commandBuffer, uint32_t attachmentCount,
@@ -8346,7 +8338,7 @@ VKAPI_ATTR void VKAPI_CALL CmdClearAttachments(VkCommandBuffer commandBuffer, ui
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdClearAttachments(commandBuffer, attachmentCount, pAttachments, rectCount, pRects);
+        dev_data->dispatch_table.CmdClearAttachments(commandBuffer, attachmentCount, pAttachments, rectCount, pRects);
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdClearColorImage(VkCommandBuffer commandBuffer, VkImage image,
@@ -8375,7 +8367,7 @@ VKAPI_ATTR void VKAPI_CALL CmdClearColorImage(VkCommandBuffer commandBuffer, VkI
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdClearColorImage(commandBuffer, image, imageLayout, pColor, rangeCount, pRanges);
+        dev_data->dispatch_table.CmdClearColorImage(commandBuffer, image, imageLayout, pColor, rangeCount, pRanges);
 }
 
 VKAPI_ATTR void VKAPI_CALL
@@ -8405,8 +8397,7 @@ CmdClearDepthStencilImage(VkCommandBuffer commandBuffer, VkImage image, VkImageL
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdClearDepthStencilImage(commandBuffer, image, imageLayout, pDepthStencil, rangeCount,
-                                                                   pRanges);
+        dev_data->dispatch_table.CmdClearDepthStencilImage(commandBuffer, image, imageLayout, pDepthStencil, rangeCount, pRanges);
 }
 
 VKAPI_ATTR void VKAPI_CALL
@@ -8442,8 +8433,8 @@ CmdResolveImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout s
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdResolveImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout,
-                                                         regionCount, pRegions);
+        dev_data->dispatch_table.CmdResolveImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount,
+                                                 pRegions);
 }
 
 bool setEventStageMask(VkQueue queue, VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags stageMask) {
@@ -8484,7 +8475,7 @@ CmdSetEvent(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags s
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdSetEvent(commandBuffer, event, stageMask);
+        dev_data->dispatch_table.CmdSetEvent(commandBuffer, event, stageMask);
 }
 
 VKAPI_ATTR void VKAPI_CALL
@@ -8512,7 +8503,7 @@ CmdResetEvent(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdResetEvent(commandBuffer, event, stageMask);
+        dev_data->dispatch_table.CmdResetEvent(commandBuffer, event, stageMask);
 }
 
 static bool TransitionImageLayouts(VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
@@ -8945,9 +8936,9 @@ CmdWaitEvents(VkCommandBuffer commandBuffer, uint32_t eventCount, const VkEvent 
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdWaitEvents(commandBuffer, eventCount, pEvents, sourceStageMask, dstStageMask,
-                                                       memoryBarrierCount, pMemoryBarriers, bufferMemoryBarrierCount,
-                                                       pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
+        dev_data->dispatch_table.CmdWaitEvents(commandBuffer, eventCount, pEvents, sourceStageMask, dstStageMask,
+                                               memoryBarrierCount, pMemoryBarriers, bufferMemoryBarrierCount, pBufferMemoryBarriers,
+                                               imageMemoryBarrierCount, pImageMemoryBarriers);
 }
 
 VKAPI_ATTR void VKAPI_CALL
@@ -8968,9 +8959,9 @@ CmdPipelineBarrier(VkCommandBuffer commandBuffer, VkPipelineStageFlags srcStageM
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdPipelineBarrier(commandBuffer, srcStageMask, dstStageMask, dependencyFlags,
-                                                            memoryBarrierCount, pMemoryBarriers, bufferMemoryBarrierCount,
-                                                            pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
+        dev_data->dispatch_table.CmdPipelineBarrier(commandBuffer, srcStageMask, dstStageMask, dependencyFlags, memoryBarrierCount,
+                                                    pMemoryBarriers, bufferMemoryBarrierCount, pBufferMemoryBarriers,
+                                                    imageMemoryBarrierCount, pImageMemoryBarriers);
 }
 
 bool setQueryState(VkQueue queue, VkCommandBuffer commandBuffer, QueryObject object, bool value) {
@@ -9004,7 +8995,7 @@ CmdBeginQuery(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t slo
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdBeginQuery(commandBuffer, queryPool, slot, flags);
+        dev_data->dispatch_table.CmdBeginQuery(commandBuffer, queryPool, slot, flags);
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdEndQuery(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t slot) {
@@ -9034,7 +9025,7 @@ VKAPI_ATTR void VKAPI_CALL CmdEndQuery(VkCommandBuffer commandBuffer, VkQueryPoo
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdEndQuery(commandBuffer, queryPool, slot);
+        dev_data->dispatch_table.CmdEndQuery(commandBuffer, queryPool, slot);
 }
 
 VKAPI_ATTR void VKAPI_CALL
@@ -9061,7 +9052,7 @@ CmdResetQueryPool(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdResetQueryPool(commandBuffer, queryPool, firstQuery, queryCount);
+        dev_data->dispatch_table.CmdResetQueryPool(commandBuffer, queryPool, firstQuery, queryCount);
 }
 
 bool validateQuery(VkQueue queue, GLOBAL_CB_NODE *pCB, VkQueryPool queryPool, uint32_t queryCount, uint32_t firstQuery) {
@@ -9135,8 +9126,8 @@ CmdCopyQueryPoolResults(VkCommandBuffer commandBuffer, VkQueryPool queryPool, ui
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdCopyQueryPoolResults(commandBuffer, queryPool, firstQuery, queryCount, dstBuffer,
-                                                                 dstOffset, stride, flags);
+        dev_data->dispatch_table.CmdCopyQueryPoolResults(commandBuffer, queryPool, firstQuery, queryCount, dstBuffer, dstOffset,
+                                                         stride, flags);
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdPushConstants(VkCommandBuffer commandBuffer, VkPipelineLayout layout,
@@ -9227,7 +9218,7 @@ VKAPI_ATTR void VKAPI_CALL CmdPushConstants(VkCommandBuffer commandBuffer, VkPip
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdPushConstants(commandBuffer, layout, stageFlags, offset, size, pValues);
+        dev_data->dispatch_table.CmdPushConstants(commandBuffer, layout, stageFlags, offset, size, pValues);
 }
 
 VKAPI_ATTR void VKAPI_CALL
@@ -9248,7 +9239,7 @@ CmdWriteTimestamp(VkCommandBuffer commandBuffer, VkPipelineStageFlagBits pipelin
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdWriteTimestamp(commandBuffer, pipelineStage, queryPool, slot);
+        dev_data->dispatch_table.CmdWriteTimestamp(commandBuffer, pipelineStage, queryPool, slot);
 }
 
 static bool MatchUsage(layer_data *dev_data, uint32_t count, const VkAttachmentReference *attachments,
@@ -9453,7 +9444,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateFramebuffer(VkDevice device, const VkFrameb
     if (skip_call)
         return VK_ERROR_VALIDATION_FAILED_EXT;
 
-    VkResult result = dev_data->device_dispatch_table->CreateFramebuffer(device, pCreateInfo, pAllocator, pFramebuffer);
+    VkResult result = dev_data->dispatch_table.CreateFramebuffer(device, pCreateInfo, pAllocator, pFramebuffer);
 
     if (VK_SUCCESS == result) {
         lock.lock();
@@ -9882,7 +9873,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateShaderModule(VkDevice device, const VkShade
     if (skip_call)
         return VK_ERROR_VALIDATION_FAILED_EXT;
 
-    VkResult res = dev_data->device_dispatch_table->CreateShaderModule(device, pCreateInfo, pAllocator, pShaderModule);
+    VkResult res = dev_data->dispatch_table.CreateShaderModule(device, pCreateInfo, pAllocator, pShaderModule);
 
     if (res == VK_SUCCESS) {
         std::lock_guard<std::mutex> lock(global_lock);
@@ -10007,7 +9998,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
 
-    VkResult result = dev_data->device_dispatch_table->CreateRenderPass(device, pCreateInfo, pAllocator, pRenderPass);
+    VkResult result = dev_data->dispatch_table.CreateRenderPass(device, pCreateInfo, pAllocator, pRenderPass);
 
     if (VK_SUCCESS == result) {
         lock.lock();
@@ -10277,7 +10268,7 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
     }
     lock.unlock();
     if (!skip_call) {
-        dev_data->device_dispatch_table->CmdBeginRenderPass(commandBuffer, pRenderPassBegin, contents);
+        dev_data->dispatch_table.CmdBeginRenderPass(commandBuffer, pRenderPassBegin, contents);
     }
 }
 
@@ -10304,7 +10295,7 @@ VKAPI_ATTR void VKAPI_CALL CmdNextSubpass(VkCommandBuffer commandBuffer, VkSubpa
     if (skip_call)
         return;
 
-    dev_data->device_dispatch_table->CmdNextSubpass(commandBuffer, contents);
+    dev_data->dispatch_table.CmdNextSubpass(commandBuffer, contents);
 
     if (pCB) {
       lock.lock();
@@ -10360,7 +10351,7 @@ VKAPI_ATTR void VKAPI_CALL CmdEndRenderPass(VkCommandBuffer commandBuffer) {
     if (skip_call)
         return;
 
-    dev_data->device_dispatch_table->CmdEndRenderPass(commandBuffer);
+    dev_data->dispatch_table.CmdEndRenderPass(commandBuffer);
 
     if (pCB) {
         lock.lock();
@@ -10686,7 +10677,7 @@ CmdExecuteCommands(VkCommandBuffer commandBuffer, uint32_t commandBuffersCount, 
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->CmdExecuteCommands(commandBuffer, commandBuffersCount, pCommandBuffers);
+        dev_data->dispatch_table.CmdExecuteCommands(commandBuffer, commandBuffersCount, pCommandBuffers);
 }
 
 // For any image objects that overlap mapped memory, verify that their layouts are PREINIT or GENERAL
@@ -10746,7 +10737,7 @@ MapMemory(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize
     lock.unlock();
 
     if (!skip_call) {
-        result = dev_data->device_dispatch_table->MapMemory(device, mem, offset, size, flags, ppData);
+        result = dev_data->dispatch_table.MapMemory(device, mem, offset, size, flags, ppData);
         if (VK_SUCCESS == result) {
             lock.lock();
             // TODO : What's the point of this range? See comment on creating new "bound_range" above, which may replace this
@@ -10766,7 +10757,7 @@ VKAPI_ATTR void VKAPI_CALL UnmapMemory(VkDevice device, VkDeviceMemory mem) {
     skip_call |= deleteMemRanges(dev_data, mem);
     lock.unlock();
     if (!skip_call) {
-        dev_data->device_dispatch_table->UnmapMemory(device, mem);
+        dev_data->dispatch_table.UnmapMemory(device, mem);
     }
 }
 
@@ -10861,7 +10852,7 @@ FlushMappedMemoryRanges(VkDevice device, uint32_t memRangeCount, const VkMappedM
     skip_call |= validateMemoryIsMapped(dev_data, "vkFlushMappedMemoryRanges", memRangeCount, pMemRanges);
     lock.unlock();
     if (!skip_call) {
-        result = dev_data->device_dispatch_table->FlushMappedMemoryRanges(device, memRangeCount, pMemRanges);
+        result = dev_data->dispatch_table.FlushMappedMemoryRanges(device, memRangeCount, pMemRanges);
     }
     return result;
 }
@@ -10876,7 +10867,7 @@ InvalidateMappedMemoryRanges(VkDevice device, uint32_t memRangeCount, const VkMa
     skip_call |= validateMemoryIsMapped(dev_data, "vkInvalidateMappedMemoryRanges", memRangeCount, pMemRanges);
     lock.unlock();
     if (!skip_call) {
-        result = dev_data->device_dispatch_table->InvalidateMappedMemoryRanges(device, memRangeCount, pMemRanges);
+        result = dev_data->dispatch_table.InvalidateMappedMemoryRanges(device, memRangeCount, pMemRanges);
         // Update our shadow copy with modified driver data
         CopyNoncoherentMemoryFromDriver(dev_data, memRangeCount, pMemRanges);
     }
@@ -10895,7 +10886,7 @@ VKAPI_ATTR VkResult VKAPI_CALL BindImageMemory(VkDevice device, VkImage image, V
         skip_call = SetMemBinding(dev_data, mem, image_handle, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, "vkBindImageMemory");
         VkMemoryRequirements memRequirements;
         lock.unlock();
-        dev_data->device_dispatch_table->GetImageMemoryRequirements(device, image, &memRequirements);
+        dev_data->dispatch_table.GetImageMemoryRequirements(device, image, &memRequirements);
         lock.lock();
 
         // Track and validate bound memory range information
@@ -10909,7 +10900,7 @@ VKAPI_ATTR VkResult VKAPI_CALL BindImageMemory(VkDevice device, VkImage image, V
         print_mem_list(dev_data);
         lock.unlock();
         if (!skip_call) {
-            result = dev_data->device_dispatch_table->BindImageMemory(device, image, mem, memoryOffset);
+            result = dev_data->dispatch_table.BindImageMemory(device, image, mem, memoryOffset);
             lock.lock();
             image_node->mem = mem;
             image_node->memOffset = memoryOffset;
@@ -10952,7 +10943,7 @@ VKAPI_ATTR VkResult VKAPI_CALL SetEvent(VkDevice device, VkEvent event) {
         }
     }
     if (!skip_call)
-        result = dev_data->device_dispatch_table->SetEvent(device, event);
+        result = dev_data->dispatch_table.SetEvent(device, event);
     return result;
 }
 
@@ -11063,7 +11054,7 @@ QueueBindSparse(VkQueue queue, uint32_t bindInfoCount, const VkBindSparseInfo *p
     lock.unlock();
 
     if (!skip_call)
-        return dev_data->device_dispatch_table->QueueBindSparse(queue, bindInfoCount, pBindInfo, fence);
+        return dev_data->dispatch_table.QueueBindSparse(queue, bindInfoCount, pBindInfo, fence);
 
     return result;
 }
@@ -11071,7 +11062,7 @@ QueueBindSparse(VkQueue queue, uint32_t bindInfoCount, const VkBindSparseInfo *p
 VKAPI_ATTR VkResult VKAPI_CALL CreateSemaphore(VkDevice device, const VkSemaphoreCreateInfo *pCreateInfo,
                                                const VkAllocationCallbacks *pAllocator, VkSemaphore *pSemaphore) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->CreateSemaphore(device, pCreateInfo, pAllocator, pSemaphore);
+    VkResult result = dev_data->dispatch_table.CreateSemaphore(device, pCreateInfo, pAllocator, pSemaphore);
     if (result == VK_SUCCESS) {
         std::lock_guard<std::mutex> lock(global_lock);
         SEMAPHORE_NODE* sNode = &dev_data->semaphoreMap[*pSemaphore];
@@ -11085,7 +11076,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSemaphore(VkDevice device, const VkSemaphor
 VKAPI_ATTR VkResult VKAPI_CALL
 CreateEvent(VkDevice device, const VkEventCreateInfo *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkEvent *pEvent) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->CreateEvent(device, pCreateInfo, pAllocator, pEvent);
+    VkResult result = dev_data->dispatch_table.CreateEvent(device, pCreateInfo, pAllocator, pEvent);
     if (result == VK_SUCCESS) {
         std::lock_guard<std::mutex> lock(global_lock);
         dev_data->eventMap[*pEvent].needsSignaled = false;
@@ -11099,7 +11090,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device, const VkSwapc
                                                   const VkAllocationCallbacks *pAllocator,
                                                   VkSwapchainKHR *pSwapchain) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->CreateSwapchainKHR(device, pCreateInfo, pAllocator, pSwapchain);
+    VkResult result = dev_data->dispatch_table.CreateSwapchainKHR(device, pCreateInfo, pAllocator, pSwapchain);
 
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
@@ -11138,13 +11129,13 @@ DestroySwapchainKHR(VkDevice device, VkSwapchainKHR swapchain, const VkAllocatio
     }
     lock.unlock();
     if (!skip_call)
-        dev_data->device_dispatch_table->DestroySwapchainKHR(device, swapchain, pAllocator);
+        dev_data->dispatch_table.DestroySwapchainKHR(device, swapchain, pAllocator);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL
 GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pCount, VkImage *pSwapchainImages) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->GetSwapchainImagesKHR(device, swapchain, pCount, pSwapchainImages);
+    VkResult result = dev_data->dispatch_table.GetSwapchainImagesKHR(device, swapchain, pCount, pSwapchainImages);
 
     if (result == VK_SUCCESS && pSwapchainImages != NULL) {
         // This should never happen and is checked by param checker.
@@ -11252,7 +11243,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
 
-    VkResult result = dev_data->device_dispatch_table->QueuePresentKHR(queue, pPresentInfo);
+    VkResult result = dev_data->dispatch_table.QueuePresentKHR(queue, pPresentInfo);
 
     if (result != VK_ERROR_VALIDATION_FAILED_EXT) {
         // Semaphore waits occur before error generation, if the call reached
@@ -11295,7 +11286,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSharedSwapchainsKHR(VkDevice device, uint32
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
     VkResult result =
-        dev_data->device_dispatch_table->CreateSharedSwapchainsKHR(device, swapchainCount, pCreateInfos, pAllocator, pSwapchains);
+        dev_data->dispatch_table.CreateSharedSwapchainsKHR(device, swapchainCount, pCreateInfos, pAllocator, pSwapchains);
     return result;
 }
 
@@ -11329,8 +11320,7 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
     if (skip_call)
         return VK_ERROR_VALIDATION_FAILED_EXT;
 
-    VkResult result =
-            dev_data->device_dispatch_table->AcquireNextImageKHR(device, swapchain, timeout, semaphore, fence, pImageIndex);
+    VkResult result = dev_data->dispatch_table.AcquireNextImageKHR(device, swapchain, timeout, semaphore, fence, pImageIndex);
 
     lock.lock();
     if (result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR) {
@@ -11542,12 +11532,10 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice dev, const c
 
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(dev), layer_data_map);
 
-    VkLayerDispatchTable *pTable = dev_data->device_dispatch_table;
-    {
-        if (pTable->GetDeviceProcAddr == NULL)
-            return NULL;
-        return pTable->GetDeviceProcAddr(dev, funcName);
-    }
+    auto &table = dev_data->dispatch_table;
+    if (!table.GetDeviceProcAddr)
+        return nullptr;
+    return table.GetDeviceProcAddr(dev, funcName);
 }
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance, const char *funcName) {
@@ -11566,10 +11554,10 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance
     if (proc)
         return proc;
 
-    auto &pTable = instance_data->dispatch_table;
-    if (pTable.GetInstanceProcAddr == NULL)
-        return NULL;
-    return pTable.GetInstanceProcAddr(instance, funcName);
+    auto &table = instance_data->dispatch_table;
+    if (!table.GetInstanceProcAddr)
+        return nullptr;
+    return table.GetInstanceProcAddr(instance, funcName);
 }
 
 static PFN_vkVoidFunction
