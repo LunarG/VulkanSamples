@@ -207,14 +207,11 @@ struct INSTANCE_STATE {
 
 struct PHYSICAL_DEVICE_STATE {
     // Track the call state and array sizes for various query functions
-    CALL_STATE vkGetPhysicalDeviceQueueFamilyPropertiesState;
-    uint32_t queueFamilyPropertiesCount;
-    CALL_STATE vkGetPhysicalDeviceLayerPropertiesState;
-    CALL_STATE vkGetPhysicalDeviceExtensionPropertiesState;
-    CALL_STATE vkGetPhysicalDeviceFeaturesState;
-    PHYSICAL_DEVICE_STATE()
-        : vkGetPhysicalDeviceQueueFamilyPropertiesState(UNCALLED),
-        vkGetPhysicalDeviceLayerPropertiesState(UNCALLED),
-        vkGetPhysicalDeviceExtensionPropertiesState(UNCALLED),
-        vkGetPhysicalDeviceFeaturesState(UNCALLED) {};
+    CALL_STATE vkGetPhysicalDeviceQueueFamilyPropertiesState = UNCALLED;
+    uint32_t queueFamilyPropertiesCount = 0;
+    CALL_STATE vkGetPhysicalDeviceLayerPropertiesState = UNCALLED;
+    CALL_STATE vkGetPhysicalDeviceExtensionPropertiesState = UNCALLED;
+    CALL_STATE vkGetPhysicalDeviceFeaturesState = UNCALLED;
+    VkPhysicalDeviceFeatures features = {};
+    VkPhysicalDevice phys_device = VK_NULL_HANDLE;
 };

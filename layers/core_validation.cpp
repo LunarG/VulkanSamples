@@ -143,8 +143,9 @@ struct layer_data {
     // Device specific data
     PHYS_DEV_PROPERTIES_NODE phys_dev_properties = {};
     VkPhysicalDeviceMemoryProperties phys_dev_mem_props = {};
-    VkPhysicalDeviceFeatures physical_device_features = {};
     unique_ptr<PHYSICAL_DEVICE_STATE> physical_device_state = nullptr;
+
+    unordered_map<VkPhysicalDevice, PHYSICAL_DEVICE_STATE> physical_device_map;
 };
 
 // TODO : Do we need to guard access to layer_data_map w/ lock?
@@ -354,6 +355,15 @@ COMMAND_POOL_NODE *getCommandPoolNode(layer_data *dev_data, VkCommandPool pool) 
     }
     return &it->second;
 }
+
+PHYSICAL_DEVICE_STATE *getPhysicalDeviceState(layer_data *dev_data, VkPhysicalDevice phys) {
+    auto it = dev_data->physical_device_map.find(phys);
+    if (it == dev_data->physical_device_map.end()) {
+        return nullptr;
+    }
+    return &it->second;
+}
+
 // Return ptr to bound memory for given handle of specified type and set sparse param to indicate if binding is sparse
 static VkDeviceMemory *GetObjectMemBinding(layer_data *my_data, uint64_t handle, VkDebugReportObjectTypeEXT type, bool *sparse) {
     switch (type) {
@@ -4390,10 +4400,11 @@ bool ValidateRequestedQueueFamilyProperties(layer_data *dev_data, const VkDevice
 }
 
 // Verify that features have been queried and that they are available
-static bool ValidateRequestedFeatures(layer_data *dev_data, const VkPhysicalDeviceFeatures *requested_features) {
+static bool ValidateRequestedFeatures(layer_data *dev_data, VkPhysicalDevice phys, const VkPhysicalDeviceFeatures *requested_features) {
     bool skip_call = false;
 
-    VkBool32 *actual = reinterpret_cast<VkBool32 *>(&(dev_data->physical_device_features));
+    auto phys_device_state = getPhysicalDeviceState(dev_data, phys);
+    const VkBool32 *actual = reinterpret_cast<VkBool32 *>(&phys_device_state->features);
     const VkBool32 *requested = reinterpret_cast<const VkBool32 *>(requested_features);
     // TODO : This is a nice, compact way to loop through struct, but a bad way to report issues
     //  Need to provide the struct member name with the issue. To do that seems like we'll
@@ -4411,7 +4422,7 @@ static bool ValidateRequestedFeatures(layer_data *dev_data, const VkPhysicalDevi
             errors++;
         }
     }
-    if (errors && (UNCALLED == dev_data->physical_device_state->vkGetPhysicalDeviceFeaturesState)) {
+    if (errors && (UNCALLED == phys_device_state->vkGetPhysicalDeviceFeaturesState)) {
         // If user didn't request features, notify them that they should
         // TODO: Verify this against the spec. I believe this is an invalid use of the API and should return an error
         skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
@@ -4429,7 +4440,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu, const VkDevice
 
     // Check that any requested features are available
     if (pCreateInfo->pEnabledFeatures) {
-        skip_call |= ValidateRequestedFeatures(my_instance_data, pCreateInfo->pEnabledFeatures);
+        skip_call |= ValidateRequestedFeatures(my_instance_data, gpu, pCreateInfo->pEnabledFeatures);
     }
     skip_call |= ValidateRequestedQueueFamilyProperties(my_instance_data, pCreateInfo);
 
@@ -11354,7 +11365,7 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
 VKAPI_ATTR VkResult VKAPI_CALL EnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysicalDeviceCount,
                                                         VkPhysicalDevice *pPhysicalDevices) {
     bool skip_call = false;
-    layer_data *instance_data = get_instance_data_ptr(get_dispatch_key(instance), layer_data_map);
+    layer_data *instance_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     if (instance_data->instance_state) {
         // For this instance, flag when vkEnumeratePhysicalDevices goes to QUERY_COUNT and then QUERY_DETAILS
         if (NULL == pPhysicalDevices) {
@@ -11387,11 +11398,10 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumeratePhysicalDevices(VkInstance instance, uin
             instance_data->instance_state->physical_devices_count = *pPhysicalDeviceCount;
         } else if (result == VK_SUCCESS){ // Save physical devices
             for (uint32_t i = 0; i < *pPhysicalDeviceCount; i++) {
-                layer_data *phy_dev_data = get_instance_data_ptr(get_dispatch_key(pPhysicalDevices[i]), layer_data_map);
-                phy_dev_data->physical_device_state = unique_ptr<PHYSICAL_DEVICE_STATE>(new PHYSICAL_DEVICE_STATE());
+                auto & phys_device_state = instance_data->physical_device_map[pPhysicalDevices[i]];
+                phys_device_state.phys_device = pPhysicalDevices[i];
                 // Init actual features for each physical device
-                instance_data->instance_dispatch_table->GetPhysicalDeviceFeatures(pPhysicalDevices[i],
-                                                                            &phy_dev_data->physical_device_features);
+                instance_data->instance_dispatch_table->GetPhysicalDeviceFeatures(pPhysicalDevices[i], &phys_device_state.features);
             }
         }
         return result;
