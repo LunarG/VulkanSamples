@@ -213,4 +213,5 @@ struct PHYSICAL_DEVICE_STATE {
     CALL_STATE vkGetPhysicalDeviceFeaturesState = UNCALLED;
     VkPhysicalDeviceFeatures features = {};
     VkPhysicalDevice phys_device = VK_NULL_HANDLE;
+    std::vector<VkQueueFamilyProperties> queue_family_properties;
 };

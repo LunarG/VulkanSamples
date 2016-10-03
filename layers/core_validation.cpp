@@ -109,8 +109,6 @@ struct layer_data {
 
     devExts device_extensions = {};
     unordered_set<VkQueue> queues;  // All queues under given device
-    // Vector indices correspond to queueFamilyIndex
-    vector<unique_ptr<VkQueueFamilyProperties>> queue_family_properties;
     // Global set of all cmdBuffers that are inFlight on this device
     unordered_set<VkCommandBuffer> globalInFlightCmdBuffers;
     // Layer specific data
@@ -4381,20 +4379,19 @@ bool ValidateRequestedQueueFamilyProperties(layer_data *instance_data, VkPhysica
         // Check that the requested queue properties are valid
         for (uint32_t i = 0; i < create_info->queueCreateInfoCount; i++) {
             uint32_t requestedIndex = create_info->pQueueCreateInfos[i].queueFamilyIndex;
-            if (instance_data->queue_family_properties.size() <=
-                requestedIndex) { // requested index is out of bounds for this physical device
+            if (requestedIndex >= physical_device_state->queue_family_properties.size()) {
                 skip_call |= log_msg(
                     instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0,
                     __LINE__, DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST, "DL",
                     "Invalid queue create request in vkCreateDevice(). Invalid queueFamilyIndex %u requested.", requestedIndex);
             } else if (create_info->pQueueCreateInfos[i].queueCount >
-                       instance_data->queue_family_properties[requestedIndex]->queueCount) {
+                       physical_device_state->queue_family_properties[requestedIndex].queueCount) {
                 skip_call |=
                     log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
                             0, __LINE__, DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST, "DL",
                             "Invalid queue create request in vkCreateDevice(). QueueFamilyIndex %u only has %u queues, but "
                             "requested queueCount is %u.",
-                            requestedIndex, instance_data->queue_family_properties[requestedIndex]->queueCount,
+                            requestedIndex, physical_device_state->queue_family_properties[requestedIndex].queueCount,
                             create_info->pQueueCreateInfos[i].queueCount);
             }
         }
@@ -11459,12 +11456,12 @@ GetPhysicalDeviceQueueFamilyProperties(VkPhysicalDevice physicalDevice, uint32_t
             physical_device_state->queueFamilyPropertiesCount = *pCount;
         }
         else { // Save queue family properties
-            instance_data->queue_family_properties.reserve(*pCount);
+            if (physical_device_state->queue_family_properties.size() < *pCount)
+                physical_device_state->queue_family_properties.resize(*pCount);
             for (uint32_t i = 0; i < *pCount; i++) {
-                instance_data->queue_family_properties.emplace_back(new VkQueueFamilyProperties(pQueueFamilyProperties[i]));
+                physical_device_state->queue_family_properties[i] = pQueueFamilyProperties[i];
             }
         }
-        return;
     }
     else {
         log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0,
