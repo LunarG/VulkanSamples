@@ -3075,7 +3075,7 @@ static void demo_init_vk_swapchain(struct demo *demo) {
     if (presentQueueFamilyIndex == UINT32_MAX) {
         // If didn't find a queue that supports both graphics and present, then
         // find a separate present queue.
-        for (size_t i = 0; i < demo->queue_family_count; ++i) {
+        for (i = 0; i < demo->queue_family_count; ++i) {
             if (supportsPresent[i] == VK_TRUE) {
                 presentQueueFamilyIndex = i;
                 break;
