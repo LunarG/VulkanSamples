@@ -255,17 +255,10 @@ struct DEVICE_MEM_INFO : public BASE_NODE {
 
 class SWAPCHAIN_NODE {
   public:
-    VkSwapchainCreateInfoKHR createInfo;
-    uint32_t *pQueueFamilyIndices;
+    safe_VkSwapchainCreateInfoKHR createInfo;
     std::vector<VkImage> images;
-    SWAPCHAIN_NODE(const VkSwapchainCreateInfoKHR *pCreateInfo) : createInfo(*pCreateInfo), pQueueFamilyIndices(NULL) {
-        if (pCreateInfo->queueFamilyIndexCount && pCreateInfo->imageSharingMode == VK_SHARING_MODE_CONCURRENT) {
-            pQueueFamilyIndices = new uint32_t[pCreateInfo->queueFamilyIndexCount];
-            memcpy(pQueueFamilyIndices, pCreateInfo->pQueueFamilyIndices, pCreateInfo->queueFamilyIndexCount * sizeof(uint32_t));
-            createInfo.pQueueFamilyIndices = pQueueFamilyIndices;
-        }
-    }
-    ~SWAPCHAIN_NODE() { delete[] pQueueFamilyIndices; }
+    SWAPCHAIN_NODE(const VkSwapchainCreateInfoKHR *pCreateInfo)
+        : createInfo(pCreateInfo) {}
 };
 
 enum DRAW_TYPE {
