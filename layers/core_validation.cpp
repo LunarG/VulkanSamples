@@ -11354,49 +11354,49 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
 VKAPI_ATTR VkResult VKAPI_CALL EnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysicalDeviceCount,
                                                         VkPhysicalDevice *pPhysicalDevices) {
     bool skip_call = false;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
-    if (my_data->instance_state) {
+    layer_data *instance_data = get_instance_data_ptr(get_dispatch_key(instance), layer_data_map);
+    if (instance_data->instance_state) {
         // For this instance, flag when vkEnumeratePhysicalDevices goes to QUERY_COUNT and then QUERY_DETAILS
         if (NULL == pPhysicalDevices) {
-            my_data->instance_state->vkEnumeratePhysicalDevicesState = QUERY_COUNT;
+            instance_data->instance_state->vkEnumeratePhysicalDevicesState = QUERY_COUNT;
         } else {
-            if (UNCALLED == my_data->instance_state->vkEnumeratePhysicalDevicesState) {
+            if (UNCALLED == instance_data->instance_state->vkEnumeratePhysicalDevicesState) {
                 // Flag warning here. You can call this without having queried the count, but it may not be
                 // robust on platforms with multiple physical devices.
-                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+                skip_call |= log_msg(instance_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
                                     0, __LINE__, DEVLIMITS_MISSING_QUERY_COUNT, "DL",
                                     "Call sequence has vkEnumeratePhysicalDevices() w/ non-NULL pPhysicalDevices. You should first "
                                     "call vkEnumeratePhysicalDevices() w/ NULL pPhysicalDevices to query pPhysicalDeviceCount.");
             } // TODO : Could also flag a warning if re-calling this function in QUERY_DETAILS state
-            else if (my_data->instance_state->physical_devices_count != *pPhysicalDeviceCount) {
+            else if (instance_data->instance_state->physical_devices_count != *pPhysicalDeviceCount) {
                 // Having actual count match count from app is not a requirement, so this can be a warning
-                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT,
+                skip_call |= log_msg(instance_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT,
                                     VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVLIMITS_COUNT_MISMATCH, "DL",
                                     "Call to vkEnumeratePhysicalDevices() w/ pPhysicalDeviceCount value %u, but actual count "
                                     "supported by this instance is %u.",
-                                    *pPhysicalDeviceCount, my_data->instance_state->physical_devices_count);
+                                    *pPhysicalDeviceCount, instance_data->instance_state->physical_devices_count);
             }
-            my_data->instance_state->vkEnumeratePhysicalDevicesState = QUERY_DETAILS;
+            instance_data->instance_state->vkEnumeratePhysicalDevicesState = QUERY_DETAILS;
         }
         if (skip_call) {
             return VK_ERROR_VALIDATION_FAILED_EXT;
         }
         VkResult result =
-            my_data->instance_dispatch_table->EnumeratePhysicalDevices(instance, pPhysicalDeviceCount, pPhysicalDevices);
+            instance_data->instance_dispatch_table->EnumeratePhysicalDevices(instance, pPhysicalDeviceCount, pPhysicalDevices);
         if (NULL == pPhysicalDevices) {
-            my_data->instance_state->physical_devices_count = *pPhysicalDeviceCount;
+            instance_data->instance_state->physical_devices_count = *pPhysicalDeviceCount;
         } else if (result == VK_SUCCESS){ // Save physical devices
             for (uint32_t i = 0; i < *pPhysicalDeviceCount; i++) {
-                layer_data *phy_dev_data = get_my_data_ptr(get_dispatch_key(pPhysicalDevices[i]), layer_data_map);
+                layer_data *phy_dev_data = get_instance_data_ptr(get_dispatch_key(pPhysicalDevices[i]), layer_data_map);
                 phy_dev_data->physical_device_state = unique_ptr<PHYSICAL_DEVICE_STATE>(new PHYSICAL_DEVICE_STATE());
                 // Init actual features for each physical device
-                my_data->instance_dispatch_table->GetPhysicalDeviceFeatures(pPhysicalDevices[i],
+                instance_data->instance_dispatch_table->GetPhysicalDeviceFeatures(pPhysicalDevices[i],
                                                                             &phy_dev_data->physical_device_features);
             }
         }
         return result;
     } else {
-        log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, 0, __LINE__,
+        log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, 0, __LINE__,
                 DEVLIMITS_INVALID_INSTANCE, "DL", "Invalid instance (0x%" PRIxLEAST64 ") passed into vkEnumeratePhysicalDevices().",
                 (uint64_t)instance);
     }
