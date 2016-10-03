@@ -96,16 +96,19 @@ struct devExts {
 // fwd decls
 struct shader_module;
 
-// TODO : Split this into separate structs for instance and device level data?
-struct layer_data {
+struct instance_layer_data {
     VkInstance instance = VK_NULL_HANDLE;
     unique_ptr<INSTANCE_STATE> instance_state = nullptr;
-
-
     debug_report_data *report_data = nullptr;
     std::vector<VkDebugReportCallbackEXT> logging_callback;
-    VkLayerDispatchTable *device_dispatch_table = nullptr;
     VkLayerInstanceDispatchTable *instance_dispatch_table = nullptr;
+    unordered_map<VkPhysicalDevice, PHYSICAL_DEVICE_STATE> physical_device_map;
+};
+
+struct layer_data {
+    debug_report_data *report_data = nullptr;
+    VkLayerDispatchTable *device_dispatch_table = nullptr;
+    unique_ptr<INSTANCE_STATE> instance_state = nullptr;
 
     devExts device_extensions = {};
     unordered_set<VkQueue> queues;  // All queues under given device
@@ -138,18 +141,17 @@ struct layer_data {
     unordered_map<VkShaderModule, unique_ptr<shader_module>> shaderModuleMap;
     VkDevice device = VK_NULL_HANDLE;
 
-    layer_data *instance_data = nullptr;  // from device to enclosing instance
+    instance_layer_data *instance_data = nullptr;  // from device to enclosing instance
 
     VkPhysicalDeviceFeatures enabled_features = {};
     // Device specific data
     PHYS_DEV_PROPERTIES_NODE phys_dev_properties = {};
     VkPhysicalDeviceMemoryProperties phys_dev_mem_props = {};
-
-    unordered_map<VkPhysicalDevice, PHYSICAL_DEVICE_STATE> physical_device_map;
 };
 
 // TODO : Do we need to guard access to layer_data_map w/ lock?
 static unordered_map<void *, layer_data *> layer_data_map;
+static unordered_map<void *, instance_layer_data *> instance_layer_data_map;
 
 static const VkLayerProperties global_layer = {
     "VK_LAYER_LUNARG_core_validation", VK_LAYER_API_VERSION, 1, "LunarG Validation Layer",
@@ -356,9 +358,9 @@ COMMAND_POOL_NODE *getCommandPoolNode(layer_data *dev_data, VkCommandPool pool) 
     return &it->second;
 }
 
-PHYSICAL_DEVICE_STATE *getPhysicalDeviceState(layer_data *dev_data, VkPhysicalDevice phys) {
-    auto it = dev_data->physical_device_map.find(phys);
-    if (it == dev_data->physical_device_map.end()) {
+PHYSICAL_DEVICE_STATE *getPhysicalDeviceState(instance_layer_data *instance_data, VkPhysicalDevice phys) {
+    auto it = instance_data->physical_device_map.find(phys);
+    if (it == instance_data->physical_device_map.end()) {
         return nullptr;
     }
     return &it->second;
@@ -4283,7 +4285,7 @@ static bool outsideRenderPass(const layer_data *my_data, GLOBAL_CB_NODE *pCB, co
     return outside;
 }
 
-static void init_core_validation(layer_data *instance_data, const VkAllocationCallbacks *pAllocator) {
+static void init_core_validation(instance_layer_data *instance_data, const VkAllocationCallbacks *pAllocator) {
 
     layer_debug_actions(instance_data->report_data, instance_data->logging_callback, pAllocator, "lunarg_core_validation");
 
@@ -4306,7 +4308,7 @@ CreateInstance(const VkInstanceCreateInfo *pCreateInfo, const VkAllocationCallba
     if (result != VK_SUCCESS)
         return result;
 
-    layer_data *instance_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
+    instance_layer_data *instance_data = get_my_data_ptr(get_dispatch_key(*pInstance), instance_layer_data_map);
     instance_data->instance = *pInstance;
     instance_data->instance_dispatch_table = new VkLayerInstanceDispatchTable;
     layer_init_instance_dispatch_table(*pInstance, instance_data->instance_dispatch_table, fpGetInstanceProcAddr);
@@ -4328,7 +4330,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
     dispatch_key key = get_dispatch_key(instance);
     // TBD: Need any locking this early, in case this function is called at the
     // same time by more than one thread?
-    layer_data *my_data = get_my_data_ptr(key, layer_data_map);
+    instance_layer_data *my_data = get_my_data_ptr(key, instance_layer_data_map);
     VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
     pTable->DestroyInstance(instance, pAllocator);
 
@@ -4362,7 +4364,7 @@ static void checkDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo,
 }
 
 // Verify that queue family has been properly requested
-bool ValidateRequestedQueueFamilyProperties(layer_data *instance_data, VkPhysicalDevice gpu, const VkDeviceCreateInfo *create_info) {
+bool ValidateRequestedQueueFamilyProperties(instance_layer_data *instance_data, VkPhysicalDevice gpu, const VkDeviceCreateInfo *create_info) {
     bool skip_call = false;
     auto physical_device_state = getPhysicalDeviceState(instance_data, gpu);
     // First check is app has actually requested queueFamilyProperties
@@ -4400,7 +4402,7 @@ bool ValidateRequestedQueueFamilyProperties(layer_data *instance_data, VkPhysica
 }
 
 // Verify that features have been queried and that they are available
-static bool ValidateRequestedFeatures(layer_data *dev_data, VkPhysicalDevice phys, const VkPhysicalDeviceFeatures *requested_features) {
+static bool ValidateRequestedFeatures(instance_layer_data *dev_data, VkPhysicalDevice phys, const VkPhysicalDeviceFeatures *requested_features) {
     bool skip_call = false;
 
     auto phys_device_state = getPhysicalDeviceState(dev_data, phys);
@@ -4435,7 +4437,7 @@ static bool ValidateRequestedFeatures(layer_data *dev_data, VkPhysicalDevice phy
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo *pCreateInfo,
                                             const VkAllocationCallbacks *pAllocator, VkDevice *pDevice) {
-    layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
+    instance_layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(gpu), instance_layer_data_map);
     bool skip_call = false;
 
     // Check that any requested features are available
@@ -11366,7 +11368,7 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
 VKAPI_ATTR VkResult VKAPI_CALL EnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysicalDeviceCount,
                                                         VkPhysicalDevice *pPhysicalDevices) {
     bool skip_call = false;
-    layer_data *instance_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    instance_layer_data *instance_data = get_my_data_ptr(get_dispatch_key(instance), instance_layer_data_map);
     if (instance_data->instance_state) {
         // For this instance, flag when vkEnumeratePhysicalDevices goes to QUERY_COUNT and then QUERY_DETAILS
         if (NULL == pPhysicalDevices) {
@@ -11418,7 +11420,7 @@ VKAPI_ATTR void VKAPI_CALL
 GetPhysicalDeviceQueueFamilyProperties(VkPhysicalDevice physicalDevice, uint32_t *pCount,
     VkQueueFamilyProperties *pQueueFamilyProperties) {
     bool skip_call = false;
-    layer_data *instance_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    instance_layer_data *instance_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     auto physical_device_state = getPhysicalDeviceState(instance_data, physicalDevice);
     if (physical_device_state) {
         if (!pQueueFamilyProperties) {
@@ -11474,7 +11476,7 @@ GetPhysicalDeviceQueueFamilyProperties(VkPhysicalDevice physicalDevice, uint32_t
 VKAPI_ATTR VkResult VKAPI_CALL
 CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
                              const VkAllocationCallbacks *pAllocator, VkDebugReportCallbackEXT *pMsgCallback) {
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    instance_layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), instance_layer_data_map);
     VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
     VkResult res = pTable->CreateDebugReportCallbackEXT(instance, pCreateInfo, pAllocator, pMsgCallback);
     if (VK_SUCCESS == res) {
@@ -11487,7 +11489,7 @@ CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCre
 VKAPI_ATTR void VKAPI_CALL DestroyDebugReportCallbackEXT(VkInstance instance,
                                                          VkDebugReportCallbackEXT msgCallback,
                                                          const VkAllocationCallbacks *pAllocator) {
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    instance_layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), instance_layer_data_map);
     VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
     pTable->DestroyDebugReportCallbackEXT(instance, msgCallback, pAllocator);
     std::lock_guard<std::mutex> lock(global_lock);
@@ -11497,7 +11499,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyDebugReportCallbackEXT(VkInstance instance,
 VKAPI_ATTR void VKAPI_CALL
 DebugReportMessageEXT(VkInstance instance, VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t object,
                       size_t location, int32_t msgCode, const char *pLayerPrefix, const char *pMsg) {
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    instance_layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), instance_layer_data_map);
     my_data->instance_dispatch_table->DebugReportMessageEXT(instance, flags, objType, object, location, msgCode, pLayerPrefix,
                                                             pMsg);
 }
@@ -11529,7 +11531,7 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumerateDeviceExtensionProperties(VkPhysicalDevi
     assert(physicalDevice);
 
     dispatch_key key = get_dispatch_key(physicalDevice);
-    layer_data *my_data = get_my_data_ptr(key, layer_data_map);
+    instance_layer_data *my_data = get_my_data_ptr(key, instance_layer_data_map);
     return my_data->instance_dispatch_table->EnumerateDeviceExtensionProperties(physicalDevice, NULL, pCount, pProperties);
 }
 
@@ -11553,8 +11555,7 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice dev, const c
     if (proc)
         return proc;
 
-    layer_data *dev_data;
-    dev_data = get_my_data_ptr(get_dispatch_key(dev), layer_data_map);
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(dev), layer_data_map);
 
     VkLayerDispatchTable *pTable = dev_data->device_dispatch_table;
     {
@@ -11575,8 +11576,7 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance
 
     assert(instance);
 
-    layer_data *my_data;
-    my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    instance_layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), instance_layer_data_map);
     proc = debug_report_get_instance_proc_addr(my_data->report_data, funcName);
     if (proc)
         return proc;
