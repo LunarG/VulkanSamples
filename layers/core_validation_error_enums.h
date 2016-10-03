@@ -225,8 +225,6 @@ enum DRAW_STATE_ERROR {
                                              // elements of pAttachmentsMustBeIdentical
     DRAWSTATE_DISABLED_LOGIC_OP,             // If logic operations is not enabled, logicOpEnable
                                              // must be VK_FALSE
-    DRAWSTATE_INVALID_LOGIC_OP,              // If logicOpEnable is VK_TRUE, logicOp must
-                                             // must be a valid VkLogicOp value
     DRAWSTATE_INVALID_QUEUE_INDEX,           // Specified queue index exceeds number
                                              // of queried queue families
     DRAWSTATE_INVALID_QUEUE_FAMILY,          // Command buffer submitted on queue is from

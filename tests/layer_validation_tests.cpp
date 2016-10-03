@@ -13902,7 +13902,7 @@ TEST_F(VkLayerTest, ColorBlendLogicOpTests) {
                                                                             "enabled, logicOpEnable must be "
                                                                             "VK_FALSE");
     } else {
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, ", logicOp must be a valid VkLogicOp value");
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "pColorBlendState->logicOp (16)");
     }
     // Create a pipeline using logicOp
     VkResult err;
@@ -13985,7 +13985,6 @@ TEST_F(VkLayerTest, ColorBlendLogicOpTests) {
     if (VK_SUCCESS == err) {
         vkDestroyPipeline(m_device->device(), pipeline, NULL);
     }
-    m_errorMonitor->VerifyFound();
     vkDestroyPipelineCache(m_device->device(), pipelineCache, NULL);
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
 }
