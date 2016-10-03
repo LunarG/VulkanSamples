@@ -110,23 +110,7 @@ struct MT_FB_ATTACHMENT_INFO {
     VkImage image;
     VkDeviceMemory mem;
 };
-
-struct MT_DESCRIPTOR_SET_INFO {
-    std::vector<VkImageView> images;
-    std::vector<VkBuffer> buffers;
-};
-
-// Track Swapchain Information
-struct MT_SWAP_CHAIN_INFO {
-    VkSwapchainCreateInfoKHR createInfo;
-    std::vector<VkImage> images;
-};
 #endif
-
-struct SHADER_DS_MAPPING {
-    uint32_t slotCount;
-    VkDescriptorSetLayoutCreateInfo *pShaderMappingSlot;
-};
 
 struct GENERIC_HEADER {
     VkStructureType sType;
@@ -197,12 +181,6 @@ class FRAMEBUFFER_NODE : public BASE_NODE {
     FRAMEBUFFER_NODE(VkFramebuffer fb, const VkFramebufferCreateInfo *pCreateInfo, const VkRenderPassCreateInfo *pRPCI)
         : framebuffer(fb), createInfo(pCreateInfo), renderPassCreateInfo(pRPCI){};
 };
-
-typedef struct stencil_data {
-    uint32_t compareMask;
-    uint32_t writeMask;
-    uint32_t reference;
-} CBStencilData;
 
 // Track command pools and their command buffers
 struct COMMAND_POOL_NODE : public BASE_NODE {
