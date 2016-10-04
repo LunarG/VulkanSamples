@@ -33,7 +33,6 @@
 #include <string.h>
 
 #include <unordered_map>
-#include <type_traits>
 
 #include "vk_layer_config.h"
 #include "vk_layer_data.h"
@@ -243,13 +242,20 @@ static void CreateSwapchainImageObject(VkDevice dispatchable_object, VkImage swa
     device_data->swapchainImageMap[reinterpret_cast<uint64_t &>(swapchain_image)] = pNewObjNode;
 }
 
+template<typename T>
+uint64_t handle_value(T handle) {
+    return reinterpret_cast<uint64_t &>(handle);
+}
+template<typename T>
+uint64_t handle_value(T *handle) {
+    return reinterpret_cast<uint64_t>(handle);
+}
+
 template <typename T1, typename T2>
 static void CreateObject(T1 dispatchable_object, T2 object, VkDebugReportObjectTypeEXT object_type, bool custom_allocator) {
     layer_data *instance_data = get_my_data_ptr(get_dispatch_key(dispatchable_object), layer_data_map);
 
-    auto object_handle = std::is_pointer<T2>::value
-        ? reinterpret_cast<uint64_t>(object)
-        : reinterpret_cast<uint64_t &>(object);
+    auto object_handle = handle_value(object);
 
     log_msg(instance_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, object_type, object_handle,
             __LINE__, OBJTRACK_NONE, LayerName, "OBJ[0x%" PRIxLEAST64 "] : CREATE %s object 0x%" PRIxLEAST64, object_track_index++,
@@ -268,9 +274,7 @@ template <typename T1, typename T2>
 static void DestroyObject(T1 dispatchable_object, T2 object, VkDebugReportObjectTypeEXT object_type, bool custom_allocator) {
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(dispatchable_object), layer_data_map);
 
-    auto object_handle = std::is_pointer<T2>::value
-        ? reinterpret_cast<uint64_t>(object)
-        : reinterpret_cast<uint64_t &>(object);
+    auto object_handle = handle_value(object);
 
     auto item = device_data->object_map[object_type].find(object_handle);
     if (item != device_data->object_map[object_type].end()) {
@@ -311,9 +315,8 @@ static bool ValidateObject(T1 dispatchable_object, T2 object, VkDebugReportObjec
     if (null_allowed && (object == VK_NULL_HANDLE)) {
         return false;
     }
-    auto object_handle = std::is_pointer<T2>::value
-        ? reinterpret_cast<uint64_t>(object)
-        : reinterpret_cast<uint64_t &>(object);
+    auto object_handle = handle_value(object);
+
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(dispatchable_object), layer_data_map);
     if (device_data->object_map[object_type].find(object_handle) == device_data->object_map[object_type].end()) {
         // If object is an image, also look for it in the swapchain image map
