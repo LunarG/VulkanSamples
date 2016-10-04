@@ -104,6 +104,28 @@ struct instance_layer_data {
     VkLayerInstanceDispatchTable dispatch_table;
 
     unordered_map<VkPhysicalDevice, PHYSICAL_DEVICE_STATE> physical_device_map;
+    unordered_map<VkSurfaceKHR, SURFACE_STATE> surface_map;
+
+    bool surfaceExtensionEnabled = false;
+    bool displayExtensionEnabled = false;
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+    bool androidSurfaceExtensionEnabled = false;
+#endif
+#ifdef VK_USE_PLATFORM_MIR_KHR
+    bool mirSurfaceExtensionEnabled = false;
+#endif
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+    bool waylandSurfaceExtensionEnabled = false;
+#endif
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+    bool win32SurfaceExtensionEnabled = false;
+#endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
+    bool xcbSurfaceExtensionEnabled = false;
+#endif
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+    bool xlibSurfaceExtensionEnabled = false;
+#endif
 };
 
 struct layer_data {
@@ -362,6 +384,14 @@ COMMAND_POOL_NODE *getCommandPoolNode(layer_data *dev_data, VkCommandPool pool) 
 PHYSICAL_DEVICE_STATE *getPhysicalDeviceState(instance_layer_data *instance_data, VkPhysicalDevice phys) {
     auto it = instance_data->physical_device_map.find(phys);
     if (it == instance_data->physical_device_map.end()) {
+        return nullptr;
+    }
+    return &it->second;
+}
+
+SURFACE_STATE *getSurfaceState(instance_layer_data *instance_data, VkSurfaceKHR surface) {
+    auto it = instance_data->surface_map.find(surface);
+    if (it == instance_data->surface_map.end()) {
         return nullptr;
     }
     return &it->second;
@@ -4292,6 +4322,39 @@ static void init_core_validation(instance_layer_data *instance_data, const VkAll
 
 }
 
+static void checkInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateInfo, instance_layer_data *instance_data) {
+    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
+        if (!strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SURFACE_EXTENSION_NAME))
+            instance_data->surfaceExtensionEnabled = true;
+        if (!strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DISPLAY_EXTENSION_NAME))
+            instance_data->displayExtensionEnabled = true;
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+        if (!strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_ANDROID_SURFACE_EXTENSION_NAME))
+            instance_data->androidSurfaceExtensionEnabled = true;
+#endif
+#ifdef VK_USE_PLATFORM_MIR_KHR
+        if (!strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_MIR_SURFACE_EXTENSION_NAME))
+            instance_data->mirSurfaceExtensionEnabled = true;
+#endif
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+        if (!strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME))
+            instance_data->waylandSurfaceExtensionEnabled = true;
+#endif
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+        if (!strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_WIN32_SURFACE_EXTENSION_NAME))
+            instance_data->win32SurfaceExtensionEnabled = true;
+#endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
+        if (!strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XCB_SURFACE_EXTENSION_NAME))
+            instance_data->xcbSurfaceExtensionEnabled = true;
+#endif
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+        if (!strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XLIB_SURFACE_EXTENSION_NAME))
+            instance_data->xlibSurfaceExtensionEnabled = true;
+#endif
+    }
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL
 CreateInstance(const VkInstanceCreateInfo *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkInstance *pInstance) {
     VkLayerInstanceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
@@ -4315,6 +4378,7 @@ CreateInstance(const VkInstanceCreateInfo *pCreateInfo, const VkAllocationCallba
 
     instance_data->report_data = debug_report_create_instance(
         &instance_data->dispatch_table, *pInstance, pCreateInfo->enabledExtensionCount, pCreateInfo->ppEnabledExtensionNames);
+    checkInstanceRegisterExtensions(pCreateInfo, instance_data);
     init_core_validation(instance_data, pAllocator);
 
     instance_data->instance_state = unique_ptr<INSTANCE_STATE>(new INSTANCE_STATE());
@@ -11458,6 +11522,86 @@ GetPhysicalDeviceQueueFamilyProperties(VkPhysicalDevice physicalDevice, uint32_t
     }
 }
 
+template<typename TCreateInfo, typename FPtr>
+static VkResult CreateSurface(VkInstance instance, TCreateInfo const *pCreateInfo,
+                              VkAllocationCallbacks const *pAllocator, VkSurfaceKHR *pSurface,
+                              FPtr fptr)
+{
+    instance_layer_data *instance_data = get_my_data_ptr(get_dispatch_key(instance), instance_layer_data_map);
+
+    // Call down the call chain:
+    VkResult result = (instance_data->dispatch_table.*fptr)(instance, pCreateInfo, pAllocator, pSurface);
+
+    if (result == VK_SUCCESS) {
+        std::unique_lock<std::mutex> lock(global_lock);
+        instance_data->surface_map[*pSurface] = SURFACE_STATE(*pSurface);
+        lock.unlock();
+    }
+
+    return result;
+}
+
+VKAPI_ATTR void VKAPI_CALL DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface, const VkAllocationCallbacks *pAllocator) {
+    bool skip_call = false;
+    instance_layer_data *instance_data = get_my_data_ptr(get_dispatch_key(instance), instance_layer_data_map);
+    std::unique_lock<std::mutex> lock(global_lock);
+    auto surface_state = getSurfaceState(instance_data, surface);
+
+    if (surface_state) {
+        // TODO: track swapchains created from this surface.
+        instance_data->surface_map.erase(surface);
+    }
+    lock.unlock();
+
+    if (!skip_call) {
+        // Call down the call chain:
+        instance_data->dispatch_table.DestroySurfaceKHR(instance, surface, pAllocator);
+    }
+}
+
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+VKAPI_ATTR VkResult VKAPI_CALL CreateAndroidSurfaceKHR(VkInstance instance, const VkAndroidSurfaceCreateInfoKHR *pCreateInfo,
+                                                       const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
+    return CreateSurface(instance, pCreateInfo, pAllocator, pSurface, &VkLayerInstanceDispatchTable::CreateAndroidSurfaceKHR);
+}
+#endif // VK_USE_PLATFORM_ANDROID_KHR
+
+#ifdef VK_USE_PLATFORM_MIR_KHR
+VKAPI_ATTR VkResult VKAPI_CALL CreateMirSurfaceKHR(VkInstance instance, const VkMirSurfaceCreateInfoKHR *pCreateInfo,
+                                                   const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
+    return CreateSurface(instance, pCreateInfo, pAllocator, pSurface, &VkLayerInstanceDispatchTable::CreateMirSurfaceKHR);
+}
+#endif // VK_USE_PLATFORM_MIR_KHR
+
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+VKAPI_ATTR VkResult VKAPI_CALL CreateWaylandSurfaceKHR(VkInstance instance, const VkWaylandSurfaceCreateInfoKHR *pCreateInfo,
+                                                       const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
+    return CreateSurface(instance, pCreateInfo, pAllocator, pSurface, &VkLayerInstanceDispatchTable::CreateMirSurfaceKHR);
+}
+#endif // VK_USE_PLATFORM_WAYLAND_KHR
+
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+VKAPI_ATTR VkResult VKAPI_CALL CreateWin32SurfaceKHR(VkInstance instance, const VkWin32SurfaceCreateInfoKHR *pCreateInfo,
+                                                     const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
+    return CreateSurface(instance, pCreateInfo, pAllocator, pSurface, &VkLayerInstanceDispatchTable::CreateWin32SurfaceKHR);
+}
+#endif // VK_USE_PLATFORM_WIN32_KHR
+
+#ifdef VK_USE_PLATFORM_XCB_KHR
+VKAPI_ATTR VkResult VKAPI_CALL CreateXcbSurfaceKHR(VkInstance instance, const VkXcbSurfaceCreateInfoKHR *pCreateInfo,
+                                                   const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
+    return CreateSurface(instance, pCreateInfo, pAllocator, pSurface, &VkLayerInstanceDispatchTable::CreateXcbSurfaceKHR);
+}
+#endif // VK_USE_PLATFORM_XCB_KHR
+
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+VKAPI_ATTR VkResult VKAPI_CALL CreateXlibSurfaceKHR(VkInstance instance, const VkXlibSurfaceCreateInfoKHR *pCreateInfo,
+                                                   const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
+    return CreateSurface(instance, pCreateInfo, pAllocator, pSurface, &VkLayerInstanceDispatchTable::CreateXlibSurfaceKHR);
+}
+#endif // VK_USE_PLATFORM_XLIB_KHR
+
+
 VKAPI_ATTR VkResult VKAPI_CALL
 CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
                              const VkAllocationCallbacks *pAllocator, VkDebugReportCallbackEXT *pMsgCallback) {
@@ -11525,6 +11669,9 @@ intercept_core_device_command(const char *name);
 static PFN_vkVoidFunction
 intercept_khr_swapchain_command(const char *name, VkDevice dev);
 
+static PFN_vkVoidFunction
+intercept_khr_surface_command(const char *name, VkInstance instance);
+
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice dev, const char *funcName) {
     PFN_vkVoidFunction proc = intercept_core_device_command(funcName);
     if (proc)
@@ -11550,6 +11697,8 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance
         proc = intercept_core_device_command(funcName);
     if (!proc)
         proc = intercept_khr_swapchain_command(funcName, VK_NULL_HANDLE);
+    if (!proc)
+        proc = intercept_khr_surface_command(funcName, instance);
     if (proc)
         return proc;
 
@@ -11757,6 +11906,57 @@ intercept_khr_swapchain_command(const char *name, VkDevice dev) {
 
     if (!strcmp("vkCreateSharedSwapchainsKHR", name))
         return reinterpret_cast<PFN_vkVoidFunction>(CreateSharedSwapchainsKHR);
+
+    return nullptr;
+}
+
+static PFN_vkVoidFunction
+intercept_khr_surface_command(const char *name, VkInstance instance) {
+    static const struct {
+        const char *name;
+        PFN_vkVoidFunction proc;
+        bool instance_layer_data::*enable;
+    } khr_surface_commands[] = {
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+        {"vkCreateAndroidSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateAndroidSurfaceKHR),
+            &instance_layer_data::androidSurfaceExtensionEnabled},
+#endif // VK_USE_PLATFORM_ANDROID_KHR
+#ifdef VK_USE_PLATFORM_MIR_KHR
+        {"vkCreateMirSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateMirSurfaceKHR),
+            &instance_layer_data::mirSurfaceExtensionEnabled},
+#endif // VK_USE_PLATFORM_MIR_KHR
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+        {"vkCreateWaylandSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateWaylandSurfaceKHR),
+            &instance_layer_data::waylandSurfaceExtensionEnabled},
+#endif // VK_USE_PLATFORM_WAYLAND_KHR
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+        {"vkCreateWin32SurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateWin32SurfaceKHR),
+            &instance_layer_data::win32SurfaceExtensionEnabled},
+#endif // VK_USE_PLATFORM_WIN32_KHR
+#ifdef VK_USE_PLATFORM_XCB_KHR
+        {"vkCreateXcbSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateXcbSurfaceKHR),
+            &instance_layer_data::xcbSurfaceExtensionEnabled},
+#endif // VK_USE_PLATFORM_XCB_KHR
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+        {"vkCreateXlibSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateXlibSurfaceKHR),
+            &instance_layer_data::xlibSurfaceExtensionEnabled},
+#endif // VK_USE_PLATFORM_XLIB_KHR
+        {"vkDestroySurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(DestroySurfaceKHR),
+            &instance_layer_data::surfaceExtensionEnabled},
+    };
+
+    instance_layer_data *instance_data = nullptr;
+    if (instance) {
+        instance_data = get_my_data_ptr(get_dispatch_key(instance), instance_layer_data_map);
+    }
+
+    for (size_t i = 0; i < ARRAY_SIZE(khr_surface_commands); i++) {
+        if (!strcmp(khr_surface_commands[i].name, name)) {
+            if (instance_data && !(instance_data->*(khr_surface_commands[i].enable)))
+                return nullptr;
+            return khr_surface_commands[i].proc;
+        }
+    }
 
     return nullptr;
 }

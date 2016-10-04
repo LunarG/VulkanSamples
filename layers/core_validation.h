@@ -215,3 +215,11 @@ struct PHYSICAL_DEVICE_STATE {
     VkPhysicalDevice phys_device = VK_NULL_HANDLE;
     std::vector<VkQueueFamilyProperties> queue_family_properties;
 };
+
+struct SURFACE_STATE {
+    VkSurfaceKHR surface = VK_NULL_HANDLE;
+
+    SURFACE_STATE() {}
+    SURFACE_STATE(VkSurfaceKHR surface)
+        : surface(surface) {}
+};
