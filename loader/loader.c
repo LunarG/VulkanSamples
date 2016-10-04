@@ -3371,17 +3371,6 @@ static bool loader_check_layer_list_for_address(
     return false;
 }
 
-static bool
-loader_check_layers_for_address(const struct loader_instance *const inst,
-                                const char *funcName) {
-    if (loader_check_layer_list_for_address(&inst->instance_layer_list,
-                                            funcName)) {
-        return true;
-    }
-
-    return false;
-}
-
 static void loader_free_dev_ext_table(struct loader_instance *inst) {
     for (uint32_t i = 0; i < MAX_NUM_DEV_EXTS; i++) {
         loader_instance_heap_free(inst, inst->disp_hash[i].func_name);
@@ -3514,7 +3503,7 @@ void *loader_dev_ext_gpa(struct loader_instance *inst, const char *funcName) {
 
     // Check if funcName is supported in either ICDs or a layer library
     if (!loader_check_icds_for_address(inst, funcName) &&
-        !loader_check_layers_for_address(inst, funcName)) {
+        !loader_check_layer_list_for_address(&inst->instance_layer_list, funcName)) {
         // if support found in layers continue on
         return NULL;
     }
