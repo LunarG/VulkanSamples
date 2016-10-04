@@ -1981,7 +1981,7 @@ static bool validate_vi_against_vs_inputs(debug_report_data *report_data, VkPipe
             it_a++;
         } else if (!b_at_end && (a_at_end || b_first < a_first)) {
             if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/ 0,
-                        __LINE__, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC", "VS consumes input at location %d but not provided",
+                        __LINE__, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC", "Vertex shader consumes input at location %d but not provided",
                         b_first)) {
                 pass = false;
             }
@@ -1994,7 +1994,7 @@ static bool validate_vi_against_vs_inputs(debug_report_data *report_data, VkPipe
             if (attrib_type != FORMAT_TYPE_UNDEFINED && input_type != FORMAT_TYPE_UNDEFINED && attrib_type != input_type) {
                 if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                             __LINE__, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
-                            "Attribute type of `%s` at location %d does not match VS input type of `%s`",
+                            "Attribute type of `%s` at location %d does not match vertex shader input type of `%s`",
                             string_VkFormat(it_a->second->format), a_first,
                             describe_type(vs, it_b->second.type_id).c_str())) {
                     pass = false;

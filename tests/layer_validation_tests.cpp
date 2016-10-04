@@ -14661,9 +14661,9 @@ TEST_F(VkLayerTest, CreatePipelineAttribLocationMismatch) {
 }
 
 TEST_F(VkLayerTest, CreatePipelineAttribNotProvided) {
-    TEST_DESCRIPTION("Test that an error is produced for a VS input which is not "
+    TEST_DESCRIPTION("Test that an error is produced for a vertex shader input which is not "
                      "provided by a vertex attribute");
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "VS consumes input at location 0 but not provided");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Vertex shader consumes input at location 0 but not provided");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -14704,8 +14704,8 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotProvided) {
 TEST_F(VkLayerTest, CreatePipelineAttribTypeMismatch) {
     TEST_DESCRIPTION("Test that an error is produced for a mismatch between the "
                      "fundamental type (float/int/uint) of an attribute and the "
-                     "VS input that consumes it");
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "location 0 does not match VS input type");
+                     "vertex shader input that consumes it");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "location 0 does not match vertex shader input type");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -14906,8 +14906,8 @@ TEST_F(VkLayerTest, CreatePipelineAttribArrayType) {
 
 TEST_F(VkLayerTest, CreatePipelineAttribComponents) {
     TEST_DESCRIPTION("Test that pipeline validation accepts consuming a vertex attribute "
-                     "through multiple VS inputs, each consuming a different subset of the "
-                     "components.");
+                     "through multiple vertex shader inputs, each consuming a different "
+                     "subset of the components.");
     m_errorMonitor->ExpectSuccess();
 
     ASSERT_NO_FATAL_FAILURE(InitState());
