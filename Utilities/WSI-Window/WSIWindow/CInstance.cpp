@@ -67,24 +67,28 @@ const char* VkResultStr(VkResult err){
 //#endif
 }
 
+void ShowVkResult(VkResult err){
+    if(err>0) LOGW("%s ",VkResultStr(err)) else  //Print warning
+    if(err<0) LOGE("%s ",VkResultStr(err));      //Print error
+}
+
 //---------------------------------------------------------------
 
 //---------------------------Layers------------------------------
-
 CLayers::CLayers(){
     uint count=0;
-    vkEnumerateInstanceLayerProperties(&count, NULL);
-    items.resize(count);
-    vkEnumerateInstanceLayerProperties(&count, items.data());
+    VKERRCHECK(vkEnumerateInstanceLayerProperties(&count, NULL));
+    itemList.resize(count);
+    VKCOMPLETE(vkEnumerateInstanceLayerProperties(&count, itemList.data()));
 }
 //---------------------------------------------------------------
 
 //-------------------------Extensions----------------------------
 CExtensions::CExtensions(const char* layerName){
     uint count=0;
-    VKERRCHECK(vkEnumerateInstanceExtensionProperties(layerName, &count, NULL));          //Get list size
-    items.resize(count);                                                                  //allocate memory for list
-    VKCOMPLETE(vkEnumerateInstanceExtensionProperties(layerName, &count, items.data()));  //Fetch list, and check for errors
+    VKERRCHECK(vkEnumerateInstanceExtensionProperties(layerName, &count, NULL));             //Get list size
+    itemList.resize(count);                                                                     //allocate memory for list
+    VKCOMPLETE(vkEnumerateInstanceExtensionProperties(layerName, &count, itemList.data()));  //Fetch list, and check for errors
 }
 //---------------------------------------------------------------
 
@@ -135,7 +139,17 @@ void CExtensions::Print(){
 //--------------------------CInstance----------------------------
 CInstance::CInstance(const char* appName, const char* engineName){
     CLayers layers;
+#ifndef NDEBUG //In Debug mode, add standard validation layers
+    layers.Pick("VK_LAYER_GOOGLE_threading"           );
+    layers.Pick("VK_LAYER_LUNARG_parameter_validation");
+    layers.Pick("VK_LAYER_LUNARG_object_tracker"      );
+    layers.Pick("VK_LAYER_LUNARG_image"               );
+    layers.Pick("VK_LAYER_LUNARG_core_validation"     );
+    layers.Pick("VK_LAYER_LUNARG_swapchain"           );
+    layers.Pick("VK_LAYER_GOOGLE_unique_objects"      );
     layers.Print();
+#endif
+
 
     CExtensions ext;
     if(ext.Pick(VK_KHR_SURFACE_EXTENSION_NAME)){
@@ -160,18 +174,18 @@ CInstance::CInstance(const char* appName, const char* engineName){
     } else LOGE("Failed to load VK_KHR_Surface");
 #ifndef NDEBUG
     ext.Pick(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);         //in Debug mode, Enable Validation
+    ext.Print();
 #endif
 
-    ext.Print();
     assert(ext.PickCount()>=2);
-    Create(ext, appName, engineName);
+    Create(layers, ext, appName, engineName);
 }
 
-CInstance::CInstance(CExtensions& extensions, const char* appName, const char* engineName){
-    Create(extensions, appName, engineName);
+CInstance::CInstance(vector<char*>& layers, vector<char*>& extensions, const char* appName, const char* engineName){
+    Create(layers, extensions, appName, engineName);
 }
 
-void CInstance::Create(CExtensions& extensions, const char* appName, const char* engineName){
+void CInstance::Create(vector<char*>const& layers, vector<char*>const& extensions, const char* appName, const char* engineName){
     // initialize the VkApplicationInfo structure
     VkApplicationInfo app_info = {};
     app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -188,10 +202,10 @@ void CInstance::Create(CExtensions& extensions, const char* appName, const char*
     inst_info.pNext = NULL;
     inst_info.flags = 0;
     inst_info.pApplicationInfo = &app_info;
-    inst_info.enabledExtensionCount   = extensions.PickCount();
-    inst_info.ppEnabledExtensionNames = extensions.PickList();
-    inst_info.enabledLayerCount = 0;
-    inst_info.ppEnabledLayerNames = NULL;
+    inst_info.enabledExtensionCount   = extensions.size();
+    inst_info.ppEnabledExtensionNames = extensions.data();
+    inst_info.enabledLayerCount       = layers.size();  //0;
+    inst_info.ppEnabledLayerNames     = layers.data();  //NULL;
     VKERRCHECK(vkCreateInstance(&inst_info, NULL, &instance));
 
     printf("Vulkan Instance created\n");

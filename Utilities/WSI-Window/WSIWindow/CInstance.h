@@ -84,9 +84,9 @@
   #define  LOGE(...) {printf(cRED    "ERROR: "   __VA_ARGS__); printf(cCLEAR);}   /*   Prints Errors in red      */
 #endif
 #else    //Remove log messages in Release mode
-#define  LOGI(...)
-#define  LOGW(...)
-#define  LOGE(...)
+#define  LOGI(...) {}
+#define  LOGW(...) {}
+#define  LOGE(...) {}
 #endif
 
 
@@ -95,12 +95,14 @@
 #include <stdio.h>
 #include <assert.h>
 #include <vector>
+#include <string>
 #include <string.h>
 #include <vulkan/vulkan.h>
 using namespace std;
 
 typedef unsigned int uint;
 const char* VkResultStr(VkResult err);  //Convert vulkan result code to a string.
+void ShowVkResult(VkResult err);        //Print warnings and errors.
 
 //---------------------------Macros-------------------------------
 #define forCount(COUNT) for(uint i=0; i<COUNT; ++i)
@@ -109,39 +111,40 @@ const char* VkResultStr(VkResult err);  //Convert vulkan result code to a string
 //----Check VkResult for errors or warnings, and print string.----
 //    (VkResult is positive for warnings, negative for erors)
 
-#ifdef NDEBUG  //in release mode, dont print VkResult strings.
-  #define VKERRCHECK(VKRESULT) {VKRESULT;}
-#else
-  #define VKERRCHECK(VKRESULT) { VkResult VKVALUE=VKRESULT;              \
-                                 if(VKVALUE>0){                          \
-                                     LOGW("%s\n",VkResultStr(VKVALUE));  \
-                                 }else if(VKVALUE<0){                    \
-                                     LOGE("%s\n",VkResultStr(VKVALUE));  \
-                                     assert(false);                      \
-                                 };                                      \
-                               }
-#endif
+#ifdef NDEBUG  //In release mode, don't print VkResult strings.
+  #define VKERRCHECK(VKFN) { VKFN; }
+  #define VKCOMPLETE(VKFN) { while(VKFN==VK_INCOMPLETE){} }
+#else          //Show warnings and errors. assert on error.
+#define VKERRCHECK(VKFN) { VkResult VKRESULT=VKFN;                              \
+                             ShowVkResult(VKRESULT);                            \
+                             assert(VKRESULT>=0);                               \
+                             if(VKRESULT) printf("%s:%d\n",__FILE__,__LINE__);  \
+                         }
 //----------------------------------------------------------------
-
 //Repeatedly run vk function, until VkResult is not VK_INCOMPLETE
-#define VKCOMPLETE(VKRESULT) { VkResult VKVAL;                          \
-                               while((VKVAL=VKRESULT)==VK_INCOMPLETE){  \
-                                 LOGW("%s\n",VkResultStr(VKVAL));       \
-                               }                                        \
-                               VKERRCHECK(VKVAL);                       \
-                             }
+#define VKCOMPLETE(VKFN) { VkResult VKVAL;                      \
+                           while((VKVAL=VKFN)==VK_INCOMPLETE){  \
+                             LOGW("%s\n",VkResultStr(VKVAL));   \
+                           }                                    \
+                           VKERRCHECK(VKVAL);                   \
+                         }
 //----------------------------------------------------------------
+#endif
+
+
+
+
 
 //--------------------------PickList------------------------------
 template <class TYPE> class TPickList{
 protected:
-    vector<TYPE> items;
+    vector<TYPE>  itemList;
     vector<char*> pickList;
 public:
     virtual char* itemName(uint32_t inx)=0;
 
     int IndexOf(const char* name){
-        forCount(items.size())
+        forCount(itemList.size())
             if(!strcmp(name, itemName(i))) return i;
         return -1;
     }
@@ -155,9 +158,10 @@ public:
         return true;
     }
 
-    const char** PickList() {return (const char**)pickList.data();}
-    uint32_t     PickCount(){return (uint32_t)pickList.size();}
-    uint32_t     Count()    {return (uint32_t)items.size();}
+    const char** PickList()   {return (const char**)pickList.data();}
+    uint32_t     PickCount()  {return (uint32_t)    pickList.size();}
+    uint32_t     Count()      {return (uint32_t)    itemList.size();}
+    operator vector<char*>&() {return pickList;}
 
     void Print(const char* listName){
       printf("%s picked: %d of %d\n",listName,PickCount(),Count());
@@ -173,14 +177,14 @@ public:
 
 struct CLayers: public TPickList<VkLayerProperties>{
   CLayers();
-  char* itemName(uint32_t inx){return items[inx].layerName;}
+  char* itemName(uint32_t inx){return itemList[inx].layerName;}
   void Print(){TPickList::Print("Layers");}
 };
 
 
 struct CExtensions : public TPickList<VkExtensionProperties>{
     CExtensions(const char* layerName=NULL);
-    char* itemName(uint32_t inx){return items[inx].extensionName;}
+    char* itemName(uint32_t inx){return itemList[inx].extensionName;}
     void Print(){TPickList::Print("Extensions");}
 };
 
@@ -208,11 +212,11 @@ public:
 
 class CInstance{
     VkInstance instance;
-    void Create(CExtensions& extensions, const char* appName, const char* engineName);
+    void Create(vector<char*>const& layers,vector<char*>const& extensions, const char* appName, const char* engineName);
 public:
-    CInstance(CExtensions& extensions, const char* appName, const char* engineName="LunarG");
+    //CInstance(CLayers&       layers, CExtensions&   extensions, const char* appName, const char* engineName="LunarG");
+    CInstance(vector<char*>& layers, vector<char*>& extensions, const char* appName, const char* engineName="LunarG");
     CInstance(const char* appName="VulkanApp", const char* engineName="LunarG");
-    //CInstance();
     ~CInstance();
     void Print();
     //CExtensions Extensions;  //list of global extensions
