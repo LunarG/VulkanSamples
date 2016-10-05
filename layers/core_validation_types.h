@@ -241,9 +241,10 @@ struct DEVICE_MEM_INFO : public BASE_NODE {
 class SWAPCHAIN_NODE {
   public:
     safe_VkSwapchainCreateInfoKHR createInfo;
+    VkSwapchainKHR swapchain;
     std::vector<VkImage> images;
-    SWAPCHAIN_NODE(const VkSwapchainCreateInfoKHR *pCreateInfo)
-        : createInfo(pCreateInfo) {}
+    SWAPCHAIN_NODE(const VkSwapchainCreateInfoKHR *pCreateInfo, VkSwapchainKHR swapchain)
+        : createInfo(pCreateInfo), swapchain(swapchain) {}
 };
 
 enum DRAW_TYPE {
