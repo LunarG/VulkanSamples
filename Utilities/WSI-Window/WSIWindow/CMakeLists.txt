@@ -45,6 +45,12 @@ if(WIN32)
     #set(VULKAN_SDK $ENV{VULKAN_SDK} CACHE PATH "Path to the Vulkan SDK.")
     #target_link_libraries(${LIBRARY_NAME} "${VULKAN_SDK}/bin/vulkan-1.lib")
     #target_include_directories(${LIBRARY_NAME} PUBLIC "${VULKAN_SDK}/include")
+    
+    if(NOT ${CMAKE_SYSTEM_VERSION} VERSION_LESS 10)
+        message("Enabling ANSI for Windows 10+")
+        add_definitions(-DWIN10PLUS)
+    endif()
+
 endif()
 #=================================================================
 #=============================ANDROID=============================
