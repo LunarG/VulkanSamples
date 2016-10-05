@@ -129,8 +129,8 @@ void CExtensions::Print(){
       char* name=item.extensionName;
       bool picked=false;
       for(auto& pick:pickList) if(pick==name) picked=true;
-      //printf("\t%s %s\n" cCLEAR,picked?"✓":cFAINT"x",name);
-      printf("\t%s %s\n" cCLEAR, picked ? "\u2713" : cFAINT"x", name);
+      //printf("\t%s %s\n" cRESET,picked?"✓":cFAINT"x",name);
+      printf("\t%s %s\n" cRESET, picked ? "\u2713" : cFAINT"x", name);
 
   }
 }
@@ -202,10 +202,10 @@ void CInstance::Create(vector<char*>const& layers, vector<char*>const& extension
     inst_info.pNext = NULL;
     inst_info.flags = 0;
     inst_info.pApplicationInfo = &app_info;
-    inst_info.enabledExtensionCount   = extensions.size();
-    inst_info.ppEnabledExtensionNames = extensions.data();
-    inst_info.enabledLayerCount       = layers.size();  //0;
-    inst_info.ppEnabledLayerNames     = layers.data();  //NULL;
+    inst_info.enabledExtensionCount   = (uint32_t)extensions.size();
+    inst_info.ppEnabledExtensionNames =           extensions.data();
+    inst_info.enabledLayerCount       = (uint32_t)layers.size();
+    inst_info.ppEnabledLayerNames     =           layers.data();
     VKERRCHECK(vkCreateInstance(&inst_info, NULL, &instance));
 
     printf("Vulkan Instance created\n");

@@ -1,4 +1,4 @@
-/*
+﻿/*
 *--------------------------------------------------------------------------
 * Copyright (c) 2015-2016 The Khronos Group Inc.
 * Copyright (c) 2015-2016 Valve Corporation
@@ -40,12 +40,14 @@
     #endif
       //#define ANSICODE(x)   /* Disble ANSI codes */
       #define ANSICODE(x) x /* Enable ANSI codes */
+      #define cTICK "y"
 #elif __ANDROID__
     #ifndef VK_USE_PLATFORM_ANDROID_KHR
     #define VK_USE_PLATFORM_ANDROID_KHR
     #endif
     #include <native.h>
     #define ANSICODE(x)
+    #define cTICK "y"
 #elif __LINUX__
 //    #if !defined(VK_USE_PLATFORM_XCB_KHR)  && \
 //        !defined(VK_USE_PLATFORM_XLIB_KHR) && \
@@ -55,18 +57,20 @@
 //    #endif
     #include <xkbcommon/xkbcommon.h>
     #define ANSICODE(x) x
+    #define cTICK "\u2713"
 #endif
 
 //----------------------------------------------------------------------------------
 
-//--ANSI escape codes to set terminal text colour-- eg. printf(cRED"Red text." cCLEAR);
-#define cFAINT     ANSICODE("\033[02m")
+//--ANSI escape codes to set terminal text colour-- eg. printf(cRED"Red text." cRESET);
+#define cFAINT     ANSICODE("\033[38;2;128;128;128m")
+#define cBRIGHT    ANSICODE("\033[01m")
 #define cSTRIKEOUT ANSICODE("\033[09m")
 #define cRED       ANSICODE("\033[31m")
 #define cGREEN     ANSICODE("\033[32m")
 #define cYELLOW    ANSICODE("\033[33m")
 #define cBLUE      ANSICODE("\033[34m")
-#define cCLEAR     ANSICODE("\033[00m")
+#define cRESET     ANSICODE("\033[00m")
 //----------------------------------------------------------------------------------
 
 #ifndef NDEBUG
@@ -80,8 +84,8 @@
   #define printf(...)  __android_log_print(ANDROID_LOG_INFO ,LOG_TAG,__VA_ARGS__) /*   printf output as log info */
 #else                                                                             // Linux and Windows 10+: ( Older Windows print in white only.)
   #define  LOGI(...) {printf(__VA_ARGS__);}                                       /*   Prints Info in white      */
-  #define  LOGW(...) {printf(cYELLOW "WARNING: " __VA_ARGS__); printf(cCLEAR);}   /*   Prints Warnings in yellow */
-  #define  LOGE(...) {printf(cRED    "ERROR: "   __VA_ARGS__); printf(cCLEAR);}   /*   Prints Errors in red      */
+  #define  LOGW(...) {printf(cYELLOW "WARNING: " __VA_ARGS__); printf(cRESET);}   /*   Prints Warnings in yellow */
+  #define  LOGE(...) {printf(cRED    "ERROR: "   __VA_ARGS__); printf(cRESET);}   /*   Prints Errors in red      */
 #endif
 #else    //Remove log messages in Release mode
 #define  LOGI(...) {}
@@ -131,10 +135,6 @@ void ShowVkResult(VkResult err);        //Print warnings and errors.
 //----------------------------------------------------------------
 #endif
 
-
-
-
-
 //--------------------------PickList------------------------------
 template <class TYPE> class TPickList{
 protected:
@@ -169,7 +169,7 @@ public:
           bool picked=false;
           char* name=itemName(i);
           for(auto& pick : pickList) if(pick==name) picked=true;
-          printf("\t%s %s\n" cCLEAR, picked ? "\u2713" : cFAINT"x", name);
+          printf("\t%s %s\n" cRESET, picked ? cTICK : cFAINT"x", name);
       }
     }
 };
