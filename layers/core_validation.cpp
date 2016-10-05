@@ -10872,7 +10872,7 @@ static bool ValidateAndCopyNoncoherentMemoryToDriver(layer_data *dev_data, uint3
             if (mem_info->shadow_copy) {
                 VkDeviceSize size = (mem_info->mem_range.size != VK_WHOLE_SIZE)
                                         ? mem_info->mem_range.size
-                                        : (mem_info->alloc_info.allocationSize - pMemRanges[i].offset);
+                                        : (mem_info->alloc_info.allocationSize - mem_info->mem_range.offset);
                 char *data = static_cast<char *>(mem_info->shadow_copy);
                 for (uint64_t j = 0; j < mem_info->shadow_pad_size; ++j) {
                     if (data[j] != NoncoherentMemoryFillValue) {
