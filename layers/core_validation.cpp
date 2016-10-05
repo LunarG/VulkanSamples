@@ -61,6 +61,7 @@
 #include "vk_layer_extension_utils.h"
 #include "vk_layer_utils.h"
 #include "spirv-tools/libspirv.h"
+#include "vk_validation_error_messages.h"
 
 #if defined __ANDROID__
 #include <android/log.h>
@@ -10304,15 +10305,15 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
             if (clear_op_size > pRenderPassBegin->clearValueCount) {
                 skip_call |=
                     log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
-                            reinterpret_cast<uint64_t &>(renderPass), __LINE__, DRAWSTATE_RENDERPASS_INCOMPATIBLE, "DS",
+                            reinterpret_cast<uint64_t &>(renderPass), __LINE__, VALIDATION_ERROR_00442, "DS",
                             "In vkCmdBeginRenderPass() the VkRenderPassBeginInfo struct has a clearValueCount of %u but there must "
                             "be at least %u "
                             "entries in pClearValues array to account for the highest index attachment in renderPass 0x%" PRIx64
                             " that uses VK_ATTACHMENT_LOAD_OP_CLEAR is %u. Note that the pClearValues array "
                             "is indexed by attachment number so even if some pClearValues entries between 0 and %u correspond to "
-                            "attachments that aren't cleared they will be ignored.",
+                            "attachments that aren't cleared they will be ignored. %s",
                             pRenderPassBegin->clearValueCount, clear_op_size, reinterpret_cast<uint64_t &>(renderPass),
-                            clear_op_size, clear_op_size - 1);
+                            clear_op_size, clear_op_size - 1, validation_error_map[VALIDATION_ERROR_00442]);
             }
             skip_call |= VerifyRenderAreaBounds(dev_data, pRenderPassBegin);
             skip_call |= VerifyFramebufferAndRenderPassLayouts(dev_data, cb_node, pRenderPassBegin);
