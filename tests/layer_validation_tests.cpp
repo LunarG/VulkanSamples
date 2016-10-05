@@ -2092,6 +2092,23 @@ TEST_F(VkLayerTest, NonCoherentMemoryMapping) {
     m_errorMonitor->VerifyNotFound();
     vkUnmapMemory(m_device->device(), mem);
 
+    // Map without offset and flush WHOLE_SIZE with two separate offsets
+    m_errorMonitor->ExpectSuccess();
+    err = vkMapMemory(m_device->device(), mem, 0, VK_WHOLE_SIZE, 0, (void **)&pData);
+    ASSERT_VK_SUCCESS(err);
+    mmr.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+    mmr.memory = mem;
+    mmr.offset = allocation_size - 100;
+    mmr.size = VK_WHOLE_SIZE;
+    err = vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
+    ASSERT_VK_SUCCESS(err);
+    mmr.offset = allocation_size - 200;
+    mmr.size = VK_WHOLE_SIZE;
+    err = vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
+    ASSERT_VK_SUCCESS(err);
+    m_errorMonitor->VerifyNotFound();
+    vkUnmapMemory(m_device->device(), mem);
+
     vkFreeMemory(m_device->device(), mem, NULL);
 }
 
