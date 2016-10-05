@@ -4449,30 +4449,31 @@ terminator_EnumeratePhysicalDevices(VkInstance instance,
             inst->phys_devs_term = NULL;
         }
 
-        if (copy_count > 0) {
+        if (inst->total_gpu_count > 0) {
             inst->phys_devs_term = loader_instance_heap_alloc(
-                inst, sizeof(struct loader_physical_device) * copy_count,
+                inst, sizeof(struct loader_physical_device) * inst->total_gpu_count,
                 VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
             if (!inst->phys_devs_term) {
                 return VK_ERROR_OUT_OF_HOST_MEMORY;
             }
         }
 
-        for (i = 0; idx < copy_count && i < inst->total_icd_count; i++) {
-            for (j = 0; j < phys_devs[i].count && idx < copy_count; j++) {
+        for (i = 0; idx < inst->total_gpu_count && i < inst->total_icd_count; i++) {
+            for (j = 0; j < phys_devs[i].count && idx < inst->total_gpu_count; j++) {
                 loader_set_dispatch((void *)&inst->phys_devs_term[idx],
                                     inst->disp);
                 inst->phys_devs_term[idx].this_icd = phys_devs[i].this_icd;
                 inst->phys_devs_term[idx].icd_index = i;
                 inst->phys_devs_term[idx].phys_dev = phys_devs[i].phys_devs[j];
-                pPhysicalDevices[idx] =
-                    (VkPhysicalDevice)&inst->phys_devs_term[idx];
+                if (idx < copy_count) {
+                    pPhysicalDevices[idx] =
+                        (VkPhysicalDevice)&inst->phys_devs_term[idx];
+                }
                 idx++;
             }
         }
 
         if (copy_count < inst->total_gpu_count) {
-            inst->total_gpu_count = copy_count;
             res = VK_INCOMPLETE;
         }
     }
