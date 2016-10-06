@@ -47,6 +47,7 @@
 
 #pragma once
 #include "core_validation_error_enums.h"
+#include "vk_validation_error_messages.h"
 #include "core_validation_types.h"
 #include "descriptor_sets.h"
 #include "vk_layer_logging.h"

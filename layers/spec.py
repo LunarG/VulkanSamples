@@ -156,12 +156,13 @@ class Specification:
         file_contents = []
         file_contents.append(self.copyright)
         file_contents.append('\n#pragma once')
+        file_contents.append('#include <unordered_map>')
         file_contents.append('\n// enum values for unique validation error codes')
         file_contents.append('//  Corresponding validation error message for each enum is given in the mapping table below')
         file_contents.append('//  When a given error occurs, these enum values should be passed to the as the messageCode')
         file_contents.append('//  parameter to the PFN_vkDebugReportCallbackEXT function')
         enum_decl = ['enum UNIQUE_VALIDATION_ERROR_CODE {']
-        error_string_map = ['std::unordered_map<int, char const *const> validation_error_map{']
+        error_string_map = ['static std::unordered_map<int, char const *const> validation_error_map{']
         for enum in sorted(self.val_error_dict):
             #print "Header enum is %s" % (enum)
             enum_decl.append('    %s = %d,' % (enum, int(enum.split('_')[-1])))

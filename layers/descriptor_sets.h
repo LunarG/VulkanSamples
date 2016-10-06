@@ -42,6 +42,7 @@
 #endif
 
 #include "core_validation_error_enums.h"
+#include "vk_validation_error_messages.h"
 #include "core_validation_types.h"
 #include "vk_layer_logging.h"
 #include "vk_layer_utils.h"

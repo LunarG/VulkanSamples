@@ -21,6 +21,7 @@
  */
 
 #pragma once
+#include <unordered_map>
 
 // enum values for unique validation error codes
 //  Corresponding validation error message for each enum is given in the mapping table below
@@ -1726,7 +1727,7 @@ enum UNIQUE_VALIDATION_ERROR_CODE {
 // Mapping from unique validation error enum to the corresponding error message
 // The error message should be appended to the end of a custom error message that is passed
 // as the pMessage parameter to the PFN_vkDebugReportCallbackEXT function
-std::unordered_map<int, char const *const> validation_error_map{
+static std::unordered_map<int, char const *const> validation_error_map{
     {VALIDATION_ERROR_00000, "For more information refer to Vulkan Spec Section '3.1. Command Function Pointers' which states 'If instance is not NULL, instance must be a valid VkInstance handle' (https://www.khronos.org/registry/vulkan/specs/1.0/xhtml/vkspec.html#id-1.5.3.8)"},
     {VALIDATION_ERROR_00001, "For more information refer to Vulkan Spec Section '3.1. Command Function Pointers' which states 'pName must be a null-terminated string' (https://www.khronos.org/registry/vulkan/specs/1.0/xhtml/vkspec.html#id-1.5.3.8)"},
     {VALIDATION_ERROR_00002, "For more information refer to Vulkan Spec Section '3.1. Command Function Pointers' which states 'device must be a valid VkDevice handle' (https://www.khronos.org/registry/vulkan/specs/1.0/xhtml/vkspec.html#id-1.5.3.15)"},
