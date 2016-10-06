@@ -25,19 +25,46 @@
 #ifdef VK_USE_PLATFORM_XCB_KHR
 
 #include "WindowImpl.h"
-#include <xcb/xcb.h>              //  window
+//#include <xcb/xcb.h>              //  window
 #include <xkbcommon/xkbcommon.h>  //  keyboard
 #include <string.h>               //  for strlen
 
 //-----------------------------------------------
 
 #include <X11/Xlib-xcb.h>
-#include <X11/Xlib.h>
+//#include <X11/Xlib.h>
 #include <X11/extensions/XInput2.h>
 
 //-----------------------------------------------
 
+typedef uint16_t xcb_input_device_id_t;
+typedef uint32_t xcb_input_fp1616_t;
 
+typedef struct xcb_input_touch_begin_event_t {
+    uint8_t                   response_type;
+    uint8_t                   extension;
+    uint16_t                  sequence;
+    uint32_t                  length;
+    uint16_t                  event_type;
+    xcb_input_device_id_t     deviceid;
+    xcb_timestamp_t           time;
+    uint32_t                  detail;
+    xcb_window_t              root;
+    xcb_window_t              event;
+    xcb_window_t              child;
+    uint32_t                  full_sequence;
+    xcb_input_fp1616_t        root_x;
+    xcb_input_fp1616_t        root_y;
+    xcb_input_fp1616_t        event_x;
+    xcb_input_fp1616_t        event_y;
+    uint16_t                  buttons_len;
+    uint16_t                  valuators_len;
+    xcb_input_device_id_t     sourceid;
+    uint8_t                   pad0[2];
+    uint32_t                  flags;
+    //xcb_input_modifier_info_t mods;
+    //xcb_input_group_info_t    group;
+} xcb_input_touch_begin_event_t;
 
 #if defined(NDEBUG) && defined(__GNUC__)
  #define U_ASSERT_ONLY __attribute__((unused))
@@ -70,20 +97,24 @@ const unsigned char EVDEV_TO_HID[256] = {
 
 //=============================XCB==============================
 class Window_xcb : public WindowImpl{
-    xcb_connection_t *xcb_connection;
+    Display          *dpy;             //for XLib
+    xcb_connection_t *xcb_connection;  //for XCB
     xcb_screen_t     *xcb_screen;
     xcb_window_t      xcb_window;
-    //--
     xcb_intern_atom_reply_t *atom_wm_delete_window;
-    //--
     //---xkb Keyboard---
     xkb_context* k_ctx;     //context for xkbcommon keyboard input
     xkb_keymap*  k_keymap;
     xkb_state*   k_state;
     //------------------
+    //---Touch Device---
+    int xi_opcode; //131
+    int xi_devid;  //2
+    //------------------
 
     void SetTitle(const char* title);
     void CreateSurface(VkInstance instance);
+    bool InitTouch();  //Returns false if no touch-device was found.
 public:
     Window_xcb(CInstance& inst, const char* title, uint width, uint height);
     virtual ~Window_xcb();
@@ -112,27 +143,41 @@ Window_xcb::Window_xcb(CInstance& inst, const char* title, uint width, uint heig
     //-------------------
 */
     //----XLib-XCB----
-    Display *dpy = XOpenDisplay(NULL);        assert(dpy && "Failed to open Display");
-    xcb_connection = XGetXCBConnection(dpy);  assert(dpy && "Failed to open XCB connection");
+    dpy = XOpenDisplay(NULL);                 assert(dpy && "Failed to open Display");        //for XLIB functions
+    xcb_connection = XGetXCBConnection(dpy);  assert(dpy && "Failed to open XCB connection");  //for XCB functions
     const xcb_setup_t*   setup = xcb_get_setup(xcb_connection);
     setup  = xcb_get_setup (xcb_connection);
     xcb_screen = (xcb_setup_roots_iterator (setup)).data;
+    XSetEventQueueOwner(dpy,XCBOwnsEventQueue);
     //----------------
 
-
-// check the version of XInput
 /*
-{
-    int rc;
-    int major = 2;
-    int minor = 3;
-    rc = XIQueryVersion(dpy, &major, &minor);
-    if (rc != Success){
-        printf("No XI2 support. (%d.%d only)\n", major, minor);
-        exit(1);
+    {
+        // check XInput extension
+        int xi_opcode;
+        int ev;
+        int err;
+        if (!XQueryExtension(dpy, "XInputExtension", &xi_opcode, &ev, &err)) {
+            printf("X Input extension not available.\n");
+            //return 1;
+        }
+        printf("xi_opcode=%d",xi_opcode);
+
+        // check the version of XInput
+        int major = 2;
+        int minor = 3;
+        if(XIQueryVersion(dpy, &major, &minor)!=Success){
+            printf("No XI2 support. (%d.%d only)\n", major, minor);
+            exit(1);
+        }
     }
-}
 */
+
+
+
+
+
+
 
 
     //--
@@ -170,6 +215,59 @@ Window_xcb::Window_xcb(CInstance& inst, const char* title, uint width, uint heig
                         (*reply).atom, 4, 32, 1, &(*atom_wm_delete_window).atom);
     //--
     free(reply);
+
+
+
+
+    //-----------------------
+    InitTouch();
+ /*
+    // select device
+        int devid;
+    {
+        XIDeviceInfo* di;
+        XIDeviceInfo* dev;
+        XITouchClassInfo* tcinfo;
+        int cnt;
+        int i, j;
+
+        di = XIQueryDevice(dpy, XIAllDevices, &cnt);
+        for (i = 0; i < cnt; i ++){
+            dev = &di[i];
+            for (j = 0; j < dev->num_classes; j ++){
+                tcinfo = (XITouchClassInfo*)(dev->classes[j]);
+                if (tcinfo->type != XITouchClass){
+                    devid = dev->deviceid;
+                    printf("--->devid=%d\n",devid);
+                    goto STOP_SEARCH_DEVICE;
+                }
+            }
+        }
+STOP_SEARCH_DEVICE:
+        XIFreeDeviceInfo(di);
+    }
+
+    // select events to listen
+    {
+        XIEventMask mask = {
+            .deviceid = devid, //XIAllDevices,
+            .mask_len = XIMaskLen(XI_TouchEnd)
+        };
+        mask.mask = (unsigned char*)calloc(3, sizeof(char));
+        XISetMask(mask.mask, XI_TouchBegin);
+        XISetMask(mask.mask, XI_TouchUpdate);
+        XISetMask(mask.mask, XI_TouchEnd);
+
+        //XISelectEvents(dpy, win, &mask, 1);
+        XISelectEvents(dpy, xcb_window, &mask, 1);
+
+        free(mask.mask);
+    }
+*/
+
+    //-----------------------
+
+
 
     //---Keyboard input---
     k_ctx = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
@@ -214,6 +312,65 @@ void Window_xcb::CreateSurface(VkInstance instance){
     //assert(!err);
     printf("Vulkan Surface created\n"); fflush(stdout);
 }
+//---------------------------------------------------------------------------
+bool Window_xcb::InitTouch(){
+   // check XInput extension
+    int ev, err;
+    if (!XQueryExtension(dpy, "XInputExtension", &xi_opcode, &ev, &err)) {
+        printf("X Input extension not available.\n");
+        return false;
+    }
+
+    // check the version of XInput
+    int major = 2;
+    int minor = 3;
+    if(XIQueryVersion(dpy, &major, &minor)!=Success){
+        printf("No XI2 support. (%d.%d only)\n", major, minor);
+        return false;
+    }
+
+    /* select device */
+        //int devid;
+    {
+        XIDeviceInfo* di;
+        XIDeviceInfo* dev;
+        XITouchClassInfo* tcinfo;
+
+        int cnt;
+        int i, j;
+        di = XIQueryDevice(dpy, XIAllDevices, &cnt);
+        for (i = 0; i < cnt; i ++){
+            dev = &di[i];
+            for (j = 0; j < dev->num_classes; j ++){
+                tcinfo = (XITouchClassInfo*)(dev->classes[j]);
+                if (tcinfo->type != XITouchClass){
+                    xi_devid = dev->deviceid;
+                    printf("--->devid=%d\n",xi_devid);
+                    goto STOP_SEARCH_DEVICE;
+                }
+            }
+        }
+STOP_SEARCH_DEVICE:
+        XIFreeDeviceInfo(di);
+    }
+
+    /* select events to listen */
+    {
+        XIEventMask mask = {
+            .deviceid = xi_devid,
+            .mask_len = XIMaskLen(XI_TouchEnd)
+        };
+        unsigned char buf[3]={};
+        mask.mask=buf;
+        XISetMask(mask.mask, XI_TouchBegin);
+        XISetMask(mask.mask, XI_TouchUpdate);
+        XISetMask(mask.mask, XI_TouchEnd);
+        XISelectEvents(dpy, xcb_window, &mask, 1);
+    }
+    return true;
+
+}
+//---------------------------------------------------------------------------
 
 EventType Window_xcb::GetEvent(){
     EventType event={};
@@ -265,8 +422,50 @@ EventType Window_xcb::GetEvent(){
             case XCB_FOCUS_IN  : if(!has_focus) event=FocusEvent(true);   break;     //window gained focus
             case XCB_FOCUS_OUT : if( has_focus) event=FocusEvent(false);  break;     //window lost focus
 
+
+            case XCB_GE_GENERIC : {
+                xcb_ge_generic_event_t& ge =*(xcb_ge_generic_event_t*)x_event;
+                //XGenericEventCookie *cookie = &ev;
+                printf("Touch Event:");
+                switch(ge.event_type){
+                    case XI_TouchBegin : printf("TouchBegin  ");  break;
+                    case XI_TouchUpdate: printf("TouchUpdate ");  break;
+                    case XI_TouchEnd   : printf("TouchEnd    ");  break;
+                }
+
+                //xcb_generic_event_t& ge1 =*(xcb_generic_event_t*)x_event;
+                xcb_input_touch_begin_event_t& te= *(xcb_input_touch_begin_event_t*)x_event;
+                printf("(%f %f : %f %f) ",  te.event_x/65536.f, te.event_y/65536.f, te.root_x/65536.f, te.root_y/65536.f);
+                printf("detail=%d deviceid=%d event=%d eventtype=%d extension=%d flags=%d, sourceid=%d buttons_len=%d",
+                          te.detail,
+                          te.deviceid,
+                          te.event,
+                          te.event_type,
+                          te.extension,
+                          te.flags,
+                          te.sourceid,
+                          te.buttons_len
+
+                );
+
+
+/*
+                printf("et=%d ext=%d fs=%d len=%d rt=%d seq=%d\n",
+                ge.event_type,
+                ge.extension,
+                ge.full_sequence,
+                ge.length,
+                ge.response_type,
+                ge.sequence
+                );
+*/
+                break;
+            }
+
+
+
             default:
-                //printf("EVENT: %d",(x_event->response_type & ~0x80));  //get event numerical value
+                //printf("EVENT: %d\n",(x_event->response_type & ~0x80));  //get event numerical value
                 break;
         }
         free (x_event);
