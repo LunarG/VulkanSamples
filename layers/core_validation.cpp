@@ -5804,9 +5804,9 @@ static bool PreCallValidateDestroyBufferView(layer_data *dev_data, VkBufferView 
 
 static void PostCallRecordDestroyBufferView(layer_data *dev_data, VkBufferView buffer_view, BUFFER_VIEW_STATE *buffer_view_state,
                                             VK_OBJECT obj_struct) {
-    dev_data->bufferViewMap.erase(buffer_view);
     // Any bound cmd buffers are now invalid
     invalidateCommandBuffers(buffer_view_state->cb_bindings, obj_struct);
+    dev_data->bufferViewMap.erase(buffer_view);
 }
 
 VKAPI_ATTR void VKAPI_CALL
