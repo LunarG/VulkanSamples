@@ -2464,6 +2464,8 @@ TEST_F(VkWsiEnabledLayerTest, TestEnabledWsi) {
     swapchain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     swapchain_create_info.pNext = NULL;
     swapchain_create_info.flags = 0;
+    swapchain_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    swapchain_create_info.surface = surface;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "called before calling vkGetPhysicalDeviceSurfaceCapabilitiesKHR().");
     err = vkCreateSwapchainKHR(m_device->device(), &swapchain_create_info, NULL, &swapchain);
