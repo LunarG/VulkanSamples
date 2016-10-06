@@ -11130,16 +11130,20 @@ TEST_F(VkLayerTest, ExecuteCommandsPrimaryCB) {
     TEST_DESCRIPTION("Attempt vkCmdExecuteCommands w/ a primary cmd buffer"
                      " (should only be secondary)");
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "vkCmdExecuteCommands() called w/ Primary Cmd Buffer ");
-
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
-    BeginCommandBuffer();
+    // An empty primary command buffer
+    VkCommandBufferObj cb(m_device, m_commandPool);
+    cb.BeginCommandBuffer();
+    cb.EndCommandBuffer();
 
-    VkCommandBuffer primCB = m_commandBuffer->GetBufferHandle();
-    vkCmdExecuteCommands(m_commandBuffer->GetBufferHandle(), 1, &primCB);
+    m_commandBuffer->BeginCommandBuffer();
+    vkCmdBeginRenderPass(m_commandBuffer->handle(), &renderPassBeginInfo(), VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+    VkCommandBuffer handle = cb.handle();
 
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "vkCmdExecuteCommands() called w/ Primary Cmd Buffer ");
+    vkCmdExecuteCommands(m_commandBuffer->handle(), 1, &handle);
     m_errorMonitor->VerifyFound();
 }
 
