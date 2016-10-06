@@ -218,6 +218,8 @@ struct PHYSICAL_DEVICE_STATE {
 
 struct SURFACE_STATE {
     VkSurfaceKHR surface = VK_NULL_HANDLE;
+    SWAPCHAIN_NODE *swapchain = nullptr;
+    SWAPCHAIN_NODE *old_swapchain = nullptr;
 
     SURFACE_STATE() {}
     SURFACE_STATE(VkSurfaceKHR surface)

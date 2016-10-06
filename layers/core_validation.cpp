@@ -11160,12 +11160,22 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device, const VkSwapc
                                                   const VkAllocationCallbacks *pAllocator,
                                                   VkSwapchainKHR *pSwapchain) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    auto surface_state = getSurfaceState(dev_data->instance_data, pCreateInfo->surface);
+    auto old_swapchain_state = getSwapchainNode(dev_data, pCreateInfo->oldSwapchain);
+
     VkResult result = dev_data->dispatch_table.CreateSwapchainKHR(device, pCreateInfo, pAllocator, pSwapchain);
 
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
-        dev_data->device_extensions.swapchainMap[*pSwapchain] = unique_ptr<SWAPCHAIN_NODE>(new SWAPCHAIN_NODE(pCreateInfo, *pSwapchain));
+        auto swapchain_state = unique_ptr<SWAPCHAIN_NODE>(new SWAPCHAIN_NODE(pCreateInfo, *pSwapchain));
+        surface_state->swapchain = swapchain_state.get();
+        dev_data->device_extensions.swapchainMap[*pSwapchain] = std::move(swapchain_state);
+    } else {
+        surface_state->swapchain = nullptr;
     }
+
+    // Spec requires that even if CreateSwapchainKHR fails, oldSwapchain behaves as replaced.
+    surface_state->old_swapchain = old_swapchain_state;
 
     return result;
 }
@@ -11195,6 +11205,15 @@ DestroySwapchainKHR(VkDevice device, VkSwapchainKHR swapchain, const VkAllocatio
                 dev_data->imageMap.erase(swapchain_image);
             }
         }
+
+        auto surface_state = getSurfaceState(dev_data->instance_data, swapchain_data->createInfo.surface);
+        if (surface_state) {
+            if (surface_state->swapchain == swapchain_data)
+                surface_state->swapchain = nullptr;
+            if (surface_state->old_swapchain == swapchain_data)
+                surface_state->old_swapchain = nullptr;
+        }
+
         dev_data->device_extensions.swapchainMap.erase(swapchain);
     }
     lock.unlock();
