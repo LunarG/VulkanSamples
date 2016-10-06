@@ -2361,6 +2361,17 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateBuffer(VkDevice device, const VkBufferCreat
     assert(device_data != nullptr);
     debug_report_data *report_data = device_data->report_data;
 
+    // TODO: Add check for VALIDATION_ERROR_00660
+    // TODO: Add check for VALIDATION_ERROR_00661
+    // TODO: Add check for VALIDATION_ERROR_00662
+    // TODO: Add check for VALIDATION_ERROR_00670
+    // TODO: Add check for VALIDATION_ERROR_00671
+    // TODO: Add check for VALIDATION_ERROR_00672
+    // TODO: Add check for VALIDATION_ERROR_00673
+    // TODO: Add check for VALIDATION_ERROR_00674
+    // TODO: Add check for VALIDATION_ERROR_00675
+    // TODO: Note that the above errors need to be generated from the next function, which is codegened.
+    // TODO: Add check for VALIDATION_ERROR_00663
     skip_call |= parameter_validation_vkCreateBuffer(report_data, pCreateInfo, pAllocator, pBuffer);
 
     if (pCreateInfo != nullptr) {
@@ -2368,20 +2379,22 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateBuffer(VkDevice device, const VkBufferCreat
         if (pCreateInfo->sharingMode == VK_SHARING_MODE_CONCURRENT) {
             // If sharingMode is VK_SHARING_MODE_CONCURRENT, queueFamilyIndexCount must be greater than 1
             if (pCreateInfo->queueFamilyIndexCount <= 1) {
-                skip_call |=
-                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                            INVALID_USAGE, LayerName, "vkCreateBuffer: if pCreateInfo->sharingMode is VK_SHARING_MODE_CONCURRENT, "
-                                                      "pCreateInfo->queueFamilyIndexCount must be greater than 1");
+                skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                     __LINE__, VALIDATION_ERROR_00665, LayerName,
+                                     "vkCreateBuffer: if pCreateInfo->sharingMode is VK_SHARING_MODE_CONCURRENT, "
+                                     "pCreateInfo->queueFamilyIndexCount must be greater than 1. %s",
+                                     validation_error_map[VALIDATION_ERROR_00665]);
             }
 
             // If sharingMode is VK_SHARING_MODE_CONCURRENT, pQueueFamilyIndices must be a pointer to an array of
             // queueFamilyIndexCount uint32_t values
             if (pCreateInfo->pQueueFamilyIndices == nullptr) {
                 skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                     __LINE__, REQUIRED_PARAMETER, LayerName,
+                                     __LINE__, VALIDATION_ERROR_00664, LayerName,
                                      "vkCreateBuffer: if pCreateInfo->sharingMode is VK_SHARING_MODE_CONCURRENT, "
                                      "pCreateInfo->pQueueFamilyIndices must be a pointer to an array of "
-                                     "pCreateInfo->queueFamilyIndexCount uint32_t values");
+                                     "pCreateInfo->queueFamilyIndexCount uint32_t values. %s",
+                                     validation_error_map[VALIDATION_ERROR_00664]);
             }
 
             // Ensure that the queue family indices were specified at device creation

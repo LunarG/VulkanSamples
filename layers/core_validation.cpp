@@ -6306,7 +6306,11 @@ DestroyRenderPass(VkDevice device, VkRenderPass renderPass, const VkAllocationCa
 VKAPI_ATTR VkResult VKAPI_CALL CreateBuffer(VkDevice device, const VkBufferCreateInfo *pCreateInfo,
                                             const VkAllocationCallbacks *pAllocator, VkBuffer *pBuffer) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-
+    // TODO: Add check for VALIDATION_ERROR_00658
+    // TODO: Add check for VALIDATION_ERROR_00666
+    // TODO: Add check for VALIDATION_ERROR_00667
+    // TODO: Add check for VALIDATION_ERROR_00668
+    // TODO: Add check for VALIDATION_ERROR_00669
     VkResult result = dev_data->dispatch_table.CreateBuffer(device, pCreateInfo, pAllocator, pBuffer);
 
     if (VK_SUCCESS == result) {

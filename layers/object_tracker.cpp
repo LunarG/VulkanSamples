@@ -42,6 +42,8 @@
 
 #include "object_tracker.h"
 
+#include "vk_validation_error_messages.h"
+
 namespace object_tracker {
 
 static void InitObjectTracker(layer_data *my_data, const VkAllocationCallbacks *pAllocator) {
@@ -313,7 +315,8 @@ static void DestroyObject(T1 dispatchable_object, T2 object, VkDebugReportObject
 }
 
 template <typename T1, typename T2>
-static bool ValidateObject(T1 dispatchable_object, T2 object, VkDebugReportObjectTypeEXT object_type, bool null_allowed) {
+static bool ValidateObject(T1 dispatchable_object, T2 object, VkDebugReportObjectTypeEXT object_type, bool null_allowed,
+                           int error_code = -1) {
     if (null_allowed && (object == VK_NULL_HANDLE)) {
         return false;
     }
@@ -324,9 +327,10 @@ static bool ValidateObject(T1 dispatchable_object, T2 object, VkDebugReportObjec
         // If object is an image, also look for it in the swapchain image map
         if ((object_type != VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT) ||
             (device_data->swapchainImageMap.find(object_handle) == device_data->swapchainImageMap.end())) {
-            return log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, object_type,
-                           object_handle, __LINE__, OBJTRACK_INVALID_OBJECT, LayerName,
-                           "Invalid %s Object 0x%" PRIxLEAST64, object_name[object_type], object_handle);
+            const char *error_msg = (error_code == -1) ? "" : validation_error_map[error_code];
+            return log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, object_type, object_handle, __LINE__,
+                           error_code, LayerName, "Invalid %s Object 0x%" PRIxLEAST64 ". %s", object_name[object_type],
+                           object_handle, error_msg);
         }
     }
     return false;
@@ -1053,7 +1057,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateBuffer(VkDevice device, const VkBufferCreat
     bool skip_call = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip_call |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
+        skip_call |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00659);
     }
     if (skip_call) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
