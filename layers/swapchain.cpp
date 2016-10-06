@@ -1837,29 +1837,6 @@ static bool validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
                              pCreateInfo->clipped);
     }
 
-    // Validate pCreateInfo->oldSwapchain:
-    if (pCreateInfo && pCreateInfo->oldSwapchain) {
-        SwpSwapchain *pOldSwapchain = NULL;
-        {
-            auto it = my_data->swapchainMap.find(pCreateInfo->oldSwapchain);
-            pOldSwapchain = (it == my_data->swapchainMap.end()) ? NULL : &it->second;
-        }
-        if (pOldSwapchain) {
-            if (device != pOldSwapchain->pDevice->device) {
-                skip_call |=
-                    log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                            reinterpret_cast<uint64_t>(device), __LINE__, SWAPCHAIN_DESTROY_SWAP_DIFF_DEVICE, swapchain_layer_name,
-                            "vkCreateSwapchainKHR() called with a different VkDevice than the VkSwapchainKHR was created with.");
-            }
-            if (pCreateInfo->surface != pOldSwapchain->pSurface->surface) {
-                skip_call |=
-                    log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                            reinterpret_cast<uint64_t>(device), __LINE__, SWAPCHAIN_CREATE_SWAP_DIFF_SURFACE, swapchain_layer_name,
-                            "vkCreateSwapchainKHR() called with pCreateInfo->oldSwapchain pCreateInfo->surface.");
-            }
-        }
-    }
-
     return skip_call;
 }
 
@@ -1941,12 +1918,6 @@ VKAPI_ATTR void VKAPI_CALL DestroySwapchainKHR(VkDevice device, VkSwapchainKHR s
         // Delete the SwpSwapchain associated with this swapchain:
         if (pSwapchain->pDevice) {
             pSwapchain->pDevice->swapchains.erase(swapchain);
-            if (device != pSwapchain->pDevice->device) {
-                skip_call |=
-                    log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                            reinterpret_cast<uint64_t>(device), __LINE__, SWAPCHAIN_DESTROY_SWAP_DIFF_DEVICE, swapchain_layer_name,
-                            "vkDestroySwapchainKHR() called with a different VkDevice than the VkSwapchainKHR was created with.");
-            }
         }
         if (pSwapchain->pSurface) {
             pSwapchain->pSurface->swapchains.erase(swapchain);

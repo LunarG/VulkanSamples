@@ -54,9 +54,6 @@ enum SWAPCHAIN_ERROR {
     SWAPCHAIN_CREATE_SWAP_BAD_SHARING_MODE,     // Called vkCreateSwapchainKHR() with a non-supported imageSharingMode
     SWAPCHAIN_CREATE_SWAP_BAD_SHARING_VALUES,   // Called vkCreateSwapchainKHR() with bad values when imageSharingMode is
                                                 // VK_SHARING_MODE_CONCURRENT
-    SWAPCHAIN_CREATE_SWAP_DIFF_SURFACE, // Called vkCreateSwapchainKHR() with pCreateInfo->oldSwapchain that has a different surface
-                                        // than pCreateInfo->surface
-    SWAPCHAIN_DESTROY_SWAP_DIFF_DEVICE, // Called vkDestroySwapchainKHR() with a different VkDevice than vkCreateSwapchainKHR()
     SWAPCHAIN_APP_ACQUIRES_TOO_MANY_IMAGES, // vkAcquireNextImageKHR() asked for more images than are available
     SWAPCHAIN_BAD_BOOL,                 // VkBool32 that doesn't have value of VK_TRUE or VK_FALSE (e.g. is a non-zero form of true)
     SWAPCHAIN_PRIOR_COUNT,              // Query must be called first to get value of pCount, then called second time
