@@ -3851,11 +3851,13 @@ void SetLayout(const layer_data *dev_data, GLOBAL_CB_NODE *pCB, VkImageView imag
 // func_str is the name of the calling function
 // Return false if no errors occur
 // Return true if validation error occurs and callback returns true (to skip upcoming API call down the chain)
-static bool validateIdleDescriptorSet(const layer_data *my_data, VkDescriptorSet set, std::string func_str) {
+static bool validateIdleDescriptorSet(const layer_data *dev_data, VkDescriptorSet set, std::string func_str) {
+    if (dev_data->instance_state->disabled.idle_descriptor_set)
+        return false;
     bool skip_call = false;
-    auto set_node = my_data->setMap.find(set);
-    if (set_node == my_data->setMap.end()) {
-        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
+    auto set_node = dev_data->setMap.find(set);
+    if (set_node == dev_data->setMap.end()) {
+        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                              (uint64_t)(set), __LINE__, DRAWSTATE_DOUBLE_DESTROY, "DS",
                              "Cannot call %s() on descriptor set 0x%" PRIxLEAST64 " that has not been allocated.", func_str.c_str(),
                              (uint64_t)(set));
@@ -3863,7 +3865,7 @@ static bool validateIdleDescriptorSet(const layer_data *my_data, VkDescriptorSet
         // TODO : This covers various error cases so should pass error enum into this function and use passed in enum here
         if (set_node->second->in_use.load()) {
             skip_call |=
-                log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                         (uint64_t)(set), __LINE__, VALIDATION_ERROR_00919, "DS",
                         "Cannot call %s() on descriptor set 0x%" PRIxLEAST64 " that is in use by a command buffer. %s",
                         func_str.c_str(), (uint64_t)(set), validation_error_map[VALIDATION_ERROR_00919]);
@@ -6630,6 +6632,8 @@ CreateDescriptorSetLayout(VkDevice device, const VkDescriptorSetLayoutCreateInfo
 // Note that the index argument is optional and only used by CreatePipelineLayout.
 static bool validatePushConstantRange(const layer_data *dev_data, const uint32_t offset, const uint32_t size,
                                       const char *caller_name, uint32_t index = 0) {
+    if (dev_data->instance_state->disabled.push_constant_range)
+        return false;
     uint32_t const maxPushConstantsSize = dev_data->phys_dev_properties.properties.limits.maxPushConstantsSize;
     bool skip_call = false;
     // Check that offset + size don't exceed the max.
@@ -6787,6 +6791,8 @@ ResetDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool, VkDescript
 // as well as DescriptorSetLayout ptrs used for later update.
 static bool PreCallValidateAllocateDescriptorSets(layer_data *dev_data, const VkDescriptorSetAllocateInfo *pAllocateInfo,
                                                   cvdescriptorset::AllocateDescriptorSetsData *common_data) {
+    if (dev_data->instance_state->disabled.allocate_descriptor_sets)
+        return false;
     // All state checks for AllocateDescriptorSets is done in single function
     return cvdescriptorset::ValidateAllocateDescriptorSets(dev_data->report_data, pAllocateInfo, dev_data, common_data);
 }
@@ -6822,6 +6828,8 @@ AllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo *pAllo
 // Verify state before freeing DescriptorSets
 static bool PreCallValidateFreeDescriptorSets(const layer_data *dev_data, VkDescriptorPool pool, uint32_t count,
                                               const VkDescriptorSet *descriptor_sets) {
+    if (dev_data->instance_state->disabled.free_descriptor_sets)
+        return false;
     bool skip_call = false;
     // First make sure sets being destroyed are not currently in-use
     for (uint32_t i = 0; i < count; ++i)
