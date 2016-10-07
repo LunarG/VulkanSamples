@@ -335,11 +335,11 @@ VKAPI_ATTR VkResult VKAPI_CALL AllocateMemory(VkDevice device, const VkMemoryAll
                                               const VkAllocationCallbacks *pAllocator, VkDeviceMemory *pMemory) {
     const VkMemoryAllocateInfo *input_allocate_info = pAllocateInfo;
     std::unique_ptr<safe_VkMemoryAllocateInfo> safe_allocate_info;
+    std::unique_ptr<safe_VkDedicatedAllocationMemoryAllocateInfoNV> safe_dedicated_allocate_info;
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
 
     if ((pAllocateInfo != nullptr) &&
         ContainsExtStruct(pAllocateInfo, VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_MEMORY_ALLOCATE_INFO_NV)) {
-        std::unique_ptr<safe_VkDedicatedAllocationMemoryAllocateInfoNV> safe_dedicated_allocate_info;
         // Assuming there is only one extension struct of this type in the list for now
         safe_dedicated_allocate_info =
             std::unique_ptr<safe_VkDedicatedAllocationMemoryAllocateInfoNV>(new safe_VkDedicatedAllocationMemoryAllocateInfoNV);
