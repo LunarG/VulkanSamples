@@ -19,97 +19,36 @@
 * Author: Rene Lindsay <rene@lunarg.com>
 *
 *--------------------------------------------------------------------------
-* CInstance creates a Vulkan vkInstance, and loads appropriate instance-extensions
-* for the current platform.
+* CInstance creates a Vulkan vkInstance, and loads appropriate
+* instance-extensions for the current platform.
+* In Debug mode, CInstance also loads standard validation layers.
 *
-* TODO: Provide means to select which extensions to load.
+* At CInstance creation time, you can override which extensions and layers get loaded,
+* by passing in your own list, or CLayers and CExtensions to the CInstance constructor.
+*
+*
+* -------Vars defined by CMAKE:-------
+*  #define VK_USE_PLATFORM_WIN32_KHR    //On Windows
+*  #define VK_USE_PLATFORM_ANDROID_KHR  //On Android
+*  #define VK_USE_PLATFORM_XCB_KHR      //On Linux
+*
 *--------------------------------------------------------------------------
 */
 
 #ifndef CINSTANCE_H
 #define CINSTANCE_H
 
-#if defined(__linux__)&& !defined(__ANDROID__)  //desktop only
-  #define __LINUX__ 1
-#endif
-
-#ifdef _WIN32
-    #include <Windows.h>
-    #ifndef VK_USE_PLATFORM_WIN32_KHR
-    #define VK_USE_PLATFORM_WIN32_KHR
-    #endif
-      //#define ANSICODE(x)   /* Disble ANSI codes */
-      #define ANSICODE(x) x /* Enable ANSI codes */
-      #define cTICK "y"
-#elif __ANDROID__
-    #ifndef VK_USE_PLATFORM_ANDROID_KHR
-    #define VK_USE_PLATFORM_ANDROID_KHR
-    #endif
-    #include <native.h>
-    #define ANSICODE(x)
-    #define cTICK "y"
-#elif __LINUX__
-//    #if !defined(VK_USE_PLATFORM_XCB_KHR)  && \
-//        !defined(VK_USE_PLATFORM_XLIB_KHR) && \
-//        !defined(VK_USE_PLATFORM_MIR_KHR)  && \
-//        !defined(VK_USE_PLATFORM_WAYLAND_KHR)
-//        #define VK_USE_PLATFORM_XCB_KHR        //On Linux, default to XCB
-//    #endif
-    #include <xkbcommon/xkbcommon.h>
-    #define ANSICODE(x) x
-    #define cTICK "\u2713"
-#endif
-
-//----------------------------------------------------------------------------------
-
-//--ANSI escape codes to set terminal text colour-- eg. printf(cRED"Red text." cRESET);
-#define cFAINT     ANSICODE("\033[38;2;128;128;128m")
-#define cBRIGHT    ANSICODE("\033[01m")
-#define cSTRIKEOUT ANSICODE("\033[09m")
-#define cRED       ANSICODE("\033[31m")
-#define cGREEN     ANSICODE("\033[32m")
-#define cYELLOW    ANSICODE("\033[33m")
-#define cBLUE      ANSICODE("\033[34m")
-#define cRESET     ANSICODE("\033[00m")
-//----------------------------------------------------------------------------------
-
-#ifndef NDEBUG
-#ifdef ANDROID
-  #include <jni.h>
-  #include <android/log.h>
-  #define LOG_TAG    "WSIWindow"                                                  // Android:
-  #define LOGI(...)    __android_log_print(ANDROID_LOG_INFO ,LOG_TAG,__VA_ARGS__) /*   Prints Info in black      */
-  #define LOGW(...)    __android_log_print(ANDROID_LOG_WARN ,LOG_TAG,__VA_ARGS__) /*   Prints Warnings in blue   */
-  #define LOGE(...)    __android_log_print(ANDROID_LOG_ERROR,LOG_TAG,__VA_ARGS__) /*   Prints Errors in red      */
-  #define printf(...)  __android_log_print(ANDROID_LOG_INFO ,LOG_TAG,__VA_ARGS__) /*   printf output as log info */
-#else                                                                             // Linux and Windows 10+: ( Older Windows print in white only.)
-  #define  LOGI(...) {printf(__VA_ARGS__);}                                       /*   Prints Info in white      */
-  #define  LOGW(...) {printf(cYELLOW "WARNING: " __VA_ARGS__); printf(cRESET);}   /*   Prints Warnings in yellow */
-  #define  LOGE(...) {printf(cRED    "ERROR: "   __VA_ARGS__); printf(cRESET);}   /*   Prints Errors in red      */
-#endif
-#else    //Remove log messages in Release mode
-#define  LOGI(...) {}
-#define  LOGW(...) {}
-#define  LOGE(...) {}
-#endif
-
-
-
-#include <cstdlib>
-#include <stdio.h>
+#include "Validation.h"
 #include <assert.h>
 #include <vector>
 #include <string>
 #include <string.h>
 #include <vulkan/vulkan.h>
+
 using namespace std;
 
-typedef unsigned int uint;
-const char* VkResultStr(VkResult err);  //Convert vulkan result code to a string.
-void ShowVkResult(VkResult err);        //Print warnings and errors.
-
 //---------------------------Macros-------------------------------
-#define forCount(COUNT) for(uint i=0; i<COUNT; ++i)
+#define forCount(COUNT) for(uint32_t i=0; i<COUNT; ++i)
 //----------------------------------------------------------------
 
 //----Check VkResult for errors or warnings, and print string.----
@@ -117,23 +56,14 @@ void ShowVkResult(VkResult err);        //Print warnings and errors.
 
 #ifdef NDEBUG  //In release mode, don't print VkResult strings.
   #define VKERRCHECK(VKFN) { VKFN; }
-  #define VKCOMPLETE(VKFN) { while(VKFN==VK_INCOMPLETE){} }
 #else          //Show warnings and errors. assert on error.
 #define VKERRCHECK(VKFN) { VkResult VKRESULT=VKFN;                              \
                              ShowVkResult(VKRESULT);                            \
                              assert(VKRESULT>=0);                               \
                              if(VKRESULT) printf("%s:%d\n",__FILE__,__LINE__);  \
                          }
-//----------------------------------------------------------------
-//Repeatedly run vk function, until VkResult is not VK_INCOMPLETE
-#define VKCOMPLETE(VKFN) { VkResult VKVAL;                      \
-                           while((VKVAL=VKFN)==VK_INCOMPLETE){  \
-                             LOGW("%s\n",VkResultStr(VKVAL));   \
-                           }                                    \
-                           VKERRCHECK(VKVAL);                   \
-                         }
-//----------------------------------------------------------------
 #endif
+//----------------------------------------------------------------
 
 //--------------------------PickList------------------------------
 template <class TYPE> class TPickList{
@@ -144,8 +74,8 @@ public:
     virtual char* itemName(uint32_t inx)=0;
 
     int IndexOf(const char* name){
-        forCount(itemList.size())
-            if(!strcmp(name, itemName(i))) return i;
+        forCount(Count())
+            if(strcmp(name, itemName(i))==0) return i;
         return -1;
     }
 
@@ -174,44 +104,24 @@ public:
     }
 };
 //----------------------------------------------------------------
-
+//----------------------------Layers------------------------------
 struct CLayers: public TPickList<VkLayerProperties>{
   CLayers();
   char* itemName(uint32_t inx){return itemList[inx].layerName;}
   void Print(){TPickList::Print("Layers");}
 };
-
-
+//----------------------------------------------------------------
+//--------------------------Extensions----------------------------
 struct CExtensions : public TPickList<VkExtensionProperties>{
     CExtensions(const char* layerName=NULL);
     char* itemName(uint32_t inx){return itemList[inx].extensionName;}
     void Print(){TPickList::Print("Extensions");}
 };
-
-
-/*
-class CExtensions{
-    vector<VkExtensionProperties> items;
-    vector<char*> pickList;
-public:
-    CExtensions(const char* layerName=NULL);  //Gets global or layer extensions
-    int IndexOf(const char* Name);            //Returns the index of the named extension, or -1 if not found.
-    bool Pick(const char* Name);              //Adds named extension to the pick list, or returns false if not found.
-    //char* Name(uint32_t index);
-    const char** PickList();                  //Returns pick-list, to be passed to Vulkan
-    uint32_t PickCount();                     //Number of items picked
-    uint32_t Count();                         //Number of items to pick from
-    void Print();                             //Print PickList to console (for debug)
-};
-*/
-
-//class Layers{
-//};
-
 //----------------------------------------------------------------
-
+//---------------------------CInstance----------------------------
 class CInstance{
     VkInstance instance;
+    CDebugReport DebugReport;
     void Create(vector<char*>const& layers,vector<char*>const& extensions, const char* appName, const char* engineName);
 public:
     //CInstance(CLayers&       layers, CExtensions&   extensions, const char* appName, const char* engineName="LunarG");
@@ -219,8 +129,7 @@ public:
     CInstance(const char* appName="VulkanApp", const char* engineName="LunarG");
     ~CInstance();
     void Print();
-    //CExtensions Extensions;  //list of global extensions
     operator VkInstance () const {return instance;}
 };
-
+//----------------------------------------------------------------
 #endif

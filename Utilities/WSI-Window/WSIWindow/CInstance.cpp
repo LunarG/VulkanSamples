@@ -22,121 +22,38 @@
 */
 
 #include "CInstance.h"
-//#include <string.h>
 
-//---------------------Error Checking-------------------------
-//  In Debug mode, convert a VkResult return value to a string.
-const char* VkResultStr(VkResult err){
-//#if !defined(NDEBUG)
-    switch (err) {
-#define STR(r) case r: return #r
-        STR(VK_SUCCESS);      // 0
-        STR(VK_NOT_READY);    // 1
-        STR(VK_TIMEOUT);      // 2
-        STR(VK_EVENT_SET);    // 3
-        STR(VK_EVENT_RESET);  // 4
-        STR(VK_INCOMPLETE);   // 5
-
-        STR(VK_ERROR_OUT_OF_HOST_MEMORY);    // -1
-        STR(VK_ERROR_OUT_OF_DEVICE_MEMORY);  // -2
-        STR(VK_ERROR_INITIALIZATION_FAILED); // -3
-        STR(VK_ERROR_DEVICE_LOST);           // -4
-        STR(VK_ERROR_MEMORY_MAP_FAILED);     // -5
-        STR(VK_ERROR_LAYER_NOT_PRESENT);     // -6
-        STR(VK_ERROR_EXTENSION_NOT_PRESENT); // -7
-        STR(VK_ERROR_FEATURE_NOT_PRESENT);   // -8
-        STR(VK_ERROR_INCOMPATIBLE_DRIVER);   // -9
-        STR(VK_ERROR_TOO_MANY_OBJECTS);      // -10
-        STR(VK_ERROR_FORMAT_NOT_SUPPORTED);  // -11
-        //STR(VK_ERROR_FRAGMENTED_POOL);       // -12
-
-        STR(VK_ERROR_SURFACE_LOST_KHR);         // -1000000000
-        STR(VK_ERROR_NATIVE_WINDOW_IN_USE_KHR); // -1000000001
-        STR(VK_SUBOPTIMAL_KHR);                 //  1000001003
-        STR(VK_ERROR_OUT_OF_DATE_KHR);          // -1000001004
-        STR(VK_ERROR_INCOMPATIBLE_DISPLAY_KHR); // -1000003001
-        STR(VK_ERROR_VALIDATION_FAILED_EXT);    // -1000011001
-        STR(VK_ERROR_INVALID_SHADER_NV);        // -1000012000
-#undef STR
-    default:
-        return "UNKNOWN_RESULT";
-    }
-//#else
-//    (void)err;
-//    return "";
-//#endif
-}
-
-void ShowVkResult(VkResult err){
-    if(err>0) LOGW("%s ",VkResultStr(err));  //Print warning
-    if(err<0) LOGE("%s ",VkResultStr(err));  //Print error
-}
-
-//---------------------------------------------------------------
-
-//---------------------------Layers------------------------------
+//----------------------------Layers------------------------------
 CLayers::CLayers(){
-    uint count=0;
-    VKERRCHECK(vkEnumerateInstanceLayerProperties(&count, NULL));
-    itemList.resize(count);
-    VKCOMPLETE(vkEnumerateInstanceLayerProperties(&count, itemList.data()));
+    VkResult result;
+    do{
+        uint count=0;
+        result = vkEnumerateInstanceLayerProperties(&count, NULL);
+        if(result==0 && count>0){
+          itemList.resize(count);
+          result=vkEnumerateInstanceLayerProperties(&count, itemList.data());
+        }
+    }while (result==VK_INCOMPLETE);
+    VKERRCHECK(result);
 }
-//---------------------------------------------------------------
+//----------------------------------------------------------------
 
-//-------------------------Extensions----------------------------
+//--------------------------Extensions----------------------------
 CExtensions::CExtensions(const char* layerName){
-    uint count=0;
-    VKERRCHECK(vkEnumerateInstanceExtensionProperties(layerName, &count, NULL));             //Get list size
-    itemList.resize(count);                                                                     //allocate memory for list
-    VKCOMPLETE(vkEnumerateInstanceExtensionProperties(layerName, &count, itemList.data()));  //Fetch list, and check for errors
+    VkResult result;
+    do{
+        uint count=0;
+        result = vkEnumerateInstanceExtensionProperties(layerName, &count, NULL);             //Get list size
+        if(result==0 && count>0){
+          itemList.resize(count);                                                             //Resize buffer
+          result=vkEnumerateInstanceExtensionProperties(layerName, &count, itemList.data());  //Fetch list
+        }
+    }while (result==VK_INCOMPLETE);                                                           //If list is incomplete, try again.
+    VKERRCHECK(result);                                                                       //report errors
 }
-//---------------------------------------------------------------
+//----------------------------------------------------------------
 
-/*
-//-------------------------Extensions----------------------------
-CExtensions::CExtensions(const char* layerName){
-    uint count=0;
-    VKERRCHECK(vkEnumerateInstanceExtensionProperties(layerName, &count, NULL));  //Get list size
-    items.resize(count);                                                          //allocate memory for list
-
-    VkResult err;                                             //Fetch list data.  If VK_INCOMPLETE, try again.
-    while ((err = vkEnumerateInstanceExtensionProperties(layerName, &count, items.data())) == VK_INCOMPLETE){}
-    VKERRCHECK(err);
-}
-
-int CExtensions::IndexOf(const char* extName){
-    forCount(items.size())
-        if(!strcmp(extName, items[i].extensionName)) return i;
-    return -1;
-}
-
-bool CExtensions::Pick(const char* extName){
-    int inx=IndexOf(extName);
-    if(inx==-1) return false;
-    for(const char* pickItem : pickList)
-        if(pickItem == items[inx].extensionName) return true;  //Check if item was already picked
-    pickList.push_back(items[inx].extensionName);              //if not, add item to pick-list
-    return true;
-}
-
-const char** CExtensions::PickList() {return (const char**)pickList.data();}
-uint32_t     CExtensions::PickCount(){return (uint32_t)pickList.size();}
-uint32_t     CExtensions::Count()    {return (uint32_t)items.size();}
-
-void CExtensions::Print(){
-  printf("Extensions picked: %d of %d\n",PickCount(),Count());
-  for(auto& item:items){
-      char* name=item.extensionName;
-      bool picked=false;
-      for(auto& pick:pickList) if(pick==name) picked=true;
-      //printf("\t%s %s\n" cRESET,picked?"✓":cFAINT"x",name);
-      printf("\t%s %s\n" cRESET, picked ? "\u2713" : cFAINT"x", name);
-
-  }
-}
-//---------------------------------------------------------------
-*/
-//--------------------------CInstance----------------------------
+//---------------------------CInstance----------------------------
 CInstance::CInstance(const char* appName, const char* engineName){
     CLayers layers;
 #ifndef NDEBUG //In Debug mode, add standard validation layers
@@ -149,7 +66,6 @@ CInstance::CInstance(const char* appName, const char* engineName){
     layers.Pick("VK_LAYER_GOOGLE_unique_objects"      );
     layers.Print();
 #endif
-
 
     CExtensions ext;
     if(ext.Pick(VK_KHR_SURFACE_EXTENSION_NAME)){
@@ -207,15 +123,16 @@ void CInstance::Create(vector<char*>const& layers, vector<char*>const& extension
     inst_info.enabledLayerCount       = (uint32_t)layers.size();
     inst_info.ppEnabledLayerNames     =           layers.data();
     VKERRCHECK(vkCreateInstance(&inst_info, NULL, &instance));
+    LOGI("Vulkan Instance created\n");
 
-    printf("Vulkan Instance created\n");
+    DebugReport.Init(instance);
 }
 
 void CInstance::Print(){ printf("->Instance %s created.\n",(!!instance)?"":"NOT"); }
 
 CInstance::~CInstance(){
     vkDestroyInstance(instance, NULL);
-    printf("Vulkan Instance destroyed\n");
+    LOGI("Vulkan Instance destroyed\n");
 }
 
-//---------------------------------------------------------------
+//----------------------------------------------------------------

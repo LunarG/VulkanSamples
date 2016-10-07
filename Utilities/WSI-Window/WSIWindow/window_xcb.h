@@ -182,7 +182,7 @@ EventType Window_xcb::GetEvent(){
         int16_t mx =e.event_x;
         int16_t my =e.event_y;
         uint8_t btn=e.detail;
-        uint8_t bestBtn=BtnState(1) ? 1 : BtnState(2) ? 2 : BtnState(3) ? 3 : 0;
+        uint8_t bestBtn=BtnState(1) ? 1 : BtnState(2) ? 2 : BtnState(3) ? 3 : 0;     //If multiple buttons pressed, pick left one.
         switch(x_event->response_type & ~0x80) {
             case XCB_MOTION_NOTIFY : event=MouseEvent(eMOVE,mx,my,bestBtn);  break;  //mouse move
             case XCB_BUTTON_PRESS  : event=MouseEvent(eDOWN,mx,my,btn);      break;  //mouse btn press
