@@ -27,26 +27,26 @@
 
 WSIWindow::WSIWindow(CInstance& inst,const char* title,uint width,uint height){
 #ifdef VK_USE_PLATFORM_XCB_KHR
-    printf("PLATFORM: XCB\n");
+    LOGI("PLATFORM: XCB\n");
     pimpl=new Window_xcb(inst,title,width,height);
 #endif
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-    printf("PLATFORM: WIN32\n");
+    LOGI("PLATFORM: WIN32\n");
     pimpl = new Window_win32(inst, title, width, height);
 #endif
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
-    printf("PLATFORM: ANDROID\n");
+    LOGI("PLATFORM: ANDROID\n");
     pimpl = new Window_android(inst, title, width, height);
 #endif
 /*
 #ifdef VK_USE_PLATFORM_XLIB_KHR
-    printf("XLIB\n");
+    LOGI("XLIB\n");
 #endif
 #ifdef VK_USE_PLATFORM_MIR_KHR
-    printf("MIR\n");
+    LOGI("MIR\n");
 #endif
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
-    printf("WAYLAND\n");
+    LOGI("WAYLAND\n");
 #endif
 */
 }

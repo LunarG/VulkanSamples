@@ -83,7 +83,7 @@ Window_xcb::Window_xcb(CInstance& inst, const char* title, uint width, uint heig
     shape.height=height;
     running=true;
 
-    printf("Creating XCB-Window...\n"); fflush(stdout);
+    LOGI("Creating XCB-Window...\n");
     //--Init Connection--
     int scr;
     xcb_connection = xcb_connect(NULL, &scr);
@@ -168,7 +168,7 @@ void Window_xcb::CreateSurface(VkInstance instance){
     xcb_createInfo.connection = xcb_connection;
     xcb_createInfo.window     = xcb_window;
     VKERRCHECK(vkCreateXcbSurfaceKHR(instance, &xcb_createInfo, NULL, &surface));
-    printf("Vulkan Surface created\n"); fflush(stdout);
+    LOGI("Vulkan Surface created\n");
 }
 
 EventType Window_xcb::GetEvent(){
@@ -204,7 +204,7 @@ EventType Window_xcb::GetEvent(){
             case XCB_CLIENT_MESSAGE:{                                                //window close event
                 if ((*(xcb_client_message_event_t *)x_event).data.data32[0] ==
                     (*atom_wm_delete_window).atom) {
-                    printf("CLOSE\n"); fflush(stdout);
+                    LOGI("CLOSE\n");
                     running=false;
                 }
                 break;

@@ -92,7 +92,7 @@ class Window_android : public WindowImpl{
         android_createInfo.window = app->window;
         VkResult err=vkCreateAndroidSurfaceKHR(instance, &android_createInfo, NULL, &surface);
         VKERRCHECK(err);
-        printf("Vulkan Surface created\n");
+        LOGI("Vulkan Surface created\n");
     }
 
 public:
@@ -232,7 +232,7 @@ public:
 
         // Check if we are exiting.
         if (app->destroyRequested){
-            printf("destroyRequested");
+            LOGI("destroyRequested");
             running=false;
             return {EventType::NONE};
         }
@@ -243,7 +243,7 @@ public:
     void TextInput(bool enabled){
         textinput=enabled;
         ShowKeyboard(enabled);
-        printf("%s keyboard",enabled ? "Show" : "Hide");
+        LOGI("%s keyboard",enabled ? "Show" : "Hide");
     }
 };
 

@@ -99,7 +99,7 @@ Window_win32::Window_win32(CInstance& inst, const char* title, uint width, uint 
     shape.height=height;
     //ShapeMode = false;
     running=true;
-    printf("Creating Win32 Window...\n"); fflush(stdout);
+    LOGI("Creating Win32 Window...\n");
 
     hInstance = GetModuleHandle(NULL);
 
@@ -156,7 +156,7 @@ void Window_win32::CreateSurface(VkInstance instance){
     win32_createInfo.hwnd       = hWnd;
     VkResult err = vkCreateWin32SurfaceKHR(instance, &win32_createInfo, NULL, &surface);
     VKERRCHECK(err);
-    printf("Vulkan Surface created\n"); fflush(stdout);
+    LOGI("Vulkan Surface created\n");
 }
 
 #define WM_RESHAPE (WM_USER+0)
@@ -263,11 +263,11 @@ EventType Window_win32::GetEvent(){
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
         case WM_CLOSE:
-            printf("WM_CLOSE\n");
+            LOGI("WM_CLOSE\n");
             DestroyWindow(hWnd);
             return 0;
         case WM_DESTROY:
-            printf("WM_DESTROY\n");
+            LOGI("WM_DESTROY\n");
             PostQuitMessage(0);
             return 0;
         case WM_PAINT:
