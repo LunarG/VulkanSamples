@@ -68,8 +68,8 @@ const char* VkResultStr(VkResult err){
 }
 
 void ShowVkResult(VkResult err){
-    if(err>0) LOGW("%s ",VkResultStr(err)) else  //Print warning
-    if(err<0) LOGE("%s ",VkResultStr(err));      //Print error
+    if(err>0) LOGW("%s ",VkResultStr(err));  //Print warning
+    if(err<0) LOGE("%s ",VkResultStr(err));  //Print error
 }
 
 //---------------------------------------------------------------
