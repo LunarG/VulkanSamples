@@ -46,7 +46,7 @@ cd generated\layer-src
 mkdir  core_validation image object_tracker parameter_validation swapchain threading unique_objects
 cd ..\..
 xcopy /s gradle-templates\*   generated\gradle-build\
-for %%G in (core_validation image object_tracker parameter_validation swapchain threading) Do (
+for %%G in (core_validation image object_tracker parameter_validation swapchain threading unique_objects) Do (
     copy ..\layers\%%G.cpp   generated\layer-src\%%G
     echo apply from: "../common.gradle"  > generated\gradle-build\%%G\build.gradle
 )
