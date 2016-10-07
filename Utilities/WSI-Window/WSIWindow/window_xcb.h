@@ -330,27 +330,21 @@ bool Window_xcb::InitTouch(){
     }
 
     /* select device */
-        //int devid;
     {
-        XIDeviceInfo* di;
-        XIDeviceInfo* dev;
-        XITouchClassInfo* tcinfo;
-
+        xi_devid=0;
         int cnt;
-        int i, j;
-        di = XIQueryDevice(dpy, XIAllDevices, &cnt);
-        for (i = 0; i < cnt; i ++){
-            dev = &di[i];
-            for (j = 0; j < dev->num_classes; j ++){
-                tcinfo = (XITouchClassInfo*)(dev->classes[j]);
-                if (tcinfo->type != XITouchClass){
-                    xi_devid = dev->deviceid;
-                    printf("--->devid=%d\n",xi_devid);
-                    goto STOP_SEARCH_DEVICE;
+        XIDeviceInfo* di = XIQueryDevice(dpy, XIAllDevices, &cnt);
+        for (int i=0; i<cnt; ++i){
+            XIDeviceInfo* dev = &di[i];
+            for (int j=0; j<dev->num_classes; ++j){
+                XITouchClassInfo* tcinfo = (XITouchClassInfo*)(dev->classes[j]);
+                if(tcinfo->type != XITouchClass){
+                  xi_devid = dev->deviceid;
+                  goto endloop;
                 }
             }
         }
-STOP_SEARCH_DEVICE:
+        endloop:
         XIFreeDeviceInfo(di);
     }
 
@@ -437,13 +431,13 @@ EventType Window_xcb::GetEvent(){
                 xcb_input_touch_begin_event_t& te= *(xcb_input_touch_begin_event_t*)x_event;
                 printf("(%f %f : %f %f) ",  te.event_x/65536.f, te.event_y/65536.f, te.root_x/65536.f, te.root_y/65536.f);
                 printf("detail=%d deviceid=%d event=%d eventtype=%d extension=%d flags=%d, sourceid=%d buttons_len=%d",
-                          te.detail,
+                          te.detail,      //touch counter
                           te.deviceid,
                           te.event,
-                          te.event_type,
-                          te.extension,
+                          te.event_type,  //18/19/20
+                          te.extension,   //131
                           te.flags,
-                          te.sourceid,
+                          te.sourceid,    //11
                           te.buttons_len
 
                 );
