@@ -356,7 +356,6 @@ struct demo {
     VkSwapchainKHR swapchain;
     SwapchainBuffers *buffers;
     VkFence fences[FRAME_LAG];
-    bool fencesInited[FRAME_LAG];
     int frame_index;
 
     VkCommandPool cmd_pool;
@@ -786,18 +785,14 @@ void demo_update_data_buffer(struct demo *demo) {
 static void demo_draw(struct demo *demo) {
     VkResult U_ASSERT_ONLY err;
 
-    if (demo->fencesInited[demo->frame_index])
-    {
-        // Ensure no more than FRAME_LAG presentations are outstanding
-        vkWaitForFences(demo->device, 1, &demo->fences[demo->frame_index], VK_TRUE, UINT64_MAX);
-        vkResetFences(demo->device, 1, &demo->fences[demo->frame_index]);
-    }
+    // Ensure no more than FRAME_LAG presentations are outstanding
+    vkWaitForFences(demo->device, 1, &demo->fences[demo->frame_index], VK_TRUE, UINT64_MAX);
+    vkResetFences(demo->device, 1, &demo->fences[demo->frame_index]);
 
     // Get the index of the next available swapchain image:
     err = demo->fpAcquireNextImageKHR(demo->device, demo->swapchain, UINT64_MAX,
                                       demo->image_acquired_semaphores[demo->frame_index], demo->fences[demo->frame_index],
                                       &demo->current_buffer);
-    demo->fencesInited[demo->frame_index] = true;
 
     if (err == VK_ERROR_OUT_OF_DATE_KHR) {
         // demo->swapchain is out of date (e.g. the window was resized) and
@@ -2043,9 +2038,7 @@ static void demo_cleanup(struct demo *demo) {
 
     // Wait for fences from present operations
     for (i = 0; i < FRAME_LAG; i++) {
-        if (demo->fencesInited[i]) {
-            vkWaitForFences(demo->device, 1, &demo->fences[i], VK_TRUE, UINT64_MAX);
-        }
+        vkWaitForFences(demo->device, 1, &demo->fences[i], VK_TRUE, UINT64_MAX);
         vkDestroyFence(demo->device, demo->fences[i], NULL);
         vkDestroySemaphore(demo->device, demo->image_acquired_semaphores[i], NULL);
         vkDestroySemaphore(demo->device, demo->draw_complete_semaphores[i], NULL);
@@ -3155,11 +3148,10 @@ static void demo_init_vk_swapchain(struct demo *demo) {
     VkFenceCreateInfo fence_ci = {
         .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
         .pNext = NULL,
-        .flags = 0
+        .flags = VK_FENCE_CREATE_SIGNALED_BIT
     };
     for (uint32_t i = 0; i < FRAME_LAG; i++) {
         vkCreateFence(demo->device, &fence_ci, NULL, &demo->fences[i]);
-        demo->fencesInited[i] = false;
         err = vkCreateSemaphore(demo->device, &semaphoreCreateInfo, NULL,
                                 &demo->image_acquired_semaphores[i]);
         assert(!err);
