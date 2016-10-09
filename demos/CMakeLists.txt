@@ -108,8 +108,8 @@ else()
     endif()
 
     add_executable(cube WIN32 cube.c ${CMAKE_BINARY_DIR}/demos/cube-vert.spv ${CMAKE_BINARY_DIR}/demos/cube-frag.spv)
+    target_link_libraries(cube ${LIBRARIES})
 endif()
-target_link_libraries(cube ${LIBRARIES})
 
 if(UNIX)
     add_executable(cubepp cube.cpp ${CMAKE_BINARY_DIR}/demos/cube-vert.spv ${CMAKE_BINARY_DIR}/demos/cube-frag.spv)
