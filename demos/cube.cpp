@@ -1658,7 +1658,7 @@ struct Demo {
     }
 
     vk::ShaderModule prepare_fs() {
-        size_t size;
+        size_t size = 0;
         void *fragShaderCode = read_spv("cube-frag.spv", &size);
 
         frag_shader_module = prepare_shader_module(fragShaderCode, size);
