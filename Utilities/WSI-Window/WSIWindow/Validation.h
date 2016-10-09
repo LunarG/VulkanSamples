@@ -27,15 +27,6 @@
     #include <Windows.h>
       #ifdef WIN10PLUS        /* ANSI color-codes requires windows 10+ */
         #define ANSICODE(x) x /* Enable ANSI codes on Win10*/
-        struct INITANSI {
-            INITANSI() {
-                HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-                DWORD dwMode = 0;
-                GetConsoleMode(hOut, &dwMode);
-                dwMode |= 0x0004; // ENABLE_VIRTUAL_TERMINAL_PROCESSING
-                SetConsoleMode(hOut, dwMode);
-            }
-        }INITANSI;
       #else
         #define ANSICODE(x)   /* Disable ANSI codes on Win7/8*/
       #endif
@@ -70,20 +61,20 @@
       #include <jni.h>
       #include <android/log.h>
       #define LOG_TAG    "WSIWindow"                                                                  // Android:
-      #define LOG(...)     __android_log_print(ANDROID_LOG_INFO   ,LOG_TAG,__VA_ARGS__)               /*   Prints Info in black       */
+      #define LOG(...)     __android_log_print(ANDROID_LOG_INFO   ,LOG_TAG,__VA_ARGS__)               /*   Prints normal text         */
       #define LOGV(...)    __android_log_print(ANDROID_LOG_VERBOSE,LOG_TAG,__VA_ARGS__)               /*   Prints Performance warnings*/
-      #define LOGD(...)    __android_log_print(ANDROID_LOG_DEBUG  ,LOG_TAG,__VA_ARGS__)               /*   Prints Debug messages      */
-      #define LOGI(...)    __android_log_print(ANDROID_LOG_INFO   ,LOG_TAG,__VA_ARGS__)               /*   Prints Info in black       */
-      #define LOGW(...)    __android_log_print(ANDROID_LOG_WARN   ,LOG_TAG,__VA_ARGS__)               /*   Prints Warnings in blue    */
-      #define LOGE(...)    __android_log_print(ANDROID_LOG_ERROR  ,LOG_TAG,__VA_ARGS__)               /*   Prints Errors in red       */
+      #define LOGD(...)    __android_log_print(ANDROID_LOG_DEBUG  ,LOG_TAG,__VA_ARGS__)               /*   Prints DEBUG messages      */
+      #define LOGI(...)    __android_log_print(ANDROID_LOG_INFO   ,LOG_TAG,__VA_ARGS__)               /*   Prints INFO messages       */
+      #define LOGW(...)    __android_log_print(ANDROID_LOG_WARN   ,LOG_TAG,__VA_ARGS__)               /*   Prints WARNING messages    */
+      #define LOGE(...)    __android_log_print(ANDROID_LOG_ERROR  ,LOG_TAG,__VA_ARGS__)               /*   Prints ERROR messages      */
       #define printf(...)  __android_log_print(ANDROID_LOG_INFO   ,LOG_TAG,__VA_ARGS__)               /*   printf output as log info  */
     #else                                                                                                // Linux and Windows 10+:
       #define LOG(...)  {printf(__VA_ARGS__);                                          fflush(stdout);}  /*   Prints in white            */
       #define LOGV(...) {printf(cCYAN   "PERF-WARNING: " cRESET); printf(__VA_ARGS__); fflush(stdout);}  /*   Prints Performace Warnings */
-      #define LOGD(...) {printf(cBLUE   "DEBUG: "        cRESET); printf(__VA_ARGS__); fflush(stdout);}  /*   Prints Debug messages      */
-      #define LOGI(...) {printf(cGREEN  "INFO: "         cRESET); printf(__VA_ARGS__); fflush(stdout);}  /*   Prints Info messages       */
-      #define LOGW(...) {printf(cYELLOW "WARNING: "      cRESET); printf(__VA_ARGS__); fflush(stdout);}  /*   Prints Warnings in yellow  */
-      #define LOGE(...) {printf(cRED    "ERROR: "        cRESET); printf(__VA_ARGS__); fflush(stdout);}  /*   Prints Errors in red       */
+      #define LOGD(...) {printf(cBLUE   "DEBUG: "        cRESET); printf(__VA_ARGS__); fflush(stdout);}  /*   Prints DEBUG messages      */
+      #define LOGI(...) {printf(cGREEN  "INFO: "         cRESET); printf(__VA_ARGS__); fflush(stdout);}  /*   Prints INFO messages       */
+      #define LOGW(...) {printf(cYELLOW "WARNING: "      cRESET); printf(__VA_ARGS__); fflush(stdout);}  /*   Prints WARNINGs in yellow  */
+      #define LOGE(...) {printf(cRED    "ERROR: "        cRESET); printf(__VA_ARGS__); fflush(stdout);}  /*   Prints ERRORs in red       */
     #endif
 #else    //Remove LOG* messages from Release build. (printf messages are NOT removed.)
     #define  LOG(...)  {}
@@ -96,8 +87,8 @@
 //=====================================================================================================
 
 #include <assert.h>
-//#include <stdio.h>
-#include <vulkan/vulkan.h>              //Android: must be included AFTER native.h
+#include <stdio.h>                      //for Windows.
+#include <vulkan/vulkan.h>              //Android: This must be included AFTER native.h
 
 const char* VkResultStr(VkResult err);  //Convert vulkan result code to a string.
 void ShowVkResult(VkResult err);        //Print warnings and errors.
@@ -112,7 +103,6 @@ class CDebugReport{
 public:
     void Init(VkInstance inst);
     void Destroy();
-    ~CDebugReport();
 };
 //--------------------------------------------------------------------------------------------
 

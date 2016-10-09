@@ -1,6 +1,18 @@
 #include "Validation.h"
-
-//----------------------Error Checking-------------------------
+//---------------- Enable ANSI Codes on Win10+ ----------------
+#if defined(WIN10PLUS) && !defined(NDEBUG)
+    struct INITANSI {
+        INITANSI() {
+            HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+            DWORD dwMode = 0;
+            GetConsoleMode(hOut, &dwMode);
+            dwMode |= 0x0004; // ENABLE_VIRTUAL_TERMINAL_PROCESSING
+            SetConsoleMode(hOut, dwMode);
+        }
+    }INITANSI;
+#endif
+//-------------------------------------------------------------
+//-----------------------Error Checking------------------------
 //  In Debug mode, convert a VkResult return value to a string.
 const char* VkResultStr(VkResult err){
 #if !defined(NDEBUG)
@@ -49,8 +61,6 @@ void ShowVkResult(VkResult err){
 }
 //----------------------------------------------------------------
 
-
-
 //------------------------------------DEBUG REPORT CALLBACK-----------------------------------
 VKAPI_ATTR VkBool32 VKAPI_CALL
 dbgFunc(VkDebugReportFlagsEXT msgFlags, VkDebugReportObjectTypeEXT objType, uint64_t srcObject,
@@ -91,15 +101,11 @@ void CDebugReport::Init(VkInstance inst){
 
     create_info.pfnCallback = dbgFunc;  //Callback function to call
     create_info.pUserData = NULL;
-    VkResult res = fpCreateDebugReportCallbackEXT(inst, &create_info, NULL, &debug_report_callback);
+    VKERRCHECK(fpCreateDebugReportCallbackEXT(inst, &create_info, NULL, &debug_report_callback));
 }
 
 void CDebugReport::Destroy(){
     if(debug_report_callback)
       fpDestroyDebugReportCallbackEXT(instance, debug_report_callback, NULL);
-}
-
-CDebugReport::~CDebugReport(){
-    Destroy();
 }
 //--------------------------------------------------------------------------------------------
