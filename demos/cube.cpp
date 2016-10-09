@@ -2023,7 +2023,7 @@ struct Demo {
     }
 
     vk::ShaderModule prepare_vs() {
-        size_t size;
+        size_t size = 0;
         void *vertShaderCode = read_spv("cube-vert.spv", &size);
 
         vert_shader_module = prepare_shader_module(vertShaderCode, size);
