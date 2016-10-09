@@ -94,8 +94,12 @@ void CDebugReport::Init(VkInstance inst){
     VkResult res = fpCreateDebugReportCallbackEXT(inst, &create_info, NULL, &debug_report_callback);
 }
 
-CDebugReport::~CDebugReport(){
+void CDebugReport::Destroy(){
     if(debug_report_callback)
       fpDestroyDebugReportCallbackEXT(instance, debug_report_callback, NULL);
+}
+
+CDebugReport::~CDebugReport(){
+    Destroy();
 }
 //--------------------------------------------------------------------------------------------

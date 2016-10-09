@@ -46,25 +46,11 @@
 #include <vulkan/vulkan.h>
 
 using namespace std;
+typedef unsigned int uint;
 
 //---------------------------Macros-------------------------------
 #define forCount(COUNT) for(uint32_t i=0; i<COUNT; ++i)
 //----------------------------------------------------------------
-
-//----Check VkResult for errors or warnings, and print string.----
-//    (VkResult is positive for warnings, negative for erors)
-
-#ifdef NDEBUG  //In release mode, don't print VkResult strings.
-  #define VKERRCHECK(VKFN) { VKFN; }
-#else          //Show warnings and errors. assert on error.
-#define VKERRCHECK(VKFN) { VkResult VKRESULT=VKFN;                              \
-                             ShowVkResult(VKRESULT);                            \
-                             assert(VKRESULT>=0);                               \
-                             if(VKRESULT) printf("%s:%d\n",__FILE__,__LINE__);  \
-                         }
-#endif
-//----------------------------------------------------------------
-
 //--------------------------PickList------------------------------
 template <class TYPE> class TPickList{
 protected:
@@ -128,6 +114,8 @@ public:
     CInstance(vector<char*>& layers, vector<char*>& extensions, const char* appName, const char* engineName="LunarG");
     CInstance(const char* appName="VulkanApp", const char* engineName="LunarG");
     ~CInstance();
+    //CLayers     layers;
+    //CExtensions extensions;
     void Print();
     operator VkInstance () const {return instance;}
 };

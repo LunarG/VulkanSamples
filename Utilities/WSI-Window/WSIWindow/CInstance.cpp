@@ -67,34 +67,34 @@ CInstance::CInstance(const char* appName, const char* engineName){
     layers.Print();
 #endif
 
-    CExtensions ext;
-    if(ext.Pick(VK_KHR_SURFACE_EXTENSION_NAME)){
+    CExtensions extensions;
+    if(extensions.Pick(VK_KHR_SURFACE_EXTENSION_NAME)){
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-        ext.Pick(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);    //Win32
+        extensions.Pick(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);    //Win32
 #endif
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
-        ext.Pick(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);  //Android
+        extensions.Pick(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);  //Android
 #endif
 #ifdef VK_USE_PLATFORM_XCB_KHR
-        ext.Pick(VK_KHR_XCB_SURFACE_EXTENSION_NAME);      //Linux XCB
+        extensions.Pick(VK_KHR_XCB_SURFACE_EXTENSION_NAME);      //Linux XCB
 #endif
 #ifdef VK_USE_PLATFORM_XLIB_KHR
-        ext.Pick(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);     //Linux XLib
+        extensions.Pick(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);     //Linux XLib
 #endif
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
-        ext.Pick(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);  //Linux Wayland
+        extensions.Pick(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);  //Linux Wayland
 #endif
 #ifdef VK_USE_PLATFORM_MIR_KHR
-        ext.Pick(VK_KHR_MIR_SURFACE_EXTENSION_NAME);      //Linux Mir
+        extensions.Pick(VK_KHR_MIR_SURFACE_EXTENSION_NAME);      //Linux Mir
 #endif
     } else LOGE("Failed to load VK_KHR_Surface");
 #ifndef NDEBUG
-    ext.Pick(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);         //in Debug mode, Enable Validation
-    ext.Print();
+    extensions.Pick(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);         //in Debug mode, Enable Validation
+    extensions.Print();
 #endif
 
-    assert(ext.PickCount()>=2);
-    Create(layers, ext, appName, engineName);
+    assert(extensions.PickCount()>=2);
+    Create(layers, extensions, appName, engineName);
 }
 
 CInstance::CInstance(vector<char*>& layers, vector<char*>& extensions, const char* appName, const char* engineName){
@@ -131,6 +131,7 @@ void CInstance::Create(vector<char*>const& layers, vector<char*>const& extension
 void CInstance::Print(){ printf("->Instance %s created.\n",(!!instance)?"":"NOT"); }
 
 CInstance::~CInstance(){
+    DebugReport.Destroy();               //Must be done BEFORE vkDestroyInstance()
     vkDestroyInstance(instance, NULL);
     LOGI("Vulkan Instance destroyed\n");
 }

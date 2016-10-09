@@ -5,6 +5,19 @@
   #define __LINUX__ 1
 #endif
 
+//===========================================Check VkResult============================================
+// Macro to check VkResult for errors(negative) or warnings(positive), and print as a string.
+#ifdef NDEBUG                           //In release builds, don't print VkResult strings.
+  #define VKERRCHECK(VKFN) { VKFN; }
+#else                                   //In debug builds, show warnings and errors. assert on error.
+#define VKERRCHECK(VKFN) { VkResult VKRESULT=VKFN;                              \
+                             ShowVkResult(VKRESULT);                            \
+                             assert(VKRESULT>=0);                               \
+                             if(VKRESULT) printf("%s:%d\n",__FILE__,__LINE__);  \
+                         }
+#endif
+//=====================================================================================================
+
 //===============================================LOGGING===============================================
 //  In Debug builds, the 6 LOG* functions print logging messages to the console, or Android LogCat.
 //  In Release builds, all LOG* functions get stripped out, to leave the exe as small as possible.
@@ -12,23 +25,31 @@
 //
 #ifdef _WIN32
     #include <Windows.h>
-      #ifdef WIN10PLUS
-        #define ANSICODE(x) x /* Enable ANSI codes */
+      #ifdef WIN10PLUS        /* ANSI color-codes requires windows 10+ */
+        #define ANSICODE(x) x /* Enable ANSI codes on Win10*/
+        struct INITANSI {
+            INITANSI() {
+                HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+                DWORD dwMode = 0;
+                GetConsoleMode(hOut, &dwMode);
+                dwMode |= 0x0004; // ENABLE_VIRTUAL_TERMINAL_PROCESSING
+                SetConsoleMode(hOut, dwMode);
+            }
+        }INITANSI;
       #else
-        #define ANSICODE(x)   /* Disable ANSI codes */
+        #define ANSICODE(x)   /* Disable ANSI codes on Win7/8*/
       #endif
-      #define cTICK "\xFB"
+      #define cTICK "\xFB"    /* On Windows, use Square-root as tick mark*/
 #elif __ANDROID__
     #include <native.h>
-    #define ANSICODE(x)
+    #define ANSICODE(x)       /* Disable ANSI codes on Android*/
     #define cTICK "\u2713"
 #elif __LINUX__
     #include <xkbcommon/xkbcommon.h>
-    #define ANSICODE(x) x
+    #define ANSICODE(x) x     /* Enable ANSI codes on Linux*/
     #define cTICK "\u2713"
 #endif
 
-#include <vulkan/vulkan.h>  //Android: must be included AFTER native.h
 //----------------------------------------------------------------------------------
 
 //--- ANSI escape codes to set text colours. eg. printf(cRED"Red text." cRESET); ---
@@ -49,7 +70,7 @@
       #include <jni.h>
       #include <android/log.h>
       #define LOG_TAG    "WSIWindow"                                                                  // Android:
-      #define LOG (...)    __android_log_print(ANDROID_LOG_INFO   ,LOG_TAG,__VA_ARGS__)               /*   Prints Info in black       */
+      #define LOG(...)     __android_log_print(ANDROID_LOG_INFO   ,LOG_TAG,__VA_ARGS__)               /*   Prints Info in black       */
       #define LOGV(...)    __android_log_print(ANDROID_LOG_VERBOSE,LOG_TAG,__VA_ARGS__)               /*   Prints Performance warnings*/
       #define LOGD(...)    __android_log_print(ANDROID_LOG_DEBUG  ,LOG_TAG,__VA_ARGS__)               /*   Prints Debug messages      */
       #define LOGI(...)    __android_log_print(ANDROID_LOG_INFO   ,LOG_TAG,__VA_ARGS__)               /*   Prints Info in black       */
@@ -57,7 +78,7 @@
       #define LOGE(...)    __android_log_print(ANDROID_LOG_ERROR  ,LOG_TAG,__VA_ARGS__)               /*   Prints Errors in red       */
       #define printf(...)  __android_log_print(ANDROID_LOG_INFO   ,LOG_TAG,__VA_ARGS__)               /*   printf output as log info  */
     #else                                                                                                // Linux and Windows 10+:
-      #define LOG (...) {printf(__VA_ARGS__);                                          fflush(stdout);}  /*   Prints in white            */
+      #define LOG(...)  {printf(__VA_ARGS__);                                          fflush(stdout);}  /*   Prints in white            */
       #define LOGV(...) {printf(cCYAN   "PERF-WARNING: " cRESET); printf(__VA_ARGS__); fflush(stdout);}  /*   Prints Performace Warnings */
       #define LOGD(...) {printf(cBLUE   "DEBUG: "        cRESET); printf(__VA_ARGS__); fflush(stdout);}  /*   Prints Debug messages      */
       #define LOGI(...) {printf(cGREEN  "INFO: "         cRESET); printf(__VA_ARGS__); fflush(stdout);}  /*   Prints Info messages       */
@@ -65,7 +86,7 @@
       #define LOGE(...) {printf(cRED    "ERROR: "        cRESET); printf(__VA_ARGS__); fflush(stdout);}  /*   Prints Errors in red       */
     #endif
 #else    //Remove LOG* messages from Release build. (printf messages are NOT removed.)
-    #define  LOG (...) {}
+    #define  LOG(...)  {}
     #define  LOGV(...) {}
     #define  LOGD(...) {}
     #define  LOGI(...) {}
@@ -74,9 +95,9 @@
 #endif
 //=====================================================================================================
 
-//#include <stdio.h>
 #include <assert.h>
-#include <vulkan/vulkan.h>
+//#include <stdio.h>
+#include <vulkan/vulkan.h>              //Android: must be included AFTER native.h
 
 const char* VkResultStr(VkResult err);  //Convert vulkan result code to a string.
 void ShowVkResult(VkResult err);        //Print warnings and errors.
@@ -90,6 +111,7 @@ class CDebugReport{
     //PFN_vkDebugReportMessageEXT         fpDebugReportMessageEXT;
 public:
     void Init(VkInstance inst);
+    void Destroy();
     ~CDebugReport();
 };
 //--------------------------------------------------------------------------------------------

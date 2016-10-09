@@ -31,21 +31,6 @@
 #include <windowsx.h>             //   Mouse
 //#pragma warning(disable:4996)
 
-//#ifdef _WIN32
-struct INITANSI {
-    INITANSI() {
-        HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-        DWORD dwMode = 0;
-        GetConsoleMode(hOut, &dwMode);
-        dwMode |= 0x0004; // ENABLE_VIRTUAL_TERMINAL_PROCESSING
-        SetConsoleMode(hOut, dwMode);
-        //printf(cRED "TEST");
-    }
-}INITANSI;
-//#endif
-
-
-
 // Convert native Win32 keyboard scancode to cross-platform USB HID code.
 const unsigned char WIN32_TO_HID[256] = {
       0,  0,  0,  0,  0,  0,  0,  0, 42, 43,  0,  0,  0, 40,  0,  0,    // 16

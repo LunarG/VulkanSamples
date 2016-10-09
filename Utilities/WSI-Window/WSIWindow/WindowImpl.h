@@ -83,8 +83,8 @@ public:
     bool has_focus;
     struct shape_t {int16_t x; int16_t y; uint16_t width; uint16_t height;}shape;  // window shape
 
-    WindowImpl() : instance(0), running(false), textinput(false), has_focus(false){}
-    virtual ~WindowImpl() {}
+    WindowImpl() : instance(0), surface(0), running(false), textinput(false), has_focus(false){}
+    virtual ~WindowImpl() { if(surface) vkDestroySurfaceKHR(*instance,surface,NULL); }
     virtual void Close() { running = false; }
     CInstance& Instance() { return *instance; }
     bool HasFocus() { return has_focus; }                                  // returns true if window has focus
