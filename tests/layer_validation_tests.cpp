@@ -3442,6 +3442,98 @@ TEST_F(VkLayerTest, PipelineNotBound) {
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
 
+// This is a positive test. No failures are expected.
+TEST_F(VkLayerTest, BindSparse) {
+    TEST_DESCRIPTION("Bind 2 memory ranges to one image using vkQueueBindSparse, destroy the image"
+                     "and then free the memory");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    auto index = m_device->graphics_queue_node_index_;
+    if (!(m_device->queue_props[index].queueFlags & VK_QUEUE_SPARSE_BINDING_BIT))
+        return;
+
+    m_errorMonitor->ExpectSuccess();
+
+    VkImage image;
+    VkImageCreateInfo image_create_info = {};
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.pNext = NULL;
+    image_create_info.imageType = VK_IMAGE_TYPE_2D;
+    image_create_info.format = VK_FORMAT_B8G8R8A8_UNORM;
+    image_create_info.extent.width = 64;
+    image_create_info.extent.height = 64;
+    image_create_info.extent.depth = 1;
+    image_create_info.mipLevels = 1;
+    image_create_info.arrayLayers = 1;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    image_create_info.usage = VK_IMAGE_USAGE_STORAGE_BIT;
+    image_create_info.flags = VK_IMAGE_CREATE_SPARSE_BINDING_BIT;
+    VkResult err = vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
+    ASSERT_VK_SUCCESS(err);
+
+    VkMemoryRequirements memory_reqs;
+    VkDeviceMemory memory_one, memory_two;
+    bool pass;
+    VkMemoryAllocateInfo memory_info = {};
+    memory_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    memory_info.pNext = NULL;
+    memory_info.allocationSize = 0;
+    memory_info.memoryTypeIndex = 0;
+    vkGetImageMemoryRequirements(m_device->device(), image, &memory_reqs);
+    // Find an image big enough to allow sparse mapping of 2 memory regions
+    // Increase the image size until it is at least twice the
+    // size of the required alignment, to ensure we can bind both
+    // allocated memory blocks to the image on aligned offsets.
+    while (memory_reqs.size < (memory_reqs.alignment * 2)) {
+        vkDestroyImage(m_device->device(), image, nullptr);
+        image_create_info.extent.width *= 2;
+        image_create_info.extent.height *= 2;
+        err = vkCreateImage(m_device->device(), &image_create_info, nullptr, &image);
+        ASSERT_VK_SUCCESS(err);
+        vkGetImageMemoryRequirements(m_device->device(), image, &memory_reqs);
+    }
+    // Allocate 2 memory regions of minimum alignment size, bind one at 0, the other
+    // at the end of the first
+    memory_info.allocationSize = memory_reqs.alignment;
+    pass = m_device->phy().set_memory_type(memory_reqs.memoryTypeBits, &memory_info, 0);
+    ASSERT_TRUE(pass);
+    err = vkAllocateMemory(m_device->device(), &memory_info, NULL, &memory_one);
+    ASSERT_VK_SUCCESS(err);
+    err = vkAllocateMemory(m_device->device(), &memory_info, NULL, &memory_two);
+    ASSERT_VK_SUCCESS(err);
+    VkSparseMemoryBind binds[2];
+    binds[0].flags = 0;
+    binds[0].memory = memory_one;
+    binds[0].memoryOffset = 0;
+    binds[0].resourceOffset = 0;
+    binds[0].size = memory_info.allocationSize;
+    binds[1].flags = 0;
+    binds[1].memory = memory_two;
+    binds[1].memoryOffset = 0;
+    binds[1].resourceOffset = memory_info.allocationSize;
+    binds[1].size = memory_info.allocationSize;
+
+    VkSparseImageOpaqueMemoryBindInfo opaqueBindInfo;
+    opaqueBindInfo.image = image;
+    opaqueBindInfo.bindCount = 2;
+    opaqueBindInfo.pBinds = binds;
+
+    VkFence fence = VK_NULL_HANDLE;
+    VkBindSparseInfo bindSparseInfo = {};
+    bindSparseInfo.sType = VK_STRUCTURE_TYPE_BIND_SPARSE_INFO;
+    bindSparseInfo.imageOpaqueBindCount = 1;
+    bindSparseInfo.pImageOpaqueBinds = &opaqueBindInfo;
+
+    vkQueueBindSparse(m_device->m_queue, 1, &bindSparseInfo, fence);
+    vkQueueWaitIdle(m_device->m_queue);
+    vkDestroyImage(m_device->device(), image, NULL);
+    vkFreeMemory(m_device->device(), memory_one, NULL);
+    vkFreeMemory(m_device->device(), memory_two, NULL);
+    m_errorMonitor->VerifyNotFound();
+}
+
 TEST_F(VkLayerTest, BindImageInvalidMemoryType) {
     VkResult err;
 
