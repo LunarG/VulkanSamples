@@ -14433,10 +14433,6 @@ TEST_F(VkLayerTest, CreatePipelineCheckShaderDescriptorTypeMismatch) {
     // Challenge core_validation with a non uniform buffer type.
     VkBufferTest storage_buffer_test(m_device, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
 
-    VkDescriptorBufferInfo buffer_info = {};
-    buffer_info.buffer = storage_buffer_test.GetBuffer();
-    buffer_info.range = 1024;
-
     char const *vsSource =
             "#version 450\n"
             "\n"
@@ -14530,11 +14526,6 @@ TEST_F(VkLayerTest, CreatePipelineCheckShaderDescriptorNotAccessible) {
     ASSERT_VK_SUCCESS(vkAllocateDescriptorSets(m_device->device(), &descriptorset_allocate_info, &descriptorset));
 
     VkBufferTest buffer_test(m_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-
-    VkDescriptorBufferInfo buffer_info = {};
-    buffer_info.buffer = buffer_test.GetBuffer();
-    buffer_info.offset = 0;
-    buffer_info.range = 1024;
 
     char const *vsSource =
             "#version 450\n"
@@ -14679,10 +14670,6 @@ TEST_F(VkLayerTest, CreatePipelineCheckShaderNotEnabled) {
     VkShaderObj fs(&test_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkRenderpassObj render_pass(&test_device);
-    VkPipelineRasterizationStateCreateInfo rasterization_state_create_info = {};
-    rasterization_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    rasterization_state_create_info.lineWidth = 1.0f;
-    rasterization_state_create_info.rasterizerDiscardEnable = true;
 
     VkPipelineObj pipe(&test_device);
     pipe.AddColorAttachment();
