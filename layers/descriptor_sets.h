@@ -21,6 +21,7 @@
 #define CORE_VALIDATION_DESCRIPTOR_SETS_H_
 
 // Check for noexcept support
+#ifndef NOEXCEPT
 #if defined(__clang__)
 #if __has_feature(cxx_noexcept)
 #define HAS_NOEXCEPT
@@ -39,6 +40,7 @@
 #define NOEXCEPT noexcept
 #else
 #define NOEXCEPT
+#endif
 #endif
 
 #include "core_validation_error_enums.h"

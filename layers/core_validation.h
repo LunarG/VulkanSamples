@@ -21,6 +21,7 @@
  * Author: Mark Lobodzinski <mark@lunarg.com>
  */
 
+#ifndef NOEXCEPT
 // Check for noexcept support
 #if defined(__clang__)
 #if __has_feature(cxx_noexcept)
@@ -40,6 +41,7 @@
 #define NOEXCEPT noexcept
 #else
 #define NOEXCEPT
+#endif
 #endif
 
 // Enable mem_tracker merged code
