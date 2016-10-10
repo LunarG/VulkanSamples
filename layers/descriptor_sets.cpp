@@ -796,6 +796,7 @@ bool cvdescriptorset::ValidateImageUpdate(VkImageView image_view, VkImageLayout 
         break;
     }
     // Now validate that usage flags are correctly set for given type of update
+    //  As we're switching per-type, if any type has specific layout requirements, check those here as well
     // TODO : The various image usage bit requirements are in general spec language for VkImageUsageFlags bit block in 11.3 Images
     // under vkCreateImage()
     // TODO : Need to also validate case VALIDATION_ERROR_00952 where STORAGE_IMAGE & INPUT_ATTACH types must have been created with
@@ -812,6 +813,15 @@ bool cvdescriptorset::ValidateImageUpdate(VkImageView image_view, VkImageLayout 
     case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE: {
         if (!(usage & VK_IMAGE_USAGE_STORAGE_BIT)) {
             error_usage_bit = "VK_IMAGE_USAGE_STORAGE_BIT";
+        } else if (VK_IMAGE_LAYOUT_GENERAL != image_layout) {
+            std::stringstream error_str;
+            // TODO : Need to create custom enum error code for this case
+            error_str << "ImageView (" << image_view << ") of VK_DESCRIPTOR_TYPE_STORAGE_IMAGE type is being updated with layout "
+                      << string_VkImageLayout(image_layout)
+                      << " but according to spec section 13.1 Descriptor Types, 'Load and store operations on storage images can "
+                         "only be done on images in VK_IMAGE_LAYOUT_GENERAL layout.'";
+            *error_msg = error_str.str();
+            return false;
         }
         break;
     }
