@@ -2316,7 +2316,7 @@ struct Demo {
         }
 
         // Create window with the registered class:
-        RECT wr = {0, 0, width, height};
+        RECT wr = {0, 0, static_cast<LONG>(width), static_cast<LONG>(height)};
         AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
         window = CreateWindowEx(0,
                                 name,                 // class name
