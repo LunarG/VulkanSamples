@@ -9096,9 +9096,9 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility) {
     imageInfo[1].imageView = view;
     imageInfo[1].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     imageInfo[2].imageView = view;
-    imageInfo[2].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    imageInfo[2].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
     imageInfo[3].imageView = view;
-    imageInfo[3].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    imageInfo[3].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
     static const uint32_t NUM_SET_UPDATES = 3;
     VkWriteDescriptorSet descriptor_write[NUM_SET_UPDATES] = {};
@@ -9245,8 +9245,6 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility) {
         vkDestroyDescriptorSetLayout(m_device->device(), ds_layout[i], NULL);
     }
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout_fs_only, NULL);
-    vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &ds0_fs_only);
-    vkFreeDescriptorSets(m_device->device(), ds_pool, NUM_SETS, descriptorSet);
     vkDestroyBuffer(m_device->device(), dyub, NULL);
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
