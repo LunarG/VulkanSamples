@@ -6893,6 +6893,8 @@ FreeDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t co
 static bool PreCallValidateUpdateDescriptorSets(layer_data *dev_data, uint32_t descriptorWriteCount,
                                                 const VkWriteDescriptorSet *pDescriptorWrites, uint32_t descriptorCopyCount,
                                                 const VkCopyDescriptorSet *pDescriptorCopies) {
+    if (dev_data->instance_state->disabled.update_descriptor_sets)
+        return false;
     // First thing to do is perform map look-ups.
     // NOTE : UpdateDescriptorSets is somewhat unique in that it's operating on a number of DescriptorSets
     //  so we can't just do a single map look-up up-front, but do them individually in functions below

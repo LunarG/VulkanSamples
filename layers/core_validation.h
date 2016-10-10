@@ -77,6 +77,7 @@ struct CHECK_DISABLED {
     bool push_constant_range; // Skip push constant range checks
     bool free_descriptor_sets; // Skip validation prior to vkFreeDescriptorSets()
     bool allocate_descriptor_sets; // Skip validation prior to vkAllocateDescriptorSets()
+    bool update_descriptor_sets;   // Skip validation prior to vkUpdateDescriptorSets()
 };
 
 #if MTMERGE
