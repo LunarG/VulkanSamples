@@ -47,7 +47,7 @@ if(WIN32)
     #target_include_directories(${LIBRARY_NAME} PUBLIC "${VULKAN_SDK}/include")
     
     if(NOT ${CMAKE_SYSTEM_VERSION} VERSION_LESS 10)                          # Check for Windows 10+
-        add_definitions(-DWIN10PLUS)
+        target_compile_definitions(${LIBRARY_NAME} PUBLIC -DWIN10PLUS)       # define WIN10PLUS
     endif()
 
 endif()
