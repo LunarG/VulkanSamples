@@ -64,6 +64,7 @@ CInstance::CInstance(const char* appName, const char* engineName){
     layers.Pick("VK_LAYER_LUNARG_core_validation"     );
     layers.Pick("VK_LAYER_LUNARG_swapchain"           );
     layers.Pick("VK_LAYER_GOOGLE_unique_objects"      );
+    //layers.Pick("Fake_Layer"); //triggers a warning
     layers.Print();
 #endif
 
@@ -89,6 +90,7 @@ CInstance::CInstance(const char* appName, const char* engineName){
 #endif
     } else LOGE("Failed to load VK_KHR_Surface");
 #ifndef NDEBUG
+    //extensions.Pick("Fake_Extension"); //triggers a warning
     extensions.Pick(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);         //in Debug mode, Enable Validation
     extensions.Print();
 #endif

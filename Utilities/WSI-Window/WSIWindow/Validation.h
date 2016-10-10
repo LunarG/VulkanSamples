@@ -97,9 +97,9 @@ void ShowVkResult(VkResult err);        //Print warnings and errors.
 class CDebugReport{
     VkInstance instance=0;
     VkDebugReportCallbackEXT debug_report_callback=0;
-    PFN_vkCreateDebugReportCallbackEXT  fpCreateDebugReportCallbackEXT;
-    PFN_vkDestroyDebugReportCallbackEXT fpDestroyDebugReportCallbackEXT;
-    //PFN_vkDebugReportMessageEXT         fpDebugReportMessageEXT;
+    PFN_vkCreateDebugReportCallbackEXT  vkCreateDebugReportCallbackEXT;
+    PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT;
+    //PFN_vkDebugReportMessageEXT         vkDebugReportMessageEXT;
 public:
     void Init(VkInstance inst);
     void Destroy();

@@ -78,8 +78,8 @@ dbgFunc(VkDebugReportFlagsEXT msgFlags, VkDebugReportObjectTypeEXT objType, uint
 
 //----------------------------------vkGetInstanceProcAddr Macro-------------------------------
 #define GET_INSTANCE_PROC_ADDR(inst, entrypoint){                                           \
-        fp##entrypoint = (PFN_vk##entrypoint)vkGetInstanceProcAddr(inst, "vk" #entrypoint); \
-        assert(fp##entrypoint && "entry point was not found.");                             \
+        vk##entrypoint = (PFN_vk##entrypoint)vkGetInstanceProcAddr(inst, "vk" #entrypoint); \
+        assert(vk##entrypoint && "entry point was not found.");                             \
 }
 //--------------------------------------------------------------------------------------------
 
@@ -97,15 +97,15 @@ void CDebugReport::Init(VkInstance inst){
                         VK_DEBUG_REPORT_WARNING_BIT_EXT             |  // 2
                         VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT |  // 4
                         VK_DEBUG_REPORT_ERROR_BIT_EXT               |  // 8
-                        VK_DEBUG_REPORT_DEBUG_BIT_EXT;                 //10
-
+                        VK_DEBUG_REPORT_DEBUG_BIT_EXT               |  //10
+                        0;
     create_info.pfnCallback = dbgFunc;  //Callback function to call
     create_info.pUserData = NULL;
-    VKERRCHECK(fpCreateDebugReportCallbackEXT(inst, &create_info, NULL, &debug_report_callback));
+    VKERRCHECK(vkCreateDebugReportCallbackEXT(inst, &create_info, NULL, &debug_report_callback));
 }
 
 void CDebugReport::Destroy(){
     if(debug_report_callback)
-      fpDestroyDebugReportCallbackEXT(instance, debug_report_callback, NULL);
+      vkDestroyDebugReportCallbackEXT(instance, debug_report_callback, NULL);
 }
 //--------------------------------------------------------------------------------------------

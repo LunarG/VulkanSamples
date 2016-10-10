@@ -52,7 +52,7 @@ typedef unsigned int uint;
 #define forCount(COUNT) for(uint32_t i=0; i<COUNT; ++i)
 //----------------------------------------------------------------
 //--------------------------PickList------------------------------
-template <class TYPE> class TPickList{
+template <class TYPE> class TPickList{     //layers and extensions
 protected:
     vector<TYPE>  itemList;
     vector<char*> pickList;
@@ -65,9 +65,12 @@ public:
         return -1;
     }
 
-    bool Pick(const char* name){
+    bool Pick(const char* name){                        //Returns false if picked item was not found.
         int inx=IndexOf(name);
-        if(inx==-1) return false;
+        if(inx==-1) {
+            LOGW("%s not found.\n",name);               //Warn if picked item was not found.
+            return false;
+        }
         for(const char* pickItem : pickList)
             if(pickItem == itemName(inx)) return true;  //Check if item was already picked
         pickList.push_back(itemName(inx));              //if not, add item to pick-list
