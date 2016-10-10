@@ -23,6 +23,7 @@
 #ifndef CORE_VALIDATION_TYPES_H_
 #define CORE_VALIDATION_TYPES_H_
 
+#ifndef NOEXCEPT
 // Check for noexcept support
 #if defined(__clang__)
 #if __has_feature(cxx_noexcept)
@@ -42,6 +43,7 @@
 #define NOEXCEPT noexcept
 #else
 #define NOEXCEPT
+#endif
 #endif
 
 #include "vk_safe_struct.h"
@@ -195,21 +197,6 @@ class IMAGE_VIEW_STATE : public BASE_NODE {
     IMAGE_VIEW_STATE(const IMAGE_VIEW_STATE &rh_obj) = delete;
 };
 
-// Simple struct to hold handle and type of object so they can be uniquely identified and looked up in appropriate map
-// TODO : Unify this with VK_OBJECT above
-struct MT_OBJ_HANDLE_TYPE {
-    uint64_t handle;
-    VkDebugReportObjectTypeEXT type;
-};
-
-inline bool operator==(MT_OBJ_HANDLE_TYPE a, MT_OBJ_HANDLE_TYPE b) NOEXCEPT { return a.handle == b.handle && a.type == b.type; }
-
-namespace std {
-template <> struct hash<MT_OBJ_HANDLE_TYPE> {
-    size_t operator()(MT_OBJ_HANDLE_TYPE obj) const NOEXCEPT { return hash<uint64_t>()(obj.handle) ^ hash<uint32_t>()(obj.type); }
-};
-}
-
 struct MemRange {
     VkDeviceSize offset;
     VkDeviceSize size;
@@ -234,7 +221,7 @@ struct DEVICE_MEM_INFO : public BASE_NODE {
     bool global_valid; // If allocation is mapped, set to "true" to be picked up by subsequently bound ranges
     VkDeviceMemory mem;
     VkMemoryAllocateInfo alloc_info;
-    std::unordered_set<MT_OBJ_HANDLE_TYPE> obj_bindings;         // objects bound to this memory
+    std::unordered_set<VK_OBJECT> obj_bindings;         // objects bound to this memory
     std::unordered_set<VkCommandBuffer> command_buffer_bindings; // cmd buffers referencing this memory
     std::unordered_map<uint64_t, MEMORY_RANGE> bound_ranges;     // Map of object to its binding range
     // Convenience vectors image/buff handles to speed up iterating over images or buffers independently
@@ -255,17 +242,11 @@ struct DEVICE_MEM_INFO : public BASE_NODE {
 
 class SWAPCHAIN_NODE {
   public:
-    VkSwapchainCreateInfoKHR createInfo;
-    uint32_t *pQueueFamilyIndices;
+    safe_VkSwapchainCreateInfoKHR createInfo;
+    VkSwapchainKHR swapchain;
     std::vector<VkImage> images;
-    SWAPCHAIN_NODE(const VkSwapchainCreateInfoKHR *pCreateInfo) : createInfo(*pCreateInfo), pQueueFamilyIndices(NULL) {
-        if (pCreateInfo->queueFamilyIndexCount && pCreateInfo->imageSharingMode == VK_SHARING_MODE_CONCURRENT) {
-            pQueueFamilyIndices = new uint32_t[pCreateInfo->queueFamilyIndexCount];
-            memcpy(pQueueFamilyIndices, pCreateInfo->pQueueFamilyIndices, pCreateInfo->queueFamilyIndexCount * sizeof(uint32_t));
-            createInfo.pQueueFamilyIndices = pQueueFamilyIndices;
-        }
-    }
-    ~SWAPCHAIN_NODE() { delete[] pQueueFamilyIndices; }
+    SWAPCHAIN_NODE(const VkSwapchainCreateInfoKHR *pCreateInfo, VkSwapchainKHR swapchain)
+        : createInfo(pCreateInfo), swapchain(swapchain) {}
 };
 
 enum DRAW_TYPE {

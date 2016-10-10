@@ -3371,17 +3371,6 @@ static bool loader_check_layer_list_for_address(
     return false;
 }
 
-static bool
-loader_check_layers_for_address(const struct loader_instance *const inst,
-                                const char *funcName) {
-    if (loader_check_layer_list_for_address(&inst->instance_layer_list,
-                                            funcName)) {
-        return true;
-    }
-
-    return false;
-}
-
 static void loader_free_dev_ext_table(struct loader_instance *inst) {
     for (uint32_t i = 0; i < MAX_NUM_DEV_EXTS; i++) {
         loader_instance_heap_free(inst, inst->disp_hash[i].func_name);
@@ -3514,7 +3503,7 @@ void *loader_dev_ext_gpa(struct loader_instance *inst, const char *funcName) {
 
     // Check if funcName is supported in either ICDs or a layer library
     if (!loader_check_icds_for_address(inst, funcName) &&
-        !loader_check_layers_for_address(inst, funcName)) {
+        !loader_check_layer_list_for_address(&inst->instance_layer_list, funcName)) {
         // if support found in layers continue on
         return NULL;
     }
@@ -4457,32 +4446,34 @@ terminator_EnumeratePhysicalDevices(VkInstance instance,
 
         if (inst->phys_devs_term) {
             loader_instance_heap_free(inst, inst->phys_devs_term);
+            inst->phys_devs_term = NULL;
         }
 
-        if (copy_count > 0) {
+        if (inst->total_gpu_count > 0) {
             inst->phys_devs_term = loader_instance_heap_alloc(
-                inst, sizeof(struct loader_physical_device) * copy_count,
+                inst, sizeof(struct loader_physical_device) * inst->total_gpu_count,
                 VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
             if (!inst->phys_devs_term) {
                 return VK_ERROR_OUT_OF_HOST_MEMORY;
             }
         }
 
-        for (i = 0; idx < copy_count && i < inst->total_icd_count; i++) {
-            for (j = 0; j < phys_devs[i].count && idx < copy_count; j++) {
+        for (i = 0; idx < inst->total_gpu_count && i < inst->total_icd_count; i++) {
+            for (j = 0; j < phys_devs[i].count && idx < inst->total_gpu_count; j++) {
                 loader_set_dispatch((void *)&inst->phys_devs_term[idx],
                                     inst->disp);
                 inst->phys_devs_term[idx].this_icd = phys_devs[i].this_icd;
                 inst->phys_devs_term[idx].icd_index = i;
                 inst->phys_devs_term[idx].phys_dev = phys_devs[i].phys_devs[j];
-                pPhysicalDevices[idx] =
-                    (VkPhysicalDevice)&inst->phys_devs_term[idx];
+                if (idx < copy_count) {
+                    pPhysicalDevices[idx] =
+                        (VkPhysicalDevice)&inst->phys_devs_term[idx];
+                }
                 idx++;
             }
         }
 
         if (copy_count < inst->total_gpu_count) {
-            inst->total_gpu_count = copy_count;
             res = VK_INCOMPLETE;
         }
     }

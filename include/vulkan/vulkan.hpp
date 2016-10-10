@@ -40,7 +40,7 @@
 # include <vector>
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
 
-static_assert( VK_HEADER_VERSION ==  26 , "Wrong VK_HEADER_VERSION!" );
+static_assert( VK_HEADER_VERSION ==  30 , "Wrong VK_HEADER_VERSION!" );
 
 // 32-bit vulkan is not typesafe for handles, so don't allow copy constructors on this platform by default.
 // To enable this feature on 32-bit platforms please define VULKAN_HPP_TYPESAFE_CONVERSION
@@ -4114,35 +4114,6 @@ namespace vk
 
   struct DisplayPlanePropertiesKHR
   {
-    DisplayPlanePropertiesKHR( DisplayKHR currentDisplay_ = DisplayKHR(), uint32_t currentStackIndex_ = 0 )
-      : currentDisplay( currentDisplay_ )
-      , currentStackIndex( currentStackIndex_ )
-    {
-    }
-
-    DisplayPlanePropertiesKHR( VkDisplayPlanePropertiesKHR const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(DisplayPlanePropertiesKHR) );
-    }
-
-    DisplayPlanePropertiesKHR& operator=( VkDisplayPlanePropertiesKHR const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(DisplayPlanePropertiesKHR) );
-      return *this;
-    }
-
-    DisplayPlanePropertiesKHR& setCurrentDisplay( DisplayKHR currentDisplay_ )
-    {
-      currentDisplay = currentDisplay_;
-      return *this;
-    }
-
-    DisplayPlanePropertiesKHR& setCurrentStackIndex( uint32_t currentStackIndex_ )
-    {
-      currentStackIndex = currentStackIndex_;
-      return *this;
-    }
-
     operator const VkDisplayPlanePropertiesKHR&() const
     {
       return *reinterpret_cast<const VkDisplayPlanePropertiesKHR*>(this);
@@ -4218,35 +4189,6 @@ namespace vk
 
   struct DisplayModePropertiesKHR
   {
-    DisplayModePropertiesKHR( DisplayModeKHR displayMode_ = DisplayModeKHR(), DisplayModeParametersKHR parameters_ = DisplayModeParametersKHR() )
-      : displayMode( displayMode_ )
-      , parameters( parameters_ )
-    {
-    }
-
-    DisplayModePropertiesKHR( VkDisplayModePropertiesKHR const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(DisplayModePropertiesKHR) );
-    }
-
-    DisplayModePropertiesKHR& operator=( VkDisplayModePropertiesKHR const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(DisplayModePropertiesKHR) );
-      return *this;
-    }
-
-    DisplayModePropertiesKHR& setDisplayMode( DisplayModeKHR displayMode_ )
-    {
-      displayMode = displayMode_;
-      return *this;
-    }
-
-    DisplayModePropertiesKHR& setParameters( DisplayModeParametersKHR parameters_ )
-    {
-      parameters = parameters_;
-      return *this;
-    }
-
     operator const VkDisplayModePropertiesKHR&() const
     {
       return *reinterpret_cast<const VkDisplayModePropertiesKHR*>(this);
@@ -5419,7 +5361,8 @@ namespace vk
     eExportMemoryAllocateInfoNV = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO_NV,
     eImportMemoryWin32HandleInfoNV = VK_STRUCTURE_TYPE_IMPORT_MEMORY_WIN32_HANDLE_INFO_NV,
     eExportMemoryWin32HandleInfoNV = VK_STRUCTURE_TYPE_EXPORT_MEMORY_WIN32_HANDLE_INFO_NV,
-    eWin32KeyedMutexAcquireReleaseInfoNV = VK_STRUCTURE_TYPE_WIN32_KEYED_MUTEX_ACQUIRE_RELEASE_INFO_NV
+    eWin32KeyedMutexAcquireReleaseInfoNV = VK_STRUCTURE_TYPE_WIN32_KEYED_MUTEX_ACQUIRE_RELEASE_INFO_NV,
+    eValidationFlagsEXT = VK_STRUCTURE_TYPE_VALIDATION_FLAGS_EXT
   };
 
   struct ApplicationInfo
@@ -14817,35 +14760,6 @@ namespace vk
 
   struct SurfaceFormatKHR
   {
-    SurfaceFormatKHR( Format format_ = Format::eUndefined, ColorSpaceKHR colorSpace_ = ColorSpaceKHR::eSrgbNonlinear )
-      : format( format_ )
-      , colorSpace( colorSpace_ )
-    {
-    }
-
-    SurfaceFormatKHR( VkSurfaceFormatKHR const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(SurfaceFormatKHR) );
-    }
-
-    SurfaceFormatKHR& operator=( VkSurfaceFormatKHR const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(SurfaceFormatKHR) );
-      return *this;
-    }
-
-    SurfaceFormatKHR& setFormat( Format format_ )
-    {
-      format = format_;
-      return *this;
-    }
-
-    SurfaceFormatKHR& setColorSpace( ColorSpaceKHR colorSpace_ )
-    {
-      colorSpace = colorSpace_;
-      return *this;
-    }
-
     operator const VkSurfaceFormatKHR&() const
     {
       return *reinterpret_cast<const VkSurfaceFormatKHR*>(this);
@@ -14884,84 +14798,6 @@ namespace vk
 
   struct DisplayPlaneCapabilitiesKHR
   {
-    DisplayPlaneCapabilitiesKHR( DisplayPlaneAlphaFlagsKHR supportedAlpha_ = DisplayPlaneAlphaFlagsKHR(), Offset2D minSrcPosition_ = Offset2D(), Offset2D maxSrcPosition_ = Offset2D(), Extent2D minSrcExtent_ = Extent2D(), Extent2D maxSrcExtent_ = Extent2D(), Offset2D minDstPosition_ = Offset2D(), Offset2D maxDstPosition_ = Offset2D(), Extent2D minDstExtent_ = Extent2D(), Extent2D maxDstExtent_ = Extent2D() )
-      : supportedAlpha( supportedAlpha_ )
-      , minSrcPosition( minSrcPosition_ )
-      , maxSrcPosition( maxSrcPosition_ )
-      , minSrcExtent( minSrcExtent_ )
-      , maxSrcExtent( maxSrcExtent_ )
-      , minDstPosition( minDstPosition_ )
-      , maxDstPosition( maxDstPosition_ )
-      , minDstExtent( minDstExtent_ )
-      , maxDstExtent( maxDstExtent_ )
-    {
-    }
-
-    DisplayPlaneCapabilitiesKHR( VkDisplayPlaneCapabilitiesKHR const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(DisplayPlaneCapabilitiesKHR) );
-    }
-
-    DisplayPlaneCapabilitiesKHR& operator=( VkDisplayPlaneCapabilitiesKHR const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(DisplayPlaneCapabilitiesKHR) );
-      return *this;
-    }
-
-    DisplayPlaneCapabilitiesKHR& setSupportedAlpha( DisplayPlaneAlphaFlagsKHR supportedAlpha_ )
-    {
-      supportedAlpha = supportedAlpha_;
-      return *this;
-    }
-
-    DisplayPlaneCapabilitiesKHR& setMinSrcPosition( Offset2D minSrcPosition_ )
-    {
-      minSrcPosition = minSrcPosition_;
-      return *this;
-    }
-
-    DisplayPlaneCapabilitiesKHR& setMaxSrcPosition( Offset2D maxSrcPosition_ )
-    {
-      maxSrcPosition = maxSrcPosition_;
-      return *this;
-    }
-
-    DisplayPlaneCapabilitiesKHR& setMinSrcExtent( Extent2D minSrcExtent_ )
-    {
-      minSrcExtent = minSrcExtent_;
-      return *this;
-    }
-
-    DisplayPlaneCapabilitiesKHR& setMaxSrcExtent( Extent2D maxSrcExtent_ )
-    {
-      maxSrcExtent = maxSrcExtent_;
-      return *this;
-    }
-
-    DisplayPlaneCapabilitiesKHR& setMinDstPosition( Offset2D minDstPosition_ )
-    {
-      minDstPosition = minDstPosition_;
-      return *this;
-    }
-
-    DisplayPlaneCapabilitiesKHR& setMaxDstPosition( Offset2D maxDstPosition_ )
-    {
-      maxDstPosition = maxDstPosition_;
-      return *this;
-    }
-
-    DisplayPlaneCapabilitiesKHR& setMinDstExtent( Extent2D minDstExtent_ )
-    {
-      minDstExtent = minDstExtent_;
-      return *this;
-    }
-
-    DisplayPlaneCapabilitiesKHR& setMaxDstExtent( Extent2D maxDstExtent_ )
-    {
-      maxDstExtent = maxDstExtent_;
-      return *this;
-    }
-
     operator const VkDisplayPlaneCapabilitiesKHR&() const
     {
       return *reinterpret_cast<const VkDisplayPlaneCapabilitiesKHR*>(this);
@@ -15034,70 +14870,6 @@ namespace vk
 
   struct DisplayPropertiesKHR
   {
-    DisplayPropertiesKHR( DisplayKHR display_ = DisplayKHR(), const char* displayName_ = nullptr, Extent2D physicalDimensions_ = Extent2D(), Extent2D physicalResolution_ = Extent2D(), SurfaceTransformFlagsKHR supportedTransforms_ = SurfaceTransformFlagsKHR(), Bool32 planeReorderPossible_ = 0, Bool32 persistentContent_ = 0 )
-      : display( display_ )
-      , displayName( displayName_ )
-      , physicalDimensions( physicalDimensions_ )
-      , physicalResolution( physicalResolution_ )
-      , supportedTransforms( supportedTransforms_ )
-      , planeReorderPossible( planeReorderPossible_ )
-      , persistentContent( persistentContent_ )
-    {
-    }
-
-    DisplayPropertiesKHR( VkDisplayPropertiesKHR const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(DisplayPropertiesKHR) );
-    }
-
-    DisplayPropertiesKHR& operator=( VkDisplayPropertiesKHR const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(DisplayPropertiesKHR) );
-      return *this;
-    }
-
-    DisplayPropertiesKHR& setDisplay( DisplayKHR display_ )
-    {
-      display = display_;
-      return *this;
-    }
-
-    DisplayPropertiesKHR& setDisplayName( const char* displayName_ )
-    {
-      displayName = displayName_;
-      return *this;
-    }
-
-    DisplayPropertiesKHR& setPhysicalDimensions( Extent2D physicalDimensions_ )
-    {
-      physicalDimensions = physicalDimensions_;
-      return *this;
-    }
-
-    DisplayPropertiesKHR& setPhysicalResolution( Extent2D physicalResolution_ )
-    {
-      physicalResolution = physicalResolution_;
-      return *this;
-    }
-
-    DisplayPropertiesKHR& setSupportedTransforms( SurfaceTransformFlagsKHR supportedTransforms_ )
-    {
-      supportedTransforms = supportedTransforms_;
-      return *this;
-    }
-
-    DisplayPropertiesKHR& setPlaneReorderPossible( Bool32 planeReorderPossible_ )
-    {
-      planeReorderPossible = planeReorderPossible_;
-      return *this;
-    }
-
-    DisplayPropertiesKHR& setPersistentContent( Bool32 persistentContent_ )
-    {
-      persistentContent = persistentContent_;
-      return *this;
-    }
-
     operator const VkDisplayPropertiesKHR&() const
     {
       return *reinterpret_cast<const VkDisplayPropertiesKHR*>(this);
@@ -15258,91 +15030,6 @@ namespace vk
 
   struct SurfaceCapabilitiesKHR
   {
-    SurfaceCapabilitiesKHR( uint32_t minImageCount_ = 0, uint32_t maxImageCount_ = 0, Extent2D currentExtent_ = Extent2D(), Extent2D minImageExtent_ = Extent2D(), Extent2D maxImageExtent_ = Extent2D(), uint32_t maxImageArrayLayers_ = 0, SurfaceTransformFlagsKHR supportedTransforms_ = SurfaceTransformFlagsKHR(), SurfaceTransformFlagBitsKHR currentTransform_ = SurfaceTransformFlagBitsKHR::eIdentity, CompositeAlphaFlagsKHR supportedCompositeAlpha_ = CompositeAlphaFlagsKHR(), ImageUsageFlags supportedUsageFlags_ = ImageUsageFlags() )
-      : minImageCount( minImageCount_ )
-      , maxImageCount( maxImageCount_ )
-      , currentExtent( currentExtent_ )
-      , minImageExtent( minImageExtent_ )
-      , maxImageExtent( maxImageExtent_ )
-      , maxImageArrayLayers( maxImageArrayLayers_ )
-      , supportedTransforms( supportedTransforms_ )
-      , currentTransform( currentTransform_ )
-      , supportedCompositeAlpha( supportedCompositeAlpha_ )
-      , supportedUsageFlags( supportedUsageFlags_ )
-    {
-    }
-
-    SurfaceCapabilitiesKHR( VkSurfaceCapabilitiesKHR const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(SurfaceCapabilitiesKHR) );
-    }
-
-    SurfaceCapabilitiesKHR& operator=( VkSurfaceCapabilitiesKHR const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(SurfaceCapabilitiesKHR) );
-      return *this;
-    }
-
-    SurfaceCapabilitiesKHR& setMinImageCount( uint32_t minImageCount_ )
-    {
-      minImageCount = minImageCount_;
-      return *this;
-    }
-
-    SurfaceCapabilitiesKHR& setMaxImageCount( uint32_t maxImageCount_ )
-    {
-      maxImageCount = maxImageCount_;
-      return *this;
-    }
-
-    SurfaceCapabilitiesKHR& setCurrentExtent( Extent2D currentExtent_ )
-    {
-      currentExtent = currentExtent_;
-      return *this;
-    }
-
-    SurfaceCapabilitiesKHR& setMinImageExtent( Extent2D minImageExtent_ )
-    {
-      minImageExtent = minImageExtent_;
-      return *this;
-    }
-
-    SurfaceCapabilitiesKHR& setMaxImageExtent( Extent2D maxImageExtent_ )
-    {
-      maxImageExtent = maxImageExtent_;
-      return *this;
-    }
-
-    SurfaceCapabilitiesKHR& setMaxImageArrayLayers( uint32_t maxImageArrayLayers_ )
-    {
-      maxImageArrayLayers = maxImageArrayLayers_;
-      return *this;
-    }
-
-    SurfaceCapabilitiesKHR& setSupportedTransforms( SurfaceTransformFlagsKHR supportedTransforms_ )
-    {
-      supportedTransforms = supportedTransforms_;
-      return *this;
-    }
-
-    SurfaceCapabilitiesKHR& setCurrentTransform( SurfaceTransformFlagBitsKHR currentTransform_ )
-    {
-      currentTransform = currentTransform_;
-      return *this;
-    }
-
-    SurfaceCapabilitiesKHR& setSupportedCompositeAlpha( CompositeAlphaFlagsKHR supportedCompositeAlpha_ )
-    {
-      supportedCompositeAlpha = supportedCompositeAlpha_;
-      return *this;
-    }
-
-    SurfaceCapabilitiesKHR& setSupportedUsageFlags( ImageUsageFlags supportedUsageFlags_ )
-    {
-      supportedUsageFlags = supportedUsageFlags_;
-      return *this;
-    }
-
     operator const VkSurfaceCapabilitiesKHR&() const
     {
       return *reinterpret_cast<const VkSurfaceCapabilitiesKHR*>(this);
@@ -18275,6 +17962,84 @@ namespace vk
   };
   static_assert( sizeof( Instance ) == sizeof( VkInstance ), "handle and wrapper have different size!" );
 
+  enum class ValidationCheckEXT
+  {
+    eAll = VK_VALIDATION_CHECK_ALL_EXT
+  };
+
+  struct ValidationFlagsEXT
+  {
+    ValidationFlagsEXT( uint32_t disabledValidationCheckCount_ = 0, ValidationCheckEXT* pDisabledValidationChecks_ = nullptr )
+      : sType( StructureType::eValidationFlagsEXT )
+      , pNext( nullptr )
+      , disabledValidationCheckCount( disabledValidationCheckCount_ )
+      , pDisabledValidationChecks( pDisabledValidationChecks_ )
+    {
+    }
+
+    ValidationFlagsEXT( VkValidationFlagsEXT const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(ValidationFlagsEXT) );
+    }
+
+    ValidationFlagsEXT& operator=( VkValidationFlagsEXT const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(ValidationFlagsEXT) );
+      return *this;
+    }
+
+    ValidationFlagsEXT& setSType( StructureType sType_ )
+    {
+      sType = sType_;
+      return *this;
+    }
+
+    ValidationFlagsEXT& setPNext( const void* pNext_ )
+    {
+      pNext = pNext_;
+      return *this;
+    }
+
+    ValidationFlagsEXT& setDisabledValidationCheckCount( uint32_t disabledValidationCheckCount_ )
+    {
+      disabledValidationCheckCount = disabledValidationCheckCount_;
+      return *this;
+    }
+
+    ValidationFlagsEXT& setPDisabledValidationChecks( ValidationCheckEXT* pDisabledValidationChecks_ )
+    {
+      pDisabledValidationChecks = pDisabledValidationChecks_;
+      return *this;
+    }
+
+    operator const VkValidationFlagsEXT&() const
+    {
+      return *reinterpret_cast<const VkValidationFlagsEXT*>(this);
+    }
+
+    bool operator==( ValidationFlagsEXT const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( disabledValidationCheckCount == rhs.disabledValidationCheckCount )
+          && ( pDisabledValidationChecks == rhs.pDisabledValidationChecks );
+    }
+
+    bool operator!=( ValidationFlagsEXT const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    const void* pNext;
+    uint32_t disabledValidationCheckCount;
+    ValidationCheckEXT* pDisabledValidationChecks;
+  };
+  static_assert( sizeof( ValidationFlagsEXT ) == sizeof( VkValidationFlagsEXT ), "struct and wrapper have different size!" );
+
   inline Result createInstance( const InstanceCreateInfo* pCreateInfo, const AllocationCallbacks* pAllocator, Instance* pInstance )
   {
     return static_cast<Result>( vkCreateInstance( reinterpret_cast<const VkInstanceCreateInfo*>( pCreateInfo ), reinterpret_cast<const VkAllocationCallbacks*>( pAllocator ), reinterpret_cast<VkInstance*>( pInstance ) ) );
@@ -19436,6 +19201,7 @@ namespace vk
     case StructureType::eImportMemoryWin32HandleInfoNV: return "ImportMemoryWin32HandleInfoNV";
     case StructureType::eExportMemoryWin32HandleInfoNV: return "ExportMemoryWin32HandleInfoNV";
     case StructureType::eWin32KeyedMutexAcquireReleaseInfoNV: return "Win32KeyedMutexAcquireReleaseInfoNV";
+    case StructureType::eValidationFlagsEXT: return "ValidationFlagsEXT";
     default: return "invalid";
     }
   }
@@ -20412,6 +20178,15 @@ namespace vk
     if (value & ExternalMemoryFeatureFlagBitsNV::eExportable) result += "Exportable | ";
     if (value & ExternalMemoryFeatureFlagBitsNV::eImportable) result += "Importable | ";
     return "{" + result.substr(0, result.size() - 3) + "}";
+  }
+
+  inline std::string to_string(ValidationCheckEXT value)
+  {
+    switch (value)
+    {
+    case ValidationCheckEXT::eAll: return "All";
+    default: return "invalid";
+    }
   }
 
 } // namespace vk

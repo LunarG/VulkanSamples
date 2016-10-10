@@ -7,13 +7,6 @@ macro(run_vk_helper subcmd)
     )
 endmacro()
 
-macro(run_vk_layer_generate subcmd output)
-    add_custom_command(OUTPUT ${output}
-        COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/vk-layer-generate.py ${DisplayServer} ${subcmd} ${PROJECT_SOURCE_DIR}/include/vulkan/vulkan.h > ${output}
-        DEPENDS ${PROJECT_SOURCE_DIR}/vk-layer-generate.py ${PROJECT_SOURCE_DIR}/include/vulkan/vulkan.h ${PROJECT_SOURCE_DIR}/vulkan.py
-    )
-endmacro()
-
 macro(run_vk_layer_xml_generate subcmd output)
     add_custom_command(OUTPUT ${output}
         COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/genvk.py -registry ${PROJECT_SOURCE_DIR}/vk.xml ${output}
@@ -67,6 +60,21 @@ else()
     endif()
 endif()
 
+# Add targets for JSON file install on Linux.
+# Need to remove the "./" from the library path before installing to /etc.
+if(UNIX)
+    foreach (config_file ${LAYER_JSON_FILES})
+        add_custom_target(${config_file}-staging-json ALL
+            COMMAND mkdir -p ${CMAKE_CURRENT_BINARY_DIR}/staging-json
+            COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/linux/${config_file}.json ${CMAKE_CURRENT_BINARY_DIR}/staging-json
+            COMMAND sed -i -e "/\"library_path\":/s$./libVkLayer$libVkLayer$" ${CMAKE_CURRENT_BINARY_DIR}/staging-json/${config_file}.json
+            VERBATIM
+            DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/linux/${config_file}.json
+            )
+        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/staging-json/${config_file}.json DESTINATION /etc/vulkan/explicit_layer.d)
+    endforeach(config_file)
+endif()
+
 if (WIN32)
     macro(add_vk_layer target)
     add_custom_command(OUTPUT VkLayer_${target}.def
@@ -82,8 +90,8 @@ else()
     add_library(VkLayer_${target} SHARED ${ARGN})
     target_link_Libraries(VkLayer_${target} VkLayer_utils)
     add_dependencies(VkLayer_${target} generate_dispatch_table_helper generate_vk_layer_helpers generate_enum_string_helper VkLayer_utils)
-    set_target_properties(VkLayer_${target} PROPERTIES LINK_FLAGS "-Wl,-Bsymbolic")
-    install(TARGETS VkLayer_${target} DESTINATION ${PROJECT_BINARY_DIR}/install_staging)
+    set_target_properties(VkLayer_${target} PROPERTIES LINK_FLAGS "-Wl,-Bsymbolic,--exclude-libs,ALL")
+    install(TARGETS VkLayer_${target} DESTINATION lib)
     endmacro()
 endif()
 
@@ -100,8 +108,8 @@ if (WIN32)
     set (CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} -D_CRT_SECURE_NO_WARNINGS /bigobj")
     set (CMAKE_C_FLAGS_DEBUG     "${CMAKE_C_FLAGS_DEBUG} -D_CRT_SECURE_NO_WARNINGS /bigobj")
 else()
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wpointer-arith -Wno-unused-function -Wno-sign-compare -fvisibility=default")
-    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wpointer-arith -Wno-unused-function -Wno-sign-compare -fvisibility=default")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wpointer-arith -Wno-unused-function -Wno-sign-compare")
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wpointer-arith -Wno-unused-function -Wno-sign-compare")
 endif()
 
 add_custom_command(OUTPUT vk_dispatch_table_helper.h
@@ -166,8 +174,8 @@ add_custom_target(generate_vk_layer_helpers DEPENDS
 )
 
 run_vk_layer_xml_generate(Threading thread_check.h)
-run_vk_layer_generate(unique_objects unique_objects.cpp)
 run_vk_layer_xml_generate(ParamChecker parameter_validation.h)
+run_vk_layer_xml_generate(UniqueObjects unique_objects_wrappers.h)
 
 # Layer Utils Library
 # For Windows, we use a static lib because the Windows loader has a fairly restrictive loader search
@@ -176,7 +184,7 @@ if (WIN32)
     add_library(VkLayer_utils STATIC vk_layer_config.cpp vk_layer_extension_utils.cpp vk_layer_utils.cpp)
 else()
     add_library(VkLayer_utils SHARED vk_layer_config.cpp vk_layer_extension_utils.cpp vk_layer_utils.cpp)
-    install(TARGETS VkLayer_utils DESTINATION ${PROJECT_BINARY_DIR}/install_staging)
+    install(TARGETS VkLayer_utils DESTINATION lib)
 endif()
 
 add_vk_layer(core_validation core_validation.cpp vk_layer_table.cpp vk_safe_struct.cpp descriptor_sets.cpp)
@@ -185,7 +193,7 @@ add_vk_layer(image image.cpp vk_layer_table.cpp)
 add_vk_layer(swapchain swapchain.cpp vk_layer_table.cpp)
 # generated
 add_vk_layer(threading threading.cpp thread_check.h vk_layer_table.cpp)
-add_vk_layer(unique_objects unique_objects.cpp vk_layer_table.cpp vk_safe_struct.cpp)
+add_vk_layer(unique_objects unique_objects.cpp unique_objects_wrappers.h vk_layer_table.cpp vk_safe_struct.cpp)
 add_vk_layer(parameter_validation parameter_validation.cpp parameter_validation.h vk_layer_table.cpp)
 
 # Core validation has additional dependencies
