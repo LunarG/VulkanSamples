@@ -12985,6 +12985,105 @@ TEST_F(VkLayerTest, InvalidImageLayout) {
     vkDestroyImage(m_device->device(), dst_image, NULL);
 }
 
+TEST_F(VkLayerTest, InvalidStorageImageLayout) {
+    TEST_DESCRIPTION("Attempt to update a STORAGE_IMAGE descriptor w/o GENERAL layout.");
+    VkResult err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    const VkFormat tex_format = VK_FORMAT_R8G8B8A8_UNORM;
+    VkImageTiling tiling;
+    VkFormatProperties format_properties;
+    vkGetPhysicalDeviceFormatProperties(gpu(), tex_format, &format_properties);
+    if (format_properties.linearTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT) {
+        tiling = VK_IMAGE_TILING_LINEAR;
+    } else if (format_properties.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT) {
+        tiling = VK_IMAGE_TILING_OPTIMAL;
+    } else {
+        printf("Device does not support VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT; "
+               "skipped.\n");
+        return;
+    }
+
+    VkDescriptorPoolSize ds_type = {};
+    ds_type.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    ds_type.descriptorCount = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+    ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    ds_pool_ci.maxSets = 1;
+    ds_pool_ci.poolSizeCount = 1;
+    ds_pool_ci.pPoolSizes = &ds_type;
+    ds_pool_ci.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+
+    VkDescriptorPool ds_pool;
+    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+    dsl_binding.binding = 0;
+    dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    dsl_binding.descriptorCount = 1;
+    dsl_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    dsl_binding.pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+    ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    ds_layout_ci.pNext = NULL;
+    ds_layout_ci.bindingCount = 1;
+    ds_layout_ci.pBindings = &dsl_binding;
+
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSetAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    alloc_info.descriptorSetCount = 1;
+    alloc_info.descriptorPool = ds_pool;
+    alloc_info.pSetLayouts = &ds_layout;
+    VkDescriptorSet descriptor_set;
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptor_set);
+    ASSERT_VK_SUCCESS(err);
+
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+    pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_ci.pNext = NULL;
+    pipeline_layout_ci.setLayoutCount = 1;
+    pipeline_layout_ci.pSetLayouts = &ds_layout;
+    VkPipelineLayout pipeline_layout;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkImageObj image(m_device);
+    image.init(32, 32, tex_format, VK_IMAGE_USAGE_STORAGE_BIT, tiling, 0);
+    ASSERT_TRUE(image.initialized());
+    VkImageView view = image.targetView(tex_format);
+
+    VkDescriptorImageInfo image_info = {};
+    image_info.imageView = view;
+    image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    VkWriteDescriptorSet descriptor_write = {};
+    descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptor_write.dstSet = descriptor_set;
+    descriptor_write.dstBinding = 0;
+    descriptor_write.descriptorCount = 1;
+    descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    descriptor_write.pImageInfo = &image_info;
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         " of VK_DESCRIPTOR_TYPE_STORAGE_IMAGE type is being updated with layout "
+                                         "VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL but according to spec ");
+    vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
+    m_errorMonitor->VerifyFound();
+
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
+    vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptor_set);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
+}
+
 TEST_F(VkLayerTest, ValidRenderPassAttachmentLayoutWithLoadOp) {
     TEST_DESCRIPTION("Positive test where we create a renderpass with an "
                      "attachment that uses LOAD_OP_CLEAR, the first subpass "
