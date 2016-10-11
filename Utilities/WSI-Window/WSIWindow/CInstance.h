@@ -80,7 +80,7 @@ public:
             LOGW("%s not found.\n",name);               //Warn if picked item was not found.
             return false;
         }
-        PickIndex(inx);
+        return PickIndex(inx);
     }
 
     bool PickIndex(uint32_t inx){                         //Add indexed item to picklist.

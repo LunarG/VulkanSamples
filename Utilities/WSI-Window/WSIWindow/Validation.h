@@ -26,18 +26,18 @@
 #ifdef _WIN32
     #include <Windows.h>
       #ifdef WIN10PLUS        /* ANSI color-codes requires windows 10+ */
-        #define ANSICODE(x) x /* Enable ANSI codes on Win10*/
+        #define ANSICODE(x) x /* Enable ANSI codes on Win10 */
       #else
-        #define ANSICODE(x)   /* Disable ANSI codes on Win7/8*/
+        #define ANSICODE(x)   /* Disable ANSI codes on Win7/8 */
       #endif
-      #define cTICK "\xFB"    /* On Windows, use Square-root as tick mark*/
+      #define cTICK "\xFB"    /* On Windows, use Square-root as tick mark */
 #elif __ANDROID__
     #include <native.h>
-    #define ANSICODE(x)       /* Disable ANSI codes on Android*/
+    #define ANSICODE(x)       /* Disable ANSI codes on Android */
     #define cTICK "\u2713"
 #elif __LINUX__
     #include <xkbcommon/xkbcommon.h>
-    #define ANSICODE(x) x     /* Enable ANSI codes on Linux*/
+    #define ANSICODE(x) x     /* Enable ANSI codes on Linux */
     #define cTICK "\u2713"
 #endif
 
@@ -46,14 +46,14 @@
 //--- ANSI escape codes to set text colours. eg. printf(cRED"Red text." cRESET); ---
 #define cFAINT     ANSICODE("\033[38;2;128;128;128m")
 #define cBRIGHT    ANSICODE("\033[01m")
-#define cSTRIKEOUT ANSICODE("\033[09m") //linux only
+#define cSTRIKEOUT ANSICODE("\033[09m") // linux only
 #define cRED       ANSICODE("\033[31m")
 #define cGREEN     ANSICODE("\033[32m")
 #define cYELLOW    ANSICODE("\033[33m")
 #define cBLUE      ANSICODE("\033[34m")
 #define cMAGENTA   ANSICODE("\033[35m")
 #define cCYAN      ANSICODE("\033[36m")
-#define cRESET     ANSICODE("\033[00m")
+#define cRESET     ANSICODE("\033[00m") // reset to normal, white text
 //----------------------------------------------------------------------------------
 
 #ifndef NDEBUG

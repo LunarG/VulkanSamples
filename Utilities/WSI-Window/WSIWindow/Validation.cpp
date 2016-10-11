@@ -63,7 +63,7 @@ void ShowVkResult(VkResult err){
 
 //------------------------------------DEBUG REPORT CALLBACK-----------------------------------
 VKAPI_ATTR VkBool32 VKAPI_CALL
-dbgFunc(VkDebugReportFlagsEXT msgFlags, VkDebugReportObjectTypeEXT objType, uint64_t srcObject,
+debugFunc(VkDebugReportFlagsEXT msgFlags, VkDebugReportObjectTypeEXT objType, uint64_t srcObject,
         size_t location, int32_t msgCode, const char *pLayerPrefix, const char *pMsg, void *pUserData) {
     char buf[512];
     snprintf(buf,sizeof(buf),cRESET "[%s] Code %d : %s\n", pLayerPrefix, msgCode, pMsg);
@@ -99,7 +99,7 @@ void CDebugReport::Init(VkInstance inst){
                         VK_DEBUG_REPORT_ERROR_BIT_EXT               |  // 8
                         VK_DEBUG_REPORT_DEBUG_BIT_EXT               |  //10
                         0;
-    create_info.pfnCallback = dbgFunc;  //Callback function to call
+    create_info.pfnCallback = debugFunc;  //Callback function to call
     create_info.pUserData = NULL;
     VKERRCHECK(vkCreateDebugReportCallbackEXT(inst, &create_info, NULL, &debug_report_callback));
 }

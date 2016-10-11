@@ -150,6 +150,8 @@ However, right after window creation, the OnResizeEvent callback will be trigger
         }
 
 #### Output:
+*(Notice the ticks next to picked items.  Available items may vary, depending on your setup.)*
+    
     Layers picked: 3 of 11
         ✓ VK_LAYER_LUNARG_core_validation
           VK_LAYER_LUNARG_vktrace
