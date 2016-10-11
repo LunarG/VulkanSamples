@@ -63,9 +63,6 @@ class Param(object):
 
         return deref.rstrip()
 
-    def __repr__(self):
-        return "Param(\"%s\", \"%s\")" % (self.ty, self.name)
-
 class Proto(object):
     """A function prototype."""
 
@@ -106,40 +103,6 @@ class Proto(object):
                 name,
                 self.c_params(need_name=need_param_names))
 
-    def c_pretty_decl(self, name, attr=""):
-        """Return a named declaration in C, with vulkan.h formatting."""
-        plist = []
-        for param in self.params:
-            idx = param.ty.find("[")
-            if idx < 0:
-                idx = len(param.ty)
-
-            pad = 44 - idx
-            if pad <= 0:
-                pad = 1
-
-            plist.append("    %s%s%s%s" % (param.ty[:idx],
-                " " * pad, param.name, param.ty[idx:]))
-
-        return "%s%s %s%s(\n%s)" % (
-                attr + "_ATTR " if attr else "",
-                self.ret,
-                attr + "_CALL " if attr else "",
-                name,
-                ",\n".join(plist))
-
-    def c_typedef(self, suffix="", attr=""):
-        """Return the typedef for the prototype in C."""
-        return self.c_decl(self.name + suffix, attr=attr, typed=True)
-
-    def c_func(self, prefix="", attr=""):
-        """Return the prototype in C."""
-        return self.c_decl(prefix + self.name, attr=attr, typed=False)
-
-    def c_call(self):
-        """Return a call to the prototype in C."""
-        return "%s(%s)" % (self.name, self.c_params(need_type=False))
-
     def object_in_params(self):
         """Return the params that are simple VK objects and are inputs."""
         return [param for param in self.params if param.ty in objects]
@@ -149,15 +112,6 @@ class Proto(object):
         return [param for param in self.params
                 if param.dereferenced_type() in objects]
 
-    def __repr__(self):
-        param_strs = []
-        for param in self.params:
-            param_strs.append(str(param))
-        param_str = "    [%s]" % (",\n     ".join(param_strs))
-
-        return "Proto(\"%s\", \"%s\",\n%s)" % \
-                (self.ret, self.name, param_str)
-
 class Extension(object):
     def __init__(self, name, headers, objects, protos, ifdef = None):
         self.name = name
@@ -165,29 +119,6 @@ class Extension(object):
         self.objects = objects
         self.protos = protos
         self.ifdef = ifdef
-
-    def __repr__(self):
-        lines = []
-        lines.append("Extension(")
-        lines.append("    name=\"%s\"," % self.name)
-        lines.append("    headers=[\"%s\"]," %
-                "\", \"".join(self.headers))
-
-        lines.append("    objects=[")
-        for obj in self.objects:
-            lines.append("        \"%s\"," % obj)
-        lines.append("    ],")
-
-        lines.append("    protos=[")
-        for proto in self.protos:
-            param_lines = str(proto).splitlines()
-            param_lines[-1] += ",\n" if proto != self.protos[-1] else ","
-            for p in param_lines:
-                lines.append("        " + p)
-        lines.append("    ],")
-        lines.append(")")
-
-        return "\n".join(lines)
 
 # VK core API
 core = Extension(
@@ -1487,69 +1418,3 @@ for ext in extensions_all:
     protos_all.extend(ext.protos)
 
 proto_all_names = [proto.name for proto in protos_all]
-
-def parse_vk_h(filename):
-    # read object and protoype typedefs
-    object_lines = []
-    proto_lines = []
-    with open(filename, "r") as fp:
-        for line in fp:
-            line = line.strip()
-            if line.startswith("VK_DEFINE"):
-                begin = line.find("(") + 1
-                end = line.find(",")
-                # extract the object type
-                object_lines.append(line[begin:end])
-            if line.startswith("typedef") and line.endswith(");"):
-                if "*PFN_vkVoidFunction" in line:
-                    continue
-
-                # drop leading "typedef " and trailing ");"
-                proto_lines.append(line[8:-2])
-
-    # parse proto_lines to protos
-    protos = []
-    for line in proto_lines:
-        first, rest = line.split(" (VKAPI_PTR *PFN_vk")
-        second, third = rest.split(")(")
-
-        # get the return type, no space before "*"
-        proto_ret = "*".join([t.rstrip() for t in first.split("*")])
-
-        # get the name
-        proto_name = second.strip()
-
-        # get the list of params
-        param_strs = third.split(", ")
-        params = []
-        for s in param_strs:
-            ty, name = s.rsplit(" ", 1)
-
-            # no space before "*"
-            ty = "*".join([t.rstrip() for t in ty.split("*")])
-            # attach [] to ty
-            idx = name.rfind("[")
-            if idx >= 0:
-                ty += name[idx:]
-                name = name[:idx]
-
-            params.append(Param(ty, name))
-
-        protos.append(Proto(proto_ret, proto_name, params))
-
-    # make them an extension and print
-    ext = Extension("VK_CORE",
-            headers=["vulkan/vulkan.h"],
-            objects=object_lines,
-            protos=protos)
-    print("core =", str(ext))
-
-    print("")
-    print("typedef struct VkLayerDispatchTable_")
-    print("{")
-    for proto in ext.protos:
-        print("    PFN_vk%s %s;" % (proto.name, proto.name))
-    print("} VkLayerDispatchTable;")
-
-if __name__ == "__main__":
-    parse_vk_h("include/vulkan/vulkan.h")
