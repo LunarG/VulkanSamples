@@ -396,32 +396,17 @@ SURFACE_STATE *getSurfaceState(instance_layer_data *instance_data, VkSurfaceKHR 
     return &it->second;
 }
 
-// Return ptr to bound memory for given handle of specified type and set sparse param to indicate if binding is sparse
-static VkDeviceMemory *GetObjectMemBinding(layer_data *my_data, uint64_t handle, VkDebugReportObjectTypeEXT type, bool *sparse) {
+// Return ptr to memory binding for given handle of specified type
+static BINDABLE *GetObjectMemBinding(layer_data *my_data, uint64_t handle, VkDebugReportObjectTypeEXT type) {
     switch (type) {
-    case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT: {
-        auto image_state = getImageState(my_data, VkImage(handle));
-        *sparse = image_state->createInfo.flags & VK_IMAGE_CREATE_SPARSE_BINDING_BIT;
-        if (image_state)
-            return &image_state->binding.mem;
-        break;
-    }
-    case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT: {
-        auto buff_node = getBufferNode(my_data, VkBuffer(handle));
-        *sparse = buff_node->createInfo.flags & VK_BUFFER_CREATE_SPARSE_BINDING_BIT;
-        if (buff_node)
-            return &buff_node->binding.mem;
-        break;
-    }
+    case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT:
+        return getImageState(my_data, VkImage(handle));
+    case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT:
+        return getBufferNode(my_data, VkBuffer(handle));
     default:
         break;
     }
     return nullptr;
-}
-// Overloaded version of above function that doesn't care about sparse bool
-static VkDeviceMemory *GetObjectMemBinding(layer_data *my_data, uint64_t handle, VkDebugReportObjectTypeEXT type) {
-    bool sparse;
-    return GetObjectMemBinding(my_data, handle, type, &sparse);
 }
 // prototype
 static GLOBAL_CB_NODE *getCBNode(layer_data const *, const VkCommandBuffer);
@@ -783,31 +768,35 @@ static bool freeMemObjInfo(layer_data *dev_data, void *object, VkDeviceMemory me
     return skip_call;
 }
 
-// Remove object binding performs 3 tasks:
-// 1. Remove ObjectInfo from MemObjInfo list container of obj bindings & free it
-// 2. Clear mem binding for image/buffer by setting its handle to 0
-// TODO : This only applied to Buffer, Image, and Swapchain objects now, how should it be updated/customized?
-static bool clear_object_binding(layer_data *dev_data, uint64_t handle, VkDebugReportObjectTypeEXT type) {
-    // TODO : Need to customize images/buffers/swapchains to track mem binding and clear it here appropriately
-    bool skip_call = false;
-    VkDeviceMemory *pMemBinding = GetObjectMemBinding(dev_data, handle, type);
-    if (pMemBinding) {
-        DEVICE_MEM_INFO *pMemObjInfo = getMemObjInfo(dev_data, *pMemBinding);
-        // TODO : Make sure this is a reasonable way to reset mem binding
-        *pMemBinding = VK_NULL_HANDLE;
-        if (pMemObjInfo) {
-            // This obj is bound to a memory object. Remove the reference to this object in that memory object's list,
-            // and set the objects memory binding pointer to NULL.
-            if (!pMemObjInfo->obj_bindings.erase({handle, type})) {
-                skip_call |=
-                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, type, handle, __LINE__, MEMTRACK_INVALID_OBJECT,
-                            "MEM", "While trying to clear mem binding for %s obj 0x%" PRIxLEAST64
-                                   ", unable to find that object referenced by mem obj 0x%" PRIxLEAST64,
-                            object_type_to_string(type), handle, (uint64_t)pMemObjInfo->mem);
+// Clear a single object binding from given memory object, or report error if binding is missing
+static bool ClearMemoryObjectBinding(layer_data *dev_data, uint64_t handle, VkDebugReportObjectTypeEXT type, VkDeviceMemory mem) {
+    DEVICE_MEM_INFO *mem_info = getMemObjInfo(dev_data, mem);
+    // This obj is bound to a memory object. Remove the reference to this object in that memory object's list
+    if (mem_info && !mem_info->obj_bindings.erase({handle, type})) {
+        return log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, type, handle, __LINE__, MEMTRACK_INVALID_OBJECT,
+                    "MEM", "While trying to clear mem binding for %s obj 0x%" PRIxLEAST64
+                           ", unable to find that object referenced by mem obj 0x%" PRIxLEAST64,
+                    object_type_to_string(type), handle, (uint64_t)mem);
+    }
+    return false;
+}
+
+// ClearMemoryObjectBindings clears the binding of objects to memory
+//  For the given object it pulls the memory bindings and makes sure that the bindings
+//  no longer refer to the object being cleared. This occurs when objects are destroyed.
+static bool ClearMemoryObjectBindings(layer_data *dev_data, uint64_t handle, VkDebugReportObjectTypeEXT type) {
+    bool skip = false;
+    BINDABLE *mem_binding = GetObjectMemBinding(dev_data, handle, type);
+    if (mem_binding) {
+        if (!mem_binding->sparse) {
+            skip = ClearMemoryObjectBinding(dev_data, handle, type, mem_binding->binding.mem);
+        } else { // Sparse, clear all bindings
+            for (auto& sparse_mem_binding : mem_binding->sparse_bindings) {
+                skip |= ClearMemoryObjectBinding(dev_data, handle, type, sparse_mem_binding.mem);
             }
         }
     }
-    return skip_call;
+    return skip;
 }
 
 // For given mem object, verify that it is not null or UNBOUND, if it is, report error. Return skip value.
@@ -850,6 +839,7 @@ bool ValidateMemoryIsBoundToBuffer(const layer_data *dev_data, const BUFFER_NODE
     return result;
 }
 
+// SetMemBinding is used to establish immutable, non-sparse binding between a single image/buffer object and memory object
 // For NULL mem case, output warning
 // Make sure given object is in global object map
 //  IF a previous binding existed, output validation error
@@ -858,17 +848,20 @@ bool ValidateMemoryIsBoundToBuffer(const layer_data *dev_data, const BUFFER_NODE
 static bool SetMemBinding(layer_data *dev_data, VkDeviceMemory mem, uint64_t handle, VkDebugReportObjectTypeEXT type,
                           const char *apiName) {
     bool skip_call = false;
-    // Handle NULL case separately, just clear previous binding & decrement reference
+    // It's an error to bind an object to NULL memory
     if (mem == VK_NULL_HANDLE) {
         skip_call = log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, type, handle, __LINE__, MEMTRACK_INVALID_MEM_OBJ,
                             "MEM", "In %s, attempting to Bind Obj(0x%" PRIxLEAST64 ") to NULL", apiName, handle);
     } else {
-        bool sparse = false;
-        VkDeviceMemory *mem_binding = GetObjectMemBinding(dev_data, handle, type, &sparse);
+        BINDABLE *mem_binding = GetObjectMemBinding(dev_data, handle, type);
         assert(mem_binding);
+        // TODO : Add check here to make sure object isn't sparse
+        //  VALIDATION_ERROR_00792 for buffers
+        //  VALIDATION_ERROR_00804 for images
+        assert(!mem_binding->sparse);
         DEVICE_MEM_INFO *mem_info = getMemObjInfo(dev_data, mem);
         if (mem_info) {
-            DEVICE_MEM_INFO *prev_binding = getMemObjInfo(dev_data, *mem_binding);
+            DEVICE_MEM_INFO *prev_binding = getMemObjInfo(dev_data, mem_binding->binding.mem);
             if (prev_binding) {
                 skip_call |=
                     log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
@@ -876,7 +869,7 @@ static bool SetMemBinding(layer_data *dev_data, VkDeviceMemory mem, uint64_t han
                             "In %s, attempting to bind memory (0x%" PRIxLEAST64 ") to object (0x%" PRIxLEAST64
                             ") which has already been bound to mem object 0x%" PRIxLEAST64,
                             apiName, reinterpret_cast<uint64_t &>(mem), handle, reinterpret_cast<uint64_t &>(prev_binding->mem));
-            } else if ((*mem_binding == MEMORY_UNBOUND) && (!sparse)) {
+            } else if (mem_binding->binding.mem == MEMORY_UNBOUND) {
                 skip_call |=
                     log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
                             reinterpret_cast<uint64_t &>(mem), __LINE__, MEMTRACK_REBIND_OBJECT, "MEM",
@@ -897,7 +890,7 @@ static bool SetMemBinding(layer_data *dev_data, VkDeviceMemory mem, uint64_t han
                         }
                     }
                 }
-                *mem_binding = mem;
+                mem_binding->binding.mem = mem;
             }
         }
     }
@@ -910,20 +903,21 @@ static bool SetMemBinding(layer_data *dev_data, VkDeviceMemory mem, uint64_t han
 //  Add reference from objectInfo to memoryInfo
 //  Add reference off of object's binding info
 // Return VK_TRUE if addition is successful, VK_FALSE otherwise
-static bool set_sparse_mem_binding(layer_data *dev_data, VkDeviceMemory mem, uint64_t handle,
-                                       VkDebugReportObjectTypeEXT type, const char *apiName) {
+static bool SetSparseMemBinding(layer_data *dev_data, MEM_BINDING binding, uint64_t handle, VkDebugReportObjectTypeEXT type,
+                                const char *apiName) {
     bool skip_call = VK_FALSE;
     // Handle NULL case separately, just clear previous binding & decrement reference
-    if (mem == VK_NULL_HANDLE) {
-        skip_call = clear_object_binding(dev_data, handle, type);
+    if (binding.mem == VK_NULL_HANDLE) {
+        // TODO : This should cause the range of the resource to be unbound according to spec
     } else {
-        VkDeviceMemory *pMemBinding = GetObjectMemBinding(dev_data, handle, type);
-        assert(pMemBinding);
-        DEVICE_MEM_INFO *pInfo = getMemObjInfo(dev_data, mem);
-        if (pInfo) {
-            pInfo->obj_bindings.insert({handle, type});
+        BINDABLE *mem_binding = GetObjectMemBinding(dev_data, handle, type);
+        assert(mem_binding);
+        assert(mem_binding->sparse);
+        DEVICE_MEM_INFO *mem_info = getMemObjInfo(dev_data, binding.mem);
+        if (mem_info) {
+            mem_info->obj_bindings.insert({handle, type});
             // Need to set mem binding for this object
-            *pMemBinding = mem;
+            mem_binding->sparse_bindings.insert(binding);
         }
     }
     return skip_call;
@@ -5774,7 +5768,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyBuffer(VkDevice device, VkBuffer buffer,
             if (mem_info) {
                 RemoveBufferMemoryRange(reinterpret_cast<uint64_t &>(buffer), mem_info);
             }
-            clear_object_binding(dev_data, reinterpret_cast<uint64_t &>(buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT);
+            ClearMemoryObjectBindings(dev_data, reinterpret_cast<uint64_t &>(buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT);
             dev_data->bufferMap.erase(buff_node->buffer);
         }
         lock.unlock();
@@ -5837,7 +5831,7 @@ static void PostCallRecordDestroyImage(layer_data *dev_data, VkImage image, IMAG
     auto mem_info = getMemObjInfo(dev_data, image_state->binding.mem);
     if (mem_info) {
         RemoveImageMemoryRange(obj_struct.handle, mem_info);
-        clear_object_binding(dev_data, obj_struct.handle, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT);
+        ClearMemoryObjectBinding(dev_data, obj_struct.handle, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, mem_info->mem);
     }
     // Remove image from imageMap
     dev_data->imageMap.erase(image);
@@ -11166,25 +11160,30 @@ QueueBindSparse(VkQueue queue, uint32_t bindInfoCount, const VkBindSparseInfo *p
         // Track objects tied to memory
         for (uint32_t j = 0; j < bindInfo.bufferBindCount; j++) {
             for (uint32_t k = 0; k < bindInfo.pBufferBinds[j].bindCount; k++) {
-                if (set_sparse_mem_binding(dev_data, bindInfo.pBufferBinds[j].pBinds[k].memory,
-                                           (uint64_t)bindInfo.pBufferBinds[j].buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
-                                           "vkQueueBindSparse"))
+                auto sparse_binding = bindInfo.pBufferBinds[j].pBinds[k];
+                if (SetSparseMemBinding(dev_data, {sparse_binding.memory, sparse_binding.memoryOffset, sparse_binding.size},
+                                        (uint64_t)bindInfo.pBufferBinds[j].buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
+                                        "vkQueueBindSparse"))
                     skip_call = true;
             }
         }
         for (uint32_t j = 0; j < bindInfo.imageOpaqueBindCount; j++) {
             for (uint32_t k = 0; k < bindInfo.pImageOpaqueBinds[j].bindCount; k++) {
-                if (set_sparse_mem_binding(dev_data, bindInfo.pImageOpaqueBinds[j].pBinds[k].memory,
-                                           (uint64_t)bindInfo.pImageOpaqueBinds[j].image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                                           "vkQueueBindSparse"))
+                auto sparse_binding = bindInfo.pImageOpaqueBinds[j].pBinds[k];
+                if (SetSparseMemBinding(dev_data, {sparse_binding.memory, sparse_binding.memoryOffset, sparse_binding.size},
+                                        (uint64_t)bindInfo.pImageOpaqueBinds[j].image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                                        "vkQueueBindSparse"))
                     skip_call = true;
             }
         }
         for (uint32_t j = 0; j < bindInfo.imageBindCount; j++) {
             for (uint32_t k = 0; k < bindInfo.pImageBinds[j].bindCount; k++) {
-                if (set_sparse_mem_binding(dev_data, bindInfo.pImageBinds[j].pBinds[k].memory,
-                                           (uint64_t)bindInfo.pImageBinds[j].image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                                           "vkQueueBindSparse"))
+                auto sparse_binding = bindInfo.pImageBinds[j].pBinds[k];
+                // TODO: This size is broken for non-opaque bindings, need to update to comprehend full sparse binding data
+                VkDeviceSize size = sparse_binding.extent.depth * sparse_binding.extent.height * sparse_binding.extent.width * 4;
+                if (SetSparseMemBinding(dev_data, {sparse_binding.memory, sparse_binding.memoryOffset, size},
+                                        (uint64_t)bindInfo.pImageBinds[j].image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                                        "vkQueueBindSparse"))
                     skip_call = true;
             }
         }
@@ -11352,7 +11351,7 @@ DestroySwapchainKHR(VkDevice device, VkSwapchainKHR swapchain, const VkAllocatio
                     dev_data->imageSubresourceMap.erase(image_sub);
                 }
                 skip_call =
-                    clear_object_binding(dev_data, (uint64_t)swapchain_image, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT);
+                    ClearMemoryObjectBindings(dev_data, (uint64_t)swapchain_image, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT);
                 dev_data->imageMap.erase(swapchain_image);
             }
         }
