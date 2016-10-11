@@ -56,18 +56,16 @@ CExtensions::CExtensions(const char* layerName){
 //---------------------------CInstance----------------------------
 CInstance::CInstance(const char* appName, const char* engineName){
     CLayers layers;
-#ifndef NDEBUG //In Debug mode, add standard validation layers
-    layers.Pick("VK_LAYER_GOOGLE_threading"           );
-    layers.Pick("VK_LAYER_LUNARG_parameter_validation");
-    layers.Pick("VK_LAYER_LUNARG_object_tracker"      );
-    layers.Pick("VK_LAYER_LUNARG_image"               );
-    layers.Pick("VK_LAYER_LUNARG_core_validation"     );
-    layers.Pick("VK_LAYER_LUNARG_swapchain"           );
-    layers.Pick("VK_LAYER_GOOGLE_unique_objects"      );
-    //layers.Pick("Fake_Layer"); //triggers a warning
+#ifndef NDEBUG  //In Debug mode, add standard validation layers
+    layers.Pick({"VK_LAYER_GOOGLE_threading",
+                 "VK_LAYER_LUNARG_parameter_validation",
+                 "VK_LAYER_LUNARG_object_tracker",
+                 "VK_LAYER_LUNARG_image",
+                 "VK_LAYER_LUNARG_core_validation",
+                 "VK_LAYER_LUNARG_swapchain",
+                 "VK_LAYER_GOOGLE_unique_objects"});
     layers.Print();
 #endif
-
     CExtensions extensions;
     if(extensions.Pick(VK_KHR_SURFACE_EXTENSION_NAME)){
 #ifdef VK_USE_PLATFORM_WIN32_KHR
@@ -94,16 +92,15 @@ CInstance::CInstance(const char* appName, const char* engineName){
     extensions.Pick(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);         //in Debug mode, Enable Validation
     extensions.Print();
 #endif
-
     assert(extensions.PickCount()>=2);
     Create(layers, extensions, appName, engineName);
 }
 
-CInstance::CInstance(vector<char*>& layers, vector<char*>& extensions, const char* appName, const char* engineName){
+CInstance::CInstance(const CLayers& layers, const CExtensions& extensions, const char* appName, const char* engineName){
     Create(layers, extensions, appName, engineName);
 }
 
-void CInstance::Create(vector<char*>const& layers, vector<char*>const& extensions, const char* appName, const char* engineName){
+void CInstance::Create(const CLayers& layers, const CExtensions& extensions, const char* appName, const char* engineName){
     // initialize the VkApplicationInfo structure
     VkApplicationInfo app_info = {};
     app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -120,14 +117,16 @@ void CInstance::Create(vector<char*>const& layers, vector<char*>const& extension
     inst_info.pNext = NULL;
     inst_info.flags = 0;
     inst_info.pApplicationInfo = &app_info;
-    inst_info.enabledExtensionCount   = (uint32_t)extensions.size();
-    inst_info.ppEnabledExtensionNames =           extensions.data();
-    inst_info.enabledLayerCount       = (uint32_t)layers.size();
-    inst_info.ppEnabledLayerNames     =           layers.data();
+    inst_info.enabledExtensionCount   = extensions.PickCount();
+    inst_info.ppEnabledExtensionNames = extensions.PickList();
+    inst_info.enabledLayerCount       = layers.PickCount();
+    inst_info.ppEnabledLayerNames     = layers.PickList();
+
     VKERRCHECK(vkCreateInstance(&inst_info, NULL, &instance));
     LOGI("Vulkan Instance created\n");
 
-    DebugReport.Init(instance);
+    if( extensions.IsPicked(VK_EXT_DEBUG_REPORT_EXTENSION_NAME))
+        DebugReport.Init(instance);  //If VK_EXT_debug_report is loaded, initialize it.
 }
 
 void CInstance::Print(){ printf("->Instance %s created.\n",(!!instance)?"":"NOT"); }

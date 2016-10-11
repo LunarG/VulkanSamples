@@ -69,7 +69,7 @@
       #define LOGE(...)    __android_log_print(ANDROID_LOG_ERROR  ,LOG_TAG,__VA_ARGS__)               /*   Prints ERROR messages      */
       #define printf(...)  __android_log_print(ANDROID_LOG_INFO   ,LOG_TAG,__VA_ARGS__)               /*   printf output as log info  */
     #else                                                                                                // Linux and Windows 10+:
-      #define LOG(...)  {printf(__VA_ARGS__);                                          fflush(stdout);}  /*   Prints in white            */
+      #define LOG(...)  {                                         printf(__VA_ARGS__); fflush(stdout);}  /*   Prints in white            */
       #define LOGV(...) {printf(cCYAN   "PERF-WARNING: " cRESET); printf(__VA_ARGS__); fflush(stdout);}  /*   Prints Performace Warnings */
       #define LOGD(...) {printf(cBLUE   "DEBUG: "        cRESET); printf(__VA_ARGS__); fflush(stdout);}  /*   Prints DEBUG messages      */
       #define LOGI(...) {printf(cGREEN  "INFO: "         cRESET); printf(__VA_ARGS__); fflush(stdout);}  /*   Prints INFO messages       */
