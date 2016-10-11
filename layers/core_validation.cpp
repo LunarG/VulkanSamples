@@ -11604,6 +11604,125 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, VkSwapchainC
                     reinterpret_cast<uint64_t>(dev_data->physical_device), __LINE__, DRAWSTATE_SWAPCHAIN_CREATE_BEFORE_QUERY, "DS",
                     "vkCreateSwapchainKHR(): surface capabilities not retrieved for this physical device"))
             return true;
+    } else { // have valid capabilities
+        auto &capabilities = physical_device_state->surfaceCapabilities;
+        // Validate pCreateInfo->minImageCount against
+        // VkSurfaceCapabilitiesKHR::{min|max}ImageCount:
+        if ((pCreateInfo->minImageCount < capabilities.minImageCount) ||
+            ((capabilities.maxImageCount > 0) && (pCreateInfo->minImageCount > capabilities.maxImageCount))) {
+            if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                        reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_BAD_IMAGE_COUNT, "DS",
+                        "vkCreateSwapchainKHR() called with pCreateInfo->minImageCount = %d, which is outside the bounds returned "
+                        "by vkGetPhysicalDeviceSurfaceCapabilitiesKHR() (i.e. minImageCount = %d, maxImageCount = %d).",
+                        pCreateInfo->minImageCount, capabilities.minImageCount, capabilities.maxImageCount))
+                return true;
+        }
+        // Validate pCreateInfo->imageExtent against
+        // VkSurfaceCapabilitiesKHR::{current|min|max}ImageExtent:
+        if ((capabilities.currentExtent.width == -1) && ((pCreateInfo->imageExtent.width < capabilities.minImageExtent.width) ||
+                                                         (pCreateInfo->imageExtent.width > capabilities.maxImageExtent.width) ||
+                                                         (pCreateInfo->imageExtent.height < capabilities.minImageExtent.height) ||
+                                                         (pCreateInfo->imageExtent.height > capabilities.maxImageExtent.height))) {
+            if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                        reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_BAD_EXTENTS, "DS",
+                        "vkCreateSwapchainKHR() called with pCreateInfo->imageExtent = (%d,%d), which is outside the "
+                        "bounds returned by vkGetPhysicalDeviceSurfaceCapabilitiesKHR(): currentExtent = (%d,%d), "
+                        "minImageExtent = (%d,%d), maxImageExtent = (%d,%d).",
+                        pCreateInfo->imageExtent.width, pCreateInfo->imageExtent.height, capabilities.currentExtent.width,
+                        capabilities.currentExtent.height, capabilities.minImageExtent.width, capabilities.minImageExtent.height,
+                        capabilities.maxImageExtent.width, capabilities.maxImageExtent.height))
+                return true;
+        }
+        if ((capabilities.currentExtent.width != -1) && ((pCreateInfo->imageExtent.width != capabilities.currentExtent.width) ||
+                                                         (pCreateInfo->imageExtent.height != capabilities.currentExtent.height))) {
+            if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                        reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_BAD_EXTENTS, "DS",
+                        "vkCreateSwapchainKHR() called with pCreateInfo->imageExtent = (%d,%d), which is not equal to the "
+                        "currentExtent = (%d,%d) returned by vkGetPhysicalDeviceSurfaceCapabilitiesKHR().",
+                        pCreateInfo->imageExtent.width, pCreateInfo->imageExtent.height, capabilities.currentExtent.width,
+                        capabilities.currentExtent.height))
+                return true;
+        }
+        // Validate pCreateInfo->preTransform has one bit set (1st two
+        // lines of if-statement), which bit is also set in
+        // VkSurfaceCapabilitiesKHR::supportedTransforms (3rd line of if-statement):
+        if (!pCreateInfo->preTransform || (pCreateInfo->preTransform & (pCreateInfo->preTransform - 1)) ||
+            !(pCreateInfo->preTransform & capabilities.supportedTransforms)) {
+            // This is an error situation; one for which we'd like to give
+            // the developer a helpful, multi-line error message.  Build it
+            // up a little at a time, and then log it:
+            std::string errorString = "";
+            char str[1024];
+            // Here's the first part of the message:
+            sprintf(str, "vkCreateSwapchainKHR() called with a non-supported "
+                         "pCreateInfo->preTransform (i.e. %s).  "
+                         "Supported values are:\n",
+                    string_VkSurfaceTransformFlagBitsKHR(pCreateInfo->preTransform));
+            errorString += str;
+            for (int i = 0; i < 32; i++) {
+                // Build up the rest of the message:
+                if ((1 << i) & capabilities.supportedTransforms) {
+                    const char *newStr = string_VkSurfaceTransformFlagBitsKHR((VkSurfaceTransformFlagBitsKHR)(1 << i));
+                    sprintf(str, "    %s\n", newStr);
+                    errorString += str;
+                }
+            }
+            // Log the message that we've built up:
+            if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                        reinterpret_cast<uint64_t &>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_BAD_PRE_TRANSFORM, "DS", "%s",
+                        errorString.c_str()))
+                return true;
+        }
+        // Validate pCreateInfo->compositeAlpha has one bit set (1st two
+        // lines of if-statement), which bit is also set in
+        // VkSurfaceCapabilitiesKHR::supportedCompositeAlpha (3rd line of if-statement):
+        if (!pCreateInfo->compositeAlpha || (pCreateInfo->compositeAlpha & (pCreateInfo->compositeAlpha - 1)) ||
+            !((pCreateInfo->compositeAlpha) & capabilities.supportedCompositeAlpha)) {
+            // This is an error situation; one for which we'd like to give
+            // the developer a helpful, multi-line error message.  Build it
+            // up a little at a time, and then log it:
+            std::string errorString = "";
+            char str[1024];
+            // Here's the first part of the message:
+            sprintf(str, "vkCreateSwapchainKHR() called with a non-supported "
+                         "pCreateInfo->compositeAlpha (i.e. %s).  "
+                         "Supported values are:\n",
+                    string_VkCompositeAlphaFlagBitsKHR(pCreateInfo->compositeAlpha));
+            errorString += str;
+            for (int i = 0; i < 32; i++) {
+                // Build up the rest of the message:
+                if ((1 << i) & capabilities.supportedCompositeAlpha) {
+                    const char *newStr = string_VkCompositeAlphaFlagBitsKHR((VkCompositeAlphaFlagBitsKHR)(1 << i));
+                    sprintf(str, "    %s\n", newStr);
+                    errorString += str;
+                }
+            }
+            // Log the message that we've built up:
+            if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                        reinterpret_cast<uint64_t &>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_BAD_COMPOSITE_ALPHA, "DS",
+                        "%s", errorString.c_str()))
+                return true;
+        }
+        // Validate pCreateInfo->imageArrayLayers against
+        // VkSurfaceCapabilitiesKHR::maxImageArrayLayers:
+        if ((pCreateInfo->imageArrayLayers < 1) || (pCreateInfo->imageArrayLayers > capabilities.maxImageArrayLayers)) {
+            if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                        reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_BAD_LAYER_COUNT, "DS",
+                        "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->imageArrayLayers (i.e. %d).  "
+                        "Minimum value is 1, maximum value is %d.",
+                        pCreateInfo->imageArrayLayers, capabilities.maxImageArrayLayers))
+                return true;
+        }
+        // Validate pCreateInfo->imageUsage against
+        // VkSurfaceCapabilitiesKHR::supportedUsageFlags:
+        if (pCreateInfo->imageUsage != (pCreateInfo->imageUsage & capabilities.supportedUsageFlags)) {
+            if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                        reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_BAD_USAGE_FLAGS, "DS",
+                        "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->imageUsage (i.e. 0x%08x).  "
+                        "Supported flag bits are 0x%08x.",
+                        pCreateInfo->imageUsage, capabilities.supportedUsageFlags))
+                return true;
+        }
     }
 
     return false;

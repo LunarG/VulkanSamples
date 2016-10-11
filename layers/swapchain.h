@@ -40,7 +40,6 @@ enum SWAPCHAIN_ERROR {
                                           // by vkGetPhysicalDeviceSurfaceSupportKHR for the device
     SWAPCHAIN_CREATE_SWAP_WITHOUT_QUERY,  // Called vkCreateSwapchainKHR() without calling a query (e.g.
                                           // vkGetPhysicalDeviceSurfaceCapabilitiesKHR())
-    SWAPCHAIN_CREATE_SWAP_BAD_MIN_IMG_COUNT,     // Called vkCreateSwapchainKHR() with out-of-bounds minImageCount
     SWAPCHAIN_CREATE_SWAP_OUT_OF_BOUNDS_EXTENTS, // Called vkCreateSwapchainKHR() with out-of-bounds imageExtent
     SWAPCHAIN_CREATE_SWAP_EXTENTS_NO_MATCH_WIN, // Called vkCreateSwapchainKHR() with imageExtent that doesn't match window's extent
     SWAPCHAIN_CREATE_SWAP_BAD_PRE_TRANSFORM,    // Called vkCreateSwapchainKHR() with a non-supported preTransform

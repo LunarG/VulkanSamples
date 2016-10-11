@@ -252,6 +252,12 @@ enum DRAW_STATE_ERROR {
                                              // before creating swapchain
     DRAWSTATE_SWAPCHAIN_UNSUPPORTED_QUEUE,   // Presentation on queue that cannot
                                              // support presentation
+    DRAWSTATE_SWAPCHAIN_BAD_IMAGE_COUNT,     // Requested image count is out of range
+    DRAWSTATE_SWAPCHAIN_BAD_EXTENTS,         // Image extents out of range or dont match window
+    DRAWSTATE_SWAPCHAIN_BAD_PRE_TRANSFORM,   // Pre transform not supported
+    DRAWSTATE_SWAPCHAIN_BAD_COMPOSITE_ALPHA, // Composite alpha mode not supported
+    DRAWSTATE_SWAPCHAIN_BAD_LAYER_COUNT,     // Layer count not supported
+    DRAWSTATE_SWAPCHAIN_BAD_USAGE_FLAGS,     // Image usage flags not supported
 };
 
 // Shader Checker ERROR codes
