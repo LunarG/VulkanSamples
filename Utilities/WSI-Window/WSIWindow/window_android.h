@@ -20,7 +20,6 @@
 *--------------------------------------------------------------------------
 */
 
-
 //#ifdef ANDROID
 //#define VK_USE_PLATFORM_ANDROID_KHR
 //#endif
@@ -34,27 +33,6 @@
 #ifndef WINDOW_ANDROID
 #define WINDOW_ANDROID
 
-//======================MULTI-TOUCH=======================  TODO: Move MTouch to WindowImpl, and expose events.
-struct CPointer{bool active; float x; float y;};
-struct MTouchEvent{eAction act; float x; float y; char id;};
-
-class CMTouch{
-    static const int MAX_POINTERS=10;  //Max 10 fingers
-public:
-    int count;
-    CPointer Pointers[MAX_POINTERS];
-    void Clear(){ memset(this,0,sizeof(this)); }
-
-    EventType Event(eAction action, float x, float y, uint8_t id) {
-        if (id >= MAX_POINTERS)return {};  // Exit if too many fingers
-        CPointer& P=Pointers[id];
-        if(action!=eMOVE) P.active=(action==eDOWN);
-        P.x=x;  P.y=y;
-        EventType e={EventType::TOUCH};
-        e.touch={action,x,y,id};
-        return e;
-    }
-};
 //========================================================
 
 // Convert native Android key-code to cross-platform USB HID code.
@@ -214,7 +192,7 @@ public:
                         }
                     }
 /*
-                    //----------------------Emulate mouse from touch events-----------------------------
+                    //-------------------------Emulate mouse from touch events--------------------------
                     if(event.tag==EventType::TOUCH && event.touch.id==0){  //if one-finger touch
                         eventFIFO.push(MouseEvent(event.touch.action, event.touch.x, event.touch.y, 1));
                     }

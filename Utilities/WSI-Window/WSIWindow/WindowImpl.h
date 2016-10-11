@@ -44,7 +44,6 @@ public:
     T* pop(){ if(head==tail)return 0; ++tail; return &buf[tail%=SIZE]; }  // Returns item ptr, or null if queue is empty
 };
 //==============================================================
-
 //========================Event Message=========================
 struct EventType{
     enum{NONE, MOUSE, KEY, TEXT, MOVE, RESIZE, FOCUS, TOUCH} tag;              // event type
@@ -55,12 +54,31 @@ struct EventType{
         struct {int16_t x; int16_t y;                             } move;      // Window move
         struct {uint16_t width; uint16_t height;                  } resize;    // Window resize
         struct {bool hasFocus;                                    } focus;     // Window gained/lost focus
-        struct {eAction action; float x; float y; uint8_t id;     } touch;     // multi-touch screen
+        struct {eAction action; float x; float y; uint8_t id;     } touch;     // multi-touch display
     };
     void Clear(){tag=NONE;}
 };
 //==============================================================
+//=========================MULTI-TOUCH==========================
+class CMTouch{
+    static const int MAX_POINTERS=10;  //Max 10 fingers
+    struct CPointer{bool active; float x; float y;};
+public:
+    int count;
+    CPointer Pointers[MAX_POINTERS];
+    void Clear(){ memset(this,0,sizeof(this)); }
 
+    EventType Event(eAction action, float x, float y, uint8_t id) {
+        if (id >= MAX_POINTERS)return {};  // Exit if too many fingers
+        CPointer& P=Pointers[id];
+        if(action!=eMOVE) P.active=(action==eDOWN);
+        P.x=x;  P.y=y;
+        EventType e={EventType::TOUCH};
+        e.touch={action,x,y,id};
+        return e;
+    }
+};
+//==============================================================
 //=====================WSIWindow base class=====================
 class WindowImpl {
     struct {int16_t x; int16_t y;}mousepos = {};                               // mouse position
