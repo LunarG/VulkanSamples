@@ -110,6 +110,7 @@ class Window_xcb : public WindowImpl{
     //---Touch Device---
     int xi_opcode; //131
     int xi_devid;  //2
+    uint32_t touchID[10]={};
     //------------------
 
     void SetTitle(const char* title);
@@ -441,6 +442,19 @@ EventType Window_xcb::GetEvent(){
                           te.buttons_len
 
                 );
+
+                switch(te.event_type){
+                    case XI_TouchBegin : { printf("--TouchBegin  ");
+                                           forCount(10) if(touchID[i]==0){ printf("i=%d\n",i); touchID[i]=te.detail; break;}
+                                           break;
+                                         }
+                    case XI_TouchUpdate: printf("--TouchUpdate ");  break;
+
+                    case XI_TouchEnd   : { printf("--TouchEnd    ");
+                                           forCount(10) if(touchID[i]==te.detail){ touchID[i]=0; break;}
+                                           break;
+                                         }
+                }
 
 
 /*
