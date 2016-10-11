@@ -403,14 +403,14 @@ static VkDeviceMemory *GetObjectMemBinding(layer_data *my_data, uint64_t handle,
         auto image_state = getImageState(my_data, VkImage(handle));
         *sparse = image_state->createInfo.flags & VK_IMAGE_CREATE_SPARSE_BINDING_BIT;
         if (image_state)
-            return &image_state->mem;
+            return &image_state->binding.mem;
         break;
     }
     case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT: {
         auto buff_node = getBufferNode(my_data, VkBuffer(handle));
         *sparse = buff_node->createInfo.flags & VK_BUFFER_CREATE_SPARSE_BINDING_BIT;
         if (buff_node)
-            return &buff_node->mem;
+            return &buff_node->binding.mem;
         break;
     }
     default:
@@ -545,22 +545,22 @@ static bool ValidateMemoryIsValid(layer_data *dev_data, VkDeviceMemory mem, uint
 //  If mem is special swapchain key, then verify that image_state valid member is true
 //  Else verify that the image's bound memory range is valid
 static bool ValidateImageMemoryIsValid(layer_data *dev_data, IMAGE_STATE *image_state, const char *functionName) {
-    if (image_state->mem == MEMTRACKER_SWAP_CHAIN_IMAGE_KEY) {
+    if (image_state->binding.mem == MEMTRACKER_SWAP_CHAIN_IMAGE_KEY) {
         if (!image_state->valid) {
             return log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
-                           reinterpret_cast<uint64_t &>(image_state->mem), __LINE__, MEMTRACK_INVALID_MEM_REGION, "MEM",
+                           reinterpret_cast<uint64_t &>(image_state->binding.mem), __LINE__, MEMTRACK_INVALID_MEM_REGION, "MEM",
                            "%s: Cannot read invalid swapchain image 0x%" PRIx64 ", please fill the memory before using.",
                            functionName, reinterpret_cast<uint64_t &>(image_state->image));
         }
     } else {
-        return ValidateMemoryIsValid(dev_data, image_state->mem, reinterpret_cast<uint64_t &>(image_state->image),
+        return ValidateMemoryIsValid(dev_data, image_state->binding.mem, reinterpret_cast<uint64_t &>(image_state->image),
                                      VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, functionName);
     }
     return false;
 }
 // For given buffer_node, verify that the range it's bound to is valid
 static bool ValidateBufferMemoryIsValid(layer_data *dev_data, BUFFER_NODE *buffer_node, const char *functionName) {
-    return ValidateMemoryIsValid(dev_data, buffer_node->mem, reinterpret_cast<uint64_t &>(buffer_node->buffer),
+    return ValidateMemoryIsValid(dev_data, buffer_node->binding.mem, reinterpret_cast<uint64_t &>(buffer_node->buffer),
                                  VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, functionName);
 }
 // For the given memory allocation, set the range bound by the given handle object to the valid param value
@@ -574,15 +574,15 @@ static void SetMemoryValid(layer_data *dev_data, VkDeviceMemory mem, uint64_t ha
 //  If mem is special swapchain key, then set entire image_state to valid param value
 //  Else set the image's bound memory range to valid param value
 static void SetImageMemoryValid(layer_data *dev_data, IMAGE_STATE *image_state, bool valid) {
-    if (image_state->mem == MEMTRACKER_SWAP_CHAIN_IMAGE_KEY) {
+    if (image_state->binding.mem == MEMTRACKER_SWAP_CHAIN_IMAGE_KEY) {
         image_state->valid = valid;
     } else {
-        SetMemoryValid(dev_data, image_state->mem, reinterpret_cast<uint64_t &>(image_state->image), valid);
+        SetMemoryValid(dev_data, image_state->binding.mem, reinterpret_cast<uint64_t &>(image_state->image), valid);
     }
 }
 // For given buffer node set the buffer's bound memory range to valid param value
 static void SetBufferMemoryValid(layer_data *dev_data, BUFFER_NODE *buffer_node, bool valid) {
-    SetMemoryValid(dev_data, buffer_node->mem, reinterpret_cast<uint64_t &>(buffer_node->buffer), valid);
+    SetMemoryValid(dev_data, buffer_node->binding.mem, reinterpret_cast<uint64_t &>(buffer_node->buffer), valid);
 }
 // Find CB Info and add mem reference to list container
 // Find Mem Obj Info and add CB reference to list container
@@ -617,13 +617,13 @@ void AddCommandBufferBindingSampler(GLOBAL_CB_NODE *cb_node, SAMPLER_NODE *sampl
 // Create binding link between given image node and command buffer node
 void AddCommandBufferBindingImage(const layer_data *dev_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *image_state) {
     // Skip validation if this image was created through WSI
-    if (image_state->mem != MEMTRACKER_SWAP_CHAIN_IMAGE_KEY) {
+    if (image_state->binding.mem != MEMTRACKER_SWAP_CHAIN_IMAGE_KEY) {
         // First update CB binding in MemObj mini CB list
-        DEVICE_MEM_INFO *pMemInfo = getMemObjInfo(dev_data, image_state->mem);
+        DEVICE_MEM_INFO *pMemInfo = getMemObjInfo(dev_data, image_state->binding.mem);
         if (pMemInfo) {
             pMemInfo->command_buffer_bindings.insert(cb_node->commandBuffer);
             // Now update CBInfo's Mem reference list
-            cb_node->memObjs.insert(image_state->mem);
+            cb_node->memObjs.insert(image_state->binding.mem);
         }
         // Now update cb binding for image
         cb_node->object_bindings.insert({reinterpret_cast<uint64_t &>(image_state->image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT});
@@ -647,11 +647,11 @@ void AddCommandBufferBindingImageView(const layer_data *dev_data, GLOBAL_CB_NODE
 // Create binding link between given buffer node and command buffer node
 void AddCommandBufferBindingBuffer(const layer_data *dev_data, GLOBAL_CB_NODE *cb_node, BUFFER_NODE *buff_node) {
     // First update CB binding in MemObj mini CB list
-    DEVICE_MEM_INFO *pMemInfo = getMemObjInfo(dev_data, buff_node->mem);
+    DEVICE_MEM_INFO *pMemInfo = getMemObjInfo(dev_data, buff_node->binding.mem);
     if (pMemInfo) {
         pMemInfo->command_buffer_bindings.insert(cb_node->commandBuffer);
         // Now update CBInfo's Mem reference list
-        cb_node->memObjs.insert(buff_node->mem);
+        cb_node->memObjs.insert(buff_node->binding.mem);
         cb_node->object_bindings.insert({reinterpret_cast<uint64_t &>(buff_node->buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT});
     }
     // Now update cb binding for buffer
@@ -725,13 +725,13 @@ static bool ReportMemReferencesAndCleanUp(layer_data *dev_data, DEVICE_MEM_INFO 
             case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT: {
                 auto image_state = getImageState(dev_data, reinterpret_cast<VkImage &>(obj.handle));
                 assert(image_state); // Any destroyed images should already be removed from bindings
-                image_state->mem = MEMORY_UNBOUND;
+                image_state->binding.mem = MEMORY_UNBOUND;
                 break;
             }
             case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT: {
                 auto buff_node = getBufferNode(dev_data, reinterpret_cast<VkBuffer &>(obj.handle));
                 assert(buff_node); // Any destroyed buffers should already be removed from bindings
-                buff_node->mem = MEMORY_UNBOUND;
+                buff_node->binding.mem = MEMORY_UNBOUND;
                 break;
             }
             default:
@@ -834,7 +834,7 @@ bool VerifyBoundMemoryIsValid(const layer_data *dev_data, VkDeviceMemory mem, ui
 bool ValidateMemoryIsBoundToImage(const layer_data *dev_data, const IMAGE_STATE *image_state, const char *api_name) {
     bool result = false;
     if (0 == (static_cast<uint32_t>(image_state->createInfo.flags) & VK_IMAGE_CREATE_SPARSE_BINDING_BIT)) {
-        result = VerifyBoundMemoryIsValid(dev_data, image_state->mem, reinterpret_cast<const uint64_t &>(image_state->image),
+        result = VerifyBoundMemoryIsValid(dev_data, image_state->binding.mem, reinterpret_cast<const uint64_t &>(image_state->image),
                                           api_name, "Image");
     }
     return result;
@@ -844,8 +844,8 @@ bool ValidateMemoryIsBoundToImage(const layer_data *dev_data, const IMAGE_STATE 
 bool ValidateMemoryIsBoundToBuffer(const layer_data *dev_data, const BUFFER_NODE *buffer_node, const char *api_name) {
     bool result = false;
     if (0 == (static_cast<uint32_t>(buffer_node->createInfo.flags) & VK_BUFFER_CREATE_SPARSE_BINDING_BIT)) {
-        result = VerifyBoundMemoryIsValid(dev_data, buffer_node->mem, reinterpret_cast<const uint64_t &>(buffer_node->buffer),
-                                          api_name, "Buffer");
+        result = VerifyBoundMemoryIsValid(dev_data, buffer_node->binding.mem,
+                                          reinterpret_cast<const uint64_t &>(buffer_node->buffer), api_name, "Buffer");
     }
     return result;
 }
@@ -935,10 +935,10 @@ static bool get_mem_for_type(layer_data *dev_data, uint64_t handle, VkDebugRepor
     *mem = VK_NULL_HANDLE;
     switch (type) {
     case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT:
-        *mem = getImageState(dev_data, VkImage(handle))->mem;
+        *mem = getImageState(dev_data, VkImage(handle))->binding.mem;
         break;
     case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT:
-        *mem = getBufferNode(dev_data, VkBuffer(handle))->mem;
+        *mem = getBufferNode(dev_data, VkBuffer(handle))->binding.mem;
         break;
     default:
         assert(0);
@@ -5770,7 +5770,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyBuffer(VkDevice device, VkBuffer buffer,
             // Any bound cmd buffers are now invalid
             invalidateCommandBuffers(buff_node->cb_bindings,
                                      {reinterpret_cast<uint64_t &>(buff_node->buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT});
-            auto mem_info = getMemObjInfo(dev_data, buff_node->mem);
+            auto mem_info = getMemObjInfo(dev_data, buff_node->binding.mem);
             if (mem_info) {
                 RemoveBufferMemoryRange(reinterpret_cast<uint64_t &>(buffer), mem_info);
             }
@@ -5834,7 +5834,7 @@ static bool PreCallValidateDestroyImage(layer_data *dev_data, VkImage image, IMA
 static void PostCallRecordDestroyImage(layer_data *dev_data, VkImage image, IMAGE_STATE *image_state, VK_OBJECT obj_struct) {
     invalidateCommandBuffers(image_state->cb_bindings, obj_struct);
     // Clean up memory mapping, bindings and range references for image
-    auto mem_info = getMemObjInfo(dev_data, image_state->mem);
+    auto mem_info = getMemObjInfo(dev_data, image_state->binding.mem);
     if (mem_info) {
         RemoveImageMemoryRange(obj_struct.handle, mem_info);
         clear_object_binding(dev_data, obj_struct.handle, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT);
@@ -5891,9 +5891,9 @@ BindBufferMemory(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDeviceS
     if (buffer_node) {
         VkMemoryRequirements memRequirements;
         dev_data->dispatch_table.GetBufferMemoryRequirements(device, buffer, &memRequirements);
-        buffer_node->mem = mem;
-        buffer_node->memOffset = memoryOffset;
-        buffer_node->memSize = memRequirements.size;
+        buffer_node->binding.mem = mem;
+        buffer_node->binding.offset = memoryOffset;
+        buffer_node->binding.size = memRequirements.size;
 
         // Track and validate bound memory range information
         auto mem_info = getMemObjInfo(dev_data, mem);
@@ -9037,7 +9037,7 @@ static bool ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, ui
 
         auto buffer_node = getBufferNode(dev_data, mem_barrier->buffer);
         if (buffer_node) {
-            auto buffer_size = buffer_node->memSize;
+            auto buffer_size = buffer_node->binding.size;
             if (mem_barrier->offset >= buffer_size) {
                 skip_call |= log_msg(
                     dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
@@ -9623,7 +9623,7 @@ static void PostCallRecordCreateFramebuffer(layer_data *dev_data, const VkFrameb
             continue;
         }
         MT_FB_ATTACHMENT_INFO fb_info;
-        fb_info.mem = getImageState(dev_data, view_state->create_info.image)->mem;
+        fb_info.mem = getImageState(dev_data, view_state->create_info.image)->binding.mem;
         fb_info.view_state = view_state;
         fb_info.image = view_state->create_info.image;
         fb_state->attachments.push_back(fb_info);
@@ -9782,8 +9782,9 @@ static bool ValidateDependencies(const layer_data *dev_data, FRAMEBUFFER_STATE c
             if (!image_data_i || !image_data_j) {
                 continue;
             }
-            if (image_data_i->mem == image_data_j->mem && isRangeOverlapping(image_data_i->memOffset, image_data_i->memSize,
-                                                                             image_data_j->memOffset, image_data_j->memSize)) {
+            if (image_data_i->binding.mem == image_data_j->binding.mem &&
+                isRangeOverlapping(image_data_i->binding.offset, image_data_i->binding.size, image_data_j->binding.offset,
+                                   image_data_j->binding.size)) {
                 overlapping_attachments[i].push_back(j);
                 overlapping_attachments[j].push_back(i);
             }
@@ -11099,9 +11100,9 @@ VKAPI_ATTR VkResult VKAPI_CALL BindImageMemory(VkDevice device, VkImage image, V
         if (!skip_call) {
             result = dev_data->dispatch_table.BindImageMemory(device, image, mem, memoryOffset);
             lock.lock();
-            image_state->mem = mem;
-            image_state->memOffset = memoryOffset;
-            image_state->memSize = memRequirements.size;
+            image_state->binding.mem = mem;
+            image_state->binding.offset = memoryOffset;
+            image_state->binding.size = memRequirements.size;
             lock.unlock();
         }
     } else {
@@ -11413,7 +11414,7 @@ GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pCoun
             dev_data->imageMap[pSwapchainImages[i]] = unique_ptr<IMAGE_STATE>(new IMAGE_STATE(pSwapchainImages[i], &image_ci));
             auto &image_state = dev_data->imageMap[pSwapchainImages[i]];
             image_state->valid = false;
-            image_state->mem = MEMTRACKER_SWAP_CHAIN_IMAGE_KEY;
+            image_state->binding.mem = MEMTRACKER_SWAP_CHAIN_IMAGE_KEY;
             swapchain_node->images.push_back(pSwapchainImages[i]);
             ImageSubresourcePair subpair = {pSwapchainImages[i], false, VkImageSubresource()};
             dev_data->imageSubresourceMap[pSwapchainImages[i]].push_back(subpair);

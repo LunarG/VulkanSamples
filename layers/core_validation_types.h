@@ -146,15 +146,46 @@ struct DESCRIPTOR_POOL_STATE : BASE_NODE {
     }
 };
 
-class BUFFER_NODE : public BASE_NODE {
+// Generic memory binding struct to track objects bound to objects
+struct MEM_BINDING {
+    VkDeviceMemory mem;
+    VkDeviceSize offset;
+    VkDeviceSize size;
+};
+
+inline bool operator==(MEM_BINDING a, MEM_BINDING b) NOEXCEPT { return a.mem == b.mem && a.offset == b.offset && a.size == b.size; }
+
+namespace std {
+template <> struct hash<MEM_BINDING> {
+    size_t operator()(MEM_BINDING mb) const NOEXCEPT {
+        auto intermediate = hash<uint64_t>()(reinterpret_cast<uint64_t &>(mb.mem)) ^ hash<uint64_t>()(mb.offset);
+        return intermediate ^ hash<uint64_t>()(mb.size);
+    }
+};
+}
+
+// Superclass for bindable object state (currently imagesa and buffers)
+class BINDABLE : public BASE_NODE {
+  public:
+    bool sparse; // Is this object being bound with sparse memory or not?
+    // Non-sparse binding data
+    MEM_BINDING binding;
+    // Sparse binding data, initially just tracking MEM_BINDING per mem object
+    //  There's more data for sparse bindings so need better long-term solution
+    // TODO : Need to update solution to track all sparse binding data
+    std::unordered_set<MEM_BINDING> sparse_bindings;
+    BINDABLE() : sparse(false), binding{}, sparse_bindings{}{};
+};
+
+class BUFFER_NODE : public BINDABLE {
   public:
     VkBuffer buffer;
-    VkDeviceMemory mem;
-    VkDeviceSize memOffset;
-    VkDeviceSize memSize; // Note: may differ from createInfo::size
     VkBufferCreateInfo createInfo;
-    BUFFER_NODE(VkBuffer buff, const VkBufferCreateInfo *pCreateInfo)
-        : buffer(buff), mem(VK_NULL_HANDLE), memOffset(0), memSize(0), createInfo(*pCreateInfo){};
+    BUFFER_NODE(VkBuffer buff, const VkBufferCreateInfo *pCreateInfo) : buffer(buff), createInfo(*pCreateInfo) {
+        if (createInfo.flags & VK_BUFFER_CREATE_SPARSE_BINDING_BIT) {
+            sparse = true;
+        }
+    };
 
     BUFFER_NODE(BUFFER_NODE const &rh_obj) = delete;
 };
@@ -174,17 +205,18 @@ struct SAMPLER_NODE : public BASE_NODE {
     SAMPLER_NODE(const VkSampler *ps, const VkSamplerCreateInfo *pci) : sampler(*ps), createInfo(*pci){};
 };
 
-class IMAGE_STATE : public BASE_NODE {
+class IMAGE_STATE : public BINDABLE {
   public:
     VkImage image;
     VkImageCreateInfo createInfo;
-    VkDeviceMemory mem;
     bool valid; // If this is a swapchain image backing memory track valid here as it doesn't have DEVICE_MEM_INFO
     bool acquired;  // If this is a swapchain image, has it been acquired by the app.
-    VkDeviceSize memOffset;
-    VkDeviceSize memSize;
     IMAGE_STATE(VkImage img, const VkImageCreateInfo *pCreateInfo)
-        : image(img), createInfo(*pCreateInfo), mem(VK_NULL_HANDLE), valid(false), acquired(false), memOffset(0), memSize(0){};
+        : image(img), createInfo(*pCreateInfo), valid(false), acquired(false) {
+        if (createInfo.flags & VK_IMAGE_CREATE_SPARSE_BINDING_BIT) {
+            sparse = true;
+        }
+    };
 
     IMAGE_STATE(IMAGE_STATE const &rh_obj) = delete;
 };
