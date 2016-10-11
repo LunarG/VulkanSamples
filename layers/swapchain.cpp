@@ -1234,10 +1234,7 @@ static bool validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
     // Validate pCreateInfo values with the results of
     // vkGetPhysicalDeviceSurfaceCapabilitiesKHR():
     if (!pPhysicalDevice || !pPhysicalDevice->gotSurfaceCapabilities) {
-        skip_call |=
-            log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                    reinterpret_cast<uint64_t>(device), __LINE__, SWAPCHAIN_CREATE_SWAP_WITHOUT_QUERY, swapchain_layer_name,
-                    "vkCreateSwapchainKHR() called before calling vkGetPhysicalDeviceSurfaceCapabilitiesKHR().");
+        // Check moved to CV
     } else if (pCreateInfo) {
         // Validate pCreateInfo->surface to make sure that
         // vkGetPhysicalDeviceSurfaceSupportKHR() reported this as a supported

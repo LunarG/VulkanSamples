@@ -238,6 +238,7 @@ enum DRAW_STATE_ERROR {
     DRAWSTATE_SWAPCHAIN_IMAGE_NOT_ACQUIRED,  // QueuePresentKHR with image not acquired by app
     DRAWSTATE_SWAPCHAIN_ALREADY_EXISTS,      // Surface has an existing swapchain that is not being replaced
     DRAWSTATE_SWAPCHAIN_WRONG_SURFACE,       // Swapchain being replaced is not attached to the same surface
+    DRAWSTATE_SWAPCHAIN_CREATE_BEFORE_QUERY, // Surface capabilities not queried before creating swapchain
 };
 
 // Shader Checker ERROR codes
