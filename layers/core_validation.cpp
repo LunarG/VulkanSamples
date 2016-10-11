@@ -12109,6 +12109,24 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilitiesKHR(VkPhysica
     return result;
 }
 
+
+VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex,
+                                                                  VkSurfaceKHR surface, VkBool32 *pSupported) {
+    auto instance_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
+    std::unique_lock<std::mutex> lock(global_lock);
+    auto surface_state = getSurfaceState(instance_data, surface);
+    lock.unlock();
+
+    auto result = instance_data->dispatch_table.GetPhysicalDeviceSurfaceSupportKHR(physicalDevice, queueFamilyIndex, surface,
+                                                                                   pSupported);
+
+    if (result == VK_SUCCESS) {
+        surface_state->gpu_queue_support[{physicalDevice, queueFamilyIndex}] = *pSupported;
+    }
+
+    return result;
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL
 CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
                              const VkAllocationCallbacks *pAllocator, VkDebugReportCallbackEXT *pMsgCallback) {
@@ -12451,6 +12469,8 @@ intercept_khr_surface_command(const char *name, VkInstance instance) {
         {"vkDestroySurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(DestroySurfaceKHR),
             &instance_layer_data::surfaceExtensionEnabled},
         {"vkGetPhysicalDeviceSurfaceCapabilitiesKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceCapabilitiesKHR),
+            &instance_layer_data::surfaceExtensionEnabled},
+        {"vkGetPhysicalDeviceSurfaceSupportKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceSupportKHR),
             &instance_layer_data::surfaceExtensionEnabled},
     };
 
