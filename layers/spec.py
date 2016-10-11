@@ -233,6 +233,8 @@ class Specification:
                     continue
                 line = line.strip()
                 db_line = line.split(self.delimiter)
+                if len(db_line) != 4:
+                    print "ERROR: Bad database line doesn't have 4 elements: %s" % (line)
                 error_enum = db_line[0]
                 implemented = db_line[1]
                 testname = db_line[2]
