@@ -111,24 +111,12 @@ struct instance_layer_data {
 
     bool surfaceExtensionEnabled = false;
     bool displayExtensionEnabled = false;
-#ifdef VK_USE_PLATFORM_ANDROID_KHR
     bool androidSurfaceExtensionEnabled = false;
-#endif
-#ifdef VK_USE_PLATFORM_MIR_KHR
     bool mirSurfaceExtensionEnabled = false;
-#endif
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
     bool waylandSurfaceExtensionEnabled = false;
-#endif
-#ifdef VK_USE_PLATFORM_WIN32_KHR
     bool win32SurfaceExtensionEnabled = false;
-#endif
-#ifdef VK_USE_PLATFORM_XCB_KHR
     bool xcbSurfaceExtensionEnabled = false;
-#endif
-#ifdef VK_USE_PLATFORM_XLIB_KHR
     bool xlibSurfaceExtensionEnabled = false;
-#endif
 };
 
 struct layer_data {
