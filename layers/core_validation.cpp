@@ -12083,6 +12083,25 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateXlibSurfaceKHR(VkInstance instance, const V
 #endif // VK_USE_PLATFORM_XLIB_KHR
 
 
+VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilitiesKHR(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
+                                                                       VkSurfaceCapabilitiesKHR *pSurfaceCapabilities) {
+    auto instance_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
+
+    std::unique_lock<std::mutex> lock(global_lock);
+    auto physical_device_state = getPhysicalDeviceState(instance_data, physicalDevice);
+    lock.unlock();
+
+    auto result = instance_data->dispatch_table.GetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface,
+                                                                                        pSurfaceCapabilities);
+
+    if (result == VK_SUCCESS) {
+        physical_device_state->vkGetPhysicalDeviceSurfaceCapabilitiesKHRState = QUERY_DETAILS;
+        physical_device_state->surfaceCapabilities = *pSurfaceCapabilities;
+    }
+
+    return result;
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL
 CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
                              const VkAllocationCallbacks *pAllocator, VkDebugReportCallbackEXT *pMsgCallback) {
@@ -12423,6 +12442,8 @@ intercept_khr_surface_command(const char *name, VkInstance instance) {
             &instance_layer_data::xlibSurfaceExtensionEnabled},
 #endif // VK_USE_PLATFORM_XLIB_KHR
         {"vkDestroySurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(DestroySurfaceKHR),
+            &instance_layer_data::surfaceExtensionEnabled},
+        {"vkGetPhysicalDeviceSurfaceCapabilitiesKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceCapabilitiesKHR),
             &instance_layer_data::surfaceExtensionEnabled},
     };
 
