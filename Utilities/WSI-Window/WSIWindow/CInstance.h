@@ -91,6 +91,12 @@ public:
       return true;
     }
 
+    void UnPick(const char* name){
+        forCount(PickCount())
+            if(strcmp(name, pickList[i])==0)
+                pickList.erase(pickList.begin()+i);
+    }
+
     void PickAll() { forCount(Count()) PickIndex(i); }  //Pick All items
     void Clear()   { pickList.clear();}                 //Clear Picklist
     const char** PickList()   const {return (const char**)pickList.data();}
@@ -104,7 +110,7 @@ public:
           bool picked=false;
           char* name=itemName(i);
           for(auto& pick : pickList) if(pick==name) picked=true;
-          printf("\t%s %s\n" cRESET, picked ? cTICK : cFAINT"x", name);
+          printf("\t%s %s\n" cRESET, picked ? cTICK : cFAINT" ", name);
       }
     }
 };
