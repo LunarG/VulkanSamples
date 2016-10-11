@@ -22,8 +22,8 @@ generate_local_properties() {
 glslang=$(realpath ../../../external/glslang/build/install/bin/glslangValidator)
 
 prebuild() {
-  ( cd ..; python3 generate-dispatch-table HelpersDispatchTable.h )
-  ( cd ..; python3 generate-dispatch-table HelpersDispatchTable.cpp )
+  ( cd ..; python3 generate-dispatch-table.py HelpersDispatchTable.h )
+  ( cd ..; python3 generate-dispatch-table.py HelpersDispatchTable.cpp )
   ( cd ..; python3 glsl-to-spirv Smoke.frag Smoke.frag.h ${glslang} )
   ( cd ..; python3 glsl-to-spirv Smoke.vert Smoke.vert.h ${glslang} )
   ( cd ..; python3 glsl-to-spirv Smoke.push_constant.vert Smoke.push_constant.vert.h ${glslang} )
