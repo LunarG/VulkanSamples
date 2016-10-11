@@ -1715,45 +1715,10 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
     bool skip_call = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
 
-    // Note: pPresentInfo->pResults is allowed to be NULL
-
-    std::unique_lock<std::mutex> lock(global_lock);
-    for (uint32_t i = 0; pPresentInfo && (i < pPresentInfo->swapchainCount); i++) {
-        SwpSwapchain *pSwapchain = NULL;
-        {
-            auto it = my_data->swapchainMap.find(pPresentInfo->pSwapchains[i]);
-            pSwapchain = (it == my_data->swapchainMap.end()) ? NULL : &it->second;
-        }
-        if (pSwapchain) {
-            SwpQueue *pQueue = NULL;
-            {
-                auto it = my_data->queueMap.find(queue);
-                pQueue = (it == my_data->queueMap.end()) ? NULL : &it->second;
-            }
-            SwpSurface *pSurface = pSwapchain->pSurface;
-            if (pQueue && pSurface && pSurface->numQueueFamilyIndexSupport) {
-                uint32_t queueFamilyIndex = pQueue->queueFamilyIndex;
-                // Note: the 1st test is to ensure queueFamilyIndex is in range,
-                // and the 2nd test is the validation check:
-                if ((pSurface->numQueueFamilyIndexSupport > queueFamilyIndex) &&
-                    (!pSurface->pQueueFamilyIndexSupport[queueFamilyIndex])) {
-                    skip_call |=
-                        log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
-                                reinterpret_cast<const uint64_t &>(pPresentInfo->pSwapchains[i]), __LINE__,
-                                SWAPCHAIN_SURFACE_NOT_SUPPORTED_WITH_QUEUE, swapchain_layer_name,
-                                "vkQueuePresentKHR() called with a swapchain whose surface is not supported for presention "
-                                "on this device with the queueFamilyIndex (i.e. %d) of the given queue.",
-                                queueFamilyIndex);
-                }
-            }
-        }
-    }
-    lock.unlock();
-
     if (!skip_call) {
         // Call down the call chain:
         result = my_data->device_dispatch_table->QueuePresentKHR(queue, pPresentInfo);
-        lock.lock();
+        std::unique_lock<std::mutex> lock(global_lock);
 
         if (pPresentInfo && ((result == VK_SUCCESS) || (result == VK_SUBOPTIMAL_KHR))) {
             for (uint32_t i = 0; i < pPresentInfo->swapchainCount; i++) {

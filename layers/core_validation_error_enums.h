@@ -46,7 +46,8 @@ enum MEM_TRACK_ERROR {
 
 // Draw State ERROR codes
 enum DRAW_STATE_ERROR {
-    // TODO: Remove the comments here or expand them. There isn't any additional information in the
+    // TODO: Remove the comments here or expand them. There isn't any additional
+    // information in the
     // comments than in the name in almost all cases.
     DRAWSTATE_NONE,                          // Used for INFO & other non-error messages
     DRAWSTATE_INTERNAL_ERROR,                // Error with DrawState internal data structures
@@ -141,7 +142,8 @@ enum DRAW_STATE_ERROR {
     DRAWSTATE_FRAMEBUFFER_INCOMPATIBLE,         // Incompatible framebuffer between
                                                 // secondary cmdBuffer and active
                                                 // renderPass
-    DRAWSTATE_INVALID_FRAMEBUFFER_CREATE_INFO,  // Invalid VkFramebufferCreateInfo state
+    DRAWSTATE_INVALID_FRAMEBUFFER_CREATE_INFO,  // Invalid VkFramebufferCreateInfo
+                                                // state
     DRAWSTATE_INVALID_RENDERPASS,               // Use of a NULL or otherwise invalid
                                                 // RenderPass object
     DRAWSTATE_INVALID_RENDERPASS_CMD,           // Invalid cmd submitted while a
@@ -180,16 +182,16 @@ enum DRAW_STATE_ERROR {
                                             // was allocated from Pool w/o
     // VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
     // bit set
-    DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH,             // Count for viewports and scissors
-                                                     // mismatch and/or state doesn't match
-                                                     // count
-    DRAWSTATE_INVALID_IMAGE_ASPECT,                  // Image aspect is invalid for the current
-                                                     // operation
-    DRAWSTATE_MISSING_ATTACHMENT_REFERENCE,          // Attachment reference must be
-                                                     // present in active subpass
-    DRAWSTATE_SAMPLER_DESCRIPTOR_ERROR,              // A Descriptor of *_SAMPLER type is
-                                                     // being updated with an invalid or bad
-                                                     // Sampler
+    DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH,    // Count for viewports and scissors
+                                            // mismatch and/or state doesn't match
+                                            // count
+    DRAWSTATE_INVALID_IMAGE_ASPECT,         // Image aspect is invalid for the current
+                                            // operation
+    DRAWSTATE_MISSING_ATTACHMENT_REFERENCE, // Attachment reference must be
+                                            // present in active subpass
+    DRAWSTATE_SAMPLER_DESCRIPTOR_ERROR,     // A Descriptor of *_SAMPLER type is
+    // being updated with an invalid or bad
+    // Sampler
     DRAWSTATE_INCONSISTENT_IMMUTABLE_SAMPLER_UPDATE, // Descriptors of
                                                      // *COMBINED_IMAGE_SAMPLER
                                                      // type are being updated
@@ -223,22 +225,33 @@ enum DRAW_STATE_ERROR {
                                              // violate device limit
     DRAWSTATE_INDEPENDENT_BLEND,             // If independent blending is not enabled, all
                                              // elements of pAttachmentsMustBeIdentical
-    DRAWSTATE_DISABLED_LOGIC_OP,             // If logic operations is not enabled, logicOpEnable
+    DRAWSTATE_DISABLED_LOGIC_OP,             // If logic operations is not enabled,
+                                             // logicOpEnable
                                              // must be VK_FALSE
     DRAWSTATE_INVALID_QUEUE_INDEX,           // Specified queue index exceeds number
                                              // of queried queue families
     DRAWSTATE_INVALID_QUEUE_FAMILY,          // Command buffer submitted on queue is from
                                              // a different queue family
-    DRAWSTATE_IMAGE_TRANSFER_GRANULARITY,    // Violation of queue family's image transfer
+    DRAWSTATE_IMAGE_TRANSFER_GRANULARITY,    // Violation of queue family's image
+                                             // transfer
                                              // granularity
     DRAWSTATE_PUSH_CONSTANTS_ERROR,          // Push constants exceed maxPushConstantSize
-    DRAWSTATE_INVALID_SUBPASS_INDEX,         // Stepping beyond last subpass, or not reaching it
-    DRAWSTATE_SWAPCHAIN_NO_SYNC_FOR_ACQUIRE, // AcquireNextImageKHR with no sync object
-    DRAWSTATE_SWAPCHAIN_INVALID_IMAGE,       // QueuePresentKHR with image index out of range
-    DRAWSTATE_SWAPCHAIN_IMAGE_NOT_ACQUIRED,  // QueuePresentKHR with image not acquired by app
-    DRAWSTATE_SWAPCHAIN_ALREADY_EXISTS,      // Surface has an existing swapchain that is not being replaced
-    DRAWSTATE_SWAPCHAIN_WRONG_SURFACE,       // Swapchain being replaced is not attached to the same surface
-    DRAWSTATE_SWAPCHAIN_CREATE_BEFORE_QUERY, // Surface capabilities not queried before creating swapchain
+    DRAWSTATE_INVALID_SUBPASS_INDEX,         // Stepping beyond last subpass, or not
+                                             // reaching it
+    DRAWSTATE_SWAPCHAIN_NO_SYNC_FOR_ACQUIRE, // AcquireNextImageKHR with no sync
+                                             // object
+    DRAWSTATE_SWAPCHAIN_INVALID_IMAGE,       // QueuePresentKHR with image index out of
+                                             // range
+    DRAWSTATE_SWAPCHAIN_IMAGE_NOT_ACQUIRED,  // QueuePresentKHR with image not
+                                             // acquired by app
+    DRAWSTATE_SWAPCHAIN_ALREADY_EXISTS,      // Surface has an existing swapchain that
+                                             // is not being replaced
+    DRAWSTATE_SWAPCHAIN_WRONG_SURFACE,       // Swapchain being replaced is not
+                                             // attached to the same surface
+    DRAWSTATE_SWAPCHAIN_CREATE_BEFORE_QUERY, // Surface capabilities not queried
+                                             // before creating swapchain
+    DRAWSTATE_SWAPCHAIN_UNSUPPORTED_QUEUE,   // Presentation on queue that cannot
+                                             // support presentation
 };
 
 // Shader Checker ERROR codes
