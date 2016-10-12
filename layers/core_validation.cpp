@@ -6331,18 +6331,38 @@ void invalidateCommandBuffers(std::unordered_set<GLOBAL_CB_NODE *> cb_nodes, VK_
     }
 }
 
+static bool PreCallValidateDestroyFramebuffer(layer_data *dev_data, VkFramebuffer framebuffer, FRAMEBUFFER_NODE **framebuffer_state,
+                                              VK_OBJECT *obj_struct) {
+    if (dev_data->instance_state->disabled.destroy_framebuffer)
+        return false;
+    bool skip = false;
+    *framebuffer_state = getFramebuffer(dev_data, framebuffer);
+    if (*framebuffer_state) {
+        *obj_struct = {reinterpret_cast<uint64_t &>(framebuffer), VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT};
+        skip |= ValidateObjectNotInUse(dev_data, *framebuffer_state, *obj_struct, VALIDATION_ERROR_00422);
+    }
+    return skip;
+}
+
+static void PostCallRecordDestroyFramebuffer(layer_data *dev_data, VkFramebuffer framebuffer, FRAMEBUFFER_NODE *framebuffer_state,
+                                             VK_OBJECT obj_struct) {
+    invalidateCommandBuffers(framebuffer_state->cb_bindings, obj_struct);
+    dev_data->frameBufferMap.erase(framebuffer);
+}
+
 VKAPI_ATTR void VKAPI_CALL
 DestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    FRAMEBUFFER_NODE *framebuffer_state = nullptr;
+    VK_OBJECT obj_struct;
     std::unique_lock<std::mutex> lock(global_lock);
-    auto fb_node = getFramebuffer(dev_data, framebuffer);
-    if (fb_node) {
-        invalidateCommandBuffers(fb_node->cb_bindings,
-                                 {reinterpret_cast<uint64_t &>(fb_node->framebuffer), VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT});
-        dev_data->frameBufferMap.erase(fb_node->framebuffer);
+    bool skip = PreCallValidateDestroyFramebuffer(dev_data, framebuffer, &framebuffer_state, &obj_struct);
+    if (!skip) {
+        lock.unlock();
+        dev_data->dispatch_table.DestroyFramebuffer(device, framebuffer, pAllocator);
+        lock.lock();
+        PostCallRecordDestroyFramebuffer(dev_data, framebuffer, framebuffer_state, obj_struct);
     }
-    lock.unlock();
-    dev_data->dispatch_table.DestroyFramebuffer(device, framebuffer, pAllocator);
 }
 
 VKAPI_ATTR void VKAPI_CALL
