@@ -276,7 +276,7 @@ struct DAGNode {
     std::vector<uint32_t> next;
 };
 
-struct RENDER_PASS_NODE : public BASE_NODE {
+struct RENDER_PASS_STATE : public BASE_NODE {
     VkRenderPass renderPass;
     safe_VkRenderPassCreateInfo createInfo;
     std::vector<bool> hasSelfDependency;
@@ -284,8 +284,7 @@ struct RENDER_PASS_NODE : public BASE_NODE {
     std::unordered_map<uint32_t, bool> attachment_first_read;
     std::unordered_map<uint32_t, VkImageLayout> attachment_first_layout;
 
-    RENDER_PASS_NODE(VkRenderPassCreateInfo const *pCreateInfo)
-        : createInfo(pCreateInfo) {}
+    RENDER_PASS_STATE(VkRenderPassCreateInfo const *pCreateInfo) : createInfo(pCreateInfo) {}
 };
 
 // Cmd Buffer Tracking
@@ -544,7 +543,7 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     uint32_t viewportMask;
     uint32_t scissorMask;
     VkRenderPassBeginInfo activeRenderPassBeginInfo;
-    RENDER_PASS_NODE *activeRenderPass;
+    RENDER_PASS_STATE *activeRenderPass;
     VkSubpassContents activeSubpassContents;
     uint32_t activeSubpass;
     VkFramebuffer activeFramebuffer;
