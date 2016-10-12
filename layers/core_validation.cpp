@@ -6017,22 +6017,38 @@ DestroyShaderModule(VkDevice device, VkShaderModule shaderModule, const VkAlloca
     my_data->dispatch_table.DestroyShaderModule(device, shaderModule, pAllocator);
 }
 
+static bool PreCallValidateDestroyPipeline(layer_data *dev_data, VkPipeline pipeline, PIPELINE_NODE **pipeline_state,
+                                           VK_OBJECT *obj_struct) {
+    if (dev_data->instance_state->disabled.destroy_pipeline)
+        return false;
+    bool skip = false;
+    *pipeline_state = getPipeline(dev_data, pipeline);
+    if (*pipeline_state) {
+        *obj_struct = {reinterpret_cast<uint64_t &>(pipeline), VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT};
+        skip |= ValidateObjectNotInUse(dev_data, *pipeline_state, *obj_struct);
+    }
+    return skip;
+}
+
+static void PostCallRecordDestroyPipeline(layer_data *dev_data, VkPipeline pipeline, PIPELINE_NODE *pipeline_state,
+                                          VK_OBJECT obj_struct) {
+    // Any bound cmd buffers are now invalid
+    invalidateCommandBuffers(pipeline_state->cb_bindings, obj_struct);
+    dev_data->pipelineMap.erase(pipeline);
+}
+
 VKAPI_ATTR void VKAPI_CALL
 DestroyPipeline(VkDevice device, VkPipeline pipeline, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    bool skip = false;
+    PIPELINE_NODE *pipeline_state = nullptr;
+    VK_OBJECT obj_struct;
     std::unique_lock<std::mutex> lock(global_lock);
-    auto pipe_node = getPipeline(dev_data, pipeline);
-    if (pipe_node) {
-        VK_OBJECT obj_struct = {reinterpret_cast<uint64_t &>(pipeline), VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT};
-        skip |= ValidateObjectNotInUse(dev_data, pipe_node, obj_struct);
-        // Any bound cmd buffers are now invalid
-        invalidateCommandBuffers(pipe_node->cb_bindings, obj_struct);
-    }
+    bool skip = PreCallValidateDestroyPipeline(dev_data, pipeline, &pipeline_state, &obj_struct);
     if (!skip) {
-        dev_data->pipelineMap.erase(pipeline);
         lock.unlock();
         dev_data->dispatch_table.DestroyPipeline(device, pipeline, pAllocator);
+        lock.lock();
+        PostCallRecordDestroyPipeline(dev_data, pipeline, pipeline_state, obj_struct);
     }
 }
 
