@@ -1497,98 +1497,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchai
     return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainKHR swapchain, uint64_t timeout,
-                                                   VkSemaphore semaphore, VkFence fence, uint32_t *pImageIndex) {
-    // TODOs:
-    //
-    // - Address the timeout.  Possibilities include looking at the state of the
-    //   swapchain's images, depending on the timeout value.
-    // - Implement a check for validity language that reads: If pname:semaphore is
-    //   not sname:VK_NULL_HANDLE it must: be unsignalled
-    // - Implement a check for validity language that reads: If pname:fence is not
-    //   sname:VK_NULL_HANDLE it must: be unsignalled and mustnot: be associated
-    //   with any other queue command that has not yet completed execution on that
-    //   queue
-    // - Record/update the state of the swapchain, in case an error occurs
-    //   (e.g. VK_ERROR_OUT_OF_DATE_KHR).
-    VkResult result = VK_SUCCESS;
-    bool skip_call = false;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    std::unique_lock<std::mutex> lock(global_lock);
-    SwpDevice *pDevice = NULL;
-    {
-        auto it = my_data->deviceMap.find(device);
-        pDevice = (it == my_data->deviceMap.end()) ? NULL : &it->second;
-    }
-
-    SwpSwapchain *pSwapchain = NULL;
-    {
-        auto it = my_data->swapchainMap.find(swapchain);
-        pSwapchain = (it == my_data->swapchainMap.end()) ? NULL : &it->second;
-    }
-    lock.unlock();
-
-    if (!skip_call) {
-        // Call down the call chain:
-        result = my_data->device_dispatch_table->AcquireNextImageKHR(device, swapchain, timeout, semaphore, fence, pImageIndex);
-        lock.lock();
-
-        // Obtain this pointer again after locking:
-        {
-            auto it = my_data->swapchainMap.find(swapchain);
-            pSwapchain = (it == my_data->swapchainMap.end()) ? NULL : &it->second;
-        }
-        if (((result == VK_SUCCESS) || (result == VK_SUBOPTIMAL_KHR)) && pSwapchain) {
-            // Change the state of the image (now acquired by the application):
-            pSwapchain->images[*pImageIndex].acquiredByApp = true;
-        }
-        lock.unlock();
-
-        return result;
-    }
-    return VK_ERROR_VALIDATION_FAILED_EXT;
-}
-
-VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInfoKHR *pPresentInfo) {
-    // TODOs:
-    //
-    // - Implement a check for validity language that reads: Any given element of
-    //   sname:VkSemaphore in pname:pWaitSemaphores must: refer to a prior signal
-    //   of that sname:VkSemaphore that won't be consumed by any other wait on that
-    //   semaphore
-    // - Record/update the state of the swapchain, in case an error occurs
-    //   (e.g. VK_ERROR_OUT_OF_DATE_KHR).
-    VkResult result = VK_SUCCESS;
-    bool skip_call = false;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
-
-    if (!skip_call) {
-        // Call down the call chain:
-        result = my_data->device_dispatch_table->QueuePresentKHR(queue, pPresentInfo);
-        std::unique_lock<std::mutex> lock(global_lock);
-
-        if (pPresentInfo && ((result == VK_SUCCESS) || (result == VK_SUBOPTIMAL_KHR))) {
-            for (uint32_t i = 0; i < pPresentInfo->swapchainCount; i++) {
-                int index = pPresentInfo->pImageIndices[i];
-                SwpSwapchain *pSwapchain = NULL;
-                {
-                    auto it = my_data->swapchainMap.find(pPresentInfo->pSwapchains[i]);
-                    pSwapchain = (it == my_data->swapchainMap.end()) ? NULL : &it->second;
-                }
-                if (pSwapchain) {
-                    // Change the state of the image (no longer acquired by the
-                    // application):
-                    pSwapchain->images[index].acquiredByApp = false;
-                }
-            }
-        }
-        lock.unlock();
-
-        return result;
-    }
-    return VK_ERROR_VALIDATION_FAILED_EXT;
-}
-
 VKAPI_ATTR VkResult VKAPI_CALL CreateSharedSwapchainsKHR(VkDevice device, uint32_t swapchainCount,
                                                          const VkSwapchainCreateInfoKHR *pCreateInfos,
                                                          const VkAllocationCallbacks *pAllocator, VkSwapchainKHR *pSwapchains) {
@@ -1882,8 +1790,6 @@ static PFN_vkVoidFunction intercept_khr_swapchain_command(const char *name, VkDe
         {"vkCreateSwapchainKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateSwapchainKHR)},
         {"vkDestroySwapchainKHR", reinterpret_cast<PFN_vkVoidFunction>(DestroySwapchainKHR)},
         {"vkGetSwapchainImagesKHR", reinterpret_cast<PFN_vkVoidFunction>(GetSwapchainImagesKHR)},
-        {"vkAcquireNextImageKHR", reinterpret_cast<PFN_vkVoidFunction>(AcquireNextImageKHR)},
-        {"vkQueuePresentKHR", reinterpret_cast<PFN_vkVoidFunction>(QueuePresentKHR)},
     };
 
     // do not check if VK_KHR_swapchain is enabled (why?)
