@@ -182,14 +182,14 @@ class QUERY_POOL_NODE : public BASE_NODE {
     VkQueryPoolCreateInfo createInfo;
 };
 
-class FRAMEBUFFER_NODE : public BASE_NODE {
+class FRAMEBUFFER_STATE : public BASE_NODE {
   public:
     VkFramebuffer framebuffer;
     safe_VkFramebufferCreateInfo createInfo;
     safe_VkRenderPassCreateInfo renderPassCreateInfo;
     std::unordered_set<VkCommandBuffer> referencingCmdBuffers;
     std::vector<MT_FB_ATTACHMENT_INFO> attachments;
-    FRAMEBUFFER_NODE(VkFramebuffer fb, const VkFramebufferCreateInfo *pCreateInfo, const VkRenderPassCreateInfo *pRPCI)
+    FRAMEBUFFER_STATE(VkFramebuffer fb, const VkFramebufferCreateInfo *pCreateInfo, const VkRenderPassCreateInfo *pRPCI)
         : framebuffer(fb), createInfo(pCreateInfo), renderPassCreateInfo(pRPCI){};
 };
 

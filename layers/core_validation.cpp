@@ -157,7 +157,7 @@ struct layer_data {
     unordered_map<VkQueryPool, QUERY_POOL_NODE> queryPoolMap;
     unordered_map<VkSemaphore, SEMAPHORE_NODE> semaphoreMap;
     unordered_map<VkCommandBuffer, GLOBAL_CB_NODE *> commandBufferMap;
-    unordered_map<VkFramebuffer, unique_ptr<FRAMEBUFFER_NODE>> frameBufferMap;
+    unordered_map<VkFramebuffer, unique_ptr<FRAMEBUFFER_STATE>> frameBufferMap;
     unordered_map<VkImage, vector<ImageSubresourcePair>> imageSubresourceMap;
     unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> imageLayoutMap;
     unordered_map<VkRenderPass, unique_ptr<RENDER_PASS_NODE>> renderPassMap;
@@ -2325,7 +2325,7 @@ static RENDER_PASS_NODE *getRenderPass(layer_data const *my_data, VkRenderPass r
     return it->second.get();
 }
 
-static FRAMEBUFFER_NODE *getFramebuffer(const layer_data *my_data, VkFramebuffer framebuffer) {
+static FRAMEBUFFER_STATE *getFramebufferState(const layer_data *my_data, VkFramebuffer framebuffer) {
     auto it = my_data->frameBufferMap.find(framebuffer);
     if (it == my_data->frameBufferMap.end()) {
         return nullptr;
@@ -4102,7 +4102,7 @@ BASE_NODE *GetStateStructPtrFromObject(layer_data *dev_data, VK_OBJECT object_st
         break;
     }
     case VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT: {
-        base_ptr = getFramebuffer(dev_data, reinterpret_cast<VkFramebuffer &>(object_struct.handle));
+        base_ptr = getFramebufferState(dev_data, reinterpret_cast<VkFramebuffer &>(object_struct.handle));
         break;
     }
     case VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT: {
@@ -4193,9 +4193,9 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
         pCB->object_bindings.clear();
         // Remove this cmdBuffer's reference from each FrameBuffer's CB ref list
         for (auto framebuffer : pCB->framebuffers) {
-            auto fb_node = getFramebuffer(dev_data, framebuffer);
-            if (fb_node)
-                fb_node->cb_bindings.erase(pCB);
+            auto fb_state = getFramebufferState(dev_data, framebuffer);
+            if (fb_state)
+                fb_state->cb_bindings.erase(pCB);
         }
         pCB->framebuffers.clear();
         pCB->activeFramebuffer = VK_NULL_HANDLE;
@@ -4738,7 +4738,7 @@ static bool ValidateAndIncrementBoundObjects(layer_data *dev_data, GLOBAL_CB_NOD
             break;
         }
         case VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT: {
-            base_obj = getFramebuffer(dev_data, reinterpret_cast<VkFramebuffer &>(obj.handle));
+            base_obj = getFramebufferState(dev_data, reinterpret_cast<VkFramebuffer &>(obj.handle));
             error_code = DRAWSTATE_INVALID_FRAMEBUFFER;
             break;
         }
@@ -6250,9 +6250,9 @@ DestroyCommandPool(VkDevice device, VkCommandPool commandPool, const VkAllocatio
             removeCommandBufferBinding(dev_data, &obj, cb_node);
         }
         for (auto framebuffer : cb_node->framebuffers) {
-            auto fb_node = getFramebuffer(dev_data, framebuffer);
-            if (fb_node)
-                fb_node->cb_bindings.erase(cb_node);
+            auto fb_state = getFramebufferState(dev_data, framebuffer);
+            if (fb_state)
+                fb_state->cb_bindings.erase(cb_node);
         }
         dev_data->commandBufferMap.erase(cb); // Remove this command buffer
         delete cb_node;                       // delete CB info structure
@@ -6331,12 +6331,12 @@ void invalidateCommandBuffers(std::unordered_set<GLOBAL_CB_NODE *> cb_nodes, VK_
     }
 }
 
-static bool PreCallValidateDestroyFramebuffer(layer_data *dev_data, VkFramebuffer framebuffer, FRAMEBUFFER_NODE **framebuffer_state,
-                                              VK_OBJECT *obj_struct) {
+static bool PreCallValidateDestroyFramebuffer(layer_data *dev_data, VkFramebuffer framebuffer,
+                                              FRAMEBUFFER_STATE **framebuffer_state, VK_OBJECT *obj_struct) {
     if (dev_data->instance_state->disabled.destroy_framebuffer)
         return false;
     bool skip = false;
-    *framebuffer_state = getFramebuffer(dev_data, framebuffer);
+    *framebuffer_state = getFramebufferState(dev_data, framebuffer);
     if (*framebuffer_state) {
         *obj_struct = {reinterpret_cast<uint64_t &>(framebuffer), VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT};
         skip |= ValidateObjectNotInUse(dev_data, *framebuffer_state, *obj_struct, VALIDATION_ERROR_00422);
@@ -6344,7 +6344,7 @@ static bool PreCallValidateDestroyFramebuffer(layer_data *dev_data, VkFramebuffe
     return skip;
 }
 
-static void PostCallRecordDestroyFramebuffer(layer_data *dev_data, VkFramebuffer framebuffer, FRAMEBUFFER_NODE *framebuffer_state,
+static void PostCallRecordDestroyFramebuffer(layer_data *dev_data, VkFramebuffer framebuffer, FRAMEBUFFER_STATE *framebuffer_state,
                                              VK_OBJECT obj_struct) {
     invalidateCommandBuffers(framebuffer_state->cb_bindings, obj_struct);
     dev_data->frameBufferMap.erase(framebuffer);
@@ -6353,7 +6353,7 @@ static void PostCallRecordDestroyFramebuffer(layer_data *dev_data, VkFramebuffer
 VKAPI_ATTR void VKAPI_CALL
 DestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    FRAMEBUFFER_NODE *framebuffer_state = nullptr;
+    FRAMEBUFFER_STATE *framebuffer_state = nullptr;
     VK_OBJECT obj_struct;
     std::unique_lock<std::mutex> lock(global_lock);
     bool skip = PreCallValidateDestroyFramebuffer(dev_data, framebuffer, &framebuffer_state, &obj_struct);
@@ -7044,7 +7044,7 @@ AllocateCommandBuffers(VkDevice device, const VkCommandBufferAllocateInfo *pCrea
 }
 
 // Add bindings between the given cmd buffer & framebuffer and the framebuffer's children
-static void AddFramebufferBinding(layer_data *dev_data, GLOBAL_CB_NODE *cb_state, FRAMEBUFFER_NODE *fb_state) {
+static void AddFramebufferBinding(layer_data *dev_data, GLOBAL_CB_NODE *cb_state, FRAMEBUFFER_STATE *fb_state) {
     fb_state->cb_bindings.insert(cb_state);
     for (auto attachment : fb_state->attachments) {
         auto view_state = attachment.view_state;
@@ -7105,7 +7105,7 @@ BeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo
                             reinterpret_cast<void *>(commandBuffer));
                     } else {
                         string errorString = "";
-                        auto framebuffer = getFramebuffer(dev_data, pInfo->framebuffer);
+                        auto framebuffer = getFramebufferState(dev_data, pInfo->framebuffer);
                         if (framebuffer) {
                             if ((framebuffer->createInfo.renderPass != pInfo->renderPass) &&
                                 !verify_renderpass_compatibility(dev_data, framebuffer->renderPassCreateInfo.ptr(),
@@ -9587,8 +9587,8 @@ static bool PreCallValidateCreateFramebuffer(layer_data *dev_data, const VkFrame
 // CreateFramebuffer state has been validated and call down chain completed so record new framebuffer object
 static void PostCallRecordCreateFramebuffer(layer_data *dev_data, const VkFramebufferCreateInfo *pCreateInfo, VkFramebuffer fb) {
     // Shadow create info and store in map
-    std::unique_ptr<FRAMEBUFFER_NODE> fb_node(
-        new FRAMEBUFFER_NODE(fb, pCreateInfo, dev_data->renderPassMap[pCreateInfo->renderPass]->createInfo.ptr()));
+    std::unique_ptr<FRAMEBUFFER_STATE> fb_state(
+        new FRAMEBUFFER_STATE(fb, pCreateInfo, dev_data->renderPassMap[pCreateInfo->renderPass]->createInfo.ptr()));
 
     for (uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i) {
         VkImageView view = pCreateInfo->pAttachments[i];
@@ -9600,9 +9600,9 @@ static void PostCallRecordCreateFramebuffer(layer_data *dev_data, const VkFrameb
         fb_info.mem = getImageNode(dev_data, view_state->create_info.image)->mem;
         fb_info.view_state = view_state;
         fb_info.image = view_state->create_info.image;
-        fb_node->attachments.push_back(fb_info);
+        fb_state->attachments.push_back(fb_info);
     }
-    dev_data->frameBufferMap[fb] = std::move(fb_node);
+    dev_data->frameBufferMap[fb] = std::move(fb_state);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateFramebuffer(VkDevice device, const VkFramebufferCreateInfo *pCreateInfo,
@@ -9720,7 +9720,7 @@ bool isRegionOverlapping(VkImageSubresourceRange range1, VkImageSubresourceRange
             isRangeOverlapping(range1.baseArrayLayer, range1.layerCount, range2.baseArrayLayer, range2.layerCount));
 }
 
-static bool ValidateDependencies(const layer_data *dev_data, FRAMEBUFFER_NODE const *framebuffer,
+static bool ValidateDependencies(const layer_data *dev_data, FRAMEBUFFER_STATE const *framebuffer,
                                  RENDER_PASS_NODE const *renderPass) {
     bool skip_call = false;
     auto const pFramebufferInfo = framebuffer->createInfo.ptr();
@@ -10263,10 +10263,8 @@ static bool VerifyFramebufferAndRenderPassLayouts(layer_data *dev_data, GLOBAL_C
     return skip_call;
 }
 
-static void TransitionAttachmentRefLayout(layer_data *dev_data, GLOBAL_CB_NODE *pCB,
-                                          FRAMEBUFFER_NODE *pFramebuffer,
-                                          VkAttachmentReference ref)
-{
+static void TransitionAttachmentRefLayout(layer_data *dev_data, GLOBAL_CB_NODE *pCB, FRAMEBUFFER_STATE *pFramebuffer,
+                                          VkAttachmentReference ref) {
     if (ref.attachment != VK_ATTACHMENT_UNUSED) {
         auto image_view = pFramebuffer->createInfo.pAttachments[ref.attachment];
         SetLayout(dev_data, pCB, image_view, ref.layout);
@@ -10279,7 +10277,7 @@ static void TransitionSubpassLayouts(layer_data *dev_data, GLOBAL_CB_NODE *pCB, 
     if (!renderPass)
         return;
 
-    auto framebuffer = getFramebuffer(dev_data, pRenderPassBegin->framebuffer);
+    auto framebuffer = getFramebufferState(dev_data, pRenderPassBegin->framebuffer);
     if (!framebuffer)
         return;
 
@@ -10311,7 +10309,7 @@ static void TransitionFinalSubpassLayouts(layer_data *dev_data, GLOBAL_CB_NODE *
         return;
 
     const VkRenderPassCreateInfo *pRenderPassInfo = renderPass->createInfo.ptr();
-    auto framebuffer = getFramebuffer(dev_data, pRenderPassBegin->framebuffer);
+    auto framebuffer = getFramebufferState(dev_data, pRenderPassBegin->framebuffer);
     if (!framebuffer)
         return;
 
@@ -10323,7 +10321,8 @@ static void TransitionFinalSubpassLayouts(layer_data *dev_data, GLOBAL_CB_NODE *
 
 static bool VerifyRenderAreaBounds(const layer_data *dev_data, const VkRenderPassBeginInfo *pRenderPassBegin) {
     bool skip_call = false;
-    const safe_VkFramebufferCreateInfo *pFramebufferInfo = &getFramebuffer(dev_data, pRenderPassBegin->framebuffer)->createInfo;
+    const safe_VkFramebufferCreateInfo *pFramebufferInfo =
+        &getFramebufferState(dev_data, pRenderPassBegin->framebuffer)->createInfo;
     if (pRenderPassBegin->renderArea.offset.x < 0 ||
         (pRenderPassBegin->renderArea.offset.x + pRenderPassBegin->renderArea.extent.width) > pFramebufferInfo->width ||
         pRenderPassBegin->renderArea.offset.y < 0 ||
@@ -10361,7 +10360,7 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
     std::unique_lock<std::mutex> lock(global_lock);
     GLOBAL_CB_NODE *cb_node = getCBNode(dev_data, commandBuffer);
     auto renderPass = pRenderPassBegin ? getRenderPass(dev_data, pRenderPassBegin->renderPass) : nullptr;
-    auto framebuffer = pRenderPassBegin ? getFramebuffer(dev_data, pRenderPassBegin->framebuffer) : nullptr;
+    auto framebuffer = pRenderPassBegin ? getFramebufferState(dev_data, pRenderPassBegin->framebuffer) : nullptr;
     if (cb_node) {
         if (renderPass) {
             uint32_t clear_op_size = 0; // Make sure pClearValues is at least as large as last LOAD_OP_CLEAR
@@ -10484,7 +10483,7 @@ VKAPI_ATTR void VKAPI_CALL CmdEndRenderPass(VkCommandBuffer commandBuffer) {
     auto pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         RENDER_PASS_NODE* pRPNode = pCB->activeRenderPass;
-        auto framebuffer = getFramebuffer(dev_data, pCB->activeFramebuffer);
+        auto framebuffer = getFramebufferState(dev_data, pCB->activeFramebuffer);
         if (pRPNode) {
             if (pCB->activeSubpass != pRPNode->createInfo.subpassCount - 1) {
                 skip_call |=
@@ -10677,7 +10676,7 @@ static bool validateFramebuffer(layer_data *dev_data, VkCommandBuffer primaryBuf
                                  reinterpret_cast<uint64_t &>(secondaryBuffer), reinterpret_cast<uint64_t &>(secondary_fb),
                                  reinterpret_cast<uint64_t &>(primary_fb));
         }
-        auto fb = getFramebuffer(dev_data, secondary_fb);
+        auto fb = getFramebufferState(dev_data, secondary_fb);
         if (!fb) {
             skip_call |=
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
