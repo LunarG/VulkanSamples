@@ -434,7 +434,7 @@ struct PIPELINE_LAYOUT_NODE {
     }
 };
 
-class PIPELINE_NODE : public BASE_NODE {
+class PIPELINE_STATE : public BASE_NODE {
   public:
     VkPipeline pipeline;
     safe_VkGraphicsPipelineCreateInfo graphicsPipelineCI;
@@ -454,7 +454,7 @@ class PIPELINE_NODE : public BASE_NODE {
     PIPELINE_LAYOUT_NODE pipeline_layout;
 
     // Default constructor
-    PIPELINE_NODE()
+    PIPELINE_STATE()
         : pipeline{}, graphicsPipelineCI{}, computePipelineCI{}, active_shaders(0), duplicate_shaders(0), active_slots(),
           vertexBindingDescriptions(), vertexAttributeDescriptions(), attachments(), blendConstantsEnabled(false), render_pass_ci(),
           pipeline_layout() {}
@@ -507,7 +507,7 @@ class PIPELINE_NODE : public BASE_NODE {
 
 // Track last states that are bound per pipeline bind point (Gfx & Compute)
 struct LAST_BOUND_STATE {
-    PIPELINE_NODE *pipeline_node;
+    PIPELINE_STATE *pipeline_state;
     PIPELINE_LAYOUT_NODE pipeline_layout;
     // Track each set that has been bound
     // Ordered bound set tracking where index is set# that given set is bound to
@@ -516,7 +516,7 @@ struct LAST_BOUND_STATE {
     std::vector<std::vector<uint32_t>> dynamicOffsets;
 
     void reset() {
-        pipeline_node = nullptr;
+        pipeline_state = nullptr;
         pipeline_layout.reset();
         boundDescriptorSets.clear();
         dynamicOffsets.clear();

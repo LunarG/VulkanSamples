@@ -143,7 +143,7 @@ struct layer_data {
     unordered_map<VkImage, unique_ptr<IMAGE_NODE>> imageMap;
     unordered_map<VkBufferView, unique_ptr<BUFFER_VIEW_STATE>> bufferViewMap;
     unordered_map<VkBuffer, unique_ptr<BUFFER_NODE>> bufferMap;
-    unordered_map<VkPipeline, PIPELINE_NODE *> pipelineMap;
+    unordered_map<VkPipeline, PIPELINE_STATE *> pipelineMap;
     unordered_map<VkCommandPool, COMMAND_POOL_NODE> commandPoolMap;
     unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_NODE *> descriptorPoolMap;
     unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> setMap;
@@ -2309,7 +2309,7 @@ static bool validate_status(layer_data *my_data, GLOBAL_CB_NODE *pNode, CBStatus
 }
 
 // Retrieve pipeline node ptr for given pipeline object
-static PIPELINE_NODE *getPipeline(layer_data const *my_data, VkPipeline pipeline) {
+static PIPELINE_STATE *getPipelineState(layer_data const *my_data, VkPipeline pipeline) {
     auto it = my_data->pipelineMap.find(pipeline);
     if (it == my_data->pipelineMap.end()) {
         return nullptr;
@@ -2341,7 +2341,7 @@ cvdescriptorset::DescriptorSetLayout const *getDescriptorSetLayout(layer_data co
     return it->second;
 }
 
-static PIPELINE_LAYOUT_NODE const *getPipelineLayout(layer_data const *my_data, VkPipelineLayout pipeLayout) {
+static PIPELINE_LAYOUT_NODE const *getPipelineStateLayout(layer_data const *my_data, VkPipelineLayout pipeLayout) {
     auto it = my_data->pipelineLayoutMap.find(pipeLayout);
     if (it == my_data->pipelineLayoutMap.end()) {
         return nullptr;
@@ -2350,7 +2350,7 @@ static PIPELINE_LAYOUT_NODE const *getPipelineLayout(layer_data const *my_data, 
 }
 
 // Return true if for a given PSO, the given state enum is dynamic, else return false
-static bool isDynamic(const PIPELINE_NODE *pPipeline, const VkDynamicState state) {
+static bool isDynamic(const PIPELINE_STATE *pPipeline, const VkDynamicState state) {
     if (pPipeline && pPipeline->graphicsPipelineCI.pDynamicState) {
         for (uint32_t i = 0; i < pPipeline->graphicsPipelineCI.pDynamicState->dynamicStateCount; i++) {
             if (state == pPipeline->graphicsPipelineCI.pDynamicState->pDynamicStates[i])
@@ -2361,7 +2361,7 @@ static bool isDynamic(const PIPELINE_NODE *pPipeline, const VkDynamicState state
 }
 
 // Validate state stored as flags at time of draw call
-static bool validate_draw_state_flags(layer_data *dev_data, GLOBAL_CB_NODE *pCB, const PIPELINE_NODE *pPipe, bool indexedDraw) {
+static bool validate_draw_state_flags(layer_data *dev_data, GLOBAL_CB_NODE *pCB, const PIPELINE_STATE *pPipe, bool indexedDraw) {
     bool result = false;
     if (pPipe->graphicsPipelineCI.pInputAssemblyState &&
         ((pPipe->graphicsPipelineCI.pInputAssemblyState->topology == VK_PRIMITIVE_TOPOLOGY_LINE_LIST) ||
@@ -2825,15 +2825,11 @@ static uint32_t descriptor_type_to_reqs(shader_module const *module, uint32_t ty
     }
 }
 
-
-static bool validate_pipeline_shader_stage(debug_report_data *report_data,
-                                           VkPipelineShaderStageCreateInfo const *pStage,
-                                           PIPELINE_NODE *pipeline,
-                                           shader_module **out_module,
-                                           spirv_inst_iter *out_entrypoint,
-                                           VkPhysicalDeviceFeatures const *enabledFeatures,
-                                           std::unordered_map<VkShaderModule,
-                                           std::unique_ptr<shader_module>> const &shaderModuleMap) {
+static bool
+validate_pipeline_shader_stage(debug_report_data *report_data, VkPipelineShaderStageCreateInfo const *pStage,
+                               PIPELINE_STATE *pipeline, shader_module **out_module, spirv_inst_iter *out_entrypoint,
+                               VkPhysicalDeviceFeatures const *enabledFeatures,
+                               std::unordered_map<VkShaderModule, std::unique_ptr<shader_module>> const &shaderModuleMap) {
     bool pass = true;
     auto module_it = shaderModuleMap.find(pStage->module);
     auto module = *out_module = module_it->second.get();
@@ -2950,9 +2946,10 @@ static bool validate_pipeline_shader_stage(debug_report_data *report_data,
 
 // Validate that the shaders used by the given pipeline and store the active_slots
 //  that are actually used by the pipeline into pPipeline->active_slots
-static bool validate_and_capture_pipeline_shader_state(debug_report_data *report_data, PIPELINE_NODE *pPipeline,
-                                                       VkPhysicalDeviceFeatures const *enabledFeatures,
-                                                       std::unordered_map<VkShaderModule, unique_ptr<shader_module>> const & shaderModuleMap) {
+static bool
+validate_and_capture_pipeline_shader_state(debug_report_data *report_data, PIPELINE_STATE *pPipeline,
+                                           VkPhysicalDeviceFeatures const *enabledFeatures,
+                                           std::unordered_map<VkShaderModule, unique_ptr<shader_module>> const &shaderModuleMap) {
     auto pCreateInfo = pPipeline->graphicsPipelineCI.ptr();
     int vertex_stage = get_shader_stage_id(VK_SHADER_STAGE_VERTEX_BIT);
     int fragment_stage = get_shader_stage_id(VK_SHADER_STAGE_FRAGMENT_BIT);
@@ -3013,8 +3010,9 @@ static bool validate_and_capture_pipeline_shader_state(debug_report_data *report
     return pass;
 }
 
-static bool validate_compute_pipeline(debug_report_data *report_data, PIPELINE_NODE *pPipeline, VkPhysicalDeviceFeatures const *enabledFeatures,
-                                      std::unordered_map<VkShaderModule, unique_ptr<shader_module>> const & shaderModuleMap) {
+static bool validate_compute_pipeline(debug_report_data *report_data, PIPELINE_STATE *pPipeline,
+                                      VkPhysicalDeviceFeatures const *enabledFeatures,
+                                      std::unordered_map<VkShaderModule, unique_ptr<shader_module>> const &shaderModuleMap) {
     auto pCreateInfo = pPipeline->computePipelineCI.ptr();
 
     shader_module *module;
@@ -3062,7 +3060,7 @@ static bool validate_and_update_drawtime_descriptor_state(
 }
 
 // For given pipeline, return number of MSAA samples, or one if MSAA disabled
-static VkSampleCountFlagBits getNumSamples(PIPELINE_NODE const *pipe) {
+static VkSampleCountFlagBits getNumSamples(PIPELINE_STATE const *pipe) {
     if (pipe->graphicsPipelineCI.pMultisampleState != NULL &&
         VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO == pipe->graphicsPipelineCI.pMultisampleState->sType) {
         return pipe->graphicsPipelineCI.pMultisampleState->rasterizationSamples;
@@ -3083,10 +3081,8 @@ static void list_bits(std::ostream& s, uint32_t bits) {
 }
 
 // Validate draw-time state related to the PSO
-static bool validatePipelineDrawtimeState(layer_data const *my_data,
-                                          LAST_BOUND_STATE const &state,
-                                          const GLOBAL_CB_NODE *pCB,
-                                          PIPELINE_NODE const *pPipeline) {
+static bool validatePipelineDrawtimeState(layer_data const *my_data, LAST_BOUND_STATE const &state, const GLOBAL_CB_NODE *pCB,
+                                          PIPELINE_STATE const *pPipeline) {
     bool skip_call = false;
 
     // Verify Vtx binding
@@ -3101,7 +3097,7 @@ static bool validatePipelineDrawtimeState(layer_data const *my_data,
                     "The Pipeline State Object (0x%" PRIxLEAST64 ") expects that this Command Buffer's vertex binding Index %u "
                     "should be set via vkCmdBindVertexBuffers. This is because VkVertexInputBindingDescription struct "
                     "at index " PRINTF_SIZE_T_SPECIFIER " of pVertexBindingDescriptions has a binding value of %u.",
-                    (uint64_t)state.pipeline_node->pipeline, vertex_binding, i, vertex_binding);
+                    (uint64_t)state.pipeline_state->pipeline, vertex_binding, i, vertex_binding);
             }
         }
     } else {
@@ -3110,7 +3106,7 @@ static bool validatePipelineDrawtimeState(layer_data const *my_data,
                                  0, __LINE__, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS",
                                  "Vertex buffers are bound to command buffer (0x%" PRIxLEAST64
                                  ") but no vertex buffers are attached to this Pipeline State Object (0x%" PRIxLEAST64 ").",
-                                 (uint64_t)pCB->commandBuffer, (uint64_t)state.pipeline_node->pipeline);
+                                 (uint64_t)pCB->commandBuffer, (uint64_t)state.pipeline_state->pipeline);
         }
     }
     // If Viewport or scissors are dynamic, verify that dynamic count matches PSO count.
@@ -3237,7 +3233,7 @@ static bool validate_and_update_draw_state(layer_data *my_data, GLOBAL_CB_NODE *
                                            const VkPipelineBindPoint bindPoint, const char *function) {
     bool result = false;
     auto const &state = cb_node->lastBound[bindPoint];
-    PIPELINE_NODE *pPipe = state.pipeline_node;
+    PIPELINE_STATE *pPipe = state.pipeline_state;
     if (nullptr == pPipe) {
         result |= log_msg(
             my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__,
@@ -3343,17 +3339,17 @@ static bool verifyLineWidth(layer_data *my_data, DRAW_STATE_ERROR dsError, const
 }
 
 // Verify that create state for a pipeline is valid
-static bool verifyPipelineCreateState(layer_data *my_data, const VkDevice device, std::vector<PIPELINE_NODE *> pPipelines,
+static bool verifyPipelineCreateState(layer_data *my_data, const VkDevice device, std::vector<PIPELINE_STATE *> pPipelines,
                                       int pipelineIndex) {
     bool skip_call = false;
 
-    PIPELINE_NODE *pPipeline = pPipelines[pipelineIndex];
+    PIPELINE_STATE *pPipeline = pPipelines[pipelineIndex];
 
     // If create derivative bit is set, check that we've specified a base
     // pipeline correctly, and that the base pipeline was created to allow
     // derivatives.
     if (pPipeline->graphicsPipelineCI.flags & VK_PIPELINE_CREATE_DERIVATIVE_BIT) {
-        PIPELINE_NODE *pBasePipeline = nullptr;
+        PIPELINE_STATE *pBasePipeline = nullptr;
         if (!((pPipeline->graphicsPipelineCI.basePipelineHandle != VK_NULL_HANDLE) ^
               (pPipeline->graphicsPipelineCI.basePipelineIndex != -1))) {
             skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
@@ -3369,7 +3365,7 @@ static bool verifyPipelineCreateState(layer_data *my_data, const VkDevice device
                 pBasePipeline = pPipelines[pPipeline->graphicsPipelineCI.basePipelineIndex];
             }
         } else if (pPipeline->graphicsPipelineCI.basePipelineHandle != VK_NULL_HANDLE) {
-            pBasePipeline = getPipeline(my_data, pPipeline->graphicsPipelineCI.basePipelineHandle);
+            pBasePipeline = getPipelineState(my_data, pPipeline->graphicsPipelineCI.basePipelineHandle);
         }
 
         if (pBasePipeline && !(pBasePipeline->graphicsPipelineCI.flags & VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT)) {
@@ -4074,7 +4070,7 @@ BASE_NODE *GetStateStructPtrFromObject(layer_data *dev_data, VK_OBJECT object_st
         break;
     }
     case VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT: {
-        base_ptr = getPipeline(dev_data, reinterpret_cast<VkPipeline &>(object_struct.handle));
+        base_ptr = getPipelineState(dev_data, reinterpret_cast<VkPipeline &>(object_struct.handle));
         break;
     }
     case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT: {
@@ -4207,7 +4203,7 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
 }
 
 // Set PSO-related status bits for CB, including dynamic state set via PSO
-static void set_cb_pso_status(GLOBAL_CB_NODE *pCB, const PIPELINE_NODE *pPipe) {
+static void set_cb_pso_status(GLOBAL_CB_NODE *pCB, const PIPELINE_STATE *pPipe) {
     // Account for any dynamic state not set via this PSO
     if (!pPipe->graphicsPipelineCI.pDynamicState ||
         !pPipe->graphicsPipelineCI.pDynamicState->dynamicStateCount) { // All state is static
@@ -4254,7 +4250,7 @@ static bool printPipeline(layer_data *my_data, const VkCommandBuffer cb) {
     bool skip_call = false;
     GLOBAL_CB_NODE *pCB = getCBNode(my_data, cb);
     if (pCB) {
-        PIPELINE_NODE *pPipeTrav = pCB->lastBound[VK_PIPELINE_BIND_POINT_GRAPHICS].pipeline_node;
+        PIPELINE_STATE *pPipeTrav = pCB->lastBound[VK_PIPELINE_BIND_POINT_GRAPHICS].pipeline_state;
         if (!pPipeTrav) {
             // nothing to print
         } else {
@@ -4702,7 +4698,7 @@ static bool ValidateAndIncrementBoundObjects(layer_data *dev_data, GLOBAL_CB_NOD
             break;
         }
         case VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT: {
-            base_obj = getPipeline(dev_data, reinterpret_cast<VkPipeline &>(obj.handle));
+            base_obj = getPipelineState(dev_data, reinterpret_cast<VkPipeline &>(obj.handle));
             error_code = DRAWSTATE_INVALID_PIPELINE;
             break;
         }
@@ -6017,12 +6013,12 @@ DestroyShaderModule(VkDevice device, VkShaderModule shaderModule, const VkAlloca
     my_data->dispatch_table.DestroyShaderModule(device, shaderModule, pAllocator);
 }
 
-static bool PreCallValidateDestroyPipeline(layer_data *dev_data, VkPipeline pipeline, PIPELINE_NODE **pipeline_state,
+static bool PreCallValidateDestroyPipeline(layer_data *dev_data, VkPipeline pipeline, PIPELINE_STATE **pipeline_state,
                                            VK_OBJECT *obj_struct) {
     if (dev_data->instance_state->disabled.destroy_pipeline)
         return false;
     bool skip = false;
-    *pipeline_state = getPipeline(dev_data, pipeline);
+    *pipeline_state = getPipelineState(dev_data, pipeline);
     if (*pipeline_state) {
         *obj_struct = {reinterpret_cast<uint64_t &>(pipeline), VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT};
         skip |= ValidateObjectNotInUse(dev_data, *pipeline_state, *obj_struct);
@@ -6030,7 +6026,7 @@ static bool PreCallValidateDestroyPipeline(layer_data *dev_data, VkPipeline pipe
     return skip;
 }
 
-static void PostCallRecordDestroyPipeline(layer_data *dev_data, VkPipeline pipeline, PIPELINE_NODE *pipeline_state,
+static void PostCallRecordDestroyPipeline(layer_data *dev_data, VkPipeline pipeline, PIPELINE_STATE *pipeline_state,
                                           VK_OBJECT obj_struct) {
     // Any bound cmd buffers are now invalid
     invalidateCommandBuffers(pipeline_state->cb_bindings, obj_struct);
@@ -6040,7 +6036,7 @@ static void PostCallRecordDestroyPipeline(layer_data *dev_data, VkPipeline pipel
 VKAPI_ATTR void VKAPI_CALL
 DestroyPipeline(VkDevice device, VkPipeline pipeline, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    PIPELINE_NODE *pipeline_state = nullptr;
+    PIPELINE_STATE *pipeline_state = nullptr;
     VK_OBJECT obj_struct;
     std::unique_lock<std::mutex> lock(global_lock);
     bool skip = PreCallValidateDestroyPipeline(dev_data, pipeline, &pipeline_state, &obj_struct);
@@ -6523,7 +6519,7 @@ MergePipelineCaches(VkDevice device, VkPipelineCache dstCache, uint32_t srcCache
 }
 
 // utility function to set collective state for pipeline
-void set_pipeline_state(PIPELINE_NODE *pPipe) {
+void set_pipeline_state(PIPELINE_STATE *pPipe) {
     // If any attachment used by this pipeline has blendEnable, set top-level blendEnable
     if (pPipe->graphicsPipelineCI.pColorBlendState) {
         for (size_t i = 0; i < pPipe->attachments.size(); ++i) {
@@ -6550,24 +6546,24 @@ CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t
     VkResult result = VK_SUCCESS;
     // TODO What to do with pipelineCache?
     // The order of operations here is a little convoluted but gets the job done
-    //  1. Pipeline create state is first shadowed into PIPELINE_NODE struct
+    //  1. Pipeline create state is first shadowed into PIPELINE_STATE struct
     //  2. Create state is then validated (which uses flags setup during shadowing)
     //  3. If everything looks good, we'll then create the pipeline and add NODE to pipelineMap
     bool skip_call = false;
     // TODO : Improve this data struct w/ unique_ptrs so cleanup below is automatic
-    vector<PIPELINE_NODE *> pPipeNode(count);
+    vector<PIPELINE_STATE *> pPipeState(count);
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
 
     uint32_t i = 0;
     std::unique_lock<std::mutex> lock(global_lock);
 
     for (i = 0; i < count; i++) {
-        pPipeNode[i] = new PIPELINE_NODE;
-        pPipeNode[i]->initGraphicsPipeline(&pCreateInfos[i]);
-        pPipeNode[i]->render_pass_ci.initialize(getRenderPass(dev_data, pCreateInfos[i].renderPass)->createInfo.ptr());
-        pPipeNode[i]->pipeline_layout = *getPipelineLayout(dev_data, pCreateInfos[i].layout);
+        pPipeState[i] = new PIPELINE_STATE;
+        pPipeState[i]->initGraphicsPipeline(&pCreateInfos[i]);
+        pPipeState[i]->render_pass_ci.initialize(getRenderPass(dev_data, pCreateInfos[i].renderPass)->createInfo.ptr());
+        pPipeState[i]->pipeline_layout = *getPipelineStateLayout(dev_data, pCreateInfos[i].layout);
 
-        skip_call |= verifyPipelineCreateState(dev_data, device, pPipeNode, i);
+        skip_call |= verifyPipelineCreateState(dev_data, device, pPipeState, i);
     }
 
     if (!skip_call) {
@@ -6576,13 +6572,13 @@ CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t
             dev_data->dispatch_table.CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pAllocator, pPipelines);
         lock.lock();
         for (i = 0; i < count; i++) {
-            pPipeNode[i]->pipeline = pPipelines[i];
-            dev_data->pipelineMap[pPipeNode[i]->pipeline] = pPipeNode[i];
+            pPipeState[i]->pipeline = pPipelines[i];
+            dev_data->pipelineMap[pPipeState[i]->pipeline] = pPipeState[i];
         }
         lock.unlock();
     } else {
         for (i = 0; i < count; i++) {
-            delete pPipeNode[i];
+            delete pPipeState[i];
         }
         lock.unlock();
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -6598,7 +6594,7 @@ CreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t 
     bool skip_call = false;
 
     // TODO : Improve this data struct w/ unique_ptrs so cleanup below is automatic
-    vector<PIPELINE_NODE *> pPipeNode(count);
+    vector<PIPELINE_STATE *> pPipeState(count);
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
 
     uint32_t i = 0;
@@ -6607,15 +6603,15 @@ CreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t 
         // TODO: Verify compute stage bits
 
         // Create and initialize internal tracking data structure
-        pPipeNode[i] = new PIPELINE_NODE;
-        pPipeNode[i]->initComputePipeline(&pCreateInfos[i]);
-        pPipeNode[i]->pipeline_layout = *getPipelineLayout(dev_data, pCreateInfos[i].layout);
-        // memcpy(&pPipeNode[i]->computePipelineCI, (const void *)&pCreateInfos[i], sizeof(VkComputePipelineCreateInfo));
+        pPipeState[i] = new PIPELINE_STATE;
+        pPipeState[i]->initComputePipeline(&pCreateInfos[i]);
+        pPipeState[i]->pipeline_layout = *getPipelineStateLayout(dev_data, pCreateInfos[i].layout);
+        // memcpy(&pPipeState[i]->computePipelineCI, (const void *)&pCreateInfos[i], sizeof(VkComputePipelineCreateInfo));
 
         // TODO: Add Compute Pipeline Verification
-        skip_call |= !validate_compute_pipeline(dev_data->report_data, pPipeNode[i], &dev_data->enabled_features,
+        skip_call |= !validate_compute_pipeline(dev_data->report_data, pPipeState[i], &dev_data->enabled_features,
                                                 dev_data->shaderModuleMap);
-        // skip_call |= verifyPipelineCreateState(dev_data, device, pPipeNode[i]);
+        // skip_call |= verifyPipelineCreateState(dev_data, device, pPipeState[i]);
     }
 
     if (!skip_call) {
@@ -6624,14 +6620,14 @@ CreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t 
             dev_data->dispatch_table.CreateComputePipelines(device, pipelineCache, count, pCreateInfos, pAllocator, pPipelines);
         lock.lock();
         for (i = 0; i < count; i++) {
-            pPipeNode[i]->pipeline = pPipelines[i];
-            dev_data->pipelineMap[pPipeNode[i]->pipeline] = pPipeNode[i];
+            pPipeState[i]->pipeline = pPipelines[i];
+            dev_data->pipelineMap[pPipeState[i]->pipeline] = pPipeState[i];
         }
         lock.unlock();
     } else {
         for (i = 0; i < count; i++) {
             // Clean up any locally allocated data structures
-            delete pPipeNode[i];
+            delete pPipeState[i];
         }
         lock.unlock();
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -7236,9 +7232,9 @@ CmdBindPipeline(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindP
                         (uint64_t)pipeline, (uint64_t)pCB->activeRenderPass->renderPass);
         }
 
-        PIPELINE_NODE *pPN = getPipeline(dev_data, pipeline);
+        PIPELINE_STATE *pPN = getPipelineState(dev_data, pipeline);
         if (pPN) {
-            pCB->lastBound[pipelineBindPoint].pipeline_node = pPN;
+            pCB->lastBound[pipelineBindPoint].pipeline_state = pPN;
             set_cb_pso_status(pCB, pPN);
             set_pipeline_state(pPN);
         } else {
@@ -7246,7 +7242,7 @@ CmdBindPipeline(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindP
                                  (uint64_t)pipeline, __LINE__, DRAWSTATE_INVALID_PIPELINE, "DS",
                                  "Attempt to bind Pipeline 0x%" PRIxLEAST64 " that doesn't exist!", (uint64_t)(pipeline));
         }
-        addCommandBufferBinding(&getPipeline(dev_data, pipeline)->cb_bindings,
+        addCommandBufferBinding(&getPipelineState(dev_data, pipeline)->cb_bindings,
                                 {reinterpret_cast<uint64_t &>(pipeline), VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT}, pCB);
     }
     lock.unlock();
@@ -7293,7 +7289,7 @@ VKAPI_ATTR void VKAPI_CALL CmdSetLineWidth(VkCommandBuffer commandBuffer, float 
         skip_call |= addCmd(dev_data, pCB, CMD_SETLINEWIDTHSTATE, "vkCmdSetLineWidth()");
         pCB->status |= CBSTATUS_LINE_WIDTH_SET;
 
-        PIPELINE_NODE *pPipeTrav = pCB->lastBound[VK_PIPELINE_BIND_POINT_GRAPHICS].pipeline_node;
+        PIPELINE_STATE *pPipeTrav = pCB->lastBound[VK_PIPELINE_BIND_POINT_GRAPHICS].pipeline_state;
         if (pPipeTrav != NULL && !isDynamic(pPipeTrav, VK_DYNAMIC_STATE_LINE_WIDTH)) {
             skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0,
                                  reinterpret_cast<uint64_t &>(commandBuffer), __LINE__, DRAWSTATE_INVALID_SET, "DS",
@@ -7416,7 +7412,7 @@ CmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelin
                 pCB->lastBound[pipelineBindPoint].dynamicOffsets.resize(lastSetIndex + 1);
             }
             auto oldFinalBoundSet = pCB->lastBound[pipelineBindPoint].boundDescriptorSets[lastSetIndex];
-            auto pipeline_layout = getPipelineLayout(dev_data, layout);
+            auto pipeline_layout = getPipelineStateLayout(dev_data, layout);
             for (uint32_t i = 0; i < setCount; i++) {
                 cvdescriptorset::DescriptorSet *pSet = getSetNode(dev_data, pDescriptorSets[i]);
                 if (pSet) {
@@ -9274,7 +9270,7 @@ VKAPI_ATTR void VKAPI_CALL CmdPushConstants(VkCommandBuffer commandBuffer, VkPip
     }
 
     // Check if push constant update is within any of the ranges with the same stage flags specified in pipeline layout.
-    auto pipeline_layout = getPipelineLayout(dev_data, layout);
+    auto pipeline_layout = getPipelineStateLayout(dev_data, layout);
     // Coalesce adjacent/overlapping pipeline ranges before checking to see if incoming range is
     // contained in the pipeline ranges.
     // Build a {start, end} span list for ranges with matching stage flags.
