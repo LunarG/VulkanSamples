@@ -149,7 +149,12 @@ class ErrorMonitor {
         string errorString(msgString);
         bool found_expected = false;
         for (auto desired_msg : m_desiredMsgs) {
-            if (errorString.find(desired_msg) != string::npos) {
+            if (desired_msg.length() == 0) {
+                // An empty desired_msg string "" indicates a positive test - not expecting an error.
+                // Return true to avoid calling layers/driver with this error.
+                // And don't erase the "" string, so it remains if another error is found.
+                result = VK_TRUE;
+            } else if (errorString.find(desired_msg) != string::npos) {
                 found_expected = true;
                 m_failureMsgs.insert(errorString);
                 m_msgFound = VK_TRUE;
