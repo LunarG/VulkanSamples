@@ -5816,10 +5816,10 @@ static void PostCallRecordDestroyBufferView(layer_data *dev_data, VkBufferView b
 VKAPI_ATTR void VKAPI_CALL
 DestroyBufferView(VkDevice device, VkBufferView bufferView, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    std::unique_lock<std::mutex> lock(global_lock);
     // Common data objects used pre & post call
     BUFFER_VIEW_STATE *buffer_view_state = nullptr;
     VK_OBJECT obj_struct;
+    std::unique_lock<std::mutex> lock(global_lock);
     // Validate state before calling down chain, update common data if we'll be calling down chain
     bool skip = PreCallValidateDestroyBufferView(dev_data, bufferView, &buffer_view_state, &obj_struct);
     if (!skip) {
@@ -5993,10 +5993,10 @@ static void PostCallRecordDestroyImageView(layer_data *dev_data, VkImageView ima
 VKAPI_ATTR void VKAPI_CALL
 DestroyImageView(VkDevice device, VkImageView imageView, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    std::unique_lock<std::mutex> lock(global_lock);
     // Common data objects used pre & post call
     IMAGE_VIEW_STATE *image_view_state = nullptr;
     VK_OBJECT obj_struct;
+    std::unique_lock<std::mutex> lock(global_lock);
     bool skip = PreCallValidateDestroyImageView(dev_data, imageView, &image_view_state, &obj_struct);
     if (!skip) {
         lock.unlock();
