@@ -27,9 +27,6 @@
 // Allow use of STL min and max functions in Windows
 #define NOMINMAX
 
-// Turn on mem_tracker merged code
-#define MTMERGESOURCE 1
-
 #include <SPIRV/spirv.hpp>
 #include <algorithm>
 #include <assert.h>
@@ -4565,6 +4562,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu, const VkDevice
 // prototype
 VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCallbacks *pAllocator) {
     // TODOSC : Shouldn't need any customization here
+    bool skip = false;
     dispatch_key key = get_dispatch_key(device);
     layer_data *dev_data = get_my_data_ptr(key, layer_data_map);
     // Free all the memory
@@ -4588,10 +4586,6 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
     dev_data->bufferMap.clear();
     // Queues persist until device is destroyed
     dev_data->queueMap.clear();
-    lock.unlock();
-#if MTMERGESOURCE
-    bool skip_call = false;
-    lock.lock();
     log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
             (uint64_t)device, __LINE__, MEMTRACK_NONE, "MEM", "Printing List details prior to vkDestroyDevice()");
     log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
@@ -4605,12 +4599,11 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
             pInfo = (*ii).second.get();
             if (pInfo->alloc_info.allocationSize != 0) {
                 // Valid Usage: All child objects created on device must have been destroyed prior to destroying device
-                skip_call |=
-                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
-                            (uint64_t)pInfo->mem, __LINE__, MEMTRACK_MEMORY_LEAK, "MEM",
-                            "Mem Object 0x%" PRIx64 " has not been freed. You should clean up this memory by calling "
-                            "vkFreeMemory(0x%" PRIx64 ") prior to vkDestroyDevice().",
-                            (uint64_t)(pInfo->mem), (uint64_t)(pInfo->mem));
+                skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
+                                (uint64_t)pInfo->mem, __LINE__, MEMTRACK_MEMORY_LEAK, "MEM",
+                                "Mem Object 0x%" PRIx64 " has not been freed. You should clean up this memory by calling "
+                                "vkFreeMemory(0x%" PRIx64 ") prior to vkDestroyDevice().",
+                                (uint64_t)(pInfo->mem), (uint64_t)(pInfo->mem));
             }
         }
     }
@@ -4620,13 +4613,10 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
 #if DISPATCH_MAP_DEBUG
     fprintf(stderr, "Device: 0x%p, key: 0x%p\n", device, key);
 #endif
-    if (!skip_call) {
+    if (!skip) {
         dev_data->dispatch_table.DestroyDevice(device, pAllocator);
+        layer_data_map.erase(key);
     }
-#else
-    dev_data->dispatch_table.DestroyDevice(device, pAllocator);
-#endif
-    layer_data_map.erase(key);
 }
 
 static const VkExtensionProperties instance_extensions[] = {{VK_EXT_DEBUG_REPORT_EXTENSION_NAME, VK_EXT_DEBUG_REPORT_SPEC_VERSION}};

@@ -44,9 +44,6 @@
 #endif
 #endif
 
-// Enable mem_tracker merged code
-#define MTMERGE 1
-
 #pragma once
 #include "core_validation_error_enums.h"
 #include "vk_validation_error_messages.h"
@@ -86,8 +83,6 @@ struct CHECK_DISABLED {
     bool update_descriptor_sets;   // Skip validation prior to vkUpdateDescriptorSets()
 };
 
-#if MTMERGE
-
 /*
  * MTMTODO : Update this comment
  * Data Structure overview
@@ -124,7 +119,6 @@ struct MT_FB_ATTACHMENT_INFO {
     VkImage image;
     VkDeviceMemory mem;
 };
-#endif
 
 struct GENERIC_HEADER {
     VkStructureType sType;
