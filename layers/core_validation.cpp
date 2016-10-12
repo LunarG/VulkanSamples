@@ -5828,36 +5828,49 @@ DestroyBufferView(VkDevice device, VkBufferView bufferView, const VkAllocationCa
     }
 }
 
+static bool PreCallValidateDestroyImage(layer_data *dev_data, VkImage image, IMAGE_NODE **image_state, VK_OBJECT *obj_struct) {
+    if (dev_data->instance_state->disabled.destroy_image)
+        return false;
+    bool skip = false;
+    *image_state = getImageNode(dev_data, image);
+    if (*image_state) {
+        *obj_struct = {reinterpret_cast<uint64_t &>(image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT};
+        skip |= ValidateObjectNotInUse(dev_data, *image_state, *obj_struct, VALIDATION_ERROR_00743);
+    }
+    return skip;
+}
+
+static void PostCallRecordDestroyImage(layer_data *dev_data, VkImage image, IMAGE_NODE *image_state, VK_OBJECT obj_struct) {
+    invalidateCommandBuffers(image_state->cb_bindings, obj_struct);
+    // Clean up memory mapping, bindings and range references for image
+    auto mem_info = getMemObjInfo(dev_data, image_state->mem);
+    if (mem_info) {
+        RemoveImageMemoryRange(obj_struct.handle, mem_info);
+        clear_object_binding(dev_data, obj_struct.handle, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT);
+    }
+    // Remove image from imageMap
+    dev_data->imageMap.erase(image);
+
+    const auto &sub_entry = dev_data->imageSubresourceMap.find(image);
+    if (sub_entry != dev_data->imageSubresourceMap.end()) {
+        for (const auto &pair : sub_entry->second) {
+            dev_data->imageLayoutMap.erase(pair);
+        }
+        dev_data->imageSubresourceMap.erase(sub_entry);
+    }
+}
+
 VKAPI_ATTR void VKAPI_CALL DestroyImage(VkDevice device, VkImage image, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    bool skip = false;
+    IMAGE_NODE *image_state = nullptr;
+    VK_OBJECT obj_struct;
     std::unique_lock<std::mutex> lock(global_lock);
-    auto img_node = getImageNode(dev_data, image);
-    if (img_node) {
-        VK_OBJECT obj_struct = {reinterpret_cast<uint64_t &>(img_node->image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT};
-        // Any bound cmd buffers are now invalid
-        invalidateCommandBuffers(img_node->cb_bindings, obj_struct);
-        skip |= ValidateObjectNotInUse(dev_data, img_node, obj_struct, VALIDATION_ERROR_00743);
-    }
+    bool skip = PreCallValidateDestroyImage(dev_data, image, &image_state, &obj_struct);
     if (!skip) {
-        // Clean up memory mapping, bindings and range references for image
-        auto mem_info = getMemObjInfo(dev_data, img_node->mem);
-        if (mem_info) {
-            RemoveImageMemoryRange(reinterpret_cast<uint64_t &>(image), mem_info);
-            clear_object_binding(dev_data, reinterpret_cast<uint64_t &>(image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT);
-        }
-        // Remove image from imageMap
-        dev_data->imageMap.erase(img_node->image);
-
-        const auto &subEntry = dev_data->imageSubresourceMap.find(image);
-        if (subEntry != dev_data->imageSubresourceMap.end()) {
-            for (const auto &pair : subEntry->second) {
-                dev_data->imageLayoutMap.erase(pair);
-            }
-            dev_data->imageSubresourceMap.erase(subEntry);
-        }
         lock.unlock();
         dev_data->dispatch_table.DestroyImage(device, image, pAllocator);
+        lock.lock();
+        PostCallRecordDestroyImage(dev_data, image, image_state, obj_struct);
     }
 }
 
