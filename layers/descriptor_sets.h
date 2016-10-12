@@ -297,7 +297,7 @@ void PerformAllocateDescriptorSets(const VkDescriptorSetAllocateInfo *, const Vk
  */
 class DescriptorSet : public BASE_NODE {
   public:
-    DescriptorSet(const VkDescriptorSet, const DescriptorSetLayout *, const core_validation::layer_data *);
+    DescriptorSet(const VkDescriptorSet, const VkDescriptorPool, const DescriptorSetLayout *, const core_validation::layer_data *);
     ~DescriptorSet();
     // A number of common Get* functions that return data based on layout from which this set was created
     uint32_t GetTotalDescriptorCount() const { return p_layout_ ? p_layout_->GetTotalDescriptorCount() : 0; };
@@ -374,6 +374,7 @@ class DescriptorSet : public BASE_NODE {
     void InvalidateBoundCmdBuffers();
     bool some_update_; // has any part of the set ever been updated?
     VkDescriptorSet set_;
+    VkDescriptorPool pool_;
     const DescriptorSetLayout *p_layout_;
     std::vector<std::unique_ptr<Descriptor>> descriptors_;
     // Ptr to device data used for various data look-ups

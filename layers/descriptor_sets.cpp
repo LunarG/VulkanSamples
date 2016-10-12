@@ -265,9 +265,9 @@ bool cvdescriptorset::DescriptorSetLayout::VerifyUpdateConsistency(uint32_t curr
 cvdescriptorset::AllocateDescriptorSetsData::AllocateDescriptorSetsData(uint32_t count)
     : required_descriptors_by_type{}, layout_nodes(count, nullptr) {}
 
-cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const DescriptorSetLayout *layout,
-                                              const core_validation::layer_data *dev_data)
-    : some_update_(false), set_(set), p_layout_(layout), device_data_(dev_data) {
+cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const VkDescriptorPool pool,
+                                              const DescriptorSetLayout *layout, const core_validation::layer_data *dev_data)
+    : some_update_(false), set_(set), pool_(pool), p_layout_(layout), device_data_(dev_data) {
     // Foreach binding, create default descriptors of given type
     for (uint32_t i = 0; i < p_layout_->GetBindingCount(); ++i) {
         auto type = p_layout_->GetTypeFromIndex(i);
@@ -648,6 +648,7 @@ void cvdescriptorset::DescriptorSet::BindCommandBuffer(GLOBAL_CB_NODE *cb_node, 
     cb_bindings.insert(cb_node);
     // Add bindings for descriptor set and individual objects in the set
     cb_node->object_bindings.insert({reinterpret_cast<uint64_t &>(set_), VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT});
+    cb_node->object_bindings.insert({reinterpret_cast<uint64_t &>(pool_), VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT});
     // For the active slots, use set# to look up descriptorSet from boundDescriptorSets, and bind all of that descriptor set's
     // resources
     for (auto binding : bindings) {
@@ -1537,7 +1538,8 @@ void cvdescriptorset::PerformAllocateDescriptorSets(const VkDescriptorSetAllocat
      * global map and the pool's set.
      */
     for (uint32_t i = 0; i < p_alloc_info->descriptorSetCount; i++) {
-        auto new_ds = new cvdescriptorset::DescriptorSet(descriptor_sets[i], ds_data->layout_nodes[i], dev_data);
+        auto new_ds = new cvdescriptorset::DescriptorSet(descriptor_sets[i], p_alloc_info->descriptorPool, ds_data->layout_nodes[i],
+                                                         dev_data);
 
         pool_state->sets.insert(new_ds);
         new_ds->in_use.store(0);
