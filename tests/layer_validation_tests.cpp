@@ -1521,6 +1521,7 @@ TEST_F(VkLayerTest, InvalidMemoryMapping) {
     vkFreeMemory(m_device->device(), mem, NULL);
 }
 
+#if 0   // disabled until PV gets real extension enable checks
 TEST_F(VkLayerTest, EnableWsiBeforeUse) {
     VkResult err;
     bool pass;
@@ -1749,6 +1750,7 @@ TEST_F(VkLayerTest, EnableWsiBeforeUse) {
     vkDestroySwapchainKHR(m_device->device(), swapchain, NULL);
     m_errorMonitor->VerifyFound();
 }
+#endif
 
 TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit) {
     VkResult err;
@@ -15137,6 +15139,7 @@ TEST_F(VkLayerTest, ClearImageErrors) {
 
 // WSI Enabled Tests
 //
+#if 0
 TEST_F(VkWsiEnabledLayerTest, TestEnabledWsi) {
 
 #if defined(VK_USE_PLATFORM_XCB_KHR)
@@ -15471,6 +15474,7 @@ TEST_F(VkWsiEnabledLayerTest, TestEnabledWsi) {
     return;
 #endif // VK_USE_PLATFORM_XCB_KHR
 }
+#endif
 
 //
 // POSITIVE VALIDATION TESTS
