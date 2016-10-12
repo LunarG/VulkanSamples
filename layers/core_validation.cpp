@@ -5470,14 +5470,15 @@ VKAPI_ATTR void VKAPI_CALL DestroyFence(VkDevice device, VkFence fence, const Vk
 }
 
 // For given obj node, if it is use, flag a validation error and return callback result, else return false
-bool ValidateObjectNotInUse(const layer_data *dev_data, BASE_NODE *obj_node, VK_OBJECT obj_struct) {
+bool ValidateObjectNotInUse(const layer_data *dev_data, BASE_NODE *obj_node, VK_OBJECT obj_struct,
+                            UNIQUE_VALIDATION_ERROR_CODE error_code) {
     if (dev_data->instance_state->disabled.object_in_use)
         return false;
     bool skip = false;
     if (obj_node->in_use.load()) {
         skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, obj_struct.type, obj_struct.handle, __LINE__,
-                        DRAWSTATE_OBJECT_INUSE, "DS", "Cannot delete %s 0x%" PRIx64 " that is currently in use by a command buffer.",
-                        object_type_to_string(obj_struct.type), obj_struct.handle);
+                        error_code, "DS", "Cannot delete %s 0x%" PRIx64 " that is currently in use by a command buffer. %s",
+                        object_type_to_string(obj_struct.type), obj_struct.handle, validation_error_map[error_code]);
     }
     return skip;
 }
@@ -5490,7 +5491,8 @@ DestroySemaphore(VkDevice device, VkSemaphore semaphore, const VkAllocationCallb
     auto sema_node = getSemaphoreNode(dev_data, semaphore);
     if (sema_node) {
         skip |= ValidateObjectNotInUse(dev_data, sema_node,
-                                       {reinterpret_cast<uint64_t &>(semaphore), VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT});
+                                       {reinterpret_cast<uint64_t &>(semaphore), VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT},
+                                       VALIDATION_ERROR_00199);
     }
     if (!skip) {
         dev_data->semaphoreMap.erase(semaphore);
@@ -5506,7 +5508,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyEvent(VkDevice device, VkEvent event, const Vk
     auto event_node = getEventNode(dev_data, event);
     if (event_node) {
         VK_OBJECT obj_struct = {reinterpret_cast<uint64_t &>(event), VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT};
-        skip |= ValidateObjectNotInUse(dev_data, event_node, obj_struct);
+        skip |= ValidateObjectNotInUse(dev_data, event_node, obj_struct, VALIDATION_ERROR_00213);
         // Any bound cmd buffers are now invalid
         invalidateCommandBuffers(event_node->cb_bindings, obj_struct);
     }
@@ -5525,7 +5527,7 @@ DestroyQueryPool(VkDevice device, VkQueryPool queryPool, const VkAllocationCallb
     auto qp_node = getQueryPoolNode(dev_data, queryPool);
     if (qp_node) {
         VK_OBJECT obj_struct = {reinterpret_cast<uint64_t &>(queryPool), VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT};
-        skip |= ValidateObjectNotInUse(dev_data, qp_node, obj_struct);
+        skip |= ValidateObjectNotInUse(dev_data, qp_node, obj_struct, VALIDATION_ERROR_01012);
         // Any bound cmd buffers are now invalid
         invalidateCommandBuffers(qp_node->cb_bindings, obj_struct);
     }
@@ -5797,7 +5799,7 @@ static bool PreCallValidateDestroyBufferView(layer_data *dev_data, VkBufferView 
     *buffer_view_state = getBufferViewState(dev_data, buffer_view);
     if (*buffer_view_state) {
         *obj_struct = {reinterpret_cast<uint64_t &>(buffer_view), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT};
-        skip |= ValidateObjectNotInUse(dev_data, *buffer_view_state, *obj_struct);
+        skip |= ValidateObjectNotInUse(dev_data, *buffer_view_state, *obj_struct, VALIDATION_ERROR_00701);
     }
     return skip;
 }
@@ -5835,7 +5837,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyImage(VkDevice device, VkImage image, const Vk
         VK_OBJECT obj_struct = {reinterpret_cast<uint64_t &>(img_node->image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT};
         // Any bound cmd buffers are now invalid
         invalidateCommandBuffers(img_node->cb_bindings, obj_struct);
-        skip |= ValidateObjectNotInUse(dev_data, img_node, obj_struct);
+        skip |= ValidateObjectNotInUse(dev_data, img_node, obj_struct, VALIDATION_ERROR_00743);
     }
     if (!skip) {
         // Clean up memory mapping, bindings and range references for image
@@ -5974,7 +5976,7 @@ static bool PreCallValidateDestroyImageView(layer_data *dev_data, VkImageView im
     *image_view_state = getImageViewState(dev_data, image_view);
     if (*image_view_state) {
         *obj_struct = {reinterpret_cast<uint64_t &>(image_view), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT};
-        skip |= ValidateObjectNotInUse(dev_data, *image_view_state, *obj_struct);
+        skip |= ValidateObjectNotInUse(dev_data, *image_view_state, *obj_struct, VALIDATION_ERROR_00776);
     }
     return skip;
 }
@@ -6021,7 +6023,7 @@ static bool PreCallValidateDestroyPipeline(layer_data *dev_data, VkPipeline pipe
     *pipeline_state = getPipelineState(dev_data, pipeline);
     if (*pipeline_state) {
         *obj_struct = {reinterpret_cast<uint64_t &>(pipeline), VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT};
-        skip |= ValidateObjectNotInUse(dev_data, *pipeline_state, *obj_struct);
+        skip |= ValidateObjectNotInUse(dev_data, *pipeline_state, *obj_struct, VALIDATION_ERROR_00555);
     }
     return skip;
 }
@@ -6066,7 +6068,7 @@ DestroySampler(VkDevice device, VkSampler sampler, const VkAllocationCallbacks *
     auto sampler_node = getSamplerNode(dev_data, sampler);
     if (sampler_node) {
         VK_OBJECT obj_struct = {reinterpret_cast<uint64_t &>(sampler), VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT};
-        skip |= ValidateObjectNotInUse(dev_data, sampler_node, obj_struct);
+        skip |= ValidateObjectNotInUse(dev_data, sampler_node, obj_struct, VALIDATION_ERROR_00837);
         // Any bound cmd buffers are now invalid
         invalidateCommandBuffers(sampler_node->cb_bindings, obj_struct);
     }
@@ -6092,7 +6094,7 @@ static bool PreCallValidateDestroyDescriptorPool(layer_data *dev_data, VkDescrip
     *desc_pool_state = getPoolNode(dev_data, pool);
     if (*desc_pool_state) {
         *obj_struct = {reinterpret_cast<uint64_t &>(pool), VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT};
-        skip |= ValidateObjectNotInUse(dev_data, *desc_pool_state, *obj_struct);
+        skip |= ValidateObjectNotInUse(dev_data, *desc_pool_state, *obj_struct, VALIDATION_ERROR_00901);
     }
     return skip;
 }
@@ -6110,7 +6112,6 @@ static void PostCallRecordDestroyDescriptorPool(layer_data *dev_data, VkDescript
 
 VKAPI_ATTR void VKAPI_CALL
 DestroyDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool, const VkAllocationCallbacks *pAllocator) {
-    // TODO : Add checks for VALIDATION_ERROR_00901
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     DESCRIPTOR_POOL_NODE *desc_pool_state = nullptr;
     VK_OBJECT obj_struct;
@@ -6352,7 +6353,7 @@ DestroyRenderPass(VkDevice device, VkRenderPass renderPass, const VkAllocationCa
     auto rp_state = getRenderPass(dev_data, renderPass);
     if (rp_state) {
         VK_OBJECT obj_struct = {reinterpret_cast<uint64_t &>(renderPass), VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT};
-        skip |= ValidateObjectNotInUse(dev_data, rp_state, obj_struct);
+        skip |= ValidateObjectNotInUse(dev_data, rp_state, obj_struct, VALIDATION_ERROR_00393);
         // Any bound cmd buffers are now invalid
         invalidateCommandBuffers(rp_state->cb_bindings, obj_struct);
     }
