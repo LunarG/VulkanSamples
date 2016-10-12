@@ -174,7 +174,7 @@ struct SAMPLER_NODE : public BASE_NODE {
     SAMPLER_NODE(const VkSampler *ps, const VkSamplerCreateInfo *pci) : sampler(*ps), createInfo(*pci){};
 };
 
-class IMAGE_NODE : public BASE_NODE {
+class IMAGE_STATE : public BASE_NODE {
   public:
     VkImage image;
     VkImageCreateInfo createInfo;
@@ -183,10 +183,10 @@ class IMAGE_NODE : public BASE_NODE {
     bool acquired;  // If this is a swapchain image, has it been acquired by the app.
     VkDeviceSize memOffset;
     VkDeviceSize memSize;
-    IMAGE_NODE(VkImage img, const VkImageCreateInfo *pCreateInfo)
+    IMAGE_STATE(VkImage img, const VkImageCreateInfo *pCreateInfo)
         : image(img), createInfo(*pCreateInfo), mem(VK_NULL_HANDLE), valid(false), acquired(false), memOffset(0), memSize(0){};
 
-    IMAGE_NODE(IMAGE_NODE const &rh_obj) = delete;
+    IMAGE_STATE(IMAGE_STATE const &rh_obj) = delete;
 };
 
 class IMAGE_VIEW_STATE : public BASE_NODE {
@@ -602,7 +602,7 @@ cvdescriptorset::DescriptorSet *getSetNode(const layer_data *, VkDescriptorSet);
 cvdescriptorset::DescriptorSetLayout const *getDescriptorSetLayout(layer_data const *, VkDescriptorSetLayout);
 DESCRIPTOR_POOL_STATE *getDescriptorPoolState(const layer_data *, const VkDescriptorPool);
 BUFFER_NODE *getBufferNode(const layer_data *, VkBuffer);
-IMAGE_NODE *getImageNode(const layer_data *, VkImage);
+IMAGE_STATE *getImageState(const layer_data *, VkImage);
 DEVICE_MEM_INFO *getMemObjInfo(const layer_data *, VkDeviceMemory);
 BUFFER_VIEW_STATE *getBufferViewState(const layer_data *, VkBufferView);
 SAMPLER_NODE *getSamplerNode(const layer_data *, VkSampler);
@@ -611,9 +611,9 @@ VkSwapchainKHR getSwapchainFromImage(const layer_data *, VkImage);
 SWAPCHAIN_NODE *getSwapchainNode(const layer_data *, VkSwapchainKHR);
 void invalidateCommandBuffers(std::unordered_set<GLOBAL_CB_NODE *>, VK_OBJECT);
 bool ValidateMemoryIsBoundToBuffer(const layer_data *, const BUFFER_NODE *, const char *);
-bool ValidateMemoryIsBoundToImage(const layer_data *, const IMAGE_NODE *, const char *);
+bool ValidateMemoryIsBoundToImage(const layer_data *, const IMAGE_STATE *, const char *);
 void AddCommandBufferBindingSampler(GLOBAL_CB_NODE *, SAMPLER_NODE *);
-void AddCommandBufferBindingImage(const layer_data *, GLOBAL_CB_NODE *, IMAGE_NODE *);
+void AddCommandBufferBindingImage(const layer_data *, GLOBAL_CB_NODE *, IMAGE_STATE *);
 void AddCommandBufferBindingImageView(const layer_data *, GLOBAL_CB_NODE *, IMAGE_VIEW_STATE *);
 void AddCommandBufferBindingBuffer(const layer_data *, GLOBAL_CB_NODE *, BUFFER_NODE *);
 void AddCommandBufferBindingBufferView(const layer_data *, GLOBAL_CB_NODE *, BUFFER_VIEW_STATE *);

@@ -446,7 +446,7 @@ bool cvdescriptorset::DescriptorSet::ValidateDrawState(const std::map<uint32_t, 
                             return false;
                         }
 
-                        auto image_node = getImageNode(device_data_, image_view_ci.image);
+                        auto image_node = getImageState(device_data_, image_view_ci.image);
                         assert(image_node);
 
                         if ((reqs & DESCRIPTOR_REQ_SINGLE_SAMPLE) &&
@@ -701,7 +701,7 @@ bool cvdescriptorset::ValidateImageUpdate(VkImageView image_view, VkImageLayout 
     VkImage image = iv_state->create_info.image;
     VkFormat format = VK_FORMAT_MAX_ENUM;
     VkImageUsageFlags usage = 0;
-    auto image_node = getImageNode(dev_data, image);
+    auto image_node = getImageState(dev_data, image);
     if (image_node) {
         format = image_node->createInfo.format;
         usage = image_node->createInfo.usage;
