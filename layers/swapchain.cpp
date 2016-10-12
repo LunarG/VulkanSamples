@@ -853,7 +853,6 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumeratePhysicalDevices(VkInstance instance, uin
             my_data->physicalDeviceMap[pPhysicalDevices[i]].pInstance = pInstance;
             my_data->physicalDeviceMap[pPhysicalDevices[i]].pDevice = NULL;
             my_data->physicalDeviceMap[pPhysicalDevices[i]].gotQueueFamilyPropertyCount = false;
-            my_data->physicalDeviceMap[pPhysicalDevices[i]].gotSurfaceCapabilities = false;
             my_data->physicalDeviceMap[pPhysicalDevices[i]].surfaceFormatCount = 0;
             my_data->physicalDeviceMap[pPhysicalDevices[i]].pSurfaceFormats = NULL;
             my_data->physicalDeviceMap[pPhysicalDevices[i]].presentModeCount = 0;
@@ -999,43 +998,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevi
                     pSurface->pQueueFamilyIndexSupport[queueFamilyIndex] = *pSupported;
                 }
             }
-        }
-        lock.unlock();
-
-        return result;
-    }
-    return VK_ERROR_VALIDATION_FAILED_EXT;
-}
-
-VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilitiesKHR(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
-                                                                       VkSurfaceCapabilitiesKHR *pSurfaceCapabilities) {
-    VkResult result = VK_SUCCESS;
-    bool skip_call = false;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
-    std::unique_lock<std::mutex> lock(global_lock);
-    SwpPhysicalDevice *pPhysicalDevice = NULL;
-    {
-        auto it = my_data->physicalDeviceMap.find(physicalDevice);
-        pPhysicalDevice = (it == my_data->physicalDeviceMap.end()) ? NULL : &it->second;
-    }
-
-    lock.unlock();
-
-    if (!skip_call) {
-        // Call down the call chain:
-        result = my_data->instance_dispatch_table->GetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface,
-                                                                                           pSurfaceCapabilities);
-        lock.lock();
-
-        // Obtain this pointer again after locking:
-        {
-            auto it = my_data->physicalDeviceMap.find(physicalDevice);
-            pPhysicalDevice = (it == my_data->physicalDeviceMap.end()) ? NULL : &it->second;
-        }
-        if ((result == VK_SUCCESS) && pPhysicalDevice) {
-            // Record the result of this query:
-            pPhysicalDevice->gotSurfaceCapabilities = true;
-            pPhysicalDevice->surfaceCapabilities = *pSurfaceCapabilities;
         }
         lock.unlock();
 
@@ -1218,11 +1180,7 @@ static bool validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
         }
     }
 
-    // Validate pCreateInfo values with the results of
-    // vkGetPhysicalDeviceSurfaceCapabilitiesKHR():
-    if (!pPhysicalDevice || !pPhysicalDevice->gotSurfaceCapabilities) {
-        // Check moved to CV
-    } else if (pCreateInfo) {
+    if (pCreateInfo) {
         // Validate pCreateInfo->surface to make sure that
         // vkGetPhysicalDeviceSurfaceSupportKHR() reported this as a supported
         // surface:
@@ -1732,8 +1690,6 @@ static PFN_vkVoidFunction intercept_khr_surface_command(const char *name, VkInst
 #endif // VK_USE_PLATFORM_XLIB_KHR
         {"vkDestroySurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(DestroySurfaceKHR)},
         {"vkGetPhysicalDeviceSurfaceSupportKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceSupportKHR)},
-        {"vkGetPhysicalDeviceSurfaceCapabilitiesKHR",
-         reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceCapabilitiesKHR)},
         {"vkGetPhysicalDeviceSurfaceFormatsKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceFormatsKHR)},
         {"vkGetPhysicalDeviceSurfacePresentModesKHR",
          reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfacePresentModesKHR)},
