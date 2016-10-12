@@ -61,9 +61,9 @@ struct EventType{
 //==============================================================
 //=========================MULTI-TOUCH==========================
 class CMTouch{
-    static const int MAX_POINTERS=10;  //Max 10 fingers
     struct CPointer{bool active; float x; float y;};
 public:
+    static const int MAX_POINTERS=10;  //Max 10 fingers
     int count;
     CPointer Pointers[MAX_POINTERS];
     void Clear(){ memset(this,0,sizeof(this)); }
