@@ -6365,22 +6365,37 @@ DestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer, const VkAllocatio
     }
 }
 
+static bool PreCallValidateDestroyRenderPass(layer_data *dev_data, VkRenderPass render_pass, RENDER_PASS_STATE **rp_state,
+                                             VK_OBJECT *obj_struct) {
+    if (dev_data->instance_state->disabled.destroy_renderpass)
+        return false;
+    bool skip = false;
+    *rp_state = getRenderPassState(dev_data, render_pass);
+    if (*rp_state) {
+        *obj_struct = {reinterpret_cast<uint64_t &>(render_pass), VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT};
+        skip |= ValidateObjectNotInUse(dev_data, *rp_state, *obj_struct, VALIDATION_ERROR_00393);
+    }
+    return skip;
+}
+
+static void PostCallRecordDestroyRenderPass(layer_data *dev_data, VkRenderPass render_pass, RENDER_PASS_STATE *rp_state,
+                                            VK_OBJECT obj_struct) {
+    invalidateCommandBuffers(rp_state->cb_bindings, obj_struct);
+    dev_data->renderPassMap.erase(render_pass);
+}
+
 VKAPI_ATTR void VKAPI_CALL
 DestroyRenderPass(VkDevice device, VkRenderPass renderPass, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    bool skip = false;
+    RENDER_PASS_STATE *rp_state = nullptr;
+    VK_OBJECT obj_struct;
     std::unique_lock<std::mutex> lock(global_lock);
-    auto rp_state = getRenderPassState(dev_data, renderPass);
-    if (rp_state) {
-        VK_OBJECT obj_struct = {reinterpret_cast<uint64_t &>(renderPass), VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT};
-        skip |= ValidateObjectNotInUse(dev_data, rp_state, obj_struct, VALIDATION_ERROR_00393);
-        // Any bound cmd buffers are now invalid
-        invalidateCommandBuffers(rp_state->cb_bindings, obj_struct);
-    }
+    bool skip = PreCallValidateDestroyRenderPass(dev_data, renderPass, &rp_state, &obj_struct);
     if (!skip) {
-        dev_data->renderPassMap.erase(renderPass);
         lock.unlock();
         dev_data->dispatch_table.DestroyRenderPass(device, renderPass, pAllocator);
+        lock.lock();
+        PostCallRecordDestroyRenderPass(dev_data, renderPass, rp_state, obj_struct);
     }
 }
 
