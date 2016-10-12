@@ -5831,8 +5831,8 @@ static void PostCallRecordDestroyImage(layer_data *dev_data, VkImage image, IMAG
     auto mem_info = getMemObjInfo(dev_data, image_state->binding.mem);
     if (mem_info) {
         RemoveImageMemoryRange(obj_struct.handle, mem_info);
-        ClearMemoryObjectBinding(dev_data, obj_struct.handle, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, mem_info->mem);
     }
+    ClearMemoryObjectBindings(dev_data, obj_struct.handle, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT);
     // Remove image from imageMap
     dev_data->imageMap.erase(image);
 
