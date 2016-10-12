@@ -7182,6 +7182,45 @@ TEST_F(VkLayerTest, InvalidCmdBufferFramebufferImageDestroyed) {
     vkFreeMemory(m_device->device(), image_memory, nullptr);
 }
 
+TEST_F(VkLayerTest, FramebufferInUseDestroyedSignaled) {
+    TEST_DESCRIPTION("Delete in-use framebuffer.");
+    VkFormatProperties format_properties;
+    VkResult err = VK_SUCCESS;
+    vkGetPhysicalDeviceFormatProperties(gpu(), VK_FORMAT_B8G8R8A8_UNORM, &format_properties);
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkImageObj image(m_device);
+    image.init(256, 256, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
+    ASSERT_TRUE(image.initialized());
+    VkImageView view = image.targetView(VK_FORMAT_B8G8R8A8_UNORM);
+
+    VkFramebufferCreateInfo fci = {VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr, 0, m_renderPass, 1, &view, 256, 256, 1};
+    VkFramebuffer fb;
+    err = vkCreateFramebuffer(m_device->device(), &fci, nullptr, &fb);
+    ASSERT_VK_SUCCESS(err);
+
+    // Just use default renderpass with our framebuffer
+    m_renderPassBeginInfo.framebuffer = fb;
+    // Create Null cmd buffer for submit
+    BeginCommandBuffer();
+    EndCommandBuffer();
+    // Submit cmd buffer to put it in-flight
+    VkSubmitInfo submit_info = {};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &m_commandBuffer->handle();
+    vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
+    // Destroy framebuffer while in-flight
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Cannot delete framebuffer 0x");
+    vkDestroyFramebuffer(m_device->device(), fb, NULL);
+    m_errorMonitor->VerifyFound();
+    // Wait for queue to complete so we can safely destroy everything
+    vkQueueWaitIdle(m_device->m_queue);
+    vkDestroyFramebuffer(m_device->device(), fb, nullptr);
+}
+
 TEST_F(VkLayerTest, FramebufferImageInUseDestroyedSignaled) {
     TEST_DESCRIPTION("Delete in-use image that's child of framebuffer.");
     VkFormatProperties format_properties;
