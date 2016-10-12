@@ -258,6 +258,7 @@ enum DRAW_STATE_ERROR {
     DRAWSTATE_SWAPCHAIN_BAD_COMPOSITE_ALPHA, // Composite alpha mode not supported
     DRAWSTATE_SWAPCHAIN_BAD_LAYER_COUNT,     // Layer count not supported
     DRAWSTATE_SWAPCHAIN_BAD_USAGE_FLAGS,     // Image usage flags not supported
+    DRAWSTATE_SWAPCHAIN_TOO_MANY_IMAGES,     // Application already owns the maximum number of images
 };
 
 // Shader Checker ERROR codes

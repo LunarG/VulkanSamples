@@ -1526,30 +1526,6 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
         auto it = my_data->swapchainMap.find(swapchain);
         pSwapchain = (it == my_data->swapchainMap.end()) ? NULL : &it->second;
     }
-    SwpPhysicalDevice *pPhysicalDevice = pDevice->pPhysicalDevice;
-    if (pSwapchain && pPhysicalDevice && pPhysicalDevice->gotSurfaceCapabilities) {
-        // Look to see if the application has already acquired the maximum
-        // number of images, and this will push it past the spec-defined
-        // limits:
-        uint32_t minImageCount = pPhysicalDevice->surfaceCapabilities.minImageCount;
-        uint32_t imagesAcquiredByApp = 0;
-        for (uint32_t i = 0; i < pSwapchain->imageCount; i++) {
-            if (pSwapchain->images[i].acquiredByApp) {
-                imagesAcquiredByApp++;
-            }
-        }
-        if (imagesAcquiredByApp > (pSwapchain->imageCount - minImageCount)) {
-            skip_call |= log_msg(
-                my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                reinterpret_cast<uint64_t>(device), __LINE__, SWAPCHAIN_APP_ACQUIRES_TOO_MANY_IMAGES, swapchain_layer_name,
-                "vkAcquireNextImageKHR() called when it cannot succeed.  The application has acquired %d image(s) that have not "
-                "yet "
-                "been presented.  The maximum number of images that the application can simultaneously acquire from this swapchain "
-                "(including this call to vkCreateSwapchainKHR()) is %d.  That value is derived by subtracting "
-                "VkSurfaceCapabilitiesKHR::minImageCount (%d) from the number of images in the swapchain (%d) and adding 1.",
-                imagesAcquiredByApp, (pSwapchain->imageCount - minImageCount + 1), minImageCount, pSwapchain->imageCount);
-        }
-    }
     lock.unlock();
 
     if (!skip_call) {
