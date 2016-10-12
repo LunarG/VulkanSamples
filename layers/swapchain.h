@@ -212,7 +212,6 @@ struct SwpSwapchain {
     // When vkGetSwapchainImagesKHR is called, the VkImage's are
     // remembered:
     uint32_t imageCount;
-    unordered_map<int, SwpImage> images;
 };
 
 // Create one of these for each VkQueue within a VkDevice:

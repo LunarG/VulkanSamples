@@ -812,7 +812,6 @@ VKAPI_ATTR void VKAPI_CALL DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR s
             // Empty and then delete all SwpSwapchains
             for (auto it = pSurface->swapchains.begin(); it != pSurface->swapchains.end(); it++) {
                 // Delete all SwpImage's
-                it->second->images.clear();
                 // In case the swapchain's device hasn't been destroyed yet
                 // (which isn't likely, but is possible), delete its
                 // association with this swapchain (i.e. so we can't point to
@@ -929,7 +928,6 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
             // Empty and then delete all SwpSwapchain's
             for (auto it = pDevice->swapchains.begin(); it != pDevice->swapchains.end(); it++) {
                 // Delete all SwpImage's
-                it->second->images.clear();
                 // In case the swapchain's surface hasn't been destroyed yet
                 // (which is likely) delete its association with this swapchain
                 // (i.e. so we can't point to this swpchain from that surface,
@@ -1422,9 +1420,6 @@ VKAPI_ATTR void VKAPI_CALL DestroySwapchainKHR(VkDevice device, VkSwapchainKHR s
         if (pSwapchain->pSurface) {
             pSwapchain->pSurface->swapchains.erase(swapchain);
         }
-        if (pSwapchain->imageCount) {
-            pSwapchain->images.clear();
-        }
         my_data->swapchainMap.erase(swapchain);
     }
     lock.unlock();
@@ -1484,11 +1479,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchai
                    (*pSwapchainImageCount > 0)) {
             // Record the images and their state:
             pSwapchain->imageCount = *pSwapchainImageCount;
-            for (uint32_t i = 0; i < *pSwapchainImageCount; i++) {
-                pSwapchain->images[i].image = pSwapchainImages[i];
-                pSwapchain->images[i].pSwapchain = pSwapchain;
-                pSwapchain->images[i].acquiredByApp = false;
-            }
         }
         lock.unlock();
 
