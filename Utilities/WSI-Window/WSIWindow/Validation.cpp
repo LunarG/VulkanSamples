@@ -70,8 +70,9 @@ debugFunc(VkDebugReportFlagsEXT msgFlags, VkDebugReportObjectTypeEXT objType, ui
     if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT)               { LOGE("%s",buf); } else
     if (msgFlags & VK_DEBUG_REPORT_WARNING_BIT_EXT)             { LOGW("%s",buf); } else
     if (msgFlags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT) { LOGV("%s",buf); } else
-    if (msgFlags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)         { LOGI("%s",buf); } else
-    if (msgFlags & VK_DEBUG_REPORT_DEBUG_BIT_EXT)               { LOGD("%s",buf); }
+    //if (msgFlags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)         { LOGI("%s",buf); } else
+    //if (msgFlags & VK_DEBUG_REPORT_DEBUG_BIT_EXT)               { LOGD("%s",buf); } else
+    return false;  //Don't bail out.
     return false;  //Don't bail out.
 }
 //--------------------------------------------------------------------------------------------

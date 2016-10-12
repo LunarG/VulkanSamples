@@ -27,10 +27,45 @@
 #ifndef WINDOW_XCB
 #define WINDOW_XCB
 
+//-------------------------------------------------
 #include "WindowImpl.h"
-#include <xcb/xcb.h>              //  window
-#include <xkbcommon/xkbcommon.h>  //  keyboard
-#include <string.h>               //  for strlen
+//#include <xcb/xcb.h>               // XCB only
+//#include <X11/Xlib.h>              // XLib only
+#include <X11/Xlib-xcb.h>            // Xlib + XCB
+#include <X11/extensions/XInput2.h>  // MultiTouch
+#include <xkbcommon/xkbcommon.h>     // keyboard
+//-------------------------------------------------
+
+typedef uint16_t xcb_input_device_id_t;
+typedef uint32_t xcb_input_fp1616_t;
+
+typedef struct xcb_input_touch_begin_event_t { //from xinput.h in XCB 1.12
+    uint8_t                   response_type;
+    uint8_t                   extension;
+    uint16_t                  sequence;
+    uint32_t                  length;
+    uint16_t                  event_type;
+    xcb_input_device_id_t     deviceid;
+    xcb_timestamp_t           time;
+    uint32_t                  detail;
+    xcb_window_t              root;
+    xcb_window_t              event;
+    xcb_window_t              child;
+    uint32_t                  full_sequence;
+    xcb_input_fp1616_t        root_x;
+    xcb_input_fp1616_t        root_y;
+    xcb_input_fp1616_t        event_x;
+    xcb_input_fp1616_t        event_y;
+    uint16_t                  buttons_len;
+    uint16_t                  valuators_len;
+    xcb_input_device_id_t     sourceid;
+    //uint8_t                   pad0[2];
+    //uint32_t                  flags;
+    //xcb_input_modifier_info_t mods;
+    //xcb_input_group_info_t    group;
+} xcb_input_touch_begin_event_t;
+
+
 
 // Convert native EVDEV key-code to cross-platform USB HID code.
 const unsigned char EVDEV_TO_HID[256] = {
@@ -204,7 +239,7 @@ EventType Window_xcb::GetEvent(){
             case XCB_CLIENT_MESSAGE:{                                                //window close event
                 if ((*(xcb_client_message_event_t *)x_event).data.data32[0] ==
                     (*atom_wm_delete_window).atom) {
-                    LOGI("CLOSE\n");
+                    LOGI("Closing Window\n");
                     running=false;
                 }
                 break;

@@ -23,13 +23,70 @@
 
 #include "CInstance.h"
 
+//---------------------------PickList-----------------------------
+bool CPickList::IsPicked(const char* name){
+    for(auto item : pickList){ if(strcmp(name,item)==0) return true; }
+    return false;
+}
+
+int CPickList::IndexOf(const char* name){
+    forCount(Count())
+        if(strcmp(name, Name(i))==0) return i;
+    return -1;
+}
+
+void CPickList::Pick(initializer_list<const char*> list) {
+    for(auto item:list) Pick(item);
+}
+
+bool CPickList::Pick(const char* name){
+    int inx=IndexOf(name);
+    if(inx==-1) {
+        LOGW("%s not found.\n",name);           //Warn if picked item was not found.
+        return false;
+    }
+    return Pick(inx);
+}
+
+bool CPickList::Pick(const uint32_t inx){        //Add indexed item to picklist.
+  if(inx>=Count()) return false;                //Return false if index is out of range.
+  for(const char* pickItem : pickList)
+      if(pickItem == Name(inx)) return true;    //Check if item was already picked
+  pickList.push_back(Name(inx));                //if not, add item to pick-list
+  return true;
+}
+
+
+
+void CPickList::UnPick(const char* name){
+    forCount(PickCount())
+        if(strcmp(name, pickList[i])==0)
+            pickList.erase(pickList.begin()+i);
+}
+
+void     CPickList::PickAll() { forCount(Count()) Pick(i); }       //Pick All items
+void     CPickList::Clear()   { pickList.clear();}                 //Clear Picklist
+char**   CPickList::PickList()   {return (char**)   pickList.data();}
+uint32_t CPickList::PickCount()  {return (uint32_t) pickList.size();}
+
+void CPickList::Print(const char* listName){
+  printf("%s picked: %d of %d\n",listName,PickCount(),Count());
+  forCount(Count()){
+      bool picked=false;
+      char* name=Name(i);
+      for(auto& pick : pickList) if(pick==name) picked=true;
+      printf("\t%s %s\n" cRESET, picked ? cTICK : cFAINT" ", name);
+  }
+}
+//----------------------------------------------------------------
+
 //----------------------------Layers------------------------------
 CLayers::CLayers(){
     VkResult result;
     do{
         uint count=0;
         result = vkEnumerateInstanceLayerProperties(&count, NULL);
-        if(result==0 && count>0){
+        if(result==VK_SUCCESS && count>0){
           itemList.resize(count);
           result=vkEnumerateInstanceLayerProperties(&count, itemList.data());
         }
@@ -44,7 +101,7 @@ CExtensions::CExtensions(const char* layerName){
     do{
         uint count=0;
         result = vkEnumerateInstanceExtensionProperties(layerName, &count, NULL);             //Get list size
-        if(result==0 && count>0){
+        if(result==VK_SUCCESS && count>0){
           itemList.resize(count);                                                             //Resize buffer
           result=vkEnumerateInstanceExtensionProperties(layerName, &count, itemList.data());  //Fetch list
         }
@@ -96,11 +153,11 @@ CInstance::CInstance(const char* appName, const char* engineName){
     Create(layers, extensions, appName, engineName);
 }
 
-CInstance::CInstance(const CLayers& layers, const CExtensions& extensions, const char* appName, const char* engineName){
+CInstance::CInstance(CLayers& layers, CExtensions& extensions, const char* appName, const char* engineName){
     Create(layers, extensions, appName, engineName);
 }
 
-void CInstance::Create(const CLayers& layers, const CExtensions& extensions, const char* appName, const char* engineName){
+void CInstance::Create(CLayers& layers, CExtensions& extensions, const char* appName, const char* engineName){
     // initialize the VkApplicationInfo structure
     VkApplicationInfo app_info = {};
     app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
