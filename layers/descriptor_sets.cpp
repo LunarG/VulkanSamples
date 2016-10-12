@@ -267,7 +267,8 @@ cvdescriptorset::AllocateDescriptorSetsData::AllocateDescriptorSetsData(uint32_t
 
 cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const VkDescriptorPool pool,
                                               const DescriptorSetLayout *layout, const core_validation::layer_data *dev_data)
-    : some_update_(false), set_(set), pool_(pool), p_layout_(layout), device_data_(dev_data) {
+    : some_update_(false), set_(set), pool_state_(nullptr), p_layout_(layout), device_data_(dev_data) {
+    pool_state_ = getDescriptorPoolState(dev_data, pool);
     // Foreach binding, create default descriptors of given type
     for (uint32_t i = 0; i < p_layout_->GetBindingCount(); ++i) {
         auto type = p_layout_->GetTypeFromIndex(i);
@@ -646,9 +647,11 @@ void cvdescriptorset::DescriptorSet::PerformCopyUpdate(const VkCopyDescriptorSet
 void cvdescriptorset::DescriptorSet::BindCommandBuffer(GLOBAL_CB_NODE *cb_node, const std::unordered_set<uint32_t> &bindings) {
     // bind cb to this descriptor set
     cb_bindings.insert(cb_node);
-    // Add bindings for descriptor set and individual objects in the set
+    // Add bindings for descriptor set, the set's pool, and individual objects in the set
     cb_node->object_bindings.insert({reinterpret_cast<uint64_t &>(set_), VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT});
-    cb_node->object_bindings.insert({reinterpret_cast<uint64_t &>(pool_), VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT});
+    pool_state_->cb_bindings.insert(cb_node);
+    cb_node->object_bindings.insert(
+        {reinterpret_cast<uint64_t &>(pool_state_->pool), VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT});
     // For the active slots, use set# to look up descriptorSet from boundDescriptorSets, and bind all of that descriptor set's
     // resources
     for (auto binding : bindings) {

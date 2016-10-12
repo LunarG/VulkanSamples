@@ -374,7 +374,7 @@ class DescriptorSet : public BASE_NODE {
     void InvalidateBoundCmdBuffers();
     bool some_update_; // has any part of the set ever been updated?
     VkDescriptorSet set_;
-    VkDescriptorPool pool_;
+    DESCRIPTOR_POOL_STATE *pool_state_;
     const DescriptorSetLayout *p_layout_;
     std::vector<std::unique_ptr<Descriptor>> descriptors_;
     // Ptr to device data used for various data look-ups
