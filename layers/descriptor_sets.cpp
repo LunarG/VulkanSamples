@@ -1524,7 +1524,7 @@ bool cvdescriptorset::ValidateAllocateDescriptorSets(const debug_report_data *re
 void cvdescriptorset::PerformAllocateDescriptorSets(const VkDescriptorSetAllocateInfo *p_alloc_info,
                                                     const VkDescriptorSet *descriptor_sets,
                                                     const AllocateDescriptorSetsData *ds_data,
-                                                    std::unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_NODE *> *pool_map,
+                                                    std::unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_STATE *> *pool_map,
                                                     std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> *set_map,
                                                     const core_validation::layer_data *dev_data) {
     auto pool_state = (*pool_map)[p_alloc_info->descriptorPool];
