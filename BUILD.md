@@ -75,6 +75,7 @@ sudo make install
 
 This command installs files to:
 
+* `/usr/local/include/vulkan`:  Vulkan include files
 * `/usr/local/lib`:  Vulkan loader and layers shared objects
 * `/usr/local/bin`:  vulkaninfo application
 * `/etc/vulkan/explicit_layer.d`:  Layer JSON files
