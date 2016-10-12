@@ -9,7 +9,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake") 
 
 #==============================LINUX==============================
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    option(BUILD_WSI_XCB_SUPPORT     "Build XCB WSI support"     ON)
+    option(BUILD_WSI_XCB_SUPPORT     "Build XCB WSI support"      ON)
+    option(BUILD_X11_XCB_SUPPORT  "Build X11-XCB support support" ON)
     #option(BUILD_WSI_XLIB_SUPPORT    "Build Xlib WSI support"    OFF)
     #option(BUILD_WSI_WAYLAND_SUPPORT "Build Wayland WSI support" OFF)
     #option(BUILD_WSI_MIR_SUPPORT     "Build Mir WSI support"     OFF)
@@ -24,6 +25,19 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         find_library(XKB "xkbcommon" DOC "XKB Keyboard library") # xkb keyboard support
         target_link_libraries(${LIBRARY_NAME} ${XKB})            # /usr/lib/x86_64-linux-gnu/libxkbcommon.so
     endif()
+
+    if (BUILD_X11_XCB_SUPPORT)
+        find_package(X11 REQUIRED)
+        include_directories(${X11_INCLUDE_DIR})
+        target_link_libraries(${LIBRARY_NAME} ${X11_LIBRARIES})
+
+        find_package(X11_XCB REQUIRED)
+        include_directories(${X11_XCB_INCLUDE_DIR})
+        target_link_libraries(${LIBRARY_NAME} ${X11_XCB_LIBRARIES})
+        target_link_libraries(${LIBRARY_NAME} ${X11_Xinput_LIB})
+    endif()
+
+
 
 #    if (BUILD_WSI_XLIB_SUPPORT)
 #        add_definitions(-DVK_USE_PLATFORM_XLIB_KHR)

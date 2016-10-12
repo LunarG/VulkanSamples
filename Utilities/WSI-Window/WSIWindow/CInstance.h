@@ -70,7 +70,7 @@ public:
         return -1;
     }
 
-    void Pick(initializer_list<char*> list) {           //Add multiple items to picklist. eg. Pick({"item1","item2"})
+    void Pick(initializer_list<const char*> list) {     //Add multiple items to picklist. eg. Pick({"item1","item2"})
         for(auto item:list) Pick(item);
     }
 
