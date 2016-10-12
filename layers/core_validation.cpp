@@ -5799,7 +5799,7 @@ static bool PreCallValidateDestroyBufferView(layer_data *dev_data, VkBufferView 
         return false;
     bool skip = false;
     *buffer_view_state = getBufferViewState(dev_data, buffer_view);
-    if (buffer_view_state) {
+    if (*buffer_view_state) {
         *obj_struct = {reinterpret_cast<uint64_t &>(buffer_view), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT};
         skip |= ValidateObjectNotInUse(dev_data, *buffer_view_state, *obj_struct);
     }
@@ -5817,7 +5817,7 @@ VKAPI_ATTR void VKAPI_CALL
 DestroyBufferView(VkDevice device, VkBufferView bufferView, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
-    // Common data objects use pre & post call
+    // Common data objects used pre & post call
     BUFFER_VIEW_STATE *buffer_view_state = nullptr;
     VK_OBJECT obj_struct;
     // Validate state before calling down chain, update common data if we'll be calling down chain
@@ -5826,7 +5826,6 @@ DestroyBufferView(VkDevice device, VkBufferView bufferView, const VkAllocationCa
         lock.unlock();
         dev_data->dispatch_table.DestroyBufferView(device, bufferView, pAllocator);
         lock.lock();
-        // We made call so update state
         PostCallRecordDestroyBufferView(dev_data, bufferView, buffer_view_state, obj_struct);
     }
 }
@@ -5971,22 +5970,39 @@ GetImageMemoryRequirements(VkDevice device, VkImage image, VkMemoryRequirements 
     my_data->dispatch_table.GetImageMemoryRequirements(device, image, pMemoryRequirements);
 }
 
+static bool PreCallValidateDestroyImageView(layer_data *dev_data, VkImageView image_view, IMAGE_VIEW_STATE **image_view_state,
+                                            VK_OBJECT *obj_struct) {
+    if (dev_data->instance_state->disabled.destroy_image_view)
+        return false;
+    bool skip = false;
+    *image_view_state = getImageViewState(dev_data, image_view);
+    if (*image_view_state) {
+        *obj_struct = {reinterpret_cast<uint64_t &>(image_view), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT};
+        skip |= ValidateObjectNotInUse(dev_data, *image_view_state, *obj_struct);
+    }
+    return skip;
+}
+
+static void PostCallRecordDestroyImageView(layer_data *dev_data, VkImageView image_view, IMAGE_VIEW_STATE *image_view_state,
+                                           VK_OBJECT obj_struct) {
+    // Any bound cmd buffers are now invalid
+    invalidateCommandBuffers(image_view_state->cb_bindings, obj_struct);
+    dev_data->imageViewMap.erase(image_view);
+}
+
 VKAPI_ATTR void VKAPI_CALL
 DestroyImageView(VkDevice device, VkImageView imageView, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    bool skip = false;
     std::unique_lock<std::mutex> lock(global_lock);
-    auto view_state = getImageViewState(dev_data, imageView);
-    if (view_state) {
-        VK_OBJECT obj_struct = {reinterpret_cast<uint64_t &>(imageView), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT};
-        skip |= ValidateObjectNotInUse(dev_data, view_state, obj_struct);
-        // Any bound cmd buffers are now invalid
-        invalidateCommandBuffers(view_state->cb_bindings, obj_struct);
-    }
+    // Common data objects used pre & post call
+    IMAGE_VIEW_STATE *image_view_state = nullptr;
+    VK_OBJECT obj_struct;
+    bool skip = PreCallValidateDestroyImageView(dev_data, imageView, &image_view_state, &obj_struct);
     if (!skip) {
-        dev_data->imageViewMap.erase(imageView);
         lock.unlock();
         dev_data->dispatch_table.DestroyImageView(device, imageView, pAllocator);
+        lock.lock();
+        PostCallRecordDestroyImageView(dev_data, imageView, image_view_state, obj_struct);
     }
 }
 
