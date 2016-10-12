@@ -7045,7 +7045,9 @@ AllocateCommandBuffers(VkDevice device, const VkCommandBufferAllocateInfo *pCrea
 
 // Add bindings between the given cmd buffer & framebuffer and the framebuffer's children
 static void AddFramebufferBinding(layer_data *dev_data, GLOBAL_CB_NODE *cb_state, FRAMEBUFFER_STATE *fb_state) {
-    fb_state->cb_bindings.insert(cb_state);
+    addCommandBufferBinding(&fb_state->cb_bindings,
+                            {reinterpret_cast<uint64_t &>(fb_state->framebuffer), VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT},
+                            cb_state);
     for (auto attachment : fb_state->attachments) {
         auto view_state = attachment.view_state;
         if (view_state) {
