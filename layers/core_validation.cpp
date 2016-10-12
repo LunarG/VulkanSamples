@@ -6084,12 +6084,44 @@ DestroyDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout descriptorSetL
         ->dispatch_table.DestroyDescriptorSetLayout(device, descriptorSetLayout, pAllocator);
 }
 
+static bool PreCallValidateDestroyDescriptorPool(layer_data *dev_data, VkDescriptorPool pool,
+                                                 DESCRIPTOR_POOL_NODE **desc_pool_state, VK_OBJECT *obj_struct) {
+    if (dev_data->instance_state->disabled.destroy_descriptor_pool)
+        return false;
+    bool skip = false;
+    *desc_pool_state = getPoolNode(dev_data, pool);
+    if (*desc_pool_state) {
+        *obj_struct = {reinterpret_cast<uint64_t &>(pool), VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT};
+        skip |= ValidateObjectNotInUse(dev_data, *desc_pool_state, *obj_struct);
+    }
+    return skip;
+}
+
+static void PostCallRecordDestroyDescriptorPool(layer_data *dev_data, VkDescriptorPool descriptorPool,
+                                                DESCRIPTOR_POOL_NODE *desc_pool_state, VK_OBJECT obj_struct) {
+    // Any bound cmd buffers are now invalid
+    invalidateCommandBuffers(desc_pool_state->cb_bindings, obj_struct);
+    // Free sets that were in this pool
+    for (auto ds : desc_pool_state->sets) {
+        freeDescriptorSet(dev_data, ds);
+    }
+    dev_data->descriptorPoolMap.erase(descriptorPool);
+}
+
 VKAPI_ATTR void VKAPI_CALL
 DestroyDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool, const VkAllocationCallbacks *pAllocator) {
     // TODO : Add checks for VALIDATION_ERROR_00901
-    // TODO : Clean up any internal data structures using this obj.
-    get_my_data_ptr(get_dispatch_key(device), layer_data_map)
-        ->dispatch_table.DestroyDescriptorPool(device, descriptorPool, pAllocator);
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    DESCRIPTOR_POOL_NODE *desc_pool_state = nullptr;
+    VK_OBJECT obj_struct;
+    std::unique_lock<std::mutex> lock(global_lock);
+    bool skip = PreCallValidateDestroyDescriptorPool(dev_data, descriptorPool, &desc_pool_state, &obj_struct);
+    if (!skip) {
+        lock.unlock();
+        dev_data->dispatch_table.DestroyDescriptorPool(device, descriptorPool, pAllocator);
+        lock.lock();
+        PostCallRecordDestroyDescriptorPool(dev_data, descriptorPool, desc_pool_state, obj_struct);
+    }
 }
 // Verify cmdBuffer in given cb_node is not in global in-flight set, and return skip_call result
 //  If this is a secondary command buffer, then make sure its primary is also in-flight
