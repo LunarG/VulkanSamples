@@ -26,10 +26,10 @@
  - Mouse input
  - Keyboard input (keycodes or localized text)
  - Window management (Todo: Full-screen mode)
- - Multi-touch input (currently on Android only)
+ - Multi-touch input (currently on Android and Linux only)
 
 #### Todo (Contributions welcome)
- - Multi-touch input on desktop
+ - Multi-touch input on Windows
  - Sensors input? (Android)
  - Joystick input?
 
@@ -91,7 +91,7 @@ The CLayers class wraps "vkEnumerateInstanceLayerProperties" to simplify enumera
 
 ### CExtensions class
 The CExtensions class wraps "vkEnumerateInstanceExtensionProperties" in much the same way as CLayers wraps the layers.
-It provides the same functions as CLayers, for picking  extensions to load, and must also be passed to the CInstance constructor.
+It provides the same functions as CLayers, for picking  extensions to load, and may also be passed to the CInstance constructor.
 
 ### WSIWindow class
 The WSIWindow class creates a Vulkan window, and provides function calls to query keyboard and mouse state, as well as callbacks, to notify you of system events. (window / keyboard / mouse / touch-screen)

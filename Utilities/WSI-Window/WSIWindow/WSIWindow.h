@@ -41,17 +41,18 @@
 //
 // Message loop vsync
 // Enable/Disable text event for better performance, and allows Android to show/hide on-screen keyboard.
-// Multi-touch input (WIP in window_android.cpp)
+// Multi-touch input (Done on Android and Linux, but Win32 is WIP)
 // Clipboard and IME
 // Multi-window support
 // More Documentation
 // Keyboard: function to get native keycode
 // Android: window resize events (WIP)
 // Set window size / position
-// Enable Validation Layers via Debug-Report extension
+// Enable Validation Layers via Debug-Report extension. (Done on destop... WIP on Android)
 // Android: Add option to set render buffer size, smaller than window size. (ANativeWindow_SetBufferGeometry) (Dustin)
 // Android: Rotate screen according to width/height aspect ratio. (Dustin)
 // Desktop: Pick render device with flag: DONT_CARE / PERFORMANCE / INTEGRATED . ... (Mark Young)
+// Enable_MultiTouch function. When disabled, touch-screen should emulate the mouse instead.
 
 #ifdef ANDROID
   #include <native.h>

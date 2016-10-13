@@ -124,7 +124,7 @@ Window_xcb::Window_xcb(CInstance& inst, const char* title, uint width, uint heig
     running=true;
 
     LOGI("Creating XCB-Window...\n");
-#ifndef X11_XCB
+/*
     //--Init Connection-- XCB only
     int scr;
     xcb_connection = xcb_connect(NULL, &scr);
@@ -134,16 +134,16 @@ Window_xcb::Window_xcb(CInstance& inst, const char* title, uint width, uint heig
     while(scr-- > 0) xcb_screen_next(&iter);
     xcb_screen = iter.data;
     //-------------------
-#else
-    //----XLib-XCB----
+*/
+    //----XLib + XCB----
     display = XOpenDisplay(NULL);                 assert(display && "Failed to open Display");        //for XLIB functions
     xcb_connection = XGetXCBConnection(display);  assert(display && "Failed to open XCB connection");  //for XCB functions
     const xcb_setup_t*   setup = xcb_get_setup(xcb_connection);
     setup  = xcb_get_setup (xcb_connection);
     xcb_screen = (xcb_setup_roots_iterator (setup)).data;
     XSetEventQueueOwner(display,XCBOwnsEventQueue);
-    //----------------
-#endif
+    //------------------
+
     //--
     uint32_t value_mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
     uint32_t value_list[2];
@@ -329,7 +329,6 @@ EventType Window_xcb::GetEvent(){
                     float y=te.event_y/65536.f;
                     switch(te.event_type){
                         case XI_TouchBegin : {
-//                            printf("--TouchBegin  ");
                             forCount(CMTouch::MAX_POINTERS) if(touchID[i]==0){          //Find first empty slot
                                 touchID[i]=te.detail;                                   //Claim slot
                                 event=MTouch.Event(eDOWN,x,y,i);                        //touch down event
@@ -338,7 +337,6 @@ EventType Window_xcb::GetEvent(){
                             break;
                         }
                         case XI_TouchUpdate: {
-//                            printf("--TouchUpdate ");
                             forCount(CMTouch::MAX_POINTERS) if(touchID[i]==te.detail){  //Find finger id
                                 event=MTouch.Event(eMOVE,x,y,i);                        //Touch move event
                                 break;
@@ -346,7 +344,6 @@ EventType Window_xcb::GetEvent(){
                             break;
                         }
                         case XI_TouchEnd   : {
-//                            printf("--TouchEnd    ");
                             forCount(CMTouch::MAX_POINTERS) if(touchID[i]==te.detail){  //Find finger id
                                 touchID[i]=0;                                           //Clear the slot
                                 event=MTouch.Event(eUP  ,x,y,i);                        //touch up event
