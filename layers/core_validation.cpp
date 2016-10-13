@@ -2341,7 +2341,7 @@ cvdescriptorset::DescriptorSetLayout const *getDescriptorSetLayout(layer_data co
     return it->second;
 }
 
-static PIPELINE_LAYOUT_NODE const *getPipelineStateLayout(layer_data const *my_data, VkPipelineLayout pipeLayout) {
+static PIPELINE_LAYOUT_NODE const *getPipelineLayout(layer_data const *my_data, VkPipelineLayout pipeLayout) {
     auto it = my_data->pipelineLayoutMap.find(pipeLayout);
     if (it == my_data->pipelineLayoutMap.end()) {
         return nullptr;
@@ -6642,7 +6642,7 @@ CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t
         pPipeState[i] = new PIPELINE_STATE;
         pPipeState[i]->initGraphicsPipeline(&pCreateInfos[i]);
         pPipeState[i]->render_pass_ci.initialize(getRenderPassState(dev_data, pCreateInfos[i].renderPass)->createInfo.ptr());
-        pPipeState[i]->pipeline_layout = *getPipelineStateLayout(dev_data, pCreateInfos[i].layout);
+        pPipeState[i]->pipeline_layout = *getPipelineLayout(dev_data, pCreateInfos[i].layout);
 
         skip_call |= verifyPipelineCreateState(dev_data, device, pPipeState, i);
     }
@@ -6686,7 +6686,7 @@ CreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t 
         // Create and initialize internal tracking data structure
         pPipeState[i] = new PIPELINE_STATE;
         pPipeState[i]->initComputePipeline(&pCreateInfos[i]);
-        pPipeState[i]->pipeline_layout = *getPipelineStateLayout(dev_data, pCreateInfos[i].layout);
+        pPipeState[i]->pipeline_layout = *getPipelineLayout(dev_data, pCreateInfos[i].layout);
         // memcpy(&pPipeState[i]->computePipelineCI, (const void *)&pCreateInfos[i], sizeof(VkComputePipelineCreateInfo));
 
         // TODO: Add Compute Pipeline Verification
@@ -7494,7 +7494,7 @@ CmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelin
                 pCB->lastBound[pipelineBindPoint].dynamicOffsets.resize(lastSetIndex + 1);
             }
             auto oldFinalBoundSet = pCB->lastBound[pipelineBindPoint].boundDescriptorSets[lastSetIndex];
-            auto pipeline_layout = getPipelineStateLayout(dev_data, layout);
+            auto pipeline_layout = getPipelineLayout(dev_data, layout);
             for (uint32_t i = 0; i < setCount; i++) {
                 cvdescriptorset::DescriptorSet *pSet = getSetNode(dev_data, pDescriptorSets[i]);
                 if (pSet) {
@@ -9358,7 +9358,7 @@ VKAPI_ATTR void VKAPI_CALL CmdPushConstants(VkCommandBuffer commandBuffer, VkPip
     }
 
     // Check if push constant update is within any of the ranges with the same stage flags specified in pipeline layout.
-    auto pipeline_layout = getPipelineStateLayout(dev_data, layout);
+    auto pipeline_layout = getPipelineLayout(dev_data, layout);
     // Coalesce adjacent/overlapping pipeline ranges before checking to see if incoming range is
     // contained in the pipeline ranges.
     // Build a {start, end} span list for ranges with matching stage flags.
