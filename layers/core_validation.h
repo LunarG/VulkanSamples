@@ -210,14 +210,6 @@ enum CALL_STATE {
     QUERY_DETAILS, // Function called w/ a count to query details
 };
 
-struct INSTANCE_STATE {
-    // Track the call state and array size for physical devices
-    CALL_STATE vkEnumeratePhysicalDevicesState;
-    uint32_t physical_devices_count;
-    CHECK_DISABLED disabled;
-    INSTANCE_STATE() : vkEnumeratePhysicalDevicesState(UNCALLED), physical_devices_count(0), disabled{} {};
-};
-
 struct PHYSICAL_DEVICE_STATE {
     // Track the call state and array sizes for various query functions
     CALL_STATE vkGetPhysicalDeviceQueueFamilyPropertiesState = UNCALLED;

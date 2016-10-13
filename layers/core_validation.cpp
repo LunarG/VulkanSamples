@@ -98,10 +98,13 @@ struct shader_module;
 
 struct instance_layer_data {
     VkInstance instance = VK_NULL_HANDLE;
-    unique_ptr<INSTANCE_STATE> instance_state = nullptr;
     debug_report_data *report_data = nullptr;
     std::vector<VkDebugReportCallbackEXT> logging_callback;
     VkLayerInstanceDispatchTable dispatch_table;
+
+    CALL_STATE vkEnumeratePhysicalDevicesState = UNCALLED;
+    uint32_t physical_devices_count = 0;
+    CHECK_DISABLED disabled = {};
 
     unordered_map<VkPhysicalDevice, PHYSICAL_DEVICE_STATE> physical_device_map;
     unordered_map<VkSurfaceKHR, SURFACE_STATE> surface_map;
@@ -131,7 +134,6 @@ struct instance_layer_data {
 struct layer_data {
     debug_report_data *report_data = nullptr;
     VkLayerDispatchTable dispatch_table;
-    unique_ptr<INSTANCE_STATE> instance_state = nullptr;
 
     devExts device_extensions = {};
     unordered_set<VkQueue> queues;  // All queues under given device
@@ -3848,7 +3850,7 @@ void SetLayout(const layer_data *dev_data, GLOBAL_CB_NODE *pCB, VkImageView imag
 // Return false if no errors occur
 // Return true if validation error occurs and callback returns true (to skip upcoming API call down the chain)
 static bool validateIdleDescriptorSet(const layer_data *dev_data, VkDescriptorSet set, std::string func_str) {
-    if (dev_data->instance_state->disabled.idle_descriptor_set)
+    if (dev_data->instance_data->disabled.idle_descriptor_set)
         return false;
     bool skip_call = false;
     auto set_node = dev_data->setMap.find(set);
@@ -4381,7 +4383,6 @@ CreateInstance(const VkInstanceCreateInfo *pCreateInfo, const VkAllocationCallba
     checkInstanceRegisterExtensions(pCreateInfo, instance_data);
     init_core_validation(instance_data, pAllocator);
 
-    instance_data->instance_state = unique_ptr<INSTANCE_STATE>(new INSTANCE_STATE());
     ValidateLayerOrdering(*pCreateInfo);
 
     return result;
@@ -4532,8 +4533,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu, const VkDevice
     std::unique_lock<std::mutex> lock(global_lock);
     layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
 
-    // Copy instance state into this device's layer_data struct
-    my_device_data->instance_state = unique_ptr<INSTANCE_STATE>(new INSTANCE_STATE(*(my_instance_data->instance_state)));
     my_device_data->instance_data = my_instance_data;
     // Setup device dispatch table
     layer_init_device_dispatch_table(*pDevice, &my_device_data->dispatch_table, fpGetDeviceProcAddr);
@@ -4936,7 +4935,7 @@ static bool validateCommandBufferSimultaneousUse(layer_data *dev_data, GLOBAL_CB
 
 static bool validateCommandBufferState(layer_data *dev_data, GLOBAL_CB_NODE *pCB, const char *call_source) {
     bool skip = false;
-    if (dev_data->instance_state->disabled.command_buffer_state)
+    if (dev_data->instance_data->disabled.command_buffer_state)
         return skip;
     // Validate ONE_TIME_SUBMIT_BIT CB is not being submitted more than once
     if ((pCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT) && (pCB->submitCount > 1)) {
@@ -5472,7 +5471,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyFence(VkDevice device, VkFence fence, const Vk
 // For given obj node, if it is use, flag a validation error and return callback result, else return false
 bool ValidateObjectNotInUse(const layer_data *dev_data, BASE_NODE *obj_node, VK_OBJECT obj_struct,
                             UNIQUE_VALIDATION_ERROR_CODE error_code) {
-    if (dev_data->instance_state->disabled.object_in_use)
+    if (dev_data->instance_data->disabled.object_in_use)
         return false;
     bool skip = false;
     if (obj_node->in_use.load()) {
@@ -5793,7 +5792,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyBuffer(VkDevice device, VkBuffer buffer,
 
 static bool PreCallValidateDestroyBufferView(layer_data *dev_data, VkBufferView buffer_view, BUFFER_VIEW_STATE **buffer_view_state,
                                              VK_OBJECT *obj_struct) {
-    if (dev_data->instance_state->disabled.destroy_buffer_view)
+    if (dev_data->instance_data->disabled.destroy_buffer_view)
         return false;
     bool skip = false;
     *buffer_view_state = getBufferViewState(dev_data, buffer_view);
@@ -5829,7 +5828,7 @@ DestroyBufferView(VkDevice device, VkBufferView bufferView, const VkAllocationCa
 }
 
 static bool PreCallValidateDestroyImage(layer_data *dev_data, VkImage image, IMAGE_STATE **image_state, VK_OBJECT *obj_struct) {
-    if (dev_data->instance_state->disabled.destroy_image)
+    if (dev_data->instance_data->disabled.destroy_image)
         return false;
     bool skip = false;
     *image_state = getImageState(dev_data, image);
@@ -5983,7 +5982,7 @@ GetImageMemoryRequirements(VkDevice device, VkImage image, VkMemoryRequirements 
 
 static bool PreCallValidateDestroyImageView(layer_data *dev_data, VkImageView image_view, IMAGE_VIEW_STATE **image_view_state,
                                             VK_OBJECT *obj_struct) {
-    if (dev_data->instance_state->disabled.destroy_image_view)
+    if (dev_data->instance_data->disabled.destroy_image_view)
         return false;
     bool skip = false;
     *image_view_state = getImageViewState(dev_data, image_view);
@@ -6030,7 +6029,7 @@ DestroyShaderModule(VkDevice device, VkShaderModule shaderModule, const VkAlloca
 
 static bool PreCallValidateDestroyPipeline(layer_data *dev_data, VkPipeline pipeline, PIPELINE_STATE **pipeline_state,
                                            VK_OBJECT *obj_struct) {
-    if (dev_data->instance_state->disabled.destroy_pipeline)
+    if (dev_data->instance_data->disabled.destroy_pipeline)
         return false;
     bool skip = false;
     *pipeline_state = getPipelineState(dev_data, pipeline);
@@ -6101,7 +6100,7 @@ DestroyDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout descriptorSetL
 
 static bool PreCallValidateDestroyDescriptorPool(layer_data *dev_data, VkDescriptorPool pool,
                                                  DESCRIPTOR_POOL_STATE **desc_pool_state, VK_OBJECT *obj_struct) {
-    if (dev_data->instance_state->disabled.destroy_descriptor_pool)
+    if (dev_data->instance_data->disabled.destroy_descriptor_pool)
         return false;
     bool skip = false;
     *desc_pool_state = getDescriptorPoolState(dev_data, pool);
@@ -6346,7 +6345,7 @@ void invalidateCommandBuffers(std::unordered_set<GLOBAL_CB_NODE *> cb_nodes, VK_
 
 static bool PreCallValidateDestroyFramebuffer(layer_data *dev_data, VkFramebuffer framebuffer,
                                               FRAMEBUFFER_STATE **framebuffer_state, VK_OBJECT *obj_struct) {
-    if (dev_data->instance_state->disabled.destroy_framebuffer)
+    if (dev_data->instance_data->disabled.destroy_framebuffer)
         return false;
     bool skip = false;
     *framebuffer_state = getFramebufferState(dev_data, framebuffer);
@@ -6380,7 +6379,7 @@ DestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer, const VkAllocatio
 
 static bool PreCallValidateDestroyRenderPass(layer_data *dev_data, VkRenderPass render_pass, RENDER_PASS_STATE **rp_state,
                                              VK_OBJECT *obj_struct) {
-    if (dev_data->instance_state->disabled.destroy_renderpass)
+    if (dev_data->instance_data->disabled.destroy_renderpass)
         return false;
     bool skip = false;
     *rp_state = getRenderPassState(dev_data, render_pass);
@@ -6745,7 +6744,7 @@ CreateDescriptorSetLayout(VkDevice device, const VkDescriptorSetLayoutCreateInfo
 // Note that the index argument is optional and only used by CreatePipelineLayout.
 static bool validatePushConstantRange(const layer_data *dev_data, const uint32_t offset, const uint32_t size,
                                       const char *caller_name, uint32_t index = 0) {
-    if (dev_data->instance_state->disabled.push_constant_range)
+    if (dev_data->instance_data->disabled.push_constant_range)
         return false;
     uint32_t const maxPushConstantsSize = dev_data->phys_dev_properties.properties.limits.maxPushConstantsSize;
     bool skip_call = false;
@@ -6904,7 +6903,7 @@ ResetDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool, VkDescript
 // as well as DescriptorSetLayout ptrs used for later update.
 static bool PreCallValidateAllocateDescriptorSets(layer_data *dev_data, const VkDescriptorSetAllocateInfo *pAllocateInfo,
                                                   cvdescriptorset::AllocateDescriptorSetsData *common_data) {
-    if (dev_data->instance_state->disabled.allocate_descriptor_sets)
+    if (dev_data->instance_data->disabled.allocate_descriptor_sets)
         return false;
     // All state checks for AllocateDescriptorSets is done in single function
     return cvdescriptorset::ValidateAllocateDescriptorSets(dev_data->report_data, pAllocateInfo, dev_data, common_data);
@@ -6941,7 +6940,7 @@ AllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo *pAllo
 // Verify state before freeing DescriptorSets
 static bool PreCallValidateFreeDescriptorSets(const layer_data *dev_data, VkDescriptorPool pool, uint32_t count,
                                               const VkDescriptorSet *descriptor_sets) {
-    if (dev_data->instance_state->disabled.free_descriptor_sets)
+    if (dev_data->instance_data->disabled.free_descriptor_sets)
         return false;
     bool skip_call = false;
     // First make sure sets being destroyed are not currently in-use
@@ -7005,7 +7004,7 @@ FreeDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t co
 static bool PreCallValidateUpdateDescriptorSets(layer_data *dev_data, uint32_t descriptorWriteCount,
                                                 const VkWriteDescriptorSet *pDescriptorWrites, uint32_t descriptorCopyCount,
                                                 const VkCopyDescriptorSet *pDescriptorCopies) {
-    if (dev_data->instance_state->disabled.update_descriptor_sets)
+    if (dev_data->instance_data->disabled.update_descriptor_sets)
         return false;
     // First thing to do is perform map look-ups.
     // NOTE : UpdateDescriptorSets is somewhat unique in that it's operating on a number of DescriptorSets
@@ -11598,35 +11597,36 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumeratePhysicalDevices(VkInstance instance, uin
                                                         VkPhysicalDevice *pPhysicalDevices) {
     bool skip_call = false;
     instance_layer_data *instance_data = get_my_data_ptr(get_dispatch_key(instance), instance_layer_data_map);
-    if (instance_data->instance_state) {
+
+    if (instance_data) {
         // For this instance, flag when vkEnumeratePhysicalDevices goes to QUERY_COUNT and then QUERY_DETAILS
         if (NULL == pPhysicalDevices) {
-            instance_data->instance_state->vkEnumeratePhysicalDevicesState = QUERY_COUNT;
+            instance_data->vkEnumeratePhysicalDevicesState = QUERY_COUNT;
         } else {
-            if (UNCALLED == instance_data->instance_state->vkEnumeratePhysicalDevicesState) {
+            if (UNCALLED == instance_data->vkEnumeratePhysicalDevicesState) {
                 // Flag warning here. You can call this without having queried the count, but it may not be
                 // robust on platforms with multiple physical devices.
                 skip_call |= log_msg(instance_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-                                    0, __LINE__, DEVLIMITS_MISSING_QUERY_COUNT, "DL",
-                                    "Call sequence has vkEnumeratePhysicalDevices() w/ non-NULL pPhysicalDevices. You should first "
-                                    "call vkEnumeratePhysicalDevices() w/ NULL pPhysicalDevices to query pPhysicalDeviceCount.");
+                                     0, __LINE__, DEVLIMITS_MISSING_QUERY_COUNT, "DL",
+                                     "Call sequence has vkEnumeratePhysicalDevices() w/ non-NULL pPhysicalDevices. You should first "
+                                     "call vkEnumeratePhysicalDevices() w/ NULL pPhysicalDevices to query pPhysicalDeviceCount.");
             } // TODO : Could also flag a warning if re-calling this function in QUERY_DETAILS state
-            else if (instance_data->instance_state->physical_devices_count != *pPhysicalDeviceCount) {
+            else if (instance_data->physical_devices_count != *pPhysicalDeviceCount) {
                 // Having actual count match count from app is not a requirement, so this can be a warning
                 skip_call |= log_msg(instance_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT,
-                                    VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVLIMITS_COUNT_MISMATCH, "DL",
-                                    "Call to vkEnumeratePhysicalDevices() w/ pPhysicalDeviceCount value %u, but actual count "
-                                    "supported by this instance is %u.",
-                                    *pPhysicalDeviceCount, instance_data->instance_state->physical_devices_count);
+                                     VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVLIMITS_COUNT_MISMATCH, "DL",
+                                     "Call to vkEnumeratePhysicalDevices() w/ pPhysicalDeviceCount value %u, but actual count "
+                                     "supported by this instance is %u.",
+                                     *pPhysicalDeviceCount, instance_data->physical_devices_count);
             }
-            instance_data->instance_state->vkEnumeratePhysicalDevicesState = QUERY_DETAILS;
+            instance_data->vkEnumeratePhysicalDevicesState = QUERY_DETAILS;
         }
         if (skip_call) {
             return VK_ERROR_VALIDATION_FAILED_EXT;
         }
         VkResult result = instance_data->dispatch_table.EnumeratePhysicalDevices(instance, pPhysicalDeviceCount, pPhysicalDevices);
         if (NULL == pPhysicalDevices) {
-            instance_data->instance_state->physical_devices_count = *pPhysicalDeviceCount;
+            instance_data->physical_devices_count = *pPhysicalDeviceCount;
         } else if (result == VK_SUCCESS){ // Save physical devices
             for (uint32_t i = 0; i < *pPhysicalDeviceCount; i++) {
                 auto & phys_device_state = instance_data->physical_device_map[pPhysicalDevices[i]];
