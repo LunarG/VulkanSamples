@@ -7,12 +7,13 @@ macro(run_vk_helper subcmd)
     )
 endmacro()
 
-macro(run_vk_layer_xml_generate subcmd output)
+macro(run_vk_layer_xml_generate dependency output)
     add_custom_command(OUTPUT ${output}
-        COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/genvk.py -registry ${PROJECT_SOURCE_DIR}/vk.xml ${output}
-        DEPENDS ${PROJECT_SOURCE_DIR}/vk.xml ${PROJECT_SOURCE_DIR}/generator.py ${PROJECT_SOURCE_DIR}/genvk.py ${PROJECT_SOURCE_DIR}/reg.py
+        COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/lvl_genvk.py -registry ${PROJECT_SOURCE_DIR}/vk.xml ${output}
+        DEPENDS ${PROJECT_SOURCE_DIR}/vk.xml ${PROJECT_SOURCE_DIR}/generator.py ${PROJECT_SOURCE_DIR}/${dependency} ${PROJECT_SOURCE_DIR}/lvl_genvk.py ${PROJECT_SOURCE_DIR}/reg.py
     )
 endmacro()
+
 set(LAYER_JSON_FILES
     VkLayer_core_validation
     VkLayer_image
@@ -173,9 +174,9 @@ add_custom_target(generate_vk_layer_helpers DEPENDS
     vk_safe_struct.cpp
 )
 
-run_vk_layer_xml_generate(Threading thread_check.h)
-run_vk_layer_xml_generate(ParamChecker parameter_validation.h)
-run_vk_layer_xml_generate(UniqueObjects unique_objects_wrappers.h)
+run_vk_layer_xml_generate(threading_generator.py thread_check.h)
+run_vk_layer_xml_generate(parameter_validation_generator.py parameter_validation.h)
+run_vk_layer_xml_generate(unique_objects_generator.py unique_objects_wrappers.h)
 
 # Layer Utils Library
 # For Windows, we use a static lib because the Windows loader has a fairly restrictive loader search

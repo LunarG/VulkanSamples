@@ -1,6 +1,6 @@
 #!/usr/bin/python3 -i
 #
-# Copyright (c) 2013-2015 The Khronos Group Inc.
+# Copyright (c) 2013-2016 The Khronos Group Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import io,os,re,string,sys
+import io,os,re,string,sys,copy
 import xml.etree.ElementTree as etree
 
 # matchAPIProfile - returns whether an API and profile
@@ -89,6 +89,12 @@ class TypeInfo(BaseInfo):
     """Represents the state of a registry type"""
     def __init__(self, elem):
         BaseInfo.__init__(self, elem)
+        self.additionalValidity = []
+        self.removedValidity = []
+    def resetState(self):
+        BaseInfo.resetState(self)
+        self.additionalValidity = []
+        self.removedValidity = []
 
 # GroupInfo - registry information about a group of related enums
 # in an <enums> block, generally corresponding to a C "enum" type.
@@ -113,10 +119,16 @@ class CmdInfo(BaseInfo):
     """Represents the state of a registry command"""
     def __init__(self, elem):
         BaseInfo.__init__(self, elem)
+        self.additionalValidity = []
+        self.removedValidity = []
+    def resetState(self):
+        BaseInfo.resetState(self)
+        self.additionalValidity = []
+        self.removedValidity = []
 
 # FeatureInfo - registry information about an API <feature>
 # or <extension>
-#   name - feature name string (e.g. 'vk_ext_khr_surface')
+#   name - feature name string (e.g. 'VK_KHR_surface')
 #   version - feature version number (e.g. 1.2). <extension>
 #     features are unversioned and assigned version number 0.
 #     ** This is confusingly taken from the 'number' attribute of <feature>.
@@ -137,10 +149,12 @@ class FeatureInfo(BaseInfo):
             self.category = 'VERSION'
             self.version = elem.get('number')
             self.number = "0"
+            self.supported = None
         else:
             self.category = self.name.split('_', 2)[1]
             self.version = "0"
             self.number = elem.get('number')
+            self.supported = elem.get('supported')
         self.emit = False
 
 from generator import write, GeneratorOptions, OutputGenerator
@@ -203,7 +217,7 @@ class Registry:
     def setGenerator(self, gen):
         """Specify output generator object. None restores the default generator"""
         self.gen = gen
-        self.gen.setRegistry(self.tree)
+        self.gen.setRegistry(self)
 
     # addElementInfo - add information about an element to the
     # corresponding dictionary
@@ -314,10 +328,23 @@ class Registry:
 
             # Add additional enums defined only in <extension> tags
             # to the corresponding core type.
-            # When seen here, a copy, processed to contain the numeric enum
-            # value, is added to the corresponding <enums> element, as well
-            # as adding to the enum dictionary. Also add a 'extnumber'
-            # attribute containing the extension number.
+            # When seen here, the <enum> element, processed to contain the
+            # numeric enum value, is added to the corresponding <enums>
+            # element, as well as adding to the enum dictionary. It is
+            # *removed* from the <require> element it is introduced in.
+            # Not doing this will cause spurious genEnum()
+            # calls to be made in output generation, and it's easier
+            # to handle here than in genEnum().
+            #
+            # In lxml.etree, an Element can have only one parent, so the
+            # append() operation also removes the element. But in Python's
+            # ElementTree package, an Element can have multiple parents. So
+            # it must be explicitly removed from the <require> tag, leading
+            # to the nested loop traversal of <require>/<enum> elements
+            # below.
+            #
+            # This code also adds a 'extnumber' attribute containing the
+            # extension number, used for enumerant value calculation.
             #
             # For <enum> tags which are actually just constants, if there's
             # no 'extends' tag but there is a 'value' or 'bitpos' tag, just
@@ -328,7 +355,9 @@ class Registry:
             # Something like this will need to be done for 'feature's up
             # above, if we use the same mechanism for adding to the core
             # API in 1.1.
-            for enum in feature.findall('require/enum'):
+            #
+            for elem in feature.findall('require'):
+              for enum in elem.findall('enum'):
                 addEnumInfo = False
                 groupName = enum.get('extends')
                 if (groupName != None):
@@ -336,12 +365,17 @@ class Registry:
                     #     enum.get('name'))
                     # Add extension number attribute to the <enum> element
                     enum.attrib['extnumber'] = featureInfo.number
+                    enum.attrib['extname'] = featureInfo.name
+                    enum.attrib['supported'] = featureInfo.supported
                     # Look up the GroupInfo with matching groupName
                     if (groupName in self.groupdict.keys()):
                         # self.gen.logMsg('diag', '*** Matching group',
                         #     groupName, 'found, adding element...')
                         gi = self.groupdict[groupName]
                         gi.elem.append(enum)
+                        # Remove element from parent <require> tag
+                        # This should be a no-op in lxml.etree
+                        elem.remove(enum)
                     else:
                         self.gen.logMsg('warn', '*** NO matching group',
                             groupName, 'for enum', enum.get('name'), 'found.')
@@ -476,6 +510,28 @@ class Registry:
         for feature in interface.findall('remove'):
             if (matchAPIProfile(api, profile, feature)):
                 self.markRequired(feature,False)
+
+    def assignAdditionalValidity(self, interface, api, profile):
+        #
+        # Loop over all usage inside all <require> tags.
+        for feature in interface.findall('require'):
+            if (matchAPIProfile(api, profile, feature)):
+                for v in feature.findall('usage'):
+                    if v.get('command'):
+                        self.cmddict[v.get('command')].additionalValidity.append(copy.deepcopy(v))
+                    if v.get('struct'):
+                        self.typedict[v.get('struct')].additionalValidity.append(copy.deepcopy(v))
+
+        #
+        # Loop over all usage inside all <remove> tags.
+        for feature in interface.findall('remove'):
+            if (matchAPIProfile(api, profile, feature)):
+                for v in feature.findall('usage'):
+                    if v.get('command'):
+                        self.cmddict[v.get('command')].removedValidity.append(copy.deepcopy(v))
+                    if v.get('struct'):
+                        self.typedict[v.get('struct')].removedValidity.append(copy.deepcopy(v))
+
     #
     # generateFeature - generate a single type / enum group / enum / command,
     # and all its dependencies as needed.
@@ -506,7 +562,7 @@ class Registry:
         #   within the element.
         # For commands, there may be many in <type> tags within the element.
         # For enums, no dependencies are allowed (though perhaps if you
-        #   have a uint64 enum, it should require GLuint64).
+        #   have a uint64 enum, it should require that type).
         genProc = None
         if (ftype == 'type'):
             genProc = self.gen.genType
@@ -557,9 +613,9 @@ class Registry:
     #   interface - Element for <version> or <extension>
     def generateRequiredInterface(self, interface):
         """Generate required C interface for specified API version/extension"""
+
         #
         # Loop over all features inside all <require> tags.
-        # <remove> tags are ignored (handled in pass 1).
         for features in interface.findall('require'):
             for t in features.findall('type'):
                 self.generateFeature(t.get('name'), 'type', self.typedict)
@@ -567,6 +623,7 @@ class Registry:
                 self.generateFeature(e.get('name'), 'enum', self.enumdict)
             for c in features.findall('command'):
                 self.generateFeature(c.get('name'), 'command', self.cmddict)
+
     #
     # apiGen(genOpts) - generate interface for specified versions
     #   genOpts - GeneratorOptions object with parameters used
@@ -683,6 +740,7 @@ class Registry:
             self.gen.logMsg('diag', '*** PASS 1: Tagging required and removed features for',
                 f.name)
             self.requireAndRemoveFeatures(f.elem, self.genOpts.apiname, self.genOpts.profile)
+            self.assignAdditionalValidity(f.elem, self.genOpts.apiname, self.genOpts.profile)
         #
         # Pass 2: loop over specified API versions and extensions printing
         #   declarations for required things which haven't already been
