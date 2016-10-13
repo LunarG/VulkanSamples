@@ -796,7 +796,7 @@ static std::string get_result_description(VkResult result) {
 * @param value VkResult value to validate.
 */
 static void validate_result(debug_report_data *report_data, const char *apiName, VkResult result) {
-    if (result < 0) {
+    if (result < 0 && result != VK_ERROR_VALIDATION_FAILED_EXT) {
         std::string resultName = string_VkResult(result);
 
         if (resultName == UnsupportedResultString) {
