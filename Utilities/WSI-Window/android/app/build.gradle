@@ -34,6 +34,9 @@ android {
             java.srcDirs = ['src/java']
             res.srcDirs = ['src/res']
             assets.srcDirs = ['assets','src/assets','../../assets']
+            jniLibs {
+                srcDir "$android.ndkDirectory/sources/third_party/vulkan/src/build-android/jniLibs"  //Path to Vulkan Validation Layers
+            }
         }
     }
 }
