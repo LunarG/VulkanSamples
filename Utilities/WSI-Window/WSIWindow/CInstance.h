@@ -62,7 +62,6 @@ public:
     virtual char* Name(uint32_t inx)=0;                 // Return name of indexed item
     virtual uint32_t Count()=0;                         // Return number of enumerated items
 
-    bool IsPicked(const char* name);                    // Returns true if named item is in the picklist
     int  IndexOf(const char* name);                     // Returns index of named item
     void Pick   (initializer_list<const char*> list);   // Add multiple items to picklist. eg. Pick({"item1","item2"})
     bool Pick   (const char* name);                     // Add named item to picklist.  Returns false if not found.
@@ -70,8 +69,10 @@ public:
     void UnPick (const char* name);                     // Unpick named item.
     void PickAll();                                     // Add all items to picklist
     void Clear  ();                                     // Remove all items from picklist
-    char**   PickList();                                // Returns picklist as an array of C string pointers (for passing to Vulkan)
-    uint32_t PickCount();                               // Returns number of items in the picklist
+
+    bool     IsPicked(const char* name)const;           // Returns true if named item is in the picklist
+    char**   PickList()const;                           // Returns picklist as an array of C string pointers (for passing to Vulkan)
+    uint32_t PickCount()const;                          // Returns number of items in the picklist
     void Print(const char* listName);                   // Prints the list of items found, with ticks next to the picked ones.
   //operator vector<char*>&() const {return pickList;}
 };
@@ -101,9 +102,9 @@ struct CExtensions : public CPickList{
 class CInstance{
     VkInstance instance;
     CDebugReport DebugReport;
-    void Create(CLayers& layers, CExtensions& extensions, const char* appName, const char* engineName);
+    void Create(const CLayers& layers, const CExtensions& extensions, const char* appName, const char* engineName);
 public:
-    CInstance(CLayers& layers, CExtensions& extensions, const char* appName="VulkanApp", const char* engineName="LunarG");
+    CInstance(const CLayers& layers, const CExtensions& extensions, const char* appName="VulkanApp", const char* engineName="LunarG");
     CInstance(const char* appName="VulkanApp", const char* engineName="LunarG");
     ~CInstance();
     //CLayers     layers;

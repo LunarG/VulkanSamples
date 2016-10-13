@@ -14,6 +14,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     #option(BUILD_WSI_XLIB_SUPPORT    "Build Xlib WSI support"    OFF)
     #option(BUILD_WSI_WAYLAND_SUPPORT "Build Wayland WSI support" OFF)
     #option(BUILD_WSI_MIR_SUPPORT     "Build Mir WSI support"     OFF)
+    option(BUILD_MULTITOUCH_SUPPORT  "Multitouch screen support"  OFF)  #adds 8.5KB to exe size
 
     if (BUILD_WSI_XCB_SUPPORT)
         add_definitions(-DVK_USE_PLATFORM_XCB_KHR)
@@ -35,6 +36,11 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         include_directories(${X11_XCB_INCLUDE_DIR})
         target_link_libraries(${LIBRARY_NAME} ${X11_XCB_LIBRARIES})
         target_link_libraries(${LIBRARY_NAME} ${X11_Xinput_LIB})
+
+        add_definitions(-DX11_XCB)
+        if (BUILD_MULTITOUCH_SUPPORT)
+            add_definitions(-DMULTITOUCH)
+        endif()
     endif()
 
 

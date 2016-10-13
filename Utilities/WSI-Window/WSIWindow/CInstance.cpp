@@ -24,7 +24,7 @@
 #include "CInstance.h"
 
 //---------------------------PickList-----------------------------
-bool CPickList::IsPicked(const char* name){
+bool CPickList::IsPicked(const char* name)const{
     for(auto item : pickList){ if(strcmp(name,item)==0) return true; }
     return false;
 }
@@ -66,8 +66,8 @@ void CPickList::UnPick(const char* name){
 
 void     CPickList::PickAll() { forCount(Count()) Pick(i); }       //Pick All items
 void     CPickList::Clear()   { pickList.clear();}                 //Clear Picklist
-char**   CPickList::PickList()   {return (char**)   pickList.data();}
-uint32_t CPickList::PickCount()  {return (uint32_t) pickList.size();}
+char**   CPickList::PickList()  const {return (char**)   pickList.data();}
+uint32_t CPickList::PickCount() const {return (uint32_t) pickList.size();}
 
 void CPickList::Print(const char* listName){
   printf("%s picked: %d of %d\n",listName,PickCount(),Count());
@@ -153,11 +153,11 @@ CInstance::CInstance(const char* appName, const char* engineName){
     Create(layers, extensions, appName, engineName);
 }
 
-CInstance::CInstance(CLayers& layers, CExtensions& extensions, const char* appName, const char* engineName){
+CInstance::CInstance(const CLayers& layers, const CExtensions& extensions, const char* appName, const char* engineName){
     Create(layers, extensions, appName, engineName);
 }
 
-void CInstance::Create(CLayers& layers, CExtensions& extensions, const char* appName, const char* engineName){
+void CInstance::Create(const CLayers& layers, const CExtensions& extensions, const char* appName, const char* engineName){
     // initialize the VkApplicationInfo structure
     VkApplicationInfo app_info = {};
     app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;

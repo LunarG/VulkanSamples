@@ -124,7 +124,7 @@ Window_xcb::Window_xcb(CInstance& inst, const char* title, uint width, uint heig
     running=true;
 
     LOGI("Creating XCB-Window...\n");
-    /*
+#ifndef X11_XCB
     //--Init Connection-- XCB only
     int scr;
     xcb_connection = xcb_connect(NULL, &scr);
@@ -134,7 +134,7 @@ Window_xcb::Window_xcb(CInstance& inst, const char* title, uint width, uint heig
     while(scr-- > 0) xcb_screen_next(&iter);
     xcb_screen = iter.data;
     //-------------------
-    */
+#else
     //----XLib-XCB----
     display = XOpenDisplay(NULL);                 assert(display && "Failed to open Display");        //for XLIB functions
     xcb_connection = XGetXCBConnection(display);  assert(display && "Failed to open XCB connection");  //for XCB functions
@@ -143,7 +143,7 @@ Window_xcb::Window_xcb(CInstance& inst, const char* title, uint width, uint heig
     xcb_screen = (xcb_setup_roots_iterator (setup)).data;
     XSetEventQueueOwner(display,XCBOwnsEventQueue);
     //----------------
-
+#endif
     //--
     uint32_t value_mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
     uint32_t value_list[2];
@@ -224,6 +224,7 @@ void Window_xcb::CreateSurface(VkInstance instance){
 
 //---------------------------------------------------------------------------
 bool Window_xcb::InitTouch(){
+#ifdef MULTITOUCH
     int ev, err;
     if (!XQueryExtension(display, "XInputExtension", &xi_opcode, &ev, &err)) {
         LOGW("X Input extension not available.\n");
@@ -266,6 +267,7 @@ bool Window_xcb::InitTouch(){
         XISetMask(mask.mask, XI_TouchEnd);
         XISelectEvents(display, xcb_window, &mask, 1);
     }
+#endif
     return true;
 }
 //---------------------------------------------------------------------------
@@ -319,7 +321,7 @@ EventType Window_xcb::GetEvent(){
             }
             case XCB_FOCUS_IN  : if(!has_focus) event=FocusEvent(true);   break;     //window gained focus
             case XCB_FOCUS_OUT : if( has_focus) event=FocusEvent(false);  break;     //window lost focus
-
+#ifdef MULTITOUCH
             case XCB_GE_GENERIC : {                                                  //Multi touch screen events
                 xcb_input_touch_begin_event_t& te=*(xcb_input_touch_begin_event_t*)x_event;
                 if(te.extension==xi_opcode){      //make sure this event is from the touch device
@@ -357,7 +359,7 @@ EventType Window_xcb::GetEvent(){
                 }//if
                 break;
             }//XCB_GE_GENERIC
-
+#endif
             default:
                 //printf("EVENT: %d",(x_event->response_type & ~0x80));  //get event numerical value
                 break;
