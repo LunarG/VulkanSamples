@@ -47,6 +47,7 @@
 #include "vk_layer_extension_utils.h"
 #include "vk_layer_utils.h"
 #include "vk_layer_logging.h"
+#include "vk_validation_error_messages.h"
 
 using namespace std;
 
