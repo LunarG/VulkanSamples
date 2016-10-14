@@ -791,9 +791,10 @@ bool cmd_copy_image_valid_usage(VkCommandBuffer commandBuffer, VkImage srcImage,
                 std::stringstream ss;
                 ss << "vkCmdCopyImage: number of layers in source and destination subresources for pRegions[" << i
                    << "] do not match";
-                skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                    VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t &>(commandBuffer),
-                                    __LINE__, IMAGE_INVALID_EXTENTS, "IMAGE", "%s", ss.str().c_str());
+                skipCall |=
+                    log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            reinterpret_cast<uint64_t &>(commandBuffer), __LINE__, VALIDATION_ERROR_01198, "IMAGE", "%s. %s",
+                            ss.str().c_str(), validation_error_map[VALIDATION_ERROR_01198]);
             }
 
             // For each region, the aspectMask member of srcSubresource and dstSubresource must match
@@ -929,7 +930,8 @@ bool cmd_copy_image_valid_usage(VkCommandBuffer commandBuffer, VkImage srcImage,
                 char const str[] = "vkCmdCopyImage called with unmatched source and dest image format sizes.";
                 skipCall |=
                     log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            reinterpret_cast<uint64_t &>(commandBuffer), __LINE__, IMAGE_MISMATCHED_IMAGE_FORMAT, "IMAGE", str);
+                            reinterpret_cast<uint64_t &>(commandBuffer), __LINE__, VALIDATION_ERROR_01184, "IMAGE", "%s. %s", str,
+                            validation_error_map[VALIDATION_ERROR_01176]);
             }
         }
     }
