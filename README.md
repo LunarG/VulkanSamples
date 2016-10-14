@@ -12,7 +12,7 @@
     directory hierarchy:
       - API-Samples - Samples that demonstrate the use of various aspects of the
         Vulkan API
-      - Vulkan Tutorial - Steps you through the process of creating a simple Vulkan application, learning the basics along the way. This [Vulkan Tutorial link]((https://vulkan.lunarg.com/doc/sdk/latest/windows/tutorial/html/index.html) allows you to view the Vulkan Tutorial on LunarXchange as well. 
+      - Vulkan Tutorial - Steps you through the process of creating a simple Vulkan application, learning the basics along the way. This [Vulkan Tutorial link](https://vulkan.lunarg.com/doc/sdk/latest/windows/tutorial/html/index.html) allows you to view the Vulkan Tutorial on LunarXchange as well. 
       - Sample-Programs - Samples that are more functional and go deeper than simple API use.
       - Layer-Samples - Samples that are implemented as layers.
       - Android-Only - Samples that are only meant to be run on Android
