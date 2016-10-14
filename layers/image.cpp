@@ -730,7 +730,28 @@ static bool region_intersects(const VkImageCopy *src, const VkImageCopy *dst, Vk
 static bool exceeds_bounds(const VkOffset3D *offset, const VkExtent3D *extent, const IMAGE_STATE *image) {
     bool result = false;
     // Extents/depths cannot be negative but checks left in for clarity
-
+    switch (image->imageType) {
+    case VK_IMAGE_TYPE_3D: // Validate z and depth
+        if ((offset->z + extent->depth > image->extent.depth) || (offset->z < 0) ||
+            ((offset->z + static_cast<int32_t>(extent->depth)) < 0)) {
+            result = true;
+        }
+        // Intentionally fall through to 2D case to check height
+    case VK_IMAGE_TYPE_2D: // Validate y and height
+        if ((offset->y + extent->height > image->extent.height) || (offset->y < 0) ||
+            ((offset->y + static_cast<int32_t>(extent->height)) < 0)) {
+            result = true;
+        }
+        // Intentionally fall through to 1D case to check width
+    case VK_IMAGE_TYPE_1D: // Validate x and width
+        if ((offset->x + extent->width > image->extent.width) || (offset->x < 0) ||
+            ((offset->x + static_cast<int32_t>(extent->width)) < 0)) {
+            result = true;
+        }
+        break;
+    default:
+        assert(false);
+    }
     return result;
 }
 
