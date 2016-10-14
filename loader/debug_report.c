@@ -386,7 +386,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDebugReportCallback(
 out:
 
     // Roll back on errors
-    if (res != NULL) {
+    if (VK_SUCCESS != res) {
         storage_idx = 0;
         for (icd = inst->icds; icd; icd = icd->next) {
             if (NULL == icd->DestroyDebugReportCallbackEXT) {
@@ -419,12 +419,9 @@ out:
                 free(icd_info);
             }
         }
-
-        return res;
     }
 
-
-    return VK_SUCCESS;
+    return res;
 }
 
 /*
