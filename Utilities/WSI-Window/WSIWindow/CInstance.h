@@ -54,7 +54,7 @@ typedef unsigned int uint;
 
 //--------------------------CPickList-----------------------------
 // Used for picking items from an enumerated list.
-// ( See: CLayers / CExtensions / CDevices / ... )
+// ( See: CLayers / CExtensions / ... )
 class CPickList{
 protected:
     vector<char*> pickList;
@@ -94,9 +94,6 @@ struct CExtensions : public CPickList{
     uint32_t Count(){return (uint32_t) itemList.size();}
     void     Print(){CPickList::Print("Extensions");}
 };
-//----------------------------------------------------------------
-//---------------------------CDevices-----------------------------
-// TODO
 //----------------------------------------------------------------
 //---------------------------CInstance----------------------------
 class CInstance{

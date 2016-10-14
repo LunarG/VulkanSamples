@@ -5,6 +5,12 @@
   #define __LINUX__ 1
 #endif
 
+//-------Enable Validation on Android------- (For Desktop, there's a CMAKE option)
+#if defined(__ANDROID__) && !defined(NDEBUG)
+  #define ENABLE_VALIDATION 1
+  //#define NDEBUG               //cuts 4kb off apk size
+#endif
+//------------------------------------------
 //===========================================Check VkResult============================================
 // Macro to check VkResult for errors(negative) or warnings(positive), and print as a string.
 #ifdef NDEBUG                           //In release builds, don't print VkResult strings.
@@ -23,6 +29,7 @@
 //  In Release builds, all LOG* functions get stripped out, to leave the exe as small as possible.
 //  LOG* functions can be used in the same way as printf, but uses color-coding, for better readability.
 //
+
 #ifdef _WIN32
     #include <Windows.h>
       #ifdef WIN10PLUS        /* ANSI color-codes requires windows 10+ */

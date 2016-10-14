@@ -20,9 +20,10 @@
  - Linux Mir
 
 ## Features
- - Create a Vulkan instance.
- - Load WSI Surface extensions
- - Create a Vulkan window.
+ - Create a Vulkan instance.(CInstance class)
+ - Load WSI Surface extensions (CExtensions class)
+ - Load Validation Layers for debugging (CLayers class)
+ - Create a Vulkan window. (WSIWindow class)
  - Mouse input
  - Keyboard input (keycodes or localized text)
  - Window management (Todo: Full-screen mode)
@@ -52,7 +53,6 @@ On Ubuntu, this can be done globally by adding the following line to your ~/.pro
  
 Or you may set VULKAN_SDK locally in Qt-Creator, cmake-gui, or your favourite IDE.  
 You should now be able to compile and run the sample project.
- 
 
 ### Android (using Ubuntu as host)
 
@@ -66,6 +66,18 @@ For debugging purposes, "printf" output is routed to Android Studio's Android Mo
 Resource files can be added to your APK, by creating an "Assets" folder in the project's root directory.  
 "fopen" will see this Assets folder as its current working directory, but will be in read-only mode.
 
+### Vulkan Validation Layers and Logging
+WSIWindow makes use of Validation Layers, via the VK_KHR_debug_report extension, to display helpful, color-coded log messages, when Vulkan is used incorrectly. (Errors / Warnings / Info / etc.)  By default, WSIWindow enables standard validation layers in Debug builds, and turns them off in Release builds.  There's also a CMAKE option to disable Validation, for faster execution, but it is highly recommended that you make use of Validation during development.  
+
+The Logging facilities may also be used from user code, in the same way as "printf", but with some advantages:
+On desktop ,LOG* messages are color-coded, for better readability, and on Android, they are forwarded to Android Studio's logcat facility.  In Release builds, they are automatically stripped out, to keep the executable as small as possible. Here are some examples:
+
+        LOGE("Error message\n");    // Errors are printed in red
+        LOGW("Warning message\n");  // Warnings are printed in yellow
+        LOGI("Info message\n");     // Info is printed in green
+*(See Validation.h for more..)*  
+On Desktop, Validation layers may be disabled by unselecting the "ENABLE_VALIDATION" option in cmake-gui, or QtCreator -> Projects.  On Android Studio, the option is under: Build -> Select Build Variant -> noValidateDebug.
+
 ## Classes
 
 ### CInstance class
@@ -77,7 +89,7 @@ Also, the following extensions are loaded where available:
  > `VK_KHR_win32_surface . ` (On Windows)  
  > `VK_KHR_xcb_surface . . ` (On Linux)  
  > `VK_KHR_android_surface ` (On Android)  
- > `VK_KHR_Surface . . . . ` (In Debug builds)   
+ > `VK_KHR_debug_report. . ` (In Debug builds)   
  
 If you need direct control over which layers and extensions to load, use the CLayers and CExtensions classes to enumerate, display and pick the items you want, and then pass them to the CInstance constructor.
 

@@ -114,13 +114,15 @@ CExtensions::CExtensions(const char* layerName){
 CInstance::CInstance(const char* appName, const char* engineName){
     CLayers layers;
 #ifndef NDEBUG  //In Debug mode, add standard validation layers
-    layers.Pick({"VK_LAYER_GOOGLE_threading",
-                 "VK_LAYER_LUNARG_parameter_validation",
-                 "VK_LAYER_LUNARG_object_tracker",
-                 "VK_LAYER_LUNARG_image",
-                 "VK_LAYER_LUNARG_core_validation",
-                 "VK_LAYER_LUNARG_swapchain",
-                 "VK_LAYER_GOOGLE_unique_objects"});
+    #ifdef ENABLE_VALIDATION
+        layers.Pick({"VK_LAYER_GOOGLE_threading",
+                     "VK_LAYER_LUNARG_parameter_validation",
+                     "VK_LAYER_LUNARG_object_tracker",
+                     "VK_LAYER_LUNARG_image",
+                     "VK_LAYER_LUNARG_core_validation",
+                     "VK_LAYER_LUNARG_swapchain",
+                     "VK_LAYER_GOOGLE_unique_objects"});
+    #endif
     layers.Print();
 #endif
     CExtensions extensions;

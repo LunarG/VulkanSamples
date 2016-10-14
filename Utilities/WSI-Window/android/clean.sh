@@ -5,6 +5,7 @@
 # to avoid Gradle errors when re-importing the project at a new location.
 # (Dont worry, Android Studio regenerates the deleted files on import.)
 
+rm -r gen
 rm -r build
 rm -r .gradle
 rm -r .idea

@@ -132,6 +132,7 @@ public:
                 default:break;
             }
             android_app_post_exec_cmd(app, cmd);
+            return event;
         }else if(id==LOOPER_ID_INPUT) {
             AInputEvent* a_event = NULL;
             while (AInputQueue_getEvent(app->inputQueue, &a_event) >= 0) {

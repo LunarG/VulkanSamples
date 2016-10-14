@@ -48,7 +48,6 @@
 // Keyboard: function to get native keycode
 // Android: window resize events (WIP)
 // Set window size / position
-// Enable Validation Layers via Debug-Report extension. (Done on destop... WIP on Android)
 // Android: Add option to set render buffer size, smaller than window size. (ANativeWindow_SetBufferGeometry) (Dustin)
 // Android: Rotate screen according to width/height aspect ratio. (Dustin)
 // Desktop: Pick render device with flag: DONT_CARE / PERFORMANCE / INTEGRATED . ... (Mark Young)
@@ -80,8 +79,10 @@ public:
     //--Control functions--
     void ShowKeyboard(bool enabled);                   // on Android, show the soft-keyboard.
     void Close();                                      // Close the window
+
     EventType PollEvent();                             // Return a single event from the queue (lower-level alternative to using "ProcessEvents")
     bool ProcessEvents();                              // Poll for events, and call appropriate event handlers. Returns false if window is being closed.
+    //void Run(){ while(ProcessEvents()){} }             // Run message loop until window is closed.  TODO: render
 
     //-- Virtual Functions as event handlers --
     virtual void OnMouseEvent (eAction action, int16_t x, int16_t y, uint8_t btn){}  // Callback for mouse events

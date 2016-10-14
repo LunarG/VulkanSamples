@@ -14,6 +14,7 @@ android {
             cmake {
                 cppFlags "-std=c++11"
                 abiFilters "armeabi-v7a", "arm64-v8a"
+                arguments "-DANDROID_STL=gnustl_static"
             }
         }
     }
@@ -23,6 +24,11 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    productFlavors {  // Adds options to:  Build -> Select Build Variant
+        Validate{}    // Adds Vulkan Validation Layers to APK (19 MB)
+        noValidate{}  // Skips Vulkan Validation Layers, for a smaller, faster APK
+    }
+
     externalNativeBuild {
         cmake {
             path "CMakeLists.txt"
@@ -34,15 +40,17 @@ android {
             java.srcDirs = ['src/java']
             res.srcDirs = ['src/res']
             assets.srcDirs = ['assets','src/assets','../../assets']
+        }
+        Validate{   // Use Build -> Select Build Variant : ValidateDebug to enable Validation layers
             jniLibs {
-                srcDir "$android.ndkDirectory/sources/third_party/vulkan/src/build-android/jniLibs"  //Path to Vulkan Validation Layers
+                srcDir "$android.ndkDirectory/sources/third_party/vulkan/src/build-android/jniLibs"  // Path to Vulkan Validation Layers
             }
         }
     }
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile fileTree(include: ['*.jar'], dir: 'libs')
     androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
         exclude group: 'com.android.support', module: 'support-annotations'
     })

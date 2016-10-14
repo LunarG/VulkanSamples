@@ -224,7 +224,7 @@ void Window_xcb::CreateSurface(VkInstance instance){
 
 //---------------------------------------------------------------------------
 bool Window_xcb::InitTouch(){
-#ifdef MULTITOUCH
+#ifdef ENABLE_MULTITOUCH
     int ev, err;
     if (!XQueryExtension(display, "XInputExtension", &xi_opcode, &ev, &err)) {
         LOGW("X Input extension not available.\n");
@@ -321,7 +321,7 @@ EventType Window_xcb::GetEvent(){
             }
             case XCB_FOCUS_IN  : if(!has_focus) event=FocusEvent(true);   break;     //window gained focus
             case XCB_FOCUS_OUT : if( has_focus) event=FocusEvent(false);  break;     //window lost focus
-#ifdef MULTITOUCH
+#ifdef ENABLE_MULTITOUCH
             case XCB_GE_GENERIC : {                                                  //Multi touch screen events
                 xcb_input_touch_begin_event_t& te=*(xcb_input_touch_begin_event_t*)x_event;
                 if(te.extension==xi_opcode){      //make sure this event is from the touch device
