@@ -880,18 +880,20 @@ bool cmd_copy_image_valid_usage(VkCommandBuffer commandBuffer, VkImage srcImage,
             if (exceeds_bounds(&pRegions[i].srcOffset, &pRegions[i].extent, srcImageEntry)) {
                 std::stringstream ss;
                 ss << "vkCmdCopyImage: srcSubResource in pRegions[" << i << "] exceeds extents srcImage was created with";
-                skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                    VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t &>(commandBuffer),
-                                    __LINE__, IMAGE_INVALID_EXTENTS, "IMAGE", "%s", ss.str().c_str());
+                skipCall |=
+                    log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            reinterpret_cast<uint64_t &>(commandBuffer), __LINE__, VALIDATION_ERROR_01175, "IMAGE", "%s. %s",
+                            ss.str().c_str(), validation_error_map[VALIDATION_ERROR_01176]);
             }
 
             // The destination region specified by a given element of pRegions must be a region that is contained within dstImage
             if (exceeds_bounds(&pRegions[i].dstOffset, &pRegions[i].extent, dstImageEntry)) {
                 std::stringstream ss;
                 ss << "vkCmdCopyImage: dstSubResource in pRegions[" << i << "] exceeds extents dstImage was created with";
-                skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                    VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t &>(commandBuffer),
-                                    __LINE__, IMAGE_INVALID_EXTENTS, "IMAGE", "%s", ss.str().c_str());
+                skipCall |=
+                    log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            reinterpret_cast<uint64_t &>(commandBuffer), __LINE__, VALIDATION_ERROR_01176, "IMAGE", "%s. %s",
+                            ss.str().c_str(), validation_error_map[VALIDATION_ERROR_01176]);
             }
 
             // The union of all source regions, and the union of all destination regions, specified by the elements of pRegions,
