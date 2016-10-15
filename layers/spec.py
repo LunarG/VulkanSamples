@@ -37,7 +37,8 @@ db_filename = "vk_validation_error_database.txt" # can override w/ '-gendb <file
 gen_db = False # set to True when '-gendb <filename>' option provided
 spec_compare = False # set to True with '-compare <db_filename>' option
 # This is the root spec link that is used in error messages to point users to spec sections
-spec_url = "https://www.khronos.org/registry/vulkan/specs/1.0/xhtml/vkspec.html"
+#old_spec_url = "https://www.khronos.org/registry/vulkan/specs/1.0/xhtml/vkspec.html"
+spec_url = "https://www.khronos.org/registry/vulkan/specs/1.0-extensions/xhtml/vkspec.html"
 # After the custom validation error message, this is the prefix for the standard message that includes the
 #  spec valid usage language as well as the link to nearest section of spec to that language
 error_msg_prefix = "For more information refer to Vulkan Spec Section "
@@ -273,16 +274,22 @@ class Specification:
         for enum in sorted(self.val_error_dict):
             ids_parsed = ids_parsed + 1
             enum_list = enum.split('_') # grab sections of enum for use below
-            if enum in orig_db_dict:
+            # Any user-forced remap takes precendence
+            if enum_list[-1] in remap_dict:
+                enum_list[-1] = remap_dict[enum_list[-1]]
+                new_enum = "_".join(enum_list)
+                print "NOTE: Using user-supplied remap to force %s to be %s" % (enum, new_enum)
+                updated_val_error_dict[new_enum] = self.val_error_dict[enum]
+            elif enum in orig_db_dict:
                 if self.val_error_dict[enum] == orig_db_dict[enum]:
-                    #print "Exact match for enum %s" % (enum)
+                    print "Exact match for enum %s" % (enum)
                     # Nothing to see here
                     if enum in updated_val_error_dict:
                         print "ERROR: About to overwrite entry for %s" % (enum)
                     updated_val_error_dict[enum] = self.val_error_dict[enum]
                 elif self.val_error_dict[enum] in orig_err_to_id_dict:
                     # Same value w/ different error id, need to anchor to original id
-                    #print "Need to switch new id %s to original id %s" % (enum, orig_err_to_id_dict[self.val_error_dict[enum]])
+                    print "Need to switch new id %s to original id %s" % (enum, orig_err_to_id_dict[self.val_error_dict[enum]])
                     # Update id at end of new enum to be same id from original enum
                     enum_list[-1] = orig_err_to_id_dict[self.val_error_dict[enum]].split('_')[-1]
                     new_enum = "_".join(enum_list)
@@ -297,13 +304,7 @@ class Specification:
                     if orig_msg_list[0] == new_msg_list[0]: # Msg is same bug link has changed, keep enum & update msg
                         print "NOTE: Found that only spec link changed for %s so keeping same id w/ new link" % (enum)
                         updated_val_error_dict[enum] = self.val_error_dict[enum]
-                    #  Second, check if user is forcing remap here
-                    elif enum_list[-1] in remap_dict:
-                        enum_list[-1] = remap_dict[enum_list[-1]]
-                        new_enum = "_".join(enum_list)
-                        print "NOTE: Using user-supplied remap to force %s to be %s" % (enum, new_enum)
-                        updated_val_error_dict[new_enum] = self.val_error_dict[enum]
-                    #  Finally, this seems to be a new error so need to pick it up from end of original unique ids & flag for review
+                    #  This seems to be a new error so need to pick it up from end of original unique ids & flag for review
                     else:
                         enum_list[-1] = "%05d" % (next_id)
                         new_enum = "_".join(enum_list)
@@ -315,7 +316,7 @@ class Specification:
                         updated_val_error_dict[new_enum] = self.val_error_dict[enum]
             else: # new enum is not in orig db
                 if self.val_error_dict[enum] in orig_err_to_id_dict:
-                    #print "New enum %s not in orig dict, but exact error message matches original unique id %s" % (enum, orig_err_to_id_dict[self.val_error_dict[enum]])
+                    print "New enum %s not in orig dict, but exact error message matches original unique id %s" % (enum, orig_err_to_id_dict[self.val_error_dict[enum]])
                     # Update new unique_id to use original
                     enum_list[-1] = orig_err_to_id_dict[self.val_error_dict[enum]].split('_')[-1]
                     new_enum = "_".join(enum_list)
