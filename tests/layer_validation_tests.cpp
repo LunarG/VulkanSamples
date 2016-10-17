@@ -1142,7 +1142,7 @@ TEST_F(VkLayerTest, FillBufferAlignment) {
 
 // This is a positive test. No failures are expected.
 TEST_F(VkLayerTest, IgnoreUnrelatedDescriptor) {
-    TEST_DESCRIPTION("Ensure that the vkUpdateDescriptorSet validation code "
+    TEST_DESCRIPTION("Ensure that the vkUpdateDescriptorSets validation code "
                      "is ignoring VkWriteDescriptorSet members that are not "
                      "related to the descriptor type specified by "
                      "VkWriteDescriptorSet::descriptorType.  Correct "
@@ -1503,6 +1503,117 @@ TEST_F(VkLayerTest, IgnoreUnrelatedDescriptor) {
         vkDestroyBuffer(m_device->device(), buffer, NULL);
         vkFreeMemory(m_device->device(), buffer_memory, NULL);
     }
+}
+
+// This is a positive test. No failures are expected.
+TEST_F(VkLayerTest, EmptyDescriptorUpdateTest) {
+    TEST_DESCRIPTION("Update last descriptor in a set that includes an empty binding");
+    VkResult err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    m_errorMonitor->ExpectSuccess();
+    VkDescriptorPoolSize ds_type_count = {};
+    ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    ds_type_count.descriptorCount = 2;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+    ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    ds_pool_ci.pNext = NULL;
+    ds_pool_ci.maxSets = 1;
+    ds_pool_ci.poolSizeCount = 1;
+    ds_pool_ci.pPoolSizes = &ds_type_count;
+
+    VkDescriptorPool ds_pool;
+    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    // Create layout with two uniform buffer descriptors w/ empty binding between them
+    static const uint32_t NUM_BINDINGS = 3;
+    VkDescriptorSetLayoutBinding dsl_binding[NUM_BINDINGS] = {};
+    dsl_binding[0].binding = 0;
+    dsl_binding[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    dsl_binding[0].descriptorCount = 1;
+    dsl_binding[0].stageFlags = VK_SHADER_STAGE_ALL;
+    dsl_binding[0].pImmutableSamplers = NULL;
+    dsl_binding[1].binding = 1;
+    dsl_binding[1].descriptorCount = 0; // empty binding
+    dsl_binding[2].binding = 2;
+    dsl_binding[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    dsl_binding[2].descriptorCount = 1;
+    dsl_binding[2].stageFlags = VK_SHADER_STAGE_ALL;
+    dsl_binding[2].pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+    ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    ds_layout_ci.pNext = NULL;
+    ds_layout_ci.bindingCount = NUM_BINDINGS;
+    ds_layout_ci.pBindings = dsl_binding;
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSet descriptor_set = {};
+    VkDescriptorSetAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    alloc_info.descriptorSetCount = 1;
+    alloc_info.descriptorPool = ds_pool;
+    alloc_info.pSetLayouts = &ds_layout;
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptor_set);
+    ASSERT_VK_SUCCESS(err);
+
+    // Create a buffer to be used for update
+    VkBufferCreateInfo buff_ci = {};
+    buff_ci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buff_ci.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    buff_ci.size = 256;
+    buff_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    VkBuffer buffer;
+    err = vkCreateBuffer(m_device->device(), &buff_ci, NULL, &buffer);
+    ASSERT_VK_SUCCESS(err);
+    // Have to bind memory to buffer before descriptor update
+    VkMemoryAllocateInfo mem_alloc = {};
+    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    mem_alloc.pNext = NULL;
+    mem_alloc.allocationSize = 512; // one allocation for both buffers
+    mem_alloc.memoryTypeIndex = 0;
+
+    VkMemoryRequirements mem_reqs;
+    vkGetBufferMemoryRequirements(m_device->device(), buffer, &mem_reqs);
+    bool pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
+    if (!pass) {
+        vkDestroyBuffer(m_device->device(), buffer, NULL);
+        return;
+    }
+
+    VkDeviceMemory mem;
+    err = vkAllocateMemory(m_device->device(), &mem_alloc, NULL, &mem);
+    ASSERT_VK_SUCCESS(err);
+    err = vkBindBufferMemory(m_device->device(), buffer, mem, 0);
+    ASSERT_VK_SUCCESS(err);
+
+    // Only update the descriptor at binding 2
+    VkDescriptorBufferInfo buff_info = {};
+    buff_info.buffer = buffer;
+    buff_info.offset = 0;
+    buff_info.range = VK_WHOLE_SIZE;
+    VkWriteDescriptorSet descriptor_write = {};
+    descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptor_write.dstBinding = 2;
+    descriptor_write.descriptorCount = 1;
+    descriptor_write.pTexelBufferView = nullptr;
+    descriptor_write.pBufferInfo = &buff_info;
+    descriptor_write.pImageInfo = nullptr;
+    descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    descriptor_write.dstSet = descriptor_set;
+
+    vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
+
+    m_errorMonitor->VerifyNotFound();
+    // Cleanup
+    vkFreeMemory(m_device->device(), mem, NULL);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
+    vkDestroyBuffer(m_device->device(), buffer, NULL);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
 
 TEST_F(VkLayerTest, PSOPolygonModeInvalid) {
