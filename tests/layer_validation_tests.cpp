@@ -3662,6 +3662,53 @@ TEST_F(VkLayerTest, ImageSampleCounts) {
     }
 }
 
+TEST_F(VkLayerTest, BlitImageFormats) {
+
+    // Image blit with mismatched formats
+    const char * expected_message =
+        "vkCmdBlitImage: If one of srcImage and dstImage images has signed/unsigned integer format,"
+        " the other one must also have signed/unsigned integer format";
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkImageObj src_image(m_device);
+    src_image.init(64, 64, VK_FORMAT_A2B10G10R10_UINT_PACK32, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_TILING_LINEAR, 0);
+    VkImageObj dst_image(m_device);
+    dst_image.init(64, 64, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_IMAGE_TILING_LINEAR, 0);
+    VkImageObj dst_image2(m_device);
+    dst_image2.init(64, 64, VK_FORMAT_B8G8R8A8_SINT, VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_IMAGE_TILING_LINEAR, 0);
+
+    VkImageBlit blitRegion = {};
+    blitRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    blitRegion.srcSubresource.baseArrayLayer = 0;
+    blitRegion.srcSubresource.layerCount = 1;
+    blitRegion.srcSubresource.mipLevel = 0;
+    blitRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    blitRegion.dstSubresource.baseArrayLayer = 0;
+    blitRegion.dstSubresource.layerCount = 1;
+    blitRegion.dstSubresource.mipLevel = 0;
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, expected_message);
+
+    // Unsigned int vs not an int
+    BeginCommandBuffer();
+    vkCmdBlitImage(m_commandBuffer->handle(), src_image.image(), src_image.layout(), dst_image.image(),
+                   dst_image.layout(), 1, &blitRegion, VK_FILTER_NEAREST);
+
+    m_errorMonitor->VerifyFound();
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, expected_message);
+
+    // Unsigned int vs signed int
+    vkCmdBlitImage(m_commandBuffer->handle(), src_image.image(), src_image.layout(), dst_image2.image(),
+                   dst_image2.layout(), 1, &blitRegion, VK_FILTER_NEAREST);
+
+    m_errorMonitor->VerifyFound();
+
+    EndCommandBuffer();
+}
+
+
 TEST_F(VkLayerTest, DSImageTransferGranularityTests) {
     VkResult err;
     bool pass;
