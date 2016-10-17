@@ -3210,7 +3210,8 @@ static bool validatePipelineDrawtimeState(layer_data const *my_data, LAST_BOUND_
                         reinterpret_cast<const uint64_t &>(pPipeline->pipeline), __LINE__, DRAWSTATE_RENDERPASS_INCOMPATIBLE, "DS",
                         "At Draw time the active render pass (0x%" PRIxLEAST64 ") is incompatible w/ gfx pipeline "
                         "(0x%" PRIxLEAST64 ") that was created w/ render pass (0x%" PRIxLEAST64 ") due to: %s",
-                        reinterpret_cast<uint64_t &>(pCB->activeRenderPass->renderPass), reinterpret_cast<uint64_t &>(pPipeline),
+                        reinterpret_cast<uint64_t &>(pCB->activeRenderPass->renderPass),
+                        reinterpret_cast<uint64_t const &>(pPipeline->pipeline),
                         reinterpret_cast<const uint64_t &>(pPipeline->graphicsPipelineCI.renderPass), err_string.c_str());
         }
 
@@ -3488,7 +3489,8 @@ static bool verifyPipelineCreateState(layer_data *my_data, const VkDevice device
     // If a rasterization state is provided, make sure that the line width conforms to the HW.
     if (pPipeline->graphicsPipelineCI.pRasterizationState) {
         if (!isDynamic(pPipeline, VK_DYNAMIC_STATE_LINE_WIDTH)) {
-            skip_call |= verifyLineWidth(my_data, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, reinterpret_cast<uint64_t &>(pPipeline),
+            skip_call |= verifyLineWidth(my_data, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE,
+                                         reinterpret_cast<uint64_t const &>(pPipeline->pipeline),
                                          pPipeline->graphicsPipelineCI.pRasterizationState->lineWidth);
         }
     }
