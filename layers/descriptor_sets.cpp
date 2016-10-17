@@ -40,7 +40,7 @@ cvdescriptorset::DescriptorSetLayout::DescriptorSetLayout(debug_report_data *rep
         binding_to_global_start_index_map_[p_create_info->pBindings[i].binding] = global_index;
         global_index += p_create_info->pBindings[i].descriptorCount ? p_create_info->pBindings[i].descriptorCount - 1 : 0;
         binding_to_global_end_index_map_[p_create_info->pBindings[i].binding] = global_index;
-        global_index++;
+        global_index += p_create_info->pBindings[i].descriptorCount ? 1 : 0;
         bindings_.push_back(safe_VkDescriptorSetLayoutBinding(&p_create_info->pBindings[i]));
         // In cases where we should ignore pImmutableSamplers make sure it's NULL
         if ((p_create_info->pBindings[i].pImmutableSamplers) &&
