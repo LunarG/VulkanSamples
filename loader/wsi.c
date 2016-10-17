@@ -165,29 +165,32 @@ terminator_DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface,
     struct loader_instance *ptr_instance = loader_get_instance(instance);
 
     VkIcdSurface *icd_surface = (VkIcdSurface *)(surface);
-    if (NULL != icd_surface->real_icd_surfaces) {
-        for (uint32_t i = 0; i < ptr_instance->total_icd_count; i++) {
-            if (ptr_instance->icd_libs.list[i].interface_version >=
-                ICD_VER_SUPPORTS_ICD_SURFACE_KHR) {
-                struct loader_icd *icd = &ptr_instance->icds[i];
-                if (NULL != icd->DestroySurfaceKHR &&
-                    NULL != (void *)icd_surface->real_icd_surfaces[i]) {
-                    icd->DestroySurfaceKHR(icd->instance,
-                                           icd_surface->real_icd_surfaces[i],
-                                           pAllocator);
-                    icd_surface->real_icd_surfaces[i] = (VkSurfaceKHR)NULL;
+    if (NULL != icd_surface) {
+        if (NULL != icd_surface->real_icd_surfaces) {
+            for (uint32_t i = 0; i < ptr_instance->total_icd_count; i++) {
+                if (ptr_instance->icd_libs.list[i].interface_version >=
+                    ICD_VER_SUPPORTS_ICD_SURFACE_KHR) {
+                    struct loader_icd *icd = &ptr_instance->icds[i];
+                    if (NULL != icd->DestroySurfaceKHR &&
+                        NULL != (void *)icd_surface->real_icd_surfaces[i]) {
+                        icd->DestroySurfaceKHR(
+                            icd->instance, icd_surface->real_icd_surfaces[i],
+                            pAllocator);
+                        icd_surface->real_icd_surfaces[i] = (VkSurfaceKHR)NULL;
+                    }
+                } else {
+                    // The real_icd_surface for any ICD not supporting the
+                    // proper interface version should be NULL.  If not, then
+                    // we have a problem.
+                    assert(NULL == (void *)icd_surface->real_icd_surfaces[i]);
                 }
-            } else {
-                // The real_icd_surface for any ICD not supporting the proper
-                // interface version should be NULL.  If not, then we have a
-                // problem.
-                assert(NULL == (void*)icd_surface->real_icd_surfaces[i]);
             }
+            loader_instance_heap_free(ptr_instance,
+                                      icd_surface->real_icd_surfaces);
         }
-        loader_instance_heap_free(ptr_instance, icd_surface->real_icd_surfaces);
-    }
 
-    loader_instance_heap_free(ptr_instance, (void *)surface);
+        loader_instance_heap_free(ptr_instance, (void *)surface);
+    }
 }
 
 // This is the trampoline entrypoint for GetPhysicalDeviceSurfaceSupportKHR
