@@ -3,7 +3,6 @@
 import sys
 import xml.etree.ElementTree as etree
 import urllib2
-#import codecs
 
 #############################
 # spec.py script
@@ -43,6 +42,7 @@ spec_url = "https://www.khronos.org/registry/vulkan/specs/1.0-extensions/xhtml/v
 #  spec valid usage language as well as the link to nearest section of spec to that language
 error_msg_prefix = "For more information refer to Vulkan Spec Section "
 ns = {'ns': 'http://www.w3.org/1999/xhtml'}
+validation_error_enum_name = "VALIDATION_ERROR_"
 # Dict of new enum values that should be forced to remap to old handles, explicitly set by -remap option
 remap_dict = {}
 
@@ -72,6 +72,7 @@ class Specification:
  * Vulkan
  *
  * Copyright (c) 2016 Google Inc.
+ * Copyright (c) 2016 LunarG, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -144,7 +145,7 @@ class Specification:
                 error_msg_str = "%s '%s' which states '%s' (%s#%s)" % (error_msg_prefix, prev_heading, "".join(tag.itertext()).replace('\n', ''), spec_url, prev_link)
                 # Some txt has multiple spaces so split on whitespace and join w/ single space
                 error_msg_str = " ".join(error_msg_str.split())
-                enum_str = "VALIDATION_ERROR_%05d" % (unique_enum_id)
+                enum_str = "%s%05d" % (validation_error_enum_name, unique_enum_id)
                 # TODO : '\' chars in spec error messages are most likely bad spec txt that needs to be updated
                 self.val_error_dict[enum_str] = error_msg_str.encode("ascii", "ignore").replace("\\", "/")
                 unique_enum_id = unique_enum_id + 1
@@ -168,6 +169,7 @@ class Specification:
             #print "Header enum is %s" % (enum)
             enum_decl.append('    %s = %d,' % (enum, int(enum.split('_')[-1])))
             error_string_map.append('    {%s, "%s"},' % (enum, self.val_error_dict[enum]))
+        enum_decl.append('    %sMAX_ENUM = %d,' % (validation_error_enum_name, int(enum.split('_')[-1]) + 1))
         enum_decl.append('};')
         error_string_map.append('};')
         file_contents.extend(enum_decl)
@@ -206,7 +208,7 @@ class Specification:
         db_lines.append("# Comments are denoted with '#' char")
         db_lines.append("# The format of the lines is:")
         db_lines.append("# <error_enum>%s<check_implemented>%s<testname>%s<errormsg>" % (self.delimiter, self.delimiter, self.delimiter))
-        db_lines.append("# error_enum: Unique error enum for this check of format VALIDATION_ERROR_<uniqueid>")
+        db_lines.append("# error_enum: Unique error enum for this check of format %s<uniqueid>" % validation_error_enum_name)
         db_lines.append("# check_implemented: 'Y' if check has been implemented in layers, 'U' for unknown, or 'N' for not implemented")
         db_lines.append("# testname: Name of validation test for this check, 'Unknown' for unknown, or 'None' if not implmented")
         db_lines.append("# errormsg: The unique error message for this check that includes spec language and link")

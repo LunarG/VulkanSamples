@@ -2077,6 +2077,7 @@ enum UNIQUE_VALIDATION_ERROR_CODE {
     VALIDATION_ERROR_02052 = 2052,
     VALIDATION_ERROR_02053 = 2053,
     VALIDATION_ERROR_02054 = 2054,
+    VALIDATION_ERROR_MAX_ENUM = 2055
 };
 
 // Mapping from unique validation error enum to the corresponding error message

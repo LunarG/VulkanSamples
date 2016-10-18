@@ -36,6 +36,7 @@
 #include "vk_layer_config.h"
 #include "vkrenderframework.h"
 #include <unordered_set>
+#include "vk_validation_error_messages.h"
 
 #define GLM_FORCE_RADIANS
 #include "glm/glm.hpp"
@@ -105,16 +106,16 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL myDbgFunc(VkFlags msgFlags, VkDebugReportO
                                                 size_t location, int32_t msgCode, const char *pLayerPrefix, const char *pMsg,
                                                 void *pUserData);
 
-// ********************************************************
 // ErrorMonitor Usage:
 //
-// Call SetDesiredFailureMsg with a string to be compared against all
-// encountered log messages. Passing NULL will match all log messages.
-// logMsg will return true for skipCall only if msg is matched or NULL.
+// Call SetDesiredFailureMsg with: a string to be compared against all
+// encountered log messages, or a validation error enum identifying
+// desired error message. Passing NULL or VALIDATION_ERROR_MAX_ENUM
+// will match all log messages. logMsg will return true for skipCall
+// only if msg is matched or NULL.
 //
 // Call DesiredMsgFound to determine if the desired failure message
 // was encountered.
-
 class ErrorMonitor {
   public:
     ErrorMonitor() {
@@ -122,25 +123,40 @@ class ErrorMonitor {
         test_platform_thread_lock_mutex(&m_mutex);
         m_msgFlags = VK_DEBUG_REPORT_ERROR_BIT_EXT;
         m_bailout = NULL;
-        m_desiredMsgSet = false;
         test_platform_thread_unlock_mutex(&m_mutex);
     }
 
     ~ErrorMonitor() { test_platform_thread_delete_mutex(&m_mutex); }
 
+    // ErrorMonitor will look for an error message containing the specified string
     void SetDesiredFailureMsg(VkFlags msgFlags, const char *msgString) {
-        // also discard all collected messages to this point
+        // Also discard all collected messages to this point
         test_platform_thread_lock_mutex(&m_mutex);
-        m_failureMsgs.clear();
+        m_failure_message_strings.clear();
+        // If we are looking for a matching string, ignore any IDs
+        m_desired_message_ids.clear();
         m_otherMsgs.clear();
-        m_desiredMsgs.insert(msgString);
+        m_desired_message_strings.insert(msgString);
         m_msgFound = VK_FALSE;
         m_msgFlags = msgFlags;
-        m_desiredMsgSet = true;
         test_platform_thread_unlock_mutex(&m_mutex);
     }
 
-    VkBool32 CheckForDesiredMsg(const char *msgString) {
+    // ErrorMonitor will look for a message ID matching the specified one
+    void SetDesiredFailureMsg(VkFlags msgFlags, UNIQUE_VALIDATION_ERROR_CODE msg_id) {
+        // Also discard all collected messages to this point
+        test_platform_thread_lock_mutex(&m_mutex);
+        m_failure_message_strings.clear();
+        // If we are looking for IDs don't look for strings
+        m_desired_message_strings.clear();
+        m_otherMsgs.clear();
+        m_desired_message_ids.insert(msg_id);
+        m_msgFound = VK_FALSE;
+        m_msgFlags = msgFlags;
+        test_platform_thread_unlock_mutex(&m_mutex);
+    }
+
+    VkBool32 CheckForDesiredMsg(uint32_t message_code, const char *msgString) {
         VkBool32 result = VK_FALSE;
         test_platform_thread_lock_mutex(&m_mutex);
         if (m_bailout != NULL) {
@@ -148,7 +164,8 @@ class ErrorMonitor {
         }
         string errorString(msgString);
         bool found_expected = false;
-        for (auto desired_msg : m_desiredMsgs) {
+
+        for (auto desired_msg : m_desired_message_strings) {
             if (desired_msg.length() == 0) {
                 // An empty desired_msg string "" indicates a positive test - not expecting an error.
                 // Return true to avoid calling layers/driver with this error.
@@ -156,15 +173,36 @@ class ErrorMonitor {
                 result = VK_TRUE;
             } else if (errorString.find(desired_msg) != string::npos) {
                 found_expected = true;
-                m_failureMsgs.insert(errorString);
+                m_failure_message_strings.insert(errorString);
                 m_msgFound = VK_TRUE;
                 result = VK_TRUE;
                 // We only want one match for each expected error so remove from set here
                 // Since we're about the break the loop it's ok to remove from set we're iterating over
-                m_desiredMsgs.erase(desired_msg);
+                m_desired_message_strings.erase(desired_msg);
                 break;
             }
         }
+        for (auto desired_id : m_desired_message_ids) {
+            if (desired_id == VALIDATION_ERROR_MAX_ENUM) {
+                // A message ID set to MAX_ENUM indicates a positive test - not expecting an error.
+                // Return true to avoid calling layers/driver with this error.
+                result = VK_TRUE;
+            } else if (desired_id == message_code) {
+                // Double-check that the string matches the error enum
+                if (errorString.find(validation_error_map[desired_id]) != string::npos) {
+                    found_expected = true;
+                    result = VK_TRUE;
+                    m_msgFound = VK_TRUE;
+                    m_desired_message_ids.erase(desired_id);
+                    break;
+                } else {
+                    // Treat this message as a regular unexpected error, but print a warning jic
+                    printf("Message (%s) from MessageID %d does not correspond to expected message from error Database (%s)\n",
+                           errorString.c_str(), desired_id, validation_error_map[desired_id]);
+                }
+            }
+        }
+
         if (!found_expected) {
             printf("Unexpected: %s\n", msgString);
             m_otherMsgs.push_back(errorString);
@@ -202,7 +240,7 @@ class ErrorMonitor {
         // Not seeing the desired message is a failure. /Before/ throwing, dump any other messages.
         if (!DesiredMsgFound()) {
             DumpFailureMsgs();
-            for (auto desired_msg : m_desiredMsgs) {
+            for (auto desired_msg : m_desired_message_strings) {
                 FAIL() << "Did not receive expected error '" << desired_msg << "'";
             }
         }
@@ -212,7 +250,7 @@ class ErrorMonitor {
         // ExpectSuccess() configured us to match anything. Any error is a failure.
         if (DesiredMsgFound()) {
             DumpFailureMsgs();
-            for (auto msg : m_failureMsgs) {
+            for (auto msg : m_failure_message_strings) {
                 FAIL() << "Expected to succeed but got error: " << msg;
             }
         }
@@ -220,13 +258,13 @@ class ErrorMonitor {
 
   private:
     VkFlags m_msgFlags;
-    std::unordered_set<string> m_desiredMsgs;
-    std::unordered_set<string> m_failureMsgs;
+    std::unordered_set<uint32_t>m_desired_message_ids;
+    std::unordered_set<string> m_desired_message_strings;
+    std::unordered_set<string> m_failure_message_strings;
     vector<string> m_otherMsgs;
     test_platform_thread_mutex m_mutex;
     bool *m_bailout;
     VkBool32 m_msgFound;
-    bool m_desiredMsgSet;
 };
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL myDbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType, uint64_t srcObject,
@@ -234,7 +272,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL myDbgFunc(VkFlags msgFlags, VkDebugReportO
                                                 void *pUserData) {
     ErrorMonitor *errMonitor = (ErrorMonitor *)pUserData;
     if (msgFlags & errMonitor->GetMessageFlags()) {
-        return errMonitor->CheckForDesiredMsg(pMsg);
+        return errMonitor->CheckForDesiredMsg(msgCode, pMsg);
     }
     return false;
 }
@@ -18035,8 +18073,7 @@ TEST_F(VkLayerTest, ImageFormatLimits) {
 TEST_F(VkLayerTest, CopyImageSrcSizeExceeded) {
 
     // Image copy with source region specified greater than src image size
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "exceeds extents srcImage was created with");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01175);
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
@@ -18074,7 +18111,7 @@ TEST_F(VkLayerTest, CopyImageSrcSizeExceeded) {
 TEST_F(VkLayerTest, CopyImageDstSizeExceeded) {
 
     // Image copy with dest region specified greater than dest image size
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "exceeds extents dstImage was created with");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01176);
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
