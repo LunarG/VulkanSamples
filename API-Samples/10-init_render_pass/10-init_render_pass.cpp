@@ -43,9 +43,6 @@ int sample_main(int argc, char *argv[]) {
     init_window(info);
     init_swapchain_extension(info);
     init_device(info);
-    init_command_pool(info);
-    init_command_buffer(info);
-    execute_begin_command_buffer(info);
     init_device_queue(info);
     init_swap_chain(info);
     init_depth_buffer(info);
@@ -75,23 +72,15 @@ int sample_main(int argc, char *argv[]) {
                                 &info.current_buffer);
     assert(res >= 0);
 
-    // Set the layout for the color buffer, transitioning it from
-    // undefined to an optimal color attachment to make it usable in
-    // a render pass.
-    // The depth buffer layout has already been set by init_depth_buffer().
-    set_image_layout(info, info.buffers[info.current_buffer].image,
-                     VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-
-    // Stop recording the command buffer here since this sample will not
-    // actually put the render pass in the command buffer (via vkCmdBeginRenderPass).
-    // An actual application might leave the command buffer in recording mode
-    // and insert a BeginRenderPass command after the image layout transition
-    // memory barrier commands.
-    // This sample simply creates and defines the render pass.
-    execute_end_command_buffer(info);
-
-    /* Need attachments for render target and depth buffer */
+    // The initial layout for the color and depth attachments will be
+    // LAYOUT_UNDEFINED because at the start of the renderpass, we don't
+    // care about their contents. At the start of the subpass, the color
+    // attachment's layout will be transitioned to LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+    // and the depth stencil attachment's layout will be transitioned to
+    // LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL.  At the end of the renderpass,
+    // the color attachment's layout will be transitioned to
+    // LAYOUT_PRESENT_SRC_KHR to be ready to present.  This is all done as part
+    // of the renderpass, no barriers are necessary.
     VkAttachmentDescription attachments[2];
     attachments[0].format = info.format;
     attachments[0].samples = NUM_SAMPLES;
@@ -99,7 +88,7 @@ int sample_main(int argc, char *argv[]) {
     attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachments[0].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    attachments[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     attachments[0].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     attachments[0].flags = 0;
 
@@ -109,8 +98,7 @@ int sample_main(int argc, char *argv[]) {
     attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachments[1].initialLayout =
-        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    attachments[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     attachments[1].finalLayout =
         VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     attachments[1].flags = 0;
@@ -153,8 +141,6 @@ int sample_main(int argc, char *argv[]) {
     vkDestroySemaphore(info.device, imageAcquiredSemaphore, NULL);
     destroy_depth_buffer(info);
     destroy_swap_chain(info);
-    destroy_command_buffer(info);
-    destroy_command_pool(info);
     destroy_device(info);
     destroy_window(info);
     destroy_instance(info);

@@ -639,12 +639,6 @@ void init_depth_buffer(struct sample_info &info) {
     res = vkBindImageMemory(info.device, info.depth.image, info.depth.mem, 0);
     assert(res == VK_SUCCESS);
 
-    /* Set the image layout to depth stencil optimal */
-    set_image_layout(info, info.depth.image,
-                     view_info.subresourceRange.aspectMask,
-                     VK_IMAGE_LAYOUT_UNDEFINED,
-                     VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-
     /* Create image view */
     view_info.image = info.depth.image;
     res = vkCreateImageView(info.device, &view_info, NULL, &info.depth.view);
@@ -772,10 +766,6 @@ void init_presentable_image(struct sample_info &info) {
     // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
     // return codes
     assert(!res);
-
-    set_image_layout(info, info.buffers[info.current_buffer].image,
-                     VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 }
 
 void execute_queue_cmdbuf(struct sample_info &info,
@@ -1137,7 +1127,7 @@ void init_renderpass(struct sample_info &info, bool include_depth, bool clear,
     attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachments[0].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    attachments[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     attachments[0].finalLayout = finalLayout;
     attachments[0].flags = 0;
 
@@ -1149,8 +1139,7 @@ void init_renderpass(struct sample_info &info, bool include_depth, bool clear,
         attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
         attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
-        attachments[1].initialLayout =
-            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        attachments[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         attachments[1].finalLayout =
             VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         attachments[1].flags = 0;

@@ -99,9 +99,10 @@ int sample_main(int argc, char *argv[]) {
     // return codes
     assert(res == VK_SUCCESS);
 
+    // We'll be blitting into the presentable image, set the layout accordingly
     set_image_layout(info, info.buffers[info.current_buffer].image,
                      VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
     // Create an image, map it, and write some values to the image
 
@@ -195,16 +196,12 @@ int sample_main(int argc, char *argv[]) {
 
     vkResetCommandBuffer(info.cmd, 0);
     execute_begin_command_buffer(info);
+    // Intend to blit from this image, set the layout accordingly
     set_image_layout(info, bltSrcImage, VK_IMAGE_ASPECT_COLOR_BIT,
                      VK_IMAGE_LAYOUT_GENERAL,
                      VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
     bltDstImage = info.buffers[info.current_buffer].image;
-    // init_swap_chain will create the images as color attachment optimal
-    // but we want transfer dst optimal
-    set_image_layout(info, bltDstImage, VK_IMAGE_ASPECT_COLOR_BIT,
-                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
     // Do a 32x32 blit to all of the dst image - should get big squares
     VkImageBlit region;

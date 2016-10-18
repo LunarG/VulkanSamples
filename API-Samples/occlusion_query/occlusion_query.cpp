@@ -149,10 +149,6 @@ int sample_main(int argc, char *argv[]) {
     // return codes
     assert(res == VK_SUCCESS);
 
-    set_image_layout(info, info.buffers[info.current_buffer].image,
-                     VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-
     /* Allocate a uniform buffer that will take query results. */
     VkBuffer query_result_buf;
     VkDeviceMemory query_result_mem;

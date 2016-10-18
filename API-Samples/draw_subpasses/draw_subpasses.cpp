@@ -134,7 +134,7 @@ int sample_main(int argc, char *argv[]) {
     attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachments[0].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    attachments[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     attachments[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     attachments[0].flags = 0;
 
@@ -144,8 +144,7 @@ int sample_main(int argc, char *argv[]) {
     attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
-    attachments[1].initialLayout =
-        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    attachments[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     attachments[1].finalLayout =
         VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     attachments[1].flags = 0;
@@ -408,10 +407,6 @@ int sample_main(int argc, char *argv[]) {
     // return codes
     assert(res == VK_SUCCESS);
 
-    set_image_layout(info, info.buffers[info.current_buffer].image,
-                     VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-
     VkRenderPassBeginInfo rp_begin;
     rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     rp_begin.pNext = NULL;
@@ -484,6 +479,12 @@ int sample_main(int argc, char *argv[]) {
     /* This time, the first subpass will use color */
     subpasses[0].colorAttachmentCount = 1;
     subpasses[0].pColorAttachments = &color_reference;
+
+    /* This time we care about the contents of the color and depth buffers */
+    attachments[0].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    attachments[0].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    attachments[1].initialLayout =
+        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
     /* The dependency between the subpasses now includes the color attachment */
     dependency.srcAccessMask |= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
@@ -617,7 +618,6 @@ int sample_main(int argc, char *argv[]) {
 
     /* The second renderpass is complete */
     vkCmdEndRenderPass(info.cmd);
-    execute_pre_present_barrier(info);
     /* VULKAN_KEY_END */
     res = vkEndCommandBuffer(info.cmd);
     const VkCommandBuffer cmd_bufs[] = {info.cmd};
