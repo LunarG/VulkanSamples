@@ -999,7 +999,7 @@ static void print_mem_list(layer_data *dev_data) {
         if (mem_info->command_buffer_bindings.size() > 0) {
             for (auto cb : mem_info->command_buffer_bindings) {
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
-                        0, __LINE__, MEMTRACK_NONE, "MEM", "      VK CB 0x%p", cb);
+                        0, __LINE__, MEMTRACK_NONE, "MEM", "      VK command buffer 0x%p", cb);
             }
         }
     }
@@ -1014,7 +1014,7 @@ static void printCBList(layer_data *my_data) {
     }
 
     log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__,
-            MEMTRACK_NONE, "MEM", "Details of CB list (of size " PRINTF_SIZE_T_SPECIFIER " elements)",
+            MEMTRACK_NONE, "MEM", "Details of command buffer list (of size " PRINTF_SIZE_T_SPECIFIER " elements)",
             my_data->commandBufferMap.size());
     log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__,
             MEMTRACK_NONE, "MEM", "==================");
@@ -1026,7 +1026,8 @@ static void printCBList(layer_data *my_data) {
         pCBInfo = cb_node.second;
 
         log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0,
-                __LINE__, MEMTRACK_NONE, "MEM", "    CB Info (0x%p) has CB 0x%p", (void *)pCBInfo, (void *)pCBInfo->commandBuffer);
+                __LINE__, MEMTRACK_NONE, "MEM", "    CB Info (0x%p) has command buffer 0x%p", (void *)pCBInfo,
+                (void *)pCBInfo->commandBuffer);
 
         if (pCBInfo->memObjs.size() <= 0)
             continue;
@@ -1967,7 +1968,7 @@ static bool validate_vi_against_vs_inputs(debug_report_data *report_data, VkPipe
         if (!a_at_end && (b_at_end || a_first < b_first)) {
             if (!used && log_msg(report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                         __LINE__, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
-                        "Vertex attribute at location %d not consumed by VS", a_first)) {
+                        "Vertex attribute at location %d not consumed by vertex shader", a_first)) {
                 pass = false;
             }
             used = false;
@@ -2035,13 +2036,14 @@ static bool validate_fs_outputs_against_render_pass(debug_report_data *report_da
         if (!a_at_end && (b_at_end || it_a->first.first < it_b->first)) {
             if (log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                         __LINE__, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
-                        "FS writes to output location %d with no matching attachment", it_a->first.first)) {
+                        "fragment shader writes to output location %d with no matching attachment", it_a->first.first)) {
                 pass = false;
             }
             it_a++;
         } else if (!b_at_end && (a_at_end || it_a->first.first > it_b->first)) {
             if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
-                        __LINE__, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC", "Attachment %d not written by FS", it_b->first)) {
+                        __LINE__, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC", "Attachment %d not written by fragment shader",
+                        it_b->first)) {
                 pass = false;
             }
             it_b++;
@@ -2053,7 +2055,7 @@ static bool validate_fs_outputs_against_render_pass(debug_report_data *report_da
             if (att_type != FORMAT_TYPE_UNDEFINED && output_type != FORMAT_TYPE_UNDEFINED && att_type != output_type) {
                 if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                             __LINE__, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
-                            "Attachment %d of type `%s` does not match FS output type of `%s`", it_b->first,
+                            "Attachment %d of type `%s` does not match fragment shader output type of `%s`", it_b->first,
                             string_VkFormat(it_b->second),
                             describe_type(fs, it_a->second.type_id).c_str())) {
                     pass = false;
@@ -2296,7 +2298,8 @@ static bool validate_status(layer_data *my_data, GLOBAL_CB_NODE *pNode, CBStatus
     if (!(pNode->status & status_mask)) {
         return log_msg(my_data->report_data, msg_flags, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                        reinterpret_cast<const uint64_t &>(pNode->commandBuffer), __LINE__, error_code, "DS",
-                       "CB object 0x%" PRIxLEAST64 ": %s", reinterpret_cast<const uint64_t &>(pNode->commandBuffer), fail_msg);
+                       "command buffer object 0x%" PRIxLEAST64 ": %s", reinterpret_cast<const uint64_t &>(pNode->commandBuffer),
+                       fail_msg);
     }
     return false;
 }
@@ -3044,7 +3047,7 @@ static bool validate_and_update_drawtime_descriptor_state(
             auto set = set_node->GetSet();
             result |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                               reinterpret_cast<const uint64_t &>(set), __LINE__, DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED, "DS",
-                              "DS 0x%" PRIxLEAST64 " encountered the following validation error at %s() time: %s",
+                              "Descriptor set 0x%" PRIxLEAST64 " encountered the following validation error at %s() time: %s",
                               reinterpret_cast<const uint64_t &>(set), function, err_str.c_str());
         }
         set_node->GetStorageUpdates(std::get<1>(set_bindings_pair), &pCB->updateBuffers, &pCB->updateImages);
@@ -3078,7 +3081,7 @@ static bool validatePipelineDrawtimeState(layer_data const *my_data, LAST_BOUND_
                                           PIPELINE_STATE const *pPipeline) {
     bool skip_call = false;
 
-    // Verify Vtx binding
+    // Verify vertex binding
     if (pPipeline->vertexBindingDescriptions.size() > 0) {
         for (size_t i = 0; i < pPipeline->vertexBindingDescriptions.size(); i++) {
             auto vertex_binding = pPipeline->vertexBindingDescriptions[i].binding;
@@ -3117,7 +3120,7 @@ static bool validatePipelineDrawtimeState(layer_data const *my_data, LAST_BOUND_
                 std::stringstream ss;
                 ss << "Dynamic viewport(s) ";
                 list_bits(ss, missingViewportMask);
-                ss << " are used by PSO, but were not provided via calls to vkCmdSetViewport().";
+                ss << " are used by pipeline state object, but were not provided via calls to vkCmdSetViewport().";
                 skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                                      __LINE__, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
                                      "%s", ss.str().c_str());
@@ -3131,7 +3134,7 @@ static bool validatePipelineDrawtimeState(layer_data const *my_data, LAST_BOUND_
                 std::stringstream ss;
                 ss << "Dynamic scissor(s) ";
                 list_bits(ss, missingScissorMask);
-                ss << " are used by PSO, but were not provided via calls to vkCmdSetScissor().";
+                ss << " are used by pipeline state object, but were not provided via calls to vkCmdSetScissor().";
                 skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                                      __LINE__, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
                                      "%s", ss.str().c_str());
@@ -3288,7 +3291,7 @@ static bool validate_and_update_draw_state(layer_data *my_data, GLOBAL_CB_NODE *
                             result |= log_msg(
                                 my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                                 (uint64_t)pSet->GetSet(), __LINE__, DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED, "DS",
-                                "DS 0x%" PRIxLEAST64 " bound but it was never updated. It is now being used to draw so "
+                                "Descriptor Set 0x%" PRIxLEAST64 " bound but was never updated. It is now being used to draw so "
                                 "this will result in undefined behavior.",
                                 (uint64_t)pSet->GetSet());
                         }
@@ -3427,7 +3430,7 @@ static bool verifyPipelineCreateState(layer_data *my_data, const VkDevice device
     if (!(pPipeline->active_shaders & VK_SHADER_STAGE_VERTEX_BIT)) {
         skip_call |=
             log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                    DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS", "Invalid Pipeline CreateInfo State: Vtx Shader required");
+                    DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS", "Invalid Pipeline CreateInfo State: Vertex Shader required");
     }
     // Either both or neither TC/TE shaders should be defined
     if (((pPipeline->active_shaders & VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT) == 0) !=
@@ -4263,10 +4266,10 @@ static void printCB(layer_data *my_data, const VkCommandBuffer cb) {
     GLOBAL_CB_NODE *pCB = getCBNode(my_data, cb);
     if (pCB && pCB->cmds.size() > 0) {
         log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                DRAWSTATE_NONE, "DS", "Cmds in CB 0x%p", (void *)cb);
+                DRAWSTATE_NONE, "DS", "Cmds in command buffer 0x%p", (void *)cb);
         vector<CMD_NODE> cmds = pCB->cmds;
         for (auto ii = cmds.begin(); ii != cmds.end(); ++ii) {
-            // TODO : Need to pass cb as srcObj here
+            // TODO : Need to pass cmdbuffer as srcObj here
             log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0,
                     __LINE__, DRAWSTATE_NONE, "DS", "  CMD 0x%" PRIx64 ": %s", (*ii).cmdNumber, cmdTypeToString((*ii).type).c_str());
         }
@@ -4927,7 +4930,7 @@ static bool validateCommandBufferState(layer_data *dev_data, GLOBAL_CB_NODE *pCB
     if ((pCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT) && (pCB->submitCount > 1)) {
         skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0,
                         __LINE__, DRAWSTATE_COMMAND_BUFFER_SINGLE_SUBMIT_VIOLATION, "DS",
-                        "CB 0x%" PRIxLEAST64 " was begun w/ VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT "
+                        "Commandbuffer 0x%" PRIxLEAST64 " was begun w/ VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT "
                         "set, but has been submitted 0x%" PRIxLEAST64 " times.",
                         (uint64_t)(pCB->commandBuffer), pCB->submitCount);
     }
@@ -4951,7 +4954,7 @@ static bool validateCommandBufferState(layer_data *dev_data, GLOBAL_CB_NODE *pCB
         } else { // Flag error for using CB w/o vkEndCommandBuffer() called
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             (uint64_t)(pCB->commandBuffer), __LINE__, DRAWSTATE_NO_END_COMMAND_BUFFER, "DS",
-                            "You must call vkEndCommandBuffer() on CB 0x%" PRIxLEAST64 " before this call to %s!",
+                            "You must call vkEndCommandBuffer() on command buffer 0x%" PRIxLEAST64 " before this call to %s!",
                             reinterpret_cast<uint64_t &>(pCB->commandBuffer), call_source);
         }
     }
@@ -4995,7 +4998,7 @@ static bool validatePrimaryCommandBufferState(layer_data *dev_data, GLOBAL_CB_NO
                 !(pSubCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT)) {
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0,
                         __LINE__, DRAWSTATE_COMMAND_BUFFER_SINGLE_SUBMIT_VIOLATION, "DS",
-                        "CB 0x%" PRIxLEAST64 " was submitted with secondary buffer 0x%" PRIxLEAST64
+                        "Commandbuffer 0x%" PRIxLEAST64 " was submitted with secondary buffer 0x%" PRIxLEAST64
                         " but that buffer has subsequently been bound to "
                         "primary cmd buffer 0x%" PRIxLEAST64
                         " and it does not have VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set.",
@@ -7087,8 +7090,8 @@ BeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo
             skip_call |=
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                         (uint64_t)commandBuffer, __LINE__, MEMTRACK_RESET_CB_WHILE_IN_FLIGHT, "MEM",
-                        "Calling vkBeginCommandBuffer() on active CB 0x%p before it has completed. "
-                        "You must check CB fence before this call.",
+                        "Calling vkBeginCommandBuffer() on active command buffer 0x%p before it has completed. "
+                        "You must check command buffer fence before this call.",
                         commandBuffer);
         }
         clear_cmd_buf_and_mem_references(dev_data, cb_node);
@@ -7172,7 +7175,7 @@ BeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo
             skip_call |=
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                         (uint64_t)commandBuffer, __LINE__, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",
-                        "vkBeginCommandBuffer(): Cannot call Begin on CB (0x%" PRIxLEAST64
+                        "vkBeginCommandBuffer(): Cannot call Begin on command buffer (0x%" PRIxLEAST64
                         ") in the RECORDING state. Must first call vkEndCommandBuffer().",
                         (uint64_t)commandBuffer);
         } else if (CB_RECORDED == cb_node->state || (CB_INVALID == cb_node->state && CMD_END == cb_node->cmds.back().type)) {
@@ -7206,7 +7209,8 @@ BeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo
     } else {
         skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                              (uint64_t)commandBuffer, __LINE__, DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
-                             "In vkBeginCommandBuffer() and unable to find CommandBuffer Node for CB 0x%p!", (void *)commandBuffer);
+                             "In vkBeginCommandBuffer() and unable to find CommandBuffer Node for command buffer 0x%p!",
+                             (void *)commandBuffer);
     }
     lock.unlock();
     if (skip_call) {
@@ -7487,13 +7491,13 @@ CmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelin
                     pCB->lastBound[pipelineBindPoint].boundDescriptorSets[i + firstSet] = pSet;
                     skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT,
                                          VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)pDescriptorSets[i], __LINE__,
-                                         DRAWSTATE_NONE, "DS", "DS 0x%" PRIxLEAST64 " bound on pipeline %s",
+                                         DRAWSTATE_NONE, "DS", "Descriptor Set 0x%" PRIxLEAST64 " bound on pipeline %s",
                                          (uint64_t)pDescriptorSets[i], string_VkPipelineBindPoint(pipelineBindPoint));
                     if (!pSet->IsUpdated() && (pSet->GetTotalDescriptorCount() != 0)) {
                         skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT,
                                              VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)pDescriptorSets[i], __LINE__,
                                              DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED, "DS",
-                                             "DS 0x%" PRIxLEAST64
+                                             "Descriptor Set 0x%" PRIxLEAST64
                                              " bound but it was never updated. You may want to either update it or not bind it.",
                                              (uint64_t)pDescriptorSets[i]);
                     }
@@ -7569,7 +7573,8 @@ CmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelin
                 } else {
                     skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)pDescriptorSets[i], __LINE__,
-                                         DRAWSTATE_INVALID_SET, "DS", "Attempt to bind DS 0x%" PRIxLEAST64 " that doesn't exist!",
+                                         DRAWSTATE_INVALID_SET, "DS", "Attempt to bind descriptor set 0x%" PRIxLEAST64
+                                         " that doesn't exist!",
                                          (uint64_t)pDescriptorSets[i]);
                 }
                 skip_call |= addCmd(dev_data, pCB, CMD_BINDDESCRIPTORSETS, "vkCmdBindDescriptorSets()");
@@ -7583,7 +7588,7 @@ CmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelin
                                 dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
                                 VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                                 (uint64_t)pCB->lastBound[pipelineBindPoint].boundDescriptorSets[i], __LINE__, DRAWSTATE_NONE, "DS",
-                                "DescriptorSetDS 0x%" PRIxLEAST64
+                                "DescriptorSet 0x%" PRIxLEAST64
                                 " previously bound as set #%u was disturbed by newly bound pipelineLayout (0x%" PRIxLEAST64 ")",
                                 (uint64_t)pCB->lastBound[pipelineBindPoint].boundDescriptorSets[i], i, (uint64_t)layout);
                             pCB->lastBound[pipelineBindPoint].boundDescriptorSets[i] = VK_NULL_HANDLE;
@@ -7598,7 +7603,7 @@ CmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelin
                         skip_call |=
                             log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
                                     VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, reinterpret_cast<uint64_t &>(old_set), __LINE__,
-                                    DRAWSTATE_NONE, "DS", "DescriptorSetDS 0x%" PRIxLEAST64
+                                    DRAWSTATE_NONE, "DS", "DescriptorSet 0x%" PRIxLEAST64
                                                           " previously bound as set #%u is incompatible with set 0x%" PRIxLEAST64
                                                           " newly bound as set #%u so set #%u and any subsequent sets were "
                                                           "disturbed by newly bound pipelineLayout (0x%" PRIxLEAST64 ")",
@@ -7755,7 +7760,8 @@ VKAPI_ATTR void VKAPI_CALL CmdDraw(VkCommandBuffer commandBuffer, uint32_t verte
         // TODO : Need to pass commandBuffer as srcObj here
         skip_call |=
             log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0,
-                    __LINE__, DRAWSTATE_NONE, "DS", "vkCmdDraw() call 0x%" PRIx64 ", reporting DS state:", g_drawCount[DRAW]++);
+                    __LINE__, DRAWSTATE_NONE, "DS", "vkCmdDraw() call 0x%" PRIx64 ", reporting descriptor set state:",
+                    g_drawCount[DRAW]++);
         skip_call |= synchAndPrintDSConfig(dev_data, commandBuffer);
         if (!skip_call) {
             updateResourceTrackingOnDraw(pCB);
@@ -7782,7 +7788,8 @@ VKAPI_ATTR void VKAPI_CALL CmdDrawIndexed(VkCommandBuffer commandBuffer, uint32_
         // TODO : Need to pass commandBuffer as srcObj here
         skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT,
                              VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_NONE, "DS",
-                             "vkCmdDrawIndexed() call 0x%" PRIx64 ", reporting DS state:", g_drawCount[DRAW_INDEXED]++);
+                             "vkCmdDrawIndexed() call 0x%" PRIx64 ", reporting descriptor set state:",
+                             g_drawCount[DRAW_INDEXED]++);
         skip_call |= synchAndPrintDSConfig(dev_data, commandBuffer);
         if (!skip_call) {
             updateResourceTrackingOnDraw(pCB);
@@ -7812,7 +7819,8 @@ CmdDrawIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize off
         // TODO : Need to pass commandBuffer as srcObj here
         skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT,
                              VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_NONE, "DS",
-                             "vkCmdDrawIndirect() call 0x%" PRIx64 ", reporting DS state:", g_drawCount[DRAW_INDIRECT]++);
+                             "vkCmdDrawIndirect() call 0x%" PRIx64 ", reporting descriptor set state:",
+                             g_drawCount[DRAW_INDIRECT]++);
         skip_call |= synchAndPrintDSConfig(dev_data, commandBuffer);
         if (!skip_call) {
             updateResourceTrackingOnDraw(cb_node);
@@ -7845,7 +7853,7 @@ CmdDrawIndexedIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceS
         // TODO : Need to pass commandBuffer as srcObj here
         skip_call |=
             log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0,
-                    __LINE__, DRAWSTATE_NONE, "DS", "vkCmdDrawIndexedIndirect() call 0x%" PRIx64 ", reporting DS state:",
+                    __LINE__, DRAWSTATE_NONE, "DS", "vkCmdDrawIndexedIndirect() call 0x%" PRIx64 ", reporting descriptor set state:",
                     g_drawCount[DRAW_INDEXED_INDIRECT]++);
         skip_call |= synchAndPrintDSConfig(dev_data, commandBuffer);
         if (!skip_call) {
@@ -8480,7 +8488,7 @@ VKAPI_ATTR void VKAPI_CALL CmdClearAttachments(VkCommandBuffer commandBuffer, ui
             skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
                                  VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t &>(commandBuffer),
                                  0, DRAWSTATE_CLEAR_CMD_BEFORE_DRAW, "DS",
-                                 "vkCmdClearAttachments() issued on CB object 0x%" PRIxLEAST64 " prior to any Draw Cmds."
+                                 "vkCmdClearAttachments() issued on command buffer object 0x%" PRIxLEAST64 " prior to any Draw Cmds."
                                  " It is recommended you use RenderPass LOAD_OP_CLEAR on Attachments prior to any Draw.",
                                  (uint64_t)(commandBuffer));
         }
@@ -10691,9 +10699,9 @@ static bool validateFramebuffer(layer_data *dev_data, VkCommandBuffer primaryBuf
         if (primary_fb != secondary_fb) {
             skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                  DRAWSTATE_FRAMEBUFFER_INCOMPATIBLE, "DS",
-                                 "vkCmdExecuteCommands() called w/ invalid secondary Cmd Buffer 0x%" PRIx64
+                                 "vkCmdExecuteCommands() called w/ invalid secondary command buffer 0x%" PRIx64
                                  " which has a framebuffer 0x%" PRIx64
-                                 " that is not the same as the primaryCB's current active framebuffer 0x%" PRIx64 ".",
+                                 " that is not the same as the primary command buffer's current active framebuffer 0x%" PRIx64 ".",
                                  reinterpret_cast<uint64_t &>(secondaryBuffer), reinterpret_cast<uint64_t &>(secondary_fb),
                                  reinterpret_cast<uint64_t &>(primary_fb));
         }
@@ -10830,8 +10838,8 @@ CmdExecuteCommands(VkCommandBuffer commandBuffer, uint32_t commandBuffersCount, 
                     skip_call |= log_msg(
                         dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                         (uint64_t)(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_CB_SIMULTANEOUS_USE, "DS",
-                        "Attempt to simultaneously execute CB 0x%" PRIxLEAST64 " w/o VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT "
-                        "set!",
+                        "Attempt to simultaneously execute command buffer 0x%" PRIxLEAST64
+                        " without VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set!",
                         (uint64_t)(pCB->commandBuffer));
                 }
                 if (pCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT) {

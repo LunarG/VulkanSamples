@@ -1749,7 +1749,7 @@ TEST_F(VkLayerTest, CallResetCommandBufferBeforeCompletion)
     fenceInfo.pNext = NULL;
     fenceInfo.flags = 0;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Resetting CB");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Resetting command buffer");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
@@ -1793,7 +1793,7 @@ TEST_F(VkLayerTest, CallBeginCommandBufferBeforeCompletion)
     fenceInfo.pNext = NULL;
     fenceInfo.flags = 0;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Calling vkBeginCommandBuffer() on active CB");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Calling vkBeginCommandBuffer() on active command buffer");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
@@ -5080,14 +5080,14 @@ TEST_F(VkLayerTest, CreateRenderPassSubpassSampleCountConsistency) {
 
 TEST_F(VkLayerTest, FramebufferCreateErrors) {
     TEST_DESCRIPTION("Hit errors when attempting to create a framebuffer :\n"
-                     " 1. Mismatch between fb & renderPass attachmentCount\n"
+                     " 1. Mismatch between framebuffer & renderPass attachmentCount\n"
                      " 2. Use a color image as depthStencil attachment\n"
-                     " 3. Mismatch fb & renderPass attachment formats\n"
-                     " 4. Mismatch fb & renderPass attachment #samples\n"
-                     " 5. FB attachment w/ non-1 mip-levels\n"
-                     " 6. FB attachment where dimensions don't match\n"
-                     " 7. FB attachment w/o identity swizzle\n"
-                     " 8. FB dimensions exceed physical device limits\n");
+                     " 3. Mismatch framebuffer & renderPass attachment formats\n"
+                     " 4. Mismatch framebuffer & renderPass attachment #samples\n"
+                     " 5. Framebuffer attachment w/ non-1 mip-levels\n"
+                     " 6. Framebuffer attachment where dimensions don't match\n"
+                     " 7. Framebuffer attachment w/o identity swizzle\n"
+                     " 8. framebuffer dimensions exceed physical device limits\n");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -9784,7 +9784,7 @@ TEST_F(VkLayerTest, CommandBufferResetErrors) {
     // Then cause 2 errors for attempting to reset CB w/o having
     // VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT set for the pool from
     // which CBs were allocated. Note that this bit is off by default.
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Cannot call Begin on CB");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Cannot call Begin on command buffer");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
@@ -9824,7 +9824,7 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState) {
     // Attempt to Create Gfx Pipeline w/o a VS
     VkResult err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Invalid Pipeline CreateInfo State: Vtx Shader required");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Invalid Pipeline CreateInfo State: Vertex Shader required");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -11415,7 +11415,7 @@ TEST_F(VkLayerTest, InvalidQueueFamilyIndex) {
 }
 
 TEST_F(VkLayerTest, ExecuteCommandsPrimaryCB) {
-    TEST_DESCRIPTION("Attempt vkCmdExecuteCommands w/ a primary cmd buffer"
+    TEST_DESCRIPTION("Attempt vkCmdExecuteCommands with a primary command buffer"
                      " (should only be secondary)");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -12613,7 +12613,7 @@ TEST_F(VkLayerTest, NumSamplesMismatch) {
 TEST_F(VkLayerTest, RenderPassIncompatible) {
     TEST_DESCRIPTION("Hit RenderPass incompatible cases. "
                      "Initial case is drawing with an active renderpass that's "
-                     "not compatible with the bound PSO's creation renderpass");
+                     "not compatible with the bound pipeline state object's creation renderpass");
     VkResult err;
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -12824,7 +12824,7 @@ TEST_F(VkLayerTest, ClearCmdNoDraw) {
     VkResult err;
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
-                                         "vkCmdClearAttachments() issued on CB object ");
+                                         "vkCmdClearAttachments() issued on command buffer object ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -14522,7 +14522,7 @@ TEST_F(VkLayerTest, FramebufferIncompatible) {
     vkCmdBeginRenderPass(m_commandBuffer->GetBufferHandle(), &m_renderPassBeginInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         " that is not the same as the primaryCB's current active framebuffer ");
+                                         " that is not the same as the primary command buffer's current active framebuffer ");
     vkCmdExecuteCommands(m_commandBuffer->GetBufferHandle(), 1, &sec_cb);
     m_errorMonitor->VerifyFound();
     // Cleanup
@@ -15400,7 +15400,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvidedInBlock) {
 
 TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatchArraySize) {
     TEST_DESCRIPTION("Test that an error is produced for mismatched array sizes "
-                     "across the VS->FS interface");
+                     "across the vertex->fragment shader interface");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Type mismatch on location 0.0: 'ptr to "
                                                                         "output arr[2] of float32' vs 'ptr to "
                                                                         "input arr[3] of float32'");
@@ -15445,7 +15445,7 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatchArraySize) {
 
 TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatch) {
     TEST_DESCRIPTION("Test that an error is produced for mismatched types across "
-                     "the VS->FS interface");
+                     "the vertex->fragment shader interface");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Type mismatch on location 0");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -15488,7 +15488,7 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatch) {
 
 TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatchInBlock) {
     TEST_DESCRIPTION("Test that an error is produced for mismatched types across "
-                     "the VS->FS interface, when the variable is contained within "
+                     "the vertex->fragment shader interface, when the variable is contained within "
                      "an interface block");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Type mismatch on location 0");
 
@@ -15532,7 +15532,7 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatchInBlock) {
 
 TEST_F(VkLayerTest, CreatePipelineVsFsMismatchByLocation) {
     TEST_DESCRIPTION("Test that an error is produced for location mismatches across "
-                     "the VS->FS interface; This should manifest as a not-written/not-consumed "
+                     "the vertex->fragment shader interface; This should manifest as a not-written/not-consumed "
                      "pair, but flushes out broken walking of the interfaces");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "location 0.0 which is not written by vertex shader");
 
@@ -15576,7 +15576,7 @@ TEST_F(VkLayerTest, CreatePipelineVsFsMismatchByLocation) {
 
 TEST_F(VkLayerTest, CreatePipelineVsFsMismatchByComponent) {
     TEST_DESCRIPTION("Test that an error is produced for component mismatches across the "
-                     "VS->FS interface. It's not enough to have the same set of locations in "
+                     "vertex->fragment shader interface. It's not enough to have the same set of locations in "
                      "use; matching is defined in terms of spirv variables.");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "location 0.1 which is not written by vertex shader");
 
@@ -15621,7 +15621,7 @@ TEST_F(VkLayerTest, CreatePipelineVsFsMismatchByComponent) {
 TEST_F(VkLayerTest, CreatePipelineAttribNotConsumed) {
     TEST_DESCRIPTION("Test that a warning is produced for a vertex attribute which is "
                      "not consumed by the vertex shader");
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, "location 0 not consumed by VS");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, "location 0 not consumed by vertex shader");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -15671,7 +15671,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotConsumed) {
 TEST_F(VkLayerTest, CreatePipelineAttribLocationMismatch) {
     TEST_DESCRIPTION("Test that a warning is produced for a location mismatch on "
                      "vertex attributes. This flushes out bad behavior in the interface walker");
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, "location 0 not consumed by VS");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, "location 0 not consumed by vertex shader");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -15842,7 +15842,7 @@ TEST_F(VkLayerTest, CreatePipelineDuplicateStage) {
     VkPipelineObj pipe(m_device);
     pipe.AddColorAttachment();
     pipe.AddShader(&vs);
-    pipe.AddShader(&vs);
+    pipe.AddShader(&vs);        // intentionally duplicate vertex shader attachment
     pipe.AddShader(&fs);
 
     VkDescriptorSetObj descriptorSet(m_device);
@@ -16522,9 +16522,9 @@ TEST_F(VkLayerTest, CreatePipeline64BitAttributesPositive) {
 }
 
 TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotWritten) {
-    TEST_DESCRIPTION("Test that an error is produced for a FS which does not "
+    TEST_DESCRIPTION("Test that an error is produced for a fragment shader which does not "
                      "provide an output for one of the pipeline's color attachments");
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Attachment 0 not written by FS");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Attachment 0 not written by fragment shader");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
@@ -16562,10 +16562,10 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotWritten) {
 }
 
 TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotConsumed) {
-    TEST_DESCRIPTION("Test that a warning is produced for a FS which provides a spurious "
+    TEST_DESCRIPTION("Test that a warning is produced for a fragment shader which provides a spurious "
                      "output with no matching attachment");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT,
-                                         "FS writes to output location 1 with no matching attachment");
+                                         "fragment shader writes to output location 1 with no matching attachment");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
@@ -16609,8 +16609,8 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotConsumed) {
 
 TEST_F(VkLayerTest, CreatePipelineFragmentOutputTypeMismatch) {
     TEST_DESCRIPTION("Test that an error is produced for a mismatch between the fundamental "
-                     "type of an FS output variable, and the format of the corresponding attachment");
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "does not match FS output type");
+                     "type of an fragment shader output variable, and the format of the corresponding attachment");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "does not match fragment shader output type");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 

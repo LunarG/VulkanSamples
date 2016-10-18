@@ -780,7 +780,7 @@ bool cvdescriptorset::ValidateImageUpdate(VkImageView image_view, VkImageLayout 
         }
         break;
     default:
-        // For other layouts if the source is ds image, both aspect bits must not be set
+        // For other layouts if the source is depth/stencil image, both aspect bits must not be set
         if (ds) {
             if (aspect_mask & VK_IMAGE_ASPECT_DEPTH_BIT) {
                 if (aspect_mask & VK_IMAGE_ASPECT_STENCIL_BIT) {

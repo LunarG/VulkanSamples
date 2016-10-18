@@ -241,7 +241,7 @@ DETAILS TABLE PENDING
 | ----- | -------- | ---------------- | ------------ | -------- | ---------- |
 | Image Format | Verifies that requested format is a supported Vulkan format on this device | FORMAT_UNSUPPORTED | vkCreateImage vkCreateRenderPass | ImageLayerUnsupportedFormat | NA |
 | RenderPass Attachments | Validates that attachment image format, layouts, loadOps, and storeOps are valid Vulkan values | RENDERPASS_INVALID_ATTACHMENT | vkCreateRenderPass | AttachmentDescriptionUndefinedFormat | Tests are needed for loadops, storeops, layouts, and bad depth format |
-| Subpass DS Settings | Verifies that if there is no depth attachment then the subpass attachment is set to VK_ATTACHMENT_UNUSED | RENDERPASS_INVALID_DS_ATTACHMENT | vkCreateRenderPass | RenderPassDepthStencilAttachmentUnused | NA |
+| Subpass Depth/Stencil Settings | Verifies that if there is no depth/stencil attachment then the subpass attachment is set to VK_ATTACHMENT_UNUSED | RENDERPASS_INVALID_DS_ATTACHMENT | vkCreateRenderPass | RenderPassDepthStencilAttachmentUnused | NA |
 | View Creation | Verify that requested Image View Creation parameters are reasonable for the image that the view is being created for | VIEW_CREATE_ERROR | vkCreateImageView | ImageLayerViewTests | NA |
 | Image Aspects | Verify that Image commands are using valid Image Aspect flags | INVALID_IMAGE_ASPECT | vkCreateImageView vkCmdClearColorImage vkCmdClearDepthStencilImage vkCmdClearAttachments vkCmdCopyImage vkCmdCopyImageToBuffer vkCmdCopyBufferToImage vkCmdResolveImage vkCmdBlitImage | InvalidImageViewAspect | NA |
 | Image Aspect Mismatch | Verify that Image commands with source and dest images use matching aspect flags | MISMATCHED_IMAGE_ASPECT | vkCmdCopyImage | MiscImageLayerTests | NA |
