@@ -637,9 +637,9 @@ void AddCommandBufferBindingBuffer(const layer_data *dev_data, GLOBAL_CB_NODE *c
         pMemInfo->command_buffer_bindings.insert(cb_node->commandBuffer);
         // Now update CBInfo's Mem reference list
         cb_node->memObjs.insert(buff_node->binding.mem);
-        cb_node->object_bindings.insert({reinterpret_cast<uint64_t &>(buff_node->buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT});
     }
     // Now update cb binding for buffer
+    cb_node->object_bindings.insert({reinterpret_cast<uint64_t &>(buff_node->buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT});
     buff_node->cb_bindings.insert(cb_node);
 }
 
