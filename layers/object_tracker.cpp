@@ -569,19 +569,19 @@ VKAPI_ATTR VkResult VKAPI_CALL QueueSubmit(VkQueue queue, uint32_t submitCount, 
                 if (pSubmits[idx0].pCommandBuffers) {
                     for (uint32_t idx1 = 0; idx1 < pSubmits[idx0].commandBufferCount; ++idx1) {
                         skip_call |= ValidateObject(queue, pSubmits[idx0].pCommandBuffers[idx1],
-                                                                VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false);
+                                                    VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false, VALIDATION_ERROR_00149);
                     }
                 }
                 if (pSubmits[idx0].pSignalSemaphores) {
                     for (uint32_t idx2 = 0; idx2 < pSubmits[idx0].signalSemaphoreCount; ++idx2) {
                         skip_call |= ValidateObject(queue, pSubmits[idx0].pSignalSemaphores[idx2],
-                                                                   VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT, false);
+                                                    VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT, false, VALIDATION_ERROR_00150);
                     }
                 }
                 if (pSubmits[idx0].pWaitSemaphores) {
                     for (uint32_t idx3 = 0; idx3 < pSubmits[idx0].waitSemaphoreCount; ++idx3) {
                         skip_call |= ValidateObject(queue, pSubmits[idx0].pWaitSemaphores[idx3],
-                                                                   VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT, false);
+                                                    VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT, false, VALIDATION_ERROR_00146);
                     }
                 }
             }
@@ -652,8 +652,8 @@ VKAPI_ATTR VkResult VKAPI_CALL FlushMappedMemoryRanges(VkDevice device, uint32_t
         if (pMemoryRanges) {
             for (uint32_t idx0 = 0; idx0 < memoryRangeCount; ++idx0) {
                 if (pMemoryRanges[idx0].memory) {
-                    skip_call |= ValidateObject(device, pMemoryRanges[idx0].memory,
-                                                               VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, false);
+                    skip_call |= ValidateObject(device, pMemoryRanges[idx0].memory, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
+                                                false, VALIDATION_ERROR_00648);
                 }
             }
         }
@@ -675,8 +675,8 @@ VKAPI_ATTR VkResult VKAPI_CALL InvalidateMappedMemoryRanges(VkDevice device, uin
         if (pMemoryRanges) {
             for (uint32_t idx0 = 0; idx0 < memoryRangeCount; ++idx0) {
                 if (pMemoryRanges[idx0].memory) {
-                    skip_call |= ValidateObject(device, pMemoryRanges[idx0].memory,
-                                                               VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, false);
+                    skip_call |= ValidateObject(device, pMemoryRanges[idx0].memory, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
+                                                false, VALIDATION_ERROR_00648);
                 }
             }
         }
@@ -1098,7 +1098,8 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateBufferView(VkDevice device, const VkBufferV
         std::lock_guard<std::mutex> lock(global_lock);
         skip_call |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00683);
         if (pCreateInfo) {
-            skip_call |= ValidateObject(device, pCreateInfo->buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, false);
+            skip_call |=
+                ValidateObject(device, pCreateInfo->buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, false, VALIDATION_ERROR_00699);
         }
     }
     if (skip_call) {
@@ -1189,7 +1190,8 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImageView(VkDevice device, const VkImageVie
         std::lock_guard<std::mutex> lock(global_lock);
         skip_call |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00750);
         if (pCreateInfo) {
-            skip_call |= ValidateObject(device, pCreateInfo->image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, false);
+            skip_call |=
+                ValidateObject(device, pCreateInfo->image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, false, VALIDATION_ERROR_00763);
         }
     }
     if (skip_call) {
@@ -1368,8 +1370,9 @@ VKAPI_ATTR VkResult VKAPI_CALL CreatePipelineLayout(VkDevice device, const VkPip
         if (pCreateInfo) {
             if (pCreateInfo->pSetLayouts) {
                 for (uint32_t idx0 = 0; idx0 < pCreateInfo->setLayoutCount; ++idx0) {
-                    skip_call |= ValidateObject(device, pCreateInfo->pSetLayouts[idx0],
-                                                               VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT, false);
+                    skip_call |=
+                        ValidateObject(device, pCreateInfo->pSetLayouts[idx0],
+                                       VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT, false, VALIDATION_ERROR_00875);
                 }
             }
         }
@@ -1454,11 +1457,13 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorSetLayout(VkDevice device, const 
         if (pCreateInfo) {
             if (pCreateInfo->pBindings) {
                 for (uint32_t idx0 = 0; idx0 < pCreateInfo->bindingCount; ++idx0) {
-                    if (pCreateInfo->pBindings[idx0].pImmutableSamplers) {
-                        for (uint32_t idx1 = 0; idx1 < pCreateInfo->pBindings[idx0].descriptorCount; ++idx1) {
-                            skip_call |=
-                                ValidateObject(device, pCreateInfo->pBindings[idx0].pImmutableSamplers[idx1],
-                                                              VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT, false);
+                    if ((pCreateInfo->pBindings[idx0].descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER) ||
+                        (pCreateInfo->pBindings[idx0].descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)) {
+                        if (pCreateInfo->pBindings[idx0].pImmutableSamplers) {
+                            for (uint32_t idx1 = 0; idx1 < pCreateInfo->pBindings[idx0].descriptorCount; ++idx1) {
+                                skip_call |= ValidateObject(device, pCreateInfo->pBindings[idx0].pImmutableSamplers[idx1],
+                                                            VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT, false, VALIDATION_ERROR_00852);
+                            }
                         }
                     }
                 }
@@ -1557,11 +1562,11 @@ VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSets(VkDevice device, uint32_t descri
             for (uint32_t idx0 = 0; idx0 < descriptorCopyCount; ++idx0) {
                 if (pDescriptorCopies[idx0].dstSet) {
                     skip_call |= ValidateObject(device, pDescriptorCopies[idx0].dstSet,
-                                                               VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, false);
+                                                VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, false, VALIDATION_ERROR_00972);
                 }
                 if (pDescriptorCopies[idx0].srcSet) {
                     skip_call |= ValidateObject(device, pDescriptorCopies[idx0].srcSet,
-                                                               VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, false);
+                                                VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, false, VALIDATION_ERROR_00971);
                 }
             }
         }
@@ -1569,40 +1574,35 @@ VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSets(VkDevice device, uint32_t descri
             for (uint32_t idx1 = 0; idx1 < descriptorWriteCount; ++idx1) {
                 if (pDescriptorWrites[idx1].dstSet) {
                     skip_call |= ValidateObject(device, pDescriptorWrites[idx1].dstSet,
-                                                               VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, false);
+                                                VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, false, VALIDATION_ERROR_00955);
+                }
+                if ((pDescriptorWrites[idx1].descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) ||
+                    (pDescriptorWrites[idx1].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER)) {
+                    for (uint32_t idx2 = 0; idx2 < pDescriptorWrites[idx1].descriptorCount; ++idx2) {
+                        skip_call |= ValidateObject(device, pDescriptorWrites[idx1].pTexelBufferView[idx2],
+                                                    VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT, false, VALIDATION_ERROR_00940);
+                    }
+                }
+                if ((pDescriptorWrites[idx1].descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) ||
+                    (pDescriptorWrites[idx1].descriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE) ||
+                    (pDescriptorWrites[idx1].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE) ||
+                    (pDescriptorWrites[idx1].descriptorType == VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT)) {
+                    for (uint32_t idx3 = 0; idx3 < pDescriptorWrites[idx1].descriptorCount; ++idx3) {
+                        if (pDescriptorWrites[idx1].pImageInfo[idx3].imageView) {
+                            skip_call |= ValidateObject(device, pDescriptorWrites[idx1].pImageInfo[idx3].imageView,
+                                                        VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT, false, VALIDATION_ERROR_00943);
+                        }
+                    }
                 }
                 if ((pDescriptorWrites[idx1].descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) ||
                     (pDescriptorWrites[idx1].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER) ||
                     (pDescriptorWrites[idx1].descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) ||
                     (pDescriptorWrites[idx1].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) {
-                    for (uint32_t idx2 = 0; idx2 < pDescriptorWrites[idx1].descriptorCount; ++idx2) {
-                        if (pDescriptorWrites[idx1].pBufferInfo[idx2].buffer) {
-                            skip_call |= ValidateObject(device, pDescriptorWrites[idx1].pBufferInfo[idx2].buffer,
-                                                                       VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, false);
-                        }
-                    }
-                }
-                if ((pDescriptorWrites[idx1].descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER) ||
-                    (pDescriptorWrites[idx1].descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) ||
-                    (pDescriptorWrites[idx1].descriptorType == VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT) ||
-                    (pDescriptorWrites[idx1].descriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE) ||
-                    (pDescriptorWrites[idx1].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)) {
-                    for (uint32_t idx3 = 0; idx3 < pDescriptorWrites[idx1].descriptorCount; ++idx3) {
-                        if (pDescriptorWrites[idx1].pImageInfo[idx3].imageView) {
-                            skip_call |= ValidateObject(device, pDescriptorWrites[idx1].pImageInfo[idx3].imageView,
-                                                                       VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT, false);
-                        }
-                        if (pDescriptorWrites[idx1].pImageInfo[idx3].sampler) {
-                            skip_call |= ValidateObject(device, pDescriptorWrites[idx1].pImageInfo[idx3].sampler,
-                                                                       VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT, false);
-                        }
-                    }
-                }
-                if ((pDescriptorWrites[idx1].descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) ||
-                    (pDescriptorWrites[idx1].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER)) {
                     for (uint32_t idx4 = 0; idx4 < pDescriptorWrites[idx1].descriptorCount; ++idx4) {
-                        skip_call |= ValidateObject(device, pDescriptorWrites[idx1].pTexelBufferView[idx4],
-                                                                   VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT, true);
+                        if (pDescriptorWrites[idx1].pBufferInfo[idx4].buffer) {
+                            skip_call |= ValidateObject(device, pDescriptorWrites[idx1].pBufferInfo[idx4].buffer,
+                                                        VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, false, VALIDATION_ERROR_00962);
+                        }
                     }
                 }
             }
@@ -1624,13 +1624,13 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateFramebuffer(VkDevice device, const VkFrameb
         if (pCreateInfo) {
             if (pCreateInfo->pAttachments) {
                 for (uint32_t idx0 = 0; idx0 < pCreateInfo->attachmentCount; ++idx0) {
-                    skip_call |= ValidateObject(device, pCreateInfo->pAttachments[idx0],
-                                                               VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT, false);
+                    skip_call |= ValidateObject(device, pCreateInfo->pAttachments[idx0], VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT,
+                                                false, VALIDATION_ERROR_00420);
                 }
             }
             if (pCreateInfo->renderPass) {
-                skip_call |= ValidateObject(device, pCreateInfo->renderPass,
-                                                           VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, false);
+                skip_call |= ValidateObject(device, pCreateInfo->renderPass, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, false,
+                                            VALIDATION_ERROR_00419);
             }
         }
     }
