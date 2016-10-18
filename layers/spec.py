@@ -114,7 +114,6 @@ class Specification:
     def parseTree(self):
         """Parse the registry Element, once created"""
         print "Parsing spec file..."
-        valid_usage = False # are we under a valid usage branch?
         unique_enum_id = 0
         self.root = self.tree.getroot()
         #print "ROOT: %s" % self.root
@@ -135,22 +134,21 @@ class Specification:
             elif tag.tag == '{http://www.w3.org/1999/xhtml}a': # grab any intermediate links
                 if tag.get('id') != None:
                     prev_link = tag.get('id')
-                    #print "Updated prev link to %s" % (prev_link)
-            elif tag.tag == '{http://www.w3.org/1999/xhtml}strong': # identify valid usage sections
-                if None != tag.text and 'Valid Usage' in tag.text:
-                    valid_usage = True
-                else:
-                    valid_usage = False
-            elif tag.tag == '{http://www.w3.org/1999/xhtml}li' and valid_usage: # grab actual valid usage requirements
-                error_msg_str = "%s '%s' which states '%s' (%s#%s)" % (error_msg_prefix, prev_heading, "".join(tag.itertext()).replace('\n', ''), spec_url, prev_link)
-                # Some txt has multiple spaces so split on whitespace and join w/ single space
-                error_msg_str = " ".join(error_msg_str.split())
-                enum_str = "%s%05d" % (validation_error_enum_name, unique_enum_id)
-                # TODO : '\' chars in spec error messages are most likely bad spec txt that needs to be updated
-                self.val_error_dict[enum_str] = error_msg_str.encode("ascii", "ignore").replace("\\", "/")
-                unique_enum_id = unique_enum_id + 1
-                #print "dict contents: %s:" % (self.val_error_dict)
-                #print "Added enum to dict: %s" % (enum_str.encode("ascii", "ignore"))
+                    print "Updated prev link to %s" % (prev_link)
+            elif tag.tag == '{http://www.w3.org/1999/xhtml}div' and tag.get('class') == 'sidebar':
+                # parse down sidebar to check for valid usage cases
+                valid_usage = False
+                for elem in tag.iter():
+                    if elem.tag == '{http://www.w3.org/1999/xhtml}strong' and None != elem.text and 'Valid Usage' in elem.text:
+                        valid_usage = True
+                    elif valid_usage and elem.tag == '{http://www.w3.org/1999/xhtml}li': # grab actual valid usage requirements
+                        error_msg_str = "%s '%s' which states '%s' (%s#%s)" % (error_msg_prefix, prev_heading, "".join(elem.itertext()).replace('\n', ''), spec_url, prev_link)
+                        # Some txt has multiple spaces so split on whitespace and join w/ single space
+                        error_msg_str = " ".join(error_msg_str.split())
+                        enum_str = "%s%05d" % (validation_error_enum_name, unique_enum_id)
+                        # TODO : '\' chars in spec error messages are most likely bad spec txt that needs to be updated
+                        self.val_error_dict[enum_str] = error_msg_str.encode("ascii", "ignore").replace("\\", "/")
+                        unique_enum_id = unique_enum_id + 1
         #print "Validation Error Dict has a total of %d unique errors and contents are:\n%s" % (unique_enum_id, self.val_error_dict)
     def genHeader(self, header_file):
         """Generate a header file based on the contents of a parsed spec"""
@@ -188,7 +186,7 @@ class Specification:
         for enum in self.val_error_dict:
             err_str = self.val_error_dict[enum]
             if err_str in str_count_dict:
-                #print "Found repeat error string"
+                print "Found repeat error string"
                 str_count_dict[err_str] = str_count_dict[err_str] + 1
             else:
                 str_count_dict[err_str] = 1
@@ -198,7 +196,7 @@ class Specification:
         for es in str_count_dict:
             if str_count_dict[es] > 1:
                 repeat_string = repeat_string + 1
-                #print "String '%s' repeated %d times" % (es, repeat_string)
+                print "String '%s' repeated %d times" % (es, repeat_string)
         print "Found %d repeat strings" % (repeat_string)
     def genDB(self, db_file):
         """Generate a database of check_enum, check_coded?, testname, error_string"""
