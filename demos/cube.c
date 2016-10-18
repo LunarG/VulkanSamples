@@ -438,7 +438,7 @@ dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
         sprintf(message, "WARNING: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
         validation_error = 1;
     } else if (msgFlags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT) {
-        sprintf(message, "PERFOERMANCE WARNING: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
+        sprintf(message, "PERFORMANCE WARNING: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
         validation_error = 1;
     } else if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
         sprintf(message, "ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
