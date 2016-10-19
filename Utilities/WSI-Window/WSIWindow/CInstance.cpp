@@ -30,8 +30,7 @@ bool CPickList::IsPicked(const char* name)const{
 }
 
 int CPickList::IndexOf(const char* name){
-    forCount(Count())
-        if(strcmp(name, Name(i))==0) return i;
+    forCount(Count()){ if(strcmp(name, Name(i))==0) return i; }
     return -1;
 }
 
@@ -48,15 +47,13 @@ bool CPickList::Pick(const char* name){
     return Pick(inx);
 }
 
-bool CPickList::Pick(const uint32_t inx){        //Add indexed item to picklist.
+bool CPickList::Pick(const uint32_t inx){       //Add indexed item to picklist.
   if(inx>=Count()) return false;                //Return false if index is out of range.
   for(const char* pickItem : pickList)
       if(pickItem == Name(inx)) return true;    //Check if item was already picked
   pickList.push_back(Name(inx));                //if not, add item to pick-list
   return true;
 }
-
-
 
 void CPickList::UnPick(const char* name){
     forCount(PickCount())

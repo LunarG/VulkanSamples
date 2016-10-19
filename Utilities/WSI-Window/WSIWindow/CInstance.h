@@ -79,11 +79,11 @@ public:
 //----------------------------------------------------------------
 //----------------------------CLayers-----------------------------
 struct CLayers: public CPickList{
-  vector<VkLayerProperties> itemList;
-  CLayers();
-  char*    Name(uint32_t inx){return itemList[inx].layerName;}
-  uint32_t Count(){return (uint32_t) itemList.size();}
-  void     Print(){CPickList::Print("Layers");}
+    vector<VkLayerProperties> itemList;
+    CLayers();
+    char*    Name(uint32_t inx){return itemList[inx].layerName;}
+    uint32_t Count(){return (uint32_t) itemList.size();}
+    void     Print(){CPickList::Print("Layers");}
 };
 //----------------------------------------------------------------
 //--------------------------CExtensions---------------------------
