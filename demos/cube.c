@@ -371,6 +371,7 @@ struct demo {
     } depth;
 
     struct texture_object textures[DEMO_TEXTURE_COUNT];
+    struct texture_object staging_texture;
 
     struct {
         VkBuffer buf;
@@ -1322,14 +1323,14 @@ static void demo_prepare_textures(struct demo *demo) {
                                   VK_IMAGE_LAYOUT_PREINITIALIZED, demo->textures[i].imageLayout,
                                   VK_ACCESS_HOST_WRITE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                                   VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+            demo->staging_texture.image = 0;
         } else if (props.optimalTilingFeatures &
                    VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) {
             /* Must use staging buffer to copy linear texture to optimized */
-            struct texture_object staging_texture;
 
-            memset(&staging_texture, 0, sizeof(staging_texture));
+            memset(&demo->staging_texture, 0, sizeof(demo->staging_texture));
             demo_prepare_texture_image(
-                demo, tex_files[i], &staging_texture, VK_IMAGE_TILING_LINEAR,
+                demo, tex_files[i], &demo->staging_texture, VK_IMAGE_TILING_LINEAR,
                 VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -1339,7 +1340,7 @@ static void demo_prepare_textures(struct demo *demo) {
                 (VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT),
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-            demo_set_image_layout(demo, staging_texture.image,
+            demo_set_image_layout(demo, demo->staging_texture.image,
                                   VK_IMAGE_ASPECT_COLOR_BIT,
                                   VK_IMAGE_LAYOUT_PREINITIALIZED,
                                   VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
@@ -1360,11 +1361,11 @@ static void demo_prepare_textures(struct demo *demo) {
                 .srcOffset = {0, 0, 0},
                 .dstSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1},
                 .dstOffset = {0, 0, 0},
-                .extent = {staging_texture.tex_width,
-                           staging_texture.tex_height, 1},
+                .extent = {demo->staging_texture.tex_width,
+                           demo->staging_texture.tex_height, 1},
             };
             vkCmdCopyImage(
-                demo->cmd, staging_texture.image,
+                demo->cmd, demo->staging_texture.image,
                 VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, demo->textures[i].image,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region);
 
@@ -1376,9 +1377,6 @@ static void demo_prepare_textures(struct demo *demo) {
                                   VK_PIPELINE_STAGE_TRANSFER_BIT,
                                   VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
-            demo_flush_init_cmd(demo);
-
-            demo_destroy_texture_image(demo, &staging_texture);
         } else {
             /* Can't support VK_FORMAT_R8G8B8A8_UNORM !? */
             assert(!"No support for R8G8B8A8_UNORM as texture image format");
@@ -2009,6 +2007,9 @@ static void demo_prepare(struct demo *demo) {
      * that need to be flushed before beginning the render loop.
      */
     demo_flush_init_cmd(demo);
+    if (demo->staging_texture.image) {
+        demo_destroy_texture_image(demo, &demo->staging_texture);
+    }
 
     demo->current_buffer = 0;
     demo->prepared = true;
