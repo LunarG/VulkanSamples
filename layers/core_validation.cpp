@@ -11033,7 +11033,7 @@ static void CopyNoncoherentMemoryFromDriver(layer_data *dev_data, uint32_t memor
     }
 }
 
-VkResult VKAPI_CALL
+VKAPI_ATTR VkResult VKAPI_CALL
 FlushMappedMemoryRanges(VkDevice device, uint32_t memRangeCount, const VkMappedMemoryRange *pMemRanges) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip_call = false;
@@ -11049,7 +11049,7 @@ FlushMappedMemoryRanges(VkDevice device, uint32_t memRangeCount, const VkMappedM
     return result;
 }
 
-VkResult VKAPI_CALL
+VKAPI_ATTR VkResult VKAPI_CALL
 InvalidateMappedMemoryRanges(VkDevice device, uint32_t memRangeCount, const VkMappedMemoryRange *pMemRanges) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip_call = false;
