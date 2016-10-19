@@ -119,6 +119,7 @@ class Specification:
         #print "ROOT: %s" % self.root
         prev_heading = '' # Last seen section heading or sub-heading
         prev_link = '' # Last seen link id within the spec
+        error_strings = set() # Flag any exact duplicate error strings and skip them
         for tag in self.root.iter(): # iterate down tree
             # Grab most recent section heading and link
             if tag.tag in ['{http://www.w3.org/1999/xhtml}h2', '{http://www.w3.org/1999/xhtml}h3']:
@@ -145,10 +146,14 @@ class Specification:
                         error_msg_str = "%s '%s' which states '%s' (%s#%s)" % (error_msg_prefix, prev_heading, "".join(elem.itertext()).replace('\n', ''), spec_url, prev_link)
                         # Some txt has multiple spaces so split on whitespace and join w/ single space
                         error_msg_str = " ".join(error_msg_str.split())
-                        enum_str = "%s%05d" % (validation_error_enum_name, unique_enum_id)
-                        # TODO : '\' chars in spec error messages are most likely bad spec txt that needs to be updated
-                        self.val_error_dict[enum_str] = error_msg_str.encode("ascii", "ignore").replace("\\", "/")
-                        unique_enum_id = unique_enum_id + 1
+                        if error_msg_str in error_strings:
+                            print "WARNING: SKIPPING adding repeat entry for string. Please review spec and file issue as appropriate. Repeat string is: %s" % (error_msg_str)
+                        else:
+                            error_strings.add(error_msg_str)
+                            enum_str = "%s%05d" % (validation_error_enum_name, unique_enum_id)
+                            # TODO : '\' chars in spec error messages are most likely bad spec txt that needs to be updated
+                            self.val_error_dict[enum_str] = error_msg_str.encode("ascii", "ignore").replace("\\", "/")
+                            unique_enum_id = unique_enum_id + 1
         #print "Validation Error Dict has a total of %d unique errors and contents are:\n%s" % (unique_enum_id, self.val_error_dict)
     def genHeader(self, header_file):
         """Generate a header file based on the contents of a parsed spec"""
