@@ -563,28 +563,7 @@ static void demo_set_image_layout(struct demo *demo, VkImage image,
                                   VkAccessFlagBits srcAccessMask,
                                   VkPipelineStageFlags src_stages,
                                   VkPipelineStageFlags dest_stages) {
-    VkResult U_ASSERT_ONLY err;
-
-    if (demo->cmd == VK_NULL_HANDLE) {
-        const VkCommandBufferAllocateInfo cmd = {
-            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-            .pNext = NULL,
-            .commandPool = demo->cmd_pool,
-            .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-            .commandBufferCount = 1,
-        };
-
-        err = vkAllocateCommandBuffers(demo->device, &cmd, &demo->cmd);
-        assert(!err);
-        VkCommandBufferBeginInfo cmd_buf_info = {
-            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-            .pNext = NULL,
-            .flags = 0,
-            .pInheritanceInfo = NULL,
-        };
-        err = vkBeginCommandBuffer(demo->cmd, &cmd_buf_info);
-        assert(!err);
-    }
+    assert(demo->cmd);
 
     VkImageMemoryBarrier image_memory_barrier = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -1964,6 +1943,16 @@ static void demo_prepare(struct demo *demo) {
         .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
         .commandBufferCount = 1,
     };
+    err = vkAllocateCommandBuffers(demo->device, &cmd, &demo->cmd);
+    assert(!err);
+    VkCommandBufferBeginInfo cmd_buf_info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .pNext = NULL,
+        .flags = 0,
+        .pInheritanceInfo = NULL,
+    };
+    err = vkBeginCommandBuffer(demo->cmd, &cmd_buf_info);
+    assert(!err);
 
     demo_prepare_buffers(demo);
     demo_prepare_depth(demo);
