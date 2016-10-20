@@ -9857,8 +9857,7 @@ TEST_F(VkLayerTest, VertexBufferInvalid) {
                                                         "is 0x";
     const char *bind_null_buffer_message = "In vkBindBufferMemory, attempting"
                                            " to Bind Obj(0x";
-    const char *free_invalid_buffer_message = "Request to delete memory "
-                                              "object 0x";
+    const char *free_invalid_buffer_message = "Invalid Device Memory Object 0x";
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
