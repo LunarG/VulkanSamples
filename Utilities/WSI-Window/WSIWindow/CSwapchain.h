@@ -9,6 +9,8 @@ struct CQueueFamilies{
     vector<VkQueueFamilyProperties> itemList;
     CQueueFamilies(VkPhysicalDevice gpu);
     ~CQueueFamilies();
+    uint32_t Count(){return (uint32_t) itemList.size();}
+    void Print();
 };
 //----------------------------------------------------------------
 //------------------------CPhysicalDevices------------------------
@@ -30,6 +32,7 @@ class CDeviceQueue{
     CDeviceQueue();
     ~CDeviceQueue();
 };
+//----------------------------------------------------------------
 //---------------------------CSwapchain---------------------------
 class CSwapchain{
 public:

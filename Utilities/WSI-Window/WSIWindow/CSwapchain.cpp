@@ -12,8 +12,27 @@ CQueueFamilies::CQueueFamilies(VkPhysicalDevice gpu){
 
 CQueueFamilies::~CQueueFamilies(){}
 
-//----------------------------------------------------------------
+void CQueueFamilies::Print(){
+    printf("\t   Queue Family Properties: %d\n",Count());
+    forCount(Count()){
+        //const char* FlagNames[]{"GRAPHICS","COMPUTE","TRANSFER","SPARSE"};  // bits 1,2,4,8
 
+        VkQueueFamilyProperties& props=itemList[i];
+        const uint32_t     count=props.queueCount;
+        const VkQueueFlags flags=props.queueFlags;
+        printf("\t\tcount=%2d",count);
+
+        const char* sep=":";
+        if(flags&1){ printf(" %s GRAPHICS",sep); sep="|";}
+        if(flags&2){ printf(" %s COMPUTE ",sep); sep="|";}
+        if(flags&4){ printf(" %s TRANSFER",sep); sep="|";}
+        if(flags&8){ printf(" %s SPARSE"  ,sep);         }
+        printf("\n");
+    }
+}
+
+
+//----------------------------------------------------------------
 
 
 
@@ -51,14 +70,17 @@ const char* CPhysicalDevices::VendorName(uint vendorID){
 }
 
 void CPhysicalDevices::Print(){
-  printf("Physical Devices: %d\n",Count());
-  forCount(Count()){
-      const char* devType[]{"OTHER","INTEGRATED","DISCRETE","VIRTUAL","CPU"};
-      VkPhysicalDeviceProperties props=Properties(i);
-      const char* vendor=VendorName(props.vendorID);
-      const char* type=(props.deviceType<5)?devType[props.deviceType]:0;
-      printf("\t%d: %s %s %s\n",i,type,vendor,props.deviceName);
-  }
+
+    printf("Physical Devices: %d\n",Count());
+    forCount(Count()){
+        const char* devType[]{"OTHER","INTEGRATED","DISCRETE","VIRTUAL","CPU"};
+        VkPhysicalDeviceProperties props=Properties(i);
+        const char* vendor=VendorName(props.vendorID);
+        const char* type=(props.deviceType<5)?devType[props.deviceType]:0;
+        printf("\t%d: %s %s %s\n",i,type,vendor,props.deviceName);
+        CQueueFamilies queueFamilies(itemList[i]);
+        queueFamilies.Print();
+    }
 }
 
 VkPhysicalDevice CPhysicalDevices::operator[](const  int inx){return itemList.at(inx);}
