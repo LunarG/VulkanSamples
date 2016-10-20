@@ -133,7 +133,7 @@ class bcolors:
 
 # Class to parse the validation layer test source and store testnames
 class TestParser:
-    def __init__(self, test_file_list, test_group_name=['VkLayerTest', 'VkWsiEnabledLayerTest']):
+    def __init__(self, test_file_list, test_group_name=['VkLayerTest', 'VkPositiveLayerTest', 'VkWsiEnabledLayerTest']):
         self.test_files = test_file_list
         self.tests_set = set()
         self.test_trigger_txt_list = []
