@@ -6061,22 +6061,38 @@ DestroyPipelineLayout(VkDevice device, VkPipelineLayout pipelineLayout, const Vk
     dev_data->dispatch_table.DestroyPipelineLayout(device, pipelineLayout, pAllocator);
 }
 
+static bool PreCallValidateDestroySampler(layer_data *dev_data, VkSampler sampler, SAMPLER_NODE **sampler_state,
+                                          VK_OBJECT *obj_struct) {
+    if (dev_data->instance_data->disabled.destroy_sampler)
+        return false;
+    bool skip = false;
+    *sampler_state = getSamplerNode(dev_data, sampler);
+    if (*sampler_state) {
+        *obj_struct = {reinterpret_cast<uint64_t &>(sampler), VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT};
+        skip |= ValidateObjectNotInUse(dev_data, *sampler_state, *obj_struct, VALIDATION_ERROR_00837);
+    }
+    return skip;
+}
+
+static void PostCallRecordDestroySampler(layer_data *dev_data, VkSampler sampler, SAMPLER_NODE *sampler_state,
+                                         VK_OBJECT obj_struct) {
+    // Any bound cmd buffers are now invalid
+    invalidateCommandBuffers(sampler_state->cb_bindings, obj_struct);
+    dev_data->samplerMap.erase(sampler);
+}
+
 VKAPI_ATTR void VKAPI_CALL
 DestroySampler(VkDevice device, VkSampler sampler, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    bool skip = false;
+    SAMPLER_NODE *sampler_state = nullptr;
+    VK_OBJECT obj_struct;
     std::unique_lock<std::mutex> lock(global_lock);
-    auto sampler_node = getSamplerNode(dev_data, sampler);
-    if (sampler_node) {
-        VK_OBJECT obj_struct = {reinterpret_cast<uint64_t &>(sampler), VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT};
-        skip |= ValidateObjectNotInUse(dev_data, sampler_node, obj_struct, VALIDATION_ERROR_00837);
-        // Any bound cmd buffers are now invalid
-        invalidateCommandBuffers(sampler_node->cb_bindings, obj_struct);
-    }
+    bool skip = PreCallValidateDestroySampler(dev_data, sampler, &sampler_state, &obj_struct);
     if (!skip) {
-        dev_data->samplerMap.erase(sampler);
         lock.unlock();
         dev_data->dispatch_table.DestroySampler(device, sampler, pAllocator);
+        lock.lock();
+        PostCallRecordDestroySampler(dev_data, sampler, sampler_state, obj_struct);
     }
 }
 

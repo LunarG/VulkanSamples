@@ -76,6 +76,7 @@ struct CHECK_DISABLED {
     bool destroy_framebuffer;     // Skip validation at DestroyFramebuffer time
     bool destroy_renderpass;      // Skip validation at DestroyRenderpass time
     bool destroy_image;           // Skip validation at DestroyImage time
+    bool destroy_sampler;         // Skip validation at DestroySampler time
     bool object_in_use;       // Skip all object in_use checking
     bool idle_descriptor_set; // Skip check to verify that descriptor set is no in-use
     bool push_constant_range; // Skip push constant range checks
