@@ -254,7 +254,6 @@ struct DEVICE_MEM_INFO : public BASE_NODE {
     VkDeviceMemory mem;
     VkMemoryAllocateInfo alloc_info;
     std::unordered_set<VK_OBJECT> obj_bindings;         // objects bound to this memory
-    std::unordered_set<VkCommandBuffer> command_buffer_bindings; // cmd buffers referencing this memory
     std::unordered_map<uint64_t, MEMORY_RANGE> bound_ranges;     // Map of object to its binding range
     // Convenience vectors image/buff handles to speed up iterating over images or buffers independently
     std::unordered_set<uint64_t> bound_images;

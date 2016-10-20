@@ -581,12 +581,12 @@ static bool update_cmd_buf_and_mem_references(layer_data *dev_data, const VkComm
         // First update CB binding in MemObj mini CB list
         DEVICE_MEM_INFO *pMemInfo = getMemObjInfo(dev_data, mem);
         if (pMemInfo) {
-            pMemInfo->command_buffer_bindings.insert(cb);
             // Now update CBInfo's Mem reference list
-            GLOBAL_CB_NODE *pCBNode = getCBNode(dev_data, cb);
+            GLOBAL_CB_NODE *cb_node = getCBNode(dev_data, cb);
+            pMemInfo->cb_bindings.insert(cb_node);
             // TODO: keep track of all destroyed CBs so we know if this is a stale or simply invalid object
-            if (pCBNode) {
-                pCBNode->memObjs.insert(mem);
+            if (cb_node) {
+                cb_node->memObjs.insert(mem);
             }
         }
     }
@@ -607,7 +607,7 @@ void AddCommandBufferBindingImage(const layer_data *dev_data, GLOBAL_CB_NODE *cb
         // First update CB binding in MemObj mini CB list
         DEVICE_MEM_INFO *pMemInfo = getMemObjInfo(dev_data, image_state->binding.mem);
         if (pMemInfo) {
-            pMemInfo->command_buffer_bindings.insert(cb_node->commandBuffer);
+            pMemInfo->cb_bindings.insert(cb_node);
             // Now update CBInfo's Mem reference list
             cb_node->memObjs.insert(image_state->binding.mem);
         }
@@ -635,7 +635,7 @@ void AddCommandBufferBindingBuffer(const layer_data *dev_data, GLOBAL_CB_NODE *c
     // First update CB binding in MemObj mini CB list
     DEVICE_MEM_INFO *pMemInfo = getMemObjInfo(dev_data, buff_node->binding.mem);
     if (pMemInfo) {
-        pMemInfo->command_buffer_bindings.insert(cb_node->commandBuffer);
+        pMemInfo->cb_bindings.insert(cb_node);
         // Now update CBInfo's Mem reference list
         cb_node->memObjs.insert(buff_node->binding.mem);
     }
@@ -658,18 +658,18 @@ void AddCommandBufferBindingBufferView(const layer_data *dev_data, GLOBAL_CB_NOD
 }
 
 // For every mem obj bound to particular CB, free bindings related to that CB
-static void clear_cmd_buf_and_mem_references(layer_data *dev_data, GLOBAL_CB_NODE *pCBNode) {
-    if (pCBNode) {
-        if (pCBNode->memObjs.size() > 0) {
-            for (auto mem : pCBNode->memObjs) {
+static void clear_cmd_buf_and_mem_references(layer_data *dev_data, GLOBAL_CB_NODE *cb_node) {
+    if (cb_node) {
+        if (cb_node->memObjs.size() > 0) {
+            for (auto mem : cb_node->memObjs) {
                 DEVICE_MEM_INFO *pInfo = getMemObjInfo(dev_data, mem);
                 if (pInfo) {
-                    pInfo->command_buffer_bindings.erase(pCBNode->commandBuffer);
+                    pInfo->cb_bindings.erase(cb_node);
                 }
             }
-            pCBNode->memObjs.clear();
+            cb_node->memObjs.clear();
         }
-        pCBNode->validate_functions.clear();
+        cb_node->validate_functions.clear();
     }
 }
 // Overloaded call to above function when GLOBAL_CB_NODE has not already been looked-up
@@ -680,10 +680,10 @@ static void clear_cmd_buf_and_mem_references(layer_data *dev_data, const VkComma
 // For given MemObjInfo, report Obj & CB bindings. Clear any object bindings.
 static bool ReportMemReferencesAndCleanUp(layer_data *dev_data, DEVICE_MEM_INFO *pMemObjInfo) {
     bool skip_call = false;
-    size_t cmdBufRefCount = pMemObjInfo->command_buffer_bindings.size();
+    size_t cmdBufRefCount = pMemObjInfo->cb_bindings.size();
     size_t objRefCount = pMemObjInfo->obj_bindings.size();
 
-    if ((pMemObjInfo->command_buffer_bindings.size()) != 0) {
+    if ((pMemObjInfo->cb_bindings.size()) != 0) {
         skip_call = log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
                             (uint64_t)pMemObjInfo->mem, __LINE__, MEMTRACK_FREED_MEM_REF, "MEM",
                             "Attempting to free memory object 0x%" PRIxLEAST64 " which still contains " PRINTF_SIZE_T_SPECIFIER
@@ -691,14 +691,14 @@ static bool ReportMemReferencesAndCleanUp(layer_data *dev_data, DEVICE_MEM_INFO 
                             (uint64_t)pMemObjInfo->mem, (cmdBufRefCount + objRefCount));
     }
 
-    if (cmdBufRefCount > 0 && pMemObjInfo->command_buffer_bindings.size() > 0) {
-        for (auto cb : pMemObjInfo->command_buffer_bindings) {
+    if (cmdBufRefCount > 0 && pMemObjInfo->cb_bindings.size() > 0) {
+        for (auto cb : pMemObjInfo->cb_bindings) {
             log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                     (uint64_t)cb, __LINE__, MEMTRACK_FREED_MEM_REF, "MEM",
                     "Command Buffer 0x%p still has a reference to mem obj 0x%" PRIxLEAST64, cb, (uint64_t)pMemObjInfo->mem);
         }
         // Clear the list of hanging references
-        pMemObjInfo->command_buffer_bindings.clear();
+        pMemObjInfo->cb_bindings.clear();
     }
 
     if (objRefCount > 0 && pMemObjInfo->obj_bindings.size() > 0) {
@@ -742,16 +742,16 @@ static bool freeMemObjInfo(layer_data *dev_data, void *object, VkDeviceMemory me
 
         assert(pInfo->object != VK_NULL_HANDLE);
         // clear_cmd_buf_and_mem_references removes elements from
-        // pInfo->command_buffer_bindings -- this copy not needed in c++14,
+        // pInfo->cb_bindings -- this copy not needed in c++14,
         // and probably not needed in practice in c++11
-        auto bindings = pInfo->command_buffer_bindings;
-        for (auto cb : bindings) {
-            if (!dev_data->globalInFlightCmdBuffers.count(cb)) {
-                clear_cmd_buf_and_mem_references(dev_data, cb);
+        auto bindings = pInfo->cb_bindings;
+        for (auto cb_node : bindings) {
+            if (!dev_data->globalInFlightCmdBuffers.count(cb_node->commandBuffer)) {
+                clear_cmd_buf_and_mem_references(dev_data, cb_node->commandBuffer);
             }
         }
         // Now check for any remaining references to this mem obj and remove bindings
-        if (pInfo->command_buffer_bindings.size() || pInfo->obj_bindings.size()) {
+        if (pInfo->cb_bindings.size() || pInfo->obj_bindings.size()) {
             skip_call |= ReportMemReferencesAndCleanUp(dev_data, pInfo);
         }
         // Delete mem obj info
@@ -973,7 +973,7 @@ static void print_mem_list(layer_data *dev_data) {
                 __LINE__, MEMTRACK_NONE, "MEM", "    Mem object: 0x%" PRIxLEAST64, (uint64_t)(mem_info->mem));
         log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0,
                 __LINE__, MEMTRACK_NONE, "MEM", "    Ref Count: " PRINTF_SIZE_T_SPECIFIER,
-                mem_info->command_buffer_bindings.size() + mem_info->obj_bindings.size());
+                mem_info->cb_bindings.size() + mem_info->obj_bindings.size());
         if (0 != mem_info->alloc_info.allocationSize) {
             string pAllocInfoMsg = vk_print_vkmemoryallocateinfo(&mem_info->alloc_info, "MEM(INFO):         ");
             log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0,
@@ -996,9 +996,9 @@ static void print_mem_list(layer_data *dev_data) {
         log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0,
                 __LINE__, MEMTRACK_NONE, "MEM",
                 "    VK Command Buffer (CB) binding list of size " PRINTF_SIZE_T_SPECIFIER " elements",
-                mem_info->command_buffer_bindings.size());
-        if (mem_info->command_buffer_bindings.size() > 0) {
-            for (auto cb : mem_info->command_buffer_bindings) {
+                mem_info->cb_bindings.size());
+        if (mem_info->cb_bindings.size() > 0) {
+            for (auto cb : mem_info->cb_bindings) {
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
                         0, __LINE__, MEMTRACK_NONE, "MEM", "      VK command buffer 0x%p", cb);
             }
@@ -5113,28 +5113,28 @@ QueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits, V
         std::vector<VkCommandBuffer> cbs;
 
         for (uint32_t i = 0; i < submit->commandBufferCount; i++) {
-            auto pCBNode = getCBNode(dev_data, submit->pCommandBuffers[i]);
-            skip_call |= ValidateCmdBufImageLayouts(dev_data, pCBNode);
-            if (pCBNode) {
+            auto cb_node = getCBNode(dev_data, submit->pCommandBuffers[i]);
+            skip_call |= ValidateCmdBufImageLayouts(dev_data, cb_node);
+            if (cb_node) {
                 cbs.push_back(submit->pCommandBuffers[i]);
-                for (auto secondaryCmdBuffer : pCBNode->secondaryCommandBuffers) {
+                for (auto secondaryCmdBuffer : cb_node->secondaryCommandBuffers) {
                     cbs.push_back(secondaryCmdBuffer);
                 }
 
-                pCBNode->submitCount++; // increment submit count
-                skip_call |= validatePrimaryCommandBufferState(dev_data, pCBNode);
-                skip_call |= validateQueueFamilyIndices(dev_data, pCBNode, queue);
+                cb_node->submitCount++; // increment submit count
+                skip_call |= validatePrimaryCommandBufferState(dev_data, cb_node);
+                skip_call |= validateQueueFamilyIndices(dev_data, cb_node, queue);
                 // Potential early exit here as bad object state may crash in delayed function calls
                 if (skip_call)
                     return result;
                 // Call submit-time functions to validate/update state
-                for (auto &function : pCBNode->validate_functions) {
+                for (auto &function : cb_node->validate_functions) {
                     skip_call |= function();
                 }
-                for (auto &function : pCBNode->eventUpdates) {
+                for (auto &function : cb_node->eventUpdates) {
                     skip_call |= function(queue);
                 }
-                for (auto &function : pCBNode->queryUpdates) {
+                for (auto &function : cb_node->queryUpdates) {
                     skip_call |= function(queue);
                 }
             }
