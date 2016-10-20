@@ -137,7 +137,7 @@ struct layer_data {
     // Global set of all cmdBuffers that are inFlight on this device
     unordered_set<VkCommandBuffer> globalInFlightCmdBuffers;
     // Layer specific data
-    unordered_map<VkSampler, unique_ptr<SAMPLER_NODE>> samplerMap;
+    unordered_map<VkSampler, unique_ptr<SAMPLER_STATE>> samplerMap;
     unordered_map<VkImageView, unique_ptr<IMAGE_VIEW_STATE>> imageViewMap;
     unordered_map<VkImage, unique_ptr<IMAGE_STATE>> imageMap;
     unordered_map<VkBufferView, unique_ptr<BUFFER_VIEW_STATE>> bufferViewMap;
@@ -284,7 +284,7 @@ IMAGE_VIEW_STATE *getImageViewState(const layer_data *dev_data, VkImageView imag
     return iv_it->second.get();
 }
 // Return sampler node ptr for specified sampler or else NULL
-SAMPLER_NODE *getSamplerNode(const layer_data *dev_data, VkSampler sampler) {
+SAMPLER_STATE *getSamplerState(const layer_data *dev_data, VkSampler sampler) {
     auto sampler_it = dev_data->samplerMap.find(sampler);
     if (sampler_it == dev_data->samplerMap.end()) {
         return nullptr;
@@ -594,9 +594,10 @@ static bool update_cmd_buf_and_mem_references(layer_data *dev_data, const VkComm
 }
 
 // Create binding link between given sampler and command buffer node
-void AddCommandBufferBindingSampler(GLOBAL_CB_NODE *cb_node, SAMPLER_NODE *sampler_node) {
-    sampler_node->cb_bindings.insert(cb_node);
-    cb_node->object_bindings.insert({reinterpret_cast<uint64_t &>(sampler_node->sampler), VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT});
+void AddCommandBufferBindingSampler(GLOBAL_CB_NODE *cb_node, SAMPLER_STATE *sampler_state) {
+    sampler_state->cb_bindings.insert(cb_node);
+    cb_node->object_bindings.insert(
+        {reinterpret_cast<uint64_t &>(sampler_state->sampler), VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT});
 }
 
 // Create binding link between given image node and command buffer node
@@ -4060,7 +4061,7 @@ BASE_NODE *GetStateStructPtrFromObject(layer_data *dev_data, VK_OBJECT object_st
         break;
     }
     case VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT: {
-        base_ptr = getSamplerNode(dev_data, reinterpret_cast<VkSampler &>(object_struct.handle));
+        base_ptr = getSamplerState(dev_data, reinterpret_cast<VkSampler &>(object_struct.handle));
         break;
     }
     case VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT: {
@@ -4676,7 +4677,7 @@ static bool ValidateAndIncrementBoundObjects(layer_data *dev_data, GLOBAL_CB_NOD
             break;
         }
         case VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT: {
-            base_obj = getSamplerNode(dev_data, reinterpret_cast<VkSampler &>(obj.handle));
+            base_obj = getSamplerState(dev_data, reinterpret_cast<VkSampler &>(obj.handle));
             error_code = DRAWSTATE_INVALID_SAMPLER;
             break;
         }
@@ -6061,12 +6062,12 @@ DestroyPipelineLayout(VkDevice device, VkPipelineLayout pipelineLayout, const Vk
     dev_data->dispatch_table.DestroyPipelineLayout(device, pipelineLayout, pAllocator);
 }
 
-static bool PreCallValidateDestroySampler(layer_data *dev_data, VkSampler sampler, SAMPLER_NODE **sampler_state,
+static bool PreCallValidateDestroySampler(layer_data *dev_data, VkSampler sampler, SAMPLER_STATE **sampler_state,
                                           VK_OBJECT *obj_struct) {
     if (dev_data->instance_data->disabled.destroy_sampler)
         return false;
     bool skip = false;
-    *sampler_state = getSamplerNode(dev_data, sampler);
+    *sampler_state = getSamplerState(dev_data, sampler);
     if (*sampler_state) {
         *obj_struct = {reinterpret_cast<uint64_t &>(sampler), VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT};
         skip |= ValidateObjectNotInUse(dev_data, *sampler_state, *obj_struct, VALIDATION_ERROR_00837);
@@ -6074,7 +6075,7 @@ static bool PreCallValidateDestroySampler(layer_data *dev_data, VkSampler sample
     return skip;
 }
 
-static void PostCallRecordDestroySampler(layer_data *dev_data, VkSampler sampler, SAMPLER_NODE *sampler_state,
+static void PostCallRecordDestroySampler(layer_data *dev_data, VkSampler sampler, SAMPLER_STATE *sampler_state,
                                          VK_OBJECT obj_struct) {
     // Any bound cmd buffers are now invalid
     invalidateCommandBuffers(sampler_state->cb_bindings, obj_struct);
@@ -6084,7 +6085,7 @@ static void PostCallRecordDestroySampler(layer_data *dev_data, VkSampler sampler
 VKAPI_ATTR void VKAPI_CALL
 DestroySampler(VkDevice device, VkSampler sampler, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    SAMPLER_NODE *sampler_state = nullptr;
+    SAMPLER_STATE *sampler_state = nullptr;
     VK_OBJECT obj_struct;
     std::unique_lock<std::mutex> lock(global_lock);
     bool skip = PreCallValidateDestroySampler(dev_data, sampler, &sampler_state, &obj_struct);
@@ -6726,7 +6727,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSampler(VkDevice device, const VkSamplerCre
     VkResult result = dev_data->dispatch_table.CreateSampler(device, pCreateInfo, pAllocator, pSampler);
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
-        dev_data->samplerMap[*pSampler] = unique_ptr<SAMPLER_NODE>(new SAMPLER_NODE(pSampler, pCreateInfo));
+        dev_data->samplerMap[*pSampler] = unique_ptr<SAMPLER_STATE>(new SAMPLER_STATE(pSampler, pCreateInfo));
     }
     return result;
 }

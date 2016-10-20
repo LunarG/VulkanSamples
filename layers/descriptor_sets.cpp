@@ -689,7 +689,7 @@ cvdescriptorset::SamplerDescriptor::SamplerDescriptor(const VkSampler *immut) : 
 }
 // Validate given sampler. Currently this only checks to make sure it exists in the samplerMap
 bool cvdescriptorset::ValidateSampler(const VkSampler sampler, const core_validation::layer_data *dev_data) {
-    return (getSamplerNode(dev_data, sampler) != nullptr);
+    return (getSamplerState(dev_data, sampler) != nullptr);
 }
 
 bool cvdescriptorset::ValidateImageUpdate(VkImageView image_view, VkImageLayout image_layout, VkDescriptorType type,
@@ -874,9 +874,9 @@ void cvdescriptorset::SamplerDescriptor::CopyUpdate(const Descriptor *src) {
 
 void cvdescriptorset::SamplerDescriptor::BindCommandBuffer(const core_validation::layer_data *dev_data, GLOBAL_CB_NODE *cb_node) {
     if (!immutable_) {
-        auto sampler_node = getSamplerNode(dev_data, sampler_);
-        if (sampler_node)
-            core_validation::AddCommandBufferBindingSampler(cb_node, sampler_node);
+        auto sampler_state = getSamplerState(dev_data, sampler_);
+        if (sampler_state)
+            core_validation::AddCommandBufferBindingSampler(cb_node, sampler_state);
     }
 }
 
@@ -921,9 +921,9 @@ void cvdescriptorset::ImageSamplerDescriptor::BindCommandBuffer(const core_valid
                                                                 GLOBAL_CB_NODE *cb_node) {
     // First add binding for any non-immutable sampler
     if (!immutable_) {
-        auto sampler_node = getSamplerNode(dev_data, sampler_);
-        if (sampler_node)
-            core_validation::AddCommandBufferBindingSampler(cb_node, sampler_node);
+        auto sampler_state = getSamplerState(dev_data, sampler_);
+        if (sampler_state)
+            core_validation::AddCommandBufferBindingSampler(cb_node, sampler_state);
     }
     // Add binding for image
     auto iv_state = getImageViewState(dev_data, image_view_);
