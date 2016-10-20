@@ -678,34 +678,34 @@ static void clear_cmd_buf_and_mem_references(layer_data *dev_data, const VkComma
 }
 
 // For given MemObjInfo, report Obj & CB bindings. Clear any object bindings.
-static bool ReportMemReferencesAndCleanUp(layer_data *dev_data, DEVICE_MEM_INFO *pMemObjInfo) {
+static bool ReportMemReferencesAndCleanUp(layer_data *dev_data, DEVICE_MEM_INFO *mem_info) {
     bool skip_call = false;
-    size_t cmdBufRefCount = pMemObjInfo->cb_bindings.size();
-    size_t objRefCount = pMemObjInfo->obj_bindings.size();
+    size_t cb_ref_count = mem_info->cb_bindings.size();
+    size_t obj_ref_count = mem_info->obj_bindings.size();
 
-    if ((pMemObjInfo->cb_bindings.size()) != 0) {
+    if (cb_ref_count != 0) {
         skip_call = log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
-                            (uint64_t)pMemObjInfo->mem, __LINE__, MEMTRACK_FREED_MEM_REF, "MEM",
+                            (uint64_t)mem_info->mem, __LINE__, MEMTRACK_FREED_MEM_REF, "MEM",
                             "Attempting to free memory object 0x%" PRIxLEAST64 " which still contains " PRINTF_SIZE_T_SPECIFIER
                             " references",
-                            (uint64_t)pMemObjInfo->mem, (cmdBufRefCount + objRefCount));
+                            (uint64_t)mem_info->mem, (cb_ref_count + obj_ref_count));
     }
 
-    if (cmdBufRefCount > 0 && pMemObjInfo->cb_bindings.size() > 0) {
-        for (auto cb : pMemObjInfo->cb_bindings) {
+    if (cb_ref_count > 0 && mem_info->cb_bindings.size() > 0) {
+        for (auto cb : mem_info->cb_bindings) {
             log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                     (uint64_t)cb, __LINE__, MEMTRACK_FREED_MEM_REF, "MEM",
-                    "Command Buffer 0x%p still has a reference to mem obj 0x%" PRIxLEAST64, cb, (uint64_t)pMemObjInfo->mem);
+                    "Command Buffer 0x%p still has a reference to mem obj 0x%" PRIxLEAST64, cb, (uint64_t)mem_info->mem);
         }
         // Clear the list of hanging references
-        pMemObjInfo->cb_bindings.clear();
+        mem_info->cb_bindings.clear();
     }
 
-    if (objRefCount > 0 && pMemObjInfo->obj_bindings.size() > 0) {
-        for (auto obj : pMemObjInfo->obj_bindings) {
+    if (obj_ref_count > 0 && mem_info->obj_bindings.size() > 0) {
+        for (auto obj : mem_info->obj_bindings) {
             log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, obj.type, obj.handle, __LINE__,
                     MEMTRACK_FREED_MEM_REF, "MEM", "VK Object 0x%" PRIxLEAST64 " still has a reference to mem obj 0x%" PRIxLEAST64,
-                    obj.handle, (uint64_t)pMemObjInfo->mem);
+                    obj.handle, (uint64_t)mem_info->mem);
             // Clear mem binding for bound objects
             switch (obj.type) {
             case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT: {
@@ -726,7 +726,7 @@ static bool ReportMemReferencesAndCleanUp(layer_data *dev_data, DEVICE_MEM_INFO 
             }
         }
         // Clear the list of hanging references
-        pMemObjInfo->obj_bindings.clear();
+        mem_info->obj_bindings.clear();
     }
     return skip_call;
 }
