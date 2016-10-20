@@ -5436,21 +5436,34 @@ DestroySemaphore(VkDevice device, VkSemaphore semaphore, const VkAllocationCallb
     }
 }
 
+static bool PreCallValidateDestroyEvent(layer_data *dev_data, VkEvent event, EVENT_NODE **event_state, VK_OBJECT *obj_struct) {
+    if (dev_data->instance_data->disabled.destroy_event)
+        return false;
+    bool skip = false;
+    *event_state = getEventNode(dev_data, event);
+    if (*event_state) {
+        *obj_struct = {reinterpret_cast<uint64_t &>(event), VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT};
+        skip |= ValidateObjectNotInUse(dev_data, *event_state, *obj_struct, VALIDATION_ERROR_00213);
+    }
+    return skip;
+}
+
+static void PostCallRecordDestroyEvent(layer_data *dev_data, VkEvent event, EVENT_NODE *event_state, VK_OBJECT obj_struct) {
+    invalidateCommandBuffers(event_state->cb_bindings, obj_struct);
+    dev_data->eventMap.erase(event);
+}
+
 VKAPI_ATTR void VKAPI_CALL DestroyEvent(VkDevice device, VkEvent event, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    bool skip = false;
+    EVENT_NODE *event_state = nullptr;
+    VK_OBJECT obj_struct;
     std::unique_lock<std::mutex> lock(global_lock);
-    auto event_node = getEventNode(dev_data, event);
-    if (event_node) {
-        VK_OBJECT obj_struct = {reinterpret_cast<uint64_t &>(event), VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT};
-        skip |= ValidateObjectNotInUse(dev_data, event_node, obj_struct, VALIDATION_ERROR_00213);
-        // Any bound cmd buffers are now invalid
-        invalidateCommandBuffers(event_node->cb_bindings, obj_struct);
-    }
+    bool skip = PreCallValidateDestroyEvent(dev_data, event, &event_state, &obj_struct);
     if (!skip) {
-        dev_data->eventMap.erase(event);
         lock.unlock();
         dev_data->dispatch_table.DestroyEvent(device, event, pAllocator);
+        lock.lock();
+        PostCallRecordDestroyEvent(dev_data, event, event_state, obj_struct);
     }
 }
 
