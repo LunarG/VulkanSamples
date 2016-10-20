@@ -21,6 +21,7 @@
  */
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 #include <assert.h>
 #include <unordered_map>
 #include <vector>
@@ -107,9 +108,10 @@ struct layer_data {
     VkDescriptorSet desc_set;
     VkSampler sampler;
     VkFence fence;
-
+    int lastFrame;
+    time_t lastTime;
+    float fps;
     int frame;
-    int cmdBuffersThisFrame;
 
     void Cleanup();
 };
@@ -218,9 +220,18 @@ static uint32_t choose_memory_type(VkPhysicalDevice gpu, uint32_t typeBits,
 
 static int fill_vertex_buffer(layer_data *data, vertex *vertices, int index) {
     char str[1024];
-    sprintf(str, "Vulkan Overlay Example\nWSI Image Index: %d\nFrame: "
-                 "%d\nCmdBuffers: %d",
-            index, data->frame++, data->cmdBuffersThisFrame);
+    time_t now;
+    time(&now);
+    float seconds = difftime(now, data->lastTime);
+
+    if (seconds > 3) {
+        data->fps = (data->frame - data->lastFrame)/seconds;
+        data->lastFrame = data->frame;
+        data->lastTime = now;
+    }
+    sprintf(str, "Vulkan Overlay Example\nFrame: "
+                 "%d\nFPS: %.2f",
+                 data->frame++, data->fps);
     float x = 0;
     float y = 16;
 
@@ -269,7 +280,9 @@ static void after_device_create(VkPhysicalDevice gpu, VkDevice device,
     data->gpu = gpu;
     data->dev = device;
     data->frame = 0;
-    data->cmdBuffersThisFrame = 0;
+    data->lastFrame = 0;
+    data->fps = 0.0;
+    time(&data->lastTime);
 
     VkLayerDispatchTable *pTable = data->device_dispatch_table;
 
@@ -1019,8 +1032,6 @@ vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits,
         get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
     VkLayerDispatchTable *pTable = my_data->device_dispatch_table;
 
-    my_data->cmdBuffersThisFrame += submitCount; // XXX WRONG
-
     return pTable->QueueSubmit(queue, submitCount, pSubmits, fence);
 }
 
@@ -1140,8 +1151,6 @@ static void before_present(VkQueue queue, layer_data *my_data,
     pTable->ResetFences(my_data->dev, 1, &my_data->fence);
     pTable->QueueSubmit(queue, 1, &si, my_data->fence);
 
-    /* Reset per-frame stats */
-    my_data->cmdBuffersThisFrame = 0;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
