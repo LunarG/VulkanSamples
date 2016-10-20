@@ -677,98 +677,6 @@ static void clear_cmd_buf_and_mem_references(layer_data *dev_data, const VkComma
     clear_cmd_buf_and_mem_references(dev_data, getCBNode(dev_data, cb));
 }
 
-// For given MemObjInfo, report Obj & CB bindings. Clear any object bindings.
-static bool ReportMemReferencesAndCleanUp(layer_data *dev_data, DEVICE_MEM_INFO *mem_info) {
-    bool skip_call = false;
-    size_t cb_ref_count = mem_info->cb_bindings.size();
-    size_t obj_ref_count = mem_info->obj_bindings.size();
-
-    if (cb_ref_count != 0) {
-        skip_call = log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
-                            (uint64_t)mem_info->mem, __LINE__, MEMTRACK_FREED_MEM_REF, "MEM",
-                            "Attempting to free memory object 0x%" PRIxLEAST64 " which still contains " PRINTF_SIZE_T_SPECIFIER
-                            " references",
-                            (uint64_t)mem_info->mem, (cb_ref_count + obj_ref_count));
-    }
-
-    if (cb_ref_count > 0 && mem_info->cb_bindings.size() > 0) {
-        for (auto cb : mem_info->cb_bindings) {
-            log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                    (uint64_t)cb, __LINE__, MEMTRACK_FREED_MEM_REF, "MEM",
-                    "Command Buffer 0x%p still has a reference to mem obj 0x%" PRIxLEAST64, cb, (uint64_t)mem_info->mem);
-        }
-        // Clear the list of hanging references
-        mem_info->cb_bindings.clear();
-    }
-
-    if (obj_ref_count > 0 && mem_info->obj_bindings.size() > 0) {
-        for (auto obj : mem_info->obj_bindings) {
-            log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, obj.type, obj.handle, __LINE__,
-                    MEMTRACK_FREED_MEM_REF, "MEM", "VK Object 0x%" PRIxLEAST64 " still has a reference to mem obj 0x%" PRIxLEAST64,
-                    obj.handle, (uint64_t)mem_info->mem);
-            // Clear mem binding for bound objects
-            switch (obj.type) {
-            case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT: {
-                auto image_state = getImageState(dev_data, reinterpret_cast<VkImage &>(obj.handle));
-                assert(image_state); // Any destroyed images should already be removed from bindings
-                image_state->binding.mem = MEMORY_UNBOUND;
-                break;
-            }
-            case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT: {
-                auto buff_node = getBufferNode(dev_data, reinterpret_cast<VkBuffer &>(obj.handle));
-                assert(buff_node); // Any destroyed buffers should already be removed from bindings
-                buff_node->binding.mem = MEMORY_UNBOUND;
-                break;
-            }
-            default:
-                // Should only have buffer or image objects bound to memory
-                assert(0);
-            }
-        }
-        // Clear the list of hanging references
-        mem_info->obj_bindings.clear();
-    }
-    return skip_call;
-}
-
-static bool freeMemObjInfo(layer_data *dev_data, void *object, VkDeviceMemory mem, bool internal) {
-    bool skip_call = false;
-    // Parse global list to find info w/ mem
-    DEVICE_MEM_INFO *pInfo = getMemObjInfo(dev_data, mem);
-    if (pInfo) {
-        // TODO: Verify against Valid Use section
-        // Clear any CB bindings for completed CBs
-        //   TODO : Is there a better place to do this?
-
-        assert(pInfo->object != VK_NULL_HANDLE);
-        // clear_cmd_buf_and_mem_references removes elements from
-        // pInfo->cb_bindings -- this copy not needed in c++14,
-        // and probably not needed in practice in c++11
-        auto bindings = pInfo->cb_bindings;
-        for (auto cb_node : bindings) {
-            if (!dev_data->globalInFlightCmdBuffers.count(cb_node->commandBuffer)) {
-                clear_cmd_buf_and_mem_references(dev_data, cb_node->commandBuffer);
-            }
-        }
-        // Now check for any remaining references to this mem obj and remove bindings
-        if (pInfo->cb_bindings.size() || pInfo->obj_bindings.size()) {
-            skip_call |= ReportMemReferencesAndCleanUp(dev_data, pInfo);
-        }
-        // Delete mem obj info
-        dev_data->memObjMap.erase(dev_data->memObjMap.find(mem));
-    } else if (VK_NULL_HANDLE != mem) {
-        // The request is to free an invalid, non-zero handle
-        skip_call = log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                            VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
-                            reinterpret_cast<uint64_t &>(mem), __LINE__,
-                            MEMTRACK_INVALID_MEM_OBJ,
-                            "MEM", "Request to delete memory object 0x%"
-                            PRIxLEAST64 " not present in memory Object Map",
-                            reinterpret_cast<uint64_t &>(mem));
-    }
-    return skip_call;
-}
-
 // Clear a single object binding from given memory object, or report error if binding is missing
 static bool ClearMemoryObjectBinding(layer_data *dev_data, uint64_t handle, VkDebugReportObjectTypeEXT type, VkDeviceMemory mem) {
     DEVICE_MEM_INFO *mem_info = getMemObjInfo(dev_data, mem);
@@ -5172,24 +5080,76 @@ VKAPI_ATTR VkResult VKAPI_CALL AllocateMemory(VkDevice device, const VkMemoryAll
     return result;
 }
 
-VKAPI_ATTR void VKAPI_CALL
-FreeMemory(VkDevice device, VkDeviceMemory mem, const VkAllocationCallbacks *pAllocator) {
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+// For given obj node, if it is use, flag a validation error and return callback result, else return false
+bool ValidateObjectNotInUse(const layer_data *dev_data, BASE_NODE *obj_node, VK_OBJECT obj_struct,
+                            UNIQUE_VALIDATION_ERROR_CODE error_code) {
+    if (dev_data->instance_data->disabled.object_in_use)
+        return false;
+    bool skip = false;
+    if (obj_node->in_use.load()) {
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, obj_struct.type, obj_struct.handle, __LINE__,
+                        error_code, "DS", "Cannot delete %s 0x%" PRIx64 " that is currently in use by a command buffer. %s",
+                        object_type_to_string(obj_struct.type), obj_struct.handle, validation_error_map[error_code]);
+    }
+    return skip;
+}
 
-    // From spec : A memory object is freed by calling vkFreeMemory() when it is no longer needed.
-    // Before freeing a memory object, an application must ensure the memory object is no longer
-    // in use by the device—for example by command buffers queued for execution. The memory need
-    // not yet be unbound from all images and buffers, but any further use of those images or
-    // buffers (on host or device) for anything other than destroying those objects will result in
-    // undefined behavior.
+static bool PreCallValidateFreeMemory(layer_data *dev_data, VkDeviceMemory mem, DEVICE_MEM_INFO **mem_info, VK_OBJECT *obj_struct) {
+    if (dev_data->instance_data->disabled.free_memory)
+        return false;
+    bool skip = false;
+    *mem_info = getMemObjInfo(dev_data, mem);
+    if (*mem_info) {
+        *obj_struct = {reinterpret_cast<uint64_t &>(mem), VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT};
+        skip |= ValidateObjectNotInUse(dev_data, *mem_info, *obj_struct, VALIDATION_ERROR_00620);
+    }
+    return skip;
+}
 
+static void PostCallRecordFreeMemory(layer_data *dev_data, VkDeviceMemory mem, DEVICE_MEM_INFO *mem_info, VK_OBJECT obj_struct) {
+    // Clear mem binding for any bound objects
+    if (mem_info->obj_bindings.size() > 0) {
+        for (auto obj : mem_info->obj_bindings) {
+            log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, obj.type, obj.handle, __LINE__,
+                    MEMTRACK_FREED_MEM_REF, "MEM", "VK Object 0x%" PRIxLEAST64 " still has a reference to mem obj 0x%" PRIxLEAST64,
+                    obj.handle, (uint64_t)mem_info->mem);
+            switch (obj.type) {
+            case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT: {
+                auto image_state = getImageState(dev_data, reinterpret_cast<VkImage &>(obj.handle));
+                assert(image_state); // Any destroyed images should already be removed from bindings
+                image_state->binding.mem = MEMORY_UNBOUND;
+                break;
+            }
+            case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT: {
+                auto buff_node = getBufferNode(dev_data, reinterpret_cast<VkBuffer &>(obj.handle));
+                assert(buff_node); // Any destroyed buffers should already be removed from bindings
+                buff_node->binding.mem = MEMORY_UNBOUND;
+                break;
+            }
+            default:
+                // Should only have buffer or image objects bound to memory
+                assert(0);
+            }
+        }
+        // Clear the list of hanging references
+        mem_info->obj_bindings.clear();
+    }
+    // Any bound cmd buffers are now invalid
+    invalidateCommandBuffers(mem_info->cb_bindings, obj_struct);
+    dev_data->memObjMap.erase(mem);
+}
+
+VKAPI_ATTR void VKAPI_CALL FreeMemory(VkDevice device, VkDeviceMemory mem, const VkAllocationCallbacks *pAllocator) {
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    DEVICE_MEM_INFO *mem_info = nullptr;
+    VK_OBJECT obj_struct;
     std::unique_lock<std::mutex> lock(global_lock);
-    bool skip_call = freeMemObjInfo(my_data, device, mem, false);
-    print_mem_list(my_data);
-    printCBList(my_data);
-    lock.unlock();
-    if (!skip_call) {
-        my_data->dispatch_table.FreeMemory(device, mem, pAllocator);
+    bool skip = PreCallValidateFreeMemory(dev_data, mem, &mem_info, &obj_struct);
+    if (!skip) {
+        lock.unlock();
+        dev_data->dispatch_table.FreeMemory(device, mem, pAllocator);
+        lock.lock();
+        PostCallRecordFreeMemory(dev_data, mem, mem_info, obj_struct);
     }
 }
 
@@ -5456,20 +5416,6 @@ VKAPI_ATTR void VKAPI_CALL DestroyFence(VkDevice device, VkFence fence, const Vk
 
     if (!skip_call)
         dev_data->dispatch_table.DestroyFence(device, fence, pAllocator);
-}
-
-// For given obj node, if it is use, flag a validation error and return callback result, else return false
-bool ValidateObjectNotInUse(const layer_data *dev_data, BASE_NODE *obj_node, VK_OBJECT obj_struct,
-                            UNIQUE_VALIDATION_ERROR_CODE error_code) {
-    if (dev_data->instance_data->disabled.object_in_use)
-        return false;
-    bool skip = false;
-    if (obj_node->in_use.load()) {
-        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, obj_struct.type, obj_struct.handle, __LINE__,
-                        error_code, "DS", "Cannot delete %s 0x%" PRIx64 " that is currently in use by a command buffer. %s",
-                        object_type_to_string(obj_struct.type), obj_struct.handle, validation_error_map[error_code]);
-    }
-    return skip;
 }
 
 VKAPI_ATTR void VKAPI_CALL

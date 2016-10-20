@@ -78,6 +78,7 @@ struct CHECK_DISABLED {
     bool destroy_image;           // Skip validation at DestroyImage time
     bool destroy_sampler;         // Skip validation at DestroySampler time
     bool destroy_command_pool;    // Skip validation at DestroyCommandPool time
+    bool free_memory;             // Skip validation at FreeMemory time
     bool object_in_use;       // Skip all object in_use checking
     bool idle_descriptor_set; // Skip check to verify that descriptor set is no in-use
     bool push_constant_range; // Skip push constant range checks
