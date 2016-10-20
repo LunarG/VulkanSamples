@@ -160,7 +160,7 @@ class SEMAPHORE_NODE : public BASE_NODE {
     bool signaled;
 };
 
-class EVENT_NODE : public BASE_NODE {
+class EVENT_STATE : public BASE_NODE {
   public:
     int write_in_use;
     bool needsSignaled;

@@ -151,7 +151,7 @@ struct layer_data {
     unordered_map<VkDeviceMemory, unique_ptr<DEVICE_MEM_INFO>> memObjMap;
     unordered_map<VkFence, FENCE_NODE> fenceMap;
     unordered_map<VkQueue, QUEUE_NODE> queueMap;
-    unordered_map<VkEvent, EVENT_NODE> eventMap;
+    unordered_map<VkEvent, EVENT_STATE> eventMap;
     unordered_map<QueryObject, bool> queryToStateMap;
     unordered_map<VkQueryPool, QUERY_POOL_NODE> queryPoolMap;
     unordered_map<VkSemaphore, SEMAPHORE_NODE> semaphoreMap;
@@ -340,7 +340,7 @@ FENCE_NODE *getFenceNode(layer_data *dev_data, VkFence fence) {
     return &it->second;
 }
 
-EVENT_NODE *getEventNode(layer_data *dev_data, VkEvent event) {
+EVENT_STATE *getEventNode(layer_data *dev_data, VkEvent event) {
     auto it = dev_data->eventMap.find(event);
     if (it == dev_data->eventMap.end()) {
         return nullptr;
@@ -4689,9 +4689,9 @@ static bool validateAndIncrementResources(layer_data *dev_data, GLOBAL_CB_NODE *
         }
     }
     for (auto event : cb_node->writeEventsBeforeWait) {
-        auto event_node = getEventNode(dev_data, event);
-        if (event_node)
-            event_node->write_in_use++;
+        auto event_state = getEventNode(dev_data, event);
+        if (event_state)
+            event_state->write_in_use++;
     }
     return skip_call;
 }
@@ -5436,7 +5436,7 @@ DestroySemaphore(VkDevice device, VkSemaphore semaphore, const VkAllocationCallb
     }
 }
 
-static bool PreCallValidateDestroyEvent(layer_data *dev_data, VkEvent event, EVENT_NODE **event_state, VK_OBJECT *obj_struct) {
+static bool PreCallValidateDestroyEvent(layer_data *dev_data, VkEvent event, EVENT_STATE **event_state, VK_OBJECT *obj_struct) {
     if (dev_data->instance_data->disabled.destroy_event)
         return false;
     bool skip = false;
@@ -5448,14 +5448,14 @@ static bool PreCallValidateDestroyEvent(layer_data *dev_data, VkEvent event, EVE
     return skip;
 }
 
-static void PostCallRecordDestroyEvent(layer_data *dev_data, VkEvent event, EVENT_NODE *event_state, VK_OBJECT obj_struct) {
+static void PostCallRecordDestroyEvent(layer_data *dev_data, VkEvent event, EVENT_STATE *event_state, VK_OBJECT obj_struct) {
     invalidateCommandBuffers(event_state->cb_bindings, obj_struct);
     dev_data->eventMap.erase(event);
 }
 
 VKAPI_ATTR void VKAPI_CALL DestroyEvent(VkDevice device, VkEvent event, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    EVENT_NODE *event_state = nullptr;
+    EVENT_STATE *event_state = nullptr;
     VK_OBJECT obj_struct;
     std::unique_lock<std::mutex> lock(global_lock);
     bool skip = PreCallValidateDestroyEvent(dev_data, event, &event_state, &obj_struct);
@@ -8659,11 +8659,11 @@ CmdSetEvent(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags s
     if (pCB) {
         skip_call |= addCmd(dev_data, pCB, CMD_SETEVENT, "vkCmdSetEvent()");
         skip_call |= insideRenderPass(dev_data, pCB, "vkCmdSetEvent");
-        auto event_node = getEventNode(dev_data, event);
-        if (event_node) {
-            addCommandBufferBinding(&event_node->cb_bindings,
+        auto event_state = getEventNode(dev_data, event);
+        if (event_state) {
+            addCommandBufferBinding(&event_state->cb_bindings,
                                     {reinterpret_cast<uint64_t &>(event), VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT}, pCB);
-            event_node->cb_bindings.insert(pCB);
+            event_state->cb_bindings.insert(pCB);
         }
         pCB->events.push_back(event);
         if (!pCB->waitedEvents.count(event)) {
@@ -8687,11 +8687,11 @@ CmdResetEvent(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags
     if (pCB) {
         skip_call |= addCmd(dev_data, pCB, CMD_RESETEVENT, "vkCmdResetEvent()");
         skip_call |= insideRenderPass(dev_data, pCB, "vkCmdResetEvent");
-        auto event_node = getEventNode(dev_data, event);
-        if (event_node) {
-            addCommandBufferBinding(&event_node->cb_bindings,
+        auto event_state = getEventNode(dev_data, event);
+        if (event_state) {
+            addCommandBufferBinding(&event_state->cb_bindings,
                                     {reinterpret_cast<uint64_t &>(event), VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT}, pCB);
-            event_node->cb_bindings.insert(pCB);
+            event_state->cb_bindings.insert(pCB);
         }
         pCB->events.push_back(event);
         if (!pCB->waitedEvents.count(event)) {
@@ -9118,12 +9118,12 @@ CmdWaitEvents(VkCommandBuffer commandBuffer, uint32_t eventCount, const VkEvent 
     if (pCB) {
         auto firstEventIndex = pCB->events.size();
         for (uint32_t i = 0; i < eventCount; ++i) {
-            auto event_node = getEventNode(dev_data, pEvents[i]);
-            if (event_node) {
-                addCommandBufferBinding(&event_node->cb_bindings,
+            auto event_state = getEventNode(dev_data, pEvents[i]);
+            if (event_state) {
+                addCommandBufferBinding(&event_state->cb_bindings,
                                         {reinterpret_cast<const uint64_t &>(pEvents[i]), VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT},
                                         pCB);
-                event_node->cb_bindings.insert(pCB);
+                event_state->cb_bindings.insert(pCB);
             }
             pCB->waitedEvents.insert(pEvents[i]);
             pCB->events.push_back(pEvents[i]);
@@ -11128,11 +11128,11 @@ VKAPI_ATTR VkResult VKAPI_CALL SetEvent(VkDevice device, VkEvent event) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
-    auto event_node = getEventNode(dev_data, event);
-    if (event_node) {
-        event_node->needsSignaled = false;
-        event_node->stageMask = VK_PIPELINE_STAGE_HOST_BIT;
-        if (event_node->write_in_use) {
+    auto event_state = getEventNode(dev_data, event);
+    if (event_state) {
+        event_state->needsSignaled = false;
+        event_state->stageMask = VK_PIPELINE_STAGE_HOST_BIT;
+        if (event_state->write_in_use) {
             skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT,
                                  reinterpret_cast<const uint64_t &>(event), __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
                                  "Cannot call vkSetEvent() on event 0x%" PRIxLEAST64 " that is already in use by a command buffer.",
