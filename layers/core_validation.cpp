@@ -6247,21 +6247,22 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateQueryPool(VkDevice device, const VkQueryPoo
     return result;
 }
 
-// Destroy commandPool along with all of the commandBuffers allocated from that pool
-VKAPI_ATTR void VKAPI_CALL
-DestroyCommandPool(VkDevice device, VkCommandPool commandPool, const VkAllocationCallbacks *pAllocator) {
-    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    bool skip_call = false;
-    std::unique_lock<std::mutex> lock(global_lock);
-    // Verify that command buffers in pool are complete (not in-flight)
-    auto pPool = getCommandPoolNode(dev_data, commandPool);
-    skip_call |= checkCommandBuffersInFlight(dev_data, pPool, "destroy command pool with", VALIDATION_ERROR_00077);
+static bool PreCallValidateDestroyCommandPool(layer_data *dev_data, VkCommandPool pool, COMMAND_POOL_NODE **cp_state) {
+    if (dev_data->instance_data->disabled.destroy_command_pool)
+        return false;
+    bool skip = false;
+    *cp_state = getCommandPoolNode(dev_data, pool);
+    if (*cp_state) {
+        // Verify that command buffers in pool are complete (not in-flight)
+        skip |= checkCommandBuffersInFlight(dev_data, *cp_state, "destroy command pool with", VALIDATION_ERROR_00077);
+    }
+    return skip;
+}
 
-    if (skip_call)
-        return;
+static void PostCallRecordDestroyCommandPool(layer_data *dev_data, VkCommandPool pool, COMMAND_POOL_NODE *cp_state) {
     // Must remove cmdpool from cmdpoolmap, after removing all cmdbuffers in its list from the commandBufferMap
-    clearCommandBuffersInFlight(dev_data, pPool);
-    for (auto cb : pPool->commandBuffers) {
+    clearCommandBuffersInFlight(dev_data, cp_state);
+    for (auto cb : cp_state->commandBuffers) {
         clear_cmd_buf_and_mem_references(dev_data, cb);
         auto cb_node = getCBNode(dev_data, cb);
         // Remove references to this cb_node prior to delete
@@ -6277,10 +6278,21 @@ DestroyCommandPool(VkDevice device, VkCommandPool commandPool, const VkAllocatio
         dev_data->commandBufferMap.erase(cb); // Remove this command buffer
         delete cb_node;                       // delete CB info structure
     }
-    dev_data->commandPoolMap.erase(commandPool);
-    lock.unlock();
+    dev_data->commandPoolMap.erase(pool);
+}
 
-    dev_data->dispatch_table.DestroyCommandPool(device, commandPool, pAllocator);
+// Destroy commandPool along with all of the commandBuffers allocated from that pool
+VKAPI_ATTR void VKAPI_CALL DestroyCommandPool(VkDevice device, VkCommandPool commandPool, const VkAllocationCallbacks *pAllocator) {
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    COMMAND_POOL_NODE *cp_state = nullptr;
+    std::unique_lock<std::mutex> lock(global_lock);
+    bool skip = PreCallValidateDestroyCommandPool(dev_data, commandPool, &cp_state);
+    if (!skip) {
+        lock.unlock();
+        dev_data->dispatch_table.DestroyCommandPool(device, commandPool, pAllocator);
+        lock.lock();
+        PostCallRecordDestroyCommandPool(dev_data, commandPool, cp_state);
+    }
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL
