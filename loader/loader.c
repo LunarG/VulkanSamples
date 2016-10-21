@@ -824,12 +824,14 @@ VkResult loader_add_device_extensions(const struct loader_instance *inst,
                                                NULL);
     if (res == VK_SUCCESS && count > 0) {
         ext_props = loader_stack_alloc(count * sizeof(VkExtensionProperties));
-        if (!ext_props)
+        if (!ext_props) {
             return VK_ERROR_OUT_OF_HOST_MEMORY;
+        }
         res = fpEnumerateDeviceExtensionProperties(physical_device, NULL,
                                                    &count, ext_props);
-        if (res != VK_SUCCESS)
+        if (res != VK_SUCCESS) {
             return res;
+        }
         for (i = 0; i < count; i++) {
             char spec_version[64];
 
@@ -4302,6 +4304,10 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDevice(
     icd_exts.list = NULL;
 
     if (fpCreateDevice == NULL) {
+        loader_log(phys_dev->this_icd->this_instance,
+                   VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "No vkCreateDevice command exposed by ICD %s",
+                   phys_dev->this_icd->this_icd_lib->lib_name);
         res = VK_ERROR_INITIALIZATION_FAILED;
         goto out;
     }
@@ -4355,17 +4361,23 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDevice(
             filtered_extension_names[localCreateInfo.enabledExtensionCount] =
                 (char *)extension_name;
             localCreateInfo.enabledExtensionCount++;
+        } else {
+            loader_log(phys_dev->this_icd->this_instance,
+                       VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                       "vkCreateDevice extension %s not available for "
+                       "devices associated with ICD %s",
+                       extension_name,
+                       phys_dev->this_icd->this_icd_lib->lib_name);
         }
     }
 
-    // TODO: Why does fpCreateDevice behave differently than
-    // this_icd->CreateDevice?
-    //    VkResult res = fpCreateDevice(phys_dev->phys_dev, &localCreateInfo,
-    //    pAllocator, &localDevice);
-    res = phys_dev->this_icd->CreateDevice(phys_dev->phys_dev, &localCreateInfo,
-                                           pAllocator, &dev->device);
-
+    res = fpCreateDevice(phys_dev->phys_dev, &localCreateInfo, pAllocator,
+                         &dev->device);
     if (res != VK_SUCCESS) {
+        loader_log(phys_dev->this_icd->this_instance,
+                   VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "vkCreateDevice call failed in ICD %s",
+                   phys_dev->this_icd->this_icd_lib->lib_name);
         goto out;
     }
 
