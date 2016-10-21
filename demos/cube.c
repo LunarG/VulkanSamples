@@ -355,6 +355,7 @@ struct demo {
     uint32_t swapchainImageCount;
     VkSwapchainKHR swapchain;
     SwapchainBuffers *buffers;
+    VkPresentModeKHR presentMode;
     VkFence fences[FRAME_LAG];
     int frame_index;
 
@@ -897,6 +898,7 @@ static void demo_prepare_buffers(struct demo *demo) {
     // The FIFO present mode is guaranteed by the spec to be supported
     // and to have no tearing.  It's a great default present mode to use.
     VkPresentModeKHR swapchainPresentMode = VK_PRESENT_MODE_FIFO_KHR;
+
     //  There are times when you may wish to use another present mode.  The
     //  following code shows how to select them, and the comments provide some
     //  reasons you may wish to use them.
@@ -909,44 +911,33 @@ static void demo_prepare_buffers(struct demo *demo) {
     // faster than the refresh rate of the display, this can waste power on
     // mobile devices.  That is because power is being spent rendering images
     // that may never be seen.
-//#define DESIRE_VK_PRESENT_MODE_IMMEDIATE_KHR
-//#define DESIRE_VK_PRESENT_MODE_MAILBOX_KHR
-//#define DESIRE_VK_PRESENT_MODE_FIFO_RELAXED_KHR
-#if defined(DESIRE_VK_PRESENT_MODE_IMMEDIATE_KHR)
+
     // VK_PRESENT_MODE_IMMEDIATE_KHR is for applications that don't care about
     // tearing, or have some way of synchronizing their rendering with the
     // display.
-    for (size_t i = 0; i < presentModeCount; ++i) {
-        if (presentModes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR) {
-            swapchainPresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
-            break;
-        }
-    }
-#elif defined(DESIRE_VK_PRESENT_MODE_MAILBOX_KHR)
     // VK_PRESENT_MODE_MAILBOX_KHR may be useful for applications that
     // generally render a new presentable image every refresh cycle, but are
     // occasionally early.  In this case, the application wants the new image
     // to be displayed instead of the previously-queued-for-presentation image
     // that has not yet been displayed.
-    for (size_t i = 0; i < presentModeCount; ++i) {
-        if (presentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
-            swapchainPresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
-            break;
-        }
-    }
-#elif defined(DESIRE_VK_PRESENT_MODE_FIFO_RELAXED_KHR)
     // VK_PRESENT_MODE_FIFO_RELAXED_KHR is for applications that generally
     // render a new presentable image every refresh cycle, but are occasionally
     // late.  In this case (perhaps because of stuttering/latency concerns),
     // the application wants the late image to be immediately displayed, even
     // though that may mean some tearing.
-    for (size_t i = 0; i < presentModeCount; ++i) {
-        if (presentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
-            swapchainPresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
-            break;
+
+    if (demo->presentMode !=  swapchainPresentMode) {
+
+        for (size_t i = 0; i < presentModeCount; ++i) {
+            if (presentModes[i] == demo->presentMode) {
+                swapchainPresentMode = demo->presentMode;
+                break;
+            }
         }
     }
-#endif
+    if (swapchainPresentMode != demo->presentMode) {
+        ERR_EXIT("Present mode specified is not supported\n", "Present mode unsupported");
+    }
 
     // Determine the number of VkImage's to use in the swap chain.
     // Application desires to only acquire 1 image at a time (which is
@@ -3222,11 +3213,18 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
     vec3 up = {0.0f, 1.0f, 0.0};
 
     memset(demo, 0, sizeof(*demo));
+    demo->presentMode = VK_PRESENT_MODE_FIFO_KHR;
     demo->frameCount = INT32_MAX;
 
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--use_staging") == 0) {
             demo->use_staging_buffer = true;
+            continue;
+        }
+        if ((strcmp(argv[i], "--present_mode") == 0) &&
+                (i < argc - 1)) {
+            demo->presentMode = atoi(argv[i+1]);
+            i++;
             continue;
         }
         if (strcmp(argv[i], "--break") == 0) {
@@ -3261,8 +3259,13 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
 #if defined(VK_USE_PLATFORM_XLIB_KHR)
                         "[--xlib] "
 #endif
-                        "[--c <framecount>] [--suppress_popups]\n",
-                APP_SHORT_NAME);
+                        "[--c <framecount>] [--suppress_popups] [--present_mode <present mode enum>]\n"
+                        "VK_PRESENT_MODE_IMMEDIATE_KHR = %d\n"
+                        "VK_PRESENT_MODE_MAILBOX_KHR = %d\n"
+                        "VK_PRESENT_MODE_FIFO_KHR = %d\n"
+                        "VK_PRESENT_MODE_FIFO_RELAXED_KHR = %d\n",
+                APP_SHORT_NAME, VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_MAILBOX_KHR,
+                VK_PRESENT_MODE_FIFO_KHR, VK_PRESENT_MODE_FIFO_RELAXED_KHR);
         fflush(stderr);
         exit(1);
 #endif
