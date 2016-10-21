@@ -8810,12 +8810,12 @@ static bool ValidateMaskBitsFromLayouts(const layer_data *my_data, VkCommandBuff
     switch (layout) {
     case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL: {
         skip_call |= ValidateMaskBits(my_data, cmdBuffer, accessMask, layout, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-                                      VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, type);
+                                      VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT, type);
         break;
     }
     case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL: {
         skip_call |= ValidateMaskBits(my_data, cmdBuffer, accessMask, layout, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-                                      VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT, type);
+                                      VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT, type);
         break;
     }
     case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL: {
@@ -8828,7 +8828,8 @@ static bool ValidateMaskBitsFromLayouts(const layer_data *my_data, VkCommandBuff
     }
     case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL: {
         skip_call |= ValidateMaskBits(my_data, cmdBuffer, accessMask, layout, 0,
-                                      VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_SHADER_READ_BIT, type);
+                                      VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
+                                      VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT, type);
         break;
     }
     case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL: {
