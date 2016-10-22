@@ -59,14 +59,14 @@
 
 #if defined(LOCALPREFIX)
 #define LOCAL_DRIVERS_INFO                                                     \
-    LOCALPREFIX "/" SYSCONFDIR VULKAN_DIR VULKAN_ICDCONF_DIR ":"               \
-    LOCALPREFIX "/" DATADIR    VULKAN_DIR VULKAN_ICDCONF_DIR ":"
+    SYSCONFDIR VULKAN_DIR VULKAN_ICDCONF_DIR ":"                               \
+    DATADIR    VULKAN_DIR VULKAN_ICDCONF_DIR ":"
 #define LOCAL_ELAYERS_INFO                                                     \
-    LOCALPREFIX "/" SYSCONFDIR VULKAN_DIR VULKAN_ELAYERCONF_DIR ":"            \
-    LOCALPREFIX "/" DATADIR    VULKAN_DIR VULKAN_ELAYERCONF_DIR ":"
+    SYSCONFDIR VULKAN_DIR VULKAN_ELAYERCONF_DIR ":"                            \
+    DATADIR    VULKAN_DIR VULKAN_ELAYERCONF_DIR ":"
 #define LOCAL_ILAYERS_INFO                                                     \
-    LOCALPREFIX "/" SYSCONFDIR VULKAN_DIR VULKAN_ILAYERCONF_DIR ":"            \
-    LOCALPREFIX "/" DATADIR    VULKAN_DIR VULKAN_ILAYERCONF_DIR ":"
+    SYSCONFDIR VULKAN_DIR VULKAN_ILAYERCONF_DIR ":"                            \
+    DATADIR    VULKAN_DIR VULKAN_ILAYERCONF_DIR ":"
 #else
 #define LOCAL_DRIVERS_INFO
 #define LOCAL_ELAYERS_INFO
@@ -75,17 +75,17 @@
 
 #define DEFAULT_VK_DRIVERS_INFO                                                \
     LOCAL_DRIVERS_INFO                                                         \
-    "/"  SYSCONFDIR VULKAN_DIR VULKAN_ICDCONF_DIR ":"                          \
-    "/usr/" DATADIR VULKAN_DIR VULKAN_ICDCONF_DIR
+    SYSCONFDIR VULKAN_DIR VULKAN_ICDCONF_DIR ":"                               \
+    DATADIR    VULKAN_DIR VULKAN_ICDCONF_DIR
 #define DEFAULT_VK_DRIVERS_PATH ""
 #define DEFAULT_VK_ELAYERS_INFO                                                \
     LOCAL_ELAYERS_INFO                                                         \
-    "/"  SYSCONFDIR VULKAN_DIR VULKAN_ELAYERCONF_DIR ":"                       \
-    "/usr/" DATADIR VULKAN_DIR VULKAN_ELAYERCONF_DIR
+    SYSCONFDIR VULKAN_DIR VULKAN_ELAYERCONF_DIR ":"                            \
+    DATADIR    VULKAN_DIR VULKAN_ELAYERCONF_DIR
 #define DEFAULT_VK_ILAYERS_INFO                                                \
     LOCAL_ILAYERS_INFO                                                         \
-    "/"  SYSCONFDIR VULKAN_DIR VULKAN_ILAYERCONF_DIR ":"                       \
-    "/usr/" DATADIR VULKAN_DIR VULKAN_ILAYERCONF_DIR
+    SYSCONFDIR VULKAN_DIR VULKAN_ILAYERCONF_DIR ":"                            \
+    DATADIR    VULKAN_DIR VULKAN_ILAYERCONF_DIR
 #define DEFAULT_VK_LAYERS_PATH ""
 #if !defined(LAYERS_SOURCE_PATH)
 #define LAYERS_SOURCE_PATH NULL
