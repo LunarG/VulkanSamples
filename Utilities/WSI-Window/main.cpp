@@ -26,6 +26,7 @@
 */
 
 #include "WSIWindow.h"
+#include "CSwapchain.h"
 
 //-- EVENT HANDLERS --
 class MyWindow : public WSIWindow{
@@ -76,6 +77,16 @@ int main(int argc, char *argv[]){
     printf("WSI-Window\n");
 
     CInstance Inst;                             //Create a Vulkan Instance
+
+    CPhysicalDevices Physicals(Inst);
+    Physicals.Print();
+
+
+    //CSwapchain swapchain;
+    //swapchain.Print();
+
+
+
     MyWindow Window(Inst,"LunarG",640,480);     //Create a Vulkan window
     Window.ShowKeyboard(true);                  //Show soft-keyboard on Android
     LOGW("Test Warnings\n");
