@@ -71,18 +71,9 @@ public:
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 Window_win32::Window_win32(CInstance& inst, const char* title, uint width, uint height){
-    //---Enable VT100 terminal escape sequences--- (enables colored text in Windows 10+)
-    //HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    //DWORD dwMode = 0;
-    //GetConsoleMode(hOut, &dwMode);
-    //dwMode |= 0x0004; // ENABLE_VIRTUAL_TERMINAL_PROCESSING
-    //SetConsoleMode(hOut, dwMode);
-    //--------------------------------------------
-
     instance=&inst;
     shape.width=width;
     shape.height=height;
-    //ShapeMode = false;
     running=true;
     LOGI("Creating Win32 Window...\n");
 
@@ -158,20 +149,6 @@ EventType Window_win32::GetEvent(){
         TranslateMessage(&msg);
         int16_t x = GET_X_LPARAM(msg.lParam);
         int16_t y = GET_Y_LPARAM(msg.lParam);
-/*
-        if (ShapeMode==true) {
-            switch (msg.message) {
-                case WM_MOUSEMOVE:{ 
-                    SetWindowPos(hWnd,0, shape.x, shape.y, shape.width, shape.height-10, SWP_SHOWWINDOW); break;
-                }
-                case WM_LBUTTONUP:
-                case WM_MOUSELEAVE:
-                case WM_NCMOUSELEAVE:
-                case WM_NCLBUTTONUP: {printf("Exit ShapeMode\n"); fflush(stdout);  ShapeMode = false; return{ EventType::NONE }; break; }
-            }
-            return{ EventType::NONE };
-        }
-*/
 
         //--Convert Shift / Ctrl / Alt key messages to LeftShift / RightShift / LeftCtrl / RightCtrl / LeftAlt / RightAlt--
         if (msg.message == WM_KEYDOWN || msg.message == WM_KEYUP) {
@@ -227,17 +204,6 @@ EventType Window_win32::GetEvent(){
                 int16_t  y = (int16_t)r.top;
                 if(x != shape.x || y != shape.y)            return MoveEvent  (x, y);  //window moved
             }
-/*
-            case WM_NCLBUTTONDOWN: {  //Start window move/resize
-                printf("->NCL [%d]", msg.wParam);
-                RECT r; GetWindowRect(hWnd, &r);
-                shape = { (int16_t)r.left,(int16_t)r.top,(uint16_t)(r.right - r.left),(uint16_t)(r.bottom - r.top) };
-                if (msg.wParam == HTBOTTOM) {
-                    ShapeMode = true;
-                    return{ EventType::NONE };  //Dont Dispatch message, to prevent Windows from going modal
-                }
-            }
-*/
         }
         DispatchMessage(&msg);
     }
@@ -262,18 +228,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
         case WM_GETMINMAXINFO:     // set window's minimum size
                                    //((MINMAXINFO*)lParam)->ptMinTrackSize = demo.minsize;
             return 0;
-        //case WM_ENTERSIZEMOVE: {printf("ENTERSIZEMOVE "); break; }
-        //case WM_EXITSIZEMOVE: {printf("EXITSIZEMOVE "); break; }
         case WM_EXITSIZEMOVE: { PostMessage(hWnd, WM_RESHAPE, 0, 0); break; }
-        
-        case WM_SIZE: {
-            if (wParam != SIZE_MINIMIZED) {
-                //width = lParam & 0xffff;
-                //height = (lParam & 0xffff0000) >> 16;
-                //demo_resize(&demo);
-            }
-            break;
-        }
         case WM_ACTIVATE: { PostMessage(hWnd, WM_ACTIVATE,wParam,lParam);  break; }
 
     default:
