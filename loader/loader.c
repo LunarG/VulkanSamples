@@ -4475,7 +4475,7 @@ terminator_EnumeratePhysicalDevices(VkInstance instance,
                 loader_set_dispatch((void *)&inst->phys_devs_term[idx],
                                     inst->disp);
                 inst->phys_devs_term[idx].this_icd = phys_devs[i].this_icd;
-                inst->phys_devs_term[idx].icd_index = i;
+                inst->phys_devs_term[idx].icd_index = (uint8_t)(i);
                 inst->phys_devs_term[idx].phys_dev = phys_devs[i].phys_devs[j];
                 if (idx < copy_count) {
                     pPhysicalDevices[idx] =
