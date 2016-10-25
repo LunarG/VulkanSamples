@@ -234,7 +234,6 @@ struct Demo {
 #elif defined(VK_USE_PLATFORM_XLIB_KHR) || defined(VK_USE_PLATFORM_XCB_KHR)
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
 #endif
-        memset(fencesInited, 0, sizeof(bool) * FRAME_LAG);
         memset(projection_matrix, 0, sizeof(projection_matrix));
         memset(view_matrix, 0, sizeof(view_matrix));
         memset(model_matrix, 0, sizeof(model_matrix));
@@ -293,9 +292,7 @@ struct Demo {
 
         // Wait for fences from present operations
         for (uint32_t i = 0; i < FRAME_LAG; i++) {
-            if (fencesInited[i]) {
-                device.waitForFences(1, &fences[i], VK_TRUE, UINT64_MAX);
-            }
+            device.waitForFences(1, &fences[i], VK_TRUE, UINT64_MAX);
             device.destroyFence(fences[i], nullptr);
             device.destroySemaphore(image_acquired_semaphores[i], nullptr);
             device.destroySemaphore(draw_complete_semaphores[i], nullptr);
@@ -400,17 +397,14 @@ struct Demo {
     }
 
     void draw() {
-        if (fencesInited[frame_index]) {
-            // Ensure no more than FRAME_LAG presentations are outstanding
-            device.waitForFences(1, &fences[frame_index], VK_TRUE, UINT64_MAX);
-            device.resetFences(1, &fences[frame_index]);
-        }
+        // Ensure no more than FRAME_LAG presentations are outstanding
+        device.waitForFences(1, &fences[frame_index], VK_TRUE, UINT64_MAX);
+        device.resetFences(1, &fences[frame_index]);
 
         // Get the index of the next available swapchain image:
         auto result = device.acquireNextImageKHR(
             swapchain, UINT64_MAX, image_acquired_semaphores[frame_index],
             fences[frame_index], &current_buffer);
-        fencesInited[frame_index] = true;
         if (result == vk::Result::eErrorOutOfDateKHR) {
             // swapchain is out of date (e.g. the window was resized) and
             // must be recreated:
@@ -1163,7 +1157,6 @@ struct Demo {
         vk::FenceCreateInfo const fence_ci;
         for (uint32_t i = 0; i < FRAME_LAG; i++) {
             device.createFence(&fence_ci, nullptr, &fences[i]);
-            fencesInited[i] = false;
             result = device.createSemaphore(&semaphoreCreateInfo, nullptr,
                                             &image_acquired_semaphores[i]);
             VERIFY(result == vk::Result::eSuccess);
@@ -2648,7 +2641,6 @@ struct Demo {
     vk::SwapchainKHR swapchain;
     std::unique_ptr<SwapchainBuffers[]> buffers;
     vk::Fence fences[FRAME_LAG];
-    bool fencesInited[FRAME_LAG];
     uint32_t frame_index;
 
     vk::CommandPool cmd_pool;
