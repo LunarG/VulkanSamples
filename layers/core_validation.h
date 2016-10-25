@@ -68,6 +68,7 @@
  */
 struct CHECK_DISABLED {
     bool command_buffer_state;
+    bool create_descriptor_set_layout;
     bool destroy_buffer_view; // Skip validation at DestroyBufferView time
     bool destroy_image_view;  // Skip validation at DestroyImageView time
     bool destroy_pipeline;    // Skip validation at DestroyPipeline time

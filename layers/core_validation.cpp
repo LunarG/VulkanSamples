@@ -6715,17 +6715,32 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSampler(VkDevice device, const VkSamplerCre
     return result;
 }
 
+static bool PreCallValidateCreateDescriptorSetLayout(layer_data *dev_data, const VkDescriptorSetLayoutCreateInfo *create_info) {
+    if (dev_data->instance_data->disabled.create_descriptor_set_layout)
+        return false;
+    return cvdescriptorset::DescriptorSetLayout::ValidateCreateInfo(dev_data->report_data, create_info);
+}
+
+static void PostCallRecordCreateDescriptorSetLayout(layer_data *dev_data, const VkDescriptorSetLayoutCreateInfo *create_info,
+                                                    VkDescriptorSetLayout set_layout) {
+    // TODOSC : Capture layout bindings set
+    dev_data->descriptorSetLayoutMap[set_layout] = new cvdescriptorset::DescriptorSetLayout(create_info, set_layout);
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL
 CreateDescriptorSetLayout(VkDevice device, const VkDescriptorSetLayoutCreateInfo *pCreateInfo,
                           const VkAllocationCallbacks *pAllocator, VkDescriptorSetLayout *pSetLayout) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    // TODO: Need to validate create state prior to calling down the chain
-    VkResult result = dev_data->dispatch_table.CreateDescriptorSetLayout(device, pCreateInfo, pAllocator, pSetLayout);
-    if (VK_SUCCESS == result) {
-        // TODOSC : Capture layout bindings set
-        std::lock_guard<std::mutex> lock(global_lock);
-        dev_data->descriptorSetLayoutMap[*pSetLayout] =
-            new cvdescriptorset::DescriptorSetLayout(dev_data->report_data, pCreateInfo, *pSetLayout);
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    std::unique_lock<std::mutex> lock(global_lock);
+    bool skip = PreCallValidateCreateDescriptorSetLayout(dev_data, pCreateInfo);
+    if (!skip) {
+        lock.unlock();
+        result = dev_data->dispatch_table.CreateDescriptorSetLayout(device, pCreateInfo, pAllocator, pSetLayout);
+        if (VK_SUCCESS == result) {
+            lock.lock();
+            PostCallRecordCreateDescriptorSetLayout(dev_data, pCreateInfo, *pSetLayout);
+        }
     }
     return result;
 }
