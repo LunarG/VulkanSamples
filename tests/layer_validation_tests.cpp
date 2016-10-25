@@ -15574,6 +15574,41 @@ TEST_F(VkPositiveLayerTest, IgnoreUnrelatedDescriptor) {
     }
 }
 
+TEST_F(VkLayerTest, DuplicateDescriptorBinding) {
+    TEST_DESCRIPTION("Create a descriptor set layout with a duplicate binding number.");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    // Create layout where two binding #s are "1"
+    static const uint32_t NUM_BINDINGS = 3;
+    VkDescriptorSetLayoutBinding dsl_binding[NUM_BINDINGS] = {};
+    dsl_binding[0].binding = 1;
+    dsl_binding[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    dsl_binding[0].descriptorCount = 1;
+    dsl_binding[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    dsl_binding[0].pImmutableSamplers = NULL;
+    dsl_binding[1].binding = 0;
+    dsl_binding[1].descriptorCount = 1;
+    dsl_binding[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    dsl_binding[1].descriptorCount = 1;
+    dsl_binding[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    dsl_binding[1].pImmutableSamplers = NULL;
+    dsl_binding[2].binding = 1; // Duplicate binding should cause error
+    dsl_binding[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    dsl_binding[2].descriptorCount = 1;
+    dsl_binding[2].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    dsl_binding[2].pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+    ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    ds_layout_ci.pNext = NULL;
+    ds_layout_ci.bindingCount = NUM_BINDINGS;
+    ds_layout_ci.pBindings = dsl_binding;
+    VkDescriptorSetLayout ds_layout;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02345);
+    vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
+    m_errorMonitor->VerifyFound();
+}
+
 // This is a positive test. No failures are expected.
 TEST_F(VkPositiveLayerTest, EmptyDescriptorUpdateTest) {
     TEST_DESCRIPTION("Update last descriptor in a set that includes an empty binding");
