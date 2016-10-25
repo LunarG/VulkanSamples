@@ -8651,9 +8651,12 @@ VKAPI_ATTR void VKAPI_CALL CmdClearAttachments(VkCommandBuffer commandBuffer, ui
     if (pCB->activeRenderPass) {
         const VkRenderPassCreateInfo *pRPCI = pCB->activeRenderPass->createInfo.ptr();
         const VkSubpassDescription *pSD = &pRPCI->pSubpasses[pCB->activeSubpass];
+        auto framebuffer = getFramebufferState(dev_data, pCB->activeFramebuffer);
 
         for (uint32_t i = 0; i < attachmentCount; i++) {
             auto clear_desc = &pAttachments[i];
+            VkImageView image_view = VK_NULL_HANDLE;
+
             if (clear_desc->aspectMask & VK_IMAGE_ASPECT_COLOR_BIT) {
                 if (clear_desc->colorAttachment >= pSD->colorAttachmentCount) {
                     skip_call |= log_msg(
@@ -8669,6 +8672,9 @@ VKAPI_ATTR void VKAPI_CALL CmdClearAttachments(VkCommandBuffer commandBuffer, ui
                         "vkCmdClearAttachments() color attachment index %d is VK_ATTACHMENT_UNUSED; ignored",
                         clear_desc->colorAttachment);
                 }
+                else {
+                    image_view = framebuffer->createInfo.pAttachments[pSD->pColorAttachments[clear_desc->colorAttachment].attachment];
+                }
             } else if (clear_desc->aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) {
                 if (!pSD->pDepthStencilAttachment || // Says no DS will be used in active subpass
                     (pSD->pDepthStencilAttachment->attachment ==
@@ -8678,6 +8684,23 @@ VKAPI_ATTR void VKAPI_CALL CmdClearAttachments(VkCommandBuffer commandBuffer, ui
                         dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                         (uint64_t)commandBuffer, __LINE__, DRAWSTATE_MISSING_ATTACHMENT_REFERENCE, "DS",
                         "vkCmdClearAttachments() depth/stencil clear with no depth/stencil attachment in subpass; ignored");
+                }
+                else {
+                    image_view = framebuffer->createInfo.pAttachments[pSD->pDepthStencilAttachment->attachment];
+                }
+            }
+
+            if (image_view) {
+                auto image_view_state = getImageViewState(dev_data, image_view);
+                auto aspects_present = image_view_state->create_info.subresourceRange.aspectMask;
+                auto extra_aspects = clear_desc->aspectMask & ~aspects_present;
+
+                if (extra_aspects) {
+                    skip_call |= log_msg(
+                            dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT,
+                            reinterpret_cast<uint64_t &>(image_view), __LINE__, DRAWSTATE_INVALID_IMAGE_ASPECT, "DS",
+                            "vkCmdClearAttachments() with aspects not present in image view: %s",
+                            string_VkImageAspectFlagBits((VkImageAspectFlagBits)extra_aspects));
                 }
             }
         }
