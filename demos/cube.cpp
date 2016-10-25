@@ -1914,12 +1914,12 @@ struct Demo {
                 set_image_layout(
                     staging_texture.image, vk::ImageAspectFlagBits::eColor,
                     staging_texture.imageLayout,
-                    vk::ImageLayout::eTransferSrcOptimal, vk::AccessFlags());
+                    vk::ImageLayout::eTransferSrcOptimal, vk::AccessFlagBits::eShaderRead);
 
                 set_image_layout(
                     textures[i].image, vk::ImageAspectFlagBits::eColor,
                     textures[i].imageLayout,
-                    vk::ImageLayout::eTransferDstOptimal, vk::AccessFlags());
+                    vk::ImageLayout::eTransferDstOptimal, vk::AccessFlagBits::eShaderRead);
 
                 auto const subresource =
                     vk::ImageSubresourceLayers()
@@ -1945,7 +1945,7 @@ struct Demo {
                 set_image_layout(textures[i].image,
                                  vk::ImageAspectFlagBits::eColor,
                                  vk::ImageLayout::eTransferDstOptimal,
-                                 textures[i].imageLayout, vk::AccessFlags());
+                                 textures[i].imageLayout, vk::AccessFlagBits::eTransferWrite);
 
                 flush_init_cmd();
 
@@ -2108,7 +2108,7 @@ struct Demo {
             case vk::ImageLayout::eTransferDstOptimal:
                 // Make sure anything that was copying from this image has
                 // completed
-                flags = vk::AccessFlagBits::eTransferRead;
+                flags = vk::AccessFlagBits::eTransferWrite;
                 break;
             case vk::ImageLayout::eColorAttachmentOptimal:
                 flags = vk::AccessFlagBits::eColorAttachmentWrite;
@@ -2120,6 +2120,9 @@ struct Demo {
                 // Make sure any Copy or CPU writes to image are flushed
                 flags = vk::AccessFlagBits::eShaderRead |
                         vk::AccessFlagBits::eInputAttachmentRead;
+                break;
+            case vk::ImageLayout::eTransferSrcOptimal:
+                flags = vk::AccessFlagBits::eTransferRead;
                 break;
             case vk::ImageLayout::ePresentSrcKHR:
                 flags = vk::AccessFlagBits::eMemoryRead;
