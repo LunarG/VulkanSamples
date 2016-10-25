@@ -155,7 +155,7 @@ Linux an application wanting to link to the latest Vulkan ABI version would
 just link to the name vulkan (libvulkan.so).  A specific Vulkan ABI version can
 also be linked to by applications (e.g. libvulkan.so.1).
 
-####Layer Usage
+#### Layer Usage
 
 Applications desiring Vulkan functionality beyond what the core API offers may
 use various layers or extensions. A layer cannot introduce new Vulkan API
