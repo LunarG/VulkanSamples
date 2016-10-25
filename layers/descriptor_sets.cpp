@@ -33,9 +33,8 @@ cvdescriptorset::DescriptorSetLayout::DescriptorSetLayout(debug_report_data *rep
         descriptor_count_ += p_create_info->pBindings[i].descriptorCount;
         if (!binding_to_index_map_.emplace(p_create_info->pBindings[i].binding, i).second) {
             log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT,
-                    reinterpret_cast<uint64_t &>(layout_), __LINE__, DRAWSTATE_INVALID_LAYOUT, "DS",
-                    "duplicated binding number in "
-                    "VkDescriptorSetLayoutBinding");
+                    reinterpret_cast<uint64_t &>(layout_), __LINE__, VALIDATION_ERROR_02345, "DS",
+                    "duplicated binding number in VkDescriptorSetLayoutBinding. %s", validation_error_map[VALIDATION_ERROR_02345]);
         }
         binding_to_global_start_index_map_[p_create_info->pBindings[i].binding] = global_index;
         global_index += p_create_info->pBindings[i].descriptorCount ? p_create_info->pBindings[i].descriptorCount - 1 : 0;

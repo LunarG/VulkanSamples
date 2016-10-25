@@ -6719,6 +6719,7 @@ VKAPI_ATTR VkResult VKAPI_CALL
 CreateDescriptorSetLayout(VkDevice device, const VkDescriptorSetLayoutCreateInfo *pCreateInfo,
                           const VkAllocationCallbacks *pAllocator, VkDescriptorSetLayout *pSetLayout) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    // TODO: Need to validate create state prior to calling down the chain
     VkResult result = dev_data->dispatch_table.CreateDescriptorSetLayout(device, pCreateInfo, pAllocator, pSetLayout);
     if (VK_SUCCESS == result) {
         // TODOSC : Capture layout bindings set
