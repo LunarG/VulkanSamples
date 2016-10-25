@@ -4,6 +4,7 @@
  * Vulkan
  *
  * Copyright (c) 2016 Google Inc.
+ * Copyright (c) 2016 LunarG, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -2005,8 +2006,6 @@ enum UNIQUE_VALIDATION_ERROR_CODE {
     VALIDATION_ERROR_02034 = 2034,
     VALIDATION_ERROR_02035 = 2035,
     VALIDATION_ERROR_02036 = 2036,
-    VALIDATION_ERROR_02038 = 2038,
-    VALIDATION_ERROR_02039 = 2039,
     VALIDATION_ERROR_02040 = 2040,
     VALIDATION_ERROR_02041 = 2041,
     VALIDATION_ERROR_02042 = 2042,
@@ -2311,7 +2310,9 @@ enum UNIQUE_VALIDATION_ERROR_CODE {
     VALIDATION_ERROR_02341 = 2341,
     VALIDATION_ERROR_02342 = 2342,
     VALIDATION_ERROR_02343 = 2343,
-    VALIDATION_ERROR_MAX_ENUM = 2344
+    VALIDATION_ERROR_02344 = 2344,
+    VALIDATION_ERROR_02345 = 2345,
+    VALIDATION_ERROR_MAX_ENUM = 2346,
 };
 
 // Mapping from unique validation error enum to the corresponding error message
@@ -4295,11 +4296,9 @@ static std::unordered_map<int, char const *const> validation_error_map{
     {VALIDATION_ERROR_02034, "For more information refer to Vulkan Spec Section '32.2. Debug Report Callbacks' which states 'pNext must be NULL' (https://www.khronos.org/registry/vulkan/specs/1.0-extensions/xhtml/vkspec.html#VkDebugReportFlagBitsEXT)"},
     {VALIDATION_ERROR_02035, "For more information refer to Vulkan Spec Section '32.2. Debug Report Callbacks' which states 'flags must be a valid combination of VkDebugReportFlagBitsEXT values' (https://www.khronos.org/registry/vulkan/specs/1.0-extensions/xhtml/vkspec.html#VkDebugReportFlagBitsEXT)"},
     {VALIDATION_ERROR_02036, "For more information refer to Vulkan Spec Section '32.2. Debug Report Callbacks' which states 'flags must not be 0' (https://www.khronos.org/registry/vulkan/specs/1.0-extensions/xhtml/vkspec.html#VkDebugReportFlagBitsEXT)"},
-    {VALIDATION_ERROR_02038, "For more information refer to Vulkan Spec Section '32.2. Debug Report Callbacks' which states 'flags must be a combination of one or more of VkDebugReportFlagBitsEXT' (https://www.khronos.org/registry/vulkan/specs/1.0-extensions/xhtml/vkspec.html#vkDebugReportMessageEXT)"},
-    {VALIDATION_ERROR_02039, "For more information refer to Vulkan Spec Section '32.2. Debug Report Callbacks' which states 'objType must be one of VkDebugReportObjectTypeEXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT if object is NULL' (https://www.khronos.org/registry/vulkan/specs/1.0-extensions/xhtml/vkspec.html#vkDebugReportMessageEXT)"},
     {VALIDATION_ERROR_02040, "For more information refer to Vulkan Spec Section '32.2. Debug Report Callbacks' which states 'object may be a Vulkan object' (https://www.khronos.org/registry/vulkan/specs/1.0-extensions/xhtml/vkspec.html#vkDebugReportMessageEXT)"},
     {VALIDATION_ERROR_02041, "For more information refer to Vulkan Spec Section '32.2. Debug Report Callbacks' which states 'pLayerPrefix must be a NULL terminated string' (https://www.khronos.org/registry/vulkan/specs/1.0-extensions/xhtml/vkspec.html#vkDebugReportMessageEXT)"},
-    {VALIDATION_ERROR_02042, "For more information refer to Vulkan Spec Section '32.2. Debug Report Callbacks' which states 'pMsg must be a NULL terminated string' (https://www.khronos.org/registry/vulkan/specs/1.0-extensions/xhtml/vkspec.html#vkDebugReportMessageEXT)"},
+    {VALIDATION_ERROR_02042, "For more information refer to Vulkan Spec Section '32.2. Debug Report Callbacks' which states 'pMessage must be a NULL terminated string' (https://www.khronos.org/registry/vulkan/specs/1.0-extensions/xhtml/vkspec.html#vkDebugReportMessageEXT)"},
     {VALIDATION_ERROR_02043, "For more information refer to Vulkan Spec Section '32.2. Debug Report Callbacks' which states 'instance must be a valid VkInstance handle' (https://www.khronos.org/registry/vulkan/specs/1.0-extensions/xhtml/vkspec.html#vkDebugReportMessageEXT)"},
     {VALIDATION_ERROR_02044, "For more information refer to Vulkan Spec Section '32.2. Debug Report Callbacks' which states 'flags must be a valid combination of VkDebugReportFlagBitsEXT values' (https://www.khronos.org/registry/vulkan/specs/1.0-extensions/xhtml/vkspec.html#vkDebugReportMessageEXT)"},
     {VALIDATION_ERROR_02045, "For more information refer to Vulkan Spec Section '32.2. Debug Report Callbacks' which states 'flags must not be 0' (https://www.khronos.org/registry/vulkan/specs/1.0-extensions/xhtml/vkspec.html#vkDebugReportMessageEXT)"},
@@ -4601,4 +4600,6 @@ static std::unordered_map<int, char const *const> validation_error_map{
     {VALIDATION_ERROR_02341, "For more information refer to Vulkan Spec Section '29.6. WSI Swapchain' which states 'presentMode must be one of the VkPresentModeKHR values returned by vkGetPhysicalDeviceSurfacePresentModesKHR for the surface' (https://www.khronos.org/registry/vulkan/specs/1.0-extensions/xhtml/vkspec.html#VkSwapchainCreateInfoKHR)"},
     {VALIDATION_ERROR_02342, "For more information refer to Vulkan Spec Section '29.6. WSI Swapchain' which states 'If more than one member of pSwapchains was created from a display surface, all display surfaces referenced that refer to the same display must use the same display mode' (https://www.khronos.org/registry/vulkan/specs/1.0-extensions/xhtml/vkspec.html#vkQueuePresentKHR)"},
     {VALIDATION_ERROR_02343, "For more information refer to Vulkan Spec Section '32.1.2. Command Buffer Markers' which states 'If the matching vkCmdDebugMarkerBeginEXT command was in a secondary command buffer, the vkCmdDebugMarkerEndEXT must be in the same commandBuffer' (https://www.khronos.org/registry/vulkan/specs/1.0-extensions/xhtml/vkspec.html#vkCmdDebugMarkerEndEXT)"},
+    {VALIDATION_ERROR_02344, "For more information refer to Vulkan Spec Section '11.3. Images' which states 'If imageType is VK_IMAGE_TYPE_3D, arrayLayers must be 1.' (https://www.khronos.org/registry/vulkan/specs/1.0-extensions/xhtml/vkspec.html#VkImageCreateInfo)"},
+    {VALIDATION_ERROR_02345, "For more information refer to Vulkan Spec Section '13.2.1. Descriptor Set Layout' which states 'The VkDescriptorSetLayoutBinding::binding members of the elements of the pBindings array must each have different values.' (https://www.khronos.org/registry/vulkan/specs/1.0-extensions/xhtml/vkspec.html#VkDescriptorSetLayoutCreateInfo)"},
 };

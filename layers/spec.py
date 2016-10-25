@@ -134,7 +134,7 @@ class Specification:
             elif tag.tag == '{http://www.w3.org/1999/xhtml}a': # grab any intermediate links
                 if tag.get('id') != None:
                     prev_link = tag.get('id')
-                    print "Updated prev link to %s" % (prev_link)
+                    #print "Updated prev link to %s" % (prev_link)
             elif tag.tag == '{http://www.w3.org/1999/xhtml}div' and tag.get('class') == 'sidebar':
                 # parse down sidebar to check for valid usage cases
                 valid_usage = False
