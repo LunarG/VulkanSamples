@@ -1873,9 +1873,6 @@ struct Demo {
         }
 
         tex_obj->imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-        set_image_layout(tex_obj->image, vk::ImageAspectFlagBits::eColor,
-                         vk::ImageLayout::ePreinitialized, tex_obj->imageLayout,
-                         vk::AccessFlagBits::eHostWrite);
     }
 
     void prepare_textures() {
@@ -1893,6 +1890,12 @@ struct Demo {
                     vk::ImageUsageFlagBits::eSampled,
                     vk::MemoryPropertyFlagBits::eHostVisible |
                         vk::MemoryPropertyFlagBits::eHostCoherent);
+                // Nothing in the pipeline needs to be complete to start, and don't allow fragment
+                // shader to run until layout transition completes
+                set_image_layout(textures[i].image, vk::ImageAspectFlagBits::eColor,
+                                 vk::ImageLayout::ePreinitialized, textures[i].imageLayout,
+                                 vk::AccessFlagBits::eHostWrite, vk::PipelineStageFlagBits::eTopOfPipe,
+                                 vk::PipelineStageFlagBits::eFragmentShader);
             } else if (props.optimalTilingFeatures &
                        vk::FormatFeatureFlagBits::eSampledImage) {
                 /* Must use staging buffer to copy linear texture to optimized
@@ -1913,13 +1916,19 @@ struct Demo {
 
                 set_image_layout(
                     staging_texture.image, vk::ImageAspectFlagBits::eColor,
-                    staging_texture.imageLayout,
-                    vk::ImageLayout::eTransferSrcOptimal, vk::AccessFlagBits::eShaderRead);
+                    vk::ImageLayout::ePreinitialized,
+                    vk::ImageLayout::eTransferSrcOptimal,
+                    vk::AccessFlagBits::eHostWrite,
+                    vk::PipelineStageFlagBits::eTopOfPipe,
+                    vk::PipelineStageFlagBits::eTransfer);
 
                 set_image_layout(
                     textures[i].image, vk::ImageAspectFlagBits::eColor,
-                    textures[i].imageLayout,
-                    vk::ImageLayout::eTransferDstOptimal, vk::AccessFlagBits::eShaderRead);
+                    vk::ImageLayout::ePreinitialized,
+                    vk::ImageLayout::eTransferDstOptimal,
+                    vk::AccessFlagBits::eHostWrite,
+                    vk::PipelineStageFlagBits::eTopOfPipe,
+                    vk::PipelineStageFlagBits::eTransfer);
 
                 auto const subresource =
                     vk::ImageSubresourceLayers()
@@ -1945,7 +1954,10 @@ struct Demo {
                 set_image_layout(textures[i].image,
                                  vk::ImageAspectFlagBits::eColor,
                                  vk::ImageLayout::eTransferDstOptimal,
-                                 textures[i].imageLayout, vk::AccessFlagBits::eTransferWrite);
+                                 textures[i].imageLayout,
+                                 vk::AccessFlagBits::eTransferWrite,
+                                 vk::PipelineStageFlagBits::eTransfer,
+                                 vk::PipelineStageFlagBits::eFragmentShader);
 
                 flush_init_cmd();
 
@@ -2084,7 +2096,9 @@ struct Demo {
 
     void set_image_layout(vk::Image image, vk::ImageAspectFlags aspectMask,
                           vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
-                          vk::AccessFlags srcAccessMask) {
+                          vk::AccessFlags srcAccessMask,
+                          vk::PipelineStageFlags src_stages,
+                          vk::PipelineStageFlags dest_stages) {
         if (!cmd) {
             auto const cmd = vk::CommandBufferAllocateInfo()
                                  .setCommandPool(cmd_pool)
@@ -2145,10 +2159,8 @@ struct Demo {
                                  .setSubresourceRange(vk::ImageSubresourceRange(
                                      aspectMask, 0, 1, 0, 1));
 
-        cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe,
-                            vk::PipelineStageFlagBits::eTopOfPipe,
-                            vk::DependencyFlagBits(), 0, nullptr, 0, nullptr, 1,
-                            &barrier);
+        cmd.pipelineBarrier(src_stages, dest_stages, vk::DependencyFlagBits(),
+                            0, nullptr, 0, nullptr, 1, &barrier);
     }
 
     void update_data_buffer() {
