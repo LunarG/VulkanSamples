@@ -25,10 +25,6 @@ import urllib2
 #
 # TODO:
 #  1. Improve string matching to add more automation for figuring out which messages are changed vs. completely new
-# Temp hack path:
-#  1. Read in spec w/ API info
-#  2. Read in database file
-#  3. Write out updated DB file w/ API/Notes columns
 #
 #############################
 
@@ -234,13 +230,15 @@ class Specification:
             # Default to unknown if check or test are implemented, then update below if appropriate
             implemented = 'U'
             testname = 'Unknown'
+            note = ''
             # If we have an existing db entry for this enum, use its implemented/testname values
             if enum in self.error_db_dict:
                 implemented = self.error_db_dict[enum]['check_implemented']
                 testname = self.error_db_dict[enum]['testname']
+                note = self.error_db_dict[enum]['note']
             #print "delimiter: %s, id: %s, str: %s" % (self.delimiter, enum, self.val_error_dict[enum])
             # No existing entry so default to N for implemented and None for testname
-            db_lines.append("%s%s%s%s%s%s%s%s%s%s" % (enum, self.delimiter, implemented, self.delimiter, testname, self.delimiter, self.val_error_dict[enum]['api'], self.delimiter, self.val_error_dict[enum]['error_msg'], self.delimiter))
+            db_lines.append("%s%s%s%s%s%s%s%s%s%s%s" % (enum, self.delimiter, implemented, self.delimiter, testname, self.delimiter, self.val_error_dict[enum]['api'], self.delimiter, self.val_error_dict[enum]['error_msg'], self.delimiter, note))
         print "Generating database file %s" % (db_file)
         with open(db_file, "w") as outfile:
             outfile.write("\n".join(db_lines))
@@ -255,18 +253,22 @@ class Specification:
                     continue
                 line = line.strip()
                 db_line = line.split(self.delimiter)
-                if len(db_line) != 4:
-                    print "ERROR: Bad database line doesn't have 4 elements: %s" % (line)
+                if len(db_line) != 6:
+                    print "ERROR: Bad database line doesn't have 6 elements: %s" % (line)
                 error_enum = db_line[0]
                 implemented = db_line[1]
                 testname = db_line[2]
-                error_str = db_line[3]
+                api = db_line[3]
+                error_str = db_line[4]
+                note = db_line[5]
                 db_dict[error_enum] = error_str
                 # Also read complete database contents into our class var for later use
                 self.error_db_dict[error_enum] = {}
                 self.error_db_dict[error_enum]['check_implemented'] = implemented
                 self.error_db_dict[error_enum]['testname'] = testname
+                self.error_db_dict[error_enum]['api'] = api
                 self.error_db_dict[error_enum]['error_string'] = error_str
+                self.error_db_dict[error_enum]['note'] = note
                 unique_id = int(db_line[0].split('_')[-1])
                 if unique_id > max_id:
                     max_id = unique_id
