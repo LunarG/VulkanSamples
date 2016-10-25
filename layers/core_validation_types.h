@@ -399,7 +399,7 @@ enum CBStatusFlagBits {
     CBSTATUS_STENCIL_WRITE_MASK_SET = 0x00000020,   // Stencil write mask has been set
     CBSTATUS_STENCIL_REFERENCE_SET  = 0x00000040,   // Stencil reference has been set
     CBSTATUS_INDEX_BUFFER_BOUND     = 0x00000080,   // Index buffer has been set
-    CBSTATUS_ALL                    = 0x0000007F,   // All dynamic state set (intentionally exclude index buffer)
+    CBSTATUS_ALL_STATE_SET          = 0x0000007F,   // All state set (intentionally exclude index buffer)
     // clang-format on
 };
 

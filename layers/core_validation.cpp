@@ -4205,12 +4205,12 @@ static void set_cb_pso_status(GLOBAL_CB_NODE *pCB, const PIPELINE_STATE *pPipe) 
     // Account for any dynamic state not set via this PSO
     if (!pPipe->graphicsPipelineCI.pDynamicState ||
         !pPipe->graphicsPipelineCI.pDynamicState->dynamicStateCount) { // All state is static
-        pCB->status |= CBSTATUS_ALL;
+        pCB->status |= CBSTATUS_ALL_STATE_SET;
     } else {
         // First consider all state on
         // Then unset any state that's noted as dynamic in PSO
         // Finally OR that into CB statemask
-        CBStatusFlags psoDynStateMask = CBSTATUS_ALL;
+        CBStatusFlags psoDynStateMask = CBSTATUS_ALL_STATE_SET;
         for (uint32_t i = 0; i < pPipe->graphicsPipelineCI.pDynamicState->dynamicStateCount; i++) {
             switch (pPipe->graphicsPipelineCI.pDynamicState->pDynamicStates[i]) {
             case VK_DYNAMIC_STATE_LINE_WIDTH:
