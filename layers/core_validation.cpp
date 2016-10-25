@@ -8652,24 +8652,24 @@ VKAPI_ATTR void VKAPI_CALL CmdClearAttachments(VkCommandBuffer commandBuffer, ui
         const VkRenderPassCreateInfo *pRPCI = pCB->activeRenderPass->createInfo.ptr();
         const VkSubpassDescription *pSD = &pRPCI->pSubpasses[pCB->activeSubpass];
 
-        for (uint32_t attachment_idx = 0; attachment_idx < attachmentCount; attachment_idx++) {
-            const VkClearAttachment *attachment = &pAttachments[attachment_idx];
-            if (attachment->aspectMask & VK_IMAGE_ASPECT_COLOR_BIT) {
-                if (attachment->colorAttachment >= pSD->colorAttachmentCount) {
+        for (uint32_t i = 0; i < attachmentCount; i++) {
+            auto clear_desc = &pAttachments[i];
+            if (clear_desc->aspectMask & VK_IMAGE_ASPECT_COLOR_BIT) {
+                if (clear_desc->colorAttachment >= pSD->colorAttachmentCount) {
                     skip_call |= log_msg(
                         dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                         (uint64_t)commandBuffer, __LINE__, DRAWSTATE_MISSING_ATTACHMENT_REFERENCE, "DS",
                         "vkCmdClearAttachments() color attachment index %d out of range for active subpass %d; ignored",
-                        attachment->colorAttachment, pCB->activeSubpass);
+                        clear_desc->colorAttachment, pCB->activeSubpass);
                 }
-                else if (pSD->pColorAttachments[attachment->colorAttachment].attachment == VK_ATTACHMENT_UNUSED) {
+                else if (pSD->pColorAttachments[clear_desc->colorAttachment].attachment == VK_ATTACHMENT_UNUSED) {
                     skip_call |= log_msg(
                         dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                         (uint64_t)commandBuffer, __LINE__, DRAWSTATE_MISSING_ATTACHMENT_REFERENCE, "DS",
                         "vkCmdClearAttachments() color attachment index %d is VK_ATTACHMENT_UNUSED; ignored",
-                        attachment->colorAttachment);
+                        clear_desc->colorAttachment);
                 }
-            } else if (attachment->aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) {
+            } else if (clear_desc->aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) {
                 if (!pSD->pDepthStencilAttachment || // Says no DS will be used in active subpass
                     (pSD->pDepthStencilAttachment->attachment ==
                      VK_ATTACHMENT_UNUSED)) { // Says no DS will be used in active subpass
