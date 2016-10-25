@@ -510,26 +510,7 @@ struct Demo {
         auto result = commandBuffer.begin(&commandInfo);
         VERIFY(result == vk::Result::eSuccess);
 
-        auto const image_memory_barrier =
-            vk::ImageMemoryBarrier()
-                .setSrcAccessMask(vk::AccessFlagBits::eMemoryRead)
-                .setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite)
-                .setOldLayout(vk::ImageLayout::ePresentSrcKHR)
-                .setNewLayout(vk::ImageLayout::eColorAttachmentOptimal)
-                .setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-                .setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-                .setImage(buffers[current_buffer].image)
-                .setSubresourceRange(vk::ImageSubresourceRange(
-                    vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
-
-        commandBuffer.pipelineBarrier(
-            vk::PipelineStageFlagBits::eColorAttachmentOutput,
-            vk::PipelineStageFlagBits::eColorAttachmentOutput,
-            vk::DependencyFlagBits(), 0, nullptr, 0, nullptr, 1,
-            &image_memory_barrier);
-
         commandBuffer.beginRenderPass(&passInfo, vk::SubpassContents::eInline);
-
         commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
         commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
                                          pipeline_layout, 0, 1, &desc_set, 0,
@@ -574,7 +555,7 @@ struct Demo {
 
             commandBuffer.pipelineBarrier(
                 vk::PipelineStageFlagBits::eColorAttachmentOutput,
-                vk::PipelineStageFlagBits::eColorAttachmentOutput,
+                vk::PipelineStageFlagBits::eBottomOfPipe,
                 vk::DependencyFlagBits(), 0, nullptr, 0, nullptr, 1,
                 &image_ownership_barrier);
         }
@@ -1419,14 +1400,6 @@ struct Demo {
             result = device.createImageView(&color_image_view, nullptr,
                                             &buffers[i].view);
             VERIFY(result == vk::Result::eSuccess);
-
-            // The draw loop will be expecting the presentable images to be in
-            // LAYOUT_PRESENT_SRC_KHR since that's how they're left at the end
-            // of every frame.
-            set_image_layout(buffers[i].image, vk::ImageAspectFlagBits::eColor,
-                             vk::ImageLayout::eUndefined,
-                             vk::ImageLayout::ePresentSrcKHR,
-                             vk::AccessFlagBits());
         }
     }
 
@@ -1530,11 +1503,6 @@ struct Demo {
 
         result = device.bindImageMemory(depth.image, depth.mem, 0);
         VERIFY(result == vk::Result::eSuccess);
-
-        set_image_layout(depth.image, vk::ImageAspectFlagBits::eDepth,
-                         vk::ImageLayout::eUndefined,
-                         vk::ImageLayout::eDepthStencilAttachmentOptimal,
-                         vk::AccessFlagBits());
 
         auto const view = vk::ImageViewCreateInfo()
                               .setImage(depth.image)
@@ -1756,6 +1724,14 @@ struct Demo {
     }
 
     void prepare_render_pass() {
+        // The initial layout for the color and depth attachments will be LAYOUT_UNDEFINED
+        // because at the start of the renderpass, we don't care about their contents.
+        // At the start of the subpass, the color attachment's layout will be transitioned
+        // to LAYOUT_COLOR_ATTACHMENT_OPTIMAL and the depth stencil attachment's layout
+        // will be transitioned to LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL.  At the end of
+        // the renderpass, the color attachment's layout will be transitioned to
+        // LAYOUT_PRESENT_SRC_KHR to be ready to present.  This is all done as part of
+        // the renderpass, no barriers are necessary.
         const vk::AttachmentDescription attachments[2] = {
             vk::AttachmentDescription()
                 .setFlags(vk::AttachmentDescriptionFlagBits::eMayAlias)
@@ -1765,7 +1741,7 @@ struct Demo {
                 .setStoreOp(vk::AttachmentStoreOp::eStore)
                 .setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
                 .setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
-                .setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
+                .setInitialLayout(vk::ImageLayout::eUndefined)
                 .setFinalLayout(vk::ImageLayout::ePresentSrcKHR),
             vk::AttachmentDescription()
                 .setFlags(vk::AttachmentDescriptionFlagBits::eMayAlias)
@@ -1776,7 +1752,7 @@ struct Demo {
                 .setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
                 .setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
                 .setInitialLayout(
-                    vk::ImageLayout::eDepthStencilAttachmentOptimal)
+                    vk::ImageLayout::eUndefined)
                 .setFinalLayout(
                     vk::ImageLayout::eDepthStencilAttachmentOptimal)};
 
