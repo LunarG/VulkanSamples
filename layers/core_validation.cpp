@@ -6495,18 +6495,18 @@ static void ResolveRemainingLevelsLayers(layer_data *dev_data, uint32_t *levels,
 }
 
 static bool PreCallValidateCreateImageView(layer_data *dev_data, const VkImageViewCreateInfo *pCreateInfo) {
-    bool skip_call = false;
+    bool skip = false;
     IMAGE_STATE *image_state = getImageState(dev_data, pCreateInfo->image);
     if (image_state) {
-        skip_call |= ValidateImageUsageFlags(
+        skip |= ValidateImageUsageFlags(
             dev_data, image_state, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT |
                                        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
             false, "vkCreateImageView()",
             "VK_IMAGE_USAGE_[SAMPLED|STORAGE|COLOR_ATTACHMENT|DEPTH_STENCIL_ATTACHMENT|INPUT_ATTACHMENT]_BIT");
         // If this isn't a sparse image, it needs to have memory backing it at CreateImageView time
-        skip_call |= ValidateMemoryIsBoundToImage(dev_data, image_state, "vkCreateImageView()");
+        skip |= ValidateMemoryIsBoundToImage(dev_data, image_state, "vkCreateImageView()");
     }
-    return skip_call;
+    return skip;
 }
 
 static inline void PostCallRecordCreateImageView(layer_data *dev_data, const VkImageViewCreateInfo *pCreateInfo, VkImageView view) {
@@ -6518,9 +6518,9 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImageView(VkDevice device, const VkImageVie
                                                const VkAllocationCallbacks *pAllocator, VkImageView *pView) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
-    bool skip_call = PreCallValidateCreateImageView(dev_data, pCreateInfo);
+    bool skip = PreCallValidateCreateImageView(dev_data, pCreateInfo);
     lock.unlock();
-    if (skip_call)
+    if (skip)
         return VK_ERROR_VALIDATION_FAILED_EXT;
     VkResult result = dev_data->dispatch_table.CreateImageView(device, pCreateInfo, pAllocator, pView);
     if (VK_SUCCESS == result) {
