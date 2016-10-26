@@ -7,6 +7,7 @@ Code file for this section is `10-init_render_pass.cpp`
 A render pass describes the scope of a rendering operation by
 specifying the collection of attachments, subpasses, and dependencies
 used during the rendering operation.
+A render pass consists of at least one subpass.
 The communication of this information to the driver allows the
 driver to know what to expect when rendering begins and to set
 up the hardware optimally for the rendering operation.
@@ -23,9 +24,9 @@ the color attachment, which is the image from the swapchain,
 and the depth/stencil attachment, which is the depth buffer
 you allocated in a previous sample.
 
-Image attachments must be prepared for use before
-being used as attachments in a render pass instance
-in an executed command buffer.
+Image attachments must be prepared for use when they are
+used as attachments in a render pass instance
+that is executed in a command buffer.
 This preparation involves transitioning image layouts from their
 initial undefined states to states that are optimal for their
 use in the render pass.
@@ -87,28 +88,41 @@ larger than 2x2.
 
 #### Vulkan Control Over the Layout
 
-GPU hardware that has the ability to use optimal image layouts
-also has controls for deciding between using linear and optimal
-layouts.
+GPU hardware often favors optimal layouts for more efficient rendering,
+as explained just above.
 Optimal layouts are often "opaque", which means that the details
 of the optimal layout format are not published or made known
 to other components that need to read or write image data.
-So it is often necessary to convert optimal to linear in order
-to allow the CPU to map the data so that the application can
-read and process it in the expected and well-understood
-linear layout.
 
-Conversely, it may be desirable for the CPU to copy an image
-into a buffer with linear layout and then convert it to
-optimal layout so that the GPU can read it more efficiently.
+For example, you may want the GPU to render to an image
+using an optimal layout.
+But if you wish to copy the resulting image to a buffer that you
+can read and understand using the CPU, you change the layout
+from optimal to general before trying to read it.
 
 Conversions from one layout to another are called layout transitions
 in Vulkan.
 You have control over these transitions and can invoke them
-with an image memory barrier command or as a subpass dependency in a render
-pass.
-In this case, the sample code uses image memory barrier commands, which
-are detailed later in this section.
+in one of three ways:
+
+1. Memory Barrier Command (via `vkCmdPipelineBarrier`)
+1. Render Pass final layout specification
+1. Render Pass subpass layout specification
+
+The memory barrier command is an explicit layout transition command
+that you place in a command buffer.
+You would use this command to synchronize memory accesses in more complex
+situations, for example.
+Since you will be using the other two methods to perform layout
+transitions here, you won't be using this barrier command in this tutorial.
+
+The more common situation is the need to perform layout transitions on images used for
+rendering before rendering begins and after rendering is complete.
+The first transition prepares the image for rendering by the GPU and
+the last one prepares the image for presentation to the display.
+In these cases, you specify the layout
+transitions as part of the render pass definition.
+You will see how to do this later in this section.
 
 A layout transition may or may not trigger an actual GPU layout
 conversion operation.
@@ -117,67 +131,46 @@ is optimal, the GPU would have to do no work other than perhaps
 program the GPU hardware to access memory in the optimal pattern.
 This is because the contents of the image is undefined and does
 not need to be preserved by converting it.
-On the other hand, if the old layout was linear and there is
+On the other hand, if the old layout was general (non-optimal) and there is
 an indication that the data in the image needs to be preserved,
-the transition probably involves some work by the GPU to
+the transition to optimal probably involves some work by the GPU to
 shuffle the texels around.
 
 Even if you know or think that a layout transition won't actually do any work,
 it is always best practice to do them anyway, since it gives the driver
-more information.
+more information and helps ensure that your application works on more devices.
 
 #### Image Layout Transitions in the Samples
 
-Look for a call to a function named `set_image_layout()` in the sample
-near the beginning of the program.
-This is a helper function that generates a `vkCmdPipelineBarrier`
-command and puts it into a command buffer.
-This helper function is designed to make it easy to transition
-image layouts in the samples.
+The sample code uses subpass definitions and render pass definitions to
+specify the required image layout transitions, instead of using memory barrier commands.
 
-    set_image_layout(info, info.buffers[info.current_buffer].image,
-                     VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+![Render Pass Layout](../images/RenderPassLayouts.png)
 
-In this case, it is changing the image layouts from
-`VK_IMAGE_LAYOUT_UNDEFINED`
-to
-`VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL`.
+The initial render pass layout is undefined and means *don't care* because
+when the render pass starts, you don't care what is already in the image
+because you are going to draw over it anyway.
+Here, you are just telling the driver what layout is in effect
+for the image at the start of the render pass.
+The driver won't do any transitions until the subpass and/or until the end
+of the render pass.
 
-The old layouts are clearly undefined because the images were
-recently created by `vkCreateSwapchainKHR()`
-back in the swapchain sample and so are in an undefined state.
+The subpass layout is set to optimal for the color buffer, which indicates
+that the driver should transition the layout to optimal for the duration
+of the rendering operations that occur during the subpass.
+The sample code sets a similar setting for the depth buffer.
 
-The new layout of `VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL`
-is the layout needed for color buffers
-that are defined in the render pass as color attachments.
-
-The depth buffer layout also needs to be transitioned from
-`VK_IMAGE_LAYOUT_UNDEFINED`
-to
-`VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL`
-
-Transitioning the depth buffer is accomplished in basically the same way as for the color buffer
-except that it is handled in the `init_depth_buffer()` helper function.
-
-Later in the sample, you can find where we close the command buffer
-by calling `execute_end_command_buffer()`.
-You don't actually send these commands to the GPU in this sample, but
-you will use these commands in a later sample.
-
-As mentioned previously, it is unlikely that these commands will cause
-the GPU to do any work.
-But at least the GPU is now programmed to use the color and depth
-buffers in the optimum way.
+The final render pass layout of present tells the driver to transition the
+layout to the best layout for presenting to the display.
 
 ### Create the Render Pass
 
 Now that you know how to get the image layouts into the correct state,
-you can proceed with defining the render pass.
+you can proceed with defining the rest of the render pass.
 
 #### Attachments
 
-As mentioned at the top of this section, there are two attachments:
+There are two attachments, one for color and one for depth:
 
     VkAttachmentDescription attachments[2];
     attachments[0].format = info.format;
@@ -186,7 +179,7 @@ As mentioned at the top of this section, there are two attachments:
     attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachments[0].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    attachments[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     attachments[0].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     attachments[0].flags = 0;
 
@@ -196,7 +189,7 @@ As mentioned at the top of this section, there are two attachments:
     attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachments[1].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    attachments[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     attachments[1].flags = 0;
 
@@ -213,31 +206,29 @@ Telling the driver that you don't care about the contents of a buffer after it i
 can be useful because it allows the driver to
 discard or page out that memory if it needed to without saving the contents.
 
-For image layouts, you created a command buffer earlier in this section that
-transitions the image layouts to their optimum layouts.
-Therefore, you need to set the initial layouts in both attachments to optimal
-in order to match the result of the layout transitions.
+For image layouts, you specify both the color and depth buffers to start with undefined
+layouts, as discussed earlier.
+
+The subpass, which occurs between the initial and final layouts,
+takes the color attachment to `VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL`
+and the depth attachment to `VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL`.
 
 For the color attachment, you specify the final layout to be the
 `VK_IMAGE_LAYOUT_PRESENT_SRC_KHR` layout, which is the one that is
 appropriate for the present operation that occurs after the render pass is complete.
-This avoids needing to build up and submit a command in the command buffer to
-explicitly perform the layout transition.
-It also tells the GPU that it needs to perform an image layout transition at the end
-of the render pass.
-
-The depth buffer image final layout can remain the same as the initial layout,
-since it is not used after the render pass is complete.
+You can leave the depth layout the same as the layout set by the subpass
+since the depth buffer is not used as part of the present operation.
 
 #### Subpass
 
 The subpass definition is straightforward and would be more interesting
 if you were doing multiple subpasses.
-And you might be interested in doing subpasses if you were doing
+And you might be interested in doing multiple subpasses if you are doing
 some pre-processing or post-processing of your graphics data, perhaps
 for ambient occlusion or some other effect.
 But here, the subpass definition is useful for indicating which attachments
-are active during the subpass.
+are active during the subpass and also for specifying the layouts to be used
+while rendering during the subpass.
 
     VkAttachmentReference color_reference = {};
     color_reference.attachment = 0;
@@ -248,7 +239,7 @@ are active during the subpass.
     depth_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
 The `attachment` member is the index of the attachment in the
-attachments array you just defined above.
+attachments array you just defined above for the render pass.
 
     VkSubpassDescription subpass = {};
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
@@ -282,29 +273,6 @@ Now you have all you need to define the render pass:
     res = vkCreateRenderPass(info.device, &rp_info, NULL, &info.render_pass);
 
 You'll be using the render pass in several of the upcoming samples.
-
-Note that you have done two things here:
-
-1. Created a command buffer with layout transition commands in it and sent it to the GPU
-1. Created (defined) a render pass
-
-Sending the command buffer with the layout transition commands in this particular sample
-really does not accomplish anything, since nothing is sent to the GPU afterwards.
-And the render pass you defined is not used for anything either.
-These are all just pieces and parts that you will put together shortly to draw the cube
-in the final sample.
-
-Looking ahead a bit, these pieces might fit together more like this:
-
-1. Create a render pass as you just did here
-1. Create a command buffer and "open" it to start receiving commands
-1. Insert image layout transition commands in the command buffer
-1. Insert a begin render pass command (vkCmdBeginRenderPass) in the command buffer
-1. Insert other commands to finish the drawing - coming in the next sections
-
-The important point is the the vkCmdPipelineBarrier commands used to perform the image layout transitions
-need to be in the command buffer before the vkCmdBeginRenderPass, since the render pass is expecting
-the images to be in the specific image layouts before the render pass begins.
 
 <table border="1" width="100%">
     <tr>
