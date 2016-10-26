@@ -6494,9 +6494,9 @@ static void ResolveRemainingLevelsLayers(layer_data *dev_data, uint32_t *levels,
     }
 }
 
-static bool PreCallValidateCreateImageView(layer_data *dev_data, const VkImageViewCreateInfo *pCreateInfo) {
+static bool PreCallValidateCreateImageView(layer_data *dev_data, const VkImageViewCreateInfo *create_info) {
     bool skip = false;
-    IMAGE_STATE *image_state = getImageState(dev_data, pCreateInfo->image);
+    IMAGE_STATE *image_state = getImageState(dev_data, create_info->image);
     if (image_state) {
         skip |= ValidateImageUsageFlags(
             dev_data, image_state, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT |
@@ -6505,13 +6505,153 @@ static bool PreCallValidateCreateImageView(layer_data *dev_data, const VkImageVi
             "VK_IMAGE_USAGE_[SAMPLED|STORAGE|COLOR_ATTACHMENT|DEPTH_STENCIL_ATTACHMENT|INPUT_ATTACHMENT]_BIT");
         // If this isn't a sparse image, it needs to have memory backing it at CreateImageView time
         skip |= ValidateMemoryIsBoundToImage(dev_data, image_state, "vkCreateImageView()");
+        // Checks imported from image layer
+        if (create_info->subresourceRange.baseMipLevel >= image_state->createInfo.mipLevels) {
+            std::stringstream ss;
+            ss << "vkCreateImageView called with baseMipLevel " << create_info->subresourceRange.baseMipLevel << " for image "
+               << create_info->image << " that only has " << image_state->createInfo.mipLevels << " mip levels.";
+            skip |=
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                        VALIDATION_ERROR_00768, "IMAGE", "%s %s", ss.str().c_str(), validation_error_map[VALIDATION_ERROR_00768]);
+        }
+        if (create_info->subresourceRange.baseArrayLayer >= image_state->createInfo.arrayLayers) {
+            std::stringstream ss;
+            ss << "vkCreateImageView called with baseArrayLayer " << create_info->subresourceRange.baseArrayLayer << " for image "
+               << create_info->image << " that only has " << image_state->createInfo.arrayLayers << " array layers.";
+            skip |=
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                        VALIDATION_ERROR_00769, "IMAGE", "%s %s", ss.str().c_str(), validation_error_map[VALIDATION_ERROR_00769]);
+        }
+        // TODO: Need new valid usage language for levelCount == 0 & layerCount == 0
+        if (!create_info->subresourceRange.levelCount) {
+            std::stringstream ss;
+            ss << "vkCreateImageView called with 0 in create_info->subresourceRange.levelCount.";
+            skip |=
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                        VALIDATION_ERROR_00768, "IMAGE", "%s %s", ss.str().c_str(), validation_error_map[VALIDATION_ERROR_00768]);
+        }
+        if (!create_info->subresourceRange.layerCount) {
+            std::stringstream ss;
+            ss << "vkCreateImageView called with 0 in create_info->subresourceRange.layerCount.";
+            skip |=
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                        VALIDATION_ERROR_00769, "IMAGE", "%s %s", ss.str().c_str(), validation_error_map[VALIDATION_ERROR_00769]);
+        }
+
+        VkImageCreateFlags image_flags = image_state->createInfo.flags;
+        VkFormat image_format = image_state->createInfo.format;
+        VkFormat view_format = create_info->format;
+        VkImageAspectFlags aspect_mask = create_info->subresourceRange.aspectMask;
+
+        // Validate VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT state
+        if (image_flags & VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT) {
+            // Format MUST be compatible (in the same format compatibility class) as the format the image was created with
+            if (vk_format_get_compatibility_class(image_format) != vk_format_get_compatibility_class(view_format)) {
+                std::stringstream ss;
+                ss << "vkCreateImageView(): ImageView format " << string_VkFormat(view_format)
+                   << " is not in the same format compatibility class as image (" << (uint64_t)create_info->image << ")  format "
+                   << string_VkFormat(image_format) << ".  Images created with the VK_IMAGE_CREATE_MUTABLE_FORMAT BIT "
+                   << "can support ImageViews with differing formats but they must be in the same compatibility class.";
+                skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                                VALIDATION_ERROR_02171, "IMAGE", "%s %s", ss.str().c_str(),
+                                validation_error_map[VALIDATION_ERROR_02171]);
+            }
+        } else {
+            // Format MUST be IDENTICAL to the format the image was created with
+            if (image_format != view_format) {
+                std::stringstream ss;
+                ss << "vkCreateImageView() format " << string_VkFormat(view_format) << " differs from image "
+                   << (uint64_t)create_info->image << " format " << string_VkFormat(image_format)
+                   << ".  Formats MUST be IDENTICAL unless VK_IMAGE_CREATE_MUTABLE_FORMAT BIT was set on image creation.";
+                skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                                VALIDATION_ERROR_02172, "IMAGE", "%s %s", ss.str().c_str(),
+                                validation_error_map[VALIDATION_ERROR_02172]);
+            }
+        }
+
+        // Validate correct image aspect bits for desired formats and format consistency
+        if (vk_format_is_color(image_format)) {
+            if ((aspect_mask & VK_IMAGE_ASPECT_COLOR_BIT) != VK_IMAGE_ASPECT_COLOR_BIT) {
+                std::stringstream ss;
+                ss << "vkCreateImageView: Color image formats must have the VK_IMAGE_ASPECT_COLOR_BIT set";
+                skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                                (uint64_t)create_info->image, __LINE__, VALIDATION_ERROR_00741, "IMAGE", "%s %s", ss.str().c_str(),
+                                validation_error_map[VALIDATION_ERROR_00741]);
+            }
+            if ((aspect_mask & VK_IMAGE_ASPECT_COLOR_BIT) != aspect_mask) {
+                std::stringstream ss;
+                ss << "vkCreateImageView: Color image formats must have ONLY the VK_IMAGE_ASPECT_COLOR_BIT set";
+                skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                                (uint64_t)create_info->image, __LINE__, VALIDATION_ERROR_00741, "IMAGE", "%s %s", ss.str().c_str(),
+                                validation_error_map[VALIDATION_ERROR_00741]);
+            }
+            if (!vk_format_is_color(view_format)) {
+                std::stringstream ss;
+                ss << "vkCreateImageView: The image view's format can differ from the parent image's format, but both must be "
+                   << "color formats.  ImageFormat is " << string_VkFormat(image_format) << " ImageViewFormat is "
+                   << string_VkFormat(view_format);
+                skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                                (uint64_t)create_info->image, __LINE__, VALIDATION_ERROR_02171, "IMAGE", "%s %s", ss.str().c_str(),
+                                validation_error_map[VALIDATION_ERROR_02171]);
+            }
+            // TODO:  Uncompressed formats are compatible if they occupy they same number of bits per pixel.
+            //        Compressed formats are compatible if the only difference between them is the numerical type of
+            //        the uncompressed pixels (e.g. signed vs. unsigned, or sRGB vs. UNORM encoding).
+        } else if (vk_format_is_depth_and_stencil(image_format)) {
+            if ((aspect_mask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) == 0) {
+                std::stringstream ss;
+                ss << "vkCreateImageView: Depth/stencil image formats must have at least one of VK_IMAGE_ASPECT_DEPTH_BIT and "
+                      "VK_IMAGE_ASPECT_STENCIL_BIT set";
+                skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                                (uint64_t)create_info->image, __LINE__, VALIDATION_ERROR_00741, "IMAGE", "%s %s", ss.str().c_str(),
+                                validation_error_map[VALIDATION_ERROR_00741]);
+            }
+            if ((aspect_mask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) != aspect_mask) {
+                std::stringstream ss;
+                ss << "vkCreateImageView: Combination depth/stencil image formats can have only the VK_IMAGE_ASPECT_DEPTH_BIT and "
+                      "VK_IMAGE_ASPECT_STENCIL_BIT set";
+                skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                                (uint64_t)create_info->image, __LINE__, VALIDATION_ERROR_00741, "IMAGE", "%s %s", ss.str().c_str(),
+                                validation_error_map[VALIDATION_ERROR_00741]);
+            }
+        } else if (vk_format_is_depth_only(image_format)) {
+            if ((aspect_mask & VK_IMAGE_ASPECT_DEPTH_BIT) != VK_IMAGE_ASPECT_DEPTH_BIT) {
+                std::stringstream ss;
+                ss << "vkCreateImageView: Depth-only image formats must have the VK_IMAGE_ASPECT_DEPTH_BIT set";
+                skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                                (uint64_t)create_info->image, __LINE__, VALIDATION_ERROR_00741, "IMAGE", "%s %s", ss.str().c_str(),
+                                validation_error_map[VALIDATION_ERROR_00741]);
+            }
+            if ((aspect_mask & VK_IMAGE_ASPECT_DEPTH_BIT) != aspect_mask) {
+                std::stringstream ss;
+                ss << "vkCreateImageView: Depth-only image formats can have only the VK_IMAGE_ASPECT_DEPTH_BIT set";
+                skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                                (uint64_t)create_info->image, __LINE__, VALIDATION_ERROR_00741, "IMAGE", "%s %s", ss.str().c_str(),
+                                validation_error_map[VALIDATION_ERROR_00741]);
+            }
+        } else if (vk_format_is_stencil_only(image_format)) {
+            if ((aspect_mask & VK_IMAGE_ASPECT_STENCIL_BIT) != VK_IMAGE_ASPECT_STENCIL_BIT) {
+                std::stringstream ss;
+                ss << "vkCreateImageView: Stencil-only image formats must have the VK_IMAGE_ASPECT_STENCIL_BIT set";
+                skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                                (uint64_t)create_info->image, __LINE__, VALIDATION_ERROR_00741, "IMAGE", "%s %s", ss.str().c_str(),
+                                validation_error_map[VALIDATION_ERROR_00741]);
+            }
+            if ((aspect_mask & VK_IMAGE_ASPECT_STENCIL_BIT) != aspect_mask) {
+                std::stringstream ss;
+                ss << "vkCreateImageView: Stencil-only image formats can have only the VK_IMAGE_ASPECT_STENCIL_BIT set";
+                skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                                (uint64_t)create_info->image, __LINE__, VALIDATION_ERROR_00741, "IMAGE", "%s %s", ss.str().c_str(),
+                                validation_error_map[VALIDATION_ERROR_00741]);
+            }
+        }
     }
     return skip;
 }
 
-static inline void PostCallRecordCreateImageView(layer_data *dev_data, const VkImageViewCreateInfo *pCreateInfo, VkImageView view) {
-    dev_data->imageViewMap[view] = unique_ptr<IMAGE_VIEW_STATE>(new IMAGE_VIEW_STATE(view, pCreateInfo));
-    ResolveRemainingLevelsLayers(dev_data, &dev_data->imageViewMap[view].get()->create_info.subresourceRange, pCreateInfo->image);
+static inline void PostCallRecordCreateImageView(layer_data *dev_data, const VkImageViewCreateInfo *create_info, VkImageView view) {
+    dev_data->imageViewMap[view] = unique_ptr<IMAGE_VIEW_STATE>(new IMAGE_VIEW_STATE(view, create_info));
+    ResolveRemainingLevelsLayers(dev_data, &dev_data->imageViewMap[view].get()->create_info.subresourceRange, create_info->image);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateImageView(VkDevice device, const VkImageViewCreateInfo *pCreateInfo,
