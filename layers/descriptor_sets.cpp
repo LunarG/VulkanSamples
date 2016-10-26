@@ -30,7 +30,7 @@ cvdescriptorset::DescriptorSetLayout::DescriptorSetLayout(const VkDescriptorSetL
     uint32_t global_index = 0;
     for (uint32_t i = 0; i < binding_count_; ++i) {
         descriptor_count_ += p_create_info->pBindings[i].descriptorCount;
-        binding_to_index_map_.emplace(p_create_info->pBindings[i].binding, i);
+        binding_to_index_map_[p_create_info->pBindings[i].binding] = i;
         binding_to_global_start_index_map_[p_create_info->pBindings[i].binding] = global_index;
         global_index += p_create_info->pBindings[i].descriptorCount ? p_create_info->pBindings[i].descriptorCount - 1 : 0;
         binding_to_global_end_index_map_[p_create_info->pBindings[i].binding] = global_index;
@@ -55,12 +55,11 @@ bool cvdescriptorset::DescriptorSetLayout::ValidateCreateInfo(debug_report_data 
     bool skip = false;
     std::unordered_set<uint32_t> bindings;
     for (uint32_t i = 0; i < create_info->bindingCount; ++i) {
-        if (bindings.count(create_info->pBindings[i].binding)) {
+        if (!bindings.insert(create_info->pBindings[i].binding).second) {
             skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                             VALIDATION_ERROR_02345, "DS", "duplicated binding number in VkDescriptorSetLayoutBinding. %s",
                             validation_error_map[VALIDATION_ERROR_02345]);
         }
-        bindings.insert(create_info->pBindings[i].binding);
     }
     return skip;
 }

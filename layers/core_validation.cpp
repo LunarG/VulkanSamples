@@ -6723,7 +6723,7 @@ static bool PreCallValidateCreateDescriptorSetLayout(layer_data *dev_data, const
 
 static void PostCallRecordCreateDescriptorSetLayout(layer_data *dev_data, const VkDescriptorSetLayoutCreateInfo *create_info,
                                                     VkDescriptorSetLayout set_layout) {
-    // TODOSC : Capture layout bindings set
+    // TODO: Convert this to unique_ptr to avoid leaks
     dev_data->descriptorSetLayoutMap[set_layout] = new cvdescriptorset::DescriptorSetLayout(create_info, set_layout);
 }
 
