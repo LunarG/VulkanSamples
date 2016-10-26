@@ -8661,15 +8661,15 @@ VKAPI_ATTR void VKAPI_CALL CmdClearAttachments(VkCommandBuffer commandBuffer, ui
                 if (clear_desc->colorAttachment >= pSD->colorAttachmentCount) {
                     skip_call |= log_msg(
                         dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                        (uint64_t)commandBuffer, __LINE__, DRAWSTATE_MISSING_ATTACHMENT_REFERENCE, "DS",
-                        "vkCmdClearAttachments() color attachment index %d out of range for active subpass %d; ignored",
-                        clear_desc->colorAttachment, pCB->activeSubpass);
+                        (uint64_t)commandBuffer, __LINE__, VALIDATION_ERROR_01114, "DS",
+                        "vkCmdClearAttachments() color attachment index %d out of range for active subpass %d. %s",
+                        clear_desc->colorAttachment, pCB->activeSubpass, validation_error_map[VALIDATION_ERROR_01114]);
                 }
                 else if (pSD->pColorAttachments[clear_desc->colorAttachment].attachment == VK_ATTACHMENT_UNUSED) {
                     skip_call |= log_msg(
-                        dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                        dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                         (uint64_t)commandBuffer, __LINE__, DRAWSTATE_MISSING_ATTACHMENT_REFERENCE, "DS",
-                        "vkCmdClearAttachments() color attachment index %d is VK_ATTACHMENT_UNUSED; ignored",
+                        "vkCmdClearAttachments() color attachment index %d is VK_ATTACHMENT_UNUSED; ignored.",
                         clear_desc->colorAttachment);
                 }
                 else {
@@ -8681,7 +8681,7 @@ VKAPI_ATTR void VKAPI_CALL CmdClearAttachments(VkCommandBuffer commandBuffer, ui
                      VK_ATTACHMENT_UNUSED)) { // Says no DS will be used in active subpass
 
                     skip_call |= log_msg(
-                        dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                        dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                         (uint64_t)commandBuffer, __LINE__, DRAWSTATE_MISSING_ATTACHMENT_REFERENCE, "DS",
                         "vkCmdClearAttachments() depth/stencil clear with no depth/stencil attachment in subpass; ignored");
                 }
@@ -8698,9 +8698,10 @@ VKAPI_ATTR void VKAPI_CALL CmdClearAttachments(VkCommandBuffer commandBuffer, ui
                 if (extra_aspects) {
                     skip_call |= log_msg(
                             dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT,
-                            reinterpret_cast<uint64_t &>(image_view), __LINE__, DRAWSTATE_INVALID_IMAGE_ASPECT, "DS",
-                            "vkCmdClearAttachments() with aspects not present in image view: %s",
-                            string_VkImageAspectFlagBits((VkImageAspectFlagBits)extra_aspects));
+                            reinterpret_cast<uint64_t &>(image_view), __LINE__, VALIDATION_ERROR_01125, "DS",
+                            "vkCmdClearAttachments() with aspects not present in image view: %s. %s",
+                            string_VkImageAspectFlagBits((VkImageAspectFlagBits)extra_aspects),
+                            validation_error_map[VALIDATION_ERROR_01125]);
                 }
             }
         }
