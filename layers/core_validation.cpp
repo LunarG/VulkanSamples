@@ -5108,31 +5108,27 @@ static bool PreCallValidateFreeMemory(layer_data *dev_data, VkDeviceMemory mem, 
 
 static void PostCallRecordFreeMemory(layer_data *dev_data, VkDeviceMemory mem, DEVICE_MEM_INFO *mem_info, VK_OBJECT obj_struct) {
     // Clear mem binding for any bound objects
-    if (mem_info->obj_bindings.size() > 0) {
-        for (auto obj : mem_info->obj_bindings) {
-            log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, obj.type, obj.handle, __LINE__,
-                    MEMTRACK_FREED_MEM_REF, "MEM", "VK Object 0x%" PRIxLEAST64 " still has a reference to mem obj 0x%" PRIxLEAST64,
-                    obj.handle, (uint64_t)mem_info->mem);
-            switch (obj.type) {
-            case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT: {
-                auto image_state = getImageState(dev_data, reinterpret_cast<VkImage &>(obj.handle));
-                assert(image_state); // Any destroyed images should already be removed from bindings
-                image_state->binding.mem = MEMORY_UNBOUND;
-                break;
-            }
-            case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT: {
-                auto buff_node = getBufferNode(dev_data, reinterpret_cast<VkBuffer &>(obj.handle));
-                assert(buff_node); // Any destroyed buffers should already be removed from bindings
-                buff_node->binding.mem = MEMORY_UNBOUND;
-                break;
-            }
-            default:
-                // Should only have buffer or image objects bound to memory
-                assert(0);
-            }
+    for (auto obj : mem_info->obj_bindings) {
+        log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, obj.type, obj.handle, __LINE__, MEMTRACK_FREED_MEM_REF,
+                "MEM", "VK Object 0x%" PRIxLEAST64 " still has a reference to mem obj 0x%" PRIxLEAST64, obj.handle,
+                (uint64_t)mem_info->mem);
+        switch (obj.type) {
+        case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT: {
+            auto image_state = getImageState(dev_data, reinterpret_cast<VkImage &>(obj.handle));
+            assert(image_state); // Any destroyed images should already be removed from bindings
+            image_state->binding.mem = MEMORY_UNBOUND;
+            break;
         }
-        // Clear the list of hanging references
-        mem_info->obj_bindings.clear();
+        case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT: {
+            auto buff_node = getBufferNode(dev_data, reinterpret_cast<VkBuffer &>(obj.handle));
+            assert(buff_node); // Any destroyed buffers should already be removed from bindings
+            buff_node->binding.mem = MEMORY_UNBOUND;
+            break;
+        }
+        default:
+            // Should only have buffer or image objects bound to memory
+            assert(0);
+        }
     }
     // Any bound cmd buffers are now invalid
     invalidateCommandBuffers(mem_info->cb_bindings, obj_struct);
