@@ -7432,35 +7432,44 @@ ResetCommandBuffer(VkCommandBuffer commandBuffer, VkCommandBufferResetFlags flag
 
 VKAPI_ATTR void VKAPI_CALL
 CmdBindPipeline(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipeline pipeline) {
-    bool skip_call = false;
+    bool skip = false;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
-    GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
-    if (pCB) {
-        skip_call |= addCmd(dev_data, pCB, CMD_BINDPIPELINE, "vkCmdBindPipeline()");
-        if ((VK_PIPELINE_BIND_POINT_COMPUTE == pipelineBindPoint) && (pCB->activeRenderPass)) {
-            skip_call |=
+    GLOBAL_CB_NODE *cb_state = getCBNode(dev_data, commandBuffer);
+    if (cb_state) {
+        skip |= addCmd(dev_data, cb_state, CMD_BINDPIPELINE, "vkCmdBindPipeline()");
+        if ((VK_PIPELINE_BIND_POINT_COMPUTE == pipelineBindPoint) && (cb_state->activeRenderPass)) {
+            skip |=
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
                         (uint64_t)pipeline, __LINE__, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
                         "Incorrectly binding compute pipeline (0x%" PRIxLEAST64 ") during active RenderPass (0x%" PRIxLEAST64 ")",
-                        (uint64_t)pipeline, (uint64_t)pCB->activeRenderPass->renderPass);
+                        (uint64_t)pipeline, (uint64_t)cb_state->activeRenderPass->renderPass);
         }
 
-        PIPELINE_STATE *pPN = getPipelineState(dev_data, pipeline);
-        if (pPN) {
-            pCB->lastBound[pipelineBindPoint].pipeline_state = pPN;
-            set_cb_pso_status(pCB, pPN);
-            set_pipeline_state(pPN);
+        PIPELINE_STATE *pipe_state = getPipelineState(dev_data, pipeline);
+        if (pipe_state) {
+            cb_state->lastBound[pipelineBindPoint].pipeline_state = pipe_state;
+            set_cb_pso_status(cb_state, pipe_state);
+            set_pipeline_state(pipe_state);
         } else {
-            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
-                                 (uint64_t)pipeline, __LINE__, DRAWSTATE_INVALID_PIPELINE, "DS",
-                                 "Attempt to bind Pipeline 0x%" PRIxLEAST64 " that doesn't exist!", (uint64_t)(pipeline));
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
+                            (uint64_t)pipeline, __LINE__, DRAWSTATE_INVALID_PIPELINE, "DS",
+                            "Attempt to bind Pipeline 0x%" PRIxLEAST64 " that doesn't exist!", (uint64_t)(pipeline));
         }
-        addCommandBufferBinding(&getPipelineState(dev_data, pipeline)->cb_bindings,
-                                {reinterpret_cast<uint64_t &>(pipeline), VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT}, pCB);
+        addCommandBufferBinding(&pipe_state->cb_bindings,
+                                {reinterpret_cast<uint64_t &>(pipeline), VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT}, cb_state);
+        if (VK_PIPELINE_BIND_POINT_GRAPHICS == pipelineBindPoint) {
+            // Add binding for child renderpass
+            auto rp_state = getRenderPassState(dev_data, pipe_state->graphicsPipelineCI.renderPass);
+            if (rp_state) {
+                addCommandBufferBinding(
+                    &rp_state->cb_bindings,
+                    {reinterpret_cast<uint64_t &>(rp_state->renderPass), VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT}, cb_state);
+            }
+        }
     }
     lock.unlock();
-    if (!skip_call)
+    if (!skip)
         dev_data->dispatch_table.CmdBindPipeline(commandBuffer, pipelineBindPoint, pipeline);
 }
 
