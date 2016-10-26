@@ -103,6 +103,36 @@ class Proto(object):
                 name,
                 self.c_params(need_name=need_param_names))
 
+    def c_pretty_decl(self, name, attr=""):
+        """Return a named declaration in C, with vulkan.h formatting."""
+        plist = []
+        for param in self.params:
+            idx = param.ty.find("[")
+            if idx < 0:
+                idx = len(param.ty)
+
+            pad = 44 - idx
+            if pad <= 0:
+                pad = 1
+
+            plist.append("    %s%s%s%s" % (param.ty[:idx],
+                " " * pad, param.name, param.ty[idx:]))
+
+        return "%s%s %s%s(\n%s)" % (
+                attr + "_ATTR " if attr else "",
+                self.ret,
+                attr + "_CALL " if attr else "",
+                name,
+                ",\n".join(plist))
+
+    def c_func(self, prefix="", attr=""):
+        """Return the prototype in C."""
+        return self.c_decl(prefix + self.name, attr=attr, typed=False)
+
+    def c_call(self):
+        """Return a call to the prototype in C."""
+        return "%s(%s)" % (self.name, self.c_params(need_type=False))
+
     def object_in_params(self):
         """Return the params that are simple VK objects and are inputs."""
         return [param for param in self.params if param.ty in objects]
@@ -111,6 +141,15 @@ class Proto(object):
         """Return the params that are simple VK objects and are outputs."""
         return [param for param in self.params
                 if param.dereferenced_type() in objects]
+
+    def __repr__(self):
+        param_strs = []
+        for param in self.params:
+            param_strs.append(str(param))
+        param_str = "    [%s]" % (",\n     ".join(param_strs))
+
+        return "Proto(\"%s\", \"%s\",\n%s)" % \
+                (self.ret, self.name, param_str)
 
 class Extension(object):
     def __init__(self, name, headers, objects, protos, ifdef = None):
