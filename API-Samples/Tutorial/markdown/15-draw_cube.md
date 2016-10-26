@@ -37,36 +37,11 @@ You are just creating this semaphore and associating it with the image so that
 the semaphore can be used to postpone the submission of the command buffer until
 the image is ready.
 
-## Transitioning the Swapchain Image
-
-Note that there is already a command buffer open due to the earlier call to `execute_begin_command_buffer()`
-and you are now recording commands.
-`set_image_layout()` inserts `vkCmdPipelineBarrier` commands into the command buffer.
-
-You already saw this code:
-
-    set_image_layout(info, info.buffers[info.current_buffer].image,
-                     VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-
-in the render pass section.
-
-Since the image was just created, its layout is undefined, and so we have to
-change it to something appropriate for rendering, which is `VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL`.
-Recall that the sample has already transitioned the depth buffer in a similar way in `init_depth_buffer()`.
-
-Note again that if this sample were changed to draw repeated frames in a loop, then this same call
-to `set_image_layout()` would work only for the first time a swapchain image is used since
-the image layout at creation is `VK_IMAGE_LAYOUT_UNDEFINED`.
-But each time the image is *reused*, the starting layout would be `VK_IMAGE_LAYOUT_PRESENT_SRC_KHR`
-instead of `VK_IMAGE_LAYOUT_UNDEFINED`, because the swapchain image is left in the
-`VK_IMAGE_LAYOUT_PRESENT_SRC_KHR` layout after it is drawn to the display.
-You would have to add additional logic here to account for this if you were to modify the program
-to draw many frames in a loop.
-
 ## Beginning the Render Pass
 
-Starting the render pass is straightforward:
+You have already defined the render pass in a previous section, so
+starting the render pass by putting a begin render pass command in the
+command buffer is straightforward:
 
     VkRenderPassBeginInfo rp_begin;
     rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -80,6 +55,9 @@ Starting the render pass is straightforward:
     rp_begin.clearValueCount = 2;
     rp_begin.pClearValues = clear_values;
     vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
+
+Note that you already created a command buffer and put it in recording mode by calling
+`init_command_buffer()` and `execute_begin_command()` earlier in this sample.
 
 You supply the previously-defined render pass and the framebuffer selected by the
 index returned from `vkAcquireNextImageKHR()`.
@@ -169,8 +147,11 @@ but the command buffer is still "open" and the sample is not finished recording 
 
 ## Transitioning the Swapchain Image for Presenting
 
-While the GPU is rendering, the target swapchain image layout is `VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL`,
+While the GPU is rendering, the target swapchain image layout is
+`VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL`,
 which is the best layout for the GPU rendering.
+You set this layout in the subpass definition when you defined the render pass
+in a previous section of this tutorial.
 But this layout may not be the best layout for the display hardware that scans the image out to the
 display device.
 For example, the optimum GPU memory layout for rendering might be "tiled",
@@ -180,8 +161,8 @@ display hardware.
 You use the `VK_IMAGE_LAYOUT_PRESENT_SRC_KHR` layout to specify that the image is about to
 be presented to the display.
 
-You already took care of this layout transition in the render_pass section by
-specifying different values for `initialLayout` and `finalLayout` in the
+You already took care of this layout transition in the render pass section by
+specifying the `finalLayout` as `VK_IMAGE_LAYOUT_PRESENT_SRC_KHR` in the
 description of the color image attachment:
 
     VkAttachmentDescription attachments[2];
@@ -191,7 +172,7 @@ description of the color image attachment:
     attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachments[0].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    attachments[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     attachments[0].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     attachments[0].flags = 0;
 

@@ -34,3 +34,9 @@ The final section in the tutorial produces a program that displays this:
 
 ![Draw Cube](../images/drawcube.png)
 <footer>&copy; Copyright 2016 LunarG, Inc</footer>
+
+## Change Log
+
+* 26 Aug 2016 - Initial Revision
+* 26 Oct 2016 - Image layout transitions are now specified
+in render pass and subpass definitions, instead of using memory barriers
