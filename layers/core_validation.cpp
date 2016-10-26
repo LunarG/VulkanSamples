@@ -10033,21 +10033,16 @@ static bool CreatePassDAG(const layer_data *dev_data, VkDevice device, const VkR
                     log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                             DRAWSTATE_INVALID_RENDERPASS, "DS", "The src and dest subpasses cannot both be external.");
             }
-
-            // We don't want to add edges to the DAG for dependencies to/from
-            // VK_SUBPASS_EXTERNAL. We don't use them for anything, and their
-            // presence complicates other code.
-            continue;
         } else if (dependency.srcSubpass > dependency.dstSubpass) {
             skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                  DRAWSTATE_INVALID_RENDERPASS, "DS",
                                  "Depedency graph must be specified such that an earlier pass cannot depend on a later pass.");
         } else if (dependency.srcSubpass == dependency.dstSubpass) {
             has_self_dependency[dependency.srcSubpass] = true;
+        } else {
+            subpass_to_node[dependency.dstSubpass].prev.push_back(dependency.srcSubpass);
+            subpass_to_node[dependency.srcSubpass].next.push_back(dependency.dstSubpass);
         }
-
-        subpass_to_node[dependency.dstSubpass].prev.push_back(dependency.srcSubpass);
-        subpass_to_node[dependency.srcSubpass].next.push_back(dependency.dstSubpass);
     }
     return skip_call;
 }
