@@ -4442,6 +4442,9 @@ terminator_EnumeratePhysicalDevices(VkInstance instance,
         phys_devs[i].this_icd = icd;
         icd = icd->next;
     }
+    if (inst->total_gpu_count == 0) {
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
 
     uint32_t copy_count = inst->total_gpu_count;
 
@@ -4456,22 +4459,19 @@ terminator_EnumeratePhysicalDevices(VkInstance instance,
             copy_count = *pPhysicalDeviceCount;
         }
 
-        if (inst->phys_devs_term) {
-            loader_instance_heap_free(inst, inst->phys_devs_term);
-            inst->phys_devs_term = NULL;
-        }
-
-        if (inst->total_gpu_count > 0) {
+        if (NULL == inst->phys_devs_term) {
             inst->phys_devs_term = loader_instance_heap_alloc(
                 inst, sizeof(struct loader_physical_device) * inst->total_gpu_count,
                 VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-            if (!inst->phys_devs_term) {
+            if (NULL == inst->phys_devs_term) {
                 return VK_ERROR_OUT_OF_HOST_MEMORY;
             }
         }
 
-        for (i = 0; idx < inst->total_gpu_count && i < inst->total_icd_count; i++) {
-            for (j = 0; j < phys_devs[i].count && idx < inst->total_gpu_count; j++) {
+        for (i = 0; idx < inst->total_gpu_count && i < inst->total_icd_count;
+             i++) {
+            for (j = 0; j < phys_devs[i].count && idx < inst->total_gpu_count;
+                 j++) {
                 loader_set_dispatch((void *)&inst->phys_devs_term[idx],
                                     inst->disp);
                 inst->phys_devs_term[idx].this_icd = phys_devs[i].this_icd;
