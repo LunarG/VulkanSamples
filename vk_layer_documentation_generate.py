@@ -320,10 +320,10 @@ class LayerDoc:
 
         # Now go through API names in doc and verify they're real
         # First we're going to transform proto names from vulkan.py into single list
-        core_api_names = [p.name for p in vulkan.core.protos]
-        wsi_s_names = [p.name for p in vulkan.ext_khr_surface.protos]
-        wsi_ds_names = [p.name for p in vulkan.ext_khr_device_swapchain.protos]
-        dbg_rpt_names = [p.name for p in vulkan.ext_debug_report.protos]
+        core_api_names = [p.name for p in vulkan.VK_VERSION_1_0.protos]
+        wsi_s_names = [p.name for p in vulkan.VK_KHR_surface.protos]
+        wsi_ds_names = [p.name for p in vulkan.VK_KHR_swapchain.protos]
+        dbg_rpt_names = [p.name for p in vulkan.VK_EXT_debug_report.protos]
         api_names = core_api_names + wsi_s_names + wsi_ds_names + dbg_rpt_names
         for ln in self.layer_doc_dict:
             for chk in self.layer_doc_dict[ln]:
