@@ -1345,38 +1345,76 @@ VK_EXT_debug_marker = Extension(
 )
 
 import sys
+
 wsi_linux = ['Xcb', 'Xlib', 'Wayland', 'Mir', 'Display']
 
-if sys.argv[1] == 'Win32':
-    extensions = [VK_VERSION_1_0, VK_KHR_surface, VK_KHR_swapchain, VK_KHR_win32_surface,
-                  VK_KHR_display, VK_KHR_display_swapchain]
-    extensions_all = [VK_VERSION_1_0, VK_KHR_surface, VK_KHR_swapchain, VK_KHR_win32_surface,
-                     VK_KHR_display, VK_AMD_draw_indirect_count,
-                     VK_NV_external_memory_capabilities, VK_NV_external_memory_win32,
-                     VK_KHR_display_swapchain, VK_EXT_debug_report, VK_EXT_debug_marker]
-elif sys.argv[1] in wsi_linux:
-    extensions = [VK_VERSION_1_0, VK_KHR_surface, VK_KHR_swapchain, VK_KHR_xcb_surface,
-                  VK_KHR_xlib_surface, VK_KHR_wayland_surface, VK_KHR_mir_surface, VK_KHR_display,
-                  VK_KHR_display_swapchain]
-    extensions_all = [VK_VERSION_1_0, VK_KHR_surface, VK_KHR_swapchain, VK_KHR_xcb_surface,
-                      VK_KHR_xlib_surface, VK_KHR_wayland_surface, VK_KHR_mir_surface,
-                      VK_KHR_display, VK_AMD_draw_indirect_count,
-                      VK_NV_external_memory_capabilities, VK_KHR_display_swapchain,
-                      VK_EXT_debug_report, VK_EXT_debug_marker]
-elif sys.argv[1] == 'Android':
-    extensions = [VK_VERSION_1_0, VK_KHR_surface, VK_KHR_swapchain, VK_KHR_android_surface, VK_KHR_display_swapchain]
-    extensions_all = [VK_VERSION_1_0, VK_KHR_surface, VK_KHR_swapchain, VK_KHR_android_surface,
-                      VK_AMD_draw_indirect_count, VK_NV_external_memory_capabilities,
-                      VK_KHR_display_swapchain, VK_EXT_debug_report, VK_EXT_debug_marker]
+# Set up platform-specific display servers
+linux_display_servers = ['Xcb', 'Xlib', 'Wayland', 'Mir', 'Display']
+win32_display_servers = ['Win32']
+android_display_servers = ['Android']
+
+# Define non-WSI platform-specific extensions
+android_only_exts = []
+linux_only_exts = []
+win32_only_exts = [VK_NV_external_memory_win32,
+#                  VK_NV_win32_keyed_mutex,
+                  ]
+
+# Define platform-specific WSI extensions
+android_wsi_exts = [VK_KHR_android_surface,
+                   ]
+linux_wsi_exts = [VK_KHR_xlib_surface,
+                  VK_KHR_xcb_surface,
+                  VK_KHR_wayland_surface,
+                  VK_KHR_mir_surface,
+                 ]
+win32_wsi_exts = [VK_KHR_win32_surface
+                 ]
+
+# Define extensions common to all configurations
+common_exts = [VK_VERSION_1_0,
+               VK_KHR_surface,
+               VK_KHR_swapchain,
+               VK_KHR_display_swapchain,
+              ]
+
+# Define extensions not exported by the loader
+non_exported_exts = [VK_NV_external_memory_capabilities,
+                     VK_AMD_draw_indirect_count,
+                     VK_EXT_debug_report,
+                     VK_EXT_debug_marker,
+#                    VK_KHR_sampler_mirror_clamp_to_edge,
+#                    VK_NV_glsl_shader,
+#                    VK_IMG_filter_cubic,
+#                    VK_AMD_rasterization_order,
+#                    VK_AMD_shader_trinary_minmax,
+#                    VK_AMD_shader_explicit_vertex_parameter,
+#                    VK_AMD_gcn_shader,
+#                    VK_NV_dedicated_allocation,
+#                    VK_NV_external_memory,
+#                    VK_EXT_validation_flags,
+#                    VK_AMD_negative_viewport_height,
+#                    VK_AMD_gpu_shader_half_float,
+#                    VK_AMD_shader_ballot,
+#                    VK_IMG_format_pvrtc,
+                    ]
+non_android_exts = [VK_KHR_display,
+                   ]
+extensions = common_exts
+extensions_all = non_exported_exts
+
+if sys.argv[1] in win32_display_servers:
+    extensions += win32_wsi_exts
+    extensions_all += extensions + win32_only_exts
+elif sys.argv[1] in linux_display_servers:
+    extensions += linux_wsi_exts
+    extensions_all += extensions + linux_only_exts
+elif sys.argv[1] in android_display_servers:
+    extensions += android_wsi_exts
+    extensions_all += extensions + android_only_exts
 else:
-    extensions = [VK_VERSION_1_0, VK_KHR_surface, VK_KHR_swapchain, VK_KHR_win32_surface, VK_KHR_xcb_surface,
-                 VK_KHR_xlib_surface, VK_KHR_wayland_surface, VK_KHR_mir_surface, VK_KHR_display,
-                 VK_KHR_android_surface, VK_KHR_display_swapchain]
-    extensions_all = [VK_VERSION_1_0, VK_KHR_surface, VK_KHR_swapchain, VK_KHR_win32_surface,
-                     VK_KHR_xcb_surface, VK_KHR_xlib_surface, VK_KHR_wayland_surface, VK_KHR_mir_surface,
-                     VK_KHR_display, VK_KHR_android_surface, VK_AMD_draw_indirect_count,
-                     VK_NV_external_memory_capabilities, VK_NV_external_memory_win32,
-                     VK_KHR_display_swapchain, VK_EXT_debug_report, VK_EXT_debug_marker]
+    extensions += win32_wsi_exts + linux_wsi_exts + android_wsi_exts
+    extensions_all += extensions + win32_only_exts + linux_only_exts + android_only_exts
 
 object_dispatch_list = [
     "VkInstance",
