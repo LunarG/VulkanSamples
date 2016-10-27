@@ -213,7 +213,9 @@ int sample_main(int argc, char *argv[]) {
 
     set_image_layout(info, info.buffers[info.current_buffer].image,
                      VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                     VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                     VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 
     const VkDeviceSize offsets[1] = {0};
 

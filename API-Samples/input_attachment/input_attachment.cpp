@@ -152,7 +152,9 @@ int sample_main(int argc, char *argv[]) {
     // Set the image layout to TRANSFER_DST_OPTIMAL to be ready for clear
     set_image_layout(info, input_image, VK_IMAGE_ASPECT_COLOR_BIT,
                      VK_IMAGE_LAYOUT_UNDEFINED,
-                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                     VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                     VK_PIPELINE_STAGE_TRANSFER_BIT);
 
     VkImageSubresourceRange srRange = {};
     srRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -174,7 +176,9 @@ int sample_main(int argc, char *argv[]) {
     // Set the image layout to SHADER_READONLY_OPTIMAL for use by the shaders
     set_image_layout(info, input_image, VK_IMAGE_ASPECT_COLOR_BIT,
                      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                     VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+                     VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                     VK_PIPELINE_STAGE_TRANSFER_BIT,
+                     VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
     VkImageViewCreateInfo view_info = {};
     view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;

@@ -1797,9 +1797,6 @@ void init_image(struct sample_info &info, texture_object &texObj,
     res = vkBindImageMemory(info.device, mappableImage, mappableMemory, 0);
     assert(res == VK_SUCCESS);
 
-    set_image_layout(info, mappableImage, VK_IMAGE_ASPECT_COLOR_BIT,
-                     VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_GENERAL);
-
     res = vkEndCommandBuffer(info.cmd);
     assert(res == VK_SUCCESS);
     const VkCommandBuffer cmd_bufs[] = {info.cmd};
@@ -1873,7 +1870,8 @@ void init_image(struct sample_info &info, texture_object &texObj,
         texObj.mem = mappableMemory;
         texObj.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         set_image_layout(info, texObj.image, VK_IMAGE_ASPECT_COLOR_BIT,
-                         VK_IMAGE_LAYOUT_GENERAL, texObj.imageLayout);
+                         VK_IMAGE_LAYOUT_PREINITIALIZED, texObj.imageLayout,
+                         VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
         /* No staging resources to free later */
         info.stagingImage = VK_NULL_HANDLE;
         info.stagingMemory = VK_NULL_HANDLE;
@@ -1910,14 +1908,18 @@ void init_image(struct sample_info &info, texture_object &texObj,
         /* Since we're going to blit from the mappable image, set its layout to
          * SOURCE_OPTIMAL. Side effect is that this will create info.cmd */
         set_image_layout(info, mappableImage, VK_IMAGE_ASPECT_COLOR_BIT,
-                         VK_IMAGE_LAYOUT_GENERAL,
-                         VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+                         VK_IMAGE_LAYOUT_PREINITIALIZED,
+                         VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                         VK_PIPELINE_STAGE_HOST_BIT,
+                         VK_PIPELINE_STAGE_TRANSFER_BIT);
 
         /* Since we're going to blit to the texture image, set its layout to
          * DESTINATION_OPTIMAL */
         set_image_layout(info, texObj.image, VK_IMAGE_ASPECT_COLOR_BIT,
                          VK_IMAGE_LAYOUT_UNDEFINED,
-                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                         VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                         VK_PIPELINE_STAGE_TRANSFER_BIT);
 
         VkImageCopy copy_region;
         copy_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -1948,7 +1950,9 @@ void init_image(struct sample_info &info, texture_object &texObj,
         texObj.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         set_image_layout(info, texObj.image, VK_IMAGE_ASPECT_COLOR_BIT,
                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                         texObj.imageLayout);
+                         texObj.imageLayout,
+                         VK_PIPELINE_STAGE_TRANSFER_BIT,
+                         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
         /* Remember staging resources to free later */
         info.stagingImage = mappableImage;

@@ -167,7 +167,8 @@ int sample_main(int argc, char *argv[]) {
         texObj.mem = mappableMemory;
         texObj.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         set_image_layout(info, texObj.image, VK_IMAGE_ASPECT_COLOR_BIT,
-                         VK_IMAGE_LAYOUT_PREINITIALIZED, texObj.imageLayout);
+                         VK_IMAGE_LAYOUT_PREINITIALIZED, texObj.imageLayout,
+                         VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
     } else {
         /* The mappable image cannot be our texture, so create an optimally
          * tiled image and blit to it */
@@ -202,14 +203,16 @@ int sample_main(int argc, char *argv[]) {
         /* Side effect is that this will create info.cmd */
         set_image_layout(info, mappableImage, VK_IMAGE_ASPECT_COLOR_BIT,
                          VK_IMAGE_LAYOUT_PREINITIALIZED,
-                         VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-
+                         VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                         VK_PIPELINE_STAGE_HOST_BIT,
+                         VK_PIPELINE_STAGE_TRANSFER_BIT);
         /* Since we're going to blit to the texture image, set its layout to
          * DESTINATION_OPTIMAL */
         set_image_layout(info, texObj.image, VK_IMAGE_ASPECT_COLOR_BIT,
                          VK_IMAGE_LAYOUT_UNDEFINED,
-                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-
+                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                         VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                         VK_PIPELINE_STAGE_TRANSFER_BIT);
         VkImageCopy copy_region;
         copy_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         copy_region.srcSubresource.mipLevel = 0;
@@ -239,7 +242,9 @@ int sample_main(int argc, char *argv[]) {
         texObj.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         set_image_layout(info, texObj.image, VK_IMAGE_ASPECT_COLOR_BIT,
                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                         texObj.imageLayout);
+                         texObj.imageLayout,
+                         VK_PIPELINE_STAGE_TRANSFER_BIT,
+                         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
     }
     execute_end_command_buffer(info);
     execute_queue_command_buffer(info);

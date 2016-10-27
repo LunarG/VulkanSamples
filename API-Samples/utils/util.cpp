@@ -124,7 +124,9 @@ bool memory_type_from_properties(struct sample_info &info, uint32_t typeBits,
 void set_image_layout(struct sample_info &info, VkImage image,
                       VkImageAspectFlags aspectMask,
                       VkImageLayout old_image_layout,
-                      VkImageLayout new_image_layout) {
+                      VkImageLayout new_image_layout,
+                      VkPipelineStageFlags src_stages,
+                      VkPipelineStageFlags dest_stages) {
     /* DEPENDS on info.cmd and info.queue initialized */
 
     assert(info.cmd != VK_NULL_HANDLE);
@@ -146,43 +148,50 @@ void set_image_layout(struct sample_info &info, VkImage image,
     image_memory_barrier.subresourceRange.baseArrayLayer = 0;
     image_memory_barrier.subresourceRange.layerCount = 1;
 
-    if (old_image_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
-        image_memory_barrier.srcAccessMask =
-            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    switch(old_image_layout) {
+        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+            image_memory_barrier.srcAccessMask =
+                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            break;
+
+        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+            image_memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            break;
+
+        case VK_IMAGE_LAYOUT_PREINITIALIZED:
+            image_memory_barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+            break;
+
+        default:
+            break;
     }
 
-    if (new_image_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-        image_memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    }
+    switch(new_image_layout) {
+        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+            image_memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            break;
 
-    if (new_image_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL) {
-        image_memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-    }
+        case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+            image_memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+            break;
 
-    if (old_image_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-        image_memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    }
+        case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+            image_memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            break;
 
-    if (old_image_layout == VK_IMAGE_LAYOUT_PREINITIALIZED) {
-        image_memory_barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
-    }
+        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+            image_memory_barrier.dstAccessMask =
+                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            break;
 
-    if (new_image_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-        image_memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    }
+        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+            image_memory_barrier.dstAccessMask =
+                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+            break;
 
-    if (new_image_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
-        image_memory_barrier.dstAccessMask =
-            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        default:
+            break;
     }
-
-    if (new_image_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
-        image_memory_barrier.dstAccessMask =
-            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-    }
-
-    VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
     vkCmdPipelineBarrier(info.cmd, src_stages, dest_stages, 0, 0, NULL, 0, NULL,
                          1, &image_memory_barrier);
@@ -643,11 +652,15 @@ void write_ppm(struct sample_info &info, const char *basename) {
     res = vkBeginCommandBuffer(info.cmd, &cmd_buf_info);
     set_image_layout(info, mappableImage, VK_IMAGE_ASPECT_COLOR_BIT,
                      VK_IMAGE_LAYOUT_UNDEFINED,
-                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                     VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                     VK_PIPELINE_STAGE_TRANSFER_BIT);
 
     set_image_layout(info, info.buffers[info.current_buffer].image,
                      VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                     VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+                     VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                     VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                     VK_PIPELINE_STAGE_TRANSFER_BIT);
 
     VkImageCopy copy_region;
     copy_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -675,7 +688,9 @@ void write_ppm(struct sample_info &info, const char *basename) {
 
     set_image_layout(info, mappableImage, VK_IMAGE_ASPECT_COLOR_BIT,
                      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                     VK_IMAGE_LAYOUT_GENERAL);
+                     VK_IMAGE_LAYOUT_GENERAL,
+                     VK_PIPELINE_STAGE_TRANSFER_BIT,
+                     VK_PIPELINE_STAGE_HOST_BIT);
 
     res = vkEndCommandBuffer(info.cmd);
     assert(res == VK_SUCCESS);

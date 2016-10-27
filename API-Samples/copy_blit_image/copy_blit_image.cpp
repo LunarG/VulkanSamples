@@ -102,7 +102,9 @@ int sample_main(int argc, char *argv[]) {
     // We'll be blitting into the presentable image, set the layout accordingly
     set_image_layout(info, info.buffers[info.current_buffer].image,
                      VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                     VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                     VK_PIPELINE_STAGE_TRANSFER_BIT);
 
     // Create an image, map it, and write some values to the image
 
@@ -137,7 +139,8 @@ int sample_main(int argc, char *argv[]) {
     res = vkAllocateMemory(info.device, &memAllocInfo, NULL, &dmem);
     res = vkBindImageMemory(info.device, bltSrcImage, dmem, 0);
     set_image_layout(info, bltSrcImage, VK_IMAGE_ASPECT_COLOR_BIT,
-                     VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+                     VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL,
+                     VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_HOST_BIT);
 
     res = vkEndCommandBuffer(info.cmd);
     assert(res == VK_SUCCESS);
@@ -199,7 +202,9 @@ int sample_main(int argc, char *argv[]) {
     // Intend to blit from this image, set the layout accordingly
     set_image_layout(info, bltSrcImage, VK_IMAGE_ASPECT_COLOR_BIT,
                      VK_IMAGE_LAYOUT_GENERAL,
-                     VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+                     VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                     VK_PIPELINE_STAGE_HOST_BIT,
+                     VK_PIPELINE_STAGE_TRANSFER_BIT);
 
     bltDstImage = info.buffers[info.current_buffer].image;
 

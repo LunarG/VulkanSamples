@@ -248,7 +248,9 @@ bool memory_type_from_properties(struct sample_info &info, uint32_t typeBits,
 void set_image_layout(struct sample_info &demo, VkImage image,
                       VkImageAspectFlags aspectMask,
                       VkImageLayout old_image_layout,
-                      VkImageLayout new_image_layout);
+                      VkImageLayout new_image_layout,
+                      VkPipelineStageFlags src_stages,
+                      VkPipelineStageFlags dest_stages);
 
 bool read_ppm(char const *const filename, int &width, int &height,
               uint64_t rowPitch, unsigned char *dataPtr);
