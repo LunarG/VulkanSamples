@@ -21,6 +21,7 @@
 # Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
 # Author: Jon Ashburn <jon@lunarg.com>
 # Author: Gwan-gyeong Mun <kk.moon@samsung.com>
+# Author: Mark Lobodzinski <mark@lunarg.com>
 
 import sys
 
@@ -136,14 +137,7 @@ class DispatchTableOpsSubcommand(Subcommand):
                   proto.name == "EnumerateInstanceLayerProperties" or proto.params[0].ty == "VkInstance" or \
                   proto.params[0].ty == "VkPhysicalDevice" or proto.name == "GetDeviceProcAddr":
                     continue
-                if proto.name == "GetMemoryWin32HandleNV":
-                    stmts.append("#ifdef VK_USE_PLATFORM_WIN32_KHR")
-                    stmts.append("    table->%s = (PFN_vk%s) gpa(device, \"vk%s\");" %
-                            (proto.name, proto.name, proto.name))
-                    stmts.append("#endif // VK_USE_PLATFORM_WIN32_KHR")
-                else:
-                    stmts.append("    table->%s = (PFN_vk%s) gpa(device, \"vk%s\");" %
-                            (proto.name, proto.name, proto.name))
+                stmts.append("    table->%s = (PFN_vk%s) gpa(device, \"vk%s\");" % (proto.name, proto.name, proto.name))
             func.append("static inline void %s_init_device_dispatch_table(VkDevice device,"
                 % self.prefix)
             func.append("%s                                               VkLayerDispatchTable *table,"
@@ -288,7 +282,6 @@ def main():
             "Wayland",
             "Mir",
             "Display",
-            "AllPlatforms"
     }
     subcommands = {
             "dispatch-table-ops": DispatchTableOpsSubcommand,
