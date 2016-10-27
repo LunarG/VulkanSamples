@@ -69,6 +69,7 @@ class WSIWindow{
 public:
     WSIWindow(CInstance& inst, const char* title, uint width, uint height);
     virtual ~WSIWindow();
+    VkSurfaceKHR Surface();
     //--State query functions--
     void GetWinPos  (int16_t& x, int16_t& y);          // Get the window's x,y position, relative to top-left
     void GetWinSize (int16_t& width, int16_t& height); // Get the window's width and height

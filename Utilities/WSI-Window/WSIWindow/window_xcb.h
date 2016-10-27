@@ -39,7 +39,7 @@
 typedef uint16_t xcb_input_device_id_t;
 typedef uint32_t xcb_input_fp1616_t;
 
-typedef struct xcb_input_touch_begin_event_t { //from xinput.h in XCB 1.12
+typedef struct xcb_input_touch_begin_event_t { //from xinput.h in XCB 1.12 (current version is 1.11)
     uint8_t                   response_type;
     uint8_t                   extension;
     uint16_t                  sequence;

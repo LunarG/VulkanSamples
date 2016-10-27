@@ -52,6 +52,7 @@ WSIWindow::WSIWindow(CInstance& inst,const char* title,uint width,uint height){
 }
 
 WSIWindow::~WSIWindow(){ delete(pimpl); }
+VkSurfaceKHR WSIWindow::Surface(){ return pimpl->Surface(); };
 
 void WSIWindow::GetWinPos  (int16_t& x, int16_t& y){x=pimpl->shape.x; y=pimpl->shape.y;}
 void WSIWindow::GetWinSize (int16_t& width, int16_t& height){width=pimpl->shape.width; height=pimpl->shape.height;}

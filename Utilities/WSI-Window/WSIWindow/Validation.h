@@ -79,7 +79,7 @@
       #define LOG(...)  {                                         printf(__VA_ARGS__); fflush(stdout);}  /*   Prints in white            */
       #define LOGV(...) {printf(cCYAN   "PERF-WARNING: " cRESET); printf(__VA_ARGS__); fflush(stdout);}  /*   Prints Performace Warnings */
       #define LOGD(...) {printf(cBLUE   "DEBUG: "        cRESET); printf(__VA_ARGS__); fflush(stdout);}  /*   Prints DEBUG messages      */
-      #define LOGI(...) {printf(cGREEN  "INFO: "         cRESET); printf(__VA_ARGS__); fflush(stdout);}  /*   Prints INFO messages       */
+      #define LOGI(...) {printf(cGREEN  "INFO : "        cRESET); printf(__VA_ARGS__); fflush(stdout);}  /*   Prints INFO messages       */
       #define LOGW(...) {printf(cYELLOW "WARNING: "      cRESET); printf(__VA_ARGS__); fflush(stdout);}  /*   Prints WARNINGs in yellow  */
       #define LOGE(...) {printf(cRED    "ERROR: "        cRESET); printf(__VA_ARGS__); fflush(stdout);}  /*   Prints ERRORs in red       */
     #endif

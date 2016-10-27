@@ -105,6 +105,7 @@ public:
     virtual ~WindowImpl() { if(surface) vkDestroySurfaceKHR(*instance,surface,NULL); }
     virtual void Close() { running = false; }
     CInstance& Instance() { return *instance; }
+    VkSurfaceKHR Surface(){ return surface; }
     bool HasFocus() { return has_focus; }                                  // returns true if window has focus
     bool KeyState(eKeycode key){ return keystate[key]; }                   // returns true if key is pressed
     bool BtnState(uint8_t  btn){ return (btn<5)  ? btnstate[btn]:0; }      // returns true if mouse btn is pressed
