@@ -83,6 +83,6 @@ RunEnumerateInstanceLayerPropertiesTest
 RunEnumerateInstanceExtensionPropertiesTest
 
 # Test the wrap objects layer.
-./run_wrap_objects_tests.sh
+./run_wrap_objects_tests.sh || exit 1
 
 popd > /dev/null

@@ -132,5 +132,5 @@ if (${CMAKE_SYSTEM_PROCESSOR} STREQUAL ${CMAKE_HOST_SYSTEM_PROCESSOR})
 endif()
 
 if(UNIX)
-    install(TARGETS vulkaninfo DESTINATION bin)
+    install(TARGETS vulkaninfo DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()

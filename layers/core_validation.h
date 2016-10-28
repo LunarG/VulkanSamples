@@ -44,9 +44,6 @@
 #endif
 #endif
 
-// Enable mem_tracker merged code
-#define MTMERGE 1
-
 #pragma once
 #include "core_validation_error_enums.h"
 #include "vk_validation_error_messages.h"
@@ -71,15 +68,25 @@
  */
 struct CHECK_DISABLED {
     bool command_buffer_state;
+    bool create_descriptor_set_layout;
     bool destroy_buffer_view; // Skip validation at DestroyBufferView time
+    bool destroy_image_view;  // Skip validation at DestroyImageView time
+    bool destroy_pipeline;    // Skip validation at DestroyPipeline time
+    bool destroy_descriptor_pool; // Skip validation at DestroyDescriptorPool time
+    bool destroy_framebuffer;     // Skip validation at DestroyFramebuffer time
+    bool destroy_renderpass;      // Skip validation at DestroyRenderpass time
+    bool destroy_image;           // Skip validation at DestroyImage time
+    bool destroy_sampler;         // Skip validation at DestroySampler time
+    bool destroy_command_pool;    // Skip validation at DestroyCommandPool time
+    bool destroy_event;           // Skip validation at DestroyEvent time
+    bool free_memory;             // Skip validation at FreeMemory time
     bool object_in_use;       // Skip all object in_use checking
     bool idle_descriptor_set; // Skip check to verify that descriptor set is no in-use
     bool push_constant_range; // Skip push constant range checks
     bool free_descriptor_sets; // Skip validation prior to vkFreeDescriptorSets()
     bool allocate_descriptor_sets; // Skip validation prior to vkAllocateDescriptorSets()
+    bool update_descriptor_sets;   // Skip validation prior to vkUpdateDescriptorSets()
 };
-
-#if MTMERGE
 
 /*
  * MTMTODO : Update this comment
@@ -117,7 +124,6 @@ struct MT_FB_ATTACHMENT_INFO {
     VkImage image;
     VkDeviceMemory mem;
 };
-#endif
 
 struct GENERIC_HEADER {
     VkStructureType sType;
@@ -154,7 +160,7 @@ class SEMAPHORE_NODE : public BASE_NODE {
     bool signaled;
 };
 
-class EVENT_NODE : public BASE_NODE {
+class EVENT_STATE : public BASE_NODE {
   public:
     int write_in_use;
     bool needsSignaled;
@@ -177,14 +183,14 @@ class QUERY_POOL_NODE : public BASE_NODE {
     VkQueryPoolCreateInfo createInfo;
 };
 
-class FRAMEBUFFER_NODE : public BASE_NODE {
+class FRAMEBUFFER_STATE : public BASE_NODE {
   public:
     VkFramebuffer framebuffer;
     safe_VkFramebufferCreateInfo createInfo;
     safe_VkRenderPassCreateInfo renderPassCreateInfo;
     std::unordered_set<VkCommandBuffer> referencingCmdBuffers;
     std::vector<MT_FB_ATTACHMENT_INFO> attachments;
-    FRAMEBUFFER_NODE(VkFramebuffer fb, const VkFramebufferCreateInfo *pCreateInfo, const VkRenderPassCreateInfo *pRPCI)
+    FRAMEBUFFER_STATE(VkFramebuffer fb, const VkFramebufferCreateInfo *pCreateInfo, const VkRenderPassCreateInfo *pRPCI)
         : framebuffer(fb), createInfo(pCreateInfo), renderPassCreateInfo(pRPCI){};
 };
 
@@ -201,14 +207,6 @@ enum CALL_STATE {
     UNCALLED,      // Function has not been called
     QUERY_COUNT,   // Function called once to query a count
     QUERY_DETAILS, // Function called w/ a count to query details
-};
-
-struct INSTANCE_STATE {
-    // Track the call state and array size for physical devices
-    CALL_STATE vkEnumeratePhysicalDevicesState;
-    uint32_t physical_devices_count;
-    CHECK_DISABLED disabled;
-    INSTANCE_STATE() : vkEnumeratePhysicalDevicesState(UNCALLED), physical_devices_count(0), disabled{} {};
 };
 
 struct PHYSICAL_DEVICE_STATE {

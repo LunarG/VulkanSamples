@@ -3,7 +3,6 @@
 import sys
 import xml.etree.ElementTree as etree
 import urllib2
-#import codecs
 
 #############################
 # spec.py script
@@ -27,7 +26,6 @@ import urllib2
 # TODO:
 #  1. Improve string matching to add more automation for figuring out which messages are changed vs. completely new
 #
-#
 #############################
 
 
@@ -37,11 +35,13 @@ db_filename = "vk_validation_error_database.txt" # can override w/ '-gendb <file
 gen_db = False # set to True when '-gendb <filename>' option provided
 spec_compare = False # set to True with '-compare <db_filename>' option
 # This is the root spec link that is used in error messages to point users to spec sections
-spec_url = "https://www.khronos.org/registry/vulkan/specs/1.0/xhtml/vkspec.html"
+#old_spec_url = "https://www.khronos.org/registry/vulkan/specs/1.0/xhtml/vkspec.html"
+spec_url = "https://www.khronos.org/registry/vulkan/specs/1.0-extensions/xhtml/vkspec.html"
 # After the custom validation error message, this is the prefix for the standard message that includes the
 #  spec valid usage language as well as the link to nearest section of spec to that language
 error_msg_prefix = "For more information refer to Vulkan Spec Section "
 ns = {'ns': 'http://www.w3.org/1999/xhtml'}
+validation_error_enum_name = "VALIDATION_ERROR_"
 # Dict of new enum values that should be forced to remap to old handles, explicitly set by -remap option
 remap_dict = {}
 
@@ -62,7 +62,7 @@ def printHelp():
 class Specification:
     def __init__(self):
         self.tree   = None
-        self.val_error_dict = {} # string for enum is key that references text for output message
+        self.val_error_dict = {} # string for enum is key that references 'error_msg' and 'api'
         self.error_db_dict = {} # dict of previous error values read in from database file
         self.delimiter = '~^~' # delimiter for db file
         self.copyright = """/* THIS FILE IS GENERATED.  DO NOT EDIT. */
@@ -71,6 +71,7 @@ class Specification:
  * Vulkan
  *
  * Copyright (c) 2016 Google Inc.
+ * Copyright (c) 2016 LunarG, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -112,12 +113,13 @@ class Specification:
     def parseTree(self):
         """Parse the registry Element, once created"""
         print "Parsing spec file..."
-        valid_usage = False # are we under a valid usage branch?
         unique_enum_id = 0
         self.root = self.tree.getroot()
         #print "ROOT: %s" % self.root
         prev_heading = '' # Last seen section heading or sub-heading
         prev_link = '' # Last seen link id within the spec
+        api_function = '' # API call that a check appears under
+        error_strings = set() # Flag any exact duplicate error strings and skip them
         for tag in self.root.iter(): # iterate down tree
             # Grab most recent section heading and link
             if tag.tag in ['{http://www.w3.org/1999/xhtml}h2', '{http://www.w3.org/1999/xhtml}h3']:
@@ -134,21 +136,33 @@ class Specification:
                 if tag.get('id') != None:
                     prev_link = tag.get('id')
                     #print "Updated prev link to %s" % (prev_link)
-            elif tag.tag == '{http://www.w3.org/1999/xhtml}strong': # identify valid usage sections
-                if None != tag.text and 'Valid Usage' in tag.text:
-                    valid_usage = True
-                else:
-                    valid_usage = False
-            elif tag.tag == '{http://www.w3.org/1999/xhtml}li' and valid_usage: # grab actual valid usage requirements
-                error_msg_str = "%s '%s' which states '%s' (%s#%s)" % (error_msg_prefix, prev_heading, "".join(tag.itertext()).replace('\n', ''), spec_url, prev_link)
-                # Some txt has multiple spaces so split on whitespace and join w/ single space
-                error_msg_str = " ".join(error_msg_str.split())
-                enum_str = "VALIDATION_ERROR_%05d" % (unique_enum_id)
-                # TODO : '\' chars in spec error messages are most likely bad spec txt that needs to be updated
-                self.val_error_dict[enum_str] = error_msg_str.encode("ascii", "ignore").replace("\\", "/")
-                unique_enum_id = unique_enum_id + 1
-                #print "dict contents: %s:" % (self.val_error_dict)
-                #print "Added enum to dict: %s" % (enum_str.encode("ascii", "ignore"))
+            elif tag.tag == '{http://www.w3.org/1999/xhtml}pre' and tag.get('class') == 'programlisting':
+                # Check and see if this is API function
+                code_text = "".join(tag.itertext()).replace('\n', '')
+                code_text_list = code_text.split()
+                if len(code_text_list) > 1 and code_text_list[1].startswith('vk'):
+                    api_function = code_text_list[1].strip('(')
+                    print "Found API function: %s" % (api_function)
+            elif tag.tag == '{http://www.w3.org/1999/xhtml}div' and tag.get('class') == 'sidebar':
+                # parse down sidebar to check for valid usage cases
+                valid_usage = False
+                for elem in tag.iter():
+                    if elem.tag == '{http://www.w3.org/1999/xhtml}strong' and None != elem.text and 'Valid Usage' in elem.text:
+                        valid_usage = True
+                    elif valid_usage and elem.tag == '{http://www.w3.org/1999/xhtml}li': # grab actual valid usage requirements
+                        error_msg_str = "%s '%s' which states '%s' (%s#%s)" % (error_msg_prefix, prev_heading, "".join(elem.itertext()).replace('\n', ''), spec_url, prev_link)
+                        # Some txt has multiple spaces so split on whitespace and join w/ single space
+                        error_msg_str = " ".join(error_msg_str.split())
+                        if error_msg_str in error_strings:
+                            print "WARNING: SKIPPING adding repeat entry for string. Please review spec and file issue as appropriate. Repeat string is: %s" % (error_msg_str)
+                        else:
+                            error_strings.add(error_msg_str)
+                            enum_str = "%s%05d" % (validation_error_enum_name, unique_enum_id)
+                            # TODO : '\' chars in spec error messages are most likely bad spec txt that needs to be updated
+                            self.val_error_dict[enum_str] = {}
+                            self.val_error_dict[enum_str]['error_msg'] = error_msg_str.encode("ascii", "ignore").replace("\\", "/")
+                            self.val_error_dict[enum_str]['api'] = api_function
+                            unique_enum_id = unique_enum_id + 1
         #print "Validation Error Dict has a total of %d unique errors and contents are:\n%s" % (unique_enum_id, self.val_error_dict)
     def genHeader(self, header_file):
         """Generate a header file based on the contents of a parsed spec"""
@@ -166,9 +180,10 @@ class Specification:
         for enum in sorted(self.val_error_dict):
             #print "Header enum is %s" % (enum)
             enum_decl.append('    %s = %d,' % (enum, int(enum.split('_')[-1])))
-            error_string_map.append('    {%s, "%s"},' % (enum, self.val_error_dict[enum]))
+            error_string_map.append('    {%s, "%s"},' % (enum, self.val_error_dict[enum]['error_msg']))
+        enum_decl.append('    %sMAX_ENUM = %d,' % (validation_error_enum_name, int(enum.split('_')[-1]) + 1))
         enum_decl.append('};')
-        error_string_map.append('};')
+        error_string_map.append('};\n')
         file_contents.extend(enum_decl)
         file_contents.append('\n// Mapping from unique validation error enum to the corresponding error message')
         file_contents.append('// The error message should be appended to the end of a custom error message that is passed')
@@ -183,9 +198,9 @@ class Specification:
         str_count_dict = {}
         unique_id_count = 0
         for enum in self.val_error_dict:
-            err_str = self.val_error_dict[enum]
+            err_str = self.val_error_dict[enum]['error_msg']
             if err_str in str_count_dict:
-                #print "Found repeat error string"
+                print "Found repeat error string"
                 str_count_dict[err_str] = str_count_dict[err_str] + 1
             else:
                 str_count_dict[err_str] = 1
@@ -195,7 +210,7 @@ class Specification:
         for es in str_count_dict:
             if str_count_dict[es] > 1:
                 repeat_string = repeat_string + 1
-                #print "String '%s' repeated %d times" % (es, repeat_string)
+                print "String '%s' repeated %d times" % (es, repeat_string)
         print "Found %d repeat strings" % (repeat_string)
     def genDB(self, db_file):
         """Generate a database of check_enum, check_coded?, testname, error_string"""
@@ -204,25 +219,30 @@ class Specification:
         db_lines.append("# This is a database file with validation error check information")
         db_lines.append("# Comments are denoted with '#' char")
         db_lines.append("# The format of the lines is:")
-        db_lines.append("# <error_enum>%s<check_implemented>%s<testname>%s<errormsg>" % (self.delimiter, self.delimiter, self.delimiter))
-        db_lines.append("# error_enum: Unique error enum for this check of format VALIDATION_ERROR_<uniqueid>")
+        db_lines.append("# <error_enum>%s<check_implemented>%s<testname>%s<api>%s<errormsg>%s<note>" % (self.delimiter, self.delimiter, self.delimiter, self.delimiter, self.delimiter))
+        db_lines.append("# error_enum: Unique error enum for this check of format %s<uniqueid>" % validation_error_enum_name)
         db_lines.append("# check_implemented: 'Y' if check has been implemented in layers, 'U' for unknown, or 'N' for not implemented")
         db_lines.append("# testname: Name of validation test for this check, 'Unknown' for unknown, or 'None' if not implmented")
+        db_lines.append("# api: Vulkan API function that this check is related to")
         db_lines.append("# errormsg: The unique error message for this check that includes spec language and link")
+        db_lines.append("# note: Free txt field with any custom notes related to the check in question")
         for enum in sorted(self.val_error_dict):
             # Default to unknown if check or test are implemented, then update below if appropriate
             implemented = 'U'
             testname = 'Unknown'
+            note = ''
             # If we have an existing db entry for this enum, use its implemented/testname values
             if enum in self.error_db_dict:
                 implemented = self.error_db_dict[enum]['check_implemented']
                 testname = self.error_db_dict[enum]['testname']
+                note = self.error_db_dict[enum]['note']
             #print "delimiter: %s, id: %s, str: %s" % (self.delimiter, enum, self.val_error_dict[enum])
             # No existing entry so default to N for implemented and None for testname
-            db_lines.append("%s%s%s%s%s%s%s" % (enum, self.delimiter, implemented, self.delimiter, testname, self.delimiter, self.val_error_dict[enum]))
+            db_lines.append("%s%s%s%s%s%s%s%s%s%s%s" % (enum, self.delimiter, implemented, self.delimiter, testname, self.delimiter, self.val_error_dict[enum]['api'], self.delimiter, self.val_error_dict[enum]['error_msg'], self.delimiter, note))
         print "Generating database file %s" % (db_file)
         with open(db_file, "w") as outfile:
             outfile.write("\n".join(db_lines))
+            outfile.write("\n")
     def readDB(self, db_file):
         """Read a db file into a dict, format of each line is <enum><implemented Y|N?><testname><errormsg>"""
         db_dict = {} # This is a simple db of just enum->errormsg, the same as is created from spec
@@ -233,16 +253,22 @@ class Specification:
                     continue
                 line = line.strip()
                 db_line = line.split(self.delimiter)
+                if len(db_line) != 6:
+                    print "ERROR: Bad database line doesn't have 6 elements: %s" % (line)
                 error_enum = db_line[0]
                 implemented = db_line[1]
                 testname = db_line[2]
-                error_str = db_line[3]
+                api = db_line[3]
+                error_str = db_line[4]
+                note = db_line[5]
                 db_dict[error_enum] = error_str
                 # Also read complete database contents into our class var for later use
                 self.error_db_dict[error_enum] = {}
                 self.error_db_dict[error_enum]['check_implemented'] = implemented
                 self.error_db_dict[error_enum]['testname'] = testname
+                self.error_db_dict[error_enum]['api'] = api
                 self.error_db_dict[error_enum]['error_string'] = error_str
+                self.error_db_dict[error_enum]['note'] = note
                 unique_id = int(db_line[0].split('_')[-1])
                 if unique_id > max_id:
                     max_id = unique_id
@@ -254,72 +280,78 @@ class Specification:
     # 4. If new id in original, but error strings don't match then:
     #   4a. If error string has exact match in original, update new to use original
     #   4b. If error string not in original, may be updated error message, manually address
-    def compareDB(self, orig_db_dict, max_id):
+    def compareDB(self, orig_error_msg_dict, max_id):
         """Compare orig database dict to new dict, report out findings, and return potential new dict for parsed spec"""
         # First create reverse dicts of err_strings to IDs
         next_id = max_id + 1
         orig_err_to_id_dict = {}
         # Create an updated dict in-place that will be assigned to self.val_error_dict when done
         updated_val_error_dict = {}
-        for enum in orig_db_dict:
-            orig_err_to_id_dict[orig_db_dict[enum]] = enum
+        for enum in orig_error_msg_dict:
+            orig_err_to_id_dict[orig_error_msg_dict[enum]] = enum
         new_err_to_id_dict = {}
         for enum in self.val_error_dict:
-            new_err_to_id_dict[self.val_error_dict[enum]] = enum
+            new_err_to_id_dict[self.val_error_dict[enum]['error_msg']] = enum
         ids_parsed = 0
+        # Values to be used for the update dict
+        update_enum = ''
+        update_msg = ''
+        update_api = ''
         # Now parse through new dict and figure out what to do with non-matching things
         for enum in sorted(self.val_error_dict):
             ids_parsed = ids_parsed + 1
             enum_list = enum.split('_') # grab sections of enum for use below
-            if enum in orig_db_dict:
-                if self.val_error_dict[enum] == orig_db_dict[enum]:
-                    #print "Exact match for enum %s" % (enum)
+            # Default update values to be the same
+            update_enum = enum
+            update_msg = self.val_error_dict[enum]['error_msg']
+            update_api = self.val_error_dict[enum]['api']
+            # Any user-forced remap takes precendence
+            if enum_list[-1] in remap_dict:
+                enum_list[-1] = remap_dict[enum_list[-1]]
+                new_enum = "_".join(enum_list)
+                print "NOTE: Using user-supplied remap to force %s to be %s" % (enum, new_enum)
+                update_enum = new_enum
+            elif enum in orig_error_msg_dict:
+                if self.val_error_dict[enum]['error_msg'] == orig_error_msg_dict[enum]:
+                    print "Exact match for enum %s" % (enum)
                     # Nothing to see here
                     if enum in updated_val_error_dict:
                         print "ERROR: About to overwrite entry for %s" % (enum)
-                    updated_val_error_dict[enum] = self.val_error_dict[enum]
-                elif self.val_error_dict[enum] in orig_err_to_id_dict:
+                elif self.val_error_dict[enum]['error_msg'] in orig_err_to_id_dict:
                     # Same value w/ different error id, need to anchor to original id
-                    #print "Need to switch new id %s to original id %s" % (enum, orig_err_to_id_dict[self.val_error_dict[enum]])
+                    print "Need to switch new id %s to original id %s" % (enum, orig_err_to_id_dict[self.val_error_dict[enum]['error_msg']])
                     # Update id at end of new enum to be same id from original enum
-                    enum_list[-1] = orig_err_to_id_dict[self.val_error_dict[enum]].split('_')[-1]
+                    enum_list[-1] = orig_err_to_id_dict[self.val_error_dict[enum]['error_msg']].split('_')[-1]
                     new_enum = "_".join(enum_list)
                     if new_enum in updated_val_error_dict:
                         print "ERROR: About to overwrite entry for %s" % (new_enum)
-                    updated_val_error_dict[new_enum] = self.val_error_dict[enum]
+                    update_enum = new_enum
                 else:
                     # No error match:
                     #  First check if only link has changed, in which case keep ID but update message
-                    orig_msg_list = orig_db_dict[enum].split('(', 1)
-                    new_msg_list = self.val_error_dict[enum].split('(', 1)
+                    orig_msg_list = orig_error_msg_dict[enum].split('(', 1)
+                    new_msg_list = self.val_error_dict[enum]['error_msg'].split('(', 1)
                     if orig_msg_list[0] == new_msg_list[0]: # Msg is same bug link has changed, keep enum & update msg
                         print "NOTE: Found that only spec link changed for %s so keeping same id w/ new link" % (enum)
-                        updated_val_error_dict[enum] = self.val_error_dict[enum]
-                    #  Second, check if user is forcing remap here
-                    elif enum_list[-1] in remap_dict:
-                        enum_list[-1] = remap_dict[enum_list[-1]]
-                        new_enum = "_".join(enum_list)
-                        print "NOTE: Using user-supplied remap to force %s to be %s" % (enum, new_enum)
-                        updated_val_error_dict[new_enum] = self.val_error_dict[enum]
-                    #  Finally, this seems to be a new error so need to pick it up from end of original unique ids & flag for review
+                    #  This seems to be a new error so need to pick it up from end of original unique ids & flag for review
                     else:
                         enum_list[-1] = "%05d" % (next_id)
                         new_enum = "_".join(enum_list)
                         next_id = next_id + 1
                         print "MANUALLY VERIFY: Updated new enum %s to be unique %s. Make sure new error msg is actually unique and not just changed" % (enum, new_enum)
-                        print "   New error string: %s" % (self.val_error_dict[enum])
+                        print "   New error string: %s" % (self.val_error_dict[enum]['error_msg'])
                         if new_enum in updated_val_error_dict:
                             print "ERROR: About to overwrite entry for %s" % (new_enum)
-                        updated_val_error_dict[new_enum] = self.val_error_dict[enum]
+                        update_enum = new_enum
             else: # new enum is not in orig db
-                if self.val_error_dict[enum] in orig_err_to_id_dict:
-                    #print "New enum %s not in orig dict, but exact error message matches original unique id %s" % (enum, orig_err_to_id_dict[self.val_error_dict[enum]])
+                if self.val_error_dict[enum]['error_msg'] in orig_err_to_id_dict:
+                    print "New enum %s not in orig dict, but exact error message matches original unique id %s" % (enum, orig_err_to_id_dict[self.val_error_dict[enum]['error_msg']])
                     # Update new unique_id to use original
-                    enum_list[-1] = orig_err_to_id_dict[self.val_error_dict[enum]].split('_')[-1]
+                    enum_list[-1] = orig_err_to_id_dict[self.val_error_dict[enum]['error_msg']].split('_')[-1]
                     new_enum = "_".join(enum_list)
                     if new_enum in updated_val_error_dict:
                         print "ERROR: About to overwrite entry for %s" % (new_enum)
-                    updated_val_error_dict[new_enum] = self.val_error_dict[enum]
+                    update_enum = new_enum
                 else:
                     enum_list[-1] = "%05d" % (next_id)
                     new_enum = "_".join(enum_list)
@@ -327,7 +359,10 @@ class Specification:
                     print "Completely new id and error code, update new id from %s to unique %s" % (enum, new_enum)
                     if new_enum in updated_val_error_dict:
                         print "ERROR: About to overwrite entry for %s" % (new_enum)
-                    updated_val_error_dict[new_enum] = self.val_error_dict[enum]
+                    update_enum = new_enum
+            updated_val_error_dict[update_enum] = {}
+            updated_val_error_dict[update_enum]['error_msg'] = update_msg
+            updated_val_error_dict[update_enum]['api'] = update_api
         # Assign parsed dict to be the udpated dict based on db compare
         print "In compareDB parsed %d entries" % (ids_parsed)
         return updated_val_error_dict
@@ -409,9 +444,9 @@ if __name__ == "__main__":
     spec.analyze()
     if (spec_compare):
         # Read in old spec info from db file
-        (orig_db_dict, max_id) = spec.readDB(db_filename)
+        (orig_err_msg_dict, max_id) = spec.readDB(db_filename)
         # New spec data should already be read into self.val_error_dict
-        updated_dict = spec.compareDB(orig_db_dict, max_id)
+        updated_dict = spec.compareDB(orig_err_msg_dict, max_id)
         update_valid = spec.validateUpdateDict(updated_dict)
         if update_valid:
             spec.updateDict(updated_dict)

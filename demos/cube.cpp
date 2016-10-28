@@ -234,7 +234,6 @@ struct Demo {
 #elif defined(VK_USE_PLATFORM_XLIB_KHR) || defined(VK_USE_PLATFORM_XCB_KHR)
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
 #endif
-        memset(fencesInited, 0, sizeof(bool) * FRAME_LAG);
         memset(projection_matrix, 0, sizeof(projection_matrix));
         memset(view_matrix, 0, sizeof(view_matrix));
         memset(model_matrix, 0, sizeof(model_matrix));
@@ -293,9 +292,7 @@ struct Demo {
 
         // Wait for fences from present operations
         for (uint32_t i = 0; i < FRAME_LAG; i++) {
-            if (fencesInited[i]) {
-                device.waitForFences(1, &fences[i], VK_TRUE, UINT64_MAX);
-            }
+            device.waitForFences(1, &fences[i], VK_TRUE, UINT64_MAX);
             device.destroyFence(fences[i], nullptr);
             device.destroySemaphore(image_acquired_semaphores[i], nullptr);
             device.destroySemaphore(draw_complete_semaphores[i], nullptr);
@@ -400,17 +397,14 @@ struct Demo {
     }
 
     void draw() {
-        if (fencesInited[frame_index]) {
-            // Ensure no more than FRAME_LAG presentations are outstanding
-            device.waitForFences(1, &fences[frame_index], VK_TRUE, UINT64_MAX);
-            device.resetFences(1, &fences[frame_index]);
-        }
+        // Ensure no more than FRAME_LAG presentations are outstanding
+        device.waitForFences(1, &fences[frame_index], VK_TRUE, UINT64_MAX);
+        device.resetFences(1, &fences[frame_index]);
 
         // Get the index of the next available swapchain image:
         auto result = device.acquireNextImageKHR(
             swapchain, UINT64_MAX, image_acquired_semaphores[frame_index],
             fences[frame_index], &current_buffer);
-        fencesInited[frame_index] = true;
         if (result == vk::Result::eErrorOutOfDateKHR) {
             // swapchain is out of date (e.g. the window was resized) and
             // must be recreated:
@@ -516,26 +510,7 @@ struct Demo {
         auto result = commandBuffer.begin(&commandInfo);
         VERIFY(result == vk::Result::eSuccess);
 
-        auto const image_memory_barrier =
-            vk::ImageMemoryBarrier()
-                .setSrcAccessMask(vk::AccessFlagBits::eMemoryRead)
-                .setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite)
-                .setOldLayout(vk::ImageLayout::ePresentSrcKHR)
-                .setNewLayout(vk::ImageLayout::eColorAttachmentOptimal)
-                .setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-                .setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-                .setImage(buffers[current_buffer].image)
-                .setSubresourceRange(vk::ImageSubresourceRange(
-                    vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
-
-        commandBuffer.pipelineBarrier(
-            vk::PipelineStageFlagBits::eColorAttachmentOutput,
-            vk::PipelineStageFlagBits::eColorAttachmentOutput,
-            vk::DependencyFlagBits(), 0, nullptr, 0, nullptr, 1,
-            &image_memory_barrier);
-
         commandBuffer.beginRenderPass(&passInfo, vk::SubpassContents::eInline);
-
         commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
         commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
                                          pipeline_layout, 0, 1, &desc_set, 0,
@@ -580,7 +555,7 @@ struct Demo {
 
             commandBuffer.pipelineBarrier(
                 vk::PipelineStageFlagBits::eColorAttachmentOutput,
-                vk::PipelineStageFlagBits::eColorAttachmentOutput,
+                vk::PipelineStageFlagBits::eBottomOfPipe,
                 vk::DependencyFlagBits(), 0, nullptr, 0, nullptr, 1,
                 &image_ownership_barrier);
         }
@@ -1163,7 +1138,6 @@ struct Demo {
         vk::FenceCreateInfo const fence_ci;
         for (uint32_t i = 0; i < FRAME_LAG; i++) {
             device.createFence(&fence_ci, nullptr, &fences[i]);
-            fencesInited[i] = false;
             result = device.createSemaphore(&semaphoreCreateInfo, nullptr,
                                             &image_acquired_semaphores[i]);
             VERIFY(result == vk::Result::eSuccess);
@@ -1426,14 +1400,6 @@ struct Demo {
             result = device.createImageView(&color_image_view, nullptr,
                                             &buffers[i].view);
             VERIFY(result == vk::Result::eSuccess);
-
-            // The draw loop will be expecting the presentable images to be in
-            // LAYOUT_PRESENT_SRC_KHR since that's how they're left at the end
-            // of every frame.
-            set_image_layout(buffers[i].image, vk::ImageAspectFlagBits::eColor,
-                             vk::ImageLayout::eUndefined,
-                             vk::ImageLayout::ePresentSrcKHR,
-                             vk::AccessFlagBits());
         }
     }
 
@@ -1537,11 +1503,6 @@ struct Demo {
 
         result = device.bindImageMemory(depth.image, depth.mem, 0);
         VERIFY(result == vk::Result::eSuccess);
-
-        set_image_layout(depth.image, vk::ImageAspectFlagBits::eDepth,
-                         vk::ImageLayout::eUndefined,
-                         vk::ImageLayout::eDepthStencilAttachmentOptimal,
-                         vk::AccessFlagBits());
 
         auto const view = vk::ImageViewCreateInfo()
                               .setImage(depth.image)
@@ -1763,6 +1724,14 @@ struct Demo {
     }
 
     void prepare_render_pass() {
+        // The initial layout for the color and depth attachments will be LAYOUT_UNDEFINED
+        // because at the start of the renderpass, we don't care about their contents.
+        // At the start of the subpass, the color attachment's layout will be transitioned
+        // to LAYOUT_COLOR_ATTACHMENT_OPTIMAL and the depth stencil attachment's layout
+        // will be transitioned to LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL.  At the end of
+        // the renderpass, the color attachment's layout will be transitioned to
+        // LAYOUT_PRESENT_SRC_KHR to be ready to present.  This is all done as part of
+        // the renderpass, no barriers are necessary.
         const vk::AttachmentDescription attachments[2] = {
             vk::AttachmentDescription()
                 .setFlags(vk::AttachmentDescriptionFlagBits::eMayAlias)
@@ -1772,7 +1741,7 @@ struct Demo {
                 .setStoreOp(vk::AttachmentStoreOp::eStore)
                 .setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
                 .setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
-                .setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
+                .setInitialLayout(vk::ImageLayout::eUndefined)
                 .setFinalLayout(vk::ImageLayout::ePresentSrcKHR),
             vk::AttachmentDescription()
                 .setFlags(vk::AttachmentDescriptionFlagBits::eMayAlias)
@@ -1783,7 +1752,7 @@ struct Demo {
                 .setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
                 .setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
                 .setInitialLayout(
-                    vk::ImageLayout::eDepthStencilAttachmentOptimal)
+                    vk::ImageLayout::eUndefined)
                 .setFinalLayout(
                     vk::ImageLayout::eDepthStencilAttachmentOptimal)};
 
@@ -1904,9 +1873,6 @@ struct Demo {
         }
 
         tex_obj->imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-        set_image_layout(tex_obj->image, vk::ImageAspectFlagBits::eColor,
-                         vk::ImageLayout::ePreinitialized, tex_obj->imageLayout,
-                         vk::AccessFlagBits::eHostWrite);
     }
 
     void prepare_textures() {
@@ -1924,6 +1890,12 @@ struct Demo {
                     vk::ImageUsageFlagBits::eSampled,
                     vk::MemoryPropertyFlagBits::eHostVisible |
                         vk::MemoryPropertyFlagBits::eHostCoherent);
+                // Nothing in the pipeline needs to be complete to start, and don't allow fragment
+                // shader to run until layout transition completes
+                set_image_layout(textures[i].image, vk::ImageAspectFlagBits::eColor,
+                                 vk::ImageLayout::ePreinitialized, textures[i].imageLayout,
+                                 vk::AccessFlagBits::eHostWrite, vk::PipelineStageFlagBits::eTopOfPipe,
+                                 vk::PipelineStageFlagBits::eFragmentShader);
             } else if (props.optimalTilingFeatures &
                        vk::FormatFeatureFlagBits::eSampledImage) {
                 /* Must use staging buffer to copy linear texture to optimized
@@ -1944,13 +1916,19 @@ struct Demo {
 
                 set_image_layout(
                     staging_texture.image, vk::ImageAspectFlagBits::eColor,
-                    staging_texture.imageLayout,
-                    vk::ImageLayout::eTransferSrcOptimal, vk::AccessFlags());
+                    vk::ImageLayout::ePreinitialized,
+                    vk::ImageLayout::eTransferSrcOptimal,
+                    vk::AccessFlagBits::eHostWrite,
+                    vk::PipelineStageFlagBits::eTopOfPipe,
+                    vk::PipelineStageFlagBits::eTransfer);
 
                 set_image_layout(
                     textures[i].image, vk::ImageAspectFlagBits::eColor,
-                    textures[i].imageLayout,
-                    vk::ImageLayout::eTransferDstOptimal, vk::AccessFlags());
+                    vk::ImageLayout::ePreinitialized,
+                    vk::ImageLayout::eTransferDstOptimal,
+                    vk::AccessFlagBits::eHostWrite,
+                    vk::PipelineStageFlagBits::eTopOfPipe,
+                    vk::PipelineStageFlagBits::eTransfer);
 
                 auto const subresource =
                     vk::ImageSubresourceLayers()
@@ -1976,7 +1954,10 @@ struct Demo {
                 set_image_layout(textures[i].image,
                                  vk::ImageAspectFlagBits::eColor,
                                  vk::ImageLayout::eTransferDstOptimal,
-                                 textures[i].imageLayout, vk::AccessFlags());
+                                 textures[i].imageLayout,
+                                 vk::AccessFlagBits::eTransferWrite,
+                                 vk::PipelineStageFlagBits::eTransfer,
+                                 vk::PipelineStageFlagBits::eFragmentShader);
 
                 flush_init_cmd();
 
@@ -2115,7 +2096,9 @@ struct Demo {
 
     void set_image_layout(vk::Image image, vk::ImageAspectFlags aspectMask,
                           vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
-                          vk::AccessFlags srcAccessMask) {
+                          vk::AccessFlags srcAccessMask,
+                          vk::PipelineStageFlags src_stages,
+                          vk::PipelineStageFlags dest_stages) {
         if (!cmd) {
             auto const cmd = vk::CommandBufferAllocateInfo()
                                  .setCommandPool(cmd_pool)
@@ -2139,7 +2122,7 @@ struct Demo {
             case vk::ImageLayout::eTransferDstOptimal:
                 // Make sure anything that was copying from this image has
                 // completed
-                flags = vk::AccessFlagBits::eTransferRead;
+                flags = vk::AccessFlagBits::eTransferWrite;
                 break;
             case vk::ImageLayout::eColorAttachmentOptimal:
                 flags = vk::AccessFlagBits::eColorAttachmentWrite;
@@ -2151,6 +2134,9 @@ struct Demo {
                 // Make sure any Copy or CPU writes to image are flushed
                 flags = vk::AccessFlagBits::eShaderRead |
                         vk::AccessFlagBits::eInputAttachmentRead;
+                break;
+            case vk::ImageLayout::eTransferSrcOptimal:
+                flags = vk::AccessFlagBits::eTransferRead;
                 break;
             case vk::ImageLayout::ePresentSrcKHR:
                 flags = vk::AccessFlagBits::eMemoryRead;
@@ -2173,10 +2159,8 @@ struct Demo {
                                  .setSubresourceRange(vk::ImageSubresourceRange(
                                      aspectMask, 0, 1, 0, 1));
 
-        cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe,
-                            vk::PipelineStageFlagBits::eTopOfPipe,
-                            vk::DependencyFlagBits(), 0, nullptr, 0, nullptr, 1,
-                            &barrier);
+        cmd.pipelineBarrier(src_stages, dest_stages, vk::DependencyFlagBits(),
+                            0, nullptr, 0, nullptr, 1, &barrier);
     }
 
     void update_data_buffer() {
@@ -2648,7 +2632,6 @@ struct Demo {
     vk::SwapchainKHR swapchain;
     std::unique_ptr<SwapchainBuffers[]> buffers;
     vk::Fence fences[FRAME_LAG];
-    bool fencesInited[FRAME_LAG];
     uint32_t frame_index;
 
     vk::CommandPool cmd_pool;
@@ -2823,18 +2806,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 #elif __linux__
 
 #if defined(VK_USE_PLATFORM_WAYLAND_KHR)
-static void handle_ping(void *data UNUSED, wl_shell_surface *shell_surface,
+static void handle_ping(void *data, wl_shell_surface *shell_surface,
                         uint32_t serial) {
     wl_shell_surface_pong(shell_surface, serial);
 }
 
-static void handle_configure(void *data UNUSED,
-                             wl_shell_surface *shell_surface UNUSED,
-                             uint32_t edges UNUSED, int32_t width UNUSED,
-                             int32_t height UNUSED) {}
+static void handle_configure(void *data,
+                             wl_shell_surface *shell_surface,
+                             uint32_t edges, int32_t width,
+                             int32_t height) {}
 
-static void handle_popup_done(void *data UNUSED,
-                              wl_shell_surface *shell_surface UNUSED) {}
+static void handle_popup_done(void *data,
+                              wl_shell_surface *shell_surface) {}
 
 static const wl_shell_surface_listener shell_surface_listener = {
     handle_ping, handle_configure, handle_popup_done};

@@ -89,8 +89,9 @@ namespace cvdescriptorset {
 class DescriptorSetLayout {
   public:
     // Constructors and destructor
-    DescriptorSetLayout(debug_report_data *report_data, const VkDescriptorSetLayoutCreateInfo *p_create_info,
-                        const VkDescriptorSetLayout layout);
+    DescriptorSetLayout(const VkDescriptorSetLayoutCreateInfo *p_create_info, const VkDescriptorSetLayout layout);
+    // Validate create info - should be called prior to creation
+    static bool ValidateCreateInfo(debug_report_data *, const VkDescriptorSetLayoutCreateInfo *);
     // Straightforward Get functions
     VkDescriptorSetLayout GetDescriptorSetLayout() const { return layout_; };
     uint32_t GetTotalDescriptorCount() const { return descriptor_count_; };
@@ -168,7 +169,8 @@ class Descriptor {
 // Shared helper functions - These are useful because the shared sampler image descriptor type
 //  performs common functions with both sampler and image descriptors so they can share their common functions
 bool ValidateSampler(const VkSampler, const core_validation::layer_data *);
-bool ValidateImageUpdate(VkImageView, VkImageLayout, VkDescriptorType, const core_validation::layer_data *, std::string *);
+bool ValidateImageUpdate(VkImageView, VkImageLayout, VkDescriptorType, const core_validation::layer_data *,
+                         UNIQUE_VALIDATION_ERROR_CODE *, std::string *);
 
 class SamplerDescriptor : public Descriptor {
   public:
@@ -272,7 +274,7 @@ bool ValidateAllocateDescriptorSets(const debug_report_data *, const VkDescripto
                                     const core_validation::layer_data *, AllocateDescriptorSetsData *);
 // Update state based on allocating new descriptorsets
 void PerformAllocateDescriptorSets(const VkDescriptorSetAllocateInfo *, const VkDescriptorSet *, const AllocateDescriptorSetsData *,
-                                   std::unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_NODE *> *,
+                                   std::unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_STATE *> *,
                                    std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> *,
                                    const core_validation::layer_data *);
 
@@ -296,7 +298,7 @@ void PerformAllocateDescriptorSets(const VkDescriptorSetAllocateInfo *, const Vk
  */
 class DescriptorSet : public BASE_NODE {
   public:
-    DescriptorSet(const VkDescriptorSet, const DescriptorSetLayout *, const core_validation::layer_data *);
+    DescriptorSet(const VkDescriptorSet, const VkDescriptorPool, const DescriptorSetLayout *, const core_validation::layer_data *);
     ~DescriptorSet();
     // A number of common Get* functions that return data based on layout from which this set was created
     uint32_t GetTotalDescriptorCount() const { return p_layout_ ? p_layout_->GetTotalDescriptorCount() : 0; };
@@ -330,11 +332,13 @@ class DescriptorSet : public BASE_NODE {
 
     // Descriptor Update functions. These functions validate state and perform update separately
     // Validate contents of a WriteUpdate
-    bool ValidateWriteUpdate(const debug_report_data *, const VkWriteDescriptorSet *, std::string *);
+    bool ValidateWriteUpdate(const debug_report_data *, const VkWriteDescriptorSet *, UNIQUE_VALIDATION_ERROR_CODE *,
+                             std::string *);
     // Perform a WriteUpdate whose contents were just validated using ValidateWriteUpdate
     void PerformWriteUpdate(const VkWriteDescriptorSet *);
     // Validate contents of a CopyUpdate
-    bool ValidateCopyUpdate(const debug_report_data *, const VkCopyDescriptorSet *, const DescriptorSet *, std::string *);
+    bool ValidateCopyUpdate(const debug_report_data *, const VkCopyDescriptorSet *, const DescriptorSet *,
+                            UNIQUE_VALIDATION_ERROR_CODE *, std::string *);
     // Perform a CopyUpdate whose contents were just validated using ValidateCopyUpdate
     void PerformCopyUpdate(const VkCopyDescriptorSet *, const DescriptorSet *);
 
@@ -360,15 +364,18 @@ class DescriptorSet : public BASE_NODE {
     bool IsUpdated() const { return some_update_; };
 
   private:
-    bool VerifyWriteUpdateContents(const VkWriteDescriptorSet *, const uint32_t, std::string *) const;
+    bool VerifyWriteUpdateContents(const VkWriteDescriptorSet *, const uint32_t, UNIQUE_VALIDATION_ERROR_CODE *,
+                                   std::string *) const;
     bool VerifyCopyUpdateContents(const VkCopyDescriptorSet *, const DescriptorSet *, VkDescriptorType, uint32_t,
-                                  std::string *) const;
-    bool ValidateBufferUsage(BUFFER_NODE const *, VkDescriptorType, std::string *) const;
-    bool ValidateBufferUpdate(VkDescriptorBufferInfo const *, VkDescriptorType, std::string *) const;
+                                  UNIQUE_VALIDATION_ERROR_CODE *, std::string *) const;
+    bool ValidateBufferUsage(BUFFER_NODE const *, VkDescriptorType, UNIQUE_VALIDATION_ERROR_CODE *, std::string *) const;
+    bool ValidateBufferUpdate(VkDescriptorBufferInfo const *, VkDescriptorType, UNIQUE_VALIDATION_ERROR_CODE *,
+                              std::string *) const;
     // Private helper to set all bound cmd buffers to INVALID state
     void InvalidateBoundCmdBuffers();
     bool some_update_; // has any part of the set ever been updated?
     VkDescriptorSet set_;
+    DESCRIPTOR_POOL_STATE *pool_state_;
     const DescriptorSetLayout *p_layout_;
     std::vector<std::unique_ptr<Descriptor>> descriptors_;
     // Ptr to device data used for various data look-ups

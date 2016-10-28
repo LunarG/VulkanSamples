@@ -308,7 +308,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDebugReportCallback(
     VkInstance instance, const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
     const VkAllocationCallbacks *pAllocator,
     VkDebugReportCallbackEXT *pCallback) {
-    VkDebugReportCallbackEXT *icd_info;
+    VkDebugReportCallbackEXT *icd_info = NULL;
     const struct loader_icd *icd;
     struct loader_instance *inst = (struct loader_instance *)instance;
     VkResult res = VK_SUCCESS;
@@ -331,7 +331,8 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDebugReportCallback(
             calloc(sizeof(VkDebugReportCallbackEXT), inst->total_icd_count);
     }
     if (!icd_info) {
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
+        res = VK_ERROR_OUT_OF_HOST_MEMORY;
+        goto out;
     }
 
     storage_idx = 0;
@@ -344,7 +345,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDebugReportCallback(
             icd->instance, pCreateInfo, pAllocator, &icd_info[storage_idx]);
 
         if (res != VK_SUCCESS) {
-            break;
+            goto out;
         }
         storage_idx++;
     }
@@ -368,19 +369,24 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDebugReportCallback(
                 VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     }
     if (!pNewDbgFuncNode) {
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
+        res = VK_ERROR_OUT_OF_HOST_MEMORY;
+        goto out;
     }
     memset(pNewDbgFuncNode, 0, sizeof(VkLayerDbgFunctionNode));
 
-    pNewDbgFuncNode->msgCallback = *pCallback;
     pNewDbgFuncNode->pfnMsgCallback = pCreateInfo->pfnCallback;
     pNewDbgFuncNode->msgFlags = pCreateInfo->flags;
     pNewDbgFuncNode->pUserData = pCreateInfo->pUserData;
     pNewDbgFuncNode->pNext = inst->DbgFunctionHead;
     inst->DbgFunctionHead = pNewDbgFuncNode;
 
-    /* roll back on errors */
-    if (icd) {
+    *(VkDebugReportCallbackEXT **)pCallback = icd_info;
+    pNewDbgFuncNode->msgCallback = *pCallback;
+
+out:
+
+    // Roll back on errors
+    if (VK_SUCCESS != res) {
         storage_idx = 0;
         for (icd = inst->icds; icd; icd = icd->next) {
             if (NULL == icd->DestroyDebugReportCallbackEXT) {
@@ -394,12 +400,28 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDebugReportCallback(
             storage_idx++;
         }
 
-        return res;
+#if (DEBUG_DISABLE_APP_ALLOCATORS == 1)
+        {
+#else
+        if (pAllocator != NULL) {
+            if (NULL != pNewDbgFuncNode) {
+                pAllocator->pfnFree(pAllocator->pUserData, pNewDbgFuncNode);
+            }
+            if (NULL != icd_info) {
+                pAllocator->pfnFree(pAllocator->pUserData, icd_info);
+            }
+        } else {
+#endif
+            if (NULL != pNewDbgFuncNode) {
+                free(pNewDbgFuncNode);
+            }
+            if (NULL != icd_info) {
+                free(icd_info);
+            }
+        }
     }
 
-    *(VkDebugReportCallbackEXT **)pCallback = icd_info;
-
-    return VK_SUCCESS;
+    return res;
 }
 
 /*

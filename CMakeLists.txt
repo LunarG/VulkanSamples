@@ -277,13 +277,23 @@ set (PYTHON_CMD ${PYTHON_EXECUTABLE})
 
 if(NOT WIN32)
     include(GNUInstallDirs)
-    add_definitions(-DSYSCONFDIR="${CMAKE_INSTALL_SYSCONFDIR}")
-    add_definitions(-DDATADIR="${CMAKE_INSTALL_DATADIR}")
-    if (CMAKE_INSTALL_PREFIX STREQUAL "/usr/local")
-    elseif (CMAKE_INSTALL_PREFIX STREQUAL "")
-    else()
-        add_definitions(-DLOCALPREFIX="${CMAKE_INSTALL_PREFIX}")
+
+    add_definitions(-DSYSCONFDIR="${CMAKE_INSTALL_FULL_SYSCONFDIR}")
+    add_definitions(-DDATADIR="${CMAKE_INSTALL_FULL_DATADIR}")
+
+    # Make sure /etc is searched by the loader
+    if (NOT (CMAKE_INSTALL_FULL_SYSCONFDIR STREQUAL "/etc"))
+        add_definitions(-DEXTRASYSCONFDIR="/etc")
     endif()
+
+    # Make sure /usr/share is searched by the loader
+    if (NOT (CMAKE_INSTALL_FULL_DATADIR STREQUAL "/usr/share"))
+        add_definitions(-DEXTRADATADIR="/usr/share")
+    endif()
+endif()
+
+if(UNIX)
+    install(DIRECTORY "${PROJECT_SOURCE_DIR}/include/vulkan" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 endif()
 
 # loader: Generic VULKAN ICD loader

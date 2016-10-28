@@ -28,6 +28,7 @@
 #include "vulkan/vulkan.h"
 #include "vk_enum_string_helper.h"
 #include "vk_layer_logging.h"
+#include "vk_validation_error_messages.h"
 
 #include "parameter_name.h"
 
@@ -795,7 +796,7 @@ static std::string get_result_description(VkResult result) {
 * @param value VkResult value to validate.
 */
 static void validate_result(debug_report_data *report_data, const char *apiName, VkResult result) {
-    if (result < 0) {
+    if (result < 0 && result != VK_ERROR_VALIDATION_FAILED_EXT) {
         std::string resultName = string_VkResult(result);
 
         if (resultName == UnsupportedResultString) {

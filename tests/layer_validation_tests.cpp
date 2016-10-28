@@ -36,6 +36,7 @@
 #include "vk_layer_config.h"
 #include "vkrenderframework.h"
 #include <unordered_set>
+#include "vk_validation_error_messages.h"
 
 #define GLM_FORCE_RADIANS
 #include "glm/glm.hpp"
@@ -105,16 +106,16 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL myDbgFunc(VkFlags msgFlags, VkDebugReportO
                                                 size_t location, int32_t msgCode, const char *pLayerPrefix, const char *pMsg,
                                                 void *pUserData);
 
-// ********************************************************
 // ErrorMonitor Usage:
 //
-// Call SetDesiredFailureMsg with a string to be compared against all
-// encountered log messages. Passing NULL will match all log messages.
-// logMsg will return true for skipCall only if msg is matched or NULL.
+// Call SetDesiredFailureMsg with: a string to be compared against all
+// encountered log messages, or a validation error enum identifying
+// desired error message. Passing NULL or VALIDATION_ERROR_MAX_ENUM
+// will match all log messages. logMsg will return true for skipCall
+// only if msg is matched or NULL.
 //
 // Call DesiredMsgFound to determine if the desired failure message
 // was encountered.
-
 class ErrorMonitor {
   public:
     ErrorMonitor() {
@@ -122,25 +123,40 @@ class ErrorMonitor {
         test_platform_thread_lock_mutex(&m_mutex);
         m_msgFlags = VK_DEBUG_REPORT_ERROR_BIT_EXT;
         m_bailout = NULL;
-        m_desiredMsgSet = false;
         test_platform_thread_unlock_mutex(&m_mutex);
     }
 
     ~ErrorMonitor() { test_platform_thread_delete_mutex(&m_mutex); }
 
+    // ErrorMonitor will look for an error message containing the specified string
     void SetDesiredFailureMsg(VkFlags msgFlags, const char *msgString) {
-        // also discard all collected messages to this point
+        // Also discard all collected messages to this point
         test_platform_thread_lock_mutex(&m_mutex);
-        m_failureMsgs.clear();
+        m_failure_message_strings.clear();
+        // If we are looking for a matching string, ignore any IDs
+        m_desired_message_ids.clear();
         m_otherMsgs.clear();
-        m_desiredMsgs.insert(msgString);
+        m_desired_message_strings.insert(msgString);
         m_msgFound = VK_FALSE;
         m_msgFlags = msgFlags;
-        m_desiredMsgSet = true;
         test_platform_thread_unlock_mutex(&m_mutex);
     }
 
-    VkBool32 CheckForDesiredMsg(const char *msgString) {
+    // ErrorMonitor will look for a message ID matching the specified one
+    void SetDesiredFailureMsg(VkFlags msgFlags, UNIQUE_VALIDATION_ERROR_CODE msg_id) {
+        // Also discard all collected messages to this point
+        test_platform_thread_lock_mutex(&m_mutex);
+        m_failure_message_strings.clear();
+        // If we are looking for IDs don't look for strings
+        m_desired_message_strings.clear();
+        m_otherMsgs.clear();
+        m_desired_message_ids.insert(msg_id);
+        m_msgFound = VK_FALSE;
+        m_msgFlags = msgFlags;
+        test_platform_thread_unlock_mutex(&m_mutex);
+    }
+
+    VkBool32 CheckForDesiredMsg(uint32_t message_code, const char *msgString) {
         VkBool32 result = VK_FALSE;
         test_platform_thread_lock_mutex(&m_mutex);
         if (m_bailout != NULL) {
@@ -148,18 +164,45 @@ class ErrorMonitor {
         }
         string errorString(msgString);
         bool found_expected = false;
-        for (auto desired_msg : m_desiredMsgs) {
-            if (errorString.find(desired_msg) != string::npos) {
+
+        for (auto desired_msg : m_desired_message_strings) {
+            if (desired_msg.length() == 0) {
+                // An empty desired_msg string "" indicates a positive test - not expecting an error.
+                // Return true to avoid calling layers/driver with this error.
+                // And don't erase the "" string, so it remains if another error is found.
+                result = VK_TRUE;
+            } else if (errorString.find(desired_msg) != string::npos) {
                 found_expected = true;
-                m_failureMsgs.insert(errorString);
+                m_failure_message_strings.insert(errorString);
                 m_msgFound = VK_TRUE;
                 result = VK_TRUE;
                 // We only want one match for each expected error so remove from set here
                 // Since we're about the break the loop it's ok to remove from set we're iterating over
-                m_desiredMsgs.erase(desired_msg);
+                m_desired_message_strings.erase(desired_msg);
                 break;
             }
         }
+        for (auto desired_id : m_desired_message_ids) {
+            if (desired_id == VALIDATION_ERROR_MAX_ENUM) {
+                // A message ID set to MAX_ENUM indicates a positive test - not expecting an error.
+                // Return true to avoid calling layers/driver with this error.
+                result = VK_TRUE;
+            } else if (desired_id == message_code) {
+                // Double-check that the string matches the error enum
+                if (errorString.find(validation_error_map[desired_id]) != string::npos) {
+                    found_expected = true;
+                    result = VK_TRUE;
+                    m_msgFound = VK_TRUE;
+                    m_desired_message_ids.erase(desired_id);
+                    break;
+                } else {
+                    // Treat this message as a regular unexpected error, but print a warning jic
+                    printf("Message (%s) from MessageID %d does not correspond to expected message from error Database (%s)\n",
+                           errorString.c_str(), desired_id, validation_error_map[desired_id]);
+                }
+            }
+        }
+
         if (!found_expected) {
             printf("Unexpected: %s\n", msgString);
             m_otherMsgs.push_back(errorString);
@@ -197,7 +240,7 @@ class ErrorMonitor {
         // Not seeing the desired message is a failure. /Before/ throwing, dump any other messages.
         if (!DesiredMsgFound()) {
             DumpFailureMsgs();
-            for (auto desired_msg : m_desiredMsgs) {
+            for (auto desired_msg : m_desired_message_strings) {
                 FAIL() << "Did not receive expected error '" << desired_msg << "'";
             }
         }
@@ -207,7 +250,7 @@ class ErrorMonitor {
         // ExpectSuccess() configured us to match anything. Any error is a failure.
         if (DesiredMsgFound()) {
             DumpFailureMsgs();
-            for (auto msg : m_failureMsgs) {
+            for (auto msg : m_failure_message_strings) {
                 FAIL() << "Expected to succeed but got error: " << msg;
             }
         }
@@ -215,13 +258,13 @@ class ErrorMonitor {
 
   private:
     VkFlags m_msgFlags;
-    std::unordered_set<string> m_desiredMsgs;
-    std::unordered_set<string> m_failureMsgs;
+    std::unordered_set<uint32_t>m_desired_message_ids;
+    std::unordered_set<string> m_desired_message_strings;
+    std::unordered_set<string> m_failure_message_strings;
     vector<string> m_otherMsgs;
     test_platform_thread_mutex m_mutex;
     bool *m_bailout;
     VkBool32 m_msgFound;
-    bool m_desiredMsgSet;
 };
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL myDbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType, uint64_t srcObject,
@@ -229,7 +272,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL myDbgFunc(VkFlags msgFlags, VkDebugReportO
                                                 void *pUserData) {
     ErrorMonitor *errMonitor = (ErrorMonitor *)pUserData;
     if (msgFlags & errMonitor->GetMessageFlags()) {
-        return errMonitor->CheckForDesiredMsg(pMsg);
+        return errMonitor->CheckForDesiredMsg(msgCode, pMsg);
     }
     return false;
 }
@@ -521,6 +564,11 @@ void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *commandBuffer, VkPi
     commandBuffer->BindPipeline(pipelineobj);
     commandBuffer->BindDescriptorSet(descriptorSet);
 }
+
+class VkPositiveLayerTest : public VkLayerTest {
+  public:
+  protected:
+};
 
 class VkWsiEnabledLayerTest : public VkLayerTest {
   public:
@@ -873,11 +921,9 @@ TEST_F(VkLayerTest, InvalidStructPNext) {
     ASSERT_NO_FATAL_FAILURE(InitState());
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT, "value of pCreateInfo->pNext must be NULL");
-    // Set VkMemoryAllocateInfo::pNext to a non-NULL value, when pNext must be
-    // NULL.
+    // Set VkMemoryAllocateInfo::pNext to a non-NULL value, when pNext must be NULL.
     // Need to pick a function that has no allowed pNext structure types.
-    // Expected to trigger an error with
-    // parameter_validation::validate_struct_pnext
+    // Expected to trigger an error with parameter_validation::validate_struct_pnext
     VkEvent event = VK_NULL_HANDLE;
     VkEventCreateInfo event_alloc_info = {};
     // Zero-initialization will provide the correct sType
@@ -892,86 +938,13 @@ TEST_F(VkLayerTest, InvalidStructPNext) {
     // Set VkMemoryAllocateInfo::pNext to a non-NULL value, but use
     // a function that has allowed pNext structure types and specify
     // a structure type that is not allowed.
-    // Expected to trigger an error with
-    // parameter_validation::validate_struct_pnext
+    // Expected to trigger an error with parameter_validation::validate_struct_pnext
     VkDeviceMemory memory = VK_NULL_HANDLE;
     VkMemoryAllocateInfo memory_alloc_info = {};
     memory_alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     memory_alloc_info.pNext = &app_info;
     vkAllocateMemory(device(), &memory_alloc_info, NULL, &memory);
     m_errorMonitor->VerifyFound();
-
-    // Positive test to check parameter_validation and unique_objects support
-    // for NV_dedicated_allocation
-    uint32_t extension_count = 0;
-    bool supports_nv_dedicated_allocation = false;
-    VkResult err = vkEnumerateDeviceExtensionProperties(gpu(), nullptr, &extension_count, nullptr);
-    ASSERT_VK_SUCCESS(err);
-
-    if (extension_count > 0) {
-        std::vector<VkExtensionProperties> available_extensions(extension_count);
-
-        err = vkEnumerateDeviceExtensionProperties(gpu(), nullptr, &extension_count, &available_extensions[0]);
-        ASSERT_VK_SUCCESS(err);
-
-        for (const auto &extension_props : available_extensions) {
-            if (strcmp(extension_props.extensionName, VK_NV_DEDICATED_ALLOCATION_EXTENSION_NAME) == 0) {
-                supports_nv_dedicated_allocation = true;
-            }
-        }
-    }
-
-    if (supports_nv_dedicated_allocation) {
-        m_errorMonitor->ExpectSuccess();
-
-        VkDedicatedAllocationBufferCreateInfoNV dedicated_buffer_create_info = {};
-        dedicated_buffer_create_info.sType = VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_BUFFER_CREATE_INFO_NV;
-        dedicated_buffer_create_info.pNext = nullptr;
-        dedicated_buffer_create_info.dedicatedAllocation = VK_TRUE;
-
-        uint32_t queue_family_index = 0;
-        VkBufferCreateInfo buffer_create_info = {};
-        buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        buffer_create_info.pNext = &dedicated_buffer_create_info;
-        buffer_create_info.size = 1024;
-        buffer_create_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-        buffer_create_info.queueFamilyIndexCount = 1;
-        buffer_create_info.pQueueFamilyIndices = &queue_family_index;
-
-        VkBuffer buffer;
-        VkResult err = vkCreateBuffer(m_device->device(), &buffer_create_info, NULL, &buffer);
-        ASSERT_VK_SUCCESS(err);
-
-        VkMemoryRequirements memory_reqs;
-        vkGetBufferMemoryRequirements(m_device->device(), buffer, &memory_reqs);
-
-        VkDedicatedAllocationMemoryAllocateInfoNV dedicated_memory_info = {};
-        dedicated_memory_info.sType = VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_MEMORY_ALLOCATE_INFO_NV;
-        dedicated_memory_info.pNext = nullptr;
-        dedicated_memory_info.buffer = buffer;
-        dedicated_memory_info.image = VK_NULL_HANDLE;
-
-        VkMemoryAllocateInfo memory_info = {};
-        memory_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        memory_info.pNext = &dedicated_memory_info;
-        memory_info.allocationSize = memory_reqs.size;
-
-        bool pass;
-        pass = m_device->phy().set_memory_type(memory_reqs.memoryTypeBits, &memory_info, 0);
-        ASSERT_TRUE(pass);
-
-        VkDeviceMemory buffer_memory;
-        err = vkAllocateMemory(m_device->device(), &memory_info, NULL, &buffer_memory);
-        ASSERT_VK_SUCCESS(err);
-
-        err = vkBindBufferMemory(m_device->device(), buffer, buffer_memory, 0);
-        ASSERT_VK_SUCCESS(err);
-
-        vkDestroyBuffer(m_device->device(), buffer, NULL);
-        vkFreeMemory(m_device->device(), buffer_memory, NULL);
-
-        m_errorMonitor->VerifyNotFound();
-    }
 }
 
 TEST_F(VkLayerTest, UnrecognizedValue) {
@@ -1135,371 +1108,6 @@ TEST_F(VkLayerTest, FillBufferAlignment) {
     EndCommandBuffer();
 }
 
-// This is a positive test. No failures are expected.
-TEST_F(VkLayerTest, IgnoreUnrelatedDescriptor) {
-    TEST_DESCRIPTION("Ensure that the vkUpdateDescriptorSet validation code "
-                     "is ignoring VkWriteDescriptorSet members that are not "
-                     "related to the descriptor type specified by "
-                     "VkWriteDescriptorSet::descriptorType.  Correct "
-                     "validation behavior will result in the test running to "
-                     "completion without validation errors.");
-
-    const uintptr_t invalid_ptr = 0xcdcdcdcd;
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-
-    // Image Case
-    {
-        m_errorMonitor->ExpectSuccess();
-
-        VkImage image;
-        const VkFormat tex_format = VK_FORMAT_B8G8R8A8_UNORM;
-        const int32_t tex_width = 32;
-        const int32_t tex_height = 32;
-        VkImageCreateInfo image_create_info = {};
-        image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-        image_create_info.pNext = NULL;
-        image_create_info.imageType = VK_IMAGE_TYPE_2D;
-        image_create_info.format = tex_format;
-        image_create_info.extent.width = tex_width;
-        image_create_info.extent.height = tex_height;
-        image_create_info.extent.depth = 1;
-        image_create_info.mipLevels = 1;
-        image_create_info.arrayLayers = 1;
-        image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
-        image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-        image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
-        image_create_info.flags = 0;
-        VkResult err = vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
-        ASSERT_VK_SUCCESS(err);
-
-        VkMemoryRequirements memory_reqs;
-        VkDeviceMemory image_memory;
-        bool pass;
-        VkMemoryAllocateInfo memory_info = {};
-        memory_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        memory_info.pNext = NULL;
-        memory_info.allocationSize = 0;
-        memory_info.memoryTypeIndex = 0;
-        vkGetImageMemoryRequirements(m_device->device(), image, &memory_reqs);
-        memory_info.allocationSize = memory_reqs.size;
-        pass = m_device->phy().set_memory_type(memory_reqs.memoryTypeBits, &memory_info, 0);
-        ASSERT_TRUE(pass);
-        err = vkAllocateMemory(m_device->device(), &memory_info, NULL, &image_memory);
-        ASSERT_VK_SUCCESS(err);
-        err = vkBindImageMemory(m_device->device(), image, image_memory, 0);
-        ASSERT_VK_SUCCESS(err);
-
-        VkImageViewCreateInfo image_view_create_info = {};
-        image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        image_view_create_info.image = image;
-        image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        image_view_create_info.format = tex_format;
-        image_view_create_info.subresourceRange.layerCount = 1;
-        image_view_create_info.subresourceRange.baseMipLevel = 0;
-        image_view_create_info.subresourceRange.levelCount = 1;
-        image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-
-        VkImageView view;
-        err = vkCreateImageView(m_device->device(), &image_view_create_info, NULL, &view);
-        ASSERT_VK_SUCCESS(err);
-
-        VkDescriptorPoolSize ds_type_count = {};
-        ds_type_count.type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-        ds_type_count.descriptorCount = 1;
-
-        VkDescriptorPoolCreateInfo ds_pool_ci = {};
-        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        ds_pool_ci.pNext = NULL;
-        ds_pool_ci.maxSets = 1;
-        ds_pool_ci.poolSizeCount = 1;
-        ds_pool_ci.pPoolSizes = &ds_type_count;
-
-        VkDescriptorPool ds_pool;
-        err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
-        ASSERT_VK_SUCCESS(err);
-
-        VkDescriptorSetLayoutBinding dsl_binding = {};
-        dsl_binding.binding = 0;
-        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-        dsl_binding.descriptorCount = 1;
-        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
-        dsl_binding.pImmutableSamplers = NULL;
-
-        VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
-        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        ds_layout_ci.pNext = NULL;
-        ds_layout_ci.bindingCount = 1;
-        ds_layout_ci.pBindings = &dsl_binding;
-        VkDescriptorSetLayout ds_layout;
-        err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
-        ASSERT_VK_SUCCESS(err);
-
-        VkDescriptorSet descriptor_set;
-        VkDescriptorSetAllocateInfo alloc_info = {};
-        alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        alloc_info.descriptorSetCount = 1;
-        alloc_info.descriptorPool = ds_pool;
-        alloc_info.pSetLayouts = &ds_layout;
-        err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptor_set);
-        ASSERT_VK_SUCCESS(err);
-
-        VkDescriptorImageInfo image_info = {};
-        image_info.imageView = view;
-        image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-        VkWriteDescriptorSet descriptor_write;
-        memset(&descriptor_write, 0, sizeof(descriptor_write));
-        descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptor_write.dstSet = descriptor_set;
-        descriptor_write.dstBinding = 0;
-        descriptor_write.descriptorCount = 1;
-        descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-        descriptor_write.pImageInfo = &image_info;
-
-        // Set pBufferInfo and pTexelBufferView to invalid values, which should
-        // be
-        //  ignored for descriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE.
-        // This will most likely produce a crash if the parameter_validation
-        // layer
-        // does not correctly ignore pBufferInfo.
-        descriptor_write.pBufferInfo = reinterpret_cast<const VkDescriptorBufferInfo *>(invalid_ptr);
-        descriptor_write.pTexelBufferView = reinterpret_cast<const VkBufferView *>(invalid_ptr);
-
-        vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
-
-        m_errorMonitor->VerifyNotFound();
-
-        vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
-        vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
-        vkDestroyImageView(m_device->device(), view, NULL);
-        vkDestroyImage(m_device->device(), image, NULL);
-        vkFreeMemory(m_device->device(), image_memory, NULL);
-    }
-
-    // Buffer Case
-    {
-        m_errorMonitor->ExpectSuccess();
-
-        VkBuffer buffer;
-        uint32_t queue_family_index = 0;
-        VkBufferCreateInfo buffer_create_info = {};
-        buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        buffer_create_info.size = 1024;
-        buffer_create_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-        buffer_create_info.queueFamilyIndexCount = 1;
-        buffer_create_info.pQueueFamilyIndices = &queue_family_index;
-
-        VkResult err = vkCreateBuffer(m_device->device(), &buffer_create_info, NULL, &buffer);
-        ASSERT_VK_SUCCESS(err);
-
-        VkMemoryRequirements memory_reqs;
-        VkDeviceMemory buffer_memory;
-        bool pass;
-        VkMemoryAllocateInfo memory_info = {};
-        memory_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        memory_info.pNext = NULL;
-        memory_info.allocationSize = 0;
-        memory_info.memoryTypeIndex = 0;
-
-        vkGetBufferMemoryRequirements(m_device->device(), buffer, &memory_reqs);
-        memory_info.allocationSize = memory_reqs.size;
-        pass = m_device->phy().set_memory_type(memory_reqs.memoryTypeBits, &memory_info, 0);
-        ASSERT_TRUE(pass);
-
-        err = vkAllocateMemory(m_device->device(), &memory_info, NULL, &buffer_memory);
-        ASSERT_VK_SUCCESS(err);
-        err = vkBindBufferMemory(m_device->device(), buffer, buffer_memory, 0);
-        ASSERT_VK_SUCCESS(err);
-
-        VkDescriptorPoolSize ds_type_count = {};
-        ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        ds_type_count.descriptorCount = 1;
-
-        VkDescriptorPoolCreateInfo ds_pool_ci = {};
-        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        ds_pool_ci.pNext = NULL;
-        ds_pool_ci.maxSets = 1;
-        ds_pool_ci.poolSizeCount = 1;
-        ds_pool_ci.pPoolSizes = &ds_type_count;
-
-        VkDescriptorPool ds_pool;
-        err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
-        ASSERT_VK_SUCCESS(err);
-
-        VkDescriptorSetLayoutBinding dsl_binding = {};
-        dsl_binding.binding = 0;
-        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        dsl_binding.descriptorCount = 1;
-        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
-        dsl_binding.pImmutableSamplers = NULL;
-
-        VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
-        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        ds_layout_ci.pNext = NULL;
-        ds_layout_ci.bindingCount = 1;
-        ds_layout_ci.pBindings = &dsl_binding;
-        VkDescriptorSetLayout ds_layout;
-        err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
-        ASSERT_VK_SUCCESS(err);
-
-        VkDescriptorSet descriptor_set;
-        VkDescriptorSetAllocateInfo alloc_info = {};
-        alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        alloc_info.descriptorSetCount = 1;
-        alloc_info.descriptorPool = ds_pool;
-        alloc_info.pSetLayouts = &ds_layout;
-        err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptor_set);
-        ASSERT_VK_SUCCESS(err);
-
-        VkDescriptorBufferInfo buffer_info = {};
-        buffer_info.buffer = buffer;
-        buffer_info.offset = 0;
-        buffer_info.range = 1024;
-
-        VkWriteDescriptorSet descriptor_write;
-        memset(&descriptor_write, 0, sizeof(descriptor_write));
-        descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptor_write.dstSet = descriptor_set;
-        descriptor_write.dstBinding = 0;
-        descriptor_write.descriptorCount = 1;
-        descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        descriptor_write.pBufferInfo = &buffer_info;
-
-        // Set pImageInfo and pTexelBufferView to invalid values, which should
-        // be
-        //  ignored for descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER.
-        // This will most likely produce a crash if the parameter_validation
-        // layer
-        // does not correctly ignore pImageInfo.
-        descriptor_write.pImageInfo = reinterpret_cast<const VkDescriptorImageInfo *>(invalid_ptr);
-        descriptor_write.pTexelBufferView = reinterpret_cast<const VkBufferView *>(invalid_ptr);
-
-        vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
-
-        m_errorMonitor->VerifyNotFound();
-
-        vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptor_set);
-        vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
-        vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
-        vkDestroyBuffer(m_device->device(), buffer, NULL);
-        vkFreeMemory(m_device->device(), buffer_memory, NULL);
-    }
-
-    // Texel Buffer Case
-    {
-        m_errorMonitor->ExpectSuccess();
-
-        VkBuffer buffer;
-        uint32_t queue_family_index = 0;
-        VkBufferCreateInfo buffer_create_info = {};
-        buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        buffer_create_info.size = 1024;
-        buffer_create_info.usage = VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
-        buffer_create_info.queueFamilyIndexCount = 1;
-        buffer_create_info.pQueueFamilyIndices = &queue_family_index;
-
-        VkResult err = vkCreateBuffer(m_device->device(), &buffer_create_info, NULL, &buffer);
-        ASSERT_VK_SUCCESS(err);
-
-        VkMemoryRequirements memory_reqs;
-        VkDeviceMemory buffer_memory;
-        bool pass;
-        VkMemoryAllocateInfo memory_info = {};
-        memory_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        memory_info.pNext = NULL;
-        memory_info.allocationSize = 0;
-        memory_info.memoryTypeIndex = 0;
-
-        vkGetBufferMemoryRequirements(m_device->device(), buffer, &memory_reqs);
-        memory_info.allocationSize = memory_reqs.size;
-        pass = m_device->phy().set_memory_type(memory_reqs.memoryTypeBits, &memory_info, 0);
-        ASSERT_TRUE(pass);
-
-        err = vkAllocateMemory(m_device->device(), &memory_info, NULL, &buffer_memory);
-        ASSERT_VK_SUCCESS(err);
-        err = vkBindBufferMemory(m_device->device(), buffer, buffer_memory, 0);
-        ASSERT_VK_SUCCESS(err);
-
-        VkBufferViewCreateInfo buff_view_ci = {};
-        buff_view_ci.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
-        buff_view_ci.buffer = buffer;
-        buff_view_ci.format = VK_FORMAT_R8_UNORM;
-        buff_view_ci.range = VK_WHOLE_SIZE;
-        VkBufferView buffer_view;
-        err = vkCreateBufferView(m_device->device(), &buff_view_ci, NULL, &buffer_view);
-
-        VkDescriptorPoolSize ds_type_count = {};
-        ds_type_count.type = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
-        ds_type_count.descriptorCount = 1;
-
-        VkDescriptorPoolCreateInfo ds_pool_ci = {};
-        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        ds_pool_ci.pNext = NULL;
-        ds_pool_ci.maxSets = 1;
-        ds_pool_ci.poolSizeCount = 1;
-        ds_pool_ci.pPoolSizes = &ds_type_count;
-
-        VkDescriptorPool ds_pool;
-        err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
-        ASSERT_VK_SUCCESS(err);
-
-        VkDescriptorSetLayoutBinding dsl_binding = {};
-        dsl_binding.binding = 0;
-        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
-        dsl_binding.descriptorCount = 1;
-        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
-        dsl_binding.pImmutableSamplers = NULL;
-
-        VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
-        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        ds_layout_ci.pNext = NULL;
-        ds_layout_ci.bindingCount = 1;
-        ds_layout_ci.pBindings = &dsl_binding;
-        VkDescriptorSetLayout ds_layout;
-        err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
-        ASSERT_VK_SUCCESS(err);
-
-        VkDescriptorSet descriptor_set;
-        VkDescriptorSetAllocateInfo alloc_info = {};
-        alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        alloc_info.descriptorSetCount = 1;
-        alloc_info.descriptorPool = ds_pool;
-        alloc_info.pSetLayouts = &ds_layout;
-        err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptor_set);
-        ASSERT_VK_SUCCESS(err);
-
-        VkWriteDescriptorSet descriptor_write;
-        memset(&descriptor_write, 0, sizeof(descriptor_write));
-        descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptor_write.dstSet = descriptor_set;
-        descriptor_write.dstBinding = 0;
-        descriptor_write.descriptorCount = 1;
-        descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
-        descriptor_write.pTexelBufferView = &buffer_view;
-
-        // Set pImageInfo and pBufferInfo to invalid values, which should be
-        //  ignored for descriptorType ==
-        //  VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER.
-        // This will most likely produce a crash if the parameter_validation
-        // layer
-        // does not correctly ignore pImageInfo and pBufferInfo.
-        descriptor_write.pImageInfo = reinterpret_cast<const VkDescriptorImageInfo *>(invalid_ptr);
-        descriptor_write.pBufferInfo = reinterpret_cast<const VkDescriptorBufferInfo *>(invalid_ptr);
-
-        vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
-
-        m_errorMonitor->VerifyNotFound();
-
-        vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptor_set);
-        vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
-        vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
-        vkDestroyBufferView(m_device->device(), buffer_view, NULL);
-        vkDestroyBuffer(m_device->device(), buffer, NULL);
-        vkFreeMemory(m_device->device(), buffer_memory, NULL);
-    }
-}
-
 TEST_F(VkLayerTest, PSOPolygonModeInvalid) {
     VkResult err;
 
@@ -1566,20 +1174,6 @@ TEST_F(VkLayerTest, PSOPolygonModeInvalid) {
     }
     m_errorMonitor->VerifyFound();
 
-    // Try again with polygonMode=FILL. No error is expected
-    m_errorMonitor->ExpectSuccess();
-    {
-        VkPipelineObj pipe(&test_device);
-        pipe.AddShader(&vs);
-        pipe.AddShader(&fs);
-        pipe.AddColorAttachment();
-        // Set polygonMode to a good value
-        rs_ci.polygonMode = VK_POLYGON_MODE_FILL;
-        pipe.SetRasterization(&rs_ci);
-        pipe.CreateVKPipeline(pipeline_layout, render_pass.handle());
-    }
-    m_errorMonitor->VerifyNotFound();
-
     vkDestroyPipelineLayout(test_device.device(), pipeline_layout, NULL);
 }
 
@@ -1595,7 +1189,7 @@ TEST_F(VkLayerTest, CallResetCommandBufferBeforeCompletion)
     fenceInfo.pNext = NULL;
     fenceInfo.flags = 0;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Resetting CB");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Resetting command buffer");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
@@ -1639,7 +1233,7 @@ TEST_F(VkLayerTest, CallBeginCommandBufferBeforeCompletion)
     fenceInfo.pNext = NULL;
     fenceInfo.flags = 0;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Calling vkBeginCommandBuffer() on active CB");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Calling vkBeginCommandBuffer() on active command buffer");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
@@ -1684,124 +1278,6 @@ TEST_F(VkLayerTest, CallBeginCommandBufferBeforeCompletion)
     m_errorMonitor->VerifyFound();
 }
 #endif
-
-// This is a positive test. No failures are expected.
-TEST_F(VkLayerTest, TestAliasedMemoryTracking) {
-    VkResult err;
-    bool pass;
-
-    TEST_DESCRIPTION("Create a buffer, allocate memory, bind memory, destroy "
-                     "the buffer, create an image, and bind the same memory to "
-                     "it");
-
-    m_errorMonitor->ExpectSuccess();
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-
-    VkBuffer buffer;
-    VkImage image;
-    VkDeviceMemory mem;
-    VkMemoryRequirements mem_reqs;
-
-    VkBufferCreateInfo buf_info = {};
-    buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    buf_info.pNext = NULL;
-    buf_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-    buf_info.size = 256;
-    buf_info.queueFamilyIndexCount = 0;
-    buf_info.pQueueFamilyIndices = NULL;
-    buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    buf_info.flags = 0;
-    err = vkCreateBuffer(m_device->device(), &buf_info, NULL, &buffer);
-    ASSERT_VK_SUCCESS(err);
-
-    vkGetBufferMemoryRequirements(m_device->device(), buffer, &mem_reqs);
-
-    VkMemoryAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    alloc_info.pNext = NULL;
-    alloc_info.memoryTypeIndex = 0;
-
-    // Ensure memory is big enough for both bindings
-    alloc_info.allocationSize = 0x10000;
-
-    pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &alloc_info, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-    if (!pass) {
-        vkDestroyBuffer(m_device->device(), buffer, NULL);
-        return;
-    }
-
-    err = vkAllocateMemory(m_device->device(), &alloc_info, NULL, &mem);
-    ASSERT_VK_SUCCESS(err);
-
-    uint8_t *pData;
-    err = vkMapMemory(m_device->device(), mem, 0, mem_reqs.size, 0, (void **)&pData);
-    ASSERT_VK_SUCCESS(err);
-
-    memset(pData, 0xCADECADE, static_cast<size_t>(mem_reqs.size));
-
-    vkUnmapMemory(m_device->device(), mem);
-
-    err = vkBindBufferMemory(m_device->device(), buffer, mem, 0);
-    ASSERT_VK_SUCCESS(err);
-
-    // NOW, destroy the buffer. Obviously, the resource no longer occupies this
-    // memory. In fact, it was never used by the GPU.
-    // Just be be sure, wait for idle.
-    vkDestroyBuffer(m_device->device(), buffer, NULL);
-    vkDeviceWaitIdle(m_device->device());
-
-    VkImageCreateInfo image_create_info = {};
-    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    image_create_info.pNext = NULL;
-    image_create_info.imageType = VK_IMAGE_TYPE_2D;
-    image_create_info.format = VK_FORMAT_R8G8B8A8_UNORM;
-    image_create_info.extent.width = 64;
-    image_create_info.extent.height = 64;
-    image_create_info.extent.depth = 1;
-    image_create_info.mipLevels = 1;
-    image_create_info.arrayLayers = 1;
-    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
-    image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
-    image_create_info.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
-    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-    image_create_info.queueFamilyIndexCount = 0;
-    image_create_info.pQueueFamilyIndices = NULL;
-    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    image_create_info.flags = 0;
-
-    VkMemoryAllocateInfo mem_alloc = {};
-    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    mem_alloc.pNext = NULL;
-    mem_alloc.allocationSize = 0;
-    mem_alloc.memoryTypeIndex = 0;
-
-    /* Create a mappable image.  It will be the texture if linear images are ok
-    * to be textures or it will be the staging image if they are not.
-    */
-    err = vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
-    ASSERT_VK_SUCCESS(err);
-
-    vkGetImageMemoryRequirements(m_device->device(), image, &mem_reqs);
-
-    mem_alloc.allocationSize = mem_reqs.size;
-
-    pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-    if (!pass) {
-        vkDestroyImage(m_device->device(), image, NULL);
-        return;
-    }
-
-    // VALIDATION FAILURE:
-    err = vkBindImageMemory(m_device->device(), image, mem, 0);
-    ASSERT_VK_SUCCESS(err);
-
-    m_errorMonitor->VerifyNotFound();
-
-    vkFreeMemory(m_device->device(), mem, NULL);
-    vkDestroyBuffer(m_device->device(), buffer, NULL);
-    vkDestroyImage(m_device->device(), image, NULL);
-}
 
 TEST_F(VkLayerTest, InvalidMemoryAliasing) {
     TEST_DESCRIPTION("Create a buffer and image, allocate memory, and bind the "
@@ -1999,116 +1475,6 @@ TEST_F(VkLayerTest, InvalidMemoryMapping) {
     //  MEMTRACK_INVALID_MAP in validateAndCopyNoncoherentMemoryToDriver()
 
     vkDestroyBuffer(m_device->device(), buffer, NULL);
-    vkFreeMemory(m_device->device(), mem, NULL);
-}
-
-TEST_F(VkLayerTest, NonCoherentMemoryMapping) {
-
-    TEST_DESCRIPTION("Ensure that validations handling of non-coherent memory "
-                     "mapping while using VK_WHOLE_SIZE does not cause access "
-                     "violations");
-    VkResult err;
-    uint8_t *pData;
-    ASSERT_NO_FATAL_FAILURE(InitState());
-
-    VkDeviceMemory mem;
-    VkMemoryRequirements mem_reqs;
-    mem_reqs.memoryTypeBits = 0xFFFFFFFF;
-    VkMemoryAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    alloc_info.pNext = NULL;
-    alloc_info.memoryTypeIndex = 0;
-
-    static const VkDeviceSize allocation_size = 0x1000;
-    alloc_info.allocationSize = allocation_size;
-
-    // Find a memory configurations WITHOUT a COHERENT bit, otherwise exit
-    bool pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &alloc_info, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-                                                VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    if (!pass) {
-        pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &alloc_info,
-                                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                                               VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-        if (!pass) {
-            pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &alloc_info,
-                                                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
-                                                       VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
-                                                   VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-            if (!pass) {
-                return;
-            }
-        }
-    }
-
-    err = vkAllocateMemory(m_device->device(), &alloc_info, NULL, &mem);
-    ASSERT_VK_SUCCESS(err);
-
-    // Map/Flush/Invalidate using WHOLE_SIZE and zero offsets and entire
-    // mapped range
-    m_errorMonitor->ExpectSuccess();
-    err = vkMapMemory(m_device->device(), mem, 0, VK_WHOLE_SIZE, 0, (void **)&pData);
-    ASSERT_VK_SUCCESS(err);
-    VkMappedMemoryRange mmr = {};
-    mmr.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-    mmr.memory = mem;
-    mmr.offset = 0;
-    mmr.size = VK_WHOLE_SIZE;
-    err = vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
-    ASSERT_VK_SUCCESS(err);
-    err = vkInvalidateMappedMemoryRanges(m_device->device(), 1, &mmr);
-    ASSERT_VK_SUCCESS(err);
-    m_errorMonitor->VerifyNotFound();
-    vkUnmapMemory(m_device->device(), mem);
-
-    // Map/Flush/Invalidate using WHOLE_SIZE and a prime offset and entire
-    // mapped range
-    m_errorMonitor->ExpectSuccess();
-    err = vkMapMemory(m_device->device(), mem, 13, VK_WHOLE_SIZE, 0, (void **)&pData);
-    ASSERT_VK_SUCCESS(err);
-    mmr.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-    mmr.memory = mem;
-    mmr.offset = 13;
-    mmr.size = VK_WHOLE_SIZE;
-    err = vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
-    ASSERT_VK_SUCCESS(err);
-    err = vkInvalidateMappedMemoryRanges(m_device->device(), 1, &mmr);
-    ASSERT_VK_SUCCESS(err);
-    m_errorMonitor->VerifyNotFound();
-    vkUnmapMemory(m_device->device(), mem);
-
-    // Map with prime offset and size
-    // Flush/Invalidate subrange of mapped area with prime offset and size
-    m_errorMonitor->ExpectSuccess();
-    err = vkMapMemory(m_device->device(), mem, allocation_size - 137, 109, 0, (void **)&pData);
-    ASSERT_VK_SUCCESS(err);
-    mmr.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-    mmr.memory = mem;
-    mmr.offset = allocation_size - 107;
-    mmr.size = 61;
-    err = vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
-    ASSERT_VK_SUCCESS(err);
-    err = vkInvalidateMappedMemoryRanges(m_device->device(), 1, &mmr);
-    ASSERT_VK_SUCCESS(err);
-    m_errorMonitor->VerifyNotFound();
-    vkUnmapMemory(m_device->device(), mem);
-
-    // Map without offset and flush WHOLE_SIZE with two separate offsets
-    m_errorMonitor->ExpectSuccess();
-    err = vkMapMemory(m_device->device(), mem, 0, VK_WHOLE_SIZE, 0, (void **)&pData);
-    ASSERT_VK_SUCCESS(err);
-    mmr.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-    mmr.memory = mem;
-    mmr.offset = allocation_size - 100;
-    mmr.size = VK_WHOLE_SIZE;
-    err = vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
-    ASSERT_VK_SUCCESS(err);
-    mmr.offset = allocation_size - 200;
-    mmr.size = VK_WHOLE_SIZE;
-    err = vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
-    ASSERT_VK_SUCCESS(err);
-    m_errorMonitor->VerifyNotFound();
-    vkUnmapMemory(m_device->device(), mem);
-
     vkFreeMemory(m_device->device(), mem, NULL);
 }
 
@@ -2340,341 +1706,6 @@ TEST_F(VkLayerTest, EnableWsiBeforeUse) {
     m_errorMonitor->VerifyFound();
 }
 
-TEST_F(VkWsiEnabledLayerTest, TestEnabledWsi) {
-
-#if defined(VK_USE_PLATFORM_XCB_KHR)
-    VkSurfaceKHR surface = VK_NULL_HANDLE;
-
-    VkResult err;
-    bool pass;
-    VkSwapchainKHR swapchain = VK_NULL_HANDLE;
-    VkSwapchainCreateInfoKHR swapchain_create_info = {};
-    //    uint32_t swapchain_image_count = 0;
-    //    VkImage swapchain_images[1] = {VK_NULL_HANDLE};
-    //    uint32_t image_index = 0;
-    //    VkPresentInfoKHR present_info = {};
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-
-    // Use the create function from one of the VK_KHR_*_surface extension in
-    // order to create a surface, testing all known errors in the process,
-    // before successfully creating a surface:
-    // First, try to create a surface without a VkXcbSurfaceCreateInfoKHR:
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "required parameter pCreateInfo specified as NULL");
-    err = vkCreateXcbSurfaceKHR(instance(), NULL, NULL, &surface);
-    pass = (err != VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Next, try to create a surface with the wrong
-    // VkXcbSurfaceCreateInfoKHR::sType:
-    VkXcbSurfaceCreateInfoKHR xcb_create_info = {};
-    xcb_create_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "parameter pCreateInfo->sType must be");
-    err = vkCreateXcbSurfaceKHR(instance(), &xcb_create_info, NULL, &surface);
-    pass = (err != VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Create a native window, and then correctly create a surface:
-    xcb_connection_t *connection;
-    xcb_screen_t *screen;
-    xcb_window_t xcb_window;
-    xcb_intern_atom_reply_t *atom_wm_delete_window;
-
-    const xcb_setup_t *setup;
-    xcb_screen_iterator_t iter;
-    int scr;
-    uint32_t value_mask, value_list[32];
-    int width = 1;
-    int height = 1;
-
-    connection = xcb_connect(NULL, &scr);
-    ASSERT_TRUE(connection != NULL);
-    setup = xcb_get_setup(connection);
-    iter = xcb_setup_roots_iterator(setup);
-    while (scr-- > 0)
-        xcb_screen_next(&iter);
-    screen = iter.data;
-
-    xcb_window = xcb_generate_id(connection);
-
-    value_mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
-    value_list[0] = screen->black_pixel;
-    value_list[1] = XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_STRUCTURE_NOTIFY;
-
-    xcb_create_window(connection, XCB_COPY_FROM_PARENT, xcb_window, screen->root, 0, 0, width, height, 0,
-                      XCB_WINDOW_CLASS_INPUT_OUTPUT, screen->root_visual, value_mask, value_list);
-
-    /* Magic code that will send notification when window is destroyed */
-    xcb_intern_atom_cookie_t cookie = xcb_intern_atom(connection, 1, 12, "WM_PROTOCOLS");
-    xcb_intern_atom_reply_t *reply = xcb_intern_atom_reply(connection, cookie, 0);
-
-    xcb_intern_atom_cookie_t cookie2 = xcb_intern_atom(connection, 0, 16, "WM_DELETE_WINDOW");
-    atom_wm_delete_window = xcb_intern_atom_reply(connection, cookie2, 0);
-    xcb_change_property(connection, XCB_PROP_MODE_REPLACE, xcb_window, (*reply).atom, 4, 32, 1, &(*atom_wm_delete_window).atom);
-    free(reply);
-
-    xcb_map_window(connection, xcb_window);
-
-    // Force the x/y coordinates to 100,100 results are identical in consecutive
-    // runs
-    const uint32_t coords[] = {100, 100};
-    xcb_configure_window(connection, xcb_window, XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y, coords);
-
-    // Finally, try to correctly create a surface:
-    xcb_create_info.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
-    xcb_create_info.pNext = NULL;
-    xcb_create_info.flags = 0;
-    xcb_create_info.connection = connection;
-    xcb_create_info.window = xcb_window;
-    err = vkCreateXcbSurfaceKHR(instance(), &xcb_create_info, NULL, &surface);
-    pass = (err == VK_SUCCESS);
-    ASSERT_TRUE(pass);
-
-    // Check if surface supports presentation:
-
-    // 1st, do so without having queried the queue families:
-    VkBool32 supported = false;
-    // TODO: Get the following error to come out:
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "called before calling the vkGetPhysicalDeviceQueueFamilyProperties "
-                                         "function");
-    err = vkGetPhysicalDeviceSurfaceSupportKHR(gpu(), 0, surface, &supported);
-    pass = (err != VK_SUCCESS);
-    //    ASSERT_TRUE(pass);
-    //    m_errorMonitor->VerifyFound();
-
-    // Next, query a queue family index that's too large:
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "called with a queueFamilyIndex that is too large");
-    err = vkGetPhysicalDeviceSurfaceSupportKHR(gpu(), 100000, surface, &supported);
-    pass = (err != VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Finally, do so correctly:
-    // FIXME: THIS ISN'T CORRECT--MUST QUERY UNTIL WE FIND A QUEUE FAMILY THAT'S
-    // SUPPORTED
-    err = vkGetPhysicalDeviceSurfaceSupportKHR(gpu(), 0, surface, &supported);
-    pass = (err == VK_SUCCESS);
-    ASSERT_TRUE(pass);
-
-    // Before proceeding, try to create a swapchain without having called
-    // vkGetPhysicalDeviceSurfaceCapabilitiesKHR():
-    swapchain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    swapchain_create_info.pNext = NULL;
-    swapchain_create_info.flags = 0;
-    swapchain_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    swapchain_create_info.surface = surface;
-    swapchain_create_info.imageArrayLayers = 1;
-    swapchain_create_info.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
-    swapchain_create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "called before calling vkGetPhysicalDeviceSurfaceCapabilitiesKHR().");
-    err = vkCreateSwapchainKHR(m_device->device(), &swapchain_create_info, NULL, &swapchain);
-    pass = (err != VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Get the surface capabilities:
-    VkSurfaceCapabilitiesKHR surface_capabilities;
-
-    // Do so correctly (only error logged by this entrypoint is if the
-    // extension isn't enabled):
-    err = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gpu(), surface, &surface_capabilities);
-    pass = (err == VK_SUCCESS);
-    ASSERT_TRUE(pass);
-
-    // Get the surface formats:
-    uint32_t surface_format_count;
-
-    // First, try without a pointer to surface_format_count:
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "required parameter pSurfaceFormatCount "
-                                                                        "specified as NULL");
-    vkGetPhysicalDeviceSurfaceFormatsKHR(gpu(), surface, NULL, NULL);
-    pass = (err == VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Next, call with a non-NULL pSurfaceFormats, even though we haven't
-    // correctly done a 1st try (to get the count):
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT, "but no prior positive value has been seen for");
-    surface_format_count = 0;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(gpu(), surface, &surface_format_count, (VkSurfaceFormatKHR *)&surface_format_count);
-    pass = (err == VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Next, correctly do a 1st try (with a NULL pointer to surface_formats):
-    vkGetPhysicalDeviceSurfaceFormatsKHR(gpu(), surface, &surface_format_count, NULL);
-    pass = (err == VK_SUCCESS);
-    ASSERT_TRUE(pass);
-
-    // Allocate memory for the correct number of VkSurfaceFormatKHR's:
-    VkSurfaceFormatKHR *surface_formats = (VkSurfaceFormatKHR *)malloc(surface_format_count * sizeof(VkSurfaceFormatKHR));
-
-    // Next, do a 2nd try with surface_format_count being set too high:
-    surface_format_count += 5;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "that is greater than the value");
-    vkGetPhysicalDeviceSurfaceFormatsKHR(gpu(), surface, &surface_format_count, surface_formats);
-    pass = (err == VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Finally, do a correct 1st and 2nd try:
-    vkGetPhysicalDeviceSurfaceFormatsKHR(gpu(), surface, &surface_format_count, NULL);
-    pass = (err == VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    vkGetPhysicalDeviceSurfaceFormatsKHR(gpu(), surface, &surface_format_count, surface_formats);
-    pass = (err == VK_SUCCESS);
-    ASSERT_TRUE(pass);
-
-    // Get the surface present modes:
-    uint32_t surface_present_mode_count;
-
-    // First, try without a pointer to surface_format_count:
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "required parameter pPresentModeCount "
-                                                                        "specified as NULL");
-
-    vkGetPhysicalDeviceSurfacePresentModesKHR(gpu(), surface, NULL, NULL);
-    pass = (err == VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Next, call with a non-NULL VkPresentModeKHR, even though we haven't
-    // correctly done a 1st try (to get the count):
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT, "but no prior positive value has been seen for");
-    surface_present_mode_count = 0;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(gpu(), surface, &surface_present_mode_count,
-                                              (VkPresentModeKHR *)&surface_present_mode_count);
-    pass = (err == VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Next, correctly do a 1st try (with a NULL pointer to surface_formats):
-    vkGetPhysicalDeviceSurfacePresentModesKHR(gpu(), surface, &surface_present_mode_count, NULL);
-    pass = (err == VK_SUCCESS);
-    ASSERT_TRUE(pass);
-
-    // Allocate memory for the correct number of VkSurfaceFormatKHR's:
-    VkPresentModeKHR *surface_present_modes = (VkPresentModeKHR *)malloc(surface_present_mode_count * sizeof(VkPresentModeKHR));
-
-    // Next, do a 2nd try with surface_format_count being set too high:
-    surface_present_mode_count += 5;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "that is greater than the value");
-    vkGetPhysicalDeviceSurfacePresentModesKHR(gpu(), surface, &surface_present_mode_count, surface_present_modes);
-    pass = (err == VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Finally, do a correct 1st and 2nd try:
-    vkGetPhysicalDeviceSurfacePresentModesKHR(gpu(), surface, &surface_present_mode_count, NULL);
-    pass = (err == VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    vkGetPhysicalDeviceSurfacePresentModesKHR(gpu(), surface, &surface_present_mode_count, surface_present_modes);
-    pass = (err == VK_SUCCESS);
-    ASSERT_TRUE(pass);
-
-    // Create a swapchain:
-
-    // First, try without a pointer to swapchain_create_info:
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "required parameter pCreateInfo "
-                                                                        "specified as NULL");
-
-    err = vkCreateSwapchainKHR(m_device->device(), NULL, NULL, &swapchain);
-    pass = (err != VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Next, call with a non-NULL swapchain_create_info, that has the wrong
-    // sType:
-    swapchain_create_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "parameter pCreateInfo->sType must be");
-
-    err = vkCreateSwapchainKHR(m_device->device(), &swapchain_create_info, NULL, &swapchain);
-    pass = (err != VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Next, call with a NULL swapchain pointer:
-    swapchain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    swapchain_create_info.pNext = NULL;
-    swapchain_create_info.flags = 0;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "required parameter pSwapchain "
-                                                                        "specified as NULL");
-
-    err = vkCreateSwapchainKHR(m_device->device(), &swapchain_create_info, NULL, NULL);
-    pass = (err != VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // TODO: Enhance swapchain layer so that
-    // swapchain_create_info.queueFamilyIndexCount is checked against something?
-
-    // Next, call with a queue family index that's too large:
-    uint32_t queueFamilyIndex[2] = {100000, 0};
-    swapchain_create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-    swapchain_create_info.queueFamilyIndexCount = 2;
-    swapchain_create_info.pQueueFamilyIndices = queueFamilyIndex;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "called with a queueFamilyIndex that is too large");
-    err = vkCreateSwapchainKHR(m_device->device(), &swapchain_create_info, NULL, &swapchain);
-    pass = (err != VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Next, call a queueFamilyIndexCount that's too small for CONCURRENT:
-    swapchain_create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-    swapchain_create_info.queueFamilyIndexCount = 1;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "but with a bad value(s) for pCreateInfo->queueFamilyIndexCount or "
-                                         "pCreateInfo->pQueueFamilyIndices).");
-    err = vkCreateSwapchainKHR(m_device->device(), &swapchain_create_info, NULL, &swapchain);
-    pass = (err != VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-
-    // Next, call with an invalid imageSharingMode:
-    swapchain_create_info.imageSharingMode = VK_SHARING_MODE_MAX_ENUM;
-    swapchain_create_info.queueFamilyIndexCount = 1;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "called with a non-supported pCreateInfo->imageSharingMode (i.e.");
-    err = vkCreateSwapchainKHR(m_device->device(), &swapchain_create_info, NULL, &swapchain);
-    pass = (err != VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-    // Fix for the future:
-    // FIXME: THIS ISN'T CORRECT--MUST QUERY UNTIL WE FIND A QUEUE FAMILY THAT'S
-    // SUPPORTED
-    swapchain_create_info.queueFamilyIndexCount = 0;
-    queueFamilyIndex[0] = 0;
-    swapchain_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-    // TODO: CONTINUE TESTING VALIDATION OF vkCreateSwapchainKHR() ...
-    // Get the images from a swapchain:
-    // Acquire an image from a swapchain:
-    // Present an image to a swapchain:
-    // Destroy the swapchain:
-
-    // TODOs:
-    //
-    // - Try destroying the device without first destroying the swapchain
-    //
-    // - Try destroying the device without first destroying the surface
-    //
-    // - Try destroying the surface without first destroying the swapchain
-
-    // Destroy the surface:
-    vkDestroySurfaceKHR(instance(), surface, NULL);
-
-    // Tear down the window:
-    xcb_destroy_window(connection, xcb_window);
-    xcb_disconnect(connection);
-
-#else  // VK_USE_PLATFORM_XCB_KHR
-    return;
-#endif // VK_USE_PLATFORM_XCB_KHR
-}
-
 TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit) {
     VkResult err;
     bool pass;
@@ -2855,142 +1886,6 @@ TEST_F(VkLayerTest, SubmitSignaledFence) {
 
     m_errorMonitor->VerifyFound();
 }
-// This is a positive test. We used to expect error in this case but spec now
-// allows it
-TEST_F(VkLayerTest, ResetUnsignaledFence) {
-    m_errorMonitor->ExpectSuccess();
-    vk_testing::Fence testFence;
-    VkFenceCreateInfo fenceInfo = {};
-    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceInfo.pNext = NULL;
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    testFence.init(*m_device, fenceInfo);
-    VkFence fences[1] = {testFence.handle()};
-    VkResult result = vkResetFences(m_device->device(), 1, fences);
-    ASSERT_VK_SUCCESS(result);
-
-    m_errorMonitor->VerifyNotFound();
-}
-#if 0 // A few devices have issues with this test so disabling for now
-TEST_F(VkLayerTest, LongFenceChain)
-{
-    m_errorMonitor->ExpectSuccess();
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    VkResult err;
-
-    std::vector<VkFence> fences;
-
-    const int chainLength = 32768;
-
-    for (int i = 0; i < chainLength; i++) {
-        VkFenceCreateInfo fci = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, nullptr, 0 };
-        VkFence fence;
-        err = vkCreateFence(m_device->device(), &fci, nullptr, &fence);
-        ASSERT_VK_SUCCESS(err);
-
-        fences.push_back(fence);
-
-        VkSubmitInfo si = { VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, nullptr,
-            0, nullptr, 0, nullptr };
-        err = vkQueueSubmit(m_device->m_queue, 1, &si, fence);
-        ASSERT_VK_SUCCESS(err);
-
-    }
-
-    // BOOM, stack overflow.
-    vkWaitForFences(m_device->device(), 1, &fences.back(), VK_TRUE, UINT64_MAX);
-
-    for (auto fence : fences)
-        vkDestroyFence(m_device->device(), fence, nullptr);
-
-    m_errorMonitor->VerifyNotFound();
-}
-#endif
-TEST_F(VkLayerTest, CommandBufferSimultaneousUseSync) {
-    m_errorMonitor->ExpectSuccess();
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    VkResult err;
-
-    // Record (empty!) command buffer that can be submitted multiple times
-    // simultaneously.
-    VkCommandBufferBeginInfo cbbi = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr,
-                                     VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT, nullptr};
-    m_commandBuffer->BeginCommandBuffer(&cbbi);
-    m_commandBuffer->EndCommandBuffer();
-
-    VkFenceCreateInfo fci = {VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, nullptr, 0};
-    VkFence fence;
-    err = vkCreateFence(m_device->device(), &fci, nullptr, &fence);
-    ASSERT_VK_SUCCESS(err);
-
-    VkSemaphoreCreateInfo sci = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, nullptr, 0};
-    VkSemaphore s1, s2;
-    err = vkCreateSemaphore(m_device->device(), &sci, nullptr, &s1);
-    ASSERT_VK_SUCCESS(err);
-    err = vkCreateSemaphore(m_device->device(), &sci, nullptr, &s2);
-    ASSERT_VK_SUCCESS(err);
-
-    // Submit CB once signaling s1, with fence so we can roll forward to its retirement.
-    VkSubmitInfo si = {VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, nullptr, 1, &m_commandBuffer->handle(), 1, &s1};
-    err = vkQueueSubmit(m_device->m_queue, 1, &si, fence);
-    ASSERT_VK_SUCCESS(err);
-
-    // Submit CB again, signaling s2.
-    si.pSignalSemaphores = &s2;
-    err = vkQueueSubmit(m_device->m_queue, 1, &si, VK_NULL_HANDLE);
-    ASSERT_VK_SUCCESS(err);
-
-    // Wait for fence.
-    err = vkWaitForFences(m_device->device(), 1, &fence, VK_TRUE, UINT64_MAX);
-    ASSERT_VK_SUCCESS(err);
-
-    // CB is still in flight from second submission, but semaphore s1 is no
-    // longer in flight. delete it.
-    vkDestroySemaphore(m_device->device(), s1, nullptr);
-
-    m_errorMonitor->VerifyNotFound();
-
-    // Force device idle and clean up remaining objects
-    vkDeviceWaitIdle(m_device->device());
-    vkDestroySemaphore(m_device->device(), s2, nullptr);
-    vkDestroyFence(m_device->device(), fence, nullptr);
-}
-
-TEST_F(VkLayerTest, FenceCreateSignaledWaitHandling) {
-    m_errorMonitor->ExpectSuccess();
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    VkResult err;
-
-    // A fence created signaled
-    VkFenceCreateInfo fci1 = {VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, nullptr, VK_FENCE_CREATE_SIGNALED_BIT};
-    VkFence f1;
-    err = vkCreateFence(m_device->device(), &fci1, nullptr, &f1);
-    ASSERT_VK_SUCCESS(err);
-
-    // A fence created not
-    VkFenceCreateInfo fci2 = {VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, nullptr, 0};
-    VkFence f2;
-    err = vkCreateFence(m_device->device(), &fci2, nullptr, &f2);
-    ASSERT_VK_SUCCESS(err);
-
-    // Submit the unsignaled fence
-    VkSubmitInfo si = {VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, nullptr, 0, nullptr, 0, nullptr};
-    err = vkQueueSubmit(m_device->m_queue, 1, &si, f2);
-
-    // Wait on both fences, with signaled first.
-    VkFence fences[] = {f1, f2};
-    vkWaitForFences(m_device->device(), 2, fences, VK_TRUE, UINT64_MAX);
-
-    // Should have both retired!
-    vkDestroyFence(m_device->device(), f1, nullptr);
-    vkDestroyFence(m_device->device(), f2, nullptr);
-
-    m_errorMonitor->VerifyNotFound();
-}
 
 TEST_F(VkLayerTest, InvalidUsageBits) {
     TEST_DESCRIPTION("Specify wrong usage for image then create conflicting view of image "
@@ -3033,46 +1928,20 @@ TEST_F(VkLayerTest, InvalidUsageBits) {
     region.imageExtent.width = 16;
     region.imageExtent.depth = 1;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Invalid usage flag for buffer ");
     // Buffer usage not set to TRANSFER_SRC and image usage not set to
     // TRANSFER_DST
     BeginCommandBuffer();
-    vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer.handle(), image.handle(),
-                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-    m_errorMonitor->VerifyFound();
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Invalid usage flag for image ");
+    // two separate errors from this call:
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "image should have VK_IMAGE_USAGE_TRANSFER_DST_BIT");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "buffer should have VK_BUFFER_USAGE_TRANSFER_SRC_BIT");
+
     vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer.handle(), image.handle(),
                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
     m_errorMonitor->VerifyFound();
 }
 
-TEST_F(VkLayerTest, ValidUsage) {
-    TEST_DESCRIPTION("Verify that creating an image view from an image with valid usage "
-                     "doesn't generate validation errors");
 
-    ASSERT_NO_FATAL_FAILURE(InitState());
-
-    m_errorMonitor->ExpectSuccess();
-    // Verify that we can create a view with usage INPUT_ATTACHMENT
-    VkImageObj image(m_device);
-    image.init(128, 128, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
-    ASSERT_TRUE(image.initialized());
-    VkImageView imageView;
-    VkImageViewCreateInfo ivci = {};
-    ivci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    ivci.image = image.handle();
-    ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    ivci.format = VK_FORMAT_R8G8B8A8_UNORM;
-    ivci.subresourceRange.layerCount = 1;
-    ivci.subresourceRange.baseMipLevel = 0;
-    ivci.subresourceRange.levelCount = 1;
-    ivci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-
-    vkCreateImageView(m_device->device(), &ivci, NULL, &imageView);
-    m_errorMonitor->VerifyNotFound();
-    vkDestroyImageView(m_device->device(), imageView, NULL);
-}
 #endif // MEM_TRACKER_TESTS
 
 #if OBJ_TRACKER_TESTS
@@ -3658,6 +2527,53 @@ TEST_F(VkLayerTest, ImageSampleCounts) {
     }
 }
 
+TEST_F(VkLayerTest, BlitImageFormats) {
+
+    // Image blit with mismatched formats
+    const char * expected_message =
+        "vkCmdBlitImage: If one of srcImage and dstImage images has signed/unsigned integer format,"
+        " the other one must also have signed/unsigned integer format";
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkImageObj src_image(m_device);
+    src_image.init(64, 64, VK_FORMAT_A2B10G10R10_UINT_PACK32, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_TILING_LINEAR, 0);
+    VkImageObj dst_image(m_device);
+    dst_image.init(64, 64, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_IMAGE_TILING_LINEAR, 0);
+    VkImageObj dst_image2(m_device);
+    dst_image2.init(64, 64, VK_FORMAT_R8G8B8A8_SINT, VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_IMAGE_TILING_LINEAR, 0);
+
+    VkImageBlit blitRegion = {};
+    blitRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    blitRegion.srcSubresource.baseArrayLayer = 0;
+    blitRegion.srcSubresource.layerCount = 1;
+    blitRegion.srcSubresource.mipLevel = 0;
+    blitRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    blitRegion.dstSubresource.baseArrayLayer = 0;
+    blitRegion.dstSubresource.layerCount = 1;
+    blitRegion.dstSubresource.mipLevel = 0;
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, expected_message);
+
+    // Unsigned int vs not an int
+    BeginCommandBuffer();
+    vkCmdBlitImage(m_commandBuffer->handle(), src_image.image(), src_image.layout(), dst_image.image(),
+                   dst_image.layout(), 1, &blitRegion, VK_FILTER_NEAREST);
+
+    m_errorMonitor->VerifyFound();
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, expected_message);
+
+    // Unsigned int vs signed int
+    vkCmdBlitImage(m_commandBuffer->handle(), src_image.image(), src_image.layout(), dst_image2.image(),
+                   dst_image2.layout(), 1, &blitRegion, VK_FILTER_NEAREST);
+
+    m_errorMonitor->VerifyFound();
+
+    EndCommandBuffer();
+}
+
+
 TEST_F(VkLayerTest, DSImageTransferGranularityTests) {
     VkResult err;
     bool pass;
@@ -3863,265 +2779,6 @@ TEST_F(VkLayerTest, MismatchedQueueFamiliesOnSubmit) {
     m_errorMonitor->VerifyFound();
 }
 
-TEST_F(VkLayerTest, RenderPassInitialLayoutUndefined) {
-    TEST_DESCRIPTION("Ensure that CmdBeginRenderPass with an attachment's "
-                     "initialLayout of VK_IMAGE_LAYOUT_UNDEFINED works when "
-                     "the command buffer has prior knowledge of that "
-                     "attachment's layout.");
-
-    m_errorMonitor->ExpectSuccess();
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-
-    // A renderpass with one color attachment.
-    VkAttachmentDescription attachment = {0,
-                                          VK_FORMAT_R8G8B8A8_UNORM,
-                                          VK_SAMPLE_COUNT_1_BIT,
-                                          VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                                          VK_ATTACHMENT_STORE_OP_STORE,
-                                          VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                                          VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                                          VK_IMAGE_LAYOUT_UNDEFINED,
-                                          VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
-
-    VkAttachmentReference att_ref = {0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
-
-    VkSubpassDescription subpass = {0, VK_PIPELINE_BIND_POINT_GRAPHICS, 0, nullptr, 1, &att_ref, nullptr, nullptr, 0, nullptr};
-
-    VkRenderPassCreateInfo rpci = {VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, nullptr, 0, 1, &attachment, 1, &subpass, 0, nullptr};
-
-    VkRenderPass rp;
-    VkResult err = vkCreateRenderPass(m_device->device(), &rpci, nullptr, &rp);
-    ASSERT_VK_SUCCESS(err);
-
-    // A compatible framebuffer.
-    VkImageObj image(m_device);
-    image.init(32, 32, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
-    ASSERT_TRUE(image.initialized());
-
-    VkImageViewCreateInfo ivci = {
-        VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-        nullptr,
-        0,
-        image.handle(),
-        VK_IMAGE_VIEW_TYPE_2D,
-        VK_FORMAT_R8G8B8A8_UNORM,
-        {VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
-         VK_COMPONENT_SWIZZLE_IDENTITY},
-        {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1},
-    };
-    VkImageView view;
-    err = vkCreateImageView(m_device->device(), &ivci, nullptr, &view);
-    ASSERT_VK_SUCCESS(err);
-
-    VkFramebufferCreateInfo fci = {VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr, 0, rp, 1, &view, 32, 32, 1};
-    VkFramebuffer fb;
-    err = vkCreateFramebuffer(m_device->device(), &fci, nullptr, &fb);
-    ASSERT_VK_SUCCESS(err);
-
-    // Record a single command buffer which uses this renderpass twice. The
-    // bug is triggered at the beginning of the second renderpass, when the
-    // command buffer already has a layout recorded for the attachment.
-    VkRenderPassBeginInfo rpbi = {VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr, rp, fb, {{0, 0}, {32, 32}}, 0, nullptr};
-    BeginCommandBuffer();
-    vkCmdBeginRenderPass(m_commandBuffer->handle(), &rpbi, VK_SUBPASS_CONTENTS_INLINE);
-    vkCmdEndRenderPass(m_commandBuffer->handle());
-    vkCmdBeginRenderPass(m_commandBuffer->handle(), &rpbi, VK_SUBPASS_CONTENTS_INLINE);
-
-    m_errorMonitor->VerifyNotFound();
-
-    vkCmdEndRenderPass(m_commandBuffer->handle());
-    EndCommandBuffer();
-
-    vkDestroyFramebuffer(m_device->device(), fb, nullptr);
-    vkDestroyRenderPass(m_device->device(), rp, nullptr);
-    vkDestroyImageView(m_device->device(), view, nullptr);
-}
-
-TEST_F(VkLayerTest, FramebufferBindingDestroyCommandPool) {
-    TEST_DESCRIPTION("This test should pass. Create a Framebuffer and "
-                     "command buffer, bind them together, then destroy "
-                     "command pool and framebuffer and verify there are no "
-                     "errors.");
-
-    m_errorMonitor->ExpectSuccess();
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-
-    // A renderpass with one color attachment.
-    VkAttachmentDescription attachment = {0,
-                                          VK_FORMAT_R8G8B8A8_UNORM,
-                                          VK_SAMPLE_COUNT_1_BIT,
-                                          VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                                          VK_ATTACHMENT_STORE_OP_STORE,
-                                          VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                                          VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                                          VK_IMAGE_LAYOUT_UNDEFINED,
-                                          VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
-
-    VkAttachmentReference att_ref = {0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
-
-    VkSubpassDescription subpass = {0, VK_PIPELINE_BIND_POINT_GRAPHICS, 0, nullptr, 1, &att_ref, nullptr, nullptr, 0, nullptr};
-
-    VkRenderPassCreateInfo rpci = {VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, nullptr, 0, 1, &attachment, 1, &subpass, 0, nullptr};
-
-    VkRenderPass rp;
-    VkResult err = vkCreateRenderPass(m_device->device(), &rpci, nullptr, &rp);
-    ASSERT_VK_SUCCESS(err);
-
-    // A compatible framebuffer.
-    VkImageObj image(m_device);
-    image.init(32, 32, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
-    ASSERT_TRUE(image.initialized());
-
-    VkImageViewCreateInfo ivci = {
-        VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-        nullptr,
-        0,
-        image.handle(),
-        VK_IMAGE_VIEW_TYPE_2D,
-        VK_FORMAT_R8G8B8A8_UNORM,
-        {VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
-         VK_COMPONENT_SWIZZLE_IDENTITY},
-        {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1},
-    };
-    VkImageView view;
-    err = vkCreateImageView(m_device->device(), &ivci, nullptr, &view);
-    ASSERT_VK_SUCCESS(err);
-
-    VkFramebufferCreateInfo fci = {VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr, 0, rp, 1, &view, 32, 32, 1};
-    VkFramebuffer fb;
-    err = vkCreateFramebuffer(m_device->device(), &fci, nullptr, &fb);
-    ASSERT_VK_SUCCESS(err);
-
-    // Explicitly create a command buffer to bind the FB to so that we can then
-    //  destroy the command pool in order to implicitly free command buffer
-    VkCommandPool command_pool;
-    VkCommandPoolCreateInfo pool_create_info{};
-    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
-    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr, &command_pool);
-
-    VkCommandBuffer command_buffer;
-    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
-    command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    command_buffer_allocate_info.commandPool = command_pool;
-    command_buffer_allocate_info.commandBufferCount = 1;
-    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, &command_buffer);
-
-    // Begin our cmd buffer with renderpass using our framebuffer
-    VkRenderPassBeginInfo rpbi = {VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr, rp, fb, {{0, 0}, {32, 32}}, 0, nullptr};
-    VkCommandBufferBeginInfo begin_info{};
-    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    vkBeginCommandBuffer(command_buffer, &begin_info);
-
-    vkCmdBeginRenderPass(command_buffer, &rpbi, VK_SUBPASS_CONTENTS_INLINE);
-    vkCmdEndRenderPass(command_buffer);
-    vkEndCommandBuffer(command_buffer);
-    vkDestroyImageView(m_device->device(), view, nullptr);
-    // Destroy command pool to implicitly free command buffer
-    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
-    vkDestroyFramebuffer(m_device->device(), fb, nullptr);
-    vkDestroyRenderPass(m_device->device(), rp, nullptr);
-    m_errorMonitor->VerifyNotFound();
-}
-
-TEST_F(VkLayerTest, RenderPassSubpassZeroTransitionsApplied) {
-    TEST_DESCRIPTION("Ensure that CmdBeginRenderPass applies the layout "
-                     "transitions for the first subpass");
-
-    m_errorMonitor->ExpectSuccess();
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-
-    // A renderpass with one color attachment.
-    VkAttachmentDescription attachment = {0,
-                                          VK_FORMAT_R8G8B8A8_UNORM,
-                                          VK_SAMPLE_COUNT_1_BIT,
-                                          VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                                          VK_ATTACHMENT_STORE_OP_STORE,
-                                          VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                                          VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                                          VK_IMAGE_LAYOUT_UNDEFINED,
-                                          VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
-
-    VkAttachmentReference att_ref = {0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
-
-    VkSubpassDescription subpass = {0, VK_PIPELINE_BIND_POINT_GRAPHICS, 0, nullptr, 1, &att_ref, nullptr, nullptr, 0, nullptr};
-
-    VkSubpassDependency dep = {0,
-                               0,
-                               VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                               VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                               VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-                               VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-                               VK_DEPENDENCY_BY_REGION_BIT};
-
-    VkRenderPassCreateInfo rpci = {VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, nullptr, 0, 1, &attachment, 1, &subpass, 1, &dep};
-
-    VkResult err;
-    VkRenderPass rp;
-    err = vkCreateRenderPass(m_device->device(), &rpci, nullptr, &rp);
-    ASSERT_VK_SUCCESS(err);
-
-    // A compatible framebuffer.
-    VkImageObj image(m_device);
-    image.init(32, 32, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
-    ASSERT_TRUE(image.initialized());
-
-    VkImageViewCreateInfo ivci = {
-        VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-        nullptr,
-        0,
-        image.handle(),
-        VK_IMAGE_VIEW_TYPE_2D,
-        VK_FORMAT_R8G8B8A8_UNORM,
-        {VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
-         VK_COMPONENT_SWIZZLE_IDENTITY},
-        {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1},
-    };
-    VkImageView view;
-    err = vkCreateImageView(m_device->device(), &ivci, nullptr, &view);
-    ASSERT_VK_SUCCESS(err);
-
-    VkFramebufferCreateInfo fci = {VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr, 0, rp, 1, &view, 32, 32, 1};
-    VkFramebuffer fb;
-    err = vkCreateFramebuffer(m_device->device(), &fci, nullptr, &fb);
-    ASSERT_VK_SUCCESS(err);
-
-    // Record a single command buffer which issues a pipeline barrier w/
-    // image memory barrier for the attachment. This detects the previously
-    // missing tracking of the subpass layout by throwing a validation error
-    // if it doesn't occur.
-    VkRenderPassBeginInfo rpbi = {VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr, rp, fb, {{0, 0}, {32, 32}}, 0, nullptr};
-    BeginCommandBuffer();
-    vkCmdBeginRenderPass(m_commandBuffer->handle(), &rpbi, VK_SUBPASS_CONTENTS_INLINE);
-
-    VkImageMemoryBarrier imb = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-                                nullptr,
-                                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-                                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-                                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                                VK_QUEUE_FAMILY_IGNORED,
-                                VK_QUEUE_FAMILY_IGNORED,
-                                image.handle(),
-                                {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}};
-    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, 1,
-                         &imb);
-
-    vkCmdEndRenderPass(m_commandBuffer->handle());
-    m_errorMonitor->VerifyNotFound();
-    EndCommandBuffer();
-
-    vkDestroyFramebuffer(m_device->device(), fb, nullptr);
-    vkDestroyRenderPass(m_device->device(), rp, nullptr);
-    vkDestroyImageView(m_device->device(), view, nullptr);
-}
-
 TEST_F(VkLayerTest, RenderPassPipelineSubpassMismatch) {
     TEST_DESCRIPTION("Use a pipeline for the wrong subpass in a render pass instance");
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -4237,111 +2894,6 @@ TEST_F(VkLayerTest, RenderPassPipelineSubpassMismatch) {
     vkDestroyRenderPass(m_device->device(), rp, nullptr);
 }
 
-TEST_F(VkLayerTest, DepthStencilLayoutTransitionForDepthOnlyImageview) {
-    TEST_DESCRIPTION("Validate that when an imageView of a depth/stencil image "
-                     "is used as a depth/stencil framebuffer attachment, the "
-                     "aspectMask is ignored and both depth and stencil image "
-                     "subresources are used.");
-
-    VkFormatProperties format_properties;
-    vkGetPhysicalDeviceFormatProperties(gpu(), VK_FORMAT_D32_SFLOAT_S8_UINT, &format_properties);
-    if (!(format_properties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
-        return;
-    }
-
-    m_errorMonitor->ExpectSuccess();
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-
-    VkAttachmentDescription attachment = {0,
-                                          VK_FORMAT_D32_SFLOAT_S8_UINT,
-                                          VK_SAMPLE_COUNT_1_BIT,
-                                          VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                                          VK_ATTACHMENT_STORE_OP_STORE,
-                                          VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                                          VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                                          VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                                          VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL};
-
-    VkAttachmentReference att_ref = {0, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL};
-
-    VkSubpassDescription subpass = {0, VK_PIPELINE_BIND_POINT_GRAPHICS, 0, nullptr, 0, nullptr, nullptr, &att_ref, 0, nullptr};
-
-    VkSubpassDependency dep = {0,
-                               0,
-                               VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                               VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                               VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-                               VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-                               VK_DEPENDENCY_BY_REGION_BIT};
-
-    VkRenderPassCreateInfo rpci = {VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, nullptr, 0, 1, &attachment, 1, &subpass, 1, &dep};
-
-    VkResult err;
-    VkRenderPass rp;
-    err = vkCreateRenderPass(m_device->device(), &rpci, nullptr, &rp);
-    ASSERT_VK_SUCCESS(err);
-
-    VkImageObj image(m_device);
-    image.init_no_layout(32, 32, VK_FORMAT_D32_SFLOAT_S8_UINT,
-                         0x26, // usage
-                         VK_IMAGE_TILING_OPTIMAL, 0);
-    ASSERT_TRUE(image.initialized());
-    image.SetLayout(0x6, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-
-    VkImageViewCreateInfo ivci = {
-        VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-        nullptr,
-        0,
-        image.handle(),
-        VK_IMAGE_VIEW_TYPE_2D,
-        VK_FORMAT_D32_SFLOAT_S8_UINT,
-        {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A},
-        {0x2, 0, 1, 0, 1},
-    };
-    VkImageView view;
-    err = vkCreateImageView(m_device->device(), &ivci, nullptr, &view);
-    ASSERT_VK_SUCCESS(err);
-
-    VkFramebufferCreateInfo fci = {VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr, 0, rp, 1, &view, 32, 32, 1};
-    VkFramebuffer fb;
-    err = vkCreateFramebuffer(m_device->device(), &fci, nullptr, &fb);
-    ASSERT_VK_SUCCESS(err);
-
-    VkRenderPassBeginInfo rpbi = {VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr, rp, fb, {{0, 0}, {32, 32}}, 0, nullptr};
-    BeginCommandBuffer();
-    vkCmdBeginRenderPass(m_commandBuffer->handle(), &rpbi, VK_SUBPASS_CONTENTS_INLINE);
-
-    VkImageMemoryBarrier imb = {};
-    imb.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    imb.pNext = nullptr;
-    imb.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-    imb.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    imb.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    imb.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    imb.srcQueueFamilyIndex = 0;
-    imb.dstQueueFamilyIndex = 0;
-    imb.image = image.handle();
-    imb.subresourceRange.aspectMask = 0x6;
-    imb.subresourceRange.baseMipLevel = 0;
-    imb.subresourceRange.levelCount = 0x1;
-    imb.subresourceRange.baseArrayLayer = 0;
-    imb.subresourceRange.layerCount = 0x1;
-
-    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, 1,
-                         &imb);
-
-    vkCmdEndRenderPass(m_commandBuffer->handle());
-    EndCommandBuffer();
-    QueueCommandBuffer(false);
-    m_errorMonitor->VerifyNotFound();
-
-    vkDestroyFramebuffer(m_device->device(), fb, nullptr);
-    vkDestroyRenderPass(m_device->device(), rp, nullptr);
-    vkDestroyImageView(m_device->device(), view, nullptr);
-}
-
 TEST_F(VkLayerTest, RenderPassInvalidRenderArea) {
     TEST_DESCRIPTION("Generate INVALID_RENDER_AREA error by beginning renderpass"
                      "with extent outside of framebuffer");
@@ -4416,213 +2968,6 @@ TEST_F(VkLayerTest, RenderPassDepthStencilAttachmentUnused) {
     subpass.pColorAttachments = NULL;
     vkCreateRenderPass(m_device->device(), &rpci, NULL, &rp);
     m_errorMonitor->VerifyFound();
-}
-
-TEST_F(VkLayerTest, RenderPassTransitionsAttachmentUnused) {
-    TEST_DESCRIPTION("Ensure that layout transitions work correctly without "
-                     "errors, when an attachment reference is "
-                     "VK_ATTACHMENT_UNUSED");
-
-    m_errorMonitor->ExpectSuccess();
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-
-    // A renderpass with no attachments
-    VkAttachmentReference att_ref = {VK_ATTACHMENT_UNUSED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
-
-    VkSubpassDescription subpass = {0, VK_PIPELINE_BIND_POINT_GRAPHICS, 0, nullptr, 1, &att_ref, nullptr, nullptr, 0, nullptr};
-
-    VkRenderPassCreateInfo rpci = {VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, nullptr, 0, 0, nullptr, 1, &subpass, 0, nullptr};
-
-    VkRenderPass rp;
-    VkResult err = vkCreateRenderPass(m_device->device(), &rpci, nullptr, &rp);
-    ASSERT_VK_SUCCESS(err);
-
-    // A compatible framebuffer.
-    VkFramebufferCreateInfo fci = {VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr, 0, rp, 0, nullptr, 32, 32, 1};
-    VkFramebuffer fb;
-    err = vkCreateFramebuffer(m_device->device(), &fci, nullptr, &fb);
-    ASSERT_VK_SUCCESS(err);
-
-    // Record a command buffer which just begins and ends the renderpass. The
-    // bug manifests in BeginRenderPass.
-    VkRenderPassBeginInfo rpbi = {VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr, rp, fb, {{0, 0}, {32, 32}}, 0, nullptr};
-    BeginCommandBuffer();
-    vkCmdBeginRenderPass(m_commandBuffer->handle(), &rpbi, VK_SUBPASS_CONTENTS_INLINE);
-    vkCmdEndRenderPass(m_commandBuffer->handle());
-    m_errorMonitor->VerifyNotFound();
-    EndCommandBuffer();
-
-    vkDestroyFramebuffer(m_device->device(), fb, nullptr);
-    vkDestroyRenderPass(m_device->device(), rp, nullptr);
-}
-
-// This is a positive test. No errors are expected.
-TEST_F(VkLayerTest, StencilLoadOp) {
-    TEST_DESCRIPTION("Create a stencil-only attachment with a LOAD_OP set to "
-                     "CLEAR. stencil[Load|Store]Op used to be ignored.");
-    VkResult result = VK_SUCCESS;
-    VkImageFormatProperties formatProps;
-    vkGetPhysicalDeviceImageFormatProperties(gpu(), VK_FORMAT_D24_UNORM_S8_UINT, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL,
-                                             VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, 0,
-                                             &formatProps);
-    if (formatProps.maxExtent.width < 100 || formatProps.maxExtent.height < 100) {
-        return;
-    }
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    VkFormat depth_stencil_fmt = VK_FORMAT_D24_UNORM_S8_UINT;
-    m_depthStencil->Init(m_device, 100, 100, depth_stencil_fmt,
-                         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
-    VkAttachmentDescription att = {};
-    VkAttachmentReference ref = {};
-    att.format = depth_stencil_fmt;
-    att.samples = VK_SAMPLE_COUNT_1_BIT;
-    att.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    att.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    att.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    att.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
-    att.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    att.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-    VkClearValue clear;
-    clear.depthStencil.depth = 1.0;
-    clear.depthStencil.stencil = 0;
-    ref.attachment = 0;
-    ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-    VkSubpassDescription subpass = {};
-    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.flags = 0;
-    subpass.inputAttachmentCount = 0;
-    subpass.pInputAttachments = NULL;
-    subpass.colorAttachmentCount = 0;
-    subpass.pColorAttachments = NULL;
-    subpass.pResolveAttachments = NULL;
-    subpass.pDepthStencilAttachment = &ref;
-    subpass.preserveAttachmentCount = 0;
-    subpass.pPreserveAttachments = NULL;
-
-    VkRenderPass rp;
-    VkRenderPassCreateInfo rp_info = {};
-    rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    rp_info.attachmentCount = 1;
-    rp_info.pAttachments = &att;
-    rp_info.subpassCount = 1;
-    rp_info.pSubpasses = &subpass;
-    result = vkCreateRenderPass(device(), &rp_info, NULL, &rp);
-    ASSERT_VK_SUCCESS(result);
-
-    VkImageView *depthView = m_depthStencil->BindInfo();
-    VkFramebufferCreateInfo fb_info = {};
-    fb_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    fb_info.pNext = NULL;
-    fb_info.renderPass = rp;
-    fb_info.attachmentCount = 1;
-    fb_info.pAttachments = depthView;
-    fb_info.width = 100;
-    fb_info.height = 100;
-    fb_info.layers = 1;
-    VkFramebuffer fb;
-    result = vkCreateFramebuffer(device(), &fb_info, NULL, &fb);
-    ASSERT_VK_SUCCESS(result);
-
-    VkRenderPassBeginInfo rpbinfo = {};
-    rpbinfo.clearValueCount = 1;
-    rpbinfo.pClearValues = &clear;
-    rpbinfo.pNext = NULL;
-    rpbinfo.renderPass = rp;
-    rpbinfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    rpbinfo.renderArea.extent.width = 100;
-    rpbinfo.renderArea.extent.height = 100;
-    rpbinfo.renderArea.offset.x = 0;
-    rpbinfo.renderArea.offset.y = 0;
-    rpbinfo.framebuffer = fb;
-
-    VkFence fence = {};
-    VkFenceCreateInfo fence_ci = {};
-    fence_ci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fence_ci.pNext = nullptr;
-    fence_ci.flags = 0;
-    result = vkCreateFence(m_device->device(), &fence_ci, nullptr, &fence);
-    ASSERT_VK_SUCCESS(result);
-
-    m_commandBuffer->BeginCommandBuffer();
-    m_commandBuffer->BeginRenderPass(rpbinfo);
-    m_commandBuffer->EndRenderPass();
-    m_commandBuffer->EndCommandBuffer();
-    m_commandBuffer->QueueCommandBuffer(fence);
-
-    VkImageObj destImage(m_device);
-    destImage.init(100, 100, depth_stencil_fmt, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-                   VK_IMAGE_TILING_OPTIMAL, 0);
-    VkImageMemoryBarrier barrier = {};
-    VkImageSubresourceRange range;
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-    barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
-    barrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-    barrier.image = m_depthStencil->handle();
-    range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-    range.baseMipLevel = 0;
-    range.levelCount = 1;
-    range.baseArrayLayer = 0;
-    range.layerCount = 1;
-    barrier.subresourceRange = range;
-    vkWaitForFences(m_device->device(), 1, &fence, VK_TRUE, UINT64_MAX);
-    VkCommandBufferObj cmdbuf(m_device, m_commandPool);
-    cmdbuf.BeginCommandBuffer();
-    cmdbuf.PipelineBarrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1,
-                           &barrier);
-    barrier.srcAccessMask = 0;
-    barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    barrier.image = destImage.handle();
-    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-    cmdbuf.PipelineBarrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1,
-                           &barrier);
-    VkImageCopy cregion;
-    cregion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-    cregion.srcSubresource.mipLevel = 0;
-    cregion.srcSubresource.baseArrayLayer = 0;
-    cregion.srcSubresource.layerCount = 1;
-    cregion.srcOffset.x = 0;
-    cregion.srcOffset.y = 0;
-    cregion.srcOffset.z = 0;
-    cregion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-    cregion.dstSubresource.mipLevel = 0;
-    cregion.dstSubresource.baseArrayLayer = 0;
-    cregion.dstSubresource.layerCount = 1;
-    cregion.dstOffset.x = 0;
-    cregion.dstOffset.y = 0;
-    cregion.dstOffset.z = 0;
-    cregion.extent.width = 100;
-    cregion.extent.height = 100;
-    cregion.extent.depth = 1;
-    cmdbuf.CopyImage(m_depthStencil->handle(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, destImage.handle(),
-                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &cregion);
-    cmdbuf.EndCommandBuffer();
-
-    VkSubmitInfo submit_info;
-    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submit_info.pNext = NULL;
-    submit_info.waitSemaphoreCount = 0;
-    submit_info.pWaitSemaphores = NULL;
-    submit_info.pWaitDstStageMask = NULL;
-    submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &cmdbuf.handle();
-    submit_info.signalSemaphoreCount = 0;
-    submit_info.pSignalSemaphores = NULL;
-
-    m_errorMonitor->ExpectSuccess();
-    vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
-    m_errorMonitor->VerifyNotFound();
-
-    vkQueueWaitIdle(m_device->m_queue);
-    vkDestroyFence(m_device->device(), fence, nullptr);
-    vkDestroyRenderPass(m_device->device(), rp, nullptr);
-    vkDestroyFramebuffer(m_device->device(), fb, nullptr);
 }
 
 TEST_F(VkLayerTest, UnusedPreserveAttachment) {
@@ -4788,14 +3133,14 @@ TEST_F(VkLayerTest, CreateRenderPassSubpassSampleCountConsistency) {
 
 TEST_F(VkLayerTest, FramebufferCreateErrors) {
     TEST_DESCRIPTION("Hit errors when attempting to create a framebuffer :\n"
-                     " 1. Mismatch between fb & renderPass attachmentCount\n"
+                     " 1. Mismatch between framebuffer & renderPass attachmentCount\n"
                      " 2. Use a color image as depthStencil attachment\n"
-                     " 3. Mismatch fb & renderPass attachment formats\n"
-                     " 4. Mismatch fb & renderPass attachment #samples\n"
-                     " 5. FB attachment w/ non-1 mip-levels\n"
-                     " 6. FB attachment where dimensions don't match\n"
-                     " 7. FB attachment w/o identity swizzle\n"
-                     " 8. FB dimensions exceed physical device limits\n");
+                     " 3. Mismatch framebuffer & renderPass attachment formats\n"
+                     " 4. Mismatch framebuffer & renderPass attachment #samples\n"
+                     " 5. Framebuffer attachment w/ non-1 mip-levels\n"
+                     " 6. Framebuffer attachment where dimensions don't match\n"
+                     " 7. Framebuffer attachment w/o identity swizzle\n"
+                     " 8. framebuffer dimensions exceed physical device limits\n");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -5002,1300 +3347,6 @@ TEST_F(VkLayerTest, FramebufferCreateErrors) {
     vkDestroyRenderPass(m_device->device(), rp, NULL);
 }
 
-// This is a positive test.  No errors should be generated.
-TEST_F(VkLayerTest, WaitEventThenSet) {
-    TEST_DESCRIPTION("Wait on a event then set it after the wait has been submitted.");
-
-    m_errorMonitor->ExpectSuccess();
-    ASSERT_NO_FATAL_FAILURE(InitState());
-
-    VkEvent event;
-    VkEventCreateInfo event_create_info{};
-    event_create_info.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
-    vkCreateEvent(m_device->device(), &event_create_info, nullptr, &event);
-
-    VkCommandPool command_pool;
-    VkCommandPoolCreateInfo pool_create_info{};
-    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
-    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr, &command_pool);
-
-    VkCommandBuffer command_buffer;
-    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
-    command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    command_buffer_allocate_info.commandPool = command_pool;
-    command_buffer_allocate_info.commandBufferCount = 1;
-    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, &command_buffer);
-
-    VkQueue queue = VK_NULL_HANDLE;
-    vkGetDeviceQueue(m_device->device(), m_device->graphics_queue_node_index_, 0, &queue);
-
-    {
-        VkCommandBufferBeginInfo begin_info{};
-        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        vkBeginCommandBuffer(command_buffer, &begin_info);
-
-        vkCmdWaitEvents(command_buffer, 1, &event, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, nullptr, 0,
-                        nullptr, 0, nullptr);
-        vkCmdResetEvent(command_buffer, event, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
-        vkEndCommandBuffer(command_buffer);
-    }
-    {
-        VkSubmitInfo submit_info{};
-        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &command_buffer;
-        submit_info.signalSemaphoreCount = 0;
-        submit_info.pSignalSemaphores = nullptr;
-        vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
-    }
-    { vkSetEvent(m_device->device(), event); }
-
-    vkQueueWaitIdle(queue);
-
-    vkDestroyEvent(m_device->device(), event, nullptr);
-    vkFreeCommandBuffers(m_device->device(), command_pool, 1, &command_buffer);
-    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
-
-    m_errorMonitor->VerifyNotFound();
-}
-// This is a positive test.  No errors should be generated.
-TEST_F(VkLayerTest, QueryAndCopySecondaryCommandBuffers) {
-    TEST_DESCRIPTION("Issue a query on a secondary command buffery and copy it on a primary.");
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    if ((m_device->queue_props.empty()) || (m_device->queue_props[0].queueCount < 2))
-        return;
-
-    m_errorMonitor->ExpectSuccess();
-
-    VkQueryPool query_pool;
-    VkQueryPoolCreateInfo query_pool_create_info{};
-    query_pool_create_info.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
-    query_pool_create_info.queryType = VK_QUERY_TYPE_TIMESTAMP;
-    query_pool_create_info.queryCount = 1;
-    vkCreateQueryPool(m_device->device(), &query_pool_create_info, nullptr, &query_pool);
-
-    VkCommandPool command_pool;
-    VkCommandPoolCreateInfo pool_create_info{};
-    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
-    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr, &command_pool);
-
-    VkCommandBuffer command_buffer;
-    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
-    command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    command_buffer_allocate_info.commandPool = command_pool;
-    command_buffer_allocate_info.commandBufferCount = 1;
-    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, &command_buffer);
-
-    VkCommandBuffer secondary_command_buffer;
-    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
-    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, &secondary_command_buffer);
-
-    VkQueue queue = VK_NULL_HANDLE;
-    vkGetDeviceQueue(m_device->device(), m_device->graphics_queue_node_index_, 1, &queue);
-
-    uint32_t qfi = 0;
-    VkBufferCreateInfo buff_create_info = {};
-    buff_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    buff_create_info.size = 1024;
-    buff_create_info.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-    buff_create_info.queueFamilyIndexCount = 1;
-    buff_create_info.pQueueFamilyIndices = &qfi;
-
-    VkResult err;
-    VkBuffer buffer;
-    err = vkCreateBuffer(m_device->device(), &buff_create_info, NULL, &buffer);
-    ASSERT_VK_SUCCESS(err);
-    VkMemoryAllocateInfo mem_alloc = {};
-    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    mem_alloc.pNext = NULL;
-    mem_alloc.allocationSize = 1024;
-    mem_alloc.memoryTypeIndex = 0;
-
-    VkMemoryRequirements memReqs;
-    vkGetBufferMemoryRequirements(m_device->device(), buffer, &memReqs);
-    bool pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &mem_alloc, 0);
-    if (!pass) {
-        vkDestroyBuffer(m_device->device(), buffer, NULL);
-        return;
-    }
-
-    VkDeviceMemory mem;
-    err = vkAllocateMemory(m_device->device(), &mem_alloc, NULL, &mem);
-    ASSERT_VK_SUCCESS(err);
-    err = vkBindBufferMemory(m_device->device(), buffer, mem, 0);
-    ASSERT_VK_SUCCESS(err);
-
-    VkCommandBufferInheritanceInfo hinfo = {};
-    hinfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-    hinfo.renderPass = VK_NULL_HANDLE;
-    hinfo.subpass = 0;
-    hinfo.framebuffer = VK_NULL_HANDLE;
-    hinfo.occlusionQueryEnable = VK_FALSE;
-    hinfo.queryFlags = 0;
-    hinfo.pipelineStatistics = 0;
-
-    {
-        VkCommandBufferBeginInfo begin_info{};
-        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        begin_info.pInheritanceInfo = &hinfo;
-        vkBeginCommandBuffer(secondary_command_buffer, &begin_info);
-
-        vkCmdResetQueryPool(secondary_command_buffer, query_pool, 0, 1);
-        vkCmdWriteTimestamp(secondary_command_buffer, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, query_pool, 0);
-
-        vkEndCommandBuffer(secondary_command_buffer);
-
-        begin_info.pInheritanceInfo = nullptr;
-        vkBeginCommandBuffer(command_buffer, &begin_info);
-
-        vkCmdExecuteCommands(command_buffer, 1, &secondary_command_buffer);
-        vkCmdCopyQueryPoolResults(command_buffer, query_pool, 0, 1, buffer, 0, 0, 0);
-
-        vkEndCommandBuffer(command_buffer);
-    }
-    {
-        VkSubmitInfo submit_info{};
-        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &command_buffer;
-        submit_info.signalSemaphoreCount = 0;
-        submit_info.pSignalSemaphores = nullptr;
-        vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
-    }
-
-    vkQueueWaitIdle(queue);
-
-    vkDestroyQueryPool(m_device->device(), query_pool, nullptr);
-    vkFreeCommandBuffers(m_device->device(), command_pool, 1, &command_buffer);
-    vkFreeCommandBuffers(m_device->device(), command_pool, 1, &secondary_command_buffer);
-    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
-    vkDestroyBuffer(m_device->device(), buffer, NULL);
-    vkFreeMemory(m_device->device(), mem, NULL);
-
-    m_errorMonitor->VerifyNotFound();
-}
-
-// This is a positive test.  No errors should be generated.
-TEST_F(VkLayerTest, QueryAndCopyMultipleCommandBuffers) {
-    TEST_DESCRIPTION("Issue a query and copy from it on a second command buffer.");
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    if ((m_device->queue_props.empty()) || (m_device->queue_props[0].queueCount < 2))
-        return;
-
-    m_errorMonitor->ExpectSuccess();
-
-    VkQueryPool query_pool;
-    VkQueryPoolCreateInfo query_pool_create_info{};
-    query_pool_create_info.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
-    query_pool_create_info.queryType = VK_QUERY_TYPE_TIMESTAMP;
-    query_pool_create_info.queryCount = 1;
-    vkCreateQueryPool(m_device->device(), &query_pool_create_info, nullptr, &query_pool);
-
-    VkCommandPool command_pool;
-    VkCommandPoolCreateInfo pool_create_info{};
-    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
-    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr, &command_pool);
-
-    VkCommandBuffer command_buffer[2];
-    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
-    command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    command_buffer_allocate_info.commandPool = command_pool;
-    command_buffer_allocate_info.commandBufferCount = 2;
-    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, command_buffer);
-
-    VkQueue queue = VK_NULL_HANDLE;
-    vkGetDeviceQueue(m_device->device(), m_device->graphics_queue_node_index_, 1, &queue);
-
-    uint32_t qfi = 0;
-    VkBufferCreateInfo buff_create_info = {};
-    buff_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    buff_create_info.size = 1024;
-    buff_create_info.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-    buff_create_info.queueFamilyIndexCount = 1;
-    buff_create_info.pQueueFamilyIndices = &qfi;
-
-    VkResult err;
-    VkBuffer buffer;
-    err = vkCreateBuffer(m_device->device(), &buff_create_info, NULL, &buffer);
-    ASSERT_VK_SUCCESS(err);
-    VkMemoryAllocateInfo mem_alloc = {};
-    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    mem_alloc.pNext = NULL;
-    mem_alloc.allocationSize = 1024;
-    mem_alloc.memoryTypeIndex = 0;
-
-    VkMemoryRequirements memReqs;
-    vkGetBufferMemoryRequirements(m_device->device(), buffer, &memReqs);
-    bool pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &mem_alloc, 0);
-    if (!pass) {
-        vkDestroyBuffer(m_device->device(), buffer, NULL);
-        return;
-    }
-
-    VkDeviceMemory mem;
-    err = vkAllocateMemory(m_device->device(), &mem_alloc, NULL, &mem);
-    ASSERT_VK_SUCCESS(err);
-    err = vkBindBufferMemory(m_device->device(), buffer, mem, 0);
-    ASSERT_VK_SUCCESS(err);
-
-    {
-        VkCommandBufferBeginInfo begin_info{};
-        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        vkBeginCommandBuffer(command_buffer[0], &begin_info);
-
-        vkCmdResetQueryPool(command_buffer[0], query_pool, 0, 1);
-        vkCmdWriteTimestamp(command_buffer[0], VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, query_pool, 0);
-
-        vkEndCommandBuffer(command_buffer[0]);
-
-        vkBeginCommandBuffer(command_buffer[1], &begin_info);
-
-        vkCmdCopyQueryPoolResults(command_buffer[1], query_pool, 0, 1, buffer, 0, 0, 0);
-
-        vkEndCommandBuffer(command_buffer[1]);
-    }
-    {
-        VkSubmitInfo submit_info{};
-        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit_info.commandBufferCount = 2;
-        submit_info.pCommandBuffers = command_buffer;
-        submit_info.signalSemaphoreCount = 0;
-        submit_info.pSignalSemaphores = nullptr;
-        vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
-    }
-
-    vkQueueWaitIdle(queue);
-
-    vkDestroyQueryPool(m_device->device(), query_pool, nullptr);
-    vkFreeCommandBuffers(m_device->device(), command_pool, 2, command_buffer);
-    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
-    vkDestroyBuffer(m_device->device(), buffer, NULL);
-    vkFreeMemory(m_device->device(), mem, NULL);
-
-    m_errorMonitor->VerifyNotFound();
-}
-
-TEST_F(VkLayerTest, ResetEventThenSet) {
-    TEST_DESCRIPTION("Reset an event then set it after the reset has been submitted.");
-
-    m_errorMonitor->ExpectSuccess();
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    VkEvent event;
-    VkEventCreateInfo event_create_info{};
-    event_create_info.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
-    vkCreateEvent(m_device->device(), &event_create_info, nullptr, &event);
-
-    VkCommandPool command_pool;
-    VkCommandPoolCreateInfo pool_create_info{};
-    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
-    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr, &command_pool);
-
-    VkCommandBuffer command_buffer;
-    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
-    command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    command_buffer_allocate_info.commandPool = command_pool;
-    command_buffer_allocate_info.commandBufferCount = 1;
-    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, &command_buffer);
-
-    VkQueue queue = VK_NULL_HANDLE;
-    vkGetDeviceQueue(m_device->device(), m_device->graphics_queue_node_index_, 0, &queue);
-
-    {
-        VkCommandBufferBeginInfo begin_info{};
-        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        vkBeginCommandBuffer(command_buffer, &begin_info);
-
-        vkCmdResetEvent(command_buffer, event, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
-        vkCmdWaitEvents(command_buffer, 1, &event, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
-                        nullptr, 0, nullptr, 0, nullptr);
-        vkEndCommandBuffer(command_buffer);
-    }
-    {
-        VkSubmitInfo submit_info{};
-        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &command_buffer;
-        submit_info.signalSemaphoreCount = 0;
-        submit_info.pSignalSemaphores = nullptr;
-        vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
-    }
-    {
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "that is already in use by a "
-                                                                            "command buffer.");
-        vkSetEvent(m_device->device(), event);
-        m_errorMonitor->VerifyFound();
-    }
-
-    vkQueueWaitIdle(queue);
-
-    vkDestroyEvent(m_device->device(), event, nullptr);
-    vkFreeCommandBuffers(m_device->device(), command_pool, 1, &command_buffer);
-    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
-}
-
-// This is a positive test.  No errors should be generated.
-TEST_F(VkLayerTest, TwoFencesThreeFrames) {
-    TEST_DESCRIPTION("Two command buffers with two separate fences are each "
-                     "run through a Submit & WaitForFences cycle 3 times. This "
-                     "previously revealed a bug so running this positive test "
-                     "to prevent a regression.");
-    m_errorMonitor->ExpectSuccess();
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    VkQueue queue = VK_NULL_HANDLE;
-    vkGetDeviceQueue(m_device->device(), m_device->graphics_queue_node_index_, 0, &queue);
-
-    static const uint32_t NUM_OBJECTS = 2;
-    static const uint32_t NUM_FRAMES = 3;
-    VkCommandBuffer cmd_buffers[NUM_OBJECTS] = {};
-    VkFence fences[NUM_OBJECTS] = {};
-
-    VkCommandPool cmd_pool;
-    VkCommandPoolCreateInfo cmd_pool_ci = {};
-    cmd_pool_ci.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    cmd_pool_ci.queueFamilyIndex = m_device->graphics_queue_node_index_;
-    cmd_pool_ci.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    VkResult err = vkCreateCommandPool(m_device->device(), &cmd_pool_ci, nullptr, &cmd_pool);
-    ASSERT_VK_SUCCESS(err);
-
-    VkCommandBufferAllocateInfo cmd_buf_info = {};
-    cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    cmd_buf_info.commandPool = cmd_pool;
-    cmd_buf_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    cmd_buf_info.commandBufferCount = 1;
-
-    VkFenceCreateInfo fence_ci = {};
-    fence_ci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fence_ci.pNext = nullptr;
-    fence_ci.flags = 0;
-
-    for (uint32_t i = 0; i < NUM_OBJECTS; ++i) {
-        err = vkAllocateCommandBuffers(m_device->device(), &cmd_buf_info, &cmd_buffers[i]);
-        ASSERT_VK_SUCCESS(err);
-        err = vkCreateFence(m_device->device(), &fence_ci, nullptr, &fences[i]);
-        ASSERT_VK_SUCCESS(err);
-    }
-
-    for (uint32_t frame = 0; frame < NUM_FRAMES; ++frame) {
-        for (uint32_t obj = 0; obj < NUM_OBJECTS; ++obj) {
-            // Create empty cmd buffer
-            VkCommandBufferBeginInfo cmdBufBeginDesc = {};
-            cmdBufBeginDesc.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-
-            err = vkBeginCommandBuffer(cmd_buffers[obj], &cmdBufBeginDesc);
-            ASSERT_VK_SUCCESS(err);
-            err = vkEndCommandBuffer(cmd_buffers[obj]);
-            ASSERT_VK_SUCCESS(err);
-
-            VkSubmitInfo submit_info = {};
-            submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-            submit_info.commandBufferCount = 1;
-            submit_info.pCommandBuffers = &cmd_buffers[obj];
-            // Submit cmd buffer and wait for fence
-            err = vkQueueSubmit(queue, 1, &submit_info, fences[obj]);
-            ASSERT_VK_SUCCESS(err);
-            err = vkWaitForFences(m_device->device(), 1, &fences[obj], VK_TRUE, UINT64_MAX);
-            ASSERT_VK_SUCCESS(err);
-            err = vkResetFences(m_device->device(), 1, &fences[obj]);
-            ASSERT_VK_SUCCESS(err);
-        }
-    }
-    m_errorMonitor->VerifyNotFound();
-    vkDestroyCommandPool(m_device->device(), cmd_pool, NULL);
-    for (uint32_t i = 0; i < NUM_OBJECTS; ++i) {
-        vkDestroyFence(m_device->device(), fences[i], nullptr);
-    }
-}
-// This is a positive test.  No errors should be generated.
-TEST_F(VkLayerTest, TwoQueueSubmitsSeparateQueuesWithSemaphoreAndOneFenceQWI) {
-
-    TEST_DESCRIPTION("Two command buffers, each in a separate QueueSubmit call "
-                     "submitted on separate queues followed by a QueueWaitIdle.");
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    if ((m_device->queue_props.empty()) || (m_device->queue_props[0].queueCount < 2))
-        return;
-
-    m_errorMonitor->ExpectSuccess();
-
-    VkSemaphore semaphore;
-    VkSemaphoreCreateInfo semaphore_create_info{};
-    semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    vkCreateSemaphore(m_device->device(), &semaphore_create_info, nullptr, &semaphore);
-
-    VkCommandPool command_pool;
-    VkCommandPoolCreateInfo pool_create_info{};
-    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
-    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr, &command_pool);
-
-    VkCommandBuffer command_buffer[2];
-    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
-    command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    command_buffer_allocate_info.commandPool = command_pool;
-    command_buffer_allocate_info.commandBufferCount = 2;
-    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, command_buffer);
-
-    VkQueue queue = VK_NULL_HANDLE;
-    vkGetDeviceQueue(m_device->device(), m_device->graphics_queue_node_index_, 1, &queue);
-
-    {
-        VkCommandBufferBeginInfo begin_info{};
-        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        vkBeginCommandBuffer(command_buffer[0], &begin_info);
-
-        vkCmdPipelineBarrier(command_buffer[0], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
-                             nullptr, 0, nullptr, 0, nullptr);
-
-        VkViewport viewport{};
-        viewport.maxDepth = 1.0f;
-        viewport.minDepth = 0.0f;
-        viewport.width = 512;
-        viewport.height = 512;
-        viewport.x = 0;
-        viewport.y = 0;
-        vkCmdSetViewport(command_buffer[0], 0, 1, &viewport);
-        vkEndCommandBuffer(command_buffer[0]);
-    }
-    {
-        VkCommandBufferBeginInfo begin_info{};
-        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        vkBeginCommandBuffer(command_buffer[1], &begin_info);
-
-        VkViewport viewport{};
-        viewport.maxDepth = 1.0f;
-        viewport.minDepth = 0.0f;
-        viewport.width = 512;
-        viewport.height = 512;
-        viewport.x = 0;
-        viewport.y = 0;
-        vkCmdSetViewport(command_buffer[1], 0, 1, &viewport);
-        vkEndCommandBuffer(command_buffer[1]);
-    }
-    {
-        VkSubmitInfo submit_info{};
-        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &command_buffer[0];
-        submit_info.signalSemaphoreCount = 1;
-        submit_info.pSignalSemaphores = &semaphore;
-        vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
-    }
-    {
-        VkPipelineStageFlags flags[]{VK_PIPELINE_STAGE_ALL_COMMANDS_BIT};
-        VkSubmitInfo submit_info{};
-        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &command_buffer[1];
-        submit_info.waitSemaphoreCount = 1;
-        submit_info.pWaitSemaphores = &semaphore;
-        submit_info.pWaitDstStageMask = flags;
-        vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
-    }
-
-    vkQueueWaitIdle(m_device->m_queue);
-
-    vkDestroySemaphore(m_device->device(), semaphore, nullptr);
-    vkFreeCommandBuffers(m_device->device(), command_pool, 2, &command_buffer[0]);
-    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
-
-    m_errorMonitor->VerifyNotFound();
-}
-
-// This is a positive test.  No errors should be generated.
-TEST_F(VkLayerTest, TwoQueueSubmitsSeparateQueuesWithSemaphoreAndOneFenceQWIFence) {
-
-    TEST_DESCRIPTION("Two command buffers, each in a separate QueueSubmit call "
-                     "submitted on separate queues, the second having a fence"
-                     "followed by a QueueWaitIdle.");
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    if ((m_device->queue_props.empty()) || (m_device->queue_props[0].queueCount < 2))
-        return;
-
-    m_errorMonitor->ExpectSuccess();
-
-    VkFence fence;
-    VkFenceCreateInfo fence_create_info{};
-    fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    vkCreateFence(m_device->device(), &fence_create_info, nullptr, &fence);
-
-    VkSemaphore semaphore;
-    VkSemaphoreCreateInfo semaphore_create_info{};
-    semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    vkCreateSemaphore(m_device->device(), &semaphore_create_info, nullptr, &semaphore);
-
-    VkCommandPool command_pool;
-    VkCommandPoolCreateInfo pool_create_info{};
-    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
-    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr, &command_pool);
-
-    VkCommandBuffer command_buffer[2];
-    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
-    command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    command_buffer_allocate_info.commandPool = command_pool;
-    command_buffer_allocate_info.commandBufferCount = 2;
-    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, command_buffer);
-
-    VkQueue queue = VK_NULL_HANDLE;
-    vkGetDeviceQueue(m_device->device(), m_device->graphics_queue_node_index_, 1, &queue);
-
-    {
-        VkCommandBufferBeginInfo begin_info{};
-        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        vkBeginCommandBuffer(command_buffer[0], &begin_info);
-
-        vkCmdPipelineBarrier(command_buffer[0], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
-                             nullptr, 0, nullptr, 0, nullptr);
-
-        VkViewport viewport{};
-        viewport.maxDepth = 1.0f;
-        viewport.minDepth = 0.0f;
-        viewport.width = 512;
-        viewport.height = 512;
-        viewport.x = 0;
-        viewport.y = 0;
-        vkCmdSetViewport(command_buffer[0], 0, 1, &viewport);
-        vkEndCommandBuffer(command_buffer[0]);
-    }
-    {
-        VkCommandBufferBeginInfo begin_info{};
-        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        vkBeginCommandBuffer(command_buffer[1], &begin_info);
-
-        VkViewport viewport{};
-        viewport.maxDepth = 1.0f;
-        viewport.minDepth = 0.0f;
-        viewport.width = 512;
-        viewport.height = 512;
-        viewport.x = 0;
-        viewport.y = 0;
-        vkCmdSetViewport(command_buffer[1], 0, 1, &viewport);
-        vkEndCommandBuffer(command_buffer[1]);
-    }
-    {
-        VkSubmitInfo submit_info{};
-        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &command_buffer[0];
-        submit_info.signalSemaphoreCount = 1;
-        submit_info.pSignalSemaphores = &semaphore;
-        vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
-    }
-    {
-        VkPipelineStageFlags flags[]{VK_PIPELINE_STAGE_ALL_COMMANDS_BIT};
-        VkSubmitInfo submit_info{};
-        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &command_buffer[1];
-        submit_info.waitSemaphoreCount = 1;
-        submit_info.pWaitSemaphores = &semaphore;
-        submit_info.pWaitDstStageMask = flags;
-        vkQueueSubmit(m_device->m_queue, 1, &submit_info, fence);
-    }
-
-    vkQueueWaitIdle(m_device->m_queue);
-
-    vkDestroyFence(m_device->device(), fence, nullptr);
-    vkDestroySemaphore(m_device->device(), semaphore, nullptr);
-    vkFreeCommandBuffers(m_device->device(), command_pool, 2, &command_buffer[0]);
-    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
-
-    m_errorMonitor->VerifyNotFound();
-}
-
-// This is a positive test.  No errors should be generated.
-TEST_F(VkLayerTest, TwoQueueSubmitsSeparateQueuesWithSemaphoreAndOneFenceTwoWFF) {
-
-    TEST_DESCRIPTION("Two command buffers, each in a separate QueueSubmit call "
-                     "submitted on separate queues, the second having a fence"
-                     "followed by two consecutive WaitForFences calls on the same fence.");
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    if ((m_device->queue_props.empty()) || (m_device->queue_props[0].queueCount < 2))
-        return;
-
-    m_errorMonitor->ExpectSuccess();
-
-    VkFence fence;
-    VkFenceCreateInfo fence_create_info{};
-    fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    vkCreateFence(m_device->device(), &fence_create_info, nullptr, &fence);
-
-    VkSemaphore semaphore;
-    VkSemaphoreCreateInfo semaphore_create_info{};
-    semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    vkCreateSemaphore(m_device->device(), &semaphore_create_info, nullptr, &semaphore);
-
-    VkCommandPool command_pool;
-    VkCommandPoolCreateInfo pool_create_info{};
-    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
-    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr, &command_pool);
-
-    VkCommandBuffer command_buffer[2];
-    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
-    command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    command_buffer_allocate_info.commandPool = command_pool;
-    command_buffer_allocate_info.commandBufferCount = 2;
-    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, command_buffer);
-
-    VkQueue queue = VK_NULL_HANDLE;
-    vkGetDeviceQueue(m_device->device(), m_device->graphics_queue_node_index_, 1, &queue);
-
-    {
-        VkCommandBufferBeginInfo begin_info{};
-        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        vkBeginCommandBuffer(command_buffer[0], &begin_info);
-
-        vkCmdPipelineBarrier(command_buffer[0], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
-                             nullptr, 0, nullptr, 0, nullptr);
-
-        VkViewport viewport{};
-        viewport.maxDepth = 1.0f;
-        viewport.minDepth = 0.0f;
-        viewport.width = 512;
-        viewport.height = 512;
-        viewport.x = 0;
-        viewport.y = 0;
-        vkCmdSetViewport(command_buffer[0], 0, 1, &viewport);
-        vkEndCommandBuffer(command_buffer[0]);
-    }
-    {
-        VkCommandBufferBeginInfo begin_info{};
-        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        vkBeginCommandBuffer(command_buffer[1], &begin_info);
-
-        VkViewport viewport{};
-        viewport.maxDepth = 1.0f;
-        viewport.minDepth = 0.0f;
-        viewport.width = 512;
-        viewport.height = 512;
-        viewport.x = 0;
-        viewport.y = 0;
-        vkCmdSetViewport(command_buffer[1], 0, 1, &viewport);
-        vkEndCommandBuffer(command_buffer[1]);
-    }
-    {
-        VkSubmitInfo submit_info{};
-        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &command_buffer[0];
-        submit_info.signalSemaphoreCount = 1;
-        submit_info.pSignalSemaphores = &semaphore;
-        vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
-    }
-    {
-        VkPipelineStageFlags flags[]{VK_PIPELINE_STAGE_ALL_COMMANDS_BIT};
-        VkSubmitInfo submit_info{};
-        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &command_buffer[1];
-        submit_info.waitSemaphoreCount = 1;
-        submit_info.pWaitSemaphores = &semaphore;
-        submit_info.pWaitDstStageMask = flags;
-        vkQueueSubmit(m_device->m_queue, 1, &submit_info, fence);
-    }
-
-    vkWaitForFences(m_device->device(), 1, &fence, VK_TRUE, UINT64_MAX);
-    vkWaitForFences(m_device->device(), 1, &fence, VK_TRUE, UINT64_MAX);
-
-    vkDestroyFence(m_device->device(), fence, nullptr);
-    vkDestroySemaphore(m_device->device(), semaphore, nullptr);
-    vkFreeCommandBuffers(m_device->device(), command_pool, 2, &command_buffer[0]);
-    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
-
-    m_errorMonitor->VerifyNotFound();
-}
-
-TEST_F(VkLayerTest, TwoQueuesEnsureCorrectRetirementWithWorkStolen) {
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    if ((m_device->queue_props.empty()) || (m_device->queue_props[0].queueCount < 2)) {
-        printf("Test requires two queues, skipping\n");
-        return;
-    }
-
-    VkResult err;
-
-    m_errorMonitor->ExpectSuccess();
-
-    VkQueue q0 = m_device->m_queue;
-    VkQueue q1 = nullptr;
-    vkGetDeviceQueue(m_device->device(), m_device->graphics_queue_node_index_, 1, &q1);
-    ASSERT_NE(q1, nullptr);
-
-    // An (empty) command buffer. We must have work in the first submission --
-    // the layer treats unfenced work differently from fenced work.
-    VkCommandPoolCreateInfo cpci = {VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, nullptr, 0, 0};
-    VkCommandPool pool;
-    err = vkCreateCommandPool(m_device->device(), &cpci, nullptr, &pool);
-    ASSERT_VK_SUCCESS(err);
-    VkCommandBufferAllocateInfo cbai = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, nullptr, pool,
-                                        VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1};
-    VkCommandBuffer cb;
-    err = vkAllocateCommandBuffers(m_device->device(), &cbai, &cb);
-    ASSERT_VK_SUCCESS(err);
-    VkCommandBufferBeginInfo cbbi = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr, 0, nullptr};
-    err = vkBeginCommandBuffer(cb, &cbbi);
-    ASSERT_VK_SUCCESS(err);
-    err = vkEndCommandBuffer(cb);
-    ASSERT_VK_SUCCESS(err);
-
-    // A semaphore
-    VkSemaphoreCreateInfo sci = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, nullptr, 0};
-    VkSemaphore s;
-    err = vkCreateSemaphore(m_device->device(), &sci, nullptr, &s);
-    ASSERT_VK_SUCCESS(err);
-
-    // First submission, to q0
-    VkSubmitInfo s0 = {VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, nullptr, 1, &cb, 1, &s};
-
-    err = vkQueueSubmit(q0, 1, &s0, VK_NULL_HANDLE);
-    ASSERT_VK_SUCCESS(err);
-
-    // Second submission, to q1, waiting on s
-    VkFlags waitmask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT; // doesn't really matter what this value is.
-    VkSubmitInfo s1 = {VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 1, &s, &waitmask, 0, nullptr, 0, nullptr};
-
-    err = vkQueueSubmit(q1, 1, &s1, VK_NULL_HANDLE);
-    ASSERT_VK_SUCCESS(err);
-
-    // Wait for q0 idle
-    err = vkQueueWaitIdle(q0);
-    ASSERT_VK_SUCCESS(err);
-
-    // Command buffer should have been completed (it was on q0); reset the pool.
-    vkFreeCommandBuffers(m_device->device(), pool, 1, &cb);
-
-    m_errorMonitor->VerifyNotFound();
-
-    // Force device completely idle and clean up resources
-    vkDeviceWaitIdle(m_device->device());
-    vkDestroyCommandPool(m_device->device(), pool, nullptr);
-    vkDestroySemaphore(m_device->device(), s, nullptr);
-}
-
-// This is a positive test.  No errors should be generated.
-TEST_F(VkLayerTest, TwoQueueSubmitsSeparateQueuesWithSemaphoreAndOneFence) {
-
-    TEST_DESCRIPTION("Two command buffers, each in a separate QueueSubmit call "
-                     "submitted on separate queues, the second having a fence, "
-                     "followed by a WaitForFences call.");
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    if ((m_device->queue_props.empty()) || (m_device->queue_props[0].queueCount < 2))
-        return;
-
-    m_errorMonitor->ExpectSuccess();
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    VkFence fence;
-    VkFenceCreateInfo fence_create_info{};
-    fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    vkCreateFence(m_device->device(), &fence_create_info, nullptr, &fence);
-
-    VkSemaphore semaphore;
-    VkSemaphoreCreateInfo semaphore_create_info{};
-    semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    vkCreateSemaphore(m_device->device(), &semaphore_create_info, nullptr, &semaphore);
-
-    VkCommandPool command_pool;
-    VkCommandPoolCreateInfo pool_create_info{};
-    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
-    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr, &command_pool);
-
-    VkCommandBuffer command_buffer[2];
-    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
-    command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    command_buffer_allocate_info.commandPool = command_pool;
-    command_buffer_allocate_info.commandBufferCount = 2;
-    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, command_buffer);
-
-    VkQueue queue = VK_NULL_HANDLE;
-    vkGetDeviceQueue(m_device->device(), m_device->graphics_queue_node_index_, 1, &queue);
-
-    {
-        VkCommandBufferBeginInfo begin_info{};
-        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        vkBeginCommandBuffer(command_buffer[0], &begin_info);
-
-        vkCmdPipelineBarrier(command_buffer[0], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
-                             nullptr, 0, nullptr, 0, nullptr);
-
-        VkViewport viewport{};
-        viewport.maxDepth = 1.0f;
-        viewport.minDepth = 0.0f;
-        viewport.width = 512;
-        viewport.height = 512;
-        viewport.x = 0;
-        viewport.y = 0;
-        vkCmdSetViewport(command_buffer[0], 0, 1, &viewport);
-        vkEndCommandBuffer(command_buffer[0]);
-    }
-    {
-        VkCommandBufferBeginInfo begin_info{};
-        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        vkBeginCommandBuffer(command_buffer[1], &begin_info);
-
-        VkViewport viewport{};
-        viewport.maxDepth = 1.0f;
-        viewport.minDepth = 0.0f;
-        viewport.width = 512;
-        viewport.height = 512;
-        viewport.x = 0;
-        viewport.y = 0;
-        vkCmdSetViewport(command_buffer[1], 0, 1, &viewport);
-        vkEndCommandBuffer(command_buffer[1]);
-    }
-    {
-        VkSubmitInfo submit_info{};
-        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &command_buffer[0];
-        submit_info.signalSemaphoreCount = 1;
-        submit_info.pSignalSemaphores = &semaphore;
-        vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
-    }
-    {
-        VkPipelineStageFlags flags[]{VK_PIPELINE_STAGE_ALL_COMMANDS_BIT};
-        VkSubmitInfo submit_info{};
-        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &command_buffer[1];
-        submit_info.waitSemaphoreCount = 1;
-        submit_info.pWaitSemaphores = &semaphore;
-        submit_info.pWaitDstStageMask = flags;
-        vkQueueSubmit(m_device->m_queue, 1, &submit_info, fence);
-    }
-
-    vkWaitForFences(m_device->device(), 1, &fence, VK_TRUE, UINT64_MAX);
-
-    vkDestroyFence(m_device->device(), fence, nullptr);
-    vkDestroySemaphore(m_device->device(), semaphore, nullptr);
-    vkFreeCommandBuffers(m_device->device(), command_pool, 2, &command_buffer[0]);
-    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
-
-    m_errorMonitor->VerifyNotFound();
-}
-
-// This is a positive test.  No errors should be generated.
-TEST_F(VkLayerTest, TwoQueueSubmitsOneQueueWithSemaphoreAndOneFence) {
-
-    TEST_DESCRIPTION("Two command buffers, each in a separate QueueSubmit call "
-                     "on the same queue, sharing a signal/wait semaphore, the "
-                     "second having a fence, "
-                     "followed by a WaitForFences call.");
-
-    m_errorMonitor->ExpectSuccess();
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    VkFence fence;
-    VkFenceCreateInfo fence_create_info{};
-    fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    vkCreateFence(m_device->device(), &fence_create_info, nullptr, &fence);
-
-    VkSemaphore semaphore;
-    VkSemaphoreCreateInfo semaphore_create_info{};
-    semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    vkCreateSemaphore(m_device->device(), &semaphore_create_info, nullptr, &semaphore);
-
-    VkCommandPool command_pool;
-    VkCommandPoolCreateInfo pool_create_info{};
-    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
-    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr, &command_pool);
-
-    VkCommandBuffer command_buffer[2];
-    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
-    command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    command_buffer_allocate_info.commandPool = command_pool;
-    command_buffer_allocate_info.commandBufferCount = 2;
-    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, command_buffer);
-
-    {
-        VkCommandBufferBeginInfo begin_info{};
-        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        vkBeginCommandBuffer(command_buffer[0], &begin_info);
-
-        vkCmdPipelineBarrier(command_buffer[0], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
-                             nullptr, 0, nullptr, 0, nullptr);
-
-        VkViewport viewport{};
-        viewport.maxDepth = 1.0f;
-        viewport.minDepth = 0.0f;
-        viewport.width = 512;
-        viewport.height = 512;
-        viewport.x = 0;
-        viewport.y = 0;
-        vkCmdSetViewport(command_buffer[0], 0, 1, &viewport);
-        vkEndCommandBuffer(command_buffer[0]);
-    }
-    {
-        VkCommandBufferBeginInfo begin_info{};
-        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        vkBeginCommandBuffer(command_buffer[1], &begin_info);
-
-        VkViewport viewport{};
-        viewport.maxDepth = 1.0f;
-        viewport.minDepth = 0.0f;
-        viewport.width = 512;
-        viewport.height = 512;
-        viewport.x = 0;
-        viewport.y = 0;
-        vkCmdSetViewport(command_buffer[1], 0, 1, &viewport);
-        vkEndCommandBuffer(command_buffer[1]);
-    }
-    {
-        VkSubmitInfo submit_info{};
-        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &command_buffer[0];
-        submit_info.signalSemaphoreCount = 1;
-        submit_info.pSignalSemaphores = &semaphore;
-        vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
-    }
-    {
-        VkPipelineStageFlags flags[]{VK_PIPELINE_STAGE_ALL_COMMANDS_BIT};
-        VkSubmitInfo submit_info{};
-        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &command_buffer[1];
-        submit_info.waitSemaphoreCount = 1;
-        submit_info.pWaitSemaphores = &semaphore;
-        submit_info.pWaitDstStageMask = flags;
-        vkQueueSubmit(m_device->m_queue, 1, &submit_info, fence);
-    }
-
-    vkWaitForFences(m_device->device(), 1, &fence, VK_TRUE, UINT64_MAX);
-
-    vkDestroyFence(m_device->device(), fence, nullptr);
-    vkDestroySemaphore(m_device->device(), semaphore, nullptr);
-    vkFreeCommandBuffers(m_device->device(), command_pool, 2, &command_buffer[0]);
-    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
-
-    m_errorMonitor->VerifyNotFound();
-}
-
-// This is a positive test.  No errors should be generated.
-TEST_F(VkLayerTest, TwoQueueSubmitsOneQueueNullQueueSubmitWithFence) {
-
-    TEST_DESCRIPTION("Two command buffers, each in a separate QueueSubmit call "
-                     "on the same queue, no fences, followed by a third QueueSubmit with NO "
-                     "SubmitInfos but with a fence, followed by a WaitForFences call.");
-
-    m_errorMonitor->ExpectSuccess();
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    VkFence fence;
-    VkFenceCreateInfo fence_create_info{};
-    fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    vkCreateFence(m_device->device(), &fence_create_info, nullptr, &fence);
-
-    VkCommandPool command_pool;
-    VkCommandPoolCreateInfo pool_create_info{};
-    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
-    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr, &command_pool);
-
-    VkCommandBuffer command_buffer[2];
-    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
-    command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    command_buffer_allocate_info.commandPool = command_pool;
-    command_buffer_allocate_info.commandBufferCount = 2;
-    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, command_buffer);
-
-    {
-        VkCommandBufferBeginInfo begin_info{};
-        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        vkBeginCommandBuffer(command_buffer[0], &begin_info);
-
-        vkCmdPipelineBarrier(command_buffer[0], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
-                             nullptr, 0, nullptr, 0, nullptr);
-
-        VkViewport viewport{};
-        viewport.maxDepth = 1.0f;
-        viewport.minDepth = 0.0f;
-        viewport.width = 512;
-        viewport.height = 512;
-        viewport.x = 0;
-        viewport.y = 0;
-        vkCmdSetViewport(command_buffer[0], 0, 1, &viewport);
-        vkEndCommandBuffer(command_buffer[0]);
-    }
-    {
-        VkCommandBufferBeginInfo begin_info{};
-        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        vkBeginCommandBuffer(command_buffer[1], &begin_info);
-
-        VkViewport viewport{};
-        viewport.maxDepth = 1.0f;
-        viewport.minDepth = 0.0f;
-        viewport.width = 512;
-        viewport.height = 512;
-        viewport.x = 0;
-        viewport.y = 0;
-        vkCmdSetViewport(command_buffer[1], 0, 1, &viewport);
-        vkEndCommandBuffer(command_buffer[1]);
-    }
-    {
-        VkSubmitInfo submit_info{};
-        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &command_buffer[0];
-        submit_info.signalSemaphoreCount = 0;
-        submit_info.pSignalSemaphores = VK_NULL_HANDLE;
-        vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
-    }
-    {
-        VkPipelineStageFlags flags[]{VK_PIPELINE_STAGE_ALL_COMMANDS_BIT};
-        VkSubmitInfo submit_info{};
-        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &command_buffer[1];
-        submit_info.waitSemaphoreCount = 0;
-        submit_info.pWaitSemaphores = VK_NULL_HANDLE;
-        submit_info.pWaitDstStageMask = flags;
-        vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
-    }
-
-    vkQueueSubmit(m_device->m_queue, 0, NULL, fence);
-
-    VkResult err = vkWaitForFences(m_device->device(), 1, &fence, VK_TRUE, UINT64_MAX);
-    ASSERT_VK_SUCCESS(err);
-
-    vkDestroyFence(m_device->device(), fence, nullptr);
-    vkFreeCommandBuffers(m_device->device(), command_pool, 2, &command_buffer[0]);
-    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
-
-    m_errorMonitor->VerifyNotFound();
-}
-
-// This is a positive test.  No errors should be generated.
-TEST_F(VkLayerTest, TwoQueueSubmitsOneQueueOneFence) {
-
-    TEST_DESCRIPTION("Two command buffers, each in a separate QueueSubmit call "
-                     "on the same queue, the second having a fence, followed "
-                     "by a WaitForFences call.");
-
-    m_errorMonitor->ExpectSuccess();
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    VkFence fence;
-    VkFenceCreateInfo fence_create_info{};
-    fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    vkCreateFence(m_device->device(), &fence_create_info, nullptr, &fence);
-
-    VkCommandPool command_pool;
-    VkCommandPoolCreateInfo pool_create_info{};
-    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
-    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr, &command_pool);
-
-    VkCommandBuffer command_buffer[2];
-    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
-    command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    command_buffer_allocate_info.commandPool = command_pool;
-    command_buffer_allocate_info.commandBufferCount = 2;
-    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, command_buffer);
-
-    {
-        VkCommandBufferBeginInfo begin_info{};
-        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        vkBeginCommandBuffer(command_buffer[0], &begin_info);
-
-        vkCmdPipelineBarrier(command_buffer[0], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
-                             nullptr, 0, nullptr, 0, nullptr);
-
-        VkViewport viewport{};
-        viewport.maxDepth = 1.0f;
-        viewport.minDepth = 0.0f;
-        viewport.width = 512;
-        viewport.height = 512;
-        viewport.x = 0;
-        viewport.y = 0;
-        vkCmdSetViewport(command_buffer[0], 0, 1, &viewport);
-        vkEndCommandBuffer(command_buffer[0]);
-    }
-    {
-        VkCommandBufferBeginInfo begin_info{};
-        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        vkBeginCommandBuffer(command_buffer[1], &begin_info);
-
-        VkViewport viewport{};
-        viewport.maxDepth = 1.0f;
-        viewport.minDepth = 0.0f;
-        viewport.width = 512;
-        viewport.height = 512;
-        viewport.x = 0;
-        viewport.y = 0;
-        vkCmdSetViewport(command_buffer[1], 0, 1, &viewport);
-        vkEndCommandBuffer(command_buffer[1]);
-    }
-    {
-        VkSubmitInfo submit_info{};
-        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &command_buffer[0];
-        submit_info.signalSemaphoreCount = 0;
-        submit_info.pSignalSemaphores = VK_NULL_HANDLE;
-        vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
-    }
-    {
-        VkPipelineStageFlags flags[]{VK_PIPELINE_STAGE_ALL_COMMANDS_BIT};
-        VkSubmitInfo submit_info{};
-        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &command_buffer[1];
-        submit_info.waitSemaphoreCount = 0;
-        submit_info.pWaitSemaphores = VK_NULL_HANDLE;
-        submit_info.pWaitDstStageMask = flags;
-        vkQueueSubmit(m_device->m_queue, 1, &submit_info, fence);
-    }
-
-    vkWaitForFences(m_device->device(), 1, &fence, VK_TRUE, UINT64_MAX);
-
-    vkDestroyFence(m_device->device(), fence, nullptr);
-    vkFreeCommandBuffers(m_device->device(), command_pool, 2, &command_buffer[0]);
-    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
-
-    m_errorMonitor->VerifyNotFound();
-}
-
-// This is a positive test.  No errors should be generated.
-TEST_F(VkLayerTest, TwoSubmitInfosWithSemaphoreOneQueueSubmitsOneFence) {
-
-    TEST_DESCRIPTION("Two command buffers each in a separate SubmitInfo sent in a single "
-                     "QueueSubmit call followed by a WaitForFences call.");
-    ASSERT_NO_FATAL_FAILURE(InitState());
-
-    m_errorMonitor->ExpectSuccess();
-
-    VkFence fence;
-    VkFenceCreateInfo fence_create_info{};
-    fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    vkCreateFence(m_device->device(), &fence_create_info, nullptr, &fence);
-
-    VkSemaphore semaphore;
-    VkSemaphoreCreateInfo semaphore_create_info{};
-    semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    vkCreateSemaphore(m_device->device(), &semaphore_create_info, nullptr, &semaphore);
-
-    VkCommandPool command_pool;
-    VkCommandPoolCreateInfo pool_create_info{};
-    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
-    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr, &command_pool);
-
-    VkCommandBuffer command_buffer[2];
-    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
-    command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    command_buffer_allocate_info.commandPool = command_pool;
-    command_buffer_allocate_info.commandBufferCount = 2;
-    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, command_buffer);
-
-    {
-        VkCommandBufferBeginInfo begin_info{};
-        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        vkBeginCommandBuffer(command_buffer[0], &begin_info);
-
-        vkCmdPipelineBarrier(command_buffer[0], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
-                             nullptr, 0, nullptr, 0, nullptr);
-
-        VkViewport viewport{};
-        viewport.maxDepth = 1.0f;
-        viewport.minDepth = 0.0f;
-        viewport.width = 512;
-        viewport.height = 512;
-        viewport.x = 0;
-        viewport.y = 0;
-        vkCmdSetViewport(command_buffer[0], 0, 1, &viewport);
-        vkEndCommandBuffer(command_buffer[0]);
-    }
-    {
-        VkCommandBufferBeginInfo begin_info{};
-        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        vkBeginCommandBuffer(command_buffer[1], &begin_info);
-
-        VkViewport viewport{};
-        viewport.maxDepth = 1.0f;
-        viewport.minDepth = 0.0f;
-        viewport.width = 512;
-        viewport.height = 512;
-        viewport.x = 0;
-        viewport.y = 0;
-        vkCmdSetViewport(command_buffer[1], 0, 1, &viewport);
-        vkEndCommandBuffer(command_buffer[1]);
-    }
-    {
-        VkSubmitInfo submit_info[2];
-        VkPipelineStageFlags flags[]{VK_PIPELINE_STAGE_ALL_COMMANDS_BIT};
-
-        submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit_info[0].pNext = NULL;
-        submit_info[0].commandBufferCount = 1;
-        submit_info[0].pCommandBuffers = &command_buffer[0];
-        submit_info[0].signalSemaphoreCount = 1;
-        submit_info[0].pSignalSemaphores = &semaphore;
-        submit_info[0].waitSemaphoreCount = 0;
-        submit_info[0].pWaitSemaphores = NULL;
-        submit_info[0].pWaitDstStageMask = 0;
-
-        submit_info[1].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit_info[1].pNext = NULL;
-        submit_info[1].commandBufferCount = 1;
-        submit_info[1].pCommandBuffers = &command_buffer[1];
-        submit_info[1].waitSemaphoreCount = 1;
-        submit_info[1].pWaitSemaphores = &semaphore;
-        submit_info[1].pWaitDstStageMask = flags;
-        submit_info[1].signalSemaphoreCount = 0;
-        submit_info[1].pSignalSemaphores = NULL;
-        vkQueueSubmit(m_device->m_queue, 2, &submit_info[0], fence);
-    }
-
-    vkWaitForFences(m_device->device(), 1, &fence, VK_TRUE, UINT64_MAX);
-
-    vkDestroyFence(m_device->device(), fence, nullptr);
-    vkFreeCommandBuffers(m_device->device(), command_pool, 2, &command_buffer[0]);
-    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
-    vkDestroySemaphore(m_device->device(), semaphore, nullptr);
-
-    m_errorMonitor->VerifyNotFound();
-}
-
 TEST_F(VkLayerTest, DynamicDepthBiasNotBound) {
     TEST_DESCRIPTION("Run a simple draw calls to validate failure when Depth Bias dynamic "
                      "state is required but not correctly bound.");
@@ -6324,7 +3375,7 @@ TEST_F(VkLayerTest, DynamicViewportNotBound) {
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     // Dynamic viewport state
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Dynamic viewport(s) 0 are used by PSO, but were not provided");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Dynamic viewport(s) 0 are used by pipeline state object, but were not provided");
     VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailViewport);
     m_errorMonitor->VerifyFound();
 }
@@ -6335,7 +3386,7 @@ TEST_F(VkLayerTest, DynamicScissorNotBound) {
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     // Dynamic scissor state
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Dynamic scissor(s) 0 are used by PSO, but were not provided");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Dynamic scissor(s) 0 are used by pipeline state object, but were not provided");
     VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailScissor);
     m_errorMonitor->VerifyFound();
 }
@@ -6585,7 +3636,7 @@ TEST_F(VkLayerTest, InvalidDescriptorPool) {
     m_errorMonitor->VerifyFound();
 }
 
-TEST_F(VkLayerTest, InvalidDescriptorSet) {
+TEST_F(VkPositiveLayerTest, InvalidDescriptorSet) {
     // Attempt to bind an invalid Descriptor Set to a valid Command Buffer
     // ObjectTracker should catch this.
     // Create a valid cmd buffer
@@ -7177,6 +4228,45 @@ TEST_F(VkLayerTest, InvalidCmdBufferFramebufferImageDestroyed) {
     vkFreeMemory(m_device->device(), image_memory, nullptr);
 }
 
+TEST_F(VkLayerTest, FramebufferInUseDestroyedSignaled) {
+    TEST_DESCRIPTION("Delete in-use framebuffer.");
+    VkFormatProperties format_properties;
+    VkResult err = VK_SUCCESS;
+    vkGetPhysicalDeviceFormatProperties(gpu(), VK_FORMAT_B8G8R8A8_UNORM, &format_properties);
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkImageObj image(m_device);
+    image.init(256, 256, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
+    ASSERT_TRUE(image.initialized());
+    VkImageView view = image.targetView(VK_FORMAT_B8G8R8A8_UNORM);
+
+    VkFramebufferCreateInfo fci = {VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr, 0, m_renderPass, 1, &view, 256, 256, 1};
+    VkFramebuffer fb;
+    err = vkCreateFramebuffer(m_device->device(), &fci, nullptr, &fb);
+    ASSERT_VK_SUCCESS(err);
+
+    // Just use default renderpass with our framebuffer
+    m_renderPassBeginInfo.framebuffer = fb;
+    // Create Null cmd buffer for submit
+    BeginCommandBuffer();
+    EndCommandBuffer();
+    // Submit cmd buffer to put it in-flight
+    VkSubmitInfo submit_info = {};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &m_commandBuffer->handle();
+    vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
+    // Destroy framebuffer while in-flight
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Cannot delete framebuffer 0x");
+    vkDestroyFramebuffer(m_device->device(), fb, NULL);
+    m_errorMonitor->VerifyFound();
+    // Wait for queue to complete so we can safely destroy everything
+    vkQueueWaitIdle(m_device->m_queue);
+    vkDestroyFramebuffer(m_device->device(), fb, nullptr);
+}
+
 TEST_F(VkLayerTest, FramebufferImageInUseDestroyedSignaled) {
     TEST_DESCRIPTION("Delete in-use image that's child of framebuffer.");
     VkFormatProperties format_properties;
@@ -7262,6 +4352,123 @@ TEST_F(VkLayerTest, FramebufferImageInUseDestroyedSignaled) {
     vkDestroyFramebuffer(m_device->device(), fb, nullptr);
     vkDestroyImageView(m_device->device(), view, nullptr);
     vkFreeMemory(m_device->device(), image_memory, nullptr);
+}
+
+TEST_F(VkLayerTest, RenderPassInUseDestroyedSignaled) {
+    TEST_DESCRIPTION("Delete in-use renderPass.");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    // Create simple renderpass
+    VkAttachmentReference attach = {};
+    attach.layout = VK_IMAGE_LAYOUT_GENERAL;
+    VkSubpassDescription subpass = {};
+    subpass.pColorAttachments = &attach;
+    VkRenderPassCreateInfo rpci = {};
+    rpci.subpassCount = 1;
+    rpci.pSubpasses = &subpass;
+    rpci.attachmentCount = 1;
+    VkAttachmentDescription attach_desc = {};
+    attach_desc.format = VK_FORMAT_B8G8R8A8_UNORM;
+    attach_desc.samples = VK_SAMPLE_COUNT_1_BIT;
+    rpci.pAttachments = &attach_desc;
+    rpci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    VkRenderPass rp;
+    VkResult err = vkCreateRenderPass(m_device->device(), &rpci, NULL, &rp);
+    ASSERT_VK_SUCCESS(err);
+
+    // Create a pipeline that uses the given renderpass
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+    pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+
+    VkPipelineLayout pipeline_layout;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkPipelineViewportStateCreateInfo vp_state_ci = {};
+    vp_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    vp_state_ci.viewportCount = 1;
+    VkViewport vp = {}; // Just need dummy vp to point to
+    vp_state_ci.pViewports = &vp;
+    vp_state_ci.scissorCount = 1;
+    VkRect2D scissors = {}; // Dummy scissors to point to
+    vp_state_ci.pScissors = &scissors;
+
+    VkPipelineShaderStageCreateInfo shaderStages[2];
+    memset(&shaderStages, 0, 2 * sizeof(VkPipelineShaderStageCreateInfo));
+
+    VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this); // We shouldn't need a fragment shader
+    // but add it to be able to run on more devices
+    shaderStages[0] = vs.GetStageCreateInfo();
+    shaderStages[1] = fs.GetStageCreateInfo();
+
+    VkPipelineVertexInputStateCreateInfo vi_ci = {};
+    vi_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
+    VkPipelineInputAssemblyStateCreateInfo ia_ci = {};
+    ia_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    ia_ci.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+
+    VkPipelineRasterizationStateCreateInfo rs_ci = {};
+    rs_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rs_ci.rasterizerDiscardEnable = true;
+    rs_ci.lineWidth = 1.0f;
+
+    VkPipelineColorBlendAttachmentState att = {};
+    att.blendEnable = VK_FALSE;
+    att.colorWriteMask = 0xf;
+
+    VkPipelineColorBlendStateCreateInfo cb_ci = {};
+    cb_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    cb_ci.attachmentCount = 1;
+    cb_ci.pAttachments = &att;
+
+    VkGraphicsPipelineCreateInfo gp_ci = {};
+    gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    gp_ci.stageCount = 2;
+    gp_ci.pStages = shaderStages;
+    gp_ci.pVertexInputState = &vi_ci;
+    gp_ci.pInputAssemblyState = &ia_ci;
+    gp_ci.pViewportState = &vp_state_ci;
+    gp_ci.pRasterizationState = &rs_ci;
+    gp_ci.pColorBlendState = &cb_ci;
+    gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
+    gp_ci.layout = pipeline_layout;
+    gp_ci.renderPass = rp;
+
+    VkPipelineCacheCreateInfo pc_ci = {};
+    pc_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+
+    VkPipeline pipeline;
+    VkPipelineCache pipe_cache;
+    err = vkCreatePipelineCache(m_device->device(), &pc_ci, NULL, &pipe_cache);
+    ASSERT_VK_SUCCESS(err);
+
+    err = vkCreateGraphicsPipelines(m_device->device(), pipe_cache, 1, &gp_ci, NULL, &pipeline);
+    ASSERT_VK_SUCCESS(err);
+    // Bind pipeline to cmd buffer, will also bind renderpass
+    m_commandBuffer->BeginCommandBuffer();
+    vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    m_commandBuffer->EndCommandBuffer();
+
+    VkSubmitInfo submit_info = {};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &m_commandBuffer->handle();
+    vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00393);
+    vkDestroyRenderPass(m_device->device(), rp, nullptr);
+    m_errorMonitor->VerifyFound();
+
+    // Wait for queue to complete so we can safely destroy everything
+    vkQueueWaitIdle(m_device->m_queue);
+    vkDestroyRenderPass(m_device->device(), rp, nullptr);
+    vkDestroyPipeline(m_device->device(), pipeline, nullptr);
+    vkDestroyPipelineCache(m_device->device(), pipe_cache, nullptr);
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, nullptr);
 }
 
 TEST_F(VkLayerTest, ImageMemoryNotBound) {
@@ -7947,6 +5154,155 @@ TEST_F(VkLayerTest, InvalidCmdBufferDescriptorSetImageSamplerDestroyed) {
     vkDestroyImage(m_device->device(), image2, NULL);
     vkDestroyImageView(m_device->device(), view, NULL);
     vkDestroyImageView(m_device->device(), view2, NULL);
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
+}
+
+TEST_F(VkLayerTest, DescriptorPoolInUseDestroyedSignaled) {
+    TEST_DESCRIPTION("Delete a DescriptorPool with a DescriptorSet that is in use.");
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkDescriptorPoolSize ds_type_count = {};
+    ds_type_count.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    ds_type_count.descriptorCount = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+    ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    ds_pool_ci.pNext = NULL;
+    ds_pool_ci.maxSets = 1;
+    ds_pool_ci.poolSizeCount = 1;
+    ds_pool_ci.pPoolSizes = &ds_type_count;
+
+    VkDescriptorPool ds_pool;
+    VkResult err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+    dsl_binding.binding = 0;
+    dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    dsl_binding.descriptorCount = 1;
+    dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+    dsl_binding.pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+    ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    ds_layout_ci.pNext = NULL;
+    ds_layout_ci.bindingCount = 1;
+    ds_layout_ci.pBindings = &dsl_binding;
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSet descriptor_set;
+    VkDescriptorSetAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    alloc_info.descriptorSetCount = 1;
+    alloc_info.descriptorPool = ds_pool;
+    alloc_info.pSetLayouts = &ds_layout;
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptor_set);
+    ASSERT_VK_SUCCESS(err);
+
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+    pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_ci.pNext = NULL;
+    pipeline_layout_ci.setLayoutCount = 1;
+    pipeline_layout_ci.pSetLayouts = &ds_layout;
+
+    VkPipelineLayout pipeline_layout;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    // Create image to update the descriptor with
+    VkImageObj image(m_device);
+    image.init(32, 32, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
+    ASSERT_TRUE(image.initialized());
+
+    VkImageView view = image.targetView(VK_FORMAT_B8G8R8A8_UNORM);
+    // Create Sampler
+    VkSamplerCreateInfo sampler_ci = {};
+    sampler_ci.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    sampler_ci.pNext = NULL;
+    sampler_ci.magFilter = VK_FILTER_NEAREST;
+    sampler_ci.minFilter = VK_FILTER_NEAREST;
+    sampler_ci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+    sampler_ci.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sampler_ci.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sampler_ci.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sampler_ci.mipLodBias = 1.0;
+    sampler_ci.anisotropyEnable = VK_FALSE;
+    sampler_ci.maxAnisotropy = 1;
+    sampler_ci.compareEnable = VK_FALSE;
+    sampler_ci.compareOp = VK_COMPARE_OP_NEVER;
+    sampler_ci.minLod = 1.0;
+    sampler_ci.maxLod = 1.0;
+    sampler_ci.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+    sampler_ci.unnormalizedCoordinates = VK_FALSE;
+    VkSampler sampler;
+    err = vkCreateSampler(m_device->device(), &sampler_ci, NULL, &sampler);
+    ASSERT_VK_SUCCESS(err);
+    // Update descriptor with image and sampler
+    VkDescriptorImageInfo img_info = {};
+    img_info.sampler = sampler;
+    img_info.imageView = view;
+    img_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    VkWriteDescriptorSet descriptor_write;
+    memset(&descriptor_write, 0, sizeof(descriptor_write));
+    descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptor_write.dstSet = descriptor_set;
+    descriptor_write.dstBinding = 0;
+    descriptor_write.descriptorCount = 1;
+    descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    descriptor_write.pImageInfo = &img_info;
+
+    vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
+
+    // Create PSO to be used for draw-time errors below
+    char const *vsSource = "#version 450\n"
+                           "\n"
+                           "out gl_PerVertex { \n"
+                           "    vec4 gl_Position;\n"
+                           "};\n"
+                           "void main(){\n"
+                           "   gl_Position = vec4(1);\n"
+                           "}\n";
+    char const *fsSource = "#version 450\n"
+                           "\n"
+                           "layout(set=0, binding=0) uniform sampler2D s;\n"
+                           "layout(location=0) out vec4 x;\n"
+                           "void main(){\n"
+                           "   x = texture(s, vec2(1));\n"
+                           "}\n";
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+    VkPipelineObj pipe(m_device);
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+    pipe.AddColorAttachment();
+    pipe.CreateVKPipeline(pipeline_layout, renderPass());
+
+    BeginCommandBuffer();
+    vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
+    vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1,
+                            &descriptor_set, 0, NULL);
+    Draw(1, 0, 0, 0);
+    EndCommandBuffer();
+    // Submit cmd buffer to put pool in-flight
+    VkSubmitInfo submit_info = {};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &m_commandBuffer->handle();
+    vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
+    // Destroy pool while in-flight, causing error
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Cannot delete descriptor pool ");
+    vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
+    m_errorMonitor->VerifyFound();
+    vkQueueWaitIdle(m_device->m_queue);
+    // Cleanup
+    vkDestroySampler(m_device->device(), sampler, NULL);
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
@@ -8721,29 +6077,6 @@ TEST_F(VkLayerTest, InvalidPushConstants) {
         }
     }
 
-    // Run some positive tests to make sure overlap checking in the layer is OK
-    const std::array<OverlappingRangeTestCase, 2> overlapping_range_tests_pos = {{{{{VK_SHADER_STAGE_VERTEX_BIT, 0, 4},
-                                                                                    {VK_SHADER_STAGE_VERTEX_BIT, 4, 4},
-                                                                                    {VK_SHADER_STAGE_VERTEX_BIT, 8, 4},
-                                                                                    {VK_SHADER_STAGE_VERTEX_BIT, 12, 4},
-                                                                                    {VK_SHADER_STAGE_VERTEX_BIT, 16, 4}},
-                                                                                   ""},
-                                                                                  {{{VK_SHADER_STAGE_VERTEX_BIT, 92, 24},
-                                                                                    {VK_SHADER_STAGE_VERTEX_BIT, 80, 4},
-                                                                                    {VK_SHADER_STAGE_VERTEX_BIT, 64, 8},
-                                                                                    {VK_SHADER_STAGE_VERTEX_BIT, 4, 16},
-                                                                                    {VK_SHADER_STAGE_VERTEX_BIT, 0, 4}},
-                                                                                   ""}}};
-    for (const auto &iter : overlapping_range_tests_pos) {
-        pipeline_layout_ci.pPushConstantRanges = iter.ranges;
-        m_errorMonitor->ExpectSuccess();
-        err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
-        m_errorMonitor->VerifyNotFound();
-        if (VK_SUCCESS == err) {
-            vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
-        }
-    }
-
     //
     // CmdPushConstants tests
     //
@@ -8833,30 +6166,6 @@ TEST_F(VkLayerTest, InvalidPushConstants) {
         vkCmdPushConstants(m_commandBuffer->GetBufferHandle(), pipeline_layout, iter.range.stageFlags, iter.range.offset,
                            iter.range.size, dummy_values);
         m_errorMonitor->VerifyFound();
-    }
-    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
-
-    // positive overlapping range tests with cmd
-    const std::array<PipelineLayoutTestCase, 4> cmd_overlap_tests_pos = {{
-        {{VK_SHADER_STAGE_VERTEX_BIT, 0, 16}, ""},
-        {{VK_SHADER_STAGE_VERTEX_BIT, 0, 4}, ""},
-        {{VK_SHADER_STAGE_VERTEX_BIT, 20, 12}, ""},
-        {{VK_SHADER_STAGE_VERTEX_BIT, 56, 36}, ""},
-    }};
-    // Setup ranges: [0,16) [20,36) [36,44) [44,52) [56,80) [80,92)
-    const VkPushConstantRange pc_range4[] = {
-        {VK_SHADER_STAGE_VERTEX_BIT, 20, 16}, {VK_SHADER_STAGE_VERTEX_BIT, 0, 16}, {VK_SHADER_STAGE_VERTEX_BIT, 44, 8},
-        {VK_SHADER_STAGE_VERTEX_BIT, 80, 12}, {VK_SHADER_STAGE_VERTEX_BIT, 36, 8}, {VK_SHADER_STAGE_VERTEX_BIT, 56, 24},
-    };
-    pipeline_layout_ci.pushConstantRangeCount = sizeof(pc_range4) / sizeof(VkPushConstantRange);
-    pipeline_layout_ci.pPushConstantRanges = pc_range4;
-    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
-    ASSERT_VK_SUCCESS(err);
-    for (const auto &iter : cmd_overlap_tests_pos) {
-        m_errorMonitor->ExpectSuccess();
-        vkCmdPushConstants(m_commandBuffer->GetBufferHandle(), pipeline_layout, iter.range.stageFlags, iter.range.offset,
-                           iter.range.size, dummy_values);
-        m_errorMonitor->VerifyNotFound();
     }
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
 
@@ -9096,9 +6405,9 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility) {
     imageInfo[1].imageView = view;
     imageInfo[1].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     imageInfo[2].imageView = view;
-    imageInfo[2].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    imageInfo[2].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
     imageInfo[3].imageView = view;
-    imageInfo[3].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    imageInfo[3].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
     static const uint32_t NUM_SET_UPDATES = 3;
     VkWriteDescriptorSet descriptor_write[NUM_SET_UPDATES] = {};
@@ -9245,8 +6554,6 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility) {
         vkDestroyDescriptorSetLayout(m_device->device(), ds_layout[i], NULL);
     }
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout_fs_only, NULL);
-    vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &ds0_fs_only);
-    vkFreeDescriptorSets(m_device->device(), ds_pool, NUM_SETS, descriptorSet);
     vkDestroyBuffer(m_device->device(), dyub, NULL);
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
@@ -9306,7 +6613,7 @@ TEST_F(VkLayerTest, CommandBufferResetErrors) {
     // Then cause 2 errors for attempting to reset CB w/o having
     // VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT set for the pool from
     // which CBs were allocated. Note that this bit is off by default.
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Cannot call Begin on CB");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Cannot call Begin on command buffer");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
@@ -9346,7 +6653,7 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState) {
     // Attempt to Create Gfx Pipeline w/o a VS
     VkResult err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Invalid Pipeline CreateInfo State: Vtx Shader required");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Invalid Pipeline CreateInfo State: Vertex Shader required");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -9953,7 +7260,7 @@ TEST_F(VkLayerTest, PSOViewportCountWithoutDataAndDynScissorMismatch) {
     // Now hit second fail case where we set scissor w/ different count than PSO
     // First need to successfully create the PSO from above by setting
     // pViewports
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Dynamic scissor(s) 0 are used by PSO, ");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Dynamic scissor(s) 0 are used by pipeline state object, ");
 
     VkViewport vp = {}; // Just need dummy vp to point to
     vp_state_ci.pViewports = &vp;
@@ -10116,7 +7423,7 @@ TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch) {
     // Now hit second fail case where we set scissor w/ different count than PSO
     // First need to successfully create the PSO from above by setting
     // pViewports
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Dynamic viewport(s) 0 are used by PSO, ");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Dynamic viewport(s) 0 are used by pipeline state object, ");
 
     VkRect2D sc = {}; // Just need dummy vp to point to
     vp_state_ci.pScissors = &sc;
@@ -10345,27 +7652,6 @@ TEST_F(VkLayerTest, RenderPassWithinRenderPass) {
     vkCmdBeginRenderPass(m_commandBuffer->GetBufferHandle(), &m_renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
     m_errorMonitor->VerifyFound();
-}
-
-TEST_F(VkLayerTest, RenderPassSecondaryCommandBuffersMultipleTimes) {
-    m_errorMonitor->ExpectSuccess();
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-
-    BeginCommandBuffer();                                   // framework implicitly begins the renderpass.
-    vkCmdEndRenderPass(m_commandBuffer->GetBufferHandle()); // end implicit.
-
-    vkCmdBeginRenderPass(m_commandBuffer->GetBufferHandle(), &m_renderPassBeginInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
-    vkCmdEndRenderPass(m_commandBuffer->GetBufferHandle());
-    m_errorMonitor->VerifyNotFound();
-    vkCmdBeginRenderPass(m_commandBuffer->GetBufferHandle(), &m_renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-    m_errorMonitor->VerifyNotFound();
-    vkCmdEndRenderPass(m_commandBuffer->GetBufferHandle());
-    m_errorMonitor->VerifyNotFound();
-
-    m_commandBuffer->EndCommandBuffer();
-    m_errorMonitor->VerifyNotFound();
 }
 
 TEST_F(VkLayerTest, RenderPassClearOpMismatch) {
@@ -10772,9 +8058,12 @@ TEST_F(VkLayerTest, InvalidBarriers) {
     m_errorMonitor->VerifyFound();
 
     // Now exercise barrier aspect bit errors, first DS
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Image is a depth and stencil format and thus must "
-                                                                        "have either one or both of VK_IMAGE_ASPECT_DEPTH_BIT and "
-                                                                        "VK_IMAGE_ASPECT_STENCIL_BIT set.");
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "Combination depth/stencil image formats can have only the VK_IMAGE_ASPECT_DEPTH_BIT and VK_IMAGE_ASPECT_STENCIL_BIT set.");
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "Depth/stencil image formats must have at least one of VK_IMAGE_ASPECT_DEPTH_BIT and VK_IMAGE_ASPECT_STENCIL_BIT set.");
     VkDepthStencilObj ds_image(m_device);
     ds_image.Init(m_device, 128, 128, VK_FORMAT_D24_UNORM_S8_UINT);
     ASSERT_TRUE(ds_image.initialized());
@@ -10791,8 +8080,10 @@ TEST_F(VkLayerTest, InvalidBarriers) {
 
     vkGetPhysicalDeviceFormatProperties(m_device->phy().handle(), VK_FORMAT_D16_UNORM, &format_props);
     if (format_props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Image is a depth-only format and thus must "
-                                                                            "have VK_IMAGE_ASPECT_DEPTH_BIT set.");
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             "Depth-only image formats must have the VK_IMAGE_ASPECT_DEPTH_BIT set.");
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             "Depth-only image formats can have only the VK_IMAGE_ASPECT_DEPTH_BIT set.");
         VkDepthStencilObj d_image(m_device);
         d_image.Init(m_device, 128, 128, VK_FORMAT_D16_UNORM);
         ASSERT_TRUE(d_image.initialized());
@@ -10808,8 +8099,8 @@ TEST_F(VkLayerTest, InvalidBarriers) {
     vkGetPhysicalDeviceFormatProperties(m_device->phy().handle(), VK_FORMAT_S8_UINT, &format_props);
     if (format_props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
         // Now test stencil-only
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Image is a stencil-only format and thus must "
-                                                                            "have VK_IMAGE_ASPECT_STENCIL_BIT set.");
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             "Stencil-only image formats must have the VK_IMAGE_ASPECT_STENCIL_BIT set.");
         VkDepthStencilObj s_image(m_device);
         s_image.Init(m_device, 128, 128, VK_FORMAT_S8_UINT);
         ASSERT_TRUE(s_image.initialized());
@@ -10823,8 +8114,10 @@ TEST_F(VkLayerTest, InvalidBarriers) {
         m_errorMonitor->VerifyFound();
     }
     // Finally test color
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Image is a color format and thus must "
-                                                                        "have VK_IMAGE_ASPECT_COLOR_BIT set.");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "Color image formats must have the VK_IMAGE_ASPECT_COLOR_BIT set.");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "Color image formats must have ONLY the VK_IMAGE_ASPECT_COLOR_BIT set.");
     VkImageObj c_image(m_device);
     c_image.init(128, 128, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
     ASSERT_TRUE(c_image.initialized());
@@ -10937,19 +8230,23 @@ TEST_F(VkLayerTest, InvalidQueueFamilyIndex) {
 }
 
 TEST_F(VkLayerTest, ExecuteCommandsPrimaryCB) {
-    TEST_DESCRIPTION("Attempt vkCmdExecuteCommands w/ a primary cmd buffer"
+TEST_DESCRIPTION("Attempt vkCmdExecuteCommands with a primary command buffer"
                      " (should only be secondary)");
-
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "vkCmdExecuteCommands() called w/ Primary Cmd Buffer ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
-    BeginCommandBuffer();
+    // An empty primary command buffer
+    VkCommandBufferObj cb(m_device, m_commandPool);
+    cb.BeginCommandBuffer();
+    cb.EndCommandBuffer();
 
-    VkCommandBuffer primCB = m_commandBuffer->GetBufferHandle();
-    vkCmdExecuteCommands(m_commandBuffer->GetBufferHandle(), 1, &primCB);
+    m_commandBuffer->BeginCommandBuffer();
+    vkCmdBeginRenderPass(m_commandBuffer->handle(), &renderPassBeginInfo(), VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+    VkCommandBuffer handle = cb.handle();
 
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "vkCmdExecuteCommands() called w/ Primary Cmd Buffer ");
+    vkCmdExecuteCommands(m_commandBuffer->handle(), 1, &handle);
     m_errorMonitor->VerifyFound();
 }
 
@@ -12131,7 +9428,7 @@ TEST_F(VkLayerTest, NumSamplesMismatch) {
 TEST_F(VkLayerTest, RenderPassIncompatible) {
     TEST_DESCRIPTION("Hit RenderPass incompatible cases. "
                      "Initial case is drawing with an active renderpass that's "
-                     "not compatible with the bound PSO's creation renderpass");
+                     "not compatible with the bound pipeline state object's creation renderpass");
     VkResult err;
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -12342,7 +9639,7 @@ TEST_F(VkLayerTest, ClearCmdNoDraw) {
     VkResult err;
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
-                                         "vkCmdClearAttachments() issued on CB object ");
+                                         "vkCmdClearAttachments() issued on command buffer object ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -12684,8 +9981,7 @@ TEST_F(VkLayerTest, VertexBufferInvalid) {
                                                         "is 0x";
     const char *bind_null_buffer_message = "In vkBindBufferMemory, attempting"
                                            " to Bind Obj(0x";
-    const char *free_invalid_buffer_message = "Request to delete memory "
-                                              "object 0x";
+    const char *free_invalid_buffer_message = "Invalid Device Memory Object 0x";
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
@@ -12987,47 +10283,103 @@ TEST_F(VkLayerTest, InvalidImageLayout) {
     vkDestroyImage(m_device->device(), dst_image, NULL);
 }
 
-TEST_F(VkLayerTest, ValidRenderPassAttachmentLayoutWithLoadOp) {
-    TEST_DESCRIPTION("Positive test where we create a renderpass with an "
-                     "attachment that uses LOAD_OP_CLEAR, the first subpass "
-                     "has a valid layout, and a second subpass then uses a "
-                     "valid *READ_ONLY* layout.");
-    m_errorMonitor->ExpectSuccess();
+TEST_F(VkLayerTest, InvalidStorageImageLayout) {
+    TEST_DESCRIPTION("Attempt to update a STORAGE_IMAGE descriptor w/o GENERAL layout.");
+    VkResult err;
+
     ASSERT_NO_FATAL_FAILURE(InitState());
 
-    VkAttachmentReference attach[2] = {};
-    attach[0].attachment = 0;
-    attach[0].layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    attach[1].attachment = 0;
-    attach[1].layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-    VkSubpassDescription subpasses[2] = {};
-    // First subpass clears DS attach on load
-    subpasses[0].pDepthStencilAttachment = &attach[0];
-    // 2nd subpass reads in DS as input attachment
-    subpasses[1].inputAttachmentCount = 1;
-    subpasses[1].pInputAttachments = &attach[1];
-    VkAttachmentDescription attach_desc = {};
-    attach_desc.format = VK_FORMAT_D24_UNORM_S8_UINT;
-    attach_desc.samples = VK_SAMPLE_COUNT_1_BIT;
-    attach_desc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    attach_desc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attach_desc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    attach_desc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    attach_desc.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    attach_desc.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-    VkRenderPassCreateInfo rpci = {};
-    rpci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    rpci.attachmentCount = 1;
-    rpci.pAttachments = &attach_desc;
-    rpci.subpassCount = 2;
-    rpci.pSubpasses = subpasses;
+    const VkFormat tex_format = VK_FORMAT_R8G8B8A8_UNORM;
+    VkImageTiling tiling;
+    VkFormatProperties format_properties;
+    vkGetPhysicalDeviceFormatProperties(gpu(), tex_format, &format_properties);
+    if (format_properties.linearTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT) {
+        tiling = VK_IMAGE_TILING_LINEAR;
+    } else if (format_properties.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT) {
+        tiling = VK_IMAGE_TILING_OPTIMAL;
+    } else {
+        printf("Device does not support VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT; "
+               "skipped.\n");
+        return;
+    }
 
-    // Now create RenderPass and verify no errors
-    VkRenderPass rp;
-    vkCreateRenderPass(m_device->device(), &rpci, NULL, &rp);
-    m_errorMonitor->VerifyNotFound();
+    VkDescriptorPoolSize ds_type = {};
+    ds_type.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    ds_type.descriptorCount = 1;
 
-    vkDestroyRenderPass(m_device->device(), rp, NULL);
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+    ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    ds_pool_ci.maxSets = 1;
+    ds_pool_ci.poolSizeCount = 1;
+    ds_pool_ci.pPoolSizes = &ds_type;
+    ds_pool_ci.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+
+    VkDescriptorPool ds_pool;
+    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+    dsl_binding.binding = 0;
+    dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    dsl_binding.descriptorCount = 1;
+    dsl_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    dsl_binding.pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+    ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    ds_layout_ci.pNext = NULL;
+    ds_layout_ci.bindingCount = 1;
+    ds_layout_ci.pBindings = &dsl_binding;
+
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSetAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    alloc_info.descriptorSetCount = 1;
+    alloc_info.descriptorPool = ds_pool;
+    alloc_info.pSetLayouts = &ds_layout;
+    VkDescriptorSet descriptor_set;
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptor_set);
+    ASSERT_VK_SUCCESS(err);
+
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+    pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_ci.pNext = NULL;
+    pipeline_layout_ci.setLayoutCount = 1;
+    pipeline_layout_ci.pSetLayouts = &ds_layout;
+    VkPipelineLayout pipeline_layout;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkImageObj image(m_device);
+    image.init(32, 32, tex_format, VK_IMAGE_USAGE_STORAGE_BIT, tiling, 0);
+    ASSERT_TRUE(image.initialized());
+    VkImageView view = image.targetView(tex_format);
+
+    VkDescriptorImageInfo image_info = {};
+    image_info.imageView = view;
+    image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    VkWriteDescriptorSet descriptor_write = {};
+    descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptor_write.dstSet = descriptor_set;
+    descriptor_write.dstBinding = 0;
+    descriptor_write.descriptorCount = 1;
+    descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    descriptor_write.pImageInfo = &image_info;
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         " of VK_DESCRIPTOR_TYPE_STORAGE_IMAGE type is being updated with layout "
+                                         "VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL but according to spec ");
+    vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
+    m_errorMonitor->VerifyFound();
+
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
+    vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptor_set);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
 
 TEST_F(VkLayerTest, SimultaneousUse) {
@@ -13037,7 +10389,7 @@ TEST_F(VkLayerTest, SimultaneousUse) {
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
-    const char *simultaneous_use_message1 = "w/o VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set!";
+    const char *simultaneous_use_message1 = "without VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set!";
     const char *simultaneous_use_message2 = "does not have VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set and "
                                             "will cause primary command buffer";
 
@@ -13941,7 +11293,7 @@ TEST_F(VkLayerTest, FramebufferIncompatible) {
     vkCmdBeginRenderPass(m_commandBuffer->GetBufferHandle(), &m_renderPassBeginInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         " that is not the same as the primaryCB's current active framebuffer ");
+                                         " that is not the same as the primary command buffer's current active framebuffer ");
     vkCmdExecuteCommands(m_commandBuffer->GetBufferHandle(), 1, &sec_cb);
     m_errorMonitor->VerifyFound();
     // Cleanup
@@ -14819,7 +12171,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvidedInBlock) {
 
 TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatchArraySize) {
     TEST_DESCRIPTION("Test that an error is produced for mismatched array sizes "
-                     "across the VS->FS interface");
+                     "across the vertex->fragment shader interface");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Type mismatch on location 0.0: 'ptr to "
                                                                         "output arr[2] of float32' vs 'ptr to "
                                                                         "input arr[3] of float32'");
@@ -14862,9 +12214,10 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatchArraySize) {
     m_errorMonitor->VerifyFound();
 }
 
+
 TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatch) {
     TEST_DESCRIPTION("Test that an error is produced for mismatched types across "
-                     "the VS->FS interface");
+                     "the vertex->fragment shader interface");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Type mismatch on location 0");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -14907,7 +12260,7 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatch) {
 
 TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatchInBlock) {
     TEST_DESCRIPTION("Test that an error is produced for mismatched types across "
-                     "the VS->FS interface, when the variable is contained within "
+                     "the vertex->fragment shader interface, when the variable is contained within "
                      "an interface block");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Type mismatch on location 0");
 
@@ -14951,7 +12304,7 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatchInBlock) {
 
 TEST_F(VkLayerTest, CreatePipelineVsFsMismatchByLocation) {
     TEST_DESCRIPTION("Test that an error is produced for location mismatches across "
-                     "the VS->FS interface; This should manifest as a not-written/not-consumed "
+                     "the vertex->fragment shader interface; This should manifest as a not-written/not-consumed "
                      "pair, but flushes out broken walking of the interfaces");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "location 0.0 which is not written by vertex shader");
 
@@ -14995,7 +12348,7 @@ TEST_F(VkLayerTest, CreatePipelineVsFsMismatchByLocation) {
 
 TEST_F(VkLayerTest, CreatePipelineVsFsMismatchByComponent) {
     TEST_DESCRIPTION("Test that an error is produced for component mismatches across the "
-                     "VS->FS interface. It's not enough to have the same set of locations in "
+                     "vertex->fragment shader interface. It's not enough to have the same set of locations in "
                      "use; matching is defined in terms of spirv variables.");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "location 0.1 which is not written by vertex shader");
 
@@ -15040,7 +12393,7 @@ TEST_F(VkLayerTest, CreatePipelineVsFsMismatchByComponent) {
 TEST_F(VkLayerTest, CreatePipelineAttribNotConsumed) {
     TEST_DESCRIPTION("Test that a warning is produced for a vertex attribute which is "
                      "not consumed by the vertex shader");
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, "location 0 not consumed by VS");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, "location 0 not consumed by vertex shader");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -15090,7 +12443,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotConsumed) {
 TEST_F(VkLayerTest, CreatePipelineAttribLocationMismatch) {
     TEST_DESCRIPTION("Test that a warning is produced for a location mismatch on "
                      "vertex attributes. This flushes out bad behavior in the interface walker");
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, "location 0 not consumed by VS");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, "location 0 not consumed by vertex shader");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -15261,7 +12614,7 @@ TEST_F(VkLayerTest, CreatePipelineDuplicateStage) {
     VkPipelineObj pipe(m_device);
     pipe.AddColorAttachment();
     pipe.AddShader(&vs);
-    pipe.AddShader(&vs);
+    pipe.AddShader(&vs);        // intentionally duplicate vertex shader attachment
     pipe.AddShader(&fs);
 
     VkDescriptorSetObj descriptorSet(m_device);
@@ -15271,174 +12624,6 @@ TEST_F(VkLayerTest, CreatePipelineDuplicateStage) {
     pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
 
     m_errorMonitor->VerifyFound();
-}
-
-TEST_F(VkLayerTest, CreatePipelineAttribMatrixType) {
-    TEST_DESCRIPTION("Test that pipeline validation accepts matrices passed "
-                     "as vertex attributes");
-    m_errorMonitor->ExpectSuccess();
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-
-    VkVertexInputBindingDescription input_binding;
-    memset(&input_binding, 0, sizeof(input_binding));
-
-    VkVertexInputAttributeDescription input_attribs[2];
-    memset(input_attribs, 0, sizeof(input_attribs));
-
-    for (int i = 0; i < 2; i++) {
-        input_attribs[i].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-        input_attribs[i].location = i;
-    }
-
-    char const *vsSource = "#version 450\n"
-                           "\n"
-                           "layout(location=0) in mat2x4 x;\n"
-                           "out gl_PerVertex {\n"
-                           "    vec4 gl_Position;\n"
-                           "};\n"
-                           "void main(){\n"
-                           "   gl_Position = x[0] + x[1];\n"
-                           "}\n";
-    char const *fsSource = "#version 450\n"
-                           "\n"
-                           "layout(location=0) out vec4 color;\n"
-                           "void main(){\n"
-                           "   color = vec4(1);\n"
-                           "}\n";
-
-    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
-    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
-
-    VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
-    pipe.AddShader(&vs);
-    pipe.AddShader(&fs);
-
-    pipe.AddVertexInputBindings(&input_binding, 1);
-    pipe.AddVertexInputAttribs(input_attribs, 2);
-
-    VkDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendDummy();
-    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
-
-    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
-
-    /* expect success */
-    m_errorMonitor->VerifyNotFound();
-}
-
-TEST_F(VkLayerTest, CreatePipelineAttribArrayType) {
-    m_errorMonitor->ExpectSuccess();
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-
-    VkVertexInputBindingDescription input_binding;
-    memset(&input_binding, 0, sizeof(input_binding));
-
-    VkVertexInputAttributeDescription input_attribs[2];
-    memset(input_attribs, 0, sizeof(input_attribs));
-
-    for (int i = 0; i < 2; i++) {
-        input_attribs[i].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-        input_attribs[i].location = i;
-    }
-
-    char const *vsSource = "#version 450\n"
-                           "\n"
-                           "layout(location=0) in vec4 x[2];\n"
-                           "out gl_PerVertex {\n"
-                           "    vec4 gl_Position;\n"
-                           "};\n"
-                           "void main(){\n"
-                           "   gl_Position = x[0] + x[1];\n"
-                           "}\n";
-    char const *fsSource = "#version 450\n"
-                           "\n"
-                           "layout(location=0) out vec4 color;\n"
-                           "void main(){\n"
-                           "   color = vec4(1);\n"
-                           "}\n";
-
-    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
-    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
-
-    VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
-    pipe.AddShader(&vs);
-    pipe.AddShader(&fs);
-
-    pipe.AddVertexInputBindings(&input_binding, 1);
-    pipe.AddVertexInputAttribs(input_attribs, 2);
-
-    VkDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendDummy();
-    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
-
-    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
-
-    m_errorMonitor->VerifyNotFound();
-}
-
-TEST_F(VkLayerTest, CreatePipelineAttribComponents) {
-    TEST_DESCRIPTION("Test that pipeline validation accepts consuming a vertex attribute "
-                     "through multiple vertex shader inputs, each consuming a different "
-                     "subset of the components.");
-    m_errorMonitor->ExpectSuccess();
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-
-    VkVertexInputBindingDescription input_binding;
-    memset(&input_binding, 0, sizeof(input_binding));
-
-    VkVertexInputAttributeDescription input_attribs[3];
-    memset(input_attribs, 0, sizeof(input_attribs));
-
-    for (int i = 0; i < 3; i++) {
-        input_attribs[i].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-        input_attribs[i].location = i;
-    }
-
-    char const *vsSource = "#version 450\n"
-                           "\n"
-                           "layout(location=0) in vec4 x;\n"
-                           "layout(location=1) in vec3 y1;\n"
-                           "layout(location=1, component=3) in float y2;\n"
-                           "layout(location=2) in vec4 z;\n"
-                           "out gl_PerVertex {\n"
-                           "    vec4 gl_Position;\n"
-                           "};\n"
-                           "void main(){\n"
-                           "   gl_Position = x + vec4(y1, y2) + z;\n"
-                           "}\n";
-    char const *fsSource = "#version 450\n"
-                           "\n"
-                           "layout(location=0) out vec4 color;\n"
-                           "void main(){\n"
-                           "   color = vec4(1);\n"
-                           "}\n";
-
-    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
-    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
-
-    VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
-    pipe.AddShader(&vs);
-    pipe.AddShader(&fs);
-
-    pipe.AddVertexInputBindings(&input_binding, 1);
-    pipe.AddVertexInputAttribs(input_attribs, 3);
-
-    VkDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendDummy();
-    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
-
-    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
-
-    m_errorMonitor->VerifyNotFound();
 }
 
 TEST_F(VkLayerTest, CreatePipelineMissingEntrypoint) {
@@ -15477,43 +12662,6 @@ TEST_F(VkLayerTest, CreatePipelineMissingEntrypoint) {
     pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
 
     m_errorMonitor->VerifyFound();
-}
-
-TEST_F(VkLayerTest, CreatePipelineSimplePositive) {
-    m_errorMonitor->ExpectSuccess();
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-
-    char const *vsSource = "#version 450\n"
-                           "out gl_PerVertex {\n"
-                           "    vec4 gl_Position;\n"
-                           "};\n"
-                           "void main(){\n"
-                           "   gl_Position = vec4(0);\n"
-                           "}\n";
-    char const *fsSource = "#version 450\n"
-                           "\n"
-                           "layout(location=0) out vec4 color;\n"
-                           "void main(){\n"
-                           "   color = vec4(1);\n"
-                           "}\n";
-
-    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
-    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
-
-    VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
-    pipe.AddShader(&vs);
-    pipe.AddShader(&fs);
-
-    VkDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendDummy();
-    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
-
-    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
-
-    m_errorMonitor->VerifyNotFound();
 }
 
 TEST_F(VkLayerTest, CreatePipelineDepthStencilRequired) {
@@ -15580,176 +12728,6 @@ TEST_F(VkLayerTest, CreatePipelineDepthStencilRequired) {
     m_errorMonitor->VerifyFound();
 
     vkDestroyRenderPass(m_device->device(), rp, nullptr);
-}
-
-TEST_F(VkLayerTest, CreatePipelineRelaxedTypeMatch) {
-    TEST_DESCRIPTION("Test that pipeline validation accepts the relaxed type matching rules "
-                     "set out in 14.1.3: fundamental type must match, and producer side must "
-                     "have at least as many components");
-    m_errorMonitor->ExpectSuccess();
-
-    // VK 1.0.8 Specification, 14.1.3 "Additionally,..." block
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-
-    char const *vsSource = "#version 450\n"
-                           "out gl_PerVertex {\n"
-                           "    vec4 gl_Position;\n"
-                           "};\n"
-                           "layout(location=0) out vec3 x;\n"
-                           "layout(location=1) out ivec3 y;\n"
-                           "layout(location=2) out vec3 z;\n"
-                           "void main(){\n"
-                           "   gl_Position = vec4(0);\n"
-                           "   x = vec3(0); y = ivec3(0); z = vec3(0);\n"
-                           "}\n";
-    char const *fsSource = "#version 450\n"
-                           "\n"
-                           "layout(location=0) out vec4 color;\n"
-                           "layout(location=0) in float x;\n"
-                           "layout(location=1) flat in int y;\n"
-                           "layout(location=2) in vec2 z;\n"
-                           "void main(){\n"
-                           "   color = vec4(1 + x + y + z.x);\n"
-                           "}\n";
-
-    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
-    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
-
-    VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
-    pipe.AddShader(&vs);
-    pipe.AddShader(&fs);
-
-    VkDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendDummy();
-    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
-
-    VkResult err = VK_SUCCESS;
-    err = pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
-    ASSERT_VK_SUCCESS(err);
-
-    m_errorMonitor->VerifyNotFound();
-}
-
-TEST_F(VkLayerTest, CreatePipelineTessPerVertex) {
-    TEST_DESCRIPTION("Test that pipeline validation accepts per-vertex variables "
-                     "passed between the TCS and TES stages");
-    m_errorMonitor->ExpectSuccess();
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-
-    if (!m_device->phy().features().tessellationShader) {
-        printf("Device does not support tessellation shaders; skipped.\n");
-        return;
-    }
-
-    char const *vsSource = "#version 450\n"
-                           "void main(){}\n";
-    char const *tcsSource = "#version 450\n"
-                            "layout(location=0) out int x[];\n"
-                            "layout(vertices=3) out;\n"
-                            "void main(){\n"
-                            "   gl_TessLevelOuter[0] = gl_TessLevelOuter[1] = gl_TessLevelOuter[2] = 1;\n"
-                            "   gl_TessLevelInner[0] = 1;\n"
-                            "   x[gl_InvocationID] = gl_InvocationID;\n"
-                            "}\n";
-    char const *tesSource = "#version 450\n"
-                            "layout(triangles, equal_spacing, cw) in;\n"
-                            "layout(location=0) in int x[];\n"
-                            "out gl_PerVertex { vec4 gl_Position; };\n"
-                            "void main(){\n"
-                            "   gl_Position.xyz = gl_TessCoord;\n"
-                            "   gl_Position.w = x[0] + x[1] + x[2];\n"
-                            "}\n";
-    char const *fsSource = "#version 450\n"
-                           "layout(location=0) out vec4 color;\n"
-                           "void main(){\n"
-                           "   color = vec4(1);\n"
-                           "}\n";
-
-    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
-    VkShaderObj tcs(m_device, tcsSource, VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, this);
-    VkShaderObj tes(m_device, tesSource, VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, this);
-    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
-
-    VkPipelineInputAssemblyStateCreateInfo iasci{VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO, nullptr, 0,
-                                                 VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, VK_FALSE};
-
-    VkPipelineTessellationStateCreateInfo tsci{VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO, nullptr, 0, 3};
-
-    VkPipelineObj pipe(m_device);
-    pipe.SetInputAssembly(&iasci);
-    pipe.SetTessellation(&tsci);
-    pipe.AddColorAttachment();
-    pipe.AddShader(&vs);
-    pipe.AddShader(&tcs);
-    pipe.AddShader(&tes);
-    pipe.AddShader(&fs);
-
-    VkDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendDummy();
-    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
-
-    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
-
-    m_errorMonitor->VerifyNotFound();
-}
-
-TEST_F(VkLayerTest, CreatePipelineGeometryInputBlockPositive) {
-    TEST_DESCRIPTION("Test that pipeline validation accepts a user-defined "
-                     "interface block passed into the geometry shader. This "
-                     "is interesting because the 'extra' array level is not "
-                     "present on the member type, but on the block instance.");
-    m_errorMonitor->ExpectSuccess();
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-
-    if (!m_device->phy().features().geometryShader) {
-        printf("Device does not support geometry shaders; skipped.\n");
-        return;
-    }
-
-    char const *vsSource = "#version 450\n"
-                           "layout(location=0) out VertexData { vec4 x; } vs_out;\n"
-                           "void main(){\n"
-                           "   vs_out.x = vec4(1);\n"
-                           "}\n";
-    char const *gsSource = "#version 450\n"
-                           "layout(triangles) in;\n"
-                           "layout(triangle_strip, max_vertices=3) out;\n"
-                           "layout(location=0) in VertexData { vec4 x; } gs_in[];\n"
-                           "out gl_PerVertex { vec4 gl_Position; };\n"
-                           "void main() {\n"
-                           "   gl_Position = gs_in[0].x;\n"
-                           "   EmitVertex();\n"
-                           "}\n";
-    char const *fsSource = "#version 450\n"
-                           "layout(location=0) out vec4 color;\n"
-                           "void main(){\n"
-                           "   color = vec4(1);\n"
-                           "}\n";
-
-    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
-    VkShaderObj gs(m_device, gsSource, VK_SHADER_STAGE_GEOMETRY_BIT, this);
-    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
-
-    VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
-    pipe.AddShader(&vs);
-    pipe.AddShader(&gs);
-    pipe.AddShader(&fs);
-
-    VkDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendDummy();
-    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
-
-    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
-
-    m_errorMonitor->VerifyNotFound();
 }
 
 TEST_F(VkLayerTest, CreatePipelineTessPatchDecorationMismatch) {
@@ -15872,78 +12850,10 @@ TEST_F(VkLayerTest, CreatePipelineAttribBindingConflict) {
     m_errorMonitor->VerifyFound();
 }
 
-TEST_F(VkLayerTest, CreatePipeline64BitAttributesPositive) {
-    TEST_DESCRIPTION("Test that pipeline validation accepts basic use of 64bit vertex "
-                     "attributes. This is interesting because they consume multiple "
-                     "locations.");
-    m_errorMonitor->ExpectSuccess();
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-
-    if (!m_device->phy().features().shaderFloat64) {
-        printf("Device does not support 64bit vertex attributes; skipped.\n");
-        return;
-    }
-
-    VkVertexInputBindingDescription input_bindings[1];
-    memset(input_bindings, 0, sizeof(input_bindings));
-
-    VkVertexInputAttributeDescription input_attribs[4];
-    memset(input_attribs, 0, sizeof(input_attribs));
-    input_attribs[0].location = 0;
-    input_attribs[0].offset = 0;
-    input_attribs[0].format = VK_FORMAT_R64G64B64A64_SFLOAT;
-    input_attribs[1].location = 2;
-    input_attribs[1].offset = 32;
-    input_attribs[1].format = VK_FORMAT_R64G64B64A64_SFLOAT;
-    input_attribs[2].location = 4;
-    input_attribs[2].offset = 64;
-    input_attribs[2].format = VK_FORMAT_R64G64B64A64_SFLOAT;
-    input_attribs[3].location = 6;
-    input_attribs[3].offset = 96;
-    input_attribs[3].format = VK_FORMAT_R64G64B64A64_SFLOAT;
-
-    char const *vsSource = "#version 450\n"
-                           "\n"
-                           "layout(location=0) in dmat4 x;\n"
-                           "out gl_PerVertex {\n"
-                           "    vec4 gl_Position;\n"
-                           "};\n"
-                           "void main(){\n"
-                           "   gl_Position = vec4(x[0][0]);\n"
-                           "}\n";
-    char const *fsSource = "#version 450\n"
-                           "\n"
-                           "layout(location=0) out vec4 color;\n"
-                           "void main(){\n"
-                           "   color = vec4(1);\n"
-                           "}\n";
-
-    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
-    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
-
-    VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
-    pipe.AddShader(&vs);
-    pipe.AddShader(&fs);
-
-    pipe.AddVertexInputBindings(input_bindings, 1);
-    pipe.AddVertexInputAttribs(input_attribs, 4);
-
-    VkDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendDummy();
-    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
-
-    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
-
-    m_errorMonitor->VerifyNotFound();
-}
-
 TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotWritten) {
-    TEST_DESCRIPTION("Test that an error is produced for a FS which does not "
+    TEST_DESCRIPTION("Test that an error is produced for a fragment shader which does not "
                      "provide an output for one of the pipeline's color attachments");
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Attachment 0 not written by FS");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Attachment 0 not written by fragment shader");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
@@ -15981,10 +12891,10 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotWritten) {
 }
 
 TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotConsumed) {
-    TEST_DESCRIPTION("Test that a warning is produced for a FS which provides a spurious "
+    TEST_DESCRIPTION("Test that a warning is produced for a fragment shader which provides a spurious "
                      "output with no matching attachment");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT,
-                                         "FS writes to output location 1 with no matching attachment");
+                                         "fragment shader writes to output location 1 with no matching attachment");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
@@ -16028,8 +12938,8 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotConsumed) {
 
 TEST_F(VkLayerTest, CreatePipelineFragmentOutputTypeMismatch) {
     TEST_DESCRIPTION("Test that an error is produced for a mismatch between the fundamental "
-                     "type of an FS output variable, and the format of the corresponding attachment");
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "does not match FS output type");
+                     "type of an fragment shader output variable, and the format of the corresponding attachment");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "does not match fragment shader output type");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
@@ -16206,79 +13116,6 @@ TEST_F(VkLayerTest, CreatePipelineInputAttachmentMissing) {
     vkDestroyDescriptorSetLayout(m_device->device(), dsl, nullptr);
 }
 
-TEST_F(VkLayerTest, CreatePipelineInputAttachmentPositive) {
-    TEST_DESCRIPTION("Positive test for a correctly matched input attachment");
-    m_errorMonitor->ExpectSuccess();
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-
-    char const *vsSource = "#version 450\n"
-                           "\n"
-                           "out gl_PerVertex {\n"
-                           "    vec4 gl_Position;\n"
-                           "};\n"
-                           "void main(){\n"
-                           "    gl_Position = vec4(1);\n"
-                           "}\n";
-    char const *fsSource = "#version 450\n"
-                           "\n"
-                           "layout(input_attachment_index=0, set=0, binding=0) uniform subpassInput x;\n"
-                           "layout(location=0) out vec4 color;\n"
-                           "void main() {\n"
-                           "   color = subpassLoad(x);\n"
-                           "}\n";
-
-    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
-    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
-
-    VkPipelineObj pipe(m_device);
-    pipe.AddShader(&vs);
-    pipe.AddShader(&fs);
-    pipe.AddColorAttachment();
-    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-
-    VkDescriptorSetLayoutBinding dslb = {0, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr};
-    VkDescriptorSetLayoutCreateInfo dslci = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, nullptr, 0, 1, &dslb};
-    VkDescriptorSetLayout dsl;
-    VkResult err = vkCreateDescriptorSetLayout(m_device->device(), &dslci, nullptr, &dsl);
-    ASSERT_VK_SUCCESS(err);
-
-    VkPipelineLayoutCreateInfo plci = {VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, nullptr, 0, 1, &dsl, 0, nullptr};
-    VkPipelineLayout pl;
-    err = vkCreatePipelineLayout(m_device->device(), &plci, nullptr, &pl);
-    ASSERT_VK_SUCCESS(err);
-
-    VkAttachmentDescription descs[2] = {
-        {0, VK_FORMAT_R8G8B8A8_UNORM, VK_SAMPLE_COUNT_1_BIT, VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_STORE,
-         VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL},
-        {0, VK_FORMAT_R8G8B8A8_UNORM, VK_SAMPLE_COUNT_1_BIT, VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_STORE,
-         VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL},
-    };
-    VkAttachmentReference color = {
-        0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-    };
-    VkAttachmentReference input = {
-        1, VK_IMAGE_LAYOUT_GENERAL,
-    };
-
-    VkSubpassDescription sd = {0, VK_PIPELINE_BIND_POINT_GRAPHICS, 1, &input, 1, &color, nullptr, nullptr, 0, nullptr};
-
-    VkRenderPassCreateInfo rpci = {VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, nullptr, 0, 2, descs, 1, &sd, 0, nullptr};
-    VkRenderPass rp;
-    err = vkCreateRenderPass(m_device->device(), &rpci, nullptr, &rp);
-    ASSERT_VK_SUCCESS(err);
-
-    // should be OK. would go wrong here if it's going to...
-    pipe.CreateVKPipeline(pl, rp);
-
-    m_errorMonitor->VerifyNotFound();
-
-    vkDestroyRenderPass(m_device->device(), rp, nullptr);
-    vkDestroyPipelineLayout(m_device->device(), pl, nullptr);
-    vkDestroyDescriptorSetLayout(m_device->device(), dsl, nullptr);
-}
-
 TEST_F(VkLayerTest, CreatePipelineInputAttachmentTypeMismatch) {
     TEST_DESCRIPTION("Test that an error is produced for a shader consuming an input attachment "
                      "with a format having a different fundamental type");
@@ -16446,47 +13283,6 @@ TEST_F(VkLayerTest, CreateComputePipelineMissingDescriptor) {
     }
 }
 
-TEST_F(VkLayerTest, CreateComputePipelineMissingDescriptorUnusedPositive) {
-    TEST_DESCRIPTION("Test that pipeline validation accepts a compute pipeline which declares a "
-                     "descriptor-backed resource which is not provided, but the shader does not "
-                     "statically use it. This is interesting because it requires compute pipelines "
-                     "to have a proper descriptor use walk, which they didn't for some time.");
-    m_errorMonitor->ExpectSuccess();
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-
-    char const *csSource = "#version 450\n"
-                           "\n"
-                           "layout(local_size_x=1) in;\n"
-                           "layout(set=0, binding=0) buffer block { vec4 x; };\n"
-                           "void main(){\n"
-                           "   // x is not used.\n"
-                           "}\n";
-
-    VkShaderObj cs(m_device, csSource, VK_SHADER_STAGE_COMPUTE_BIT, this);
-
-    VkDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
-
-    VkComputePipelineCreateInfo cpci = {VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-                                        nullptr,
-                                        0,
-                                        {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0,
-                                         VK_SHADER_STAGE_COMPUTE_BIT, cs.handle(), "main", nullptr},
-                                        descriptorSet.GetPipelineLayout(),
-                                        VK_NULL_HANDLE,
-                                        -1};
-
-    VkPipeline pipe;
-    VkResult err = vkCreateComputePipelines(m_device->device(), VK_NULL_HANDLE, 1, &cpci, nullptr, &pipe);
-
-    m_errorMonitor->VerifyNotFound();
-
-    if (err == VK_SUCCESS) {
-        vkDestroyPipeline(m_device->device(), pipe, nullptr);
-    }
-}
-
 TEST_F(VkLayerTest, CreateComputePipelineDescriptorTypeMismatch) {
     TEST_DESCRIPTION("Test that an error is produced for a pipeline consuming a "
                      "descriptor-backed resource of a mismatched type");
@@ -16528,171 +13324,6 @@ TEST_F(VkLayerTest, CreateComputePipelineDescriptorTypeMismatch) {
     err = vkCreateComputePipelines(m_device->device(), VK_NULL_HANDLE, 1, &cpci, nullptr, &pipe);
 
     m_errorMonitor->VerifyFound();
-
-    if (err == VK_SUCCESS) {
-        vkDestroyPipeline(m_device->device(), pipe, nullptr);
-    }
-
-    vkDestroyPipelineLayout(m_device->device(), pl, nullptr);
-    vkDestroyDescriptorSetLayout(m_device->device(), dsl, nullptr);
-}
-
-TEST_F(VkLayerTest, CreateComputePipelineCombinedImageSamplerConsumedAsSampler) {
-    TEST_DESCRIPTION("Test that pipeline validation accepts a shader consuming only the "
-                     "sampler portion of a combined image + sampler");
-    m_errorMonitor->ExpectSuccess();
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-
-    VkDescriptorSetLayoutBinding bindings[] = {
-        {0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},
-        {1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},
-        {2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},
-    };
-    VkDescriptorSetLayoutCreateInfo dslci = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, nullptr, 0, 3, bindings};
-    VkDescriptorSetLayout dsl;
-    VkResult err = vkCreateDescriptorSetLayout(m_device->device(), &dslci, nullptr, &dsl);
-    ASSERT_VK_SUCCESS(err);
-
-    VkPipelineLayoutCreateInfo plci = {VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, nullptr, 0, 1, &dsl, 0, nullptr};
-    VkPipelineLayout pl;
-    err = vkCreatePipelineLayout(m_device->device(), &plci, nullptr, &pl);
-    ASSERT_VK_SUCCESS(err);
-
-    char const *csSource = "#version 450\n"
-                           "\n"
-                           "layout(local_size_x=1) in;\n"
-                           "layout(set=0, binding=0) uniform sampler s;\n"
-                           "layout(set=0, binding=1) uniform texture2D t;\n"
-                           "layout(set=0, binding=2) buffer block { vec4 x; };\n"
-                           "void main() {\n"
-                           "   x = texture(sampler2D(t, s), vec2(0));\n"
-                           "}\n";
-    VkShaderObj cs(m_device, csSource, VK_SHADER_STAGE_COMPUTE_BIT, this);
-
-    VkComputePipelineCreateInfo cpci = {VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-                                        nullptr,
-                                        0,
-                                        {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0,
-                                         VK_SHADER_STAGE_COMPUTE_BIT, cs.handle(), "main", nullptr},
-                                        pl,
-                                        VK_NULL_HANDLE,
-                                        -1};
-
-    VkPipeline pipe;
-    err = vkCreateComputePipelines(m_device->device(), VK_NULL_HANDLE, 1, &cpci, nullptr, &pipe);
-
-    m_errorMonitor->VerifyNotFound();
-
-    if (err == VK_SUCCESS) {
-        vkDestroyPipeline(m_device->device(), pipe, nullptr);
-    }
-
-    vkDestroyPipelineLayout(m_device->device(), pl, nullptr);
-    vkDestroyDescriptorSetLayout(m_device->device(), dsl, nullptr);
-}
-
-TEST_F(VkLayerTest, CreateComputePipelineCombinedImageSamplerConsumedAsImage) {
-    TEST_DESCRIPTION("Test that pipeline validation accepts a shader consuming only the "
-                     "image portion of a combined image + sampler");
-    m_errorMonitor->ExpectSuccess();
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-
-    VkDescriptorSetLayoutBinding bindings[] = {
-        {0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},
-        {1, VK_DESCRIPTOR_TYPE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},
-        {2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},
-    };
-    VkDescriptorSetLayoutCreateInfo dslci = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, nullptr, 0, 3, bindings};
-    VkDescriptorSetLayout dsl;
-    VkResult err = vkCreateDescriptorSetLayout(m_device->device(), &dslci, nullptr, &dsl);
-    ASSERT_VK_SUCCESS(err);
-
-    VkPipelineLayoutCreateInfo plci = {VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, nullptr, 0, 1, &dsl, 0, nullptr};
-    VkPipelineLayout pl;
-    err = vkCreatePipelineLayout(m_device->device(), &plci, nullptr, &pl);
-    ASSERT_VK_SUCCESS(err);
-
-    char const *csSource = "#version 450\n"
-                           "\n"
-                           "layout(local_size_x=1) in;\n"
-                           "layout(set=0, binding=0) uniform texture2D t;\n"
-                           "layout(set=0, binding=1) uniform sampler s;\n"
-                           "layout(set=0, binding=2) buffer block { vec4 x; };\n"
-                           "void main() {\n"
-                           "   x = texture(sampler2D(t, s), vec2(0));\n"
-                           "}\n";
-    VkShaderObj cs(m_device, csSource, VK_SHADER_STAGE_COMPUTE_BIT, this);
-
-    VkComputePipelineCreateInfo cpci = {VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-                                        nullptr,
-                                        0,
-                                        {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0,
-                                         VK_SHADER_STAGE_COMPUTE_BIT, cs.handle(), "main", nullptr},
-                                        pl,
-                                        VK_NULL_HANDLE,
-                                        -1};
-
-    VkPipeline pipe;
-    err = vkCreateComputePipelines(m_device->device(), VK_NULL_HANDLE, 1, &cpci, nullptr, &pipe);
-
-    m_errorMonitor->VerifyNotFound();
-
-    if (err == VK_SUCCESS) {
-        vkDestroyPipeline(m_device->device(), pipe, nullptr);
-    }
-
-    vkDestroyPipelineLayout(m_device->device(), pl, nullptr);
-    vkDestroyDescriptorSetLayout(m_device->device(), dsl, nullptr);
-}
-
-TEST_F(VkLayerTest, CreateComputePipelineCombinedImageSamplerConsumedAsBoth) {
-    TEST_DESCRIPTION("Test that pipeline validation accepts a shader consuming "
-                     "both the sampler and the image of a combined image+sampler "
-                     "but via separate variables");
-    m_errorMonitor->ExpectSuccess();
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-
-    VkDescriptorSetLayoutBinding bindings[] = {
-        {0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},
-        {1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},
-    };
-    VkDescriptorSetLayoutCreateInfo dslci = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, nullptr, 0, 2, bindings};
-    VkDescriptorSetLayout dsl;
-    VkResult err = vkCreateDescriptorSetLayout(m_device->device(), &dslci, nullptr, &dsl);
-    ASSERT_VK_SUCCESS(err);
-
-    VkPipelineLayoutCreateInfo plci = {VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, nullptr, 0, 1, &dsl, 0, nullptr};
-    VkPipelineLayout pl;
-    err = vkCreatePipelineLayout(m_device->device(), &plci, nullptr, &pl);
-    ASSERT_VK_SUCCESS(err);
-
-    char const *csSource = "#version 450\n"
-                           "\n"
-                           "layout(local_size_x=1) in;\n"
-                           "layout(set=0, binding=0) uniform texture2D t;\n"
-                           "layout(set=0, binding=0) uniform sampler s;  // both binding 0!\n"
-                           "layout(set=0, binding=1) buffer block { vec4 x; };\n"
-                           "void main() {\n"
-                           "   x = texture(sampler2D(t, s), vec2(0));\n"
-                           "}\n";
-    VkShaderObj cs(m_device, csSource, VK_SHADER_STAGE_COMPUTE_BIT, this);
-
-    VkComputePipelineCreateInfo cpci = {VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-                                        nullptr,
-                                        0,
-                                        {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0,
-                                         VK_SHADER_STAGE_COMPUTE_BIT, cs.handle(), "main", nullptr},
-                                        pl,
-                                        VK_NULL_HANDLE,
-                                        -1};
-
-    VkPipeline pipe;
-    err = vkCreateComputePipelines(m_device->device(), VK_NULL_HANDLE, 1, &cpci, nullptr, &pipe);
-
-    m_errorMonitor->VerifyNotFound();
 
     if (err == VK_SUCCESS) {
         vkDestroyPipeline(m_device->device(), pipe, nullptr);
@@ -17026,9 +13657,11 @@ TEST_F(VkLayerTest, CreateImageViewNoMemoryBoundToImage) {
 
 TEST_F(VkLayerTest, InvalidImageViewAspect) {
     TEST_DESCRIPTION("Create an image and try to create a view with an invalid aspectMask");
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "vkCreateImageView: Color image "
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "vkCreateImageView(): Color image "
                                                                         "formats must have ONLY the "
                                                                         "VK_IMAGE_ASPECT_COLOR_BIT set");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "Color image formats must have the VK_IMAGE_ASPECT_COLOR_BIT set.");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
@@ -17038,12 +13671,13 @@ TEST_F(VkLayerTest, InvalidImageViewAspect) {
     ASSERT_TRUE(image.initialized());
 
     VkImageViewCreateInfo image_view_create_info = {};
-    image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     image_view_create_info.image = image.handle();
     image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
     image_view_create_info.format = tex_format;
     image_view_create_info.subresourceRange.baseMipLevel = 0;
     image_view_create_info.subresourceRange.levelCount = 1;
+    image_view_create_info.subresourceRange.layerCount = 1;
     // Cause an error by setting an invalid image aspect
     image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_METADATA_BIT;
 
@@ -17087,6 +13721,7 @@ TEST_F(VkLayerTest, CopyImageLayerCountMismatch) {
     err = vkCreateImage(m_device->device(), &image_create_info, NULL, &srcImage);
     ASSERT_VK_SUCCESS(err);
 
+    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     err = vkCreateImage(m_device->device(), &image_create_info, NULL, &dstImage);
     ASSERT_VK_SUCCESS(err);
 
@@ -17251,6 +13886,9 @@ TEST_F(VkLayerTest, ImageLayerViewTests) {
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "vkCreateImageView called with 0 in "
                                                                         "pCreateInfo->subresourceRange."
                                                                         "layerCount");
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "if pCreateInfo->viewType is VK_IMAGE_TYPE_2D, pCreateInfo->subresourceRange.layerCount must be 1");
     // View's layerCount can't be 0 - Expect VIEW_CREATE_ERROR
     imgViewInfo.subresourceRange.layerCount = 0;
     vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
@@ -17258,6 +13896,9 @@ TEST_F(VkLayerTest, ImageLayerViewTests) {
     imgViewInfo.subresourceRange.layerCount = 1;
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "but both must be color formats");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Formats MUST be IDENTICAL unless "
+                                                                        "VK_IMAGE_CREATE_MUTABLE_FORMAT BIT "
+                                                                        "was set on image creation.");
     // Can't use depth format for view into color image - Expect INVALID_FORMAT
     imgViewInfo.format = VK_FORMAT_D24_UNORM_S8_UINT;
     vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
@@ -17277,6 +13918,10 @@ TEST_F(VkLayerTest, ImageLayerViewTests) {
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "can support ImageViews with "
                                                                         "differing formats but they must be "
                                                                         "in the same compatibility class.");
+    // TODO: Update framework to easily passing mutable flag into ImageObj init
+    //   For now just allowing image for this one test to not have memory bound
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         " used with no memory bound. Memory should be bound by calling vkBindImageMemory().");
     // Have MUTABLE_FORMAT bit but not in same compatibility class - Expect
     // VIEW_CREATE_ERROR
     VkImageCreateInfo mutImgInfo = image.create_info();
@@ -17488,6 +14133,82 @@ TEST_F(VkLayerTest, ImageFormatLimits) {
     image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 }
 
+TEST_F(VkLayerTest, CopyImageSrcSizeExceeded) {
+
+    // Image copy with source region specified greater than src image size
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01175);
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkImageObj src_image(m_device);
+    src_image.init(32, 32, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_TILING_LINEAR, 0);
+    VkImageObj dst_image(m_device);
+    dst_image.init(64, 64, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_IMAGE_TILING_LINEAR, 0);
+
+    BeginCommandBuffer();
+    VkImageCopy copy_region;
+    copy_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copy_region.srcSubresource.mipLevel = 0;
+    copy_region.srcSubresource.baseArrayLayer = 0;
+    copy_region.srcSubresource.layerCount = 0;
+    copy_region.srcOffset.x = 0;
+    copy_region.srcOffset.y = 0;
+    copy_region.srcOffset.z = 0;
+    copy_region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copy_region.dstSubresource.mipLevel = 0;
+    copy_region.dstSubresource.baseArrayLayer = 0;
+    copy_region.dstSubresource.layerCount = 0;
+    copy_region.dstOffset.x = 0;
+    copy_region.dstOffset.y = 0;
+    copy_region.dstOffset.z = 0;
+    copy_region.extent.width = 64;
+    copy_region.extent.height = 64;
+    copy_region.extent.depth = 1;
+    m_commandBuffer->CopyImage(src_image.image(), VK_IMAGE_LAYOUT_GENERAL, dst_image.image(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                               &copy_region);
+    EndCommandBuffer();
+
+    m_errorMonitor->VerifyFound();
+}
+
+TEST_F(VkLayerTest, CopyImageDstSizeExceeded) {
+
+    // Image copy with dest region specified greater than dest image size
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01176);
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkImageObj src_image(m_device);
+    src_image.init(64, 64, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_TILING_LINEAR, 0);
+    VkImageObj dst_image(m_device);
+    dst_image.init(32, 32, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_IMAGE_TILING_LINEAR, 0);
+
+    BeginCommandBuffer();
+    VkImageCopy copy_region;
+    copy_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copy_region.srcSubresource.mipLevel = 0;
+    copy_region.srcSubresource.baseArrayLayer = 0;
+    copy_region.srcSubresource.layerCount = 0;
+    copy_region.srcOffset.x = 0;
+    copy_region.srcOffset.y = 0;
+    copy_region.srcOffset.z = 0;
+    copy_region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copy_region.dstSubresource.mipLevel = 0;
+    copy_region.dstSubresource.baseArrayLayer = 0;
+    copy_region.dstSubresource.layerCount = 0;
+    copy_region.dstOffset.x = 0;
+    copy_region.dstOffset.y = 0;
+    copy_region.dstOffset.z = 0;
+    copy_region.extent.width = 64;
+    copy_region.extent.height = 64;
+    copy_region.extent.depth = 1;
+    m_commandBuffer->CopyImage(src_image.image(), VK_IMAGE_LAYOUT_GENERAL, dst_image.image(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                               &copy_region);
+    EndCommandBuffer();
+
+    m_errorMonitor->VerifyFound();
+}
+
 TEST_F(VkLayerTest, CopyImageFormatSizeMismatch) {
     VkResult err;
     bool pass;
@@ -17626,7 +14347,7 @@ TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch) {
     // Introduce failure by creating second image with a depth/stencil format
     image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
     image_create_info.format = VK_FORMAT_D24_UNORM_S8_UINT;
-    image_create_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
     err = vkCreateImage(m_device->device(), &image_create_info, NULL, &dstImage);
     ASSERT_VK_SUCCESS(err);
@@ -18280,6 +15001,4220 @@ TEST_F(VkLayerTest, ClearImageErrors) {
     m_errorMonitor->VerifyFound();
 }
 #endif // IMAGE_TESTS
+
+
+// WSI Enabled Tests
+//
+TEST_F(VkWsiEnabledLayerTest, TestEnabledWsi) {
+
+#if defined(VK_USE_PLATFORM_XCB_KHR)
+    VkSurfaceKHR surface = VK_NULL_HANDLE;
+
+    VkResult err;
+    bool pass;
+    VkSwapchainKHR swapchain = VK_NULL_HANDLE;
+    VkSwapchainCreateInfoKHR swapchain_create_info = {};
+    //    uint32_t swapchain_image_count = 0;
+    //    VkImage swapchain_images[1] = {VK_NULL_HANDLE};
+    //    uint32_t image_index = 0;
+    //    VkPresentInfoKHR present_info = {};
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    // Use the create function from one of the VK_KHR_*_surface extension in
+    // order to create a surface, testing all known errors in the process,
+    // before successfully creating a surface:
+    // First, try to create a surface without a VkXcbSurfaceCreateInfoKHR:
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "required parameter pCreateInfo specified as NULL");
+    err = vkCreateXcbSurfaceKHR(instance(), NULL, NULL, &surface);
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Next, try to create a surface with the wrong
+    // VkXcbSurfaceCreateInfoKHR::sType:
+    VkXcbSurfaceCreateInfoKHR xcb_create_info = {};
+    xcb_create_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "parameter pCreateInfo->sType must be");
+    err = vkCreateXcbSurfaceKHR(instance(), &xcb_create_info, NULL, &surface);
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Create a native window, and then correctly create a surface:
+    xcb_connection_t *connection;
+    xcb_screen_t *screen;
+    xcb_window_t xcb_window;
+    xcb_intern_atom_reply_t *atom_wm_delete_window;
+
+    const xcb_setup_t *setup;
+    xcb_screen_iterator_t iter;
+    int scr;
+    uint32_t value_mask, value_list[32];
+    int width = 1;
+    int height = 1;
+
+    connection = xcb_connect(NULL, &scr);
+    ASSERT_TRUE(connection != NULL);
+    setup = xcb_get_setup(connection);
+    iter = xcb_setup_roots_iterator(setup);
+    while (scr-- > 0)
+        xcb_screen_next(&iter);
+    screen = iter.data;
+
+    xcb_window = xcb_generate_id(connection);
+
+    value_mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
+    value_list[0] = screen->black_pixel;
+    value_list[1] = XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_STRUCTURE_NOTIFY;
+
+    xcb_create_window(connection, XCB_COPY_FROM_PARENT, xcb_window, screen->root, 0, 0, width, height, 0,
+        XCB_WINDOW_CLASS_INPUT_OUTPUT, screen->root_visual, value_mask, value_list);
+
+    /* Magic code that will send notification when window is destroyed */
+    xcb_intern_atom_cookie_t cookie = xcb_intern_atom(connection, 1, 12, "WM_PROTOCOLS");
+    xcb_intern_atom_reply_t *reply = xcb_intern_atom_reply(connection, cookie, 0);
+
+    xcb_intern_atom_cookie_t cookie2 = xcb_intern_atom(connection, 0, 16, "WM_DELETE_WINDOW");
+    atom_wm_delete_window = xcb_intern_atom_reply(connection, cookie2, 0);
+    xcb_change_property(connection, XCB_PROP_MODE_REPLACE, xcb_window, (*reply).atom, 4, 32, 1, &(*atom_wm_delete_window).atom);
+    free(reply);
+
+    xcb_map_window(connection, xcb_window);
+
+    // Force the x/y coordinates to 100,100 results are identical in consecutive
+    // runs
+    const uint32_t coords[] = { 100, 100 };
+    xcb_configure_window(connection, xcb_window, XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y, coords);
+
+    // Finally, try to correctly create a surface:
+    xcb_create_info.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
+    xcb_create_info.pNext = NULL;
+    xcb_create_info.flags = 0;
+    xcb_create_info.connection = connection;
+    xcb_create_info.window = xcb_window;
+    err = vkCreateXcbSurfaceKHR(instance(), &xcb_create_info, NULL, &surface);
+    pass = (err == VK_SUCCESS);
+    ASSERT_TRUE(pass);
+
+    // Check if surface supports presentation:
+
+    // 1st, do so without having queried the queue families:
+    VkBool32 supported = false;
+    // TODO: Get the following error to come out:
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "called before calling the vkGetPhysicalDeviceQueueFamilyProperties "
+        "function");
+    err = vkGetPhysicalDeviceSurfaceSupportKHR(gpu(), 0, surface, &supported);
+    pass = (err != VK_SUCCESS);
+    //    ASSERT_TRUE(pass);
+    //    m_errorMonitor->VerifyFound();
+
+    // Next, query a queue family index that's too large:
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "called with a queueFamilyIndex that is too large");
+    err = vkGetPhysicalDeviceSurfaceSupportKHR(gpu(), 100000, surface, &supported);
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Finally, do so correctly:
+    // FIXME: THIS ISN'T CORRECT--MUST QUERY UNTIL WE FIND A QUEUE FAMILY THAT'S
+    // SUPPORTED
+    err = vkGetPhysicalDeviceSurfaceSupportKHR(gpu(), 0, surface, &supported);
+    pass = (err == VK_SUCCESS);
+    ASSERT_TRUE(pass);
+
+    // Before proceeding, try to create a swapchain without having called
+    // vkGetPhysicalDeviceSurfaceCapabilitiesKHR():
+    swapchain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    swapchain_create_info.pNext = NULL;
+    swapchain_create_info.flags = 0;
+    swapchain_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    swapchain_create_info.surface = surface;
+    swapchain_create_info.imageArrayLayers = 1;
+    swapchain_create_info.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+    swapchain_create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "called before calling vkGetPhysicalDeviceSurfaceCapabilitiesKHR().");
+    err = vkCreateSwapchainKHR(m_device->device(), &swapchain_create_info, NULL, &swapchain);
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Get the surface capabilities:
+    VkSurfaceCapabilitiesKHR surface_capabilities;
+
+    // Do so correctly (only error logged by this entrypoint is if the
+    // extension isn't enabled):
+    err = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gpu(), surface, &surface_capabilities);
+    pass = (err == VK_SUCCESS);
+    ASSERT_TRUE(pass);
+
+    // Get the surface formats:
+    uint32_t surface_format_count;
+
+    // First, try without a pointer to surface_format_count:
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "required parameter pSurfaceFormatCount "
+        "specified as NULL");
+    vkGetPhysicalDeviceSurfaceFormatsKHR(gpu(), surface, NULL, NULL);
+    pass = (err == VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Next, call with a non-NULL pSurfaceFormats, even though we haven't
+    // correctly done a 1st try (to get the count):
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT, "but no prior positive value has been seen for");
+    surface_format_count = 0;
+    vkGetPhysicalDeviceSurfaceFormatsKHR(gpu(), surface, &surface_format_count, (VkSurfaceFormatKHR *)&surface_format_count);
+    pass = (err == VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Next, correctly do a 1st try (with a NULL pointer to surface_formats):
+    vkGetPhysicalDeviceSurfaceFormatsKHR(gpu(), surface, &surface_format_count, NULL);
+    pass = (err == VK_SUCCESS);
+    ASSERT_TRUE(pass);
+
+    // Allocate memory for the correct number of VkSurfaceFormatKHR's:
+    VkSurfaceFormatKHR *surface_formats = (VkSurfaceFormatKHR *)malloc(surface_format_count * sizeof(VkSurfaceFormatKHR));
+
+    // Next, do a 2nd try with surface_format_count being set too high:
+    surface_format_count += 5;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "that is greater than the value");
+    vkGetPhysicalDeviceSurfaceFormatsKHR(gpu(), surface, &surface_format_count, surface_formats);
+    pass = (err == VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Finally, do a correct 1st and 2nd try:
+    vkGetPhysicalDeviceSurfaceFormatsKHR(gpu(), surface, &surface_format_count, NULL);
+    pass = (err == VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(gpu(), surface, &surface_format_count, surface_formats);
+    pass = (err == VK_SUCCESS);
+    ASSERT_TRUE(pass);
+
+    // Get the surface present modes:
+    uint32_t surface_present_mode_count;
+
+    // First, try without a pointer to surface_format_count:
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "required parameter pPresentModeCount "
+        "specified as NULL");
+
+    vkGetPhysicalDeviceSurfacePresentModesKHR(gpu(), surface, NULL, NULL);
+    pass = (err == VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Next, call with a non-NULL VkPresentModeKHR, even though we haven't
+    // correctly done a 1st try (to get the count):
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT, "but no prior positive value has been seen for");
+    surface_present_mode_count = 0;
+    vkGetPhysicalDeviceSurfacePresentModesKHR(gpu(), surface, &surface_present_mode_count,
+        (VkPresentModeKHR *)&surface_present_mode_count);
+    pass = (err == VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Next, correctly do a 1st try (with a NULL pointer to surface_formats):
+    vkGetPhysicalDeviceSurfacePresentModesKHR(gpu(), surface, &surface_present_mode_count, NULL);
+    pass = (err == VK_SUCCESS);
+    ASSERT_TRUE(pass);
+
+    // Allocate memory for the correct number of VkSurfaceFormatKHR's:
+    VkPresentModeKHR *surface_present_modes = (VkPresentModeKHR *)malloc(surface_present_mode_count * sizeof(VkPresentModeKHR));
+
+    // Next, do a 2nd try with surface_format_count being set too high:
+    surface_present_mode_count += 5;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "that is greater than the value");
+    vkGetPhysicalDeviceSurfacePresentModesKHR(gpu(), surface, &surface_present_mode_count, surface_present_modes);
+    pass = (err == VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Finally, do a correct 1st and 2nd try:
+    vkGetPhysicalDeviceSurfacePresentModesKHR(gpu(), surface, &surface_present_mode_count, NULL);
+    pass = (err == VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(gpu(), surface, &surface_present_mode_count, surface_present_modes);
+    pass = (err == VK_SUCCESS);
+    ASSERT_TRUE(pass);
+
+    // Create a swapchain:
+
+    // First, try without a pointer to swapchain_create_info:
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "required parameter pCreateInfo "
+        "specified as NULL");
+
+    err = vkCreateSwapchainKHR(m_device->device(), NULL, NULL, &swapchain);
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Next, call with a non-NULL swapchain_create_info, that has the wrong
+    // sType:
+    swapchain_create_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "parameter pCreateInfo->sType must be");
+
+    err = vkCreateSwapchainKHR(m_device->device(), &swapchain_create_info, NULL, &swapchain);
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Next, call with a NULL swapchain pointer:
+    swapchain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    swapchain_create_info.pNext = NULL;
+    swapchain_create_info.flags = 0;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "required parameter pSwapchain "
+        "specified as NULL");
+
+    err = vkCreateSwapchainKHR(m_device->device(), &swapchain_create_info, NULL, NULL);
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // TODO: Enhance swapchain layer so that
+    // swapchain_create_info.queueFamilyIndexCount is checked against something?
+
+    // Next, call with a queue family index that's too large:
+    uint32_t queueFamilyIndex[2] = { 100000, 0 };
+    swapchain_create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+    swapchain_create_info.queueFamilyIndexCount = 2;
+    swapchain_create_info.pQueueFamilyIndices = queueFamilyIndex;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "called with a queueFamilyIndex that is too large");
+    err = vkCreateSwapchainKHR(m_device->device(), &swapchain_create_info, NULL, &swapchain);
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Next, call a queueFamilyIndexCount that's too small for CONCURRENT:
+    swapchain_create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+    swapchain_create_info.queueFamilyIndexCount = 1;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "but with a bad value(s) for pCreateInfo->queueFamilyIndexCount or "
+        "pCreateInfo->pQueueFamilyIndices).");
+    err = vkCreateSwapchainKHR(m_device->device(), &swapchain_create_info, NULL, &swapchain);
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Next, call with an invalid imageSharingMode:
+    swapchain_create_info.imageSharingMode = VK_SHARING_MODE_MAX_ENUM;
+    swapchain_create_info.queueFamilyIndexCount = 1;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "called with a non-supported pCreateInfo->imageSharingMode (i.e.");
+    err = vkCreateSwapchainKHR(m_device->device(), &swapchain_create_info, NULL, &swapchain);
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+    // Fix for the future:
+    // FIXME: THIS ISN'T CORRECT--MUST QUERY UNTIL WE FIND A QUEUE FAMILY THAT'S
+    // SUPPORTED
+    swapchain_create_info.queueFamilyIndexCount = 0;
+    queueFamilyIndex[0] = 0;
+    swapchain_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    // TODO: CONTINUE TESTING VALIDATION OF vkCreateSwapchainKHR() ...
+    // Get the images from a swapchain:
+    // Acquire an image from a swapchain:
+    // Present an image to a swapchain:
+    // Destroy the swapchain:
+
+    // TODOs:
+    //
+    // - Try destroying the device without first destroying the swapchain
+    //
+    // - Try destroying the device without first destroying the surface
+    //
+    // - Try destroying the surface without first destroying the swapchain
+
+    // Destroy the surface:
+    vkDestroySurfaceKHR(instance(), surface, NULL);
+
+    // Tear down the window:
+    xcb_destroy_window(connection, xcb_window);
+    xcb_disconnect(connection);
+
+#else  // VK_USE_PLATFORM_XCB_KHR
+    return;
+#endif // VK_USE_PLATFORM_XCB_KHR
+}
+
+//
+// POSITIVE VALIDATION TESTS
+//
+// These tests do not expect to encounter ANY validation errors pass only if this is true
+
+// This is a positive test. No failures are expected.
+TEST_F(VkPositiveLayerTest, IgnoreUnrelatedDescriptor) {
+    TEST_DESCRIPTION("Ensure that the vkUpdateDescriptorSets validation code "
+        "is ignoring VkWriteDescriptorSet members that are not "
+        "related to the descriptor type specified by "
+        "VkWriteDescriptorSet::descriptorType.  Correct "
+        "validation behavior will result in the test running to "
+        "completion without validation errors.");
+
+    const uintptr_t invalid_ptr = 0xcdcdcdcd;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    // Image Case
+    {
+        m_errorMonitor->ExpectSuccess();
+
+        VkImage image;
+        const VkFormat tex_format = VK_FORMAT_B8G8R8A8_UNORM;
+        const int32_t tex_width = 32;
+        const int32_t tex_height = 32;
+        VkImageCreateInfo image_create_info = {};
+        image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        image_create_info.pNext = NULL;
+        image_create_info.imageType = VK_IMAGE_TYPE_2D;
+        image_create_info.format = tex_format;
+        image_create_info.extent.width = tex_width;
+        image_create_info.extent.height = tex_height;
+        image_create_info.extent.depth = 1;
+        image_create_info.mipLevels = 1;
+        image_create_info.arrayLayers = 1;
+        image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+        image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+        image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+        image_create_info.flags = 0;
+        VkResult err = vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
+        ASSERT_VK_SUCCESS(err);
+
+        VkMemoryRequirements memory_reqs;
+        VkDeviceMemory image_memory;
+        bool pass;
+        VkMemoryAllocateInfo memory_info = {};
+        memory_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        memory_info.pNext = NULL;
+        memory_info.allocationSize = 0;
+        memory_info.memoryTypeIndex = 0;
+        vkGetImageMemoryRequirements(m_device->device(), image, &memory_reqs);
+        memory_info.allocationSize = memory_reqs.size;
+        pass = m_device->phy().set_memory_type(memory_reqs.memoryTypeBits, &memory_info, 0);
+        ASSERT_TRUE(pass);
+        err = vkAllocateMemory(m_device->device(), &memory_info, NULL, &image_memory);
+        ASSERT_VK_SUCCESS(err);
+        err = vkBindImageMemory(m_device->device(), image, image_memory, 0);
+        ASSERT_VK_SUCCESS(err);
+
+        VkImageViewCreateInfo image_view_create_info = {};
+        image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        image_view_create_info.image = image;
+        image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        image_view_create_info.format = tex_format;
+        image_view_create_info.subresourceRange.layerCount = 1;
+        image_view_create_info.subresourceRange.baseMipLevel = 0;
+        image_view_create_info.subresourceRange.levelCount = 1;
+        image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+        VkImageView view;
+        err = vkCreateImageView(m_device->device(), &image_view_create_info, NULL, &view);
+        ASSERT_VK_SUCCESS(err);
+
+        VkDescriptorPoolSize ds_type_count = {};
+        ds_type_count.type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        ds_type_count.descriptorCount = 1;
+
+        VkDescriptorPoolCreateInfo ds_pool_ci = {};
+        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        ds_pool_ci.pNext = NULL;
+        ds_pool_ci.maxSets = 1;
+        ds_pool_ci.poolSizeCount = 1;
+        ds_pool_ci.pPoolSizes = &ds_type_count;
+
+        VkDescriptorPool ds_pool;
+        err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
+        ASSERT_VK_SUCCESS(err);
+
+        VkDescriptorSetLayoutBinding dsl_binding = {};
+        dsl_binding.binding = 0;
+        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        dsl_binding.descriptorCount = 1;
+        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+        dsl_binding.pImmutableSamplers = NULL;
+
+        VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ds_layout_ci.pNext = NULL;
+        ds_layout_ci.bindingCount = 1;
+        ds_layout_ci.pBindings = &dsl_binding;
+        VkDescriptorSetLayout ds_layout;
+        err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
+        ASSERT_VK_SUCCESS(err);
+
+        VkDescriptorSet descriptor_set;
+        VkDescriptorSetAllocateInfo alloc_info = {};
+        alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        alloc_info.descriptorSetCount = 1;
+        alloc_info.descriptorPool = ds_pool;
+        alloc_info.pSetLayouts = &ds_layout;
+        err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptor_set);
+        ASSERT_VK_SUCCESS(err);
+
+        VkDescriptorImageInfo image_info = {};
+        image_info.imageView = view;
+        image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+        VkWriteDescriptorSet descriptor_write;
+        memset(&descriptor_write, 0, sizeof(descriptor_write));
+        descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptor_write.dstSet = descriptor_set;
+        descriptor_write.dstBinding = 0;
+        descriptor_write.descriptorCount = 1;
+        descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        descriptor_write.pImageInfo = &image_info;
+
+        // Set pBufferInfo and pTexelBufferView to invalid values, which should
+        // be
+        //  ignored for descriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE.
+        // This will most likely produce a crash if the parameter_validation
+        // layer
+        // does not correctly ignore pBufferInfo.
+        descriptor_write.pBufferInfo = reinterpret_cast<const VkDescriptorBufferInfo *>(invalid_ptr);
+        descriptor_write.pTexelBufferView = reinterpret_cast<const VkBufferView *>(invalid_ptr);
+
+        vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
+
+        m_errorMonitor->VerifyNotFound();
+
+        vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
+        vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
+        vkDestroyImageView(m_device->device(), view, NULL);
+        vkDestroyImage(m_device->device(), image, NULL);
+        vkFreeMemory(m_device->device(), image_memory, NULL);
+    }
+
+    // Buffer Case
+    {
+        m_errorMonitor->ExpectSuccess();
+
+        VkBuffer buffer;
+        uint32_t queue_family_index = 0;
+        VkBufferCreateInfo buffer_create_info = {};
+        buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        buffer_create_info.size = 1024;
+        buffer_create_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+        buffer_create_info.queueFamilyIndexCount = 1;
+        buffer_create_info.pQueueFamilyIndices = &queue_family_index;
+
+        VkResult err = vkCreateBuffer(m_device->device(), &buffer_create_info, NULL, &buffer);
+        ASSERT_VK_SUCCESS(err);
+
+        VkMemoryRequirements memory_reqs;
+        VkDeviceMemory buffer_memory;
+        bool pass;
+        VkMemoryAllocateInfo memory_info = {};
+        memory_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        memory_info.pNext = NULL;
+        memory_info.allocationSize = 0;
+        memory_info.memoryTypeIndex = 0;
+
+        vkGetBufferMemoryRequirements(m_device->device(), buffer, &memory_reqs);
+        memory_info.allocationSize = memory_reqs.size;
+        pass = m_device->phy().set_memory_type(memory_reqs.memoryTypeBits, &memory_info, 0);
+        ASSERT_TRUE(pass);
+
+        err = vkAllocateMemory(m_device->device(), &memory_info, NULL, &buffer_memory);
+        ASSERT_VK_SUCCESS(err);
+        err = vkBindBufferMemory(m_device->device(), buffer, buffer_memory, 0);
+        ASSERT_VK_SUCCESS(err);
+
+        VkDescriptorPoolSize ds_type_count = {};
+        ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        ds_type_count.descriptorCount = 1;
+
+        VkDescriptorPoolCreateInfo ds_pool_ci = {};
+        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        ds_pool_ci.pNext = NULL;
+        ds_pool_ci.maxSets = 1;
+        ds_pool_ci.poolSizeCount = 1;
+        ds_pool_ci.pPoolSizes = &ds_type_count;
+
+        VkDescriptorPool ds_pool;
+        err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
+        ASSERT_VK_SUCCESS(err);
+
+        VkDescriptorSetLayoutBinding dsl_binding = {};
+        dsl_binding.binding = 0;
+        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        dsl_binding.descriptorCount = 1;
+        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+        dsl_binding.pImmutableSamplers = NULL;
+
+        VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ds_layout_ci.pNext = NULL;
+        ds_layout_ci.bindingCount = 1;
+        ds_layout_ci.pBindings = &dsl_binding;
+        VkDescriptorSetLayout ds_layout;
+        err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
+        ASSERT_VK_SUCCESS(err);
+
+        VkDescriptorSet descriptor_set;
+        VkDescriptorSetAllocateInfo alloc_info = {};
+        alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        alloc_info.descriptorSetCount = 1;
+        alloc_info.descriptorPool = ds_pool;
+        alloc_info.pSetLayouts = &ds_layout;
+        err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptor_set);
+        ASSERT_VK_SUCCESS(err);
+
+        VkDescriptorBufferInfo buffer_info = {};
+        buffer_info.buffer = buffer;
+        buffer_info.offset = 0;
+        buffer_info.range = 1024;
+
+        VkWriteDescriptorSet descriptor_write;
+        memset(&descriptor_write, 0, sizeof(descriptor_write));
+        descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptor_write.dstSet = descriptor_set;
+        descriptor_write.dstBinding = 0;
+        descriptor_write.descriptorCount = 1;
+        descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptor_write.pBufferInfo = &buffer_info;
+
+        // Set pImageInfo and pTexelBufferView to invalid values, which should
+        // be
+        //  ignored for descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER.
+        // This will most likely produce a crash if the parameter_validation
+        // layer
+        // does not correctly ignore pImageInfo.
+        descriptor_write.pImageInfo = reinterpret_cast<const VkDescriptorImageInfo *>(invalid_ptr);
+        descriptor_write.pTexelBufferView = reinterpret_cast<const VkBufferView *>(invalid_ptr);
+
+        vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
+
+        m_errorMonitor->VerifyNotFound();
+
+        vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptor_set);
+        vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
+        vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
+        vkDestroyBuffer(m_device->device(), buffer, NULL);
+        vkFreeMemory(m_device->device(), buffer_memory, NULL);
+    }
+
+    // Texel Buffer Case
+    {
+        m_errorMonitor->ExpectSuccess();
+
+        VkBuffer buffer;
+        uint32_t queue_family_index = 0;
+        VkBufferCreateInfo buffer_create_info = {};
+        buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        buffer_create_info.size = 1024;
+        buffer_create_info.usage = VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
+        buffer_create_info.queueFamilyIndexCount = 1;
+        buffer_create_info.pQueueFamilyIndices = &queue_family_index;
+
+        VkResult err = vkCreateBuffer(m_device->device(), &buffer_create_info, NULL, &buffer);
+        ASSERT_VK_SUCCESS(err);
+
+        VkMemoryRequirements memory_reqs;
+        VkDeviceMemory buffer_memory;
+        bool pass;
+        VkMemoryAllocateInfo memory_info = {};
+        memory_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        memory_info.pNext = NULL;
+        memory_info.allocationSize = 0;
+        memory_info.memoryTypeIndex = 0;
+
+        vkGetBufferMemoryRequirements(m_device->device(), buffer, &memory_reqs);
+        memory_info.allocationSize = memory_reqs.size;
+        pass = m_device->phy().set_memory_type(memory_reqs.memoryTypeBits, &memory_info, 0);
+        ASSERT_TRUE(pass);
+
+        err = vkAllocateMemory(m_device->device(), &memory_info, NULL, &buffer_memory);
+        ASSERT_VK_SUCCESS(err);
+        err = vkBindBufferMemory(m_device->device(), buffer, buffer_memory, 0);
+        ASSERT_VK_SUCCESS(err);
+
+        VkBufferViewCreateInfo buff_view_ci = {};
+        buff_view_ci.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
+        buff_view_ci.buffer = buffer;
+        buff_view_ci.format = VK_FORMAT_R8_UNORM;
+        buff_view_ci.range = VK_WHOLE_SIZE;
+        VkBufferView buffer_view;
+        err = vkCreateBufferView(m_device->device(), &buff_view_ci, NULL, &buffer_view);
+
+        VkDescriptorPoolSize ds_type_count = {};
+        ds_type_count.type = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+        ds_type_count.descriptorCount = 1;
+
+        VkDescriptorPoolCreateInfo ds_pool_ci = {};
+        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        ds_pool_ci.pNext = NULL;
+        ds_pool_ci.maxSets = 1;
+        ds_pool_ci.poolSizeCount = 1;
+        ds_pool_ci.pPoolSizes = &ds_type_count;
+
+        VkDescriptorPool ds_pool;
+        err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
+        ASSERT_VK_SUCCESS(err);
+
+        VkDescriptorSetLayoutBinding dsl_binding = {};
+        dsl_binding.binding = 0;
+        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+        dsl_binding.descriptorCount = 1;
+        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+        dsl_binding.pImmutableSamplers = NULL;
+
+        VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ds_layout_ci.pNext = NULL;
+        ds_layout_ci.bindingCount = 1;
+        ds_layout_ci.pBindings = &dsl_binding;
+        VkDescriptorSetLayout ds_layout;
+        err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
+        ASSERT_VK_SUCCESS(err);
+
+        VkDescriptorSet descriptor_set;
+        VkDescriptorSetAllocateInfo alloc_info = {};
+        alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        alloc_info.descriptorSetCount = 1;
+        alloc_info.descriptorPool = ds_pool;
+        alloc_info.pSetLayouts = &ds_layout;
+        err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptor_set);
+        ASSERT_VK_SUCCESS(err);
+
+        VkWriteDescriptorSet descriptor_write;
+        memset(&descriptor_write, 0, sizeof(descriptor_write));
+        descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptor_write.dstSet = descriptor_set;
+        descriptor_write.dstBinding = 0;
+        descriptor_write.descriptorCount = 1;
+        descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+        descriptor_write.pTexelBufferView = &buffer_view;
+
+        // Set pImageInfo and pBufferInfo to invalid values, which should be
+        //  ignored for descriptorType ==
+        //  VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER.
+        // This will most likely produce a crash if the parameter_validation
+        // layer
+        // does not correctly ignore pImageInfo and pBufferInfo.
+        descriptor_write.pImageInfo = reinterpret_cast<const VkDescriptorImageInfo *>(invalid_ptr);
+        descriptor_write.pBufferInfo = reinterpret_cast<const VkDescriptorBufferInfo *>(invalid_ptr);
+
+        vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
+
+        m_errorMonitor->VerifyNotFound();
+
+        vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptor_set);
+        vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
+        vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
+        vkDestroyBufferView(m_device->device(), buffer_view, NULL);
+        vkDestroyBuffer(m_device->device(), buffer, NULL);
+        vkFreeMemory(m_device->device(), buffer_memory, NULL);
+    }
+}
+
+TEST_F(VkLayerTest, DuplicateDescriptorBinding) {
+    TEST_DESCRIPTION("Create a descriptor set layout with a duplicate binding number.");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    // Create layout where two binding #s are "1"
+    static const uint32_t NUM_BINDINGS = 3;
+    VkDescriptorSetLayoutBinding dsl_binding[NUM_BINDINGS] = {};
+    dsl_binding[0].binding = 1;
+    dsl_binding[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    dsl_binding[0].descriptorCount = 1;
+    dsl_binding[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    dsl_binding[0].pImmutableSamplers = NULL;
+    dsl_binding[1].binding = 0;
+    dsl_binding[1].descriptorCount = 1;
+    dsl_binding[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    dsl_binding[1].descriptorCount = 1;
+    dsl_binding[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    dsl_binding[1].pImmutableSamplers = NULL;
+    dsl_binding[2].binding = 1; // Duplicate binding should cause error
+    dsl_binding[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    dsl_binding[2].descriptorCount = 1;
+    dsl_binding[2].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    dsl_binding[2].pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+    ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    ds_layout_ci.pNext = NULL;
+    ds_layout_ci.bindingCount = NUM_BINDINGS;
+    ds_layout_ci.pBindings = dsl_binding;
+    VkDescriptorSetLayout ds_layout;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02345);
+    vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
+    m_errorMonitor->VerifyFound();
+}
+
+// This is a positive test. No failures are expected.
+TEST_F(VkPositiveLayerTest, EmptyDescriptorUpdateTest) {
+    TEST_DESCRIPTION("Update last descriptor in a set that includes an empty binding");
+    VkResult err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    m_errorMonitor->ExpectSuccess();
+    VkDescriptorPoolSize ds_type_count = {};
+    ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    ds_type_count.descriptorCount = 2;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+    ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    ds_pool_ci.pNext = NULL;
+    ds_pool_ci.maxSets = 1;
+    ds_pool_ci.poolSizeCount = 1;
+    ds_pool_ci.pPoolSizes = &ds_type_count;
+
+    VkDescriptorPool ds_pool;
+    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    // Create layout with two uniform buffer descriptors w/ empty binding between them
+    static const uint32_t NUM_BINDINGS = 3;
+    VkDescriptorSetLayoutBinding dsl_binding[NUM_BINDINGS] = {};
+    dsl_binding[0].binding = 0;
+    dsl_binding[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    dsl_binding[0].descriptorCount = 1;
+    dsl_binding[0].stageFlags = VK_SHADER_STAGE_ALL;
+    dsl_binding[0].pImmutableSamplers = NULL;
+    dsl_binding[1].binding = 1;
+    dsl_binding[1].descriptorCount = 0; // empty binding
+    dsl_binding[2].binding = 2;
+    dsl_binding[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    dsl_binding[2].descriptorCount = 1;
+    dsl_binding[2].stageFlags = VK_SHADER_STAGE_ALL;
+    dsl_binding[2].pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+    ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    ds_layout_ci.pNext = NULL;
+    ds_layout_ci.bindingCount = NUM_BINDINGS;
+    ds_layout_ci.pBindings = dsl_binding;
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSet descriptor_set = {};
+    VkDescriptorSetAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    alloc_info.descriptorSetCount = 1;
+    alloc_info.descriptorPool = ds_pool;
+    alloc_info.pSetLayouts = &ds_layout;
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptor_set);
+    ASSERT_VK_SUCCESS(err);
+
+    // Create a buffer to be used for update
+    VkBufferCreateInfo buff_ci = {};
+    buff_ci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buff_ci.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    buff_ci.size = 256;
+    buff_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    VkBuffer buffer;
+    err = vkCreateBuffer(m_device->device(), &buff_ci, NULL, &buffer);
+    ASSERT_VK_SUCCESS(err);
+    // Have to bind memory to buffer before descriptor update
+    VkMemoryAllocateInfo mem_alloc = {};
+    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    mem_alloc.pNext = NULL;
+    mem_alloc.allocationSize = 512; // one allocation for both buffers
+    mem_alloc.memoryTypeIndex = 0;
+
+    VkMemoryRequirements mem_reqs;
+    vkGetBufferMemoryRequirements(m_device->device(), buffer, &mem_reqs);
+    bool pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
+    if (!pass) {
+        vkDestroyBuffer(m_device->device(), buffer, NULL);
+        return;
+    }
+
+    VkDeviceMemory mem;
+    err = vkAllocateMemory(m_device->device(), &mem_alloc, NULL, &mem);
+    ASSERT_VK_SUCCESS(err);
+    err = vkBindBufferMemory(m_device->device(), buffer, mem, 0);
+    ASSERT_VK_SUCCESS(err);
+
+    // Only update the descriptor at binding 2
+    VkDescriptorBufferInfo buff_info = {};
+    buff_info.buffer = buffer;
+    buff_info.offset = 0;
+    buff_info.range = VK_WHOLE_SIZE;
+    VkWriteDescriptorSet descriptor_write = {};
+    descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptor_write.dstBinding = 2;
+    descriptor_write.descriptorCount = 1;
+    descriptor_write.pTexelBufferView = nullptr;
+    descriptor_write.pBufferInfo = &buff_info;
+    descriptor_write.pImageInfo = nullptr;
+    descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    descriptor_write.dstSet = descriptor_set;
+
+    vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
+
+    m_errorMonitor->VerifyNotFound();
+    // Cleanup
+    vkFreeMemory(m_device->device(), mem, NULL);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
+    vkDestroyBuffer(m_device->device(), buffer, NULL);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
+}
+
+// This is a positive test. No failures are expected.
+TEST_F(VkPositiveLayerTest, TestAliasedMemoryTracking) {
+    VkResult err;
+    bool pass;
+
+    TEST_DESCRIPTION("Create a buffer, allocate memory, bind memory, destroy "
+        "the buffer, create an image, and bind the same memory to "
+        "it");
+
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkBuffer buffer;
+    VkImage image;
+    VkDeviceMemory mem;
+    VkMemoryRequirements mem_reqs;
+
+    VkBufferCreateInfo buf_info = {};
+    buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buf_info.pNext = NULL;
+    buf_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    buf_info.size = 256;
+    buf_info.queueFamilyIndexCount = 0;
+    buf_info.pQueueFamilyIndices = NULL;
+    buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    buf_info.flags = 0;
+    err = vkCreateBuffer(m_device->device(), &buf_info, NULL, &buffer);
+    ASSERT_VK_SUCCESS(err);
+
+    vkGetBufferMemoryRequirements(m_device->device(), buffer, &mem_reqs);
+
+    VkMemoryAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    alloc_info.pNext = NULL;
+    alloc_info.memoryTypeIndex = 0;
+
+    // Ensure memory is big enough for both bindings
+    alloc_info.allocationSize = 0x10000;
+
+    pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &alloc_info, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    if (!pass) {
+        vkDestroyBuffer(m_device->device(), buffer, NULL);
+        return;
+    }
+
+    err = vkAllocateMemory(m_device->device(), &alloc_info, NULL, &mem);
+    ASSERT_VK_SUCCESS(err);
+
+    uint8_t *pData;
+    err = vkMapMemory(m_device->device(), mem, 0, mem_reqs.size, 0, (void **)&pData);
+    ASSERT_VK_SUCCESS(err);
+
+    memset(pData, 0xCADECADE, static_cast<size_t>(mem_reqs.size));
+
+    vkUnmapMemory(m_device->device(), mem);
+
+    err = vkBindBufferMemory(m_device->device(), buffer, mem, 0);
+    ASSERT_VK_SUCCESS(err);
+
+    // NOW, destroy the buffer. Obviously, the resource no longer occupies this
+    // memory. In fact, it was never used by the GPU.
+    // Just be be sure, wait for idle.
+    vkDestroyBuffer(m_device->device(), buffer, NULL);
+    vkDeviceWaitIdle(m_device->device());
+
+    VkImageCreateInfo image_create_info = {};
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.pNext = NULL;
+    image_create_info.imageType = VK_IMAGE_TYPE_2D;
+    image_create_info.format = VK_FORMAT_R8G8B8A8_UNORM;
+    image_create_info.extent.width = 64;
+    image_create_info.extent.height = 64;
+    image_create_info.extent.depth = 1;
+    image_create_info.mipLevels = 1;
+    image_create_info.arrayLayers = 1;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    image_create_info.queueFamilyIndexCount = 0;
+    image_create_info.pQueueFamilyIndices = NULL;
+    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    image_create_info.flags = 0;
+
+    VkMemoryAllocateInfo mem_alloc = {};
+    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    mem_alloc.pNext = NULL;
+    mem_alloc.allocationSize = 0;
+    mem_alloc.memoryTypeIndex = 0;
+
+    /* Create a mappable image.  It will be the texture if linear images are ok
+    * to be textures or it will be the staging image if they are not.
+    */
+    err = vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
+    ASSERT_VK_SUCCESS(err);
+
+    vkGetImageMemoryRequirements(m_device->device(), image, &mem_reqs);
+
+    mem_alloc.allocationSize = mem_reqs.size;
+
+    pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    if (!pass) {
+        vkDestroyImage(m_device->device(), image, NULL);
+        return;
+    }
+
+    // VALIDATION FAILURE:
+    err = vkBindImageMemory(m_device->device(), image, mem, 0);
+    ASSERT_VK_SUCCESS(err);
+
+    m_errorMonitor->VerifyNotFound();
+
+    vkFreeMemory(m_device->device(), mem, NULL);
+    vkDestroyBuffer(m_device->device(), buffer, NULL);
+    vkDestroyImage(m_device->device(), image, NULL);
+}
+
+TEST_F(VkPositiveLayerTest, NonCoherentMemoryMapping) {
+
+    TEST_DESCRIPTION("Ensure that validations handling of non-coherent memory "
+        "mapping while using VK_WHOLE_SIZE does not cause access "
+        "violations");
+    VkResult err;
+    uint8_t *pData;
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkDeviceMemory mem;
+    VkMemoryRequirements mem_reqs;
+    mem_reqs.memoryTypeBits = 0xFFFFFFFF;
+    VkMemoryAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    alloc_info.pNext = NULL;
+    alloc_info.memoryTypeIndex = 0;
+
+    static const VkDeviceSize allocation_size = 0x1000;
+    alloc_info.allocationSize = allocation_size;
+
+    // Find a memory configurations WITHOUT a COHERENT bit, otherwise exit
+    bool pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &alloc_info, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+        VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    if (!pass) {
+        pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &alloc_info,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        if (!pass) {
+            pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &alloc_info,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
+                VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
+                VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+            if (!pass) {
+                return;
+            }
+        }
+    }
+
+    err = vkAllocateMemory(m_device->device(), &alloc_info, NULL, &mem);
+    ASSERT_VK_SUCCESS(err);
+
+    // Map/Flush/Invalidate using WHOLE_SIZE and zero offsets and entire
+    // mapped range
+    m_errorMonitor->ExpectSuccess();
+    err = vkMapMemory(m_device->device(), mem, 0, VK_WHOLE_SIZE, 0, (void **)&pData);
+    ASSERT_VK_SUCCESS(err);
+    VkMappedMemoryRange mmr = {};
+    mmr.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+    mmr.memory = mem;
+    mmr.offset = 0;
+    mmr.size = VK_WHOLE_SIZE;
+    err = vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
+    ASSERT_VK_SUCCESS(err);
+    err = vkInvalidateMappedMemoryRanges(m_device->device(), 1, &mmr);
+    ASSERT_VK_SUCCESS(err);
+    m_errorMonitor->VerifyNotFound();
+    vkUnmapMemory(m_device->device(), mem);
+
+    // Map/Flush/Invalidate using WHOLE_SIZE and a prime offset and entire
+    // mapped range
+    m_errorMonitor->ExpectSuccess();
+    err = vkMapMemory(m_device->device(), mem, 13, VK_WHOLE_SIZE, 0, (void **)&pData);
+    ASSERT_VK_SUCCESS(err);
+    mmr.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+    mmr.memory = mem;
+    mmr.offset = 13;
+    mmr.size = VK_WHOLE_SIZE;
+    err = vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
+    ASSERT_VK_SUCCESS(err);
+    err = vkInvalidateMappedMemoryRanges(m_device->device(), 1, &mmr);
+    ASSERT_VK_SUCCESS(err);
+    m_errorMonitor->VerifyNotFound();
+    vkUnmapMemory(m_device->device(), mem);
+
+    // Map with prime offset and size
+    // Flush/Invalidate subrange of mapped area with prime offset and size
+    m_errorMonitor->ExpectSuccess();
+    err = vkMapMemory(m_device->device(), mem, allocation_size - 137, 109, 0, (void **)&pData);
+    ASSERT_VK_SUCCESS(err);
+    mmr.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+    mmr.memory = mem;
+    mmr.offset = allocation_size - 107;
+    mmr.size = 61;
+    err = vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
+    ASSERT_VK_SUCCESS(err);
+    err = vkInvalidateMappedMemoryRanges(m_device->device(), 1, &mmr);
+    ASSERT_VK_SUCCESS(err);
+    m_errorMonitor->VerifyNotFound();
+    vkUnmapMemory(m_device->device(), mem);
+
+    // Map without offset and flush WHOLE_SIZE with two separate offsets
+    m_errorMonitor->ExpectSuccess();
+    err = vkMapMemory(m_device->device(), mem, 0, VK_WHOLE_SIZE, 0, (void **)&pData);
+    ASSERT_VK_SUCCESS(err);
+    mmr.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+    mmr.memory = mem;
+    mmr.offset = allocation_size - 100;
+    mmr.size = VK_WHOLE_SIZE;
+    err = vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
+    ASSERT_VK_SUCCESS(err);
+    mmr.offset = allocation_size - 200;
+    mmr.size = VK_WHOLE_SIZE;
+    err = vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
+    ASSERT_VK_SUCCESS(err);
+    m_errorMonitor->VerifyNotFound();
+    vkUnmapMemory(m_device->device(), mem);
+
+    vkFreeMemory(m_device->device(), mem, NULL);
+}
+
+// This is a positive test. We used to expect error in this case but spec now allows it
+TEST_F(VkPositiveLayerTest, ResetUnsignaledFence) {
+    m_errorMonitor->ExpectSuccess();
+    vk_testing::Fence testFence;
+    VkFenceCreateInfo fenceInfo = {};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.pNext = NULL;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    testFence.init(*m_device, fenceInfo);
+    VkFence fences[1] = { testFence.handle() };
+    VkResult result = vkResetFences(m_device->device(), 1, fences);
+    ASSERT_VK_SUCCESS(result);
+
+    m_errorMonitor->VerifyNotFound();
+}
+
+TEST_F(VkPositiveLayerTest, CommandBufferSimultaneousUseSync) {
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    VkResult err;
+
+    // Record (empty!) command buffer that can be submitted multiple times
+    // simultaneously.
+    VkCommandBufferBeginInfo cbbi = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr,
+        VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT, nullptr };
+    m_commandBuffer->BeginCommandBuffer(&cbbi);
+    m_commandBuffer->EndCommandBuffer();
+
+    VkFenceCreateInfo fci = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, nullptr, 0 };
+    VkFence fence;
+    err = vkCreateFence(m_device->device(), &fci, nullptr, &fence);
+    ASSERT_VK_SUCCESS(err);
+
+    VkSemaphoreCreateInfo sci = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, nullptr, 0 };
+    VkSemaphore s1, s2;
+    err = vkCreateSemaphore(m_device->device(), &sci, nullptr, &s1);
+    ASSERT_VK_SUCCESS(err);
+    err = vkCreateSemaphore(m_device->device(), &sci, nullptr, &s2);
+    ASSERT_VK_SUCCESS(err);
+
+    // Submit CB once signaling s1, with fence so we can roll forward to its retirement.
+    VkSubmitInfo si = { VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, nullptr, 1, &m_commandBuffer->handle(), 1, &s1 };
+    err = vkQueueSubmit(m_device->m_queue, 1, &si, fence);
+    ASSERT_VK_SUCCESS(err);
+
+    // Submit CB again, signaling s2.
+    si.pSignalSemaphores = &s2;
+    err = vkQueueSubmit(m_device->m_queue, 1, &si, VK_NULL_HANDLE);
+    ASSERT_VK_SUCCESS(err);
+
+    // Wait for fence.
+    err = vkWaitForFences(m_device->device(), 1, &fence, VK_TRUE, UINT64_MAX);
+    ASSERT_VK_SUCCESS(err);
+
+    // CB is still in flight from second submission, but semaphore s1 is no
+    // longer in flight. delete it.
+    vkDestroySemaphore(m_device->device(), s1, nullptr);
+
+    m_errorMonitor->VerifyNotFound();
+
+    // Force device idle and clean up remaining objects
+    vkDeviceWaitIdle(m_device->device());
+    vkDestroySemaphore(m_device->device(), s2, nullptr);
+    vkDestroyFence(m_device->device(), fence, nullptr);
+}
+
+TEST_F(VkPositiveLayerTest, FenceCreateSignaledWaitHandling) {
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    VkResult err;
+
+    // A fence created signaled
+    VkFenceCreateInfo fci1 = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, nullptr, VK_FENCE_CREATE_SIGNALED_BIT };
+    VkFence f1;
+    err = vkCreateFence(m_device->device(), &fci1, nullptr, &f1);
+    ASSERT_VK_SUCCESS(err);
+
+    // A fence created not
+    VkFenceCreateInfo fci2 = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, nullptr, 0 };
+    VkFence f2;
+    err = vkCreateFence(m_device->device(), &fci2, nullptr, &f2);
+    ASSERT_VK_SUCCESS(err);
+
+    // Submit the unsignaled fence
+    VkSubmitInfo si = { VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, nullptr, 0, nullptr, 0, nullptr };
+    err = vkQueueSubmit(m_device->m_queue, 1, &si, f2);
+
+    // Wait on both fences, with signaled first.
+    VkFence fences[] = { f1, f2 };
+    vkWaitForFences(m_device->device(), 2, fences, VK_TRUE, UINT64_MAX);
+
+    // Should have both retired!
+    vkDestroyFence(m_device->device(), f1, nullptr);
+    vkDestroyFence(m_device->device(), f2, nullptr);
+
+    m_errorMonitor->VerifyNotFound();
+}
+
+TEST_F(VkPositiveLayerTest, ValidUsage) {
+    TEST_DESCRIPTION("Verify that creating an image view from an image with valid usage "
+        "doesn't generate validation errors");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    m_errorMonitor->ExpectSuccess();
+    // Verify that we can create a view with usage INPUT_ATTACHMENT
+    VkImageObj image(m_device);
+    image.init(128, 128, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
+    ASSERT_TRUE(image.initialized());
+    VkImageView imageView;
+    VkImageViewCreateInfo ivci = {};
+    ivci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    ivci.image = image.handle();
+    ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    ivci.format = VK_FORMAT_R8G8B8A8_UNORM;
+    ivci.subresourceRange.layerCount = 1;
+    ivci.subresourceRange.baseMipLevel = 0;
+    ivci.subresourceRange.levelCount = 1;
+    ivci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+    vkCreateImageView(m_device->device(), &ivci, NULL, &imageView);
+    m_errorMonitor->VerifyNotFound();
+    vkDestroyImageView(m_device->device(), imageView, NULL);
+}
+
+// This is a positive test. No failures are expected.
+TEST_F(VkPositiveLayerTest, BindSparse) {
+    TEST_DESCRIPTION("Bind 2 memory ranges to one image using vkQueueBindSparse, destroy the image"
+        "and then free the memory");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    auto index = m_device->graphics_queue_node_index_;
+    if (!(m_device->queue_props[index].queueFlags & VK_QUEUE_SPARSE_BINDING_BIT))
+        return;
+
+    m_errorMonitor->ExpectSuccess();
+
+    VkImage image;
+    VkImageCreateInfo image_create_info = {};
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.pNext = NULL;
+    image_create_info.imageType = VK_IMAGE_TYPE_2D;
+    image_create_info.format = VK_FORMAT_B8G8R8A8_UNORM;
+    image_create_info.extent.width = 64;
+    image_create_info.extent.height = 64;
+    image_create_info.extent.depth = 1;
+    image_create_info.mipLevels = 1;
+    image_create_info.arrayLayers = 1;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    image_create_info.usage = VK_IMAGE_USAGE_STORAGE_BIT;
+    image_create_info.flags = VK_IMAGE_CREATE_SPARSE_BINDING_BIT;
+    VkResult err = vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
+    ASSERT_VK_SUCCESS(err);
+
+    VkMemoryRequirements memory_reqs;
+    VkDeviceMemory memory_one, memory_two;
+    bool pass;
+    VkMemoryAllocateInfo memory_info = {};
+    memory_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    memory_info.pNext = NULL;
+    memory_info.allocationSize = 0;
+    memory_info.memoryTypeIndex = 0;
+    vkGetImageMemoryRequirements(m_device->device(), image, &memory_reqs);
+    // Find an image big enough to allow sparse mapping of 2 memory regions
+    // Increase the image size until it is at least twice the
+    // size of the required alignment, to ensure we can bind both
+    // allocated memory blocks to the image on aligned offsets.
+    while (memory_reqs.size < (memory_reqs.alignment * 2)) {
+        vkDestroyImage(m_device->device(), image, nullptr);
+        image_create_info.extent.width *= 2;
+        image_create_info.extent.height *= 2;
+        err = vkCreateImage(m_device->device(), &image_create_info, nullptr, &image);
+        ASSERT_VK_SUCCESS(err);
+        vkGetImageMemoryRequirements(m_device->device(), image, &memory_reqs);
+    }
+    // Allocate 2 memory regions of minimum alignment size, bind one at 0, the other
+    // at the end of the first
+    memory_info.allocationSize = memory_reqs.alignment;
+    pass = m_device->phy().set_memory_type(memory_reqs.memoryTypeBits, &memory_info, 0);
+    ASSERT_TRUE(pass);
+    err = vkAllocateMemory(m_device->device(), &memory_info, NULL, &memory_one);
+    ASSERT_VK_SUCCESS(err);
+    err = vkAllocateMemory(m_device->device(), &memory_info, NULL, &memory_two);
+    ASSERT_VK_SUCCESS(err);
+    VkSparseMemoryBind binds[2];
+    binds[0].flags = 0;
+    binds[0].memory = memory_one;
+    binds[0].memoryOffset = 0;
+    binds[0].resourceOffset = 0;
+    binds[0].size = memory_info.allocationSize;
+    binds[1].flags = 0;
+    binds[1].memory = memory_two;
+    binds[1].memoryOffset = 0;
+    binds[1].resourceOffset = memory_info.allocationSize;
+    binds[1].size = memory_info.allocationSize;
+
+    VkSparseImageOpaqueMemoryBindInfo opaqueBindInfo;
+    opaqueBindInfo.image = image;
+    opaqueBindInfo.bindCount = 2;
+    opaqueBindInfo.pBinds = binds;
+
+    VkFence fence = VK_NULL_HANDLE;
+    VkBindSparseInfo bindSparseInfo = {};
+    bindSparseInfo.sType = VK_STRUCTURE_TYPE_BIND_SPARSE_INFO;
+    bindSparseInfo.imageOpaqueBindCount = 1;
+    bindSparseInfo.pImageOpaqueBinds = &opaqueBindInfo;
+
+    vkQueueBindSparse(m_device->m_queue, 1, &bindSparseInfo, fence);
+    vkQueueWaitIdle(m_device->m_queue);
+    vkDestroyImage(m_device->device(), image, NULL);
+    vkFreeMemory(m_device->device(), memory_one, NULL);
+    vkFreeMemory(m_device->device(), memory_two, NULL);
+    m_errorMonitor->VerifyNotFound();
+}
+
+TEST_F(VkPositiveLayerTest, RenderPassInitialLayoutUndefined) {
+    TEST_DESCRIPTION("Ensure that CmdBeginRenderPass with an attachment's "
+        "initialLayout of VK_IMAGE_LAYOUT_UNDEFINED works when "
+        "the command buffer has prior knowledge of that "
+        "attachment's layout.");
+
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    // A renderpass with one color attachment.
+    VkAttachmentDescription attachment = { 0,
+        VK_FORMAT_R8G8B8A8_UNORM,
+        VK_SAMPLE_COUNT_1_BIT,
+        VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        VK_ATTACHMENT_STORE_OP_STORE,
+        VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+
+    VkAttachmentReference att_ref = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+
+    VkSubpassDescription subpass = { 0, VK_PIPELINE_BIND_POINT_GRAPHICS, 0, nullptr, 1, &att_ref, nullptr, nullptr, 0, nullptr };
+
+    VkRenderPassCreateInfo rpci = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, nullptr, 0, 1, &attachment, 1, &subpass, 0, nullptr };
+
+    VkRenderPass rp;
+    VkResult err = vkCreateRenderPass(m_device->device(), &rpci, nullptr, &rp);
+    ASSERT_VK_SUCCESS(err);
+
+    // A compatible framebuffer.
+    VkImageObj image(m_device);
+    image.init(32, 32, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
+    ASSERT_TRUE(image.initialized());
+
+    VkImageViewCreateInfo ivci = {
+        VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        nullptr,
+        0,
+        image.handle(),
+        VK_IMAGE_VIEW_TYPE_2D,
+        VK_FORMAT_R8G8B8A8_UNORM,
+        { VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
+        VK_COMPONENT_SWIZZLE_IDENTITY },
+        { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
+    };
+    VkImageView view;
+    err = vkCreateImageView(m_device->device(), &ivci, nullptr, &view);
+    ASSERT_VK_SUCCESS(err);
+
+    VkFramebufferCreateInfo fci = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr, 0, rp, 1, &view, 32, 32, 1 };
+    VkFramebuffer fb;
+    err = vkCreateFramebuffer(m_device->device(), &fci, nullptr, &fb);
+    ASSERT_VK_SUCCESS(err);
+
+    // Record a single command buffer which uses this renderpass twice. The
+    // bug is triggered at the beginning of the second renderpass, when the
+    // command buffer already has a layout recorded for the attachment.
+    VkRenderPassBeginInfo rpbi = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr, rp, fb,{ { 0, 0 },{ 32, 32 } }, 0, nullptr };
+    BeginCommandBuffer();
+    vkCmdBeginRenderPass(m_commandBuffer->handle(), &rpbi, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdEndRenderPass(m_commandBuffer->handle());
+    vkCmdBeginRenderPass(m_commandBuffer->handle(), &rpbi, VK_SUBPASS_CONTENTS_INLINE);
+
+    m_errorMonitor->VerifyNotFound();
+
+    vkCmdEndRenderPass(m_commandBuffer->handle());
+    EndCommandBuffer();
+
+    vkDestroyFramebuffer(m_device->device(), fb, nullptr);
+    vkDestroyRenderPass(m_device->device(), rp, nullptr);
+    vkDestroyImageView(m_device->device(), view, nullptr);
+}
+
+TEST_F(VkPositiveLayerTest, FramebufferBindingDestroyCommandPool) {
+    TEST_DESCRIPTION("This test should pass. Create a Framebuffer and "
+        "command buffer, bind them together, then destroy "
+        "command pool and framebuffer and verify there are no "
+        "errors.");
+
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    // A renderpass with one color attachment.
+    VkAttachmentDescription attachment = { 0,
+        VK_FORMAT_R8G8B8A8_UNORM,
+        VK_SAMPLE_COUNT_1_BIT,
+        VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        VK_ATTACHMENT_STORE_OP_STORE,
+        VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+
+    VkAttachmentReference att_ref = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+
+    VkSubpassDescription subpass = { 0, VK_PIPELINE_BIND_POINT_GRAPHICS, 0, nullptr, 1, &att_ref, nullptr, nullptr, 0, nullptr };
+
+    VkRenderPassCreateInfo rpci = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, nullptr, 0, 1, &attachment, 1, &subpass, 0, nullptr };
+
+    VkRenderPass rp;
+    VkResult err = vkCreateRenderPass(m_device->device(), &rpci, nullptr, &rp);
+    ASSERT_VK_SUCCESS(err);
+
+    // A compatible framebuffer.
+    VkImageObj image(m_device);
+    image.init(32, 32, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
+    ASSERT_TRUE(image.initialized());
+
+    VkImageViewCreateInfo ivci = {
+        VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        nullptr,
+        0,
+        image.handle(),
+        VK_IMAGE_VIEW_TYPE_2D,
+        VK_FORMAT_R8G8B8A8_UNORM,
+        { VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
+        VK_COMPONENT_SWIZZLE_IDENTITY },
+        { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
+    };
+    VkImageView view;
+    err = vkCreateImageView(m_device->device(), &ivci, nullptr, &view);
+    ASSERT_VK_SUCCESS(err);
+
+    VkFramebufferCreateInfo fci = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr, 0, rp, 1, &view, 32, 32, 1 };
+    VkFramebuffer fb;
+    err = vkCreateFramebuffer(m_device->device(), &fci, nullptr, &fb);
+    ASSERT_VK_SUCCESS(err);
+
+    // Explicitly create a command buffer to bind the FB to so that we can then
+    //  destroy the command pool in order to implicitly free command buffer
+    VkCommandPool command_pool;
+    VkCommandPoolCreateInfo pool_create_info{};
+    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
+    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr, &command_pool);
+
+    VkCommandBuffer command_buffer;
+    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
+    command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    command_buffer_allocate_info.commandPool = command_pool;
+    command_buffer_allocate_info.commandBufferCount = 1;
+    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, &command_buffer);
+
+    // Begin our cmd buffer with renderpass using our framebuffer
+    VkRenderPassBeginInfo rpbi = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr, rp, fb,{ { 0, 0 },{ 32, 32 } }, 0, nullptr };
+    VkCommandBufferBeginInfo begin_info{};
+    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    vkBeginCommandBuffer(command_buffer, &begin_info);
+
+    vkCmdBeginRenderPass(command_buffer, &rpbi, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdEndRenderPass(command_buffer);
+    vkEndCommandBuffer(command_buffer);
+    vkDestroyImageView(m_device->device(), view, nullptr);
+    // Destroy command pool to implicitly free command buffer
+    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
+    vkDestroyFramebuffer(m_device->device(), fb, nullptr);
+    vkDestroyRenderPass(m_device->device(), rp, nullptr);
+    m_errorMonitor->VerifyNotFound();
+}
+
+TEST_F(VkPositiveLayerTest, RenderPassSubpassZeroTransitionsApplied) {
+    TEST_DESCRIPTION("Ensure that CmdBeginRenderPass applies the layout "
+        "transitions for the first subpass");
+
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    // A renderpass with one color attachment.
+    VkAttachmentDescription attachment = { 0,
+        VK_FORMAT_R8G8B8A8_UNORM,
+        VK_SAMPLE_COUNT_1_BIT,
+        VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        VK_ATTACHMENT_STORE_OP_STORE,
+        VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+
+    VkAttachmentReference att_ref = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+
+    VkSubpassDescription subpass = { 0, VK_PIPELINE_BIND_POINT_GRAPHICS, 0, nullptr, 1, &att_ref, nullptr, nullptr, 0, nullptr };
+
+    VkSubpassDependency dep = { 0,
+        0,
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        VK_DEPENDENCY_BY_REGION_BIT };
+
+    VkRenderPassCreateInfo rpci = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, nullptr, 0, 1, &attachment, 1, &subpass, 1, &dep };
+
+    VkResult err;
+    VkRenderPass rp;
+    err = vkCreateRenderPass(m_device->device(), &rpci, nullptr, &rp);
+    ASSERT_VK_SUCCESS(err);
+
+    // A compatible framebuffer.
+    VkImageObj image(m_device);
+    image.init(32, 32, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
+    ASSERT_TRUE(image.initialized());
+
+    VkImageViewCreateInfo ivci = {
+        VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        nullptr,
+        0,
+        image.handle(),
+        VK_IMAGE_VIEW_TYPE_2D,
+        VK_FORMAT_R8G8B8A8_UNORM,
+        { VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
+        VK_COMPONENT_SWIZZLE_IDENTITY },
+        { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
+    };
+    VkImageView view;
+    err = vkCreateImageView(m_device->device(), &ivci, nullptr, &view);
+    ASSERT_VK_SUCCESS(err);
+
+    VkFramebufferCreateInfo fci = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr, 0, rp, 1, &view, 32, 32, 1 };
+    VkFramebuffer fb;
+    err = vkCreateFramebuffer(m_device->device(), &fci, nullptr, &fb);
+    ASSERT_VK_SUCCESS(err);
+
+    // Record a single command buffer which issues a pipeline barrier w/
+    // image memory barrier for the attachment. This detects the previously
+    // missing tracking of the subpass layout by throwing a validation error
+    // if it doesn't occur.
+    VkRenderPassBeginInfo rpbi = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr, rp, fb,{ { 0, 0 },{ 32, 32 } }, 0, nullptr };
+    BeginCommandBuffer();
+    vkCmdBeginRenderPass(m_commandBuffer->handle(), &rpbi, VK_SUBPASS_CONTENTS_INLINE);
+
+    VkImageMemoryBarrier imb = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        nullptr,
+        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        VK_QUEUE_FAMILY_IGNORED,
+        VK_QUEUE_FAMILY_IGNORED,
+        image.handle(),
+        { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } };
+    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, 1,
+        &imb);
+
+    vkCmdEndRenderPass(m_commandBuffer->handle());
+    m_errorMonitor->VerifyNotFound();
+    EndCommandBuffer();
+
+    vkDestroyFramebuffer(m_device->device(), fb, nullptr);
+    vkDestroyRenderPass(m_device->device(), rp, nullptr);
+    vkDestroyImageView(m_device->device(), view, nullptr);
+}
+
+TEST_F(VkPositiveLayerTest, DepthStencilLayoutTransitionForDepthOnlyImageview) {
+    TEST_DESCRIPTION("Validate that when an imageView of a depth/stencil image "
+        "is used as a depth/stencil framebuffer attachment, the "
+        "aspectMask is ignored and both depth and stencil image "
+        "subresources are used.");
+
+    VkFormatProperties format_properties;
+    vkGetPhysicalDeviceFormatProperties(gpu(), VK_FORMAT_D32_SFLOAT_S8_UINT, &format_properties);
+    if (!(format_properties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
+        return;
+    }
+
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkAttachmentDescription attachment = { 0,
+        VK_FORMAT_D32_SFLOAT_S8_UINT,
+        VK_SAMPLE_COUNT_1_BIT,
+        VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        VK_ATTACHMENT_STORE_OP_STORE,
+        VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+
+    VkAttachmentReference att_ref = { 0, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+
+    VkSubpassDescription subpass = { 0, VK_PIPELINE_BIND_POINT_GRAPHICS, 0, nullptr, 0, nullptr, nullptr, &att_ref, 0, nullptr };
+
+    VkSubpassDependency dep = { 0,
+        0,
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        VK_DEPENDENCY_BY_REGION_BIT};
+
+    VkRenderPassCreateInfo rpci = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, nullptr, 0, 1, &attachment, 1, &subpass, 1, &dep };
+
+    VkResult err;
+    VkRenderPass rp;
+    err = vkCreateRenderPass(m_device->device(), &rpci, nullptr, &rp);
+    ASSERT_VK_SUCCESS(err);
+
+    VkImageObj image(m_device);
+    image.init_no_layout(32, 32, VK_FORMAT_D32_SFLOAT_S8_UINT,
+        0x26, // usage
+        VK_IMAGE_TILING_OPTIMAL, 0);
+    ASSERT_TRUE(image.initialized());
+    image.SetLayout(0x6, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+
+    VkImageViewCreateInfo ivci = {
+        VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        nullptr,
+        0,
+        image.handle(),
+        VK_IMAGE_VIEW_TYPE_2D,
+        VK_FORMAT_D32_SFLOAT_S8_UINT,
+        { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A },
+        { 0x2, 0, 1, 0, 1 },
+    };
+    VkImageView view;
+    err = vkCreateImageView(m_device->device(), &ivci, nullptr, &view);
+    ASSERT_VK_SUCCESS(err);
+
+    VkFramebufferCreateInfo fci = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr, 0, rp, 1, &view, 32, 32, 1 };
+    VkFramebuffer fb;
+    err = vkCreateFramebuffer(m_device->device(), &fci, nullptr, &fb);
+    ASSERT_VK_SUCCESS(err);
+
+    VkRenderPassBeginInfo rpbi = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr, rp, fb,{ { 0, 0 },{ 32, 32 } }, 0, nullptr };
+    BeginCommandBuffer();
+    vkCmdBeginRenderPass(m_commandBuffer->handle(), &rpbi, VK_SUBPASS_CONTENTS_INLINE);
+
+    VkImageMemoryBarrier imb = {};
+    imb.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    imb.pNext = nullptr;
+    imb.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    imb.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    imb.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    imb.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    imb.srcQueueFamilyIndex = 0;
+    imb.dstQueueFamilyIndex = 0;
+    imb.image = image.handle();
+    imb.subresourceRange.aspectMask = 0x6;
+    imb.subresourceRange.baseMipLevel = 0;
+    imb.subresourceRange.levelCount = 0x1;
+    imb.subresourceRange.baseArrayLayer = 0;
+    imb.subresourceRange.layerCount = 0x1;
+
+    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, 1,
+        &imb);
+
+    vkCmdEndRenderPass(m_commandBuffer->handle());
+    EndCommandBuffer();
+    QueueCommandBuffer(false);
+    m_errorMonitor->VerifyNotFound();
+
+    vkDestroyFramebuffer(m_device->device(), fb, nullptr);
+    vkDestroyRenderPass(m_device->device(), rp, nullptr);
+    vkDestroyImageView(m_device->device(), view, nullptr);
+}
+
+TEST_F(VkPositiveLayerTest, RenderPassTransitionsAttachmentUnused) {
+    TEST_DESCRIPTION("Ensure that layout transitions work correctly without "
+        "errors, when an attachment reference is "
+        "VK_ATTACHMENT_UNUSED");
+
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    // A renderpass with no attachments
+    VkAttachmentReference att_ref = { VK_ATTACHMENT_UNUSED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+
+    VkSubpassDescription subpass = { 0, VK_PIPELINE_BIND_POINT_GRAPHICS, 0, nullptr, 1, &att_ref, nullptr, nullptr, 0, nullptr };
+
+    VkRenderPassCreateInfo rpci = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, nullptr, 0, 0, nullptr, 1, &subpass, 0, nullptr };
+
+    VkRenderPass rp;
+    VkResult err = vkCreateRenderPass(m_device->device(), &rpci, nullptr, &rp);
+    ASSERT_VK_SUCCESS(err);
+
+    // A compatible framebuffer.
+    VkFramebufferCreateInfo fci = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr, 0, rp, 0, nullptr, 32, 32, 1 };
+    VkFramebuffer fb;
+    err = vkCreateFramebuffer(m_device->device(), &fci, nullptr, &fb);
+    ASSERT_VK_SUCCESS(err);
+
+    // Record a command buffer which just begins and ends the renderpass. The
+    // bug manifests in BeginRenderPass.
+    VkRenderPassBeginInfo rpbi = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr, rp, fb,{ { 0, 0 },{ 32, 32 } }, 0, nullptr };
+    BeginCommandBuffer();
+    vkCmdBeginRenderPass(m_commandBuffer->handle(), &rpbi, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdEndRenderPass(m_commandBuffer->handle());
+    m_errorMonitor->VerifyNotFound();
+    EndCommandBuffer();
+
+    vkDestroyFramebuffer(m_device->device(), fb, nullptr);
+    vkDestroyRenderPass(m_device->device(), rp, nullptr);
+}
+
+// This is a positive test. No errors are expected.
+TEST_F(VkPositiveLayerTest, StencilLoadOp) {
+    TEST_DESCRIPTION("Create a stencil-only attachment with a LOAD_OP set to "
+        "CLEAR. stencil[Load|Store]Op used to be ignored.");
+    VkResult result = VK_SUCCESS;
+    VkImageFormatProperties formatProps;
+    vkGetPhysicalDeviceImageFormatProperties(gpu(), VK_FORMAT_D24_UNORM_S8_UINT, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL,
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, 0,
+        &formatProps);
+    if (formatProps.maxExtent.width < 100 || formatProps.maxExtent.height < 100) {
+        return;
+    }
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    VkFormat depth_stencil_fmt = VK_FORMAT_D24_UNORM_S8_UINT;
+    m_depthStencil->Init(m_device, 100, 100, depth_stencil_fmt,
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
+    VkAttachmentDescription att = {};
+    VkAttachmentReference ref = {};
+    att.format = depth_stencil_fmt;
+    att.samples = VK_SAMPLE_COUNT_1_BIT;
+    att.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    att.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    att.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    att.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+    att.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    att.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkClearValue clear;
+    clear.depthStencil.depth = 1.0;
+    clear.depthStencil.stencil = 0;
+    ref.attachment = 0;
+    ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass = {};
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.flags = 0;
+    subpass.inputAttachmentCount = 0;
+    subpass.pInputAttachments = NULL;
+    subpass.colorAttachmentCount = 0;
+    subpass.pColorAttachments = NULL;
+    subpass.pResolveAttachments = NULL;
+    subpass.pDepthStencilAttachment = &ref;
+    subpass.preserveAttachmentCount = 0;
+    subpass.pPreserveAttachments = NULL;
+
+    VkRenderPass rp;
+    VkRenderPassCreateInfo rp_info = {};
+    rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    rp_info.attachmentCount = 1;
+    rp_info.pAttachments = &att;
+    rp_info.subpassCount = 1;
+    rp_info.pSubpasses = &subpass;
+    result = vkCreateRenderPass(device(), &rp_info, NULL, &rp);
+    ASSERT_VK_SUCCESS(result);
+
+    VkImageView *depthView = m_depthStencil->BindInfo();
+    VkFramebufferCreateInfo fb_info = {};
+    fb_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    fb_info.pNext = NULL;
+    fb_info.renderPass = rp;
+    fb_info.attachmentCount = 1;
+    fb_info.pAttachments = depthView;
+    fb_info.width = 100;
+    fb_info.height = 100;
+    fb_info.layers = 1;
+    VkFramebuffer fb;
+    result = vkCreateFramebuffer(device(), &fb_info, NULL, &fb);
+    ASSERT_VK_SUCCESS(result);
+
+    VkRenderPassBeginInfo rpbinfo = {};
+    rpbinfo.clearValueCount = 1;
+    rpbinfo.pClearValues = &clear;
+    rpbinfo.pNext = NULL;
+    rpbinfo.renderPass = rp;
+    rpbinfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    rpbinfo.renderArea.extent.width = 100;
+    rpbinfo.renderArea.extent.height = 100;
+    rpbinfo.renderArea.offset.x = 0;
+    rpbinfo.renderArea.offset.y = 0;
+    rpbinfo.framebuffer = fb;
+
+    VkFence fence = {};
+    VkFenceCreateInfo fence_ci = {};
+    fence_ci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fence_ci.pNext = nullptr;
+    fence_ci.flags = 0;
+    result = vkCreateFence(m_device->device(), &fence_ci, nullptr, &fence);
+    ASSERT_VK_SUCCESS(result);
+
+    m_commandBuffer->BeginCommandBuffer();
+    m_commandBuffer->BeginRenderPass(rpbinfo);
+    m_commandBuffer->EndRenderPass();
+    m_commandBuffer->EndCommandBuffer();
+    m_commandBuffer->QueueCommandBuffer(fence);
+
+    VkImageObj destImage(m_device);
+    destImage.init(100, 100, depth_stencil_fmt, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+        VK_IMAGE_TILING_OPTIMAL, 0);
+    VkImageMemoryBarrier barrier = {};
+    VkImageSubresourceRange range;
+    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+    barrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    barrier.image = m_depthStencil->handle();
+    range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+    range.baseMipLevel = 0;
+    range.levelCount = 1;
+    range.baseArrayLayer = 0;
+    range.layerCount = 1;
+    barrier.subresourceRange = range;
+    vkWaitForFences(m_device->device(), 1, &fence, VK_TRUE, UINT64_MAX);
+    VkCommandBufferObj cmdbuf(m_device, m_commandPool);
+    cmdbuf.BeginCommandBuffer();
+    cmdbuf.PipelineBarrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1,
+        &barrier);
+    barrier.srcAccessMask = 0;
+    barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    barrier.image = destImage.handle();
+    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    cmdbuf.PipelineBarrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1,
+        &barrier);
+    VkImageCopy cregion;
+    cregion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+    cregion.srcSubresource.mipLevel = 0;
+    cregion.srcSubresource.baseArrayLayer = 0;
+    cregion.srcSubresource.layerCount = 1;
+    cregion.srcOffset.x = 0;
+    cregion.srcOffset.y = 0;
+    cregion.srcOffset.z = 0;
+    cregion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+    cregion.dstSubresource.mipLevel = 0;
+    cregion.dstSubresource.baseArrayLayer = 0;
+    cregion.dstSubresource.layerCount = 1;
+    cregion.dstOffset.x = 0;
+    cregion.dstOffset.y = 0;
+    cregion.dstOffset.z = 0;
+    cregion.extent.width = 100;
+    cregion.extent.height = 100;
+    cregion.extent.depth = 1;
+    cmdbuf.CopyImage(m_depthStencil->handle(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, destImage.handle(),
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &cregion);
+    cmdbuf.EndCommandBuffer();
+
+    VkSubmitInfo submit_info;
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.pNext = NULL;
+    submit_info.waitSemaphoreCount = 0;
+    submit_info.pWaitSemaphores = NULL;
+    submit_info.pWaitDstStageMask = NULL;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &cmdbuf.handle();
+    submit_info.signalSemaphoreCount = 0;
+    submit_info.pSignalSemaphores = NULL;
+
+    m_errorMonitor->ExpectSuccess();
+    vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
+    m_errorMonitor->VerifyNotFound();
+
+    vkQueueWaitIdle(m_device->m_queue);
+    vkDestroyFence(m_device->device(), fence, nullptr);
+    vkDestroyRenderPass(m_device->device(), rp, nullptr);
+    vkDestroyFramebuffer(m_device->device(), fb, nullptr);
+}
+
+// This is a positive test.  No errors should be generated.
+TEST_F(VkPositiveLayerTest, WaitEventThenSet) {
+    TEST_DESCRIPTION("Wait on a event then set it after the wait has been submitted.");
+
+    m_errorMonitor->ExpectSuccess();
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkEvent event;
+    VkEventCreateInfo event_create_info{};
+    event_create_info.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
+    vkCreateEvent(m_device->device(), &event_create_info, nullptr, &event);
+
+    VkCommandPool command_pool;
+    VkCommandPoolCreateInfo pool_create_info{};
+    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
+    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr, &command_pool);
+
+    VkCommandBuffer command_buffer;
+    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
+    command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    command_buffer_allocate_info.commandPool = command_pool;
+    command_buffer_allocate_info.commandBufferCount = 1;
+    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, &command_buffer);
+
+    VkQueue queue = VK_NULL_HANDLE;
+    vkGetDeviceQueue(m_device->device(), m_device->graphics_queue_node_index_, 0, &queue);
+
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer, &begin_info);
+
+        vkCmdWaitEvents(command_buffer, 1, &event, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, nullptr, 0,
+            nullptr, 0, nullptr);
+        vkCmdResetEvent(command_buffer, event, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+        vkEndCommandBuffer(command_buffer);
+    }
+    {
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer;
+        submit_info.signalSemaphoreCount = 0;
+        submit_info.pSignalSemaphores = nullptr;
+        vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
+    }
+    { vkSetEvent(m_device->device(), event); }
+
+    vkQueueWaitIdle(queue);
+
+    vkDestroyEvent(m_device->device(), event, nullptr);
+    vkFreeCommandBuffers(m_device->device(), command_pool, 1, &command_buffer);
+    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
+
+    m_errorMonitor->VerifyNotFound();
+}
+// This is a positive test.  No errors should be generated.
+TEST_F(VkPositiveLayerTest, QueryAndCopySecondaryCommandBuffers) {
+    TEST_DESCRIPTION("Issue a query on a secondary command buffery and copy it on a primary.");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    if ((m_device->queue_props.empty()) || (m_device->queue_props[0].queueCount < 2))
+        return;
+
+    m_errorMonitor->ExpectSuccess();
+
+    VkQueryPool query_pool;
+    VkQueryPoolCreateInfo query_pool_create_info{};
+    query_pool_create_info.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+    query_pool_create_info.queryType = VK_QUERY_TYPE_TIMESTAMP;
+    query_pool_create_info.queryCount = 1;
+    vkCreateQueryPool(m_device->device(), &query_pool_create_info, nullptr, &query_pool);
+
+    VkCommandPool command_pool;
+    VkCommandPoolCreateInfo pool_create_info{};
+    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
+    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr, &command_pool);
+
+    VkCommandBuffer command_buffer;
+    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
+    command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    command_buffer_allocate_info.commandPool = command_pool;
+    command_buffer_allocate_info.commandBufferCount = 1;
+    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, &command_buffer);
+
+    VkCommandBuffer secondary_command_buffer;
+    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
+    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, &secondary_command_buffer);
+
+    VkQueue queue = VK_NULL_HANDLE;
+    vkGetDeviceQueue(m_device->device(), m_device->graphics_queue_node_index_, 1, &queue);
+
+    uint32_t qfi = 0;
+    VkBufferCreateInfo buff_create_info = {};
+    buff_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buff_create_info.size = 1024;
+    buff_create_info.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    buff_create_info.queueFamilyIndexCount = 1;
+    buff_create_info.pQueueFamilyIndices = &qfi;
+
+    VkResult err;
+    VkBuffer buffer;
+    err = vkCreateBuffer(m_device->device(), &buff_create_info, NULL, &buffer);
+    ASSERT_VK_SUCCESS(err);
+    VkMemoryAllocateInfo mem_alloc = {};
+    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    mem_alloc.pNext = NULL;
+    mem_alloc.allocationSize = 1024;
+    mem_alloc.memoryTypeIndex = 0;
+
+    VkMemoryRequirements memReqs;
+    vkGetBufferMemoryRequirements(m_device->device(), buffer, &memReqs);
+    bool pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &mem_alloc, 0);
+    if (!pass) {
+        vkDestroyBuffer(m_device->device(), buffer, NULL);
+        return;
+    }
+
+    VkDeviceMemory mem;
+    err = vkAllocateMemory(m_device->device(), &mem_alloc, NULL, &mem);
+    ASSERT_VK_SUCCESS(err);
+    err = vkBindBufferMemory(m_device->device(), buffer, mem, 0);
+    ASSERT_VK_SUCCESS(err);
+
+    VkCommandBufferInheritanceInfo hinfo = {};
+    hinfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+    hinfo.renderPass = VK_NULL_HANDLE;
+    hinfo.subpass = 0;
+    hinfo.framebuffer = VK_NULL_HANDLE;
+    hinfo.occlusionQueryEnable = VK_FALSE;
+    hinfo.queryFlags = 0;
+    hinfo.pipelineStatistics = 0;
+
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        begin_info.pInheritanceInfo = &hinfo;
+        vkBeginCommandBuffer(secondary_command_buffer, &begin_info);
+
+        vkCmdResetQueryPool(secondary_command_buffer, query_pool, 0, 1);
+        vkCmdWriteTimestamp(secondary_command_buffer, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, query_pool, 0);
+
+        vkEndCommandBuffer(secondary_command_buffer);
+
+        begin_info.pInheritanceInfo = nullptr;
+        vkBeginCommandBuffer(command_buffer, &begin_info);
+
+        vkCmdExecuteCommands(command_buffer, 1, &secondary_command_buffer);
+        vkCmdCopyQueryPoolResults(command_buffer, query_pool, 0, 1, buffer, 0, 0, 0);
+
+        vkEndCommandBuffer(command_buffer);
+    }
+    {
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer;
+        submit_info.signalSemaphoreCount = 0;
+        submit_info.pSignalSemaphores = nullptr;
+        vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
+    }
+
+    vkQueueWaitIdle(queue);
+
+    vkDestroyQueryPool(m_device->device(), query_pool, nullptr);
+    vkFreeCommandBuffers(m_device->device(), command_pool, 1, &command_buffer);
+    vkFreeCommandBuffers(m_device->device(), command_pool, 1, &secondary_command_buffer);
+    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
+    vkDestroyBuffer(m_device->device(), buffer, NULL);
+    vkFreeMemory(m_device->device(), mem, NULL);
+
+    m_errorMonitor->VerifyNotFound();
+}
+
+// This is a positive test.  No errors should be generated.
+TEST_F(VkPositiveLayerTest, QueryAndCopyMultipleCommandBuffers) {
+    TEST_DESCRIPTION("Issue a query and copy from it on a second command buffer.");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    if ((m_device->queue_props.empty()) || (m_device->queue_props[0].queueCount < 2))
+        return;
+
+    m_errorMonitor->ExpectSuccess();
+
+    VkQueryPool query_pool;
+    VkQueryPoolCreateInfo query_pool_create_info{};
+    query_pool_create_info.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+    query_pool_create_info.queryType = VK_QUERY_TYPE_TIMESTAMP;
+    query_pool_create_info.queryCount = 1;
+    vkCreateQueryPool(m_device->device(), &query_pool_create_info, nullptr, &query_pool);
+
+    VkCommandPool command_pool;
+    VkCommandPoolCreateInfo pool_create_info{};
+    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
+    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr, &command_pool);
+
+    VkCommandBuffer command_buffer[2];
+    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
+    command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    command_buffer_allocate_info.commandPool = command_pool;
+    command_buffer_allocate_info.commandBufferCount = 2;
+    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, command_buffer);
+
+    VkQueue queue = VK_NULL_HANDLE;
+    vkGetDeviceQueue(m_device->device(), m_device->graphics_queue_node_index_, 1, &queue);
+
+    uint32_t qfi = 0;
+    VkBufferCreateInfo buff_create_info = {};
+    buff_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buff_create_info.size = 1024;
+    buff_create_info.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    buff_create_info.queueFamilyIndexCount = 1;
+    buff_create_info.pQueueFamilyIndices = &qfi;
+
+    VkResult err;
+    VkBuffer buffer;
+    err = vkCreateBuffer(m_device->device(), &buff_create_info, NULL, &buffer);
+    ASSERT_VK_SUCCESS(err);
+    VkMemoryAllocateInfo mem_alloc = {};
+    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    mem_alloc.pNext = NULL;
+    mem_alloc.allocationSize = 1024;
+    mem_alloc.memoryTypeIndex = 0;
+
+    VkMemoryRequirements memReqs;
+    vkGetBufferMemoryRequirements(m_device->device(), buffer, &memReqs);
+    bool pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &mem_alloc, 0);
+    if (!pass) {
+        vkDestroyBuffer(m_device->device(), buffer, NULL);
+        return;
+    }
+
+    VkDeviceMemory mem;
+    err = vkAllocateMemory(m_device->device(), &mem_alloc, NULL, &mem);
+    ASSERT_VK_SUCCESS(err);
+    err = vkBindBufferMemory(m_device->device(), buffer, mem, 0);
+    ASSERT_VK_SUCCESS(err);
+
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer[0], &begin_info);
+
+        vkCmdResetQueryPool(command_buffer[0], query_pool, 0, 1);
+        vkCmdWriteTimestamp(command_buffer[0], VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, query_pool, 0);
+
+        vkEndCommandBuffer(command_buffer[0]);
+
+        vkBeginCommandBuffer(command_buffer[1], &begin_info);
+
+        vkCmdCopyQueryPoolResults(command_buffer[1], query_pool, 0, 1, buffer, 0, 0, 0);
+
+        vkEndCommandBuffer(command_buffer[1]);
+    }
+    {
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 2;
+        submit_info.pCommandBuffers = command_buffer;
+        submit_info.signalSemaphoreCount = 0;
+        submit_info.pSignalSemaphores = nullptr;
+        vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
+    }
+
+    vkQueueWaitIdle(queue);
+
+    vkDestroyQueryPool(m_device->device(), query_pool, nullptr);
+    vkFreeCommandBuffers(m_device->device(), command_pool, 2, command_buffer);
+    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
+    vkDestroyBuffer(m_device->device(), buffer, NULL);
+    vkFreeMemory(m_device->device(), mem, NULL);
+
+    m_errorMonitor->VerifyNotFound();
+}
+
+TEST_F(VkPositiveLayerTest, ResetEventThenSet) {
+    TEST_DESCRIPTION("Reset an event then set it after the reset has been submitted.");
+
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    VkEvent event;
+    VkEventCreateInfo event_create_info{};
+    event_create_info.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
+    vkCreateEvent(m_device->device(), &event_create_info, nullptr, &event);
+
+    VkCommandPool command_pool;
+    VkCommandPoolCreateInfo pool_create_info{};
+    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
+    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr, &command_pool);
+
+    VkCommandBuffer command_buffer;
+    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
+    command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    command_buffer_allocate_info.commandPool = command_pool;
+    command_buffer_allocate_info.commandBufferCount = 1;
+    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, &command_buffer);
+
+    VkQueue queue = VK_NULL_HANDLE;
+    vkGetDeviceQueue(m_device->device(), m_device->graphics_queue_node_index_, 0, &queue);
+
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer, &begin_info);
+
+        vkCmdResetEvent(command_buffer, event, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+        vkCmdWaitEvents(command_buffer, 1, &event, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
+            nullptr, 0, nullptr, 0, nullptr);
+        vkEndCommandBuffer(command_buffer);
+    }
+    {
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer;
+        submit_info.signalSemaphoreCount = 0;
+        submit_info.pSignalSemaphores = nullptr;
+        vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
+    }
+    {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "that is already in use by a "
+            "command buffer.");
+        vkSetEvent(m_device->device(), event);
+        m_errorMonitor->VerifyFound();
+    }
+
+    vkQueueWaitIdle(queue);
+
+    vkDestroyEvent(m_device->device(), event, nullptr);
+    vkFreeCommandBuffers(m_device->device(), command_pool, 1, &command_buffer);
+    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
+}
+
+// This is a positive test.  No errors should be generated.
+TEST_F(VkPositiveLayerTest, TwoFencesThreeFrames) {
+    TEST_DESCRIPTION("Two command buffers with two separate fences are each "
+        "run through a Submit & WaitForFences cycle 3 times. This "
+        "previously revealed a bug so running this positive test "
+        "to prevent a regression.");
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    VkQueue queue = VK_NULL_HANDLE;
+    vkGetDeviceQueue(m_device->device(), m_device->graphics_queue_node_index_, 0, &queue);
+
+    static const uint32_t NUM_OBJECTS = 2;
+    static const uint32_t NUM_FRAMES = 3;
+    VkCommandBuffer cmd_buffers[NUM_OBJECTS] = {};
+    VkFence fences[NUM_OBJECTS] = {};
+
+    VkCommandPool cmd_pool;
+    VkCommandPoolCreateInfo cmd_pool_ci = {};
+    cmd_pool_ci.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    cmd_pool_ci.queueFamilyIndex = m_device->graphics_queue_node_index_;
+    cmd_pool_ci.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    VkResult err = vkCreateCommandPool(m_device->device(), &cmd_pool_ci, nullptr, &cmd_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    VkCommandBufferAllocateInfo cmd_buf_info = {};
+    cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    cmd_buf_info.commandPool = cmd_pool;
+    cmd_buf_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    cmd_buf_info.commandBufferCount = 1;
+
+    VkFenceCreateInfo fence_ci = {};
+    fence_ci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fence_ci.pNext = nullptr;
+    fence_ci.flags = 0;
+
+    for (uint32_t i = 0; i < NUM_OBJECTS; ++i) {
+        err = vkAllocateCommandBuffers(m_device->device(), &cmd_buf_info, &cmd_buffers[i]);
+        ASSERT_VK_SUCCESS(err);
+        err = vkCreateFence(m_device->device(), &fence_ci, nullptr, &fences[i]);
+        ASSERT_VK_SUCCESS(err);
+    }
+
+    for (uint32_t frame = 0; frame < NUM_FRAMES; ++frame) {
+        for (uint32_t obj = 0; obj < NUM_OBJECTS; ++obj) {
+            // Create empty cmd buffer
+            VkCommandBufferBeginInfo cmdBufBeginDesc = {};
+            cmdBufBeginDesc.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+            err = vkBeginCommandBuffer(cmd_buffers[obj], &cmdBufBeginDesc);
+            ASSERT_VK_SUCCESS(err);
+            err = vkEndCommandBuffer(cmd_buffers[obj]);
+            ASSERT_VK_SUCCESS(err);
+
+            VkSubmitInfo submit_info = {};
+            submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            submit_info.commandBufferCount = 1;
+            submit_info.pCommandBuffers = &cmd_buffers[obj];
+            // Submit cmd buffer and wait for fence
+            err = vkQueueSubmit(queue, 1, &submit_info, fences[obj]);
+            ASSERT_VK_SUCCESS(err);
+            err = vkWaitForFences(m_device->device(), 1, &fences[obj], VK_TRUE, UINT64_MAX);
+            ASSERT_VK_SUCCESS(err);
+            err = vkResetFences(m_device->device(), 1, &fences[obj]);
+            ASSERT_VK_SUCCESS(err);
+        }
+    }
+    m_errorMonitor->VerifyNotFound();
+    vkDestroyCommandPool(m_device->device(), cmd_pool, NULL);
+    for (uint32_t i = 0; i < NUM_OBJECTS; ++i) {
+        vkDestroyFence(m_device->device(), fences[i], nullptr);
+    }
+}
+// This is a positive test.  No errors should be generated.
+TEST_F(VkPositiveLayerTest, TwoQueueSubmitsSeparateQueuesWithSemaphoreAndOneFenceQWI) {
+
+    TEST_DESCRIPTION("Two command buffers, each in a separate QueueSubmit call "
+        "submitted on separate queues followed by a QueueWaitIdle.");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    if ((m_device->queue_props.empty()) || (m_device->queue_props[0].queueCount < 2))
+        return;
+
+    m_errorMonitor->ExpectSuccess();
+
+    VkSemaphore semaphore;
+    VkSemaphoreCreateInfo semaphore_create_info{};
+    semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    vkCreateSemaphore(m_device->device(), &semaphore_create_info, nullptr, &semaphore);
+
+    VkCommandPool command_pool;
+    VkCommandPoolCreateInfo pool_create_info{};
+    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
+    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr, &command_pool);
+
+    VkCommandBuffer command_buffer[2];
+    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
+    command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    command_buffer_allocate_info.commandPool = command_pool;
+    command_buffer_allocate_info.commandBufferCount = 2;
+    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, command_buffer);
+
+    VkQueue queue = VK_NULL_HANDLE;
+    vkGetDeviceQueue(m_device->device(), m_device->graphics_queue_node_index_, 1, &queue);
+
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer[0], &begin_info);
+
+        vkCmdPipelineBarrier(command_buffer[0], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
+            nullptr, 0, nullptr, 0, nullptr);
+
+        VkViewport viewport{};
+        viewport.maxDepth = 1.0f;
+        viewport.minDepth = 0.0f;
+        viewport.width = 512;
+        viewport.height = 512;
+        viewport.x = 0;
+        viewport.y = 0;
+        vkCmdSetViewport(command_buffer[0], 0, 1, &viewport);
+        vkEndCommandBuffer(command_buffer[0]);
+    }
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer[1], &begin_info);
+
+        VkViewport viewport{};
+        viewport.maxDepth = 1.0f;
+        viewport.minDepth = 0.0f;
+        viewport.width = 512;
+        viewport.height = 512;
+        viewport.x = 0;
+        viewport.y = 0;
+        vkCmdSetViewport(command_buffer[1], 0, 1, &viewport);
+        vkEndCommandBuffer(command_buffer[1]);
+    }
+    {
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer[0];
+        submit_info.signalSemaphoreCount = 1;
+        submit_info.pSignalSemaphores = &semaphore;
+        vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
+    }
+    {
+        VkPipelineStageFlags flags[]{ VK_PIPELINE_STAGE_ALL_COMMANDS_BIT };
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer[1];
+        submit_info.waitSemaphoreCount = 1;
+        submit_info.pWaitSemaphores = &semaphore;
+        submit_info.pWaitDstStageMask = flags;
+        vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
+    }
+
+    vkQueueWaitIdle(m_device->m_queue);
+
+    vkDestroySemaphore(m_device->device(), semaphore, nullptr);
+    vkFreeCommandBuffers(m_device->device(), command_pool, 2, &command_buffer[0]);
+    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
+
+    m_errorMonitor->VerifyNotFound();
+}
+
+// This is a positive test.  No errors should be generated.
+TEST_F(VkPositiveLayerTest, TwoQueueSubmitsSeparateQueuesWithSemaphoreAndOneFenceQWIFence) {
+
+    TEST_DESCRIPTION("Two command buffers, each in a separate QueueSubmit call "
+        "submitted on separate queues, the second having a fence"
+        "followed by a QueueWaitIdle.");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    if ((m_device->queue_props.empty()) || (m_device->queue_props[0].queueCount < 2))
+        return;
+
+    m_errorMonitor->ExpectSuccess();
+
+    VkFence fence;
+    VkFenceCreateInfo fence_create_info{};
+    fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    vkCreateFence(m_device->device(), &fence_create_info, nullptr, &fence);
+
+    VkSemaphore semaphore;
+    VkSemaphoreCreateInfo semaphore_create_info{};
+    semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    vkCreateSemaphore(m_device->device(), &semaphore_create_info, nullptr, &semaphore);
+
+    VkCommandPool command_pool;
+    VkCommandPoolCreateInfo pool_create_info{};
+    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
+    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr, &command_pool);
+
+    VkCommandBuffer command_buffer[2];
+    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
+    command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    command_buffer_allocate_info.commandPool = command_pool;
+    command_buffer_allocate_info.commandBufferCount = 2;
+    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, command_buffer);
+
+    VkQueue queue = VK_NULL_HANDLE;
+    vkGetDeviceQueue(m_device->device(), m_device->graphics_queue_node_index_, 1, &queue);
+
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer[0], &begin_info);
+
+        vkCmdPipelineBarrier(command_buffer[0], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
+            nullptr, 0, nullptr, 0, nullptr);
+
+        VkViewport viewport{};
+        viewport.maxDepth = 1.0f;
+        viewport.minDepth = 0.0f;
+        viewport.width = 512;
+        viewport.height = 512;
+        viewport.x = 0;
+        viewport.y = 0;
+        vkCmdSetViewport(command_buffer[0], 0, 1, &viewport);
+        vkEndCommandBuffer(command_buffer[0]);
+    }
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer[1], &begin_info);
+
+        VkViewport viewport{};
+        viewport.maxDepth = 1.0f;
+        viewport.minDepth = 0.0f;
+        viewport.width = 512;
+        viewport.height = 512;
+        viewport.x = 0;
+        viewport.y = 0;
+        vkCmdSetViewport(command_buffer[1], 0, 1, &viewport);
+        vkEndCommandBuffer(command_buffer[1]);
+    }
+    {
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer[0];
+        submit_info.signalSemaphoreCount = 1;
+        submit_info.pSignalSemaphores = &semaphore;
+        vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
+    }
+    {
+        VkPipelineStageFlags flags[]{ VK_PIPELINE_STAGE_ALL_COMMANDS_BIT };
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer[1];
+        submit_info.waitSemaphoreCount = 1;
+        submit_info.pWaitSemaphores = &semaphore;
+        submit_info.pWaitDstStageMask = flags;
+        vkQueueSubmit(m_device->m_queue, 1, &submit_info, fence);
+    }
+
+    vkQueueWaitIdle(m_device->m_queue);
+
+    vkDestroyFence(m_device->device(), fence, nullptr);
+    vkDestroySemaphore(m_device->device(), semaphore, nullptr);
+    vkFreeCommandBuffers(m_device->device(), command_pool, 2, &command_buffer[0]);
+    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
+
+    m_errorMonitor->VerifyNotFound();
+}
+
+// This is a positive test.  No errors should be generated.
+TEST_F(VkPositiveLayerTest, TwoQueueSubmitsSeparateQueuesWithSemaphoreAndOneFenceTwoWFF) {
+
+    TEST_DESCRIPTION("Two command buffers, each in a separate QueueSubmit call "
+        "submitted on separate queues, the second having a fence"
+        "followed by two consecutive WaitForFences calls on the same fence.");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    if ((m_device->queue_props.empty()) || (m_device->queue_props[0].queueCount < 2))
+        return;
+
+    m_errorMonitor->ExpectSuccess();
+
+    VkFence fence;
+    VkFenceCreateInfo fence_create_info{};
+    fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    vkCreateFence(m_device->device(), &fence_create_info, nullptr, &fence);
+
+    VkSemaphore semaphore;
+    VkSemaphoreCreateInfo semaphore_create_info{};
+    semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    vkCreateSemaphore(m_device->device(), &semaphore_create_info, nullptr, &semaphore);
+
+    VkCommandPool command_pool;
+    VkCommandPoolCreateInfo pool_create_info{};
+    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
+    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr, &command_pool);
+
+    VkCommandBuffer command_buffer[2];
+    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
+    command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    command_buffer_allocate_info.commandPool = command_pool;
+    command_buffer_allocate_info.commandBufferCount = 2;
+    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, command_buffer);
+
+    VkQueue queue = VK_NULL_HANDLE;
+    vkGetDeviceQueue(m_device->device(), m_device->graphics_queue_node_index_, 1, &queue);
+
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer[0], &begin_info);
+
+        vkCmdPipelineBarrier(command_buffer[0], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
+            nullptr, 0, nullptr, 0, nullptr);
+
+        VkViewport viewport{};
+        viewport.maxDepth = 1.0f;
+        viewport.minDepth = 0.0f;
+        viewport.width = 512;
+        viewport.height = 512;
+        viewport.x = 0;
+        viewport.y = 0;
+        vkCmdSetViewport(command_buffer[0], 0, 1, &viewport);
+        vkEndCommandBuffer(command_buffer[0]);
+    }
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer[1], &begin_info);
+
+        VkViewport viewport{};
+        viewport.maxDepth = 1.0f;
+        viewport.minDepth = 0.0f;
+        viewport.width = 512;
+        viewport.height = 512;
+        viewport.x = 0;
+        viewport.y = 0;
+        vkCmdSetViewport(command_buffer[1], 0, 1, &viewport);
+        vkEndCommandBuffer(command_buffer[1]);
+    }
+    {
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer[0];
+        submit_info.signalSemaphoreCount = 1;
+        submit_info.pSignalSemaphores = &semaphore;
+        vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
+    }
+    {
+        VkPipelineStageFlags flags[]{ VK_PIPELINE_STAGE_ALL_COMMANDS_BIT };
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer[1];
+        submit_info.waitSemaphoreCount = 1;
+        submit_info.pWaitSemaphores = &semaphore;
+        submit_info.pWaitDstStageMask = flags;
+        vkQueueSubmit(m_device->m_queue, 1, &submit_info, fence);
+    }
+
+    vkWaitForFences(m_device->device(), 1, &fence, VK_TRUE, UINT64_MAX);
+    vkWaitForFences(m_device->device(), 1, &fence, VK_TRUE, UINT64_MAX);
+
+    vkDestroyFence(m_device->device(), fence, nullptr);
+    vkDestroySemaphore(m_device->device(), semaphore, nullptr);
+    vkFreeCommandBuffers(m_device->device(), command_pool, 2, &command_buffer[0]);
+    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
+
+    m_errorMonitor->VerifyNotFound();
+}
+
+TEST_F(VkPositiveLayerTest, TwoQueuesEnsureCorrectRetirementWithWorkStolen) {
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    if ((m_device->queue_props.empty()) || (m_device->queue_props[0].queueCount < 2)) {
+        printf("Test requires two queues, skipping\n");
+        return;
+    }
+
+    VkResult err;
+
+    m_errorMonitor->ExpectSuccess();
+
+    VkQueue q0 = m_device->m_queue;
+    VkQueue q1 = nullptr;
+    vkGetDeviceQueue(m_device->device(), m_device->graphics_queue_node_index_, 1, &q1);
+    ASSERT_NE(q1, nullptr);
+
+    // An (empty) command buffer. We must have work in the first submission --
+    // the layer treats unfenced work differently from fenced work.
+    VkCommandPoolCreateInfo cpci = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, nullptr, 0, 0 };
+    VkCommandPool pool;
+    err = vkCreateCommandPool(m_device->device(), &cpci, nullptr, &pool);
+    ASSERT_VK_SUCCESS(err);
+    VkCommandBufferAllocateInfo cbai = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, nullptr, pool,
+        VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1 };
+    VkCommandBuffer cb;
+    err = vkAllocateCommandBuffers(m_device->device(), &cbai, &cb);
+    ASSERT_VK_SUCCESS(err);
+    VkCommandBufferBeginInfo cbbi = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr, 0, nullptr };
+    err = vkBeginCommandBuffer(cb, &cbbi);
+    ASSERT_VK_SUCCESS(err);
+    err = vkEndCommandBuffer(cb);
+    ASSERT_VK_SUCCESS(err);
+
+    // A semaphore
+    VkSemaphoreCreateInfo sci = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, nullptr, 0 };
+    VkSemaphore s;
+    err = vkCreateSemaphore(m_device->device(), &sci, nullptr, &s);
+    ASSERT_VK_SUCCESS(err);
+
+    // First submission, to q0
+    VkSubmitInfo s0 = { VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, nullptr, 1, &cb, 1, &s };
+
+    err = vkQueueSubmit(q0, 1, &s0, VK_NULL_HANDLE);
+    ASSERT_VK_SUCCESS(err);
+
+    // Second submission, to q1, waiting on s
+    VkFlags waitmask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT; // doesn't really matter what this value is.
+    VkSubmitInfo s1 = { VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 1, &s, &waitmask, 0, nullptr, 0, nullptr };
+
+    err = vkQueueSubmit(q1, 1, &s1, VK_NULL_HANDLE);
+    ASSERT_VK_SUCCESS(err);
+
+    // Wait for q0 idle
+    err = vkQueueWaitIdle(q0);
+    ASSERT_VK_SUCCESS(err);
+
+    // Command buffer should have been completed (it was on q0); reset the pool.
+    vkFreeCommandBuffers(m_device->device(), pool, 1, &cb);
+
+    m_errorMonitor->VerifyNotFound();
+
+    // Force device completely idle and clean up resources
+    vkDeviceWaitIdle(m_device->device());
+    vkDestroyCommandPool(m_device->device(), pool, nullptr);
+    vkDestroySemaphore(m_device->device(), s, nullptr);
+}
+
+// This is a positive test.  No errors should be generated.
+TEST_F(VkPositiveLayerTest, TwoQueueSubmitsSeparateQueuesWithSemaphoreAndOneFence) {
+
+    TEST_DESCRIPTION("Two command buffers, each in a separate QueueSubmit call "
+        "submitted on separate queues, the second having a fence, "
+        "followed by a WaitForFences call.");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    if ((m_device->queue_props.empty()) || (m_device->queue_props[0].queueCount < 2))
+        return;
+
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    VkFence fence;
+    VkFenceCreateInfo fence_create_info{};
+    fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    vkCreateFence(m_device->device(), &fence_create_info, nullptr, &fence);
+
+    VkSemaphore semaphore;
+    VkSemaphoreCreateInfo semaphore_create_info{};
+    semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    vkCreateSemaphore(m_device->device(), &semaphore_create_info, nullptr, &semaphore);
+
+    VkCommandPool command_pool;
+    VkCommandPoolCreateInfo pool_create_info{};
+    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
+    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr, &command_pool);
+
+    VkCommandBuffer command_buffer[2];
+    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
+    command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    command_buffer_allocate_info.commandPool = command_pool;
+    command_buffer_allocate_info.commandBufferCount = 2;
+    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, command_buffer);
+
+    VkQueue queue = VK_NULL_HANDLE;
+    vkGetDeviceQueue(m_device->device(), m_device->graphics_queue_node_index_, 1, &queue);
+
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer[0], &begin_info);
+
+        vkCmdPipelineBarrier(command_buffer[0], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
+            nullptr, 0, nullptr, 0, nullptr);
+
+        VkViewport viewport{};
+        viewport.maxDepth = 1.0f;
+        viewport.minDepth = 0.0f;
+        viewport.width = 512;
+        viewport.height = 512;
+        viewport.x = 0;
+        viewport.y = 0;
+        vkCmdSetViewport(command_buffer[0], 0, 1, &viewport);
+        vkEndCommandBuffer(command_buffer[0]);
+    }
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer[1], &begin_info);
+
+        VkViewport viewport{};
+        viewport.maxDepth = 1.0f;
+        viewport.minDepth = 0.0f;
+        viewport.width = 512;
+        viewport.height = 512;
+        viewport.x = 0;
+        viewport.y = 0;
+        vkCmdSetViewport(command_buffer[1], 0, 1, &viewport);
+        vkEndCommandBuffer(command_buffer[1]);
+    }
+    {
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer[0];
+        submit_info.signalSemaphoreCount = 1;
+        submit_info.pSignalSemaphores = &semaphore;
+        vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
+    }
+    {
+        VkPipelineStageFlags flags[]{ VK_PIPELINE_STAGE_ALL_COMMANDS_BIT };
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer[1];
+        submit_info.waitSemaphoreCount = 1;
+        submit_info.pWaitSemaphores = &semaphore;
+        submit_info.pWaitDstStageMask = flags;
+        vkQueueSubmit(m_device->m_queue, 1, &submit_info, fence);
+    }
+
+    vkWaitForFences(m_device->device(), 1, &fence, VK_TRUE, UINT64_MAX);
+
+    vkDestroyFence(m_device->device(), fence, nullptr);
+    vkDestroySemaphore(m_device->device(), semaphore, nullptr);
+    vkFreeCommandBuffers(m_device->device(), command_pool, 2, &command_buffer[0]);
+    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
+
+    m_errorMonitor->VerifyNotFound();
+}
+
+// This is a positive test.  No errors should be generated.
+TEST_F(VkPositiveLayerTest, TwoQueueSubmitsOneQueueWithSemaphoreAndOneFence) {
+
+    TEST_DESCRIPTION("Two command buffers, each in a separate QueueSubmit call "
+        "on the same queue, sharing a signal/wait semaphore, the "
+        "second having a fence, "
+        "followed by a WaitForFences call.");
+
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    VkFence fence;
+    VkFenceCreateInfo fence_create_info{};
+    fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    vkCreateFence(m_device->device(), &fence_create_info, nullptr, &fence);
+
+    VkSemaphore semaphore;
+    VkSemaphoreCreateInfo semaphore_create_info{};
+    semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    vkCreateSemaphore(m_device->device(), &semaphore_create_info, nullptr, &semaphore);
+
+    VkCommandPool command_pool;
+    VkCommandPoolCreateInfo pool_create_info{};
+    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
+    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr, &command_pool);
+
+    VkCommandBuffer command_buffer[2];
+    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
+    command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    command_buffer_allocate_info.commandPool = command_pool;
+    command_buffer_allocate_info.commandBufferCount = 2;
+    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, command_buffer);
+
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer[0], &begin_info);
+
+        vkCmdPipelineBarrier(command_buffer[0], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
+            nullptr, 0, nullptr, 0, nullptr);
+
+        VkViewport viewport{};
+        viewport.maxDepth = 1.0f;
+        viewport.minDepth = 0.0f;
+        viewport.width = 512;
+        viewport.height = 512;
+        viewport.x = 0;
+        viewport.y = 0;
+        vkCmdSetViewport(command_buffer[0], 0, 1, &viewport);
+        vkEndCommandBuffer(command_buffer[0]);
+    }
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer[1], &begin_info);
+
+        VkViewport viewport{};
+        viewport.maxDepth = 1.0f;
+        viewport.minDepth = 0.0f;
+        viewport.width = 512;
+        viewport.height = 512;
+        viewport.x = 0;
+        viewport.y = 0;
+        vkCmdSetViewport(command_buffer[1], 0, 1, &viewport);
+        vkEndCommandBuffer(command_buffer[1]);
+    }
+    {
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer[0];
+        submit_info.signalSemaphoreCount = 1;
+        submit_info.pSignalSemaphores = &semaphore;
+        vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
+    }
+    {
+        VkPipelineStageFlags flags[]{ VK_PIPELINE_STAGE_ALL_COMMANDS_BIT };
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer[1];
+        submit_info.waitSemaphoreCount = 1;
+        submit_info.pWaitSemaphores = &semaphore;
+        submit_info.pWaitDstStageMask = flags;
+        vkQueueSubmit(m_device->m_queue, 1, &submit_info, fence);
+    }
+
+    vkWaitForFences(m_device->device(), 1, &fence, VK_TRUE, UINT64_MAX);
+
+    vkDestroyFence(m_device->device(), fence, nullptr);
+    vkDestroySemaphore(m_device->device(), semaphore, nullptr);
+    vkFreeCommandBuffers(m_device->device(), command_pool, 2, &command_buffer[0]);
+    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
+
+    m_errorMonitor->VerifyNotFound();
+}
+
+// This is a positive test.  No errors should be generated.
+TEST_F(VkPositiveLayerTest, TwoQueueSubmitsOneQueueNullQueueSubmitWithFence) {
+
+    TEST_DESCRIPTION("Two command buffers, each in a separate QueueSubmit call "
+        "on the same queue, no fences, followed by a third QueueSubmit with NO "
+        "SubmitInfos but with a fence, followed by a WaitForFences call.");
+
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    VkFence fence;
+    VkFenceCreateInfo fence_create_info{};
+    fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    vkCreateFence(m_device->device(), &fence_create_info, nullptr, &fence);
+
+    VkCommandPool command_pool;
+    VkCommandPoolCreateInfo pool_create_info{};
+    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
+    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr, &command_pool);
+
+    VkCommandBuffer command_buffer[2];
+    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
+    command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    command_buffer_allocate_info.commandPool = command_pool;
+    command_buffer_allocate_info.commandBufferCount = 2;
+    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, command_buffer);
+
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer[0], &begin_info);
+
+        vkCmdPipelineBarrier(command_buffer[0], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
+            nullptr, 0, nullptr, 0, nullptr);
+
+        VkViewport viewport{};
+        viewport.maxDepth = 1.0f;
+        viewport.minDepth = 0.0f;
+        viewport.width = 512;
+        viewport.height = 512;
+        viewport.x = 0;
+        viewport.y = 0;
+        vkCmdSetViewport(command_buffer[0], 0, 1, &viewport);
+        vkEndCommandBuffer(command_buffer[0]);
+    }
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer[1], &begin_info);
+
+        VkViewport viewport{};
+        viewport.maxDepth = 1.0f;
+        viewport.minDepth = 0.0f;
+        viewport.width = 512;
+        viewport.height = 512;
+        viewport.x = 0;
+        viewport.y = 0;
+        vkCmdSetViewport(command_buffer[1], 0, 1, &viewport);
+        vkEndCommandBuffer(command_buffer[1]);
+    }
+    {
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer[0];
+        submit_info.signalSemaphoreCount = 0;
+        submit_info.pSignalSemaphores = VK_NULL_HANDLE;
+        vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
+    }
+    {
+        VkPipelineStageFlags flags[]{ VK_PIPELINE_STAGE_ALL_COMMANDS_BIT };
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer[1];
+        submit_info.waitSemaphoreCount = 0;
+        submit_info.pWaitSemaphores = VK_NULL_HANDLE;
+        submit_info.pWaitDstStageMask = flags;
+        vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
+    }
+
+    vkQueueSubmit(m_device->m_queue, 0, NULL, fence);
+
+    VkResult err = vkWaitForFences(m_device->device(), 1, &fence, VK_TRUE, UINT64_MAX);
+    ASSERT_VK_SUCCESS(err);
+
+    vkDestroyFence(m_device->device(), fence, nullptr);
+    vkFreeCommandBuffers(m_device->device(), command_pool, 2, &command_buffer[0]);
+    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
+
+    m_errorMonitor->VerifyNotFound();
+}
+
+// This is a positive test.  No errors should be generated.
+TEST_F(VkPositiveLayerTest, TwoQueueSubmitsOneQueueOneFence) {
+
+    TEST_DESCRIPTION("Two command buffers, each in a separate QueueSubmit call "
+        "on the same queue, the second having a fence, followed "
+        "by a WaitForFences call.");
+
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    VkFence fence;
+    VkFenceCreateInfo fence_create_info{};
+    fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    vkCreateFence(m_device->device(), &fence_create_info, nullptr, &fence);
+
+    VkCommandPool command_pool;
+    VkCommandPoolCreateInfo pool_create_info{};
+    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
+    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr, &command_pool);
+
+    VkCommandBuffer command_buffer[2];
+    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
+    command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    command_buffer_allocate_info.commandPool = command_pool;
+    command_buffer_allocate_info.commandBufferCount = 2;
+    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, command_buffer);
+
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer[0], &begin_info);
+
+        vkCmdPipelineBarrier(command_buffer[0], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
+            nullptr, 0, nullptr, 0, nullptr);
+
+        VkViewport viewport{};
+        viewport.maxDepth = 1.0f;
+        viewport.minDepth = 0.0f;
+        viewport.width = 512;
+        viewport.height = 512;
+        viewport.x = 0;
+        viewport.y = 0;
+        vkCmdSetViewport(command_buffer[0], 0, 1, &viewport);
+        vkEndCommandBuffer(command_buffer[0]);
+    }
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer[1], &begin_info);
+
+        VkViewport viewport{};
+        viewport.maxDepth = 1.0f;
+        viewport.minDepth = 0.0f;
+        viewport.width = 512;
+        viewport.height = 512;
+        viewport.x = 0;
+        viewport.y = 0;
+        vkCmdSetViewport(command_buffer[1], 0, 1, &viewport);
+        vkEndCommandBuffer(command_buffer[1]);
+    }
+    {
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer[0];
+        submit_info.signalSemaphoreCount = 0;
+        submit_info.pSignalSemaphores = VK_NULL_HANDLE;
+        vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
+    }
+    {
+        VkPipelineStageFlags flags[]{ VK_PIPELINE_STAGE_ALL_COMMANDS_BIT };
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer[1];
+        submit_info.waitSemaphoreCount = 0;
+        submit_info.pWaitSemaphores = VK_NULL_HANDLE;
+        submit_info.pWaitDstStageMask = flags;
+        vkQueueSubmit(m_device->m_queue, 1, &submit_info, fence);
+    }
+
+    vkWaitForFences(m_device->device(), 1, &fence, VK_TRUE, UINT64_MAX);
+
+    vkDestroyFence(m_device->device(), fence, nullptr);
+    vkFreeCommandBuffers(m_device->device(), command_pool, 2, &command_buffer[0]);
+    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
+
+    m_errorMonitor->VerifyNotFound();
+}
+
+// This is a positive test.  No errors should be generated.
+TEST_F(VkPositiveLayerTest, TwoSubmitInfosWithSemaphoreOneQueueSubmitsOneFence) {
+
+    TEST_DESCRIPTION("Two command buffers each in a separate SubmitInfo sent in a single "
+        "QueueSubmit call followed by a WaitForFences call.");
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    m_errorMonitor->ExpectSuccess();
+
+    VkFence fence;
+    VkFenceCreateInfo fence_create_info{};
+    fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    vkCreateFence(m_device->device(), &fence_create_info, nullptr, &fence);
+
+    VkSemaphore semaphore;
+    VkSemaphoreCreateInfo semaphore_create_info{};
+    semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    vkCreateSemaphore(m_device->device(), &semaphore_create_info, nullptr, &semaphore);
+
+    VkCommandPool command_pool;
+    VkCommandPoolCreateInfo pool_create_info{};
+    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
+    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr, &command_pool);
+
+    VkCommandBuffer command_buffer[2];
+    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
+    command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    command_buffer_allocate_info.commandPool = command_pool;
+    command_buffer_allocate_info.commandBufferCount = 2;
+    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, command_buffer);
+
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer[0], &begin_info);
+
+        vkCmdPipelineBarrier(command_buffer[0], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
+            nullptr, 0, nullptr, 0, nullptr);
+
+        VkViewport viewport{};
+        viewport.maxDepth = 1.0f;
+        viewport.minDepth = 0.0f;
+        viewport.width = 512;
+        viewport.height = 512;
+        viewport.x = 0;
+        viewport.y = 0;
+        vkCmdSetViewport(command_buffer[0], 0, 1, &viewport);
+        vkEndCommandBuffer(command_buffer[0]);
+    }
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer[1], &begin_info);
+
+        VkViewport viewport{};
+        viewport.maxDepth = 1.0f;
+        viewport.minDepth = 0.0f;
+        viewport.width = 512;
+        viewport.height = 512;
+        viewport.x = 0;
+        viewport.y = 0;
+        vkCmdSetViewport(command_buffer[1], 0, 1, &viewport);
+        vkEndCommandBuffer(command_buffer[1]);
+    }
+    {
+        VkSubmitInfo submit_info[2];
+        VkPipelineStageFlags flags[]{ VK_PIPELINE_STAGE_ALL_COMMANDS_BIT };
+
+        submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info[0].pNext = NULL;
+        submit_info[0].commandBufferCount = 1;
+        submit_info[0].pCommandBuffers = &command_buffer[0];
+        submit_info[0].signalSemaphoreCount = 1;
+        submit_info[0].pSignalSemaphores = &semaphore;
+        submit_info[0].waitSemaphoreCount = 0;
+        submit_info[0].pWaitSemaphores = NULL;
+        submit_info[0].pWaitDstStageMask = 0;
+
+        submit_info[1].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info[1].pNext = NULL;
+        submit_info[1].commandBufferCount = 1;
+        submit_info[1].pCommandBuffers = &command_buffer[1];
+        submit_info[1].waitSemaphoreCount = 1;
+        submit_info[1].pWaitSemaphores = &semaphore;
+        submit_info[1].pWaitDstStageMask = flags;
+        submit_info[1].signalSemaphoreCount = 0;
+        submit_info[1].pSignalSemaphores = NULL;
+        vkQueueSubmit(m_device->m_queue, 2, &submit_info[0], fence);
+    }
+
+    vkWaitForFences(m_device->device(), 1, &fence, VK_TRUE, UINT64_MAX);
+
+    vkDestroyFence(m_device->device(), fence, nullptr);
+    vkFreeCommandBuffers(m_device->device(), command_pool, 2, &command_buffer[0]);
+    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
+    vkDestroySemaphore(m_device->device(), semaphore, nullptr);
+
+    m_errorMonitor->VerifyNotFound();
+}
+
+TEST_F(VkPositiveLayerTest, RenderPassSecondaryCommandBuffersMultipleTimes) {
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    BeginCommandBuffer();                                   // Framework implicitly begins the renderpass.
+    vkCmdEndRenderPass(m_commandBuffer->GetBufferHandle()); // End implicit.
+
+    vkCmdBeginRenderPass(m_commandBuffer->GetBufferHandle(), &m_renderPassBeginInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+    vkCmdEndRenderPass(m_commandBuffer->GetBufferHandle());
+    m_errorMonitor->VerifyNotFound();
+    vkCmdBeginRenderPass(m_commandBuffer->GetBufferHandle(), &m_renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+    m_errorMonitor->VerifyNotFound();
+    vkCmdEndRenderPass(m_commandBuffer->GetBufferHandle());
+    m_errorMonitor->VerifyNotFound();
+
+    m_commandBuffer->EndCommandBuffer();
+    m_errorMonitor->VerifyNotFound();
+}
+
+TEST_F(VkPositiveLayerTest, ValidRenderPassAttachmentLayoutWithLoadOp) {
+    TEST_DESCRIPTION("Positive test where we create a renderpass with an "
+                     "attachment that uses LOAD_OP_CLEAR, the first subpass "
+                     "has a valid layout, and a second subpass then uses a "
+                     "valid *READ_ONLY* layout.");
+    m_errorMonitor->ExpectSuccess();
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkAttachmentReference attach[2] = {};
+    attach[0].attachment = 0;
+    attach[0].layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    attach[1].attachment = 0;
+    attach[1].layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+    VkSubpassDescription subpasses[2] = {};
+    // First subpass clears DS attach on load
+    subpasses[0].pDepthStencilAttachment = &attach[0];
+    // 2nd subpass reads in DS as input attachment
+    subpasses[1].inputAttachmentCount = 1;
+    subpasses[1].pInputAttachments = &attach[1];
+    VkAttachmentDescription attach_desc = {};
+    attach_desc.format = VK_FORMAT_D24_UNORM_S8_UINT;
+    attach_desc.samples = VK_SAMPLE_COUNT_1_BIT;
+    attach_desc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attach_desc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attach_desc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attach_desc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attach_desc.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    attach_desc.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+    VkRenderPassCreateInfo rpci = {};
+    rpci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    rpci.attachmentCount = 1;
+    rpci.pAttachments = &attach_desc;
+    rpci.subpassCount = 2;
+    rpci.pSubpasses = subpasses;
+
+    // Now create RenderPass and verify no errors
+    VkRenderPass rp;
+    vkCreateRenderPass(m_device->device(), &rpci, NULL, &rp);
+    m_errorMonitor->VerifyNotFound();
+
+    vkDestroyRenderPass(m_device->device(), rp, NULL);
+}
+
+TEST_F(VkPositiveLayerTest, CreatePipelineAttribMatrixType) {
+    TEST_DESCRIPTION("Test that pipeline validation accepts matrices passed "
+        "as vertex attributes");
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkVertexInputBindingDescription input_binding;
+    memset(&input_binding, 0, sizeof(input_binding));
+
+    VkVertexInputAttributeDescription input_attribs[2];
+    memset(input_attribs, 0, sizeof(input_attribs));
+
+    for (int i = 0; i < 2; i++) {
+        input_attribs[i].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+        input_attribs[i].location = i;
+    }
+
+    char const *vsSource = "#version 450\n"
+        "\n"
+        "layout(location=0) in mat2x4 x;\n"
+        "out gl_PerVertex {\n"
+        "    vec4 gl_Position;\n"
+        "};\n"
+        "void main(){\n"
+        "   gl_Position = x[0] + x[1];\n"
+        "}\n";
+    char const *fsSource = "#version 450\n"
+        "\n"
+        "layout(location=0) out vec4 color;\n"
+        "void main(){\n"
+        "   color = vec4(1);\n"
+        "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddColorAttachment();
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+
+    pipe.AddVertexInputBindings(&input_binding, 1);
+    pipe.AddVertexInputAttribs(input_attribs, 2);
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendDummy();
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+
+    /* expect success */
+    m_errorMonitor->VerifyNotFound();
+}
+
+TEST_F(VkPositiveLayerTest, CreatePipelineAttribArrayType) {
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkVertexInputBindingDescription input_binding;
+    memset(&input_binding, 0, sizeof(input_binding));
+
+    VkVertexInputAttributeDescription input_attribs[2];
+    memset(input_attribs, 0, sizeof(input_attribs));
+
+    for (int i = 0; i < 2; i++) {
+        input_attribs[i].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+        input_attribs[i].location = i;
+    }
+
+    char const *vsSource = "#version 450\n"
+        "\n"
+        "layout(location=0) in vec4 x[2];\n"
+        "out gl_PerVertex {\n"
+        "    vec4 gl_Position;\n"
+        "};\n"
+        "void main(){\n"
+        "   gl_Position = x[0] + x[1];\n"
+        "}\n";
+    char const *fsSource = "#version 450\n"
+        "\n"
+        "layout(location=0) out vec4 color;\n"
+        "void main(){\n"
+        "   color = vec4(1);\n"
+        "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddColorAttachment();
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+
+    pipe.AddVertexInputBindings(&input_binding, 1);
+    pipe.AddVertexInputAttribs(input_attribs, 2);
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendDummy();
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+
+    m_errorMonitor->VerifyNotFound();
+}
+
+TEST_F(VkPositiveLayerTest, CreatePipelineAttribComponents) {
+    TEST_DESCRIPTION("Test that pipeline validation accepts consuming a vertex attribute "
+        "through multiple vertex shader inputs, each consuming a different "
+        "subset of the components.");
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkVertexInputBindingDescription input_binding;
+    memset(&input_binding, 0, sizeof(input_binding));
+
+    VkVertexInputAttributeDescription input_attribs[3];
+    memset(input_attribs, 0, sizeof(input_attribs));
+
+    for (int i = 0; i < 3; i++) {
+        input_attribs[i].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+        input_attribs[i].location = i;
+    }
+
+    char const *vsSource = "#version 450\n"
+        "\n"
+        "layout(location=0) in vec4 x;\n"
+        "layout(location=1) in vec3 y1;\n"
+        "layout(location=1, component=3) in float y2;\n"
+        "layout(location=2) in vec4 z;\n"
+        "out gl_PerVertex {\n"
+        "    vec4 gl_Position;\n"
+        "};\n"
+        "void main(){\n"
+        "   gl_Position = x + vec4(y1, y2) + z;\n"
+        "}\n";
+    char const *fsSource = "#version 450\n"
+        "\n"
+        "layout(location=0) out vec4 color;\n"
+        "void main(){\n"
+        "   color = vec4(1);\n"
+        "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddColorAttachment();
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+
+    pipe.AddVertexInputBindings(&input_binding, 1);
+    pipe.AddVertexInputAttribs(input_attribs, 3);
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendDummy();
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+
+    m_errorMonitor->VerifyNotFound();
+}
+
+TEST_F(VkPositiveLayerTest, CreatePipelineSimplePositive) {
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    char const *vsSource = "#version 450\n"
+        "out gl_PerVertex {\n"
+        "    vec4 gl_Position;\n"
+        "};\n"
+        "void main(){\n"
+        "   gl_Position = vec4(0);\n"
+        "}\n";
+    char const *fsSource = "#version 450\n"
+        "\n"
+        "layout(location=0) out vec4 color;\n"
+        "void main(){\n"
+        "   color = vec4(1);\n"
+        "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddColorAttachment();
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendDummy();
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+
+    m_errorMonitor->VerifyNotFound();
+}
+
+TEST_F(VkPositiveLayerTest, CreatePipelineRelaxedTypeMatch) {
+    TEST_DESCRIPTION("Test that pipeline validation accepts the relaxed type matching rules "
+        "set out in 14.1.3: fundamental type must match, and producer side must "
+        "have at least as many components");
+    m_errorMonitor->ExpectSuccess();
+
+    // VK 1.0.8 Specification, 14.1.3 "Additionally,..." block
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    char const *vsSource = "#version 450\n"
+        "out gl_PerVertex {\n"
+        "    vec4 gl_Position;\n"
+        "};\n"
+        "layout(location=0) out vec3 x;\n"
+        "layout(location=1) out ivec3 y;\n"
+        "layout(location=2) out vec3 z;\n"
+        "void main(){\n"
+        "   gl_Position = vec4(0);\n"
+        "   x = vec3(0); y = ivec3(0); z = vec3(0);\n"
+        "}\n";
+    char const *fsSource = "#version 450\n"
+        "\n"
+        "layout(location=0) out vec4 color;\n"
+        "layout(location=0) in float x;\n"
+        "layout(location=1) flat in int y;\n"
+        "layout(location=2) in vec2 z;\n"
+        "void main(){\n"
+        "   color = vec4(1 + x + y + z.x);\n"
+        "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddColorAttachment();
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendDummy();
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    VkResult err = VK_SUCCESS;
+    err = pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+    ASSERT_VK_SUCCESS(err);
+
+    m_errorMonitor->VerifyNotFound();
+}
+
+TEST_F(VkPositiveLayerTest, CreatePipelineTessPerVertex) {
+    TEST_DESCRIPTION("Test that pipeline validation accepts per-vertex variables "
+        "passed between the TCS and TES stages");
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    if (!m_device->phy().features().tessellationShader) {
+        printf("Device does not support tessellation shaders; skipped.\n");
+        return;
+    }
+
+    char const *vsSource = "#version 450\n"
+        "void main(){}\n";
+    char const *tcsSource = "#version 450\n"
+        "layout(location=0) out int x[];\n"
+        "layout(vertices=3) out;\n"
+        "void main(){\n"
+        "   gl_TessLevelOuter[0] = gl_TessLevelOuter[1] = gl_TessLevelOuter[2] = 1;\n"
+        "   gl_TessLevelInner[0] = 1;\n"
+        "   x[gl_InvocationID] = gl_InvocationID;\n"
+        "}\n";
+    char const *tesSource = "#version 450\n"
+        "layout(triangles, equal_spacing, cw) in;\n"
+        "layout(location=0) in int x[];\n"
+        "out gl_PerVertex { vec4 gl_Position; };\n"
+        "void main(){\n"
+        "   gl_Position.xyz = gl_TessCoord;\n"
+        "   gl_Position.w = x[0] + x[1] + x[2];\n"
+        "}\n";
+    char const *fsSource = "#version 450\n"
+        "layout(location=0) out vec4 color;\n"
+        "void main(){\n"
+        "   color = vec4(1);\n"
+        "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj tcs(m_device, tcsSource, VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, this);
+    VkShaderObj tes(m_device, tesSource, VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineInputAssemblyStateCreateInfo iasci{ VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO, nullptr, 0,
+        VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, VK_FALSE };
+
+    VkPipelineTessellationStateCreateInfo tsci{ VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO, nullptr, 0, 3 };
+
+    VkPipelineObj pipe(m_device);
+    pipe.SetInputAssembly(&iasci);
+    pipe.SetTessellation(&tsci);
+    pipe.AddColorAttachment();
+    pipe.AddShader(&vs);
+    pipe.AddShader(&tcs);
+    pipe.AddShader(&tes);
+    pipe.AddShader(&fs);
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendDummy();
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+
+    m_errorMonitor->VerifyNotFound();
+}
+
+TEST_F(VkPositiveLayerTest, CreatePipelineGeometryInputBlockPositive) {
+    TEST_DESCRIPTION("Test that pipeline validation accepts a user-defined "
+        "interface block passed into the geometry shader. This "
+        "is interesting because the 'extra' array level is not "
+        "present on the member type, but on the block instance.");
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    if (!m_device->phy().features().geometryShader) {
+        printf("Device does not support geometry shaders; skipped.\n");
+        return;
+    }
+
+    char const *vsSource = "#version 450\n"
+        "layout(location=0) out VertexData { vec4 x; } vs_out;\n"
+        "void main(){\n"
+        "   vs_out.x = vec4(1);\n"
+        "}\n";
+    char const *gsSource = "#version 450\n"
+        "layout(triangles) in;\n"
+        "layout(triangle_strip, max_vertices=3) out;\n"
+        "layout(location=0) in VertexData { vec4 x; } gs_in[];\n"
+        "out gl_PerVertex { vec4 gl_Position; };\n"
+        "void main() {\n"
+        "   gl_Position = gs_in[0].x;\n"
+        "   EmitVertex();\n"
+        "}\n";
+    char const *fsSource = "#version 450\n"
+        "layout(location=0) out vec4 color;\n"
+        "void main(){\n"
+        "   color = vec4(1);\n"
+        "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj gs(m_device, gsSource, VK_SHADER_STAGE_GEOMETRY_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddColorAttachment();
+    pipe.AddShader(&vs);
+    pipe.AddShader(&gs);
+    pipe.AddShader(&fs);
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendDummy();
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+
+    m_errorMonitor->VerifyNotFound();
+}
+
+TEST_F(VkPositiveLayerTest, CreatePipeline64BitAttributesPositive) {
+    TEST_DESCRIPTION("Test that pipeline validation accepts basic use of 64bit vertex "
+        "attributes. This is interesting because they consume multiple "
+        "locations.");
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    if (!m_device->phy().features().shaderFloat64) {
+        printf("Device does not support 64bit vertex attributes; skipped.\n");
+        return;
+    }
+
+    VkVertexInputBindingDescription input_bindings[1];
+    memset(input_bindings, 0, sizeof(input_bindings));
+
+    VkVertexInputAttributeDescription input_attribs[4];
+    memset(input_attribs, 0, sizeof(input_attribs));
+    input_attribs[0].location = 0;
+    input_attribs[0].offset = 0;
+    input_attribs[0].format = VK_FORMAT_R64G64B64A64_SFLOAT;
+    input_attribs[1].location = 2;
+    input_attribs[1].offset = 32;
+    input_attribs[1].format = VK_FORMAT_R64G64B64A64_SFLOAT;
+    input_attribs[2].location = 4;
+    input_attribs[2].offset = 64;
+    input_attribs[2].format = VK_FORMAT_R64G64B64A64_SFLOAT;
+    input_attribs[3].location = 6;
+    input_attribs[3].offset = 96;
+    input_attribs[3].format = VK_FORMAT_R64G64B64A64_SFLOAT;
+
+    char const *vsSource = "#version 450\n"
+        "\n"
+        "layout(location=0) in dmat4 x;\n"
+        "out gl_PerVertex {\n"
+        "    vec4 gl_Position;\n"
+        "};\n"
+        "void main(){\n"
+        "   gl_Position = vec4(x[0][0]);\n"
+        "}\n";
+    char const *fsSource = "#version 450\n"
+        "\n"
+        "layout(location=0) out vec4 color;\n"
+        "void main(){\n"
+        "   color = vec4(1);\n"
+        "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddColorAttachment();
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+
+    pipe.AddVertexInputBindings(input_bindings, 1);
+    pipe.AddVertexInputAttribs(input_attribs, 4);
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendDummy();
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+
+    m_errorMonitor->VerifyNotFound();
+}
+
+TEST_F(VkPositiveLayerTest, CreatePipelineInputAttachmentPositive) {
+    TEST_DESCRIPTION("Positive test for a correctly matched input attachment");
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    char const *vsSource = "#version 450\n"
+        "\n"
+        "out gl_PerVertex {\n"
+        "    vec4 gl_Position;\n"
+        "};\n"
+        "void main(){\n"
+        "    gl_Position = vec4(1);\n"
+        "}\n";
+    char const *fsSource = "#version 450\n"
+        "\n"
+        "layout(input_attachment_index=0, set=0, binding=0) uniform subpassInput x;\n"
+        "layout(location=0) out vec4 color;\n"
+        "void main() {\n"
+        "   color = subpassLoad(x);\n"
+        "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+    pipe.AddColorAttachment();
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkDescriptorSetLayoutBinding dslb = { 0, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr };
+    VkDescriptorSetLayoutCreateInfo dslci = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, nullptr, 0, 1, &dslb };
+    VkDescriptorSetLayout dsl;
+    VkResult err = vkCreateDescriptorSetLayout(m_device->device(), &dslci, nullptr, &dsl);
+    ASSERT_VK_SUCCESS(err);
+
+    VkPipelineLayoutCreateInfo plci = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, nullptr, 0, 1, &dsl, 0, nullptr };
+    VkPipelineLayout pl;
+    err = vkCreatePipelineLayout(m_device->device(), &plci, nullptr, &pl);
+    ASSERT_VK_SUCCESS(err);
+
+    VkAttachmentDescription descs[2] = {
+        { 0, VK_FORMAT_R8G8B8A8_UNORM, VK_SAMPLE_COUNT_1_BIT, VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_STORE,
+        VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL },
+        { 0, VK_FORMAT_R8G8B8A8_UNORM, VK_SAMPLE_COUNT_1_BIT, VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_STORE,
+        VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL },
+    };
+    VkAttachmentReference color = {
+        0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    };
+    VkAttachmentReference input = {
+        1, VK_IMAGE_LAYOUT_GENERAL,
+    };
+
+    VkSubpassDescription sd = { 0, VK_PIPELINE_BIND_POINT_GRAPHICS, 1, &input, 1, &color, nullptr, nullptr, 0, nullptr };
+
+    VkRenderPassCreateInfo rpci = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, nullptr, 0, 2, descs, 1, &sd, 0, nullptr };
+    VkRenderPass rp;
+    err = vkCreateRenderPass(m_device->device(), &rpci, nullptr, &rp);
+    ASSERT_VK_SUCCESS(err);
+
+    // should be OK. would go wrong here if it's going to...
+    pipe.CreateVKPipeline(pl, rp);
+
+    m_errorMonitor->VerifyNotFound();
+
+    vkDestroyRenderPass(m_device->device(), rp, nullptr);
+    vkDestroyPipelineLayout(m_device->device(), pl, nullptr);
+    vkDestroyDescriptorSetLayout(m_device->device(), dsl, nullptr);
+}
+
+TEST_F(VkPositiveLayerTest, CreateComputePipelineMissingDescriptorUnusedPositive) {
+    TEST_DESCRIPTION("Test that pipeline validation accepts a compute pipeline which declares a "
+        "descriptor-backed resource which is not provided, but the shader does not "
+        "statically use it. This is interesting because it requires compute pipelines "
+        "to have a proper descriptor use walk, which they didn't for some time.");
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    char const *csSource = "#version 450\n"
+        "\n"
+        "layout(local_size_x=1) in;\n"
+        "layout(set=0, binding=0) buffer block { vec4 x; };\n"
+        "void main(){\n"
+        "   // x is not used.\n"
+        "}\n";
+
+    VkShaderObj cs(m_device, csSource, VK_SHADER_STAGE_COMPUTE_BIT, this);
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    VkComputePipelineCreateInfo cpci = { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+        nullptr,
+        0,
+        { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0,
+        VK_SHADER_STAGE_COMPUTE_BIT, cs.handle(), "main", nullptr },
+        descriptorSet.GetPipelineLayout(),
+        VK_NULL_HANDLE,
+        -1 };
+
+    VkPipeline pipe;
+    VkResult err = vkCreateComputePipelines(m_device->device(), VK_NULL_HANDLE, 1, &cpci, nullptr, &pipe);
+
+    m_errorMonitor->VerifyNotFound();
+
+    if (err == VK_SUCCESS) {
+        vkDestroyPipeline(m_device->device(), pipe, nullptr);
+    }
+}
+
+TEST_F(VkPositiveLayerTest, CreateComputePipelineCombinedImageSamplerConsumedAsSampler) {
+    TEST_DESCRIPTION("Test that pipeline validation accepts a shader consuming only the "
+        "sampler portion of a combined image + sampler");
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkDescriptorSetLayoutBinding bindings[] = {
+        { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
+        { 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
+        { 2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
+    };
+    VkDescriptorSetLayoutCreateInfo dslci = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, nullptr, 0, 3, bindings };
+    VkDescriptorSetLayout dsl;
+    VkResult err = vkCreateDescriptorSetLayout(m_device->device(), &dslci, nullptr, &dsl);
+    ASSERT_VK_SUCCESS(err);
+
+    VkPipelineLayoutCreateInfo plci = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, nullptr, 0, 1, &dsl, 0, nullptr };
+    VkPipelineLayout pl;
+    err = vkCreatePipelineLayout(m_device->device(), &plci, nullptr, &pl);
+    ASSERT_VK_SUCCESS(err);
+
+    char const *csSource = "#version 450\n"
+        "\n"
+        "layout(local_size_x=1) in;\n"
+        "layout(set=0, binding=0) uniform sampler s;\n"
+        "layout(set=0, binding=1) uniform texture2D t;\n"
+        "layout(set=0, binding=2) buffer block { vec4 x; };\n"
+        "void main() {\n"
+        "   x = texture(sampler2D(t, s), vec2(0));\n"
+        "}\n";
+    VkShaderObj cs(m_device, csSource, VK_SHADER_STAGE_COMPUTE_BIT, this);
+
+    VkComputePipelineCreateInfo cpci = { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+        nullptr,
+        0,
+        { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0,
+        VK_SHADER_STAGE_COMPUTE_BIT, cs.handle(), "main", nullptr },
+        pl,
+        VK_NULL_HANDLE,
+        -1 };
+
+    VkPipeline pipe;
+    err = vkCreateComputePipelines(m_device->device(), VK_NULL_HANDLE, 1, &cpci, nullptr, &pipe);
+
+    m_errorMonitor->VerifyNotFound();
+
+    if (err == VK_SUCCESS) {
+        vkDestroyPipeline(m_device->device(), pipe, nullptr);
+    }
+
+    vkDestroyPipelineLayout(m_device->device(), pl, nullptr);
+    vkDestroyDescriptorSetLayout(m_device->device(), dsl, nullptr);
+}
+
+TEST_F(VkPositiveLayerTest, CreateComputePipelineCombinedImageSamplerConsumedAsImage) {
+    TEST_DESCRIPTION("Test that pipeline validation accepts a shader consuming only the "
+        "image portion of a combined image + sampler");
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkDescriptorSetLayoutBinding bindings[] = {
+        { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
+        { 1, VK_DESCRIPTOR_TYPE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
+        { 2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
+    };
+    VkDescriptorSetLayoutCreateInfo dslci = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, nullptr, 0, 3, bindings };
+    VkDescriptorSetLayout dsl;
+    VkResult err = vkCreateDescriptorSetLayout(m_device->device(), &dslci, nullptr, &dsl);
+    ASSERT_VK_SUCCESS(err);
+
+    VkPipelineLayoutCreateInfo plci = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, nullptr, 0, 1, &dsl, 0, nullptr };
+    VkPipelineLayout pl;
+    err = vkCreatePipelineLayout(m_device->device(), &plci, nullptr, &pl);
+    ASSERT_VK_SUCCESS(err);
+
+    char const *csSource = "#version 450\n"
+        "\n"
+        "layout(local_size_x=1) in;\n"
+        "layout(set=0, binding=0) uniform texture2D t;\n"
+        "layout(set=0, binding=1) uniform sampler s;\n"
+        "layout(set=0, binding=2) buffer block { vec4 x; };\n"
+        "void main() {\n"
+        "   x = texture(sampler2D(t, s), vec2(0));\n"
+        "}\n";
+    VkShaderObj cs(m_device, csSource, VK_SHADER_STAGE_COMPUTE_BIT, this);
+
+    VkComputePipelineCreateInfo cpci = { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+        nullptr,
+        0,
+        { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0,
+        VK_SHADER_STAGE_COMPUTE_BIT, cs.handle(), "main", nullptr },
+        pl,
+        VK_NULL_HANDLE,
+        -1 };
+
+    VkPipeline pipe;
+    err = vkCreateComputePipelines(m_device->device(), VK_NULL_HANDLE, 1, &cpci, nullptr, &pipe);
+
+    m_errorMonitor->VerifyNotFound();
+
+    if (err == VK_SUCCESS) {
+        vkDestroyPipeline(m_device->device(), pipe, nullptr);
+    }
+
+    vkDestroyPipelineLayout(m_device->device(), pl, nullptr);
+    vkDestroyDescriptorSetLayout(m_device->device(), dsl, nullptr);
+}
+
+TEST_F(VkPositiveLayerTest, CreateComputePipelineCombinedImageSamplerConsumedAsBoth) {
+    TEST_DESCRIPTION("Test that pipeline validation accepts a shader consuming "
+        "both the sampler and the image of a combined image+sampler "
+        "but via separate variables");
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkDescriptorSetLayoutBinding bindings[] = {
+        { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
+        { 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
+    };
+    VkDescriptorSetLayoutCreateInfo dslci = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, nullptr, 0, 2, bindings };
+    VkDescriptorSetLayout dsl;
+    VkResult err = vkCreateDescriptorSetLayout(m_device->device(), &dslci, nullptr, &dsl);
+    ASSERT_VK_SUCCESS(err);
+
+    VkPipelineLayoutCreateInfo plci = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, nullptr, 0, 1, &dsl, 0, nullptr };
+    VkPipelineLayout pl;
+    err = vkCreatePipelineLayout(m_device->device(), &plci, nullptr, &pl);
+    ASSERT_VK_SUCCESS(err);
+
+    char const *csSource = "#version 450\n"
+        "\n"
+        "layout(local_size_x=1) in;\n"
+        "layout(set=0, binding=0) uniform texture2D t;\n"
+        "layout(set=0, binding=0) uniform sampler s;  // both binding 0!\n"
+        "layout(set=0, binding=1) buffer block { vec4 x; };\n"
+        "void main() {\n"
+        "   x = texture(sampler2D(t, s), vec2(0));\n"
+        "}\n";
+    VkShaderObj cs(m_device, csSource, VK_SHADER_STAGE_COMPUTE_BIT, this);
+
+    VkComputePipelineCreateInfo cpci = { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+        nullptr,
+        0,
+        { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0,
+        VK_SHADER_STAGE_COMPUTE_BIT, cs.handle(), "main", nullptr },
+        pl,
+        VK_NULL_HANDLE,
+        -1 };
+
+    VkPipeline pipe;
+    err = vkCreateComputePipelines(m_device->device(), VK_NULL_HANDLE, 1, &cpci, nullptr, &pipe);
+
+    m_errorMonitor->VerifyNotFound();
+
+    if (err == VK_SUCCESS) {
+        vkDestroyPipeline(m_device->device(), pipe, nullptr);
+    }
+
+    vkDestroyPipelineLayout(m_device->device(), pl, nullptr);
+    vkDestroyDescriptorSetLayout(m_device->device(), dsl, nullptr);
+}
+
+TEST_F(VkPositiveLayerTest, ValidStructPNext) {
+    TEST_DESCRIPTION("Verify that a valid pNext value is handled correctly");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    // Positive test to check parameter_validation and unique_objects support
+    // for NV_dedicated_allocation
+    uint32_t extension_count = 0;
+    bool supports_nv_dedicated_allocation = false;
+    VkResult err = vkEnumerateDeviceExtensionProperties(gpu(), nullptr, &extension_count, nullptr);
+    ASSERT_VK_SUCCESS(err);
+
+    if (extension_count > 0) {
+        std::vector<VkExtensionProperties> available_extensions(extension_count);
+
+        err = vkEnumerateDeviceExtensionProperties(gpu(), nullptr, &extension_count, &available_extensions[0]);
+        ASSERT_VK_SUCCESS(err);
+
+        for (const auto &extension_props : available_extensions) {
+            if (strcmp(extension_props.extensionName, VK_NV_DEDICATED_ALLOCATION_EXTENSION_NAME) == 0) {
+                supports_nv_dedicated_allocation = true;
+            }
+        }
+    }
+
+    if (supports_nv_dedicated_allocation) {
+        m_errorMonitor->ExpectSuccess();
+
+        VkDedicatedAllocationBufferCreateInfoNV dedicated_buffer_create_info = {};
+        dedicated_buffer_create_info.sType = VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_BUFFER_CREATE_INFO_NV;
+        dedicated_buffer_create_info.pNext = nullptr;
+        dedicated_buffer_create_info.dedicatedAllocation = VK_TRUE;
+
+        uint32_t queue_family_index = 0;
+        VkBufferCreateInfo buffer_create_info = {};
+        buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        buffer_create_info.pNext = &dedicated_buffer_create_info;
+        buffer_create_info.size = 1024;
+        buffer_create_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+        buffer_create_info.queueFamilyIndexCount = 1;
+        buffer_create_info.pQueueFamilyIndices = &queue_family_index;
+
+        VkBuffer buffer;
+        VkResult err = vkCreateBuffer(m_device->device(), &buffer_create_info, NULL, &buffer);
+        ASSERT_VK_SUCCESS(err);
+
+        VkMemoryRequirements memory_reqs;
+        vkGetBufferMemoryRequirements(m_device->device(), buffer, &memory_reqs);
+
+        VkDedicatedAllocationMemoryAllocateInfoNV dedicated_memory_info = {};
+        dedicated_memory_info.sType = VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_MEMORY_ALLOCATE_INFO_NV;
+        dedicated_memory_info.pNext = nullptr;
+        dedicated_memory_info.buffer = buffer;
+        dedicated_memory_info.image = VK_NULL_HANDLE;
+
+        VkMemoryAllocateInfo memory_info = {};
+        memory_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        memory_info.pNext = &dedicated_memory_info;
+        memory_info.allocationSize = memory_reqs.size;
+
+        bool pass;
+        pass = m_device->phy().set_memory_type(memory_reqs.memoryTypeBits, &memory_info, 0);
+        ASSERT_TRUE(pass);
+
+        VkDeviceMemory buffer_memory;
+        err = vkAllocateMemory(m_device->device(), &memory_info, NULL, &buffer_memory);
+        ASSERT_VK_SUCCESS(err);
+
+        err = vkBindBufferMemory(m_device->device(), buffer, buffer_memory, 0);
+        ASSERT_VK_SUCCESS(err);
+
+        vkDestroyBuffer(m_device->device(), buffer, NULL);
+        vkFreeMemory(m_device->device(), buffer_memory, NULL);
+
+        m_errorMonitor->VerifyNotFound();
+    }
+}
+
+TEST_F(VkPositiveLayerTest, PSOPolygonModeValid) {
+    VkResult err;
+
+    TEST_DESCRIPTION("Verify that using a solid polygon fill mode works correctly.");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    std::vector<const char *> device_extension_names;
+    auto features = m_device->phy().features();
+    // Artificially disable support for non-solid fill modes
+    features.fillModeNonSolid = false;
+    // The sacrificial device object
+    VkDeviceObj test_device(0, gpu(), device_extension_names, &features);
+
+    VkRenderpassObj render_pass(&test_device);
+
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+    pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_ci.setLayoutCount = 0;
+    pipeline_layout_ci.pSetLayouts = NULL;
+
+    VkPipelineLayout pipeline_layout;
+    err = vkCreatePipelineLayout(test_device.device(), &pipeline_layout_ci, NULL, &pipeline_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkPipelineRasterizationStateCreateInfo rs_ci = {};
+    rs_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rs_ci.pNext = nullptr;
+    rs_ci.lineWidth = 1.0f;
+    rs_ci.rasterizerDiscardEnable = true;
+
+    VkShaderObj vs(&test_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(&test_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    // Set polygonMode=FILL. No error is expected
+    m_errorMonitor->ExpectSuccess();
+    {
+        VkPipelineObj pipe(&test_device);
+        pipe.AddShader(&vs);
+        pipe.AddShader(&fs);
+        pipe.AddColorAttachment();
+        // Set polygonMode to a good value
+        rs_ci.polygonMode = VK_POLYGON_MODE_FILL;
+        pipe.SetRasterization(&rs_ci);
+        pipe.CreateVKPipeline(pipeline_layout, render_pass.handle());
+    }
+    m_errorMonitor->VerifyNotFound();
+
+    vkDestroyPipelineLayout(test_device.device(), pipeline_layout, NULL);
+}
+
+TEST_F(VkPositiveLayerTest, ValidPushConstants) {
+    VkResult err;
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkPipelineLayout pipeline_layout;
+    VkPushConstantRange pc_range = {};
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+    pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_ci.pushConstantRangeCount = 1;
+    pipeline_layout_ci.pPushConstantRanges = &pc_range;
+
+    //
+    // Check for invalid push constant ranges in pipeline layouts.
+    //
+    struct PipelineLayoutTestCase {
+        VkPushConstantRange const range;
+        char const *msg;
+    };
+
+    // Check for overlapping ranges
+    const uint32_t ranges_per_test = 5;
+    struct OverlappingRangeTestCase {
+        VkPushConstantRange const ranges[ranges_per_test];
+        char const *msg;
+    };
+
+    // Run some positive tests to make sure overlap checking in the layer is OK
+    const std::array<OverlappingRangeTestCase, 2> overlapping_range_tests_pos = { { { { { VK_SHADER_STAGE_VERTEX_BIT, 0, 4 },
+    { VK_SHADER_STAGE_VERTEX_BIT, 4, 4 },
+    { VK_SHADER_STAGE_VERTEX_BIT, 8, 4 },
+    { VK_SHADER_STAGE_VERTEX_BIT, 12, 4 },
+    { VK_SHADER_STAGE_VERTEX_BIT, 16, 4 } },
+        "" },
+        { { { VK_SHADER_STAGE_VERTEX_BIT, 92, 24 },
+        { VK_SHADER_STAGE_VERTEX_BIT, 80, 4 },
+        { VK_SHADER_STAGE_VERTEX_BIT, 64, 8 },
+        { VK_SHADER_STAGE_VERTEX_BIT, 4, 16 },
+        { VK_SHADER_STAGE_VERTEX_BIT, 0, 4 } },
+        "" } } };
+    for (const auto &iter : overlapping_range_tests_pos) {
+        pipeline_layout_ci.pPushConstantRanges = iter.ranges;
+        m_errorMonitor->ExpectSuccess();
+        err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
+        m_errorMonitor->VerifyNotFound();
+        if (VK_SUCCESS == err) {
+            vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
+        }
+    }
+
+    //
+    // CmdPushConstants tests
+    //
+    const uint8_t dummy_values[100] = {};
+
+    BeginCommandBuffer();
+
+    // positive overlapping range tests with cmd
+    const std::array<PipelineLayoutTestCase, 4> cmd_overlap_tests_pos = { {
+        { { VK_SHADER_STAGE_VERTEX_BIT, 0, 16 }, "" },
+        { { VK_SHADER_STAGE_VERTEX_BIT, 0, 4 }, "" },
+        { { VK_SHADER_STAGE_VERTEX_BIT, 20, 12 }, "" },
+        { { VK_SHADER_STAGE_VERTEX_BIT, 56, 36 }, "" },
+        } };
+
+    // Setup ranges: [0,16) [20,36) [36,44) [44,52) [56,80) [80,92)
+    const VkPushConstantRange pc_range4[] = {
+        { VK_SHADER_STAGE_VERTEX_BIT, 20, 16 },{ VK_SHADER_STAGE_VERTEX_BIT, 0, 16 },{ VK_SHADER_STAGE_VERTEX_BIT, 44, 8 },
+        { VK_SHADER_STAGE_VERTEX_BIT, 80, 12 },{ VK_SHADER_STAGE_VERTEX_BIT, 36, 8 },{ VK_SHADER_STAGE_VERTEX_BIT, 56, 24 },
+    };
+
+    pipeline_layout_ci.pushConstantRangeCount = sizeof(pc_range4) / sizeof(VkPushConstantRange);
+    pipeline_layout_ci.pPushConstantRanges = pc_range4;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
+    ASSERT_VK_SUCCESS(err);
+    for (const auto &iter : cmd_overlap_tests_pos) {
+        m_errorMonitor->ExpectSuccess();
+        vkCmdPushConstants(m_commandBuffer->GetBufferHandle(), pipeline_layout, iter.range.stageFlags, iter.range.offset,
+            iter.range.size, dummy_values);
+        m_errorMonitor->VerifyNotFound();
+    }
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
+
+    EndCommandBuffer();
+}
+
+
+
+
+
+
+
+#if 0 // A few devices have issues with this test so disabling for now
+TEST_F(VkPositiveLayerTest, LongFenceChain)
+{
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    VkResult err;
+
+    std::vector<VkFence> fences;
+
+    const int chainLength = 32768;
+
+    for (int i = 0; i < chainLength; i++) {
+        VkFenceCreateInfo fci = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, nullptr, 0 };
+        VkFence fence;
+        err = vkCreateFence(m_device->device(), &fci, nullptr, &fence);
+        ASSERT_VK_SUCCESS(err);
+
+        fences.push_back(fence);
+
+        VkSubmitInfo si = { VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, nullptr,
+            0, nullptr, 0, nullptr };
+        err = vkQueueSubmit(m_device->m_queue, 1, &si, fence);
+        ASSERT_VK_SUCCESS(err);
+
+    }
+
+    // BOOM, stack overflow.
+    vkWaitForFences(m_device->device(), 1, &fences.back(), VK_TRUE, UINT64_MAX);
+
+    for (auto fence : fences)
+        vkDestroyFence(m_device->device(), fence, nullptr);
+
+    m_errorMonitor->VerifyNotFound();
+}
+#endif
+
 
 #if defined(ANDROID) && defined(VALIDATION_APK)
 static bool initialized = false;
