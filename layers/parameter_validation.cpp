@@ -3967,13 +3967,19 @@ VKAPI_ATTR void VKAPI_CALL CmdBindPipeline(VkCommandBuffer commandBuffer, VkPipe
     }
 }
 
+bool preCmdSetViewport(debug_report_data *report_data, uint32_t viewport_count, const VkViewport *viewports) {
+    bool skip =
+        validate_array(report_data, "vkCmdSetViewport", "viewportCount", "pViewports", viewport_count, viewports, true, true);
+    return skip;
+}
+
 VKAPI_ATTR void VKAPI_CALL CmdSetViewport(VkCommandBuffer commandBuffer, uint32_t firstViewport, uint32_t viewportCount,
                                           const VkViewport *pViewports) {
     bool skip_call = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     assert(my_data != NULL);
 
-    skip_call |= parameter_validation_vkCmdSetViewport(my_data->report_data, firstViewport, viewportCount, pViewports);
+    skip_call |= preCmdSetViewport(my_data->report_data, viewportCount, pViewports);
 
     if (!skip_call) {
         get_dispatch_table(pc_device_table_map, commandBuffer)
