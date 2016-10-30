@@ -282,6 +282,7 @@ def main():
             "Wayland",
             "Mir",
             "Display",
+            "AllPlatforms",
     }
     subcommands = {
             "dispatch-table-ops": DispatchTableOpsSubcommand,
@@ -289,9 +290,10 @@ def main():
     }
 
     if len(sys.argv) < 3 or sys.argv[1] not in wsi or sys.argv[2] not in subcommands:
-        print("Usage: %s <wsi> <subcommand> [options]" % sys.argv[0])
+        print("Usage: %s <wsi> <subcommand> <option>" % sys.argv[0])
         print
-        print("Available sucommands are: %s" % " ".join(subcommands))
+        print("Available wsi are: %s" % " ".join(wsi))
+        print("Available subcommands are: %s" % " ".join(subcommands))
         exit(1)
 
     subcmd = subcommands[sys.argv[2]](sys.argv[3:])
