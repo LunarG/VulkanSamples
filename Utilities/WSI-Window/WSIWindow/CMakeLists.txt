@@ -9,7 +9,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake") 
 
 #============================VALIDATION===========================
 #    Validation layers is always off for Release builds
-option(ENABLE_VALIDATION "Enable Validation in Debug builds"  ON)
+option(ENABLE_VALIDATION "Enable Vulkan Validation in Debug builds"  ON)
 if (ENABLE_VALIDATION)
     add_definitions(-DENABLE_VALIDATION)
 endif()
