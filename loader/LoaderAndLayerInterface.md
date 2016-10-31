@@ -1070,7 +1070,7 @@ and must live in the application's library folder. The application
 enables the layers at vkCreateInstance as any Vulkan
 application would.
 An application enabled for debug has more options. It can enumerate and enable
-layers located in /data/local/vulkan/debug.
+layers located in /data/local/debug/vulkan.
 
 <br/>
 
