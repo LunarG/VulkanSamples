@@ -142,7 +142,7 @@ class Specification:
                 code_text_list = code_text.split()
                 if len(code_text_list) > 1 and code_text_list[1].startswith('vk'):
                     api_function = code_text_list[1].strip('(')
-                    print "Found API function: %s" % (api_function)
+                    #print "Found API function: %s" % (api_function)
             elif tag.tag == '{http://www.w3.org/1999/xhtml}div' and tag.get('class') == 'sidebar':
                 # parse down sidebar to check for valid usage cases
                 valid_usage = False
@@ -249,9 +249,9 @@ class Specification:
         max_id = 0
         with open(db_file, "r") as infile:
             for line in infile:
-                if line.startswith('#'):
-                    continue
                 line = line.strip()
+                if line.startswith('#') or '' == line:
+                    continue
                 db_line = line.split(self.delimiter)
                 if len(db_line) != 6:
                     print "ERROR: Bad database line doesn't have 6 elements: %s" % (line)
