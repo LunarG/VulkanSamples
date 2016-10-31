@@ -11643,9 +11643,8 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, VkSwapchainC
                         capabilities.currentExtent.height))
                 return true;
         }
-        // Validate pCreateInfo->preTransform has one bit set (1st two
-        // lines of if-statement), which bit is also set in
-        // VkSurfaceCapabilitiesKHR::supportedTransforms (3rd line of if-statement):
+        // pCreateInfo->preTransform should have exactly one bit set, and that
+        // bit must also be set in VkSurfaceCapabilitiesKHR::supportedTransforms.
         if (!pCreateInfo->preTransform || (pCreateInfo->preTransform & (pCreateInfo->preTransform - 1)) ||
             !(pCreateInfo->preTransform & capabilities.supportedTransforms)) {
             // This is an error situation; one for which we'd like to give
@@ -11673,9 +11672,9 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, VkSwapchainC
                         errorString.c_str()))
                 return true;
         }
-        // Validate pCreateInfo->compositeAlpha has one bit set (1st two
-        // lines of if-statement), which bit is also set in
-        // VkSurfaceCapabilitiesKHR::supportedCompositeAlpha (3rd line of if-statement):
+
+        // pCreateInfo->compositeAlpha should have exactly one bit set, and that
+        // bit must also be set in VkSurfaceCapabilitiesKHR::supportedCompositeAlpha
         if (!pCreateInfo->compositeAlpha || (pCreateInfo->compositeAlpha & (pCreateInfo->compositeAlpha - 1)) ||
             !((pCreateInfo->compositeAlpha) & capabilities.supportedCompositeAlpha)) {
             // This is an error situation; one for which we'd like to give
