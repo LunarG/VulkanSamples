@@ -239,10 +239,10 @@ class Specification:
             #print "delimiter: %s, id: %s, str: %s" % (self.delimiter, enum, self.val_error_dict[enum])
             # No existing entry so default to N for implemented and None for testname
             db_lines.append("%s%s%s%s%s%s%s%s%s%s%s" % (enum, self.delimiter, implemented, self.delimiter, testname, self.delimiter, self.val_error_dict[enum]['api'], self.delimiter, self.val_error_dict[enum]['error_msg'], self.delimiter, note))
+        db_lines.append("\n") # newline at end of file
         print "Generating database file %s" % (db_file)
         with open(db_file, "w") as outfile:
             outfile.write("\n".join(db_lines))
-            outfile.write("\n")
     def readDB(self, db_file):
         """Read a db file into a dict, format of each line is <enum><implemented Y|N?><testname><errormsg>"""
         db_dict = {} # This is a simple db of just enum->errormsg, the same as is created from spec
