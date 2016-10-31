@@ -205,7 +205,6 @@ layer VK\_LAYER\_LUNARG\_parameter\_validation on Windows or Linux is as follows
 
 ```
 > $ export VK_INSTANCE_LAYERS=VK_LAYER_LUNARG_parameter_validation
-
 ```
 
 #### Implicit vs Explicit Layers
@@ -465,9 +464,14 @@ Notice the semi-colon between "C:\\Windows\\System32\\vendorc\_icd.json" and
 In order to find properly-installed ICDs, the Vulkan loader will scan the files
 in the following Linux directories:
 
-/usr/share/vulkan/icd.d
-/etc/vulkan/icd.d
-$HOME/.local/share/vulkan/icd.d
+    /usr/local/etc/vulkan/icd.d
+    /usr/local/share/vulkan/icd.d
+    /etc/vulkan/icd.d
+    /usr/share/vulkan/icd.d
+    $HOME/.local/share/vulkan/icd.d
+
+The "/usr/local/*" directories can be configured to be other directories at build time.
+See the `BUILD.md` file in this repository for more information.
 
 Where $HOME is the current home directory of the application's user id; this
 path will be ignored for suid programs.
@@ -508,9 +512,14 @@ same shared library).
 The "api\_version" specifies the major.minor.patch version number of the Vulkan
 API that the shared library (referenced by "library\_path") was built with.
 
-The "/usr/share/vulkan/icd.d" directory is for ICDs that are installed from
-Linux-distribution-provided packages. The "/etc/vulkan/icd.d" directory is for
+The "/usr/local/etc/vulkan/icd.d" and "/usr/local/share/vulkan/icd.d"
+directories are for locally-built ICDs.
+
+The "/etc/vulkan/icd.d" directory is for
 ICDs that are installed from non-Linux-distribution-provided packages.
+
+The "/usr/share/vulkan/icd.d" directory is for ICDs that are installed from
+Linux-distribution-provided packages. 
 
 There are no rules about the name of the text files (except the .json suffix).
 
@@ -544,7 +553,13 @@ other words, only the ICDs listed in "VK\_ICD\_FILENAMES" will be used.
 The "VK\_ICD\_FILENAMES" environment variable is a colon-separated list of ICD
 manifest files, containing the following:
 
-- A filename (e.g. "libvkicd.json") in the "/usr/share/vulkan/icd.d", "/etc/vulkan/icd.d" "$HOME/.local/share/vulkan/icd.d" directories
+- A filename (e.g. "libvkicd.json") in the
+"/usr/local/etc/vulkan/icd.d",
+"/usr/local/share/vulkan/icd.d",
+"/etc/vulkan/icd.d",
+"/usr/share/vulkan/icd.d",
+"$HOME/.local/share/vulkan/icd.d"
+directories
 
 - A full pathname (e.g. "/my\_build/my\_icd.json")
 
@@ -962,12 +977,19 @@ library file may contain multiple layers/extensions (perhaps even an ICD).
 
 The Vulkan loader will scan the files in the following Linux directories:
 
-/usr/share/vulkan/explicit\_layer.d
-/usr/share/vulkan/implicit\_layer.d
-/etc/vulkan/explicit\_layer.d
-/etc/vulkan/implicit\_layer.d
-\$HOME/.local/share/vulkan/explicit\_layer.d
-\$HOME/.local/share/vulkan/implicit\_layer.d
+    /usr/local/etc/vulkan/explicit_layer.d
+    /usr/local/etc/vulkan/implicit_layer.d
+    /usr/local/share/vulkan/explicit_layer.d
+    /usr/local/share/vulkan/implicit_layer.d
+    /etc/vulkan/explicit_layer.d
+    /etc/vulkan/implicit_layer.d
+    /usr/share/vulkan/explicit_layer.d
+    /usr/share/vulkan/implicit_layer.d
+    $HOME/.local/share/vulkan/explicit_layer.d
+    $HOME/.local/share/vulkan/implicit_layer.d
+
+The "/usr/local/*" directories can be configured to be other directories at build time.
+See the `BUILD.md` file in this repository for more information.
 
 Where $HOME is the current home directory of the application's user id; this
 path will be ignored for suid programs.
@@ -983,10 +1005,14 @@ Implicit layers are enabled automatically, whereas explicit layers must be
 enabled explicitly. What distinguishes a layer as implicit or explicit is by
 which directory its layer information file exists in.
 
-The "/usr/share/vulkan/\*\_layer.d" directories are for layers that are
-installed from Linux-distribution-provided packages. The
-"/etc/vulkan/\*\_layer.d" directories are for layers that are installed from
+The "/usr/local/etc/vulkan/\*\_layer.d" and "/usr/local/share/vulkan/\*\_layer.d"
+directories are for layers that are installed from locally-built sources.
+
+The "/etc/vulkan/\*\_layer.d" directories are for layers that are installed from
 non-Linux-distribution-provided packages.
+
+The "/usr/share/vulkan/\*\_layer.d" directories are for layers that are
+installed from Linux-distribution-provided packages.
 
 This manifest file is in the JSON format as shown in the following example.
 See the section [Layer Library Manifest File](#LayerLibraryManifestFile) for more information about each of the nodes in the JSON file.

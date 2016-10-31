@@ -78,7 +78,7 @@ This command installs files to:
 * `/usr/local/include/vulkan`:  Vulkan include files
 * `/usr/local/lib`:  Vulkan loader and layers shared objects
 * `/usr/local/bin`:  vulkaninfo application
-* `/etc/vulkan/explicit_layer.d`:  Layer JSON files
+* `/usr/local/etc/vulkan/explicit_layer.d`:  Layer JSON files
 
 You may need to run `ldconfig` in order to refresh the system loader search cache on some Linux systems.
 
@@ -89,8 +89,35 @@ You can easily remove the installed files with:
 cat install_manifest.txt | sudo xargs rm
 ```
 
-See the CMake documentation for details on using `DESTDIR` and `CMAKE_INSTALL_PREFIX` to customize
-your installation location.
+You can further customize the installation location by setting additional CMake variables
+to override their defaults.
+For example, if you would like to install to `/tmp/build` instead of `/usr/local`, specify:
+
+```
+-DCMAKE_INSTALL_PREFIX=/tmp/build
+-DDEST_DIR=/tmp/build
+```
+
+on your CMake command line and run `make install` as before.
+The install step places the files in `/tmp/build`.
+
+Using the `CMAKE_INSTALL_PREFIX` to customize the install location also modifies the
+loader search paths to include searching for layers in the specified install location.
+In this example, setting `CMAKE_INSTALL_PREFIX` to `/tmp/build` causes the loader to
+search `/tmp/build/etc/vulkan/explicit_layer.d` and `/tmp/build/share/vulkan/explicit_layer.d`
+for the layer JSON files.
+The loader also searches the "standard" system locations of `/etc/vulkan/explicit_layer.d`
+and `/usr/share/vulkan/explicit_layer.d` after searching the two locations under `/tmp/build`.
+
+You can further customize the installation directories by using the CMake variables
+`CMAKE_INSTALL_SYSCONFDIR` to rename the `etc` directory and `CMAKE_INSTALL_DATADIR`
+to rename the `share` directory.
+
+See the CMake documentation for more details on using these variables
+to further customize your installation.
+
+Also see the `LoaderAndLayerInterface` document in the `loader` folder in this repository for more
+information about loader operation.
 
 Note that some executables in this repository (e.g., `cube`) use the "rpath" linker directive
 to load the Vulkan loader from the build directory, `dbuild` in this example.
@@ -99,7 +126,7 @@ still use the loader from the build directory.
 
 ## Validation Test
 
-The test executables can be found in the dbuild/tests directory. 
+The test executables can be found in the dbuild/tests directory.
 Some of the tests that are available:
 - vk\_layer\_validation\_tests: Test Vulkan layers.
 
