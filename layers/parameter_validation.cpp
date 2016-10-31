@@ -23,6 +23,7 @@
 
 #define NOMINMAX
 
+#include <limits.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -3992,8 +3993,35 @@ VKAPI_ATTR void VKAPI_CALL CmdSetScissor(VkCommandBuffer commandBuffer, uint32_t
     bool skip_call = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     assert(my_data != NULL);
+    debug_report_data *report_data = my_data->report_data;
 
     skip_call |= parameter_validation_vkCmdSetScissor(my_data->report_data, firstScissor, scissorCount, pScissors);
+
+    for (uint32_t scissorIndex = 0; scissorIndex < scissorCount; ++scissorIndex) {
+        const VkRect2D &pScissor = pScissors[scissorIndex];
+
+        if (pScissor.offset.x < 0) {
+            skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                                 VALIDATION_ERROR_01489, LayerName, "vkCmdSetScissor %d: offset.x (%d) must not be negative. %s",
+                                 scissorIndex, pScissor.offset.x, validation_error_map[VALIDATION_ERROR_01489]);
+        } else if (static_cast<int32_t>(pScissor.extent.width) > (INT_MAX - pScissor.offset.x)) {
+            skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                                 VALIDATION_ERROR_01490, LayerName,
+                                 "vkCmdSetScissor %d: adding offset.x (%d) and extent.width (%u) will overflow. %s", scissorIndex,
+                                 pScissor.offset.x, pScissor.extent.width, validation_error_map[VALIDATION_ERROR_01490]);
+        }
+
+        if (pScissor.offset.y < 0) {
+            skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                                 VALIDATION_ERROR_01489, LayerName, "vkCmdSetScissor %d: offset.y (%d) must not be negative. %s",
+                                 scissorIndex, pScissor.offset.y, validation_error_map[VALIDATION_ERROR_01489]);
+        } else if (static_cast<int32_t>(pScissor.extent.height) > (INT_MAX - pScissor.offset.y)) {
+            skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                                 VALIDATION_ERROR_01491, LayerName,
+                                 "vkCmdSetScissor %d: adding offset.y (%d) and extent.height (%u) will overflow. %s", scissorIndex,
+                                 pScissor.offset.y, pScissor.extent.height, validation_error_map[VALIDATION_ERROR_01491]);
+        }
+    }
 
     if (!skip_call) {
         get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetScissor(commandBuffer, firstScissor, scissorCount, pScissors);
