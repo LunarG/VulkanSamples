@@ -9627,7 +9627,7 @@ TEST_F(VkLayerTest, MissingClearAttachment) {
                      "structure passed to vkCmdClearAttachments");
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "vkCmdClearAttachments() color attachment index 1 out of range for active subpass 0; ignored");
+                                         "vkCmdClearAttachments() color attachment index 1 out of range for active subpass 0");
 
     VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailCmdClearAttachments);
     m_errorMonitor->VerifyFound();
