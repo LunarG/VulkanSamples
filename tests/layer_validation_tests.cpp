@@ -15837,36 +15837,56 @@ TEST_F(VkLayerTest, DuplicateDescriptorBinding) {
     m_errorMonitor->VerifyFound();
 }
 
-TEST_F(VkLayerTest, ViewportBoundsChecking) {
+TEST_F(VkLayerTest, ViewportAndScissorBoundsChecking) {
     TEST_DESCRIPTION("Verify errors are detected on misuse of SetViewport and SetScissor.");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
-    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-
-    char const *vsSource = "#version 450\n"
-                           "void main() { gl_Position = vec4(1); }\n";
-    char const *fsSource = "#version 450\n"
-                           "layout(location=0) out vec4 color;\n"
-                           "void main() { color = vec4(1); }\n";
-
-    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
-    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
-
-    VkPipelineObj pipe(m_device);
-    pipe.AddShader(&vs);
-    pipe.AddShader(&fs);
-    pipe.AddColorAttachment();
-
-    VkDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
-    VkResult err = pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
-    ASSERT_VK_SUCCESS(err);
 
     BeginCommandBuffer();
-    m_commandBuffer->BindPipeline(pipe);
 
-    VkViewport viewport = {0, 0, 16, 16, 0, 1};
-    vkCmdSetViewport(m_commandBuffer->handle(), 0, 1, &viewport);
+    const VkPhysicalDeviceLimits &limits = m_device->props.limits;
+
+    {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01448);
+        VkViewport viewport = {0, 0, static_cast<float>(limits.maxViewportDimensions[0] + 1), 16, 0, 1};
+        vkCmdSetViewport(m_commandBuffer->handle(), 0, 1, &viewport);
+        m_errorMonitor->VerifyFound();
+    }
+
+    {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01449);
+        VkViewport viewport = {0, 0, 16, static_cast<float>(limits.maxViewportDimensions[1] + 1), 0, 1};
+        vkCmdSetViewport(m_commandBuffer->handle(), 0, 1, &viewport);
+        m_errorMonitor->VerifyFound();
+    }
+
+    {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01450);
+        VkViewport viewport = {limits.viewportBoundsRange[0] - 1, 0, 16, 16, 0, 1};
+        vkCmdSetViewport(m_commandBuffer->handle(), 0, 1, &viewport);
+        m_errorMonitor->VerifyFound();
+    }
+
+    {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01450);
+        VkViewport viewport = {0, limits.viewportBoundsRange[0] - 1, 16, 16, 0, 1};
+        vkCmdSetViewport(m_commandBuffer->handle(), 0, 1, &viewport);
+        m_errorMonitor->VerifyFound();
+    }
+
+    {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01451);
+        VkViewport viewport = {limits.viewportBoundsRange[1], 0, 16, 16, 0, 1};
+        vkCmdSetViewport(m_commandBuffer->handle(), 0, 1, &viewport);
+        m_errorMonitor->VerifyFound();
+    }
+
+    {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01452);
+        VkViewport viewport = {0, limits.viewportBoundsRange[1], 16, 16, 0, 1};
+        vkCmdSetViewport(m_commandBuffer->handle(), 0, 1, &viewport);
+        m_errorMonitor->VerifyFound();
+    }
 
     {
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01489);
