@@ -128,16 +128,7 @@ run_vk_helper(gen_struct_wrappers
     vk_struct_wrappers.h
     vk_struct_wrappers.cpp
     vk_safe_struct.h
-# Don't list vk_safe_struct.cpp as OUTPUT to avoid duplicate builds.
-# If listed here use of it for add_library will cause it to be created
-# independently of custom target generate_vk_layer_helpers .
-# That breaks parallel builds.
-#   vk_safe_struct.cpp
-)
-
-# Let gen_struct_wrappers really create vk_safe_struct.cpp
-add_custom_command(OUTPUT vk_safe_struct.cpp
-    COMMAND echo defer making vk_safe_struct.cpp
+    vk_safe_struct.cpp
 )
 
 set_source_files_properties(
@@ -188,13 +179,13 @@ else()
     install(TARGETS VkLayer_utils DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()
 
-add_vk_layer(core_validation core_validation.cpp vk_layer_table.cpp vk_safe_struct.cpp descriptor_sets.cpp)
+add_vk_layer(core_validation core_validation.cpp vk_layer_table.cpp descriptor_sets.cpp)
 add_vk_layer(object_tracker object_tracker.cpp vk_layer_table.cpp)
 add_vk_layer(image image.cpp vk_layer_table.cpp)
 add_vk_layer(swapchain swapchain.cpp vk_layer_table.cpp)
 # generated
 add_vk_layer(threading threading.cpp thread_check.h vk_layer_table.cpp)
-add_vk_layer(unique_objects unique_objects.cpp unique_objects_wrappers.h vk_layer_table.cpp vk_safe_struct.cpp)
+add_vk_layer(unique_objects unique_objects.cpp unique_objects_wrappers.h vk_layer_table.cpp)
 add_vk_layer(parameter_validation parameter_validation.cpp parameter_validation.h vk_layer_table.cpp)
 
 # Core validation has additional dependencies

@@ -70,6 +70,9 @@
     }
 #endif
 
+// This intentionally includes a cpp file
+#include "vk_safe_struct.cpp"
+
 using namespace std;
 
 namespace core_validation {

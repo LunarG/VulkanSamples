@@ -41,6 +41,9 @@
 #include "vk_layer_data.h"
 #include "vk_layer_utils.h"
 
+// This intentionally includes a cpp file
+#include "vk_safe_struct.cpp"
+
 #include "unique_objects_wrappers.h"
 
 namespace unique_objects {

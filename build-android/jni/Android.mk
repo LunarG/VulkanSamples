@@ -33,7 +33,6 @@ LOCAL_MODULE := VkLayer_core_validation
 LOCAL_SRC_FILES += $(LAYER_DIR)/layer-src/core_validation/core_validation.cpp
 LOCAL_SRC_FILES += $(LAYER_DIR)/layer-src/core_validation/descriptor_sets.cpp
 LOCAL_SRC_FILES += $(LAYER_DIR)/common/vk_layer_table.cpp
-LOCAL_SRC_FILES += $(LAYER_DIR)/layer-src/unique_objects/vk_safe_struct.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include \
                     $(SRC_DIR)/layers \
                     $(LAYER_DIR)/include \
@@ -110,7 +109,6 @@ include $(BUILD_SHARED_LIBRARY)
 include $(CLEAR_VARS)
 LOCAL_MODULE := VkLayer_unique_objects
 LOCAL_SRC_FILES += $(LAYER_DIR)/layer-src/unique_objects/unique_objects.cpp
-LOCAL_SRC_FILES += $(LAYER_DIR)/layer-src/unique_objects/vk_safe_struct.cpp
 LOCAL_SRC_FILES += $(LAYER_DIR)/common/vk_layer_table.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include \
                     $(SRC_DIR)/layers \
