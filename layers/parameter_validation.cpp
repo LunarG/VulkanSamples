@@ -75,6 +75,7 @@ struct layer_data {
 
     bool swapchain_enabled = false;
     bool display_swapchain_enabled = false;
+    bool amd_negative_viewport_height_enabled = false;
 };
 
 static std::unordered_map<void *, struct instance_extension_enables> instance_extension_map;
@@ -1614,6 +1615,7 @@ static void CheckDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo,
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     device_data->swapchain_enabled = false;
     device_data->display_swapchain_enabled = false;
+    device_data->amd_negative_viewport_height_enabled = false;
 
     for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
@@ -1621,6 +1623,9 @@ static void CheckDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo,
         }
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME) == 0) {
             device_data->display_swapchain_enabled = true;
+        }
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_AMD_NEGATIVE_VIEWPORT_HEIGHT_EXTENSION_NAME) == 0) {
+            device_data->amd_negative_viewport_height_enabled = true;
         }
     }
 }
@@ -3949,9 +3954,70 @@ VKAPI_ATTR void VKAPI_CALL CmdBindPipeline(VkCommandBuffer commandBuffer, VkPipe
     }
 }
 
-bool preCmdSetViewport(debug_report_data *report_data, uint32_t viewport_count, const VkViewport *viewports) {
+bool preCmdSetViewport(layer_data *my_data, uint32_t viewport_count, const VkViewport *viewports) {
+    debug_report_data *report_data = my_data->report_data;
+
     bool skip =
         validate_array(report_data, "vkCmdSetViewport", "viewportCount", "pViewports", viewport_count, viewports, true, true);
+
+    if (viewport_count > 0 && viewports != nullptr) {
+        const VkPhysicalDeviceLimits &limits = my_data->device_limits;
+        for (uint32_t viewportIndex = 0; viewportIndex < viewport_count; ++viewportIndex) {
+            const VkViewport &viewport = viewports[viewportIndex];
+
+            if (viewport.width <= 0 || viewport.width > limits.maxViewportDimensions[0]) {
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                                VALIDATION_ERROR_01448, LayerName,
+                                "vkCmdSetViewport %d: width (%f) exceeds permitted bounds (0,%u). %s", viewportIndex,
+                                viewport.width, limits.maxViewportDimensions[0], validation_error_map[VALIDATION_ERROR_01448]);
+            }
+
+            bool invalid_height = (viewport.height <= 0 || viewport.height > limits.maxViewportDimensions[1]);
+            if (my_data->amd_negative_viewport_height_enabled && (viewport.height < 0)) {
+                // VALIDATION_ERROR_01790
+                invalid_height = false;
+            }
+            if (invalid_height) {
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                                VALIDATION_ERROR_01449, LayerName,
+                                "vkCmdSetViewport %d: height (%f) exceeds permitted bounds (0,%u). %s", viewportIndex,
+                                viewport.height, limits.maxViewportDimensions[1], validation_error_map[VALIDATION_ERROR_01449]);
+            }
+
+            if (viewport.x < limits.viewportBoundsRange[0] || viewport.x > limits.viewportBoundsRange[1]) {
+                skip |=
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                            VALIDATION_ERROR_01450, LayerName, "vkCmdSetViewport %d: x (%f) exceeds permitted bounds (%f,%f). %s",
+                            viewportIndex, viewport.x, limits.viewportBoundsRange[0], limits.viewportBoundsRange[1],
+                            validation_error_map[VALIDATION_ERROR_01450]);
+            }
+
+            if (viewport.y < limits.viewportBoundsRange[0] || viewport.y > limits.viewportBoundsRange[1]) {
+                skip |=
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                            VALIDATION_ERROR_01450, LayerName, "vkCmdSetViewport %d: y (%f) exceeds permitted bounds (%f,%f). %s",
+                            viewportIndex, viewport.y, limits.viewportBoundsRange[0], limits.viewportBoundsRange[1],
+                            validation_error_map[VALIDATION_ERROR_01450]);
+            }
+
+            if (viewport.x + viewport.width > limits.viewportBoundsRange[1]) {
+                skip |=
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                            VALIDATION_ERROR_01451, LayerName,
+                            "vkCmdSetViewport %d: x (%f) + width (%f) exceeds permitted bound (%f). %s", viewportIndex, viewport.x,
+                            viewport.width, limits.viewportBoundsRange[1], validation_error_map[VALIDATION_ERROR_01451]);
+            }
+
+            if (viewport.y + viewport.height > limits.viewportBoundsRange[1]) {
+                skip |=
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                            VALIDATION_ERROR_01452, LayerName,
+                            "vkCmdSetViewport %d: y (%f) + height (%f) exceeds permitted bound (%f). %s", viewportIndex, viewport.y,
+                            viewport.height, limits.viewportBoundsRange[1], validation_error_map[VALIDATION_ERROR_01452]);
+            }
+        }
+    }
+
     return skip;
 }
 
@@ -3961,7 +4027,7 @@ VKAPI_ATTR void VKAPI_CALL CmdSetViewport(VkCommandBuffer commandBuffer, uint32_
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     assert(my_data != NULL);
 
-    skip |= preCmdSetViewport(my_data->report_data, viewportCount, pViewports);
+    skip |= preCmdSetViewport(my_data, viewportCount, pViewports);
 
     if (!skip) {
         get_dispatch_table(pc_device_table_map, commandBuffer)
