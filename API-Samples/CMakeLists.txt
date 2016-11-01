@@ -236,7 +236,7 @@ set (S_TARGETS
     08-init_pipeline_layout 09-init_descriptor_set 10-init_render_pass
     11-init_shaders 12-init_frame_buffers 13-init_vertex_buffer 14-init_pipeline 15-draw_cube
     enumerate_devices_adv init_texture multithreaded_command_buffers
-    draw_textured_cube dynamic_uniform texel_buffer
+    draw_textured_cube dynamic_uniform texel_buffer events
     instance_layer_properties instance_extension_properties
     instance_layer_extension_properties create_debug_report_callback
     enable_validation_with_callback multiple_sets
