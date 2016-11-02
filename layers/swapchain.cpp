@@ -88,24 +88,6 @@ static void checkInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateI
     my_data->instanceMap[instance].instance = instance;
     my_data->instanceMap[instance].surfaceExtensionEnabled = false;
     my_data->instanceMap[instance].displayExtensionEnabled = false;
-#ifdef VK_USE_PLATFORM_ANDROID_KHR
-    my_data->instanceMap[instance].androidSurfaceExtensionEnabled = false;
-#endif // VK_USE_PLATFORM_ANDROID_KHR
-#ifdef VK_USE_PLATFORM_MIR_KHR
-    my_data->instanceMap[instance].mirSurfaceExtensionEnabled = false;
-#endif // VK_USE_PLATFORM_MIR_KHR
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
-    my_data->instanceMap[instance].waylandSurfaceExtensionEnabled = false;
-#endif // VK_USE_PLATFORM_WAYLAND_KHR
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-    my_data->instanceMap[instance].win32SurfaceExtensionEnabled = false;
-#endif // VK_USE_PLATFORM_WIN32_KHR
-#ifdef VK_USE_PLATFORM_XCB_KHR
-    my_data->instanceMap[instance].xcbSurfaceExtensionEnabled = false;
-#endif // VK_USE_PLATFORM_XCB_KHR
-#ifdef VK_USE_PLATFORM_XLIB_KHR
-    my_data->instanceMap[instance].xlibSurfaceExtensionEnabled = false;
-#endif // VK_USE_PLATFORM_XLIB_KHR
 
     // Look for one or more debug report create info structures, and copy the
     // callback(s) for each one found (for use by vkDestroyInstance)
@@ -124,42 +106,6 @@ static void checkInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateI
 
             my_data->instanceMap[instance].displayExtensionEnabled = true;
         }
-#ifdef VK_USE_PLATFORM_ANDROID_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_ANDROID_SURFACE_EXTENSION_NAME) == 0) {
-
-            my_data->instanceMap[instance].androidSurfaceExtensionEnabled = true;
-        }
-#endif // VK_USE_PLATFORM_ANDROID_KHR
-#ifdef VK_USE_PLATFORM_MIR_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_MIR_SURFACE_EXTENSION_NAME) == 0) {
-
-            my_data->instanceMap[instance].mirSurfaceExtensionEnabled = true;
-        }
-#endif // VK_USE_PLATFORM_MIR_KHR
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME) == 0) {
-
-            my_data->instanceMap[instance].waylandSurfaceExtensionEnabled = true;
-        }
-#endif // VK_USE_PLATFORM_WAYLAND_KHR
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_WIN32_SURFACE_EXTENSION_NAME) == 0) {
-
-            my_data->instanceMap[instance].win32SurfaceExtensionEnabled = true;
-        }
-#endif // VK_USE_PLATFORM_WIN32_KHR
-#ifdef VK_USE_PLATFORM_XCB_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XCB_SURFACE_EXTENSION_NAME) == 0) {
-
-            my_data->instanceMap[instance].xcbSurfaceExtensionEnabled = true;
-        }
-#endif // VK_USE_PLATFORM_XCB_KHR
-#ifdef VK_USE_PLATFORM_XLIB_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XLIB_SURFACE_EXTENSION_NAME) == 0) {
-
-            my_data->instanceMap[instance].xlibSurfaceExtensionEnabled = true;
-        }
-#endif // VK_USE_PLATFORM_XLIB_KHR
     }
 }
 
@@ -645,15 +591,6 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceXcbPresentationSupportKHR(VkPhys
         pPhysicalDevice = (it == my_data->physicalDeviceMap.end()) ? NULL : &it->second;
     }
 
-    // Validate that the platform extension was enabled:
-    if (pPhysicalDevice && pPhysicalDevice->pInstance && !pPhysicalDevice->pInstance->xcbSurfaceExtensionEnabled) {
-        skip_call |=
-            log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-                    reinterpret_cast<uint64_t>(pPhysicalDevice->pInstance->instance), __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                    swapchain_layer_name, "vkGetPhysicalDeviceXcbPresentationSupportKHR() called even though the %s "
-                                          "extension was not enabled for this VkInstance.",
-                    VK_KHR_XCB_SURFACE_EXTENSION_NAME);
-    }
     if (pPhysicalDevice->gotQueueFamilyPropertyCount) {
         skip_call |= ValidateQueueFamilyIndex(my_data, queueFamilyIndex, pPhysicalDevice->numOfQueueFamilies,
                                               pPhysicalDevice->physicalDevice, "vkGetPhysicalDeviceXcbPresentationSupportKHR");
@@ -682,14 +619,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateXlibSurfaceKHR(VkInstance instance, const V
         pInstance = (it == my_data->instanceMap.end()) ? NULL : &it->second;
     }
 
-    // Validate that the platform extension was enabled:
-    if (pInstance && !pInstance->xlibSurfaceExtensionEnabled) {
-        skip_call |=
-            log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-                    reinterpret_cast<uint64_t>(instance), __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED, swapchain_layer_name,
-                    "vkCreateXlibSurfaceKHR() called even though the %s extension was not enabled for this VkInstance.",
-                    VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
-    }
     lock.unlock();
 
     if (!skip_call) {
@@ -731,15 +660,6 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceXlibPresentationSupportKHR(VkPhy
         pPhysicalDevice = (it == my_data->physicalDeviceMap.end()) ? NULL : &it->second;
     }
 
-    // Validate that the platform extension was enabled:
-    if (pPhysicalDevice && pPhysicalDevice->pInstance && !pPhysicalDevice->pInstance->xlibSurfaceExtensionEnabled) {
-        skip_call |=
-            log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-                    reinterpret_cast<uint64_t>(pPhysicalDevice->pInstance->instance), __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                    swapchain_layer_name, "vkGetPhysicalDeviceXlibPresentationSupportKHR() called even though the %s "
-                                          "extension was not enabled for this VkInstance.",
-                    VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
-    }
     if (pPhysicalDevice->gotQueueFamilyPropertyCount) {
         skip_call |= ValidateQueueFamilyIndex(my_data, queueFamilyIndex, pPhysicalDevice->numOfQueueFamilies,
                                               pPhysicalDevice->physicalDevice, "vkGetPhysicalDeviceXlibPresentationSupportKHR");
