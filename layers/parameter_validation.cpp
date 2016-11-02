@@ -5783,47 +5783,35 @@ static PFN_vkVoidFunction InterceptWsiEnabledCommand(const char *name, VkInstanc
         {"vkCreateDisplayModeKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateDisplayModeKHR)},
         {"vkGetDisplayPlaneCapabilitiesKHR", reinterpret_cast<PFN_vkVoidFunction>(GetDisplayPlaneCapabilitiesKHR)},
         {"vkCreateDisplayPlaneSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateDisplayPlaneSurfaceKHR)},
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+        {"vkCreateWin32SurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateWin32SurfaceKHR)},
+        {"vkGetPhysicalDeviceWin32PresentationSupportKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceWin32PresentationSupportKHR)},
+#endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
+        {"vkCreateXcbSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateXcbSurfaceKHR)},
+        {"vkGetPhysicalDeviceXcbPresentationSupportKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceXcbPresentationSupportKHR)},
+#endif
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+        {"vkCreateXlibSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateXlibSurfaceKHR)},
+        {"vkGetPhysicalDeviceXlibPresentationSupportKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceXlibPresentationSupportKHR)},
+#endif
+#ifdef VK_USE_PLATFORM_MIR_KHR
+        {"vkCreateMirSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateMirSurfaceKHR)},
+        {"vkGetPhysicalDeviceMirPresentationSupportKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceMirPresentationSupportKHR)},
+#endif
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+        {"vkCreateWaylandSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateWaylandSurfaceKHR)},
+        {"vkGetPhysicalDeviceWaylandPresentationSupportKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceWaylandPresentationSupportKHR)},
+#endif
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+        {"vkCreateAndroidSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateAndroidSurfaceKHR)},
+#endif
     };
 
     for (size_t i = 0; i < ARRAY_SIZE(wsi_instance_commands); i++) {
         if (!strcmp(wsi_instance_commands[i].name, name))
             return wsi_instance_commands[i].proc;
     }
-
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-    if (!strcmp("vkCreateWin32SurfaceKHR", name))
-        return reinterpret_cast<PFN_vkVoidFunction>(CreateWin32SurfaceKHR);
-    if (!strcmp("vkGetPhysicalDeviceWin32PresentationSupportKHR", name))
-        return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceWin32PresentationSupportKHR);
-#endif // VK_USE_PLATFORM_WIN32_KHR
-#ifdef VK_USE_PLATFORM_XCB_KHR
-    if (!strcmp("vkCreateXcbSurfaceKHR", name))
-        return reinterpret_cast<PFN_vkVoidFunction>(CreateXcbSurfaceKHR);
-    if (!strcmp("vkGetPhysicalDeviceXcbPresentationSupportKHR", name))
-        return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceXcbPresentationSupportKHR);
-#endif // VK_USE_PLATFORM_XCB_KHR
-#ifdef VK_USE_PLATFORM_XLIB_KHR
-    if (!strcmp("vkCreateXlibSurfaceKHR", name))
-        return reinterpret_cast<PFN_vkVoidFunction>(CreateXlibSurfaceKHR);
-    if (!strcmp("vkGetPhysicalDeviceXlibPresentationSupportKHR", name))
-        return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceXlibPresentationSupportKHR);
-#endif // VK_USE_PLATFORM_XLIB_KHR
-#ifdef VK_USE_PLATFORM_MIR_KHR
-    if (!strcmp("vkCreateMirSurfaceKHR", name))
-        return reinterpret_cast<PFN_vkVoidFunction>(CreateMirSurfaceKHR);
-    if (!strcmp("vkGetPhysicalDeviceMirPresentationSupportKHR", name))
-        return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceMirPresentationSupportKHR);
-#endif // VK_USE_PLATFORM_MIR_KHR
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
-    if (!strcmp("vkCreateWaylandSurfaceKHR", name))
-        return reinterpret_cast<PFN_vkVoidFunction>(CreateWaylandSurfaceKHR);
-    if (!strcmp("vkGetPhysicalDeviceWaylandPresentationSupportKHR", name))
-        return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceWaylandPresentationSupportKHR);
-#endif // VK_USE_PLATFORM_WAYLAND_KHR
-#ifdef VK_USE_PLATFORM_ANDROID_KHR
-    if (!strcmp("vkCreateAndroidSurfaceKHR", name))
-        return reinterpret_cast<PFN_vkVoidFunction>(CreateAndroidSurfaceKHR);
-#endif // VK_USE_PLATFORM_ANDROID_KHR
 
     return nullptr;
 }
