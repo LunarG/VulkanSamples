@@ -84,6 +84,8 @@ class Subcommand(object):
  * limitations under the License.
  *
  * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
+ * Author: Jon Ashburn <jon@lunarg.com>
+ * Author: Mark Lobodzinski <mark@lunarg.com>
  */"""
 
     def generate_header(self):
@@ -291,9 +293,15 @@ class WinDefFileSubcommand(Subcommand):
         body.append("LIBRARY " + self.library)
         body.append("EXPORTS")
 
-        for proto in self.exports:
-            if self.library != "VkLayerSwapchain" or proto != "vkEnumerateInstanceExtensionProperties" and proto != "vkEnumerateInstanceLayerProperties":
-                body.append( proto)
+        if self.argv[1] != "all":
+            for proto in self.exports:
+                if self.library != "VkLayerSwapchain" or proto != "vkEnumerateInstanceExtensionProperties" and proto != "vkEnumerateInstanceLayerProperties":
+                    body.append(proto)
+        else:
+            for proto in self.protos:
+                if self.exports and proto.name not in self.exports:
+                    continue
+                body.append("   vk" + proto.name)
 
         return "\n".join(body)
 
