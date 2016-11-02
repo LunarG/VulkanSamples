@@ -3305,8 +3305,8 @@ static void loader_init_dispatch_dev_ext_entry(struct loader_instance *inst,
             dev->loader_dispatch.ext_dispatch.dev_ext[idx] =
                 (PFN_vkDevExt)gdpa_value;
     } else {
-        for (uint32_t i = 0; i < inst->total_icd_count; i++) {
-            struct loader_icd *icd = &inst->icds[i];
+        for (struct loader_icd *icd = inst->icds; icd != NULL;
+             icd = icd->next) {
             struct loader_device *ldev = icd->logical_device_list;
             while (ldev) {
                 gdpa_value =
