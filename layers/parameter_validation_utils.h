@@ -80,6 +80,7 @@ struct instance_extension_enables {
     bool mir_enabled;
     bool android_enabled;
     bool win32_enabled;
+    bool display_enabled;
 };
 
 // String returned by string_VkStructureType for an unrecognized type.

@@ -1604,6 +1604,9 @@ static void CheckInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateI
             instance_extension_map[dispatch_table].win32_enabled = true;
         }
 #endif
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DISPLAY_EXTENSION_NAME) == 0) {
+            instance_extension_map[dispatch_table].display_enabled = true;
+        }
     }
 }
 
