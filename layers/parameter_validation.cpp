@@ -4732,6 +4732,18 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumerateDeviceExtensionProperties(VkPhysicalDevi
         ->EnumerateDeviceExtensionProperties(physicalDevice, NULL, pCount, pProperties);
 }
 
+bool require_device_extension(layer_data *my_data, bool layer_data::*flag, char const *function_name, char const *extension_name)
+{
+    if (!(my_data->*flag)) {
+        return log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                       __LINE__, EXTENSION_NOT_ENABLED, LayerName,
+                       "%s() called even though the %s extension was not enabled for this VkDevice.",
+                       function_name, extension_name);
+    }
+
+    return false;
+}
+
 // WSI Extension Functions
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device, const VkSwapchainCreateInfoKHR *pCreateInfo,
@@ -4741,12 +4753,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device, const VkSwapc
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-    if (!my_data->swapchain_enabled) {
-        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                             reinterpret_cast<uint64_t>(device), __LINE__, EXTENSION_NOT_ENABLED, LayerName,
-                             "vkCreateSwapchainKHR() called even though the %s extension was not enabled for this VkDevice.",
-                             VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-    }
+    skip_call |= require_device_extension(my_data, &layer_data::swapchain_enabled, "vkCreateSwapchainKHR", VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
     skip_call |= parameter_validation_vkCreateSwapchainKHR(my_data->report_data, pCreateInfo, pAllocator, pSwapchain);
 
@@ -4766,12 +4773,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchai
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-    if (!my_data->swapchain_enabled) {
-        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                             reinterpret_cast<uint64_t>(device), __LINE__, EXTENSION_NOT_ENABLED, LayerName,
-                             "vkGetSwapchainImagesKHR() called even though the %s extension was not enabled for this VkDevice.",
-                             VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-    }
+    skip_call |= require_device_extension(my_data, &layer_data::swapchain_enabled, "vkGetSwapchainImagesKHR", VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
     skip_call |=
         parameter_validation_vkGetSwapchainImagesKHR(my_data->report_data, swapchain, pSwapchainImageCount, pSwapchainImages);
@@ -4793,12 +4795,7 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-    if (!my_data->swapchain_enabled) {
-        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                             reinterpret_cast<uint64_t>(device), __LINE__, EXTENSION_NOT_ENABLED, LayerName,
-                             "vkAcquireNextImageKHR() called even though the %s extension was not enabled for this VkDevice.",
-                             VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-    }
+    skip_call |= require_device_extension(my_data, &layer_data::swapchain_enabled, "vkAcquireNextImageKHR", VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
     skip_call |=
         parameter_validation_vkAcquireNextImageKHR(my_data->report_data, swapchain, timeout, semaphore, fence, pImageIndex);
@@ -4819,13 +4816,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
     assert(my_data != NULL);
 
-    if (!my_data->swapchain_enabled) {
-        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT,
-                             reinterpret_cast<uint64_t>(queue), __LINE__,
-                             EXTENSION_NOT_ENABLED, LayerName,
-                             "vkQueuePresentKHR() called even though the %s extension was not enabled for this VkDevice.",
-                             VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-    }
+    skip_call |= require_device_extension(my_data, &layer_data::swapchain_enabled, "vkQueuePresentKHR", VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
     skip_call |= parameter_validation_vkQueuePresentKHR(my_data->report_data, pPresentInfo);
 
@@ -4843,12 +4834,7 @@ VKAPI_ATTR void VKAPI_CALL DestroySwapchainKHR(VkDevice device, VkSwapchainKHR s
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-    if (!my_data->swapchain_enabled) {
-        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                             reinterpret_cast<uint64_t>(device), __LINE__, EXTENSION_NOT_ENABLED, LayerName,
-                             "vkDestroySwapchainKHR() called even though the %s extension was not enabled for this VkDevice.",
-                             VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-    }
+    skip_call |= require_device_extension(my_data, &layer_data::swapchain_enabled, "vkDestroySwapchainKHR", VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
     /* No generated validation function for this call */
 
