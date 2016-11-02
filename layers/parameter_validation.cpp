@@ -73,12 +73,12 @@ struct layer_data {
     VkPhysicalDeviceFeatures physical_device_features;
     VkPhysicalDevice physical_device;
 
-    bool wsi_enabled;
-    bool wsi_display_swapchain_enabled;
+    bool swapchain_enabled;
+    bool display_swapchain_enabled;
 
     layer_data()
         : report_data(nullptr), num_tmp_callbacks(0), tmp_dbg_create_infos(nullptr), tmp_callbacks(nullptr), device_limits{},
-          physical_device_features{}, physical_device{}, wsi_enabled(false), wsi_display_swapchain_enabled(false) {};
+          physical_device_features{}, physical_device{}, swapchain_enabled(false), display_swapchain_enabled(false) {};
 };
 
 static std::unordered_map<void *, struct instance_extension_enables> instance_extension_map;
@@ -1613,15 +1613,15 @@ static void CheckInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateI
 
 static void CheckDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo, VkDevice device) {
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    device_data->wsi_enabled = false;
-    device_data->wsi_display_swapchain_enabled = false;
+    device_data->swapchain_enabled = false;
+    device_data->display_swapchain_enabled = false;
 
     for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
-            device_data->wsi_enabled = true;
+            device_data->swapchain_enabled = true;
         }
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME) == 0) {
-            device_data->wsi_display_swapchain_enabled = true;
+            device_data->display_swapchain_enabled = true;
         }
     }
 }
@@ -5613,14 +5613,14 @@ static PFN_vkVoidFunction InterceptWsiEnabledCommand(const char *name, VkDevice 
     if (device) {
         layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
 
-        if (device_data->wsi_enabled) {
+        if (device_data->swapchain_enabled) {
             for (size_t i = 0; i < ARRAY_SIZE(wsi_device_commands); i++) {
                 if (!strcmp(wsi_device_commands[i].name, name))
                     return wsi_device_commands[i].proc;
             }
         }
 
-        if (device_data->wsi_display_swapchain_enabled) {
+        if (device_data->display_swapchain_enabled) {
             if (!strcmp("vkCreateSharedSwapchainsKHR", name)) {
                 return reinterpret_cast<PFN_vkVoidFunction>(CreateSharedSwapchainsKHR);
             }
