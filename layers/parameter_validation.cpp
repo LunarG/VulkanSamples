@@ -86,18 +86,6 @@ static std::unordered_map<void *, layer_data *> layer_data_map;
 static device_table_map pc_device_table_map;
 static instance_table_map pc_instance_table_map;
 
-// "my instance data"
-debug_report_data *mid(VkInstance object) {
-    dispatch_key key = get_dispatch_key(object);
-    layer_data *data = get_my_data_ptr(key, layer_data_map);
-#if DISPATCH_MAP_DEBUG
-    fprintf(stderr, "MID: map:  0x%p, object:  0x%p, key:  0x%p, data:  0x%p\n", &layer_data_map, object, key, data);
-#endif
-    assert(data != NULL);
-
-    return data->report_data;
-}
-
 // "my device data"
 debug_report_data *mdd(void *object) {
     dispatch_key key = get_dispatch_key(object);
@@ -1416,7 +1404,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
             my_data->logging_callback.pop_back();
         }
 
-        layer_debug_report_destroy_instance(mid(instance));
+        layer_debug_report_destroy_instance(my_data->report_data);
         layer_data_map.erase(pTable);
 
         pc_instance_table_map.erase(key);
