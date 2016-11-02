@@ -1132,15 +1132,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevi
         pPhysicalDevice = (it == my_data->physicalDeviceMap.end()) ? NULL : &it->second;
     }
 
-    // Validate that the surface extension was enabled:
-    if (pPhysicalDevice && pPhysicalDevice->pInstance && !pPhysicalDevice->pInstance->surfaceExtensionEnabled) {
-        skip_call |= log_msg(
-            my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-            reinterpret_cast<uint64_t>(pPhysicalDevice->pInstance->instance), __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-            swapchain_layer_name,
-            "vkGetPhysicalDeviceSurfaceSupportKHR() called even though the %s extension was not enabled for this VkInstance.",
-            VK_KHR_SURFACE_EXTENSION_NAME);
-    }
     if (!pPhysicalDevice->gotQueueFamilyPropertyCount) {
         skip_call |= log_msg(
             my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
@@ -1204,15 +1195,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilitiesKHR(VkPhysica
         pPhysicalDevice = (it == my_data->physicalDeviceMap.end()) ? NULL : &it->second;
     }
 
-    // Validate that the surface extension was enabled:
-    if (pPhysicalDevice && pPhysicalDevice->pInstance && !pPhysicalDevice->pInstance->surfaceExtensionEnabled) {
-        skip_call |= log_msg(
-            my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-            reinterpret_cast<uint64_t>(pPhysicalDevice->pInstance->instance), __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-            swapchain_layer_name,
-            "vkGetPhysicalDeviceSurfaceCapabilitiesKHR() called even though the %s extension was not enabled for this VkInstance.",
-            VK_KHR_DISPLAY_EXTENSION_NAME);
-    }
     lock.unlock();
 
     if (!skip_call) {
@@ -1251,15 +1233,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevi
         pPhysicalDevice = (it == my_data->physicalDeviceMap.end()) ? NULL : &it->second;
     }
 
-    // Validate that the surface extension was enabled:
-    if (pPhysicalDevice && pPhysicalDevice->pInstance && !pPhysicalDevice->pInstance->surfaceExtensionEnabled) {
-        skip_call |= log_msg(
-            my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-            reinterpret_cast<uint64_t>(pPhysicalDevice->pInstance->instance), __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-            swapchain_layer_name,
-            "vkGetPhysicalDeviceSurfaceFormatsKHR() called even though the %s extension was not enabled for this VkInstance.",
-            VK_KHR_DISPLAY_EXTENSION_NAME);
-    }
     if (pPhysicalDevice && pSurfaceFormats) {
         // Compare the preliminary value of *pSurfaceFormatCount with the value this time:
         if (pPhysicalDevice->surfaceFormatCount == 0) {
@@ -1334,15 +1307,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfacePresentModesKHR(VkPhysica
         pPhysicalDevice = (it == my_data->physicalDeviceMap.end()) ? NULL : &it->second;
     }
 
-    // Validate that the surface extension was enabled:
-    if (pPhysicalDevice && pPhysicalDevice->pInstance && !pPhysicalDevice->pInstance->surfaceExtensionEnabled) {
-        skip_call |= log_msg(
-            my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-            reinterpret_cast<uint64_t>(pPhysicalDevice->pInstance->instance), __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-            swapchain_layer_name,
-            "vkGetPhysicalDeviceSurfacePresentModesKHR() called even though the %s extension was not enabled for this VkInstance.",
-            VK_KHR_DISPLAY_EXTENSION_NAME);
-    }
     if (pPhysicalDevice && pPresentModes) {
         // Compare the preliminary value of *pPresentModeCount with the value this time:
         if (pPhysicalDevice->presentModeCount == 0) {
