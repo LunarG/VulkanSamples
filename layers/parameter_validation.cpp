@@ -1576,7 +1576,7 @@ static void CheckInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateI
 
     for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SURFACE_EXTENSION_NAME) == 0) {
-            instance_extension_map[dispatch_table].wsi_enabled = true;
+            instance_extension_map[dispatch_table].surface_enabled = true;
         }
 #ifdef VK_USE_PLATFORM_XLIB_KHR
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XLIB_SURFACE_EXTENSION_NAME) == 0) {
@@ -5608,7 +5608,7 @@ static PFN_vkVoidFunction InterceptWsiEnabledCommand(const char *name, VkInstanc
     };
 
     VkLayerInstanceDispatchTable *pTable = get_dispatch_table(pc_instance_table_map, instance);
-    if (instance_extension_map[pTable].wsi_enabled) {
+    if (instance_extension_map[pTable].surface_enabled) {
         for (size_t i = 0; i < ARRAY_SIZE(wsi_instance_commands); i++) {
             if (!strcmp(wsi_instance_commands[i].name, name))
                 return wsi_instance_commands[i].proc;

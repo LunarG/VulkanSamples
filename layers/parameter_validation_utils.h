@@ -73,7 +73,7 @@ const char LayerName[] = "ParameterValidation";
 
 // Enables for display-related instance extensions
 struct instance_extension_enables {
-    bool wsi_enabled;
+    bool surface_enabled;
     bool xlib_enabled;
     bool xcb_enabled;
     bool wayland_enabled;
