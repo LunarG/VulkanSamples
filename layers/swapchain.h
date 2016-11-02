@@ -101,9 +101,6 @@ struct SwpInstance {
     // remembered:
     unordered_map<const void *, SwpPhysicalDevice *> physicalDevices;
 
-    // Set to true if VK_KHR_SURFACE_EXTENSION_NAME was enabled for this VkInstance:
-    bool surfaceExtensionEnabled;
-
     // Set to true if VK_KHR_DISPLAY_EXTENSION_NAME was enabled for this VkInstance:
     bool displayExtensionEnabled;
 };
@@ -181,12 +178,6 @@ struct SwpDevice {
 
     // Corresponding VkPhysicalDevice (and info) to this VkDevice:
     SwpPhysicalDevice *pPhysicalDevice;
-
-    // Set to true if VK_KHR_SWAPCHAIN_EXTENSION_NAME was enabled:
-    bool swapchainExtensionEnabled;
-
-    // Set to true if VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME was enabled:
-    bool displaySwapchainExtensionEnabled;
 
     // When vkCreateSwapchainKHR is called, the VkSwapchainKHR's are
     // remembered:

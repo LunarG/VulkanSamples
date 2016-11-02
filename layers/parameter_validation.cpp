@@ -4741,6 +4741,13 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device, const VkSwapc
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
+    if (!my_data->swapchain_enabled) {
+        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                             reinterpret_cast<uint64_t>(device), __LINE__, EXTENSION_NOT_ENABLED, LayerName,
+                             "vkCreateSwapchainKHR() called even though the %s extension was not enabled for this VkDevice.",
+                             VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+    }
+
     skip_call |= parameter_validation_vkCreateSwapchainKHR(my_data->report_data, pCreateInfo, pAllocator, pSwapchain);
 
     if (!skip_call) {
@@ -4758,6 +4765,13 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchai
     bool skip_call = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
+
+    if (!my_data->swapchain_enabled) {
+        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                             reinterpret_cast<uint64_t>(device), __LINE__, EXTENSION_NOT_ENABLED, LayerName,
+                             "vkGetSwapchainImagesKHR() called even though the %s extension was not enabled for this VkDevice.",
+                             VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+    }
 
     skip_call |=
         parameter_validation_vkGetSwapchainImagesKHR(my_data->report_data, swapchain, pSwapchainImageCount, pSwapchainImages);
@@ -4779,6 +4793,13 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
+    if (!my_data->swapchain_enabled) {
+        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                             reinterpret_cast<uint64_t>(device), __LINE__, EXTENSION_NOT_ENABLED, LayerName,
+                             "vkAcquireNextImageKHR() called even though the %s extension was not enabled for this VkDevice.",
+                             VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+    }
+
     skip_call |=
         parameter_validation_vkAcquireNextImageKHR(my_data->report_data, swapchain, timeout, semaphore, fence, pImageIndex);
 
@@ -4798,6 +4819,14 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
     assert(my_data != NULL);
 
+    if (!my_data->swapchain_enabled) {
+        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT,
+                             reinterpret_cast<uint64_t>(queue), __LINE__,
+                             EXTENSION_NOT_ENABLED, LayerName,
+                             "vkQueuePresentKHR() called even though the %s extension was not enabled for this VkDevice.",
+                             VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+    }
+
     skip_call |= parameter_validation_vkQueuePresentKHR(my_data->report_data, pPresentInfo);
 
     if (!skip_call) {
@@ -4807,6 +4836,25 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
     }
 
     return result;
+}
+
+VKAPI_ATTR void VKAPI_CALL DestroySwapchainKHR(VkDevice device, VkSwapchainKHR swapchain, const VkAllocationCallbacks *pAllocator) {
+    bool skip_call = false;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+
+    if (!my_data->swapchain_enabled) {
+        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                             reinterpret_cast<uint64_t>(device), __LINE__, EXTENSION_NOT_ENABLED, LayerName,
+                             "vkDestroySwapchainKHR() called even though the %s extension was not enabled for this VkDevice.",
+                             VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+    }
+
+    /* No generated validation function for this call */
+
+    if (!skip_call) {
+        get_dispatch_table(pc_device_table_map, device)->DestroySwapchainKHR(device, swapchain, pAllocator);
+    }
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex,
@@ -4851,7 +4899,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilitiesKHR(VkPhysica
             reinterpret_cast<uint64_t>(physicalDevice), __LINE__, EXTENSION_NOT_ENABLED,
             LayerName,
             "vkGetPhysicalDeviceSurfaceCapabilitiesKHR() called even though the %s extension was not enabled for this VkInstance.",
-            VK_KHR_DISPLAY_EXTENSION_NAME);
+            VK_KHR_SURFACE_EXTENSION_NAME);
     }
 
     skip_call |=
@@ -4881,7 +4929,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevi
             reinterpret_cast<uint64_t>(physicalDevice), __LINE__, EXTENSION_NOT_ENABLED,
             LayerName,
             "vkGetPhysicalDeviceSurfaceFormatsKHR() called even though the %s extension was not enabled for this VkInstance.",
-            VK_KHR_DISPLAY_EXTENSION_NAME);
+            VK_KHR_SURFACE_EXTENSION_NAME);
     }
 
     skip_call |= parameter_validation_vkGetPhysicalDeviceSurfaceFormatsKHR(my_data->report_data, surface, pSurfaceFormatCount,
@@ -4911,7 +4959,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfacePresentModesKHR(VkPhysica
             reinterpret_cast<uint64_t>(physicalDevice), __LINE__, EXTENSION_NOT_ENABLED,
             LayerName,
             "vkGetPhysicalDeviceSurfacePresentModesKHR() called even though the %s extension was not enabled for this VkInstance.",
-            VK_KHR_DISPLAY_EXTENSION_NAME);
+            VK_KHR_SURFACE_EXTENSION_NAME);
     }
 
     skip_call |= parameter_validation_vkGetPhysicalDeviceSurfacePresentModesKHR(my_data->report_data, surface, pPresentModeCount,
@@ -4925,6 +4973,24 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfacePresentModesKHR(VkPhysica
     }
 
     return result;
+}
+
+VKAPI_ATTR void VKAPI_CALL DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface, const VkAllocationCallbacks *pAllocator) {
+    bool skip_call = false;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    assert(my_data != NULL);
+
+    if (!instance_extension_map[get_dispatch_table(pc_instance_table_map, instance)].surface_enabled) {
+        skip_call |= log_msg(
+                my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+                reinterpret_cast<uint64_t>(instance), __LINE__, EXTENSION_NOT_ENABLED,
+                LayerName, "vkDestroySurfaceKHR() called even though the %s extension was not enabled for this VkInstance.",
+                VK_KHR_SURFACE_EXTENSION_NAME);
+    }
+
+    if (!skip_call) {
+        get_dispatch_table(pc_instance_table_map, instance)->DestroySurfaceKHR(instance, surface, pAllocator);
+    }
 }
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
@@ -5245,6 +5311,13 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSharedSwapchainsKHR(VkDevice device, uint32
     bool skip_call = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
+
+    if (!my_data->display_swapchain_enabled) {
+        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                             reinterpret_cast<uint64_t>(device), __LINE__, EXTENSION_NOT_ENABLED, LayerName,
+                             "vkCreateSharedSwapchainsKHR() called even though the %s extension was not enabled for this VkDevice.",
+                             VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME);
+    }
 
     skip_call |= parameter_validation_vkCreateSharedSwapchainsKHR(my_data->report_data, swapchainCount, pCreateInfos, pAllocator,
                                                                   pSwapchains);
@@ -5604,22 +5677,17 @@ static PFN_vkVoidFunction InterceptWsiEnabledCommand(const char *name, VkDevice 
         {"vkGetSwapchainImagesKHR", reinterpret_cast<PFN_vkVoidFunction>(GetSwapchainImagesKHR)},
         {"vkAcquireNextImageKHR", reinterpret_cast<PFN_vkVoidFunction>(AcquireNextImageKHR)},
         {"vkQueuePresentKHR", reinterpret_cast<PFN_vkVoidFunction>(QueuePresentKHR)},
+        {"vkDestroySwapchainKHR", reinterpret_cast<PFN_vkVoidFunction>(DestroySwapchainKHR)},
     };
 
     if (device) {
-        layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-
-        if (device_data->swapchain_enabled) {
-            for (size_t i = 0; i < ARRAY_SIZE(wsi_device_commands); i++) {
-                if (!strcmp(wsi_device_commands[i].name, name))
-                    return wsi_device_commands[i].proc;
-            }
+        for (size_t i = 0; i < ARRAY_SIZE(wsi_device_commands); i++) {
+            if (!strcmp(wsi_device_commands[i].name, name))
+                return wsi_device_commands[i].proc;
         }
 
-        if (device_data->display_swapchain_enabled) {
-            if (!strcmp("vkCreateSharedSwapchainsKHR", name)) {
-                return reinterpret_cast<PFN_vkVoidFunction>(CreateSharedSwapchainsKHR);
-            }
+        if (!strcmp("vkCreateSharedSwapchainsKHR", name)) {
+            return reinterpret_cast<PFN_vkVoidFunction>(CreateSharedSwapchainsKHR);
         }
     }
 
@@ -5637,6 +5705,7 @@ static PFN_vkVoidFunction InterceptWsiEnabledCommand(const char *name, VkInstanc
         {"vkGetPhysicalDeviceSurfaceFormatsKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceFormatsKHR)},
         {"vkGetPhysicalDeviceSurfacePresentModesKHR",
          reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfacePresentModesKHR)},
+        {"vkDestroySurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(DestroySurfaceKHR)},
     };
 
     for (size_t i = 0; i < ARRAY_SIZE(wsi_instance_commands); i++) {
