@@ -471,7 +471,6 @@ in the following Linux directories:
     $HOME/.local/share/vulkan/icd.d
 
 The "/usr/local/*" directories can be configured to be other directories at build time.
-See the `BUILD.md` file in this repository for more information.
 
 Where $HOME is the current home directory of the application's user id; this
 path will be ignored for suid programs.
@@ -989,7 +988,6 @@ The Vulkan loader will scan the files in the following Linux directories:
     $HOME/.local/share/vulkan/implicit_layer.d
 
 The "/usr/local/*" directories can be configured to be other directories at build time.
-See the `BUILD.md` file in this repository for more information.
 
 Where $HOME is the current home directory of the application's user id; this
 path will be ignored for suid programs.
