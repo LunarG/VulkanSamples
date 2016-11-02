@@ -99,10 +99,9 @@ public:
     bool running;
     bool textinput;
     bool has_focus;
-    bool wait_for_event;                                                           // enables blocking-mode.
     struct shape_t { int16_t x; int16_t y; uint16_t width; uint16_t height; }shape = {};  // window shape
 
-    WindowImpl() : instance(0), surface(0), running(false), textinput(false), has_focus(false), wait_for_event(false){}
+    WindowImpl() : instance(0), surface(0), running(false), textinput(false), has_focus(false){}
     virtual ~WindowImpl() { if(surface) vkDestroySurfaceKHR(*instance,surface,NULL); }
     virtual void Close() { running = false; }
     CInstance& Instance() { return *instance; }
@@ -115,7 +114,7 @@ public:
     virtual void TextInput(bool enabled);          //Enable TextEvent, (and on Android, show the soft-keyboard)
     virtual bool TextInput(){return textinput;}    //Returns true if text input is enabled (and on android, keyboard is visible.) //TODO
 
-    virtual EventType GetEvent()=0; //fetch one event from the queue
+    virtual EventType GetEvent(bool wait_for_event=false)=0; //fetch one event from the queue. the 'wait_for_event' flag enables blocking mode.
 
     virtual bool CanPresent(VkPhysicalDevice gpu, uint32_t queue_family) {return true;} //check if this window can present this queue type
     virtual void SetTitle(const char* title){}

@@ -33,7 +33,7 @@
 //#include <X11/Xlib.h>              // XLib only
 #include <X11/Xlib-xcb.h>            // Xlib + XCB
 #include <X11/extensions/XInput2.h>  // MultiTouch
-#include <xkbcommon/xkbcommon.h>     // keyboard
+#include <xkbcommon/xkbcommon.h>     // Keyboard
 //-------------------------------------------------
 
 typedef uint16_t xcb_input_device_id_t;
@@ -112,7 +112,7 @@ class Window_xcb : public WindowImpl{
 public:
     Window_xcb(CInstance& inst, const char* title, uint width, uint height);
     virtual ~Window_xcb();
-    EventType GetEvent();
+    EventType GetEvent(bool wait_for_event=false);
     bool CanPresent(VkPhysicalDevice phy, uint32_t queue_family);  //check if this window can present this queue type
 };
 //==============================================================
@@ -282,7 +282,7 @@ bool Window_xcb::InitTouch(){
 }
 //---------------------------------------------------------------------------
 
-EventType Window_xcb::GetEvent(){
+EventType Window_xcb::GetEvent(bool wait_for_event){
     EventType event={};
     static char buf[4]={};                             //store char for text event
     if(!eventFIFO.isEmpty()) return *eventFIFO.pop();  //pop message from message queue buffer

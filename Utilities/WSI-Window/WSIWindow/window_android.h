@@ -108,14 +108,14 @@ public:
 
     virtual ~Window_android(){};
 
-    EventType GetEvent(){
+    EventType GetEvent(bool wait_for_event=false){
         EventType event={};
         static char buf[4]={};                             //store char for text event
         if(!eventFIFO.isEmpty()) return *eventFIFO.pop();  //pop message from message queue buffer
 
         int events=0;
         struct android_poll_source* source;
-        int timeoutMillis = wait_for_event ? -1 : 0;
+        int timeoutMillis = wait_for_event ? -1 : 0;       // Blocking or non-blocking mode
         int id=ALooper_pollOnce(timeoutMillis, NULL,&events,(void**)&source);
         //ALooper_pollAll(0, NULL,&events,(void**)&source);
 

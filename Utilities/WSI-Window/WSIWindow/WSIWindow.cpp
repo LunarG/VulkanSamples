@@ -71,10 +71,10 @@ void WSIWindow::SetWinSize(uint16_t w, uint16_t h){ pimpl->SetWinPos(pimpl->shap
 void WSIWindow::ShowKeyboard(bool enabled){ pimpl->TextInput(enabled);}            //On Android, show the soft-keyboard,
 void WSIWindow::Close(){ pimpl->Close(); }
 
-EventType WSIWindow::PollEvent(){return pimpl->GetEvent();}
+EventType WSIWindow::GetEvent(bool wait_for_event){return pimpl->GetEvent(wait_for_event);}
 
-bool WSIWindow::ProcessEvents(){
-    EventType e=pimpl->GetEvent();
+bool WSIWindow::ProcessEvents(bool wait_for_event){
+    EventType e=pimpl->GetEvent(wait_for_event);
     while(e.tag!=EventType::NONE){
 //     Using Virtual functions for event handlers
        switch(e.tag){

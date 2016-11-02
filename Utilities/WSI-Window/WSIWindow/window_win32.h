@@ -64,7 +64,7 @@ class Window_win32 : public WindowImpl{
 public:
     Window_win32(CInstance& inst, const char* title, uint width, uint height);
     virtual ~Window_win32();
-    EventType GetEvent();
+    EventType GetEvent(bool wait_for_event=false);
     bool CanPresent(VkPhysicalDevice phy, uint32_t queue_family);  //check if this window can present this queue type
 };
 //==============================================================
@@ -149,7 +149,7 @@ void Window_win32::CreateSurface(VkInstance instance){
 #define WM_RESHAPE (WM_USER+0)
 #define WM_ACTIVE  (WM_USER+1)
 
-EventType Window_win32::GetEvent(){
+EventType Window_win32::GetEvent(bool wait_for_event){
     //EventType event;
     if (!eventFIFO.isEmpty()) return *eventFIFO.pop();
 
@@ -240,7 +240,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
             return 0;
         case WM_PAINT:
             //printf("WM_PAINT\n");
-            //demo_run(&demo);
             return 0;
         case WM_GETMINMAXINFO:     // set window's minimum size
                                    //((MINMAXINFO*)lParam)->ptMinTrackSize = demo.minsize;

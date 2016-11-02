@@ -47,7 +47,6 @@
 // More Documentation
 // Keyboard: function to get native keycode
 // Android: window resize events (WIP)
-// Set window size / position
 // Android: Add option to set render buffer size, smaller than window size. (ANativeWindow_SetBufferGeometry) (Dustin)
 // Android: Rotate screen according to width/height aspect ratio. (Dustin)
 // Desktop: Pick render device with flag: DONT_CARE / PERFORMANCE / INTEGRATED . ... (Mark Young)
@@ -88,8 +87,8 @@ public:
     void Close();                                      // Close the window
 
     //--Event loop--
-    EventType PollEvent();                             // Return a single event from the queue (lower-level alternative to using "ProcessEvents")
-    bool ProcessEvents();                              // Poll for events, and call appropriate event handlers. Returns false if window is being closed.
+    EventType GetEvent(bool wait_for_event=false);     // Return a single event from the queue (lower-level alternative to using "ProcessEvents")
+    bool ProcessEvents(bool wait_for_event=false);     // Poll for events, and call appropriate event handlers. Returns false if window is being closed.
     //void Run(){ while(ProcessEvents()){} }             // Run message loop until window is closed.  TODO: render
 
     //-- Virtual Functions as event handlers --
