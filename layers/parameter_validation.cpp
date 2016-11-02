@@ -5592,16 +5592,13 @@ static PFN_vkVoidFunction InterceptWsiEnabledCommand(const char *name, VkDevice 
         {"vkAcquireNextImageKHR", reinterpret_cast<PFN_vkVoidFunction>(AcquireNextImageKHR)},
         {"vkQueuePresentKHR", reinterpret_cast<PFN_vkVoidFunction>(QueuePresentKHR)},
         {"vkDestroySwapchainKHR", reinterpret_cast<PFN_vkVoidFunction>(DestroySwapchainKHR)},
+        {"vkCreateSharedSwapchainsKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateSharedSwapchainsKHR)},
     };
 
     if (device) {
         for (size_t i = 0; i < ARRAY_SIZE(wsi_device_commands); i++) {
             if (!strcmp(wsi_device_commands[i].name, name))
                 return wsi_device_commands[i].proc;
-        }
-
-        if (!strcmp("vkCreateSharedSwapchainsKHR", name)) {
-            return reinterpret_cast<PFN_vkVoidFunction>(CreateSharedSwapchainsKHR);
         }
     }
 
