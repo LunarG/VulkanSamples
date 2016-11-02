@@ -1485,12 +1485,14 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDisplayPlaneSurfaceKHR(
     const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
     struct loader_instance *inst = loader_get_instance(instance);
     VkIcdSurface *pIcdSurface = NULL;
+    VkResult vkRes = VK_SUCCESS;
 
-    if (!inst->wsi_surface_enabled) {
+    if (!inst->wsi_display_enabled) {
         loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                    "VK_KHR_surface extension not enabled.  "
                    "vkCreateDisplayPlaneSurfaceKHR not executed!\n");
-        return VK_ERROR_EXTENSION_NOT_PRESENT;
+        vkRes = VK_ERROR_EXTENSION_NOT_PRESENT;
+        goto out;
     }
 
     // The VK_KHR_display path will continue to use the old path (hence the
@@ -1499,7 +1501,8 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDisplayPlaneSurfaceKHR(
         AllocateIcdSurfaceStruct(inst, sizeof(pIcdSurface->display_surf.base),
                                  sizeof(pIcdSurface->display_surf), false);
     if (pIcdSurface == NULL) {
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
+        vkRes = VK_ERROR_OUT_OF_HOST_MEMORY;
+        goto out;
     }
 
     pIcdSurface->display_surf.base.platform = VK_ICD_WSI_PLATFORM_DISPLAY;
@@ -1511,9 +1514,43 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDisplayPlaneSurfaceKHR(
     pIcdSurface->display_surf.alphaMode = pCreateInfo->alphaMode;
     pIcdSurface->display_surf.imageExtent = pCreateInfo->imageExtent;
 
+    // Loop through each ICD and determine if they need to create a surface
+    for (uint32_t i = 0; i < inst->total_icd_count; i++) {
+        if (inst->icd_libs.list[i].interface_version >=
+            ICD_VER_SUPPORTS_ICD_SURFACE_KHR) {
+            struct loader_icd *icd = &inst->icds[i];
+            if (NULL != icd->CreateDisplayPlaneSurfaceKHR) {
+                vkRes = icd->CreateDisplayPlaneSurfaceKHR(
+                    icd->instance, pCreateInfo, pAllocator,
+                    &pIcdSurface->real_icd_surfaces[i]);
+                if (VK_SUCCESS != vkRes) {
+                    goto out;
+                }
+            }
+        }
+    }
+
     *pSurface = (VkSurfaceKHR)pIcdSurface;
 
-    return VK_SUCCESS;
+out:
+
+    if (VK_SUCCESS != vkRes && NULL != pIcdSurface) {
+        if (NULL != pIcdSurface->real_icd_surfaces) {
+            for (uint32_t i = 0; i < inst->total_icd_count; i++) {
+                struct loader_icd *icd = &inst->icds[i];
+                if (NULL != (void *)pIcdSurface->real_icd_surfaces[i] &&
+                    NULL != icd->DestroySurfaceKHR) {
+                    icd->DestroySurfaceKHR(icd->instance,
+                                           pIcdSurface->real_icd_surfaces[i],
+                                           pAllocator);
+                }
+            }
+            loader_instance_heap_free(inst, pIcdSurface->real_icd_surfaces);
+        }
+        loader_instance_heap_free(inst, pIcdSurface);
+    }
+
+    return vkRes;
 }
 
 // This is the trampoline entrypoint
