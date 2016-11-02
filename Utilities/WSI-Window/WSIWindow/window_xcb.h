@@ -106,12 +106,14 @@ class Window_xcb : public WindowImpl{
     //------------------
 
     void SetTitle(const char* title);
+    void SetWinPos(uint x,uint y,uint w,uint h);
     void CreateSurface(VkInstance instance);
-    bool InitTouch();  //Returns false if no touch-device was found.
+    bool InitTouch();                // Returns false if no touch-device was found.
 public:
     Window_xcb(CInstance& inst, const char* title, uint width, uint height);
     virtual ~Window_xcb();
     EventType GetEvent();
+    bool CanPresent(VkPhysicalDevice phy, uint32_t queue_family);  //check if this window can present this queue type
 };
 //==============================================================
 #endif
@@ -211,6 +213,14 @@ void Window_xcb::SetTitle(const char* title){
     xcb_flush(xcb_connection);
 }
 
+void Window_xcb::SetWinPos(uint x,uint y,uint w,uint h){
+    uint values[] = { x,y,w,h };
+    xcb_configure_window(xcb_connection, xcb_window,
+                         XCB_CONFIG_WINDOW_X     | XCB_CONFIG_WINDOW_Y |
+                         XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT, values);
+    xcb_flush(xcb_connection);
+}
+
 void Window_xcb::CreateSurface(VkInstance instance){
     VkXcbSurfaceCreateInfoKHR xcb_createInfo;
     xcb_createInfo.sType      = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
@@ -227,7 +237,7 @@ bool Window_xcb::InitTouch(){
 #ifdef ENABLE_MULTITOUCH
     int ev, err;
     if (!XQueryExtension(display, "XInputExtension", &xi_opcode, &ev, &err)) {
-        LOGW("X Input extension not available.\n");
+        LOGW("XInput extension not available.\n");
         return false;
     }
 
@@ -278,7 +288,9 @@ EventType Window_xcb::GetEvent(){
     if(!eventFIFO.isEmpty()) return *eventFIFO.pop();  //pop message from message queue buffer
 
     xcb_generic_event_t* x_event;
-    if (x_event = xcb_poll_for_event(xcb_connection)) {
+    if(wait_for_event) x_event = xcb_wait_for_event(xcb_connection);  // Blocking mode
+    else               x_event = xcb_poll_for_event(xcb_connection);  // Non-blocking mode
+    if(x_event){
         xcb_button_press_event_t& e =*(xcb_button_press_event_t*)x_event; //xcb_motion_notify_event_t
         int16_t mx =e.event_x;
         int16_t my =e.event_y;
@@ -319,10 +331,10 @@ EventType Window_xcb::GetEvent(){
                 }
                 break;
             }
-            case XCB_FOCUS_IN  : if(!has_focus) event=FocusEvent(true);   break;     //window gained focus
-            case XCB_FOCUS_OUT : if( has_focus) event=FocusEvent(false);  break;     //window lost focus
+            case XCB_FOCUS_IN  : if(!has_focus) event=FocusEvent(true);   break;        //window gained focus
+            case XCB_FOCUS_OUT : if( has_focus) event=FocusEvent(false);  break;        //window lost focus
 #ifdef ENABLE_MULTITOUCH
-            case XCB_GE_GENERIC : {                                                  //Multi touch screen events
+            case XCB_GE_GENERIC : {                                                     //Multi touch screen events
                 xcb_input_touch_begin_event_t& te=*(xcb_input_touch_begin_event_t*)x_event;
                 if(te.extension==xi_opcode){      //make sure this event is from the touch device
                     float x=te.event_x/65536.f;
@@ -360,13 +372,17 @@ EventType Window_xcb::GetEvent(){
             default:
                 //printf("EVENT: %d",(x_event->response_type & ~0x80));  //get event numerical value
                 break;
-        }
+        }//switch
         free (x_event);
         return event;
     }
     return {EventType::NONE};
 }
 
+// Return true if this window can present the given queue type
+bool Window_xcb::CanPresent(VkPhysicalDevice gpu, uint32_t queue_family){
+    return vkGetPhysicalDeviceXcbPresentationSupportKHR(gpu, queue_family, xcb_connection, xcb_screen->root_visual) == VK_TRUE;
+}
 
 #endif //VK_USE_PLATFORM_XCB_KHR
 //==============================================================

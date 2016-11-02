@@ -115,7 +115,8 @@ public:
 
         int events=0;
         struct android_poll_source* source;
-        int id=ALooper_pollOnce(0, NULL,&events,(void**)&source);
+        int timeoutMillis = wait_for_event ? -1 : 0;
+        int id=ALooper_pollOnce(timeoutMillis, NULL,&events,(void**)&source);
         //ALooper_pollAll(0, NULL,&events,(void**)&source);
 
         //if(id>=0) printf("id=%d events=%d, source=%d",id,(int)events, source[0]);

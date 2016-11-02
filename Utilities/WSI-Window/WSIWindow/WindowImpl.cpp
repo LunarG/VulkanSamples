@@ -36,7 +36,7 @@ EventType WindowImpl::MouseEvent(eAction action, int16_t x, int16_t y, uint8_t b
 EventType WindowImpl::KeyEvent(eAction action, uint8_t key) {
     keystate[key] = (action==eDOWN);
     EventType e={EventType::KEY};
-    e.key={action,key};
+    e.key={action,(eKeycode)key};
     return e;
 }
 

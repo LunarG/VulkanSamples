@@ -49,7 +49,7 @@ struct EventType{
     enum{NONE, MOUSE, KEY, TEXT, MOVE, RESIZE, FOCUS, TOUCH} tag;              // event type
     union{
         struct {eAction action; int16_t x; int16_t y; uint8_t btn;} mouse;     // mouse move/click
-        struct {eAction action; uint8_t keycode;                  } key;       // Keyboard key state
+        struct {eAction action; eKeycode keycode;                 } key;       // Keyboard key state
         struct {const char* str;                                  } text;      // Text entered
         struct {int16_t x; int16_t y;                             } move;      // Window move
         struct {uint16_t width; uint16_t height;                  } resize;    // Window resize
@@ -99,9 +99,10 @@ public:
     bool running;
     bool textinput;
     bool has_focus;
-    struct shape_t {int16_t x; int16_t y; uint16_t width; uint16_t height;}shape;  // window shape
+    bool wait_for_event;                                                           // enables blocking-mode.
+    struct shape_t { int16_t x; int16_t y; uint16_t width; uint16_t height; }shape = {};  // window shape
 
-    WindowImpl() : instance(0), surface(0), running(false), textinput(false), has_focus(false){}
+    WindowImpl() : instance(0), surface(0), running(false), textinput(false), has_focus(false), wait_for_event(false){}
     virtual ~WindowImpl() { if(surface) vkDestroySurfaceKHR(*instance,surface,NULL); }
     virtual void Close() { running = false; }
     CInstance& Instance() { return *instance; }
@@ -115,6 +116,10 @@ public:
     virtual bool TextInput(){return textinput;}    //Returns true if text input is enabled (and on android, keyboard is visible.) //TODO
 
     virtual EventType GetEvent()=0; //fetch one event from the queue
+
+    virtual bool CanPresent(VkPhysicalDevice gpu, uint32_t queue_family) {return true;} //check if this window can present this queue type
+    virtual void SetTitle(const char* title){}
+    virtual void SetWinPos(uint x,uint y,uint w,uint h){}
 };
 //==============================================================
 

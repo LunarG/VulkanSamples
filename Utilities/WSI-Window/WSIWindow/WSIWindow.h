@@ -70,24 +70,31 @@ public:
     WSIWindow(CInstance& inst, const char* title, uint width, uint height);
     virtual ~WSIWindow();
     VkSurfaceKHR Surface();
+    operator VkSurfaceKHR () {return Surface();}
+    bool CanPresent(VkPhysicalDevice gpu, uint32_t queue_family); //Check if this window can present given queue type
+
     //--State query functions--
     void GetWinPos  (int16_t& x, int16_t& y);          // Get the window's x,y position, relative to top-left
     void GetWinSize (int16_t& width, int16_t& height); // Get the window's width and height
     bool GetKeyState(const eKeycode key);              // Returns true if specified key is pressed. (see keycodes.h)
-    bool GetBtnState(const uint8_t  btn);              // Returns true if specified mouse button is pressed (button 1-5)
+    bool GetBtnState(const uint8_t  btn);              // Returns true if specified mouse button is pressed (button 1-3)
     void GetMousePos(int16_t& x, int16_t& y);          // Get mouse (x,y) coordinate within window client area
 
     //--Control functions--
+    void SetTitle(const char* title);                  // Set window title
+    void SetWinPos (uint16_t x, uint16_t y);           // Set window position
+    void SetWinSize(uint16_t w, uint16_t h);           // Set window size
     void ShowKeyboard(bool enabled);                   // on Android, show the soft-keyboard.
     void Close();                                      // Close the window
 
+    //--Event loop--
     EventType PollEvent();                             // Return a single event from the queue (lower-level alternative to using "ProcessEvents")
     bool ProcessEvents();                              // Poll for events, and call appropriate event handlers. Returns false if window is being closed.
     //void Run(){ while(ProcessEvents()){} }             // Run message loop until window is closed.  TODO: render
 
     //-- Virtual Functions as event handlers --
     virtual void OnMouseEvent (eAction action, int16_t x, int16_t y, uint8_t btn){}  // Callback for mouse events
-    virtual void OnKeyEvent   (eAction action, uint8_t keycode){}                    // Callback for keyboard events (keycodes)
+    virtual void OnKeyEvent   (eAction action, eKeycode keycode){}                   // Callback for keyboard events (keycodes)
     virtual void OnTextEvent  (const char* str){}                                    // Callback for text typed events (text)
     virtual void OnMoveEvent  (int16_t x, int16_t y){}                               // Callback for window move events
     virtual void OnResizeEvent(uint16_t width, uint16_t height){}                    // Callback for window resize events

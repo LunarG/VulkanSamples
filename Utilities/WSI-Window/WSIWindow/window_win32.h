@@ -58,11 +58,14 @@ class Window_win32 : public WindowImpl{
     //bool ShapeMode;
     FIFO<EventType, 4> eventFIFO;  //Event message queue buffer (max 4 items)
 
+    void SetTitle(const char* title);
+    void SetWinPos(uint x, uint y, uint w, uint h);
     void CreateSurface(VkInstance instance);
 public:
     Window_win32(CInstance& inst, const char* title, uint width, uint height);
     virtual ~Window_win32();
     EventType GetEvent();
+    bool CanPresent(VkPhysicalDevice phy, uint32_t queue_family);  //check if this window can present this queue type
 };
 //==============================================================
 #endif
@@ -123,6 +126,14 @@ Window_win32::~Window_win32(){
      DestroyWindow(hWnd);
 }
 
+void Window_win32::SetTitle(const char* title){
+    SetWindowText(hWnd, title);
+}
+
+void Window_win32::SetWinPos(uint x, uint y, uint w, uint h){
+    SetWindowPos(hWnd, NULL, x, y, x + w, y + h, SWP_NOZORDER | SWP_NOACTIVATE);
+}
+
 void Window_win32::CreateSurface(VkInstance instance){
     VkWin32SurfaceCreateInfoKHR win32_createInfo;
     win32_createInfo.sType      = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
@@ -143,8 +154,8 @@ EventType Window_win32::GetEvent(){
     if (!eventFIFO.isEmpty()) return *eventFIFO.pop();
 
     MSG msg = {};
-    //running = (GetMessage(&msg, NULL, 0, 0)>0); 
-    running = (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)>0);
+    if(wait_for_event) running = (GetMessage(&msg, NULL, 0, 0)>0);              //Blocking mode
+    else               running = (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)>0);  //Non-blocking mode
     
     if (running) {
         TranslateMessage(&msg);
@@ -242,6 +253,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
         break;
     }
     return DefWindowProc(hWnd, uMsg, wParam, lParam);
+}
+
+// Return true if this window can present the given queue type
+bool Window_win32::CanPresent(VkPhysicalDevice gpu, uint32_t queue_family){
+    return vkGetPhysicalDeviceWin32PresentationSupportKHR(gpu, queue_family) == VK_TRUE;
 }
 
 #endif //VK_USE_PLATFORM_WIN32_KHR
