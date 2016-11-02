@@ -54,31 +54,27 @@
 namespace parameter_validation {
 
 struct layer_data {
-    VkInstance instance;
+    VkInstance instance = VK_NULL_HANDLE;
 
-    debug_report_data *report_data;
+    debug_report_data *report_data = nullptr;
     std::vector<VkDebugReportCallbackEXT> logging_callback;
 
     // The following are for keeping track of the temporary callbacks that can
     // be used in vkCreateInstance and vkDestroyInstance:
-    uint32_t num_tmp_callbacks;
-    VkDebugReportCallbackCreateInfoEXT *tmp_dbg_create_infos;
-    VkDebugReportCallbackEXT *tmp_callbacks;
+    uint32_t num_tmp_callbacks = 0;
+    VkDebugReportCallbackCreateInfoEXT *tmp_dbg_create_infos = nullptr;
+    VkDebugReportCallbackEXT *tmp_callbacks = nullptr;
 
     // TODO: Split instance/device structs
     // Device Data
     // Map for queue family index to queue count
     std::unordered_map<uint32_t, uint32_t> queueFamilyIndexMap;
-    VkPhysicalDeviceLimits device_limits;
-    VkPhysicalDeviceFeatures physical_device_features;
-    VkPhysicalDevice physical_device;
+    VkPhysicalDeviceLimits device_limits = {};
+    VkPhysicalDeviceFeatures physical_device_features = {};
+    VkPhysicalDevice physical_device = VK_NULL_HANDLE;
 
-    bool swapchain_enabled;
-    bool display_swapchain_enabled;
-
-    layer_data()
-        : report_data(nullptr), num_tmp_callbacks(0), tmp_dbg_create_infos(nullptr), tmp_callbacks(nullptr), device_limits{},
-          physical_device_features{}, physical_device{}, swapchain_enabled(false), display_swapchain_enabled(false) {};
+    bool swapchain_enabled = false;
+    bool display_swapchain_enabled = false;
 };
 
 static std::unordered_map<void *, struct instance_extension_enables> instance_extension_map;
