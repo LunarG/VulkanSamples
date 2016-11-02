@@ -58,6 +58,9 @@ enum ErrorCode {
                           // the device
     FAILURE_RETURN_CODE,  // A Vulkan return code indicating a failure condition
                           // was encountered.
+    EXTENSION_NOT_ENABLED,// An extension entrypoint was called, but the required
+                          // extension was not enabled at CreateInstance or
+                          // CreateDevice time.
 };
 
 struct GenericHeader {

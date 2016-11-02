@@ -4902,8 +4902,17 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateWin32SurfaceKHR(VkInstance instance, const 
 
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     assert(my_data != NULL);
+    bool skip_call = false;
 
-    bool skip_call = parameter_validation_vkCreateWin32SurfaceKHR(my_data->report_data, pCreateInfo, pAllocator, pSurface);
+    if (!instance_extension_map[get_dispatch_table(pc_instance_table_map, instance)].win32_enabled) {
+        skip_call |=
+            log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+                    reinterpret_cast<uint64_t>(instance), __LINE__, EXTENSION_NOT_ENABLED, LayerName,
+                    "vkCreateWin32SurfaceKHR() called even though the %s extension was not enabled for this VkInstance.",
+                    VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+    }
+
+    skip_call |= parameter_validation_vkCreateWin32SurfaceKHR(my_data->report_data, pCreateInfo, pAllocator, pSurface);
 
     if (!skip_call) {
         result =
@@ -4911,6 +4920,33 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateWin32SurfaceKHR(VkInstance instance, const 
     }
 
     validate_result(my_data->report_data, "vkCreateWin32SurfaceKHR", result);
+
+    return result;
+}
+
+VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceWin32PresentationSupportKHR(VkPhysicalDevice physicalDevice,
+                                                                            uint32_t queueFamilyIndex)
+{
+    VkBool32 result = false;
+
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    assert(my_data != NULL);
+    bool skip_call = false;
+
+    if (!instance_extension_map[get_dispatch_table(pc_instance_table_map, physicalDevice)].win32_enabled) {
+        skip_call |=
+            log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                    reinterpret_cast<uint64_t>(physicalDevice), __LINE__, EXTENSION_NOT_ENABLED, LayerName,
+                    "vkGetPhysicalDeviceWin32PresentationSupportKHR() called even though the %s extension was not enabled for this VkInstance.",
+                    VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+    }
+
+    skip_call |= parameter_validation_vkGetPhysicalDeviceWin32PresentationSupportKHR(physicalDevice, queueFamilyIndex);
+
+    if (!skip_call) {
+        result = get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceWin32PresentationSupportKHR(
+                physicalDevice, queueFamilyIndex);
+    }
 
     return result;
 }
@@ -4923,8 +4959,17 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateXcbSurfaceKHR(VkInstance instance, const Vk
 
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     assert(my_data != NULL);
+    bool skip_call = false;
 
-    bool skip_call = parameter_validation_vkCreateXcbSurfaceKHR(my_data->report_data, pCreateInfo, pAllocator, pSurface);
+    if (!instance_extension_map[get_dispatch_table(pc_instance_table_map, instance)].xcb_enabled) {
+        skip_call |=
+            log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+                    reinterpret_cast<uint64_t>(instance), __LINE__, EXTENSION_NOT_ENABLED, LayerName,
+                    "vkCreateXcbSurfaceKHR() called even though the %s extension was not enabled for this VkInstance.",
+                    VK_KHR_XCB_SURFACE_EXTENSION_NAME);
+    }
+
+    skip_call |= parameter_validation_vkCreateXcbSurfaceKHR(my_data->report_data, pCreateInfo, pAllocator, pSurface);
 
     if (!skip_call) {
         result =
@@ -4943,8 +4988,17 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceXcbPresentationSupportKHR(VkPhys
 
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
     assert(my_data != NULL);
+    bool skip_call = false;
 
-    bool skip_call = parameter_validation_vkGetPhysicalDeviceXcbPresentationSupportKHR(my_data->report_data, queueFamilyIndex,
+    if (!instance_extension_map[get_dispatch_table(pc_instance_table_map, physicalDevice)].xcb_enabled) {
+        skip_call |=
+            log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                    reinterpret_cast<uint64_t>(physicalDevice), __LINE__, EXTENSION_NOT_ENABLED, LayerName,
+                    "vkGetPhysicalDeviceXcbPresentationSupportKHR() called even though the %s extension was not enabled for this VkInstance.",
+                    VK_KHR_XCB_SURFACE_EXTENSION_NAME);
+    }
+
+    skip_call |= parameter_validation_vkGetPhysicalDeviceXcbPresentationSupportKHR(my_data->report_data, queueFamilyIndex,
                                                                                        connection, visual_id);
 
     if (!skip_call) {
@@ -4963,8 +5017,17 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateXlibSurfaceKHR(VkInstance instance, const V
 
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     assert(my_data != NULL);
+    bool skip_call = false;
 
-    bool skip_call = parameter_validation_vkCreateXlibSurfaceKHR(my_data->report_data, pCreateInfo, pAllocator, pSurface);
+    if (!instance_extension_map[get_dispatch_table(pc_instance_table_map, instance)].xlib_enabled) {
+        skip_call |=
+            log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+                    reinterpret_cast<uint64_t>(instance), __LINE__, EXTENSION_NOT_ENABLED, LayerName,
+                    "vkCreateXlibSurfaceKHR() called even though the %s extension was not enabled for this VkInstance.",
+                    VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
+    }
+
+    skip_call |= parameter_validation_vkCreateXlibSurfaceKHR(my_data->report_data, pCreateInfo, pAllocator, pSurface);
 
     if (!skip_call) {
         result =
@@ -4983,9 +5046,17 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceXlibPresentationSupportKHR(VkPhy
 
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
     assert(my_data != NULL);
+    bool skip_call = false;
 
-    bool skip_call =
-        parameter_validation_vkGetPhysicalDeviceXlibPresentationSupportKHR(my_data->report_data, queueFamilyIndex, dpy, visualID);
+    if (!instance_extension_map[get_dispatch_table(pc_instance_table_map, physicalDevice)].xlib_enabled) {
+        skip_call |=
+            log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                    reinterpret_cast<uint64_t>(physicalDevice), __LINE__, EXTENSION_NOT_ENABLED, LayerName,
+                    "vkGetPhysicalDeviceXlibPresentationSupportKHR() called even though the %s extension was not enabled for this VkInstance.",
+                    VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
+    }
+
+    skip_call |= parameter_validation_vkGetPhysicalDeviceXlibPresentationSupportKHR(my_data->report_data, queueFamilyIndex, dpy, visualID);
 
     if (!skip_call) {
         result = get_dispatch_table(pc_instance_table_map, physicalDevice)
@@ -5002,8 +5073,17 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateMirSurfaceKHR(VkInstance instance, const Vk
 
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     assert(my_data != NULL);
+    bool skip_call = false;
 
-    bool skip_call = parameter_validation_vkCreateMirSurfaceKHR(my_data->report_data, pCreateInfo, pAllocator, pSurface);
+    if (!instance_extension_map[get_dispatch_table(pc_instance_table_map, instance)].mir_enabled) {
+        skip_call |=
+            log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+                    reinterpret_cast<uint64_t>(instance), __LINE__, EXTENSION_NOT_ENABLED, LayerName,
+                    "vkCreateMirSurfaceKHR() called even though the %s extension was not enabled for this VkInstance.",
+                    VK_KHR_MIR_SURFACE_EXTENSION_NAME);
+    }
+
+    skip_call |= parameter_validation_vkCreateMirSurfaceKHR(my_data->report_data, pCreateInfo, pAllocator, pSurface);
 
     if (!skip_call) {
         result =
@@ -5022,13 +5102,22 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceMirPresentationSupportKHR(VkPhys
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
     assert(my_data != NULL);
 
-    bool skip_call =
-        parameter_validation_vkGetPhysicalDeviceMirPresentationSupportKHR(my_data->report_data, queueFamilyIndex, connection);
+    bool skip_call = false;
+
+    if (!instance_extension_map[get_dispatch_table(pc_instance_table_map, physicalDevice)].mir_enabled) {
+        skip_call |=
+            log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                    reinterpret_cast<uint64_t>(physicalDevice), __LINE__, EXTENSION_NOT_ENABLED, LayerName,
+                    "vkGetPhysicalDeviceMirPresentationSupportKHR() called even though the %s extension was not enabled for this VkInstance.",
+                    VK_KHR_MIR_SURFACE_EXTENSION_NAME);
+    }
+    skip_call |= parameter_validation_vkGetPhysicalDeviceMirPresentationSupportKHR(my_data->report_data, queueFamilyIndex, connection);
 
     if (!skip_call) {
         result = get_dispatch_table(pc_instance_table_map, physicalDevice)
                      ->GetPhysicalDeviceMirPresentationSupportKHR(physicalDevice, queueFamilyIndex, connection);
     }
+    return result;
 }
 #endif // VK_USE_PLATFORM_MIR_KHR
 
@@ -5039,8 +5128,16 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateWaylandSurfaceKHR(VkInstance instance, cons
 
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     assert(my_data != NULL);
+    bool skip_call = false;
 
-    bool skip_call = parameter_validation_vkCreateWaylandSurfaceKHR(my_data->report_data, pCreateInfo, pAllocator, pSurface);
+    if (!instance_extension_map[get_dispatch_table(pc_instance_table_map, instance)].wayland_enabled) {
+        skip_call |=
+            log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+                    reinterpret_cast<uint64_t>(instance), __LINE__, EXTENSION_NOT_ENABLED, LayerName,
+                    "vkCreateWaylandSurfaceKHR() called even though the %s extension was not enabled for this VkInstance.",
+                    VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
+    }
+    skip_call |= parameter_validation_vkCreateWaylandSurfaceKHR(my_data->report_data, pCreateInfo, pAllocator, pSurface);
 
     if (!skip_call) {
         result = get_dispatch_table(pc_instance_table_map, instance)
@@ -5059,14 +5156,24 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceWaylandPresentationSupportKHR(Vk
 
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
     assert(my_data != NULL);
+    bool skip_call = false;
 
-    bool skip_call =
+    if (!instance_extension_map[get_dispatch_table(pc_instance_table_map, physicalDevice)].wayland_enabled) {
+        skip_call |=
+            log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                    reinterpret_cast<uint64_t>(physicalDevice), __LINE__, EXTENSION_NOT_ENABLED, LayerName,
+                    "vkGetPhysicalDeviceWaylandPresentationSupportKHR() called even though the %s extension was not enabled for this VkInstance.",
+                    VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
+    }
+    skip_call |=
         parameter_validation_vkGetPhysicalDeviceWaylandPresentationSupportKHR(my_data->report_data, queueFamilyIndex, display);
 
     if (!skip_call) {
         result = get_dispatch_table(pc_instance_table_map, physicalDevice)
                      ->GetPhysicalDeviceWaylandPresentationSupportKHR(physicalDevice, queueFamilyIndex, display);
     }
+
+    return result;
 }
 #endif // VK_USE_PLATFORM_WAYLAND_KHR
 
@@ -5077,8 +5184,16 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateAndroidSurfaceKHR(VkInstance instance, cons
 
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     assert(my_data != NULL);
+    bool skip_call = false;
 
-    bool skip_call = parameter_validation_vkCreateAndroidSurfaceKHR(my_data->report_data, pCreateInfo, pAllocator, pSurface);
+    if (!instance_extension_map[get_dispatch_table(pc_instance_table_map, instance)].android_enabled) {
+        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+                             reinterpret_cast<uint64_t>(instance), __LINE__, EXTENSION_NOT_ENABLED, LayerName,
+                             "vkCreateAndroidSurfaceKHR() called even though the %s extension was not enabled for this VkInstance.",
+                             VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
+    }
+
+    skip_call |= parameter_validation_vkCreateAndroidSurfaceKHR(my_data->report_data, pCreateInfo, pAllocator, pSurface);
 
     if (!skip_call) {
         result = get_dispatch_table(pc_instance_table_map, instance)
@@ -5493,45 +5608,45 @@ static PFN_vkVoidFunction InterceptWsiEnabledCommand(const char *name, VkInstanc
     };
 
     VkLayerInstanceDispatchTable *pTable = get_dispatch_table(pc_instance_table_map, instance);
-    if (instance_extension_map.size() == 0 || !instance_extension_map[pTable].wsi_enabled)
-        return nullptr;
-
-    for (size_t i = 0; i < ARRAY_SIZE(wsi_instance_commands); i++) {
-        if (!strcmp(wsi_instance_commands[i].name, name))
-            return wsi_instance_commands[i].proc;
+    if (instance_extension_map[pTable].wsi_enabled) {
+        for (size_t i = 0; i < ARRAY_SIZE(wsi_instance_commands); i++) {
+            if (!strcmp(wsi_instance_commands[i].name, name))
+                return wsi_instance_commands[i].proc;
+        }
     }
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-    if ((instance_extension_map[pTable].win32_enabled == true) && !strcmp("vkCreateWin32SurfaceKHR", name))
+    if (!strcmp("vkCreateWin32SurfaceKHR", name))
         return reinterpret_cast<PFN_vkVoidFunction>(CreateWin32SurfaceKHR);
+    if (!strcmp("vkGetPhysicalDeviceWin32PresentationSupportKHR", name))
+        return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceWin32PresentationSupportKHR);
 #endif // VK_USE_PLATFORM_WIN32_KHR
 #ifdef VK_USE_PLATFORM_XCB_KHR
-    if ((instance_extension_map[pTable].xcb_enabled == true) && !strcmp("vkCreateXcbSurfaceKHR", name))
+    if (!strcmp("vkCreateXcbSurfaceKHR", name))
         return reinterpret_cast<PFN_vkVoidFunction>(CreateXcbSurfaceKHR);
-    if ((instance_extension_map[pTable].xcb_enabled == true) && !strcmp("vkGetPhysicalDeviceXcbPresentationSupportKHR", name))
+    if (!strcmp("vkGetPhysicalDeviceXcbPresentationSupportKHR", name))
         return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceXcbPresentationSupportKHR);
 #endif // VK_USE_PLATFORM_XCB_KHR
 #ifdef VK_USE_PLATFORM_XLIB_KHR
-    if ((instance_extension_map[pTable].xlib_enabled == true) && !strcmp("vkCreateXlibSurfaceKHR", name))
+    if (!strcmp("vkCreateXlibSurfaceKHR", name))
         return reinterpret_cast<PFN_vkVoidFunction>(CreateXlibSurfaceKHR);
-    if ((instance_extension_map[pTable].xlib_enabled == true) && !strcmp("vkGetPhysicalDeviceXlibPresentationSupportKHR", name))
+    if (!strcmp("vkGetPhysicalDeviceXlibPresentationSupportKHR", name))
         return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceXlibPresentationSupportKHR);
 #endif // VK_USE_PLATFORM_XLIB_KHR
 #ifdef VK_USE_PLATFORM_MIR_KHR
-    if ((instance_extension_map[pTable].mir_enabled == true) && !strcmp("vkCreateMirSurfaceKHR", name))
+    if (!strcmp("vkCreateMirSurfaceKHR", name))
         return reinterpret_cast<PFN_vkVoidFunction>(CreateMirSurfaceKHR);
-    if ((instance_extension_map[pTable].mir_enabled == true) && !strcmp("vkGetPhysicalDeviceMirPresentationSupportKHR", name))
+    if (!strcmp("vkGetPhysicalDeviceMirPresentationSupportKHR", name))
         return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceMirPresentationSupportKHR);
 #endif // VK_USE_PLATFORM_MIR_KHR
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
-    if ((instance_extension_map[pTable].wayland_enabled == true) && !strcmp("vkCreateWaylandSurfaceKHR", name))
+    if (!strcmp("vkCreateWaylandSurfaceKHR", name))
         return reinterpret_cast<PFN_vkVoidFunction>(CreateWaylandSurfaceKHR);
-    if ((instance_extension_map[pTable].wayland_enabled == true) &&
-        !strcmp("vkGetPhysicalDeviceWaylandPresentationSupportKHR", name))
+    if (!strcmp("vkGetPhysicalDeviceWaylandPresentationSupportKHR", name))
         return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceWaylandPresentationSupportKHR);
 #endif // VK_USE_PLATFORM_WAYLAND_KHR
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
-    if ((instance_extension_map[pTable].android_enabled == true) && !strcmp("vkCreateAndroidSurfaceKHR", name))
+    if (!strcmp("vkCreateAndroidSurfaceKHR", name))
         return reinterpret_cast<PFN_vkVoidFunction>(CreateAndroidSurfaceKHR);
 #endif // VK_USE_PLATFORM_ANDROID_KHR
 
