@@ -426,6 +426,21 @@ static const char *vk_format_string(VkFormat fmt) {
     }
 }
 
+static const char *vk_present_mode_string(VkPresentModeKHR mode) {
+    switch (mode) {
+#define STR(r)                                                                 \
+    case VK_PRESENT_MODE_##r:                                                  \
+        return #r
+        STR(IMMEDIATE_KHR);
+        STR(MAILBOX_KHR);
+        STR(FIFO_KHR);
+        STR(FIFO_RELAXED_KHR);
+#undef STR
+    default:
+        return "UNKNOWN_FORMAT";
+    }
+}
+
 static void app_dev_init_formats(struct app_dev *dev) {
     VkFormat f;
 
@@ -962,14 +977,33 @@ static int app_dump_surface_formats(struct app_instance *inst, struct app_gpu *g
     VkSurfaceFormatKHR *surfFormats = (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
     err = inst->vkGetPhysicalDeviceSurfaceFormatsKHR(gpu->obj, inst->surface, &formatCount, surfFormats);
     assert(!err);
-    printf("Format count = %d\n",formatCount);
+    printf("Formats:\t\tcount = %d\n",formatCount);
 
     for (uint32_t i = 0; i < formatCount; i++) {
         printf("\t%s\n", vk_format_string(surfFormats[i].format));
     }
-    printf("\n");
     fflush(stdout);
     return formatCount;
+}
+
+static int app_dump_surface_present_modes(struct app_instance *inst, struct app_gpu *gpu) {
+    // Get the list of VkPresentMode's that are supported:
+    VkResult U_ASSERT_ONLY err;
+    uint32_t presentModeCount = 0;
+    err = inst->vkGetPhysicalDeviceSurfacePresentModesKHR(gpu->obj, inst->surface, &presentModeCount, NULL);
+    assert(!err);
+
+    VkPresentModeKHR *surfPresentModes = (VkPresentModeKHR *)malloc(presentModeCount * sizeof(VkPresentInfoKHR));
+    err = inst->vkGetPhysicalDeviceSurfacePresentModesKHR(gpu->obj, inst->surface, &presentModeCount, surfPresentModes);
+    assert(!err);
+    printf("Present Modes:\t\tcount = %d\n", presentModeCount);
+
+    for (uint32_t i = 0; i < presentModeCount; i++) {
+        printf("\t%s\n", vk_present_mode_string(surfPresentModes[i]));
+    }
+    printf("\n");
+    fflush(stdout);
+    return presentModeCount;
 }
 #endif
 
@@ -1493,11 +1527,12 @@ int main(int argc, char **argv) {
     fflush(stdout);
     //-----------------------------
 
-    printf("Presentable Surface formats:\n");
-    printf("============================\n");
+    printf("Presentable Surfaces:\n");
+    printf("=====================\n");
     inst.width = 256;
     inst.height = 256;
     int formatCount = 0;
+    int presentModeCount = 0;
 
 //--WIN32--
 #ifdef VK_USE_PLATFORM_WIN32_KHR
@@ -1509,6 +1544,7 @@ int main(int argc, char **argv) {
             printf("GPU id       : %u (%s)\n", i, gpus[i].props.deviceName);
             printf("Surface type : %s\n", VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
             formatCount += app_dump_surface_formats(&inst, &gpus[i]);
+            presentModeCount += app_dump_surface_present_modes(&inst, &gpus[i]);
             app_destroy_surface(&inst);
         }
         app_destroy_win32_window(&inst);
@@ -1531,6 +1567,7 @@ int main(int argc, char **argv) {
             printf("GPU id       : %u (%s)\n", i, gpus[i].props.deviceName);
             printf("Surface type : %s\n", VK_KHR_XCB_SURFACE_EXTENSION_NAME);
             formatCount += app_dump_surface_formats(&inst, &gpus[i]);
+            presentModeCount += app_dump_surface_present_modes(&inst, &gpus[i]);
             app_destroy_surface(&inst);
         }
         app_destroy_xcb_window(&inst);
@@ -1546,13 +1583,14 @@ int main(int argc, char **argv) {
             printf("GPU id       : %u (%s)\n", i, gpus[i].props.deviceName);
             printf("Surface type : %s\n", VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
             formatCount += app_dump_surface_formats(&inst, &gpus[i]);
+            presentModeCount += app_dump_surface_present_modes(&inst, &gpus[i]);
             app_destroy_surface(&inst);
         }
         app_destroy_xlib_window(&inst);
     }
 #endif
     // TODO: Android / Wayland / MIR
-    if (!formatCount)
+    if (!formatCount && !presentModeCount)
         printf("None found\n");
     //---------
 
