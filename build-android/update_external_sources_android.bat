@@ -21,7 +21,7 @@ REM
 setlocal EnableDelayedExpansion
 set errorCode=0
 set ANDROID_BUILD_DIR=%~dp0
-set BUILD_DIR=%ANDROID_BUILD_DIR%..
+set BUILD_DIR=%ANDROID_BUILD_DIR%
 set BASE_DIR=%BUILD_DIR%\external
 set GLSLANG_DIR=%BASE_DIR%\glslang
 set SPIRV_TOOLS_DIR=%BASE_DIR%\spirv-tools
