@@ -222,9 +222,11 @@ class ErrorMonitor {
 
     void DumpFailureMsgs(void) {
         vector<string> otherMsgs = GetOtherFailureMsgs();
-        cout << "Other error messages logged for this test were:" << endl;
-        for (auto iter = otherMsgs.begin(); iter != otherMsgs.end(); iter++) {
-            cout << "     " << *iter << endl;
+        if (otherMsgs.size()) {
+            cout << "Other error messages logged for this test were:" << endl;
+            for (auto iter = otherMsgs.begin(); iter != otherMsgs.end(); iter++) {
+                cout << "     " << *iter << endl;
+            }
         }
     }
 
@@ -243,6 +245,9 @@ class ErrorMonitor {
             DumpFailureMsgs();
             for (auto desired_msg : m_desired_message_strings) {
                 FAIL() << "Did not receive expected error '" << desired_msg << "'";
+            }
+            for (auto desired_id : m_desired_message_ids) {
+                FAIL() << "Did not receive expected error '" << desired_id << "'";
             }
         }
     }
