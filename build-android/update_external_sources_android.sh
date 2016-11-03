@@ -31,6 +31,12 @@ echo "GLSLANG_REVISION=$GLSLANG_REVISION"
 echo "SPIRV_TOOLS_REVISION=$SPIRV_TOOLS_REVISION"
 echo "SHADERC_REVISION=$SHADERC_REVISION"
 
+if [[ $(uname) == "Linux" ]]; then
+    cores=$(ncpus)
+elif [[ $(uname) == "Darwin" ]]; then
+    cores=$(sysctl -n hw.ncpu)
+fi
+
 function create_glslang () {
    rm -rf $BASEDIR/glslang
    echo "Creating local glslang repository ($BASEDIR/glslang)."
@@ -98,7 +104,7 @@ function update_shaderc () {
 function build_shaderc () {
    echo "Building $BASEDIR/shaderc"
    cd $BASEDIR/shaderc/android_test
-   ndk-build THIRD_PARTY_PATH=../.. -j 4
+   ndk-build THIRD_PARTY_PATH=../.. -j $cores
 }
 
 if [ ! -d "$BASEDIR/glslang" -o ! -d "$BASEDIR/glslang/.git" -o -d "$BASEDIR/glslang/.svn" ]; then
