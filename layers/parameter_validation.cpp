@@ -4955,8 +4955,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfacePresentModesKHR(VkPhysica
 
 VKAPI_ATTR void VKAPI_CALL DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface, const VkAllocationCallbacks *pAllocator) {
     bool skip = false;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
-    assert(my_data != NULL);
 
     skip |= require_instance_extension(instance, &instance_extension_enables::surface_enabled,
                                             "vkDestroySurfaceKHR", VK_KHR_SURFACE_EXTENSION_NAME);
