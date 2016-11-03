@@ -26,7 +26,15 @@
 #    x.devbuild.z for development builds
 #    x for releases
 #
-!define PRODUCTNAME "VulkanRT"
+
+# Set the default name to "Vulkan", but allow this to be overriden
+!ifndef APINAME
+    !define APINAME "Vulkan"
+!endif
+
+!define INFO "info"
+!define PRODUCTNAME "${APINAME}RT"
+
 !ifndef HIDE_VERSION
   !define VERSION_ABI_MAJOR "1"
   !define VERSION_API_MAJOR "1"
@@ -69,7 +77,7 @@ WindowIcon off
   !echo "Creating RT installer...."
 
   # Define name of installer
-  OutFile "VulkanRT-${PRODUCTVERSION}-Installer.exe"
+  OutFile "${PRODUCTNAME}-${PRODUCTVERSION}-Installer.exe"
   SetCompressor /SOLID lzma
 
 !endif
@@ -89,6 +97,9 @@ Var IDir
 
 # Install count
 Var IC
+
+# Lower case version of ${APINAME}
+Var APILowerCaseName
 
 #############################################
 # StrRep - string replace
@@ -221,15 +232,15 @@ UninstPage instFiles
 
 # File Properties
 VIProductVersion "${PRODUCTVERSION}"
-VIAddVersionKey  "ProductName" "Vulkan Runtime"
+VIAddVersionKey  "ProductName" "${APINAME} Runtime"
 VIAddVersionKey  "FileVersion" "${PRODUCTVERSION}"
 VIAddVersionKey  "ProductVersion" "${PRODUCTVERSION}"
 VIAddVersionKey  "LegalCopyright" ""
 
 !ifdef UNINSTALLER
-    VIAddVersionKey  "FileDescription" "Vulkan Runtime Uninstaller"
+    VIAddVersionKey  "FileDescription" "${APINAME} Runtime Uninstaller"
 !else
-    VIAddVersionKey  "FileDescription" "Vulkan Runtime Installer"
+    VIAddVersionKey  "FileDescription" "${APINAME} Runtime Installer"
 !endif
 
 
@@ -268,8 +279,47 @@ FunctionEnd
 !insertmacro DiagConfigLayersAndVulkanDLL ""
 !insertmacro DiagConfigLayersAndVulkanDLL "un."
 
+!macro StrLower un
+Function ${un}StrLower
+    Exch $0 ; Original string
+    Push $1 ; Final string
+    Push $2 ; Current character
+    Push $3
+    Push $4
+    StrCpy $1 ""
+Loop:
+    StrCpy $2 $0 1 ; Get next character
+    StrCmp $2 "" Done
+    StrCpy $0 $0 "" 1
+    StrCpy $3 122 ; 122 = ASCII code for z
+Loop2:
+    IntFmt $4 %c $3 ; Get character from current ASCII code
+    StrCmp $2 $4 Match
+    IntOp $3 $3 - 1
+    StrCmp $3 91 NoMatch Loop2 ; 90 = ASCII code one beyond Z
+Match:
+    StrCpy $2 $4 ; It 'matches' (either case) so grab the lowercase version
+NoMatch:
+    StrCpy $1 $1$2 ; Append to the final string
+    Goto Loop
+Done:
+    StrCpy $0 $1 ; Return the final string
+    Pop $4
+    Pop $3
+    Pop $2
+    Pop $1
+    Exch $0
+FunctionEnd
+!macroend
+!insertmacro StrLower ""
+!insertmacro StrLower "un."
+
 # Start default section
 Section
+
+    Push "${APINAME}"
+    Call StrLower
+    Pop $APILowerCaseName
 
     # Turn on logging
     LogSet on
@@ -311,7 +361,7 @@ Section
         strcmp $INSTDIR $0 notinstalled
 
         ${If} $0 != ""
-            MessageBox MB_OK "The Windows Vulkan Runtime is already installed to $0. It will be re-installed to the same folder." /SD IDOK
+            MessageBox MB_OK "The Windows ${APINAME} Runtime is already installed to $0. It will be re-installed to the same folder." /SD IDOK
             Strcpy $INSTDIR $0
         ${Endif}
 
@@ -376,7 +426,7 @@ Section
     ${EndIf}
 
     # Modify registry for Programs and Features
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "DisplayName" "Vulkan Run Time Libraries ${PRODUCTVERSION}"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "DisplayName" "${APINAME} Run Time Libraries ${PRODUCTVERSION}"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "UninstallString" "$INSTDIR\Uninstall${PRODUCTNAME}.exe"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "Publisher" "${PUBLISHER}"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "DisplayVersion" "${PRODUCTVERSION}"
@@ -386,7 +436,7 @@ Section
     WriteRegDword HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "InstallCount" $IC
 
     ${If} $IC > 1
-        WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}-$IC" "DisplayName" "Vulkan Run Time Libraries ${PRODUCTVERSION}"
+        WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}-$IC" "DisplayName" "${APINAME} Run Time Libraries ${PRODUCTVERSION}"
         WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}-$IC" "UninstallString" "$INSTDIR\Instance_$IC\Uninstall${PRODUCTNAME}.exe"
         WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}-$IC" "Publisher" "${PUBLISHER}"
         WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}-$IC" "DisplayVersion" "${PRODUCTVERSION}"
@@ -428,23 +478,23 @@ Section
         # 32-bit DLLs/EXEs destined for SysWOW64
         ##########################################
         SetOutPath $WINDIR\SysWow64
-        File /oname=vulkan-$FileVersion.dll ..\build32\loader\Release\vulkan-${VERSION_ABI_MAJOR}.dll
-        File /oname=vulkaninfo-$FileVersion.exe ..\build32\demos\Release\vulkaninfo.exe
+        File /oname=$APILowerCaseName-$FileVersion.dll ..\build32\loader\Release\vulkan-${VERSION_ABI_MAJOR}.dll
+        File /oname=$APILowerCaseName${INFO}-$FileVersion.exe ..\build32\demos\Release\vulkaninfo.exe
         StrCpy $1 30
         Call CheckForError
 
         # 64-bit DLLs/EXEs
         ##########################################
         SetOutPath $WINDIR\System32
-        File /oname=vulkan-$FileVersion.dll ..\build\loader\Release\vulkan-${VERSION_ABI_MAJOR}.dll
+        File /oname=$APILowerCaseName-$FileVersion.dll ..\build\loader\Release\vulkan-${VERSION_ABI_MAJOR}.dll
         StrCpy $1 35
         Call CheckForError
 
         # vulkaninfo.exe
-        File /oname=vulkaninfo-$FileVersion.exe ..\build\demos\Release\vulkaninfo.exe
+        File /oname=$APILowerCaseName${INFO}-$FileVersion.exe ..\build\demos\Release\vulkaninfo.exe
         SetOutPath "$INSTDIR"
-        File ..\build\demos\Release\vulkaninfo.exe
-        File /oname=vulkaninfo32.exe ..\build32\demos\Release\vulkaninfo.exe
+        File /oname=$APILowerCaseName${INFO} ..\build\demos\Release\vulkaninfo.exe
+        File /oname=$APILowerCaseName${INFO}32.exe ..\build32\demos\Release\vulkaninfo.exe
         StrCpy $1 40
         Call CheckForError
 
@@ -454,14 +504,14 @@ Section
         # 32-bit DLLs/EXEs destined for SysWOW64
         ##########################################
         SetOutPath $WINDIR\System32
-        File /oname=vulkan-$FileVersion.dll ..\build32\loader\Release\vulkan-${VERSION_ABI_MAJOR}.dll
+        File /oname=$APILowerCaseName-$FileVersion.dll ..\build32\loader\Release\vulkan-${VERSION_ABI_MAJOR}.dll
         StrCpy $1 50
         Call CheckForError
 
         # vulkaninfo.exe
-        File /oname=vulkaninfo-$FileVersion.exe ..\build32\demos\Release\vulkaninfo.exe
+        File /oname=$APILowerCaseName${INFO}-$FileVersion.exe ..\build32\demos\Release\vulkaninfo.exe
         SetOutPath "$INSTDIR"
-        File ..\build32\demos\Release\vulkaninfo.exe
+        File /oname=$APILowerCaseName${INFO} ..\build32\demos\Release\vulkaninfo.exe
         StrCpy $1 55
         Call CheckForError
 
@@ -480,15 +530,15 @@ Section
         # Simply configure system to use our loader and vulkaninfo.
         MessageBox MB_OK "Warning!$\n$\nConfigureRT program called by VulkanRT Installer failed with error $0. This may result in an incomplete installation.$\n$\nWill configure system with Vulkan $FileVersion." /SD IDOK
         ${If} ${RunningX64}
-            Delete  $WINDIR\SysWow64\vulkan-${VERSION_ABI_MAJOR}.dll
-            Delete  $WINDIR\SysWow64\vulkaninfo.exe
-            CopyFiles /SILENT $WINDIR\SysWow64\vulkan-$FileVersion.dll $WINDIR\SysWow64\vulkan-${VERSION_ABI_MAJOR}.dll
-            CopyFiles /SILENT $WINDIR\SysWow64\vulkaninfo-$FileVersion.exe $WINDIR\SysWow64\vulkaninfo.exe
+            Delete  $WINDIR\SysWow64\$APILowerCaseName-${VERSION_ABI_MAJOR}.dll
+            Delete  $WINDIR\SysWow64\$APILowerCaseName${INFO}.exe
+            CopyFiles /SILENT $WINDIR\SysWow64\$APILowerCaseName-$FileVersion.dll $WINDIR\SysWow64\$APILowerCaseName-${VERSION_ABI_MAJOR}.dll
+            CopyFiles /SILENT $WINDIR\SysWow64\$APILowerCaseName${INFO}-$FileVersion.exe $WINDIR\SysWow64\$APILowerCaseName${INFO}.exe
         ${Endif}
-        Delete  $WINDIR\System32\vulkan-${VERSION_ABI_MAJOR}.dll
-        Delete  $WINDIR\System32\vulkaninfo.exe
-        CopyFiles /SILENT $WINDIR\System32\vulkan-$FileVersion.dll $WINDIR\System32\vulkan-${VERSION_ABI_MAJOR}.dll
-        CopyFiles /SILENT $WINDIR\System32\vulkaninfo-$FileVersion.exe $WINDIR\System32\vulkaninfo.exe
+        Delete  $WINDIR\System32\$APILowerCaseName-${VERSION_ABI_MAJOR}.dll
+        Delete  $WINDIR\System32\$APILowerCaseName${INFO}.exe
+        CopyFiles /SILENT $WINDIR\System32\$APILowerCaseName-$FileVersion.dll $WINDIR\System32\$APILowerCaseName-${VERSION_ABI_MAJOR}.dll
+        CopyFiles /SILENT $WINDIR\System32\$APILowerCaseName${INFO}-$FileVersion.exe $WINDIR\System32\$APILowerCaseName${INFO}.exe
         ClearErrors
     ${Endif}
     StrCpy $1 60
@@ -507,6 +557,10 @@ SectionEnd
 # Uninstaller section start
 !ifdef UNINSTALLER
 Section "uninstall"
+
+    Push "${APINAME}"
+    Call un.StrLower
+    Pop $APILowerCaseName
 
     # Turn on logging
     SetOutPath "$TEMP\VulkanRT"
@@ -577,21 +631,21 @@ Section "uninstall"
     ${If} ${RunningX64}
 
         # Delete vulkaninfo.exe in C:\Windows\System32 and C:\Windows\SysWOW64
-        Delete /REBOOTOK $WINDIR\SysWow64\vulkaninfo.exe
-        Delete /REBOOTOK $WINDIR\System32\vulkaninfo.exe
+        Delete /REBOOTOK $WINDIR\SysWow64\$APILowerCaseName${INFO}.exe
+        Delete /REBOOTOK $WINDIR\System32\$APILowerCaseName${INFO}.exe
 
         # Delete vulkan-<majorabi>.dll in C:\Windows\System32 and C:\Windows\SysWOW64
-        Delete /REBOOTOK $WINDIR\SysWow64\vulkan-${VERSION_ABI_MAJOR}.dll
-        Delete /REBOOTOK $WINDIR\System32\vulkan-${VERSION_ABI_MAJOR}.dll
+        Delete /REBOOTOK $WINDIR\SysWow64\$APILowerCaseName-${VERSION_ABI_MAJOR}.dll
+        Delete /REBOOTOK $WINDIR\System32\$APILowerCaseName-${VERSION_ABI_MAJOR}.dll
 
     # Else, running on a 32-bit OS machine
     ${Else}
 
         # Delete vulkaninfo.exe in C:\Windows\System32
-        Delete /REBOOTOK $WINDIR\System32\vulkaninfo.exe
+        Delete /REBOOTOK $WINDIR\System32\$APILowerCaseName${INFO}.exe
 
         # Delete vulkan-<majorabi>.dll in C:\Windows\System32
-        Delete /REBOOTOK $WINDIR\System32\vulkan-${VERSION_ABI_MAJOR}.dll
+        Delete /REBOOTOK $WINDIR\System32\$APILowerCaseName-${VERSION_ABI_MAJOR}.dll
 
     ${EndIf}
     StrCpy $1 80
@@ -602,16 +656,16 @@ Section "uninstall"
 
         ${If} ${RunningX64}
             # Delete vulkaninfo.exe in C:\Windows\System32 and C:\Windows\SysWOW64
-            Delete /REBOOTOK "$WINDIR\SysWow64\vulkaninfo-$FileVersion.exe"
-            Delete /REBOOTOK "$WINDIR\System32\vulkaninfo-$FileVersion.exe"
+            Delete /REBOOTOK "$WINDIR\SysWow64\$APILowerCaseName${INFO}-$FileVersion.exe"
+            Delete /REBOOTOK "$WINDIR\System32\$APILowerCaseName${INFO}-$FileVersion.exe"
             # Delete vulkan-<majorabi>-<major>-<minor>-<patch>-<buildno>.dll from sys dirs
-            Delete /REBOOTOK $WINDIR\SysWow64\vulkan-$FileVersion.dll
-            Delete /REBOOTOK $WINDIR\System32\vulkan-$FileVersion.dll
+            Delete /REBOOTOK $WINDIR\SysWow64\$APILowerCaseName-$FileVersion.dll
+            Delete /REBOOTOK $WINDIR\System32\$APILowerCaseName-$FileVersion.dll
         ${Else}
             # Delete vulkaninfo.exe in C:\Windows\System32
-            Delete /REBOOTOK "$WINDIR\System32\vulkaninfo-$FileVersion.exe"
+            Delete /REBOOTOK "$WINDIR\System32\$APILowerCaseName${INFO}-$FileVersion.exe"
             # Delete vulkan-<majorabi>-<major>-<minor>-<patch>-<buildno>.dll from sys dir
-            Delete /REBOOTOK $WINDIR\System32\vulkan-$FileVersion.dll
+            Delete /REBOOTOK $WINDIR\System32\$APILowerCaseName-$FileVersion.dll
         ${EndIf}
 
     ${Endif}
@@ -624,13 +678,13 @@ Section "uninstall"
     ${If} $0 != 0
         SetOutPath "$IDir"
         Call un.DiagConfigLayersAndVulkanDLL
-        MessageBox MB_OK "Warning!$\n$\nConfigureRT program called by VulkanRT Installer failed with error $0. This may result in an incomplete uninstall.$\n$\nVulkan $FileVersion has been uninstalled from your system." /SD IDOK
+        MessageBox MB_OK "Warning!$\n$\nConfigureRT program called by $APILowerCaseName Runtime Installer failed with error $0. This may result in an incomplete uninstall.$\n$\nVulkan $FileVersion has been uninstalled from your system." /SD IDOK
         ${If} ${RunningX64}
-            Delete  $WINDIR\SysWow64\vulkan-${VERSION_ABI_MAJOR}.dll
-            Delete  $WINDIR\SysWow64\vulkaninfo.exe
+            Delete  $WINDIR\SysWow64\$APILowerCaseName-${VERSION_ABI_MAJOR}.dll
+            Delete  $WINDIR\SysWow64\$APILowerCaseName${INFO}.exe
         ${Endif}
-        Delete  $WINDIR\System32\vulkan-${VERSION_ABI_MAJOR}.dll
-        Delete  $WINDIR\System32\vulkaninfo.exe
+        Delete  $WINDIR\System32\$APILowerCaseName-${VERSION_ABI_MAJOR}.dll
+        Delete  $WINDIR\System32\$APILowerCaseName${INFO}.exe
         ClearErrors
     ${Else}
         StrCpy $1 85
@@ -648,11 +702,11 @@ Section "uninstall"
         Delete /REBOOTOK "$IDir\LICENSE.txt"
         Delete /REBOOTOK "$IDir\Uninstall${PRODUCTNAME}.exe"
         Delete /REBOOTOK "$IDir\V.ico"
-        Delete /REBOOTOK "$IDir\vulkaninfo.exe"
+        Delete /REBOOTOK "$IDir\$APILowerCaseName${INFO}.exe"
 
         # If running on a 64-bit OS machine
         ${If} ${RunningX64}
-            Delete /REBOOTOK "$IDir\vulkaninfo32.exe"
+            Delete /REBOOTOK "$IDir\$APILowerCaseName${INFO}32.exe"
         ${EndIf}
 
         StrCpy $1 90
