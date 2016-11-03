@@ -51,16 +51,16 @@ terminator_GetPhysicalDeviceExternalImageFormatPropertiesNV(
     VkImageTiling tiling, VkImageUsageFlags usage, VkImageCreateFlags flags,
     VkExternalMemoryHandleTypeFlagsNV externalHandleType,
     VkExternalImageFormatPropertiesNV *pExternalImageFormatProperties) {
-    struct loader_physical_device *phys_dev =
-        (struct loader_physical_device *)physicalDevice;
-    struct loader_icd *icd = phys_dev->this_icd;
+    struct loader_physical_device_term *phys_dev_term =
+        (struct loader_physical_device_term *)physicalDevice;
+    struct loader_icd_term *icd_term = phys_dev_term->this_icd_term;
 
-    if (!icd->GetPhysicalDeviceExternalImageFormatPropertiesNV) {
+    if (!icd_term->GetPhysicalDeviceExternalImageFormatPropertiesNV) {
         if (externalHandleType) {
             return VK_ERROR_FORMAT_NOT_SUPPORTED;
         }
 
-        if (!icd->GetPhysicalDeviceImageFormatProperties) {
+        if (!icd_term->GetPhysicalDeviceImageFormatProperties) {
             return VK_ERROR_INITIALIZATION_FAILED;
         }
 
@@ -68,13 +68,13 @@ terminator_GetPhysicalDeviceExternalImageFormatPropertiesNV(
         pExternalImageFormatProperties->exportFromImportedHandleTypes = 0;
         pExternalImageFormatProperties->compatibleHandleTypes = 0;
 
-        return icd->GetPhysicalDeviceImageFormatProperties(
-            phys_dev->phys_dev, format, type, tiling, usage, flags,
+        return icd_term->GetPhysicalDeviceImageFormatProperties(
+            phys_dev_term->phys_dev, format, type, tiling, usage, flags,
             &pExternalImageFormatProperties->imageFormatProperties);
     }
 
-    return icd->GetPhysicalDeviceExternalImageFormatPropertiesNV(
-        phys_dev->phys_dev, format, type, tiling, usage, flags,
+    return icd_term->GetPhysicalDeviceExternalImageFormatPropertiesNV(
+        phys_dev_term->phys_dev, format, type, tiling, usage, flags,
         externalHandleType, pExternalImageFormatProperties);
 }
 

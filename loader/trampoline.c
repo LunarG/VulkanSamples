@@ -121,7 +121,7 @@ vkEnumerateInstanceExtensionProperties(const char *pLayerName,
     struct loader_extension_list *global_ext_list = NULL;
     struct loader_layer_list instance_layers;
     struct loader_extension_list local_ext_list;
-    struct loader_icd_libs icd_libs;
+    struct loader_icd_tramp_list icd_tramp_list;
     uint32_t copy_size;
     VkResult res = VK_SUCCESS;
 
@@ -172,18 +172,18 @@ vkEnumerateInstanceExtensionProperties(const char *pLayerName,
         }
     } else {
         /* Scan/discover all ICD libraries */
-        memset(&icd_libs, 0, sizeof(struct loader_icd_libs));
-        res = loader_icd_scan(NULL, &icd_libs);
+        memset(&icd_tramp_list, 0, sizeof(struct loader_icd_tramp_list));
+        res = loader_icd_scan(NULL, &icd_tramp_list);
         if (VK_SUCCESS != res) {
             goto out;
         }
         /* get extensions from all ICD's, merge so no duplicates */
-        res = loader_get_icd_loader_instance_extensions(NULL, &icd_libs,
+        res = loader_get_icd_loader_instance_extensions(NULL, &icd_tramp_list,
                                                         &local_ext_list);
         if (VK_SUCCESS != res) {
             goto out;
         }
-        loader_scanned_icd_clear(NULL, &icd_libs);
+        loader_scanned_icd_clear(NULL, &icd_tramp_list);
 
         // Append implicit layers.
         loader_implicit_layer_scan(NULL, &instance_layers);
@@ -222,14 +222,14 @@ vkEnumerateInstanceExtensionProperties(const char *pLayerName,
     }
 
 out:
-    loader_destroy_generic_list(NULL, (struct loader_generic_list *)&local_ext_list);
+    loader_destroy_generic_list(NULL,
+                                (struct loader_generic_list *)&local_ext_list);
     loader_delete_layer_properties(NULL, &instance_layers);
     return res;
 }
 
-LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
-vkEnumerateInstanceLayerProperties(uint32_t *pPropertyCount,
-                                   VkLayerProperties *pProperties) {
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(
+    uint32_t *pPropertyCount, VkLayerProperties *pProperties) {
 
     struct loader_layer_list instance_layer_list;
     tls_instance = NULL;
@@ -363,15 +363,16 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
     }
 
     /* Scan/discover all ICD libraries */
-    memset(&ptr_instance->icd_libs, 0, sizeof(ptr_instance->icd_libs));
-    res = loader_icd_scan(ptr_instance, &ptr_instance->icd_libs);
+    memset(&ptr_instance->icd_tramp_list, 0,
+           sizeof(ptr_instance->icd_tramp_list));
+    res = loader_icd_scan(ptr_instance, &ptr_instance->icd_tramp_list);
     if (res != VK_SUCCESS) {
         goto out;
     }
 
     /* get extensions from all ICD's, merge so no duplicates, then validate */
     res = loader_get_icd_loader_instance_extensions(
-        ptr_instance, &ptr_instance->icd_libs, &ptr_instance->ext_list);
+        ptr_instance, &ptr_instance->icd_tramp_list, &ptr_instance->ext_list);
     if (res != VK_SUCCESS) {
         goto out;
     }
@@ -446,7 +447,8 @@ out:
                                                   &ici);
             loader_delete_layer_properties(ptr_instance,
                                            &ptr_instance->instance_layer_list);
-            loader_scanned_icd_clear(ptr_instance, &ptr_instance->icd_libs);
+            loader_scanned_icd_clear(ptr_instance,
+                                     &ptr_instance->icd_tramp_list);
             loader_destroy_generic_list(
                 ptr_instance,
                 (struct loader_generic_list *)&ptr_instance->ext_list);
@@ -503,8 +505,8 @@ LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(
 
     loader_deactivate_layers(ptr_instance, NULL,
                              &ptr_instance->activated_layer_list);
-    if (ptr_instance->phys_devs) {
-        loader_instance_heap_free(ptr_instance, ptr_instance->phys_devs);
+    if (ptr_instance->phys_devs_tramp) {
+        loader_instance_heap_free(ptr_instance, ptr_instance->phys_devs_tramp);
     }
     if (callback_setup) {
         util_DestroyDebugReportCallbacks(ptr_instance, pAllocator,
@@ -552,14 +554,14 @@ vkEnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysicalDeviceCount,
                 ? inst->total_gpu_count
                 : *pPhysicalDeviceCount;
     *pPhysicalDeviceCount = count;
-    if (!inst->phys_devs) {
-        inst->phys_devs =
+    if (NULL == inst->phys_devs_tramp) {
+        inst->phys_devs_tramp =
             (struct loader_physical_device_tramp *)loader_instance_heap_alloc(
                 inst, inst->total_gpu_count *
                           sizeof(struct loader_physical_device_tramp),
                 VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     }
-    if (!inst->phys_devs) {
+    if (NULL == inst->phys_devs_tramp) {
         loader_platform_thread_unlock_mutex(&loader_lock);
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
@@ -567,20 +569,19 @@ vkEnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysicalDeviceCount,
     for (i = 0; i < count; i++) {
 
         // initialize the loader's physicalDevice object
-        loader_set_dispatch((void *)&inst->phys_devs[i], inst->disp);
-        inst->phys_devs[i].this_instance = inst;
-        inst->phys_devs[i].phys_dev = pPhysicalDevices[i];
+        loader_set_dispatch((void *)&inst->phys_devs_tramp[i], inst->disp);
+        inst->phys_devs_tramp[i].this_instance = inst;
+        inst->phys_devs_tramp[i].phys_dev = pPhysicalDevices[i];
 
         // copy wrapped object into Application provided array
-        pPhysicalDevices[i] = (VkPhysicalDevice)&inst->phys_devs[i];
+        pPhysicalDevices[i] = (VkPhysicalDevice)&inst->phys_devs_tramp[i];
     }
     loader_platform_thread_unlock_mutex(&loader_lock);
     return res;
 }
 
-LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL
-vkGetPhysicalDeviceFeatures(VkPhysicalDevice physicalDevice,
-                            VkPhysicalDeviceFeatures *pFeatures) {
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceFeatures(
+    VkPhysicalDevice physicalDevice, VkPhysicalDeviceFeatures *pFeatures) {
     const VkLayerInstanceDispatchTable *disp;
     VkPhysicalDevice unwrapped_phys_dev =
         loader_unwrap_physical_device(physicalDevice);
@@ -588,10 +589,9 @@ vkGetPhysicalDeviceFeatures(VkPhysicalDevice physicalDevice,
     disp->GetPhysicalDeviceFeatures(unwrapped_phys_dev, pFeatures);
 }
 
-LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL
-vkGetPhysicalDeviceFormatProperties(VkPhysicalDevice physicalDevice,
-                                    VkFormat format,
-                                    VkFormatProperties *pFormatInfo) {
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceFormatProperties(
+    VkPhysicalDevice physicalDevice, VkFormat format,
+    VkFormatProperties *pFormatInfo) {
     const VkLayerInstanceDispatchTable *disp;
     VkPhysicalDevice unwrapped_pd =
         loader_unwrap_physical_device(physicalDevice);
@@ -613,9 +613,8 @@ vkGetPhysicalDeviceImageFormatProperties(
         pImageFormatProperties);
 }
 
-LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL
-vkGetPhysicalDeviceProperties(VkPhysicalDevice physicalDevice,
-                              VkPhysicalDeviceProperties *pProperties) {
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceProperties(
+    VkPhysicalDevice physicalDevice, VkPhysicalDeviceProperties *pProperties) {
     const VkLayerInstanceDispatchTable *disp;
     VkPhysicalDevice unwrapped_phys_dev =
         loader_unwrap_physical_device(physicalDevice);
@@ -756,13 +755,14 @@ vkDestroyDevice(VkDevice device, const VkAllocationCallbacks *pAllocator) {
 
     loader_platform_thread_lock_mutex(&loader_lock);
 
-    struct loader_icd *icd = loader_get_icd_and_device(device, &dev, NULL);
-    const struct loader_instance *inst = icd->this_instance;
+    struct loader_icd_term *icd_term =
+        loader_get_icd_and_device(device, &dev, NULL);
+    const struct loader_instance *inst = icd_term->this_instance;
     disp = loader_get_dispatch(device);
 
     disp->DestroyDevice(device, pAllocator);
     dev->device = NULL;
-    loader_remove_logical_device(inst, icd, dev, pAllocator);
+    loader_remove_logical_device(inst, icd_term, dev, pAllocator);
 
     loader_platform_thread_unlock_mutex(&loader_lock);
 }
@@ -806,8 +806,8 @@ vkEnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice,
                      i++) {
                     loader_find_layer_name_add_list(
                         NULL, std_validation_names[i],
-                        VK_LAYER_TYPE_INSTANCE_EXPLICIT, &inst->instance_layer_list,
-                        &local_list);
+                        VK_LAYER_TYPE_INSTANCE_EXPLICIT,
+                        &inst->instance_layer_list, &local_list);
                 }
                 for (uint32_t i = 0; i < local_list.count; i++) {
                     struct loader_device_extension_list *ext_list =

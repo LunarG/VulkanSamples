@@ -31,10 +31,11 @@
 
 static VkResult vkDevExtError(VkDevice dev) {
     struct loader_device *found_dev;
-    struct loader_icd *icd = loader_get_icd_and_device(dev, &found_dev, NULL);
+    struct loader_icd_term *icd_term =
+        loader_get_icd_and_device(dev, &found_dev, NULL);
 
-    if (icd)
-        loader_log(icd->this_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+    if (icd_term)
+        loader_log(icd_term->this_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                    "Bad destination in loader trampoline dispatch,"
                    "Are layers and extensions that you are calling enabled?");
     return VK_ERROR_EXTENSION_NOT_PRESENT;

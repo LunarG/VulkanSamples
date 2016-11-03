@@ -309,7 +309,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDebugReportCallback(
     const VkAllocationCallbacks *pAllocator,
     VkDebugReportCallbackEXT *pCallback) {
     VkDebugReportCallbackEXT *icd_info = NULL;
-    const struct loader_icd *icd;
+    const struct loader_icd_term *icd_term;
     struct loader_instance *inst = (struct loader_instance *)instance;
     VkResult res = VK_SUCCESS;
     uint32_t storage_idx;
@@ -336,13 +336,14 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDebugReportCallback(
     }
 
     storage_idx = 0;
-    for (icd = inst->icds; icd; icd = icd->next) {
-        if (!icd->CreateDebugReportCallbackEXT) {
+    for (icd_term = inst->icd_terms; icd_term; icd_term = icd_term->next) {
+        if (!icd_term->CreateDebugReportCallbackEXT) {
             continue;
         }
 
-        res = icd->CreateDebugReportCallbackEXT(
-            icd->instance, pCreateInfo, pAllocator, &icd_info[storage_idx]);
+        res = icd_term->CreateDebugReportCallbackEXT(icd_term->instance,
+                                                     pCreateInfo, pAllocator,
+                                                     &icd_info[storage_idx]);
 
         if (res != VK_SUCCESS) {
             goto out;
@@ -388,14 +389,14 @@ out:
     // Roll back on errors
     if (VK_SUCCESS != res) {
         storage_idx = 0;
-        for (icd = inst->icds; icd; icd = icd->next) {
-            if (NULL == icd->DestroyDebugReportCallbackEXT) {
+        for (icd_term = inst->icd_terms; icd_term; icd_term = icd_term->next) {
+            if (NULL == icd_term->DestroyDebugReportCallbackEXT) {
                 continue;
             }
 
             if (icd_info[storage_idx]) {
-                icd->DestroyDebugReportCallbackEXT(
-                    icd->instance, icd_info[storage_idx], pAllocator);
+                icd_term->DestroyDebugReportCallbackEXT(
+                    icd_term->instance, icd_info[storage_idx], pAllocator);
             }
             storage_idx++;
         }
@@ -433,19 +434,19 @@ VKAPI_ATTR void VKAPI_CALL terminator_DestroyDebugReportCallback(
     const VkAllocationCallbacks *pAllocator) {
     uint32_t storage_idx;
     VkDebugReportCallbackEXT *icd_info;
-    const struct loader_icd *icd;
+    const struct loader_icd_term *icd_term;
 
     struct loader_instance *inst = (struct loader_instance *)instance;
     icd_info = *(VkDebugReportCallbackEXT **)&callback;
     storage_idx = 0;
-    for (icd = inst->icds; icd; icd = icd->next) {
-        if (NULL == icd->DestroyDebugReportCallbackEXT) {
+    for (icd_term = inst->icd_terms; icd_term; icd_term = icd_term->next) {
+        if (NULL == icd_term->DestroyDebugReportCallbackEXT) {
             continue;
         }
 
         if (icd_info[storage_idx]) {
-            icd->DestroyDebugReportCallbackEXT(
-                icd->instance, icd_info[storage_idx], pAllocator);
+            icd_term->DestroyDebugReportCallbackEXT(
+                icd_term->instance, icd_info[storage_idx], pAllocator);
         }
         storage_idx++;
     }
@@ -459,15 +460,16 @@ VKAPI_ATTR void VKAPI_CALL terminator_DebugReportMessage(
     VkInstance instance, VkDebugReportFlagsEXT flags,
     VkDebugReportObjectTypeEXT objType, uint64_t object, size_t location,
     int32_t msgCode, const char *pLayerPrefix, const char *pMsg) {
-    const struct loader_icd *icd;
+    const struct loader_icd_term *icd_term;
 
     struct loader_instance *inst = (struct loader_instance *)instance;
 
     loader_platform_thread_lock_mutex(&loader_lock);
-    for (icd = inst->icds; icd; icd = icd->next) {
-        if (icd->DebugReportMessageEXT != NULL) {
-            icd->DebugReportMessageEXT(icd->instance, flags, objType, object,
-                                       location, msgCode, pLayerPrefix, pMsg);
+    for (icd_term = inst->icd_terms; icd_term; icd_term = icd_term->next) {
+        if (icd_term->DebugReportMessageEXT != NULL) {
+            icd_term->DebugReportMessageEXT(icd_term->instance, flags, objType,
+                                            object, location, msgCode,
+                                            pLayerPrefix, pMsg);
         }
     }
 
