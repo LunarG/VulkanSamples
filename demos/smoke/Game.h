@@ -113,26 +113,26 @@ private:
     void parse_args(const std::vector<std::string> &args)
     {
         for (auto it = args.begin(); it != args.end(); ++it) {
-            if (*it == "-b") {
+            if (*it == "--b") {
                 settings_.vsync = false;
-            } else if (*it == "-w") {
+            } else if (*it == "--w") {
                 ++it;
                 settings_.initial_width = std::stoi(*it);
-            } else if (*it == "-h") {
+            } else if (*it == "--h") {
                 ++it;
                 settings_.initial_height = std::stoi(*it);
-            } else if (*it == "-v") {
+            } else if (*it == "--v") {
                 settings_.validate = true;
             } else if (*it == "--validate") {
                 settings_.validate = true;
-            } else if (*it == "-vv") {
+            } else if (*it == "--vv") {
                 settings_.validate = true;
                 settings_.validate_verbose = true;
-            } else if (*it == "-nt") {
+            } else if (*it == "--nt") {
                 settings_.no_tick = true;
-            } else if (*it == "-nr") {
+            } else if (*it == "--nr") {
                 settings_.no_render = true;
-            } else if (*it == "-np") {
+            } else if (*it == "--np") {
                 settings_.no_present = true;
             } else if (*it == "--c") {
                 ++it;
