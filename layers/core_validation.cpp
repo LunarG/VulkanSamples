@@ -11008,6 +11008,10 @@ CmdExecuteCommands(VkCommandBuffer commandBuffer, uint32_t commandBuffersCount, 
                             "supported on this device.",
                             reinterpret_cast<uint64_t>(pCommandBuffers[i]));
             }
+            // Propagate layout transitions to the primary cmd buffer
+            for (auto ilm_entry : pSubCB->imageLayoutMap) {
+                SetLayout(pCB, ilm_entry.first, ilm_entry.second);
+            }
             pSubCB->primaryCommandBuffer = pCB->commandBuffer;
             pCB->secondaryCommandBuffers.insert(pSubCB->commandBuffer);
             dev_data->globalInFlightCmdBuffers.insert(pSubCB->commandBuffer);
