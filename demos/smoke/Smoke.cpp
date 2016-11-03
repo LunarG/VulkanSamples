@@ -734,7 +734,7 @@ void Smoke::on_key(Key key)
     switch (key) {
     case KEY_SHUTDOWN:
     case KEY_ESC:
-        shell_->quit();
+        quit();
         break;
     case KEY_UP:
         camera_.eye_pos -= glm::vec3(0.05f);
@@ -763,6 +763,14 @@ void Smoke::on_tick()
 
 void Smoke::on_frame(float frame_pred)
 {
+    // Limit number of frames if argument was specified
+    if (settings_.max_frame_count != -1 &&
+        frame_count == settings_.max_frame_count) {
+        quit();
+        return;
+    }
+    frame_count++;
+
     auto &data = frame_data_[frame_data_index_];
 
     // wait for the last submission since we reuse frame data
