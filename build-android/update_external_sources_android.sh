@@ -36,7 +36,7 @@ function create_glslang () {
    echo "Creating local glslang repository ($BASEDIR/glslang)."
    mkdir -p $BASEDIR/glslang
    cd $BASEDIR/glslang
-   git clone https://github.com/KhronosGroup/glslang.git .
+   git clone https://android.googlesource.com/platform/external/shaderc/glslang .
    git checkout $GLSLANG_REVISION
 }
 
@@ -52,7 +52,7 @@ function create_spirv-tools () {
    echo "Creating local spirv-tools repository ($BASEDIR/spirv-tools)."
    mkdir -p $BASEDIR/spirv-tools
    cd $BASEDIR/spirv-tools
-   git clone https://github.com/KhronosGroup/SPIRV-Tools.git .
+   git clone https://android.googlesource.com/platform/external/shaderc/spirv-tools .
    git checkout $SPIRV_TOOLS_REVISION
 }
 
@@ -68,7 +68,7 @@ function create_spirv-headers () {
    echo "Creating local spirv-headers repository ($BASEDIR/spirv-tools/external/spirv-headers)."
    mkdir -p $BASEDIR/spirv-tools/external/spirv-headers
    cd $BASEDIR/spirv-tools/external/spirv-headers
-   git clone https://github.com/KhronosGroup/SPIRV-Headers.git .
+   git clone https://android.googlesource.com/platform/external/shaderc/spirv-headers .
    git checkout $SPIRV_HEADERS_REVISION
 }
 
@@ -83,7 +83,7 @@ function create_shaderc () {
    rm -rf $BASEDIR/shaderc
    echo "Creating local shaderc repository ($BASEDIR/shaderc)."
    cd $BASEDIR
-   git clone https://github.com/google/shaderc.git
+   git clone https://android.googlesource.com/platform/external/shaderc/shaderc
    cd shaderc
    git checkout $SHADERC_REVISION
 }
