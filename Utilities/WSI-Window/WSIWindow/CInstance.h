@@ -97,7 +97,6 @@ struct CExtensions : public CPickList{
 //---------------------------CInstance----------------------------
 class CInstance{
     VkInstance instance;
-    CDebugReport DebugReport;
     void Create(const CLayers& layers, const CExtensions& extensions, const char* appName, const char* engineName);
 public:
     CInstance(const CLayers& layers, const CExtensions& extensions, const char* appName="VulkanApp", const char* engineName="LunarG");
@@ -105,6 +104,7 @@ public:
     ~CInstance();
     //CLayers     layers;
     //CExtensions extensions;
+    CDebugReport DebugReport;  // Configure debug report in flags here.
     void Print();
     operator VkInstance () const {return instance;}
 };

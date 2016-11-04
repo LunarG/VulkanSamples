@@ -76,10 +76,12 @@ int main(int argc, char *argv[]){
     printf("WSI-Window\n");
 
     CInstance Inst;                                    //Create a Vulkan Instance
-    MyWindow Window(Inst,"LunarG WSIWindow",640,480);  //Create a Vulkan window
+    MyWindow Window(Inst,"WSI-Window",640,480);        //Create a Vulkan window
     Window.ShowKeyboard(true);                         //Show soft-keyboard on Android
     LOGW("Test Warnings\n");
     Window.SetWinPos(0,0);
+
+    Inst.DebugReport.SetFlags(31);
 
     while(Window.ProcessEvents()){                     //Main event loop, runs until window is closed.
         bool KeyPressed = Window.GetKeyState(KEY_LeftShift);

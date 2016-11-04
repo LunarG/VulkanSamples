@@ -1,13 +1,46 @@
+/*
+*--------------------------------------------------------------------------
+* Copyright (c) 2015-2016 Valve Corporation
+* Copyright (c) 2015-2016 LunarG, Inc.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*
+* Author: Rene Lindsay <rene@lunarg.com>
+*
+*--------------------------------------------------------------------------
+* Below are 6 LOG* macros, for printing to the Console or Android Logcat.
+*
+* The CDebugReport class is used internally by CInstance, to enable
+* the validation layers to print debug/error/info messages.
+*
+*-------Vars defined by CMAKE:-------
+*  #define ENABLE_VALIDATION 1          // Enables Vulkan Validation
+*  #define ENABLE_LOGGING    1          // Enables LOG* print messages
+*------------------------------------
+*--------------------------------------------------------------------------
+*/
+
 #ifndef VALIDATION_H
 #define VALIDATION_H
 
-#if defined(__linux__)&& !defined(__ANDROID__)  //desktop only
+#if defined(__linux__)&& !defined(__ANDROID__)  //Linux (desktop only)
   #define __LINUX__ 1
 #endif
 
 //-------Enable Validation on Android------- (For Desktop, there's a CMAKE option)
 #if defined(__ANDROID__) && !defined(NDEBUG)
   #define ENABLE_VALIDATION 1
+  #define ENABLE_LOGGING    1
   //#define NDEBUG               //cuts 4kb off apk size
 #endif
 //------------------------------------------
@@ -25,10 +58,9 @@
 //=====================================================================================================
 
 //===============================================LOGGING===============================================
-//  In Debug builds, the 6 LOG* functions print logging messages to the console, or Android LogCat.
-//  In Release builds, all LOG* functions get stripped out, to leave the exe as small as possible.
+//  If enabled, the 6 LOG* functions print logging messages to the console, or Android LogCat.
 //  LOG* functions can be used in the same way as printf, but uses color-coding, for better readability.
-//
+//  Turn off the ENABLE_LOGGING flag in CMake, to strip out log messages and reduce exe size for release.
 
 #ifdef _WIN32
     #include <Windows.h>
@@ -47,13 +79,12 @@
     #define ANSICODE(x) x     /* Enable ANSI codes on Linux */
     #define cTICK "\u2713"
 #endif
-
 //----------------------------------------------------------------------------------
 
 //--- ANSI escape codes to set text colours. eg. printf(cRED"Red text." cRESET); ---
 #define cFAINT     ANSICODE("\033[38;2;128;128;128m")
 #define cBRIGHT    ANSICODE("\033[01m")
-#define cSTRIKEOUT ANSICODE("\033[09m") // linux only
+#define cSTRIKEOUT // linux only
 #define cRED       ANSICODE("\033[31m")
 #define cGREEN     ANSICODE("\033[32m")
 #define cYELLOW    ANSICODE("\033[33m")
@@ -61,36 +92,50 @@
 #define cMAGENTA   ANSICODE("\033[35m")
 #define cCYAN      ANSICODE("\033[36m")
 #define cRESET     ANSICODE("\033[00m") // reset to normal, white text
-//----------------------------------------------------------------------------------
-
-#ifndef NDEBUG
-    #ifdef ANDROID
-      #include <jni.h>
-      #include <android/log.h>
-      #define LOG_TAG    "WSIWindow"                                                                  // Android:
-      #define LOG(...)     __android_log_print(ANDROID_LOG_INFO   ,LOG_TAG,__VA_ARGS__)               /*   Prints normal text         */
-      #define LOGV(...)    __android_log_print(ANDROID_LOG_VERBOSE,LOG_TAG,__VA_ARGS__)               /*   Prints Performance warnings*/
-      #define LOGD(...)    __android_log_print(ANDROID_LOG_DEBUG  ,LOG_TAG,__VA_ARGS__)               /*   Prints DEBUG messages      */
-      #define LOGI(...)    __android_log_print(ANDROID_LOG_INFO   ,LOG_TAG,__VA_ARGS__)               /*   Prints INFO messages       */
-      #define LOGW(...)    __android_log_print(ANDROID_LOG_WARN   ,LOG_TAG,__VA_ARGS__)               /*   Prints WARNING messages    */
-      #define LOGE(...)    __android_log_print(ANDROID_LOG_ERROR  ,LOG_TAG,__VA_ARGS__)               /*   Prints ERROR messages      */
-      #define printf(...)  __android_log_print(ANDROID_LOG_INFO   ,LOG_TAG,__VA_ARGS__)               /*   printf output as log info  */
-    #else                                                                                                // Linux and Windows 10+:
-      #define LOG(...)  {                                         printf(__VA_ARGS__); fflush(stdout);}  /*   Prints in white            */
-      #define LOGV(...) {printf(cCYAN   "PERF-WARNING: " cRESET); printf(__VA_ARGS__); fflush(stdout);}  /*   Prints Performace Warnings */
-      #define LOGD(...) {printf(cBLUE   "DEBUG: "        cRESET); printf(__VA_ARGS__); fflush(stdout);}  /*   Prints DEBUG messages      */
-      #define LOGI(...) {printf(cGREEN  "INFO : "        cRESET); printf(__VA_ARGS__); fflush(stdout);}  /*   Prints INFO messages       */
-      #define LOGW(...) {printf(cYELLOW "WARNING: "      cRESET); printf(__VA_ARGS__); fflush(stdout);}  /*   Prints WARNINGs in yellow  */
-      #define LOGE(...) {printf(cRED    "ERROR: "        cRESET); printf(__VA_ARGS__); fflush(stdout);}  /*   Prints ERRORs in red       */
-    #endif
-#else    //Remove LOG* messages from Release build. (printf messages are NOT removed.)
-    #define  LOG(...)  {}
-    #define  LOGV(...) {}
-    #define  LOGD(...) {}
-    #define  LOGI(...) {}
-    #define  LOGW(...) {}
-    #define  LOGE(...) {}
+#ifdef __LINUX__
+  #undef  cSTRIKEOUT
+  #define cSTRIKEOUT ANSICODE("\033[09m") // linux only
 #endif
+//----------------------------------------------------------------------------------
+//----------------Printing Log & Validation messages on Android vs PC---------------
+#ifdef ANDROID
+  #include <jni.h>
+  #include <android/log.h>
+  #define LOG_TAG    "WSIWindow"
+  #define _LOG(...)    __android_log_print(ANDROID_LOG_INFO   ,LOG_TAG,__VA_ARGS__)
+  #define _LOGV(...)   __android_log_print(ANDROID_LOG_VERBOSE,LOG_TAG,__VA_ARGS__)
+  #define _LOGD(...)   __android_log_print(ANDROID_LOG_DEBUG  ,LOG_TAG,__VA_ARGS__)
+  #define _LOGI(...)   __android_log_print(ANDROID_LOG_INFO   ,LOG_TAG,__VA_ARGS__)
+  #define _LOGW(...)   __android_log_print(ANDROID_LOG_WARN   ,LOG_TAG,__VA_ARGS__)
+  #define _LOGE(...)   __android_log_print(ANDROID_LOG_ERROR  ,LOG_TAG,__VA_ARGS__)
+  #define printf(...)  __android_log_print(ANDROID_LOG_INFO   ,LOG_TAG,__VA_ARGS__)
+#else // DESKTOP
+  #define _LOG(...)  {                                    printf(__VA_ARGS__); fflush(stdout);}
+  #define _LOGV(...) {printf(cCYAN   "PERF : "   cRESET); printf(__VA_ARGS__); fflush(stdout);}
+  #define _LOGD(...) {printf(cBLUE   "DEBUG: "   cRESET); printf(__VA_ARGS__); fflush(stdout);}
+  #define _LOGI(...) {printf(cGREEN  "INFO : "   cRESET); printf(__VA_ARGS__); fflush(stdout);}
+  #define _LOGW(...) {printf(cYELLOW "WARNING: " cRESET); printf(__VA_ARGS__); fflush(stdout);}
+  #define _LOGE(...) {printf(cRED    "ERROR: "   cRESET); printf(__VA_ARGS__); fflush(stdout);}
+#endif
+//----------------------------------------------------------------------------------
+//-----------------------------Enable / Disable Logging-----------------------------
+//  Use these 6 LOG* functions for printing to the terminal, or Android Logcat.
+#ifdef ENABLE_LOGGING
+  #define  LOG(...)  {_LOG( __VA_ARGS__)}      /*  Prints in white (like printf)  */
+  #define  LOGV(...) {_LOGV(__VA_ARGS__)}      /*  Prints Performace Warnings     */
+  #define  LOGD(...) {_LOGD(__VA_ARGS__)}      /*  Prints DEBUG messages in blue  */
+  #define  LOGI(...) {_LOGI(__VA_ARGS__)}      /*  Prints INFO messages in green  */
+  #define  LOGW(...) {_LOGW(__VA_ARGS__)}      /*  Prints WARNINGs in yellow      */
+  #define  LOGE(...) {_LOGE(__VA_ARGS__)}      /*  Prints ERRORs in red           */
+#else
+  #define  LOG(...)  {}
+  #define  LOGV(...) {}
+  #define  LOGD(...) {}
+  #define  LOGI(...) {}
+  #define  LOGW(...) {}
+  #define  LOGE(...) {}
+#endif
+//----------------------------------------------------------------------------------
 //=====================================================================================================
 
 #include <assert.h>
@@ -102,14 +147,22 @@ void ShowVkResult(VkResult err);        //Print warnings and errors.
 
 //--------------------------------------CDebugReport------------------------------------------
 class CDebugReport{
-    VkInstance instance=0;
-    VkDebugReportCallbackEXT debug_report_callback=0;
+    VkInstance                          instance=0;
+    VkDebugReportCallbackEXT            debug_report_callback=0;
     PFN_vkCreateDebugReportCallbackEXT  vkCreateDebugReportCallbackEXT;
     PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT;
     //PFN_vkDebugReportMessageEXT         vkDebugReportMessageEXT;
+    PFN_vkDebugReportCallbackEXT func=0;
+    static VkDebugReportFlagsEXT flags;  //TODO: make this non-static once LVL bug #1129 is fixed.
+    void Init(VkInstance inst, VkDebugReportFlagsEXT flags, PFN_vkDebugReportCallbackEXT debugFunc=0);
 public:
-    void Init(VkInstance inst);
+    static VkDebugReportFlagsEXT GetFlags(){return flags;}     //TEMPORARY (workaround for LVL bug #1129)
+
+    void Init(VkInstance inst);                                //Initialize with default callback, and all flags enabled.
+    void SetFlags(VkDebugReportFlagsEXT flags);                //Select which type of messages to display
+    void SetCallback(PFN_vkDebugReportCallbackEXT debugFunc);  //Set a custom callback function for printing debug reports
     void Destroy();
+    void Print();
 };
 //--------------------------------------------------------------------------------------------
 

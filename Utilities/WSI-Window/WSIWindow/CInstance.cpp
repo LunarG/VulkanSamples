@@ -61,7 +61,7 @@ void CPickList::UnPick(const char* name){
 }
 
 void     CPickList::PickAll() { forCount(Count()) Pick(i); }       //Pick All items
-void     CPickList::Clear()   { pickList.clear();}                 //Clear Picklist
+void     CPickList::Clear()   { pickList.clear(); }                //Clear Picklist
 char**   CPickList::PickList()  const {return (char**)   pickList.data();}
 uint32_t CPickList::PickCount() const {return (uint32_t) pickList.size();}
 
@@ -109,7 +109,6 @@ CExtensions::CExtensions(const char* layerName){
 //---------------------------CInstance----------------------------
 CInstance::CInstance(const char* appName, const char* engineName){
     CLayers layers;
-#ifndef NDEBUG  //In Debug mode, add standard validation layers
     #ifdef ENABLE_VALIDATION
         layers.Pick({"VK_LAYER_GOOGLE_threading",
                      "VK_LAYER_LUNARG_parameter_validation",
@@ -118,9 +117,9 @@ CInstance::CInstance(const char* appName, const char* engineName){
                      "VK_LAYER_LUNARG_core_validation",
                      "VK_LAYER_LUNARG_swapchain",
                      "VK_LAYER_GOOGLE_unique_objects"});
+        layers.Print();
     #endif
-    layers.Print();
-#endif
+//#endif
     CExtensions extensions;
     if(extensions.Pick(VK_KHR_SURFACE_EXTENSION_NAME)){
 #ifdef VK_USE_PLATFORM_WIN32_KHR
@@ -142,7 +141,8 @@ CInstance::CInstance(const char* appName, const char* engineName){
         extensions.Pick(VK_KHR_MIR_SURFACE_EXTENSION_NAME);      //Linux Mir
 #endif
     } else LOGE("Failed to load VK_KHR_Surface");
-#ifndef NDEBUG
+
+#ifdef ENABLE_VALIDATION
     //extensions.Pick("Fake_Extension"); //triggers a warning
     extensions.Pick(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);         //in Debug mode, Enable Validation
     extensions.Print();
@@ -179,15 +179,20 @@ void CInstance::Create(const CLayers& layers, const CExtensions& extensions, con
 
     VKERRCHECK(vkCreateInstance(&inst_info, NULL, &instance));
     LOGI("Vulkan Instance created\n");
-
+#ifdef ENABLE_VALIDATION
     if( extensions.IsPicked(VK_EXT_DEBUG_REPORT_EXTENSION_NAME))
         DebugReport.Init(instance);  //If VK_EXT_debug_report is loaded, initialize it.
+#endif
+    //DebugReport.SetFlags(16);
+    //DebugReport.SetFlags(1);
 }
 
 void CInstance::Print(){ printf("->Instance %s created.\n",(!!instance)?"":"NOT"); }
 
 CInstance::~CInstance(){
+#ifdef ENABLE_VALIDATION
     DebugReport.Destroy();               //Must be done BEFORE vkDestroyInstance()
+#endif
     vkDestroyInstance(instance, NULL);
     LOGI("Vulkan Instance destroyed\n");
 }

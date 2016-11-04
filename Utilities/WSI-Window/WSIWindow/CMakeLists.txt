@@ -8,11 +8,20 @@ add_definitions(-std=c++11)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")  #for find_package
 
 #============================VALIDATION===========================
-#    Validation layers is always off for Release builds
-option(ENABLE_VALIDATION "Enable Vulkan Validation in Debug builds"  ON)
+#  Validation may be enabled in both debug and release builds.
+#  Logging is enabled in debug builds, or when validation is enabled.
+
+option(ENABLE_VALIDATION "Enable Vulkan Validation."   ON) #adds 5KB to exe size
 if (ENABLE_VALIDATION)
     add_definitions(-DENABLE_VALIDATION)
 endif()
+
+option(ENABLE_LOGGING "Prints LOG* messages to terminal or Android Logcat." ON)
+if (ENABLE_LOGGING)
+    add_definitions(-DENABLE_LOGGING)
+endif()
+
+
 #=================================================================
 #==============================LINUX==============================
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -82,7 +91,7 @@ endif()
 #endif()
 #=================================================================
 #=======================Find Vulkan Loader========================
-find_library(VULKAN_LOADER vulkan   DOC "Path to Vulkan loader library.")
+find_library(VULKAN_LOADER vulkan   DOC "Path to Vulkan loader library. (libvulkan.so or vulkan-1.dll)")
 find_library(VULKAN_LOADER vulkan   PATH "$ENV{VULKAN_SDK}/lib")             # Search in Vulkan SDK on Linux  : /lib/libvulkan.so
 find_library(VULKAN_LOADER vulkan-1 PATH "$ENV{VULKAN_SDK}/bin")             # Search in Vulkan SDK on Windows: /bin/vulkan-1.lib
 find_library(VULKAN_LOADER vulkan   PATH "../../../build/Default/loader")    # Search in VulkanSamples on Linux
@@ -91,7 +100,7 @@ target_link_libraries(${LIBRARY_NAME} ${VULKAN_LOADER})                      # L
 message("Found VULKAN_LOADER  at: ${VULKAN_LOADER}")
 #=================================================================
 #=======================Find Vulkan Header========================
-find_path(VULKAN_INCLUDE vulkan/vulkan.h DOC "Path to Vulkan header file.")
+find_path(VULKAN_INCLUDE vulkan/vulkan.h DOC "Path to Vulkan header file. (vulkan.h)")
 find_path(VULKAN_INCLUDE vulkan/vulkan.h PATH "$ENV{VULKAN_SDK}/include")    # Search in Vulkan SDK
 find_path(VULKAN_INCLUDE vulkan/vulkan.h PATH "../../../include")            # Search in VulkanSamples
 target_include_directories(${LIBRARY_NAME} PUBLIC "${VULKAN_INCLUDE}")       # include vulkan.h
