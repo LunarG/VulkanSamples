@@ -277,8 +277,10 @@ bool Window_xcb::InitTouch(){
         XISetMask(mask.mask, XI_TouchEnd);
         XISelectEvents(display, xcb_window, &mask, 1);
     }
-#endif
     return true;
+#else
+    return false;
+#endif
 }
 //---------------------------------------------------------------------------
 
