@@ -250,7 +250,7 @@ VIAddVersionKey  "LegalCopyright" ""
 Function ${un}ConfigLayersAndVulkanDLL
 
     # Execute the configuration program
-    nsExec::ExecToStack 'ConfigureRT.exe --abi-major ${VERSION_ABI_MAJOR}'
+    nsExec::ExecToStack 'ConfigureRT.exe --abi-major ${VERSION_ABI_MAJOR} --api-name ${APINAME}'
     Delete "$TEMP\VulkanRT\configure_rt.log"
     Rename "configure_rt.log" "$TEMP\VulkanRT\configure_rt.log"
     pop $0
