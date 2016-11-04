@@ -17313,10 +17313,8 @@ TEST_F(VkPositiveLayerTest, QueryAndCopyMultipleCommandBuffers) {
     m_errorMonitor->VerifyNotFound();
 }
 
-TEST_F(VkPositiveLayerTest, ResetEventThenSet) {
+TEST_F(VkLayerTest, ResetEventThenSet) {
     TEST_DESCRIPTION("Reset an event then set it after the reset has been submitted.");
-
-    m_errorMonitor->ExpectSuccess();
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     VkEvent event;
@@ -17348,8 +17346,6 @@ TEST_F(VkPositiveLayerTest, ResetEventThenSet) {
         vkBeginCommandBuffer(command_buffer, &begin_info);
 
         vkCmdResetEvent(command_buffer, event, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
-        vkCmdWaitEvents(command_buffer, 1, &event, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
-            nullptr, 0, nullptr, 0, nullptr);
         vkEndCommandBuffer(command_buffer);
     }
     {
