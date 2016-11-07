@@ -221,6 +221,7 @@ The VK_LAYER_LUNARG_parameter_validation layer validates parameter values and fl
 | Device Limit Violation | Verifies that a parameter is within the limits advertised by the gpu | DEVICE_LIMIT | vkUpdateDescriptorSets vkCreateRenderPass | TODO | NA |
 | Device Feature Violation | Verifies that a requested feature is supported by the gpu | DEVICE_FEATURE | vkBeginCommandBuffer vkCreateGraphicsPipelines | PSOPolygonModeInvalid | NA |
 | Failed Call Return Code | Provides a description of a failure code returned by a Vulkan API call | FAILURE_RETURN_CODE | | FailedReturnValue | NA |
+| Extension Not Enabled | Verifies that extension entrypoints are only used when the appropriate extension is enabled | EXTENSION_NOT_ENABLED | | VkLayerTest.EnableWsiBeforeUse | NA |
 | NA | Enum used for informational messages | NONE | | TODO | None |
 
 ### VK_LAYER_LUNARG_parameter_validation Pending Work
