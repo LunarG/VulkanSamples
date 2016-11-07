@@ -5000,7 +5000,8 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceWin32PresentationSupportKHR(VkPh
     skip |= require_instance_extension(physicalDevice, &instance_extension_enables::win32_enabled,
                                             "vkGetPhysicalDeviceWin32PresentationSupportKHR", VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 
-    skip |= parameter_validation_vkGetPhysicalDeviceWin32PresentationSupportKHR(physicalDevice, queueFamilyIndex);
+    // TODO: codegen doesn't produce this function?
+    //skip |= parameter_validation_vkGetPhysicalDeviceWin32PresentationSupportKHR(physicalDevice, queueFamilyIndex);
 
     if (!skip) {
         result = get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceWin32PresentationSupportKHR(
