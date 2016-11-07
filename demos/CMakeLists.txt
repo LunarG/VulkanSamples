@@ -19,9 +19,9 @@ set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 if(WIN32)
-  set (LIBRARIES "vulkan-${MAJOR}")
+  set (LIBRARIES "${API_LOWERCASE}-${MAJOR}")
 elseif(UNIX)
-  set (LIBRARIES "vulkan")
+  set (LIBRARIES "${API_LOWERCASE}")
 else()
 endif()
 
@@ -81,7 +81,7 @@ if(NOT WIN32)
     endif()
 
     include_directories ("${PROJECT_SOURCE_DIR}/icd/common")
-    link_libraries(vulkan m)
+    link_libraries(${API_LOWERCASE} m)
 endif()
 if(WIN32)
     include_directories (
@@ -92,8 +92,8 @@ if(WIN32)
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_CRT_SECURE_NO_WARNINGS -D_USE_MATH_DEFINES")
 endif()
 
-add_executable(vulkaninfo vulkaninfo.c)
-target_link_libraries(vulkaninfo ${LIBRARIES})
+add_executable(${API_LOWERCASE}info vulkaninfo.c)
+target_link_libraries(${API_LOWERCASE}info ${LIBRARIES})
 
 if(NOT WIN32)
     if (${CMAKE_SYSTEM_PROCESSOR} STREQUAL ${CMAKE_HOST_SYSTEM_PROCESSOR})
@@ -132,5 +132,5 @@ if (${CMAKE_SYSTEM_PROCESSOR} STREQUAL ${CMAKE_HOST_SYSTEM_PROCESSOR})
 endif()
 
 if(UNIX)
-    install(TARGETS vulkaninfo DESTINATION ${CMAKE_INSTALL_BINDIR})
+    install(TARGETS ${API_LOWERCASE}info DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()
