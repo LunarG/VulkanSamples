@@ -107,9 +107,10 @@ CExtensions::CExtensions(const char* layerName){
 //----------------------------------------------------------------
 
 //---------------------------CInstance----------------------------
-CInstance::CInstance(const char* appName, const char* engineName){
+CInstance::CInstance(const bool enableValidation, const char* appName, const char* engineName){
     CLayers layers;
     #ifdef ENABLE_VALIDATION
+    if(enableValidation){
         layers.Pick({"VK_LAYER_GOOGLE_threading",
                      "VK_LAYER_LUNARG_parameter_validation",
                      "VK_LAYER_LUNARG_object_tracker",
@@ -117,7 +118,8 @@ CInstance::CInstance(const char* appName, const char* engineName){
                      "VK_LAYER_LUNARG_core_validation",
                      "VK_LAYER_LUNARG_swapchain",
                      "VK_LAYER_GOOGLE_unique_objects"});
-        layers.Print();
+    }
+    layers.Print();
     #endif
 //#endif
     CExtensions extensions;
@@ -183,8 +185,6 @@ void CInstance::Create(const CLayers& layers, const CExtensions& extensions, con
     if( extensions.IsPicked(VK_EXT_DEBUG_REPORT_EXTENSION_NAME))
         DebugReport.Init(instance);  //If VK_EXT_debug_report is loaded, initialize it.
 #endif
-    //DebugReport.SetFlags(16);
-    //DebugReport.SetFlags(1);
 }
 
 void CInstance::Print(){ printf("->Instance %s created.\n",(!!instance)?"":"NOT"); }

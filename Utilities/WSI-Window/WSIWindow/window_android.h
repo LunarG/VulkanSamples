@@ -74,8 +74,8 @@ class Window_android : public WindowImpl{
     }
 
 public:
-    Window_android(CInstance& inst, const char* title, uint width, uint height) {
-        instance = &inst;
+    Window_android(VkInstance inst, const char* title, uint width, uint height) {
+        instance = inst;
         shape.width  = 0;//width;
         shape.height = 0;//height;
         running = true;

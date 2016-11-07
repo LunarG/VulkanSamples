@@ -85,7 +85,7 @@ class WindowImpl {
     bool btnstate[5]   = {};                                                   // mouse btn state
     bool keystate[256] = {};                                                   // keyboard state
 protected:
-    CInstance* instance;
+    VkInstance instance;
     VkSurfaceKHR surface;
     FIFO<EventType,4> eventFIFO;                        //Event message queue buffer (max 4 items)
 
@@ -98,17 +98,17 @@ protected:
 public:
     bool running;
     bool textinput;
-    bool has_focus;
+    bool has_focus;                                                            // true if window has focus
     struct shape_t { int16_t x; int16_t y; uint16_t width; uint16_t height; }shape = {};  // window shape
 
     WindowImpl() : instance(0), surface(0), running(false), textinput(false), has_focus(false){}
-    virtual ~WindowImpl() { if(surface) vkDestroySurfaceKHR(*instance,surface,NULL); }
+    virtual ~WindowImpl() { if(surface) vkDestroySurfaceKHR(instance,surface,NULL); }
     virtual void Close() { running = false; }
-    CInstance& Instance() { return *instance; }
-    VkSurfaceKHR Surface(){ return surface; }
-    bool HasFocus() { return has_focus; }                                  // returns true if window has focus
+    //VkInstance Instance() const { return instance; }
+    VkSurfaceKHR Surface() const { return surface; }
+
     bool KeyState(eKeycode key){ return keystate[key]; }                   // returns true if key is pressed
-    bool BtnState(uint8_t  btn){ return (btn<5)  ? btnstate[btn]:0; }      // returns true if mouse btn is pressed
+    bool BtnState(uint8_t  btn){ return (btn<3)  ? btnstate[btn]:0; }      // returns true if mouse btn is pressed
     void MousePos(int16_t& x, int16_t& y){x=mousepos.x; y=mousepos.y; }    // returns mouse x,y position
 
     virtual void TextInput(bool enabled);          //Enable TextEvent, (and on Android, show the soft-keyboard)

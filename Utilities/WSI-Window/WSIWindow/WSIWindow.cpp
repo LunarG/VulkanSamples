@@ -25,7 +25,7 @@
 #include "window_android.h"
 //==============================================================
 
-WSIWindow::WSIWindow(CInstance& inst,const char* title,uint width,uint height){
+WSIWindow::WSIWindow(VkInstance inst,const char* title,const uint width,const uint height){
 #ifdef VK_USE_PLATFORM_XCB_KHR
     LOGI("PLATFORM: XCB\n");
     pimpl=new Window_xcb(inst,title,width,height);
@@ -76,7 +76,7 @@ EventType WSIWindow::GetEvent(bool wait_for_event){return pimpl->GetEvent(wait_f
 bool WSIWindow::ProcessEvents(bool wait_for_event){
     EventType e=pimpl->GetEvent(wait_for_event);
     while(e.tag!=EventType::NONE){
-//     Using Virtual functions for event handlers
+    // Calling the event handlers
        switch(e.tag){
            case EventType::MOUSE :OnMouseEvent (e.mouse.action, e.mouse.x, e.mouse.y, e.mouse.btn);   break;
            case EventType::KEY   :OnKeyEvent   (e.key.action, e.key.keycode);                         break;

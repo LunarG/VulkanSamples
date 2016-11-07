@@ -18,14 +18,15 @@ endif()
 
 option(ENABLE_LOGGING "Prints LOG* messages to terminal or Android Logcat." ON)
 if (ENABLE_LOGGING)
-    add_definitions(-DENABLE_LOGGING)
+    target_compile_definitions(${LIBRARY_NAME} PUBLIC -DENABLE_LOGGING) #enable logging for target project
 endif()
 
 
 #=================================================================
 #==============================LINUX==============================
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    option(BUILD_WSI_XCB_SUPPORT     "Build XCB WSI support"      ON)
+    set(BUILD_WSI_XCB_SUPPORT ON)  #Other options are not yet supported.
+    #option(BUILD_WSI_XCB_SUPPORT     "Build XCB WSI support"      ON)
     #option(BUILD_WSI_XLIB_SUPPORT    "Build Xlib WSI support"    OFF)
     #option(BUILD_WSI_WAYLAND_SUPPORT "Build Wayland WSI support" OFF)
     #option(BUILD_WSI_MIR_SUPPORT     "Build Mir WSI support"     OFF)

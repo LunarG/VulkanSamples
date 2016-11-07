@@ -100,11 +100,12 @@ class CInstance{
     void Create(const CLayers& layers, const CExtensions& extensions, const char* appName, const char* engineName);
 public:
     CInstance(const CLayers& layers, const CExtensions& extensions, const char* appName="VulkanApp", const char* engineName="LunarG");
-    CInstance(const char* appName="VulkanApp", const char* engineName="LunarG");
+    CInstance(const bool enableValidation=true, const char* appName="VulkanApp", const char* engineName="LunarG");
+
     ~CInstance();
     //CLayers     layers;
     //CExtensions extensions;
-    CDebugReport DebugReport;  // Configure debug report in flags here.
+    CDebugReport DebugReport;  // Configure debug report flags here.
     void Print();
     operator VkInstance () const {return instance;}
 };

@@ -84,7 +84,6 @@
 //--- ANSI escape codes to set text colours. eg. printf(cRED"Red text." cRESET); ---
 #define cFAINT     ANSICODE("\033[38;2;128;128;128m")
 #define cBRIGHT    ANSICODE("\033[01m")
-#define cSTRIKEOUT // linux only
 #define cRED       ANSICODE("\033[31m")
 #define cGREEN     ANSICODE("\033[32m")
 #define cYELLOW    ANSICODE("\033[33m")
@@ -93,8 +92,9 @@
 #define cCYAN      ANSICODE("\033[36m")
 #define cRESET     ANSICODE("\033[00m") // reset to normal, white text
 #ifdef __LINUX__
-  #undef  cSTRIKEOUT
   #define cSTRIKEOUT ANSICODE("\033[09m") // linux only
+#else
+  #define cSTRIKEOUT // linux only
 #endif
 //----------------------------------------------------------------------------------
 //----------------Printing Log & Validation messages on Android vs PC---------------
@@ -121,12 +121,12 @@
 //-----------------------------Enable / Disable Logging-----------------------------
 //  Use these 6 LOG* functions for printing to the terminal, or Android Logcat.
 #ifdef ENABLE_LOGGING
-  #define  LOG(...)  {_LOG( __VA_ARGS__)}      /*  Prints in white (like printf)  */
-  #define  LOGV(...) {_LOGV(__VA_ARGS__)}      /*  Prints Performace Warnings     */
-  #define  LOGD(...) {_LOGD(__VA_ARGS__)}      /*  Prints DEBUG messages in blue  */
-  #define  LOGI(...) {_LOGI(__VA_ARGS__)}      /*  Prints INFO messages in green  */
-  #define  LOGW(...) {_LOGW(__VA_ARGS__)}      /*  Prints WARNINGs in yellow      */
-  #define  LOGE(...) {_LOGE(__VA_ARGS__)}      /*  Prints ERRORs in red           */
+  #define  LOG(...)  _LOG( __VA_ARGS__)      /*  Prints in white (like printf)  */
+  #define  LOGV(...) _LOGV(__VA_ARGS__)      /*  Prints Performace Warnings     */
+  #define  LOGD(...) _LOGD(__VA_ARGS__)      /*  Prints DEBUG messages in blue  */
+  #define  LOGI(...) _LOGI(__VA_ARGS__)      /*  Prints INFO messages in green  */
+  #define  LOGW(...) _LOGW(__VA_ARGS__)      /*  Prints WARNINGs in yellow      */
+  #define  LOGE(...) _LOGE(__VA_ARGS__)      /*  Prints ERRORs in red           */
 #else
   #define  LOG(...)  {}
   #define  LOGV(...) {}
@@ -149,20 +149,19 @@ void ShowVkResult(VkResult err);        //Print warnings and errors.
 class CDebugReport{
     VkInstance                          instance=0;
     VkDebugReportCallbackEXT            debug_report_callback=0;
-    PFN_vkCreateDebugReportCallbackEXT  vkCreateDebugReportCallbackEXT;
-    PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT;
-    //PFN_vkDebugReportMessageEXT         vkDebugReportMessageEXT;
-    PFN_vkDebugReportCallbackEXT func=0;
-    static VkDebugReportFlagsEXT flags;  //TODO: make this non-static once LVL bug #1129 is fixed.
-    void Init(VkInstance inst, VkDebugReportFlagsEXT flags, PFN_vkDebugReportCallbackEXT debugFunc=0);
+    PFN_vkCreateDebugReportCallbackEXT  vkCreateDebugReportCallbackEXT=0;
+    PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT=0;
+    //PFN_vkDebugReportMessageEXT         vkDebugReportMessageEXT=0;
+    PFN_vkDebugReportCallbackEXT        func=0;
+    static VkDebugReportFlagsEXT        flags;    //TODO: Make this non-static once LVL bug #1129 is fixed.
+    void Set(VkInstance inst, VkDebugReportFlagsEXT flags, PFN_vkDebugReportCallbackEXT debugFunc=0);
 public:
-    static VkDebugReportFlagsEXT GetFlags(){return flags;}     //TEMPORARY (workaround for LVL bug #1129)
-
-    void Init(VkInstance inst);                                //Initialize with default callback, and all flags enabled.
-    void SetFlags(VkDebugReportFlagsEXT flags);                //Select which type of messages to display
-    void SetCallback(PFN_vkDebugReportCallbackEXT debugFunc);  //Set a custom callback function for printing debug reports
-    void Destroy();
-    void Print();
+    static VkDebugReportFlagsEXT GetFlags(){return flags;}     // Returns current flag settings.
+    void Init(VkInstance inst);                                // Initialize with default callback, and all flags enabled.
+    void SetFlags(VkDebugReportFlagsEXT flags);                // Select which type of messages to display
+    void SetCallback(PFN_vkDebugReportCallbackEXT debugFunc);  // Set a custom callback function for printing debug reports
+    void Destroy();                                            // Destroy the debug report. Must be done BEFORE vkDestroyInstance()
+    void Print();                                              // Print the debug report flags state.
 };
 //--------------------------------------------------------------------------------------------
 

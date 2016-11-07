@@ -51,6 +51,7 @@
 // Android: Rotate screen according to width/height aspect ratio. (Dustin)
 // Desktop: Pick render device with flag: DONT_CARE / PERFORMANCE / INTEGRATED . ... (Mark Young)
 // Enable_MultiTouch function. When disabled, touch-screen should emulate the mouse instead.
+// Make window DPI-aware.
 
 #ifdef ANDROID
   #include <native.h>
@@ -61,12 +62,11 @@
 #ifndef WSIWINDOW_H
 #define WSIWINDOW_H
 
-
 //===========================WSIWindow==========================
 class WSIWindow{
     WindowImpl* pimpl;
 public:
-    WSIWindow(CInstance& inst, const char* title, uint width, uint height);
+    WSIWindow(VkInstance inst, const char* title, const uint width, const uint height);
     virtual ~WSIWindow();
     VkSurfaceKHR Surface();
     operator VkSurfaceKHR () {return Surface();}

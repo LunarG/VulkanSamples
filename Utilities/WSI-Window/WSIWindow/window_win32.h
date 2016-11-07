@@ -62,7 +62,7 @@ class Window_win32 : public WindowImpl{
     void SetWinPos(uint x, uint y, uint w, uint h);
     void CreateSurface(VkInstance instance);
 public:
-    Window_win32(CInstance& inst, const char* title, uint width, uint height);
+    Window_win32(VkInstance inst, const char* title, uint width, uint height);
     virtual ~Window_win32();
     EventType GetEvent(bool wait_for_event=false);
     bool CanPresent(VkPhysicalDevice phy, uint32_t queue_family);  //check if this window can present this queue type
@@ -73,8 +73,8 @@ public:
 //=====================Win32 IMPLEMENTATION=====================
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
-Window_win32::Window_win32(CInstance& inst, const char* title, uint width, uint height){
-    instance=&inst;
+Window_win32::Window_win32(VkInstance inst, const char* title, uint width, uint height){
+    instance=inst;
     shape.width=width;
     shape.height=height;
     running=true;

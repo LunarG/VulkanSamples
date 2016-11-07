@@ -75,13 +75,13 @@ int main(int argc, char *argv[]){
     setbuf(stdout, NULL);          //Prevent printf buffering in QtCreator
     printf("WSI-Window\n");
 
-    CInstance Inst;                                    //Create a Vulkan Instance
+    CInstance Inst(true);                              //Create a Vulkan Instance
+    Inst.DebugReport.SetFlags(31);                     //Select message types
+
     MyWindow Window(Inst,"WSI-Window",640,480);        //Create a Vulkan window
     Window.ShowKeyboard(true);                         //Show soft-keyboard on Android
     LOGW("Test Warnings\n");
     Window.SetWinPos(0,0);
-
-    Inst.DebugReport.SetFlags(31);
 
     while(Window.ProcessEvents()){                     //Main event loop, runs until window is closed.
         bool KeyPressed = Window.GetKeyState(KEY_LeftShift);
