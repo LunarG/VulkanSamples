@@ -30,9 +30,9 @@
 # Set the default name to "Vulkan", but allow this to be overriden
 !ifndef APINAME
     !define APINAME "Vulkan"
+    !define APILOWER "vulkan"
 !endif
 
-!define INFO "info"
 !define PRODUCTNAME "${APINAME}RT"
 
 !ifndef HIDE_VERSION
@@ -97,9 +97,6 @@ Var IDir
 
 # Install count
 Var IC
-
-# Lower case version of ${APINAME}
-Var APILowerCaseName
 
 #############################################
 # StrRep - string replace
@@ -279,47 +276,8 @@ FunctionEnd
 !insertmacro DiagConfigLayersAndVulkanDLL ""
 !insertmacro DiagConfigLayersAndVulkanDLL "un."
 
-!macro StrLower un
-Function ${un}StrLower
-    Exch $0 ; Original string
-    Push $1 ; Final string
-    Push $2 ; Current character
-    Push $3
-    Push $4
-    StrCpy $1 ""
-Loop:
-    StrCpy $2 $0 1 ; Get next character
-    StrCmp $2 "" Done
-    StrCpy $0 $0 "" 1
-    StrCpy $3 122 ; 122 = ASCII code for z
-Loop2:
-    IntFmt $4 %c $3 ; Get character from current ASCII code
-    StrCmp $2 $4 Match
-    IntOp $3 $3 - 1
-    StrCmp $3 91 NoMatch Loop2 ; 90 = ASCII code one beyond Z
-Match:
-    StrCpy $2 $4 ; It 'matches' (either case) so grab the lowercase version
-NoMatch:
-    StrCpy $1 $1$2 ; Append to the final string
-    Goto Loop
-Done:
-    StrCpy $0 $1 ; Return the final string
-    Pop $4
-    Pop $3
-    Pop $2
-    Pop $1
-    Exch $0
-FunctionEnd
-!macroend
-!insertmacro StrLower ""
-!insertmacro StrLower "un."
-
 # Start default section
 Section
-
-    Push "${APINAME}"
-    Call StrLower
-    Pop $APILowerCaseName
 
     # Turn on logging
     LogSet on
@@ -478,23 +436,23 @@ Section
         # 32-bit DLLs/EXEs destined for SysWOW64
         ##########################################
         SetOutPath $WINDIR\SysWow64
-        File /oname=$APILowerCaseName-$FileVersion.dll ..\build32\loader\Release\vulkan-${VERSION_ABI_MAJOR}.dll
-        File /oname=$APILowerCaseName${INFO}-$FileVersion.exe ..\build32\demos\Release\vulkaninfo.exe
+        File /oname=${APILOWER}-$FileVersion.dll ..\build32\loader\Release\${APILOWER}-${VERSION_ABI_MAJOR}.dll
+        File /oname=${APILOWER}info-$FileVersion.exe ..\build32\demos\Release\${APILOWER}info.exe
         StrCpy $1 30
         Call CheckForError
 
         # 64-bit DLLs/EXEs
         ##########################################
         SetOutPath $WINDIR\System32
-        File /oname=$APILowerCaseName-$FileVersion.dll ..\build\loader\Release\vulkan-${VERSION_ABI_MAJOR}.dll
+        File /oname=${APILOWER}-$FileVersion.dll ..\build\loader\Release\${APILOWER}-${VERSION_ABI_MAJOR}.dll
         StrCpy $1 35
         Call CheckForError
 
         # vulkaninfo.exe
-        File /oname=$APILowerCaseName${INFO}-$FileVersion.exe ..\build\demos\Release\vulkaninfo.exe
+        File /oname=${APILOWER}info-$FileVersion.exe ..\build\demos\Release\${APILOWER}info.exe
         SetOutPath "$INSTDIR"
-        File /oname=$APILowerCaseName${INFO} ..\build\demos\Release\vulkaninfo.exe
-        File /oname=$APILowerCaseName${INFO}32.exe ..\build32\demos\Release\vulkaninfo.exe
+        File /oname=${APILOWER}info ..\build\demos\Release\${APILOWER}info.exe
+        File /oname=${APILOWER}info32.exe ..\build32\demos\Release\${APILOWER}info.exe
         StrCpy $1 40
         Call CheckForError
 
@@ -504,14 +462,14 @@ Section
         # 32-bit DLLs/EXEs destined for SysWOW64
         ##########################################
         SetOutPath $WINDIR\System32
-        File /oname=$APILowerCaseName-$FileVersion.dll ..\build32\loader\Release\vulkan-${VERSION_ABI_MAJOR}.dll
+        File /oname=${APILOWER}-$FileVersion.dll ..\build32\loader\Release\${APILOWER}-${VERSION_ABI_MAJOR}.dll
         StrCpy $1 50
         Call CheckForError
 
         # vulkaninfo.exe
-        File /oname=$APILowerCaseName${INFO}-$FileVersion.exe ..\build32\demos\Release\vulkaninfo.exe
+        File /oname=${APILOWER}info-$FileVersion.exe ..\build32\demos\Release\${APILOWER}info.exe
         SetOutPath "$INSTDIR"
-        File /oname=$APILowerCaseName${INFO} ..\build32\demos\Release\vulkaninfo.exe
+        File /oname=${APILOWER}info ..\build32\demos\Release\${APILOWER}info.exe
         StrCpy $1 55
         Call CheckForError
 
@@ -530,15 +488,15 @@ Section
         # Simply configure system to use our loader and vulkaninfo.
         MessageBox MB_OK "Warning!$\n$\nConfigureRT program called by VulkanRT Installer failed with error $0. This may result in an incomplete installation.$\n$\nWill configure system with Vulkan $FileVersion." /SD IDOK
         ${If} ${RunningX64}
-            Delete  $WINDIR\SysWow64\$APILowerCaseName-${VERSION_ABI_MAJOR}.dll
-            Delete  $WINDIR\SysWow64\$APILowerCaseName${INFO}.exe
-            CopyFiles /SILENT $WINDIR\SysWow64\$APILowerCaseName-$FileVersion.dll $WINDIR\SysWow64\$APILowerCaseName-${VERSION_ABI_MAJOR}.dll
-            CopyFiles /SILENT $WINDIR\SysWow64\$APILowerCaseName${INFO}-$FileVersion.exe $WINDIR\SysWow64\$APILowerCaseName${INFO}.exe
+            Delete  $WINDIR\SysWow64\${APILOWER}-${VERSION_ABI_MAJOR}.dll
+            Delete  $WINDIR\SysWow64\${APILOWER}info.exe
+            CopyFiles /SILENT $WINDIR\SysWow64\${APILOWER}-$FileVersion.dll $WINDIR\SysWow64\${APILOWER}-${VERSION_ABI_MAJOR}.dll
+            CopyFiles /SILENT $WINDIR\SysWow64\${APILOWER}info-$FileVersion.exe $WINDIR\SysWow64\${APILOWER}info.exe
         ${Endif}
-        Delete  $WINDIR\System32\$APILowerCaseName-${VERSION_ABI_MAJOR}.dll
-        Delete  $WINDIR\System32\$APILowerCaseName${INFO}.exe
-        CopyFiles /SILENT $WINDIR\System32\$APILowerCaseName-$FileVersion.dll $WINDIR\System32\$APILowerCaseName-${VERSION_ABI_MAJOR}.dll
-        CopyFiles /SILENT $WINDIR\System32\$APILowerCaseName${INFO}-$FileVersion.exe $WINDIR\System32\$APILowerCaseName${INFO}.exe
+        Delete  $WINDIR\System32\${APILOWER}-${VERSION_ABI_MAJOR}.dll
+        Delete  $WINDIR\System32\${APILOWER}info.exe
+        CopyFiles /SILENT $WINDIR\System32\${APILOWER}-$FileVersion.dll $WINDIR\System32\${APILOWER}-${VERSION_ABI_MAJOR}.dll
+        CopyFiles /SILENT $WINDIR\System32\${APILOWER}info-$FileVersion.exe $WINDIR\System32\${APILOWER}info.exe
         ClearErrors
     ${Endif}
     StrCpy $1 60
@@ -557,11 +515,6 @@ SectionEnd
 # Uninstaller section start
 !ifdef UNINSTALLER
 Section "uninstall"
-
-    Push "${APINAME}"
-    Call un.StrLower
-    Pop $APILowerCaseName
-
     # Turn on logging
     SetOutPath "$TEMP\VulkanRT"
     StrCpy $INSTDIR "$TEMP\VulkanRT"
@@ -631,21 +584,21 @@ Section "uninstall"
     ${If} ${RunningX64}
 
         # Delete vulkaninfo.exe in C:\Windows\System32 and C:\Windows\SysWOW64
-        Delete /REBOOTOK $WINDIR\SysWow64\$APILowerCaseName${INFO}.exe
-        Delete /REBOOTOK $WINDIR\System32\$APILowerCaseName${INFO}.exe
+        Delete /REBOOTOK $WINDIR\SysWow64\${APILOWER}info.exe
+        Delete /REBOOTOK $WINDIR\System32\${APILOWER}info.exe
 
         # Delete vulkan-<majorabi>.dll in C:\Windows\System32 and C:\Windows\SysWOW64
-        Delete /REBOOTOK $WINDIR\SysWow64\$APILowerCaseName-${VERSION_ABI_MAJOR}.dll
-        Delete /REBOOTOK $WINDIR\System32\$APILowerCaseName-${VERSION_ABI_MAJOR}.dll
+        Delete /REBOOTOK $WINDIR\SysWow64\${APILOWER}-${VERSION_ABI_MAJOR}.dll
+        Delete /REBOOTOK $WINDIR\System32\${APILOWER}-${VERSION_ABI_MAJOR}.dll
 
     # Else, running on a 32-bit OS machine
     ${Else}
 
         # Delete vulkaninfo.exe in C:\Windows\System32
-        Delete /REBOOTOK $WINDIR\System32\$APILowerCaseName${INFO}.exe
+        Delete /REBOOTOK $WINDIR\System32\${APILOWER}info.exe
 
         # Delete vulkan-<majorabi>.dll in C:\Windows\System32
-        Delete /REBOOTOK $WINDIR\System32\$APILowerCaseName-${VERSION_ABI_MAJOR}.dll
+        Delete /REBOOTOK $WINDIR\System32\${APILOWER}-${VERSION_ABI_MAJOR}.dll
 
     ${EndIf}
     StrCpy $1 80
@@ -656,16 +609,16 @@ Section "uninstall"
 
         ${If} ${RunningX64}
             # Delete vulkaninfo.exe in C:\Windows\System32 and C:\Windows\SysWOW64
-            Delete /REBOOTOK "$WINDIR\SysWow64\$APILowerCaseName${INFO}-$FileVersion.exe"
-            Delete /REBOOTOK "$WINDIR\System32\$APILowerCaseName${INFO}-$FileVersion.exe"
+            Delete /REBOOTOK "$WINDIR\SysWow64\${APILOWER}info-$FileVersion.exe"
+            Delete /REBOOTOK "$WINDIR\System32\${APILOWER}info-$FileVersion.exe"
             # Delete vulkan-<majorabi>-<major>-<minor>-<patch>-<buildno>.dll from sys dirs
-            Delete /REBOOTOK $WINDIR\SysWow64\$APILowerCaseName-$FileVersion.dll
-            Delete /REBOOTOK $WINDIR\System32\$APILowerCaseName-$FileVersion.dll
+            Delete /REBOOTOK $WINDIR\SysWow64\${APILOWER}-$FileVersion.dll
+            Delete /REBOOTOK $WINDIR\System32\${APILOWER}-$FileVersion.dll
         ${Else}
             # Delete vulkaninfo.exe in C:\Windows\System32
-            Delete /REBOOTOK "$WINDIR\System32\$APILowerCaseName${INFO}-$FileVersion.exe"
+            Delete /REBOOTOK "$WINDIR\System32\${APILOWER}info-$FileVersion.exe"
             # Delete vulkan-<majorabi>-<major>-<minor>-<patch>-<buildno>.dll from sys dir
-            Delete /REBOOTOK $WINDIR\System32\$APILowerCaseName-$FileVersion.dll
+            Delete /REBOOTOK $WINDIR\System32\${APILOWER}-$FileVersion.dll
         ${EndIf}
 
     ${Endif}
@@ -678,13 +631,13 @@ Section "uninstall"
     ${If} $0 != 0
         SetOutPath "$IDir"
         Call un.DiagConfigLayersAndVulkanDLL
-        MessageBox MB_OK "Warning!$\n$\nConfigureRT program called by $APILowerCaseName Runtime Installer failed with error $0. This may result in an incomplete uninstall.$\n$\nVulkan $FileVersion has been uninstalled from your system." /SD IDOK
+        MessageBox MB_OK "Warning!$\n$\nConfigureRT program called by ${APILOWER} Runtime Installer failed with error $0. This may result in an incomplete uninstall.$\n$\nVulkan $FileVersion has been uninstalled from your system." /SD IDOK
         ${If} ${RunningX64}
-            Delete  $WINDIR\SysWow64\$APILowerCaseName-${VERSION_ABI_MAJOR}.dll
-            Delete  $WINDIR\SysWow64\$APILowerCaseName${INFO}.exe
+            Delete  $WINDIR\SysWow64\${APILOWER}-${VERSION_ABI_MAJOR}.dll
+            Delete  $WINDIR\SysWow64\${APILOWER}info.exe
         ${Endif}
-        Delete  $WINDIR\System32\$APILowerCaseName-${VERSION_ABI_MAJOR}.dll
-        Delete  $WINDIR\System32\$APILowerCaseName${INFO}.exe
+        Delete  $WINDIR\System32\${APILOWER}-${VERSION_ABI_MAJOR}.dll
+        Delete  $WINDIR\System32\${APILOWER}info.exe
         ClearErrors
     ${Else}
         StrCpy $1 85
@@ -702,11 +655,11 @@ Section "uninstall"
         Delete /REBOOTOK "$IDir\LICENSE.txt"
         Delete /REBOOTOK "$IDir\Uninstall${PRODUCTNAME}.exe"
         Delete /REBOOTOK "$IDir\V.ico"
-        Delete /REBOOTOK "$IDir\$APILowerCaseName${INFO}.exe"
+        Delete /REBOOTOK "$IDir\${APILOWER}info.exe"
 
         # If running on a 64-bit OS machine
         ${If} ${RunningX64}
-            Delete /REBOOTOK "$IDir\$APILowerCaseName${INFO}32.exe"
+            Delete /REBOOTOK "$IDir\${APILOWER}info32.exe"
         ${EndIf}
 
         StrCpy $1 90
