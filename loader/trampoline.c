@@ -710,7 +710,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(
         goto out;
     }
 
-    *pDevice = dev->device;
+    *pDevice = dev->chain_device;
 
     // Initialize any device extension dispatch entry's from the instance list
     loader_init_dispatch_dev_ext(inst, dev);
@@ -720,12 +720,6 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(
     loader_init_device_extension_dispatch_table(
         &dev->loader_dispatch,
         dev->loader_dispatch.core_dispatch.GetDeviceProcAddr, *pDevice);
-
-    // The loader needs to override some terminating device procs.  Usually,
-    // these are device procs which need to go through a loader terminator.
-    // This needs to occur if the loader needs to perform some work prior
-    // to passing the work along to the ICD.
-    loader_override_terminating_device_proc(*pDevice, &dev->loader_dispatch);
 
 out:
 
@@ -761,8 +755,9 @@ vkDestroyDevice(VkDevice device, const VkAllocationCallbacks *pAllocator) {
     disp = loader_get_dispatch(device);
 
     disp->DestroyDevice(device, pAllocator);
-    dev->device = NULL;
+    dev->chain_device = NULL;
     loader_remove_logical_device(inst, icd_term, dev, pAllocator);
+    dev->icd_device = NULL;
 
     loader_platform_thread_unlock_mutex(&loader_lock);
 }

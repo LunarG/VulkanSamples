@@ -1262,9 +1262,10 @@ loader_get_icd_and_device(const VkDevice device,
              icd_term = icd_term->next) {
             for (struct loader_device *dev = icd_term->logical_device_list; dev;
                  dev = dev->next)
-                /* Value comparison of device prevents object wrapping by layers
-                 */
-                if (loader_get_dispatch(dev->device) ==
+                // Value comparison of device prevents object wrapping by layers
+                if (loader_get_dispatch(dev->icd_device) ==
+                    loader_get_dispatch(device) ||
+                    loader_get_dispatch(dev->chain_device) ==
                     loader_get_dispatch(device)) {
                     *found_dev = dev;
                     if (NULL != icd_index) {
@@ -1644,6 +1645,8 @@ static bool loader_icd_init_entrys(struct loader_icd_term *icd_term,
     LOOKUP_GIPA(GetPhysicalDeviceSparseImageFormatProperties, true);
     LOOKUP_GIPA(CreateDebugReportCallbackEXT, false);
     LOOKUP_GIPA(DestroyDebugReportCallbackEXT, false);
+    LOOKUP_GIPA(DebugMarkerSetObjectTagEXT, false);
+    LOOKUP_GIPA(DebugMarkerSetObjectNameEXT, false);
     LOOKUP_GIPA(GetPhysicalDeviceSurfaceSupportKHR, false);
     LOOKUP_GIPA(GetPhysicalDeviceSurfaceCapabilitiesKHR, false);
     LOOKUP_GIPA(GetPhysicalDeviceSurfaceFormatsKHR, false);
@@ -3268,36 +3271,28 @@ loader_gpa_instance_internal(VkInstance inst, const char *pName) {
     return NULL;
 }
 
-void loader_override_terminating_device_proc(
-    VkDevice device, struct loader_dev_dispatch_table *disp_table) {
-    struct loader_device *dev;
-    struct loader_icd_term *icd_term =
-        loader_get_icd_and_device(device, &dev, NULL);
-
-    // Certain device entry-points still need to go through a terminator before
-    // hitting the ICD.  This could be for several reasons, but the main one
-    // is currently unwrapping an object before passing the appropriate info
-    // along to the ICD.
-    if ((PFN_vkVoidFunction)disp_table->core_dispatch.CreateSwapchainKHR ==
-        (PFN_vkVoidFunction)icd_term->GetDeviceProcAddr(
-            device, "vkCreateSwapchainKHR")) {
-        disp_table->core_dispatch.CreateSwapchainKHR =
-            terminator_vkCreateSwapchainKHR;
-    }
-}
-
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
 loader_gpa_device_internal(VkDevice device, const char *pName) {
     struct loader_device *dev;
     struct loader_icd_term *icd_term =
         loader_get_icd_and_device(device, &dev, NULL);
 
-    // Certain device entry-points still need to go through a terminator before
-    // hitting the ICD.  This could be for several reasons, but the main one
-    // is currently unwrapping an object before passing the appropriate info
-    // along to the ICD.
-    if (!strcmp(pName, "vkCreateSwapchainKHR")) {
+    // NOTE: Device Funcs needing Trampoline/Terminator.
+    // Overrides for device functions needing a trampoline and
+    // a terminator because certain device entry-points still need to go
+    // through a terminator before hitting the ICD.  This could be for
+    // several reasons, but the main one is currently unwrapping an
+    // object before passing the appropriate info along to the ICD.
+    // This is why we also have to override the direct ICD call to
+    // vkGetDeviceProcAddr to intercept those calls.
+    if (!strcmp(pName, "vkGetDeviceProcAddr")) {
+        return (PFN_vkVoidFunction)loader_gpa_device_internal;
+    } else if (!strcmp(pName, "vkCreateSwapchainKHR")) {
         return (PFN_vkVoidFunction)terminator_vkCreateSwapchainKHR;
+    } else if (!strcmp(pName, "vkDebugMarkerSetObjectTagEXT")) {
+        return (PFN_vkVoidFunction)terminator_DebugMarkerSetObjectTagEXT;
+    } else if (!strcmp(pName, "vkDebugMarkerSetObjectNameEXT")) {
+        return (PFN_vkVoidFunction)terminator_DebugMarkerSetObjectNameEXT;
     }
 
     return icd_term->GetDeviceProcAddr(device, pName);
@@ -3321,7 +3316,7 @@ static void loader_init_dispatch_dev_ext_entry(struct loader_instance *inst,
     void *gdpa_value;
     if (dev != NULL) {
         gdpa_value = dev->loader_dispatch.core_dispatch.GetDeviceProcAddr(
-            dev->device, funcName);
+            dev->chain_device, funcName);
         if (gdpa_value != NULL)
             dev->loader_dispatch.ext_dispatch.dev_ext[idx] =
                 (PFN_vkDevExt)gdpa_value;
@@ -3332,7 +3327,7 @@ static void loader_init_dispatch_dev_ext_entry(struct loader_instance *inst,
             while (ldev) {
                 gdpa_value =
                     ldev->loader_dispatch.core_dispatch.GetDeviceProcAddr(
-                        ldev->device, funcName);
+                        ldev->chain_device, funcName);
                 if (gdpa_value != NULL)
                     ldev->loader_dispatch.ext_dispatch.dev_ext[idx] =
                         (PFN_vkDevExt)gdpa_value;
@@ -3982,15 +3977,15 @@ loader_create_device_chain(const struct loader_physical_device_tramp *pd,
         if (res != VK_SUCCESS) {
             return res;
         }
-        dev->device = created_device;
+        dev->chain_device = created_device;
     } else {
         // Couldn't find CreateDevice function!
         return VK_ERROR_INITIALIZATION_FAILED;
     }
 
-    /* Initialize device dispatch table */
+    // Initialize device dispatch table
     loader_init_device_dispatch_table(&dev->loader_dispatch, nextGDPA,
-                                      dev->device);
+                                      dev->chain_device);
 
     return res;
 }
@@ -4332,6 +4327,8 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDevice(
     PFN_vkCreateDevice fpCreateDevice = icd_term->CreateDevice;
     struct loader_extension_list icd_exts;
 
+    dev->phys_dev_term = phys_dev_term;
+
     icd_exts.list = NULL;
 
     if (fpCreateDevice == NULL) {
@@ -4398,7 +4395,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDevice(
     }
 
     res = fpCreateDevice(phys_dev_term->phys_dev, &localCreateInfo, pAllocator,
-                         &dev->device);
+                         &dev->icd_device);
     if (res != VK_SUCCESS) {
         loader_log(icd_term->this_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                    "vkCreateDevice call failed in ICD %s",
@@ -4406,7 +4403,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDevice(
         goto out;
     }
 
-    *pDevice = dev->device;
+    *pDevice = dev->icd_device;
     loader_add_logical_device(icd_term->this_instance, icd_term, dev);
 
     /* Init dispatch pointer in new device object */

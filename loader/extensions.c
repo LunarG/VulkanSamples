@@ -26,6 +26,100 @@
 #include "loader.h"
 #include "extensions.h"
 #include <vulkan/vk_icd.h>
+#include "wsi.h"
+
+// Definitions for the VK_EXT_debug_marker extension commands which
+// need to have a terminator function
+
+VKAPI_ATTR VkResult VKAPI_CALL vkDebugMarkerSetObjectTagEXT(
+    VkDevice device, VkDebugMarkerObjectTagInfoEXT *pTagInfo) {
+    const VkLayerDispatchTable *disp = loader_get_dispatch(device);
+    // If this is a physical device, we have to replace it with the proper one
+    // for the next call.
+    if (pTagInfo->objectType ==
+        VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT) {
+        struct loader_physical_device_tramp *phys_dev_tramp =
+            (struct loader_physical_device_tramp *)pTagInfo->object;
+        pTagInfo->object = (uint64_t)phys_dev_tramp->phys_dev;
+    }
+    return disp->DebugMarkerSetObjectTagEXT(device, pTagInfo);
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL terminator_DebugMarkerSetObjectTagEXT(
+    VkDevice device, VkDebugMarkerObjectTagInfoEXT *pTagInfo) {
+    uint32_t icd_index = 0;
+    struct loader_device *dev;
+    struct loader_icd_term *icd_term =
+        loader_get_icd_and_device(device, &dev, &icd_index);
+    // If this is a physical device, we have to replace it with the proper one
+    // for the next call.
+    if (pTagInfo->objectType ==
+        VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT) {
+        struct loader_physical_device_term *phys_dev_term =
+            (struct loader_physical_device_term *)pTagInfo->object;
+        pTagInfo->object = (uint64_t)phys_dev_term->phys_dev;
+
+        // If this is a KHR_surface, and the ICD has created its own, we have to
+        // replace it with the proper one for the next call.
+    } else if (pTagInfo->objectType ==
+               VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT) {
+        if (NULL != icd_term && NULL != icd_term->CreateSwapchainKHR) {
+            VkIcdSurface *icd_surface = (VkIcdSurface *)(pTagInfo->object);
+            if (NULL != icd_surface->real_icd_surfaces) {
+                pTagInfo->object =
+                    (uint64_t)icd_surface->real_icd_surfaces[icd_index];
+            }
+        }
+    }
+    assert(icd_term != NULL && icd_term->DebugMarkerSetObjectTagEXT &&
+           "loader: null DebugMarkerSetObjectTagEXT ICD pointer");
+    return icd_term->DebugMarkerSetObjectTagEXT(device, pTagInfo);
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkDebugMarkerSetObjectNameEXT(
+    VkDevice device, VkDebugMarkerObjectNameInfoEXT *pNameInfo) {
+    const VkLayerDispatchTable *disp = loader_get_dispatch(device);
+    // If this is a physical device, we have to replace it with the proper one
+    // for the next call.
+    if (pNameInfo->objectType ==
+        VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT) {
+        struct loader_physical_device_tramp *phys_dev_tramp =
+            (struct loader_physical_device_tramp *)pNameInfo->object;
+        pNameInfo->object = (uint64_t)phys_dev_tramp->phys_dev;
+    }
+    return disp->DebugMarkerSetObjectNameEXT(device, pNameInfo);
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL terminator_DebugMarkerSetObjectNameEXT(
+    VkDevice device, VkDebugMarkerObjectNameInfoEXT *pNameInfo) {
+    uint32_t icd_index = 0;
+    struct loader_device *dev;
+    struct loader_icd_term *icd_term =
+        loader_get_icd_and_device(device, &dev, &icd_index);
+    // If this is a physical device, we have to replace it with the proper one
+    // for the next call.
+    if (pNameInfo->objectType ==
+        VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT) {
+        struct loader_physical_device_term *phys_dev_term =
+            (struct loader_physical_device_term *)pNameInfo->object;
+        pNameInfo->object = (uint64_t)phys_dev_term->phys_dev;
+
+        // If this is a KHR_surface, and the ICD has created its own, we have to
+        // replace it with the proper one for the next call.
+    } else if (pNameInfo->objectType ==
+               VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT) {
+        if (NULL != icd_term && NULL != icd_term->CreateSwapchainKHR) {
+            VkIcdSurface *icd_surface = (VkIcdSurface *)(pNameInfo->object);
+            if (NULL != icd_surface->real_icd_surfaces) {
+                pNameInfo->object =
+                    (uint64_t)icd_surface->real_icd_surfaces[icd_index];
+            }
+        }
+    }
+    assert(icd_term != NULL && icd_term->DebugMarkerSetObjectNameEXT &&
+           "loader: null DebugMarkerSetObjectNameEXT ICD pointer");
+    return icd_term->DebugMarkerSetObjectNameEXT(device, pNameInfo);
+}
 
 // Definitions for the VK_NV_external_memory_capabilities extension
 
@@ -117,6 +211,19 @@ VKAPI_ATTR VkResult VKAPI_CALL vkGetMemoryWin32HandleNV(
 bool extension_instance_gpa(struct loader_instance *ptr_instance,
                             const char *name, void **addr) {
     *addr = NULL;
+
+    // Definitions for the VK_EXT_debug_marker extension commands which
+    // need to have a terminator function.  Since these are device
+    // commands, we always need to return a valid value for them.
+
+    if (!strcmp("vkDebugMarkerSetObjectTagEXT", name)) {
+        *addr = (void *)vkDebugMarkerSetObjectTagEXT;
+        return true;
+    }
+    if (!strcmp("vkDebugMarkerSetObjectNameEXT", name)) {
+        *addr = (void *)vkDebugMarkerSetObjectNameEXT;
+        return true;
+    }
 
     // Functions for the VK_NV_external_memory_capabilities extension
 

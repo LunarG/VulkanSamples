@@ -31,6 +31,7 @@
 
 static VkResult vkDevExtError(VkDevice dev) {
     struct loader_device *found_dev;
+    // The device going in is a trampoline device
     struct loader_icd_term *icd_term =
         loader_get_icd_and_device(dev, &found_dev, NULL);
 
@@ -541,11 +542,6 @@ loader_lookup_device_dispatch_table(const VkLayerDispatchTable *table,
     if (!strcmp(name, "CmdExecuteCommands"))
         return (void *)table->CmdExecuteCommands;
 
-    if (!strcmp(name, "CreateSwapchainKHR")) {
-        // For CreateSwapChainKHR we need to use trampoline and terminator
-        // functions to properly unwrap the SurfaceKHR object.
-        return (void *)vkCreateSwapchainKHR;
-    }
     if (!strcmp(name, "DestroySwapchainKHR"))
         return (void *)table->DestroySwapchainKHR;
     if (!strcmp(name, "GetSwapchainImagesKHR"))
@@ -554,6 +550,20 @@ loader_lookup_device_dispatch_table(const VkLayerDispatchTable *table,
         return (void *)table->AcquireNextImageKHR;
     if (!strcmp(name, "QueuePresentKHR"))
         return (void *)table->QueuePresentKHR;
+
+    // NOTE: Device Funcs needing Trampoline/Terminator.
+    // Overrides for device functions needing a trampoline and
+    // a terminator because certain device entry-points still need to go
+    // through a terminator before hitting the ICD.  This could be for
+    // several reasons, but the main one is currently unwrapping an
+    // object before passing the appropriate info along to the ICD.
+    if (!strcmp(name, "CreateSwapchainKHR")) {
+        return (void *)vkCreateSwapchainKHR;
+    } else if (!strcmp(name, "DebugMarkerSetObjectTagEXT")) {
+        return (void *)vkDebugMarkerSetObjectTagEXT;
+    } else if (!strcmp(name, "DebugMarkerSetObjectNameEXT")) {
+        return (void *)vkDebugMarkerSetObjectNameEXT;
+    }
 
     return NULL;
 }
