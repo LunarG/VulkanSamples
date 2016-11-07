@@ -38,6 +38,7 @@ set (OPT_LOADER_SRCS
 )
 
 set (LOADER_SRCS ${NORMAL_LOADER_SRCS} ${OPT_LOADER_SRCS})
+add_definitions(-DAPI_NAME="${API_NAME}")
 
 if (WIN32)
     # Use static MSVCRT libraries
