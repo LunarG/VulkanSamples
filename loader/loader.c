@@ -2587,10 +2587,12 @@ loader_add_layer_properties(const struct loader_instance *inst,
  * Linux ICD  | dirs     | files
  * Linux Layer| dirs     | dirs
  */
-static VkResult loader_get_manifest_files(
-    const struct loader_instance *inst, const char *env_override,
-    char *source_override, bool is_layer, const char *location,
-    const char *home_location, struct loader_manifest_files *out_files) {
+static VkResult
+loader_get_manifest_files(const struct loader_instance *inst,
+                          const char *env_override, char *source_override,
+                          bool is_layer, bool warn_if_not_present,
+                          const char *location, const char *home_location,
+                          struct loader_manifest_files *out_files) {
     char * override = NULL;
     char *loc, *orig_loc = NULL;
     char *reg = NULL;
@@ -2660,10 +2662,12 @@ static VkResult loader_get_manifest_files(
                 // if this is for the loader.
                 res = VK_ERROR_OUT_OF_HOST_MEMORY;
             } else {
-                // warning only for layers
-                loader_log(
-                    inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
-                    "Registry lookup failed can't get layer manifest files");
+                if (warn_if_not_present) {
+                    // warning only for layers
+                    loader_log(
+                        inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                        "Registry lookup failed can't get layer manifest files");
+                }
                 // Return success for now since it's not critical for layers
                 res = VK_SUCCESS;
             }
@@ -2916,7 +2920,7 @@ VkResult loader_icd_scan(const struct loader_instance *inst,
 
     // Get a list of manifest files for ICDs
     res = loader_get_manifest_files(inst, "VK_ICD_FILENAMES", NULL, false,
-                                    DEFAULT_VK_DRIVERS_INFO,
+                                    true, DEFAULT_VK_DRIVERS_INFO,
                                     HOME_VK_DRIVERS_INFO, &manifest_files);
     if (VK_SUCCESS != res || manifest_files.count == 0) {
         goto out;
@@ -3111,7 +3115,7 @@ void loader_layer_scan(const struct loader_instance *inst,
     // Get a list of manifest files for explicit layers
     if (VK_SUCCESS !=
         loader_get_manifest_files(inst, LAYERS_PATH_ENV, LAYERS_SOURCE_PATH,
-                                  true, DEFAULT_VK_ELAYERS_INFO,
+                                  true, true, DEFAULT_VK_ELAYERS_INFO,
                                   HOME_VK_ELAYERS_INFO, &manifest_files[0])) {
         goto out;
     }
@@ -3119,9 +3123,10 @@ void loader_layer_scan(const struct loader_instance *inst,
     // Get a list of manifest files for any implicit layers
     // Pass NULL for environment variable override - implicit layers are not
     // overridden by LAYERS_PATH_ENV
-    if (VK_SUCCESS != loader_get_manifest_files(
-                          inst, NULL, NULL, true, DEFAULT_VK_ILAYERS_INFO,
-                          HOME_VK_ILAYERS_INFO, &manifest_files[1])) {
+    if (VK_SUCCESS != loader_get_manifest_files(inst, NULL, NULL, true, false,
+                                                DEFAULT_VK_ILAYERS_INFO,
+                                                HOME_VK_ILAYERS_INFO,
+                                                &manifest_files[1])) {
         goto out;
     }
 
@@ -3189,8 +3194,8 @@ void loader_implicit_layer_scan(const struct loader_instance *inst,
     // Pass NULL for environment variable override - implicit layers are not
     // overridden by LAYERS_PATH_ENV
     VkResult res = loader_get_manifest_files(
-        inst, NULL, NULL, true, DEFAULT_VK_ILAYERS_INFO, HOME_VK_ILAYERS_INFO,
-        &manifest_files);
+        inst, NULL, NULL, true, false, DEFAULT_VK_ILAYERS_INFO,
+        HOME_VK_ILAYERS_INFO, &manifest_files);
     if (VK_SUCCESS != res || manifest_files.count == 0) {
         return;
     }
