@@ -60,7 +60,9 @@ class Window_android : public WindowImpl{
     android_app* app=0;
     CMTouch MTouch;
 
-    void SetTitle(const char* title){};  //TODO : Set window title?
+    void SetTitle(const char* title){};             //TODO : Set window title?
+    void SetWinPos(uint x,uint y,uint w,uint h){};
+    bool CanPresent(VkPhysicalDevice gpu, uint32_t queue_family){return true;}
 
     void CreateSurface(VkInstance instance){
         VkAndroidSurfaceCreateInfoKHR android_createInfo;

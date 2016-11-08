@@ -53,22 +53,19 @@ WSIWindow::WSIWindow(VkInstance inst,const char* title,const uint width,const ui
 
 WSIWindow::~WSIWindow(){ delete(pimpl); }
 
-VkSurfaceKHR WSIWindow::Surface(){ return pimpl->Surface(); }
-bool WSIWindow::CanPresent(VkPhysicalDevice gpu, uint32_t queue_family){ return pimpl->CanPresent(gpu,queue_family); }
-
 void WSIWindow::GetWinPos  (int16_t& x, int16_t& y){x=pimpl->shape.x; y=pimpl->shape.y;}
 void WSIWindow::GetWinSize (int16_t& width, int16_t& height){width=pimpl->shape.width; height=pimpl->shape.height;}
 bool WSIWindow::GetKeyState(eKeycode key){ return pimpl->KeyState(key); }
 bool WSIWindow::GetBtnState(uint8_t  btn){ return pimpl->BtnState(btn); }
 void WSIWindow::GetMousePos(int16_t& x, int16_t& y){ pimpl->MousePos(x,y); }
 
-void WSIWindow::SetTitle(const char* title){ pimpl->SetTitle(title);}
+void WSIWindow::SetTitle(const char* title){ pimpl->SetTitle(title); }
 void WSIWindow::SetWinPos (uint16_t x, uint16_t y){ pimpl->SetWinPos(x,y,pimpl->shape.width,pimpl->shape.height); }
 void WSIWindow::SetWinSize(uint16_t w, uint16_t h){ pimpl->SetWinPos(pimpl->shape.x,pimpl->shape.y, w, h); }
 
-//void WSIWindow::SetTextInput(bool enabled){ pimpl->TextInput(enabled);}           //Enable OnTextEvent, (and on Android, show the soft-keyboard)
-//bool WSIWindow::GetTextInput(){return pimpl->textinput;}                          //Returns true if text input is enabled (and on android, keyboard is visible.)
-void WSIWindow::ShowKeyboard(bool enabled){ pimpl->TextInput(enabled);}            //On Android, show the soft-keyboard,
+//void WSIWindow::SetTextInput(bool enabled){ pimpl->TextInput(enabled);}           // Enable OnTextEvent, (and on Android, show the soft-keyboard)
+//bool WSIWindow::GetTextInput(){return pimpl->textinput;}                          // Returns true if text input is enabled (and on android, keyboard is visible.)
+void WSIWindow::ShowKeyboard(bool enabled){ pimpl->TextInput(enabled); }            // On Android, show the soft-keyboard,
 void WSIWindow::Close(){ pimpl->Close(); }
 
 EventType WSIWindow::GetEvent(bool wait_for_event){return pimpl->GetEvent(wait_for_event);}

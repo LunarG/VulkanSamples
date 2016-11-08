@@ -79,14 +79,22 @@ public:
     }
 };
 //==============================================================
+//===========================CSurface===========================
+class CSurface{                                                                // Vulkan Surface
+protected:
+    VkSurfaceKHR surface=0;
+public:
+    operator VkSurfaceKHR () const {return surface;}                           // Use this class as a VkSurfaceKHR
+    virtual bool CanPresent(VkPhysicalDevice gpu, uint32_t queue_family) = 0;  // Checks if this surface can present given queue type
+};
+//==============================================================
 //=====================WSIWindow base class=====================
-class WindowImpl {
+class WindowImpl :public CSurface {
     struct {int16_t x; int16_t y;}mousepos = {};                               // mouse position
     bool btnstate[5]   = {};                                                   // mouse btn state
     bool keystate[256] = {};                                                   // keyboard state
 protected:
     VkInstance instance;
-    VkSurfaceKHR surface;
     FIFO<EventType,4> eventFIFO;                        //Event message queue buffer (max 4 items)
 
     EventType MouseEvent (eAction action, int16_t x, int16_t y, uint8_t btn);  // Mouse event
@@ -101,24 +109,21 @@ public:
     bool has_focus;                                                            // true if window has focus
     struct shape_t { int16_t x; int16_t y; uint16_t width; uint16_t height; }shape = {};  // window shape
 
-    WindowImpl() : instance(0), surface(0), running(false), textinput(false), has_focus(false){}
+    WindowImpl() : instance(0), running(false), textinput(false), has_focus(false){}
     virtual ~WindowImpl() { if(surface) vkDestroySurfaceKHR(instance,surface,NULL); }
     virtual void Close() { running = false; }
-    //VkInstance Instance() const { return instance; }
-    VkSurfaceKHR Surface() const { return surface; }
 
     bool KeyState(eKeycode key){ return keystate[key]; }                   // returns true if key is pressed
     bool BtnState(uint8_t  btn){ return (btn<3)  ? btnstate[btn]:0; }      // returns true if mouse btn is pressed
     void MousePos(int16_t& x, int16_t& y){x=mousepos.x; y=mousepos.y; }    // returns mouse x,y position
 
-    virtual void TextInput(bool enabled);          //Enable TextEvent, (and on Android, show the soft-keyboard)
-    virtual bool TextInput(){return textinput;}    //Returns true if text input is enabled (and on android, keyboard is visible.) //TODO
+    virtual void TextInput(bool enabled);                    //Enable TextEvent, (and on Android, show the soft-keyboard)
+    virtual bool TextInput(){return textinput;}              //Returns true if text input is enabled (and on android, keyboard is visible.) //TODO
 
     virtual EventType GetEvent(bool wait_for_event=false)=0; //fetch one event from the queue. the 'wait_for_event' flag enables blocking mode.
 
-    virtual bool CanPresent(VkPhysicalDevice gpu, uint32_t queue_family) {return true;} //check if this window can present this queue type
-    virtual void SetTitle(const char* title){}
-    virtual void SetWinPos(uint x,uint y,uint w,uint h){}
+    virtual void SetTitle(const char* title)=0;
+    virtual void SetWinPos(uint x,uint y,uint w,uint h)=0;
 };
 //==============================================================
 
