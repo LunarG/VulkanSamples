@@ -577,7 +577,7 @@ struct Demo {
         VERIFY(result == vk::Result::eSuccess);
 
         auto const fenceInfo =
-            vk::FenceCreateInfo().setFlags(vk::FenceCreateFlagBits(0));
+            vk::FenceCreateInfo().setFlags(vk::FenceCreateFlagBits::eSignaled);
         vk::Fence fence;
         device.createFence(&fenceInfo, nullptr, &fence);
 
@@ -1135,7 +1135,8 @@ struct Demo {
 
         // Create fences that we can use to throttle if we get too far
         // ahead of the image presents
-        vk::FenceCreateInfo const fence_ci;
+        auto const fence_ci =
+            vk::FenceCreateInfo().setFlags(vk::FenceCreateFlagBits::eSignaled);
         for (uint32_t i = 0; i < FRAME_LAG; i++) {
             device.createFence(&fence_ci, nullptr, &fences[i]);
             result = device.createSemaphore(&semaphoreCreateInfo, nullptr,
