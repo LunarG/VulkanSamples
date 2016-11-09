@@ -474,6 +474,7 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu) {
     VkDeviceCreateInfo info = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
         .pNext = NULL,
+        .flags = 0,
         .queueCreateInfoCount = 0,
         .pQueueCreateInfos = NULL,
         .enabledLayerCount = 0,
@@ -736,6 +737,7 @@ static void app_gpu_init(struct app_gpu *gpu, uint32_t id,
                gpu->queue_props[i].queueCount * sizeof(float));
         gpu->queue_reqs[i].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         gpu->queue_reqs[i].pNext = NULL;
+        gpu->queue_reqs[i].flags = 0;
         gpu->queue_reqs[i].queueFamilyIndex = i;
         gpu->queue_reqs[i].queueCount = gpu->queue_props[i].queueCount;
         gpu->queue_reqs[i].pQueuePriorities = queue_priorities;

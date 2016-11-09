@@ -142,7 +142,7 @@ class Specification:
                 code_text_list = code_text.split()
                 if len(code_text_list) > 1 and code_text_list[1].startswith('vk'):
                     api_function = code_text_list[1].strip('(')
-                    print "Found API function: %s" % (api_function)
+                    #print "Found API function: %s" % (api_function)
             elif tag.tag == '{http://www.w3.org/1999/xhtml}div' and tag.get('class') == 'sidebar':
                 # parse down sidebar to check for valid usage cases
                 valid_usage = False
@@ -239,19 +239,19 @@ class Specification:
             #print "delimiter: %s, id: %s, str: %s" % (self.delimiter, enum, self.val_error_dict[enum])
             # No existing entry so default to N for implemented and None for testname
             db_lines.append("%s%s%s%s%s%s%s%s%s%s%s" % (enum, self.delimiter, implemented, self.delimiter, testname, self.delimiter, self.val_error_dict[enum]['api'], self.delimiter, self.val_error_dict[enum]['error_msg'], self.delimiter, note))
+        db_lines.append("\n") # newline at end of file
         print "Generating database file %s" % (db_file)
         with open(db_file, "w") as outfile:
             outfile.write("\n".join(db_lines))
-            outfile.write("\n")
     def readDB(self, db_file):
         """Read a db file into a dict, format of each line is <enum><implemented Y|N?><testname><errormsg>"""
         db_dict = {} # This is a simple db of just enum->errormsg, the same as is created from spec
         max_id = 0
         with open(db_file, "r") as infile:
             for line in infile:
-                if line.startswith('#'):
-                    continue
                 line = line.strip()
+                if line.startswith('#') or '' == line:
+                    continue
                 db_line = line.split(self.delimiter)
                 if len(db_line) != 6:
                     print "ERROR: Bad database line doesn't have 6 elements: %s" % (line)

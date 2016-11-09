@@ -73,9 +73,9 @@ else()
 endif()
 
 if(WIN32)
-   set (LIBVK "vulkan-${MAJOR}")
+   set (LIBVK "${API_LOWERCASE}-${MAJOR}")
 elseif(UNIX)
-   set (LIBVK "vulkan")
+   set (LIBVK "${API_LOWERCASE}")
 else()
 endif()
 

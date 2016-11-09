@@ -70,6 +70,9 @@
     }
 #endif
 
+// This intentionally includes a cpp file
+#include "vk_safe_struct.cpp"
+
 using namespace std;
 
 namespace core_validation {
@@ -7346,6 +7349,7 @@ BeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo
                 (cb_node->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT)) {
                 cb_node->activeRenderPass = getRenderPassState(dev_data, cb_node->beginInfo.pInheritanceInfo->renderPass);
                 cb_node->activeSubpass = cb_node->beginInfo.pInheritanceInfo->subpass;
+                cb_node->activeFramebuffer = cb_node->beginInfo.pInheritanceInfo->framebuffer;
                 cb_node->framebuffers.insert(cb_node->beginInfo.pInheritanceInfo->framebuffer);
             }
         }
@@ -8651,33 +8655,57 @@ VKAPI_ATTR void VKAPI_CALL CmdClearAttachments(VkCommandBuffer commandBuffer, ui
     if (pCB->activeRenderPass) {
         const VkRenderPassCreateInfo *pRPCI = pCB->activeRenderPass->createInfo.ptr();
         const VkSubpassDescription *pSD = &pRPCI->pSubpasses[pCB->activeSubpass];
+        auto framebuffer = getFramebufferState(dev_data, pCB->activeFramebuffer);
 
-        for (uint32_t attachment_idx = 0; attachment_idx < attachmentCount; attachment_idx++) {
-            const VkClearAttachment *attachment = &pAttachments[attachment_idx];
-            if (attachment->aspectMask & VK_IMAGE_ASPECT_COLOR_BIT) {
-                if (attachment->colorAttachment >= pSD->colorAttachmentCount) {
+        for (uint32_t i = 0; i < attachmentCount; i++) {
+            auto clear_desc = &pAttachments[i];
+            VkImageView image_view = VK_NULL_HANDLE;
+
+            if (clear_desc->aspectMask & VK_IMAGE_ASPECT_COLOR_BIT) {
+                if (clear_desc->colorAttachment >= pSD->colorAttachmentCount) {
                     skip_call |= log_msg(
                         dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                        (uint64_t)commandBuffer, __LINE__, DRAWSTATE_MISSING_ATTACHMENT_REFERENCE, "DS",
-                        "vkCmdClearAttachments() color attachment index %d out of range for active subpass %d; ignored",
-                        attachment->colorAttachment, pCB->activeSubpass);
+                        (uint64_t)commandBuffer, __LINE__, VALIDATION_ERROR_01114, "DS",
+                        "vkCmdClearAttachments() color attachment index %d out of range for active subpass %d. %s",
+                        clear_desc->colorAttachment, pCB->activeSubpass, validation_error_map[VALIDATION_ERROR_01114]);
                 }
-                else if (pSD->pColorAttachments[attachment->colorAttachment].attachment == VK_ATTACHMENT_UNUSED) {
+                else if (pSD->pColorAttachments[clear_desc->colorAttachment].attachment == VK_ATTACHMENT_UNUSED) {
                     skip_call |= log_msg(
-                        dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                        dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                         (uint64_t)commandBuffer, __LINE__, DRAWSTATE_MISSING_ATTACHMENT_REFERENCE, "DS",
-                        "vkCmdClearAttachments() color attachment index %d is VK_ATTACHMENT_UNUSED; ignored",
-                        attachment->colorAttachment);
+                        "vkCmdClearAttachments() color attachment index %d is VK_ATTACHMENT_UNUSED; ignored.",
+                        clear_desc->colorAttachment);
                 }
-            } else if (attachment->aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) {
+                else {
+                    image_view = framebuffer->createInfo.pAttachments[pSD->pColorAttachments[clear_desc->colorAttachment].attachment];
+                }
+            } else if (clear_desc->aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) {
                 if (!pSD->pDepthStencilAttachment || // Says no DS will be used in active subpass
                     (pSD->pDepthStencilAttachment->attachment ==
                      VK_ATTACHMENT_UNUSED)) { // Says no DS will be used in active subpass
 
                     skip_call |= log_msg(
-                        dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                        dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                         (uint64_t)commandBuffer, __LINE__, DRAWSTATE_MISSING_ATTACHMENT_REFERENCE, "DS",
                         "vkCmdClearAttachments() depth/stencil clear with no depth/stencil attachment in subpass; ignored");
+                }
+                else {
+                    image_view = framebuffer->createInfo.pAttachments[pSD->pDepthStencilAttachment->attachment];
+                }
+            }
+
+            if (image_view) {
+                auto image_view_state = getImageViewState(dev_data, image_view);
+                auto aspects_present = image_view_state->create_info.subresourceRange.aspectMask;
+                auto extra_aspects = clear_desc->aspectMask & ~aspects_present;
+
+                if (extra_aspects) {
+                    skip_call |= log_msg(
+                            dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT,
+                            reinterpret_cast<uint64_t &>(image_view), __LINE__, VALIDATION_ERROR_01125, "DS",
+                            "vkCmdClearAttachments() with aspects not present in image view: %s. %s",
+                            string_VkImageAspectFlagBits((VkImageAspectFlagBits)extra_aspects),
+                            validation_error_map[VALIDATION_ERROR_01125]);
                 }
             }
         }
@@ -10979,6 +11007,10 @@ CmdExecuteCommands(VkCommandBuffer commandBuffer, uint32_t commandBuffersCount, 
                             "flight and inherited queries not "
                             "supported on this device.",
                             reinterpret_cast<uint64_t>(pCommandBuffers[i]));
+            }
+            // Propagate layout transitions to the primary cmd buffer
+            for (auto ilm_entry : pSubCB->imageLayoutMap) {
+                SetLayout(pCB, ilm_entry.first, ilm_entry.second);
             }
             pSubCB->primaryCommandBuffer = pCB->commandBuffer;
             pCB->secondaryCommandBuffers.insert(pSubCB->commandBuffer);

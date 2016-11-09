@@ -58,6 +58,9 @@ enum ErrorCode {
                           // the device
     FAILURE_RETURN_CODE,  // A Vulkan return code indicating a failure condition
                           // was encountered.
+    EXTENSION_NOT_ENABLED,// An extension entrypoint was called, but the required
+                          // extension was not enabled at CreateInstance or
+                          // CreateDevice time.
 };
 
 struct GenericHeader {
@@ -70,13 +73,14 @@ const char LayerName[] = "ParameterValidation";
 
 // Enables for display-related instance extensions
 struct instance_extension_enables {
-    bool wsi_enabled;
+    bool surface_enabled;
     bool xlib_enabled;
     bool xcb_enabled;
     bool wayland_enabled;
     bool mir_enabled;
     bool android_enabled;
     bool win32_enabled;
+    bool display_enabled;
 };
 
 // String returned by string_VkStructureType for an unrecognized type.

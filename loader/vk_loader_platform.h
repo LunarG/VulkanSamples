@@ -239,11 +239,10 @@ using namespace std;
 #define PATH_SEPERATOR ';'
 #define DIRECTORY_SYMBOL '\\'
 #define DEFAULT_VK_REGISTRY_HIVE HKEY_LOCAL_MACHINE
-#define DEFAULT_VK_DRIVERS_INFO "SOFTWARE\\Khronos\\Vulkan\\Drivers"
-// TODO: Are these the correct paths
+#define DEFAULT_VK_DRIVERS_INFO "SOFTWARE\\Khronos\\" API_NAME "\\Drivers"
 #define DEFAULT_VK_DRIVERS_PATH ""
-#define DEFAULT_VK_ELAYERS_INFO "SOFTWARE\\Khronos\\Vulkan\\ExplicitLayers"
-#define DEFAULT_VK_ILAYERS_INFO "SOFTWARE\\Khronos\\Vulkan\\ImplicitLayers"
+#define DEFAULT_VK_ELAYERS_INFO "SOFTWARE\\Khronos\\" API_NAME "\\ExplicitLayers"
+#define DEFAULT_VK_ILAYERS_INFO "SOFTWARE\\Khronos\\" API_NAME "\\ImplicitLayers"
 #if !defined(DEFAULT_VK_LAYERS_PATH)
 #define DEFAULT_VK_LAYERS_PATH ""
 #endif
