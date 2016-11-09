@@ -71,6 +71,10 @@ function(sampleWithSingleFile)
             MESSAGE("Generating AndroidStudio project:" ${SAMPLE_NAME})
             # Replace "-" to "_", which is invalid in a package name.
             STRING(REPLACE "-" "_" PACKAGE_NAME ${SAMPLE_NAME})
+            STRING(REGEX MATCH "^[0-9]" LEADING_DIGIT "${PACKAGE_NAME}")
+            if(NOT LEADING_DIGIT STREQUAL "")
+                STRING(CONCAT PACKAGE_NAME "T" "${PACKAGE_NAME}")
+            endif()
             set (PACKAGE_NAME org.khronos.vulkan.samples.${PACKAGE_NAME})
             set (SAMPLE_DESCRIPTION "Vulkan sample: ${SAMPLE_NAME}")
             file(COPY ./android/project_template/ DESTINATION ./android/${SAMPLE_NAME}/)
@@ -104,13 +108,7 @@ function(sampleWithSingleFile)
             # Add validation layer settings.
             set (SAMPLE_WITH_TOOLS create_debug_report_callback enable_validation_with_callback)
             if (";${SAMPLE_WITH_TOOLS};" MATCHES ";${SAMPLE_NAME};")
-                set (VALIDATIONLAYER_LINKAGE "project \":threading\"
-                    project \":parameter_validation\"
-                    project \":object_tracker\"
-                    project \":core_validation\"
-                    project \":image\"
-                    project \":swapchain\"
-                    project \":unique_objects\"")
+                set (VALIDATIONLAYER_LINKAGE "srcDir \"${ndkDir}sources/third_party/vulkan/src/build-android/jniLibs\"")
             endif()
 
             # Cook template files.
@@ -231,10 +229,10 @@ option(ANDROID OFF)
 
 # simple one file sample targets, no additional files
 set (S_TARGETS 
-    01-init_instance 02-enumerate_devices 03-init_device 04-init_command_buffer
-    05-init_swapchain 06-init_depth_buffer 07-init_uniform_buffer
-    08-init_pipeline_layout 09-init_descriptor_set 10-init_render_pass
-    11-init_shaders 12-init_frame_buffers 13-init_vertex_buffer 14-init_pipeline 15-draw_cube
+    T01-init_instance T02-enumerate_devices T03-init_device T04-init_command_buffer
+    T05-init_swapchain T06-init_depth_buffer T07-init_uniform_buffer
+    T08-init_pipeline_layout T09-init_descriptor_set T10-init_render_pass
+    T11-init_shaders T12-init_frame_buffers T13-init_vertex_buffer T14-init_pipeline T15-draw_cube
     enumerate_devices_adv init_texture multithreaded_command_buffers
     draw_textured_cube dynamic_uniform texel_buffer events
     instance_layer_properties instance_extension_properties
