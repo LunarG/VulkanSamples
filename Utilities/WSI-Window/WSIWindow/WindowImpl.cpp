@@ -66,5 +66,11 @@ EventType WindowImpl::FocusEvent(bool hasFocus) {
     e.focus.hasFocus=hasFocus;
     return e;
 }
+
+EventType WindowImpl::CloseEvent() {
+    running = false;
+    return {EventType::CLOSE};
+}
 //----------
+
 void WindowImpl::TextInput(bool enabled){ textinput=enabled; }

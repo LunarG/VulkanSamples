@@ -237,7 +237,7 @@ bool Window_xcb::InitTouch(){
 #ifdef ENABLE_MULTITOUCH
     int ev, err;
     if (!XQueryExtension(display, "XInputExtension", &xi_opcode, &ev, &err)) {
-        LOGW("XInput extension not available.\n");
+        LOGW("XInputExtension not available.\n");
         return false;
     }
 
@@ -320,7 +320,7 @@ EventType Window_xcb::GetEvent(bool wait_for_event){
                 if ((*(xcb_client_message_event_t *)x_event).data.data32[0] ==
                     (*atom_wm_delete_window).atom) {
                     LOGI("Closing Window\n");
-                    running=false;
+                    event=CloseEvent();
                 }
                 break;
             }

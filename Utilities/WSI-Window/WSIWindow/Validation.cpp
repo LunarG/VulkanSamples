@@ -64,7 +64,6 @@ void ShowVkResult(VkResult err){
 VKAPI_ATTR VkBool32 VKAPI_CALL
 DebugReportFn(VkDebugReportFlagsEXT msgFlags, VkDebugReportObjectTypeEXT objType, uint64_t srcObject,
         size_t location, int32_t msgCode, const char *pLayerPrefix, const char *pMsg, void *pUserData) {
-
     CDebugReport& DebugReport=*(CDebugReport*)pUserData;                       // Get CDebugReport instance
     msgFlags &= DebugReport.GetFlags();                                        // Discard disabled messages
     //if(objType==VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT) return false;  // Discard messages from DebugReport module
@@ -90,7 +89,6 @@ DebugReportFn(VkDebugReportFlagsEXT msgFlags, VkDebugReportObjectTypeEXT objType
 //--------------------------------------------------------------------------------------------
 
 //----------------------------------------CDebugReport----------------------------------------
-//#ifdef ENABLE_VALIDATION
 void CDebugReport::Init(VkInstance inst){
     assert(!!inst);
     GET_INSTANCE_PROC_ADDR(inst, CreateDebugReportCallbackEXT);

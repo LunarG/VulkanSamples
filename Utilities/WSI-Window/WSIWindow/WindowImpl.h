@@ -46,7 +46,7 @@ public:
 //==============================================================
 //========================Event Message=========================
 struct EventType{
-    enum{NONE, MOUSE, KEY, TEXT, MOVE, RESIZE, FOCUS, TOUCH} tag;              // event type
+    enum{NONE, MOUSE, KEY, TEXT, MOVE, RESIZE, FOCUS, TOUCH, CLOSE} tag;       // event type
     union{
         struct {eAction action; int16_t x; int16_t y; uint8_t btn;} mouse;     // mouse move/click
         struct {eAction action; eKeycode keycode;                 } key;       // Keyboard key state
@@ -55,6 +55,7 @@ struct EventType{
         struct {uint16_t width; uint16_t height;                  } resize;    // Window resize
         struct {bool hasFocus;                                    } focus;     // Window gained/lost focus
         struct {eAction action; float x; float y; uint8_t id;     } touch;     // multi-touch display
+        struct {                                                  } close;     // Window is closing
     };
     void Clear(){tag=NONE;}
 };
@@ -103,6 +104,7 @@ protected:
     EventType MoveEvent  (int16_t x, int16_t y);                               // Window moved
     EventType ResizeEvent(uint16_t width, uint16_t height);                    // Window resized
     EventType FocusEvent (bool hasFocus);                                      // Window gained/lost focus
+    EventType CloseEvent ();                                                   // Window closing
 public:
     bool running;
     bool textinput;
@@ -111,7 +113,7 @@ public:
 
     WindowImpl() : instance(0), running(false), textinput(false), has_focus(false){}
     virtual ~WindowImpl() { if(surface) vkDestroySurfaceKHR(instance,surface,NULL); }
-    virtual void Close() { running = false; }
+    virtual void Close() { eventFIFO.push(CloseEvent()); }
 
     bool KeyState(eKeycode key){ return keystate[key]; }                   // returns true if key is pressed
     bool BtnState(uint8_t  btn){ return (btn<3)  ? btnstate[btn]:0; }      // returns true if mouse btn is pressed

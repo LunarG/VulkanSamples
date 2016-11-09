@@ -82,6 +82,7 @@ bool WSIWindow::ProcessEvents(bool wait_for_event){
            case EventType::RESIZE:OnResizeEvent(e.resize.width, e.resize.height);                     break;
            case EventType::FOCUS :OnFocusEvent (e.focus.hasFocus);                                    break;
            case EventType::TOUCH :OnTouchEvent (e.touch.action, e.touch.x, e.touch.y, e.touch.id);    break;
+           //case EventType::CLOSE :OnCloseEvent (); return false;
            default: break;
        }
        e=pimpl->GetEvent();

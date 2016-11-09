@@ -40,7 +40,7 @@
 // TODO:
 //
 // Message loop vsync
-// Enable/Disable text event for better performance, and allows Android to show/hide on-screen keyboard.
+// Enable/Disable text event (to skip TranslateMessage and show/hide Android keyboard)
 // Multi-touch input (Done on Android and Linux, but Win32 is WIP)
 // Clipboard and IME
 // Multi-window support
@@ -97,6 +97,7 @@ public:
     virtual void OnResizeEvent(uint16_t width, uint16_t height){}                    // Callback for window resize events
     virtual void OnFocusEvent (bool hasFocus){}                                      // Callback for window gain/lose focus events
     virtual void OnTouchEvent (eAction action, float x, float y, uint8_t id){}       // Callback for Multi-touch events
+    //virtual void OnCloseEvent (){}                                                   // Callback for window closing event (adds 4.2kb to exe size)
 };
 //==============================================================
 
