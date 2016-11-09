@@ -83,6 +83,7 @@ struct layer_data {
 
     VkPhysicalDevice gpu;
     VkDevice dev;
+    uint32_t graphicsQueueFamilyIndex;
 
     PFN_vkSetDeviceLoaderData pfn_dev_init;
     std::unordered_map<VkSwapchainKHR, SwapChainData *> *swapChains;
@@ -105,6 +106,7 @@ struct layer_data {
     VkDescriptorPool desc_pool;
     VkDescriptorSet desc_set;
     VkSampler sampler;
+    VkFence fence;
 
     int frame;
     int cmdBuffersThisFrame;
@@ -289,11 +291,8 @@ static void after_device_create(VkPhysicalDevice gpu, VkDevice device,
     VkCommandPoolCreateInfo cpci;
     cpci.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     cpci.pNext = nullptr;
-    cpci.queueFamilyIndex =
-        0; /* TODO: this needs to be the proper index for the graphics queue
-            * we intend to do our overlay rendering on
-            */
-    cpci.flags = 0;
+    cpci.queueFamilyIndex = data->graphicsQueueFamilyIndex;
+    cpci.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     err = pTable->CreateCommandPool(device, &cpci, nullptr, &data->pool);
     assert(!err);
 
@@ -321,6 +320,7 @@ static void after_device_create(VkPhysicalDevice gpu, VkDevice device,
     ici.samples = VK_SAMPLE_COUNT_1_BIT;
     ici.tiling = VK_IMAGE_TILING_LINEAR;
     ici.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+    ici.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
 
     err = pTable->CreateImage(device, &ici, nullptr, &data->fontGlyphsImage);
     assert(!err);
@@ -440,6 +440,8 @@ static void after_device_create(VkPhysicalDevice gpu, VkDevice device,
     imb.subresourceRange.levelCount = 1;
     imb.subresourceRange.baseArrayLayer = 0;
     imb.subresourceRange.layerCount = 1;
+    imb.srcQueueFamilyIndex = data->graphicsQueueFamilyIndex;
+    imb.dstQueueFamilyIndex = data->graphicsQueueFamilyIndex;
 
     pTable->CmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
@@ -461,6 +463,7 @@ static void after_device_create(VkPhysicalDevice gpu, VkDevice device,
     VkSamplerCreateInfo sci;
     sci.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
     sci.pNext = nullptr;
+    sci.flags = 0;
     sci.magFilter = VK_FILTER_NEAREST;
     sci.minFilter = VK_FILTER_NEAREST;
     sci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
@@ -468,7 +471,9 @@ static void after_device_create(VkPhysicalDevice gpu, VkDevice device,
     sci.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     sci.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     sci.mipLodBias = 0.0f;
+    sci.anisotropyEnable = false;
     sci.maxAnisotropy = 1;
+    sci.compareEnable = false;
     sci.compareOp = VK_COMPARE_OP_NEVER;
     sci.minLod = 0.0f;
     sci.maxLod = 0.0f;
@@ -546,6 +551,13 @@ static void after_device_create(VkPhysicalDevice gpu, VkDevice device,
     writes[0].pImageInfo = descs;
 
     pTable->UpdateDescriptorSets(device, 1, writes, 0, nullptr);
+
+    VkFenceCreateInfo fci;
+    fci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fci.pNext = NULL;
+    fci.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+    pTable->CreateFence(device, &fci, NULL, &data->fence);
+
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
@@ -588,6 +600,27 @@ vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo *pCreateInfo,
     } else {
         my_device_data->pfn_dev_init = NULL;
     }
+
+    uint32_t queue_family_count;
+    layer_data *my_data =
+        get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
+    my_data->instance_dispatch_table->GetPhysicalDeviceQueueFamilyProperties(gpu,
+                                             &queue_family_count, NULL);
+    VkQueueFamilyProperties *queue_props = (VkQueueFamilyProperties *)malloc(
+        queue_family_count * sizeof(VkQueueFamilyProperties));
+    if (queue_props == NULL) {
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+    my_data->instance_dispatch_table->GetPhysicalDeviceQueueFamilyProperties(
+        gpu, &queue_family_count, queue_props);
+    my_device_data->graphicsQueueFamilyIndex = 0;
+    for (uint32_t i = 0; i < pCreateInfo->queueCreateInfoCount; i++) {
+        if (queue_props[pCreateInfo->pQueueCreateInfos[i].queueFamilyIndex].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+            my_device_data->graphicsQueueFamilyIndex = pCreateInfo->pQueueCreateInfos[i].queueFamilyIndex;
+            break;
+        }
+    }
+    free(queue_props);
 
     after_device_create(gpu, *pDevice, my_device_data);
     return result;
@@ -684,7 +717,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
          * etc etc
          */
         ad.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        ad.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        ad.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
         VkAttachmentReference ar;
         ar.attachment = 0;
@@ -711,6 +744,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
         VkRenderPassCreateInfo rpci;
         rpci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
         rpci.pNext = nullptr;
+        rpci.flags = 0;
         rpci.attachmentCount = 1;
         rpci.pAttachments = &ad;
         rpci.subpassCount = 1;
@@ -895,6 +929,7 @@ vkGetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapChain,
             VkFramebufferCreateInfo fci;
             fci.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
             fci.pNext = nullptr;
+            fci.flags = 0;
             fci.renderPass = data->render_pass;
             fci.attachmentCount = 1;
             fci.pAttachments = &v;
@@ -994,7 +1029,7 @@ static void before_present(VkQueue queue, layer_data *my_data,
     VkLayerDispatchTable *pTable = my_data->device_dispatch_table;
 
     if (!my_data->fontUploadComplete) {
-        VkSubmitInfo si;
+        VkSubmitInfo si = {};
         si.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         si.pNext = nullptr;
         si.waitSemaphoreCount = 0;
@@ -1034,6 +1069,23 @@ static void before_present(VkQueue queue, layer_data *my_data,
     cbbi.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     cbbi.pInheritanceInfo = nullptr;
 
+    VkImageMemoryBarrier imb;
+    imb.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    imb.pNext = nullptr;
+    imb.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    imb.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    imb.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    imb.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    imb.image = id->image;
+    imb.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    imb.subresourceRange.baseMipLevel = 0;
+    imb.subresourceRange.levelCount = 1;
+    imb.subresourceRange.baseArrayLayer = 0;
+    imb.subresourceRange.layerCount = 1;
+    imb.srcQueueFamilyIndex = my_data->graphicsQueueFamilyIndex;
+    imb.dstQueueFamilyIndex = my_data->graphicsQueueFamilyIndex;
+
+
     VkRenderPassBeginInfo rpbi;
     rpbi.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     rpbi.pNext = nullptr;
@@ -1047,6 +1099,12 @@ static void before_present(VkQueue queue, layer_data *my_data,
     rpbi.pClearValues = nullptr;
 
     pTable->BeginCommandBuffer(id->cmd, &cbbi);
+    pTable->CmdPipelineBarrier(id->cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                               VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                               0 /* dependency flags */, 0,
+                               nullptr,    /* memory barriers */
+                               0, nullptr, /* buffer memory barriers */
+                               1, &imb);   /* image memory barriers */
     pTable->CmdBeginRenderPass(id->cmd, &rpbi, VK_SUBPASS_CONTENTS_INLINE);
 
     pTable->CmdBindPipeline(id->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -1071,15 +1129,16 @@ static void before_present(VkQueue queue, layer_data *my_data,
      * buffer is guaranteed to have been retired before the app tries to
      * present it again.
      */
-    VkFence null_fence = VK_NULL_HANDLE;
-    VkSubmitInfo si;
+    VkSubmitInfo si = {};
     si.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     si.pNext = nullptr;
     si.waitSemaphoreCount = 0;
     si.commandBufferCount = 1;
     si.signalSemaphoreCount = 0;
     si.pCommandBuffers = &id->cmd;
-    pTable->QueueSubmit(queue, 1, &si, null_fence);
+    pTable->WaitForFences(my_data->dev, 1, &my_data->fence, VK_TRUE, UINT64_MAX);
+    pTable->ResetFences(my_data->dev, 1, &my_data->fence);
+    pTable->QueueSubmit(queue, 1, &si, my_data->fence);
 
     /* Reset per-frame stats */
     my_data->cmdBuffersThisFrame = 0;
@@ -1107,6 +1166,7 @@ void WsiImageData::Cleanup(VkDevice dev) {
     layer_data *my_data =
         get_my_data_ptr(get_dispatch_key(dev), layer_data_map);
     VkLayerDispatchTable *pTable = my_data->device_dispatch_table;
+    pTable->DeviceWaitIdle(dev);
 
     // XXX: needs device data
     //    pTable->FreeCommandBuffers(dev, cmd, nullptr);
@@ -1148,6 +1208,7 @@ void layer_data::Cleanup() {
 
     pTable->DestroyShaderModule(dev, vsShaderModule, nullptr);
     pTable->DestroyShaderModule(dev, fsShaderModule, nullptr);
+    pTable->DestroyFence(dev, fence, nullptr);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
