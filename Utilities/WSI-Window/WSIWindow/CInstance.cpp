@@ -182,7 +182,7 @@ void CInstance::Create(const CLayers& layers, const CExtensions& extensions, con
     VKERRCHECK(vkCreateInstance(&inst_info, NULL, &instance));
     LOGI("Vulkan Instance created\n");
 #ifdef ENABLE_VALIDATION
-    if( extensions.IsPicked(VK_EXT_DEBUG_REPORT_EXTENSION_NAME))
+    if(extensions.IsPicked(VK_EXT_DEBUG_REPORT_EXTENSION_NAME))
         DebugReport.Init(instance);  //If VK_EXT_debug_report is loaded, initialize it.
 #endif
 }

@@ -153,15 +153,23 @@ class CDebugReport{
     PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT=0;
     //PFN_vkDebugReportMessageEXT         vkDebugReportMessageEXT=0;
     PFN_vkDebugReportCallbackEXT        func=0;
-    static VkDebugReportFlagsEXT        flags;    //TODO: Make this non-static once LVL bug #1129 is fixed.
-    void Set(VkInstance inst, VkDebugReportFlagsEXT flags, PFN_vkDebugReportCallbackEXT debugFunc=0);
-public:
-    static VkDebugReportFlagsEXT GetFlags(){return flags;}     // Returns current flag settings.
+    VkDebugReportFlagsEXT               flags = VK_DEBUG_REPORT_INFORMATION_BIT_EXT         |  // 1
+                                                VK_DEBUG_REPORT_WARNING_BIT_EXT             |  // 2
+                                                VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT |  // 4
+                                                VK_DEBUG_REPORT_ERROR_BIT_EXT               |  // 8
+                                                VK_DEBUG_REPORT_DEBUG_BIT_EXT               |  //16
+                                                0;
+
+    void Set(VkDebugReportFlagsEXT flags, PFN_vkDebugReportCallbackEXT debugFunc=0);
+    void Print();                                              // Print the debug report flags state.
+
+    friend class CInstance;
     void Init(VkInstance inst);                                // Initialize with default callback, and all flags enabled.
+    void Destroy();                                            // Destroy the debug report. Must be done BEFORE vkDestroyInstance()
+public:
+    VkDebugReportFlagsEXT GetFlags(){return flags;}            // Returns current flag settings.
     void SetFlags(VkDebugReportFlagsEXT flags);                // Select which type of messages to display
     void SetCallback(PFN_vkDebugReportCallbackEXT debugFunc);  // Set a custom callback function for printing debug reports
-    void Destroy();                                            // Destroy the debug report. Must be done BEFORE vkDestroyInstance()
-    void Print();                                              // Print the debug report flags state.
 };
 //--------------------------------------------------------------------------------------------
 

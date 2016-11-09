@@ -57,20 +57,17 @@ void ShowVkResult(VkResult err){
 }
 #endif
 //----------------------------------------------------------------
+
 //------------------------------------DEBUG REPORT CALLBACK-----------------------------------
 #ifdef ENABLE_VALIDATION
-VkDebugReportFlagsEXT CDebugReport::flags = VK_DEBUG_REPORT_INFORMATION_BIT_EXT         |  // 1
-                                            VK_DEBUG_REPORT_WARNING_BIT_EXT             |  // 2
-                                            VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT |  // 4
-                                            VK_DEBUG_REPORT_ERROR_BIT_EXT               |  // 8
-                                            VK_DEBUG_REPORT_DEBUG_BIT_EXT               |  //16
-                                            0;
 
 VKAPI_ATTR VkBool32 VKAPI_CALL
 DebugReportFn(VkDebugReportFlagsEXT msgFlags, VkDebugReportObjectTypeEXT objType, uint64_t srcObject,
         size_t location, int32_t msgCode, const char *pLayerPrefix, const char *pMsg, void *pUserData) {
-#ifdef ENABLE_VALIDATION
-    msgFlags &= CDebugReport::GetFlags();  // Discard disabled messages
+
+    CDebugReport& DebugReport=*(CDebugReport*)pUserData;                       // Get CDebugReport instance
+    msgFlags &= DebugReport.GetFlags();                                        // Discard disabled messages
+    //if(objType==VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT) return false;  // Discard messages from DebugReport module
 
     char buf[512];
     snprintf(buf,sizeof(buf),cRESET "[%s] Code %d : %s\n", pLayerPrefix, msgCode, pMsg);
@@ -81,44 +78,47 @@ DebugReportFn(VkDebugReportFlagsEXT msgFlags, VkDebugReportObjectTypeEXT objType
         case VK_DEBUG_REPORT_INFORMATION_BIT_EXT          : _LOGI("%s",buf);  return false;
         case VK_DEBUG_REPORT_DEBUG_BIT_EXT                : _LOGD("%s",buf);  return false;
     }
-#endif
     return false;  //Don't bail out.
 }
 //--------------------------------------------------------------------------------------------
 
 //----------------------------------vkGetInstanceProcAddr Macro-------------------------------
-#define GET_INSTANCE_PROC_ADDR(inst, entrypoint){                                           \
-        vk##entrypoint = (PFN_vk##entrypoint)vkGetInstanceProcAddr(inst, "vk" #entrypoint); \
-        assert(vk##entrypoint && "entry point was not found.");                             \
-}
+#define GET_INSTANCE_PROC_ADDR(inst, entrypoint){                                             \
+          vk##entrypoint = (PFN_vk##entrypoint)vkGetInstanceProcAddr(inst, "vk" #entrypoint); \
+          assert(vk##entrypoint && "entry point was not found.");                             \
+        }
 //--------------------------------------------------------------------------------------------
 
 //----------------------------------------CDebugReport----------------------------------------
 //#ifdef ENABLE_VALIDATION
-void CDebugReport::Init       (VkInstance inst)                       { Set(inst,flags,DebugReportFn);    }
-void CDebugReport::SetFlags   (VkDebugReportFlagsEXT flags)           { Set(instance,flags,func); Print();}
-void CDebugReport::SetCallback(PFN_vkDebugReportCallbackEXT debugFunc){ Set(instance,flags,debugFunc);    }
-
-void CDebugReport::Set(VkInstance inst,VkDebugReportFlagsEXT flags, PFN_vkDebugReportCallbackEXT debugFunc){
-    if(!inst) {LOGW("Debug Report was not initialized.\n"); return;}
-    if(!debugFunc) debugFunc=DebugReportFn; //Use default debug-report function.
-
-    Destroy();
-    this->instance = inst;
-    this->flags    = 0;          //turn reports off
-    this->func     = debugFunc;
-
+void CDebugReport::Init(VkInstance inst){
+    assert(!!inst);
     GET_INSTANCE_PROC_ADDR(inst, CreateDebugReportCallbackEXT);
     GET_INSTANCE_PROC_ADDR(inst,DestroyDebugReportCallbackEXT);
     //GET_INSTANCE_PROC_ADDR(inst,       DebugReportMessageEXT );
+    this->instance = inst;
+    this->func     = DebugReportFn; //Use default debug-report function.
+    Set(flags,func);
+}
+
+void CDebugReport::SetFlags   (VkDebugReportFlagsEXT flags)           { Set(flags,func); Print(); }
+void CDebugReport::SetCallback(PFN_vkDebugReportCallbackEXT debugFunc){ Set(flags,debugFunc);     }
+
+void CDebugReport::Set(VkDebugReportFlagsEXT flags, PFN_vkDebugReportCallbackEXT debugFunc){
+    if(!instance) {LOGW("Debug Report was not initialized.\n"); return;}
+    if(!debugFunc) debugFunc=DebugReportFn;  // callback may not be empty
+
+    Destroy();
+    this->flags = 0;           //turn reports off while changing settings
+    this->func  = debugFunc;
 
     VkDebugReportCallbackCreateInfoEXT create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
     create_info.pNext = NULL;
     create_info.flags = flags;
     create_info.pfnCallback = debugFunc;  //Callback function to call
-    create_info.pUserData = NULL;
-    VKERRCHECK(vkCreateDebugReportCallbackEXT(inst, &create_info, NULL, &debug_report_callback));
+    create_info.pUserData = this;
+    VKERRCHECK(vkCreateDebugReportCallbackEXT(instance, &create_info, NULL, &debug_report_callback));
     this->flags = flags;       //turn reports back on
 }
 
@@ -128,21 +128,17 @@ void CDebugReport::Destroy(){
 }
 
 void CDebugReport::Print(){
-    _LOGI("Debug Report flags : [%s" cRESET "%s" cRESET "%s" cRESET "%s" cRESET "%s\b" cRESET "] = %d\n",
-        (flags& 1)?cGREEN "INFO|" : cFAINT cSTRIKEOUT "no-info|",
-        (flags& 2)?cYELLOW"WARN|" : cFAINT cSTRIKEOUT "no-warn|",
-        (flags& 4)?cCYAN  "PERF|" : cFAINT cSTRIKEOUT "no-perf|",
-        (flags& 8)?cRED   "ERROR|": cFAINT cSTRIKEOUT "no-error|",
-        (flags&16)?cBLUE  "DEBUG|": cFAINT cSTRIKEOUT "no-debug|",
+    _LOG("Debug Report flags : [%s" cRESET "%s" cRESET "%s" cRESET "%s" cRESET "%s\b" cRESET "] = %d\n",
+        (flags& 1) ? cGREEN "INFO|" : cFAINT cSTRIKEOUT "info|",
+        (flags& 2) ? cYELLOW"WARN|" : cFAINT cSTRIKEOUT "warn|",
+        (flags& 4) ? cCYAN  "PERF|" : cFAINT cSTRIKEOUT "perf|",
+        (flags& 8) ? cRED   "ERROR|": cFAINT cSTRIKEOUT "error|",
+        (flags&16) ? cBLUE  "DEBUG|": cFAINT cSTRIKEOUT "debug|",
         flags
     );
 }
 #else   //no validation
-void CDebugReport::Init(VkInstance inst){}
 void CDebugReport::SetFlags(VkDebugReportFlagsEXT flags){}
 void CDebugReport::SetCallback(PFN_vkDebugReportCallbackEXT debugFunc){}
-void CDebugReport::Destroy(){}
-void CDebugReport::Print(){}
-
 #endif  //ENABLE_VALIDATION
 //--------------------------------------------------------------------------------------------
