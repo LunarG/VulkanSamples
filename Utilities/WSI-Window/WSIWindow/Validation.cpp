@@ -1,6 +1,7 @@
 #include "Validation.h"
 //---------------- Enable ANSI Codes on Win10+ ----------------
-#if defined(WIN10PLUS) && !defined(NDEBUG)
+#if defined(WIN10PLUS)
+#if !defined(NDEBUG) || defined(ENABLE_LOGGING) || defined(ENABLE_VALIDATION)
     struct INITANSI {
         INITANSI() {
             HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -10,6 +11,7 @@
             SetConsoleMode(hOut, dwMode);
         }
     }INITANSI;
+#endif
 #endif
 //-------------------------------------------------------------
 //-----------------------Error Checking------------------------
@@ -106,18 +108,18 @@ void CDebugReport::Set(VkDebugReportFlagsEXT flags, PFN_vkDebugReportCallbackEXT
     if(!instance) {LOGW("Debug Report was not initialized.\n"); return;}
     if(!debugFunc) debugFunc=DebugReportFn;  // callback may not be empty
 
-    Destroy();
-    this->flags = 0;           //turn reports off while changing settings
+    Destroy();                               //Destroy old report before creating new one
+    this->flags = 0;                         //Turn off reports while changing settings
     this->func  = debugFunc;
 
     VkDebugReportCallbackCreateInfoEXT create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
     create_info.pNext = NULL;
     create_info.flags = flags;
-    create_info.pfnCallback = debugFunc;  //Callback function to call
+    create_info.pfnCallback = debugFunc;     //Callback function to call
     create_info.pUserData = this;
     VKERRCHECK(vkCreateDebugReportCallbackEXT(instance, &create_info, NULL, &debug_report_callback));
-    this->flags = flags;       //turn reports back on
+    this->flags = flags;                     //Turn reports back on
 }
 
 void CDebugReport::Destroy(){
@@ -125,7 +127,7 @@ void CDebugReport::Destroy(){
       vkDestroyDebugReportCallbackEXT(instance, debug_report_callback, NULL);
 }
 
-void CDebugReport::Print(){
+void CDebugReport::Print(){  //print the state of the report flags
     _LOG("Debug Report flags : [%s" cRESET "%s" cRESET "%s" cRESET "%s" cRESET "%s\b" cRESET "] = %d\n",
         (flags& 1) ? cGREEN "INFO|" : cFAINT cSTRIKEOUT "info|",
         (flags& 2) ? cYELLOW"WARN|" : cFAINT cSTRIKEOUT "warn|",
@@ -135,8 +137,8 @@ void CDebugReport::Print(){
         flags
     );
 }
-#else   //no validation
-void CDebugReport::SetFlags(VkDebugReportFlagsEXT flags){}
-void CDebugReport::SetCallback(PFN_vkDebugReportCallbackEXT debugFunc){}
+#else   //No Validation
+void CDebugReport::SetFlags(VkDebugReportFlagsEXT flags)              { LOGW("Vulkan Validation disabled at compile-time.\n"); }
+void CDebugReport::SetCallback(PFN_vkDebugReportCallbackEXT debugFunc){ LOGW("Vulkan Validation disabled at compile-time.\n"); }
 #endif  //ENABLE_VALIDATION
 //--------------------------------------------------------------------------------------------

@@ -34,7 +34,6 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     #option(BUILD_WSI_XLIB_SUPPORT    "Build Xlib WSI support"    OFF)
     #option(BUILD_WSI_WAYLAND_SUPPORT "Build Wayland WSI support" OFF)
     #option(BUILD_WSI_MIR_SUPPORT     "Build Mir WSI support"     OFF)
-    #option(ENABLE_MULTITOUCH    "X11 Multi-touch-screen support"  ON)  #adds 8.5KB to exe size
 
     if (BUILD_WSI_XCB_SUPPORT)
         add_definitions(-DVK_USE_PLATFORM_XCB_KHR)
@@ -55,12 +54,11 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         include_directories(${X11_XCB_INCLUDE_DIR})
         target_link_libraries(${LIBRARY_NAME} ${X11_XCB_LIBRARIES})
         #---XInput--- (MultiTouch)
-        if (ENABLE_MULTITOUCH)
+        if (ENABLE_MULTITOUCH)               #adds 8.5KB to exe size
             target_link_libraries(${LIBRARY_NAME} ${X11_Xinput_LIB})
             add_definitions(-DENABLE_MULTITOUCH)
         endif()
     endif()
-
 
 #    if (BUILD_WSI_XLIB_SUPPORT)
 #        add_definitions(-DVK_USE_PLATFORM_XLIB_KHR)
@@ -95,7 +93,7 @@ endif()
 #endif()
 #=================================================================
 #=======================Find Vulkan Loader========================
-find_library(VULKAN_LOADER vulkan   DOC "Path to Vulkan loader library. (libvulkan.so or vulkan-1.dll)")
+find_library(VULKAN_LOADER vulkan   DOC "Path to Vulkan loader library. (libvulkan.so or vulkan-1.lib)")
 find_library(VULKAN_LOADER vulkan   PATH "$ENV{VULKAN_SDK}/lib")             # Search in Vulkan SDK on Linux  : /lib/libvulkan.so
 find_library(VULKAN_LOADER vulkan-1 PATH "$ENV{VULKAN_SDK}/bin")             # Search in Vulkan SDK on Windows: /bin/vulkan-1.lib
 find_library(VULKAN_LOADER vulkan   PATH "../../../build/Default/loader")    # Search in VulkanSamples on Linux

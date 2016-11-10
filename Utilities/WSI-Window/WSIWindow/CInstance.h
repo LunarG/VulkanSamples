@@ -99,8 +99,8 @@ class CInstance{
     VkInstance instance;
     void Create(const CLayers& layers, const CExtensions& extensions, const char* appName, const char* engineName);
 public:
-    CInstance(const CLayers& layers, const CExtensions& extensions, const char* appName="VulkanApp", const char* engineName="LunarG");
-    CInstance(const bool enableValidation=true, const char* appName="VulkanApp", const char* engineName="LunarG");
+    CInstance(const CLayers& layers, const CExtensions& extensions, const char* appName="VulkanApp", const char* engineName="");
+    CInstance(const bool enableValidation=true, const char* appName="VulkanApp", const char* engineName="");
 
     ~CInstance();
     //CLayers     layers;
