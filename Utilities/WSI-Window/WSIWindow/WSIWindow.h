@@ -39,18 +39,18 @@
 
 // TODO:
 //
-// Message loop vsync
-// Enable/Disable text event (to skip TranslateMessage and show/hide Android keyboard)
 // Multi-touch input (Done on Android and Linux, but Win32 is WIP)
-// Clipboard and IME
 // Multi-window support
 // More Documentation
 // Keyboard: function to get native keycode
+// Keyboard: Clipboard and IME
 // Android: window resize events (WIP)
-// Android: Add option to set render buffer size, smaller than window size. (ANativeWindow_SetBufferGeometry) (Dustin)
+// Android: Option to set render buffer size, smaller than window size. (ANativeWindow_SetBufferGeometry) (Dustin)
 // Android: Rotate screen according to width/height aspect ratio. (Dustin)
-// Desktop: Pick render device with flag: DONT_CARE / PERFORMANCE / INTEGRATED . ... (Mark Young)
+// Desktop: Pick render device with flag: DONT_CARE / PERFORMANCE / INTEGRATED  (Mark Young)
 // Enable_MultiTouch function. When disabled, touch-screen should emulate the mouse instead.
+// Enable/Disable text event (to skip TranslateMessage and show/hide Android keyboard)
+// Swapchain and vsync
 // Make window DPI-aware.
 
 #ifdef ANDROID
@@ -97,7 +97,7 @@ public:
     virtual void OnResizeEvent(uint16_t width, uint16_t height){}                    // Callback for window resize events
     virtual void OnFocusEvent (bool hasFocus){}                                      // Callback for window gain/lose focus events
     virtual void OnTouchEvent (eAction action, float x, float y, uint8_t id){}       // Callback for Multi-touch events
-    //virtual void OnCloseEvent (){}                                                   // Callback for window closing event (adds 4.2kb to exe size)
+    virtual void OnCloseEvent (){}                                                   // Callback for window closing event
 };
 //==============================================================
 

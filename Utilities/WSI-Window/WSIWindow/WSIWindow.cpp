@@ -28,27 +28,18 @@
 WSIWindow::WSIWindow(VkInstance inst,const char* title,const uint width,const uint height){
 #ifdef VK_USE_PLATFORM_XCB_KHR
     LOGI("PLATFORM: XCB\n");
-    pimpl=new Window_xcb(inst,title,width,height);
-#endif
-#ifdef VK_USE_PLATFORM_WIN32_KHR
+    pimpl=new Window_xcb(inst, title, width, height);
+#elif VK_USE_PLATFORM_WIN32_KHR
     LOGI("PLATFORM: WIN32\n");
     pimpl = new Window_win32(inst, title, width, height);
-#endif
-#ifdef VK_USE_PLATFORM_ANDROID_KHR
+#elif VK_USE_PLATFORM_ANDROID_KHR
     LOGI("PLATFORM: ANDROID\n");
     pimpl = new Window_android(inst, title, width, height);
 #endif
-/*
-#ifdef VK_USE_PLATFORM_XLIB_KHR
-    LOGI("XLIB\n");
-#endif
-#ifdef VK_USE_PLATFORM_MIR_KHR
-    LOGI("MIR\n");
-#endif
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
-    LOGI("WAYLAND\n");
-#endif
-*/
+// TODO:
+//    #ifdef VK_USE_PLATFORM_XLIB_KHR
+//    #ifdef VK_USE_PLATFORM_MIR_KHR
+//    #ifdef VK_USE_PLATFORM_WAYLAND_KHR
 }
 
 WSIWindow::~WSIWindow(){ delete(pimpl); }
@@ -63,9 +54,7 @@ void WSIWindow::SetTitle(const char* title){ pimpl->SetTitle(title); }
 void WSIWindow::SetWinPos (uint16_t x, uint16_t y){ pimpl->SetWinPos(x,y,pimpl->shape.width,pimpl->shape.height); }
 void WSIWindow::SetWinSize(uint16_t w, uint16_t h){ pimpl->SetWinPos(pimpl->shape.x,pimpl->shape.y, w, h); }
 
-//void WSIWindow::SetTextInput(bool enabled){ pimpl->TextInput(enabled);}           // Enable OnTextEvent, (and on Android, show the soft-keyboard)
-//bool WSIWindow::GetTextInput(){return pimpl->textinput;}                          // Returns true if text input is enabled (and on android, keyboard is visible.)
-void WSIWindow::ShowKeyboard(bool enabled){ pimpl->TextInput(enabled); }            // On Android, show the soft-keyboard,
+void WSIWindow::ShowKeyboard(bool enabled){ pimpl->TextInput(enabled); }     // On Android, show the soft-keyboard.
 void WSIWindow::Close(){ pimpl->Close(); }
 
 EventType WSIWindow::GetEvent(bool wait_for_event){return pimpl->GetEvent(wait_for_event);}
@@ -82,7 +71,7 @@ bool WSIWindow::ProcessEvents(bool wait_for_event){
            case EventType::RESIZE:OnResizeEvent(e.resize.width, e.resize.height);                     break;
            case EventType::FOCUS :OnFocusEvent (e.focus.hasFocus);                                    break;
            case EventType::TOUCH :OnTouchEvent (e.touch.action, e.touch.x, e.touch.y, e.touch.id);    break;
-           //case EventType::CLOSE :OnCloseEvent (); return false;
+           case EventType::CLOSE :OnCloseEvent (); return false;
            default: break;
        }
        e=pimpl->GetEvent();
