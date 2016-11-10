@@ -215,8 +215,7 @@ public:
         // Check if we are exiting.
         if (app->destroyRequested){
             LOGI("destroyRequested");
-            running=false;
-            return {EventType::NONE};
+            return {EventType::CLOSE};
         }
         return {EventType::NONE};
     };

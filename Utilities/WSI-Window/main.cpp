@@ -69,6 +69,9 @@ class MyWindow : public WSIWindow{
         printf("Touch: %s %4.0f x %4.0f Finger id:%d\n",type[action],x,y,id);
     }
 
+    void OnCloseEvent(){
+        printf("Window Closing.\n");
+    }
 };
 
 int main(int argc, char *argv[]){
