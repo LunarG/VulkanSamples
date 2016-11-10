@@ -188,10 +188,11 @@ static inline VkResult layer_create_msg_callback(debug_report_data *debug_data, 
 
     if (default_callback) {
         AddDebugMessageCallback(debug_data, &debug_data->default_debug_callback_list, pNewDbgFuncNode);
+        debug_data->active_flags |= pCreateInfo->flags;
     } else {
         AddDebugMessageCallback(debug_data, &debug_data->debug_callback_list, pNewDbgFuncNode);
+        debug_data->active_flags = pCreateInfo->flags;
     }
-    debug_data->active_flags |= pCreateInfo->flags;
 
     debug_report_log_msg(debug_data, VK_DEBUG_REPORT_DEBUG_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT,
                          (uint64_t)*pCallback, 0, VK_DEBUG_REPORT_ERROR_CALLBACK_REF_EXT, "DebugReport", "Added callback");
