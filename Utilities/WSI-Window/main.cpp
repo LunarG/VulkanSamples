@@ -38,7 +38,7 @@ class MyWindow : public WSIWindow{
     }
 
     //--Keyboard event handler--
-    void OnKeyEvent(eAction action,uint8_t keycode){
+    void OnKeyEvent(eAction action, eKeycode keycode){
         const char* type[]={"up  ","down"};
         printf("Key: %s keycode:%d\n",type[action],keycode);
     }
