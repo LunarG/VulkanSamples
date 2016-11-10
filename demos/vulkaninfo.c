@@ -505,6 +505,7 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu) {
 }
 
 static void app_dev_destroy(struct app_dev *dev) {
+    vkDeviceWaitIdle(dev->obj);
     vkDestroyDevice(dev->obj, NULL);
 }
 

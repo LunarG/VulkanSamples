@@ -243,6 +243,7 @@ Device::~Device() {
         queues_[i].clear();
     }
 
+    vkDeviceWaitIdle(handle());
     vkDestroyDevice(handle(), NULL);
 }
 

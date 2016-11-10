@@ -2062,6 +2062,7 @@ static void demo_cleanup(struct demo *demo) {
     if (demo->separate_present_queue) {
         vkDestroyCommandPool(demo->device, demo->present_cmd_pool, NULL);
     }
+    vkDeviceWaitIdle(demo->device);
     vkDestroyDevice(demo->device, NULL);
     if (demo->validate) {
         demo->DestroyDebugReportCallback(demo->inst, demo->msg_callback, NULL);
