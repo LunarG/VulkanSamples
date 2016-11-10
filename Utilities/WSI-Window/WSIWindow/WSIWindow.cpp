@@ -50,14 +50,14 @@ bool WSIWindow::GetKeyState(eKeycode key){ return pimpl->KeyState(key); }
 bool WSIWindow::GetBtnState(uint8_t  btn){ return pimpl->BtnState(btn); }
 void WSIWindow::GetMousePos(int16_t& x, int16_t& y){ pimpl->MousePos(x,y); }
 
-void WSIWindow::SetTitle(const char* title){ pimpl->SetTitle(title); }
+void WSIWindow::SetTitle  (const char* title){ pimpl->SetTitle(title); }
 void WSIWindow::SetWinPos (uint16_t x, uint16_t y){ pimpl->SetWinPos(x,y,pimpl->shape.width,pimpl->shape.height); }
 void WSIWindow::SetWinSize(uint16_t w, uint16_t h){ pimpl->SetWinPos(pimpl->shape.x,pimpl->shape.y, w, h); }
 
 void WSIWindow::ShowKeyboard(bool enabled){ pimpl->TextInput(enabled); }     // On Android, show the soft-keyboard.
 void WSIWindow::Close(){ pimpl->Close(); }
 
-EventType WSIWindow::GetEvent(bool wait_for_event){return pimpl->GetEvent(wait_for_event);}
+EventType WSIWindow::GetEvent(bool wait_for_event){ return pimpl->GetEvent(wait_for_event); }
 
 bool WSIWindow::ProcessEvents(bool wait_for_event){
     EventType e=pimpl->GetEvent(wait_for_event);

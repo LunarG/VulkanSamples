@@ -56,7 +56,6 @@ class Window_win32 : public WindowImpl{
     HINSTANCE hInstance;
     HWND      hWnd;
     //bool ShapeMode;
-    FIFO<EventType, 4> eventFIFO;  //Event message queue buffer (max 4 items)
 
     void SetTitle(const char* title);
     void SetWinPos(uint x, uint y, uint w, uint h);
@@ -221,6 +220,7 @@ EventType Window_win32::GetEvent(bool wait_for_event){
                 int16_t  y = (int16_t)r.top;
                 if(x != shape.x || y != shape.y)            return MoveEvent  (x, y);  //window moved
             }
+            case WM_CLOSE: { LOGI("WM_CLOSE\n");  return CloseEvent(); }
         }
         DispatchMessage(&msg);
     }
@@ -230,9 +230,8 @@ EventType Window_win32::GetEvent(bool wait_for_event){
 // MS-Windows event handling function:
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
-        case WM_CLOSE:
-            LOGI("WM_CLOSE\n");
-            DestroyWindow(hWnd);
+    case WM_CLOSE:
+            PostMessage(hWnd, WM_CLOSE, 0, 0);  // for OnCloseEvent
             return 0;
         case WM_DESTROY:
             LOGI("WM_DESTROY\n");
@@ -242,14 +241,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
             //printf("WM_PAINT\n");
             return 0;
         case WM_GETMINMAXINFO:     // set window's minimum size
-                                   //((MINMAXINFO*)lParam)->ptMinTrackSize = demo.minsize;
+            //((MINMAXINFO*)lParam)->ptMinTrackSize = demo.minsize;
             return 0;
-
         case WM_EXITSIZEMOVE : { PostMessage(hWnd, WM_RESHAPE, 0, 0);          break; }
         case WM_ACTIVATE     : { PostMessage(hWnd, WM_ACTIVE, wParam, lParam); break; }
-
-    default:
-        break;
+        default: break;
     }
     return DefWindowProc(hWnd, uMsg, wParam, lParam);
 }
