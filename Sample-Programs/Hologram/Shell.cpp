@@ -277,6 +277,7 @@ void Shell::destroy_context()
     ctx_.game_queue = VK_NULL_HANDLE;
     ctx_.present_queue = VK_NULL_HANDLE;
 
+    vk::DeviceWaitIdle(ctx_.dev);
     vk::DestroyDevice(ctx_.dev, nullptr);
     ctx_.dev = VK_NULL_HANDLE;
 }

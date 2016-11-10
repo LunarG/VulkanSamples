@@ -2151,6 +2151,7 @@ void destroy_renderpass(struct sample_info &info) {
 }
 
 void destroy_device(struct sample_info &info) {
+    vkDeviceWaitIdle(info.device);
     vkDestroyDevice(info.device, NULL);
 }
 

@@ -599,6 +599,7 @@ vkDestroyDevice(VkDevice device, const VkAllocationCallbacks *pAllocator) {
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
     my_data->Cleanup();
     VkLayerDispatchTable *pTable = my_data->device_dispatch_table;
+    pTable->DeviceWaitIdle(device);
     pTable->DestroyDevice(device, pAllocator);
     delete pTable;
     layer_data_map.erase(key);
