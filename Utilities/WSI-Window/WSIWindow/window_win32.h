@@ -57,6 +57,11 @@ class Window_win32 : public WindowImpl{
     HWND      hWnd;
     //bool ShapeMode;
 
+    //---Touch Device---
+    CMTouch MTouch;
+    uint32_t touchID[CMTouch::MAX_POINTERS]={};
+    //------------------
+
     void SetTitle(const char* title);
     void SetWinPos(uint x, uint y, uint w, uint h);
     void CreateSurface(VkInstance instance);
@@ -221,6 +226,37 @@ EventType Window_win32::GetEvent(bool wait_for_event){
                 if(x != shape.x || y != shape.y)            return MoveEvent  (x, y);  //window moved
             }
             case WM_CLOSE: { LOGI("WM_CLOSE\n");  return CloseEvent(); }
+#ifdef ENABLE_MULTITOUCH
+            case WM_POINTERUPDATE:
+            case WM_POINTERDOWN  :
+            case WM_POINTERUP    :{
+                POINTER_INFO pointerInfo;
+                if (GetPointerInfo(GET_POINTERID_WPARAM(msg.wParam), &pointerInfo)) {
+                    uint  id = pointerInfo.pointerId;
+                    POINT pt = pointerInfo.ptPixelLocation;
+                    ScreenToClient(hWnd, &pt);
+                    switch (msg.message) {
+                        case WM_POINTERDOWN  :{
+                            forCount(CMTouch::MAX_POINTERS) if(touchID[i]==0){          //Find first empty slot
+                                touchID[i]=id;                                          //Claim slot
+                                return MTouch.Event(eDOWN,x,y,i);                       //touch down event
+                            }
+                        }
+                        case WM_POINTERUPDATE:{
+                            forCount(CMTouch::MAX_POINTERS) if(touchID[i]==id){          //Find first empty slot
+                                return MTouch.Event(eMOVE,x,y,i);                       //touch move event
+                            }
+                        }
+                        case WM_POINTERUP    :{
+                            forCount(CMTouch::MAX_POINTERS) if(touchID[i]==id){         //Find first empty slot
+                                touchID[i]=0;                                           //Clear slot
+                                return MTouch.Event(eUP  ,x,y,i);                       //touch up event
+                            }
+                        }
+                    }
+                }
+            }
+#endif
         }
         DispatchMessage(&msg);
     }

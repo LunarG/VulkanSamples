@@ -21,6 +21,10 @@ if (ENABLE_LOGGING)
     target_compile_definitions(${LIBRARY_NAME} PUBLIC -DENABLE_LOGGING) #enable logging for target project
 endif()
 
+option(ENABLE_MULTITOUCH    "Multi-touch screen support"  ON)
+if (ENABLE_MULTITOUCH)
+    add_definitions(-DENABLE_MULTITOUCH)
+endif()
 
 #=================================================================
 #==============================LINUX==============================
@@ -30,7 +34,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     #option(BUILD_WSI_XLIB_SUPPORT    "Build Xlib WSI support"    OFF)
     #option(BUILD_WSI_WAYLAND_SUPPORT "Build Wayland WSI support" OFF)
     #option(BUILD_WSI_MIR_SUPPORT     "Build Mir WSI support"     OFF)
-    option(ENABLE_MULTITOUCH    "X11 Multi-touch-screen support"  ON)  #adds 8.5KB to exe size
+    #option(ENABLE_MULTITOUCH    "X11 Multi-touch-screen support"  ON)  #adds 8.5KB to exe size
 
     if (BUILD_WSI_XCB_SUPPORT)
         add_definitions(-DVK_USE_PLATFORM_XCB_KHR)
@@ -82,7 +86,6 @@ if(WIN32)
     if(NOT ${CMAKE_SYSTEM_VERSION} VERSION_LESS 10)                          # Check for Windows 10+
         target_compile_definitions(${LIBRARY_NAME} PUBLIC -DWIN10PLUS)       # define WIN10PLUS
     endif()
-
 endif()
 #=================================================================
 #=============================ANDROID=============================
