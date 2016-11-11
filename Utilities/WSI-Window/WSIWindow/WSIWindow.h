@@ -39,7 +39,6 @@
 
 // TODO:
 //
-// Multi-touch input (Done on Android and Linux, but Win32 is WIP)
 // Multi-window support
 // More Documentation
 // Keyboard: function to get native keycode
@@ -48,7 +47,6 @@
 // Android: Option to set render buffer size, smaller than window size. (ANativeWindow_SetBufferGeometry) (Dustin)
 // Android: Rotate screen according to width/height aspect ratio. (Dustin)
 // Desktop: Pick render device with flag: DONT_CARE / PERFORMANCE / INTEGRATED  (Mark Young)
-// Enable_MultiTouch function. When disabled, touch-screen should emulate the mouse instead.
 // Enable/Disable text event (to skip TranslateMessage and show/hide Android keyboard)
 // Swapchain and vsync
 // Make window DPI-aware.
