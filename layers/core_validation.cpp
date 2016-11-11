@@ -4754,18 +4754,25 @@ static bool RetireWorkOnQueue(layer_data *dev_data, QUEUE_NODE *pQueue, uint64_t
 
         for (auto & wait : submission.waitSemaphores) {
             auto pSemaphore = getSemaphoreNode(dev_data, wait.semaphore);
-            pSemaphore->in_use.fetch_sub(1);
+            if (pSemaphore) {
+                pSemaphore->in_use.fetch_sub(1);
+            }
             auto & lastSeq = otherQueueSeqs[wait.queue];
             lastSeq = std::max(lastSeq, wait.seq);
         }
 
         for (auto & semaphore : submission.signalSemaphores) {
             auto pSemaphore = getSemaphoreNode(dev_data, semaphore);
-            pSemaphore->in_use.fetch_sub(1);
+            if (pSemaphore) {
+                pSemaphore->in_use.fetch_sub(1);
+            }
         }
 
         for (auto cb : submission.cbs) {
             auto cb_node = getCBNode(dev_data, cb);
+            if (!cb_node) {
+                continue;
+            }
             // First perform decrement on general case bound objects
             DecrementBoundResources(dev_data, cb_node);
             for (auto drawDataElement : cb_node->drawData) {
