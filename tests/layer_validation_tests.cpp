@@ -3501,10 +3501,12 @@ TEST_F(VkLayerTest, CommandBufferTwoSubmits) {
 
     err = vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
     ASSERT_VK_SUCCESS(err);
+    vkQueueWaitIdle(m_device->m_queue);
 
     // Cause validation error by re-submitting cmd buffer that should only be
     // submitted once
     err = vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
+    vkQueueWaitIdle(m_device->m_queue);
 
     m_errorMonitor->VerifyFound();
 }
