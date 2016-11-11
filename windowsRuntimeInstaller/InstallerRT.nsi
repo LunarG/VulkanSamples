@@ -451,7 +451,7 @@ Section
         # vulkaninfo.exe
         File /oname=${APILOWER}info-$FileVersion.exe ..\build\demos\Release\${APILOWER}info.exe
         SetOutPath "$INSTDIR"
-        File /oname=${APILOWER}info ..\build\demos\Release\${APILOWER}info.exe
+        File /oname=${APILOWER}info.exe ..\build\demos\Release\${APILOWER}info.exe
         File /oname=${APILOWER}info32.exe ..\build32\demos\Release\${APILOWER}info.exe
         StrCpy $1 40
         Call CheckForError
