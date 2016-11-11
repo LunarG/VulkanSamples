@@ -82,7 +82,7 @@
 //----------------------------------------------------------------------------------
 
 //--- ANSI escape codes to set text colours. eg. printf(cRED"Red text." cRESET); ---
-#define cFAINT     ANSICODE("\033[38;2;128;128;128m")
+#define cFAINT     ANSICODE("\033[38;2;96;96;96m")
 #define cBRIGHT    ANSICODE("\033[01m")
 #define cRED       ANSICODE("\033[31m")
 #define cGREEN     ANSICODE("\033[32m")
@@ -99,41 +99,41 @@
 //----------------------------------------------------------------------------------
 //----------------Printing Log & Validation messages on Android vs PC---------------
 #ifdef ANDROID
-  #include <jni.h>
-  #include <android/log.h>
-  #define LOG_TAG    "WSIWindow"
-  #define _LOG(...)    __android_log_print(ANDROID_LOG_INFO   ,LOG_TAG,__VA_ARGS__)
-  #define _LOGV(...)   __android_log_print(ANDROID_LOG_VERBOSE,LOG_TAG,__VA_ARGS__)
-  #define _LOGD(...)   __android_log_print(ANDROID_LOG_DEBUG  ,LOG_TAG,__VA_ARGS__)
-  #define _LOGI(...)   __android_log_print(ANDROID_LOG_INFO   ,LOG_TAG,__VA_ARGS__)
-  #define _LOGW(...)   __android_log_print(ANDROID_LOG_WARN   ,LOG_TAG,__VA_ARGS__)
-  #define _LOGE(...)   __android_log_print(ANDROID_LOG_ERROR  ,LOG_TAG,__VA_ARGS__)
-  #define printf(...)  __android_log_print(ANDROID_LOG_INFO   ,LOG_TAG,__VA_ARGS__)
+    #include <jni.h>
+    #include <android/log.h>
+    #define LOG_TAG    "WSIWindow"
+    #define _LOG(...)    __android_log_print(ANDROID_LOG_INFO   ,LOG_TAG,__VA_ARGS__)
+    #define _LOGV(...)   __android_log_print(ANDROID_LOG_VERBOSE,LOG_TAG,__VA_ARGS__)
+    #define _LOGD(...)   __android_log_print(ANDROID_LOG_DEBUG  ,LOG_TAG,__VA_ARGS__)
+    #define _LOGI(...)   __android_log_print(ANDROID_LOG_INFO   ,LOG_TAG,__VA_ARGS__)
+    #define _LOGW(...)   __android_log_print(ANDROID_LOG_WARN   ,LOG_TAG,__VA_ARGS__)
+    #define _LOGE(...)   __android_log_print(ANDROID_LOG_ERROR  ,LOG_TAG,__VA_ARGS__)
+    #define printf(...)  __android_log_print(ANDROID_LOG_INFO   ,LOG_TAG,__VA_ARGS__)
 #else // DESKTOP
-  #define _LOG(...)  {                                    printf(__VA_ARGS__); fflush(stdout);}
-  #define _LOGV(...) {printf(cCYAN   "PERF : "   cRESET); printf(__VA_ARGS__); fflush(stdout);}
-  #define _LOGD(...) {printf(cBLUE   "DEBUG: "   cRESET); printf(__VA_ARGS__); fflush(stdout);}
-  #define _LOGI(...) {printf(cGREEN  "INFO : "   cRESET); printf(__VA_ARGS__); fflush(stdout);}
-  #define _LOGW(...) {printf(cYELLOW "WARNING: " cRESET); printf(__VA_ARGS__); fflush(stdout);}
-  #define _LOGE(...) {printf(cRED    "ERROR: "   cRESET); printf(__VA_ARGS__); fflush(stdout);}
+    #define _LOG(...)  {                                    printf(__VA_ARGS__); fflush(stdout);}
+    #define _LOGV(...) {printf(cCYAN   "PERF : "   cRESET); printf(__VA_ARGS__); fflush(stdout);}
+    #define _LOGD(...) {printf(cBLUE   "DEBUG: "   cRESET); printf(__VA_ARGS__); fflush(stdout);}
+    #define _LOGI(...) {printf(cGREEN  "INFO : "   cRESET); printf(__VA_ARGS__); fflush(stdout);}
+    #define _LOGW(...) {printf(cYELLOW "WARNING: " cRESET); printf(__VA_ARGS__); fflush(stdout);}
+    #define _LOGE(...) {printf(cRED    "ERROR: "   cRESET); printf(__VA_ARGS__); fflush(stdout);}
 #endif
 //----------------------------------------------------------------------------------
 //-----------------------------Enable / Disable Logging-----------------------------
 //  Use these 6 LOG* functions for printing to the terminal, or Android Logcat.
 #ifdef ENABLE_LOGGING
-  #define  LOG(...)  _LOG( __VA_ARGS__)      /*  Prints in white (like printf)  */
-  #define  LOGV(...) _LOGV(__VA_ARGS__)      /*  Prints Performace Warnings     */
-  #define  LOGD(...) _LOGD(__VA_ARGS__)      /*  Prints DEBUG messages in blue  */
-  #define  LOGI(...) _LOGI(__VA_ARGS__)      /*  Prints INFO messages in green  */
-  #define  LOGW(...) _LOGW(__VA_ARGS__)      /*  Prints WARNINGs in yellow      */
-  #define  LOGE(...) _LOGE(__VA_ARGS__)      /*  Prints ERRORs in red           */
+    #define  LOG(...)  _LOG( __VA_ARGS__)      /*  Prints in white (like printf)  */
+    #define  LOGV(...) _LOGV(__VA_ARGS__)      /*  Prints Performace Warnings     */
+    #define  LOGD(...) _LOGD(__VA_ARGS__)      /*  Prints DEBUG messages in blue  */
+    #define  LOGI(...) _LOGI(__VA_ARGS__)      /*  Prints INFO messages in green  */
+    #define  LOGW(...) _LOGW(__VA_ARGS__)      /*  Prints WARNINGs in yellow      */
+    #define  LOGE(...) _LOGE(__VA_ARGS__)      /*  Prints ERRORs in red           */
 #else
-  #define  LOG(...)  {}
-  #define  LOGV(...) {}
-  #define  LOGD(...) {}
-  #define  LOGI(...) {}
-  #define  LOGW(...) {}
-  #define  LOGE(...) {}
+    #define  LOG(...)  {}
+    #define  LOGV(...) {}
+    #define  LOGD(...) {}
+    #define  LOGI(...) {}
+    #define  LOGW(...) {}
+    #define  LOGE(...) {}
 #endif
 //----------------------------------------------------------------------------------
 //=====================================================================================================
@@ -145,32 +145,30 @@
 const char* VkResultStr(VkResult err);  //Convert vulkan result code to a string.
 void ShowVkResult(VkResult err);        //Print warnings and errors.
 
-//--------------------------------------CDebugReport------------------------------------------
+
+//===================================== CDebugReport =========================================
 class CDebugReport{
-    VkInstance                          instance=0;
-    VkDebugReportCallbackEXT            debug_report_callback=0;
-    PFN_vkCreateDebugReportCallbackEXT  vkCreateDebugReportCallbackEXT=0;
-    PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT=0;
-    //PFN_vkDebugReportMessageEXT         vkDebugReportMessageEXT=0;
-    PFN_vkDebugReportCallbackEXT        func=0;
-    VkDebugReportFlagsEXT               flags = VK_DEBUG_REPORT_INFORMATION_BIT_EXT         |  // 1
-                                                VK_DEBUG_REPORT_WARNING_BIT_EXT             |  // 2
-                                                VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT |  // 4
-                                                VK_DEBUG_REPORT_ERROR_BIT_EXT               |  // 8
-                                                VK_DEBUG_REPORT_DEBUG_BIT_EXT               |  //16
-                                                0;
+    CDebugReport();
+    PFN_vkCreateDebugReportCallbackEXT  vkCreateDebugReportCallbackEXT;
+    PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT;
+  //PFN_vkDebugReportMessageEXT         vkDebugReportMessageEXT;
+    VkDebugReportCallbackEXT            debug_report_callback;
+
+    VkInstance                          instance;
+    PFN_vkDebugReportCallbackEXT        func;
+    VkDebugReportFlagsEXT               flags;
 
     void Set(VkDebugReportFlagsEXT flags, PFN_vkDebugReportCallbackEXT debugFunc=0);
     void Print();                                              // Print the debug report flags state.
 
-    friend class CInstance;
+    friend class CInstance;                                    // CInstance calls Init and Destroy
     void Init(VkInstance inst);                                // Initialize with default callback, and all flags enabled.
-    void Destroy();                                            // Destroy the debug report. Must be done BEFORE vkDestroyInstance()
+    void Destroy();                                            // Destroy the debug report. Must be called BEFORE vkDestroyInstance()
 public:
     VkDebugReportFlagsEXT GetFlags(){return flags;}            // Returns current flag settings.
     void SetFlags(VkDebugReportFlagsEXT flags);                // Select which type of messages to display
     void SetCallback(PFN_vkDebugReportCallbackEXT debugFunc);  // Set a custom callback function for printing debug reports
 };
-//--------------------------------------------------------------------------------------------
+//============================================================================================
 
 #endif

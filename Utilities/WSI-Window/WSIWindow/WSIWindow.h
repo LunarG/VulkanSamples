@@ -25,7 +25,7 @@
 *  It provides functions for querying the current state of the window, keyboard,
 *  and mouse. Also, events may be processed via either polling or callbacks.
 *
-*  For polling, use the "PollEvent" function to return one event at a time,
+*  For polling, use the "GetEvent" function to return one event at a time,
 *  and process, using a case statement.  For an example, see the "ProcessEvents" implementation.
 *
 *  For callbacks, use the "ProcessEvents" function to dispatch all queued events to their
@@ -39,6 +39,7 @@
 
 // TODO:
 //
+// Full-screen mode
 // Multi-window support
 // More Documentation
 // Keyboard: function to get native keycode
@@ -85,7 +86,7 @@ public:
     //--Event loop--
     EventType GetEvent(bool wait_for_event=false);     // Return a single event from the queue (lower-level alternative to using "ProcessEvents")
     bool ProcessEvents(bool wait_for_event=false);     // Poll for events, and call appropriate event handlers. Returns false if window is being closed.
-    //void Run(){ while(ProcessEvents()){} }             // Run message loop until window is closed.  TODO: render
+    //void Run(){ while(ProcessEvents()){} }             // Run message loop until window is closed.  TODO: OnFrameEvent?
 
     //-- Virtual Functions as event handlers --
     virtual void OnMouseEvent (eAction action, int16_t x, int16_t y, uint8_t btn){}  // Callback for mouse events

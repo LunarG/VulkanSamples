@@ -38,7 +38,7 @@ const char* VkResultStr(VkResult err){
         STR(VK_ERROR_INCOMPATIBLE_DRIVER);   // -9
         STR(VK_ERROR_TOO_MANY_OBJECTS);      // -10
         STR(VK_ERROR_FORMAT_NOT_SUPPORTED);  // -11
-        //STR(VK_ERROR_FRAGMENTED_POOL);       // -12
+        //STR(VK_ERROR_FRAGMENTED_POOL);       // -12 (this item requires latest vulkan.h)
 
         STR(VK_ERROR_SURFACE_LOST_KHR);         // -1000000000
         STR(VK_ERROR_NATIVE_WINDOW_IN_USE_KHR); // -1000000001
@@ -73,13 +73,13 @@ DebugReportFn(VkDebugReportFlagsEXT msgFlags, VkDebugReportObjectTypeEXT objType
     char buf[512];
     snprintf(buf,sizeof(buf),cRESET "[%s] Code %d : %s\n", pLayerPrefix, msgCode, pMsg);
     switch(msgFlags){
-        case VK_DEBUG_REPORT_ERROR_BIT_EXT                : _LOGE("%s",buf);  return true;   //Bail out for errors
-        case VK_DEBUG_REPORT_WARNING_BIT_EXT              : _LOGW("%s",buf);  return false;  //Don't bail out
-        case VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT  : _LOGV("%s",buf);  return false;
-        case VK_DEBUG_REPORT_INFORMATION_BIT_EXT          : _LOGI("%s",buf);  return false;
-        case VK_DEBUG_REPORT_DEBUG_BIT_EXT                : _LOGD("%s",buf);  return false;
+        case VK_DEBUG_REPORT_INFORMATION_BIT_EXT          : _LOGI("%s",buf);  return false;  // 1
+        case VK_DEBUG_REPORT_WARNING_BIT_EXT              : _LOGW("%s",buf);  return false;  // 2
+        case VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT  : _LOGV("%s",buf);  return false;  // 4
+        case VK_DEBUG_REPORT_ERROR_BIT_EXT                : _LOGE("%s",buf);  return true;   // 8 Bail out for errors
+        case VK_DEBUG_REPORT_DEBUG_BIT_EXT                : _LOGD("%s",buf);  return false;  //16
+        default : return false; //Don't bail out.
     }
-    return false;  //Don't bail out.
 }
 //--------------------------------------------------------------------------------------------
 
@@ -91,35 +91,45 @@ DebugReportFn(VkDebugReportFlagsEXT msgFlags, VkDebugReportObjectTypeEXT objType
 //--------------------------------------------------------------------------------------------
 
 //----------------------------------------CDebugReport----------------------------------------
+CDebugReport::CDebugReport(): vkCreateDebugReportCallbackEXT(0),vkDestroyDebugReportCallbackEXT(0),
+    debug_report_callback(0), instance(0), func(DebugReportFn), flags(0) {}
+
 void CDebugReport::Init(VkInstance inst){
     assert(!!inst);
     GET_INSTANCE_PROC_ADDR(inst, CreateDebugReportCallbackEXT);
     GET_INSTANCE_PROC_ADDR(inst,DestroyDebugReportCallbackEXT);
-    //GET_INSTANCE_PROC_ADDR(inst,       DebugReportMessageEXT );
-    this->instance = inst;
-    this->func     = DebugReportFn; //Use default debug-report function.
+  //GET_INSTANCE_PROC_ADDR(inst,       DebugReportMessageEXT );
+
+    instance = inst;
+    func     = DebugReportFn; //Use default debug-report function.
+    flags = VK_DEBUG_REPORT_INFORMATION_BIT_EXT         |  // 1
+            VK_DEBUG_REPORT_WARNING_BIT_EXT             |  // 2
+            VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT |  // 4
+            VK_DEBUG_REPORT_ERROR_BIT_EXT               |  // 8
+            VK_DEBUG_REPORT_DEBUG_BIT_EXT               |  //16
+            0;
     Set(flags,func);
 }
 
 void CDebugReport::SetFlags   (VkDebugReportFlagsEXT flags)           { Set(flags,func); Print(); }
 void CDebugReport::SetCallback(PFN_vkDebugReportCallbackEXT debugFunc){ Set(flags,debugFunc);     }
 
-void CDebugReport::Set(VkDebugReportFlagsEXT flags, PFN_vkDebugReportCallbackEXT debugFunc){
+void CDebugReport::Set(VkDebugReportFlagsEXT newFlags, PFN_vkDebugReportCallbackEXT newFunc){
     if(!instance) {LOGW("Debug Report was not initialized.\n"); return;}
-    if(!debugFunc) debugFunc=DebugReportFn;  // callback may not be empty
+    if(!newFunc) newFunc=DebugReportFn;      // ensure callback is not empty
 
-    Destroy();                               //Destroy old report before creating new one
-    this->flags = 0;                         //Turn off reports while changing settings
-    this->func  = debugFunc;
+    Destroy();                               // Destroy old report before creating new one
+    flags = 0;                               // Turn off reports while changing settings
+    func  = newFunc;
 
     VkDebugReportCallbackCreateInfoEXT create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
     create_info.pNext = NULL;
-    create_info.flags = flags;
-    create_info.pfnCallback = debugFunc;     //Callback function to call
-    create_info.pUserData = this;
+    create_info.flags       = newFlags;
+    create_info.pfnCallback = newFunc;      // Callback function to call
+    create_info.pUserData   = this;         // Give static callback access to flags
     VKERRCHECK(vkCreateDebugReportCallbackEXT(instance, &create_info, NULL, &debug_report_callback));
-    this->flags = flags;                     //Turn reports back on
+    flags = newFlags;                       // Turn reports back on
 }
 
 void CDebugReport::Destroy(){
@@ -138,7 +148,7 @@ void CDebugReport::Print(){  //print the state of the report flags
     );
 }
 #else   //No Validation
-void CDebugReport::SetFlags(VkDebugReportFlagsEXT flags)              { LOGW("Vulkan Validation disabled at compile-time.\n"); }
-void CDebugReport::SetCallback(PFN_vkDebugReportCallbackEXT debugFunc){ LOGW("Vulkan Validation disabled at compile-time.\n"); }
+void CDebugReport::SetFlags(VkDebugReportFlagsEXT flags)              { LOGW("ENABLE_VALIDATION was disabled at compile-time.\n"); }
+void CDebugReport::SetCallback(PFN_vkDebugReportCallbackEXT debugFunc){ LOGW("ENABLE_VALIDATION was disabled at compile-time.\n"); }
 #endif  //ENABLE_VALIDATION
 //--------------------------------------------------------------------------------------------
