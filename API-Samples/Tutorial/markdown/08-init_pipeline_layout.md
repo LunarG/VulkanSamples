@@ -62,6 +62,7 @@ which you use to describe each descriptor set:
     layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     layout_binding.descriptorCount = 1;
     layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    layout_binding.pImmutableSamplers = NULL;
 
 * You happen to be making only one descriptor set, so the only
 choice for the `binding` member is 0.
@@ -75,11 +76,13 @@ the shader vertex stage.
 With the binding for our one descriptor set defined, you are ready to
 create the descriptor set layout:
 
+    #define NUM_DESCRIPTOR_SETS 1
     VkDescriptorSetLayoutCreateInfo descriptor_layout = {};
     descriptor_layout.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     descriptor_layout.pNext = NULL;
     descriptor_layout.bindingCount = 1;
     descriptor_layout.pBindings = &layout_binding;
+    info.desc_layout.resize(NUM_DESCRIPTOR_SETS);
     res = vkCreateDescriptorSetLayout(info.device, &descriptor_layout, NULL,
                                       info.desc_layout.data());
 

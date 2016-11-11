@@ -43,9 +43,9 @@ This layout describes how the descriptor set is to be allocated.
     alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info[0].pNext = NULL;
     alloc_info[0].descriptorPool = info.desc_pool;
-    alloc_info[0].descriptorSetCount = 1;
+    alloc_info[0].descriptorSetCount = NUM_DESCRIPTOR_SETS;
     alloc_info[0].pSetLayouts = info.desc_layout.data();
-    info.desc_set.resize(1);
+    info.desc_set.resize(NUM_DESCRIPTOR_SETS);
     res = vkAllocateDescriptorSets(info.device, alloc_info, info.desc_set.data());
 
 ## Update the Descriptor Set

@@ -95,7 +95,7 @@ The next data structure configures the rasterization operations in the GPU.
     rs.flags = 0;
     rs.polygonMode = VK_POLYGON_MODE_FILL;
     rs.cullMode = VK_CULL_MODE_BACK_BIT;
-    rs.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    rs.frontFace = VK_FRONT_FACE_CLOCKWISE;
     rs.depthClampEnable = VK_TRUE;
     rs.rasterizerDiscardEnable = VK_FALSE;
     rs.depthBiasEnable = VK_FALSE;
