@@ -4137,6 +4137,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateInstance(
     char **filtered_extension_names = NULL;
     VkInstanceCreateInfo icd_create_info;
     VkResult res = VK_SUCCESS;
+    bool one_icd_successful = false;
 
     struct loader_instance *ptr_instance = (struct loader_instance *)*pInstance;
     memcpy(&icd_create_info, pCreateInfo, sizeof(icd_create_info));
@@ -4223,12 +4224,14 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateInstance(
         loader_destroy_generic_list(ptr_instance,
                                     (struct loader_generic_list *)&icd_exts);
 
-        res = ptr_instance->icd_tramp_list.scanned_list[i].CreateInstance(
-            &icd_create_info, pAllocator, &(icd_term->instance));
-        if (VK_ERROR_OUT_OF_HOST_MEMORY == res) {
+        VkResult icd_result =
+            ptr_instance->icd_tramp_list.scanned_list[i].CreateInstance(
+                &icd_create_info, pAllocator, &(icd_term->instance));
+        if (VK_ERROR_OUT_OF_HOST_MEMORY == icd_result) {
             // If out of memory, bail immediately.
+            res = VK_ERROR_OUT_OF_HOST_MEMORY;
             goto out;
-        } else if (VK_SUCCESS != res) {
+        } else if (VK_SUCCESS != icd_result) {
             loader_log(ptr_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                        "ICD ignored: failed to CreateInstance in ICD %d", i);
             ptr_instance->icd_terms = icd_term->next;
@@ -4245,14 +4248,16 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateInstance(
                        "entrypoints with ICD");
             continue;
         }
+
+        // If we made it this far, at least one ICD was successful
+        one_icd_successful = true;
     }
 
-    /*
-     * If no ICDs were added to instance list and res is unchanged
-     * from it's initial value, the loader was unable to find
-     * a suitable ICD.
-     */
-    if (VK_SUCCESS == res && ptr_instance->icd_terms == NULL) {
+    // If no ICDs were added to instance list and res is unchanged
+    // from it's initial value, the loader was unable to find
+    // a suitable ICD.
+    if (VK_SUCCESS == res &&
+        (ptr_instance->icd_terms == NULL || !one_icd_successful)) {
         res = VK_ERROR_INCOMPATIBLE_DRIVER;
     }
 
