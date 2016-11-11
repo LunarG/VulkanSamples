@@ -81,7 +81,7 @@ int main(int argc, char *argv[]){
     CInstance Inst(true);                              //Create a Vulkan Instance
     Inst.DebugReport.SetFlags(31);                     //Select message types
 
-    MyWindow Window(Inst,"WSI-Window",640,480);        //Create a Vulkan window
+    MyWindow Window(Inst,"WSI-Window Test",640,480);   //Create a Vulkan window
     Window.ShowKeyboard(true);                         //Show soft-keyboard on Android
     LOGW("Test Warnings\n");
     Window.SetWinPos(0,0);

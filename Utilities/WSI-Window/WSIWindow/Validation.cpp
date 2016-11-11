@@ -148,6 +148,7 @@ void CDebugReport::Print(){  //print the state of the report flags
     );
 }
 #else   //No Validation
+     CDebugReport::CDebugReport(){}
 void CDebugReport::SetFlags(VkDebugReportFlagsEXT flags)              { LOGW("ENABLE_VALIDATION was disabled at compile-time.\n"); }
 void CDebugReport::SetCallback(PFN_vkDebugReportCallbackEXT debugFunc){ LOGW("ENABLE_VALIDATION was disabled at compile-time.\n"); }
 #endif  //ENABLE_VALIDATION
