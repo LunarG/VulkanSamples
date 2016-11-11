@@ -5079,15 +5079,37 @@ QueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits, V
     return result;
 }
 
+static bool PreCallValidateAllocateMemory(layer_data *dev_data) {
+    bool skip = false;
+    if (dev_data->memObjMap.size() >= dev_data->phys_dev_properties.properties.limits.maxMemoryAllocationCount) {
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                        reinterpret_cast<const uint64_t &>(dev_data->device), __LINE__, VALIDATION_ERROR_00611, "MEM",
+                        "Number of currently valid memory objects is not less than the maximum allowed (%u). %s",
+                        dev_data->phys_dev_properties.properties.limits.maxMemoryAllocationCount,
+                        validation_error_map[VALIDATION_ERROR_00611]);
+    }
+    return skip;
+}
+
+static void PostCallRecordAllocateMemory(layer_data *dev_data, const VkMemoryAllocateInfo *pAllocateInfo, VkDeviceMemory *pMemory) {
+    add_mem_obj_info(dev_data, dev_data->device, *pMemory, pAllocateInfo);
+    print_mem_list(dev_data);
+    return;
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL AllocateMemory(VkDevice device, const VkMemoryAllocateInfo *pAllocateInfo,
                                               const VkAllocationCallbacks *pAllocator, VkDeviceMemory *pMemory) {
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = my_data->dispatch_table.AllocateMemory(device, pAllocateInfo, pAllocator, pMemory);
-    if (result == VK_SUCCESS) {
-        // TODO : Track allocations and overall size here
-        std::lock_guard<std::mutex> lock(global_lock);
-        add_mem_obj_info(my_data, device, *pMemory, pAllocateInfo);
-        print_mem_list(my_data);
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    std::unique_lock<std::mutex> lock(global_lock);
+    bool skip = PreCallValidateAllocateMemory(dev_data);
+    if (!skip) {
+        lock.unlock();
+        result = dev_data->dispatch_table.AllocateMemory(device, pAllocateInfo, pAllocator, pMemory);
+        lock.lock();
+        if (VK_SUCCESS == result) {
+            PostCallRecordAllocateMemory(dev_data, pAllocateInfo, pMemory);
+        }
     }
     return result;
 }
