@@ -471,9 +471,9 @@ void Shell::resize_swapchain(uint32_t width_hint, uint32_t height_hint)
 
     // destroy the old swapchain
     if (swapchain_info.oldSwapchain != VK_NULL_HANDLE) {
-        game_.detach_swapchain();
-
         vk::DeviceWaitIdle(ctx_.dev);
+
+        game_.detach_swapchain();
         vk::DestroySwapchainKHR(ctx_.dev, swapchain_info.oldSwapchain, nullptr);
     }
 
