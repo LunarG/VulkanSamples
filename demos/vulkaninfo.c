@@ -908,12 +908,15 @@ static void app_destroy_xcb_window(struct app_instance *inst) {
 //----------------------------XLib---------------------------
 #ifdef VK_USE_PLATFORM_XLIB_KHR
 static void app_create_xlib_window(struct app_instance *inst) {
-    inst->xlib_display = XOpenDisplay(NULL);
     long visualMask = VisualScreenMask;
     int numberOfVisuals;
 
-    if (inst->xlib_display == NULL)
-        return;
+    inst->xlib_display = XOpenDisplay(NULL);
+    if (inst->xlib_display == NULL) {
+        printf("XLib failed to connect to the X server.\nExiting ...\n");
+        fflush(stdout);
+        exit(1);
+    }
 
     XVisualInfo vInfoTemplate={};
     vInfoTemplate.screen = DefaultScreen(inst->xlib_display);
@@ -1514,7 +1517,8 @@ int main(int argc, char **argv) {
 #if defined(VK_USE_PLATFORM_XCB_KHR) || defined(VK_USE_PLATFORM_XLIB_KHR)
     if (getenv("DISPLAY") == NULL) {
         printf("'DISPLAY' environment variable not set... Exiting!\n");
-        goto out;
+        fflush(stdout);
+        exit(1);
     }
 #endif
 //--XCB--
@@ -1537,10 +1541,6 @@ int main(int argc, char **argv) {
     if (has_extension(VK_KHR_XLIB_SURFACE_EXTENSION_NAME,
                       inst.global_extension_count, inst.global_extensions)) {
         app_create_xlib_window(&inst);
-        if (inst.xlib_display == NULL) {
-            printf("'DISPLAY' variable not set correctly. Exiting!\n'");
-            goto out;
-        }
         for (i = 0; i < gpu_count; i++) {
             app_create_xlib_surface(&inst);
             printf("GPU id       : %u (%s)\n", i, gpus[i].props.deviceName);
@@ -1561,7 +1561,6 @@ int main(int argc, char **argv) {
         printf("\n\n");
     }
 
-out:
     for (i = 0; i < gpu_count; i++)
         app_gpu_destroy(&gpus[i]);
 
