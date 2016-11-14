@@ -756,8 +756,8 @@ vkDestroyDevice(VkDevice device, const VkAllocationCallbacks *pAllocator) {
 
     disp->DestroyDevice(device, pAllocator);
     dev->chain_device = NULL;
-    loader_remove_logical_device(inst, icd_term, dev, pAllocator);
     dev->icd_device = NULL;
+    loader_remove_logical_device(inst, icd_term, dev, pAllocator);
 
     loader_platform_thread_unlock_mutex(&loader_lock);
 }
