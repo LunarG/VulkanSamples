@@ -14,14 +14,10 @@
 * limitations under the License.
 */
 
+#include <sstream>
+
 #include "Game.h"
 #include "Shell.h"
-
-#if (defined(_MSC_VER) && _MSC_VER < 1900 /*vs2015*/) ||                       \
-    defined MINGW_HAS_SECURE_API
-#include <basetsd.h>
-#define snprintf sprintf_s
-#endif
 
 void Game::print_stats() {
     // Output frame count and measured elapsed time
@@ -29,9 +25,9 @@ void Game::print_stats() {
     auto elapsed = now - start_time;
     auto elapsed_millis =
         std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
-    char msg[256];
-    snprintf(msg, 255, "frames:%d, elapsedms:%ld", frame_count, elapsed_millis);
-    shell_->log(Shell::LogPriority::LOG_INFO, msg);
+    std::stringstream ss;
+    ss << "frames:" << frame_count << ", elapsedms:" << elapsed_millis;
+    shell_->log(Shell::LogPriority::LOG_INFO, ss.str().c_str());
 }
 
 void Game::quit() {
