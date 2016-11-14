@@ -5083,10 +5083,12 @@ VKAPI_ATTR VkResult VKAPI_CALL AllocateMemory(VkDevice device, const VkMemoryAll
                                               const VkAllocationCallbacks *pAllocator, VkDeviceMemory *pMemory) {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = my_data->dispatch_table.AllocateMemory(device, pAllocateInfo, pAllocator, pMemory);
-    // TODO : Track allocations and overall size here
-    std::lock_guard<std::mutex> lock(global_lock);
-    add_mem_obj_info(my_data, device, *pMemory, pAllocateInfo);
-    print_mem_list(my_data);
+    if (result == VK_SUCCESS) {
+        // TODO : Track allocations and overall size here
+        std::lock_guard<std::mutex> lock(global_lock);
+        add_mem_obj_info(my_data, device, *pMemory, pAllocateInfo);
+        print_mem_list(my_data);
+    }
     return result;
 }
 
