@@ -191,7 +191,7 @@ void CInstance::Print(){ printf("->Instance %s created.\n",(!!instance)?"":"NOT"
 
 CInstance::~CInstance(){
 #ifdef ENABLE_VALIDATION
-    DebugReport.Destroy();               //Must be done BEFORE vkDestroyInstance()
+    DebugReport.Destroy();               //Must be called BEFORE vkDestroyInstance()
 #endif
     vkDestroyInstance(instance, NULL);
     LOGI("Vulkan Instance destroyed\n");

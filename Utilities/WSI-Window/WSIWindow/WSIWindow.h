@@ -45,8 +45,9 @@
 // Keyboard: function to get native keycode
 // Keyboard: Clipboard and IME
 // Android: window resize events (WIP)
+// Android: IsKeyboardVisible() function?
 // Android: Option to set render buffer size, smaller than window size. (ANativeWindow_SetBufferGeometry) (Dustin)
-// Android: Rotate screen according to width/height aspect ratio. (Dustin)
+// Android: Rotate screen according to width/height aspect ratio, for portrait / landscape modes. (Dustin)
 // Desktop: Pick render device with flag: DONT_CARE / PERFORMANCE / INTEGRATED  (Mark Young)
 // Enable/Disable text event (to skip TranslateMessage and show/hide Android keyboard)
 // Swapchain and vsync

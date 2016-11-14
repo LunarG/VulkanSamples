@@ -38,7 +38,7 @@ const char* VkResultStr(VkResult err){
         STR(VK_ERROR_INCOMPATIBLE_DRIVER);   // -9
         STR(VK_ERROR_TOO_MANY_OBJECTS);      // -10
         STR(VK_ERROR_FORMAT_NOT_SUPPORTED);  // -11
-        //STR(VK_ERROR_FRAGMENTED_POOL);       // -12 (this item requires latest vulkan.h)
+        STR(VK_ERROR_FRAGMENTED_POOL);       // -12
 
         STR(VK_ERROR_SURFACE_LOST_KHR);         // -1000000000
         STR(VK_ERROR_NATIVE_WINDOW_IN_USE_KHR); // -1000000001
@@ -68,7 +68,6 @@ DebugReportFn(VkDebugReportFlagsEXT msgFlags, VkDebugReportObjectTypeEXT objType
         size_t location, int32_t msgCode, const char *pLayerPrefix, const char *pMsg, void *pUserData) {
     CDebugReport& DebugReport=*(CDebugReport*)pUserData;                       // Get CDebugReport instance
     msgFlags &= DebugReport.GetFlags();                                        // Discard disabled messages
-    //if(objType==VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT) return false;  // Discard messages from DebugReport module
 
     char buf[512];
     snprintf(buf,sizeof(buf),cRESET "[%s] Code %d : %s\n", pLayerPrefix, msgCode, pMsg);
@@ -91,8 +90,6 @@ DebugReportFn(VkDebugReportFlagsEXT msgFlags, VkDebugReportObjectTypeEXT objType
 //--------------------------------------------------------------------------------------------
 
 //----------------------------------------CDebugReport----------------------------------------
-CDebugReport::CDebugReport(): vkCreateDebugReportCallbackEXT(0),vkDestroyDebugReportCallbackEXT(0),
-    debug_report_callback(0), instance(0), func(DebugReportFn), flags(0) {}
 
 void CDebugReport::Init(VkInstance inst){
     assert(!!inst);
@@ -117,11 +114,10 @@ void CDebugReport::SetCallback(PFN_vkDebugReportCallbackEXT debugFunc){ Set(flag
 void CDebugReport::Set(VkDebugReportFlagsEXT newFlags, PFN_vkDebugReportCallbackEXT newFunc){
     if(!instance) {LOGW("Debug Report was not initialized.\n"); return;}
     if(!newFunc) newFunc=DebugReportFn;      // ensure callback is not empty
+    func  = newFunc;
+    flags = 0;                               // turn off flags while changing settings
 
     Destroy();                               // Destroy old report before creating new one
-    flags = 0;                               // Turn off reports while changing settings
-    func  = newFunc;
-
     VkDebugReportCallbackCreateInfoEXT create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
     create_info.pNext = NULL;
@@ -129,7 +125,7 @@ void CDebugReport::Set(VkDebugReportFlagsEXT newFlags, PFN_vkDebugReportCallback
     create_info.pfnCallback = newFunc;      // Callback function to call
     create_info.pUserData   = this;         // Give static callback access to flags
     VKERRCHECK(vkCreateDebugReportCallbackEXT(instance, &create_info, NULL, &debug_report_callback));
-    flags = newFlags;                       // Turn reports back on
+    flags = newFlags;                       // turn flags back on
 }
 
 void CDebugReport::Destroy(){
@@ -138,18 +134,21 @@ void CDebugReport::Destroy(){
 }
 
 void CDebugReport::Print(){  //print the state of the report flags
-    _LOG("Debug Report flags : [%s" cRESET "%s" cRESET "%s" cRESET "%s" cRESET "%s\b" cRESET "] = %d\n",
+    char buf[256]={};
+    sprintf(buf,"Debug Report flags : [%s" cRESET "%s" cRESET "%s" cRESET "%s" cRESET "%s",
         (flags& 1) ? cGREEN "INFO|" : cFAINT cSTRIKEOUT "info|",
         (flags& 2) ? cYELLOW"WARN|" : cFAINT cSTRIKEOUT "warn|",
         (flags& 4) ? cCYAN  "PERF|" : cFAINT cSTRIKEOUT "perf|",
         (flags& 8) ? cRED   "ERROR|": cFAINT cSTRIKEOUT "error|",
-        (flags&16) ? cBLUE  "DEBUG|": cFAINT cSTRIKEOUT "debug|",
-        flags
-    );
+        (flags&16) ? cBLUE  "DEBUG|": cFAINT cSTRIKEOUT "debug|");
+    buf[strlen(buf)-1]=0;  //delete last character;
+    _LOG("%s" cRESET "] = %d\n",buf,flags);
 }
 #else   //No Validation
-     CDebugReport::CDebugReport(){}
-void CDebugReport::SetFlags(VkDebugReportFlagsEXT flags)              { LOGW("ENABLE_VALIDATION was disabled at compile-time.\n"); }
-void CDebugReport::SetCallback(PFN_vkDebugReportCallbackEXT debugFunc){ LOGW("ENABLE_VALIDATION was disabled at compile-time.\n"); }
+void CDebugReport::SetFlags(VkDebugReportFlagsEXT flags)              { LOGW("Vulkan Validation was not enabled at compile-time.\n"); }
+void CDebugReport::SetCallback(PFN_vkDebugReportCallbackEXT debugFunc){ LOGW("Vulkan Validation was not enabled at compile-time.\n"); }
 #endif  //ENABLE_VALIDATION
+
+CDebugReport::CDebugReport(): vkCreateDebugReportCallbackEXT(0),vkDestroyDebugReportCallbackEXT(0),
+    debug_report_callback(0), instance(0), func(0), flags(0) {}
 //--------------------------------------------------------------------------------------------

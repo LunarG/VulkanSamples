@@ -67,7 +67,7 @@ public:
     static const int MAX_POINTERS=10;  //Max 10 fingers
     int count;
     CPointer Pointers[MAX_POINTERS];
-    void Clear(){ memset(this,0,sizeof(this)); }
+    void Clear(){ memset(this,0,sizeof(*this)); }
 
     EventType Event(eAction action, float x, float y, uint8_t id) {
         if (id >= MAX_POINTERS)return {};  // Exit if too many fingers
