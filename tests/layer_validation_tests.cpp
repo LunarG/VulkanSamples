@@ -1575,11 +1575,12 @@ TEST_F(VkLayerTest, EnableWsiBeforeUse) {
 // Set this (for now, until all platforms are supported and tested):
 #define NEED_TO_TEST_THIS_ON_PLATFORM
 #endif // VK_USE_PLATFORM_WIN32_KHR
-
-#if defined(VK_USE_PLATFORM_XCB_KHR)
+#if defined(VK_USE_PLATFORM_XCB_KHR) || defined (VK_USE_PLATFORM_XLIB_KHR)
     // FIXME: REMOVE THIS HERE, AND UNCOMMENT ABOVE, WHEN THIS TEST HAS BEEN PORTED
     // TO NON-LINUX PLATFORMS:
     VkSurfaceKHR surface = VK_NULL_HANDLE;
+#endif
+#if defined(VK_USE_PLATFORM_XCB_KHR)
     // Use the functions from the VK_KHR_xcb_surface extension without enabling
     // that extension:
 

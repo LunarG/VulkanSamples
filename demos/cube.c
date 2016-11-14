@@ -293,13 +293,16 @@ struct demo {
     POINT minsize;               // minimum window size
 #elif defined(VK_USE_PLATFORM_XLIB_KHR) | defined(VK_USE_PLATFORM_XCB_KHR)
     Display* display;
+#if defined(VK_USE_PLATFORM_XLIB_KHR)
     Window xlib_window;
     Atom xlib_wm_delete_window;
-
+#endif
+#if defined(VK_USE_PLATFORM_XCB_KHR)
     xcb_connection_t *connection;
     xcb_screen_t *screen;
     xcb_window_t xcb_window;
     xcb_intern_atom_reply_t *atom_wm_delete_window;
+#endif
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
     struct wl_display *display;
     struct wl_registry *registry;
@@ -2070,7 +2073,7 @@ static void demo_cleanup(struct demo *demo) {
     vkDestroySurfaceKHR(demo->inst, demo->surface, NULL);
     vkDestroyInstance(demo->inst, NULL);
 
-#if defined(VK_USE_PLATFORM_XLIB_KHR)
+#if defined(VK_USE_PLATFORM_XLIB_KHR) && defined(VK_USE_PLATFORM_XCB_KHR)
     if (demo->use_xlib) {
         XDestroyWindow(demo->display, demo->xlib_window);
         XCloseDisplay(demo->display);
@@ -2079,6 +2082,9 @@ static void demo_cleanup(struct demo *demo) {
         xcb_disconnect(demo->connection);
     }
     free(demo->atom_wm_delete_window);
+#elif defined(VK_USE_PLATFORM_XLIB_KHR)
+    XDestroyWindow(demo->display, demo->xlib_window);
+    XCloseDisplay(demo->display);
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
     xcb_destroy_window(demo->connection, demo->xcb_window);
     xcb_disconnect(demo->connection);
@@ -3487,6 +3493,7 @@ int main(int argc, char **argv) {
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
     demo_create_xcb_window(&demo);
 #elif defined(VK_USE_PLATFORM_XLIB_KHR)
+    demo.use_xlib = true;
     demo_create_xlib_window(&demo);
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
     demo_create_window(&demo);
