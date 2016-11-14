@@ -11260,10 +11260,34 @@ static void CopyNoncoherentMemoryFromDriver(layer_data *dev_data, uint32_t mem_r
     }
 }
 
+static bool ValidateMappedMemoryRangeDeviceLimits(layer_data *dev_data, const char *func_name, uint32_t mem_range_count,
+                                                  const VkMappedMemoryRange *mem_ranges) {
+    bool skip = false;
+    for (uint32_t i = 0; i < mem_range_count; ++i) {
+        uint64_t atom_size = dev_data->phys_dev_properties.properties.limits.nonCoherentAtomSize;
+        if (vk_safe_modulo(mem_ranges[i].offset, atom_size) != 0) {
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                            __LINE__, VALIDATION_ERROR_00644, "MEM",
+                            "%s: Offset in pMemRanges[%d] is 0x%" PRIxLEAST64
+                            ", which is not a multiple of VkPhysicalDeviceLimits::nonCoherentAtomSize (0x%" PRIxLEAST64 "). %s",
+                            func_name, i, mem_ranges[i].offset, atom_size, validation_error_map[VALIDATION_ERROR_00644]);
+        }
+        if ((mem_ranges[i].size != VK_WHOLE_SIZE) && (vk_safe_modulo(mem_ranges[i].size, atom_size) != 0)) {
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                            __LINE__, VALIDATION_ERROR_00645, "MEM",
+                            "%s: Size in pMemRanges[%d] is 0x%" PRIxLEAST64
+                            ", which is not a multiple of VkPhysicalDeviceLimits::nonCoherentAtomSize (0x%" PRIxLEAST64 "). %s",
+                            func_name, i, mem_ranges[i].size, atom_size, validation_error_map[VALIDATION_ERROR_00645]);
+        }
+    }
+    return skip;
+}
+
 static bool PreCallValidateFlushMappedMemoryRanges(layer_data *dev_data, uint32_t mem_range_count,
                                                    const VkMappedMemoryRange *mem_ranges) {
     bool skip = false;
     std::lock_guard<std::mutex> lock(global_lock);
+    skip |= ValidateMappedMemoryRangeDeviceLimits(dev_data, "vkFlushMappedMemoryRanges", mem_range_count, mem_ranges);
     skip |= ValidateAndCopyNoncoherentMemoryToDriver(dev_data, mem_range_count, mem_ranges);
     skip |= validateMemoryIsMapped(dev_data, "vkFlushMappedMemoryRanges", mem_range_count, mem_ranges);
     return skip;
@@ -11284,6 +11308,7 @@ static bool PreCallValidateInvalidateMappedMemoryRanges(layer_data *dev_data, ui
                                                         const VkMappedMemoryRange *mem_ranges) {
     bool skip = false;
     std::lock_guard<std::mutex> lock(global_lock);
+    skip |= ValidateMappedMemoryRangeDeviceLimits(dev_data, "vkInvalidateMappedMemoryRanges", mem_range_count, mem_ranges);
     skip |= validateMemoryIsMapped(dev_data, "vkInvalidateMappedMemoryRanges", mem_range_count, mem_ranges);
     return skip;
 }
