@@ -32,7 +32,7 @@ echo "SPIRV_TOOLS_REVISION=$SPIRV_TOOLS_REVISION"
 echo "SHADERC_REVISION=$SHADERC_REVISION"
 
 if [[ $(uname) == "Linux" ]]; then
-    cores=$(ncpus)
+    cores=$(ncpus || echo 4)
 elif [[ $(uname) == "Darwin" ]]; then
     cores=$(sysctl -n hw.ncpu)
 fi
