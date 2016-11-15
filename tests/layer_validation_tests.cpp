@@ -2880,6 +2880,26 @@ TEST_F(VkLayerTest, MismatchedQueueFamiliesOnSubmit) {
     m_errorMonitor->VerifyFound();
 }
 
+TEST_F(VkLayerTest, RenderPassAttachmentIndexOutOfRange) {
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkAttachmentReference ref = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+    VkSubpassDescription subpasses[] = {
+        { 0, VK_PIPELINE_BIND_POINT_GRAPHICS, 0, nullptr, 1, &ref, nullptr, nullptr, 0, nullptr },
+    };
+
+    VkRenderPassCreateInfo rpci = {
+        VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, nullptr,
+        0, 0, nullptr, 1, subpasses, 0, nullptr
+    };
+    VkRenderPass rp;
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "must be less than the total number of attachments");
+    vkCreateRenderPass(m_device->device(), &rpci, nullptr, &rp);
+    m_errorMonitor->VerifyFound();
+}
+
 TEST_F(VkLayerTest, RenderPassPipelineSubpassMismatch) {
     TEST_DESCRIPTION("Use a pipeline for the wrong subpass in a render pass instance");
     ASSERT_NO_FATAL_FAILURE(InitState());
