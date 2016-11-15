@@ -11177,13 +11177,13 @@ VKAPI_ATTR void VKAPI_CALL UnmapMemory(VkDevice device, VkDeviceMemory mem) {
 
 static bool validateMemoryIsMapped(layer_data *dev_data, const char *funcName, uint32_t memRangeCount,
                                    const VkMappedMemoryRange *pMemRanges) {
-    bool skip_call = false;
+    bool skip = false;
     for (uint32_t i = 0; i < memRangeCount; ++i) {
         auto mem_info = getMemObjInfo(dev_data, pMemRanges[i].memory);
         if (mem_info) {
             if (pMemRanges[i].size == VK_WHOLE_SIZE) {
                 if (mem_info->mem_range.offset > pMemRanges[i].offset) {
-                    skip_call |=
+                    skip |=
                         log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
                                 (uint64_t)pMemRanges[i].memory, __LINE__, VALIDATION_ERROR_00643, "MEM",
                                 "%s: Flush/Invalidate offset (" PRINTF_SIZE_T_SPECIFIER ") is less than Memory Object's offset "
@@ -11197,7 +11197,7 @@ static bool validateMemoryIsMapped(layer_data *dev_data, const char *funcName, u
                                               : (mem_info->mem_range.offset + mem_info->mem_range.size);
                 if ((mem_info->mem_range.offset > pMemRanges[i].offset) ||
                     (data_end < (pMemRanges[i].offset + pMemRanges[i].size))) {
-                    skip_call |=
+                    skip |=
                         log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
                                 (uint64_t)pMemRanges[i].memory, __LINE__, VALIDATION_ERROR_00642, "MEM",
                                 "%s: Flush/Invalidate size or offset (" PRINTF_SIZE_T_SPECIFIER ", " PRINTF_SIZE_T_SPECIFIER
@@ -11210,7 +11210,7 @@ static bool validateMemoryIsMapped(layer_data *dev_data, const char *funcName, u
             }
         }
     }
-    return skip_call;
+    return skip;
 }
 
 static bool ValidateAndCopyNoncoherentMemoryToDriver(layer_data *dev_data, uint32_t memRangeCount,
