@@ -119,6 +119,7 @@ option(BUILD_TESTS "Build tests" ON)
 option(BUILD_LAYERS "Build layers" ON)
 option(BUILD_DEMOS "Build demos" ON)
 option(BUILD_VKJSON "Build vkjson" ON)
+option(BUILD_UTILITIES "Build WSIWindow and Teapots" ON)
 option(CUSTOM_GLSLANG_BIN_ROOT "Use the user defined GLSLANG_BINARY_ROOT" OFF)
 option(CUSTOM_SPIRV_TOOLS_BIN_ROOT "Use the user defined SPIRV_TOOLS_BINARY_ROOT" OFF)
 
@@ -320,6 +321,10 @@ endif()
 
 if(BUILD_VKJSON)
     add_subdirectory(libs/vkjson)
+endif()
+
+if(BUILD_UTILITIES)
+    add_subdirectory(Utilities)
 endif()
 
 set (UTILS_NAME vsamputils)
