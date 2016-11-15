@@ -619,11 +619,13 @@ void AddCommandBufferBindingImage(const layer_data *dev_data, GLOBAL_CB_NODE *cb
     // Skip validation if this image was created through WSI
     if (image_state->binding.mem != MEMTRACKER_SWAP_CHAIN_IMAGE_KEY) {
         // First update CB binding in MemObj mini CB list
-        DEVICE_MEM_INFO *pMemInfo = getMemObjInfo(dev_data, image_state->binding.mem);
-        if (pMemInfo) {
-            pMemInfo->cb_bindings.insert(cb_node);
-            // Now update CBInfo's Mem reference list
-            cb_node->memObjs.insert(image_state->binding.mem);
+        for (auto mem_binding : image_state->GetBoundMemory()) {
+            DEVICE_MEM_INFO *pMemInfo = getMemObjInfo(dev_data, mem_binding);
+            if (pMemInfo) {
+                pMemInfo->cb_bindings.insert(cb_node);
+                // Now update CBInfo's Mem reference list
+                cb_node->memObjs.insert(mem_binding);
+            }
         }
         // Now update cb binding for image
         cb_node->object_bindings.insert({reinterpret_cast<uint64_t &>(image_state->image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT});
@@ -647,11 +649,13 @@ void AddCommandBufferBindingImageView(const layer_data *dev_data, GLOBAL_CB_NODE
 // Create binding link between given buffer node and command buffer node
 void AddCommandBufferBindingBuffer(const layer_data *dev_data, GLOBAL_CB_NODE *cb_node, BUFFER_NODE *buff_node) {
     // First update CB binding in MemObj mini CB list
-    DEVICE_MEM_INFO *pMemInfo = getMemObjInfo(dev_data, buff_node->binding.mem);
-    if (pMemInfo) {
-        pMemInfo->cb_bindings.insert(cb_node);
-        // Now update CBInfo's Mem reference list
-        cb_node->memObjs.insert(buff_node->binding.mem);
+    for (auto mem_binding : buff_node->GetBoundMemory()) {
+        DEVICE_MEM_INFO *pMemInfo = getMemObjInfo(dev_data, mem_binding);
+        if (pMemInfo) {
+            pMemInfo->cb_bindings.insert(cb_node);
+            // Now update CBInfo's Mem reference list
+            cb_node->memObjs.insert(mem_binding);
+        }
     }
     // Now update cb binding for buffer
     cb_node->object_bindings.insert({reinterpret_cast<uint64_t &>(buff_node->buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT});
@@ -5769,9 +5773,11 @@ VKAPI_ATTR void VKAPI_CALL DestroyBuffer(VkDevice device, VkBuffer buffer,
             // Any bound cmd buffers are now invalid
             invalidateCommandBuffers(buff_node->cb_bindings,
                                      {reinterpret_cast<uint64_t &>(buff_node->buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT});
-            auto mem_info = getMemObjInfo(dev_data, buff_node->binding.mem);
-            if (mem_info) {
-                RemoveBufferMemoryRange(reinterpret_cast<uint64_t &>(buffer), mem_info);
+            for (auto mem_binding : buff_node->GetBoundMemory()) {
+                auto mem_info = getMemObjInfo(dev_data, mem_binding);
+                if (mem_info) {
+                    RemoveBufferMemoryRange(reinterpret_cast<uint64_t &>(buffer), mem_info);
+                }
             }
             ClearMemoryObjectBindings(dev_data, reinterpret_cast<uint64_t &>(buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT);
             dev_data->bufferMap.erase(buff_node->buffer);
@@ -5833,9 +5839,11 @@ static bool PreCallValidateDestroyImage(layer_data *dev_data, VkImage image, IMA
 static void PostCallRecordDestroyImage(layer_data *dev_data, VkImage image, IMAGE_STATE *image_state, VK_OBJECT obj_struct) {
     invalidateCommandBuffers(image_state->cb_bindings, obj_struct);
     // Clean up memory mapping, bindings and range references for image
-    auto mem_info = getMemObjInfo(dev_data, image_state->binding.mem);
-    if (mem_info) {
-        RemoveImageMemoryRange(obj_struct.handle, mem_info);
+    for (auto mem_binding : image_state->GetBoundMemory()) {
+        auto mem_info = getMemObjInfo(dev_data, mem_binding);
+        if (mem_info) {
+            RemoveImageMemoryRange(obj_struct.handle, mem_info);
+        }
     }
     ClearMemoryObjectBindings(dev_data, obj_struct.handle, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT);
     // Remove image from imageMap

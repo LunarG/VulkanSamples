@@ -177,6 +177,18 @@ class BINDABLE : public BASE_NODE {
     // TODO : Need to update solution to track all sparse binding data
     std::unordered_set<MEM_BINDING> sparse_bindings;
     BINDABLE() : sparse(false), binding{}, requirements{}, sparse_bindings{} {};
+    // Return unordered set of memory objects that are bound
+    std::unordered_set<VkDeviceMemory> GetBoundMemory() {
+        std::unordered_set<VkDeviceMemory> mem_set;
+        if (!sparse) {
+            mem_set.insert(binding.mem);
+        } else {
+            for (auto sb : sparse_bindings) {
+                mem_set.insert(sb.mem);
+            }
+        }
+        return mem_set;
+    }
 };
 
 class BUFFER_NODE : public BINDABLE {

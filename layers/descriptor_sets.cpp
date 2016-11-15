@@ -406,14 +406,15 @@ bool cvdescriptorset::DescriptorSet::ValidateDrawState(const std::map<uint32_t, 
                             *error = error_str.str();
                             return false;
                         } else {
-                            auto mem_entry = getMemObjInfo(device_data_, buffer_node->binding.mem);
-                            if (!mem_entry) {
-                                std::stringstream error_str;
-                                error_str << "Descriptor in binding #" << binding << " at global descriptor index " << i
-                                          << " uses buffer " << buffer << " that references invalid memory "
-                                          << buffer_node->binding.mem << ".";
-                                *error = error_str.str();
-                                return false;
+                            for (auto mem_binding : buffer_node->GetBoundMemory()) {
+                                if (!getMemObjInfo(device_data_, mem_binding)) {
+                                    std::stringstream error_str;
+                                    error_str << "Descriptor in binding #" << binding << " at global descriptor index " << i
+                                              << " uses buffer " << buffer << " that references invalid memory " << mem_binding
+                                              << ".";
+                                    *error = error_str.str();
+                                    return false;
+                                }
                             }
                         }
                         if (descriptors_[i]->IsDynamic()) {
