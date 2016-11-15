@@ -58,7 +58,7 @@ if(TARGET vulkan)
     list(APPEND definitions PRIVATE -DUNINSTALLED_LOADER="$<TARGET_FILE:vulkan>")
 endif()
 
-list(APPEND includes PRIVATE "../../VulkanSamples/API-Samples/utils") #Path to GLM
+list(APPEND includes PRIVATE "../../API-Samples/utils") #Path to GLM
 
 if(WIN32)
     list(APPEND definitions PRIVATE -DVK_USE_PLATFORM_WIN32_KHR)
