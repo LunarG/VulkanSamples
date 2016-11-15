@@ -1484,6 +1484,29 @@ TEST_F(VkLayerTest, InvalidMemoryMapping) {
     vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
     m_errorMonitor->VerifyFound();
 
+    // Some platforms have an atomsize of 1 which makes the test meaningless
+    if (atom_size > 3) {
+        // Now with an offset NOT a multiple of the device limit
+        vkUnmapMemory(m_device->device(), mem);
+        err = vkMapMemory(m_device->device(), mem, 0, 4 * atom_size, 0, (void **)&pData);
+        ASSERT_VK_SUCCESS(err);
+        mmr.offset = 3;    // Not a multiple of atom_size
+        mmr.size = VK_WHOLE_SIZE;
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00644);
+        vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
+        m_errorMonitor->VerifyFound();
+
+        // Now with a size NOT a multiple of the device limit
+        vkUnmapMemory(m_device->device(), mem);
+        err = vkMapMemory(m_device->device(), mem, 0, 4 * atom_size, 0, (void **)&pData);
+        ASSERT_VK_SUCCESS(err);
+        mmr.offset = atom_size;
+        mmr.size = 2 * atom_size + 1;    // Not a multiple of atom_size
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00645);
+        vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
+        m_errorMonitor->VerifyFound();
+    }
+
     pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &alloc_info, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
                                            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     if (!pass) {
