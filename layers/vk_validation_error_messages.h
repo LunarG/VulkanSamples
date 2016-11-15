@@ -1693,7 +1693,6 @@ enum UNIQUE_VALIDATION_ERROR_CODE {
     VALIDATION_ERROR_01720 = 1720,
     VALIDATION_ERROR_01721 = 1721,
     VALIDATION_ERROR_01722 = 1722,
-    VALIDATION_ERROR_01723 = 1723,
     VALIDATION_ERROR_01724 = 1724,
     VALIDATION_ERROR_01725 = 1725,
     VALIDATION_ERROR_01726 = 1726,
@@ -2312,7 +2311,9 @@ enum UNIQUE_VALIDATION_ERROR_CODE {
     VALIDATION_ERROR_02343 = 2343,
     VALIDATION_ERROR_02344 = 2344,
     VALIDATION_ERROR_02345 = 2345,
-    VALIDATION_ERROR_MAX_ENUM = 2346,
+    VALIDATION_ERROR_02346 = 2346,
+    VALIDATION_ERROR_02347 = 2347,
+    VALIDATION_ERROR_MAX_ENUM = 2348,
 };
 
 // Mapping from unique validation error enum to the corresponding error message
@@ -3983,7 +3984,6 @@ static std::unordered_map<int, char const *const> validation_error_map{
     {VALIDATION_ERROR_01720, "For more information refer to Vulkan Spec Section '10.2. Device Memory' which states 'sType must be VK_STRUCTURE_TYPE_IMPORT_MEMORY_WIN32_HANDLE_INFO_NV' (https://www.khronos.org/registry/vulkan/specs/1.0-extensions/xhtml/vkspec.html#VkExternalMemoryHandleTypeFlagBitsNV)"},
     {VALIDATION_ERROR_01721, "For more information refer to Vulkan Spec Section '10.2. Device Memory' which states 'pNext must be NULL' (https://www.khronos.org/registry/vulkan/specs/1.0-extensions/xhtml/vkspec.html#VkExternalMemoryHandleTypeFlagBitsNV)"},
     {VALIDATION_ERROR_01722, "For more information refer to Vulkan Spec Section '10.2. Device Memory' which states 'handleType must be a valid combination of VkExternalMemoryHandleTypeFlagBitsNV values' (https://www.khronos.org/registry/vulkan/specs/1.0-extensions/xhtml/vkspec.html#VkExternalMemoryHandleTypeFlagBitsNV)"},
-    {VALIDATION_ERROR_01723, "For more information refer to Vulkan Spec Section '10.2. Device Memory' which states 'handleType must not be 0' (https://www.khronos.org/registry/vulkan/specs/1.0-extensions/xhtml/vkspec.html#VkExternalMemoryHandleTypeFlagBitsNV)"},
     {VALIDATION_ERROR_01724, "For more information refer to Vulkan Spec Section '10.2. Device Memory' which states 'handleType must be a flag specified in VkExportMemoryAllocateInfoNV::handleTypes when allocating memory' (https://www.khronos.org/registry/vulkan/specs/1.0-extensions/xhtml/vkspec.html#vkGetMemoryWin32HandleNV)"},
     {VALIDATION_ERROR_01725, "For more information refer to Vulkan Spec Section '10.2. Device Memory' which states 'device must be a valid VkDevice handle' (https://www.khronos.org/registry/vulkan/specs/1.0-extensions/xhtml/vkspec.html#vkGetMemoryWin32HandleNV)"},
     {VALIDATION_ERROR_01726, "For more information refer to Vulkan Spec Section '10.2. Device Memory' which states 'memory must be a valid VkDeviceMemory handle' (https://www.khronos.org/registry/vulkan/specs/1.0-extensions/xhtml/vkspec.html#vkGetMemoryWin32HandleNV)"},
@@ -4602,4 +4602,6 @@ static std::unordered_map<int, char const *const> validation_error_map{
     {VALIDATION_ERROR_02343, "For more information refer to Vulkan Spec Section '32.1.2. Command Buffer Markers' which states 'If the matching vkCmdDebugMarkerBeginEXT command was in a secondary command buffer, the vkCmdDebugMarkerEndEXT must be in the same commandBuffer' (https://www.khronos.org/registry/vulkan/specs/1.0-extensions/xhtml/vkspec.html#vkCmdDebugMarkerEndEXT)"},
     {VALIDATION_ERROR_02344, "For more information refer to Vulkan Spec Section '11.3. Images' which states 'If imageType is VK_IMAGE_TYPE_3D, arrayLayers must be 1.' (https://www.khronos.org/registry/vulkan/specs/1.0-extensions/xhtml/vkspec.html#VkImageCreateInfo)"},
     {VALIDATION_ERROR_02345, "For more information refer to Vulkan Spec Section '13.2.1. Descriptor Set Layout' which states 'The VkDescriptorSetLayoutBinding::binding members of the elements of the pBindings array must each have different values.' (https://www.khronos.org/registry/vulkan/specs/1.0-extensions/xhtml/vkspec.html#VkDescriptorSetLayoutCreateInfo)"},
+    {VALIDATION_ERROR_02346, "For more information refer to Vulkan Spec Section '10.2. Device Memory' which states 'handleType must not have more than one bit set.' (https://www.khronos.org/registry/vulkan/specs/1.0-extensions/xhtml/vkspec.html#VkExternalMemoryHandleTypeFlagBitsNV)"},
+    {VALIDATION_ERROR_02347, "For more information refer to Vulkan Spec Section '10.2. Device Memory' which states 'handle must be a valid handle to memory, obtained as specified by handleType.' (https://www.khronos.org/registry/vulkan/specs/1.0-extensions/xhtml/vkspec.html#VkExternalMemoryHandleTypeFlagBitsNV)"},
 };
