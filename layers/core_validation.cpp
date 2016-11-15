@@ -418,9 +418,9 @@ static GLOBAL_CB_NODE *getCBNode(layer_data const *, const VkCommandBuffer);
 //  Verify that (actual & desired) flags != 0 or,
 //   if strict is true, verify that (actual & desired) flags == desired
 //  In case of error, report it via dbg callbacks
-static bool validate_usage_flags(layer_data *my_data, VkFlags actual, VkFlags desired, VkBool32 strict,
-                                     uint64_t obj_handle, VkDebugReportObjectTypeEXT obj_type, char const *ty_str,
-                                     char const *func_name, char const *usage_str) {
+static bool validate_usage_flags(layer_data *my_data, VkFlags actual, VkFlags desired, VkBool32 strict, uint64_t obj_handle,
+                                 VkDebugReportObjectTypeEXT obj_type, int32_t const msgCode, char const *ty_str,
+                                 char const *func_name, char const *usage_str) {
     bool correct_usage = false;
     bool skip_call = false;
     if (strict)
@@ -428,10 +428,20 @@ static bool validate_usage_flags(layer_data *my_data, VkFlags actual, VkFlags de
     else
         correct_usage = ((actual & desired) != 0);
     if (!correct_usage) {
-        skip_call = log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, obj_type, obj_handle, __LINE__,
-                            MEMTRACK_INVALID_USAGE_FLAG, "MEM", "Invalid usage flag for %s 0x%" PRIxLEAST64
-                                                                " used by %s. In this case, %s should have %s set during creation.",
-                            ty_str, obj_handle, func_name, ty_str, usage_str);
+        if (msgCode == -1) {
+            // TODO: Fix callers with msgCode == -1 to use correct validation checks.
+            skip_call =
+                log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, obj_type, obj_handle, __LINE__,
+                        MEMTRACK_INVALID_USAGE_FLAG, "MEM", "Invalid usage flag for %s 0x%" PRIxLEAST64
+                                                            " used by %s. In this case, %s should have %s set during creation.",
+                        ty_str, obj_handle, func_name, ty_str, usage_str);
+        } else {
+            const char *valid_usage = (msgCode == -1) ? "" : validation_error_map[msgCode];
+            skip_call = log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, obj_type, obj_handle, __LINE__, msgCode, "MEM",
+                                "Invalid usage flag for %s 0x%" PRIxLEAST64
+                                " used by %s. In this case, %s should have %s set during creation. %s",
+                                ty_str, obj_handle, func_name, ty_str, usage_str, valid_usage);
+        }
     }
     return skip_call;
 }
@@ -440,20 +450,20 @@ static bool validate_usage_flags(layer_data *my_data, VkFlags actual, VkFlags de
 // For given buffer_node send actual vs. desired usage off to helper above where
 //  an error will be flagged if usage is not correct
 static bool ValidateImageUsageFlags(layer_data *dev_data, IMAGE_STATE const *image_state, VkFlags desired, VkBool32 strict,
-                                    char const *func_name, char const *usage_string) {
+                                    int32_t const msgCode, char const *func_name, char const *usage_string) {
     return validate_usage_flags(dev_data, image_state->createInfo.usage, desired, strict,
                                 reinterpret_cast<const uint64_t &>(image_state->image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                                "image", func_name, usage_string);
+                                msgCode, "image", func_name, usage_string);
 }
 
 // Helper function to validate usage flags for buffers
 // For given buffer_node send actual vs. desired usage off to helper above where
 //  an error will be flagged if usage is not correct
 static bool ValidateBufferUsageFlags(layer_data *dev_data, BUFFER_NODE const *buffer_node, VkFlags desired, VkBool32 strict,
-                                     char const *func_name, char const *usage_string) {
+                                     int32_t const msgCode, char const *func_name, char const *usage_string) {
     return validate_usage_flags(dev_data, buffer_node->createInfo.usage, desired, strict,
                                 reinterpret_cast<const uint64_t &>(buffer_node->buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
-                                "buffer", func_name, usage_string);
+                                msgCode, "buffer", func_name, usage_string);
 }
 
 // Return ptr to info in map container containing mem, or NULL if not found
@@ -6447,9 +6457,9 @@ static bool PreCallValidateCreateBufferView(layer_data *dev_data, const VkBuffer
         skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, buf_node, "vkCreateBufferView()");
         // In order to create a valid buffer view, the buffer must have been created with at least one of the
         // following flags:  UNIFORM_TEXEL_BUFFER_BIT or STORAGE_TEXEL_BUFFER_BIT
-        skip_call |= ValidateBufferUsageFlags(dev_data, buf_node,
-                                              VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT,
-                                              false, "vkCreateBufferView()", "VK_BUFFER_USAGE_[STORAGE|UNIFORM]_TEXEL_BUFFER_BIT");
+        skip_call |= ValidateBufferUsageFlags(
+            dev_data, buf_node, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT, false,
+            VALIDATION_ERROR_00694, "vkCreateBufferView()", "VK_BUFFER_USAGE_[STORAGE|UNIFORM]_TEXEL_BUFFER_BIT");
     }
     return skip_call;
 }
@@ -6597,7 +6607,7 @@ static bool PreCallValidateCreateImageView(layer_data *dev_data, const VkImageVi
         skip |= ValidateImageUsageFlags(
             dev_data, image_state, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT |
                                        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-            false, "vkCreateImageView()",
+            false, -1, "vkCreateImageView()",
             "VK_IMAGE_USAGE_[SAMPLED|STORAGE|COLOR_ATTACHMENT|DEPTH_STENCIL_ATTACHMENT|INPUT_ATTACHMENT]_BIT");
         // If this isn't a sparse image, it needs to have memory backing it at CreateImageView time
         skip |= ValidateMemoryIsBoundToImage(dev_data, image_state, "vkCreateImageView()");
@@ -8109,10 +8119,10 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer
         AddCommandBufferBindingBuffer(dev_data, cb_node, src_buff_node);
         AddCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_node);
         // Validate that SRC & DST buffers have correct usage flags set
-        skip_call |= ValidateBufferUsageFlags(dev_data, src_buff_node, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true, "vkCmdCopyBuffer()",
-                                              "VK_BUFFER_USAGE_TRANSFER_SRC_BIT");
-        skip_call |= ValidateBufferUsageFlags(dev_data, dst_buff_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true, "vkCmdCopyBuffer()",
-                                              "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
+        skip_call |= ValidateBufferUsageFlags(dev_data, src_buff_node, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true,
+                                              VALIDATION_ERROR_01164, "vkCmdCopyBuffer()", "VK_BUFFER_USAGE_TRANSFER_SRC_BIT");
+        skip_call |= ValidateBufferUsageFlags(dev_data, dst_buff_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true,
+                                              VALIDATION_ERROR_01165, "vkCmdCopyBuffer()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
 
         std::function<bool()> function = [=]() {
             return ValidateBufferMemoryIsValid(dev_data, src_buff_node, "vkCmdCopyBuffer()");
@@ -8413,10 +8423,10 @@ CmdCopyImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcI
         AddCommandBufferBindingImage(dev_data, cb_node, src_image_state);
         AddCommandBufferBindingImage(dev_data, cb_node, dst_image_state);
         // Validate that SRC & DST images have correct usage flags set
-        skip_call |= ValidateImageUsageFlags(dev_data, src_image_state, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, true, "vkCmdCopyImage()",
-                                             "VK_IMAGE_USAGE_TRANSFER_SRC_BIT");
-        skip_call |= ValidateImageUsageFlags(dev_data, dst_image_state, VK_IMAGE_USAGE_TRANSFER_DST_BIT, true, "vkCmdCopyImage()",
-                                             "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
+        skip_call |= ValidateImageUsageFlags(dev_data, src_image_state, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, true,
+                                             VALIDATION_ERROR_01178, "vkCmdCopyImage()", "VK_IMAGE_USAGE_TRANSFER_SRC_BIT");
+        skip_call |= ValidateImageUsageFlags(dev_data, dst_image_state, VK_IMAGE_USAGE_TRANSFER_DST_BIT, true,
+                                             VALIDATION_ERROR_01181, "vkCmdCopyImage()", "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
         std::function<bool()> function = [=]() {
             return ValidateImageMemoryIsValid(dev_data, src_image_state, "vkCmdCopyImage()");
         };
@@ -8477,10 +8487,10 @@ CmdBlitImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcI
         AddCommandBufferBindingImage(dev_data, cb_node, src_image_state);
         AddCommandBufferBindingImage(dev_data, cb_node, dst_image_state);
         // Validate that SRC & DST images have correct usage flags set
-        skip_call |= ValidateImageUsageFlags(dev_data, src_image_state, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, true, "vkCmdBlitImage()",
-                                             "VK_IMAGE_USAGE_TRANSFER_SRC_BIT");
-        skip_call |= ValidateImageUsageFlags(dev_data, dst_image_state, VK_IMAGE_USAGE_TRANSFER_DST_BIT, true, "vkCmdBlitImage()",
-                                             "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
+        skip_call |= ValidateImageUsageFlags(dev_data, src_image_state, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, true,
+                                             VALIDATION_ERROR_02182, "vkCmdBlitImage()", "VK_IMAGE_USAGE_TRANSFER_SRC_BIT");
+        skip_call |= ValidateImageUsageFlags(dev_data, dst_image_state, VK_IMAGE_USAGE_TRANSFER_DST_BIT, true,
+                                             VALIDATION_ERROR_02186, "vkCmdBlitImage()", "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
         std::function<bool()> function = [=]() {
             return ValidateImageMemoryIsValid(dev_data, src_image_state, "vkCmdBlitImage()");
         };
@@ -8519,10 +8529,11 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBufferToImage(VkCommandBuffer commandBuffer, V
         skip_call |= ValidateMemoryIsBoundToImage(dev_data, dst_image_state, "vkCmdCopyBufferToImage()");
         AddCommandBufferBindingBuffer(dev_data, cb_node, src_buff_node);
         AddCommandBufferBindingImage(dev_data, cb_node, dst_image_state);
-        skip_call |= ValidateBufferUsageFlags(dev_data, src_buff_node, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true,
-                                              "vkCmdCopyBufferToImage()", "VK_BUFFER_USAGE_TRANSFER_SRC_BIT");
+        skip_call |=
+            ValidateBufferUsageFlags(dev_data, src_buff_node, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true, VALIDATION_ERROR_01230,
+                                     "vkCmdCopyBufferToImage()", "VK_BUFFER_USAGE_TRANSFER_SRC_BIT");
         skip_call |= ValidateImageUsageFlags(dev_data, dst_image_state, VK_IMAGE_USAGE_TRANSFER_DST_BIT, true,
-                                             "vkCmdCopyBufferToImage()", "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
+                                             VALIDATION_ERROR_01231, "vkCmdCopyBufferToImage()", "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
         std::function<bool()> function = [=]() {
             SetImageMemoryValid(dev_data, dst_image_state, true);
             return false;
@@ -8566,9 +8577,10 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyImageToBuffer(VkCommandBuffer commandBuffer, V
         AddCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_node);
         // Validate that SRC image & DST buffer have correct usage flags set
         skip_call |= ValidateImageUsageFlags(dev_data, src_image_state, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, true,
-                                             "vkCmdCopyImageToBuffer()", "VK_IMAGE_USAGE_TRANSFER_SRC_BIT");
-        skip_call |= ValidateBufferUsageFlags(dev_data, dst_buff_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true,
-                                              "vkCmdCopyImageToBuffer()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
+                                             VALIDATION_ERROR_01248, "vkCmdCopyImageToBuffer()", "VK_IMAGE_USAGE_TRANSFER_SRC_BIT");
+        skip_call |=
+            ValidateBufferUsageFlags(dev_data, dst_buff_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true, VALIDATION_ERROR_01252,
+                                     "vkCmdCopyImageToBuffer()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
         std::function<bool()> function = [=]() {
             return ValidateImageMemoryIsValid(dev_data, src_image_state, "vkCmdCopyImageToBuffer()");
         };
@@ -8608,7 +8620,7 @@ VKAPI_ATTR void VKAPI_CALL CmdUpdateBuffer(VkCommandBuffer commandBuffer, VkBuff
         AddCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_node);
         // Validate that DST buffer has correct usage flags set
         skip_call |= ValidateBufferUsageFlags(dev_data, dst_buff_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true,
-                                              "vkCmdUpdateBuffer()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
+                                              VALIDATION_ERROR_01146, "vkCmdUpdateBuffer()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
         std::function<bool()> function = [=]() {
             SetBufferMemoryValid(dev_data, dst_buff_node, true);
             return false;
@@ -8638,8 +8650,8 @@ CmdFillBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize ds
         // Update bindings between buffer and cmd buffer
         AddCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_node);
         // Validate that DST buffer has correct usage flags set
-        skip_call |= ValidateBufferUsageFlags(dev_data, dst_buff_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true, "vkCmdFillBuffer()",
-                                              "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
+        skip_call |= ValidateBufferUsageFlags(dev_data, dst_buff_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true,
+                                              VALIDATION_ERROR_01137, "vkCmdFillBuffer()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
         std::function<bool()> function = [=]() {
             SetBufferMemoryValid(dev_data, dst_buff_node, true);
             return false;
@@ -9478,8 +9490,9 @@ CmdCopyQueryPoolResults(VkCommandBuffer commandBuffer, VkQueryPool queryPool, ui
         // Update bindings between buffer and cmd buffer
         AddCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_node);
         // Validate that DST buffer has correct usage flags set
-        skip_call |= ValidateBufferUsageFlags(dev_data, dst_buff_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true,
-                                              "vkCmdCopyQueryPoolResults()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
+        skip_call |=
+            ValidateBufferUsageFlags(dev_data, dst_buff_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true, VALIDATION_ERROR_01066,
+                                     "vkCmdCopyQueryPoolResults()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
         std::function<bool()> function = [=]() {
             SetBufferMemoryValid(dev_data, dst_buff_node, true);
             return false;
