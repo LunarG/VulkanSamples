@@ -158,8 +158,8 @@ EventType Window_win32::GetEvent(bool wait_for_event){
     if (!eventFIFO.isEmpty()) return *eventFIFO.pop();
 
     MSG msg = {};
-    if(wait_for_event) running = (GetMessage(&msg, NULL, 0, 0)>0);              //Blocking mode
-    else               running = (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)>0);  //Non-blocking mode
+    if(wait_for_event) running = (GetMessage(&msg, NULL, 16, 0)>0);             // Blocking mode
+    else               running = (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)>0);  // Non-blocking mode
     
     if (running) {
         TranslateMessage(&msg);
