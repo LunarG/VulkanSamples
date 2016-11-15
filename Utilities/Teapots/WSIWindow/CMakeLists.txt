@@ -1,4 +1,4 @@
-set(LIBRARY_NAME WSIWindow)
+set(LIBRARY_NAME Teapots_WSIWindow)
 
 file(GLOB SRC_LIST "*.h" "*.cpp")                   # List all source files from current directory
 add_library (${LIBRARY_NAME} STATIC ${SRC_LIST})    # and add them to the WSIWindow library.

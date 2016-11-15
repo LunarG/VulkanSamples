@@ -1,4 +1,5 @@
 #include "Validation.h"
+#include <string.h>   //for strlen
 //---------------- Enable ANSI Codes on Win10+ ----------------
 #if defined(WIN10PLUS)
 #if !defined(NDEBUG) || defined(ENABLE_LOGGING) || defined(ENABLE_VALIDATION)
@@ -66,9 +67,6 @@ void ShowVkResult(VkResult err){
 VKAPI_ATTR VkBool32 VKAPI_CALL
 DebugReportFn(VkDebugReportFlagsEXT msgFlags, VkDebugReportObjectTypeEXT objType, uint64_t srcObject,
         size_t location, int32_t msgCode, const char *pLayerPrefix, const char *pMsg, void *pUserData) {
-    CDebugReport& DebugReport=*(CDebugReport*)pUserData;                       // Get CDebugReport instance
-    msgFlags &= DebugReport.GetFlags();                                        // Discard disabled messages
-
     char buf[512];
     snprintf(buf,sizeof(buf),cRESET "[%s] Code %d : %s\n", pLayerPrefix, msgCode, pMsg);
     switch(msgFlags){
@@ -115,7 +113,7 @@ void CDebugReport::Set(VkDebugReportFlagsEXT newFlags, PFN_vkDebugReportCallback
     if(!instance) {LOGW("Debug Report was not initialized.\n"); return;}
     if(!newFunc) newFunc=DebugReportFn;      // ensure callback is not empty
     func  = newFunc;
-    flags = 0;                               // turn off flags while changing settings
+    flags = newFlags;
 
     Destroy();                               // Destroy old report before creating new one
     VkDebugReportCallbackCreateInfoEXT create_info = {};
@@ -123,9 +121,8 @@ void CDebugReport::Set(VkDebugReportFlagsEXT newFlags, PFN_vkDebugReportCallback
     create_info.pNext = NULL;
     create_info.flags       = newFlags;
     create_info.pfnCallback = newFunc;      // Callback function to call
-    create_info.pUserData   = this;         // Give static callback access to flags
+    create_info.pUserData   = NULL;
     VKERRCHECK(vkCreateDebugReportCallbackEXT(instance, &create_info, NULL, &debug_report_callback));
-    flags = newFlags;                       // turn flags back on
 }
 
 void CDebugReport::Destroy(){

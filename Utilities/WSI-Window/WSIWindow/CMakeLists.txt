@@ -93,7 +93,7 @@ endif()
 #endif()
 #=================================================================
 #=======================Find Vulkan Loader========================
-find_library(VULKAN_LOADER vulkan   DOC "Path to Vulkan loader library. (libvulkan.so or vulkan-1.lib)")
+find_library(VULKAN_LOADER vulkan   DOC "Path + Filename of Vulkan loader. (libvulkan.so or vulkan-1.lib)") # MUST INCLUDE FILENAME
 find_library(VULKAN_LOADER vulkan   PATH "$ENV{VULKAN_SDK}/lib")             # Search in Vulkan SDK on Linux  : /lib/libvulkan.so
 find_library(VULKAN_LOADER vulkan-1 PATH "$ENV{VULKAN_SDK}/bin")             # Search in Vulkan SDK on Windows: /bin/vulkan-1.lib
 find_library(VULKAN_LOADER vulkan   PATH "../../../build/Default/loader")    # Search in VulkanSamples on Linux

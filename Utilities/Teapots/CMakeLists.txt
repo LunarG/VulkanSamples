@@ -83,5 +83,5 @@ target_link_libraries     (${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
 
 #-----------------WSIWindow-----------------
 add_subdirectory(WSIWindow)
-target_link_libraries(${PROJECT_NAME} WSIWindow)
+target_link_libraries(${PROJECT_NAME} Teapots_WSIWindow)
 #-------------------------------------------
