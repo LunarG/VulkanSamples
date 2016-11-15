@@ -11260,35 +11260,51 @@ static void CopyNoncoherentMemoryFromDriver(layer_data *dev_data, uint32_t mem_r
     }
 }
 
+static bool PreCallValidateFlushMappedMemoryRanges(layer_data *dev_data, uint32_t mem_range_count,
+                                                   const VkMappedMemoryRange *mem_ranges) {
+    bool skip = false;
+    std::lock_guard<std::mutex> lock(global_lock);
+    skip |= ValidateAndCopyNoncoherentMemoryToDriver(dev_data, mem_range_count, mem_ranges);
+    skip |= validateMemoryIsMapped(dev_data, "vkFlushMappedMemoryRanges", mem_range_count, mem_ranges);
+    return skip;
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL FlushMappedMemoryRanges(VkDevice device, uint32_t memRangeCount,
                                                        const VkMappedMemoryRange *pMemRanges) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
-    bool skip = false;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
 
-    std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateAndCopyNoncoherentMemoryToDriver(dev_data, memRangeCount, pMemRanges);
-    skip |= validateMemoryIsMapped(dev_data, "vkFlushMappedMemoryRanges", memRangeCount, pMemRanges);
-    lock.unlock();
-    if (!skip) {
+    if (!PreCallValidateFlushMappedMemoryRanges(dev_data, memRangeCount, pMemRanges)) {
         result = dev_data->dispatch_table.FlushMappedMemoryRanges(device, memRangeCount, pMemRanges);
     }
     return result;
 }
 
+static bool PreCallValidateInvalidateMappedMemoryRanges(layer_data *dev_data, uint32_t mem_range_count,
+                                                        const VkMappedMemoryRange *mem_ranges) {
+    bool skip = false;
+    std::lock_guard<std::mutex> lock(global_lock);
+    skip |= validateMemoryIsMapped(dev_data, "vkInvalidateMappedMemoryRanges", mem_range_count, mem_ranges);
+    return skip;
+}
+
+static void PostCallRecordInvalidateMappedMemoryRanges(layer_data *dev_data, uint32_t mem_range_count,
+                                                       const VkMappedMemoryRange *mem_ranges) {
+    std::lock_guard<std::mutex> lock(global_lock);
+    // Update our shadow copy with modified driver data
+    CopyNoncoherentMemoryFromDriver(dev_data, mem_range_count, mem_ranges);
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL InvalidateMappedMemoryRanges(VkDevice device, uint32_t memRangeCount,
                                                             const VkMappedMemoryRange *pMemRanges) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
-    bool skip = false;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
 
-    std::unique_lock<std::mutex> lock(global_lock);
-    skip |= validateMemoryIsMapped(dev_data, "vkInvalidateMappedMemoryRanges", memRangeCount, pMemRanges);
-    lock.unlock();
-    if (!skip) {
+    if (!PreCallValidateInvalidateMappedMemoryRanges(dev_data, memRangeCount, pMemRanges)) {
         result = dev_data->dispatch_table.InvalidateMappedMemoryRanges(device, memRangeCount, pMemRanges);
-        // Update our shadow copy with modified driver data
-        CopyNoncoherentMemoryFromDriver(dev_data, memRangeCount, pMemRanges);
+        if (result == VK_SUCCESS) {
+            PostCallRecordInvalidateMappedMemoryRanges(dev_data, memRangeCount, pMemRanges);
+        }
     }
     return result;
 }
