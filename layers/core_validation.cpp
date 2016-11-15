@@ -11181,26 +11181,32 @@ static bool validateMemoryIsMapped(layer_data *dev_data, const char *funcName, u
     for (uint32_t i = 0; i < memRangeCount; ++i) {
         auto mem_info = getMemObjInfo(dev_data, pMemRanges[i].memory);
         if (mem_info) {
-            if (mem_info->mem_range.offset > pMemRanges[i].offset) {
-                skip_call |=
-                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
-                            (uint64_t)pMemRanges[i].memory, __LINE__, MEMTRACK_INVALID_MAP, "MEM",
-                            "%s: Flush/Invalidate offset (" PRINTF_SIZE_T_SPECIFIER ") is less than Memory Object's offset "
-                            "(" PRINTF_SIZE_T_SPECIFIER ").",
-                            funcName, static_cast<size_t>(pMemRanges[i].offset), static_cast<size_t>(mem_info->mem_range.offset));
-            }
-
-            const uint64_t dev_dataTerminus = (mem_info->mem_range.size == VK_WHOLE_SIZE)
-                                                  ? mem_info->alloc_info.allocationSize
-                                                  : (mem_info->mem_range.offset + mem_info->mem_range.size);
-            if (pMemRanges[i].size != VK_WHOLE_SIZE && (dev_dataTerminus < (pMemRanges[i].offset + pMemRanges[i].size))) {
-                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                     VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, (uint64_t)pMemRanges[i].memory, __LINE__,
-                                     MEMTRACK_INVALID_MAP, "MEM", "%s: Flush/Invalidate upper-bound (" PRINTF_SIZE_T_SPECIFIER
-                                                                  ") exceeds the Memory Object's upper-bound "
-                                                                  "(" PRINTF_SIZE_T_SPECIFIER ").",
-                                     funcName, static_cast<size_t>(pMemRanges[i].offset + pMemRanges[i].size),
-                                     static_cast<size_t>(dev_dataTerminus));
+            if (pMemRanges[i].size == VK_WHOLE_SIZE) {
+                if (mem_info->mem_range.offset > pMemRanges[i].offset) {
+                    skip_call |=
+                        log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
+                                (uint64_t)pMemRanges[i].memory, __LINE__, VALIDATION_ERROR_00643, "MEM",
+                                "%s: Flush/Invalidate offset (" PRINTF_SIZE_T_SPECIFIER ") is less than Memory Object's offset "
+                                "(" PRINTF_SIZE_T_SPECIFIER "). %s",
+                                funcName, static_cast<size_t>(pMemRanges[i].offset),
+                                static_cast<size_t>(mem_info->mem_range.offset), validation_error_map[VALIDATION_ERROR_00643]);
+                }
+            } else {
+                const uint64_t data_end = (mem_info->mem_range.size == VK_WHOLE_SIZE)
+                                              ? mem_info->alloc_info.allocationSize
+                                              : (mem_info->mem_range.offset + mem_info->mem_range.size);
+                if ((mem_info->mem_range.offset > pMemRanges[i].offset) ||
+                    (data_end < (pMemRanges[i].offset + pMemRanges[i].size))) {
+                    skip_call |=
+                        log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
+                                (uint64_t)pMemRanges[i].memory, __LINE__, VALIDATION_ERROR_00642, "MEM",
+                                "%s: Flush/Invalidate size or offset (" PRINTF_SIZE_T_SPECIFIER ", " PRINTF_SIZE_T_SPECIFIER
+                                ") exceed the Memory Object's upper-bound "
+                                "(" PRINTF_SIZE_T_SPECIFIER "). %s",
+                                funcName, static_cast<size_t>(pMemRanges[i].offset + pMemRanges[i].size),
+                                static_cast<size_t>(pMemRanges[i].offset), static_cast<size_t>(data_end),
+                                validation_error_map[VALIDATION_ERROR_00642]);
+                }
             }
         }
     }

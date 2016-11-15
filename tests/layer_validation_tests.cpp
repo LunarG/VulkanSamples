@@ -1457,7 +1457,7 @@ TEST_F(VkLayerTest, InvalidMemoryMapping) {
     mmr.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
     mmr.memory = mem;
     mmr.offset = 15; // Error b/c offset less than offset of mapped mem
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, ") is less than Memory Object's offset (");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00642);
     vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
     m_errorMonitor->VerifyFound();
     // Now flush range that oversteps mapped range
@@ -1466,7 +1466,17 @@ TEST_F(VkLayerTest, InvalidMemoryMapping) {
     ASSERT_VK_SUCCESS(err);
     mmr.offset = 16;
     mmr.size = 256; // flushing bounds (272) exceed mapped bounds (256)
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, ") exceeds the Memory Object's upper-bound (");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00642);
+    vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
+    m_errorMonitor->VerifyFound();
+
+    // Now flush range with VK_WHOLE_SIZE that oversteps offset
+    vkUnmapMemory(m_device->device(), mem);
+    err = vkMapMemory(m_device->device(), mem, 128, 256, 0, (void **)&pData);
+    ASSERT_VK_SUCCESS(err);
+    mmr.offset = 64;
+    mmr.size = VK_WHOLE_SIZE;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00643);
     vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
     m_errorMonitor->VerifyFound();
 
