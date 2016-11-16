@@ -6778,6 +6778,17 @@ void set_pipeline_state(PIPELINE_STATE *pPipe) {
     }
 }
 
+static bool PreCallCreateGraphicsPipelines(layer_data *device_data, uint32_t count,
+                                           const VkGraphicsPipelineCreateInfo *create_infos, vector<PIPELINE_STATE *> &pipe_state) {
+    bool skip = false;
+    layer_data *phy_dev_data = get_my_data_ptr(get_dispatch_key(device_data->instance_data), layer_data_map);
+
+    for (uint32_t i = 0; i < count; i++) {
+        skip |= verifyPipelineCreateState(device_data, pipe_state, i);
+    }
+    return skip;
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL
 CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t count,
                         const VkGraphicsPipelineCreateInfo *pCreateInfos, const VkAllocationCallbacks *pAllocator,
@@ -6801,9 +6812,9 @@ CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t
         pPipeState[i]->initGraphicsPipeline(&pCreateInfos[i]);
         pPipeState[i]->render_pass_ci.initialize(getRenderPassState(dev_data, pCreateInfos[i].renderPass)->createInfo.ptr());
         pPipeState[i]->pipeline_layout = *getPipelineLayout(dev_data, pCreateInfos[i].layout);
-
-        skip_call |= verifyPipelineCreateState(dev_data, pPipeState, i);
     }
+
+    skip_call |= PreCallCreateGraphicsPipelines(dev_data, count, pCreateInfos, pPipeState);
 
     if (!skip_call) {
         lock.unlock();
