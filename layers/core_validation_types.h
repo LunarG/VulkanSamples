@@ -164,17 +164,19 @@ template <> struct hash<MEM_BINDING> {
 };
 }
 
-// Superclass for bindable object state (currently imagesa and buffers)
+// Superclass for bindable object state (currently images and buffers)
 class BINDABLE : public BASE_NODE {
   public:
     bool sparse; // Is this object being bound with sparse memory or not?
     // Non-sparse binding data
     MEM_BINDING binding;
+    // Memory requirements for this BINDABLE
+    VkMemoryRequirements requirements;
     // Sparse binding data, initially just tracking MEM_BINDING per mem object
     //  There's more data for sparse bindings so need better long-term solution
     // TODO : Need to update solution to track all sparse binding data
     std::unordered_set<MEM_BINDING> sparse_bindings;
-    BINDABLE() : sparse(false), binding{}, sparse_bindings{}{};
+    BINDABLE() : sparse(false), binding{}, requirements{}, sparse_bindings{} {};
 };
 
 class BUFFER_NODE : public BINDABLE {

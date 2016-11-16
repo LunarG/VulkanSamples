@@ -5957,18 +5957,22 @@ BindBufferMemory(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDeviceS
 
 VKAPI_ATTR void VKAPI_CALL
 GetBufferMemoryRequirements(VkDevice device, VkBuffer buffer, VkMemoryRequirements *pMemoryRequirements) {
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    // TODO : What to track here?
-    //   Could potentially save returned mem requirements and validate values passed into BindBufferMemory
-    my_data->dispatch_table.GetBufferMemoryRequirements(device, buffer, pMemoryRequirements);
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    dev_data->dispatch_table.GetBufferMemoryRequirements(device, buffer, pMemoryRequirements);
+    auto buffer_state = getBufferNode(dev_data, buffer);
+    if (buffer_state) {
+        buffer_state->requirements = *pMemoryRequirements;
+    }
 }
 
 VKAPI_ATTR void VKAPI_CALL
 GetImageMemoryRequirements(VkDevice device, VkImage image, VkMemoryRequirements *pMemoryRequirements) {
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    // TODO : What to track here?
-    //   Could potentially save returned mem requirements and validate values passed into BindImageMemory
-    my_data->dispatch_table.GetImageMemoryRequirements(device, image, pMemoryRequirements);
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    dev_data->dispatch_table.GetImageMemoryRequirements(device, image, pMemoryRequirements);
+    auto image_state = getImageState(dev_data, image);
+    if (image_state) {
+        image_state->requirements = *pMemoryRequirements;
+    }
 }
 
 static bool PreCallValidateDestroyImageView(layer_data *dev_data, VkImageView image_view, IMAGE_VIEW_STATE **image_view_state,
