@@ -1179,6 +1179,15 @@ struct Demo {
                              .setLevel(vk::CommandBufferLevel::ePrimary)
                              .setCommandBufferCount(1);
 
+        result = device.allocateCommandBuffers(&cmd, &this->cmd);
+        VERIFY(result == vk::Result::eSuccess);
+
+        auto const cmd_buf_info =
+            vk::CommandBufferBeginInfo().setPInheritanceInfo(nullptr);
+
+        result = this->cmd.begin(&cmd_buf_info);
+        VERIFY(result == vk::Result::eSuccess);
+
         prepare_buffers();
         prepare_depth();
         prepare_textures();
@@ -2107,21 +2116,7 @@ struct Demo {
                           vk::AccessFlags srcAccessMask,
                           vk::PipelineStageFlags src_stages,
                           vk::PipelineStageFlags dest_stages) {
-        if (!cmd) {
-            auto const cmd = vk::CommandBufferAllocateInfo()
-                                 .setCommandPool(cmd_pool)
-                                 .setLevel(vk::CommandBufferLevel::ePrimary)
-                                 .setCommandBufferCount(1);
-
-            auto result = device.allocateCommandBuffers(&cmd, &this->cmd);
-            VERIFY(result == vk::Result::eSuccess);
-
-            auto const cmd_buf_info =
-                vk::CommandBufferBeginInfo().setPInheritanceInfo(nullptr);
-
-            result = this->cmd.begin(&cmd_buf_info);
-            VERIFY(result == vk::Result::eSuccess);
-        }
+        assert(cmd);
 
         auto DstAccessMask = [](vk::ImageLayout const &layout) {
             vk::AccessFlags flags;
