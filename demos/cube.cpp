@@ -337,7 +337,7 @@ struct Demo {
         if (separate_present_queue) {
             device.destroyCommandPool(present_cmd_pool, nullptr);
         }
-
+        device.waitIdle();
         device.destroy(nullptr);
         inst.destroySurfaceKHR(surface, nullptr);
         inst.destroy(nullptr);
