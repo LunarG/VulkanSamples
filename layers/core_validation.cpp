@@ -144,7 +144,7 @@ struct layer_data {
     unordered_map<VkImageView, unique_ptr<IMAGE_VIEW_STATE>> imageViewMap;
     unordered_map<VkImage, unique_ptr<IMAGE_STATE>> imageMap;
     unordered_map<VkBufferView, unique_ptr<BUFFER_VIEW_STATE>> bufferViewMap;
-    unordered_map<VkBuffer, unique_ptr<BUFFER_NODE>> bufferMap;
+    unordered_map<VkBuffer, unique_ptr<BUFFER_STATE>> bufferMap;
     unordered_map<VkPipeline, PIPELINE_STATE *> pipelineMap;
     unordered_map<VkCommandPool, COMMAND_POOL_NODE> commandPoolMap;
     unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_STATE *> descriptorPoolMap;
@@ -295,7 +295,7 @@ SAMPLER_STATE *getSamplerState(const layer_data *dev_data, VkSampler sampler) {
     }
     return sampler_it->second.get();
 }
-// Return image node ptr for specified image or else NULL
+// Return image state ptr for specified image or else NULL
 IMAGE_STATE *getImageState(const layer_data *dev_data, VkImage image) {
     auto img_it = dev_data->imageMap.find(image);
     if (img_it == dev_data->imageMap.end()) {
@@ -303,8 +303,8 @@ IMAGE_STATE *getImageState(const layer_data *dev_data, VkImage image) {
     }
     return img_it->second.get();
 }
-// Return buffer node ptr for specified buffer or else NULL
-BUFFER_NODE *getBufferNode(const layer_data *dev_data, VkBuffer buffer) {
+// Return buffer state ptr for specified buffer or else NULL
+BUFFER_STATE *getBufferState(const layer_data *dev_data, VkBuffer buffer) {
     auto buff_it = dev_data->bufferMap.find(buffer);
     if (buff_it == dev_data->bufferMap.end()) {
         return nullptr;
@@ -406,7 +406,7 @@ static BINDABLE *GetObjectMemBinding(layer_data *my_data, uint64_t handle, VkDeb
     case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT:
         return getImageState(my_data, VkImage(handle));
     case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT:
-        return getBufferNode(my_data, VkBuffer(handle));
+        return getBufferState(my_data, VkBuffer(handle));
     default:
         break;
     }
@@ -448,7 +448,7 @@ static bool validate_usage_flags(layer_data *my_data, VkFlags actual, VkFlags de
 }
 
 // Helper function to validate usage flags for buffers
-// For given buffer_node send actual vs. desired usage off to helper above where
+// For given buffer_state send actual vs. desired usage off to helper above where
 //  an error will be flagged if usage is not correct
 static bool ValidateImageUsageFlags(layer_data *dev_data, IMAGE_STATE const *image_state, VkFlags desired, VkBool32 strict,
                                     int32_t const msgCode, char const *func_name, char const *usage_string) {
@@ -458,12 +458,12 @@ static bool ValidateImageUsageFlags(layer_data *dev_data, IMAGE_STATE const *ima
 }
 
 // Helper function to validate usage flags for buffers
-// For given buffer_node send actual vs. desired usage off to helper above where
+// For given buffer_state send actual vs. desired usage off to helper above where
 //  an error will be flagged if usage is not correct
-static bool ValidateBufferUsageFlags(layer_data *dev_data, BUFFER_NODE const *buffer_node, VkFlags desired, VkBool32 strict,
+static bool ValidateBufferUsageFlags(layer_data *dev_data, BUFFER_STATE const *buffer_state, VkFlags desired, VkBool32 strict,
                                      int32_t const msgCode, char const *func_name, char const *usage_string) {
-    return validate_usage_flags(dev_data, buffer_node->createInfo.usage, desired, strict,
-                                reinterpret_cast<const uint64_t &>(buffer_node->buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
+    return validate_usage_flags(dev_data, buffer_state->createInfo.usage, desired, strict,
+                                reinterpret_cast<const uint64_t &>(buffer_state->buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
                                 msgCode, "buffer", func_name, usage_string);
 }
 
@@ -557,9 +557,9 @@ static bool ValidateImageMemoryIsValid(layer_data *dev_data, IMAGE_STATE *image_
     }
     return false;
 }
-// For given buffer_node, verify that the range it's bound to is valid
-static bool ValidateBufferMemoryIsValid(layer_data *dev_data, BUFFER_NODE *buffer_node, const char *functionName) {
-    return ValidateMemoryIsValid(dev_data, buffer_node->binding.mem, reinterpret_cast<uint64_t &>(buffer_node->buffer),
+// For given buffer_state, verify that the range it's bound to is valid
+static bool ValidateBufferMemoryIsValid(layer_data *dev_data, BUFFER_STATE *buffer_state, const char *functionName) {
+    return ValidateMemoryIsValid(dev_data, buffer_state->binding.mem, reinterpret_cast<uint64_t &>(buffer_state->buffer),
                                  VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, functionName);
 }
 // For the given memory allocation, set the range bound by the given handle object to the valid param value
@@ -580,8 +580,8 @@ static void SetImageMemoryValid(layer_data *dev_data, IMAGE_STATE *image_state, 
     }
 }
 // For given buffer node set the buffer's bound memory range to valid param value
-static void SetBufferMemoryValid(layer_data *dev_data, BUFFER_NODE *buffer_node, bool valid) {
-    SetMemoryValid(dev_data, buffer_node->binding.mem, reinterpret_cast<uint64_t &>(buffer_node->buffer), valid);
+static void SetBufferMemoryValid(layer_data *dev_data, BUFFER_STATE *buffer_state, bool valid) {
+    SetMemoryValid(dev_data, buffer_state->binding.mem, reinterpret_cast<uint64_t &>(buffer_state->buffer), valid);
 }
 // Find CB Info and add mem reference to list container
 // Find Mem Obj Info and add CB reference to list container
@@ -647,9 +647,9 @@ void AddCommandBufferBindingImageView(const layer_data *dev_data, GLOBAL_CB_NODE
 }
 
 // Create binding link between given buffer node and command buffer node
-void AddCommandBufferBindingBuffer(const layer_data *dev_data, GLOBAL_CB_NODE *cb_node, BUFFER_NODE *buff_node) {
+void AddCommandBufferBindingBuffer(const layer_data *dev_data, GLOBAL_CB_NODE *cb_node, BUFFER_STATE *buffer_state) {
     // First update CB binding in MemObj mini CB list
-    for (auto mem_binding : buff_node->GetBoundMemory()) {
+    for (auto mem_binding : buffer_state->GetBoundMemory()) {
         DEVICE_MEM_INFO *pMemInfo = getMemObjInfo(dev_data, mem_binding);
         if (pMemInfo) {
             pMemInfo->cb_bindings.insert(cb_node);
@@ -658,8 +658,8 @@ void AddCommandBufferBindingBuffer(const layer_data *dev_data, GLOBAL_CB_NODE *c
         }
     }
     // Now update cb binding for buffer
-    cb_node->object_bindings.insert({reinterpret_cast<uint64_t &>(buff_node->buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT});
-    buff_node->cb_bindings.insert(cb_node);
+    cb_node->object_bindings.insert({reinterpret_cast<uint64_t &>(buffer_state->buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT});
+    buffer_state->cb_bindings.insert(cb_node);
 }
 
 // Create binding link between given buffer view node and its buffer with command buffer node
@@ -668,10 +668,10 @@ void AddCommandBufferBindingBufferView(const layer_data *dev_data, GLOBAL_CB_NOD
     view_state->cb_bindings.insert(cb_node);
     cb_node->object_bindings.insert(
         {reinterpret_cast<uint64_t &>(view_state->buffer_view), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT});
-    auto buffer_node = getBufferNode(dev_data, view_state->create_info.buffer);
+    auto buffer_state = getBufferState(dev_data, view_state->create_info.buffer);
     // Add bindings for buffer within bufferView
-    if (buffer_node) {
-        AddCommandBufferBindingBuffer(dev_data, cb_node, buffer_node);
+    if (buffer_state) {
+        AddCommandBufferBindingBuffer(dev_data, cb_node, buffer_state);
     }
 }
 
@@ -757,11 +757,11 @@ bool ValidateMemoryIsBoundToImage(const layer_data *dev_data, const IMAGE_STATE 
 }
 
 // Check to see if memory was bound to this buffer
-bool ValidateMemoryIsBoundToBuffer(const layer_data *dev_data, const BUFFER_NODE *buffer_node, const char *api_name) {
+bool ValidateMemoryIsBoundToBuffer(const layer_data *dev_data, const BUFFER_STATE *buffer_state, const char *api_name) {
     bool result = false;
-    if (0 == (static_cast<uint32_t>(buffer_node->createInfo.flags) & VK_BUFFER_CREATE_SPARSE_BINDING_BIT)) {
-        result = VerifyBoundMemoryIsValid(dev_data, buffer_node->binding.mem,
-                                          reinterpret_cast<const uint64_t &>(buffer_node->buffer), api_name, "Buffer");
+    if (0 == (static_cast<uint32_t>(buffer_state->createInfo.flags) & VK_BUFFER_CREATE_SPARSE_BINDING_BIT)) {
+        result = VerifyBoundMemoryIsValid(dev_data, buffer_state->binding.mem,
+                                          reinterpret_cast<const uint64_t &>(buffer_state->buffer), api_name, "Buffer");
     }
     return result;
 }
@@ -859,7 +859,7 @@ static bool get_mem_for_type(layer_data *dev_data, uint64_t handle, VkDebugRepor
         *mem = getImageState(dev_data, VkImage(handle))->binding.mem;
         break;
     case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT:
-        *mem = getBufferNode(dev_data, VkBuffer(handle))->binding.mem;
+        *mem = getBufferState(dev_data, VkBuffer(handle))->binding.mem;
         break;
     default:
         assert(0);
@@ -3998,7 +3998,7 @@ BASE_NODE *GetStateStructPtrFromObject(layer_data *dev_data, VK_OBJECT object_st
         break;
     }
     case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT: {
-        base_ptr = getBufferNode(dev_data, reinterpret_cast<VkBuffer &>(object_struct.handle));
+        base_ptr = getBufferState(dev_data, reinterpret_cast<VkBuffer &>(object_struct.handle));
         break;
     }
     case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT: {
@@ -4619,7 +4619,7 @@ static bool ValidateAndIncrementBoundObjects(layer_data *dev_data, GLOBAL_CB_NOD
             break;
         }
         case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT: {
-            base_obj = getBufferNode(dev_data, reinterpret_cast<VkBuffer &>(obj.handle));
+            base_obj = getBufferState(dev_data, reinterpret_cast<VkBuffer &>(obj.handle));
             error_code = DRAWSTATE_INVALID_BUFFER;
             break;
         }
@@ -4697,13 +4697,13 @@ static bool validateAndIncrementResources(layer_data *dev_data, GLOBAL_CB_NODE *
     //  should then be flagged prior to calling this function
     for (auto drawDataElement : cb_node->drawData) {
         for (auto buffer : drawDataElement.buffers) {
-            auto buffer_node = getBufferNode(dev_data, buffer);
-            if (!buffer_node) {
+            auto buffer_state = getBufferState(dev_data, buffer);
+            if (!buffer_state) {
                 skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
                                      (uint64_t)(buffer), __LINE__, DRAWSTATE_INVALID_BUFFER, "DS",
                                      "Cannot submit cmd buffer using deleted buffer 0x%" PRIx64 ".", (uint64_t)(buffer));
             } else {
-                buffer_node->in_use.fetch_add(1);
+                buffer_state->in_use.fetch_add(1);
             }
         }
     }
@@ -4793,9 +4793,9 @@ static bool RetireWorkOnQueue(layer_data *dev_data, QUEUE_NODE *pQueue, uint64_t
             DecrementBoundResources(dev_data, cb_node);
             for (auto drawDataElement : cb_node->drawData) {
                 for (auto buffer : drawDataElement.buffers) {
-                    auto buffer_node = getBufferNode(dev_data, buffer);
-                    if (buffer_node) {
-                        buffer_node->in_use.fetch_sub(1);
+                    auto buffer_state = getBufferState(dev_data, buffer);
+                    if (buffer_state) {
+                        buffer_state->in_use.fetch_sub(1);
                     }
                 }
             }
@@ -5170,9 +5170,9 @@ static void PostCallRecordFreeMemory(layer_data *dev_data, VkDeviceMemory mem, D
             break;
         }
         case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT: {
-            auto buff_node = getBufferNode(dev_data, reinterpret_cast<VkBuffer &>(obj.handle));
-            assert(buff_node); // Any destroyed buffers should already be removed from bindings
-            buff_node->binding.mem = MEMORY_UNBOUND;
+            auto buffer_state = getBufferState(dev_data, reinterpret_cast<VkBuffer &>(obj.handle));
+            assert(buffer_state); // Any destroyed buffers should already be removed from bindings
+            buffer_state->binding.mem = MEMORY_UNBOUND;
             break;
         }
         default:
@@ -5606,13 +5606,13 @@ VKAPI_ATTR VkResult VKAPI_CALL GetQueryPoolResults(VkDevice device, VkQueryPool 
 
 static bool validateIdleBuffer(const layer_data *my_data, VkBuffer buffer) {
     bool skip_call = false;
-    auto buffer_node = getBufferNode(my_data, buffer);
-    if (!buffer_node) {
+    auto buffer_state = getBufferState(my_data, buffer);
+    if (!buffer_state) {
         skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
                              (uint64_t)(buffer), __LINE__, DRAWSTATE_DOUBLE_DESTROY, "DS",
                              "Cannot free buffer 0x%" PRIxLEAST64 " that has not been allocated.", (uint64_t)(buffer));
     } else {
-        if (buffer_node->in_use.load()) {
+        if (buffer_state->in_use.load()) {
             skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
                                  (uint64_t)(buffer), __LINE__, DRAWSTATE_OBJECT_INUSE, "DS",
                                  "Cannot free buffer 0x%" PRIxLEAST64 " that is in use by a command buffer.", (uint64_t)(buffer));
@@ -5768,19 +5768,19 @@ VKAPI_ATTR void VKAPI_CALL DestroyBuffer(VkDevice device, VkBuffer buffer,
     std::unique_lock<std::mutex> lock(global_lock);
     if (!validateIdleBuffer(dev_data, buffer)) {
         // Clean up memory binding and range information for buffer
-        auto buff_node = getBufferNode(dev_data, buffer);
-        if (buff_node) {
+        auto buffer_state = getBufferState(dev_data, buffer);
+        if (buffer_state) {
             // Any bound cmd buffers are now invalid
-            invalidateCommandBuffers(buff_node->cb_bindings,
-                                     {reinterpret_cast<uint64_t &>(buff_node->buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT});
-            for (auto mem_binding : buff_node->GetBoundMemory()) {
+            invalidateCommandBuffers(buffer_state->cb_bindings,
+                                     {reinterpret_cast<uint64_t &>(buffer_state->buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT});
+            for (auto mem_binding : buffer_state->GetBoundMemory()) {
                 auto mem_info = getMemObjInfo(dev_data, mem_binding);
                 if (mem_info) {
                     RemoveBufferMemoryRange(reinterpret_cast<uint64_t &>(buffer), mem_info);
                 }
             }
             ClearMemoryObjectBindings(dev_data, reinterpret_cast<uint64_t &>(buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT);
-            dev_data->bufferMap.erase(buff_node->buffer);
+            dev_data->bufferMap.erase(buffer_state->buffer);
         }
         lock.unlock();
         dev_data->dispatch_table.DestroyBuffer(device, buffer, pAllocator);
@@ -5894,13 +5894,13 @@ BindBufferMemory(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDeviceS
     // Track objects tied to memory
     uint64_t buffer_handle = reinterpret_cast<uint64_t &>(buffer);
     bool skip_call = SetMemBinding(dev_data, mem, buffer_handle, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, "vkBindBufferMemory");
-    auto buffer_node = getBufferNode(dev_data, buffer);
-    if (buffer_node) {
+    auto buffer_state = getBufferState(dev_data, buffer);
+    if (buffer_state) {
         VkMemoryRequirements memRequirements;
         dev_data->dispatch_table.GetBufferMemoryRequirements(device, buffer, &memRequirements);
-        buffer_node->binding.mem = mem;
-        buffer_node->binding.offset = memoryOffset;
-        buffer_node->binding.size = memRequirements.size;
+        buffer_state->binding.mem = mem;
+        buffer_state->binding.offset = memoryOffset;
+        buffer_state->binding.size = memRequirements.size;
 
         // Track and validate bound memory range information
         auto mem_info = getMemObjInfo(dev_data, mem);
@@ -5967,7 +5967,7 @@ VKAPI_ATTR void VKAPI_CALL
 GetBufferMemoryRequirements(VkDevice device, VkBuffer buffer, VkMemoryRequirements *pMemoryRequirements) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     dev_data->dispatch_table.GetBufferMemoryRequirements(device, buffer, pMemoryRequirements);
-    auto buffer_state = getBufferNode(dev_data, buffer);
+    auto buffer_state = getBufferState(dev_data, buffer);
     if (buffer_state) {
         buffer_state->requirements = *pMemoryRequirements;
     }
@@ -6458,21 +6458,21 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateBuffer(VkDevice device, const VkBufferCreat
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
         // TODO : This doesn't create deep copy of pQueueFamilyIndices so need to fix that if/when we want that data to be valid
-        dev_data->bufferMap.insert(std::make_pair(*pBuffer, unique_ptr<BUFFER_NODE>(new BUFFER_NODE(*pBuffer, pCreateInfo))));
+        dev_data->bufferMap.insert(std::make_pair(*pBuffer, unique_ptr<BUFFER_STATE>(new BUFFER_STATE(*pBuffer, pCreateInfo))));
     }
     return result;
 }
 
 static bool PreCallValidateCreateBufferView(layer_data *dev_data, const VkBufferViewCreateInfo *pCreateInfo) {
     bool skip_call = false;
-    BUFFER_NODE *buf_node = getBufferNode(dev_data, pCreateInfo->buffer);
+    BUFFER_STATE *buffer_state = getBufferState(dev_data, pCreateInfo->buffer);
     // If this isn't a sparse buffer, it needs to have memory backing it at CreateBufferView time
-    if (buf_node) {
-        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, buf_node, "vkCreateBufferView()");
+    if (buffer_state) {
+        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, buffer_state, "vkCreateBufferView()");
         // In order to create a valid buffer view, the buffer must have been created with at least one of the
         // following flags:  UNIFORM_TEXEL_BUFFER_BIT or STORAGE_TEXEL_BUFFER_BIT
         skip_call |= ValidateBufferUsageFlags(
-            dev_data, buf_node, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT, false,
+            dev_data, buffer_state, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT, false,
             VALIDATION_ERROR_00694, "vkCreateBufferView()", "VK_BUFFER_USAGE_[STORAGE|UNIFORM]_TEXEL_BUFFER_BIT");
     }
     return skip_call;
@@ -7876,12 +7876,12 @@ CmdBindIndexBuffer(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize 
     // TODO : Somewhere need to verify that IBs have correct usage state flagged
     std::unique_lock<std::mutex> lock(global_lock);
 
-    auto buff_node = getBufferNode(dev_data, buffer);
+    auto buffer_state = getBufferState(dev_data, buffer);
     auto cb_node = getCBNode(dev_data, commandBuffer);
-    if (cb_node && buff_node) {
-        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, buff_node, "vkCmdBindIndexBuffer()");
+    if (cb_node && buffer_state) {
+        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, buffer_state, "vkCmdBindIndexBuffer()");
         std::function<bool()> function = [=]() {
-            return ValidateBufferMemoryIsValid(dev_data, buff_node, "vkCmdBindIndexBuffer()");
+            return ValidateBufferMemoryIsValid(dev_data, buffer_state, "vkCmdBindIndexBuffer()");
         };
         cb_node->validate_functions.push_back(function);
         skip_call |= addCmd(dev_data, cb_node, CMD_BINDINDEXBUFFER, "vkCmdBindIndexBuffer()");
@@ -7935,11 +7935,11 @@ VKAPI_ATTR void VKAPI_CALL CmdBindVertexBuffers(VkCommandBuffer commandBuffer, u
     auto cb_node = getCBNode(dev_data, commandBuffer);
     if (cb_node) {
         for (uint32_t i = 0; i < bindingCount; ++i) {
-            auto buff_node = getBufferNode(dev_data, pBuffers[i]);
-            assert(buff_node);
-            skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, buff_node, "vkCmdBindVertexBuffers()");
+            auto buffer_state = getBufferState(dev_data, pBuffers[i]);
+            assert(buffer_state);
+            skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, buffer_state, "vkCmdBindVertexBuffers()");
             std::function<bool()> function = [=]() {
-                return ValidateBufferMemoryIsValid(dev_data, buff_node, "vkCmdBindVertexBuffers()");
+                return ValidateBufferMemoryIsValid(dev_data, buffer_state, "vkCmdBindVertexBuffers()");
             };
             cb_node->validate_functions.push_back(function);
         }
@@ -7971,10 +7971,10 @@ static bool markStoreImagesAndBuffersAsWritten(layer_data *dev_data, GLOBAL_CB_N
         pCB->validate_functions.push_back(function);
     }
     for (auto buffer : pCB->updateBuffers) {
-        auto buff_node = getBufferNode(dev_data, buffer);
-        assert(buff_node);
+        auto buffer_state = getBufferState(dev_data, buffer);
+        assert(buffer_state);
         std::function<bool()> function = [=]() {
-            SetBufferMemoryValid(dev_data, buff_node, true);
+            SetBufferMemoryValid(dev_data, buffer_state, true);
             return false;
         };
         pCB->validate_functions.push_back(function);
@@ -8044,10 +8044,10 @@ CmdDrawIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize off
     std::unique_lock<std::mutex> lock(global_lock);
 
     auto cb_node = getCBNode(dev_data, commandBuffer);
-    auto buff_node = getBufferNode(dev_data, buffer);
-    if (cb_node && buff_node) {
-        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, buff_node, "vkCmdDrawIndirect()");
-        AddCommandBufferBindingBuffer(dev_data, cb_node, buff_node);
+    auto buffer_state = getBufferState(dev_data, buffer);
+    if (cb_node && buffer_state) {
+        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, buffer_state, "vkCmdDrawIndirect()");
+        AddCommandBufferBindingBuffer(dev_data, cb_node, buffer_state);
         skip_call |= addCmd(dev_data, cb_node, CMD_DRAWINDIRECT, "vkCmdDrawIndirect()");
         cb_node->drawCount[DRAW_INDIRECT]++;
         skip_call |= validate_and_update_draw_state(dev_data, cb_node, false, VK_PIPELINE_BIND_POINT_GRAPHICS, "vkCmdDrawIndirect");
@@ -8077,10 +8077,10 @@ CmdDrawIndexedIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceS
     std::unique_lock<std::mutex> lock(global_lock);
 
     auto cb_node = getCBNode(dev_data, commandBuffer);
-    auto buff_node = getBufferNode(dev_data, buffer);
-    if (cb_node && buff_node) {
-        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, buff_node, "vkCmdDrawIndexedIndirect()");
-        AddCommandBufferBindingBuffer(dev_data, cb_node, buff_node);
+    auto buffer_state = getBufferState(dev_data, buffer);
+    if (cb_node && buffer_state) {
+        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, buffer_state, "vkCmdDrawIndexedIndirect()");
+        AddCommandBufferBindingBuffer(dev_data, cb_node, buffer_state);
         skip_call |= addCmd(dev_data, cb_node, CMD_DRAWINDEXEDINDIRECT, "vkCmdDrawIndexedIndirect()");
         cb_node->drawCount[DRAW_INDEXED_INDIRECT]++;
         skip_call |=
@@ -8127,10 +8127,10 @@ CmdDispatchIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize
     std::unique_lock<std::mutex> lock(global_lock);
 
     auto cb_node = getCBNode(dev_data, commandBuffer);
-    auto buff_node = getBufferNode(dev_data, buffer);
-    if (cb_node && buff_node) {
-        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, buff_node, "vkCmdDispatchIndirect()");
-        AddCommandBufferBindingBuffer(dev_data, cb_node, buff_node);
+    auto buffer_state = getBufferState(dev_data, buffer);
+    if (cb_node && buffer_state) {
+        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, buffer_state, "vkCmdDispatchIndirect()");
+        AddCommandBufferBindingBuffer(dev_data, cb_node, buffer_state);
         skip_call |=
             validate_and_update_draw_state(dev_data, cb_node, false, VK_PIPELINE_BIND_POINT_COMPUTE, "vkCmdDispatchIndirect");
         skip_call |= markStoreImagesAndBuffersAsWritten(dev_data, cb_node);
@@ -8149,26 +8149,26 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer
     std::unique_lock<std::mutex> lock(global_lock);
 
     auto cb_node = getCBNode(dev_data, commandBuffer);
-    auto src_buff_node = getBufferNode(dev_data, srcBuffer);
-    auto dst_buff_node = getBufferNode(dev_data, dstBuffer);
-    if (cb_node && src_buff_node && dst_buff_node) {
-        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, src_buff_node, "vkCmdCopyBuffer()");
-        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, dst_buff_node, "vkCmdCopyBuffer()");
+    auto src_buff_state = getBufferState(dev_data, srcBuffer);
+    auto dst_buff_state = getBufferState(dev_data, dstBuffer);
+    if (cb_node && src_buff_state && dst_buff_state) {
+        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, src_buff_state, "vkCmdCopyBuffer()");
+        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, dst_buff_state, "vkCmdCopyBuffer()");
         // Update bindings between buffers and cmd buffer
-        AddCommandBufferBindingBuffer(dev_data, cb_node, src_buff_node);
-        AddCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_node);
+        AddCommandBufferBindingBuffer(dev_data, cb_node, src_buff_state);
+        AddCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_state);
         // Validate that SRC & DST buffers have correct usage flags set
-        skip_call |= ValidateBufferUsageFlags(dev_data, src_buff_node, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true,
+        skip_call |= ValidateBufferUsageFlags(dev_data, src_buff_state, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true,
                                               VALIDATION_ERROR_01164, "vkCmdCopyBuffer()", "VK_BUFFER_USAGE_TRANSFER_SRC_BIT");
-        skip_call |= ValidateBufferUsageFlags(dev_data, dst_buff_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true,
+        skip_call |= ValidateBufferUsageFlags(dev_data, dst_buff_state, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true,
                                               VALIDATION_ERROR_01165, "vkCmdCopyBuffer()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
 
         std::function<bool()> function = [=]() {
-            return ValidateBufferMemoryIsValid(dev_data, src_buff_node, "vkCmdCopyBuffer()");
+            return ValidateBufferMemoryIsValid(dev_data, src_buff_state, "vkCmdCopyBuffer()");
         };
         cb_node->validate_functions.push_back(function);
         function = [=]() {
-            SetBufferMemoryValid(dev_data, dst_buff_node, true);
+            SetBufferMemoryValid(dev_data, dst_buff_state, true);
             return false;
         };
         cb_node->validate_functions.push_back(function);
@@ -8559,17 +8559,17 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBufferToImage(VkCommandBuffer commandBuffer, V
     std::unique_lock<std::mutex> lock(global_lock);
 
     auto cb_node = getCBNode(dev_data, commandBuffer);
-    auto src_buff_node = getBufferNode(dev_data, srcBuffer);
+    auto src_buff_state = getBufferState(dev_data, srcBuffer);
     auto dst_image_state = getImageState(dev_data, dstImage);
-    if (cb_node && src_buff_node && dst_image_state) {
+    if (cb_node && src_buff_state && dst_image_state) {
         skip_call |=
             ValidateImageSampleCount(dev_data, dst_image_state, VK_SAMPLE_COUNT_1_BIT, "vkCmdCopyBufferToImage(): dstImage");
-        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, src_buff_node, "vkCmdCopyBufferToImage()");
+        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, src_buff_state, "vkCmdCopyBufferToImage()");
         skip_call |= ValidateMemoryIsBoundToImage(dev_data, dst_image_state, "vkCmdCopyBufferToImage()");
-        AddCommandBufferBindingBuffer(dev_data, cb_node, src_buff_node);
+        AddCommandBufferBindingBuffer(dev_data, cb_node, src_buff_state);
         AddCommandBufferBindingImage(dev_data, cb_node, dst_image_state);
         skip_call |=
-            ValidateBufferUsageFlags(dev_data, src_buff_node, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true, VALIDATION_ERROR_01230,
+            ValidateBufferUsageFlags(dev_data, src_buff_state, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true, VALIDATION_ERROR_01230,
                                      "vkCmdCopyBufferToImage()", "VK_BUFFER_USAGE_TRANSFER_SRC_BIT");
         skip_call |= ValidateImageUsageFlags(dev_data, dst_image_state, VK_IMAGE_USAGE_TRANSFER_DST_BIT, true,
                                              VALIDATION_ERROR_01231, "vkCmdCopyBufferToImage()", "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
@@ -8578,7 +8578,7 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBufferToImage(VkCommandBuffer commandBuffer, V
             return false;
         };
         cb_node->validate_functions.push_back(function);
-        function = [=]() { return ValidateBufferMemoryIsValid(dev_data, src_buff_node, "vkCmdCopyBufferToImage()"); };
+        function = [=]() { return ValidateBufferMemoryIsValid(dev_data, src_buff_state, "vkCmdCopyBufferToImage()"); };
         cb_node->validate_functions.push_back(function);
 
         skip_call |= addCmd(dev_data, cb_node, CMD_COPYBUFFERTOIMAGE, "vkCmdCopyBufferToImage()");
@@ -8605,27 +8605,27 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyImageToBuffer(VkCommandBuffer commandBuffer, V
 
     auto cb_node = getCBNode(dev_data, commandBuffer);
     auto src_image_state = getImageState(dev_data, srcImage);
-    auto dst_buff_node = getBufferNode(dev_data, dstBuffer);
-    if (cb_node && src_image_state && dst_buff_node) {
+    auto dst_buff_state = getBufferState(dev_data, dstBuffer);
+    if (cb_node && src_image_state && dst_buff_state) {
         skip_call |=
             ValidateImageSampleCount(dev_data, src_image_state, VK_SAMPLE_COUNT_1_BIT, "vkCmdCopyImageToBuffer(): srcImage");
         skip_call |= ValidateMemoryIsBoundToImage(dev_data, src_image_state, "vkCmdCopyImageToBuffer()");
-        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, dst_buff_node, "vkCmdCopyImageToBuffer()");
+        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, dst_buff_state, "vkCmdCopyImageToBuffer()");
         // Update bindings between buffer/image and cmd buffer
         AddCommandBufferBindingImage(dev_data, cb_node, src_image_state);
-        AddCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_node);
+        AddCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_state);
         // Validate that SRC image & DST buffer have correct usage flags set
         skip_call |= ValidateImageUsageFlags(dev_data, src_image_state, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, true,
                                              VALIDATION_ERROR_01248, "vkCmdCopyImageToBuffer()", "VK_IMAGE_USAGE_TRANSFER_SRC_BIT");
         skip_call |=
-            ValidateBufferUsageFlags(dev_data, dst_buff_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true, VALIDATION_ERROR_01252,
+            ValidateBufferUsageFlags(dev_data, dst_buff_state, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true, VALIDATION_ERROR_01252,
                                      "vkCmdCopyImageToBuffer()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
         std::function<bool()> function = [=]() {
             return ValidateImageMemoryIsValid(dev_data, src_image_state, "vkCmdCopyImageToBuffer()");
         };
         cb_node->validate_functions.push_back(function);
         function = [=]() {
-            SetBufferMemoryValid(dev_data, dst_buff_node, true);
+            SetBufferMemoryValid(dev_data, dst_buff_state, true);
             return false;
         };
         cb_node->validate_functions.push_back(function);
@@ -8652,16 +8652,16 @@ VKAPI_ATTR void VKAPI_CALL CmdUpdateBuffer(VkCommandBuffer commandBuffer, VkBuff
     std::unique_lock<std::mutex> lock(global_lock);
 
     auto cb_node = getCBNode(dev_data, commandBuffer);
-    auto dst_buff_node = getBufferNode(dev_data, dstBuffer);
-    if (cb_node && dst_buff_node) {
-        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, dst_buff_node, "vkCmdUpdateBuffer()");
+    auto dst_buff_state = getBufferState(dev_data, dstBuffer);
+    if (cb_node && dst_buff_state) {
+        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, dst_buff_state, "vkCmdUpdateBuffer()");
         // Update bindings between buffer and cmd buffer
-        AddCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_node);
+        AddCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_state);
         // Validate that DST buffer has correct usage flags set
-        skip_call |= ValidateBufferUsageFlags(dev_data, dst_buff_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true,
+        skip_call |= ValidateBufferUsageFlags(dev_data, dst_buff_state, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true,
                                               VALIDATION_ERROR_01146, "vkCmdUpdateBuffer()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
         std::function<bool()> function = [=]() {
-            SetBufferMemoryValid(dev_data, dst_buff_node, true);
+            SetBufferMemoryValid(dev_data, dst_buff_state, true);
             return false;
         };
         cb_node->validate_functions.push_back(function);
@@ -8683,16 +8683,16 @@ CmdFillBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize ds
     std::unique_lock<std::mutex> lock(global_lock);
 
     auto cb_node = getCBNode(dev_data, commandBuffer);
-    auto dst_buff_node = getBufferNode(dev_data, dstBuffer);
-    if (cb_node && dst_buff_node) {
-        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, dst_buff_node, "vkCmdFillBuffer()");
+    auto dst_buff_state = getBufferState(dev_data, dstBuffer);
+    if (cb_node && dst_buff_state) {
+        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, dst_buff_state, "vkCmdFillBuffer()");
         // Update bindings between buffer and cmd buffer
-        AddCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_node);
+        AddCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_state);
         // Validate that DST buffer has correct usage flags set
-        skip_call |= ValidateBufferUsageFlags(dev_data, dst_buff_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true,
+        skip_call |= ValidateBufferUsageFlags(dev_data, dst_buff_state, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true,
                                               VALIDATION_ERROR_01137, "vkCmdFillBuffer()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
         std::function<bool()> function = [=]() {
-            SetBufferMemoryValid(dev_data, dst_buff_node, true);
+            SetBufferMemoryValid(dev_data, dst_buff_state, true);
             return false;
         };
         cb_node->validate_functions.push_back(function);
@@ -9263,9 +9263,9 @@ static bool ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, ui
                             dev_data->phys_dev_properties.queue_family_properties.size());
         }
 
-        auto buffer_node = getBufferNode(dev_data, mem_barrier->buffer);
-        if (buffer_node) {
-            auto buffer_size = buffer_node->requirements.size;
+        auto buffer_state = getBufferState(dev_data, mem_barrier->buffer);
+        if (buffer_state) {
+            auto buffer_size = buffer_state->requirements.size;
             if (mem_barrier->offset >= buffer_size) {
                 skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                 DRAWSTATE_INVALID_BARRIER, "DS", "%s: Buffer Barrier 0x%" PRIx64 " has offset 0x%" PRIx64
@@ -9523,17 +9523,17 @@ CmdCopyQueryPoolResults(VkCommandBuffer commandBuffer, VkQueryPool queryPool, ui
     std::unique_lock<std::mutex> lock(global_lock);
 
     auto cb_node = getCBNode(dev_data, commandBuffer);
-    auto dst_buff_node = getBufferNode(dev_data, dstBuffer);
-    if (cb_node && dst_buff_node) {
-        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, dst_buff_node, "vkCmdCopyQueryPoolResults()");
+    auto dst_buff_state = getBufferState(dev_data, dstBuffer);
+    if (cb_node && dst_buff_state) {
+        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, dst_buff_state, "vkCmdCopyQueryPoolResults()");
         // Update bindings between buffer and cmd buffer
-        AddCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_node);
+        AddCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_state);
         // Validate that DST buffer has correct usage flags set
         skip_call |=
-            ValidateBufferUsageFlags(dev_data, dst_buff_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true, VALIDATION_ERROR_01066,
+            ValidateBufferUsageFlags(dev_data, dst_buff_state, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true, VALIDATION_ERROR_01066,
                                      "vkCmdCopyQueryPoolResults()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
         std::function<bool()> function = [=]() {
-            SetBufferMemoryValid(dev_data, dst_buff_node, true);
+            SetBufferMemoryValid(dev_data, dst_buff_state, true);
             return false;
         };
         cb_node->validate_functions.push_back(function);

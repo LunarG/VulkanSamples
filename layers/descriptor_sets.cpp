@@ -398,7 +398,7 @@ bool cvdescriptorset::DescriptorSet::ValidateDrawState(const std::map<uint32_t, 
                     if (descriptor_class == GeneralBuffer) {
                         // Verify that buffers are valid
                         auto buffer = static_cast<BufferDescriptor *>(descriptors_[i].get())->GetBuffer();
-                        auto buffer_node = getBufferNode(device_data_, buffer);
+                        auto buffer_node = getBufferState(device_data_, buffer);
                         if (!buffer_node) {
                             std::stringstream error_str;
                             error_str << "Descriptor in binding #" << binding << " at global descriptor index " << i
@@ -1004,7 +1004,7 @@ void cvdescriptorset::BufferDescriptor::CopyUpdate(const Descriptor *src) {
 }
 
 void cvdescriptorset::BufferDescriptor::BindCommandBuffer(const core_validation::layer_data *dev_data, GLOBAL_CB_NODE *cb_node) {
-    auto buffer_node = getBufferNode(dev_data, buffer_);
+    auto buffer_node = getBufferState(dev_data, buffer_);
     if (buffer_node)
         core_validation::AddCommandBufferBindingBuffer(dev_data, cb_node, buffer_node);
 }
@@ -1190,7 +1190,7 @@ bool cvdescriptorset::DescriptorSet::ValidateWriteUpdate(const debug_report_data
 }
 // For the given buffer, verify that its creation parameters are appropriate for the given type
 //  If there's an error, update the error_msg string with details and return false, else return true
-bool cvdescriptorset::DescriptorSet::ValidateBufferUsage(BUFFER_NODE const *buffer_node, VkDescriptorType type,
+bool cvdescriptorset::DescriptorSet::ValidateBufferUsage(BUFFER_STATE const *buffer_node, VkDescriptorType type,
                                                          UNIQUE_VALIDATION_ERROR_CODE *error_code, std::string *error_msg) const {
     // Verify that usage bits set correctly for given type
     auto usage = buffer_node->createInfo.usage;
@@ -1246,7 +1246,7 @@ bool cvdescriptorset::DescriptorSet::ValidateBufferUpdate(VkDescriptorBufferInfo
     // TODO : Defaulting to 00962 for all cases here. Need to create new error codes for a few cases below.
     *error_code = VALIDATION_ERROR_00962;
     // First make sure that buffer is valid
-    auto buffer_node = getBufferNode(device_data_, buffer_info->buffer);
+    auto buffer_node = getBufferState(device_data_, buffer_info->buffer);
     if (!buffer_node) {
         std::stringstream error_str;
         error_str << "Invalid VkBuffer: " << buffer_info->buffer;
@@ -1360,7 +1360,7 @@ bool cvdescriptorset::DescriptorSet::VerifyWriteUpdateContents(const VkWriteDesc
                 return false;
             }
             auto buffer = bv_state->create_info.buffer;
-            if (!ValidateBufferUsage(getBufferNode(device_data_, buffer), update->descriptorType, error_code, error_msg)) {
+            if (!ValidateBufferUsage(getBufferState(device_data_, buffer), update->descriptorType, error_code, error_msg)) {
                 std::stringstream error_str;
                 error_str << "Attempted write update to texel buffer descriptor failed due to: " << error_msg->c_str();
                 *error_msg = error_str.str();
@@ -1469,7 +1469,7 @@ bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescri
                 return false;
             }
             auto buffer = bv_state->create_info.buffer;
-            if (!ValidateBufferUsage(getBufferNode(device_data_, buffer), type, error_code, error_msg)) {
+            if (!ValidateBufferUsage(getBufferState(device_data_, buffer), type, error_code, error_msg)) {
                 std::stringstream error_str;
                 error_str << "Attempted copy update to texel buffer descriptor failed due to: " << error_msg->c_str();
                 *error_msg = error_str.str();
@@ -1481,7 +1481,7 @@ bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescri
     case GeneralBuffer: {
         for (uint32_t di = 0; di < update->descriptorCount; ++di) {
             auto buffer = static_cast<BufferDescriptor *>(src_set->descriptors_[index + di].get())->GetBuffer();
-            if (!ValidateBufferUsage(getBufferNode(device_data_, buffer), type, error_code, error_msg)) {
+            if (!ValidateBufferUsage(getBufferState(device_data_, buffer), type, error_code, error_msg)) {
                 std::stringstream error_str;
                 error_str << "Attempted copy update to buffer descriptor failed due to: " << error_msg->c_str();
                 *error_msg = error_str.str();
