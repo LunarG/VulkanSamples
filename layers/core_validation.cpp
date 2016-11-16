@@ -3258,8 +3258,7 @@ static bool verifyLineWidth(layer_data *my_data, DRAW_STATE_ERROR dsError, const
 }
 
 // Verify that create state for a pipeline is valid
-static bool verifyPipelineCreateState(layer_data *my_data, const VkDevice device, std::vector<PIPELINE_STATE *> pPipelines,
-                                      int pipelineIndex) {
+static bool verifyPipelineCreateState(layer_data *my_data, std::vector<PIPELINE_STATE *> pPipelines, int pipelineIndex) {
     bool skip_call = false;
 
     PIPELINE_STATE *pPipeline = pPipelines[pipelineIndex];
@@ -6803,7 +6802,7 @@ CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t
         pPipeState[i]->render_pass_ci.initialize(getRenderPassState(dev_data, pCreateInfos[i].renderPass)->createInfo.ptr());
         pPipeState[i]->pipeline_layout = *getPipelineLayout(dev_data, pCreateInfos[i].layout);
 
-        skip_call |= verifyPipelineCreateState(dev_data, device, pPipeState, i);
+        skip_call |= verifyPipelineCreateState(dev_data, pPipeState, i);
     }
 
     if (!skip_call) {
@@ -6851,7 +6850,7 @@ CreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t 
         // TODO: Add Compute Pipeline Verification
         skip_call |= !validate_compute_pipeline(dev_data->report_data, pPipeState[i], &dev_data->enabled_features,
                                                 dev_data->shaderModuleMap);
-        // skip_call |= verifyPipelineCreateState(dev_data, device, pPipeState[i]);
+        // skip_call |= verifyPipelineCreateState(dev_data, pPipeState[i]);
     }
 
     if (!skip_call) {
