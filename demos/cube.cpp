@@ -610,12 +610,19 @@ struct Demo {
         vec3 origin = {0, 0, 0};
         vec3 up = {0.0f, 1.0f, 0.0};
 
+        presentMode = vk::PresentModeKHR::eFifo;
         frameCount = UINT32_MAX;
         use_xlib = false;
 
         for (int i = 1; i < argc; i++) {
             if (strcmp(argv[i], "--use_staging") == 0) {
                 use_staging_buffer = true;
+                continue;
+            }
+            if ((strcmp(argv[i], "--present_mode") == 0) &&
+                    (i < argc - 1)) {
+                presentMode = (vk::PresentModeKHR)atoi(argv[i+1]);
+                i++;
                 continue;
             }
             if (strcmp(argv[i], "--break") == 0) {
@@ -647,8 +654,13 @@ struct Demo {
 #if defined(VK_USE_PLATFORM_XLIB_KHR)
                     "[--xlib] "
 #endif
-                    "[--c <framecount>] [--suppress_popups]\n",
-                    APP_SHORT_NAME);
+                    "[--c <framecount>] [--suppress_popups] [--present_mode <present mode enum>]\n"
+                    "VK_PRESENT_MODE_IMMEDIATE_KHR = %d\n"
+                    "VK_PRESENT_MODE_MAILBOX_KHR = %d\n"
+                    "VK_PRESENT_MODE_FIFO_KHR = %d\n"
+                    "VK_PRESENT_MODE_FIFO_RELAXED_KHR = %d\n",
+            APP_SHORT_NAME, VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_MAILBOX_KHR,
+            VK_PRESENT_MODE_FIFO_KHR, VK_PRESENT_MODE_FIFO_RELAXED_KHR);
             fflush(stderr);
             exit(1);
         }
@@ -1286,33 +1298,23 @@ struct Demo {
         // and to have no tearing.  It's a great default present mode to use.
         vk::PresentModeKHR swapchainPresentMode = vk::PresentModeKHR::eFifo;
 
-//  There are times when you may wish to use another present mode.  The
-//  following code shows how to select them, and the comments provide some
-//  reasons you may wish to use them.
-//
-// It should be noted that Vulkan 1.0 doesn't provide a method for
-// synchronizing rendering with the presentation engine's display.  There
-// is a method provided for throttling rendering with the display, but
-// there are some presentation engines for which this method will not work.
-// If an application doesn't throttle its rendering, and if it renders much
-// faster than the refresh rate of the display, this can waste power on
-// mobile devices.  That is because power is being spent rendering images
-// that may never be seen.
-//#define DESIRE_VK_PRESENT_MODE_IMMEDIATE_KHR
-//#define DESIRE_VK_PRESENT_MODE_MAILBOX_KHR
-//#define DESIRE_VK_PRESENT_MODE_FIFO_RELAXED_KHR
-#if defined(DESIRE_VK_PRESENT_MODE_IMMEDIATE_KHR)
+        //  There are times when you may wish to use another present mode.  The
+        //  following code shows how to select them, and the comments provide some
+        //  reasons you may wish to use them.
+        //
+        // It should be noted that Vulkan 1.0 doesn't provide a method for
+        // synchronizing rendering with the presentation engine's display.  There
+        // is a method provided for throttling rendering with the display, but
+        // there are some presentation engines for which this method will not work.
+        // If an application doesn't throttle its rendering, and if it renders much
+        // faster than the refresh rate of the display, this can waste power on
+        // mobile devices.  That is because power is being spent rendering images
+        // that may never be seen.
+
         // VK_PRESENT_MODE_IMMEDIATE_KHR is for applications that don't care
         // about
         // tearing, or have some way of synchronizing their rendering with the
         // display.
-        for (size_t i = 0; i < presentModeCount; ++i) {
-            if (presentModes[i] == vk::PresentModeKHR::eImmediate) {
-                swapchainPresentMode = vk::PresentModeKHR::eImmediate;
-                break;
-            }
-        }
-#elif defined(DESIRE_VK_PRESENT_MODE_MAILBOX_KHR)
         // VK_PRESENT_MODE_MAILBOX_KHR may be useful for applications that
         // generally render a new presentable image every refresh cycle, but are
         // occasionally early.  In this case, the application wants the new
@@ -1320,13 +1322,6 @@ struct Demo {
         // to be displayed instead of the previously-queued-for-presentation
         // image
         // that has not yet been displayed.
-        for (size_t i = 0; i < presentModeCount; ++i) {
-            if (presentModes[i] == vk::PresentModeKHR::eMailbox) {
-                swapchainPresentMode = vk::PresentModeKHR::eMailbox;
-                break;
-            }
-        }
-#elif defined(DESIRE_VK_PRESENT_MODE_FIFO_RELAXED_KHR)
         // VK_PRESENT_MODE_FIFO_RELAXED_KHR is for applications that generally
         // render a new presentable image every refresh cycle, but are
         // occasionally
@@ -1334,13 +1329,21 @@ struct Demo {
         // the application wants the late image to be immediately displayed,
         // even
         // though that may mean some tearing.
-        for (size_t i = 0; i < presentModeCount; ++i) {
-            if (presentModes[i] == vk::PresentModeKHR::eFifoRelaxed) {
-                swapchainPresentMode = vk::PresentModeKHR::eFifoRelaxed;
-                break;
+
+        if(presentMode != swapchainPresentMode)
+        {
+            for (size_t i = 0; i < presentModeCount; ++i) {
+                if (presentModes[i] == presentMode) {
+                    swapchainPresentMode = presentMode;
+                    break;
+                }
             }
         }
-#endif
+
+        if(swapchainPresentMode != presentMode)
+        {
+            ERR_EXIT("Present mode specified is not supported\n", "Present mode unsupported");
+        }
 
         // Determine the number of VkImage's to use in the swap chain (we desire
         // to
@@ -2636,6 +2639,7 @@ struct Demo {
     uint32_t swapchainImageCount;
     vk::SwapchainKHR swapchain;
     std::unique_ptr<SwapchainBuffers[]> buffers;
+    vk::PresentModeKHR presentMode;
     vk::Fence fences[FRAME_LAG];
     uint32_t frame_index;
 
