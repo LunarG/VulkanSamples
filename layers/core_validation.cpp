@@ -6793,45 +6793,43 @@ VKAPI_ATTR VkResult VKAPI_CALL
 CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t count,
                         const VkGraphicsPipelineCreateInfo *pCreateInfos, const VkAllocationCallbacks *pAllocator,
                         VkPipeline *pPipelines) {
-    VkResult result = VK_SUCCESS;
     // TODO What to do with pipelineCache?
     // The order of operations here is a little convoluted but gets the job done
     //  1. Pipeline create state is first shadowed into PIPELINE_STATE struct
     //  2. Create state is then validated (which uses flags setup during shadowing)
     //  3. If everything looks good, we'll then create the pipeline and add NODE to pipelineMap
-    bool skip_call = false;
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skip = false;
     // TODO : Improve this data struct w/ unique_ptrs so cleanup below is automatic
-    vector<PIPELINE_STATE *> pPipeState(count);
+    vector<PIPELINE_STATE *> pipe_state(count);
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
 
     uint32_t i = 0;
     std::unique_lock<std::mutex> lock(global_lock);
 
     for (i = 0; i < count; i++) {
-        pPipeState[i] = new PIPELINE_STATE;
-        pPipeState[i]->initGraphicsPipeline(&pCreateInfos[i]);
-        pPipeState[i]->render_pass_ci.initialize(getRenderPassState(dev_data, pCreateInfos[i].renderPass)->createInfo.ptr());
-        pPipeState[i]->pipeline_layout = *getPipelineLayout(dev_data, pCreateInfos[i].layout);
+        pipe_state[i] = new PIPELINE_STATE;
+        pipe_state[i]->initGraphicsPipeline(&pCreateInfos[i]);
+        pipe_state[i]->render_pass_ci.initialize(getRenderPassState(dev_data, pCreateInfos[i].renderPass)->createInfo.ptr());
+        pipe_state[i]->pipeline_layout = *getPipelineLayout(dev_data, pCreateInfos[i].layout);
     }
+    skip |= PreCallCreateGraphicsPipelines(dev_data, count, pCreateInfos, pipe_state);
 
-    skip_call |= PreCallCreateGraphicsPipelines(dev_data, count, pCreateInfos, pPipeState);
-
-    if (!skip_call) {
+    if (!skip) {
         lock.unlock();
         result =
             dev_data->dispatch_table.CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pAllocator, pPipelines);
         lock.lock();
         for (i = 0; i < count; i++) {
-            pPipeState[i]->pipeline = pPipelines[i];
-            dev_data->pipelineMap[pPipeState[i]->pipeline] = pPipeState[i];
+            pipe_state[i]->pipeline = pPipelines[i];
+            dev_data->pipelineMap[pipe_state[i]->pipeline] = pipe_state[i];
         }
         lock.unlock();
     } else {
         for (i = 0; i < count; i++) {
-            delete pPipeState[i];
+            delete pipe_state[i];
         }
         lock.unlock();
-        return VK_ERROR_VALIDATION_FAILED_EXT;
     }
     return result;
 }
