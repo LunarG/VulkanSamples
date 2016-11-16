@@ -9257,7 +9257,7 @@ static bool ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, ui
 
         auto buffer_node = getBufferNode(dev_data, mem_barrier->buffer);
         if (buffer_node) {
-            auto buffer_size = buffer_node->binding.size;
+            auto buffer_size = buffer_node->requirements.size;
             if (mem_barrier->offset >= buffer_size) {
                 skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                 DRAWSTATE_INVALID_BARRIER, "DS", "%s: Buffer Barrier 0x%" PRIx64 " has offset 0x%" PRIx64
