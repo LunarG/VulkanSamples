@@ -10425,10 +10425,12 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
 
     std::unique_lock<std::mutex> lock(global_lock);
 
-    skip_call |= ValidateLayouts(dev_data, device, pCreateInfo);
     // TODO: As part of wrapping up the mem_tracker/core_validation merge the following routine should be consolidated with
     //       ValidateLayouts.
     skip_call |= ValidateRenderpassAttachmentUsage(dev_data, pCreateInfo);
+    if (!skip_call) {
+        skip_call |= ValidateLayouts(dev_data, device, pCreateInfo);
+    }
     lock.unlock();
 
     if (skip_call) {
