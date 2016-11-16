@@ -108,6 +108,10 @@ struct layer_data {
     VkDescriptorSet desc_set;
     VkSampler sampler;
     VkFence fence;
+    VkImage lunargImage;
+    VkDeviceMemory lunargMemory;
+    int32_t lunargWidth;
+    int32_t lunargHeight;
     int lastFrame;
     time_t lastTime;
     float fps;
@@ -218,6 +222,179 @@ static uint32_t choose_memory_type(VkPhysicalDevice gpu, uint32_t typeBits,
     return 0;
 }
 
+static bool loadBitmap(const char *filename, uint8_t *rgba_data,
+                       int32_t *width, int32_t *height, int32_t rowPitch) {
+    FILE *fPtr = fopen(filename, "rb");
+    char header[256], *cPtr, *tmp;
+
+    if (!fPtr)
+        return false;
+
+    cPtr = fgets(header, 256, fPtr); // P6
+    if (cPtr == NULL || strncmp(header, "P6\n", 3)) {
+        fclose(fPtr);
+        return false;
+    }
+
+    do {
+        cPtr = fgets(header, 256, fPtr);
+        if (cPtr == NULL) {
+            fclose(fPtr);
+            return false;
+        }
+    } while (!strncmp(header, "#", 1));
+
+    sscanf(header, "%u %u", width, height);
+    if (rgba_data == NULL) {
+        fclose(fPtr);
+        return true;
+    }
+    tmp = fgets(header, 256, fPtr); // Format
+    (void)tmp;
+    if (cPtr == NULL || strncmp(header, "255\n", 3)) {
+        fclose(fPtr);
+        return false;
+    }
+
+    for (int y = 0; y < *height; y++) {
+        uint8_t *rowPtr = rgba_data;
+        for (int x = 0; x < *width; x++) {
+            size_t s = fread(rowPtr, 3, 1, fPtr);
+            (void)s;
+            rowPtr[3] = 255; /* Alpha of 1 */
+            rowPtr += 4;
+        }
+        rgba_data += rowPitch;
+    }
+    fclose(fPtr);
+    return true;
+}
+
+static bool loadLunarg(VkDevice device, layer_data *my_data) {
+    VkResult U_ASSERT_ONLY err;
+    VkLayerDispatchTable *pTable = my_data->device_dispatch_table;
+
+    VkFormatProperties formatProperties;
+    layer_data *inst_data =
+        get_my_data_ptr(get_dispatch_key(my_data->gpu), layer_data_map);
+    inst_data->instance_dispatch_table->GetPhysicalDeviceFormatProperties(my_data->gpu, VK_FORMAT_R8G8B8A8_UNORM, &formatProperties);
+    if (!(formatProperties.linearTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT)) {
+        return false;
+    }
+
+    if (!loadBitmap(VULKAN_SAMPLES_BASE_DIR "/Layer-Samples/data/LittleLunarG.ppm", NULL, &my_data->lunargWidth, &my_data->lunargHeight, 0)) {
+        return false;
+    }
+
+    VkImageCreateInfo img_info;
+    memset(&img_info, 0, sizeof(img_info));
+    img_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    img_info.imageType = VK_IMAGE_TYPE_2D;
+    img_info.format = VK_FORMAT_R8G8B8A8_UNORM;
+    img_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    img_info.extent.width = my_data->lunargWidth;
+    img_info.extent.height = my_data->lunargHeight;
+    img_info.extent.depth = 1;
+    img_info.mipLevels = 1;
+    img_info.arrayLayers = 1;
+    img_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    img_info.tiling = VK_IMAGE_TILING_LINEAR;
+    img_info.flags = 0;
+    img_info.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+    err = pTable->CreateImage(device, &img_info, NULL, &my_data->lunargImage);
+    if (err != VK_SUCCESS) {
+        return false;
+    }
+
+    VkMemoryRequirements mem_reqs;
+    VkMemoryAllocateInfo mem_alloc = {};
+    pTable->GetImageMemoryRequirements(device, my_data->lunargImage, &mem_reqs);
+
+    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    mem_alloc.pNext = NULL;
+    mem_alloc.allocationSize = mem_reqs.size;
+    mem_alloc.memoryTypeIndex =
+        choose_memory_type(my_data->gpu, mem_reqs.memoryTypeBits,
+                           VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+    err = pTable->AllocateMemory(device, &mem_alloc, NULL,
+                           &my_data->lunargMemory);
+    assert(!err);
+
+    err = pTable->BindImageMemory(device, my_data->lunargImage, my_data->lunargMemory, 0);
+    assert(!err);
+
+    VkImageSubresource subres;
+    subres.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    subres.mipLevel = 0;
+    subres.arrayLayer = 0;
+    VkSubresourceLayout layout;
+    pTable->GetImageSubresourceLayout(device, my_data->lunargImage, &subres,
+                                &layout);
+
+    uint8_t *data;
+    err = pTable->MapMemory(device, my_data->lunargMemory, 0,
+                      mem_alloc.allocationSize, 0,
+                      (void **) &data);
+    assert(!err);
+
+    if (!loadBitmap(VULKAN_SAMPLES_BASE_DIR "/Layer-Samples/data/LittleLunarG.ppm", data, &my_data->lunargWidth, &my_data->lunargHeight, layout.rowPitch)) {
+        return false;
+    }
+
+    pTable->UnmapMemory(device, my_data->lunargMemory);
+    return true;
+}
+
+static void copyLunarg(layer_data *my_data, WsiImageData *id) {
+    VkLayerDispatchTable *pTable = my_data->device_dispatch_table;
+
+    VkImageMemoryBarrier imb;
+    imb.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    imb.pNext = nullptr;
+    imb.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    imb.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    imb.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    imb.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    imb.image = id->image;
+    imb.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    imb.subresourceRange.baseMipLevel = 0;
+    imb.subresourceRange.levelCount = 1;
+    imb.subresourceRange.baseArrayLayer = 0;
+    imb.subresourceRange.layerCount = 1;
+    imb.srcQueueFamilyIndex = my_data->graphicsQueueFamilyIndex;
+    imb.dstQueueFamilyIndex = my_data->graphicsQueueFamilyIndex;
+
+    pTable->CmdPipelineBarrier(id->cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                               VK_PIPELINE_STAGE_TRANSFER_BIT,
+                               0 /* dependency flags */, 0,
+                               nullptr,    /* memory barriers */
+                               0, nullptr, /* buffer memory barriers */
+                               1, &imb);   /* image memory barriers */
+
+    VkImageBlit imageBlitRegion = {};
+    imageBlitRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    imageBlitRegion.srcSubresource.baseArrayLayer = 0;
+    imageBlitRegion.srcSubresource.layerCount = 1;
+    imageBlitRegion.srcSubresource.mipLevel = 0;
+    imageBlitRegion.srcOffsets[1].x = my_data->lunargWidth;
+    imageBlitRegion.srcOffsets[1].y = my_data->lunargHeight;
+    imageBlitRegion.srcOffsets[1].z = 1;
+    imageBlitRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    imageBlitRegion.dstSubresource.baseArrayLayer = 0;
+    imageBlitRegion.dstSubresource.layerCount = 1;
+    imageBlitRegion.dstSubresource.mipLevel = 0;
+    imageBlitRegion.dstOffsets[1].x = my_data->lunargWidth;
+    imageBlitRegion.dstOffsets[1].y = my_data->lunargHeight;
+    imageBlitRegion.dstOffsets[1].z = 1;
+
+    pTable->CmdBlitImage(
+        id->cmd, my_data->lunargImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        id->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
+        &imageBlitRegion, VK_FILTER_NEAREST);
+}
+
 static int fill_vertex_buffer(layer_data *data, vertex *vertices, int index) {
     char str[1024];
     time_t now;
@@ -229,11 +406,11 @@ static int fill_vertex_buffer(layer_data *data, vertex *vertices, int index) {
         data->lastFrame = data->frame;
         data->lastTime = now;
     }
-    sprintf(str, "Vulkan Overlay Example\nFrame: "
+    sprintf(str, "Frame: "
                  "%d\nFPS: %.2f",
                  data->frame++, data->fps);
     float x = 0;
-    float y = 16;
+    float y = 75;
 
     vertex *v = vertices;
 
@@ -431,6 +608,10 @@ static void after_device_create(VkPhysicalDevice gpu, VkDevice device,
         assert(!err);
     }
 
+    if (!loadLunarg(device, data)) {
+        data->lunargImage = 0;
+    }
+
     VkCommandBufferBeginInfo cbbi;
     cbbi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     cbbi.pNext = nullptr;
@@ -443,7 +624,7 @@ static void after_device_create(VkPhysicalDevice gpu, VkDevice device,
     VkImageMemoryBarrier imb;
     imb.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     imb.pNext = nullptr;
-    imb.dstAccessMask = VK_ACCESS_HOST_WRITE_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
+    imb.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
     imb.srcAccessMask = 0;
     imb.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     imb.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -462,6 +643,20 @@ static void after_device_create(VkPhysicalDevice gpu, VkDevice device,
                                nullptr,    /* memory barriers */
                                0, nullptr, /* buffer memory barriers */
                                1, &imb);   /* image memory barriers */
+
+    if (data->lunargImage) {
+        imb.oldLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+        imb.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        imb.image = data->lunargImage;
+        imb.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+        imb.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+        pTable->CmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                                   VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                                   0 /* dependency flags */, 0,
+                                   nullptr,    /* memory barriers */
+                                   0, nullptr, /* buffer memory barriers */
+                                   1, &imb);   /* image memory barriers */
+    }
 
     pTable->EndCommandBuffer(cmd);
     data->fontUploadCmdBuffer = cmd;
@@ -699,6 +894,9 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
     layer_data *my_data =
         get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkLayerDispatchTable *pTable = my_data->device_dispatch_table;
+    if (my_data->lunargImage) {
+        *((uint32_t*)&pCreateInfo->imageUsage) |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    }
     VkResult result = my_data->pfnCreateSwapchainKHR(device, pCreateInfo,
                                                      pAllocator, pSwapChain);
 
@@ -1096,7 +1294,6 @@ static void before_present(VkQueue queue, layer_data *my_data,
     imb.srcQueueFamilyIndex = my_data->graphicsQueueFamilyIndex;
     imb.dstQueueFamilyIndex = my_data->graphicsQueueFamilyIndex;
 
-
     VkRenderPassBeginInfo rpbi;
     rpbi.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     rpbi.pNext = nullptr;
@@ -1110,6 +1307,12 @@ static void before_present(VkQueue queue, layer_data *my_data,
     rpbi.pClearValues = nullptr;
 
     pTable->BeginCommandBuffer(id->cmd, &cbbi);
+    if (my_data->lunargImage) {
+        copyLunarg(my_data, id);
+        imb.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        imb.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        imb.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    }
     pTable->CmdPipelineBarrier(id->cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                                0 /* dependency flags */, 0,
@@ -1218,6 +1421,10 @@ void layer_data::Cleanup() {
     pTable->DestroyShaderModule(dev, vsShaderModule, nullptr);
     pTable->DestroyShaderModule(dev, fsShaderModule, nullptr);
     pTable->DestroyFence(dev, fence, nullptr);
+    if (this->lunargImage) {
+        pTable->DestroyImage(dev, this->lunargImage, nullptr);
+        pTable->FreeMemory(dev, this->lunargMemory, nullptr);
+    }
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
