@@ -57,9 +57,37 @@ set(libraries PRIVATE ${CMAKE_THREAD_LIBS_INIT})
 if(TARGET vulkan)
     list(APPEND definitions PRIVATE -DUNINSTALLED_LOADER="$<TARGET_FILE:vulkan>")
 endif()
-
+if(WIN32)
+    set (MOVE_CMD "move")
+    set (VULKAN_LOADER_NAME "vulkan-${MAJOR}")
+else()
+    set (MOVE_CMD "mv")
+    set (PTHREAD "pthread")
+    set (VULKAN_LOADER_NAME "vulkan")
+endif()
 list(APPEND includes PRIVATE "../../API-Samples/utils") #Path to GLM
+if(EXISTS "${CMAKE_SOURCE_DIR}/layers")
+    set (VULKAN_LOADER ${VULKAN_LOADER_NAME})
+else()
+    find_library(VULKAN_LOADER NAMES ${VULKAN_LOADER_NAME}
+                 HINTS "${CMAKE_SOURCE_DIR}/../${BINDATA_DIR}" "${CMAKE_SOURCE_DIR}/../x86_64/lib" )
+endif()
 
+set (LIBGLM_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/libs)
+
+if(NOT WIN32 AND NOT ANDROID)
+    if(SDK_INCLUDE_PATH)
+        include_directories(
+            ${XCB_INCLUDE_DIRS}
+            ${SDK_INCLUDE_PATH}
+        )
+    else()
+        include_directories(
+            ${XCB_INCLUDE_DIRS}
+        )
+    endif()
+    link_libraries(${XCB_LIBRARIES} ${VULKAN_LOADER} m )
+endif()
 if(WIN32)
     list(APPEND definitions PRIVATE -DVK_USE_PLATFORM_WIN32_KHR)
     list(APPEND definitions PRIVATE -DWIN32_LEAN_AND_MEAN)
@@ -77,8 +105,6 @@ add_executable(${PROJECT_NAME} ${sources})
 
 target_compile_definitions(${PROJECT_NAME} ${definitions})
 target_include_directories(${PROJECT_NAME} ${includes})
-target_link_libraries     (${PROJECT_NAME} ${libraries})
-target_link_libraries     (${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
 #-------------------------------------------------------------------------------------------------
 
 #-----------------WSIWindow-----------------

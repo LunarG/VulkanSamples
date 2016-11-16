@@ -93,12 +93,36 @@ endif()
 #endif()
 #=================================================================
 #=======================Find Vulkan Loader========================
-find_library(VULKAN_LOADER vulkan   DOC "Path + Filename of Vulkan loader. (libvulkan.so or vulkan-1.lib)") # MUST INCLUDE FILENAME
-find_library(VULKAN_LOADER vulkan   PATH "$ENV{VULKAN_SDK}/lib")             # Search in Vulkan SDK on Linux  : /lib/libvulkan.so
-find_library(VULKAN_LOADER vulkan-1 PATH "$ENV{VULKAN_SDK}/bin")             # Search in Vulkan SDK on Windows: /bin/vulkan-1.lib
-find_library(VULKAN_LOADER vulkan   PATH "../../../build/Default/loader")    # Search in VulkanSamples on Linux
-find_library(VULKAN_LOADER vulkan-1 PATH "../../../build/Default/loader")    # Search in VulkanSamples on Windows
-target_link_libraries(${LIBRARY_NAME} ${VULKAN_LOADER})                      # Link to loader
+if(WIN32)
+    set (MOVE_CMD "move")
+    set (VULKAN_LOADER_NAME "vulkan-${MAJOR}")
+else()
+    set (MOVE_CMD "mv")
+    set (PTHREAD "pthread")
+    set (VULKAN_LOADER_NAME "vulkan")
+endif()
+if(EXISTS "${CMAKE_SOURCE_DIR}/layers")
+    set (VULKAN_LOADER ${VULKAN_LOADER_NAME})
+else()
+    find_library(VULKAN_LOADER NAMES ${VULKAN_LOADER_NAME}
+                 HINTS "${CMAKE_SOURCE_DIR}/../${BINDATA_DIR}" "${CMAKE_SOURCE_DIR}/../x86_64/lib" )
+endif()
+
+set (LIBGLM_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/libs)
+
+if(NOT WIN32 AND NOT ANDROID)
+    if(SDK_INCLUDE_PATH)
+        include_directories(
+            ${XCB_INCLUDE_DIRS}
+            ${SDK_INCLUDE_PATH}
+        )
+    else()
+        include_directories(
+            ${XCB_INCLUDE_DIRS}
+        )
+    endif()
+    link_libraries(${XCB_LIBRARIES} ${VULKAN_LOADER} m )
+endif()
 message("Found VULKAN_LOADER  at: ${VULKAN_LOADER}")
 #=================================================================
 #=======================Find Vulkan Header========================
