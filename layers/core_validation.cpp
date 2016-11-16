@@ -6784,10 +6784,26 @@ void set_pipeline_state(PIPELINE_STATE *pPipe) {
 static bool PreCallCreateGraphicsPipelines(layer_data *device_data, uint32_t count,
                                            const VkGraphicsPipelineCreateInfo *create_infos, vector<PIPELINE_STATE *> &pipe_state) {
     bool skip = false;
-    layer_data *phy_dev_data = get_my_data_ptr(get_dispatch_key(device_data->instance_data), layer_data_map);
+    instance_layer_data *instance_data = get_my_data_ptr(get_dispatch_key(device_data->instance_data->instance), instance_layer_data_map);
 
     for (uint32_t i = 0; i < count; i++) {
         skip |= verifyPipelineCreateState(device_data, pipe_state, i);
+        if (create_infos[i].pVertexInputState != NULL) {
+            for (uint32_t j = 0; j < create_infos[i].pVertexInputState->vertexAttributeDescriptionCount; j++) {
+                VkFormat format = create_infos[i].pVertexInputState->pVertexAttributeDescriptions[j].format;
+                // Internal call to get format info.  Still goes through layers, could potentially go directly to ICD.
+                VkFormatProperties properties;
+                instance_data->dispatch_table.GetPhysicalDeviceFormatProperties(device_data->physical_device, format, &properties);
+                if ((properties.bufferFeatures & VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT) == 0) {
+                    skip |= log_msg(
+                        device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                        __LINE__, VALIDATION_ERROR_01413, "IMAGE",
+                        "vkCreateGraphicsPipelines: pCreateInfo[%d].pVertexInputState->vertexAttributeDescriptions[%d].format "
+                        "(%s) is not a supported vertex buffer format. %s",
+                        i, j, string_VkFormat(format), validation_error_map[VALIDATION_ERROR_01413]);
+                }
+            }
+        }
     }
     return skip;
 }
