@@ -71,14 +71,14 @@ struct texture_object {
     vk::Sampler sampler;
 
     vk::Image image;
-    vk::ImageLayout imageLayout;
+    vk::ImageLayout imageLayout { vk::ImageLayout::eUndefined };
 
     vk::MemoryAllocateInfo mem_alloc;
     vk::DeviceMemory mem;
     vk::ImageView view;
 
-    int32_t tex_width;
-    int32_t tex_height;
+    int32_t tex_width {0};
+    int32_t tex_height {0};
 };
 
 static char const *const tex_files[] = {"lunarg.ppm"};
@@ -1240,6 +1240,10 @@ struct Demo {
          * that need to be flushed before beginning the render loop.
          */
         flush_init_cmd();
+        if(staging_texture.image)
+        {
+            destroy_texture_image(&staging_texture);
+        }
 
         current_buffer = 0;
         prepared = true;
@@ -1913,11 +1917,10 @@ struct Demo {
                                  vk::ImageLayout::ePreinitialized, textures[i].imageLayout,
                                  vk::AccessFlagBits::eHostWrite, vk::PipelineStageFlagBits::eTopOfPipe,
                                  vk::PipelineStageFlagBits::eFragmentShader);
+                staging_texture.image = vk::Image();
             } else if (props.optimalTilingFeatures &
                        vk::FormatFeatureFlagBits::eSampledImage) {
-                /* Must use staging buffer to copy linear texture to optimized
-                 */
-                texture_object staging_texture;
+                /* Must use staging buffer to copy linear texture to optimized */
 
                 prepare_texture_image(
                     tex_files[i], &staging_texture, vk::ImageTiling::eLinear,
@@ -1975,10 +1978,6 @@ struct Demo {
                                  vk::AccessFlagBits::eTransferWrite,
                                  vk::PipelineStageFlagBits::eTransfer,
                                  vk::PipelineStageFlagBits::eFragmentShader);
-
-                flush_init_cmd();
-
-                destroy_texture_image(&staging_texture);
             } else {
                 assert(
                     !"No support for R8G8B8A8_UNORM as texture image format");
@@ -2653,6 +2652,7 @@ struct Demo {
 
     static int32_t const texture_count = 1;
     texture_object textures[texture_count];
+    texture_object staging_texture;
 
     struct {
         vk::Buffer buf;
