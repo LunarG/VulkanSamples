@@ -280,37 +280,39 @@ static void DestroyObject(T1 dispatchable_object, T2 object, VkDebugReportObject
     auto object_handle = handle_value(object);
     bool custom_allocator = pAllocator != nullptr;
 
-    auto item = device_data->object_map[object_type].find(object_handle);
-    if (item != device_data->object_map[object_type].end()) {
+    if (object_handle != VK_NULL_HANDLE) {
+        auto item = device_data->object_map[object_type].find(object_handle);
+        if (item != device_data->object_map[object_type].end()) {
 
-        OBJTRACK_NODE *pNode = item->second;
-        assert(device_data->num_total_objects > 0);
-        device_data->num_total_objects--;
-        assert(device_data->num_objects[pNode->object_type] > 0);
-        device_data->num_objects[pNode->object_type]--;
+            OBJTRACK_NODE *pNode = item->second;
+            assert(device_data->num_total_objects > 0);
+            device_data->num_total_objects--;
+            assert(device_data->num_objects[pNode->object_type] > 0);
+            device_data->num_objects[pNode->object_type]--;
 
-        log_msg(device_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, pNode->object_type, object_handle, __LINE__,
-                OBJTRACK_NONE, LayerName,
-                "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%" PRIu64 " total objs remain & %" PRIu64 " %s objs).",
-                object_name[pNode->object_type], reinterpret_cast<uint64_t &>(object), device_data->num_total_objects,
-                device_data->num_objects[pNode->object_type], object_name[pNode->object_type]);
+            log_msg(device_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, pNode->object_type, object_handle, __LINE__,
+                    OBJTRACK_NONE, LayerName,
+                    "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%" PRIu64 " total objs remain & %" PRIu64 " %s objs).",
+                    object_name[pNode->object_type], reinterpret_cast<uint64_t &>(object), device_data->num_total_objects,
+                    device_data->num_objects[pNode->object_type], object_name[pNode->object_type]);
 
-        auto allocated_with_custom = (pNode->status & OBJSTATUS_CUSTOM_ALLOCATOR) ? true : false;
-        if (custom_allocator ^ allocated_with_custom) {
-            log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, object_type, object_handle, __LINE__,
-                    OBJTRACK_ALLOCATOR_MISMATCH, LayerName,
-                    "Custom allocator %sspecified while destroying %s obj 0x%" PRIxLEAST64 " but %sspecified at creation",
-                    (custom_allocator ? "" : "not "), object_name[object_type], object_handle,
-                    (allocated_with_custom ? "" : "not "));
+            auto allocated_with_custom = (pNode->status & OBJSTATUS_CUSTOM_ALLOCATOR) ? true : false;
+            if (custom_allocator ^ allocated_with_custom) {
+                log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, object_type, object_handle, __LINE__,
+                        OBJTRACK_ALLOCATOR_MISMATCH, LayerName,
+                        "Custom allocator %sspecified while destroying %s obj 0x%" PRIxLEAST64 " but %sspecified at creation",
+                        (custom_allocator ? "" : "not "), object_name[object_type], object_handle,
+                        (allocated_with_custom ? "" : "not "));
+            }
+
+            delete pNode;
+            device_data->object_map[object_type].erase(item);
+        } else {
+            log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, object_handle, __LINE__,
+                    OBJTRACK_UNKNOWN_OBJECT, LayerName,
+                    "Unable to remove %s obj 0x%" PRIxLEAST64 ". Was it created? Has it already been destroyed?",
+                    object_name[object_type], object_handle);
         }
-
-        delete pNode;
-        device_data->object_map[object_type].erase(item);
-    } else {
-        log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, object_handle, __LINE__,
-                OBJTRACK_UNKNOWN_OBJECT, LayerName,
-                "Unable to remove %s obj 0x%" PRIxLEAST64 ". Was it created? Has it already been destroyed?",
-                object_name[object_type], object_handle);
     }
 }
 
