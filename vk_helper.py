@@ -377,8 +377,6 @@ def recreate_structs():
 def get_struct_name_from_struct_type(struct_type):
     # Note: All struct types are now camel-case
     # Debug Report has an inconsistency - so need special case.
-    if ("VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT" == struct_type):
-        return "VkDebugReportCallbackCreateInfoEXT"
     caps_struct_name = struct_type.replace("_STRUCTURE_TYPE", "")
     char_idx = 0
     struct_name = ''
@@ -390,6 +388,12 @@ def get_struct_name_from_struct_type(struct_type):
         else:
             struct_name += caps_struct_name[char_idx].lower()
         char_idx += 1
+
+    # Vendor extension structs ending in vendor TLA need to be uppercase.
+    if (caps_struct_name[-2:] == "NV"):
+        struct_name = struct_name[:-2] + caps_struct_name[-2:]
+    if ((caps_struct_name[-3:] == "AMD") or (caps_struct_name[-3:] == "IMG") or (caps_struct_name[-3:] == "EXT")):
+        struct_name = struct_name[:-3] + caps_struct_name[-3:]
 
     return struct_name
 
@@ -1163,12 +1167,16 @@ class StructWrapperGen:
                     struct_name = get_struct_name_from_struct_type(v)
                     if struct_name not in self.struct_dict:
                         continue
+                    if 'WIN32' in v:
+                        sh_funcs.append("#ifdef VK_USE_PLATFORM_WIN32_KHR")
                     print_func_name = self._get_sh_func_name(struct_name)
                     #sh_funcs.append('string %s(const %s* pStruct, const string prefix);' % (self._get_sh_func_name(s), typedef_fwd_dict[s]))
                     sh_funcs.append('        case %s:\n        {' % (v))
                     sh_funcs.append('            return %s((%s*)pStruct, indent);' % (print_func_name, struct_name))
                     sh_funcs.append('        }')
                     sh_funcs.append('        break;')
+                    if 'WIN32' in v:
+                        sh_funcs.append("#endif // VK_USE_PLATFORM_WIN32_KHR")
                 sh_funcs.append("        default:")
                 sh_funcs.append("        return string();")
         sh_funcs.append('%s' % lineinfo.get())
@@ -1418,7 +1426,7 @@ class StructWrapperGen:
                             sh_funcs.append('%s}' % (indent))
                         else:
                             sh_funcs.append('%sstructSize += pStruct->%s*sizeof(%s);' % (indent, self.struct_dict[s][m]['array_size'], self.struct_dict[s][m]['type']))
-                elif self.struct_dict[s][m]['ptr'] and 'pNext' != self.struct_dict[s][m]['name']:
+                elif self.struct_dict[s][m]['ptr'] and 'pNext' != self.struct_dict[s][m]['name'] and 'dpy' != self.struct_dict[s][m]['name']:
                     if 'char' in self.struct_dict[s][m]['type'].lower():
                         sh_funcs.append('%sstructSize += (pStruct->%s != NULL) ? sizeof(%s)*(1+strlen(pStruct->%s)) : 0;' % (indent, self.struct_dict[s][m]['name'], self.struct_dict[s][m]['type'], self.struct_dict[s][m]['name']))
                     elif is_type(self.struct_dict[s][m]['type'], 'struct'):
@@ -1460,6 +1468,8 @@ class StructWrapperGen:
                             if struct_name not in self.struct_dict:
                                 continue
 
+                            if 'WIN32' in v:
+                                sh_funcs.append("#ifdef VK_USE_PLATFORM_WIN32_KHR")
                             sh_funcs.append('%scase %s:' % (indent, v))
                             sh_funcs.append('%s{' % (indent))
                             indent += '    '
@@ -1467,6 +1477,8 @@ class StructWrapperGen:
                             sh_funcs.append('%sbreak;' % (indent))
                             indent = indent[:-4]
                             sh_funcs.append('%s}' % (indent))
+                            if 'WIN32' in v:
+                                sh_funcs.append("#endif // VK_USE_PLATFORM_WIN32_KHR")
                         sh_funcs.append('%sdefault:' % (indent))
                         indent += '    '
                         sh_funcs.append('%sassert(0);' % (indent))
