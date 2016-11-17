@@ -205,7 +205,7 @@ int sample_main(int argc, char *argv[]) {
     VkDescriptorImageInfo input_image_info = {};
     input_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     input_image_info.imageView = input_attachment_view;
-    input_image_info.sampler = NULL;
+    input_image_info.sampler = VK_NULL_HANDLE;
 
     VkDescriptorSetLayoutBinding layout_bindings[1];
     layout_bindings[0].binding = 0;

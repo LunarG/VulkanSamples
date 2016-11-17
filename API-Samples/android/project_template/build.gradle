@@ -22,7 +22,7 @@ def ndkDir = properties.getProperty('ndk.dir')
 def shadercLibPath = file(ndkDir).absolutePath + "/sources/third_party/shaderc"
 def vulkanWrapperPath = file(project.rootProject.projectDir).absolutePath + "/vulkan_wrapper"
 
-def stlType = "c++_shared"
+def stlType = "gnustl_static"
 
 def ndkbuild = "ndk-build"
 if (Os.isFamily(Os.FAMILY_WINDOWS)) {
@@ -42,20 +42,15 @@ model {
     }
 
     android {
-        compileSdkVersion = "android-N"
-        buildToolsVersion = "23.0.2"
+        compileSdkVersion = 24
+        buildToolsVersion = 24
 
         defaultConfig.with {
             applicationId = "@PACKAGE_NAME@"
-            minSdkVersion.apiLevel = 22
+            minSdkVersion.apiLevel = 24
             targetSdkVersion.apiLevel = 24
             versionCode = 1
             versionName = "0.0.1"
-        }
-
-        compileOptions.with {
-            sourceCompatibility=JavaVersion.VERSION_1_7
-            targetCompatibility=JavaVersion.VERSION_1_7
         }
     }
 
@@ -66,14 +61,14 @@ model {
         toolchain = "clang"
         stl = stlType
         ldLibs.addAll(["log", "android"])
-        cppFlags.add("-I${file("${ndkDir}/sources/android/native_app_glue")}".toString())
-        cppFlags.add("-I${file("../../data")}".toString())
-        cppFlags.add("-I${file("../../utils")}".toString())
-        cppFlags.add("-I${file("../../utils/glm")}".toString())
-        cppFlags.add("-I${file(vulkanWrapperPath)}".toString())
-        cppFlags.add("-I${file("${shadercLibPath}/third_party/spirv-tools/include")}".toString())
-        cppFlags.add("-I${file("${shadercLibPath}/third_party/spirv-tools/include/spirv-tools")}".toString())
-        cppFlags.add("-D VK_USE_PLATFORM_ANDROID_KHR")
+        cppFlags.add('-I' + file("${ndkDir}/sources/android/native_app_glue"))
+        cppFlags.add('-I' + file("../../data"))
+        cppFlags.add('-I' + file("../../utils"))
+        cppFlags.add('-I' + file("../../utils/glm"))
+        cppFlags.add('-I' + file(vulkanWrapperPath))
+        cppFlags.add('-I' + file("${shadercLibPath}/third_party/spirv-tools/include"))
+        cppFlags.add('-I' + file("${shadercLibPath}/third_party/spirv-tools/include/spirv-tools"))
+        cppFlags.addAll(["-D VK_USE_PLATFORM_ANDROID_KHR", "-D __ANDROID__"])
         @OTHER_FLAGS@
     }
 
@@ -93,7 +88,7 @@ model {
                 }
             }
             jniLibs {
-                dependencies {
+                source {
                     @VALIDATIONLAYER_LINKAGE@
                 }
             }
