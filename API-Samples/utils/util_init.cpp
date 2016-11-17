@@ -917,7 +917,7 @@ void init_swap_chain(struct sample_info &info, VkImageUsageFlags usageFlags) {
 #ifndef __ANDROID__
     swapchain_ci.clipped = true;
 #else
-    swap_chain.clipped = false;
+    swapchain_ci.clipped = false;
 #endif
     swapchain_ci.imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
     swapchain_ci.imageUsage = usageFlags;

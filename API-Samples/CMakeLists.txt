@@ -71,6 +71,10 @@ function(sampleWithSingleFile)
             MESSAGE("Generating AndroidStudio project:" ${SAMPLE_NAME})
             # Replace "-" to "_", which is invalid in a package name.
             STRING(REPLACE "-" "_" PACKAGE_NAME ${SAMPLE_NAME})
+            STRING(REGEX MATCH "^[0-9]" LEADING_DIGIT "${PACKAGE_NAME}")
+            if(NOT LEADING_DIGIT STREQUAL "")
+                STRING(CONCAT PACKAGE_NAME "T" "${PACKAGE_NAME}")
+            endif()
             set (PACKAGE_NAME org.khronos.vulkan.samples.${PACKAGE_NAME})
             set (SAMPLE_DESCRIPTION "Vulkan sample: ${SAMPLE_NAME}")
             file(COPY ./android/project_template/ DESTINATION ./android/${SAMPLE_NAME}/)
@@ -104,13 +108,7 @@ function(sampleWithSingleFile)
             # Add validation layer settings.
             set (SAMPLE_WITH_TOOLS create_debug_report_callback enable_validation_with_callback)
             if (";${SAMPLE_WITH_TOOLS};" MATCHES ";${SAMPLE_NAME};")
-                set (VALIDATIONLAYER_LINKAGE "project \":threading\"
-                    project \":parameter_validation\"
-                    project \":object_tracker\"
-                    project \":core_validation\"
-                    project \":image\"
-                    project \":swapchain\"
-                    project \":unique_objects\"")
+                set (VALIDATIONLAYER_LINKAGE "srcDir \"\${ndkDir}/sources/third_party/vulkan/src/build-android/jniLibs\"")
             endif()
 
             # Cook template files.
