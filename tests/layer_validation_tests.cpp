@@ -16246,6 +16246,199 @@ TEST_F(VkPositiveLayerTest, TestAliasedMemoryTracking) {
     vkDestroyImage(m_device->device(), image, NULL);
 }
 
+TEST_F(VkPositiveLayerTest, DynamicOffsetWithInactiveBinding) {
+    // Create a descriptorSet w/ dynamic descriptors where 1 binding is inactive
+    // We previously had a bug where dynamic offset of inactive bindings was still being used
+    VkResult err;
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkDescriptorPoolSize ds_type_count = {};
+    ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+    ds_type_count.descriptorCount = 3;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+    ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    ds_pool_ci.pNext = NULL;
+    ds_pool_ci.maxSets = 1;
+    ds_pool_ci.poolSizeCount = 1;
+    ds_pool_ci.pPoolSizes = &ds_type_count;
+
+    VkDescriptorPool ds_pool;
+    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    const uint32_t BINDING_COUNT = 3;
+    VkDescriptorSetLayoutBinding dsl_binding[BINDING_COUNT] = {};
+    dsl_binding[0].binding = 0;
+    dsl_binding[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+    dsl_binding[0].descriptorCount = 1;
+    dsl_binding[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    dsl_binding[0].pImmutableSamplers = NULL;
+    dsl_binding[1].binding = 1;
+    dsl_binding[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+    dsl_binding[1].descriptorCount = 1;
+    dsl_binding[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    dsl_binding[1].pImmutableSamplers = NULL;
+    dsl_binding[2].binding = 2;
+    dsl_binding[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+    dsl_binding[2].descriptorCount = 1;
+    dsl_binding[2].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    dsl_binding[2].pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+    ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    ds_layout_ci.pNext = NULL;
+    ds_layout_ci.bindingCount = BINDING_COUNT;
+    ds_layout_ci.pBindings = dsl_binding;
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSet descriptor_set;
+    VkDescriptorSetAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    alloc_info.descriptorSetCount = 1;
+    alloc_info.descriptorPool = ds_pool;
+    alloc_info.pSetLayouts = &ds_layout;
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptor_set);
+    ASSERT_VK_SUCCESS(err);
+
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+    pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_ci.pNext = NULL;
+    pipeline_layout_ci.setLayoutCount = 1;
+    pipeline_layout_ci.pSetLayouts = &ds_layout;
+
+    VkPipelineLayout pipeline_layout;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    // Create two buffers to update the descriptors with
+    // The first will be 2k and used for bindings 0 & 1, the second is 1k for binding 2
+    uint32_t qfi = 0;
+    VkBufferCreateInfo buffCI = {};
+    buffCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buffCI.size = 2048;
+    buffCI.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    buffCI.queueFamilyIndexCount = 1;
+    buffCI.pQueueFamilyIndices = &qfi;
+
+    VkBuffer dyub1;
+    err = vkCreateBuffer(m_device->device(), &buffCI, NULL, &dyub1);
+    ASSERT_VK_SUCCESS(err);
+    // buffer2
+    buffCI.size = 1024;
+    VkBuffer dyub2;
+    err = vkCreateBuffer(m_device->device(), &buffCI, NULL, &dyub2);
+    ASSERT_VK_SUCCESS(err);
+    // Allocate memory and bind to buffers
+    VkMemoryAllocateInfo mem_alloc[2] = {};
+    mem_alloc[0].sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    mem_alloc[0].pNext = NULL;
+    mem_alloc[0].memoryTypeIndex = 0;
+    mem_alloc[1].sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    mem_alloc[1].pNext = NULL;
+    mem_alloc[1].memoryTypeIndex = 0;
+
+    VkMemoryRequirements mem_reqs1;
+    vkGetBufferMemoryRequirements(m_device->device(), dyub1, &mem_reqs1);
+    VkMemoryRequirements mem_reqs2;
+    vkGetBufferMemoryRequirements(m_device->device(), dyub2, &mem_reqs2);
+    mem_alloc[0].allocationSize = mem_reqs1.size;
+    bool pass = m_device->phy().set_memory_type(mem_reqs1.memoryTypeBits, &mem_alloc[0], 0);
+    mem_alloc[1].allocationSize = mem_reqs2.size;
+    pass &= m_device->phy().set_memory_type(mem_reqs2.memoryTypeBits, &mem_alloc[1], 0);
+    if (!pass) {
+        vkDestroyBuffer(m_device->device(), dyub1, NULL);
+        vkDestroyBuffer(m_device->device(), dyub2, NULL);
+        return;
+    }
+
+    VkDeviceMemory mem1;
+    err = vkAllocateMemory(m_device->device(), &mem_alloc[0], NULL, &mem1);
+    ASSERT_VK_SUCCESS(err);
+    err = vkBindBufferMemory(m_device->device(), dyub1, mem1, 0);
+    ASSERT_VK_SUCCESS(err);
+    VkDeviceMemory mem2;
+    err = vkAllocateMemory(m_device->device(), &mem_alloc[1], NULL, &mem2);
+    ASSERT_VK_SUCCESS(err);
+    err = vkBindBufferMemory(m_device->device(), dyub2, mem2, 0);
+    ASSERT_VK_SUCCESS(err);
+    // Update descriptors
+    VkDescriptorBufferInfo buff_info[BINDING_COUNT] = {};
+    buff_info[0].buffer = dyub1;
+    buff_info[0].offset = 0;
+    buff_info[0].range = 256;
+    buff_info[1].buffer = dyub1;
+    buff_info[1].offset = 256;
+    buff_info[1].range = 512;
+    buff_info[2].buffer = dyub2;
+    buff_info[2].offset = 0;
+    buff_info[2].range = 512;
+
+    VkWriteDescriptorSet descriptor_write;
+    memset(&descriptor_write, 0, sizeof(descriptor_write));
+    descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptor_write.dstSet = descriptor_set;
+    descriptor_write.dstBinding = 0;
+    descriptor_write.descriptorCount = BINDING_COUNT;
+    descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+    descriptor_write.pBufferInfo = buff_info;
+
+    vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
+
+    BeginCommandBuffer();
+
+    // Create PSO to be used for draw-time errors below
+    char const *vsSource = "#version 450\n"
+                           "\n"
+                           "out gl_PerVertex { \n"
+                           "    vec4 gl_Position;\n"
+                           "};\n"
+                           "void main(){\n"
+                           "   gl_Position = vec4(1);\n"
+                           "}\n";
+    char const *fsSource = "#version 450\n"
+                           "\n"
+                           "layout(location=0) out vec4 x;\n"
+                           "layout(set=0) layout(binding=0) uniform foo1 { int x; int y; } bar1;\n"
+                           "layout(set=0) layout(binding=2) uniform foo2 { int x; int y; } bar2;\n"
+                           "void main(){\n"
+                           "   x = vec4(bar1.y) + vec4(bar2.y);\n"
+                           "}\n";
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+    VkPipelineObj pipe(m_device);
+    pipe.SetViewport(m_viewports);
+    pipe.SetScissor(m_scissors);
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+    pipe.AddColorAttachment();
+    pipe.CreateVKPipeline(pipeline_layout, renderPass());
+
+    vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
+    // This update should succeed, but offset of inactive binding 1 oversteps binding 2 buffer size
+    //   we used to have a bug in this case.
+    uint32_t dyn_off[BINDING_COUNT] = {0, 1024, 256};
+    vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1,
+                            &descriptor_set, BINDING_COUNT, dyn_off);
+    Draw(1, 0, 0, 0);
+    m_errorMonitor->VerifyNotFound();
+
+    vkDestroyBuffer(m_device->device(), dyub1, NULL);
+    vkDestroyBuffer(m_device->device(), dyub2, NULL);
+    vkFreeMemory(m_device->device(), mem1, NULL);
+    vkFreeMemory(m_device->device(), mem2, NULL);
+
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
+}
+
 TEST_F(VkPositiveLayerTest, NonCoherentMemoryMapping) {
 
     TEST_DESCRIPTION("Ensure that validations handling of non-coherent memory "
