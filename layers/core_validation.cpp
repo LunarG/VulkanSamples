@@ -11370,17 +11370,27 @@ VKAPI_ATTR VkResult VKAPI_CALL BindImageMemory(VkDevice device, VkImage image, V
         // Track objects tied to memory
         uint64_t image_handle = reinterpret_cast<uint64_t &>(image);
         skip_call = SetMemBinding(dev_data, mem, image_handle, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, "vkBindImageMemory");
-        VkMemoryRequirements memRequirements;
-        lock.unlock();
-        dev_data->dispatch_table.GetImageMemoryRequirements(device, image, &memRequirements);
-        lock.lock();
+        if (!image_state->memory_requirements_checked) {
+            // There's not an explicit requirement in the spec to call vkGetImageMemoryRequirements() prior to calling
+            //  BindImageMemory but it's implied in that memory being bound must conform with VkMemoryRequirements from
+            //  vkGetImageMemoryRequirements()
+            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                                 image_handle, __LINE__, DRAWSTATE_INVALID_IMAGE, "DS",
+                                 "vkBindBufferMemory(): Binding memory to image 0x%" PRIxLEAST64
+                                 " but vkGetImageMemoryRequirements() has not been called on that image.",
+                                 image_handle);
+            // Make the call for them so we can verify the state
+            lock.unlock();
+            dev_data->dispatch_table.GetImageMemoryRequirements(device, image, &image_state->requirements);
+            lock.lock();
+        }
 
         // Track and validate bound memory range information
         auto mem_info = getMemObjInfo(dev_data, mem);
         if (mem_info) {
-            skip_call |= InsertImageMemoryRange(dev_data, image, mem_info, memoryOffset, memRequirements,
+            skip_call |= InsertImageMemoryRange(dev_data, image, mem_info, memoryOffset, image_state->requirements,
                                                 image_state->createInfo.tiling == VK_IMAGE_TILING_LINEAR);
-            skip_call |= ValidateMemoryTypes(dev_data, mem_info, memRequirements.memoryTypeBits, "vkBindImageMemory");
+            skip_call |= ValidateMemoryTypes(dev_data, mem_info, image_state->requirements.memoryTypeBits, "vkBindImageMemory");
         }
 
         print_mem_list(dev_data);
@@ -11390,7 +11400,7 @@ VKAPI_ATTR VkResult VKAPI_CALL BindImageMemory(VkDevice device, VkImage image, V
             lock.lock();
             image_state->binding.mem = mem;
             image_state->binding.offset = memoryOffset;
-            image_state->binding.size = memRequirements.size;
+            image_state->binding.size = image_state->requirements.size;
             lock.unlock();
         }
     } else {
