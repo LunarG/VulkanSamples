@@ -50,8 +50,8 @@ int sample_main(int argc, char *argv[]) {
     /* VULKAN_KEY_START */
 
     // Start with a trivial command buffer and make sure fence wait doesn't time out
-    info.viewport.height = (float)info.height;
-    info.viewport.width = (float)info.width;
+    info.viewport.height = 10.0;
+    info.viewport.width = 10.0;
     info.viewport.minDepth = (float)0.0f;
     info.viewport.maxDepth = (float)1.0f;
     info.viewport.x = 0;
