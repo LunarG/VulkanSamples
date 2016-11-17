@@ -1393,6 +1393,8 @@ TEST_F(VkLayerTest, InvalidMemoryMapping) {
     VkDeviceMemory mem;
     VkMemoryRequirements mem_reqs;
 
+    const VkDeviceSize atom_size = m_device->props.limits.nonCoherentAtomSize;
+
     VkBufferCreateInfo buf_info = {};
     buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     buf_info.pNext = NULL;
@@ -1450,25 +1452,60 @@ TEST_F(VkLayerTest, InvalidMemoryMapping) {
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Unmapping Memory without memory being mapped: ");
     vkUnmapMemory(m_device->device(), mem);
     m_errorMonitor->VerifyFound();
+
     // Now map memory and cause errors due to flushing invalid ranges
-    err = vkMapMemory(m_device->device(), mem, 16, VK_WHOLE_SIZE, 0, (void **)&pData);
+    err = vkMapMemory(m_device->device(), mem, 4 * atom_size, VK_WHOLE_SIZE, 0, (void **)&pData);
     ASSERT_VK_SUCCESS(err);
     VkMappedMemoryRange mmr = {};
     mmr.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
     mmr.memory = mem;
-    mmr.offset = 15; // Error b/c offset less than offset of mapped mem
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, ") is less than Memory Object's offset (");
+    mmr.offset = atom_size; // Error b/c offset less than offset of mapped mem
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00642);
     vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
     m_errorMonitor->VerifyFound();
+
     // Now flush range that oversteps mapped range
     vkUnmapMemory(m_device->device(), mem);
-    err = vkMapMemory(m_device->device(), mem, 0, 256, 0, (void **)&pData);
+    err = vkMapMemory(m_device->device(), mem, 0, 4 * atom_size, 0, (void **)&pData);
     ASSERT_VK_SUCCESS(err);
-    mmr.offset = 16;
-    mmr.size = 256; // flushing bounds (272) exceed mapped bounds (256)
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, ") exceeds the Memory Object's upper-bound (");
+    mmr.offset = atom_size;
+    mmr.size = 4 * atom_size; // Flushing bounds exceed mapped bounds
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00642);
     vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
     m_errorMonitor->VerifyFound();
+
+    // Now flush range with VK_WHOLE_SIZE that oversteps offset
+    vkUnmapMemory(m_device->device(), mem);
+    err = vkMapMemory(m_device->device(), mem, 2 * atom_size, 4 * atom_size, 0, (void **)&pData);
+    ASSERT_VK_SUCCESS(err);
+    mmr.offset = atom_size;
+    mmr.size = VK_WHOLE_SIZE;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00643);
+    vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
+    m_errorMonitor->VerifyFound();
+
+    // Some platforms have an atomsize of 1 which makes the test meaningless
+    if (atom_size > 3) {
+        // Now with an offset NOT a multiple of the device limit
+        vkUnmapMemory(m_device->device(), mem);
+        err = vkMapMemory(m_device->device(), mem, 0, 4 * atom_size, 0, (void **)&pData);
+        ASSERT_VK_SUCCESS(err);
+        mmr.offset = 3;    // Not a multiple of atom_size
+        mmr.size = VK_WHOLE_SIZE;
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00644);
+        vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
+        m_errorMonitor->VerifyFound();
+
+        // Now with a size NOT a multiple of the device limit
+        vkUnmapMemory(m_device->device(), mem);
+        err = vkMapMemory(m_device->device(), mem, 0, 4 * atom_size, 0, (void **)&pData);
+        ASSERT_VK_SUCCESS(err);
+        mmr.offset = atom_size;
+        mmr.size = 2 * atom_size + 1;    // Not a multiple of atom_size
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00645);
+        vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
+        m_errorMonitor->VerifyFound();
+    }
 
     pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &alloc_info, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
                                            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -1575,11 +1612,12 @@ TEST_F(VkLayerTest, EnableWsiBeforeUse) {
 // Set this (for now, until all platforms are supported and tested):
 #define NEED_TO_TEST_THIS_ON_PLATFORM
 #endif // VK_USE_PLATFORM_WIN32_KHR
-
-#if defined(VK_USE_PLATFORM_XCB_KHR)
+#if defined(VK_USE_PLATFORM_XCB_KHR) || defined (VK_USE_PLATFORM_XLIB_KHR)
     // FIXME: REMOVE THIS HERE, AND UNCOMMENT ABOVE, WHEN THIS TEST HAS BEEN PORTED
     // TO NON-LINUX PLATFORMS:
     VkSurfaceKHR surface = VK_NULL_HANDLE;
+#endif
+#if defined(VK_USE_PLATFORM_XCB_KHR)
     // Use the functions from the VK_KHR_xcb_surface extension without enabling
     // that extension:
 
@@ -2411,6 +2449,63 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject) {
 #endif // OBJ_TRACKER_TESTS
 
 #if DRAW_STATE_TESTS
+
+TEST_F(VkLayerTest, CreatePipelineBadVertexAttributeFormat) {
+    TEST_DESCRIPTION("Test that pipeline validation catches invalid vertex attribute formats");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkVertexInputBindingDescription input_binding;
+    memset(&input_binding, 0, sizeof(input_binding));
+
+    VkVertexInputAttributeDescription input_attribs;
+    memset(&input_attribs, 0, sizeof(input_attribs));
+
+    // Pick a really bad format for this purpose and make sure it should fail
+    input_attribs.format = VK_FORMAT_BC2_UNORM_BLOCK;
+    VkFormatProperties format_props = m_device->format_properties(input_attribs.format);
+    if ((format_props.bufferFeatures & VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT) != 0) {
+        printf("Format unsuitable for test; skipped.\n");
+        return;
+    }
+
+    input_attribs.location = 0;
+    char const *vsSource = "#version 450\n"
+        "\n"
+        "out gl_PerVertex {\n"
+        "    vec4 gl_Position;\n"
+        "};\n"
+        "void main(){\n"
+        "   gl_Position = vec4(1);\n"
+        "}\n";
+    char const *fsSource = "#version 450\n"
+        "\n"
+        "layout(location=0) out vec4 color;\n"
+        "void main(){\n"
+        "   color = vec4(1);\n"
+        "}\n";
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01413);
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddColorAttachment();
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+
+    pipe.AddVertexInputBindings(&input_binding, 1);
+    pipe.AddVertexInputAttribs(&input_attribs, 1);
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendDummy();
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+
+    m_errorMonitor->VerifyFound();
+}
 
 TEST_F(VkLayerTest, ImageSampleCounts) {
 
@@ -3501,10 +3596,12 @@ TEST_F(VkLayerTest, CommandBufferTwoSubmits) {
 
     err = vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
     ASSERT_VK_SUCCESS(err);
+    vkQueueWaitIdle(m_device->m_queue);
 
     // Cause validation error by re-submitting cmd buffer that should only be
     // submitted once
     err = vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
+    vkQueueWaitIdle(m_device->m_queue);
 
     m_errorMonitor->VerifyFound();
 }
@@ -13525,6 +13622,7 @@ TEST_F(VkLayerTest, CreateImageLimitsViolationMinWidth) {
 #endif // DEVICE_LIMITS_TESTS
 
 #if IMAGE_TESTS
+
 TEST_F(VkLayerTest, AttachmentDescriptionUndefinedFormat) {
     TEST_DESCRIPTION("Create a render pass with an attachment description "
                      "format set to VK_FORMAT_UNDEFINED");

@@ -21,6 +21,7 @@ glsl_to_spirv(Smoke.vert)
 glsl_to_spirv(Smoke.push_constant.vert)
 
 set(sources
+    Game.cpp
     Game.h
     Helpers.h
     HelpersDispatchTable.cpp

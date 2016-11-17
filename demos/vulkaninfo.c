@@ -505,6 +505,7 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu) {
 }
 
 static void app_dev_destroy(struct app_dev *dev) {
+    vkDeviceWaitIdle(dev->obj);
     vkDestroyDevice(dev->obj, NULL);
 }
 
@@ -907,9 +908,15 @@ static void app_destroy_xcb_window(struct app_instance *inst) {
 //----------------------------XLib---------------------------
 #ifdef VK_USE_PLATFORM_XLIB_KHR
 static void app_create_xlib_window(struct app_instance *inst) {
-    inst->xlib_display = XOpenDisplay(NULL);
     long visualMask = VisualScreenMask;
     int numberOfVisuals;
+
+    inst->xlib_display = XOpenDisplay(NULL);
+    if (inst->xlib_display == NULL) {
+        printf("XLib failed to connect to the X server.\nExiting ...\n");
+        fflush(stdout);
+        exit(1);
+    }
 
     XVisualInfo vInfoTemplate={};
     vInfoTemplate.screen = DefaultScreen(inst->xlib_display);
@@ -1505,6 +1512,13 @@ int main(int argc, char **argv) {
             app_destroy_surface(&inst);
         }
         app_destroy_win32_window(&inst);
+    }
+#endif
+#if defined(VK_USE_PLATFORM_XCB_KHR) || defined(VK_USE_PLATFORM_XLIB_KHR)
+    if (getenv("DISPLAY") == NULL) {
+        printf("'DISPLAY' environment variable not set... Exiting!\n");
+        fflush(stdout);
+        exit(1);
     }
 #endif
 //--XCB--

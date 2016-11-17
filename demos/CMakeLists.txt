@@ -127,8 +127,10 @@ else()
     target_link_libraries(cubepp ${LIBRARIES})
 endif()
 
-if (${CMAKE_SYSTEM_PROCESSOR} STREQUAL ${CMAKE_HOST_SYSTEM_PROCESSOR})
-    add_subdirectory(smoke)
+if ((${CMAKE_SYSTEM_PROCESSOR} STREQUAL ${CMAKE_HOST_SYSTEM_PROCESSOR}))
+    if  (BUILD_WSI_XCB_SUPPORT OR BUILD_WSI_WAYLAND_SUPPORT OR WIN32 OR (CMAKE_SYSTEM_NAME STREQUAL "Android"))
+        add_subdirectory(smoke)
+    endif()
 endif()
 
 if(UNIX)

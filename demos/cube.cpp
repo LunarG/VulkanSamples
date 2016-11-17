@@ -212,17 +212,19 @@ struct Demo {
           window{nullptr},
           minsize(POINT{
               0, 0}), // Use explicit construction to avoid MSVC error C2797.
-#elif defined(VK_USE_PLATFORM_XLIB_KHR) || defined(VK_USE_PLATFORM_XCB_KHR)
-          display{nullptr},
-          xlib_window{0}, xlib_wm_delete_window{0}, connection{nullptr},
-          screen{nullptr}, xcb_window{0}, atom_wm_delete_window{nullptr},
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-          display{nullptr},
-          registry{nullptr}, compositor{nullptr}, window{nullptr},
-          shell{nullptr}, shell_surface{nullptr},
 #endif
-          prepared{false},
-          use_staging_buffer{false}, use_xlib{false},
+#if defined(VK_USE_PLATFORM_XLIB_KHR)
+          xlib_window{0},
+          xlib_wm_delete_window{0}, display{nullptr},
+#endif
+#if defined(VK_USE_PLATFORM_XCB_KHR)
+          xcb_window{0}, screen{nullptr}, connection{nullptr},
+#endif
+#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
+          display{nullptr}, registry{nullptr}, compositor{nullptr},
+          window{nullptr}, shell{nullptr}, shell_surface{nullptr},
+#endif
+          prepared{false}, use_staging_buffer{false}, use_xlib{false},
           graphics_queue_family_index{0}, present_queue_family_index{0},
           enabled_extension_count{0}, enabled_layer_count{0}, width{0},
           height{0}, swapchainImageCount{0}, frame_index{0}, spin_angle{0.0f},
@@ -231,8 +233,6 @@ struct Demo {
           suppress_popups{false}, current_buffer{0}, queue_family_count{0} {
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
         memset(name, '\0', APP_NAME_STR_LEN);
-#elif defined(VK_USE_PLATFORM_XLIB_KHR) || defined(VK_USE_PLATFORM_XCB_KHR)
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
 #endif
         memset(projection_matrix, 0, sizeof(projection_matrix));
         memset(view_matrix, 0, sizeof(view_matrix));
@@ -342,7 +342,7 @@ struct Demo {
         inst.destroySurfaceKHR(surface, nullptr);
         inst.destroy(nullptr);
 
-#if defined(VK_USE_PLATFORM_XLIB_KHR) || defined(VK_USE_PLATFORM_XCB_KHR)
+#if defined(VK_USE_PLATFORM_XLIB_KHR) && defined(VK_USE_PLATFORM_XCB_KHR)
         if (use_xlib) {
             XDestroyWindow(display, xlib_window);
             XCloseDisplay(display);
@@ -350,6 +350,13 @@ struct Demo {
             xcb_destroy_window(connection, xcb_window);
             xcb_disconnect(connection);
         }
+        free(atom_wm_delete_window);
+#elif defined(VK_USE_PLATFORM_XLIB_KHR)
+        XDestroyWindow(display, xlib_window);
+        XCloseDisplay(display);
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
+        xcb_destroy_window(connection, xcb_window);
+        xcb_disconnect(connection);
         free(atom_wm_delete_window);
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
         wl_shell_surface_destroy(shell_surface);
@@ -2581,16 +2588,19 @@ struct Demo {
     HWND window;                 // hWnd - window handle
     POINT minsize;               // minimum window size
     char name[APP_NAME_STR_LEN]; // Name to put on the window/icon
-#elif defined(VK_USE_PLATFORM_XLIB_KHR) || defined(VK_USE_PLATFORM_XCB_KHR)
-    Display *display;
+#endif
+#if defined(VK_USE_PLATFORM_XLIB_KHR)
     Window xlib_window;
     Atom xlib_wm_delete_window;
-
-    xcb_connection_t *connection;
-    xcb_screen_t *screen;
+    Display *display;
+#endif
+#if defined(VK_USE_PLATFORM_XCB_KHR)
     xcb_window_t xcb_window;
+    xcb_screen_t *screen;
+    xcb_connection_t *connection;
     xcb_intern_atom_reply_t *atom_wm_delete_window;
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+#endif
+#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
     wl_display *display;
     wl_registry *registry;
     wl_compositor *compositor;
@@ -2834,14 +2844,15 @@ int main(int argc, char **argv) {
         demo.create_xlib_window();
     } else {
         demo.create_xcb_window();
+    }
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
     demo.create_xcb_window();
 #elif defined(VK_USE_PLATFORM_XLIB_KHR)
+    demo.use_xlib = true;
     demo.create_xlib_window();
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
     demo.create_window();
 #endif
-    }
 
     demo.init_vk_swapchain();
 
@@ -2852,6 +2863,7 @@ int main(int argc, char **argv) {
         demo.run_xlib();
     } else {
         demo.run_xcb();
+    }
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
 demo.run_xcb();
 #elif defined(VK_USE_PLATFORM_XLIB_KHR)
@@ -2859,7 +2871,6 @@ demo.run_xlib();
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
 demo.run();
 #endif
-    }
 
     demo.cleanup();
 

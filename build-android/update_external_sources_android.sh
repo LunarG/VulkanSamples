@@ -19,7 +19,7 @@
 set -e
 
 ANDROIDBUILDDIR=$PWD
-BUILDDIR=$ANDROIDBUILDDIR/..
+BUILDDIR=$ANDROIDBUILDDIR
 BASEDIR=$BUILDDIR/external
 
 GLSLANG_REVISION=$(cat $ANDROIDBUILDDIR/glslang_revision_android)
@@ -31,12 +31,18 @@ echo "GLSLANG_REVISION=$GLSLANG_REVISION"
 echo "SPIRV_TOOLS_REVISION=$SPIRV_TOOLS_REVISION"
 echo "SHADERC_REVISION=$SHADERC_REVISION"
 
+if [[ $(uname) == "Linux" ]]; then
+    cores=$(ncpus || echo 4)
+elif [[ $(uname) == "Darwin" ]]; then
+    cores=$(sysctl -n hw.ncpu)
+fi
+
 function create_glslang () {
    rm -rf $BASEDIR/glslang
    echo "Creating local glslang repository ($BASEDIR/glslang)."
    mkdir -p $BASEDIR/glslang
    cd $BASEDIR/glslang
-   git clone https://github.com/KhronosGroup/glslang.git .
+   git clone https://android.googlesource.com/platform/external/shaderc/glslang .
    git checkout $GLSLANG_REVISION
 }
 
@@ -52,7 +58,7 @@ function create_spirv-tools () {
    echo "Creating local spirv-tools repository ($BASEDIR/spirv-tools)."
    mkdir -p $BASEDIR/spirv-tools
    cd $BASEDIR/spirv-tools
-   git clone https://github.com/KhronosGroup/SPIRV-Tools.git .
+   git clone https://android.googlesource.com/platform/external/shaderc/spirv-tools .
    git checkout $SPIRV_TOOLS_REVISION
 }
 
@@ -68,7 +74,7 @@ function create_spirv-headers () {
    echo "Creating local spirv-headers repository ($BASEDIR/spirv-tools/external/spirv-headers)."
    mkdir -p $BASEDIR/spirv-tools/external/spirv-headers
    cd $BASEDIR/spirv-tools/external/spirv-headers
-   git clone https://github.com/KhronosGroup/SPIRV-Headers.git .
+   git clone https://android.googlesource.com/platform/external/shaderc/spirv-headers .
    git checkout $SPIRV_HEADERS_REVISION
 }
 
@@ -83,7 +89,7 @@ function create_shaderc () {
    rm -rf $BASEDIR/shaderc
    echo "Creating local shaderc repository ($BASEDIR/shaderc)."
    cd $BASEDIR
-   git clone https://github.com/google/shaderc.git
+   git clone https://android.googlesource.com/platform/external/shaderc/shaderc
    cd shaderc
    git checkout $SHADERC_REVISION
 }
@@ -98,7 +104,7 @@ function update_shaderc () {
 function build_shaderc () {
    echo "Building $BASEDIR/shaderc"
    cd $BASEDIR/shaderc/android_test
-   ndk-build THIRD_PARTY_PATH=../.. -j 4
+   ndk-build THIRD_PARTY_PATH=../.. -j $cores
 }
 
 if [ ! -d "$BASEDIR/glslang" -o ! -d "$BASEDIR/glslang/.git" -o -d "$BASEDIR/glslang/.svn" ]; then

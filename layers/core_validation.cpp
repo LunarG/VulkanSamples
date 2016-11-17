@@ -165,6 +165,7 @@ struct layer_data {
     unordered_map<VkRenderPass, unique_ptr<RENDER_PASS_STATE>> renderPassMap;
     unordered_map<VkShaderModule, unique_ptr<shader_module>> shaderModuleMap;
     VkDevice device = VK_NULL_HANDLE;
+    VkPhysicalDevice physical_device = VK_NULL_HANDLE;
 
     instance_layer_data *instance_data = nullptr;  // from device to enclosing instance
 
@@ -418,9 +419,9 @@ static GLOBAL_CB_NODE *getCBNode(layer_data const *, const VkCommandBuffer);
 //  Verify that (actual & desired) flags != 0 or,
 //   if strict is true, verify that (actual & desired) flags == desired
 //  In case of error, report it via dbg callbacks
-static bool validate_usage_flags(layer_data *my_data, VkFlags actual, VkFlags desired, VkBool32 strict,
-                                     uint64_t obj_handle, VkDebugReportObjectTypeEXT obj_type, char const *ty_str,
-                                     char const *func_name, char const *usage_str) {
+static bool validate_usage_flags(layer_data *my_data, VkFlags actual, VkFlags desired, VkBool32 strict, uint64_t obj_handle,
+                                 VkDebugReportObjectTypeEXT obj_type, int32_t const msgCode, char const *ty_str,
+                                 char const *func_name, char const *usage_str) {
     bool correct_usage = false;
     bool skip_call = false;
     if (strict)
@@ -428,10 +429,20 @@ static bool validate_usage_flags(layer_data *my_data, VkFlags actual, VkFlags de
     else
         correct_usage = ((actual & desired) != 0);
     if (!correct_usage) {
-        skip_call = log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, obj_type, obj_handle, __LINE__,
-                            MEMTRACK_INVALID_USAGE_FLAG, "MEM", "Invalid usage flag for %s 0x%" PRIxLEAST64
-                                                                " used by %s. In this case, %s should have %s set during creation.",
-                            ty_str, obj_handle, func_name, ty_str, usage_str);
+        if (msgCode == -1) {
+            // TODO: Fix callers with msgCode == -1 to use correct validation checks.
+            skip_call =
+                log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, obj_type, obj_handle, __LINE__,
+                        MEMTRACK_INVALID_USAGE_FLAG, "MEM", "Invalid usage flag for %s 0x%" PRIxLEAST64
+                                                            " used by %s. In this case, %s should have %s set during creation.",
+                        ty_str, obj_handle, func_name, ty_str, usage_str);
+        } else {
+            const char *valid_usage = (msgCode == -1) ? "" : validation_error_map[msgCode];
+            skip_call = log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, obj_type, obj_handle, __LINE__, msgCode, "MEM",
+                                "Invalid usage flag for %s 0x%" PRIxLEAST64
+                                " used by %s. In this case, %s should have %s set during creation. %s",
+                                ty_str, obj_handle, func_name, ty_str, usage_str, valid_usage);
+        }
     }
     return skip_call;
 }
@@ -440,20 +451,20 @@ static bool validate_usage_flags(layer_data *my_data, VkFlags actual, VkFlags de
 // For given buffer_node send actual vs. desired usage off to helper above where
 //  an error will be flagged if usage is not correct
 static bool ValidateImageUsageFlags(layer_data *dev_data, IMAGE_STATE const *image_state, VkFlags desired, VkBool32 strict,
-                                    char const *func_name, char const *usage_string) {
+                                    int32_t const msgCode, char const *func_name, char const *usage_string) {
     return validate_usage_flags(dev_data, image_state->createInfo.usage, desired, strict,
                                 reinterpret_cast<const uint64_t &>(image_state->image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                                "image", func_name, usage_string);
+                                msgCode, "image", func_name, usage_string);
 }
 
 // Helper function to validate usage flags for buffers
 // For given buffer_node send actual vs. desired usage off to helper above where
 //  an error will be flagged if usage is not correct
 static bool ValidateBufferUsageFlags(layer_data *dev_data, BUFFER_NODE const *buffer_node, VkFlags desired, VkBool32 strict,
-                                     char const *func_name, char const *usage_string) {
+                                     int32_t const msgCode, char const *func_name, char const *usage_string) {
     return validate_usage_flags(dev_data, buffer_node->createInfo.usage, desired, strict,
                                 reinterpret_cast<const uint64_t &>(buffer_node->buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
-                                "buffer", func_name, usage_string);
+                                msgCode, "buffer", func_name, usage_string);
 }
 
 // Return ptr to info in map container containing mem, or NULL if not found
@@ -3248,8 +3259,7 @@ static bool verifyLineWidth(layer_data *my_data, DRAW_STATE_ERROR dsError, const
 }
 
 // Verify that create state for a pipeline is valid
-static bool verifyPipelineCreateState(layer_data *my_data, const VkDevice device, std::vector<PIPELINE_STATE *> pPipelines,
-                                      int pipelineIndex) {
+static bool verifyPipelineCreateState(layer_data *my_data, std::vector<PIPELINE_STATE *> pPipelines, int pipelineIndex) {
     bool skip_call = false;
 
     PIPELINE_STATE *pPipeline = pPipelines[pipelineIndex];
@@ -4445,6 +4455,8 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu, const VkDevice
     // Setup device dispatch table
     layer_init_device_dispatch_table(*pDevice, &my_device_data->dispatch_table, fpGetDeviceProcAddr);
     my_device_data->device = *pDevice;
+    // Save PhysicalDevice handle
+    my_device_data->physical_device = gpu;
 
     my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
     checkDeviceRegisterExtensions(pCreateInfo, *pDevice);
@@ -4754,18 +4766,25 @@ static bool RetireWorkOnQueue(layer_data *dev_data, QUEUE_NODE *pQueue, uint64_t
 
         for (auto & wait : submission.waitSemaphores) {
             auto pSemaphore = getSemaphoreNode(dev_data, wait.semaphore);
-            pSemaphore->in_use.fetch_sub(1);
+            if (pSemaphore) {
+                pSemaphore->in_use.fetch_sub(1);
+            }
             auto & lastSeq = otherQueueSeqs[wait.queue];
             lastSeq = std::max(lastSeq, wait.seq);
         }
 
         for (auto & semaphore : submission.signalSemaphores) {
             auto pSemaphore = getSemaphoreNode(dev_data, semaphore);
-            pSemaphore->in_use.fetch_sub(1);
+            if (pSemaphore) {
+                pSemaphore->in_use.fetch_sub(1);
+            }
         }
 
         for (auto cb : submission.cbs) {
             auto cb_node = getCBNode(dev_data, cb);
+            if (!cb_node) {
+                continue;
+            }
             // First perform decrement on general case bound objects
             DecrementBoundResources(dev_data, cb_node);
             for (auto drawDataElement : cb_node->drawData) {
@@ -5072,14 +5091,38 @@ QueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits, V
     return result;
 }
 
+static bool PreCallValidateAllocateMemory(layer_data *dev_data) {
+    bool skip = false;
+    if (dev_data->memObjMap.size() >= dev_data->phys_dev_properties.properties.limits.maxMemoryAllocationCount) {
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                        reinterpret_cast<const uint64_t &>(dev_data->device), __LINE__, VALIDATION_ERROR_00611, "MEM",
+                        "Number of currently valid memory objects is not less than the maximum allowed (%u). %s",
+                        dev_data->phys_dev_properties.properties.limits.maxMemoryAllocationCount,
+                        validation_error_map[VALIDATION_ERROR_00611]);
+    }
+    return skip;
+}
+
+static void PostCallRecordAllocateMemory(layer_data *dev_data, const VkMemoryAllocateInfo *pAllocateInfo, VkDeviceMemory *pMemory) {
+    add_mem_obj_info(dev_data, dev_data->device, *pMemory, pAllocateInfo);
+    print_mem_list(dev_data);
+    return;
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL AllocateMemory(VkDevice device, const VkMemoryAllocateInfo *pAllocateInfo,
                                               const VkAllocationCallbacks *pAllocator, VkDeviceMemory *pMemory) {
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = my_data->dispatch_table.AllocateMemory(device, pAllocateInfo, pAllocator, pMemory);
-    // TODO : Track allocations and overall size here
-    std::lock_guard<std::mutex> lock(global_lock);
-    add_mem_obj_info(my_data, device, *pMemory, pAllocateInfo);
-    print_mem_list(my_data);
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    std::unique_lock<std::mutex> lock(global_lock);
+    bool skip = PreCallValidateAllocateMemory(dev_data);
+    if (!skip) {
+        lock.unlock();
+        result = dev_data->dispatch_table.AllocateMemory(device, pAllocateInfo, pAllocator, pMemory);
+        lock.lock();
+        if (VK_SUCCESS == result) {
+            PostCallRecordAllocateMemory(dev_data, pAllocateInfo, pMemory);
+        }
+    }
     return result;
 }
 
@@ -6416,9 +6459,9 @@ static bool PreCallValidateCreateBufferView(layer_data *dev_data, const VkBuffer
         skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, buf_node, "vkCreateBufferView()");
         // In order to create a valid buffer view, the buffer must have been created with at least one of the
         // following flags:  UNIFORM_TEXEL_BUFFER_BIT or STORAGE_TEXEL_BUFFER_BIT
-        skip_call |= ValidateBufferUsageFlags(dev_data, buf_node,
-                                              VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT,
-                                              false, "vkCreateBufferView()", "VK_BUFFER_USAGE_[STORAGE|UNIFORM]_TEXEL_BUFFER_BIT");
+        skip_call |= ValidateBufferUsageFlags(
+            dev_data, buf_node, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT, false,
+            VALIDATION_ERROR_00694, "vkCreateBufferView()", "VK_BUFFER_USAGE_[STORAGE|UNIFORM]_TEXEL_BUFFER_BIT");
     }
     return skip_call;
 }
@@ -6566,7 +6609,7 @@ static bool PreCallValidateCreateImageView(layer_data *dev_data, const VkImageVi
         skip |= ValidateImageUsageFlags(
             dev_data, image_state, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT |
                                        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-            false, "vkCreateImageView()",
+            false, -1, "vkCreateImageView()",
             "VK_IMAGE_USAGE_[SAMPLED|STORAGE|COLOR_ATTACHMENT|DEPTH_STENCIL_ATTACHMENT|INPUT_ATTACHMENT]_BIT");
         // If this isn't a sparse image, it needs to have memory backing it at CreateImageView time
         skip |= ValidateMemoryIsBoundToImage(dev_data, image_state, "vkCreateImageView()");
@@ -6738,49 +6781,74 @@ void set_pipeline_state(PIPELINE_STATE *pPipe) {
     }
 }
 
+static bool PreCallCreateGraphicsPipelines(layer_data *device_data, uint32_t count,
+                                           const VkGraphicsPipelineCreateInfo *create_infos, vector<PIPELINE_STATE *> &pipe_state) {
+    bool skip = false;
+    instance_layer_data *instance_data = get_my_data_ptr(get_dispatch_key(device_data->instance_data->instance), instance_layer_data_map);
+
+    for (uint32_t i = 0; i < count; i++) {
+        skip |= verifyPipelineCreateState(device_data, pipe_state, i);
+        if (create_infos[i].pVertexInputState != NULL) {
+            for (uint32_t j = 0; j < create_infos[i].pVertexInputState->vertexAttributeDescriptionCount; j++) {
+                VkFormat format = create_infos[i].pVertexInputState->pVertexAttributeDescriptions[j].format;
+                // Internal call to get format info.  Still goes through layers, could potentially go directly to ICD.
+                VkFormatProperties properties;
+                instance_data->dispatch_table.GetPhysicalDeviceFormatProperties(device_data->physical_device, format, &properties);
+                if ((properties.bufferFeatures & VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT) == 0) {
+                    skip |= log_msg(
+                        device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                        __LINE__, VALIDATION_ERROR_01413, "IMAGE",
+                        "vkCreateGraphicsPipelines: pCreateInfo[%d].pVertexInputState->vertexAttributeDescriptions[%d].format "
+                        "(%s) is not a supported vertex buffer format. %s",
+                        i, j, string_VkFormat(format), validation_error_map[VALIDATION_ERROR_01413]);
+                }
+            }
+        }
+    }
+    return skip;
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL
 CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t count,
                         const VkGraphicsPipelineCreateInfo *pCreateInfos, const VkAllocationCallbacks *pAllocator,
                         VkPipeline *pPipelines) {
-    VkResult result = VK_SUCCESS;
     // TODO What to do with pipelineCache?
     // The order of operations here is a little convoluted but gets the job done
     //  1. Pipeline create state is first shadowed into PIPELINE_STATE struct
     //  2. Create state is then validated (which uses flags setup during shadowing)
     //  3. If everything looks good, we'll then create the pipeline and add NODE to pipelineMap
-    bool skip_call = false;
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skip = false;
     // TODO : Improve this data struct w/ unique_ptrs so cleanup below is automatic
-    vector<PIPELINE_STATE *> pPipeState(count);
+    vector<PIPELINE_STATE *> pipe_state(count);
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
 
     uint32_t i = 0;
     std::unique_lock<std::mutex> lock(global_lock);
 
     for (i = 0; i < count; i++) {
-        pPipeState[i] = new PIPELINE_STATE;
-        pPipeState[i]->initGraphicsPipeline(&pCreateInfos[i]);
-        pPipeState[i]->render_pass_ci.initialize(getRenderPassState(dev_data, pCreateInfos[i].renderPass)->createInfo.ptr());
-        pPipeState[i]->pipeline_layout = *getPipelineLayout(dev_data, pCreateInfos[i].layout);
-
-        skip_call |= verifyPipelineCreateState(dev_data, device, pPipeState, i);
+        pipe_state[i] = new PIPELINE_STATE;
+        pipe_state[i]->initGraphicsPipeline(&pCreateInfos[i]);
+        pipe_state[i]->render_pass_ci.initialize(getRenderPassState(dev_data, pCreateInfos[i].renderPass)->createInfo.ptr());
+        pipe_state[i]->pipeline_layout = *getPipelineLayout(dev_data, pCreateInfos[i].layout);
     }
+    skip |= PreCallCreateGraphicsPipelines(dev_data, count, pCreateInfos, pipe_state);
 
-    if (!skip_call) {
+    if (!skip) {
         lock.unlock();
         result =
             dev_data->dispatch_table.CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pAllocator, pPipelines);
         lock.lock();
         for (i = 0; i < count; i++) {
-            pPipeState[i]->pipeline = pPipelines[i];
-            dev_data->pipelineMap[pPipeState[i]->pipeline] = pPipeState[i];
+            pipe_state[i]->pipeline = pPipelines[i];
+            dev_data->pipelineMap[pipe_state[i]->pipeline] = pipe_state[i];
         }
         lock.unlock();
     } else {
         for (i = 0; i < count; i++) {
-            delete pPipeState[i];
+            delete pipe_state[i];
         }
         lock.unlock();
-        return VK_ERROR_VALIDATION_FAILED_EXT;
     }
     return result;
 }
@@ -6810,7 +6878,7 @@ CreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t 
         // TODO: Add Compute Pipeline Verification
         skip_call |= !validate_compute_pipeline(dev_data->report_data, pPipeState[i], &dev_data->enabled_features,
                                                 dev_data->shaderModuleMap);
-        // skip_call |= verifyPipelineCreateState(dev_data, device, pPipeState[i]);
+        // skip_call |= verifyPipelineCreateState(dev_data, pPipeState[i]);
     }
 
     if (!skip_call) {
@@ -8078,10 +8146,10 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer
         AddCommandBufferBindingBuffer(dev_data, cb_node, src_buff_node);
         AddCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_node);
         // Validate that SRC & DST buffers have correct usage flags set
-        skip_call |= ValidateBufferUsageFlags(dev_data, src_buff_node, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true, "vkCmdCopyBuffer()",
-                                              "VK_BUFFER_USAGE_TRANSFER_SRC_BIT");
-        skip_call |= ValidateBufferUsageFlags(dev_data, dst_buff_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true, "vkCmdCopyBuffer()",
-                                              "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
+        skip_call |= ValidateBufferUsageFlags(dev_data, src_buff_node, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true,
+                                              VALIDATION_ERROR_01164, "vkCmdCopyBuffer()", "VK_BUFFER_USAGE_TRANSFER_SRC_BIT");
+        skip_call |= ValidateBufferUsageFlags(dev_data, dst_buff_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true,
+                                              VALIDATION_ERROR_01165, "vkCmdCopyBuffer()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
 
         std::function<bool()> function = [=]() {
             return ValidateBufferMemoryIsValid(dev_data, src_buff_node, "vkCmdCopyBuffer()");
@@ -8382,10 +8450,10 @@ CmdCopyImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcI
         AddCommandBufferBindingImage(dev_data, cb_node, src_image_state);
         AddCommandBufferBindingImage(dev_data, cb_node, dst_image_state);
         // Validate that SRC & DST images have correct usage flags set
-        skip_call |= ValidateImageUsageFlags(dev_data, src_image_state, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, true, "vkCmdCopyImage()",
-                                             "VK_IMAGE_USAGE_TRANSFER_SRC_BIT");
-        skip_call |= ValidateImageUsageFlags(dev_data, dst_image_state, VK_IMAGE_USAGE_TRANSFER_DST_BIT, true, "vkCmdCopyImage()",
-                                             "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
+        skip_call |= ValidateImageUsageFlags(dev_data, src_image_state, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, true,
+                                             VALIDATION_ERROR_01178, "vkCmdCopyImage()", "VK_IMAGE_USAGE_TRANSFER_SRC_BIT");
+        skip_call |= ValidateImageUsageFlags(dev_data, dst_image_state, VK_IMAGE_USAGE_TRANSFER_DST_BIT, true,
+                                             VALIDATION_ERROR_01181, "vkCmdCopyImage()", "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
         std::function<bool()> function = [=]() {
             return ValidateImageMemoryIsValid(dev_data, src_image_state, "vkCmdCopyImage()");
         };
@@ -8446,10 +8514,10 @@ CmdBlitImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcI
         AddCommandBufferBindingImage(dev_data, cb_node, src_image_state);
         AddCommandBufferBindingImage(dev_data, cb_node, dst_image_state);
         // Validate that SRC & DST images have correct usage flags set
-        skip_call |= ValidateImageUsageFlags(dev_data, src_image_state, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, true, "vkCmdBlitImage()",
-                                             "VK_IMAGE_USAGE_TRANSFER_SRC_BIT");
-        skip_call |= ValidateImageUsageFlags(dev_data, dst_image_state, VK_IMAGE_USAGE_TRANSFER_DST_BIT, true, "vkCmdBlitImage()",
-                                             "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
+        skip_call |= ValidateImageUsageFlags(dev_data, src_image_state, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, true,
+                                             VALIDATION_ERROR_02182, "vkCmdBlitImage()", "VK_IMAGE_USAGE_TRANSFER_SRC_BIT");
+        skip_call |= ValidateImageUsageFlags(dev_data, dst_image_state, VK_IMAGE_USAGE_TRANSFER_DST_BIT, true,
+                                             VALIDATION_ERROR_02186, "vkCmdBlitImage()", "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
         std::function<bool()> function = [=]() {
             return ValidateImageMemoryIsValid(dev_data, src_image_state, "vkCmdBlitImage()");
         };
@@ -8488,10 +8556,11 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBufferToImage(VkCommandBuffer commandBuffer, V
         skip_call |= ValidateMemoryIsBoundToImage(dev_data, dst_image_state, "vkCmdCopyBufferToImage()");
         AddCommandBufferBindingBuffer(dev_data, cb_node, src_buff_node);
         AddCommandBufferBindingImage(dev_data, cb_node, dst_image_state);
-        skip_call |= ValidateBufferUsageFlags(dev_data, src_buff_node, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true,
-                                              "vkCmdCopyBufferToImage()", "VK_BUFFER_USAGE_TRANSFER_SRC_BIT");
+        skip_call |=
+            ValidateBufferUsageFlags(dev_data, src_buff_node, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true, VALIDATION_ERROR_01230,
+                                     "vkCmdCopyBufferToImage()", "VK_BUFFER_USAGE_TRANSFER_SRC_BIT");
         skip_call |= ValidateImageUsageFlags(dev_data, dst_image_state, VK_IMAGE_USAGE_TRANSFER_DST_BIT, true,
-                                             "vkCmdCopyBufferToImage()", "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
+                                             VALIDATION_ERROR_01231, "vkCmdCopyBufferToImage()", "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
         std::function<bool()> function = [=]() {
             SetImageMemoryValid(dev_data, dst_image_state, true);
             return false;
@@ -8535,9 +8604,10 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyImageToBuffer(VkCommandBuffer commandBuffer, V
         AddCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_node);
         // Validate that SRC image & DST buffer have correct usage flags set
         skip_call |= ValidateImageUsageFlags(dev_data, src_image_state, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, true,
-                                             "vkCmdCopyImageToBuffer()", "VK_IMAGE_USAGE_TRANSFER_SRC_BIT");
-        skip_call |= ValidateBufferUsageFlags(dev_data, dst_buff_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true,
-                                              "vkCmdCopyImageToBuffer()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
+                                             VALIDATION_ERROR_01248, "vkCmdCopyImageToBuffer()", "VK_IMAGE_USAGE_TRANSFER_SRC_BIT");
+        skip_call |=
+            ValidateBufferUsageFlags(dev_data, dst_buff_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true, VALIDATION_ERROR_01252,
+                                     "vkCmdCopyImageToBuffer()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
         std::function<bool()> function = [=]() {
             return ValidateImageMemoryIsValid(dev_data, src_image_state, "vkCmdCopyImageToBuffer()");
         };
@@ -8577,7 +8647,7 @@ VKAPI_ATTR void VKAPI_CALL CmdUpdateBuffer(VkCommandBuffer commandBuffer, VkBuff
         AddCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_node);
         // Validate that DST buffer has correct usage flags set
         skip_call |= ValidateBufferUsageFlags(dev_data, dst_buff_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true,
-                                              "vkCmdUpdateBuffer()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
+                                              VALIDATION_ERROR_01146, "vkCmdUpdateBuffer()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
         std::function<bool()> function = [=]() {
             SetBufferMemoryValid(dev_data, dst_buff_node, true);
             return false;
@@ -8607,8 +8677,8 @@ CmdFillBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize ds
         // Update bindings between buffer and cmd buffer
         AddCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_node);
         // Validate that DST buffer has correct usage flags set
-        skip_call |= ValidateBufferUsageFlags(dev_data, dst_buff_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true, "vkCmdFillBuffer()",
-                                              "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
+        skip_call |= ValidateBufferUsageFlags(dev_data, dst_buff_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true,
+                                              VALIDATION_ERROR_01137, "vkCmdFillBuffer()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
         std::function<bool()> function = [=]() {
             SetBufferMemoryValid(dev_data, dst_buff_node, true);
             return false;
@@ -9000,10 +9070,6 @@ static bool ValidateMaskBitsFromLayouts(const layer_data *my_data, VkCommandBuff
     }
     case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL: {
         skip_call |= ValidateMaskBits(my_data, cmdBuffer, accessMask, layout, VK_ACCESS_TRANSFER_WRITE_BIT, 0, type);
-        break;
-    }
-    case VK_IMAGE_LAYOUT_PREINITIALIZED: {
-        skip_call |= ValidateMaskBits(my_data, cmdBuffer, accessMask, layout, VK_ACCESS_HOST_WRITE_BIT, 0, type);
         break;
     }
     case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL: {
@@ -9451,8 +9517,9 @@ CmdCopyQueryPoolResults(VkCommandBuffer commandBuffer, VkQueryPool queryPool, ui
         // Update bindings between buffer and cmd buffer
         AddCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_node);
         // Validate that DST buffer has correct usage flags set
-        skip_call |= ValidateBufferUsageFlags(dev_data, dst_buff_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true,
-                                              "vkCmdCopyQueryPoolResults()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
+        skip_call |=
+            ValidateBufferUsageFlags(dev_data, dst_buff_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true, VALIDATION_ERROR_01066,
+                                     "vkCmdCopyQueryPoolResults()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
         std::function<bool()> function = [=]() {
             SetBufferMemoryValid(dev_data, dst_buff_node, true);
             return false;
@@ -11110,41 +11177,47 @@ VKAPI_ATTR void VKAPI_CALL UnmapMemory(VkDevice device, VkDeviceMemory mem) {
 
 static bool validateMemoryIsMapped(layer_data *dev_data, const char *funcName, uint32_t memRangeCount,
                                    const VkMappedMemoryRange *pMemRanges) {
-    bool skip_call = false;
+    bool skip = false;
     for (uint32_t i = 0; i < memRangeCount; ++i) {
         auto mem_info = getMemObjInfo(dev_data, pMemRanges[i].memory);
         if (mem_info) {
-            if (mem_info->mem_range.offset > pMemRanges[i].offset) {
-                skip_call |=
-                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
-                            (uint64_t)pMemRanges[i].memory, __LINE__, MEMTRACK_INVALID_MAP, "MEM",
-                            "%s: Flush/Invalidate offset (" PRINTF_SIZE_T_SPECIFIER ") is less than Memory Object's offset "
-                            "(" PRINTF_SIZE_T_SPECIFIER ").",
-                            funcName, static_cast<size_t>(pMemRanges[i].offset), static_cast<size_t>(mem_info->mem_range.offset));
-            }
-
-            const uint64_t dev_dataTerminus = (mem_info->mem_range.size == VK_WHOLE_SIZE)
-                                                  ? mem_info->alloc_info.allocationSize
-                                                  : (mem_info->mem_range.offset + mem_info->mem_range.size);
-            if (pMemRanges[i].size != VK_WHOLE_SIZE && (dev_dataTerminus < (pMemRanges[i].offset + pMemRanges[i].size))) {
-                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                     VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, (uint64_t)pMemRanges[i].memory, __LINE__,
-                                     MEMTRACK_INVALID_MAP, "MEM", "%s: Flush/Invalidate upper-bound (" PRINTF_SIZE_T_SPECIFIER
-                                                                  ") exceeds the Memory Object's upper-bound "
-                                                                  "(" PRINTF_SIZE_T_SPECIFIER ").",
-                                     funcName, static_cast<size_t>(pMemRanges[i].offset + pMemRanges[i].size),
-                                     static_cast<size_t>(dev_dataTerminus));
+            if (pMemRanges[i].size == VK_WHOLE_SIZE) {
+                if (mem_info->mem_range.offset > pMemRanges[i].offset) {
+                    skip |=
+                        log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
+                                (uint64_t)pMemRanges[i].memory, __LINE__, VALIDATION_ERROR_00643, "MEM",
+                                "%s: Flush/Invalidate offset (" PRINTF_SIZE_T_SPECIFIER ") is less than Memory Object's offset "
+                                "(" PRINTF_SIZE_T_SPECIFIER "). %s",
+                                funcName, static_cast<size_t>(pMemRanges[i].offset),
+                                static_cast<size_t>(mem_info->mem_range.offset), validation_error_map[VALIDATION_ERROR_00643]);
+                }
+            } else {
+                const uint64_t data_end = (mem_info->mem_range.size == VK_WHOLE_SIZE)
+                                              ? mem_info->alloc_info.allocationSize
+                                              : (mem_info->mem_range.offset + mem_info->mem_range.size);
+                if ((mem_info->mem_range.offset > pMemRanges[i].offset) ||
+                    (data_end < (pMemRanges[i].offset + pMemRanges[i].size))) {
+                    skip |=
+                        log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
+                                (uint64_t)pMemRanges[i].memory, __LINE__, VALIDATION_ERROR_00642, "MEM",
+                                "%s: Flush/Invalidate size or offset (" PRINTF_SIZE_T_SPECIFIER ", " PRINTF_SIZE_T_SPECIFIER
+                                ") exceed the Memory Object's upper-bound "
+                                "(" PRINTF_SIZE_T_SPECIFIER "). %s",
+                                funcName, static_cast<size_t>(pMemRanges[i].offset + pMemRanges[i].size),
+                                static_cast<size_t>(pMemRanges[i].offset), static_cast<size_t>(data_end),
+                                validation_error_map[VALIDATION_ERROR_00642]);
+                }
             }
         }
     }
-    return skip_call;
+    return skip;
 }
 
-static bool ValidateAndCopyNoncoherentMemoryToDriver(layer_data *dev_data, uint32_t memRangeCount,
-                                                     const VkMappedMemoryRange *pMemRanges) {
-    bool skip_call = false;
-    for (uint32_t i = 0; i < memRangeCount; ++i) {
-        auto mem_info = getMemObjInfo(dev_data, pMemRanges[i].memory);
+static bool ValidateAndCopyNoncoherentMemoryToDriver(layer_data *dev_data, uint32_t mem_range_count,
+                                                     const VkMappedMemoryRange *mem_ranges) {
+    bool skip = false;
+    for (uint32_t i = 0; i < mem_range_count; ++i) {
+        auto mem_info = getMemObjInfo(dev_data, mem_ranges[i].memory);
         if (mem_info) {
             if (mem_info->shadow_copy) {
                 VkDeviceSize size = (mem_info->mem_range.size != VK_WHOLE_SIZE)
@@ -11153,30 +11226,29 @@ static bool ValidateAndCopyNoncoherentMemoryToDriver(layer_data *dev_data, uint3
                 char *data = static_cast<char *>(mem_info->shadow_copy);
                 for (uint64_t j = 0; j < mem_info->shadow_pad_size; ++j) {
                     if (data[j] != NoncoherentMemoryFillValue) {
-                        skip_call |= log_msg(
-                            dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
-                            (uint64_t)pMemRanges[i].memory, __LINE__, MEMTRACK_INVALID_MAP, "MEM",
-                            "Memory underflow was detected on mem obj 0x%" PRIxLEAST64, (uint64_t)pMemRanges[i].memory);
+                        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                        VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, (uint64_t)mem_ranges[i].memory, __LINE__,
+                                        MEMTRACK_INVALID_MAP, "MEM", "Memory underflow was detected on mem obj 0x%" PRIxLEAST64,
+                                        (uint64_t)mem_ranges[i].memory);
                     }
                 }
                 for (uint64_t j = (size + mem_info->shadow_pad_size); j < (2 * mem_info->shadow_pad_size + size); ++j) {
                     if (data[j] != NoncoherentMemoryFillValue) {
-                        skip_call |= log_msg(
-                            dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
-                            (uint64_t)pMemRanges[i].memory, __LINE__, MEMTRACK_INVALID_MAP, "MEM",
-                            "Memory overflow was detected on mem obj 0x%" PRIxLEAST64, (uint64_t)pMemRanges[i].memory);
+                        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                        VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, (uint64_t)mem_ranges[i].memory, __LINE__,
+                                        MEMTRACK_INVALID_MAP, "MEM", "Memory overflow was detected on mem obj 0x%" PRIxLEAST64,
+                                        (uint64_t)mem_ranges[i].memory);
                     }
                 }
                 memcpy(mem_info->p_driver_data, static_cast<void *>(data + mem_info->shadow_pad_size), (size_t)(size));
             }
         }
     }
-    return skip_call;
+    return skip;
 }
 
-static void CopyNoncoherentMemoryFromDriver(layer_data *dev_data, uint32_t memory_range_count,
-                                            const VkMappedMemoryRange *mem_ranges) {
-    for (uint32_t i = 0; i < memory_range_count; ++i) {
+static void CopyNoncoherentMemoryFromDriver(layer_data *dev_data, uint32_t mem_range_count, const VkMappedMemoryRange *mem_ranges) {
+    for (uint32_t i = 0; i < mem_range_count; ++i) {
         auto mem_info = getMemObjInfo(dev_data, mem_ranges[i].memory);
         if (mem_info && mem_info->shadow_copy) {
             VkDeviceSize size = (mem_info->mem_range.size != VK_WHOLE_SIZE)
@@ -11188,35 +11260,76 @@ static void CopyNoncoherentMemoryFromDriver(layer_data *dev_data, uint32_t memor
     }
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL
-FlushMappedMemoryRanges(VkDevice device, uint32_t memRangeCount, const VkMappedMemoryRange *pMemRanges) {
+static bool ValidateMappedMemoryRangeDeviceLimits(layer_data *dev_data, const char *func_name, uint32_t mem_range_count,
+                                                  const VkMappedMemoryRange *mem_ranges) {
+    bool skip = false;
+    for (uint32_t i = 0; i < mem_range_count; ++i) {
+        uint64_t atom_size = dev_data->phys_dev_properties.properties.limits.nonCoherentAtomSize;
+        if (vk_safe_modulo(mem_ranges[i].offset, atom_size) != 0) {
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                            __LINE__, VALIDATION_ERROR_00644, "MEM",
+                            "%s: Offset in pMemRanges[%d] is 0x%" PRIxLEAST64
+                            ", which is not a multiple of VkPhysicalDeviceLimits::nonCoherentAtomSize (0x%" PRIxLEAST64 "). %s",
+                            func_name, i, mem_ranges[i].offset, atom_size, validation_error_map[VALIDATION_ERROR_00644]);
+        }
+        if ((mem_ranges[i].size != VK_WHOLE_SIZE) && (vk_safe_modulo(mem_ranges[i].size, atom_size) != 0)) {
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                            __LINE__, VALIDATION_ERROR_00645, "MEM",
+                            "%s: Size in pMemRanges[%d] is 0x%" PRIxLEAST64
+                            ", which is not a multiple of VkPhysicalDeviceLimits::nonCoherentAtomSize (0x%" PRIxLEAST64 "). %s",
+                            func_name, i, mem_ranges[i].size, atom_size, validation_error_map[VALIDATION_ERROR_00645]);
+        }
+    }
+    return skip;
+}
+
+static bool PreCallValidateFlushMappedMemoryRanges(layer_data *dev_data, uint32_t mem_range_count,
+                                                   const VkMappedMemoryRange *mem_ranges) {
+    bool skip = false;
+    std::lock_guard<std::mutex> lock(global_lock);
+    skip |= ValidateMappedMemoryRangeDeviceLimits(dev_data, "vkFlushMappedMemoryRanges", mem_range_count, mem_ranges);
+    skip |= ValidateAndCopyNoncoherentMemoryToDriver(dev_data, mem_range_count, mem_ranges);
+    skip |= validateMemoryIsMapped(dev_data, "vkFlushMappedMemoryRanges", mem_range_count, mem_ranges);
+    return skip;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL FlushMappedMemoryRanges(VkDevice device, uint32_t memRangeCount,
+                                                       const VkMappedMemoryRange *pMemRanges) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
-    bool skip_call = false;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
 
-    std::unique_lock<std::mutex> lock(global_lock);
-    skip_call |= ValidateAndCopyNoncoherentMemoryToDriver(dev_data, memRangeCount, pMemRanges);
-    skip_call |= validateMemoryIsMapped(dev_data, "vkFlushMappedMemoryRanges", memRangeCount, pMemRanges);
-    lock.unlock();
-    if (!skip_call) {
+    if (!PreCallValidateFlushMappedMemoryRanges(dev_data, memRangeCount, pMemRanges)) {
         result = dev_data->dispatch_table.FlushMappedMemoryRanges(device, memRangeCount, pMemRanges);
     }
     return result;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL
-InvalidateMappedMemoryRanges(VkDevice device, uint32_t memRangeCount, const VkMappedMemoryRange *pMemRanges) {
+static bool PreCallValidateInvalidateMappedMemoryRanges(layer_data *dev_data, uint32_t mem_range_count,
+                                                        const VkMappedMemoryRange *mem_ranges) {
+    bool skip = false;
+    std::lock_guard<std::mutex> lock(global_lock);
+    skip |= ValidateMappedMemoryRangeDeviceLimits(dev_data, "vkInvalidateMappedMemoryRanges", mem_range_count, mem_ranges);
+    skip |= validateMemoryIsMapped(dev_data, "vkInvalidateMappedMemoryRanges", mem_range_count, mem_ranges);
+    return skip;
+}
+
+static void PostCallRecordInvalidateMappedMemoryRanges(layer_data *dev_data, uint32_t mem_range_count,
+                                                       const VkMappedMemoryRange *mem_ranges) {
+    std::lock_guard<std::mutex> lock(global_lock);
+    // Update our shadow copy with modified driver data
+    CopyNoncoherentMemoryFromDriver(dev_data, mem_range_count, mem_ranges);
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL InvalidateMappedMemoryRanges(VkDevice device, uint32_t memRangeCount,
+                                                            const VkMappedMemoryRange *pMemRanges) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
-    bool skip_call = false;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
 
-    std::unique_lock<std::mutex> lock(global_lock);
-    skip_call |= validateMemoryIsMapped(dev_data, "vkInvalidateMappedMemoryRanges", memRangeCount, pMemRanges);
-    lock.unlock();
-    if (!skip_call) {
+    if (!PreCallValidateInvalidateMappedMemoryRanges(dev_data, memRangeCount, pMemRanges)) {
         result = dev_data->dispatch_table.InvalidateMappedMemoryRanges(device, memRangeCount, pMemRanges);
-        // Update our shadow copy with modified driver data
-        CopyNoncoherentMemoryFromDriver(dev_data, memRangeCount, pMemRanges);
+        if (result == VK_SUCCESS) {
+            PostCallRecordInvalidateMappedMemoryRanges(dev_data, memRangeCount, pMemRanges);
+        }
     }
     return result;
 }

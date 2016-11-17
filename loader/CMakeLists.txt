@@ -84,7 +84,7 @@ else()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wpointer-arith")
 
     add_library(${API_LOWERCASE} SHARED ${LOADER_SRCS})
-    set_target_properties(${API_LOWERCASE} PROPERTIES SOVERSION "1" VERSION "1.0.32")
+    set_target_properties(${API_LOWERCASE} PROPERTIES SOVERSION "1" VERSION "1.0.33")
     target_link_libraries(${API_LOWERCASE} -ldl -lpthread -lm)
     install(TARGETS ${API_LOWERCASE} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()

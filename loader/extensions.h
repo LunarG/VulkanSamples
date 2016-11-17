@@ -28,6 +28,15 @@ bool extension_instance_gpa(struct loader_instance *ptr_instance,
 void extensions_create_instance(struct loader_instance *ptr_instance,
                                 const VkInstanceCreateInfo *pCreateInfo);
 
+// Definitions for the VK_EXT_debug_marker extension
+
+
+VKAPI_ATTR VkResult VKAPI_CALL terminator_DebugMarkerSetObjectTagEXT(
+    VkDevice device, VkDebugMarkerObjectTagInfoEXT *pTagInfo);
+
+VKAPI_ATTR VkResult VKAPI_CALL terminator_DebugMarkerSetObjectNameEXT(
+    VkDevice device, VkDebugMarkerObjectNameInfoEXT *pNameInfo);
+
 // Definitions for the VK_NV_external_memory_capabilities extension
 
 VKAPI_ATTR VkResult VKAPI_CALL

@@ -64,8 +64,8 @@ static inline void RemoveDebugMessageCallback(debug_report_data *debug_data, VkL
     VkLayerDbgFunctionNode *cur_callback = *list_head;
     VkLayerDbgFunctionNode *prev_callback = cur_callback;
     bool matched = false;
+    VkFlags local_flags = 0;
 
-    debug_data->active_flags = 0;
     while (cur_callback) {
         if (cur_callback->msgCallback == callback) {
             matched = true;
@@ -75,10 +75,10 @@ static inline void RemoveDebugMessageCallback(debug_report_data *debug_data, VkL
             }
             debug_report_log_msg(debug_data, VK_DEBUG_REPORT_DEBUG_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT,
                                  reinterpret_cast<uint64_t &>(cur_callback->msgCallback), 0, VK_DEBUG_REPORT_ERROR_CALLBACK_REF_EXT,
-                                 "DebugReport", "Destroyed callback");
+                                 "DebugReport", "Destroyed callback\n");
         } else {
             matched = false;
-            debug_data->active_flags |= cur_callback->msgFlags;
+            local_flags |= cur_callback->msgFlags;
         }
         prev_callback = cur_callback;
         cur_callback = cur_callback->pNext;
@@ -86,6 +86,7 @@ static inline void RemoveDebugMessageCallback(debug_report_data *debug_data, VkL
             free(prev_callback);
         }
     }
+    debug_data->active_flags = local_flags;
 }
 
 // Removes all debug callback function nodes from the specified callback linked lists and frees their resources
@@ -188,10 +189,11 @@ static inline VkResult layer_create_msg_callback(debug_report_data *debug_data, 
 
     if (default_callback) {
         AddDebugMessageCallback(debug_data, &debug_data->default_debug_callback_list, pNewDbgFuncNode);
+        debug_data->active_flags |= pCreateInfo->flags;
     } else {
         AddDebugMessageCallback(debug_data, &debug_data->debug_callback_list, pNewDbgFuncNode);
+        debug_data->active_flags = pCreateInfo->flags;
     }
-    debug_data->active_flags |= pCreateInfo->flags;
 
     debug_report_log_msg(debug_data, VK_DEBUG_REPORT_DEBUG_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT,
                          (uint64_t)*pCallback, 0, VK_DEBUG_REPORT_ERROR_CALLBACK_REF_EXT, "DebugReport", "Added callback");
