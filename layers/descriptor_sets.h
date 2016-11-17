@@ -119,6 +119,15 @@ class DescriptorSetLayout {
     VkShaderStageFlags GetStageFlagsFromBinding(const uint32_t) const;
     VkSampler const *GetImmutableSamplerPtrFromBinding(const uint32_t) const;
     VkSampler const *GetImmutableSamplerPtrFromIndex(const uint32_t) const;
+    // For a given binding and array index, return the corresponding index into the dynamic offset array
+    int32_t GetDynamicOffsetIndexFromBinding(uint32_t binding) const {
+        auto dyn_off = binding_to_dynamic_array_idx_map_.find(binding);
+        if (dyn_off == binding_to_dynamic_array_idx_map_.end()) {
+            assert(0); // Requesting dyn offset for invalid binding/array idx pair
+            return -1;
+        }
+        return dyn_off->second;
+    }
     // For a particular binding, get the global index
     //  These calls should be guarded by a call to "HasBinding(binding)" to verify that the given binding exists
     uint32_t GetGlobalStartIndexFromBinding(const uint32_t) const;
@@ -132,6 +141,8 @@ class DescriptorSetLayout {
     std::unordered_map<uint32_t, uint32_t> binding_to_index_map_;
     std::unordered_map<uint32_t, uint32_t> binding_to_global_start_index_map_;
     std::unordered_map<uint32_t, uint32_t> binding_to_global_end_index_map_;
+    // For a given binding map to associated index in the dynamic offset array
+    std::unordered_map<uint32_t, uint32_t> binding_to_dynamic_array_idx_map_;
     // VkDescriptorSetLayoutCreateFlags flags_;
     uint32_t binding_count_; // # of bindings in this layout
     std::vector<safe_VkDescriptorSetLayoutBinding> bindings_;
@@ -319,6 +330,10 @@ class DescriptorSet : public BASE_NODE {
     uint32_t GetDescriptorCountFromBinding(const uint32_t binding) const {
         return p_layout_ ? p_layout_->GetDescriptorCountFromBinding(binding) : 0;
     };
+    // Return index into dynamic offset array for given binding
+    int32_t GetDynamicOffsetIndexFromBinding(uint32_t binding) const {
+        return p_layout_ ? p_layout_->GetDynamicOffsetIndexFromBinding(binding) : -1;
+    }
     // Return true if given binding is present in this set
     bool HasBinding(const uint32_t binding) const { return p_layout_->HasBinding(binding); };
     // Is this set compatible with the given layout?
