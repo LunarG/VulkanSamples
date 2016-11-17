@@ -5896,28 +5896,40 @@ BindBufferMemory(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDeviceS
     bool skip_call = SetMemBinding(dev_data, mem, buffer_handle, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, "vkBindBufferMemory");
     auto buffer_state = getBufferState(dev_data, buffer);
     if (buffer_state) {
-        VkMemoryRequirements memRequirements;
-        dev_data->dispatch_table.GetBufferMemoryRequirements(device, buffer, &memRequirements);
+        if (!buffer_state->memory_requirements_checked) {
+            // There's not an explicit requirement in the spec to call vkGetBufferMemoryRequirements() prior to calling
+            //  BindBufferMemory but it's implied in that memory being bound must conform with VkMemoryRequirements from
+            //  vkGetBufferMemoryRequirements()
+            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
+                                 buffer_handle, __LINE__, DRAWSTATE_INVALID_BUFFER, "DS",
+                                 "vkBindBufferMemory(): Binding memory to buffer 0x%" PRIxLEAST64
+                                 " but vkGetBufferMemoryRequirements() has not been called on that buffer.",
+                                 buffer_handle);
+            // Make the call for them so we can verify the state
+            lock.unlock();
+            dev_data->dispatch_table.GetBufferMemoryRequirements(device, buffer, &buffer_state->requirements);
+            lock.lock();
+        }
         buffer_state->binding.mem = mem;
         buffer_state->binding.offset = memoryOffset;
-        buffer_state->binding.size = memRequirements.size;
+        buffer_state->binding.size = buffer_state->requirements.size;
 
         // Track and validate bound memory range information
         auto mem_info = getMemObjInfo(dev_data, mem);
         if (mem_info) {
-            skip_call |= InsertBufferMemoryRange(dev_data, buffer, mem_info, memoryOffset, memRequirements);
-            skip_call |= ValidateMemoryTypes(dev_data, mem_info, memRequirements.memoryTypeBits, "BindBufferMemory");
+            skip_call |= InsertBufferMemoryRange(dev_data, buffer, mem_info, memoryOffset, buffer_state->requirements);
+            skip_call |= ValidateMemoryTypes(dev_data, mem_info, buffer_state->requirements.memoryTypeBits, "BindBufferMemory");
         }
 
         // Validate memory requirements alignment
-        if (vk_safe_modulo(memoryOffset, memRequirements.alignment) != 0) {
+        if (vk_safe_modulo(memoryOffset, buffer_state->requirements.alignment) != 0) {
             skip_call |=
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0,
                         __LINE__, DRAWSTATE_INVALID_BUFFER_MEMORY_OFFSET, "DS",
                         "vkBindBufferMemory(): memoryOffset is 0x%" PRIxLEAST64 " but must be an integer multiple of the "
                         "VkMemoryRequirements::alignment value 0x%" PRIxLEAST64
                         ", returned from a call to vkGetBufferMemoryRequirements with buffer",
-                        memoryOffset, memRequirements.alignment);
+                        memoryOffset, buffer_state->requirements.alignment);
         }
 
         // Validate device limits alignments
@@ -5970,6 +5982,7 @@ GetBufferMemoryRequirements(VkDevice device, VkBuffer buffer, VkMemoryRequiremen
     auto buffer_state = getBufferState(dev_data, buffer);
     if (buffer_state) {
         buffer_state->requirements = *pMemoryRequirements;
+        buffer_state->memory_requirements_checked = true;
     }
 }
 
@@ -5980,6 +5993,7 @@ GetImageMemoryRequirements(VkDevice device, VkImage image, VkMemoryRequirements 
     auto image_state = getImageState(dev_data, image);
     if (image_state) {
         image_state->requirements = *pMemoryRequirements;
+        image_state->memory_requirements_checked = true;
     }
 }
 

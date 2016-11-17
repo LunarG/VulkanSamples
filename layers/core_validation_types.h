@@ -172,11 +172,13 @@ class BINDABLE : public BASE_NODE {
     MEM_BINDING binding;
     // Memory requirements for this BINDABLE
     VkMemoryRequirements requirements;
+    // bool to track if memory requirements were checked
+    bool memory_requirements_checked;
     // Sparse binding data, initially just tracking MEM_BINDING per mem object
     //  There's more data for sparse bindings so need better long-term solution
     // TODO : Need to update solution to track all sparse binding data
     std::unordered_set<MEM_BINDING> sparse_bindings;
-    BINDABLE() : sparse(false), binding{}, requirements{}, sparse_bindings{} {};
+    BINDABLE() : sparse(false), binding{}, requirements{}, memory_requirements_checked(false), sparse_bindings{} {};
     // Return unordered set of memory objects that are bound
     std::unordered_set<VkDeviceMemory> GetBoundMemory() {
         std::unordered_set<VkDeviceMemory> mem_set;
