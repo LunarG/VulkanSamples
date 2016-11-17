@@ -102,6 +102,8 @@ int sample_main(int argc, char **argv)
     info.instance_extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 #ifdef _WIN32
     info.instance_extension_names.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#elif  __ANDROID__
+    info.instance_extension_names.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
 #else
     info.instance_extension_names.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
 #endif
