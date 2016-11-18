@@ -46,6 +46,7 @@ layer_source_files = [
 'descriptor_sets.cpp',
 'parameter_validation.cpp',
 'object_tracker.cpp',
+'image.cpp'
 ]
 header_file = 'vk_validation_error_messages.h'
 # TODO : Don't hardcode linux path format if we want this to run on windows
@@ -311,7 +312,7 @@ def main(argv=None):
     else:
         print(txt_color.red() + "  Uh oh, Database claimed implemented don't match Source :(" + txt_color.endc())
         if len(imp_not_found) != 0:
-            print(txt_color.red() + "   The following checks are claimed to be implemented in Database, but weren't found in source:" + txt_color.endc())
+            print(txt_color.red() + "   The following %d checks are claimed to be implemented in Database, but weren't found in source:" % (len(imp_not_found)) + txt_color.endc())
             for not_imp_enum in imp_not_found:
                 print(txt_color.red() + "    %s" % (not_imp_enum) + txt_color.endc())
         if len(imp_not_claimed) != 0:
