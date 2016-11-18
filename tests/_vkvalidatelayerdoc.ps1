@@ -17,7 +17,7 @@ write-host "vkvalidatelayerdoc.ps1: Validate layer documentation"
 push-location ..\..
 
 # Validate that layer documentation matches source contents
-python vk_layer_documentation_generate.py --validate
+python scripts\vk_layer_documentation_generate.py --validate
 
 # Report result based on exit code
 if (!$LASTEXITCODE) {

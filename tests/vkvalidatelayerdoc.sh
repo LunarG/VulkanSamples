@@ -16,7 +16,7 @@ printf "$GREEN[ RUN      ]$NC $0\n"
 pushd ../..
 
 # Validate that layer documentation matches source contents
-./vk_layer_documentation_generate.py --validate
+./scripts/vk_layer_documentation_generate.py --validate
 
 RES=$?
 

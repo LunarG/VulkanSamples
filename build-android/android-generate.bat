@@ -19,10 +19,10 @@ if exist generated (
 )
 mkdir generated\include generated\common
 
-python ../vk-generate.py Android dispatch-table-ops layer > generated/include/vk_dispatch_table_helper.h
+python ../scripts/vk-generate.py Android dispatch-table-ops layer > generated/include/vk_dispatch_table_helper.h
 
-python ../vk_helper.py --gen_enum_string_helper ../include/vulkan/vulkan.h --abs_out_dir generated/include
-python ../vk_helper.py --gen_struct_wrappers ../include/vulkan/vulkan.h --abs_out_dir generated/include
+python ../scripts/vk_helper.py --gen_enum_string_helper ../include/vulkan/vulkan.h --abs_out_dir generated/include
+python ../scripts/vk_helper.py --gen_struct_wrappers ../include/vulkan/vulkan.h --abs_out_dir generated/include
 
 cd generated/include
 python ../../../lvl_genvk.py -registry ../../../vk.xml thread_check.h
