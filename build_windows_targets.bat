@@ -41,7 +41,7 @@ if %do_cmake%==0 (
 
 REM Determine the appropriate CMake strings for the current version of Visual Studio
 echo Determining VS version
-python .\determine_vs_version.py > vsversion.tmp
+python .\scripts\determine_vs_version.py > vsversion.tmp
 set /p VS_VERSION=< vsversion.tmp
 echo Detected Visual Studio Version as %VS_VERSION%
 del /Q /F vsversion.tmp
