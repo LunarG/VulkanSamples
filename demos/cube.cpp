@@ -583,8 +583,7 @@ struct Demo {
         auto result = cmd.end();
         VERIFY(result == vk::Result::eSuccess);
 
-        auto const fenceInfo =
-            vk::FenceCreateInfo().setFlags(vk::FenceCreateFlagBits::eSignaled);
+        auto const fenceInfo = vk::FenceCreateInfo();
         vk::Fence fence;
         device.createFence(&fenceInfo, nullptr, &fence);
 
