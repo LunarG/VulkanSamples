@@ -3,9 +3,11 @@
 
 set -e
 
-GLSLANG_REVISION=$(cat "${PWD}"/glslang_revision)
-SPIRV_TOOLS_REVISION=$(cat "${PWD}"/spirv-tools_revision)
-SPIRV_HEADERS_REVISION=$(cat "${PWD}"/spirv-headers_revision)
+REVISION_DIR=$PWD/external_revisions
+
+GLSLANG_REVISION=$(cat ${REVISION_DIR}/glslang_revision)
+SPIRV_TOOLS_REVISION=$(cat "${REVISION_DIR}"/spirv-tools_revision)
+SPIRV_HEADERS_REVISION=$(cat "${REVISION_DIR}"/spirv-headers_revision)
 echo "GLSLANG_REVISION=${GLSLANG_REVISION}"
 echo "SPIRV_TOOLS_REVISION=${SPIRV_TOOLS_REVISION}"
 echo "SPIRV_HEADERS_REVISION=${SPIRV_HEADERS_REVISION}"
