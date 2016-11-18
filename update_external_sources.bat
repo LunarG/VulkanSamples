@@ -136,6 +136,13 @@ if not exist %REVISION_DIR%\spirv-tools_revision (
    goto:error
 )
 
+if not exist %REVISION_DIR%\spirv-headers_revision (
+   echo.
+   echo Missing spirv-headers_revision file!  Place it in %REVISION_DIR% with target version in it.
+   set errorCode=1
+   goto:error
+)
+
 set /p GLSLANG_REVISION= < %REVISION_DIR%\glslang_revision
 set /p SPIRV_TOOLS_REVISION= < %REVISION_DIR%\spirv-tools_revision
 set /p SPIRV_HEADERS_REVISION= < %REVISION_DIR%\spirv-headers_revision
