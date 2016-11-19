@@ -124,6 +124,39 @@ to load the Vulkan loader from the build directory, `dbuild` in this example.
 This means that even after installing the loader to the system directories, these executables
 still use the loader from the build directory.
 
+### Linux 32-bit support
+
+Usage of this repository's contents in 32-bit Linux environments is not officially supported.
+However, since this repository is supported on 32-bit Windows, these modules should generally
+work on 32-bit Linux.
+
+Here are some notes for building 32-bit targets on a 64-bit Ubuntu "reference" platform:
+
+If not already installed, install the following 32-bit development libraries:
+
+`gcc-multilib g++-multilib xorg-x11-libx11-devel-32bit lib32-x11 libx11-dev:i386 libxcb-dev:i386`
+
+This list may vary depending on your distro and which windowing systems you are building for.
+
+Set up your environment for building 32-bit targets:
+
+```
+export CFLAGS=-m32
+export CXXFLAGS=-m32
+export PKG_CONFIG_LIBDIR=/usr/lib/i386-linux-gnu
+```
+
+Again, your PKG_CONFIG configuration may be different, depending on your distro.
+
+If the libraries in the `external` directory have already been built
+for 64-bit targets,
+delete or "clean" this directory and rebuild it with
+the above settings using the `update_external_sources` shell script.
+This is required because the libraries in `external` must be built for
+32-bit in order to be usable by the rest of the components in the repository.
+
+Finally, rebuild the repository using `cmake` and `make`, as explained above.
+
 ## Validation Test
 
 The test executables can be found in the dbuild/tests directory.
