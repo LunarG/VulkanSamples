@@ -232,7 +232,7 @@ VkResult util_CopyDebugReportCreateInfos(
         if (((VkInstanceCreateInfo *)pNext)->sType ==
             VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT) {
             memcpy(pInfos, pNext, sizeof(VkDebugReportCallbackCreateInfoEXT));
-            *pCallbacks++ = (VkDebugReportCallbackEXT)pInfos++;
+            *pCallbacks++ = (VkDebugReportCallbackEXT)(uintptr_t)pInfos++;
         }
         pNext = (void *)((VkInstanceCreateInfo *)pNext)->pNext;
     }

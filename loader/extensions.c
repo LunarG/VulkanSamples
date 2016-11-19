@@ -39,8 +39,8 @@ VKAPI_ATTR VkResult VKAPI_CALL vkDebugMarkerSetObjectTagEXT(
     if (pTagInfo->objectType ==
         VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT) {
         struct loader_physical_device_tramp *phys_dev_tramp =
-            (struct loader_physical_device_tramp *)pTagInfo->object;
-        pTagInfo->object = (uint64_t)phys_dev_tramp->phys_dev;
+            (struct loader_physical_device_tramp *)(uintptr_t)pTagInfo->object;
+        pTagInfo->object = (uint64_t)(uintptr_t)phys_dev_tramp->phys_dev;
     }
     return disp->DebugMarkerSetObjectTagEXT(device, pTagInfo);
 }
@@ -56,15 +56,16 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_DebugMarkerSetObjectTagEXT(
     if (pTagInfo->objectType ==
         VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT) {
         struct loader_physical_device_term *phys_dev_term =
-            (struct loader_physical_device_term *)pTagInfo->object;
-        pTagInfo->object = (uint64_t)phys_dev_term->phys_dev;
+            (struct loader_physical_device_term *)(uintptr_t)pTagInfo->object;
+        pTagInfo->object = (uint64_t)(uintptr_t)phys_dev_term->phys_dev;
 
         // If this is a KHR_surface, and the ICD has created its own, we have to
         // replace it with the proper one for the next call.
     } else if (pTagInfo->objectType ==
                VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT) {
         if (NULL != icd_term && NULL != icd_term->CreateSwapchainKHR) {
-            VkIcdSurface *icd_surface = (VkIcdSurface *)(pTagInfo->object);
+            VkIcdSurface *icd_surface =
+                (VkIcdSurface *)(uintptr_t)pTagInfo->object;
             if (NULL != icd_surface->real_icd_surfaces) {
                 pTagInfo->object =
                     (uint64_t)icd_surface->real_icd_surfaces[icd_index];
@@ -84,8 +85,8 @@ VKAPI_ATTR VkResult VKAPI_CALL vkDebugMarkerSetObjectNameEXT(
     if (pNameInfo->objectType ==
         VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT) {
         struct loader_physical_device_tramp *phys_dev_tramp =
-            (struct loader_physical_device_tramp *)pNameInfo->object;
-        pNameInfo->object = (uint64_t)phys_dev_tramp->phys_dev;
+            (struct loader_physical_device_tramp *)(uintptr_t)pNameInfo->object;
+        pNameInfo->object = (uint64_t)(uintptr_t)phys_dev_tramp->phys_dev;
     }
     return disp->DebugMarkerSetObjectNameEXT(device, pNameInfo);
 }
@@ -101,18 +102,20 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_DebugMarkerSetObjectNameEXT(
     if (pNameInfo->objectType ==
         VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT) {
         struct loader_physical_device_term *phys_dev_term =
-            (struct loader_physical_device_term *)pNameInfo->object;
-        pNameInfo->object = (uint64_t)phys_dev_term->phys_dev;
+            (struct loader_physical_device_term *)(uintptr_t)pNameInfo->object;
+        pNameInfo->object = (uint64_t)(uintptr_t)phys_dev_term->phys_dev;
 
         // If this is a KHR_surface, and the ICD has created its own, we have to
         // replace it with the proper one for the next call.
     } else if (pNameInfo->objectType ==
                VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT) {
         if (NULL != icd_term && NULL != icd_term->CreateSwapchainKHR) {
-            VkIcdSurface *icd_surface = (VkIcdSurface *)(pNameInfo->object);
+            VkIcdSurface *icd_surface =
+                (VkIcdSurface *)(uintptr_t)pNameInfo->object;
             if (NULL != icd_surface->real_icd_surfaces) {
                 pNameInfo->object =
-                    (uint64_t)icd_surface->real_icd_surfaces[icd_index];
+                    (uint64_t)(
+                        uintptr_t)icd_surface->real_icd_surfaces[icd_index];
             }
         }
     }
