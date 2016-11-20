@@ -10323,9 +10323,9 @@ static bool ValidateAttachmentIndex(layer_data *dev_data, uint32_t attachment, u
     bool skip_call = false;
     if (attachment >= attachment_count && attachment != VK_ATTACHMENT_UNUSED) {
         skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                             DRAWSTATE_INVALID_ATTACHMENT_INDEX, "DS",
-                             "CreateRenderPass: %s attachment %d must be less than the total number of attachments %d.",
-                             type, attachment, attachment_count);
+                             VALIDATION_ERROR_00325, "DS",
+                             "CreateRenderPass: %s attachment %d must be less than the total number of attachments %d. %s",
+                             type, attachment, attachment_count, validation_error_map[VALIDATION_ERROR_00325]);
     }
     return skip_call;
 }
