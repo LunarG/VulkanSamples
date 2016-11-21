@@ -6254,7 +6254,21 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateQueryPool(VkDevice device, const VkQueryPoo
                                                const VkAllocationCallbacks *pAllocator, VkQueryPool *pQueryPool) {
 
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->dispatch_table.CreateQueryPool(device, pCreateInfo, pAllocator, pQueryPool);
+    bool skip = false;
+    if (pCreateInfo && pCreateInfo->queryType == VK_QUERY_TYPE_PIPELINE_STATISTICS) {
+        if (!dev_data->enabled_features.pipelineStatisticsQuery) {
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0,
+                            __LINE__, VALIDATION_ERROR_01006, "DS",
+                            "Query pool with type VK_QUERY_TYPE_PIPELINE_STATISTICS created on a device "
+                            "with VkDeviceCreateInfo.pEnabledFeatures.pipelineStatisticsQuery == VK_FALSE. %s",
+                            validation_error_map[VALIDATION_ERROR_01006]);
+        }
+    }
+
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    if (!skip) {
+        result = dev_data->dispatch_table.CreateQueryPool(device, pCreateInfo, pAllocator, pQueryPool);
+    }
     if (result == VK_SUCCESS) {
         std::lock_guard<std::mutex> lock(global_lock);
         QUERY_POOL_NODE *qp_node = &dev_data->queryPoolMap[*pQueryPool];
