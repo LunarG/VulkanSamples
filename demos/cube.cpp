@@ -215,7 +215,8 @@ struct Demo {
 #endif
 #if defined(VK_USE_PLATFORM_XLIB_KHR)
           xlib_window{0},
-          xlib_wm_delete_window{0}, display{nullptr},
+          xlib_wm_delete_window{0},
+          xlib_display{nullptr},
 #endif
 #if defined(VK_USE_PLATFORM_XCB_KHR)
           xcb_window{0}, screen{nullptr}, connection{nullptr},
@@ -344,16 +345,16 @@ struct Demo {
 
 #if defined(VK_USE_PLATFORM_XLIB_KHR) && defined(VK_USE_PLATFORM_XCB_KHR)
         if (use_xlib) {
-            XDestroyWindow(display, xlib_window);
-            XCloseDisplay(display);
+            XDestroyWindow(xlib_display, xlib_window);
+            XCloseDisplay(xlib_display);
         } else {
             xcb_destroy_window(connection, xcb_window);
             xcb_disconnect(connection);
         }
         free(atom_wm_delete_window);
 #elif defined(VK_USE_PLATFORM_XLIB_KHR)
-        XDestroyWindow(display, xlib_window);
-        XCloseDisplay(display);
+        XDestroyWindow(xlib_display, xlib_window);
+        XCloseDisplay(xlib_display);
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
         xcb_destroy_window(connection, xcb_window);
         xcb_disconnect(connection);
@@ -1035,7 +1036,7 @@ struct Demo {
         if (use_xlib) {
 #if defined(VK_USE_PLATFORM_XLIB_KHR)
             auto const createInfo =
-                vk::XlibSurfaceCreateInfoKHR().setDpy(display).setWindow(
+                vk::XlibSurfaceCreateInfoKHR().setDpy(xlib_display).setWindow(
                     xlib_window);
 
             auto result =
@@ -2340,16 +2341,16 @@ struct Demo {
 #if defined(VK_USE_PLATFORM_XLIB_KHR)
 
     void create_xlib_window() {
-        display = XOpenDisplay(nullptr);
+        xlib_display = XOpenDisplay(nullptr);
         long visualMask = VisualScreenMask;
         int numberOfVisuals;
         XVisualInfo vInfoTemplate = {};
-        vInfoTemplate.screen = DefaultScreen(display);
+        vInfoTemplate.screen = DefaultScreen(xlib_display);
         XVisualInfo *visualInfo = XGetVisualInfo(
-            display, visualMask, &vInfoTemplate, &numberOfVisuals);
+            xlib_display, visualMask, &vInfoTemplate, &numberOfVisuals);
 
         Colormap colormap =
-            XCreateColormap(display, RootWindow(display, vInfoTemplate.screen),
+            XCreateColormap(xlib_display, RootWindow(xlib_display, vInfoTemplate.screen),
                             visualInfo->visual, AllocNone);
 
         XSetWindowAttributes windowAttributes = {};
@@ -2360,15 +2361,15 @@ struct Demo {
             KeyPressMask | KeyReleaseMask | StructureNotifyMask | ExposureMask;
 
         xlib_window = XCreateWindow(
-            display, RootWindow(display, vInfoTemplate.screen), 0, 0, width,
+            xlib_display, RootWindow(xlib_display, vInfoTemplate.screen), 0, 0, width,
             height, 0, visualInfo->depth, InputOutput, visualInfo->visual,
             CWBackPixel | CWBorderPixel | CWEventMask | CWColormap,
             &windowAttributes);
 
-        XSelectInput(display, xlib_window, ExposureMask | KeyPressMask);
-        XMapWindow(display, xlib_window);
-        XFlush(display);
-        xlib_wm_delete_window = XInternAtom(display, "WM_DELETE_WINDOW", False);
+        XSelectInput(xlib_display, xlib_window, ExposureMask | KeyPressMask);
+        XMapWindow(xlib_display, xlib_window);
+        XFlush(xlib_display);
+        xlib_wm_delete_window = XInternAtom(xlib_display, "WM_DELETE_WINDOW", False);
     }
 
     void handle_xlib_event(const XEvent *event) {
@@ -2412,11 +2413,11 @@ struct Demo {
             XEvent event;
 
             if (pause) {
-                XNextEvent(display, &event);
+                XNextEvent(xlib_display, &event);
                 handle_xlib_event(&event);
             } else {
-                while (XPending(display) > 0) {
-                    XNextEvent(display, &event);
+                while (XPending(xlib_display) > 0) {
+                    XNextEvent(xlib_display, &event);
                     handle_xlib_event(&event);
                 }
             }
@@ -2592,7 +2593,7 @@ struct Demo {
 #if defined(VK_USE_PLATFORM_XLIB_KHR)
     Window xlib_window;
     Atom xlib_wm_delete_window;
-    Display *display;
+    Display *xlib_display;
 #endif
 #if defined(VK_USE_PLATFORM_XCB_KHR)
     xcb_window_t xcb_window;
