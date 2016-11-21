@@ -656,7 +656,7 @@ SAMPLER_STATE *getSamplerState(const layer_data *, VkSampler);
 IMAGE_VIEW_STATE *getImageViewState(const layer_data *, VkImageView);
 VkSwapchainKHR getSwapchainFromImage(const layer_data *, VkImage);
 SWAPCHAIN_NODE *getSwapchainNode(const layer_data *, VkSwapchainKHR);
-void invalidateCommandBuffers(std::unordered_set<GLOBAL_CB_NODE *>, VK_OBJECT);
+void invalidateCommandBuffers(const layer_data *, std::unordered_set<GLOBAL_CB_NODE *>, VK_OBJECT);
 bool ValidateMemoryIsBoundToBuffer(const layer_data *, const BUFFER_STATE *, const char *);
 bool ValidateMemoryIsBoundToImage(const layer_data *, const IMAGE_STATE *, const char *);
 void AddCommandBufferBindingSampler(GLOBAL_CB_NODE *, SAMPLER_STATE *);

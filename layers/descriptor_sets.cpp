@@ -541,7 +541,7 @@ uint32_t cvdescriptorset::DescriptorSet::GetStorageUpdates(const std::map<uint32
 }
 // Set is being deleted or updates so invalidate all bound cmd buffers
 void cvdescriptorset::DescriptorSet::InvalidateBoundCmdBuffers() {
-    core_validation::invalidateCommandBuffers(cb_bindings,
+    core_validation::invalidateCommandBuffers(device_data_, cb_bindings,
                                               {reinterpret_cast<uint64_t &>(set_), VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT});
 }
 // Perform write update in given update struct
