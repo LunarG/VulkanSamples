@@ -6390,8 +6390,9 @@ void invalidateCommandBuffers(const layer_data *dev_data, std::unordered_set<GLO
     for (auto cb_node : cb_nodes) {
         if (cb_node->state == CB_RECORDING) {
             log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                    (uint64_t)(cb_node), __LINE__, DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
-                    "Invalidating a command buffer that's currently being recorded: 0x%" PRIx64 ".", (uint64_t)(cb_node));
+                    (uint64_t)(cb_node->commandBuffer), __LINE__, DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
+                    "Invalidating a command buffer that's currently being recorded: 0x%" PRIx64 ".",
+                    (uint64_t)(cb_node->commandBuffer));
         }
         cb_node->state = CB_INVALID;
         cb_node->broken_bindings.push_back(obj);
