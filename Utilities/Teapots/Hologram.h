@@ -24,7 +24,7 @@
 #include <thread>
 #include <vector>
 
-#include <vulkan/vulkan.h>
+//#include <vulkan/vulkan.h>
 #include <glm/glm.hpp>
 
 #include "Simulation.h"

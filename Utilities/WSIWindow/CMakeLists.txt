@@ -7,6 +7,14 @@ target_include_directories (${LIBRARY_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 add_definitions(-std=c++11)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")  #for find_package
 
+#=========================VULKAN_WRAPPER==========================
+#option(USE_VULKAN_WRAPPER "Build Dispatch-table, to skip loader trampoline code." OFF)
+if (USE_VULKAN_WRAPPER)
+#    add_definitions(-DUSE_VULKAN_WRAPPER)
+    add_subdirectory(VulkanWrapper)
+    target_link_libraries(${LIBRARY_NAME} VULKAN_WRAPPER)
+endif()
+#=================================================================
 #============================VALIDATION===========================
 #  Validation may be enabled in both debug and release builds.
 #  Logging is enabled in debug builds, or when validation is enabled.
@@ -25,23 +33,6 @@ endif()
 option(ENABLE_MULTITOUCH "Multi-touch screen support" OFF)
 if (ENABLE_MULTITOUCH)
     add_definitions(-DENABLE_MULTITOUCH)
-endif()
-#=================================================================
-#=================================================================
-option(USE_VULKAN_WRAPPER "Build Dispatch-table, to skip loader trampoline code." OFF)
-if (USE_VULKAN_WRAPPER)
-    add_definitions(-DUSE_VULKAN_WRAPPER)
-    include_directories (VulkanWrapper)
-    add_subdirectory(VulkanWrapper)
-
-    target_link_libraries(${LIBRARY_NAME} VULKAN_WRAPPER)
-
-
-    #aux_source_directory(VulkanWrapper SRC_LIST)
-    #target_link_libraries(${LIBRARY_NAME} ${SRC_LIST})
-
-
-    target_link_libraries(${LIBRARY_NAME} ${CMAKE_DL_LIBS})
 endif()
 #=================================================================
 #==============================LINUX==============================

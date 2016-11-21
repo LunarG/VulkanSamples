@@ -17,13 +17,14 @@
 #ifndef SHELL_H
 #define SHELL_H
 
+#include "Validation.h" //for printing log messages
 #include <queue>
 #include <vector>
 #include <stdexcept>
-#include <vulkan/vulkan.h>
+//#include <vulkan/vulkan.h>
 
 #include "Game.h"
-#include "Validation.h" //for printing log messages
+
 
 class Game;
 

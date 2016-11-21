@@ -17,13 +17,13 @@
 #ifndef HELPERS_H
 #define HELPERS_H
 
+#include "Validation.h"
 #include <vector>
 //#include <sstream>
 //#include <stdexcept>
 //#include <vulkan/vulkan.h>
 
 //#include "HelpersDispatchTable.h"
-#include "Validation.h"
 
 namespace vk {
 /*

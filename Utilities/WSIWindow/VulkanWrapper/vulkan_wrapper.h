@@ -1,4 +1,6 @@
 // Copyright 2016 Google Inc. All rights reserved.
+// Copyright (c) 2015-2016 Valve Corporation
+// Copyright (c) 2015-2016 LunarG, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

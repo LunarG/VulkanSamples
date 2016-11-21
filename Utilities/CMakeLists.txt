@@ -1,4 +1,12 @@
 cmake_minimum_required(VERSION 2.8)
-    add_subdirectory(WSIWindow)
-    add_subdirectory(WSIWindow_Test)
-    add_subdirectory(Teapots)
+
+#=========================VULKAN_WRAPPER==========================
+option(USE_VULKAN_WRAPPER "Build Dispatch-table, to skip loader trampoline code." OFF)
+if (USE_VULKAN_WRAPPER)
+    add_definitions(-DUSE_VULKAN_WRAPPER)
+endif()
+#=================================================================
+
+add_subdirectory(WSIWindow)
+add_subdirectory(WSIWindow_Test)
+add_subdirectory(Teapots)

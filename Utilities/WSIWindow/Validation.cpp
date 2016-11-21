@@ -14,12 +14,18 @@
     }INITANSI;
 #endif
 #endif
-//-------------------------------------------------------------
+//--------------------------------------------------------------
 
-#ifdef USE_VULKAN_WRAPPER  //Using vulkan_wrapper dispatch table
+//--------------------Vulkan Dispatch Table---------------------
+//WARNING: vulkan_wrapper.h must be #included BEFORE vulkan.h
+#ifdef VK_NO_PROTOTYPES
     #include <vulkan_wrapper.cpp>
-    struct INITVULKAN{ INITVULKAN(){InitVulkan(); printf("InitVulkan\n"); }}INITVULKAN;
+    struct INITVULKAN{ INITVULKAN(){
+        bool success = InitVulkan();
+        LOG("Vulkan Dispatch-table: %s\n" cRESET, success?cGREEN"ENABLED":cRED"FAILED");
+    }}INITVULKAN;               //Run this function BEFORE main.
 #endif
+//-------------------------------------------------------------
 
 //-----------------------Error Checking------------------------
 #if !defined(NDEBUG) || defined(ENABLE_LOGGING) || defined(ENABLE_VALIDATION)
