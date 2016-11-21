@@ -15,6 +15,12 @@
 #endif
 #endif
 //-------------------------------------------------------------
+
+#ifdef USE_VULKAN_WRAPPER  //Using vulkan_wrapper dispatch table
+    #include <vulkan_wrapper.cpp>
+    struct INITVULKAN{ INITVULKAN(){InitVulkan(); printf("InitVulkan\n"); }}INITVULKAN;
+#endif
+
 //-----------------------Error Checking------------------------
 #if !defined(NDEBUG) || defined(ENABLE_LOGGING) || defined(ENABLE_VALIDATION)
 //  In Debug mode, convert a VkResult return value to a string.

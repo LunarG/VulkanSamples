@@ -11,7 +11,7 @@ add_definitions(-DVK_USE_PLATFORM_ANDROID_KHR)
   include_directories( ${ANDROID_NDK}/sources/android/native_app_glue )
   include_directories( src/cpp                                        )
   include_directories( ../..                                          )
-  include_directories( ../../WSIWindow                                )
+  include_directories( ../../../WSIWindow                             )
   include_directories( ../../generated                                )  # TODO: regenerate these files
   include_directories( ../../../../API-Samples/utils                  )  # PATH TO GLM
 
@@ -19,7 +19,7 @@ add_definitions(-DVK_USE_PLATFORM_ANDROID_KHR)
   aux_source_directory( ${ANDROID_NDK}/sources/android/native_app_glue SRC_LIST)
   aux_source_directory( src/cpp                                        SRC_LIST)
   aux_source_directory( ../..                                          SRC_LIST)
-  aux_source_directory( ../../WSIWindow                                SRC_LIST)
+  aux_source_directory( ../../../WSIWindow                             SRC_LIST)
 
 # Create native shared library
 add_library(native SHARED ${SRC_LIST})

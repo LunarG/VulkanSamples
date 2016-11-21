@@ -1,4 +1,4 @@
-set(LIBRARY_NAME Teapots_WSIWindow)
+set(LIBRARY_NAME WSIWindow)
 
 file(GLOB SRC_LIST "*.h" "*.cpp")                   # List all source files from current directory
 add_library (${LIBRARY_NAME} STATIC ${SRC_LIST})    # and add them to the WSIWindow library.
@@ -20,12 +20,29 @@ option(ENABLE_LOGGING "Prints LOG* messages to Terminal or Android Logcat." ON)
 if (ENABLE_LOGGING)
     target_compile_definitions(${LIBRARY_NAME} PUBLIC -DENABLE_LOGGING) #enable logging for target project
 endif()
-
+#=================================================================
+#============================MULTI-TOUCH==========================
 option(ENABLE_MULTITOUCH "Multi-touch screen support" OFF)
 if (ENABLE_MULTITOUCH)
     add_definitions(-DENABLE_MULTITOUCH)
 endif()
+#=================================================================
+#=================================================================
+option(USE_VULKAN_WRAPPER "Build Dispatch-table, to skip loader trampoline code." OFF)
+if (USE_VULKAN_WRAPPER)
+    add_definitions(-DUSE_VULKAN_WRAPPER)
+    include_directories (VulkanWrapper)
+    add_subdirectory(VulkanWrapper)
 
+    target_link_libraries(${LIBRARY_NAME} VULKAN_WRAPPER)
+
+
+    #aux_source_directory(VulkanWrapper SRC_LIST)
+    #target_link_libraries(${LIBRARY_NAME} ${SRC_LIST})
+
+
+    target_link_libraries(${LIBRARY_NAME} ${CMAKE_DL_LIBS})
+endif()
 #=================================================================
 #==============================LINUX==============================
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")

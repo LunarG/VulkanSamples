@@ -137,16 +137,28 @@
 #endif
 //----------------------------------------------------------------------------------
 //=====================================================================================================
-
 #include <assert.h>
-#include <stdio.h>                      //for Windows.
-#include <vulkan/vulkan.h>              //Android: This must be included AFTER native.h
+#include <stdio.h>   //for Windows.
+
+//=========================================== Vulkan Wrapper ===========================================
+//  By default, all Vulkan functions call the loader trampoline-code, which then calls the ICD or layers.
+//  Alternatively vulkan_wrapper.h can be used to replace all Vulkan functions with a dispatch-table,
+//  which skips the loader, and calls the ICD directly, and thereby improving performance.
+//  Android has no loader, and always uses vulkan_wrapper.h.
+//  For more details, see /source/loader/LoaderAndLayreInterface.md in the Vulkan SDK.
+
+#ifdef USE_VULKAN_WRAPPER
+    #include <dlfcn.h>
+    #include <vulkan_wrapper.h>
+#else
+    #include <vulkan/vulkan.h>              //Android: This must be included AFTER native.h
+#endif
+//=====================================================================================================
 
 const char* VkResultStr(VkResult err);  //Convert vulkan result code to a string.
 void ShowVkResult(VkResult err);        //Print warnings and errors.
 
-
-//===================================== CDebugReport =========================================
+//============================================ CDebugReport ==========================================
 class CDebugReport{
     CDebugReport();
     PFN_vkCreateDebugReportCallbackEXT  vkCreateDebugReportCallbackEXT;
@@ -169,6 +181,6 @@ public:
     void SetFlags(VkDebugReportFlagsEXT flags);                // Select which type of messages to display
     void SetCallback(PFN_vkDebugReportCallbackEXT debugFunc);  // Set a custom callback function for printing debug reports
 };
-//============================================================================================
+//=====================================================================================================
 
 #endif

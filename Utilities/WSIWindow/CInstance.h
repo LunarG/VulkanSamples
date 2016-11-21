@@ -42,7 +42,7 @@
 #include <vector>
 #include <string>
 #include <string.h>
-#include <vulkan/vulkan.h>
+//#include <vulkan/vulkan.h>
 
 using namespace std;
 typedef unsigned int uint;
