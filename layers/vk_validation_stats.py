@@ -337,7 +337,7 @@ def main(argv=None):
     else:
         print(txt_color.red() + "  The following testnames in Database appear to be invalid:")
         for bt in bad_testnames:
-            print(txt_color.red() + "   %s" % (bt))
+            print(txt_color.red() + "   %s" % (bt) + txt_color.endc())
 
     return 0
 
