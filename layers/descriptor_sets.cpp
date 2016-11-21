@@ -566,21 +566,21 @@ bool cvdescriptorset::DescriptorSet::ValidateCopyUpdate(const debug_report_data 
         *error_code = VALIDATION_ERROR_00919;
         std::stringstream error_str;
         error_str << "Cannot call vkUpdateDescriptorSets() to perform copy update on descriptor set " << set_
-                  << " that is in use by a command buffer.";
+                  << " that is in use by a command buffer";
         *error_msg = error_str.str();
         return false;
     }
     if (!p_layout_->HasBinding(update->dstBinding)) {
         *error_code = VALIDATION_ERROR_00966;
         std::stringstream error_str;
-        error_str << "DescriptorSet " << set_ << " does not have copy update dest binding of " << update->dstBinding << ".";
+        error_str << "DescriptorSet " << set_ << " does not have copy update dest binding of " << update->dstBinding;
         *error_msg = error_str.str();
         return false;
     }
     if (!src_set->HasBinding(update->srcBinding)) {
         *error_code = VALIDATION_ERROR_00964;
         std::stringstream error_str;
-        error_str << "DescriptorSet " << set_ << " does not have copy update src binding of " << update->srcBinding << ".";
+        error_str << "DescriptorSet " << set_ << " does not have copy update src binding of " << update->srcBinding;
         *error_msg = error_str.str();
         return false;
     }
@@ -594,7 +594,7 @@ bool cvdescriptorset::DescriptorSet::ValidateCopyUpdate(const debug_report_data 
         error_str << "Attempting copy update from descriptorSet " << update->srcSet << " binding#" << update->srcBinding
                   << " with offset index of " << src_set->GetGlobalStartIndexFromBinding(update->srcBinding)
                   << " plus update array offset of " << update->srcArrayElement << " and update of " << update->descriptorCount
-                  << " descriptors oversteps total number of descriptors in set: " << src_set->GetTotalDescriptorCount() << ".";
+                  << " descriptors oversteps total number of descriptors in set: " << src_set->GetTotalDescriptorCount();
         *error_msg = error_str.str();
         return false;
     }
@@ -606,7 +606,7 @@ bool cvdescriptorset::DescriptorSet::ValidateCopyUpdate(const debug_report_data 
         error_str << "Attempting copy update to descriptorSet " << set_ << " binding#" << update->dstBinding
                   << " with offset index of " << p_layout_->GetGlobalStartIndexFromBinding(update->dstBinding)
                   << " plus update array offset of " << update->dstArrayElement << " and update of " << update->descriptorCount
-                  << " descriptors oversteps total number of descriptors in set: " << p_layout_->GetTotalDescriptorCount() << ".";
+                  << " descriptors oversteps total number of descriptors in set: " << p_layout_->GetTotalDescriptorCount();
         *error_msg = error_str.str();
         return false;
     }
@@ -620,7 +620,7 @@ bool cvdescriptorset::DescriptorSet::ValidateCopyUpdate(const debug_report_data 
         std::stringstream error_str;
         error_str << "Attempting copy update to descriptorSet " << set_ << " binding #" << update->dstBinding << " with type "
                   << string_VkDescriptorType(dst_type) << " from descriptorSet " << src_set->GetSet() << " binding #"
-                  << update->srcBinding << " with type " << string_VkDescriptorType(src_type) << ". Types do not match.";
+                  << update->srcBinding << " with type " << string_VkDescriptorType(src_type) << ". Types do not match";
         *error_msg = error_str.str();
         return false;
     }
@@ -635,8 +635,8 @@ bool cvdescriptorset::DescriptorSet::ValidateCopyUpdate(const debug_report_data 
     for (uint32_t i = 0; i < update->descriptorCount; ++i) {
         if (!src_set->descriptors_[src_start_idx + i]) {
             std::stringstream error_str;
-            error_str << "Attempting copy update from descriptorSet " << src_set << " binding #" << update->srcBinding << " but descriptor at array offset "
-                      << update->srcArrayElement + i << " has not been updated.";
+            error_str << "Attempting copy update from descriptorSet " << src_set << " binding #" << update->srcBinding
+                      << " but descriptor at array offset " << update->srcArrayElement + i << " has not been updated";
             *error_msg = error_str.str();
             return false;
         }
@@ -1137,7 +1137,7 @@ bool cvdescriptorset::DescriptorSet::ValidateWriteUpdate(const debug_report_data
         *error_code = VALIDATION_ERROR_00919;
         std::stringstream error_str;
         error_str << "Cannot call vkUpdateDescriptorSets() to perform write update on descriptor set " << set_
-                  << " that is in use by a command buffer.";
+                  << " that is in use by a command buffer";
         *error_msg = error_str.str();
         return false;
     }
@@ -1145,7 +1145,7 @@ bool cvdescriptorset::DescriptorSet::ValidateWriteUpdate(const debug_report_data
     if (!p_layout_->HasBinding(update->dstBinding)) {
         *error_code = VALIDATION_ERROR_00936;
         std::stringstream error_str;
-        error_str << "DescriptorSet " << set_ << " does not have binding " << update->dstBinding << ".";
+        error_str << "DescriptorSet " << set_ << " does not have binding " << update->dstBinding;
         *error_msg = error_str.str();
         return false;
     } else {
@@ -1176,7 +1176,7 @@ bool cvdescriptorset::DescriptorSet::ValidateWriteUpdate(const debug_report_data
                   << p_layout_->GetTotalDescriptorCount() << " total descriptors but update of " << update->descriptorCount
                   << " descriptors starting at binding offset of " << p_layout_->GetGlobalStartIndexFromBinding(update->dstBinding)
                   << " combined with update array element offset of " << update->dstArrayElement
-                  << " oversteps the size of this descriptor set.";
+                  << " oversteps the size of this descriptor set";
         *error_msg = error_str.str();
         return false;
     }
