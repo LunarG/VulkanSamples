@@ -6386,7 +6386,7 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetFences(VkDevice device, uint32_t fenceCount,
 }
 
 // For given cb_nodes, invalidate them and track object causing invalidation
-void invalidateCommandBuffers(const layer_data *dev_data, std::unordered_set<GLOBAL_CB_NODE *> cb_nodes, VK_OBJECT obj) {
+void invalidateCommandBuffers(const layer_data *dev_data, std::unordered_set<GLOBAL_CB_NODE *> const &cb_nodes, VK_OBJECT obj) {
     for (auto cb_node : cb_nodes) {
         if (cb_node->state == CB_RECORDING) {
             log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
