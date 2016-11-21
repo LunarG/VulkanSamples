@@ -1148,6 +1148,15 @@ bool cvdescriptorset::DescriptorSet::ValidateWriteUpdate(const debug_report_data
         error_str << "DescriptorSet " << set_ << " does not have binding " << update->dstBinding << ".";
         *error_msg = error_str.str();
         return false;
+    } else {
+        // Make sure binding isn't empty
+        if (0 == p_layout_->GetDescriptorCountFromBinding(update->dstBinding)) {
+            *error_code = VALIDATION_ERROR_02348;
+            std::stringstream error_str;
+            error_str << "DescriptorSet " << set_ << " cannot updated binding " << update->dstBinding << " that has 0 descriptors";
+            *error_msg = error_str.str();
+            return false;
+        }
     }
     // We know that binding is valid, verify update and do update on each descriptor
     auto start_idx = p_layout_->GetGlobalStartIndexFromBinding(update->dstBinding) + update->dstArrayElement;
