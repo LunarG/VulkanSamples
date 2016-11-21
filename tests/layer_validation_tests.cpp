@@ -10111,6 +10111,55 @@ TEST_F(VkLayerTest, MismatchCountQueueCreateRequestedFeature) {
     }
 }
 
+TEST_F(VkLayerTest, InvalidQueryPoolCreate) {
+    TEST_DESCRIPTION("Attempt to create a query pool for PIPELINE_STATISTICS without enabling pipeline stats for the device.");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    const std::vector<VkQueueFamilyProperties> queue_props = m_device->queue_props;
+    std::vector<VkDeviceQueueCreateInfo> queue_info;
+    queue_info.reserve(queue_props.size());
+    std::vector<std::vector<float>> queue_priorities;
+    for (uint32_t i = 0; i < (uint32_t)queue_props.size(); i++) {
+        VkDeviceQueueCreateInfo qi{};
+        qi.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        qi.queueFamilyIndex = i;
+        qi.queueCount = queue_props[i].queueCount;
+        queue_priorities.emplace_back(qi.queueCount, 0.0f);
+        qi.pQueuePriorities = queue_priorities[i].data();
+        queue_info.push_back(qi);
+    }
+
+    std::vector<const char *> device_extension_names;
+
+    VkDevice local_device;
+    VkDeviceCreateInfo device_create_info = {};
+    auto features = m_device->phy().features();
+    // Intentionally disable pipeline stats
+    features.pipelineStatisticsQuery = VK_FALSE;
+    device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    device_create_info.pNext = NULL;
+    device_create_info.queueCreateInfoCount = queue_info.size();
+    device_create_info.pQueueCreateInfos = queue_info.data();
+    device_create_info.enabledLayerCount = 0;
+    device_create_info.ppEnabledLayerNames = NULL;
+    device_create_info.pEnabledFeatures = &features;
+    VkResult err = vkCreateDevice(gpu(), &device_create_info, nullptr, &local_device);
+    ASSERT_VK_SUCCESS(err);
+
+    VkQueryPoolCreateInfo qpci{};
+    qpci.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+    qpci.queryType = VK_QUERY_TYPE_PIPELINE_STATISTICS;
+    qpci.queryCount = 1;
+    VkQueryPool query_pool;
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01006);
+    vkCreateQueryPool(local_device, &qpci, nullptr, &query_pool);
+    m_errorMonitor->VerifyFound();
+
+    vkDestroyDevice(local_device, nullptr);
+}
+
 TEST_F(VkLayerTest, InvalidQueueIndexInvalidQuery) {
     TEST_DESCRIPTION("Use an invalid queue index in a vkCmdWaitEvents call."
                      "End a command buffer with a query still in progress.");
