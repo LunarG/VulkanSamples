@@ -134,7 +134,7 @@ Here are some notes for building 32-bit targets on a 64-bit Ubuntu "reference" p
 
 If not already installed, install the following 32-bit development libraries:
 
-`gcc-multilib g++-multilib xorg-x11-libx11-devel-32bit lib32-x11 libx11-dev:i386 libxcb-dev:i386`
+`gcc-multilib g++-multilib libx11-dev:i386`
 
 This list may vary depending on your distro and which windowing systems you are building for.
 
