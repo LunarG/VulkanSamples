@@ -8967,11 +8967,10 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds) {
 }
 
 TEST_F(VkLayerTest, InvalidDSUpdateIndex) {
-    // Create layout w/ count of 1 and attempt update to that layout w/ binding
-    // index 2
+    // Create layout w/ count of 1 and attempt update to that layout w/ binding index 2
     VkResult err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, " does not have binding 2.");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00936);
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     // VkDescriptorSetObj descriptorSet(m_device);
