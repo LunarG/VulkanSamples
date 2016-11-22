@@ -235,6 +235,27 @@ int sample_main(int argc, char *argv[]) {
                    bltDstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
                    &region, VK_FILTER_LINEAR);
 
+    // Use a barrier to make sure the blit is finished before the copy starts
+    VkImageMemoryBarrier memBarrier = {};
+    memBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    memBarrier.pNext = NULL;
+    memBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    memBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    memBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    memBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    memBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    memBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    memBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    memBarrier.subresourceRange.baseMipLevel = 0;
+    memBarrier.subresourceRange.levelCount = 1;
+    memBarrier.subresourceRange.baseArrayLayer = 0;
+    memBarrier.subresourceRange.layerCount = 1;
+    memBarrier.image = bltDstImage;
+    vkCmdPipelineBarrier(info.cmd,
+                         VK_PIPELINE_STAGE_TRANSFER_BIT,
+                         VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0,
+                         NULL, 1, &memBarrier);
+
     // Do a image copy to part of the dst image - checks should stay small
     VkImageCopy cregion;
     cregion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
