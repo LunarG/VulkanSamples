@@ -11386,7 +11386,7 @@ VKAPI_ATTR VkResult VKAPI_CALL BindImageMemory(VkDevice device, VkImage image, V
             //  vkGetImageMemoryRequirements()
             skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                                  image_handle, __LINE__, DRAWSTATE_INVALID_IMAGE, "DS",
-                                 "vkBindBufferMemory(): Binding memory to image 0x%" PRIxLEAST64
+                                 "vkBindImageMemory(): Binding memory to image 0x%" PRIxLEAST64
                                  " but vkGetImageMemoryRequirements() has not been called on that image.",
                                  image_handle);
             // Make the call for them so we can verify the state
