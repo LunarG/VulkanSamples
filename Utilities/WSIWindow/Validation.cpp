@@ -21,7 +21,7 @@
 #ifdef VK_NO_PROTOTYPES
     #include <vulkan_wrapper.cpp>
     struct INITVULKAN{ INITVULKAN(){
-        bool success = InitVulkan();
+        bool success = InitVulkan()==1;
         LOG("Vulkan Dispatch-table: %s\n" cRESET, success?cGREEN"ENABLED":cRED"FAILED");
     }}INITVULKAN;               //Run this function BEFORE main.
 #endif
@@ -144,7 +144,7 @@ void CDebugReport::Destroy(){
 
 void CDebugReport::Print(){  //print the state of the report flags
     char buf[256]={};
-    sprintf(buf,"Debug Report flags : [%s" cRESET "%s" cRESET "%s" cRESET "%s" cRESET "%s",
+    snprintf(buf,sizeof(buf),"Debug Report flags : [%s" cRESET "%s" cRESET "%s" cRESET "%s" cRESET "%s",
         (flags& 1) ? cGREEN "INFO|" : cFAINT cSTRIKEOUT "info|",
         (flags& 2) ? cYELLOW"WARN|" : cFAINT cSTRIKEOUT "warn|",
         (flags& 4) ? cCYAN  "PERF|" : cFAINT cSTRIKEOUT "perf|",

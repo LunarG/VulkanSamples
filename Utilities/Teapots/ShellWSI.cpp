@@ -397,7 +397,7 @@ void ShellWSI::step(){
     CTimer timestep;
     acquire_back_buffer();
     present_back_buffer();
-    add_game_time(timestep.span());
+    add_game_time((float)timestep.span());
     framecount++;
 
     //-- Show Frames per second --

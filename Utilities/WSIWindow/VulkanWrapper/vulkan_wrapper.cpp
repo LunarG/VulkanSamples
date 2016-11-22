@@ -16,10 +16,18 @@
 
 // This file is generated.
 #include "vulkan_wrapper.h"
-#include <dlfcn.h>
+#ifndef _WIN32
+  #include <dlfcn.h>
+#endif
 
 int InitVulkan(void) {
-    void* libvulkan = dlopen("libvulkan.so", RTLD_NOW | RTLD_LOCAL);
+#ifdef _WIN32
+	HMODULE libvulkan = LoadLibrary("vulkan-1.dll");
+    #define dlsym(LIB,FUNC) GetProcAddress(LIB,FUNC)
+#else
+	void* libvulkan = dlopen("libvulkan.so", RTLD_NOW | RTLD_LOCAL);
+#endif
+
     if (!libvulkan)
         return 0;
 
