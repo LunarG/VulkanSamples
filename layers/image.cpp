@@ -892,9 +892,9 @@ static bool ValidateBufferImageCopyData(layer_data *dev_data, uint32_t regionCou
 static bool PreCallValidateCmdCopyImageToBuffer(layer_data *dev_data, VkCommandBuffer commandBuffer, VkImage srcImage,
                                                 VkImageLayout srcImageLayout, VkBuffer dstBuffer, uint32_t regionCount,
                                                 const VkBufferImageCopy *pRegions, const char *func_name) {
-    bool skip_call = false;
+    bool skip = false;
 
-    skip_call |= ValidateBufferImageCopyData(dev_data, regionCount, pRegions, srcImage, "vkCmdCopyImageToBuffer");
+    skip |= ValidateBufferImageCopyData(dev_data, regionCount, pRegions, srcImage, "vkCmdCopyImageToBuffer");
 
     // For each region, the number of layers in the image subresource should not be zero
     // Image aspect must be ONE OF color, depth, stencil
@@ -902,21 +902,19 @@ static bool PreCallValidateCmdCopyImageToBuffer(layer_data *dev_data, VkCommandB
         if (pRegions[i].imageSubresource.layerCount == 0) {
             char const str[] = "vkCmdCopyImageToBuffer: number of layers in image subresource is zero";
             // TODO: Verify against Valid Use section of spec, if this case yields undefined results, then it's an error
-            skip_call |=
-                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                        (uint64_t)commandBuffer, __LINE__, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            (uint64_t)commandBuffer, __LINE__, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
         }
 
         VkImageAspectFlags aspectMask = pRegions[i].imageSubresource.aspectMask;
         if ((aspectMask != VK_IMAGE_ASPECT_COLOR_BIT) && (aspectMask != VK_IMAGE_ASPECT_DEPTH_BIT) &&
             (aspectMask != VK_IMAGE_ASPECT_STENCIL_BIT)) {
             char const str[] = "vkCmdCopyImageToBuffer: aspectMasks for each region must specify only COLOR or DEPTH or STENCIL";
-            skip_call |=
-                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                        (uint64_t)commandBuffer, __LINE__, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", str);
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            (uint64_t)commandBuffer, __LINE__, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", str);
         }
     }
-    return skip_call;
+    return skip;
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdCopyImageToBuffer(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout,
@@ -933,9 +931,9 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyImageToBuffer(VkCommandBuffer commandBuffer, V
 static bool PreCallValidateCmdCopyBufferToImage(layer_data *dev_data, VkCommandBuffer commandBuffer, VkBuffer srcBuffer,
                                                 VkImage dstImage, VkImageLayout dstImageLayout, uint32_t regionCount,
                                                 const VkBufferImageCopy *pRegions, const char *func_name) {
-    bool skip_call = false;
+    bool skip = false;
 
-    skip_call |= ValidateBufferImageCopyData(dev_data, regionCount, pRegions, dstImage, "vkCmdCopyBufferToImage");
+    skip |= ValidateBufferImageCopyData(dev_data, regionCount, pRegions, dstImage, "vkCmdCopyBufferToImage");
 
     // For each region, the number of layers in the image subresource should not be zero
     // Image aspect must be ONE OF color, depth, or stencil
@@ -943,21 +941,19 @@ static bool PreCallValidateCmdCopyBufferToImage(layer_data *dev_data, VkCommandB
         if (pRegions[i].imageSubresource.layerCount == 0) {
             char const str[] = "vkCmdCopyBufferToImage: number of layers in image subresource is zero";
             // TODO: Verify against Valid Use section of spec, if this case yields undefined results, then it's an error
-            skip_call |=
-                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                        (uint64_t)commandBuffer, __LINE__, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            (uint64_t)commandBuffer, __LINE__, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
         }
 
         VkImageAspectFlags aspectMask = pRegions[i].imageSubresource.aspectMask;
         if ((aspectMask != VK_IMAGE_ASPECT_COLOR_BIT) && (aspectMask != VK_IMAGE_ASPECT_DEPTH_BIT) &&
             (aspectMask != VK_IMAGE_ASPECT_STENCIL_BIT)) {
             char const str[] = "vkCmdCopyBufferToImage: aspectMasks for each region must specify only COLOR or DEPTH or STENCIL";
-            skip_call |=
-                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                        (uint64_t)commandBuffer, __LINE__, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", str);
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            (uint64_t)commandBuffer, __LINE__, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", str);
         }
     }
-    return skip_call;
+    return skip;
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdCopyBufferToImage(VkCommandBuffer commandBuffer, VkBuffer srcBuffer, VkImage dstImage,
