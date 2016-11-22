@@ -1,6 +1,9 @@
 # Utilities
 
 This folder contains the cross-platform WSIWindow utility, for easily creating a Vulkan window.  
+It provides callbacks for mouse, keyboard and multi-touch events,and works on Windows, Linux and Android.  
+Build from the CMakeLists.txt file in this folder, to get the USE_VULKAN_WRAPPER CMake option.  
+
 Please see the docs in the WSIWindow folder, for more details.
 
 The two included demos show how to use WSIWindow:

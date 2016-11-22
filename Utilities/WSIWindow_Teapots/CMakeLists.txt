@@ -1,7 +1,7 @@
 project(WSIWindow_Teapots)
 cmake_minimum_required(VERSION 2.8)
 add_definitions(-std=c++11)
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")  #for find_package
+#set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")  #for find_package
 #-------------------------------------------------------------------------------------------------
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -64,11 +64,11 @@ if(WIN32)
     list(APPEND definitions PRIVATE -DVK_USE_PLATFORM_WIN32_KHR)
     list(APPEND definitions PRIVATE -DWIN32_LEAN_AND_MEAN)
 else()
-    list(APPEND libraries PRIVATE -ldl)
-    find_package(XCB REQUIRED)
-    list(APPEND definitions PRIVATE -DVK_USE_PLATFORM_XCB_KHR)
-    list(APPEND includes PRIVATE ${XCB_INCLUDES})
-    list(APPEND libraries PRIVATE ${XCB_LIBRARIES})
+    #list(APPEND libraries PRIVATE -ldl)
+    #find_package(XCB REQUIRED)
+    #list(APPEND definitions PRIVATE -DVK_USE_PLATFORM_XCB_KHR)
+    #list(APPEND includes PRIVATE ${XCB_INCLUDES})
+    #list(APPEND libraries PRIVATE ${XCB_LIBRARIES})
 endif()
 
 find_package (Threads)
@@ -83,7 +83,7 @@ target_link_libraries     (${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
 
 #---------------Find WSIWindow--------------
 #add_subdirectory(WSIWindow)
-if(NOT TARGET WSIWindow)
+if(NOT TARGET WSIWindow)  # If WSIWindow is not already built...
     add_subdirectory(../WSIWindow ${CMAKE_BINARY_DIR}/WSIWindow)
 endif()
 target_link_libraries(${PROJECT_NAME} WSIWindow)
