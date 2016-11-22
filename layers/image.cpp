@@ -841,7 +841,7 @@ VKAPI_ATTR void VKAPI_CALL CmdClearAttachments(VkCommandBuffer commandBuffer, ui
     }
 }
 
-static bool ValidateBufferToImageData(layer_data *dev_data, uint32_t regionCount, const VkBufferImageCopy *pRegions, VkImage image,
+static bool ValidateBufferImageCopyData(layer_data *dev_data, uint32_t regionCount, const VkBufferImageCopy *pRegions, VkImage image,
                                       const char *function) {
     bool skip = false;
 
@@ -895,7 +895,7 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyImageToBuffer(VkCommandBuffer commandBuffer, V
     bool skip_call = false;
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
 
-    skip_call |= ValidateBufferToImageData(device_data, regionCount, pRegions, srcImage, "vkCmdCopyImageToBuffer");
+    skip_call |= ValidateBufferImageCopyData(device_data, regionCount, pRegions, srcImage, "vkCmdCopyImageToBuffer");
 
     // For each region, the number of layers in the image subresource should not be zero
     // Image aspect must be ONE OF color, depth, stencil
@@ -930,7 +930,7 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBufferToImage(VkCommandBuffer commandBuffer, V
     bool skip_call = false;
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
 
-    skip_call |= ValidateBufferToImageData(device_data, regionCount, pRegions, dstImage, "vkCmdCopyBufferToImage");
+    skip_call |= ValidateBufferImageCopyData(device_data, regionCount, pRegions, dstImage, "vkCmdCopyBufferToImage");
 
     // For each region, the number of layers in the image subresource should not be zero
     // Image aspect must be ONE OF color, depth, stencil
