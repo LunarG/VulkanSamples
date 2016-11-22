@@ -14233,6 +14233,25 @@ TEST_F(VkLayerTest, MiscImageLayerTests) {
     region.imageExtent.depth = 1;
     m_commandBuffer->BeginCommandBuffer();
 
+    // Image must have offset.z of 0 and extent.depth of 1
+    // Introduce failure by setting imageExtent.depth to 0
+    region.imageExtent.depth = 0;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01269);
+    vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer.handle(), image.handle(),
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+    m_errorMonitor->VerifyFound();
+
+    region.imageExtent.depth = 1;
+
+    // Image must have offset.z of 0 and extent.depth of 1
+    // Introduce failure by setting imageOffset.z to 4
+    region.imageOffset.z = 4;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01269);
+    vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer.handle(), image.handle(),
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+    m_errorMonitor->VerifyFound();
+
+    region.imageOffset.z = 0;
     // BufferOffset must be a multiple of the calling command's VkImage parameter's texel size
     // Introduce failure by setting bufferOffset to 1 and 1/2 texels
     region.bufferOffset = 6;
