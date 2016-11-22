@@ -841,8 +841,8 @@ VKAPI_ATTR void VKAPI_CALL CmdClearAttachments(VkCommandBuffer commandBuffer, ui
     }
 }
 
-static bool ValidateBufferImageCopyData(layer_data *dev_data, uint32_t regionCount, const VkBufferImageCopy *pRegions, VkImage image,
-                                      const char *function) {
+static bool ValidateBufferImageCopyData(layer_data *dev_data, uint32_t regionCount, const VkBufferImageCopy *pRegions,
+                                        VkImage image, const char *function) {
     bool skip = false;
 
     for (uint32_t i = 0; i < regionCount; i++) {
@@ -853,35 +853,37 @@ static bool ValidateBufferImageCopyData(layer_data *dev_data, uint32_t regionCou
             auto texel_size = vk_format_get_size(image_info->format);
             if (vk_safe_modulo(pRegions[i].bufferOffset, texel_size) != 0) {
                 skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                                reinterpret_cast<uint64_t &>(image), __LINE__, IMAGE_INVALID_EXTENTS, "IMAGE",
+                                reinterpret_cast<uint64_t &>(image), __LINE__, VALIDATION_ERROR_01263, "IMAGE",
                                 "%s(): pRegion[%d] bufferOffset 0x%" PRIxLEAST64
-                                " must be a multiple of this format's texel size (" PRINTF_SIZE_T_SPECIFIER ")",
-                                function, i, pRegions[i].bufferOffset, texel_size);
+                                " must be a multiple of this format's texel size (" PRINTF_SIZE_T_SPECIFIER "). %s",
+                                function, i, pRegions[i].bufferOffset, texel_size, validation_error_map[VALIDATION_ERROR_01263]);
             }
             //  BufferOffset must be a multiple of 4
             if (vk_safe_modulo(pRegions[i].bufferOffset, 4) != 0) {
                 skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                                reinterpret_cast<uint64_t &>(image), __LINE__, IMAGE_INVALID_EXTENTS, "IMAGE",
-                                "%s(): pRegion[%d] bufferOffset 0x%" PRIxLEAST64 " must be a multiple of 4", function, i,
-                                pRegions[i].bufferOffset);
+                                reinterpret_cast<uint64_t &>(image), __LINE__, VALIDATION_ERROR_01264, "IMAGE",
+                                "%s(): pRegion[%d] bufferOffset 0x%" PRIxLEAST64 " must be a multiple of 4. %s", function, i,
+                                pRegions[i].bufferOffset, validation_error_map[VALIDATION_ERROR_01264]);
             }
 
             //  BufferRowLength must be 0, or greater than or equal to the width member of imageExtent
             if ((pRegions[i].bufferRowLength != 0) && (pRegions[i].bufferRowLength < pRegions[i].imageExtent.width)) {
                 skip |= log_msg(
                     dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                    reinterpret_cast<uint64_t &>(image), __LINE__, IMAGE_INVALID_EXTENTS, "IMAGE",
-                    "%s(): pRegion[%d] bufferRowLength (%d) must be zero or greater-than-or-equal-to imageExtent.width (%d).",
-                    function, i, pRegions[i].bufferRowLength, pRegions[i].imageExtent.width);
+                    reinterpret_cast<uint64_t &>(image), __LINE__, VALIDATION_ERROR_01265, "IMAGE",
+                    "%s(): pRegion[%d] bufferRowLength (%d) must be zero or greater-than-or-equal-to imageExtent.width (%d). %s",
+                    function, i, pRegions[i].bufferRowLength, pRegions[i].imageExtent.width,
+                    validation_error_map[VALIDATION_ERROR_01265]);
             }
 
             //  BufferImageHeight must be 0, or greater than or equal to the height member of imageExtent
             if ((pRegions[i].bufferImageHeight != 0) && (pRegions[i].bufferImageHeight < pRegions[i].imageExtent.height)) {
                 skip |= log_msg(
                     dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                    reinterpret_cast<uint64_t &>(image), __LINE__, IMAGE_INVALID_EXTENTS, "IMAGE",
-                    "%s(): pRegion[%d] bufferImageHeight (%d) must be zero or greater-than-or-equal-to imageExtent.height (%d).",
-                    function, i, pRegions[i].bufferImageHeight, pRegions[i].imageExtent.height);
+                    reinterpret_cast<uint64_t &>(image), __LINE__, VALIDATION_ERROR_01266, "IMAGE",
+                    "%s(): pRegion[%d] bufferImageHeight (%d) must be zero or greater-than-or-equal-to imageExtent.height (%d). %s",
+                    function, i, pRegions[i].bufferImageHeight, pRegions[i].imageExtent.height,
+                    validation_error_map[VALIDATION_ERROR_01266]);
             }
         }
     }
