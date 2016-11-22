@@ -15,7 +15,7 @@ Command-line flags: (at startup)
     -nr        : Turn off rendering
     -np        : Turn off presenting
 
-Keyboard Keys: (runtime)
+Keyboard Keys: (at runtime)
 --------------
     A          : Toggle message-loop blocking / non-blocking mode.
     W/Up-key   : Move camera forward.
@@ -29,13 +29,14 @@ Keyboard Keys: (runtime)
     5          : toggle flag: VK_DEBUG_REPORT_DEBUG_BIT_EXT
     Q / Escape : Quit
 
-CMake settings: (compile-time)
+CMake settings: (at compile-time)
 ---------------
-    ENABLE_VALIDATION : Enable Vulkan Validation. (Recommended for this demo)
-    ENABLE_LOGGING    : Allow WSIWindow to print log messages to console or Android LogCat.
-    ENABLE_MULTITOUCH : Enables Multi-touch on Windows and Linux. (Not used by this demo.)
-    VULKAN_LOADER     : Set path to the libvulkan.so or vulkan-1.lib file.
-    VULKAN_INCLUDE    : Set path to the vulkan.h file.
+    ENABLE_VALIDATION  : Enable Vulkan Validation. (Recommended for this demo)
+    ENABLE_LOGGING     : Allow WSIWindow to print log messages to console or Android LogCat.
+    ENABLE_MULTITOUCH  : Enables Multi-touch on Windows and Linux. (Not used by this demo.)
+    USE_VULKAN_WRAPPER : Builds a dispatch-table, to skip the loader trampoline code.
+    VULKAN_LOADER      : Set path to the libvulkan.so or vulkan-1.lib file.
+    VULKAN_INCLUDE     : Set path to the vulkan.h file.
 
 ## LINUX
 1. Use Qt Creator to open the CMakeLists.txt file.
@@ -46,11 +47,12 @@ CMake settings: (compile-time)
 1. Use cmake-gui to load the CMakeLists.txt file.
 2. Configure the CMake settings, and generate a Visual Studio Solution.
 3. Use Visual Studio to open the Solution.
-4. Set 'Teapots' as the active project.
+4. Set 'WSIWindow_Teapots' as the active project.
 3. Select build type (Debug / Release), Build and Run.
 
 ## ANDROID (Linux host)
-1. Use Android Studio to load the project, using the /Teapots/android/build.gradle file.
-2. Connect Android device via USB cable, for ADB connection. (Device must support Vulkan.)
-3. Build and run.
+1. Ensure you have Android Studio v2.2 or later, with NDK installed.
+2. Use Android Studio to load the project, using the /Teapots/android/build.gradle file.
+3. Connect Android device via USB cable, for ADB connection. (Device must support Vulkan.)
+4. Build and run.
 

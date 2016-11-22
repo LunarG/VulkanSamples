@@ -361,7 +361,7 @@ EventType Window_xcb::GetEvent(bool wait_for_event){
                         case XI_TouchEnd   : {
                             forCount(CMTouch::MAX_POINTERS) if(touchID[i]==te.detail){  //Find finger id
                                 touchID[i]=0;                                           //Clear the slot
-                                event=MTouch.Event(eUP  ,x,y,i);                        //touch up event
+                                event=MTouch.Event(eUP  ,x,y,i);                        //Touch up event
                                 break;
                             }
                             break;

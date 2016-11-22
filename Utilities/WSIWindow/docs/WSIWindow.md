@@ -40,7 +40,8 @@
  - `ENABLE_VALIDATION :` Enable Vulkan Validation. (Turn this off for Release builds.)
  - `ENABLE_LOGGING . .:` Allow WSIWindow to print log messages to the Terminal, or Android LogCat.
  - `ENABLE_MULTITOUCH :` Enables Multi-touch on Windows and Linux.
- - `VULKAN_LOADER . . :` Set this to the full path (including filename) of the vulkan loader. (libvulkan.so or vulkan-1.lib).
+ - `USE_VULKAN_WRAPPER:` Builds a dispatch-table, to skip the Loader trampoline-code. (Required for Android)
+ - `VULKAN_LOADER . . :` Full path (including filename) of the vulkan loader. (libvulkan.so or vulkan-1.lib).
  - `VULKAN_INCLUDE . .:` Set this to the path of the vulkan.h file.
 
 ### Windows
@@ -119,7 +120,9 @@ It provides the same functions as CLayers, for picking  extensions to load, and 
 ### WSIWindow class
 The WSIWindow class creates a Vulkan window, and provides function calls to query keyboard and mouse state, as well as callbacks, to notify you of system events. (window / keyboard / mouse / touch-screen)
 The WSIWindow constructor requires a VkInstance parameter, as well as the window's title, width and height.  These dimensions only apply to Linux and Windows, but are ignored on Android.
-However, right after window creation, the OnResizeEvent callback will be triggered, to return the actual window dimensions.
+However, right after window creation, the OnResizeEvent callback will be triggered, to return the actual window dimensions.  
+The "Surface" member function returns a **CSurface** class, which contains the VkSurface of the window.
+CSurface also provides the CanPresent() funtion, which wraps the vkGetPhysicalDevice***PresentationSupportKHR functions. When creating a Vulkan queue, use CanPresent() to check if the queue family can present to this surface.
 
 #### The following query functions are provided:
  - `GetWinPos . :` Get the window's current position, relative to the top-left corner of the display  
@@ -127,7 +130,7 @@ However, right after window creation, the OnResizeEvent callback will be trigger
  - `GetKeyState :` Get the current state of the specified keyboard key. (see "keycodes.h" for a list of key codes.)  
  - `GetBtnState :` Get the state of the specified mouse button (1-3)  
  - `GetMousePos :` Get the current mouse position (x,y) within this window.  
- - `Surface . . :` Returns the VkSurface, and 'CanPresent()' function.
+ - `Surface . . :` Returns CSurface, which contains the VkSurface, and 'CanPresent()' function.
 
 #### The following control functions are provided:
  - `SetTitle . . . .:` Set window title.

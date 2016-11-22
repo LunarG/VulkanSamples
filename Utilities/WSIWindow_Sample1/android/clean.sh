@@ -3,7 +3,7 @@
 # # Run this script before importing this project into Android Studio.
 # It delete's Android Studio config files which contain fixed paths,
 # to avoid Gradle errors when re-importing the project at a new location.
-# (Dont worry, Android Studio regenerates the deleted files on import.)
+# (Don't worry, Android Studio regenerates the deleted files on import.)
 
 rm -r gen
 rm -r build
