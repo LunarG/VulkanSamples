@@ -851,6 +851,18 @@ static bool ValidateBufferImageCopyData(layer_data *dev_data, uint32_t regionCou
 
         auto image_info = getImageState(dev_data, image);
         if (image_info) {
+
+            if ((image_info->imageType == VK_IMAGE_TYPE_1D) || (image_info->imageType == VK_IMAGE_TYPE_2D)) {
+                if ((pRegions[i].imageOffset.z != 0) || (pRegions[i].imageExtent.depth != 1)) {
+                    skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                                    reinterpret_cast<uint64_t &>(image), __LINE__, VALIDATION_ERROR_01269, "IMAGE",
+                                    "%s(): pRegion[%d] imageOffset.z is %d and imageExtent.depth is %d.  These must be 0 and 1, "
+                                    "respectively. %s",
+                                    function, i, pRegions[i].imageOffset.z, pRegions[i].imageExtent.depth,
+                                    validation_error_map[VALIDATION_ERROR_01269]);
+                }
+            }
+
             // BufferOffset must be a multiple of the calling command's VkImage parameter's texel size
             auto texel_size = vk_format_get_size(image_info->format);
             if (vk_safe_modulo(pRegions[i].bufferOffset, texel_size) != 0) {
@@ -860,6 +872,7 @@ static bool ValidateBufferImageCopyData(layer_data *dev_data, uint32_t regionCou
                                 " must be a multiple of this format's texel size (" PRINTF_SIZE_T_SPECIFIER "). %s",
                                 function, i, pRegions[i].bufferOffset, texel_size, validation_error_map[VALIDATION_ERROR_01263]);
             }
+
             //  BufferOffset must be a multiple of 4
             if (vk_safe_modulo(pRegions[i].bufferOffset, 4) != 0) {
                 skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
