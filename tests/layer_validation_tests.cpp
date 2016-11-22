@@ -14219,7 +14219,6 @@ TEST_F(VkLayerTest, MiscImageLayerTests) {
                VK_IMAGE_TILING_OPTIMAL, 0);
     ASSERT_TRUE(image.initialized());
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "number of layers in image subresource is zero");
     vk_testing::Buffer buffer;
     VkMemoryPropertyFlags reqs = 0;
     buffer.init_as_src(*m_device, 128 * 128 * 4, reqs);
@@ -14228,15 +14227,11 @@ TEST_F(VkLayerTest, MiscImageLayerTests) {
     region.bufferImageHeight = 128;
     region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     // layerCount can't be 0 - Expect MISMATCHED_IMAGE_ASPECT
-    region.imageSubresource.layerCount = 0;
+    region.imageSubresource.layerCount = 1;
     region.imageExtent.height = 4;
     region.imageExtent.width = 4;
     region.imageExtent.depth = 1;
     m_commandBuffer->BeginCommandBuffer();
-    vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer.handle(), image.handle(),
-                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-    m_errorMonitor->VerifyFound();
-    region.imageSubresource.layerCount = 1;
 
     // BufferOffset must be a multiple of the calling command's VkImage parameter's texel size
     // Introduce failure by setting bufferOffset to 1 and 1/2 texels
