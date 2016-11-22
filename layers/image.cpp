@@ -32,8 +32,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 #include <unordered_map>
 #include <vector>
+#include <bitset>
 
 #include "vk_loader_platform.h"
 #include "vk_dispatch_table_helper.h"
@@ -885,6 +887,16 @@ static bool ValidateBufferImageCopyData(layer_data *dev_data, uint32_t regionCou
                     function, i, pRegions[i].bufferImageHeight, pRegions[i].imageExtent.height,
                     validation_error_map[VALIDATION_ERROR_01266]);
             }
+
+            const int num_bits = sizeof(VkFlags) * CHAR_BIT;
+            std::bitset<num_bits> aspect_mask_bits (pRegions[i].imageSubresource.aspectMask);
+            if (aspect_mask_bits.count() != 1) {
+                skip |=
+                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            reinterpret_cast<uint64_t &>(image), __LINE__, VALIDATION_ERROR_01280, "IMAGE",
+                            "%s: aspectMasks for imageSubresource in each region must have only a single bit set. %s", function,
+                            validation_error_map[VALIDATION_ERROR_01280]);
+            }
         }
     }
 
@@ -906,14 +918,6 @@ static bool PreCallValidateCmdCopyImageToBuffer(layer_data *dev_data, VkCommandB
             // TODO: Verify against Valid Use section of spec, if this case yields undefined results, then it's an error
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             (uint64_t)commandBuffer, __LINE__, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
-        }
-
-        VkImageAspectFlags aspectMask = pRegions[i].imageSubresource.aspectMask;
-        if ((aspectMask != VK_IMAGE_ASPECT_COLOR_BIT) && (aspectMask != VK_IMAGE_ASPECT_DEPTH_BIT) &&
-            (aspectMask != VK_IMAGE_ASPECT_STENCIL_BIT)) {
-            char const str[] = "vkCmdCopyImageToBuffer: aspectMasks for each region must specify only COLOR or DEPTH or STENCIL";
-            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            (uint64_t)commandBuffer, __LINE__, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", str);
         }
     }
     return skip;
@@ -945,14 +949,6 @@ static bool PreCallValidateCmdCopyBufferToImage(layer_data *dev_data, VkCommandB
             // TODO: Verify against Valid Use section of spec, if this case yields undefined results, then it's an error
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             (uint64_t)commandBuffer, __LINE__, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
-        }
-
-        VkImageAspectFlags aspectMask = pRegions[i].imageSubresource.aspectMask;
-        if ((aspectMask != VK_IMAGE_ASPECT_COLOR_BIT) && (aspectMask != VK_IMAGE_ASPECT_DEPTH_BIT) &&
-            (aspectMask != VK_IMAGE_ASPECT_STENCIL_BIT)) {
-            char const str[] = "vkCmdCopyBufferToImage: aspectMasks for each region must specify only COLOR or DEPTH or STENCIL";
-            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            (uint64_t)commandBuffer, __LINE__, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", str);
         }
     }
     return skip;

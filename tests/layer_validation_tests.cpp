@@ -14277,16 +14277,6 @@ TEST_F(VkLayerTest, MiscImageLayerTests) {
     m_errorMonitor->VerifyFound();
 
     region.bufferImageHeight = 128;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "aspectMasks for each region must "
-                                                                        "specify only COLOR or DEPTH or "
-                                                                        "STENCIL");
-    // Expect MISMATCHED_IMAGE_ASPECT
-    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_METADATA_BIT;
-    vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer.handle(), image.handle(),
-                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-    m_errorMonitor->VerifyFound();
-    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "If the format of srcImage is a depth, stencil, depth stencil or "
                                          "integer-based format then filter must be VK_FILTER_NEAREST");
