@@ -889,13 +889,12 @@ static bool ValidateBufferImageCopyData(layer_data *dev_data, uint32_t regionCou
     return skip;
 }
 
-VKAPI_ATTR void VKAPI_CALL CmdCopyImageToBuffer(VkCommandBuffer commandBuffer, VkImage srcImage,
-                                                VkImageLayout srcImageLayout, VkBuffer dstBuffer,
-                                                uint32_t regionCount, const VkBufferImageCopy *pRegions) {
+static bool PreCallValidateCmdCopyImageToBuffer(layer_data *dev_data, VkCommandBuffer commandBuffer, VkImage srcImage,
+                                                VkImageLayout srcImageLayout, VkBuffer dstBuffer, uint32_t regionCount,
+                                                const VkBufferImageCopy *pRegions, const char *func_name) {
     bool skip_call = false;
-    layer_data *device_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
 
-    skip_call |= ValidateBufferImageCopyData(device_data, regionCount, pRegions, srcImage, "vkCmdCopyImageToBuffer");
+    skip_call |= ValidateBufferImageCopyData(dev_data, regionCount, pRegions, srcImage, "vkCmdCopyImageToBuffer");
 
     // For each region, the number of layers in the image subresource should not be zero
     // Image aspect must be ONE OF color, depth, stencil
@@ -904,7 +903,7 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyImageToBuffer(VkCommandBuffer commandBuffer, V
             char const str[] = "vkCmdCopyImageToBuffer: number of layers in image subresource is zero";
             // TODO: Verify against Valid Use section of spec, if this case yields undefined results, then it's an error
             skip_call |=
-                log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                         (uint64_t)commandBuffer, __LINE__, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
         }
 
@@ -913,33 +912,39 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyImageToBuffer(VkCommandBuffer commandBuffer, V
             (aspectMask != VK_IMAGE_ASPECT_STENCIL_BIT)) {
             char const str[] = "vkCmdCopyImageToBuffer: aspectMasks for each region must specify only COLOR or DEPTH or STENCIL";
             skip_call |=
-                log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                         (uint64_t)commandBuffer, __LINE__, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", str);
         }
     }
+    return skip_call;
+}
 
-    if (!skip_call) {
+VKAPI_ATTR void VKAPI_CALL CmdCopyImageToBuffer(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout,
+                                                VkBuffer dstBuffer, uint32_t regionCount, const VkBufferImageCopy *pRegions) {
+    layer_data *device_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+
+    if (!PreCallValidateCmdCopyImageToBuffer(device_data, commandBuffer, srcImage, srcImageLayout, dstBuffer, regionCount, pRegions,
+                                             "vkCmdCopyImageToBuffer()")) {
         device_data->device_dispatch_table->CmdCopyImageToBuffer(commandBuffer, srcImage, srcImageLayout, dstBuffer, regionCount,
                                                                  pRegions);
     }
 }
 
-VKAPI_ATTR void VKAPI_CALL CmdCopyBufferToImage(VkCommandBuffer commandBuffer, VkBuffer srcBuffer,
-                                                VkImage dstImage, VkImageLayout dstImageLayout,
-                                                uint32_t regionCount, const VkBufferImageCopy *pRegions) {
+static bool PreCallValidateCmdCopyBufferToImage(layer_data *dev_data, VkCommandBuffer commandBuffer, VkBuffer srcBuffer,
+                                                VkImage dstImage, VkImageLayout dstImageLayout, uint32_t regionCount,
+                                                const VkBufferImageCopy *pRegions, const char *func_name) {
     bool skip_call = false;
-    layer_data *device_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
 
-    skip_call |= ValidateBufferImageCopyData(device_data, regionCount, pRegions, dstImage, "vkCmdCopyBufferToImage");
+    skip_call |= ValidateBufferImageCopyData(dev_data, regionCount, pRegions, dstImage, "vkCmdCopyBufferToImage");
 
     // For each region, the number of layers in the image subresource should not be zero
-    // Image aspect must be ONE OF color, depth, stencil
+    // Image aspect must be ONE OF color, depth, or stencil
     for (uint32_t i = 0; i < regionCount; i++) {
         if (pRegions[i].imageSubresource.layerCount == 0) {
             char const str[] = "vkCmdCopyBufferToImage: number of layers in image subresource is zero";
             // TODO: Verify against Valid Use section of spec, if this case yields undefined results, then it's an error
             skip_call |=
-                log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                         (uint64_t)commandBuffer, __LINE__, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
         }
 
@@ -948,12 +953,20 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBufferToImage(VkCommandBuffer commandBuffer, V
             (aspectMask != VK_IMAGE_ASPECT_STENCIL_BIT)) {
             char const str[] = "vkCmdCopyBufferToImage: aspectMasks for each region must specify only COLOR or DEPTH or STENCIL";
             skip_call |=
-                log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                         (uint64_t)commandBuffer, __LINE__, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", str);
         }
     }
+    return skip_call;
+}
 
-    if (!skip_call) {
+VKAPI_ATTR void VKAPI_CALL CmdCopyBufferToImage(VkCommandBuffer commandBuffer, VkBuffer srcBuffer, VkImage dstImage,
+                                                VkImageLayout dstImageLayout, uint32_t regionCount,
+                                                const VkBufferImageCopy *pRegions) {
+    layer_data *device_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+
+    if (!PreCallValidateCmdCopyBufferToImage(device_data, commandBuffer, srcBuffer, dstImage, dstImageLayout, regionCount, pRegions,
+                                             "vkCmdCopyBufferToImage()")) {
         device_data->device_dispatch_table->CmdCopyBufferToImage(commandBuffer, srcBuffer, dstImage, dstImageLayout, regionCount,
                                                                  pRegions);
     }
