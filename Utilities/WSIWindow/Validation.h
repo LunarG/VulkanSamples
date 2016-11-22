@@ -44,7 +44,7 @@
   //#define NDEBUG               //cuts 4kb off apk size
 #endif
 //------------------------------------------
-//===========================================Check VkResult============================================
+//===========================================Check VkResult=============================================
 // Macro to check VkResult for errors(negative) or warnings(positive), and print as a string.
 #ifdef NDEBUG                           //In release builds, don't print VkResult strings.
   #define VKERRCHECK(VKFN) { VKFN; }
@@ -55,9 +55,9 @@
                              if(VKRESULT) printf("%s:%d\n",__FILE__,__LINE__);  \
                          }
 #endif
-//=====================================================================================================
+//======================================================================================================
 
-//===============================================LOGGING===============================================
+//===============================================LOGGING================================================
 //  If enabled, the 6 LOG* functions print logging messages to the console, or Android LogCat.
 //  LOG* functions can be used in the same way as printf, but uses color-coding, for better readability.
 //  Turn off the ENABLE_LOGGING flag in CMake, to strip out log messages and reduce exe size for release.
@@ -136,7 +136,7 @@
     #define  LOGE(...) {}
 #endif
 //----------------------------------------------------------------------------------
-//=====================================================================================================
+//======================================================================================================
 #include <assert.h>
 #include <stdio.h>   //for Windows.
 
@@ -156,12 +156,12 @@
 #else
     #include <vulkan/vulkan.h>              // Android: This must be included AFTER native.h
 #endif
-//=====================================================================================================
+//======================================================================================================
 
 const char* VkResultStr(VkResult err);  //Convert vulkan result code to a string.
 void ShowVkResult(VkResult err);        //Print warnings and errors.
 
-//============================================ CDebugReport ==========================================
+//============================================ CDebugReport ============================================
 class CDebugReport{
     CDebugReport();
     PFN_vkCreateDebugReportCallbackEXT  vkCreateDebugReportCallbackEXT;
@@ -184,6 +184,6 @@ public:
     void SetFlags(VkDebugReportFlagsEXT flags);                // Select which type of messages to display
     void SetCallback(PFN_vkDebugReportCallbackEXT debugFunc);  // Set a custom callback function for printing debug reports
 };
-//=====================================================================================================
+//=======================================================================================================
 
 #endif

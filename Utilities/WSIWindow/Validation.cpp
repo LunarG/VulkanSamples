@@ -18,13 +18,17 @@
 
 //--------------------Vulkan Dispatch Table---------------------
 //WARNING: vulkan_wrapper.h must be #included BEFORE vulkan.h
+
 #ifdef VK_NO_PROTOTYPES
+#ifdef __LINUX__
     #include <vulkan_wrapper.cpp>
+#endif
     struct INITVULKAN{ INITVULKAN(){
         bool success = InitVulkan()==1;
         LOG("Vulkan Dispatch-table: %s\n" cRESET, success?cGREEN"ENABLED":cRED"FAILED");
     }}INITVULKAN;               //Run this function BEFORE main.
 #endif
+
 //-------------------------------------------------------------
 
 //-----------------------Error Checking------------------------
@@ -143,15 +147,12 @@ void CDebugReport::Destroy(){
 }
 
 void CDebugReport::Print(){  //print the state of the report flags
-    char buf[256]={};
-    snprintf(buf,sizeof(buf),"Debug Report flags : [%s" cRESET "%s" cRESET "%s" cRESET "%s" cRESET "%s",
-        (flags& 1) ? cGREEN "INFO|" : cFAINT cSTRIKEOUT "info|",
-        (flags& 2) ? cYELLOW"WARN|" : cFAINT cSTRIKEOUT "warn|",
-        (flags& 4) ? cCYAN  "PERF|" : cFAINT cSTRIKEOUT "perf|",
-        (flags& 8) ? cRED   "ERROR|": cFAINT cSTRIKEOUT "error|",
-        (flags&16) ? cBLUE  "DEBUG|": cFAINT cSTRIKEOUT "debug|");
-    buf[strlen(buf)-1]=0;  //delete last character;
-    _LOG("%s" cRESET "] = %d\n",buf,flags);
+    _LOG("Debug Report flags : [%s" cRESET "%s" cRESET "%s" cRESET "%s" cRESET "%s" cRESET "] = %d\n",
+        (flags& 1) ? cGREEN "INFO:1 |" : cFAINT cSTRIKEOUT "info:0 |",
+        (flags& 2) ? cYELLOW"WARN:1 |" : cFAINT cSTRIKEOUT "warn:0 |",
+        (flags& 4) ? cCYAN  "PERF:1 |" : cFAINT cSTRIKEOUT "perf:0 |",
+        (flags& 8) ? cRED   "ERROR:1|" : cFAINT cSTRIKEOUT "error:0|",
+        (flags&16) ? cBLUE  "DEBUG:1"  : cFAINT cSTRIKEOUT "debug:0" ,flags);
 }
 #else   //No Validation
 void CDebugReport::SetFlags(VkDebugReportFlagsEXT flags)              { LOGW("Vulkan Validation was not enabled at compile-time.\n"); }

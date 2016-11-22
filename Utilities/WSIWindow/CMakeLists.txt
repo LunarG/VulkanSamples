@@ -8,9 +8,7 @@ add_definitions(-std=c++11)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")  #for find_package
 
 #=========================VULKAN_WRAPPER==========================
-#option(USE_VULKAN_WRAPPER "Build Dispatch-table, to skip loader trampoline code." OFF)
 if (USE_VULKAN_WRAPPER)
-#    add_definitions(-DUSE_VULKAN_WRAPPER)
     add_subdirectory(VulkanWrapper)
     target_link_libraries(${LIBRARY_NAME} VULKAN_WRAPPER)
 endif()
@@ -124,7 +122,8 @@ endif()
 #=======================Find Vulkan Header========================
 find_path(VULKAN_INCLUDE vulkan/vulkan.h DOC "Path to Vulkan header file. (vulkan.h)")
 find_path(VULKAN_INCLUDE vulkan/vulkan.h PATH "$ENV{VULKAN_SDK}/include")    # Search in Vulkan SDK
-find_path(VULKAN_INCLUDE vulkan/vulkan.h PATH "../../../include")            # Search in VulkanSamples
+find_path(VULKAN_INCLUDE vulkan/vulkan.h PATH "../../include")               # Search in VulkanSamples
+find_path(VULKAN_INCLUDE vulkan/vulkan.h PATH "VulkanWrapper")               # Search in VulkanWrapper
 target_include_directories(${LIBRARY_NAME} PUBLIC "${VULKAN_INCLUDE}")       # include vulkan.h
 message("VULKAN_INCLUDE path: ${VULKAN_INCLUDE}")
 #=================================================================

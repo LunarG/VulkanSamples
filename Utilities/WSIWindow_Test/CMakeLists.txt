@@ -6,7 +6,7 @@ include_directories("${PROJECT_SOURCE_DIR}")
 aux_source_directory(. SRC_LIST)
 add_executable(${PROJECT_NAME} ${SRC_LIST})
 
-#-----------------WSIWindow-----------------
+#---------------Find WSIWindow---------------
 #add_subdirectory(WSIWindow)
 
 if(NOT TARGET WSIWindow)

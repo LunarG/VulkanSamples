@@ -14,7 +14,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This file is generated.
 #ifndef VULKAN_WRAPPER_H
 #define VULKAN_WRAPPER_H
 

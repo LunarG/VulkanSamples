@@ -19,8 +19,8 @@ include_directories("./generated")
 set(sources
     Game.h
     Helpers.h
-    #generated/HelpersDispatchTable.cpp  //TODO: Use this dispatch table
-    #generated/HelpersDispatchTable.h
+    #generated/HelpersDispatchTable.cpp  //Replaced by vulkan_wrapper.cpp
+    #generated/HelpersDispatchTable.h    //Replaced by vulkan_wrapper.h
     generated/Hologram.frag.h
     generated/Hologram.vert.h
     generated/Hologram.push_constant.vert.h
@@ -81,7 +81,7 @@ target_link_libraries     (${PROJECT_NAME} ${libraries})
 target_link_libraries     (${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
 #-------------------------------------------------------------------------------------------------
 
-#-----------------WSIWindow-----------------
+#---------------Find WSIWindow--------------
 #add_subdirectory(WSIWindow)
 if(NOT TARGET WSIWindow)
     add_subdirectory(../WSIWindow ${CMAKE_BINARY_DIR}/WSIWindow)

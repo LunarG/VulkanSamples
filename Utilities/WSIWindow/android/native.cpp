@@ -53,8 +53,8 @@ void android_main(struct android_app* state) {
 
     android_fopen_set_asset_manager(state->activity->assetManager);  //Re-direct fopen to read assets from our APK.
 
-    int success=InitVulkan();
-    printf("InitVulkan : %s\n",success ? "SUCCESS" : "FAILED");
+    //int success=InitVulkan();
+    //printf("InitVulkan : %s\n",success ? "SUCCESS" : "FAILED");
 
     main(0,NULL);
 
