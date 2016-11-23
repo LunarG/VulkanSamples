@@ -64,6 +64,7 @@ struct instance_layer_data {
     uint32_t num_tmp_callbacks = 0;
     VkDebugReportCallbackCreateInfoEXT *tmp_dbg_create_infos = nullptr;
     VkDebugReportCallbackEXT *tmp_callbacks = nullptr;
+    instance_extension_enables extensions = {};
 };
 
 struct layer_data {
@@ -82,7 +83,6 @@ struct layer_data {
     bool amd_negative_viewport_height_enabled = false;
 };
 
-static std::unordered_map<void *, struct instance_extension_enables> instance_extension_map;
 static std::unordered_map<void *, layer_data *> layer_data_map;
 static std::unordered_map<void *, instance_layer_data *> instance_layer_data_map;
 static device_table_map pc_device_table_map;
@@ -1280,7 +1280,7 @@ static bool validate_queue_family_indices(layer_data *device_data, const char *f
     return skip;
 }
 
-static void CheckInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateInfo, VkInstance instance);
+static void CheckInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateInfo, instance_layer_data *instance_data);
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateInstance(const VkInstanceCreateInfo *pCreateInfo, const VkAllocationCallbacks *pAllocator,
                                               VkInstance *pInstance) {
@@ -1328,7 +1328,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateInstance(const VkInstanceCreateInfo *pCreat
         }
 
         init_parameter_validation(my_instance_data, pAllocator);
-        CheckInstanceRegisterExtensions(pCreateInfo, *pInstance);
+        CheckInstanceRegisterExtensions(pCreateInfo, my_instance_data);
 
         // Ordinarily we'd check these before calling down the chain, but none of the layer
         // support is in place until now, if we survive we can report the issue now.
@@ -1571,47 +1571,46 @@ void validateDeviceCreateInfo(VkPhysicalDevice physicalDevice, const VkDeviceCre
     }
 }
 
-static void CheckInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateInfo, VkInstance instance) {
-    VkLayerInstanceDispatchTable *dispatch_table = get_dispatch_table(pc_instance_table_map, instance);
-
-    instance_extension_map[dispatch_table] = {};
+static void CheckInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateInfo, instance_layer_data *instance_data) {
 
     for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SURFACE_EXTENSION_NAME) == 0) {
-            instance_extension_map[dispatch_table].surface_enabled = true;
+        auto name = pCreateInfo->ppEnabledExtensionNames[i];
+
+        if (strcmp(name, VK_KHR_SURFACE_EXTENSION_NAME) == 0) {
+            instance_data->extensions.surface_enabled = true;
         }
 #ifdef VK_USE_PLATFORM_XLIB_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XLIB_SURFACE_EXTENSION_NAME) == 0) {
-            instance_extension_map[dispatch_table].xlib_enabled = true;
+        if (strcmp(name, VK_KHR_XLIB_SURFACE_EXTENSION_NAME) == 0) {
+            instance_data->extensions.xlib_enabled = true;
         }
 #endif
 #ifdef VK_USE_PLATFORM_XCB_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XCB_SURFACE_EXTENSION_NAME) == 0) {
-            instance_extension_map[dispatch_table].xcb_enabled = true;
+        if (strcmp(name, VK_KHR_XCB_SURFACE_EXTENSION_NAME) == 0) {
+            instance_data->extensions.xcb_enabled = true;
         }
 #endif
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME) == 0) {
-            instance_extension_map[dispatch_table].wayland_enabled = true;
+        if (strcmp(name, VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME) == 0) {
+            instance_data->extensions.wayland_enabled = true;
         }
 #endif
 #ifdef VK_USE_PLATFORM_MIR_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_MIR_SURFACE_EXTENSION_NAME) == 0) {
-            instance_extension_map[dispatch_table].mir_enabled = true;
+        if (strcmp(name, VK_KHR_MIR_SURFACE_EXTENSION_NAME) == 0) {
+            instance_data->extensions.mir_enabled = true;
         }
 #endif
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_ANDROID_SURFACE_EXTENSION_NAME) == 0) {
-            instance_extension_map[dispatch_table].android_enabled = true;
+        if (strcmp(name, VK_KHR_ANDROID_SURFACE_EXTENSION_NAME) == 0) {
+            instance_data->extensions.android_enabled = true;
         }
 #endif
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_WIN32_SURFACE_EXTENSION_NAME) == 0) {
-            instance_extension_map[dispatch_table].win32_enabled = true;
+        if (strcmp(name, VK_KHR_WIN32_SURFACE_EXTENSION_NAME) == 0) {
+            instance_data->extensions.win32_enabled = true;
         }
 #endif
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DISPLAY_EXTENSION_NAME) == 0) {
-            instance_extension_map[dispatch_table].display_enabled = true;
+        if (strcmp(name, VK_KHR_DISPLAY_EXTENSION_NAME) == 0) {
+            instance_data->extensions.display_enabled = true;
         }
     }
 }
@@ -4922,8 +4921,8 @@ VKAPI_ATTR void VKAPI_CALL DestroySwapchainKHR(VkDevice device, VkSwapchainKHR s
 
 bool require_instance_extension(void *instance, bool instance_extension_enables::*flag, char const *function_name, char const *extension_name)
 {
-    if (!(instance_extension_map[get_dispatch_table(pc_instance_table_map, instance)].*flag)) {
-        layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(instance), instance_layer_data_map);
+    if (!(my_data->extensions.*flag)) {
         return log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
                        reinterpret_cast<uint64_t>(instance), __LINE__, EXTENSION_NOT_ENABLED, LayerName,
                        "%s() called even though the %s extension was not enabled for this VkInstance.",
