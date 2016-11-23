@@ -3589,8 +3589,8 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
     VkResult result = get_dispatch_table(ot_device_table_map, device)
                           ->CreateGraphicsPipelines(device, pipelineCache, createInfoCount, pCreateInfos, pAllocator, pPipelines);
     lock.lock();
-    if (result == VK_SUCCESS) {
-        for (uint32_t idx2 = 0; idx2 < createInfoCount; ++idx2) {
+    for (uint32_t idx2 = 0; idx2 < createInfoCount; ++idx2) {
+        if (pPipelines[idx2] != VK_NULL_HANDLE) {
             CreateObject(device, pPipelines[idx2], VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, pAllocator);
         }
     }
@@ -3631,8 +3631,8 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateComputePipelines(VkDevice device, VkPipelin
     VkResult result = get_dispatch_table(ot_device_table_map, device)
                           ->CreateComputePipelines(device, pipelineCache, createInfoCount, pCreateInfos, pAllocator, pPipelines);
     lock.lock();
-    if (result == VK_SUCCESS) {
-        for (uint32_t idx1 = 0; idx1 < createInfoCount; ++idx1) {
+    for (uint32_t idx1 = 0; idx1 < createInfoCount; ++idx1) {
+        if (pPipelines[idx1] != VK_NULL_HANDLE) {
             CreateObject(device, pPipelines[idx1], VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, pAllocator);
         }
     }
