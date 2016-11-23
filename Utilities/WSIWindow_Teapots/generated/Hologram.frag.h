@@ -1,7 +1,7 @@
 #include <stdint.h>
 
 #if 0
-/home/rene/git/VulkanSamples/Sample-Programs/Hologram/Hologram.frag
+/home/rene/git/VulkanSamples/Utilities/WSIWindow_Teapots/Hologram.frag
 Warning, version 310 is not yet complete; most version-specific features are present, but some are missing.
 
 

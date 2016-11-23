@@ -14,6 +14,24 @@ if(ANDROID)
     add_definitions(-DVK_USE_PLATFORM_ANDROID_KHR)
 endif()
 #-------------------------------------------------------------------------------------------------
+#------------------------------------------GLSL to SPIRV------------------------------------------
+find_package(PythonInterp 3 REQUIRED)
+macro(glsl_to_spirv src)
+    add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/generated/${src}.h
+        COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/glsl-to-spirv ${CMAKE_CURRENT_SOURCE_DIR}/${src} ${CMAKE_CURRENT_SOURCE_DIR}/generated/${src}.h ${GLSLANG_VALIDATOR}
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/glsl-to-spirv ${CMAKE_CURRENT_SOURCE_DIR}/${src} ${GLSLANG_VALIDATOR}
+        )
+endmacro()
+
+if(NOT EXISTS {GLSLANG_VALIDATOR})
+    message("WARNING : GLSLANG_VALIDATOR not found. Shaders will not be built.")
+endif()
+
+glsl_to_spirv(Hologram.frag)
+glsl_to_spirv(Hologram.vert)
+glsl_to_spirv(Hologram.push_constant.vert)
+
+#-------------------------------------------------------------------------------------------------
 include_directories("./generated")
 
 set(sources
@@ -21,9 +39,11 @@ set(sources
     Helpers.h
     #generated/HelpersDispatchTable.cpp  //Replaced by vulkan_wrapper.cpp
     #generated/HelpersDispatchTable.h    //Replaced by vulkan_wrapper.h
+
     generated/Hologram.frag.h
     generated/Hologram.vert.h
     generated/Hologram.push_constant.vert.h
+
     Hologram.cpp
     Hologram.h
     main.cpp
