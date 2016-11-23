@@ -53,7 +53,7 @@
 
 namespace parameter_validation {
 
-struct layer_data {
+struct instance_layer_data {
     VkInstance instance = VK_NULL_HANDLE;
 
     debug_report_data *report_data = nullptr;
@@ -64,9 +64,13 @@ struct layer_data {
     uint32_t num_tmp_callbacks = 0;
     VkDebugReportCallbackCreateInfoEXT *tmp_dbg_create_infos = nullptr;
     VkDebugReportCallbackEXT *tmp_callbacks = nullptr;
+};
 
-    // TODO: Split instance/device structs
+struct layer_data {
+    instance_layer_data *instance_data = nullptr;
+
     // Device Data
+    debug_report_data *report_data = nullptr;
     // Map for queue family index to queue count
     std::unordered_map<uint32_t, uint32_t> queueFamilyIndexMap;
     VkPhysicalDeviceLimits device_limits = {};
@@ -80,10 +84,11 @@ struct layer_data {
 
 static std::unordered_map<void *, struct instance_extension_enables> instance_extension_map;
 static std::unordered_map<void *, layer_data *> layer_data_map;
+static std::unordered_map<void *, instance_layer_data *> instance_layer_data_map;
 static device_table_map pc_device_table_map;
 static instance_table_map pc_instance_table_map;
 
-static void init_parameter_validation(layer_data *my_data, const VkAllocationCallbacks *pAllocator) {
+static void init_parameter_validation(instance_layer_data *my_data, const VkAllocationCallbacks *pAllocator) {
 
     layer_debug_actions(my_data->report_data, my_data->logging_callback, pAllocator, "lunarg_parameter_validation");
 }
@@ -96,7 +101,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDebugReportCallbackEXT(VkInstance instance,
     VkResult result = pTable->CreateDebugReportCallbackEXT(instance, pCreateInfo, pAllocator, pMsgCallback);
 
     if (result == VK_SUCCESS) {
-        layer_data *data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+        auto data = get_my_data_ptr(get_dispatch_key(instance), instance_layer_data_map);
         result = layer_create_msg_callback(data->report_data, false, pCreateInfo, pAllocator, pMsgCallback);
     }
 
@@ -108,7 +113,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyDebugReportCallbackEXT(VkInstance instance, Vk
     VkLayerInstanceDispatchTable *pTable = get_dispatch_table(pc_instance_table_map, instance);
     pTable->DestroyDebugReportCallbackEXT(instance, msgCallback, pAllocator);
 
-    layer_data *data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    auto data = get_my_data_ptr(get_dispatch_key(instance), instance_layer_data_map);
     layer_destroy_msg_callback(data->report_data, msgCallback, pAllocator);
 }
 
@@ -1297,7 +1302,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateInstance(const VkInstanceCreateInfo *pCreat
     result = fpCreateInstance(pCreateInfo, pAllocator, pInstance);
 
     if (result == VK_SUCCESS) {
-        layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
+        auto my_instance_data = get_my_data_ptr(get_dispatch_key(*pInstance), instance_layer_data_map);
         assert(my_instance_data != nullptr);
 
         VkLayerInstanceDispatchTable *pTable = initInstanceTable(*pInstance, fpGetInstanceProcAddr, pc_instance_table_map);
@@ -1356,7 +1361,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
     // Grab the key before the instance is destroyed.
     dispatch_key key = get_dispatch_key(instance);
     bool skip = false;
-    layer_data *my_data = get_my_data_ptr(key, layer_data_map);
+    auto my_data = get_my_data_ptr(key, instance_layer_data_map);
     assert(my_data != NULL);
 
     // Enable the temporary callback(s) here to catch vkDestroyInstance issues:
@@ -1402,7 +1407,7 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumeratePhysicalDevices(VkInstance instance, uin
                                                         VkPhysicalDevice *pPhysicalDevices) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip = false;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(instance), instance_layer_data_map);
     assert(my_data != NULL);
 
     skip |= parameter_validation_vkEnumeratePhysicalDevices(my_data->report_data, pPhysicalDeviceCount, pPhysicalDevices);
@@ -1426,7 +1431,7 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumeratePhysicalDevices(VkInstance instance, uin
 
 VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceFeatures(VkPhysicalDevice physicalDevice, VkPhysicalDeviceFeatures *pFeatures) {
     bool skip = false;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
     skip |= parameter_validation_vkGetPhysicalDeviceFeatures(my_data->report_data, pFeatures);
@@ -1439,7 +1444,7 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceFeatures(VkPhysicalDevice physicalDe
 VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceFormatProperties(VkPhysicalDevice physicalDevice, VkFormat format,
                                                              VkFormatProperties *pFormatProperties) {
     bool skip = false;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
     skip |= parameter_validation_vkGetPhysicalDeviceFormatProperties(my_data->report_data, format, pFormatProperties);
@@ -1456,7 +1461,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceImageFormatProperties(VkPhysical
                                                                       VkImageFormatProperties *pImageFormatProperties) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip = false;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
     skip |= parameter_validation_vkGetPhysicalDeviceImageFormatProperties(my_data->report_data, format, type, tiling, usage,
@@ -1475,7 +1480,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceImageFormatProperties(VkPhysical
 
 VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceProperties(VkPhysicalDevice physicalDevice, VkPhysicalDeviceProperties *pProperties) {
     bool skip = false;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
     skip |= parameter_validation_vkGetPhysicalDeviceProperties(my_data->report_data, pProperties);
@@ -1489,7 +1494,7 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceQueueFamilyProperties(VkPhysicalDevi
                                                                   uint32_t *pQueueFamilyPropertyCount,
                                                                   VkQueueFamilyProperties *pQueueFamilyProperties) {
     bool skip = false;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
     skip |= parameter_validation_vkGetPhysicalDeviceQueueFamilyProperties(my_data->report_data, pQueueFamilyPropertyCount,
@@ -1504,7 +1509,7 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceQueueFamilyProperties(VkPhysicalDevi
 VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceMemoryProperties(VkPhysicalDevice physicalDevice,
                                                              VkPhysicalDeviceMemoryProperties *pMemoryProperties) {
     bool skip = false;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
     skip |= parameter_validation_vkGetPhysicalDeviceMemoryProperties(my_data->report_data, pMemoryProperties);
@@ -1519,7 +1524,7 @@ void validateDeviceCreateInfo(VkPhysicalDevice physicalDevice, const VkDeviceCre
                               const std::vector<VkQueueFamilyProperties> properties) {
     std::unordered_set<uint32_t> set;
 
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
 
     if ((pCreateInfo != nullptr) && (pCreateInfo->pQueueCreateInfos != nullptr)) {
         for (uint32_t i = 0; i < pCreateInfo->queueCreateInfoCount; ++i) {
@@ -1650,7 +1655,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physicalDevice, con
 
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip = false;
-    layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    auto my_instance_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_instance_data != nullptr);
 
     skip |= parameter_validation_vkCreateDevice(my_instance_data->report_data, pCreateInfo, pAllocator, pDevice);
@@ -2026,7 +2031,7 @@ VKAPI_ATTR void VKAPI_CALL GetImageSparseMemoryRequirements(VkDevice device, VkI
 bool PostGetPhysicalDeviceSparseImageFormatProperties(VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type,
                                                       VkSampleCountFlagBits samples, VkImageUsageFlags usage, VkImageTiling tiling,
                                                       uint32_t *pNumProperties, VkSparseImageFormatProperties *pProperties) {
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     if (pProperties != nullptr) {
         if ((pProperties->aspectMask & (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT |
                                         VK_IMAGE_ASPECT_METADATA_BIT)) == 0) {
@@ -2047,7 +2052,7 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceSparseImageFormatProperties(VkPhysic
                                                                         uint32_t *pPropertyCount,
                                                                         VkSparseImageFormatProperties *pProperties) {
     bool skip = false;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
     skip |= parameter_validation_vkGetPhysicalDeviceSparseImageFormatProperties(my_data->report_data, format, type, samples,
@@ -4932,7 +4937,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevi
                                                                   VkSurfaceKHR surface, VkBool32 *pSupported) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip = false;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
     skip |= require_instance_extension(physicalDevice, &instance_extension_enables::surface_enabled,
@@ -4955,7 +4960,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilitiesKHR(VkPhysica
                                                                        VkSurfaceCapabilitiesKHR *pSurfaceCapabilities) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip = false;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
     skip |= require_instance_extension(physicalDevice, &instance_extension_enables::surface_enabled,
@@ -4979,7 +4984,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevi
                                                                   VkSurfaceFormatKHR *pSurfaceFormats) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip = false;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
     skip |= require_instance_extension(physicalDevice, &instance_extension_enables::surface_enabled,
@@ -5003,7 +5008,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfacePresentModesKHR(VkPhysica
                                                                        VkPresentModeKHR *pPresentModes) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip = false;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
     skip |= require_instance_extension(physicalDevice, &instance_extension_enables::surface_enabled,
@@ -5038,7 +5043,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateWin32SurfaceKHR(VkInstance instance, const 
                                                      const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
 
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(instance), instance_layer_data_map);
     assert(my_data != NULL);
     bool skip = false;
 
@@ -5062,7 +5067,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceWin32PresentationSupportKHR(VkPh
 {
     VkBool32 result = false;
 
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
     bool skip = false;
 
@@ -5086,7 +5091,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateXcbSurfaceKHR(VkInstance instance, const Vk
                                                    const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
 
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(instance), instance_layer_data_map);
     assert(my_data != NULL);
     bool skip = false;
 
@@ -5110,7 +5115,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceXcbPresentationSupportKHR(VkPhys
                                                                           xcb_visualid_t visual_id) {
     VkBool32 result = false;
 
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
     bool skip = false;
 
@@ -5134,7 +5139,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateXlibSurfaceKHR(VkInstance instance, const V
                                                     const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
 
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(instance), instance_layer_data_map);
     assert(my_data != NULL);
     bool skip = false;
 
@@ -5158,7 +5163,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceXlibPresentationSupportKHR(VkPhy
                                                                            VisualID visualID) {
     VkBool32 result = false;
 
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
     bool skip = false;
 
@@ -5180,7 +5185,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateMirSurfaceKHR(VkInstance instance, const Vk
                                                    const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
 
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(instance), instance_layer_data_map);
     assert(my_data != NULL);
     bool skip = false;
 
@@ -5203,7 +5208,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceMirPresentationSupportKHR(VkPhys
                                                                           uint32_t queueFamilyIndex, MirConnection *connection) {
     VkBool32 result = false;
 
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
     bool skip = false;
@@ -5226,7 +5231,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateWaylandSurfaceKHR(VkInstance instance, cons
                                                        const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
 
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(instance), instance_layer_data_map);
     assert(my_data != NULL);
     bool skip = false;
 
@@ -5250,7 +5255,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceWaylandPresentationSupportKHR(Vk
                                                                               struct wl_display *display) {
     VkBool32 result = false;
 
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
     bool skip = false;
 
@@ -5274,7 +5279,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateAndroidSurfaceKHR(VkInstance instance, cons
                                                        const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
 
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(instance), instance_layer_data_map);
     assert(my_data != NULL);
     bool skip = false;
 
@@ -5299,7 +5304,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSharedSwapchainsKHR(VkDevice device, uint32
                                                          const VkAllocationCallbacks *pAllocator, VkSwapchainKHR *pSwapchains) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip = false;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
     skip |= require_device_extension(my_data, &layer_data::display_swapchain_enabled, "vkCreateSharedSwapchainsKHR", VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME);
@@ -5321,7 +5326,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceDisplayPropertiesKHR(VkPhysicalD
                                                                      VkDisplayPropertiesKHR *pProperties) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip = false;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
     skip |= require_instance_extension(physicalDevice, &instance_extension_enables::display_enabled,
@@ -5343,7 +5348,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceDisplayPlanePropertiesKHR(VkPhys
                                                                           VkDisplayPlanePropertiesKHR *pProperties) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip = false;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
     skip |= require_instance_extension(physicalDevice, &instance_extension_enables::display_enabled,
@@ -5365,7 +5370,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneSupportedDisplaysKHR(VkPhysicalDev
                                                                    uint32_t *pDisplayCount, VkDisplayKHR *pDisplays) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip = false;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
     skip |= require_instance_extension(physicalDevice, &instance_extension_enables::display_enabled,
@@ -5387,7 +5392,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayModePropertiesKHR(VkPhysicalDevice phys
                                                            uint32_t *pPropertyCount, VkDisplayModePropertiesKHR *pProperties) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip = false;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
     skip |= require_instance_extension(physicalDevice, &instance_extension_enables::display_enabled,
@@ -5410,7 +5415,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDisplayModeKHR(VkPhysicalDevice physicalDev
                                                     const VkAllocationCallbacks *pAllocator, VkDisplayModeKHR *pMode) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip = false;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
     skip |= require_instance_extension(physicalDevice, &instance_extension_enables::display_enabled,
@@ -5432,7 +5437,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneCapabilitiesKHR(VkPhysicalDevice p
                                                               uint32_t planeIndex, VkDisplayPlaneCapabilitiesKHR *pCapabilities) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip = false;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
     skip |= require_instance_extension(physicalDevice, &instance_extension_enables::display_enabled,
@@ -5454,7 +5459,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDisplayPlaneSurfaceKHR(VkInstance instance,
                                                             const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip = false;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(instance), instance_layer_data_map);
     assert(my_data != NULL);
 
     skip |= require_instance_extension(instance, &instance_extension_enables::display_enabled,
@@ -5539,7 +5544,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceExternalImageFormatPropertiesNV(
 
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip = false;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    auto my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
     skip |= parameter_validation_vkGetPhysicalDeviceExternalImageFormatPropertiesNV(
@@ -5621,7 +5626,7 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance
 
     assert(instance);
 
-    layer_data *data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    auto data = get_my_data_ptr(get_dispatch_key(instance), instance_layer_data_map);
 
     proc = debug_report_get_instance_proc_addr(data->report_data, funcName);
     if (!proc)
