@@ -20,7 +20,7 @@
 
 /*
 VULKAN_SAMPLE_SHORT_DESCRIPTION
-Demonsrate how to use SPIR-V shaders with inline assembly.
+Demonstrate how to use SPIR-V shaders with inline assembly.
 */
 
 #include <util_init.hpp>
