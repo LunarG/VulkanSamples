@@ -6987,15 +6987,23 @@ static bool validatePushConstantRange(const layer_data *dev_data, const uint32_t
     bool skip_call = false;
     // Check that offset + size don't exceed the max.
     // Prevent arithetic overflow here by avoiding addition and testing in this order.
-    // TODO : This check combines VALIDATION_ERROR_00877 & 880, need to break out separately
     if ((offset >= maxPushConstantsSize) || (size > maxPushConstantsSize - offset)) {
         // This is a pain just to adapt the log message to the caller, but better to sort it out only when there is a problem.
         if (0 == strcmp(caller_name, "vkCreatePipelineLayout()")) {
-            skip_call |=
-                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                        VALIDATION_ERROR_00877, "DS", "%s call has push constants index %u with offset %u and size %u that "
-                                                      "exceeds this device's maxPushConstantSize of %u. %s",
-                        caller_name, index, offset, size, maxPushConstantsSize, validation_error_map[VALIDATION_ERROR_00877]);
+            if (offset >= maxPushConstantsSize) {
+                skip_call |=
+                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                            VALIDATION_ERROR_00877, "DS", "%s call has push constants index %u with offset %u that "
+                                                          "exceeds this device's maxPushConstantSize of %u. %s",
+                            caller_name, index, offset, maxPushConstantsSize, validation_error_map[VALIDATION_ERROR_00877]);
+            }
+            if (size > maxPushConstantsSize - offset) {
+                skip_call |=
+                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                            VALIDATION_ERROR_00880, "DS", "%s call has push constants index %u with offset %u and size %u that "
+                                                          "exceeds this device's maxPushConstantSize of %u. %s",
+                            caller_name, index, offset, size, maxPushConstantsSize, validation_error_map[VALIDATION_ERROR_00880]);
+            }
         } else if (0 == strcmp(caller_name, "vkCmdPushConstants()")) {
             skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                  DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS", "%s call has push constants with offset %u and size %u that "
