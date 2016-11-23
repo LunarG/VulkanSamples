@@ -10083,22 +10083,22 @@ VKAPI_ATTR VkResult VKAPI_CALL InvalidateMappedMemoryRanges(VkDevice device, uin
 VKAPI_ATTR VkResult VKAPI_CALL BindImageMemory(VkDevice device, VkImage image, VkDeviceMemory mem, VkDeviceSize memoryOffset) {
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
-    bool skip_call = false;
+    bool skip = false;
     std::unique_lock<std::mutex> lock(global_lock);
     auto image_state = GetImageState(dev_data, image);
     if (image_state) {
         // Track objects tied to memory
         uint64_t image_handle = reinterpret_cast<uint64_t &>(image);
-        skip_call = SetMemBinding(dev_data, mem, image_handle, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, "vkBindImageMemory");
+        skip = SetMemBinding(dev_data, mem, image_handle, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, "vkBindImageMemory");
         if (!image_state->memory_requirements_checked) {
             // There's not an explicit requirement in the spec to call vkGetImageMemoryRequirements() prior to calling
             //  BindImageMemory but it's implied in that memory being bound must conform with VkMemoryRequirements from
             //  vkGetImageMemoryRequirements()
-            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                                 image_handle, __LINE__, DRAWSTATE_INVALID_IMAGE, "DS",
-                                 "vkBindImageMemory(): Binding memory to image 0x%" PRIxLEAST64
-                                 " but vkGetImageMemoryRequirements() has not been called on that image.",
-                                 image_handle);
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                            image_handle, __LINE__, DRAWSTATE_INVALID_IMAGE, "DS",
+                            "vkBindImageMemory(): Binding memory to image 0x%" PRIxLEAST64
+                            " but vkGetImageMemoryRequirements() has not been called on that image.",
+                            image_handle);
             // Make the call for them so we can verify the state
             lock.unlock();
             dev_data->dispatch_table.GetImageMemoryRequirements(device, image, &image_state->requirements);
@@ -10108,14 +10108,14 @@ VKAPI_ATTR VkResult VKAPI_CALL BindImageMemory(VkDevice device, VkImage image, V
         // Track and validate bound memory range information
         auto mem_info = GetMemObjInfo(dev_data, mem);
         if (mem_info) {
-            skip_call |= InsertImageMemoryRange(dev_data, image, mem_info, memoryOffset, image_state->requirements,
-                                                image_state->createInfo.tiling == VK_IMAGE_TILING_LINEAR);
-            skip_call |= ValidateMemoryTypes(dev_data, mem_info, image_state->requirements.memoryTypeBits, "vkBindImageMemory()",
-                                             VALIDATION_ERROR_00806);
+            skip |= InsertImageMemoryRange(dev_data, image, mem_info, memoryOffset, image_state->requirements,
+                                           image_state->createInfo.tiling == VK_IMAGE_TILING_LINEAR);
+            skip |= ValidateMemoryTypes(dev_data, mem_info, image_state->requirements.memoryTypeBits, "vkBindImageMemory",
+                                        VALIDATION_ERROR_00806);
         }
 
         lock.unlock();
-        if (!skip_call) {
+        if (!skip) {
             result = dev_data->dispatch_table.BindImageMemory(device, image, mem, memoryOffset);
             lock.lock();
             image_state->binding.mem = mem;
