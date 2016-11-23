@@ -7007,13 +7007,20 @@ static bool validatePushConstantRange(const layer_data *dev_data, const uint32_t
         }
     }
     // size needs to be non-zero and a multiple of 4.
-    // TODO : This check combines VALIDATION_ERROR_00878 & 879, need to break out separately
     if ((size == 0) || ((size & 0x3) != 0)) {
         if (0 == strcmp(caller_name, "vkCreatePipelineLayout()")) {
-            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                                 VALIDATION_ERROR_00878, "DS", "%s call has push constants index %u with "
-                                                               "size %u. Size must be greater than zero and a multiple of 4. %s",
-                                 caller_name, index, size, validation_error_map[VALIDATION_ERROR_00878]);
+            if (size == 0) {
+                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
+                                     __LINE__, VALIDATION_ERROR_00878, "DS", "%s call has push constants index %u with "
+                                                                             "size %u. Size must be greater than zero. %s",
+                                     caller_name, index, size, validation_error_map[VALIDATION_ERROR_00878]);
+            }
+            if (size & 0x3) {
+                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
+                                     __LINE__, VALIDATION_ERROR_00879, "DS", "%s call has push constants index %u with "
+                                                                             "size %u. Size must be a multiple of 4. %s",
+                                     caller_name, index, size, validation_error_map[VALIDATION_ERROR_00879]);
+            }
         } else if (0 == strcmp(caller_name, "vkCmdPushConstants()")) {
             skip_call |=
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
