@@ -1534,21 +1534,23 @@ bool cvdescriptorset::ValidateAllocateDescriptorSets(const debug_report_data *re
     auto pool_state = getDescriptorPoolState(dev_data, p_alloc_info->descriptorPool);
     // Track number of descriptorSets allowable in this pool
     if (pool_state->availableSets < p_alloc_info->descriptorSetCount) {
-        skip_call |= log_msg(
-            report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT,
-            reinterpret_cast<uint64_t &>(pool_state->pool), __LINE__, DRAWSTATE_DESCRIPTOR_POOL_EMPTY, "DS",
-            "Unable to allocate %u descriptorSets from pool 0x%" PRIxLEAST64 ". This pool only has %d descriptorSets remaining.",
-            p_alloc_info->descriptorSetCount, reinterpret_cast<uint64_t &>(pool_state->pool), pool_state->availableSets);
+        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT,
+                             reinterpret_cast<uint64_t &>(pool_state->pool), __LINE__, VALIDATION_ERROR_00911, "DS",
+                             "Unable to allocate %u descriptorSets from pool 0x%" PRIxLEAST64
+                             ". This pool only has %d descriptorSets remaining. %s",
+                             p_alloc_info->descriptorSetCount, reinterpret_cast<uint64_t &>(pool_state->pool),
+                             pool_state->availableSets, validation_error_map[VALIDATION_ERROR_00911]);
     }
     // Determine whether descriptor counts are satisfiable
     for (uint32_t i = 0; i < VK_DESCRIPTOR_TYPE_RANGE_SIZE; i++) {
         if (ds_data->required_descriptors_by_type[i] > pool_state->availableDescriptorTypeCount[i]) {
             skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT,
-                                 reinterpret_cast<const uint64_t &>(pool_state->pool), __LINE__, DRAWSTATE_DESCRIPTOR_POOL_EMPTY,
-                                 "DS", "Unable to allocate %u descriptors of type %s from pool 0x%" PRIxLEAST64
-                                       ". This pool only has %d descriptors of this type remaining.",
+                                 reinterpret_cast<const uint64_t &>(pool_state->pool), __LINE__, VALIDATION_ERROR_00912, "DS",
+                                 "Unable to allocate %u descriptors of type %s from pool 0x%" PRIxLEAST64
+                                 ". This pool only has %d descriptors of this type remaining. %s",
                                  ds_data->required_descriptors_by_type[i], string_VkDescriptorType(VkDescriptorType(i)),
-                                 reinterpret_cast<uint64_t &>(pool_state->pool), pool_state->availableDescriptorTypeCount[i]);
+                                 reinterpret_cast<uint64_t &>(pool_state->pool), pool_state->availableDescriptorTypeCount[i],
+                                 validation_error_map[VALIDATION_ERROR_00912]);
         }
     }
 
