@@ -75,20 +75,20 @@ class MyWindow : public WSIWindow{
 };
 
 int main(int argc, char *argv[]){
-    setbuf(stdout, NULL);          //Prevent printf buffering in QtCreator
+    setbuf(stdout, NULL);                                     // Prevent printf buffering in QtCreator
     printf("WSI-Window\n");
 
-    CInstance Inst(true);                              //Create a Vulkan Instance
-    Inst.DebugReport.SetFlags(31);                     //Select message types
+    CInstance inst(true);                                     // Create a Vulkan Instance
+    inst.DebugReport.SetFlags(31);                            // Select message types
 
-    MyWindow Window(Inst,"WSI-Window Test",640,480);   //Create a Vulkan window
-    Window.ShowKeyboard(true);                         //Show soft-keyboard on Android
+    MyWindow Window(inst, "WSI-Window Sample1", 640, 480);    // Create a Vulkan window
+    Window.ShowKeyboard(true);                                // Show soft-keyboard on Android
     LOGW("Test Warnings\n");
     Window.SetWinPos(0,0);
 
-    while(Window.ProcessEvents()){                     //Main event loop, runs until window is closed.
-        bool KeyPressed = Window.GetKeyState(KEY_LeftShift);
-        if (KeyPressed) printf("LEFT SHIFT PRESSED\r");
+    while(Window.ProcessEvents()){                            // Main event loop, runs until window is closed.
+        bool key_pressed = Window.GetKeyState(KEY_LeftShift);
+        if (key_pressed) printf("LEFT SHIFT PRESSED\r");
     }
     return 0;
 }

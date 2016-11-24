@@ -96,20 +96,13 @@ DebugReportFn(VkDebugReportFlagsEXT msgFlags, VkDebugReportObjectTypeEXT objType
 }
 //--------------------------------------------------------------------------------------------
 
-//----------------------------------vkGetInstanceProcAddr Macro-------------------------------
-#define GET_INSTANCE_PROC_ADDR(inst, entrypoint){                                             \
-          vk##entrypoint = (PFN_vk##entrypoint)vkGetInstanceProcAddr(inst, "vk" #entrypoint); \
-          assert(vk##entrypoint && "entry point was not found.");                             \
-        }
-//--------------------------------------------------------------------------------------------
-
 //----------------------------------------CDebugReport----------------------------------------
 
 void CDebugReport::Init(VkInstance inst){
     assert(!!inst);
-    GET_INSTANCE_PROC_ADDR(inst, CreateDebugReportCallbackEXT);
-    GET_INSTANCE_PROC_ADDR(inst,DestroyDebugReportCallbackEXT);
-  //GET_INSTANCE_PROC_ADDR(inst,       DebugReportMessageEXT );
+    vkCreateDebugReportCallbackEXT  = (PFN_vkCreateDebugReportCallbackEXT)  vkGetInstanceProcAddr(inst, "vkCreateDebugReportCallbackEXT" );
+    vkDestroyDebugReportCallbackEXT = (PFN_vkDestroyDebugReportCallbackEXT) vkGetInstanceProcAddr(inst, "vkDestroyDebugReportCallbackEXT");
+  //vkDebugReportMessageEXT         = (PFN_vkDebugReportMessageEXT)         vkGetInstanceProcAddr(inst, "vkDebugReportMessageEXT"        );
 
     instance = inst;
     func     = DebugReportFn; //Use default debug-report function.

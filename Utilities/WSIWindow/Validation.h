@@ -44,6 +44,12 @@
   //#define NDEBUG               //cuts 4kb off apk size
 #endif
 //------------------------------------------
+//--------------fix VS2013------------------
+#if _MSC_VER == 1800
+  #define snprintf _snprintf
+#endif
+//------------------------------------------
+
 //===========================================Check VkResult=============================================
 // Macro to check VkResult for errors(negative) or warnings(positive), and print as a string.
 #ifdef NDEBUG                           //In release builds, don't print VkResult strings.

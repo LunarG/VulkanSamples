@@ -15,23 +15,22 @@ if(ANDROID)
 endif()
 #-------------------------------------------------------------------------------------------------
 #------------------------------------------GLSL to SPIRV------------------------------------------
-find_package(PythonInterp 3 REQUIRED)
-macro(glsl_to_spirv src)
-    add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/generated/${src}.h
-        COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/glsl-to-spirv ${CMAKE_CURRENT_SOURCE_DIR}/${src} ${CMAKE_CURRENT_SOURCE_DIR}/generated/${src}.h ${GLSLANG_VALIDATOR}
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/glsl-to-spirv ${CMAKE_CURRENT_SOURCE_DIR}/${src} ${GLSLANG_VALIDATOR}
-        )
-endmacro()
-
 if(NOT EXISTS {GLSLANG_VALIDATOR})
-    message("WARNING : GLSLANG_VALIDATOR not found. Shaders will not be built.")
+    message("WARNING : GLSLANG_VALIDATOR not found. Shaders will not be rebuilt.")
+else()
+    find_package(PythonInterp 3 REQUIRED)
+    macro(glsl_to_spirv src)
+        add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/generated/${src}.h
+            COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/glsl-to-spirv ${CMAKE_CURRENT_SOURCE_DIR}/${src} ${CMAKE_CURRENT_SOURCE_DIR}/generated/${src}.h ${GLSLANG_VALIDATOR}
+            DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/glsl-to-spirv ${CMAKE_CURRENT_SOURCE_DIR}/${src} ${GLSLANG_VALIDATOR}
+            )
+    endmacro()
+    glsl_to_spirv(Hologram.frag)
+    glsl_to_spirv(Hologram.vert)
+    glsl_to_spirv(Hologram.push_constant.vert)
 endif()
-
-glsl_to_spirv(Hologram.frag)
-glsl_to_spirv(Hologram.vert)
-glsl_to_spirv(Hologram.push_constant.vert)
-
 #-------------------------------------------------------------------------------------------------
+
 include_directories("./generated")
 
 set(sources
