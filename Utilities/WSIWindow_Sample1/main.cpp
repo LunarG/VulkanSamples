@@ -29,7 +29,7 @@
 
 //-- EVENT HANDLERS --
 class MyWindow : public WSIWindow{
-    using WSIWindow::WSIWindow;     //Inherit base constructor
+    //using WSIWindow::WSIWindow;     //Inherit base constructor (Requires C++11)
 
     //--Mouse event handler--
     void OnMouseEvent(eAction action, int16_t x, int16_t y, uint8_t btn){
@@ -81,8 +81,15 @@ int main(int argc, char *argv[]){
     CInstance inst(true);                                     // Create a Vulkan Instance
     inst.DebugReport.SetFlags(31);                            // Select message types
 
-    MyWindow Window(inst, "WSI-Window Sample1", 640, 480);    // Create a Vulkan window
-    Window.ShowKeyboard(true);                                // Show soft-keyboard on Android
+    //MyWindow Window(inst, "WSI-Window Sample1", 640, 480);    // Create a Vulkan window
+    //MyWindow Window("WSI-Window Sample1", 640, 480);    // Create a Vulkan window
+
+    MyWindow Window;                                          // Create a Vulkan window
+    Window.SetTitle("WSI-Window Sample1");                    // Set the window title
+    Window.SetWinSize(640, 480);                              // Set the window size (Desktop)
+    VkSurfaceKHR surface = Window.GetSurface(inst);           // Create the Vulkan surface
+
+    Window.ShowKeyboard(true);                                // Show soft-keyboard (Android)
     LOGW("Test Warnings\n");
     Window.SetWinPos(0,0);
 

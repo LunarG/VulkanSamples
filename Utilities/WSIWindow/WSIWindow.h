@@ -46,6 +46,7 @@
 // Keyboard: Clipboard and IME
 // Android: window resize events (WIP)
 // Android: IsKeyboardVisible() function?
+// Android: OnAppPauseEvent / OnAppResumeEvent / OnMemoryWarningEvent ?
 // Android: Option to set render buffer size, smaller than window size. (ANativeWindow_SetBufferGeometry) (Dustin)
 // Android: Rotate screen according to width/height aspect ratio, for portrait / landscape modes. (Dustin)
 // Desktop: Pick render device with flag: DONT_CARE / PERFORMANCE / INTEGRATED  (Mark Young)
@@ -66,9 +67,12 @@
 class WSIWindow{
     WindowImpl* pimpl;
 public:
-    WSIWindow(VkInstance inst, const char* title, const uint width, const uint height);
+    //WSIWindow(VkInstance inst, const char* title, const uint width, const uint height);
+    WSIWindow(const char* title="WSIWindow", const uint width=640, const uint height=480);
     virtual ~WSIWindow();
     CSurface& Surface(){return *pimpl;}                // Vulkan Surface, with CanPresent() function
+
+    CSurface& GetSurface(VkInstance instance);         // Returns Vulkan Surface, with CanPresent() function
 
     //--State query functions--
     void GetWinPos  (int16_t& x, int16_t& y);          // Get the window's x,y position, relative to top-left

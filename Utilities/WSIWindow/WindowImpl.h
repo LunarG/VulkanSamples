@@ -82,7 +82,11 @@ public:
 //==============================================================
 //===========================CSurface===========================
 class CSurface{                                                                // Vulkan Surface
+    //CSurface(CSurface const &) = delete;                                       // disable copy-constructor
+    //void operator=(CSurface const &x) = delete;                                // disable copy-assignment
+
 protected:
+    VkInstance  instance=0;
     VkSurfaceKHR surface=0;
 public:
     operator VkSurfaceKHR () const {return surface;}                           // Use this class as a VkSurfaceKHR
@@ -95,7 +99,6 @@ class WindowImpl :public CSurface {
     bool btnstate[5]   = {};                                                   // mouse btn state
     bool keystate[256] = {};                                                   // keyboard state
 protected:
-    VkInstance instance;
     FIFO<EventType,4> eventFIFO;                        //Event message queue buffer (max 4 items)
 
     EventType MouseEvent (eAction action, int16_t x, int16_t y, uint8_t btn);  // Mouse event
@@ -111,9 +114,11 @@ public:
     bool has_focus;                                                            // true if window has focus
     struct shape_t { int16_t x; int16_t y; uint16_t width; uint16_t height; }shape = {};  // window shape
 
-    WindowImpl() : instance(0), running(false), textinput(false), has_focus(false){}
+    WindowImpl() : running(false), textinput(false), has_focus(false){}
     virtual ~WindowImpl() { if(surface) vkDestroySurfaceKHR(instance,surface,NULL); }
     virtual void Close() { eventFIFO.push(CloseEvent()); }
+    virtual void CreateSurface(VkInstance instance) = 0;
+
 
     bool KeyState(eKeycode key){ return keystate[key]; }                   // returns true if key is pressed
     bool BtnState(uint8_t  btn){ return (btn<3)  ? btnstate[btn]:0; }      // returns true if mouse btn is pressed

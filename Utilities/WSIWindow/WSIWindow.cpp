@@ -24,7 +24,7 @@
 #include "window_win32.h"
 #include "window_android.h"
 //==============================================================
-
+/*
 WSIWindow::WSIWindow(VkInstance inst,const char* title,const uint width,const uint height){
 #ifdef VK_USE_PLATFORM_XCB_KHR
     LOGI("PLATFORM: XCB\n");
@@ -41,8 +41,35 @@ WSIWindow::WSIWindow(VkInstance inst,const char* title,const uint width,const ui
 //    #ifdef VK_USE_PLATFORM_MIR_KHR
 //    #ifdef VK_USE_PLATFORM_WAYLAND_KHR
 }
+*/
+
+WSIWindow::WSIWindow(const char* title,const uint width,const uint height){
+//    Create(title, width, height);
+//}
+
+//WSIWindow::Create(const char* title,const uint width,const uint height){
+#ifdef VK_USE_PLATFORM_XCB_KHR
+    LOGI("PLATFORM: XCB\n");
+    pimpl=new Window_xcb(title, width, height);
+#elif VK_USE_PLATFORM_WIN32_KHR
+    LOGI("PLATFORM: WIN32\n");
+    pimpl = new Window_win32(title, width, height);
+#elif VK_USE_PLATFORM_ANDROID_KHR
+    LOGI("PLATFORM: ANDROID\n");
+    pimpl = new Window_android(title, width, height);
+#endif
+// TODO:
+//    #ifdef VK_USE_PLATFORM_XLIB_KHR
+//    #ifdef VK_USE_PLATFORM_MIR_KHR
+//    #ifdef VK_USE_PLATFORM_WAYLAND_KHR
+}
 
 WSIWindow::~WSIWindow(){ delete(pimpl); }
+
+CSurface&  WSIWindow::GetSurface(VkInstance instance){
+    pimpl->CreateSurface(instance);
+    return *pimpl;
+}
 
 void WSIWindow::GetWinPos  (int16_t& x, int16_t& y){x=pimpl->shape.x; y=pimpl->shape.y;}
 void WSIWindow::GetWinSize (int16_t& width, int16_t& height){width=pimpl->shape.width; height=pimpl->shape.height;}

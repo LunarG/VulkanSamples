@@ -44,7 +44,7 @@ Game* create_game(int argc, char **argv){
 
 //----------------------SWIWindow event handlers----------------------
 class MyWindow : public WSIWindow{
-    using WSIWindow::WSIWindow;     //Inherit base constructor
+    //using WSIWindow::WSIWindow;     //Inherit base constructor (Requires C++11)
 
     //--Keyboard event handler--
     void OnKeyEvent(eAction action,eKeycode keycode){
@@ -98,7 +98,13 @@ int main(int argc, char *argv[]){
 
     //--Create Instance and Window--
     CInstance inst(settings.validate);              // Create a Vulkan Instance
-    MyWindow Window(inst,title,width,height);       // Create a Vulkan window
+  //MyWindow Window(inst,title,width,height);       // Create a Vulkan window
+    //MyWindow Window(title,width,height);            // Create a window
+
+    MyWindow Window;                                // Create a window
+    Window.SetTitle(title);
+    Window.SetWinSize(width, height);
+    CSurface& Surface=Window.GetSurface(inst);      // Create the Vulkan Surface
 
     //--Set Debug report flags--
     if(settings.validate_verbose) inst.DebugReport.SetFlags(31); // -vv Full Validation
@@ -106,7 +112,7 @@ int main(int argc, char *argv[]){
       else                        inst.DebugReport.SetFlags( 0); //     No Validation
 
     //--Create shell object--
-    ShellWSI shell(*game, inst, &Window.Surface());
+    ShellWSI shell(*game, inst, &Surface);
 
     Window.shell=&shell;
     Window.game =game;
