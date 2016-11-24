@@ -19,6 +19,7 @@
  * Author: Tony Barbour <tony@LunarG.com>
  * Author: Mark Lobodzinski <mark@LunarG.com>
  * Author: Dustin Graves <dustin@lunarg.com>
+ * Author: Chris Forbes <chrisforbes@google.com>
  */
 
 #define NOMINMAX
@@ -71,9 +72,6 @@ struct instance_layer_data {
 };
 
 struct layer_data {
-    instance_layer_data *instance_data = nullptr;
-
-    // Device Data
     debug_report_data *report_data = nullptr;
     // Map for queue family index to queue count
     std::unordered_map<uint32_t, uint32_t> queueFamilyIndexMap;
