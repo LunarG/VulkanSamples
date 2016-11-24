@@ -29,8 +29,6 @@
 
 //-- EVENT HANDLERS --
 class MyWindow : public WSIWindow{
-    //using WSIWindow::WSIWindow;     //Inherit base constructor (Requires C++11)
-
     //--Mouse event handler--
     void OnMouseEvent(eAction action, int16_t x, int16_t y, uint8_t btn){
         const char* type[]={"up  ","down","move"};
@@ -80,9 +78,6 @@ int main(int argc, char *argv[]){
 
     CInstance inst(true);                                     // Create a Vulkan Instance
     inst.DebugReport.SetFlags(31);                            // Select message types
-
-    //MyWindow Window(inst, "WSI-Window Sample1", 640, 480);    // Create a Vulkan window
-    //MyWindow Window("WSI-Window Sample1", 640, 480);    // Create a Vulkan window
 
     MyWindow Window;                                          // Create a Vulkan window
     Window.SetTitle("WSI-Window Sample1");                    // Set the window title

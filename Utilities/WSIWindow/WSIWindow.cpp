@@ -24,30 +24,8 @@
 #include "window_win32.h"
 #include "window_android.h"
 //==============================================================
-/*
-WSIWindow::WSIWindow(VkInstance inst,const char* title,const uint width,const uint height){
-#ifdef VK_USE_PLATFORM_XCB_KHR
-    LOGI("PLATFORM: XCB\n");
-    pimpl=new Window_xcb(inst, title, width, height);
-#elif VK_USE_PLATFORM_WIN32_KHR
-    LOGI("PLATFORM: WIN32\n");
-    pimpl = new Window_win32(inst, title, width, height);
-#elif VK_USE_PLATFORM_ANDROID_KHR
-    LOGI("PLATFORM: ANDROID\n");
-    pimpl = new Window_android(inst, title, width, height);
-#endif
-// TODO:
-//    #ifdef VK_USE_PLATFORM_XLIB_KHR
-//    #ifdef VK_USE_PLATFORM_MIR_KHR
-//    #ifdef VK_USE_PLATFORM_WAYLAND_KHR
-}
-*/
 
 WSIWindow::WSIWindow(const char* title,const uint width,const uint height){
-//    Create(title, width, height);
-//}
-
-//WSIWindow::Create(const char* title,const uint width,const uint height){
 #ifdef VK_USE_PLATFORM_XCB_KHR
     LOGI("PLATFORM: XCB\n");
     pimpl=new Window_xcb(title, width, height);

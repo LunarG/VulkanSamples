@@ -115,7 +115,7 @@ public:
     struct shape_t { int16_t x; int16_t y; uint16_t width; uint16_t height; }shape = {};  // window shape
 
     WindowImpl() : running(false), textinput(false), has_focus(false){}
-    virtual ~WindowImpl() { if(surface) vkDestroySurfaceKHR(instance,surface,NULL); }
+    virtual ~WindowImpl() { if(surface) vkDestroySurfaceKHR(instance,surface,NULL); surface=0; }
     virtual void Close() { eventFIFO.push(CloseEvent()); }
     virtual void CreateSurface(VkInstance instance) = 0;
 

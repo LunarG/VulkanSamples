@@ -66,7 +66,7 @@ class Window_win32 : public WindowImpl{
     void SetWinPos(uint x, uint y, uint w, uint h);
     void CreateSurface(VkInstance instance);
 public:
-    Window_win32(VkInstance inst, const char* title, uint width, uint height);
+    Window_win32(const char* title, uint width, uint height);
     virtual ~Window_win32();
     EventType GetEvent(bool wait_for_event=false);
     bool CanPresent(VkPhysicalDevice phy, uint32_t queue_family);  //check if this window can present this queue type
@@ -77,8 +77,7 @@ public:
 //=====================Win32 IMPLEMENTATION=====================
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
-Window_win32::Window_win32(VkInstance inst, const char* title, uint width, uint height){
-    instance=inst;
+Window_win32::Window_win32(const char* title, uint width, uint height){
     shape.width=width;
     shape.height=height;
     running=true;
@@ -122,7 +121,6 @@ Window_win32::Window_win32(VkInstance inst, const char* title, uint width, uint 
         NULL);                // no extra parameters
     assert(hWnd && "Failed to create a window.");
 
-    CreateSurface(inst);
     eventFIFO.push(ResizeEvent(width, height));
 }
 
@@ -139,14 +137,15 @@ void Window_win32::SetWinPos(uint x, uint y, uint w, uint h){
 }
 
 void Window_win32::CreateSurface(VkInstance instance){
+    if(surface) return;
+    this->instance=instance;
     VkWin32SurfaceCreateInfoKHR win32_createInfo;
     win32_createInfo.sType      = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
     win32_createInfo.pNext      = NULL;
     win32_createInfo.flags      = 0;
     win32_createInfo.hinstance  = hInstance;
     win32_createInfo.hwnd       = hWnd;
-    VkResult err = vkCreateWin32SurfaceKHR(instance, &win32_createInfo, NULL, &surface);
-    VKERRCHECK(err);
+    VKERRCHECK(vkCreateWin32SurfaceKHR(instance, &win32_createInfo, NULL, &surface));
     LOGI("Vulkan Surface created\n");
 }
 

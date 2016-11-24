@@ -111,7 +111,6 @@ class Window_xcb : public WindowImpl{
     void CreateSurface(VkInstance instance);
     bool InitTouch();                // Returns false if no touch-device was found.
 public:
-    //Window_xcb(VkInstance inst, const char* title, uint width, uint height);
     Window_xcb(const char* title, uint width, uint height);
     virtual ~Window_xcb();
     EventType GetEvent(bool wait_for_event=false);
@@ -121,7 +120,6 @@ public:
 #endif
 
 //=======================XCB IMPLEMENTATION=====================
-//Window_xcb::Window_xcb(VkInstance inst, const char* title, uint width, uint height){
 Window_xcb::Window_xcb(const char* title, uint width, uint height){
     //instance=inst;
     shape.width=width;
@@ -195,7 +193,6 @@ Window_xcb::Window_xcb(const char* title, uint width, uint height){
     InitTouch();
     //--------------------
     SetTitle(title);
-    //CreateSurface(instance);
     eventFIFO.push(ResizeEvent(width,height));       //ResizeEvent BEFORE focus, for consistency with win32 and android
 }
 
@@ -226,6 +223,7 @@ void Window_xcb::SetWinPos(uint x,uint y,uint w,uint h){
 
 void Window_xcb::CreateSurface(VkInstance instance){
     if(surface) return;
+    this->instance=instance;
     VkXcbSurfaceCreateInfoKHR xcb_createInfo;
     xcb_createInfo.sType      = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
     xcb_createInfo.pNext      = NULL;

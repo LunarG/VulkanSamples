@@ -67,11 +67,8 @@
 class WSIWindow{
     WindowImpl* pimpl;
 public:
-    //WSIWindow(VkInstance inst, const char* title, const uint width, const uint height);
     WSIWindow(const char* title="WSIWindow", const uint width=640, const uint height=480);
     virtual ~WSIWindow();
-    CSurface& Surface(){return *pimpl;}                // Vulkan Surface, with CanPresent() function
-
     CSurface& GetSurface(VkInstance instance);         // Returns Vulkan Surface, with CanPresent() function
 
     //--State query functions--

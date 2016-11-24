@@ -65,19 +65,19 @@ class Window_android : public WindowImpl{
     bool CanPresent(VkPhysicalDevice gpu, uint32_t queue_family){return true;}
 
     void CreateSurface(VkInstance instance){
+        if(surface) return;
+        this->instance=instance;
         VkAndroidSurfaceCreateInfoKHR android_createInfo;
         android_createInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
         android_createInfo.pNext = NULL;
         android_createInfo.flags = 0;
         android_createInfo.window = app->window;
-        VkResult err=vkCreateAndroidSurfaceKHR(instance, &android_createInfo, NULL, &surface);
-        VKERRCHECK(err);
+        VKERRCHECK(vkCreateAndroidSurfaceKHR(instance, &android_createInfo, NULL, &surface));
         LOGI("Vulkan Surface created\n");
     }
 
 public:
-    Window_android(VkInstance inst, const char* title, uint width, uint height) {
-        instance = inst;
+    Window_android(const char* title, uint width, uint height) {
         shape.width  = 0;//width;
         shape.height = 0;//height;
         running = true;
@@ -104,8 +104,6 @@ public:
         }
         ALooper_pollAll(10, NULL, NULL, NULL);  //for keyboard
         //--------------------------------------------------
-
-        CreateSurface(inst);
     };
 
     virtual ~Window_android(){};
