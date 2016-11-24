@@ -204,6 +204,32 @@ typedef struct {
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 #endif
 
+#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
+static void handle_ping(void *data, wl_shell_surface *shell_surface,
+                        uint32_t serial) {
+    wl_shell_surface_pong(shell_surface, serial);
+}
+
+static void handle_configure(void *data, wl_shell_surface *shell_surface,
+                             uint32_t edges, int32_t width, int32_t height) {}
+
+static void handle_popup_done(void *data, wl_shell_surface *shell_surface) {}
+
+static const wl_shell_surface_listener shell_surface_listener = {
+    handle_ping, handle_configure, handle_popup_done};
+
+static void handle_announce_global_object(void *data,
+                                          struct wl_registry *wl_registry,
+                                          uint32_t name, const char *interface,
+                                          uint32_t version) {}
+
+static void handle_announce_global_object_remove(
+    void *data, struct wl_registry *wl_registry, uint32_t name) {}
+
+static const wl_registry_listener registry_listener = {
+    handle_announce_global_object, handle_announce_global_object_remove};
+#endif
+
 struct Demo {
     Demo()
         :
@@ -213,6 +239,7 @@ struct Demo {
           minsize(POINT{
               0, 0}), // Use explicit construction to avoid MSVC error C2797.
 #endif
+#if defined(VK_USE_PLATFORM_XLIB_KHR) || defined(VK_USE_PLATFORM_XCB_KHR)
 #if defined(VK_USE_PLATFORM_XLIB_KHR)
           xlib_window{0},
           xlib_wm_delete_window{0}, display{nullptr},
@@ -220,9 +247,10 @@ struct Demo {
 #if defined(VK_USE_PLATFORM_XCB_KHR)
           xcb_window{0}, screen{nullptr}, connection{nullptr},
 #endif
-#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
-          display{nullptr}, registry{nullptr}, compositor{nullptr},
-          window{nullptr}, shell{nullptr}, shell_surface{nullptr},
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+          display{nullptr},
+          registry{nullptr}, compositor{nullptr}, window{nullptr},
+          shell{nullptr}, shell_surface{nullptr},
 #endif
           prepared{false}, use_staging_buffer{false}, use_xlib{false},
           graphics_queue_family_index{0}, present_queue_family_index{0},
@@ -2583,6 +2611,7 @@ struct Demo {
     POINT minsize;               // minimum window size
     char name[APP_NAME_STR_LEN]; // Name to put on the window/icon
 #endif
+#if defined(VK_USE_PLATFORM_XLIB_KHR) || defined(VK_USE_PLATFORM_XCB_KHR)
 #if defined(VK_USE_PLATFORM_XLIB_KHR)
     Window xlib_window;
     Atom xlib_wm_delete_window;
@@ -2594,7 +2623,7 @@ struct Demo {
     xcb_connection_t *connection;
     xcb_intern_atom_reply_t *atom_wm_delete_window;
 #endif
-#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
     wl_display *display;
     wl_registry *registry;
     wl_compositor *compositor;
@@ -2811,24 +2840,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 }
 
 #elif __linux__
-
-#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
-static void handle_ping(void *data, wl_shell_surface *shell_surface,
-                        uint32_t serial) {
-    wl_shell_surface_pong(shell_surface, serial);
-}
-
-static void handle_configure(void *data,
-                             wl_shell_surface *shell_surface,
-                             uint32_t edges, int32_t width,
-                             int32_t height) {}
-
-static void handle_popup_done(void *data,
-                              wl_shell_surface *shell_surface) {}
-
-static const wl_shell_surface_listener shell_surface_listener = {
-    handle_ping, handle_configure, handle_popup_done};
-#endif
 
 int main(int argc, char **argv) {
     Demo demo;
