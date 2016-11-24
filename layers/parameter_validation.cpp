@@ -84,11 +84,12 @@ struct layer_data {
     bool swapchain_enabled = false;
     bool display_swapchain_enabled = false;
     bool amd_negative_viewport_height_enabled = false;
+
+    VkLayerDispatchTable dispatch_table = {};
 };
 
 static std::unordered_map<void *, layer_data *> layer_data_map;
 static std::unordered_map<void *, instance_layer_data *> instance_layer_data_map;
-static device_table_map pc_device_table_map;
 
 static void init_parameter_validation(instance_layer_data *my_data, const VkAllocationCallbacks *pAllocator) {
 
@@ -1682,7 +1683,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physicalDevice, con
             assert(my_device_data != nullptr);
 
             my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
-            initDeviceTable(*pDevice, fpGetDeviceProcAddr, pc_device_table_map);
+            layer_init_device_dispatch_table(*pDevice, &my_device_data->dispatch_table, fpGetDeviceProcAddr);
 
             CheckDeviceRegisterExtensions(pCreateInfo, *pDevice);
 
@@ -1727,8 +1728,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
         fprintf(stderr, "Device:  0x%p, key:  0x%p\n", device, key);
 #endif
 
-        get_dispatch_table(pc_device_table_map, device)->DestroyDevice(device, pAllocator);
-        pc_device_table_map.erase(key);
+        my_data->dispatch_table.DestroyDevice(device, pAllocator);
         layer_data_map.erase(key);
     }
 }
@@ -1761,7 +1761,7 @@ VKAPI_ATTR void VKAPI_CALL GetDeviceQueue(VkDevice device, uint32_t queueFamilyI
     if (!skip) {
         PreGetDeviceQueue(device, queueFamilyIndex, queueIndex);
 
-        get_dispatch_table(pc_device_table_map, device)->GetDeviceQueue(device, queueFamilyIndex, queueIndex, pQueue);
+        my_data->dispatch_table.GetDeviceQueue(device, queueFamilyIndex, queueIndex, pQueue);
     }
 }
 
@@ -1774,7 +1774,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueueSubmit(VkQueue queue, uint32_t submitCount, 
     skip |= parameter_validation_vkQueueSubmit(my_data->report_data, submitCount, pSubmits, fence);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, queue)->QueueSubmit(queue, submitCount, pSubmits, fence);
+        result = my_data->dispatch_table.QueueSubmit(queue, submitCount, pSubmits, fence);
 
         validate_result(my_data->report_data, "vkQueueSubmit", result);
     }
@@ -1786,7 +1786,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueueWaitIdle(VkQueue queue) {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
     assert(my_data != NULL);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, queue)->QueueWaitIdle(queue);
+    VkResult result = my_data->dispatch_table.QueueWaitIdle(queue);
 
     validate_result(my_data->report_data, "vkQueueWaitIdle", result);
 
@@ -1797,7 +1797,7 @@ VKAPI_ATTR VkResult VKAPI_CALL DeviceWaitIdle(VkDevice device) {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->DeviceWaitIdle(device);
+    VkResult result = my_data->dispatch_table.DeviceWaitIdle(device);
 
     validate_result(my_data->report_data, "vkDeviceWaitIdle", result);
 
@@ -1814,7 +1814,7 @@ VKAPI_ATTR VkResult VKAPI_CALL AllocateMemory(VkDevice device, const VkMemoryAll
     skip |= parameter_validation_vkAllocateMemory(my_data->report_data, pAllocateInfo, pAllocator, pMemory);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)->AllocateMemory(device, pAllocateInfo, pAllocator, pMemory);
+        result = my_data->dispatch_table.AllocateMemory(device, pAllocateInfo, pAllocator, pMemory);
 
         validate_result(my_data->report_data, "vkAllocateMemory", result);
     }
@@ -1830,7 +1830,7 @@ VKAPI_ATTR void VKAPI_CALL FreeMemory(VkDevice device, VkDeviceMemory memory, co
     skip |= parameter_validation_vkFreeMemory(my_data->report_data, memory, pAllocator);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, device)->FreeMemory(device, memory, pAllocator);
+        my_data->dispatch_table.FreeMemory(device, memory, pAllocator);
     }
 }
 
@@ -1844,7 +1844,7 @@ VKAPI_ATTR VkResult VKAPI_CALL MapMemory(VkDevice device, VkDeviceMemory memory,
     skip |= parameter_validation_vkMapMemory(my_data->report_data, memory, offset, size, flags, ppData);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)->MapMemory(device, memory, offset, size, flags, ppData);
+        result = my_data->dispatch_table.MapMemory(device, memory, offset, size, flags, ppData);
 
         validate_result(my_data->report_data, "vkMapMemory", result);
     }
@@ -1860,7 +1860,7 @@ VKAPI_ATTR void VKAPI_CALL UnmapMemory(VkDevice device, VkDeviceMemory memory) {
     skip |= parameter_validation_vkUnmapMemory(my_data->report_data, memory);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, device)->UnmapMemory(device, memory);
+        my_data->dispatch_table.UnmapMemory(device, memory);
     }
 }
 
@@ -1874,7 +1874,7 @@ VKAPI_ATTR VkResult VKAPI_CALL FlushMappedMemoryRanges(VkDevice device, uint32_t
     skip |= parameter_validation_vkFlushMappedMemoryRanges(my_data->report_data, memoryRangeCount, pMemoryRanges);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)->FlushMappedMemoryRanges(device, memoryRangeCount, pMemoryRanges);
+        result = my_data->dispatch_table.FlushMappedMemoryRanges(device, memoryRangeCount, pMemoryRanges);
 
         validate_result(my_data->report_data, "vkFlushMappedMemoryRanges", result);
     }
@@ -1893,7 +1893,7 @@ VKAPI_ATTR VkResult VKAPI_CALL InvalidateMappedMemoryRanges(VkDevice device, uin
 
     if (!skip) {
         result =
-            get_dispatch_table(pc_device_table_map, device)->InvalidateMappedMemoryRanges(device, memoryRangeCount, pMemoryRanges);
+            my_data->dispatch_table.InvalidateMappedMemoryRanges(device, memoryRangeCount, pMemoryRanges);
 
         validate_result(my_data->report_data, "vkInvalidateMappedMemoryRanges", result);
     }
@@ -1910,7 +1910,7 @@ VKAPI_ATTR void VKAPI_CALL GetDeviceMemoryCommitment(VkDevice device, VkDeviceMe
     skip |= parameter_validation_vkGetDeviceMemoryCommitment(my_data->report_data, memory, pCommittedMemoryInBytes);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, device)->GetDeviceMemoryCommitment(device, memory, pCommittedMemoryInBytes);
+        my_data->dispatch_table.GetDeviceMemoryCommitment(device, memory, pCommittedMemoryInBytes);
     }
 }
 
@@ -1924,7 +1924,7 @@ VKAPI_ATTR VkResult VKAPI_CALL BindBufferMemory(VkDevice device, VkBuffer buffer
     skip |= parameter_validation_vkBindBufferMemory(my_data->report_data, buffer, memory, memoryOffset);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)->BindBufferMemory(device, buffer, memory, memoryOffset);
+        result = my_data->dispatch_table.BindBufferMemory(device, buffer, memory, memoryOffset);
 
         validate_result(my_data->report_data, "vkBindBufferMemory", result);
     }
@@ -1941,7 +1941,7 @@ VKAPI_ATTR VkResult VKAPI_CALL BindImageMemory(VkDevice device, VkImage image, V
     skip |= parameter_validation_vkBindImageMemory(my_data->report_data, image, memory, memoryOffset);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)->BindImageMemory(device, image, memory, memoryOffset);
+        result = my_data->dispatch_table.BindImageMemory(device, image, memory, memoryOffset);
 
         validate_result(my_data->report_data, "vkBindImageMemory", result);
     }
@@ -1958,7 +1958,7 @@ VKAPI_ATTR void VKAPI_CALL GetBufferMemoryRequirements(VkDevice device, VkBuffer
     skip |= parameter_validation_vkGetBufferMemoryRequirements(my_data->report_data, buffer, pMemoryRequirements);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, device)->GetBufferMemoryRequirements(device, buffer, pMemoryRequirements);
+        my_data->dispatch_table.GetBufferMemoryRequirements(device, buffer, pMemoryRequirements);
     }
 }
 
@@ -1970,7 +1970,7 @@ VKAPI_ATTR void VKAPI_CALL GetImageMemoryRequirements(VkDevice device, VkImage i
     skip |= parameter_validation_vkGetImageMemoryRequirements(my_data->report_data, image, pMemoryRequirements);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, device)->GetImageMemoryRequirements(device, image, pMemoryRequirements);
+        my_data->dispatch_table.GetImageMemoryRequirements(device, image, pMemoryRequirements);
     }
 }
 
@@ -2002,8 +2002,7 @@ VKAPI_ATTR void VKAPI_CALL GetImageSparseMemoryRequirements(VkDevice device, VkI
                                                                          pSparseMemoryRequirements);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, device)
-            ->GetImageSparseMemoryRequirements(device, image, pSparseMemoryRequirementCount, pSparseMemoryRequirements);
+        my_data->dispatch_table.GetImageSparseMemoryRequirements(device, image, pSparseMemoryRequirementCount, pSparseMemoryRequirements);
 
         PostGetImageSparseMemoryRequirements(device, image, pSparseMemoryRequirementCount, pSparseMemoryRequirements);
     }
@@ -2058,7 +2057,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueueBindSparse(VkQueue queue, uint32_t bindInfoC
     skip |= parameter_validation_vkQueueBindSparse(my_data->report_data, bindInfoCount, pBindInfo, fence);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, queue)->QueueBindSparse(queue, bindInfoCount, pBindInfo, fence);
+        result = my_data->dispatch_table.QueueBindSparse(queue, bindInfoCount, pBindInfo, fence);
 
         validate_result(my_data->report_data, "vkQueueBindSparse", result);
     }
@@ -2076,7 +2075,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateFence(VkDevice device, const VkFenceCreateI
     skip |= parameter_validation_vkCreateFence(my_data->report_data, pCreateInfo, pAllocator, pFence);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)->CreateFence(device, pCreateInfo, pAllocator, pFence);
+        result = my_data->dispatch_table.CreateFence(device, pCreateInfo, pAllocator, pFence);
 
         validate_result(my_data->report_data, "vkCreateFence", result);
     }
@@ -2092,7 +2091,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyFence(VkDevice device, VkFence fence, const Vk
     skip |= parameter_validation_vkDestroyFence(my_data->report_data, fence, pAllocator);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, device)->DestroyFence(device, fence, pAllocator);
+        my_data->dispatch_table.DestroyFence(device, fence, pAllocator);
     }
 }
 
@@ -2105,7 +2104,7 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetFences(VkDevice device, uint32_t fenceCount,
     skip |= parameter_validation_vkResetFences(my_data->report_data, fenceCount, pFences);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)->ResetFences(device, fenceCount, pFences);
+        result = my_data->dispatch_table.ResetFences(device, fenceCount, pFences);
 
         validate_result(my_data->report_data, "vkResetFences", result);
     }
@@ -2122,7 +2121,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetFenceStatus(VkDevice device, VkFence fence) {
     skip |= parameter_validation_vkGetFenceStatus(my_data->report_data, fence);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)->GetFenceStatus(device, fence);
+        result = my_data->dispatch_table.GetFenceStatus(device, fence);
 
         validate_result(my_data->report_data, "vkGetFenceStatus", result);
     }
@@ -2140,7 +2139,7 @@ VKAPI_ATTR VkResult VKAPI_CALL WaitForFences(VkDevice device, uint32_t fenceCoun
     skip |= parameter_validation_vkWaitForFences(my_data->report_data, fenceCount, pFences, waitAll, timeout);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)->WaitForFences(device, fenceCount, pFences, waitAll, timeout);
+        result = my_data->dispatch_table.WaitForFences(device, fenceCount, pFences, waitAll, timeout);
 
         validate_result(my_data->report_data, "vkWaitForFences", result);
     }
@@ -2158,7 +2157,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSemaphore(VkDevice device, const VkSemaphor
     skip |= parameter_validation_vkCreateSemaphore(my_data->report_data, pCreateInfo, pAllocator, pSemaphore);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)->CreateSemaphore(device, pCreateInfo, pAllocator, pSemaphore);
+        result = my_data->dispatch_table.CreateSemaphore(device, pCreateInfo, pAllocator, pSemaphore);
 
         validate_result(my_data->report_data, "vkCreateSemaphore", result);
     }
@@ -2174,7 +2173,7 @@ VKAPI_ATTR void VKAPI_CALL DestroySemaphore(VkDevice device, VkSemaphore semapho
     skip |= parameter_validation_vkDestroySemaphore(my_data->report_data, semaphore, pAllocator);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, device)->DestroySemaphore(device, semaphore, pAllocator);
+        my_data->dispatch_table.DestroySemaphore(device, semaphore, pAllocator);
     }
 }
 
@@ -2188,7 +2187,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateEvent(VkDevice device, const VkEventCreateI
     skip |= parameter_validation_vkCreateEvent(my_data->report_data, pCreateInfo, pAllocator, pEvent);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)->CreateEvent(device, pCreateInfo, pAllocator, pEvent);
+        result = my_data->dispatch_table.CreateEvent(device, pCreateInfo, pAllocator, pEvent);
 
         validate_result(my_data->report_data, "vkCreateEvent", result);
     }
@@ -2204,7 +2203,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyEvent(VkDevice device, VkEvent event, const Vk
     skip |= parameter_validation_vkDestroyEvent(my_data->report_data, event, pAllocator);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, device)->DestroyEvent(device, event, pAllocator);
+        my_data->dispatch_table.DestroyEvent(device, event, pAllocator);
     }
 }
 
@@ -2217,7 +2216,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetEventStatus(VkDevice device, VkEvent event) {
     skip |= parameter_validation_vkGetEventStatus(my_data->report_data, event);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)->GetEventStatus(device, event);
+        result = my_data->dispatch_table.GetEventStatus(device, event);
 
         validate_result(my_data->report_data, "vkGetEventStatus", result);
     }
@@ -2234,7 +2233,7 @@ VKAPI_ATTR VkResult VKAPI_CALL SetEvent(VkDevice device, VkEvent event) {
     skip |= parameter_validation_vkSetEvent(my_data->report_data, event);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)->SetEvent(device, event);
+        result = my_data->dispatch_table.SetEvent(device, event);
 
         validate_result(my_data->report_data, "vkSetEvent", result);
     }
@@ -2251,7 +2250,7 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetEvent(VkDevice device, VkEvent event) {
     skip |= parameter_validation_vkResetEvent(my_data->report_data, event);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)->ResetEvent(device, event);
+        result = my_data->dispatch_table.ResetEvent(device, event);
 
         validate_result(my_data->report_data, "vkResetEvent", result);
     }
@@ -2284,7 +2283,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateQueryPool(VkDevice device, const VkQueryPoo
     }
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)->CreateQueryPool(device, pCreateInfo, pAllocator, pQueryPool);
+        result = device_data->dispatch_table.CreateQueryPool(device, pCreateInfo, pAllocator, pQueryPool);
 
         validate_result(report_data, "vkCreateQueryPool", result);
     }
@@ -2300,7 +2299,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyQueryPool(VkDevice device, VkQueryPool queryPo
     skip |= parameter_validation_vkDestroyQueryPool(my_data->report_data, queryPool, pAllocator);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, device)->DestroyQueryPool(device, queryPool, pAllocator);
+        my_data->dispatch_table.DestroyQueryPool(device, queryPool, pAllocator);
     }
 }
 
@@ -2315,8 +2314,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetQueryPoolResults(VkDevice device, VkQueryPool 
                                                             pData, stride, flags);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)
-                     ->GetQueryPoolResults(device, queryPool, firstQuery, queryCount, dataSize, pData, stride, flags);
+        result = my_data->dispatch_table.GetQueryPoolResults(device, queryPool, firstQuery, queryCount, dataSize, pData, stride, flags);
 
         validate_result(my_data->report_data, "vkGetQueryPoolResults", result);
     }
@@ -2375,7 +2373,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateBuffer(VkDevice device, const VkBufferCreat
     }
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)->CreateBuffer(device, pCreateInfo, pAllocator, pBuffer);
+        result = device_data->dispatch_table.CreateBuffer(device, pCreateInfo, pAllocator, pBuffer);
 
         validate_result(report_data, "vkCreateBuffer", result);
     }
@@ -2391,7 +2389,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyBuffer(VkDevice device, VkBuffer buffer, const
     skip |= parameter_validation_vkDestroyBuffer(my_data->report_data, buffer, pAllocator);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, device)->DestroyBuffer(device, buffer, pAllocator);
+        my_data->dispatch_table.DestroyBuffer(device, buffer, pAllocator);
     }
 }
 
@@ -2405,7 +2403,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateBufferView(VkDevice device, const VkBufferV
     skip |= parameter_validation_vkCreateBufferView(my_data->report_data, pCreateInfo, pAllocator, pView);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)->CreateBufferView(device, pCreateInfo, pAllocator, pView);
+        result = my_data->dispatch_table.CreateBufferView(device, pCreateInfo, pAllocator, pView);
 
         validate_result(my_data->report_data, "vkCreateBufferView", result);
     }
@@ -2421,7 +2419,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyBufferView(VkDevice device, VkBufferView buffe
     skip |= parameter_validation_vkDestroyBufferView(my_data->report_data, bufferView, pAllocator);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, device)->DestroyBufferView(device, bufferView, pAllocator);
+        my_data->dispatch_table.DestroyBufferView(device, bufferView, pAllocator);
     }
 }
 
@@ -2518,7 +2516,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateI
     }
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)->CreateImage(device, pCreateInfo, pAllocator, pImage);
+        result = device_data->dispatch_table.CreateImage(device, pCreateInfo, pAllocator, pImage);
 
         validate_result(report_data, "vkCreateImage", result);
     }
@@ -2534,7 +2532,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyImage(VkDevice device, VkImage image, const Vk
     skip |= parameter_validation_vkDestroyImage(my_data->report_data, image, pAllocator);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, device)->DestroyImage(device, image, pAllocator);
+        my_data->dispatch_table.DestroyImage(device, image, pAllocator);
     }
 }
 
@@ -2564,7 +2562,7 @@ VKAPI_ATTR void VKAPI_CALL GetImageSubresourceLayout(VkDevice device, VkImage im
     if (!skip) {
         PreGetImageSubresourceLayout(device, pSubresource);
 
-        get_dispatch_table(pc_device_table_map, device)->GetImageSubresourceLayout(device, image, pSubresource, pLayout);
+        my_data->dispatch_table.GetImageSubresourceLayout(device, image, pSubresource, pLayout);
     }
 }
 
@@ -2627,7 +2625,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImageView(VkDevice device, const VkImageVie
     }
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)->CreateImageView(device, pCreateInfo, pAllocator, pView);
+        result = my_data->dispatch_table.CreateImageView(device, pCreateInfo, pAllocator, pView);
 
         validate_result(my_data->report_data, "vkCreateImageView", result);
     }
@@ -2643,7 +2641,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyImageView(VkDevice device, VkImageView imageVi
     skip |= parameter_validation_vkDestroyImageView(my_data->report_data, imageView, pAllocator);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, device)->DestroyImageView(device, imageView, pAllocator);
+        my_data->dispatch_table.DestroyImageView(device, imageView, pAllocator);
     }
 }
 
@@ -2658,7 +2656,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateShaderModule(VkDevice device, const VkShade
 
     if (!skip) {
         result =
-            get_dispatch_table(pc_device_table_map, device)->CreateShaderModule(device, pCreateInfo, pAllocator, pShaderModule);
+            my_data->dispatch_table.CreateShaderModule(device, pCreateInfo, pAllocator, pShaderModule);
 
         validate_result(my_data->report_data, "vkCreateShaderModule", result);
     }
@@ -2675,7 +2673,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyShaderModule(VkDevice device, VkShaderModule s
     skip |= parameter_validation_vkDestroyShaderModule(my_data->report_data, shaderModule, pAllocator);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, device)->DestroyShaderModule(device, shaderModule, pAllocator);
+        my_data->dispatch_table.DestroyShaderModule(device, shaderModule, pAllocator);
     }
 }
 
@@ -2690,7 +2688,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreatePipelineCache(VkDevice device, const VkPipe
 
     if (!skip) {
         result =
-            get_dispatch_table(pc_device_table_map, device)->CreatePipelineCache(device, pCreateInfo, pAllocator, pPipelineCache);
+            my_data->dispatch_table.CreatePipelineCache(device, pCreateInfo, pAllocator, pPipelineCache);
 
         validate_result(my_data->report_data, "vkCreatePipelineCache", result);
     }
@@ -2707,7 +2705,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyPipelineCache(VkDevice device, VkPipelineCache
     skip |= parameter_validation_vkDestroyPipelineCache(my_data->report_data, pipelineCache, pAllocator);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, device)->DestroyPipelineCache(device, pipelineCache, pAllocator);
+        my_data->dispatch_table.DestroyPipelineCache(device, pipelineCache, pAllocator);
     }
 }
 
@@ -2721,7 +2719,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPipelineCacheData(VkDevice device, VkPipelineC
     skip |= parameter_validation_vkGetPipelineCacheData(my_data->report_data, pipelineCache, pDataSize, pData);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)->GetPipelineCacheData(device, pipelineCache, pDataSize, pData);
+        result = my_data->dispatch_table.GetPipelineCacheData(device, pipelineCache, pDataSize, pData);
 
         validate_result(my_data->report_data, "vkGetPipelineCacheData", result);
     }
@@ -2739,7 +2737,7 @@ VKAPI_ATTR VkResult VKAPI_CALL MergePipelineCaches(VkDevice device, VkPipelineCa
     skip |= parameter_validation_vkMergePipelineCaches(my_data->report_data, dstCache, srcCacheCount, pSrcCaches);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)->MergePipelineCaches(device, dstCache, srcCacheCount, pSrcCaches);
+        result = my_data->dispatch_table.MergePipelineCaches(device, dstCache, srcCacheCount, pSrcCaches);
 
         validate_result(my_data->report_data, "vkMergePipelineCaches", result);
     }
@@ -3211,8 +3209,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
     if (!skip) {
         PreCreateGraphicsPipelines(device, pCreateInfos);
 
-        result = get_dispatch_table(pc_device_table_map, device)
-                     ->CreateGraphicsPipelines(device, pipelineCache, createInfoCount, pCreateInfos, pAllocator, pPipelines);
+        result = device_data->dispatch_table.CreateGraphicsPipelines(device, pipelineCache, createInfoCount, pCreateInfos, pAllocator, pPipelines);
 
         validate_result(report_data, "vkCreateGraphicsPipelines", result);
     }
@@ -3247,8 +3244,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateComputePipelines(VkDevice device, VkPipelin
     if (!skip) {
         PreCreateComputePipelines(device, pCreateInfos);
 
-        result = get_dispatch_table(pc_device_table_map, device)
-                     ->CreateComputePipelines(device, pipelineCache, createInfoCount, pCreateInfos, pAllocator, pPipelines);
+        result = my_data->dispatch_table.CreateComputePipelines(device, pipelineCache, createInfoCount, pCreateInfos, pAllocator, pPipelines);
 
         validate_result(my_data->report_data, "vkCreateComputePipelines", result);
     }
@@ -3264,7 +3260,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyPipeline(VkDevice device, VkPipeline pipeline,
     skip |= parameter_validation_vkDestroyPipeline(my_data->report_data, pipeline, pAllocator);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, device)->DestroyPipeline(device, pipeline, pAllocator);
+        my_data->dispatch_table.DestroyPipeline(device, pipeline, pAllocator);
     }
 }
 
@@ -3279,7 +3275,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreatePipelineLayout(VkDevice device, const VkPip
 
     if (!skip) {
         result =
-            get_dispatch_table(pc_device_table_map, device)->CreatePipelineLayout(device, pCreateInfo, pAllocator, pPipelineLayout);
+            my_data->dispatch_table.CreatePipelineLayout(device, pCreateInfo, pAllocator, pPipelineLayout);
 
         validate_result(my_data->report_data, "vkCreatePipelineLayout", result);
     }
@@ -3296,7 +3292,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyPipelineLayout(VkDevice device, VkPipelineLayo
     skip |= parameter_validation_vkDestroyPipelineLayout(my_data->report_data, pipelineLayout, pAllocator);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, device)->DestroyPipelineLayout(device, pipelineLayout, pAllocator);
+        my_data->dispatch_table.DestroyPipelineLayout(device, pipelineLayout, pAllocator);
     }
 }
 
@@ -3329,7 +3325,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSampler(VkDevice device, const VkSamplerCre
     }
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)->CreateSampler(device, pCreateInfo, pAllocator, pSampler);
+        result = device_data->dispatch_table.CreateSampler(device, pCreateInfo, pAllocator, pSampler);
 
         validate_result(report_data, "vkCreateSampler", result);
     }
@@ -3345,7 +3341,7 @@ VKAPI_ATTR void VKAPI_CALL DestroySampler(VkDevice device, VkSampler sampler, co
     skip |= parameter_validation_vkDestroySampler(my_data->report_data, sampler, pAllocator);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, device)->DestroySampler(device, sampler, pAllocator);
+        my_data->dispatch_table.DestroySampler(device, sampler, pAllocator);
     }
 }
 
@@ -3398,8 +3394,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorSetLayout(VkDevice device, const 
     }
 
     if (!skip) {
-        result =
-            get_dispatch_table(pc_device_table_map, device)->CreateDescriptorSetLayout(device, pCreateInfo, pAllocator, pSetLayout);
+        result = device_data->dispatch_table.CreateDescriptorSetLayout(device, pCreateInfo, pAllocator, pSetLayout);
 
         validate_result(report_data, "vkCreateDescriptorSetLayout", result);
     }
@@ -3416,7 +3411,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyDescriptorSetLayout(VkDevice device, VkDescrip
     skip |= parameter_validation_vkDestroyDescriptorSetLayout(my_data->report_data, descriptorSetLayout, pAllocator);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, device)->DestroyDescriptorSetLayout(device, descriptorSetLayout, pAllocator);
+        my_data->dispatch_table.DestroyDescriptorSetLayout(device, descriptorSetLayout, pAllocator);
     }
 }
 
@@ -3433,7 +3428,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorPool(VkDevice device, const VkDes
 
     if (!skip) {
         result =
-            get_dispatch_table(pc_device_table_map, device)->CreateDescriptorPool(device, pCreateInfo, pAllocator, pDescriptorPool);
+            my_data->dispatch_table.CreateDescriptorPool(device, pCreateInfo, pAllocator, pDescriptorPool);
 
         validate_result(my_data->report_data, "vkCreateDescriptorPool", result);
     }
@@ -3450,7 +3445,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyDescriptorPool(VkDevice device, VkDescriptorPo
     skip |= parameter_validation_vkDestroyDescriptorPool(my_data->report_data, descriptorPool, pAllocator);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, device)->DestroyDescriptorPool(device, descriptorPool, pAllocator);
+        my_data->dispatch_table.DestroyDescriptorPool(device, descriptorPool, pAllocator);
     }
 }
 
@@ -3464,7 +3459,7 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetDescriptorPool(VkDevice device, VkDescriptor
     skip |= parameter_validation_vkResetDescriptorPool(my_data->report_data, descriptorPool, flags);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)->ResetDescriptorPool(device, descriptorPool, flags);
+        result = my_data->dispatch_table.ResetDescriptorPool(device, descriptorPool, flags);
 
         validate_result(my_data->report_data, "vkResetDescriptorPool", result);
     }
@@ -3482,7 +3477,7 @@ VKAPI_ATTR VkResult VKAPI_CALL AllocateDescriptorSets(VkDevice device, const VkD
     skip |= parameter_validation_vkAllocateDescriptorSets(my_data->report_data, pAllocateInfo, pDescriptorSets);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)->AllocateDescriptorSets(device, pAllocateInfo, pDescriptorSets);
+        result = my_data->dispatch_table.AllocateDescriptorSets(device, pAllocateInfo, pDescriptorSets);
 
         validate_result(my_data->report_data, "vkAllocateDescriptorSets", result);
     }
@@ -3507,8 +3502,7 @@ VKAPI_ATTR VkResult VKAPI_CALL FreeDescriptorSets(VkDevice device, VkDescriptorP
                                 pDescriptorSets, true, true);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)
-                     ->FreeDescriptorSets(device, descriptorPool, descriptorSetCount, pDescriptorSets);
+        result = device_data->dispatch_table.FreeDescriptorSets(device, descriptorPool, descriptorSetCount, pDescriptorSets);
 
         validate_result(report_data, "vkFreeDescriptorSets", result);
     }
@@ -3651,8 +3645,7 @@ VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSets(VkDevice device, uint32_t descri
     }
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, device)
-            ->UpdateDescriptorSets(device, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount, pDescriptorCopies);
+        device_data->dispatch_table.UpdateDescriptorSets(device, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount, pDescriptorCopies);
     }
 }
 
@@ -3666,7 +3659,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateFramebuffer(VkDevice device, const VkFrameb
     skip |= parameter_validation_vkCreateFramebuffer(my_data->report_data, pCreateInfo, pAllocator, pFramebuffer);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)->CreateFramebuffer(device, pCreateInfo, pAllocator, pFramebuffer);
+        result = my_data->dispatch_table.CreateFramebuffer(device, pCreateInfo, pAllocator, pFramebuffer);
 
         validate_result(my_data->report_data, "vkCreateFramebuffer", result);
     }
@@ -3682,7 +3675,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyFramebuffer(VkDevice device, VkFramebuffer fra
     skip |= parameter_validation_vkDestroyFramebuffer(my_data->report_data, framebuffer, pAllocator);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, device)->DestroyFramebuffer(device, framebuffer, pAllocator);
+        my_data->dispatch_table.DestroyFramebuffer(device, framebuffer, pAllocator);
     }
 }
 
@@ -3711,7 +3704,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
     skip |= PreCreateRenderPass(my_data, pCreateInfo);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)->CreateRenderPass(device, pCreateInfo, pAllocator, pRenderPass);
+        result = my_data->dispatch_table.CreateRenderPass(device, pCreateInfo, pAllocator, pRenderPass);
 
         validate_result(my_data->report_data, "vkCreateRenderPass", result);
     }
@@ -3727,7 +3720,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyRenderPass(VkDevice device, VkRenderPass rende
     skip |= parameter_validation_vkDestroyRenderPass(my_data->report_data, renderPass, pAllocator);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, device)->DestroyRenderPass(device, renderPass, pAllocator);
+        my_data->dispatch_table.DestroyRenderPass(device, renderPass, pAllocator);
     }
 }
 
@@ -3739,7 +3732,7 @@ VKAPI_ATTR void VKAPI_CALL GetRenderAreaGranularity(VkDevice device, VkRenderPas
     skip |= parameter_validation_vkGetRenderAreaGranularity(my_data->report_data, renderPass, pGranularity);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, device)->GetRenderAreaGranularity(device, renderPass, pGranularity);
+        my_data->dispatch_table.GetRenderAreaGranularity(device, renderPass, pGranularity);
     }
 }
 
@@ -3756,7 +3749,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateCommandPool(VkDevice device, const VkComman
     skip |= parameter_validation_vkCreateCommandPool(my_data->report_data, pCreateInfo, pAllocator, pCommandPool);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)->CreateCommandPool(device, pCreateInfo, pAllocator, pCommandPool);
+        result = my_data->dispatch_table.CreateCommandPool(device, pCreateInfo, pAllocator, pCommandPool);
 
         validate_result(my_data->report_data, "vkCreateCommandPool", result);
     }
@@ -3772,7 +3765,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyCommandPool(VkDevice device, VkCommandPool com
     skip |= parameter_validation_vkDestroyCommandPool(my_data->report_data, commandPool, pAllocator);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, device)->DestroyCommandPool(device, commandPool, pAllocator);
+        my_data->dispatch_table.DestroyCommandPool(device, commandPool, pAllocator);
     }
 }
 
@@ -3785,7 +3778,7 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetCommandPool(VkDevice device, VkCommandPool c
     skip |= parameter_validation_vkResetCommandPool(my_data->report_data, commandPool, flags);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)->ResetCommandPool(device, commandPool, flags);
+        result = my_data->dispatch_table.ResetCommandPool(device, commandPool, flags);
 
         validate_result(my_data->report_data, "vkResetCommandPool", result);
     }
@@ -3803,7 +3796,7 @@ VKAPI_ATTR VkResult VKAPI_CALL AllocateCommandBuffers(VkDevice device, const VkC
     skip |= parameter_validation_vkAllocateCommandBuffers(my_data->report_data, pAllocateInfo, pCommandBuffers);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)->AllocateCommandBuffers(device, pAllocateInfo, pCommandBuffers);
+        result = my_data->dispatch_table.AllocateCommandBuffers(device, pAllocateInfo, pCommandBuffers);
 
         validate_result(my_data->report_data, "vkAllocateCommandBuffers", result);
     }
@@ -3827,13 +3820,13 @@ VKAPI_ATTR void VKAPI_CALL FreeCommandBuffers(VkDevice device, VkCommandPool com
                                 pCommandBuffers, true, true);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, device)
-            ->FreeCommandBuffers(device, commandPool, commandBufferCount, pCommandBuffers);
+        device_data->dispatch_table.FreeCommandBuffers(device, commandPool, commandBufferCount, pCommandBuffers);
     }
 }
 
 bool PreBeginCommandBuffer(layer_data *dev_data, VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo *pBeginInfo) {
     bool skip = false;
+    // TODO: this makes no sense.
     layer_data *phy_dev_data = get_my_data_ptr(get_dispatch_key(dev_data->physical_device), layer_data_map);
     const VkCommandBufferInheritanceInfo *pInfo = pBeginInfo->pInheritanceInfo;
 
@@ -3894,7 +3887,7 @@ VKAPI_ATTR VkResult VKAPI_CALL BeginCommandBuffer(VkCommandBuffer commandBuffer,
     skip |= PreBeginCommandBuffer(device_data, commandBuffer, pBeginInfo);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, commandBuffer)->BeginCommandBuffer(commandBuffer, pBeginInfo);
+        result = device_data->dispatch_table.BeginCommandBuffer(commandBuffer, pBeginInfo);
 
         validate_result(report_data, "vkBeginCommandBuffer", result);
     }
@@ -3906,7 +3899,7 @@ VKAPI_ATTR VkResult VKAPI_CALL EndCommandBuffer(VkCommandBuffer commandBuffer) {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     assert(my_data != NULL);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, commandBuffer)->EndCommandBuffer(commandBuffer);
+    VkResult result = my_data->dispatch_table.EndCommandBuffer(commandBuffer);
 
     validate_result(my_data->report_data, "vkEndCommandBuffer", result);
 
@@ -3921,7 +3914,7 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetCommandBuffer(VkCommandBuffer commandBuffer,
     bool skip = parameter_validation_vkResetCommandBuffer(my_data->report_data, flags);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, commandBuffer)->ResetCommandBuffer(commandBuffer, flags);
+        result = my_data->dispatch_table.ResetCommandBuffer(commandBuffer, flags);
 
         validate_result(my_data->report_data, "vkResetCommandBuffer", result);
     }
@@ -3938,7 +3931,7 @@ VKAPI_ATTR void VKAPI_CALL CmdBindPipeline(VkCommandBuffer commandBuffer, VkPipe
     skip |= parameter_validation_vkCmdBindPipeline(my_data->report_data, pipelineBindPoint, pipeline);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, commandBuffer)->CmdBindPipeline(commandBuffer, pipelineBindPoint, pipeline);
+        my_data->dispatch_table.CmdBindPipeline(commandBuffer, pipelineBindPoint, pipeline);
     }
 }
 
@@ -4018,8 +4011,7 @@ VKAPI_ATTR void VKAPI_CALL CmdSetViewport(VkCommandBuffer commandBuffer, uint32_
     skip |= preCmdSetViewport(my_data, viewportCount, pViewports);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, commandBuffer)
-            ->CmdSetViewport(commandBuffer, firstViewport, viewportCount, pViewports);
+        my_data->dispatch_table.CmdSetViewport(commandBuffer, firstViewport, viewportCount, pViewports);
     }
 }
 
@@ -4059,18 +4051,19 @@ VKAPI_ATTR void VKAPI_CALL CmdSetScissor(VkCommandBuffer commandBuffer, uint32_t
     }
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetScissor(commandBuffer, firstScissor, scissorCount, pScissors);
+        my_data->dispatch_table.CmdSetScissor(commandBuffer, firstScissor, scissorCount, pScissors);
     }
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdSetLineWidth(VkCommandBuffer commandBuffer, float lineWidth) {
-    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetLineWidth(commandBuffer, lineWidth);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+    my_data->dispatch_table.CmdSetLineWidth(commandBuffer, lineWidth);
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdSetDepthBias(VkCommandBuffer commandBuffer, float depthBiasConstantFactor, float depthBiasClamp,
                                            float depthBiasSlopeFactor) {
-    get_dispatch_table(pc_device_table_map, commandBuffer)
-        ->CmdSetDepthBias(commandBuffer, depthBiasConstantFactor, depthBiasClamp, depthBiasSlopeFactor);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+    my_data->dispatch_table.CmdSetDepthBias(commandBuffer, depthBiasConstantFactor, depthBiasClamp, depthBiasSlopeFactor);
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdSetBlendConstants(VkCommandBuffer commandBuffer, const float blendConstants[4]) {
@@ -4081,12 +4074,13 @@ VKAPI_ATTR void VKAPI_CALL CmdSetBlendConstants(VkCommandBuffer commandBuffer, c
     skip |= parameter_validation_vkCmdSetBlendConstants(my_data->report_data, blendConstants);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetBlendConstants(commandBuffer, blendConstants);
+        my_data->dispatch_table.CmdSetBlendConstants(commandBuffer, blendConstants);
     }
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdSetDepthBounds(VkCommandBuffer commandBuffer, float minDepthBounds, float maxDepthBounds) {
-    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetDepthBounds(commandBuffer, minDepthBounds, maxDepthBounds);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+    my_data->dispatch_table.CmdSetDepthBounds(commandBuffer, minDepthBounds, maxDepthBounds);
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdSetStencilCompareMask(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask,
@@ -4098,7 +4092,7 @@ VKAPI_ATTR void VKAPI_CALL CmdSetStencilCompareMask(VkCommandBuffer commandBuffe
     skip |= parameter_validation_vkCmdSetStencilCompareMask(my_data->report_data, faceMask, compareMask);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetStencilCompareMask(commandBuffer, faceMask, compareMask);
+        my_data->dispatch_table.CmdSetStencilCompareMask(commandBuffer, faceMask, compareMask);
     }
 }
 
@@ -4110,7 +4104,7 @@ VKAPI_ATTR void VKAPI_CALL CmdSetStencilWriteMask(VkCommandBuffer commandBuffer,
     skip |= parameter_validation_vkCmdSetStencilWriteMask(my_data->report_data, faceMask, writeMask);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetStencilWriteMask(commandBuffer, faceMask, writeMask);
+        my_data->dispatch_table.CmdSetStencilWriteMask(commandBuffer, faceMask, writeMask);
     }
 }
 
@@ -4122,7 +4116,7 @@ VKAPI_ATTR void VKAPI_CALL CmdSetStencilReference(VkCommandBuffer commandBuffer,
     skip |= parameter_validation_vkCmdSetStencilReference(my_data->report_data, faceMask, reference);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetStencilReference(commandBuffer, faceMask, reference);
+        my_data->dispatch_table.CmdSetStencilReference(commandBuffer, faceMask, reference);
     }
 }
 
@@ -4139,8 +4133,7 @@ VKAPI_ATTR void VKAPI_CALL CmdBindDescriptorSets(VkCommandBuffer commandBuffer, 
                                                      pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, commandBuffer)
-            ->CmdBindDescriptorSets(commandBuffer, pipelineBindPoint, layout, firstSet, descriptorSetCount, pDescriptorSets,
+        my_data->dispatch_table.CmdBindDescriptorSets(commandBuffer, pipelineBindPoint, layout, firstSet, descriptorSetCount, pDescriptorSets,
                                     dynamicOffsetCount, pDynamicOffsets);
     }
 }
@@ -4154,7 +4147,7 @@ VKAPI_ATTR void VKAPI_CALL CmdBindIndexBuffer(VkCommandBuffer commandBuffer, VkB
     skip |= parameter_validation_vkCmdBindIndexBuffer(my_data->report_data, buffer, offset, indexType);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, commandBuffer)->CmdBindIndexBuffer(commandBuffer, buffer, offset, indexType);
+        my_data->dispatch_table.CmdBindIndexBuffer(commandBuffer, buffer, offset, indexType);
     }
 }
 
@@ -4167,8 +4160,7 @@ VKAPI_ATTR void VKAPI_CALL CmdBindVertexBuffers(VkCommandBuffer commandBuffer, u
     skip |= parameter_validation_vkCmdBindVertexBuffers(my_data->report_data, firstBinding, bindingCount, pBuffers, pOffsets);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, commandBuffer)
-            ->CmdBindVertexBuffers(commandBuffer, firstBinding, bindingCount, pBuffers, pOffsets);
+        my_data->dispatch_table.CmdBindVertexBuffers(commandBuffer, firstBinding, bindingCount, pBuffers, pOffsets);
     }
 }
 
@@ -4196,16 +4188,16 @@ bool PreCmdDraw(VkCommandBuffer commandBuffer, uint32_t vertexCount, uint32_t in
 
 VKAPI_ATTR void VKAPI_CALL CmdDraw(VkCommandBuffer commandBuffer, uint32_t vertexCount, uint32_t instanceCount,
                                    uint32_t firstVertex, uint32_t firstInstance) {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     PreCmdDraw(commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
 
-    get_dispatch_table(pc_device_table_map, commandBuffer)
-        ->CmdDraw(commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
+    my_data->dispatch_table.CmdDraw(commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdDrawIndexed(VkCommandBuffer commandBuffer, uint32_t indexCount, uint32_t instanceCount,
                                           uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance) {
-    get_dispatch_table(pc_device_table_map, commandBuffer)
-        ->CmdDrawIndexed(commandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+    my_data->dispatch_table.CmdDrawIndexed(commandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdDrawIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t count,
@@ -4217,7 +4209,7 @@ VKAPI_ATTR void VKAPI_CALL CmdDrawIndirect(VkCommandBuffer commandBuffer, VkBuff
     skip |= parameter_validation_vkCmdDrawIndirect(my_data->report_data, buffer, offset, count, stride);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, commandBuffer)->CmdDrawIndirect(commandBuffer, buffer, offset, count, stride);
+        my_data->dispatch_table.CmdDrawIndirect(commandBuffer, buffer, offset, count, stride);
     }
 }
 
@@ -4230,13 +4222,13 @@ VKAPI_ATTR void VKAPI_CALL CmdDrawIndexedIndirect(VkCommandBuffer commandBuffer,
     skip |= parameter_validation_vkCmdDrawIndexedIndirect(my_data->report_data, buffer, offset, count, stride);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, commandBuffer)
-            ->CmdDrawIndexedIndirect(commandBuffer, buffer, offset, count, stride);
+        my_data->dispatch_table.CmdDrawIndexedIndirect(commandBuffer, buffer, offset, count, stride);
     }
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdDispatch(VkCommandBuffer commandBuffer, uint32_t x, uint32_t y, uint32_t z) {
-    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdDispatch(commandBuffer, x, y, z);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+    my_data->dispatch_table.CmdDispatch(commandBuffer, x, y, z);
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdDispatchIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset) {
@@ -4247,7 +4239,7 @@ VKAPI_ATTR void VKAPI_CALL CmdDispatchIndirect(VkCommandBuffer commandBuffer, Vk
     skip |= parameter_validation_vkCmdDispatchIndirect(my_data->report_data, buffer, offset);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, commandBuffer)->CmdDispatchIndirect(commandBuffer, buffer, offset);
+        my_data->dispatch_table.CmdDispatchIndirect(commandBuffer, buffer, offset);
     }
 }
 
@@ -4260,8 +4252,7 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer
     skip |= parameter_validation_vkCmdCopyBuffer(my_data->report_data, srcBuffer, dstBuffer, regionCount, pRegions);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, commandBuffer)
-            ->CmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, regionCount, pRegions);
+        my_data->dispatch_table.CmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, regionCount, pRegions);
     }
 }
 
@@ -4300,8 +4291,7 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyImage(VkCommandBuffer commandBuffer, VkImage s
     if (!skip) {
         PreCmdCopyImage(commandBuffer, pRegions);
 
-        get_dispatch_table(pc_device_table_map, commandBuffer)
-            ->CmdCopyImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount, pRegions);
+        my_data->dispatch_table.CmdCopyImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount, pRegions);
     }
 }
 
@@ -4340,8 +4330,7 @@ VKAPI_ATTR void VKAPI_CALL CmdBlitImage(VkCommandBuffer commandBuffer, VkImage s
     if (!skip) {
         PreCmdBlitImage(commandBuffer, pRegions);
 
-        get_dispatch_table(pc_device_table_map, commandBuffer)
-            ->CmdBlitImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount, pRegions, filter);
+        my_data->dispatch_table.CmdBlitImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount, pRegions, filter);
     }
 }
 
@@ -4374,8 +4363,7 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBufferToImage(VkCommandBuffer commandBuffer, V
     if (!skip) {
         PreCmdCopyBufferToImage(commandBuffer, pRegions);
 
-        get_dispatch_table(pc_device_table_map, commandBuffer)
-            ->CmdCopyBufferToImage(commandBuffer, srcBuffer, dstImage, dstImageLayout, regionCount, pRegions);
+        my_data->dispatch_table.CmdCopyBufferToImage(commandBuffer, srcBuffer, dstImage, dstImageLayout, regionCount, pRegions);
     }
 }
 
@@ -4407,8 +4395,7 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyImageToBuffer(VkCommandBuffer commandBuffer, V
     if (!skip) {
         PreCmdCopyImageToBuffer(commandBuffer, pRegions);
 
-        get_dispatch_table(pc_device_table_map, commandBuffer)
-            ->CmdCopyImageToBuffer(commandBuffer, srcImage, srcImageLayout, dstBuffer, regionCount, pRegions);
+        my_data->dispatch_table.CmdCopyImageToBuffer(commandBuffer, srcImage, srcImageLayout, dstBuffer, regionCount, pRegions);
     }
 }
 
@@ -4438,8 +4425,7 @@ VKAPI_ATTR void VKAPI_CALL CmdUpdateBuffer(VkCommandBuffer commandBuffer, VkBuff
     }
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, commandBuffer)
-            ->CmdUpdateBuffer(commandBuffer, dstBuffer, dstOffset, dataSize, pData);
+        my_data->dispatch_table.CmdUpdateBuffer(commandBuffer, dstBuffer, dstOffset, dataSize, pData);
     }
 }
 
@@ -4470,7 +4456,7 @@ VKAPI_ATTR void VKAPI_CALL CmdFillBuffer(VkCommandBuffer commandBuffer, VkBuffer
     }
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, commandBuffer)->CmdFillBuffer(commandBuffer, dstBuffer, dstOffset, size, data);
+        my_data->dispatch_table.CmdFillBuffer(commandBuffer, dstBuffer, dstOffset, size, data);
     }
 }
 
@@ -4484,8 +4470,7 @@ VKAPI_ATTR void VKAPI_CALL CmdClearColorImage(VkCommandBuffer commandBuffer, VkI
     skip |= parameter_validation_vkCmdClearColorImage(my_data->report_data, image, imageLayout, pColor, rangeCount, pRanges);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, commandBuffer)
-            ->CmdClearColorImage(commandBuffer, image, imageLayout, pColor, rangeCount, pRanges);
+        my_data->dispatch_table.CmdClearColorImage(commandBuffer, image, imageLayout, pColor, rangeCount, pRanges);
     }
 }
 
@@ -4500,8 +4485,7 @@ VKAPI_ATTR void VKAPI_CALL CmdClearDepthStencilImage(VkCommandBuffer commandBuff
                                                                   rangeCount, pRanges);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, commandBuffer)
-            ->CmdClearDepthStencilImage(commandBuffer, image, imageLayout, pDepthStencil, rangeCount, pRanges);
+        my_data->dispatch_table.CmdClearDepthStencilImage(commandBuffer, image, imageLayout, pDepthStencil, rangeCount, pRanges);
     }
 }
 
@@ -4515,8 +4499,7 @@ VKAPI_ATTR void VKAPI_CALL CmdClearAttachments(VkCommandBuffer commandBuffer, ui
     skip |= parameter_validation_vkCmdClearAttachments(my_data->report_data, attachmentCount, pAttachments, rectCount, pRects);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, commandBuffer)
-            ->CmdClearAttachments(commandBuffer, attachmentCount, pAttachments, rectCount, pRects);
+        my_data->dispatch_table.CmdClearAttachments(commandBuffer, attachmentCount, pAttachments, rectCount, pRects);
     }
 }
 
@@ -4557,8 +4540,7 @@ VKAPI_ATTR void VKAPI_CALL CmdResolveImage(VkCommandBuffer commandBuffer, VkImag
     if (!skip) {
         PreCmdResolveImage(commandBuffer, pRegions);
 
-        get_dispatch_table(pc_device_table_map, commandBuffer)
-            ->CmdResolveImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount, pRegions);
+        my_data->dispatch_table.CmdResolveImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount, pRegions);
     }
 }
 
@@ -4570,7 +4552,7 @@ VKAPI_ATTR void VKAPI_CALL CmdSetEvent(VkCommandBuffer commandBuffer, VkEvent ev
     skip |= parameter_validation_vkCmdSetEvent(my_data->report_data, event, stageMask);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetEvent(commandBuffer, event, stageMask);
+        my_data->dispatch_table.CmdSetEvent(commandBuffer, event, stageMask);
     }
 }
 
@@ -4582,7 +4564,7 @@ VKAPI_ATTR void VKAPI_CALL CmdResetEvent(VkCommandBuffer commandBuffer, VkEvent 
     skip |= parameter_validation_vkCmdResetEvent(my_data->report_data, event, stageMask);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, commandBuffer)->CmdResetEvent(commandBuffer, event, stageMask);
+        my_data->dispatch_table.CmdResetEvent(commandBuffer, event, stageMask);
     }
 }
 
@@ -4600,8 +4582,7 @@ VKAPI_ATTR void VKAPI_CALL CmdWaitEvents(VkCommandBuffer commandBuffer, uint32_t
                                                       pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, commandBuffer)
-            ->CmdWaitEvents(commandBuffer, eventCount, pEvents, srcStageMask, dstStageMask, memoryBarrierCount, pMemoryBarriers,
+        my_data->dispatch_table.CmdWaitEvents(commandBuffer, eventCount, pEvents, srcStageMask, dstStageMask, memoryBarrierCount, pMemoryBarriers,
                             bufferMemoryBarrierCount, pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
     }
 }
@@ -4620,8 +4601,7 @@ VKAPI_ATTR void VKAPI_CALL CmdPipelineBarrier(VkCommandBuffer commandBuffer, VkP
                                                            pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, commandBuffer)
-            ->CmdPipelineBarrier(commandBuffer, srcStageMask, dstStageMask, dependencyFlags, memoryBarrierCount, pMemoryBarriers,
+        my_data->dispatch_table.CmdPipelineBarrier(commandBuffer, srcStageMask, dstStageMask, dependencyFlags, memoryBarrierCount, pMemoryBarriers,
                                  bufferMemoryBarrierCount, pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
     }
 }
@@ -4635,7 +4615,7 @@ VKAPI_ATTR void VKAPI_CALL CmdBeginQuery(VkCommandBuffer commandBuffer, VkQueryP
     skip |= parameter_validation_vkCmdBeginQuery(my_data->report_data, queryPool, slot, flags);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, commandBuffer)->CmdBeginQuery(commandBuffer, queryPool, slot, flags);
+        my_data->dispatch_table.CmdBeginQuery(commandBuffer, queryPool, slot, flags);
     }
 }
 
@@ -4647,7 +4627,7 @@ VKAPI_ATTR void VKAPI_CALL CmdEndQuery(VkCommandBuffer commandBuffer, VkQueryPoo
     skip |= parameter_validation_vkCmdEndQuery(my_data->report_data, queryPool, slot);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, commandBuffer)->CmdEndQuery(commandBuffer, queryPool, slot);
+        my_data->dispatch_table.CmdEndQuery(commandBuffer, queryPool, slot);
     }
 }
 
@@ -4660,7 +4640,7 @@ VKAPI_ATTR void VKAPI_CALL CmdResetQueryPool(VkCommandBuffer commandBuffer, VkQu
     skip |= parameter_validation_vkCmdResetQueryPool(my_data->report_data, queryPool, firstQuery, queryCount);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, commandBuffer)->CmdResetQueryPool(commandBuffer, queryPool, firstQuery, queryCount);
+        my_data->dispatch_table.CmdResetQueryPool(commandBuffer, queryPool, firstQuery, queryCount);
     }
 }
 
@@ -4681,7 +4661,7 @@ VKAPI_ATTR void VKAPI_CALL CmdWriteTimestamp(VkCommandBuffer commandBuffer, VkPi
     skip |= parameter_validation_vkCmdWriteTimestamp(my_data->report_data, pipelineStage, queryPool, query);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, commandBuffer)->CmdWriteTimestamp(commandBuffer, pipelineStage, queryPool, query);
+        my_data->dispatch_table.CmdWriteTimestamp(commandBuffer, pipelineStage, queryPool, query);
 
         PostCmdWriteTimestamp(commandBuffer, pipelineStage, queryPool, query);
     }
@@ -4698,8 +4678,7 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyQueryPoolResults(VkCommandBuffer commandBuffer
                                                                 dstOffset, stride, flags);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, commandBuffer)
-            ->CmdCopyQueryPoolResults(commandBuffer, queryPool, firstQuery, queryCount, dstBuffer, dstOffset, stride, flags);
+        my_data->dispatch_table.CmdCopyQueryPoolResults(commandBuffer, queryPool, firstQuery, queryCount, dstBuffer, dstOffset, stride, flags);
     }
 }
 
@@ -4712,8 +4691,7 @@ VKAPI_ATTR void VKAPI_CALL CmdPushConstants(VkCommandBuffer commandBuffer, VkPip
     skip |= parameter_validation_vkCmdPushConstants(my_data->report_data, layout, stageFlags, offset, size, pValues);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, commandBuffer)
-            ->CmdPushConstants(commandBuffer, layout, stageFlags, offset, size, pValues);
+        my_data->dispatch_table.CmdPushConstants(commandBuffer, layout, stageFlags, offset, size, pValues);
     }
 }
 
@@ -4726,7 +4704,7 @@ VKAPI_ATTR void VKAPI_CALL CmdBeginRenderPass(VkCommandBuffer commandBuffer, con
     skip |= parameter_validation_vkCmdBeginRenderPass(my_data->report_data, pRenderPassBegin, contents);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, commandBuffer)->CmdBeginRenderPass(commandBuffer, pRenderPassBegin, contents);
+        my_data->dispatch_table.CmdBeginRenderPass(commandBuffer, pRenderPassBegin, contents);
     }
 }
 
@@ -4738,12 +4716,13 @@ VKAPI_ATTR void VKAPI_CALL CmdNextSubpass(VkCommandBuffer commandBuffer, VkSubpa
     skip |= parameter_validation_vkCmdNextSubpass(my_data->report_data, contents);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, commandBuffer)->CmdNextSubpass(commandBuffer, contents);
+        my_data->dispatch_table.CmdNextSubpass(commandBuffer, contents);
     }
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdEndRenderPass(VkCommandBuffer commandBuffer) {
-    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdEndRenderPass(commandBuffer);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+    my_data->dispatch_table.CmdEndRenderPass(commandBuffer);
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdExecuteCommands(VkCommandBuffer commandBuffer, uint32_t commandBufferCount,
@@ -4755,8 +4734,7 @@ VKAPI_ATTR void VKAPI_CALL CmdExecuteCommands(VkCommandBuffer commandBuffer, uin
     skip |= parameter_validation_vkCmdExecuteCommands(my_data->report_data, commandBufferCount, pCommandBuffers);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, commandBuffer)
-            ->CmdExecuteCommands(commandBuffer, commandBufferCount, pCommandBuffers);
+        my_data->dispatch_table.CmdExecuteCommands(commandBuffer, commandBufferCount, pCommandBuffers);
     }
 }
 
@@ -4815,7 +4793,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device, const VkSwapc
     skip |= parameter_validation_vkCreateSwapchainKHR(my_data->report_data, pCreateInfo, pAllocator, pSwapchain);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)->CreateSwapchainKHR(device, pCreateInfo, pAllocator, pSwapchain);
+        result = my_data->dispatch_table.CreateSwapchainKHR(device, pCreateInfo, pAllocator, pSwapchain);
 
         validate_result(my_data->report_data, "vkCreateSwapchainKHR", result);
     }
@@ -4836,8 +4814,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchai
         parameter_validation_vkGetSwapchainImagesKHR(my_data->report_data, swapchain, pSwapchainImageCount, pSwapchainImages);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)
-                     ->GetSwapchainImagesKHR(device, swapchain, pSwapchainImageCount, pSwapchainImages);
+        result = my_data->dispatch_table.GetSwapchainImagesKHR(device, swapchain, pSwapchainImageCount, pSwapchainImages);
 
         validate_result(my_data->report_data, "vkGetSwapchainImagesKHR", result);
     }
@@ -4858,8 +4835,7 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
         parameter_validation_vkAcquireNextImageKHR(my_data->report_data, swapchain, timeout, semaphore, fence, pImageIndex);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)
-                     ->AcquireNextImageKHR(device, swapchain, timeout, semaphore, fence, pImageIndex);
+        result = my_data->dispatch_table.AcquireNextImageKHR(device, swapchain, timeout, semaphore, fence, pImageIndex);
 
         validate_result(my_data->report_data, "vkAcquireNextImageKHR", result);
     }
@@ -4878,7 +4854,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
     skip |= parameter_validation_vkQueuePresentKHR(my_data->report_data, pPresentInfo);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, queue)->QueuePresentKHR(queue, pPresentInfo);
+        result = my_data->dispatch_table.QueuePresentKHR(queue, pPresentInfo);
 
         validate_result(my_data->report_data, "vkQueuePresentKHR", result);
     }
@@ -4896,7 +4872,7 @@ VKAPI_ATTR void VKAPI_CALL DestroySwapchainKHR(VkDevice device, VkSwapchainKHR s
     /* No generated validation function for this call */
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, device)->DestroySwapchainKHR(device, swapchain, pAllocator);
+        my_data->dispatch_table.DestroySwapchainKHR(device, swapchain, pAllocator);
     }
 }
 
@@ -5283,8 +5259,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSharedSwapchainsKHR(VkDevice device, uint32
                                                                   pSwapchains);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)
-                     ->CreateSharedSwapchainsKHR(device, swapchainCount, pCreateInfos, pAllocator, pSwapchains);
+        result = my_data->dispatch_table.CreateSharedSwapchainsKHR(device, swapchainCount, pCreateInfos, pAllocator, pSwapchains);
 
         validate_result(my_data->report_data, "vkCreateSharedSwapchainsKHR", result);
     }
@@ -5450,7 +5425,7 @@ VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectTagEXT(VkDevice device, VkDeb
     skip |= parameter_validation_vkDebugMarkerSetObjectTagEXT(my_data->report_data, pTagInfo);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)->DebugMarkerSetObjectTagEXT(device, pTagInfo);
+        result = my_data->dispatch_table.DebugMarkerSetObjectTagEXT(device, pTagInfo);
 
         validate_result(my_data->report_data, "vkDebugMarkerSetObjectTagEXT", result);
     }
@@ -5467,7 +5442,7 @@ VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectNameEXT(VkDevice device, VkDe
     skip |= parameter_validation_vkDebugMarkerSetObjectNameEXT(my_data->report_data, pNameInfo);
 
     if (!skip) {
-        VkResult result = get_dispatch_table(pc_device_table_map, device)->DebugMarkerSetObjectNameEXT(device, pNameInfo);
+        VkResult result = my_data->dispatch_table.DebugMarkerSetObjectNameEXT(device, pNameInfo);
 
         validate_result(my_data->report_data, "vkDebugMarkerSetObjectNameEXT", result);
     }
@@ -5483,7 +5458,7 @@ VKAPI_ATTR void VKAPI_CALL CmdDebugMarkerBeginEXT(VkCommandBuffer commandBuffer,
     skip |= parameter_validation_vkCmdDebugMarkerBeginEXT(my_data->report_data, pMarkerInfo);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, commandBuffer)->CmdDebugMarkerBeginEXT(commandBuffer, pMarkerInfo);
+        my_data->dispatch_table.CmdDebugMarkerBeginEXT(commandBuffer, pMarkerInfo);
     }
 }
 
@@ -5495,7 +5470,7 @@ VKAPI_ATTR void VKAPI_CALL CmdDebugMarkerInsertEXT(VkCommandBuffer commandBuffer
     skip |= parameter_validation_vkCmdDebugMarkerInsertEXT(my_data->report_data, pMarkerInfo);
 
     if (!skip) {
-        get_dispatch_table(pc_device_table_map, commandBuffer)->CmdDebugMarkerInsertEXT(commandBuffer, pMarkerInfo);
+        my_data->dispatch_table.CmdDebugMarkerInsertEXT(commandBuffer, pMarkerInfo);
     }
 }
 
@@ -5536,7 +5511,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetMemoryWin32HandleNV(VkDevice device, VkDeviceM
     skip |= parameter_validation_vkGetMemoryWin32HandleNV(my_data->report_data, memory, handleType, pHandle);
 
     if (!skip) {
-        result = get_dispatch_table(pc_device_table_map, device)->GetMemoryWin32HandleNV(device, memory, handleType, pHandle);
+        result = my_data->dispatch_table.GetMemoryWin32HandleNV(device, memory, handleType, pHandle);
     }
 
     return result;
@@ -5570,9 +5545,9 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, cons
     if (proc)
         return proc;
 
-    if (get_dispatch_table(pc_device_table_map, device)->GetDeviceProcAddr == NULL)
-        return NULL;
-    return get_dispatch_table(pc_device_table_map, device)->GetDeviceProcAddr(device, funcName);
+    if (!data->dispatch_table.GetDeviceProcAddr)
+        return nullptr;
+    return data->dispatch_table.GetDeviceProcAddr(device, funcName);
 }
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance, const char *funcName) {
