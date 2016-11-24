@@ -3826,12 +3826,10 @@ VKAPI_ATTR void VKAPI_CALL FreeCommandBuffers(VkDevice device, VkCommandPool com
 
 bool PreBeginCommandBuffer(layer_data *dev_data, VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo *pBeginInfo) {
     bool skip = false;
-    // TODO: this makes no sense.
-    layer_data *phy_dev_data = get_my_data_ptr(get_dispatch_key(dev_data->physical_device), layer_data_map);
     const VkCommandBufferInheritanceInfo *pInfo = pBeginInfo->pInheritanceInfo;
 
     if (pInfo != NULL) {
-        if ((phy_dev_data->physical_device_features.inheritedQueries == VK_FALSE) && (pInfo->occlusionQueryEnable != VK_FALSE)) {
+        if ((dev_data->physical_device_features.inheritedQueries == VK_FALSE) && (pInfo->occlusionQueryEnable != VK_FALSE)) {
             skip |=
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                         reinterpret_cast<uint64_t>(commandBuffer), __LINE__, DEVICE_FEATURE, LayerName,
@@ -3839,7 +3837,7 @@ bool PreBeginCommandBuffer(layer_data *dev_data, VkCommandBuffer commandBuffer, 
                         "inheritedQueries.");
         }
 
-        if ((phy_dev_data->physical_device_features.inheritedQueries != VK_FALSE) && (pInfo->occlusionQueryEnable != VK_FALSE) &&
+        if ((dev_data->physical_device_features.inheritedQueries != VK_FALSE) && (pInfo->occlusionQueryEnable != VK_FALSE) &&
             (!validate_VkQueryControlFlagBits(VkQueryControlFlagBits(pInfo->queryFlags)))) {
             skip |=
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
