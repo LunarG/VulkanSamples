@@ -126,7 +126,7 @@ And you are done.
 
 <table border="1" width="100%">
     <tr>
-        <td align="center" width="33%">Previous: <a href="05-init_depth_buffer.html" title="Prev">Depth Buffer</a></td>
+        <td align="center" width="33%">Previous: <a href="06-init_depth_buffer.html" title="Prev">Depth Buffer</a></td>
         <td align="center" width="33%">Back to: <a href="index.html" title="Index">Index</a></td>
         <td align="center" width="33%">Next: <a href="08-init_pipeline_layout.html" title="Next">Pipeline Layouts</a></td>
     </tr>
