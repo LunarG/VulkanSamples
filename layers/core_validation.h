@@ -218,11 +218,13 @@ struct PHYSICAL_DEVICE_STATE {
     CALL_STATE vkGetPhysicalDeviceFeaturesState = UNCALLED;
     CALL_STATE vkGetPhysicalDeviceSurfaceCapabilitiesKHRState = UNCALLED;
     CALL_STATE vkGetPhysicalDeviceSurfacePresentModesKHRState = UNCALLED;
+    CALL_STATE vkGetPhysicalDeviceSurfaceFormatsKHRState = UNCALLED;
     VkPhysicalDeviceFeatures features = {};
     VkPhysicalDevice phys_device = VK_NULL_HANDLE;
     std::vector<VkQueueFamilyProperties> queue_family_properties;
     VkSurfaceCapabilitiesKHR surfaceCapabilities = {};
     std::vector<VkPresentModeKHR> present_modes;
+    std::vector<VkSurfaceFormatKHR> surface_formats;
 };
 
 struct GpuQueue {

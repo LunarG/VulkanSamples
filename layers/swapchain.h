@@ -146,12 +146,6 @@ struct SwpPhysicalDevice {
     // called for:
     unordered_map<VkSurfaceKHR, SwpSurface *> supportedSurfaces;
 
-    // TODO: Record/use this info per-surface, not per-device, once a
-    // non-dispatchable surface object is added to WSI:
-    // Count and VkSurfaceFormatKHR's returned by vkGetPhysicalDeviceSurfaceFormatsKHR():
-    uint32_t surfaceFormatCount;
-    VkSurfaceFormatKHR *pSurfaceFormats;
-
     // Count returned by vkGetPhysicalDeviceDisplayPlanePropertiesKHR():
     uint32_t displayPlanePropertyCount;
     bool gotDisplayPlanePropertyCount;

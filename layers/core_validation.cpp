@@ -11756,6 +11756,61 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, VkSwapchainC
     }
 
     // Validate pCreateInfo values with the results of
+    // vkGetPhysicalDeviceSurfaceFormatsKHR():
+    if (physical_device_state->vkGetPhysicalDeviceSurfaceFormatsKHRState != QUERY_DETAILS) {
+        if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                    reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_CREATE_BEFORE_QUERY, "DS",
+                    "vkCreateSwapchainKHR() called before calling vkGetPhysicalDeviceSurfaceFormatsKHR()."))
+            return true;
+    } else {
+        // Validate pCreateInfo->imageFormat against
+        // VkSurfaceFormatKHR::format:
+        bool foundFormat = false;
+        bool foundColorSpace = false;
+        bool foundMatch = false;
+        for (auto const &format : physical_device_state->surface_formats) {
+            if (pCreateInfo->imageFormat == format.format) {
+                // Validate pCreateInfo->imageColorSpace against
+                // VkSurfaceFormatKHR::colorSpace:
+                foundFormat = true;
+                if (pCreateInfo->imageColorSpace == format.colorSpace) {
+                    foundMatch = true;
+                    break;
+                }
+            } else {
+                if (pCreateInfo->imageColorSpace == format.colorSpace) {
+                    foundColorSpace = true;
+                }
+            }
+        }
+        if (!foundMatch) {
+            if (!foundFormat) {
+                if (!foundColorSpace) {
+                    if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_BAD_FORMAT, "DS",
+                                "vkCreateSwapchainKHR() called with neither a supported pCreateInfo->imageFormat "
+                                "(i.e. %d) nor a supported "
+                                "pCreateInfo->imageColorSpace (i.e. %d).",
+                                pCreateInfo->imageFormat, pCreateInfo->imageColorSpace))
+                        return true;
+                } else {
+                    if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_BAD_FORMAT, "DS",
+                                "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->imageFormat (i.e. %d)",
+                                pCreateInfo->imageFormat))
+                        return true;
+                }
+            } else if (!foundColorSpace) {
+                if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                            reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_BAD_FORMAT, "DS",
+                            "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->imageColorSpace (i.e. %d).",
+                            pCreateInfo->imageColorSpace))
+                    return true;
+            }
+        }
+    }
+
+    // Validate pCreateInfo values with the results of
     // vkGetPhysicalDeviceSurfacePresentModesKHR():
     if (physical_device_state->vkGetPhysicalDeviceSurfacePresentModesKHRState != QUERY_DETAILS) {
         /* FIFO is required to always be supported */
@@ -12385,12 +12440,74 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfacePresentModesKHR(VkPhysica
                 physical_device_state->present_modes[i] = pPresentModes[i];
             }
         }
-
-        }
     }
 
     return result;
 }
+
+
+VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
+                                                                  uint32_t *pSurfaceFormatCount,
+                                                                  VkSurfaceFormatKHR *pSurfaceFormats) {
+    bool skip_call = false;
+    auto instance_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
+    std::unique_lock<std::mutex> lock(global_lock);
+    auto physical_device_state = getPhysicalDeviceState(instance_data, physicalDevice);
+    auto & call_state = physical_device_state->vkGetPhysicalDeviceSurfaceFormatsKHRState;
+
+    if (pSurfaceFormats) {
+        auto prev_format_count = (uint32_t) physical_device_state->surface_formats.size();
+
+        switch (call_state) {
+        case UNCALLED:
+            // Since we haven't recorded a preliminary value of *pSurfaceFormatCount, that likely means that the application didn't
+            // previously call this function with a NULL value of pSurfaceFormats:
+            skip_call |= log_msg(
+                instance_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                reinterpret_cast<uint64_t>(physicalDevice), __LINE__, DEVLIMITS_MUST_QUERY_COUNT, "DL",
+                "vkGetPhysicalDeviceSurfaceFormatsKHR() called with non-NULL pSurfaceFormatCount; but no prior positive "
+                "value has been seen for pSurfaceFormats.");
+            break;
+        default:
+            if (prev_format_count != *pSurfaceFormatCount) {
+                skip_call |= log_msg(
+                        instance_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                        reinterpret_cast<uint64_t>(physicalDevice), __LINE__, DEVLIMITS_COUNT_MISMATCH, "DL",
+                        "vkGetPhysicalDeviceSurfaceFormatsKHR() called with non-NULL pSurfaceFormatCount, and with pSurfaceFormats set to "
+                        "a value (%u) that is greater than the value (%u) that was returned when pSurfaceFormatCount was NULL.",
+                        *pSurfaceFormatCount, prev_format_count);
+            }
+            break;
+        }
+    }
+    lock.unlock();
+
+    if (skip_call)
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+
+    // Call down the call chain:
+    auto result = instance_data->dispatch_table.GetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, pSurfaceFormatCount,
+                                                                                   pSurfaceFormats);
+
+    if (result == VK_SUCCESS || result == VK_INCOMPLETE) {
+
+        lock.lock();
+
+        if (*pSurfaceFormatCount) {
+            if (call_state < QUERY_COUNT) call_state = QUERY_COUNT;
+            if (*pSurfaceFormatCount > physical_device_state->surface_formats.size())
+                physical_device_state->surface_formats.resize(*pSurfaceFormatCount);
+        }
+        if (pSurfaceFormats) {
+            if (call_state < QUERY_DETAILS) call_state = QUERY_DETAILS;
+            for (uint32_t i = 0; i < *pSurfaceFormatCount; i++) {
+                physical_device_state->surface_formats[i] = pSurfaceFormats[i];
+            }
+        }
+    }
+    return result;
+}
+
 
 VKAPI_ATTR VkResult VKAPI_CALL
 CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
@@ -12738,6 +12855,8 @@ intercept_khr_surface_command(const char *name, VkInstance instance) {
         {"vkGetPhysicalDeviceSurfaceSupportKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceSupportKHR),
             &instance_layer_data::surfaceExtensionEnabled},
         {"vkGetPhysicalDeviceSurfacePresentModesKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfacePresentModesKHR),
+            &instance_layer_data::surfaceExtensionEnabled},
+        {"vkGetPhysicalDeviceSurfaceFormatsKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceFormatsKHR),
             &instance_layer_data::surfaceExtensionEnabled},
     };
 

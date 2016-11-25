@@ -191,7 +191,6 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
                             SWAPCHAIN_DEL_OBJECT_BEFORE_CHILDREN, swapchain_layer_name,
                             "VkDestroyInstance() called before all of its associated VkDevices were destroyed.");
                 }
-                free(pPhysicalDevice->pSurfaceFormats);
             }
 
             // Erase the SwpPhysicalDevice's from the my_data->physicalDeviceMap (which
@@ -852,8 +851,6 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumeratePhysicalDevices(VkInstance instance, uin
             my_data->physicalDeviceMap[pPhysicalDevices[i]].pInstance = pInstance;
             my_data->physicalDeviceMap[pPhysicalDevices[i]].pDevice = NULL;
             my_data->physicalDeviceMap[pPhysicalDevices[i]].gotQueueFamilyPropertyCount = false;
-            my_data->physicalDeviceMap[pPhysicalDevices[i]].surfaceFormatCount = 0;
-            my_data->physicalDeviceMap[pPhysicalDevices[i]].pSurfaceFormats = NULL;
             // Point to the associated SwpInstance:
             if (pInstance) {
                 pInstance->physicalDevices[pPhysicalDevices[i]] = &my_data->physicalDeviceMap[pPhysicalDevices[i]];
@@ -1003,80 +1000,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevi
     return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
-                                                                  uint32_t *pSurfaceFormatCount,
-                                                                  VkSurfaceFormatKHR *pSurfaceFormats) {
-    VkResult result = VK_SUCCESS;
-    bool skip_call = false;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
-    std::unique_lock<std::mutex> lock(global_lock);
-    SwpPhysicalDevice *pPhysicalDevice = NULL;
-    {
-        auto it = my_data->physicalDeviceMap.find(physicalDevice);
-        pPhysicalDevice = (it == my_data->physicalDeviceMap.end()) ? NULL : &it->second;
-    }
-
-    if (pPhysicalDevice && pSurfaceFormats) {
-        // Compare the preliminary value of *pSurfaceFormatCount with the value this time:
-        if (pPhysicalDevice->surfaceFormatCount == 0) {
-            // Since we haven't recorded a preliminary value of *pSurfaceFormatCount, that likely means that the application didn't
-            // previously call this function with a NULL value of pSurfaceFormats:
-            skip_call |= log_msg(
-                my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
-                reinterpret_cast<uint64_t>(pPhysicalDevice->physicalDevice), __LINE__, SWAPCHAIN_PRIOR_COUNT, swapchain_layer_name,
-                "vkGetPhysicalDeviceSurfaceFormatsKHR() called with non-NULL pSurfaceFormatCount; but no prior positive "
-                "value has been seen for pSurfaceFormats.");
-        } else if (*pSurfaceFormatCount > pPhysicalDevice->surfaceFormatCount) {
-            skip_call |= log_msg(
-                my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
-                reinterpret_cast<uint64_t>(pPhysicalDevice->physicalDevice), __LINE__, SWAPCHAIN_INVALID_COUNT,
-                swapchain_layer_name,
-                "vkGetPhysicalDeviceSurfaceFormatsKHR() called with non-NULL pSurfaceFormatCount, and with pSurfaceFormats set to "
-                "a value (%d) that is greater than the value (%d) that was returned when pSurfaceFormatCount was NULL.",
-                *pSurfaceFormatCount, pPhysicalDevice->surfaceFormatCount);
-        }
-    }
-    lock.unlock();
-
-    if (!skip_call) {
-        // Call down the call chain:
-        result = my_data->instance_dispatch_table->GetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, pSurfaceFormatCount,
-                                                                                      pSurfaceFormats);
-        lock.lock();
-
-        // Obtain this pointer again after locking:
-        {
-            auto it = my_data->physicalDeviceMap.find(physicalDevice);
-            pPhysicalDevice = (it == my_data->physicalDeviceMap.end()) ? NULL : &it->second;
-        }
-        if ((result == VK_SUCCESS) && pPhysicalDevice && !pSurfaceFormats && pSurfaceFormatCount) {
-            // Record the result of this preliminary query:
-            pPhysicalDevice->surfaceFormatCount = *pSurfaceFormatCount;
-        } else if (((result == VK_SUCCESS) || (result == VK_INCOMPLETE)) && pPhysicalDevice && pSurfaceFormats &&
-                   pSurfaceFormatCount && (*pSurfaceFormatCount > 0)) {
-            // Record the result of this query:
-
-            // Note: for poorly-written applications (e.g. that don't call this command
-            // twice, the first time with pSurfaceFormats set to NULL, and the second time
-            // with a non-NULL pSurfaceFormats and with the same count as returned the
-            // first time), record again the count when pSurfaceFormats is non-NULL:
-            pPhysicalDevice->surfaceFormatCount = *pSurfaceFormatCount;
-            pPhysicalDevice->pSurfaceFormats = (VkSurfaceFormatKHR *)malloc(*pSurfaceFormatCount * sizeof(VkSurfaceFormatKHR));
-            if (pPhysicalDevice->pSurfaceFormats) {
-                for (uint32_t i = 0; i < *pSurfaceFormatCount; i++) {
-                    pPhysicalDevice->pSurfaceFormats[i] = pSurfaceFormats[i];
-                }
-            } else {
-                pPhysicalDevice->surfaceFormatCount = 0;
-            }
-        }
-        lock.unlock();
-
-        return result;
-    }
-    return VK_ERROR_VALIDATION_FAILED_EXT;
-}
-
 // This function does the up-front validation work for vkCreateSwapchainKHR(),
 // and returns true if a logging callback indicates that the call down the
 // chain should be skipped:
@@ -1117,61 +1040,6 @@ static bool validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
                         "However, vkGetPhysicalDeviceSurfaceSupportKHR() was never called with this surface.");
         }
 
-    }
-
-    // Validate pCreateInfo values with the results of
-    // vkGetPhysicalDeviceSurfaceFormatsKHR():
-    if (!pPhysicalDevice || !pPhysicalDevice->surfaceFormatCount) {
-        skip_call |=
-            log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                    reinterpret_cast<uint64_t>(device), __LINE__, SWAPCHAIN_CREATE_SWAP_WITHOUT_QUERY, swapchain_layer_name,
-                    "vkCreateSwapchainKHR() called before calling vkGetPhysicalDeviceSurfaceFormatsKHR().");
-    } else if (pCreateInfo) {
-        // Validate pCreateInfo->imageFormat against
-        // VkSurfaceFormatKHR::format:
-        bool foundFormat = false;
-        bool foundColorSpace = false;
-        bool foundMatch = false;
-        for (uint32_t i = 0; i < pPhysicalDevice->surfaceFormatCount; i++) {
-            if (pCreateInfo->imageFormat == pPhysicalDevice->pSurfaceFormats[i].format) {
-                // Validate pCreateInfo->imageColorSpace against
-                // VkSurfaceFormatKHR::colorSpace:
-                foundFormat = true;
-                if (pCreateInfo->imageColorSpace == pPhysicalDevice->pSurfaceFormats[i].colorSpace) {
-                    foundMatch = true;
-                    break;
-                }
-            } else {
-                if (pCreateInfo->imageColorSpace == pPhysicalDevice->pSurfaceFormats[i].colorSpace) {
-                    foundColorSpace = true;
-                }
-            }
-        }
-        if (!foundMatch) {
-            if (!foundFormat) {
-                if (!foundColorSpace) {
-                    skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, reinterpret_cast<uint64_t>(device), __LINE__,
-                                         SWAPCHAIN_CREATE_SWAP_BAD_IMG_FMT_CLR_SP, swapchain_layer_name,
-                                         "vkCreateSwapchainKHR() called with neither a supported pCreateInfo->imageFormat "
-                                         "(i.e. %d) nor a supported "
-                                         "pCreateInfo->imageColorSpace (i.e. %d).",
-                                         pCreateInfo->imageFormat, pCreateInfo->imageColorSpace);
-                } else {
-                    skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, reinterpret_cast<uint64_t>(device), __LINE__,
-                                         SWAPCHAIN_CREATE_SWAP_BAD_IMG_FORMAT, swapchain_layer_name,
-                                         "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->imageFormat (i.e. %d)",
-                                         pCreateInfo->imageFormat);
-                }
-            } else if (!foundColorSpace) {
-                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                                     reinterpret_cast<uint64_t>(device), __LINE__, SWAPCHAIN_CREATE_SWAP_BAD_IMG_COLOR_SPACE,
-                                     swapchain_layer_name,
-                                     "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->imageColorSpace (i.e. %d).",
-                                     pCreateInfo->imageColorSpace);
-            }
-        }
     }
 
     // Validate pCreateInfo->imageSharingMode and related values:
@@ -1523,7 +1391,6 @@ static PFN_vkVoidFunction intercept_khr_surface_command(const char *name, VkInst
 #endif // VK_USE_PLATFORM_XLIB_KHR
         {"vkDestroySurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(DestroySurfaceKHR)},
         {"vkGetPhysicalDeviceSurfaceSupportKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceSupportKHR)},
-        {"vkGetPhysicalDeviceSurfaceFormatsKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceFormatsKHR)},
         {"vkGetPhysicalDeviceDisplayPlanePropertiesKHR",
          reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceDisplayPlanePropertiesKHR)},
         {"vkGetDisplayPlaneSupportedDisplaysKHR", reinterpret_cast<PFN_vkVoidFunction>(GetDisplayPlaneSupportedDisplaysKHR)},
