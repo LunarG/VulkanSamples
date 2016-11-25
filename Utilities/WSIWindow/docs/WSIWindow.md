@@ -121,7 +121,7 @@ It provides the same functions as CLayers, for picking  extensions to load, and 
 The WSIWindow class creates a Vulkan window, and provides function calls to query keyboard and mouse state, as well as callbacks, to notify you of system events. (window / keyboard / mouse / touch-screen)
 The WSIWindow constructor requires a VkInstance parameter, as well as the window's title, width and height.  These dimensions only apply to Linux and Windows, but are ignored on Android.
 However, right after window creation, the OnResizeEvent callback will be triggered, to return the actual window dimensions.  
-The "Surface" member function returns a **CSurface** class, which contains the VkSurface of the window.
+The "GetSurface" member function returns a **CSurface** class, which contains the VkSurfaceKHR of the window.
 CSurface also provides the CanPresent() funtion, which wraps the vkGetPhysicalDevice***PresentationSupportKHR functions. When creating a Vulkan queue, use CanPresent() to check if the queue family can present to this surface.
 
 #### The following query functions are provided:
@@ -130,7 +130,7 @@ CSurface also provides the CanPresent() funtion, which wraps the vkGetPhysicalDe
  - `GetKeyState :` Get the current state of the specified keyboard key. (see "keycodes.h" for a list of key codes.)  
  - `GetBtnState :` Get the state of the specified mouse button (1-3)  
  - `GetMousePos :` Get the current mouse position (x,y) within this window.  
- - `Surface . . :` Returns CSurface, which contains the VkSurface, and 'CanPresent()' function.
+ - `GetSurface. :` Returns CSurface, which contains the VkSurfaceKHR, and 'CanPresent()' function.
 
 #### The following control functions are provided:
  - `SetTitle . . . .:` Set window title.
@@ -204,13 +204,14 @@ CSurface also provides the CanPresent() funtion, which wraps the vkGetPhysicalDe
 
 
 
-### Example 3: Create a Vulkan window.
+### Example 3: Create a Vulkan window and surface.
         #include "WSIWindow.h"
 
         int main(){
-            CInstance Inst;                             // Create a Vulkan Instance
-            WSIWindow Window(Inst,"LunarG",640,480);    // Create a Vulkan window, setting title and size.
-            while(Window.ProcessEvents()){ }            // Run message-loop until window is closed
+            CInstance Inst;                                // Create a Vulkan Instance
+            WSIWindow Window("LunarG",640,480);            // Create a window, setting title and size.
+            VkSurfaceKHR surface=Window.GetSurface(Inst);  // Get the Vulkan surface
+            while(Window.ProcessEvents()){ }               // Run message-loop until window is closed
             return 0;
         }
 
@@ -219,7 +220,8 @@ CSurface also provides the CanPresent() funtion, which wraps the vkGetPhysicalDe
 
         int main(){
             CInstance Inst;                                           // Create a Vulkan Instance
-            WSIWindow Window(Inst,"LunarG",640,480);                  // Create a Vulkan window
+            WSIWindow Window("LunarG",640,480);                       // Create a Vulkan window
+            VkSurfaceKHR surface=Window.GetSurface(Inst);             // Get the Vulkan surface
             while(Window.ProcessEvents()){                            // Run message-loop
                 bool KeyPressed = Window.GetKeyState(KEY_LeftShift);  // Get state of a key. (see keycodes.h)
                 if (KeyPressed) printf("LEFT-SHIFT is pressed\r");
@@ -235,8 +237,6 @@ CSurface also provides the CanPresent() funtion, which wraps the vkGetPhysicalDe
         #include "WSIWindow.h"
 
         class MyWindow : public WSIWindow{
-            using WSIWindow::WSIWindow;     //Inherit base constructor
-
             //--Mouse event handler--
             void OnMouseEvent(eAction action, int16_t x, int16_t y, uint8_t btn){
                 const char* type[]={"up  ","down","move"};
@@ -261,8 +261,11 @@ CSurface also provides the CanPresent() funtion, which wraps the vkGetPhysicalDe
         };
 
         int main(){
-            CInstance Inst;                             // Create a Vulkan Instance
-            MyWindow Window(Inst,"LunarG",640,480);     // Create a Vulkan window
-            while(Window.ProcessEvents()){ }            // Run until window is closed
+            CInstance Inst;                                // Create a Vulkan Instance
+            MyWindow Window;                               // Create a window
+            Window.SetTitle("LunarG");                     // Set window title
+            Window.SetWinSize(640,480);                    // Set window size
+            VkSurfaceKHR surface=Window.GetSurface(Inst);  // Get the Vulkan surface
+            while(Window.ProcessEvents()){ }               // Run until window is closed
             return 0;
         }
