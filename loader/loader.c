@@ -302,7 +302,7 @@ static inline char *loader_getenv(const char *name,
     (void)inst;
     return getenv(name);
 }
-static inline void loader_free_getenv(const char *val,
+static inline void loader_free_getenv(char *val,
                                       const struct loader_instance *inst) {
     // No freeing of memory necessary for Linux, but we should at least touch
     // the val and inst pointers to get rid of compiler warnings.
@@ -358,7 +358,7 @@ static inline char *loader_getenv(const char *name,
     (void)name;
     return NULL;
 }
-static inline void loader_free_getenv(const char *val,
+static inline void loader_free_getenv(char *val,
                                       const struct loader_instance *inst) {
     // stub func
     (void)val;
@@ -2592,11 +2592,12 @@ loader_add_layer_properties(const struct loader_instance *inst,
  */
 static VkResult
 loader_get_manifest_files(const struct loader_instance *inst,
-                          const char *env_override, char *source_override,
+                          const char *env_override, const char *source_override,
                           bool is_layer, bool warn_if_not_present,
                           const char *location, const char *home_location,
                           struct loader_manifest_files *out_files) {
-    char * override = NULL;
+    const char *override = NULL;
+    char *override_getenv = NULL;
     char *loc, *orig_loc = NULL;
     char *reg = NULL;
     char *file, *next_file, *name;
@@ -2612,15 +2613,16 @@ loader_get_manifest_files(const struct loader_instance *inst,
 
     if (source_override != NULL) {
         override = source_override;
-    } else if (env_override != NULL &&
-               (override = loader_getenv(env_override, inst))) {
+    } else if (env_override != NULL) {
 #if !defined(_WIN32)
         if (geteuid() != getuid() || getegid() != getgid()) {
             /* Don't allow setuid apps to use the env var: */
-            loader_free_getenv(override, inst);
-            override = NULL;
+            env_override = NULL;
         }
 #endif
+        if (env_override != NULL) {
+            override = override_getenv = loader_getenv(env_override, inst);
+        }
     }
 
 #if !defined(_WIN32)
@@ -2632,7 +2634,7 @@ loader_get_manifest_files(const struct loader_instance *inst,
         loader_log(
             inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
             "Can't get manifest files with NULL location, env_override=%s",
-            env_override);
+            (env_override != NULL) ? env_override : "");
         res = VK_ERROR_INITIALIZATION_FAILED;
         goto out;
     }
@@ -2688,9 +2690,6 @@ loader_get_manifest_files(const struct loader_instance *inst,
             goto out;
         }
         strcpy(loc, override);
-        if (source_override == NULL) {
-            loader_free_getenv(override, inst);
-        }
     }
 
     // Print out the paths being searched if debugging is enabled
@@ -2878,6 +2877,10 @@ out:
 
     if (NULL != sysdir) {
         closedir(sysdir);
+    }
+
+    if (override_getenv != NULL) {
+        loader_free_getenv(override_getenv, inst);
     }
 
     if (NULL != reg && reg != orig_loc) {
