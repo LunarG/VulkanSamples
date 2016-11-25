@@ -496,7 +496,7 @@ static char *loader_get_registry_files(const struct loader_instance *inst,
                     snprintf(out, name_size + 1, "%s", name);
                 else
                     snprintf(out + strlen(out), name_size + 2, "%c%s",
-                             PATH_SEPERATOR, name);
+                             PATH_SEPARATOR, name);
             }
             name_size = 2048;
         }
@@ -1773,7 +1773,7 @@ static char *loader_get_next_path(char *path) {
 
     if (path == NULL)
         return NULL;
-    next = strchr(path, PATH_SEPERATOR);
+    next = strchr(path, PATH_SEPARATOR);
     if (next == NULL) {
         len = (uint32_t)strlen(path);
         next = path + len;
