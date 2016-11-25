@@ -146,6 +146,7 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
             'vkGetPhysicalDeviceDisplayPlanePropertiesKHR',
             'vkGetDisplayPlaneSupportedDisplaysKHR',
             'vkGetDisplayModePropertiesKHR',
+            'vkGetDisplayPlaneCapabilitiesKHR',
             # DebugReport APIs are hooked, but handled separately in the source file
             'vkCreateDebugReportCallbackEXT',
             'vkDestroyDebugReportCallbackEXT',

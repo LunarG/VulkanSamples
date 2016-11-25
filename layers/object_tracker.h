@@ -81,6 +81,7 @@ struct instance_extension_enables {
     bool mir_enabled;
     bool android_enabled;
     bool win32_enabled;
+    bool display_enabled;
 };
 
 typedef std::unordered_map<uint64_t, OBJTRACK_NODE *> object_map_type;

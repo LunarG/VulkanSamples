@@ -1375,6 +1375,7 @@ win32_wsi_exts = [VK_KHR_win32_surface
 common_exts = [VK_VERSION_1_0,
                VK_KHR_surface,
                VK_KHR_swapchain,
+               VK_KHR_display,
                VK_KHR_display_swapchain,
               ]
 
@@ -1398,8 +1399,7 @@ non_exported_exts = [VK_NV_external_memory_capabilities,
 #                    VK_AMD_shader_ballot,
 #                    VK_IMG_format_pvrtc,
                     ]
-non_android_exts = [VK_KHR_display,
-                   ]
+
 extensions = common_exts
 extensions_all = non_exported_exts
 
