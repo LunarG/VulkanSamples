@@ -71,14 +71,14 @@ struct texture_object {
     vk::Sampler sampler;
 
     vk::Image image;
-    vk::ImageLayout imageLayout;
+    vk::ImageLayout imageLayout { vk::ImageLayout::eUndefined };
 
     vk::MemoryAllocateInfo mem_alloc;
     vk::DeviceMemory mem;
     vk::ImageView view;
 
-    int32_t tex_width;
-    int32_t tex_height;
+    int32_t tex_width {0};
+    int32_t tex_height {0};
 };
 
 static char const *const tex_files[] = {"lunarg.ppm"};
@@ -204,6 +204,32 @@ typedef struct {
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 #endif
 
+#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
+static void handle_ping(void *data, wl_shell_surface *shell_surface,
+                        uint32_t serial) {
+    wl_shell_surface_pong(shell_surface, serial);
+}
+
+static void handle_configure(void *data, wl_shell_surface *shell_surface,
+                             uint32_t edges, int32_t width, int32_t height) {}
+
+static void handle_popup_done(void *data, wl_shell_surface *shell_surface) {}
+
+static const wl_shell_surface_listener shell_surface_listener = {
+    handle_ping, handle_configure, handle_popup_done};
+
+static void handle_announce_global_object(void *data,
+                                          struct wl_registry *wl_registry,
+                                          uint32_t name, const char *interface,
+                                          uint32_t version) {}
+
+static void handle_announce_global_object_remove(
+    void *data, struct wl_registry *wl_registry, uint32_t name) {}
+
+static const wl_registry_listener registry_listener = {
+    handle_announce_global_object, handle_announce_global_object_remove};
+#endif
+
 struct Demo {
     Demo()
         :
@@ -213,6 +239,7 @@ struct Demo {
           minsize(POINT{
               0, 0}), // Use explicit construction to avoid MSVC error C2797.
 #endif
+#if defined(VK_USE_PLATFORM_XLIB_KHR) || defined(VK_USE_PLATFORM_XCB_KHR)
 #if defined(VK_USE_PLATFORM_XLIB_KHR)
           xlib_window{0},
           xlib_wm_delete_window{0}, display{nullptr},
@@ -220,9 +247,10 @@ struct Demo {
 #if defined(VK_USE_PLATFORM_XCB_KHR)
           xcb_window{0}, screen{nullptr}, connection{nullptr},
 #endif
-#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
-          display{nullptr}, registry{nullptr}, compositor{nullptr},
-          window{nullptr}, shell{nullptr}, shell_surface{nullptr},
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+          display{nullptr},
+          registry{nullptr}, compositor{nullptr}, window{nullptr},
+          shell{nullptr}, shell_surface{nullptr},
 #endif
           prepared{false}, use_staging_buffer{false}, use_xlib{false},
           graphics_queue_family_index{0}, present_queue_family_index{0},
@@ -337,7 +365,7 @@ struct Demo {
         if (separate_present_queue) {
             device.destroyCommandPool(present_cmd_pool, nullptr);
         }
-
+        device.waitIdle();
         device.destroy(nullptr);
         inst.destroySurfaceKHR(surface, nullptr);
         inst.destroy(nullptr);
@@ -583,8 +611,7 @@ struct Demo {
         auto result = cmd.end();
         VERIFY(result == vk::Result::eSuccess);
 
-        auto const fenceInfo =
-            vk::FenceCreateInfo().setFlags(vk::FenceCreateFlagBits::eSignaled);
+        auto const fenceInfo = vk::FenceCreateInfo();
         vk::Fence fence;
         device.createFence(&fenceInfo, nullptr, &fence);
 
@@ -610,12 +637,19 @@ struct Demo {
         vec3 origin = {0, 0, 0};
         vec3 up = {0.0f, 1.0f, 0.0};
 
+        presentMode = vk::PresentModeKHR::eFifo;
         frameCount = UINT32_MAX;
         use_xlib = false;
 
         for (int i = 1; i < argc; i++) {
             if (strcmp(argv[i], "--use_staging") == 0) {
                 use_staging_buffer = true;
+                continue;
+            }
+            if ((strcmp(argv[i], "--present_mode") == 0) &&
+                    (i < argc - 1)) {
+                presentMode = (vk::PresentModeKHR)atoi(argv[i+1]);
+                i++;
                 continue;
             }
             if (strcmp(argv[i], "--break") == 0) {
@@ -647,8 +681,13 @@ struct Demo {
 #if defined(VK_USE_PLATFORM_XLIB_KHR)
                     "[--xlib] "
 #endif
-                    "[--c <framecount>] [--suppress_popups]\n",
-                    APP_SHORT_NAME);
+                    "[--c <framecount>] [--suppress_popups] [--present_mode <present mode enum>]\n"
+                    "VK_PRESENT_MODE_IMMEDIATE_KHR = %d\n"
+                    "VK_PRESENT_MODE_MAILBOX_KHR = %d\n"
+                    "VK_PRESENT_MODE_FIFO_KHR = %d\n"
+                    "VK_PRESENT_MODE_FIFO_RELAXED_KHR = %d\n",
+            APP_SHORT_NAME, VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_MAILBOX_KHR,
+            VK_PRESENT_MODE_FIFO_KHR, VK_PRESENT_MODE_FIFO_RELAXED_KHR);
             fflush(stderr);
             exit(1);
         }
@@ -1179,6 +1218,15 @@ struct Demo {
                              .setLevel(vk::CommandBufferLevel::ePrimary)
                              .setCommandBufferCount(1);
 
+        result = device.allocateCommandBuffers(&cmd, &this->cmd);
+        VERIFY(result == vk::Result::eSuccess);
+
+        auto const cmd_buf_info =
+            vk::CommandBufferBeginInfo().setPInheritanceInfo(nullptr);
+
+        result = this->cmd.begin(&cmd_buf_info);
+        VERIFY(result == vk::Result::eSuccess);
+
         prepare_buffers();
         prepare_depth();
         prepare_textures();
@@ -1231,6 +1279,10 @@ struct Demo {
          * that need to be flushed before beginning the render loop.
          */
         flush_init_cmd();
+        if(staging_texture.image)
+        {
+            destroy_texture_image(&staging_texture);
+        }
 
         current_buffer = 0;
         prepared = true;
@@ -1273,33 +1325,23 @@ struct Demo {
         // and to have no tearing.  It's a great default present mode to use.
         vk::PresentModeKHR swapchainPresentMode = vk::PresentModeKHR::eFifo;
 
-//  There are times when you may wish to use another present mode.  The
-//  following code shows how to select them, and the comments provide some
-//  reasons you may wish to use them.
-//
-// It should be noted that Vulkan 1.0 doesn't provide a method for
-// synchronizing rendering with the presentation engine's display.  There
-// is a method provided for throttling rendering with the display, but
-// there are some presentation engines for which this method will not work.
-// If an application doesn't throttle its rendering, and if it renders much
-// faster than the refresh rate of the display, this can waste power on
-// mobile devices.  That is because power is being spent rendering images
-// that may never be seen.
-//#define DESIRE_VK_PRESENT_MODE_IMMEDIATE_KHR
-//#define DESIRE_VK_PRESENT_MODE_MAILBOX_KHR
-//#define DESIRE_VK_PRESENT_MODE_FIFO_RELAXED_KHR
-#if defined(DESIRE_VK_PRESENT_MODE_IMMEDIATE_KHR)
+        //  There are times when you may wish to use another present mode.  The
+        //  following code shows how to select them, and the comments provide some
+        //  reasons you may wish to use them.
+        //
+        // It should be noted that Vulkan 1.0 doesn't provide a method for
+        // synchronizing rendering with the presentation engine's display.  There
+        // is a method provided for throttling rendering with the display, but
+        // there are some presentation engines for which this method will not work.
+        // If an application doesn't throttle its rendering, and if it renders much
+        // faster than the refresh rate of the display, this can waste power on
+        // mobile devices.  That is because power is being spent rendering images
+        // that may never be seen.
+
         // VK_PRESENT_MODE_IMMEDIATE_KHR is for applications that don't care
         // about
         // tearing, or have some way of synchronizing their rendering with the
         // display.
-        for (size_t i = 0; i < presentModeCount; ++i) {
-            if (presentModes[i] == vk::PresentModeKHR::eImmediate) {
-                swapchainPresentMode = vk::PresentModeKHR::eImmediate;
-                break;
-            }
-        }
-#elif defined(DESIRE_VK_PRESENT_MODE_MAILBOX_KHR)
         // VK_PRESENT_MODE_MAILBOX_KHR may be useful for applications that
         // generally render a new presentable image every refresh cycle, but are
         // occasionally early.  In this case, the application wants the new
@@ -1307,13 +1349,6 @@ struct Demo {
         // to be displayed instead of the previously-queued-for-presentation
         // image
         // that has not yet been displayed.
-        for (size_t i = 0; i < presentModeCount; ++i) {
-            if (presentModes[i] == vk::PresentModeKHR::eMailbox) {
-                swapchainPresentMode = vk::PresentModeKHR::eMailbox;
-                break;
-            }
-        }
-#elif defined(DESIRE_VK_PRESENT_MODE_FIFO_RELAXED_KHR)
         // VK_PRESENT_MODE_FIFO_RELAXED_KHR is for applications that generally
         // render a new presentable image every refresh cycle, but are
         // occasionally
@@ -1321,13 +1356,21 @@ struct Demo {
         // the application wants the late image to be immediately displayed,
         // even
         // though that may mean some tearing.
-        for (size_t i = 0; i < presentModeCount; ++i) {
-            if (presentModes[i] == vk::PresentModeKHR::eFifoRelaxed) {
-                swapchainPresentMode = vk::PresentModeKHR::eFifoRelaxed;
-                break;
+
+        if(presentMode != swapchainPresentMode)
+        {
+            for (size_t i = 0; i < presentModeCount; ++i) {
+                if (presentModes[i] == presentMode) {
+                    swapchainPresentMode = presentMode;
+                    break;
+                }
             }
         }
-#endif
+
+        if(swapchainPresentMode != presentMode)
+        {
+            ERR_EXIT("Present mode specified is not supported\n", "Present mode unsupported");
+        }
 
         // Determine the number of VkImage's to use in the swap chain (we desire
         // to
@@ -1742,7 +1785,6 @@ struct Demo {
         // the renderpass, no barriers are necessary.
         const vk::AttachmentDescription attachments[2] = {
             vk::AttachmentDescription()
-                .setFlags(vk::AttachmentDescriptionFlagBits::eMayAlias)
                 .setFormat(format)
                 .setSamples(vk::SampleCountFlagBits::e1)
                 .setLoadOp(vk::AttachmentLoadOp::eClear)
@@ -1752,7 +1794,6 @@ struct Demo {
                 .setInitialLayout(vk::ImageLayout::eUndefined)
                 .setFinalLayout(vk::ImageLayout::ePresentSrcKHR),
             vk::AttachmentDescription()
-                .setFlags(vk::AttachmentDescriptionFlagBits::eMayAlias)
                 .setFormat(depth.format)
                 .setSamples(vk::SampleCountFlagBits::e1)
                 .setLoadOp(vk::AttachmentLoadOp::eClear)
@@ -1904,11 +1945,10 @@ struct Demo {
                                  vk::ImageLayout::ePreinitialized, textures[i].imageLayout,
                                  vk::AccessFlagBits::eHostWrite, vk::PipelineStageFlagBits::eTopOfPipe,
                                  vk::PipelineStageFlagBits::eFragmentShader);
+                staging_texture.image = vk::Image();
             } else if (props.optimalTilingFeatures &
                        vk::FormatFeatureFlagBits::eSampledImage) {
-                /* Must use staging buffer to copy linear texture to optimized
-                 */
-                texture_object staging_texture;
+                /* Must use staging buffer to copy linear texture to optimized */
 
                 prepare_texture_image(
                     tex_files[i], &staging_texture, vk::ImageTiling::eLinear,
@@ -1966,10 +2006,6 @@ struct Demo {
                                  vk::AccessFlagBits::eTransferWrite,
                                  vk::PipelineStageFlagBits::eTransfer,
                                  vk::PipelineStageFlagBits::eFragmentShader);
-
-                flush_init_cmd();
-
-                destroy_texture_image(&staging_texture);
             } else {
                 assert(
                     !"No support for R8G8B8A8_UNORM as texture image format");
@@ -2107,21 +2143,7 @@ struct Demo {
                           vk::AccessFlags srcAccessMask,
                           vk::PipelineStageFlags src_stages,
                           vk::PipelineStageFlags dest_stages) {
-        if (!cmd) {
-            auto const cmd = vk::CommandBufferAllocateInfo()
-                                 .setCommandPool(cmd_pool)
-                                 .setLevel(vk::CommandBufferLevel::ePrimary)
-                                 .setCommandBufferCount(1);
-
-            auto result = device.allocateCommandBuffers(&cmd, &this->cmd);
-            VERIFY(result == vk::Result::eSuccess);
-
-            auto const cmd_buf_info =
-                vk::CommandBufferBeginInfo().setPInheritanceInfo(nullptr);
-
-            result = this->cmd.begin(&cmd_buf_info);
-            VERIFY(result == vk::Result::eSuccess);
-        }
+        assert(cmd);
 
         auto DstAccessMask = [](vk::ImageLayout const &layout) {
             vk::AccessFlags flags;
@@ -2589,6 +2611,7 @@ struct Demo {
     POINT minsize;               // minimum window size
     char name[APP_NAME_STR_LEN]; // Name to put on the window/icon
 #endif
+#if defined(VK_USE_PLATFORM_XLIB_KHR) || defined(VK_USE_PLATFORM_XCB_KHR)
 #if defined(VK_USE_PLATFORM_XLIB_KHR)
     Window xlib_window;
     Atom xlib_wm_delete_window;
@@ -2600,7 +2623,7 @@ struct Demo {
     xcb_connection_t *connection;
     xcb_intern_atom_reply_t *atom_wm_delete_window;
 #endif
-#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
     wl_display *display;
     wl_registry *registry;
     wl_compositor *compositor;
@@ -2642,6 +2665,7 @@ struct Demo {
     uint32_t swapchainImageCount;
     vk::SwapchainKHR swapchain;
     std::unique_ptr<SwapchainBuffers[]> buffers;
+    vk::PresentModeKHR presentMode;
     vk::Fence fences[FRAME_LAG];
     uint32_t frame_index;
 
@@ -2658,6 +2682,7 @@ struct Demo {
 
     static int32_t const texture_count = 1;
     texture_object textures[texture_count];
+    texture_object staging_texture;
 
     struct {
         vk::Buffer buf;
@@ -2815,24 +2840,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 }
 
 #elif __linux__
-
-#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
-static void handle_ping(void *data, wl_shell_surface *shell_surface,
-                        uint32_t serial) {
-    wl_shell_surface_pong(shell_surface, serial);
-}
-
-static void handle_configure(void *data,
-                             wl_shell_surface *shell_surface,
-                             uint32_t edges, int32_t width,
-                             int32_t height) {}
-
-static void handle_popup_done(void *data,
-                              wl_shell_surface *shell_surface) {}
-
-static const wl_shell_surface_listener shell_surface_listener = {
-    handle_ping, handle_configure, handle_popup_done};
-#endif
 
 int main(int argc, char **argv) {
     Demo demo;

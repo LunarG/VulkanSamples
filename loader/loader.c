@@ -381,9 +381,9 @@ void loader_log(const struct loader_instance *inst, VkFlags msg_type,
     va_end(ap);
 
     if (inst) {
-        util_DebugReportMessage(inst, msg_type,
-                                VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-                                (uint64_t)inst, 0, msg_code, "loader", msg);
+        util_DebugReportMessage(
+            inst, msg_type, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+            (uint64_t)(uintptr_t)inst, 0, msg_code, "loader", msg);
     }
 
     if (!(msg_type & g_loader_log_msgs)) {

@@ -46,6 +46,7 @@ layer_source_files = [
 'descriptor_sets.cpp',
 'parameter_validation.cpp',
 'object_tracker.cpp',
+'image.cpp'
 ]
 header_file = 'vk_validation_error_messages.h'
 # TODO : Don't hardcode linux path format if we want this to run on windows
@@ -128,6 +129,8 @@ class ValidationSource:
     def __init__(self, source_file_list):
         self.source_files = source_file_list
         self.enum_count_dict = {} # dict of enum values to the count of how much they're used
+        # 1790 is a special case that provides an exception when an extension is enabled. No specific error is flagged, but the exception is handled so add it here
+        self.enum_count_dict['VALIDATION_ERROR_01790'] = 1
     def parse(self):
         duplicate_checks = 0
         for sf in self.source_files:
@@ -311,7 +314,7 @@ def main(argv=None):
     else:
         print(txt_color.red() + "  Uh oh, Database claimed implemented don't match Source :(" + txt_color.endc())
         if len(imp_not_found) != 0:
-            print(txt_color.red() + "   The following checks are claimed to be implemented in Database, but weren't found in source:" + txt_color.endc())
+            print(txt_color.red() + "   The following %d checks are claimed to be implemented in Database, but weren't found in source:" % (len(imp_not_found)) + txt_color.endc())
             for not_imp_enum in imp_not_found:
                 print(txt_color.red() + "    %s" % (not_imp_enum) + txt_color.endc())
         if len(imp_not_claimed) != 0:
@@ -336,7 +339,7 @@ def main(argv=None):
     else:
         print(txt_color.red() + "  The following testnames in Database appear to be invalid:")
         for bt in bad_testnames:
-            print(txt_color.red() + "   %s" % (bt))
+            print(txt_color.red() + "   %s" % (bt) + txt_color.endc())
 
     return 0
 

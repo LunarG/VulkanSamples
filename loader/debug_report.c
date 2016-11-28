@@ -215,14 +215,18 @@ VkResult util_CopyDebugReportCreateInfos(
             ((VkDebugReportCallbackEXT *)pAllocator->pfnAllocation(
                 pAllocator->pUserData, n * sizeof(VkDebugReportCallbackEXT),
                 sizeof(void *), VK_SYSTEM_ALLOCATION_SCOPE_OBJECT));
+        if (!pCallbacks) {
+            pAllocator->pfnFree(pAllocator->pUserData, pInfos);
+            return VK_ERROR_OUT_OF_HOST_MEMORY;
+        }
     } else {
 #endif
         pCallbacks = *callbacks = ((VkDebugReportCallbackEXT *)malloc(
             n * sizeof(VkDebugReportCallbackEXT)));
-    }
-    if (!pCallbacks) {
-        free(pInfos);
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
+        if (!pCallbacks) {
+            free(pInfos);
+            return VK_ERROR_OUT_OF_HOST_MEMORY;
+        }
     }
     // 4th, copy each VkDebugReportCallbackCreateInfoEXT for use by
     // vkDestroyInstance, and assign a unique handle to each callback (just
@@ -232,7 +236,7 @@ VkResult util_CopyDebugReportCreateInfos(
         if (((VkInstanceCreateInfo *)pNext)->sType ==
             VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT) {
             memcpy(pInfos, pNext, sizeof(VkDebugReportCallbackCreateInfoEXT));
-            *pCallbacks++ = (VkDebugReportCallbackEXT)pInfos++;
+            *pCallbacks++ = (VkDebugReportCallbackEXT)(uintptr_t)pInfos++;
         }
         pNext = (void *)((VkInstanceCreateInfo *)pNext)->pNext;
     }
@@ -244,8 +248,17 @@ VkResult util_CopyDebugReportCreateInfos(
 void util_FreeDebugReportCreateInfos(const VkAllocationCallbacks *pAllocator,
                                      VkDebugReportCallbackCreateInfoEXT *infos,
                                      VkDebugReportCallbackEXT *callbacks) {
-    free(infos);
-    free(callbacks);
+#if (DEBUG_DISABLE_APP_ALLOCATORS == 1)
+                                         {
+#else
+    if (pAllocator != NULL) {
+         pAllocator->pfnFree(pAllocator->pUserData, infos);
+         pAllocator->pfnFree(pAllocator->pUserData, callbacks);
+    } else {
+#endif
+        free(infos);
+        free(callbacks);
+    }
 }
 
 VkResult util_CreateDebugReportCallbacks(
@@ -449,6 +462,16 @@ VKAPI_ATTR void VKAPI_CALL terminator_DestroyDebugReportCallback(
                 icd_term->instance, icd_info[storage_idx], pAllocator);
         }
         storage_idx++;
+    }
+
+#if (DEBUG_DISABLE_APP_ALLOCATORS == 1)
+    {
+#else
+    if (pAllocator != NULL) {
+        pAllocator->pfnFree(pAllocator->pUserData, icd_info);
+    } else {
+#endif
+        free(icd_info);
     }
 }
 

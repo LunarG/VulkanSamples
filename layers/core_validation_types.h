@@ -164,30 +164,46 @@ template <> struct hash<MEM_BINDING> {
 };
 }
 
-// Superclass for bindable object state (currently imagesa and buffers)
+// Superclass for bindable object state (currently images and buffers)
 class BINDABLE : public BASE_NODE {
   public:
     bool sparse; // Is this object being bound with sparse memory or not?
     // Non-sparse binding data
     MEM_BINDING binding;
+    // Memory requirements for this BINDABLE
+    VkMemoryRequirements requirements;
+    // bool to track if memory requirements were checked
+    bool memory_requirements_checked;
     // Sparse binding data, initially just tracking MEM_BINDING per mem object
     //  There's more data for sparse bindings so need better long-term solution
     // TODO : Need to update solution to track all sparse binding data
     std::unordered_set<MEM_BINDING> sparse_bindings;
-    BINDABLE() : sparse(false), binding{}, sparse_bindings{}{};
+    BINDABLE() : sparse(false), binding{}, requirements{}, memory_requirements_checked(false), sparse_bindings{} {};
+    // Return unordered set of memory objects that are bound
+    std::unordered_set<VkDeviceMemory> GetBoundMemory() {
+        std::unordered_set<VkDeviceMemory> mem_set;
+        if (!sparse) {
+            mem_set.insert(binding.mem);
+        } else {
+            for (auto sb : sparse_bindings) {
+                mem_set.insert(sb.mem);
+            }
+        }
+        return mem_set;
+    }
 };
 
-class BUFFER_NODE : public BINDABLE {
+class BUFFER_STATE : public BINDABLE {
   public:
     VkBuffer buffer;
     VkBufferCreateInfo createInfo;
-    BUFFER_NODE(VkBuffer buff, const VkBufferCreateInfo *pCreateInfo) : buffer(buff), createInfo(*pCreateInfo) {
+    BUFFER_STATE(VkBuffer buff, const VkBufferCreateInfo *pCreateInfo) : buffer(buff), createInfo(*pCreateInfo) {
         if (createInfo.flags & VK_BUFFER_CREATE_SPARSE_BINDING_BIT) {
             sparse = true;
         }
     };
 
-    BUFFER_NODE(BUFFER_NODE const &rh_obj) = delete;
+    BUFFER_STATE(BUFFER_STATE const &rh_obj) = delete;
 };
 
 class BUFFER_VIEW_STATE : public BASE_NODE {
@@ -632,7 +648,7 @@ struct layer_data;
 cvdescriptorset::DescriptorSet *getSetNode(const layer_data *, VkDescriptorSet);
 cvdescriptorset::DescriptorSetLayout const *getDescriptorSetLayout(layer_data const *, VkDescriptorSetLayout);
 DESCRIPTOR_POOL_STATE *getDescriptorPoolState(const layer_data *, const VkDescriptorPool);
-BUFFER_NODE *getBufferNode(const layer_data *, VkBuffer);
+BUFFER_STATE *getBufferState(const layer_data *, VkBuffer);
 IMAGE_STATE *getImageState(const layer_data *, VkImage);
 DEVICE_MEM_INFO *getMemObjInfo(const layer_data *, VkDeviceMemory);
 BUFFER_VIEW_STATE *getBufferViewState(const layer_data *, VkBufferView);
@@ -640,13 +656,13 @@ SAMPLER_STATE *getSamplerState(const layer_data *, VkSampler);
 IMAGE_VIEW_STATE *getImageViewState(const layer_data *, VkImageView);
 VkSwapchainKHR getSwapchainFromImage(const layer_data *, VkImage);
 SWAPCHAIN_NODE *getSwapchainNode(const layer_data *, VkSwapchainKHR);
-void invalidateCommandBuffers(std::unordered_set<GLOBAL_CB_NODE *>, VK_OBJECT);
-bool ValidateMemoryIsBoundToBuffer(const layer_data *, const BUFFER_NODE *, const char *);
+void invalidateCommandBuffers(const layer_data *, std::unordered_set<GLOBAL_CB_NODE *> const &, VK_OBJECT);
+bool ValidateMemoryIsBoundToBuffer(const layer_data *, const BUFFER_STATE *, const char *);
 bool ValidateMemoryIsBoundToImage(const layer_data *, const IMAGE_STATE *, const char *);
 void AddCommandBufferBindingSampler(GLOBAL_CB_NODE *, SAMPLER_STATE *);
 void AddCommandBufferBindingImage(const layer_data *, GLOBAL_CB_NODE *, IMAGE_STATE *);
 void AddCommandBufferBindingImageView(const layer_data *, GLOBAL_CB_NODE *, IMAGE_VIEW_STATE *);
-void AddCommandBufferBindingBuffer(const layer_data *, GLOBAL_CB_NODE *, BUFFER_NODE *);
+void AddCommandBufferBindingBuffer(const layer_data *, GLOBAL_CB_NODE *, BUFFER_STATE *);
 void AddCommandBufferBindingBufferView(const layer_data *, GLOBAL_CB_NODE *, BUFFER_VIEW_STATE *);
 }
 

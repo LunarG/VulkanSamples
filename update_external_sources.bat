@@ -3,7 +3,7 @@ REM Update source for glslang, spirv-tools
 
 REM Determine the appropriate CMake strings for the current version of Visual Studio
 echo Determining VS version
-python .\determine_vs_version.py > vsversion.tmp
+python .\scripts\determine_vs_version.py > vsversion.tmp
 set /p VS_VERSION=< vsversion.tmp
 echo Detected Visual Studio Version as %VS_VERSION%
 
@@ -14,6 +14,7 @@ setlocal EnableDelayedExpansion
 set errorCode=0
 set BUILD_DIR=%~dp0
 set BASE_DIR="%BUILD_DIR%external"
+set REVISION_DIR="%BUILD_DIR%external_revisions"
 set GLSLANG_DIR=%BASE_DIR%\glslang
 set SPIRV_TOOLS_DIR=%BASE_DIR%\spirv-tools
 
@@ -121,23 +122,30 @@ if %errorCode% neq 0 (goto:error)
 
 REM Read the target versions from external file, which is shared with Linux script
 
-if not exist glslang_revision (
+if not exist %REVISION_DIR%\glslang_revision (
    echo.
-   echo Missing glslang_revision file!  Place it next to this script with target version in it.
+   echo Missing glslang_revision file!  Place it in %REVSION_DIR% with target version in it.
    set errorCode=1
    goto:error
 )
 
-if not exist spirv-tools_revision (
+if not exist %REVISION_DIR%\spirv-tools_revision (
    echo.
-   echo Missing spirv-tools_revision file!  Place it next to this script with target version in it.
+   echo Missing spirv-tools_revision file!  Place it in %REVISION_DIR% with target version in it.
    set errorCode=1
    goto:error
 )
 
-set /p GLSLANG_REVISION= < glslang_revision
-set /p SPIRV_TOOLS_REVISION= < spirv-tools_revision
-set /p SPIRV_HEADERS_REVISION= < spirv-headers_revision
+if not exist %REVISION_DIR%\spirv-headers_revision (
+   echo.
+   echo Missing spirv-headers_revision file!  Place it in %REVISION_DIR% with target version in it.
+   set errorCode=1
+   goto:error
+)
+
+set /p GLSLANG_REVISION= < %REVISION_DIR%\glslang_revision
+set /p SPIRV_TOOLS_REVISION= < %REVISION_DIR%\spirv-tools_revision
+set /p SPIRV_HEADERS_REVISION= < %REVISION_DIR%\spirv-headers_revision
 echo GLSLANG_REVISION=%GLSLANG_REVISION%
 echo SPIRV_TOOLS_REVISION=%SPIRV_TOOLS_REVISION%
 echo SPIRV_HEADERS_REVISION=%SPIRV_HEADERS_REVISION%

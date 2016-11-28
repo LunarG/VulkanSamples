@@ -216,15 +216,35 @@ struct PHYSICAL_DEVICE_STATE {
     CALL_STATE vkGetPhysicalDeviceLayerPropertiesState = UNCALLED;
     CALL_STATE vkGetPhysicalDeviceExtensionPropertiesState = UNCALLED;
     CALL_STATE vkGetPhysicalDeviceFeaturesState = UNCALLED;
+    CALL_STATE vkGetPhysicalDeviceSurfaceCapabilitiesKHRState = UNCALLED;
     VkPhysicalDeviceFeatures features = {};
     VkPhysicalDevice phys_device = VK_NULL_HANDLE;
     std::vector<VkQueueFamilyProperties> queue_family_properties;
+    VkSurfaceCapabilitiesKHR surfaceCapabilities = {};
 };
+
+struct GpuQueue {
+    VkPhysicalDevice gpu;
+    uint32_t queue_family_index;
+};
+
+inline bool operator==(GpuQueue const & lhs, GpuQueue const & rhs) {
+    return (lhs.gpu == rhs.gpu && lhs.queue_family_index == rhs.queue_family_index);
+}
+
+namespace std {
+template <> struct hash<GpuQueue> {
+    size_t operator()(GpuQueue gq) const throw() {
+        return hash<uint64_t>()((uint64_t)(gq.gpu)) ^ hash<uint32_t>()(gq.queue_family_index);
+    }
+};
+}
 
 struct SURFACE_STATE {
     VkSurfaceKHR surface = VK_NULL_HANDLE;
     SWAPCHAIN_NODE *swapchain = nullptr;
     SWAPCHAIN_NODE *old_swapchain = nullptr;
+    std::unordered_map<GpuQueue, bool> gpu_queue_support;
 
     SURFACE_STATE() {}
     SURFACE_STATE(VkSurfaceKHR surface)

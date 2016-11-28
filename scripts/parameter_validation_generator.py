@@ -150,6 +150,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         self.enumRanges = dict()                          # Map of enum name to BEGIN/END range values
         self.flags = set()                                # Map of flags typenames
         self.flagBits = dict()                            # Map of flag bits typename to list of values
+        self.newFlags = set()                             # Map of flags typenames /defined in the current feature/
         # Named tuples to store struct and command data
         self.StructType = namedtuple('StructType', ['name', 'value'])
         self.CommandParam = namedtuple('CommandParam', ['type', 'name', 'ispointer', 'isstaticarray', 'isbool', 'israngedenum',
@@ -228,9 +229,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         self.commands = []
         self.structMembers = []
         self.validatedStructs = dict()
-        self.enumRanges = dict()
-        self.flags = set()
-        self.flagBits = dict()
+        self.newFlags = set()
     def endFeature(self):
         # C-specific
         # Actually write the interface to the output file.
@@ -250,7 +249,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                 write('const uint32_t GeneratedHeaderVersion = {};'.format(self.headerVersion), file=self.outFile)
                 self.newline()
             # Write the declarations for the VkFlags values combining all flag bits
-            for flag in sorted(self.flags):
+            for flag in sorted(self.newFlags):
                 flagBits = flag.replace('Flags', 'FlagBits')
                 if flagBits in self.flagBits:
                     bits = self.flagBits[flagBits]
@@ -292,6 +291,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
             self.handleTypes.add(name)
         elif (category == 'bitmask'):
             self.flags.add(name)
+            self.newFlags.add(name)
         elif (category == 'define'):
             if name == 'VK_HEADER_VERSION':
                 nameElem = typeElem.find('name')

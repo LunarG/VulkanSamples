@@ -1549,6 +1549,7 @@ static void demo_prepare_render_pass(struct demo *demo) {
             [0] =
                 {
                  .format = demo->format,
+                 .flags = 0,
                  .samples = VK_SAMPLE_COUNT_1_BIT,
                  .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
                  .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
@@ -1560,6 +1561,7 @@ static void demo_prepare_render_pass(struct demo *demo) {
             [1] =
                 {
                  .format = demo->depth.format,
+                 .flags = 0,
                  .samples = VK_SAMPLE_COUNT_1_BIT,
                  .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
                  .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -1593,6 +1595,7 @@ static void demo_prepare_render_pass(struct demo *demo) {
     const VkRenderPassCreateInfo rp_info = {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
         .pNext = NULL,
+        .flags = 0,
         .attachmentCount = 2,
         .pAttachments = attachments,
         .subpassCount = 1,

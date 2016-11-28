@@ -464,11 +464,13 @@ Notice the semi-colon between "C:\\Windows\\System32\\vendorc\_icd.json" and
 In order to find properly-installed ICDs, the Vulkan loader will scan the files
 in the following Linux directories:
 
+```
     /usr/local/etc/vulkan/icd.d
     /usr/local/share/vulkan/icd.d
     /etc/vulkan/icd.d
     /usr/share/vulkan/icd.d
     $HOME/.local/share/vulkan/icd.d
+```
 
 The "/usr/local/*" directories can be configured to be other directories at build time.
 

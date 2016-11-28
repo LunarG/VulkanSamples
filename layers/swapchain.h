@@ -40,7 +40,6 @@ enum SWAPCHAIN_ERROR {
                                           // by vkGetPhysicalDeviceSurfaceSupportKHR for the device
     SWAPCHAIN_CREATE_SWAP_WITHOUT_QUERY,  // Called vkCreateSwapchainKHR() without calling a query (e.g.
                                           // vkGetPhysicalDeviceSurfaceCapabilitiesKHR())
-    SWAPCHAIN_CREATE_SWAP_BAD_MIN_IMG_COUNT,     // Called vkCreateSwapchainKHR() with out-of-bounds minImageCount
     SWAPCHAIN_CREATE_SWAP_OUT_OF_BOUNDS_EXTENTS, // Called vkCreateSwapchainKHR() with out-of-bounds imageExtent
     SWAPCHAIN_CREATE_SWAP_EXTENTS_NO_MATCH_WIN, // Called vkCreateSwapchainKHR() with imageExtent that doesn't match window's extent
     SWAPCHAIN_CREATE_SWAP_BAD_PRE_TRANSFORM,    // Called vkCreateSwapchainKHR() with a non-supported preTransform
@@ -54,7 +53,6 @@ enum SWAPCHAIN_ERROR {
     SWAPCHAIN_CREATE_SWAP_BAD_SHARING_MODE,     // Called vkCreateSwapchainKHR() with a non-supported imageSharingMode
     SWAPCHAIN_CREATE_SWAP_BAD_SHARING_VALUES,   // Called vkCreateSwapchainKHR() with bad values when imageSharingMode is
                                                 // VK_SHARING_MODE_CONCURRENT
-    SWAPCHAIN_APP_ACQUIRES_TOO_MANY_IMAGES, // vkAcquireNextImageKHR() asked for more images than are available
     SWAPCHAIN_BAD_BOOL,                 // VkBool32 that doesn't have value of VK_TRUE or VK_FALSE (e.g. is a non-zero form of true)
     SWAPCHAIN_PRIOR_COUNT,              // Query must be called first to get value of pCount, then called second time
     SWAPCHAIN_INVALID_COUNT,            // Second time a query called, the pCount value didn't match first time
@@ -150,12 +148,6 @@ struct SwpPhysicalDevice {
 
     // TODO: Record/use this info per-surface, not per-device, once a
     // non-dispatchable surface object is added to WSI:
-    // Results of vkGetPhysicalDeviceSurfaceCapabilitiesKHR():
-    bool gotSurfaceCapabilities;
-    VkSurfaceCapabilitiesKHR surfaceCapabilities;
-
-    // TODO: Record/use this info per-surface, not per-device, once a
-    // non-dispatchable surface object is added to WSI:
     // Count and VkSurfaceFormatKHR's returned by vkGetPhysicalDeviceSurfaceFormatsKHR():
     uint32_t surfaceFormatCount;
     VkSurfaceFormatKHR *pSurfaceFormats;
@@ -214,7 +206,6 @@ struct SwpSwapchain {
     // When vkGetSwapchainImagesKHR is called, the VkImage's are
     // remembered:
     uint32_t imageCount;
-    unordered_map<int, SwpImage> images;
 };
 
 // Create one of these for each VkQueue within a VkDevice:

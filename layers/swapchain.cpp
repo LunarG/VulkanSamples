@@ -95,16 +95,6 @@ static void init_swapchain(layer_data *my_data, const VkAllocationCallbacks *pAl
     layer_debug_actions(my_data->report_data, my_data->logging_callback, pAllocator, "lunarg_swapchain");
 }
 
-static const char *surfaceTransformStr(VkSurfaceTransformFlagBitsKHR value) {
-    // Return a string corresponding to the value:
-    return string_VkSurfaceTransformFlagBitsKHR(value);
-}
-
-static const char *surfaceCompositeAlphaStr(VkCompositeAlphaFlagBitsKHR value) {
-    // Return a string corresponding to the value:
-    return string_VkCompositeAlphaFlagBitsKHR(value);
-}
-
 static const char *presentModeStr(VkPresentModeKHR value) {
     // Return a string corresponding to the value:
     return string_VkPresentModeKHR(value);
@@ -822,7 +812,6 @@ VKAPI_ATTR void VKAPI_CALL DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR s
             // Empty and then delete all SwpSwapchains
             for (auto it = pSurface->swapchains.begin(); it != pSurface->swapchains.end(); it++) {
                 // Delete all SwpImage's
-                it->second->images.clear();
                 // In case the swapchain's device hasn't been destroyed yet
                 // (which isn't likely, but is possible), delete its
                 // association with this swapchain (i.e. so we can't point to
@@ -864,7 +853,6 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumeratePhysicalDevices(VkInstance instance, uin
             my_data->physicalDeviceMap[pPhysicalDevices[i]].pInstance = pInstance;
             my_data->physicalDeviceMap[pPhysicalDevices[i]].pDevice = NULL;
             my_data->physicalDeviceMap[pPhysicalDevices[i]].gotQueueFamilyPropertyCount = false;
-            my_data->physicalDeviceMap[pPhysicalDevices[i]].gotSurfaceCapabilities = false;
             my_data->physicalDeviceMap[pPhysicalDevices[i]].surfaceFormatCount = 0;
             my_data->physicalDeviceMap[pPhysicalDevices[i]].pSurfaceFormats = NULL;
             my_data->physicalDeviceMap[pPhysicalDevices[i]].presentModeCount = 0;
@@ -939,7 +927,6 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
             // Empty and then delete all SwpSwapchain's
             for (auto it = pDevice->swapchains.begin(); it != pDevice->swapchains.end(); it++) {
                 // Delete all SwpImage's
-                it->second->images.clear();
                 // In case the swapchain's surface hasn't been destroyed yet
                 // (which is likely) delete its association with this swapchain
                 // (i.e. so we can't point to this swpchain from that surface,
@@ -1011,43 +998,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevi
                     pSurface->pQueueFamilyIndexSupport[queueFamilyIndex] = *pSupported;
                 }
             }
-        }
-        lock.unlock();
-
-        return result;
-    }
-    return VK_ERROR_VALIDATION_FAILED_EXT;
-}
-
-VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilitiesKHR(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
-                                                                       VkSurfaceCapabilitiesKHR *pSurfaceCapabilities) {
-    VkResult result = VK_SUCCESS;
-    bool skip_call = false;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
-    std::unique_lock<std::mutex> lock(global_lock);
-    SwpPhysicalDevice *pPhysicalDevice = NULL;
-    {
-        auto it = my_data->physicalDeviceMap.find(physicalDevice);
-        pPhysicalDevice = (it == my_data->physicalDeviceMap.end()) ? NULL : &it->second;
-    }
-
-    lock.unlock();
-
-    if (!skip_call) {
-        // Call down the call chain:
-        result = my_data->instance_dispatch_table->GetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface,
-                                                                                           pSurfaceCapabilities);
-        lock.lock();
-
-        // Obtain this pointer again after locking:
-        {
-            auto it = my_data->physicalDeviceMap.find(physicalDevice);
-            pPhysicalDevice = (it == my_data->physicalDeviceMap.end()) ? NULL : &it->second;
-        }
-        if ((result == VK_SUCCESS) && pPhysicalDevice) {
-            // Record the result of this query:
-            pPhysicalDevice->gotSurfaceCapabilities = true;
-            pPhysicalDevice->surfaceCapabilities = *pSurfaceCapabilities;
         }
         lock.unlock();
 
@@ -1212,7 +1162,6 @@ static bool validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
     // assumes a new swapchain is being created).
     bool skip_call = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    char fn[] = "vkCreateSwapchainKHR";
     SwpDevice *pDevice = NULL;
     {
         auto it = my_data->deviceMap.find(device);
@@ -1231,14 +1180,7 @@ static bool validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
         }
     }
 
-    // Validate pCreateInfo values with the results of
-    // vkGetPhysicalDeviceSurfaceCapabilitiesKHR():
-    if (!pPhysicalDevice || !pPhysicalDevice->gotSurfaceCapabilities) {
-        skip_call |=
-            log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                    reinterpret_cast<uint64_t>(device), __LINE__, SWAPCHAIN_CREATE_SWAP_WITHOUT_QUERY, swapchain_layer_name,
-                    "vkCreateSwapchainKHR() called before calling vkGetPhysicalDeviceSurfaceCapabilitiesKHR().");
-    } else if (pCreateInfo) {
+    if (pCreateInfo) {
         // Validate pCreateInfo->surface to make sure that
         // vkGetPhysicalDeviceSurfaceSupportKHR() reported this as a supported
         // surface:
@@ -1252,124 +1194,6 @@ static bool validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
                         "However, vkGetPhysicalDeviceSurfaceSupportKHR() was never called with this surface.");
         }
 
-        // Validate pCreateInfo->minImageCount against
-        // VkSurfaceCapabilitiesKHR::{min|max}ImageCount:
-        VkSurfaceCapabilitiesKHR *pCapabilities = &pPhysicalDevice->surfaceCapabilities;
-        if ((pCreateInfo->minImageCount < pCapabilities->minImageCount) ||
-            ((pCapabilities->maxImageCount > 0) && (pCreateInfo->minImageCount > pCapabilities->maxImageCount))) {
-            skip_call |=
-                log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                        reinterpret_cast<uint64_t>(device), __LINE__, SWAPCHAIN_CREATE_SWAP_BAD_MIN_IMG_COUNT, swapchain_layer_name,
-                        "vkCreateSwapchainKHR() called with pCreateInfo->minImageCount = %d, which is outside the bounds returned "
-                        "by vkGetPhysicalDeviceSurfaceCapabilitiesKHR() (i.e. minImageCount = %d, maxImageCount = %d).",
-                        pCreateInfo->minImageCount, pCapabilities->minImageCount, pCapabilities->maxImageCount);
-        }
-        // Validate pCreateInfo->imageExtent against
-        // VkSurfaceCapabilitiesKHR::{current|min|max}ImageExtent:
-        if ((pCapabilities->currentExtent.width == -1) &&
-            ((pCreateInfo->imageExtent.width < pCapabilities->minImageExtent.width) ||
-             (pCreateInfo->imageExtent.width > pCapabilities->maxImageExtent.width) ||
-             (pCreateInfo->imageExtent.height < pCapabilities->minImageExtent.height) ||
-             (pCreateInfo->imageExtent.height > pCapabilities->maxImageExtent.height))) {
-            skip_call |= log_msg(
-                my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                reinterpret_cast<uint64_t>(device), __LINE__, SWAPCHAIN_CREATE_SWAP_OUT_OF_BOUNDS_EXTENTS, swapchain_layer_name,
-                "vkCreateSwapchainKHR() called with pCreateInfo->imageExtent = (%d,%d), which is outside the "
-                "bounds returned by vkGetPhysicalDeviceSurfaceCapabilitiesKHR(): currentExtent = (%d,%d), "
-                "minImageExtent = (%d,%d), maxImageExtent = (%d,%d).",
-                pCreateInfo->imageExtent.width, pCreateInfo->imageExtent.height, pCapabilities->currentExtent.width,
-                pCapabilities->currentExtent.height, pCapabilities->minImageExtent.width, pCapabilities->minImageExtent.height,
-                pCapabilities->maxImageExtent.width, pCapabilities->maxImageExtent.height);
-        }
-        if ((pCapabilities->currentExtent.width != -1) &&
-            ((pCreateInfo->imageExtent.width != pCapabilities->currentExtent.width) ||
-             (pCreateInfo->imageExtent.height != pCapabilities->currentExtent.height))) {
-            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                                 reinterpret_cast<uint64_t>(device), __LINE__, SWAPCHAIN_CREATE_SWAP_EXTENTS_NO_MATCH_WIN,
-                                 swapchain_layer_name,
-                                 "vkCreateSwapchainKHR() called with pCreateInfo->imageExtent = (%d,%d), which is not equal to the "
-                                 "currentExtent = (%d,%d) returned by vkGetPhysicalDeviceSurfaceCapabilitiesKHR().",
-                                 pCreateInfo->imageExtent.width, pCreateInfo->imageExtent.height,
-                                 pCapabilities->currentExtent.width, pCapabilities->currentExtent.height);
-        }
-        // Validate pCreateInfo->preTransform has one bit set (1st two
-        // lines of if-statement), which bit is also set in
-        // VkSurfaceCapabilitiesKHR::supportedTransforms (3rd line of if-statement):
-        if (!pCreateInfo->preTransform || (pCreateInfo->preTransform & (pCreateInfo->preTransform - 1)) ||
-            !(pCreateInfo->preTransform & pCapabilities->supportedTransforms)) {
-            // This is an error situation; one for which we'd like to give
-            // the developer a helpful, multi-line error message.  Build it
-            // up a little at a time, and then log it:
-            std::string errorString = "";
-            char str[1024];
-            // Here's the first part of the message:
-            sprintf(str, "%s() called with a non-supported "
-                         "pCreateInfo->preTransform (i.e. %s).  "
-                         "Supported values are:\n",
-                    fn, surfaceTransformStr(pCreateInfo->preTransform));
-            errorString += str;
-            for (int i = 0; i < 32; i++) {
-                // Build up the rest of the message:
-                if ((1 << i) & pCapabilities->supportedTransforms) {
-                    const char *newStr = surfaceTransformStr((VkSurfaceTransformFlagBitsKHR)(1 << i));
-                    sprintf(str, "    %s\n", newStr);
-                    errorString += str;
-                }
-            }
-            // Log the message that we've built up:
-            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                                 reinterpret_cast<uint64_t &>(device), __LINE__, SWAPCHAIN_CREATE_SWAP_BAD_PRE_TRANSFORM,
-                                 LAYER_NAME, "%s", errorString.c_str());
-        }
-        // Validate pCreateInfo->compositeAlpha has one bit set (1st two
-        // lines of if-statement), which bit is also set in
-        // VkSurfaceCapabilitiesKHR::supportedCompositeAlpha (3rd line of if-statement):
-        if (!pCreateInfo->compositeAlpha || (pCreateInfo->compositeAlpha & (pCreateInfo->compositeAlpha - 1)) ||
-            !((pCreateInfo->compositeAlpha) & pCapabilities->supportedCompositeAlpha)) {
-            // This is an error situation; one for which we'd like to give
-            // the developer a helpful, multi-line error message.  Build it
-            // up a little at a time, and then log it:
-            std::string errorString = "";
-            char str[1024];
-            // Here's the first part of the message:
-            sprintf(str, "%s() called with a non-supported "
-                         "pCreateInfo->compositeAlpha (i.e. %s).  "
-                         "Supported values are:\n",
-                    fn, surfaceCompositeAlphaStr(pCreateInfo->compositeAlpha));
-            errorString += str;
-            for (int i = 0; i < 32; i++) {
-                // Build up the rest of the message:
-                if ((1 << i) & pCapabilities->supportedCompositeAlpha) {
-                    const char *newStr = surfaceCompositeAlphaStr((VkCompositeAlphaFlagBitsKHR)(1 << i));
-                    sprintf(str, "    %s\n", newStr);
-                    errorString += str;
-                }
-            }
-            // Log the message that we've built up:
-            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                                 reinterpret_cast<uint64_t &>(device), __LINE__, SWAPCHAIN_CREATE_SWAP_BAD_COMPOSITE_ALPHA,
-                                 LAYER_NAME, "%s", errorString.c_str());
-        }
-        // Validate pCreateInfo->imageArrayLayers against
-        // VkSurfaceCapabilitiesKHR::maxImageArrayLayers:
-        if ((pCreateInfo->imageArrayLayers < 1) || (pCreateInfo->imageArrayLayers > pCapabilities->maxImageArrayLayers)) {
-            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                                 reinterpret_cast<uint64_t>(device), __LINE__, SWAPCHAIN_CREATE_SWAP_BAD_IMG_ARRAY_LAYERS,
-                                 swapchain_layer_name,
-                                 "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->imageArrayLayers (i.e. %d).  "
-                                 "Minimum value is 1, maximum value is %d.",
-                                 pCreateInfo->imageArrayLayers, pCapabilities->maxImageArrayLayers);
-        }
-        // Validate pCreateInfo->imageUsage against
-        // VkSurfaceCapabilitiesKHR::supportedUsageFlags:
-        if (pCreateInfo->imageUsage != (pCreateInfo->imageUsage & pCapabilities->supportedUsageFlags)) {
-            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                                 reinterpret_cast<uint64_t>(device), __LINE__, SWAPCHAIN_CREATE_SWAP_BAD_IMG_USAGE_FLAGS,
-                                 swapchain_layer_name,
-                                 "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->imageUsage (i.e. 0x%08x).  "
-                                 "Supported flag bits are 0x%08x.",
-                                 pCreateInfo->imageUsage, pCapabilities->supportedUsageFlags);
-        }
     }
 
     // Validate pCreateInfo values with the results of
@@ -1465,23 +1289,7 @@ static bool validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
                                  "bad value(s) for pCreateInfo->queueFamilyIndexCount or pCreateInfo->pQueueFamilyIndices).",
                                  sharingModeStr(pCreateInfo->imageSharingMode));
         }
-    } else if (pCreateInfo->imageSharingMode != VK_SHARING_MODE_EXCLUSIVE) {
-        skip_call |=
-            log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                    reinterpret_cast<uint64_t>(device), __LINE__, SWAPCHAIN_CREATE_SWAP_BAD_SHARING_MODE, swapchain_layer_name,
-                    "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->imageSharingMode (i.e. %s).",
-                    sharingModeStr(pCreateInfo->imageSharingMode));
     }
-
-    // Validate pCreateInfo->clipped:
-    if (pCreateInfo && (pCreateInfo->clipped != VK_FALSE) && (pCreateInfo->clipped != VK_TRUE)) {
-        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                             reinterpret_cast<uint64_t>(device), __LINE__, SWAPCHAIN_BAD_BOOL, swapchain_layer_name,
-                             "vkCreateSwapchainKHR() called with a VkBool32 value that is neither VK_TRUE nor VK_FALSE, but "
-                             "has the numeric value of %d.",
-                             pCreateInfo->clipped);
-    }
-
     return skip_call;
 }
 
@@ -1554,9 +1362,6 @@ VKAPI_ATTR void VKAPI_CALL DestroySwapchainKHR(VkDevice device, VkSwapchainKHR s
         if (pSwapchain->pSurface) {
             pSwapchain->pSurface->swapchains.erase(swapchain);
         }
-        if (pSwapchain->imageCount) {
-            pSwapchain->images.clear();
-        }
         my_data->swapchainMap.erase(swapchain);
     }
     lock.unlock();
@@ -1616,162 +1421,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchai
                    (*pSwapchainImageCount > 0)) {
             // Record the images and their state:
             pSwapchain->imageCount = *pSwapchainImageCount;
-            for (uint32_t i = 0; i < *pSwapchainImageCount; i++) {
-                pSwapchain->images[i].image = pSwapchainImages[i];
-                pSwapchain->images[i].pSwapchain = pSwapchain;
-                pSwapchain->images[i].acquiredByApp = false;
-            }
-        }
-        lock.unlock();
-
-        return result;
-    }
-    return VK_ERROR_VALIDATION_FAILED_EXT;
-}
-
-VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainKHR swapchain, uint64_t timeout,
-                                                   VkSemaphore semaphore, VkFence fence, uint32_t *pImageIndex) {
-    // TODOs:
-    //
-    // - Address the timeout.  Possibilities include looking at the state of the
-    //   swapchain's images, depending on the timeout value.
-    // - Implement a check for validity language that reads: If pname:semaphore is
-    //   not sname:VK_NULL_HANDLE it must: be unsignalled
-    // - Implement a check for validity language that reads: If pname:fence is not
-    //   sname:VK_NULL_HANDLE it must: be unsignalled and mustnot: be associated
-    //   with any other queue command that has not yet completed execution on that
-    //   queue
-    // - Record/update the state of the swapchain, in case an error occurs
-    //   (e.g. VK_ERROR_OUT_OF_DATE_KHR).
-    VkResult result = VK_SUCCESS;
-    bool skip_call = false;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    std::unique_lock<std::mutex> lock(global_lock);
-    SwpDevice *pDevice = NULL;
-    {
-        auto it = my_data->deviceMap.find(device);
-        pDevice = (it == my_data->deviceMap.end()) ? NULL : &it->second;
-    }
-
-    SwpSwapchain *pSwapchain = NULL;
-    {
-        auto it = my_data->swapchainMap.find(swapchain);
-        pSwapchain = (it == my_data->swapchainMap.end()) ? NULL : &it->second;
-    }
-    SwpPhysicalDevice *pPhysicalDevice = pDevice->pPhysicalDevice;
-    if (pSwapchain && pPhysicalDevice && pPhysicalDevice->gotSurfaceCapabilities) {
-        // Look to see if the application has already acquired the maximum
-        // number of images, and this will push it past the spec-defined
-        // limits:
-        uint32_t minImageCount = pPhysicalDevice->surfaceCapabilities.minImageCount;
-        uint32_t imagesAcquiredByApp = 0;
-        for (uint32_t i = 0; i < pSwapchain->imageCount; i++) {
-            if (pSwapchain->images[i].acquiredByApp) {
-                imagesAcquiredByApp++;
-            }
-        }
-        if (imagesAcquiredByApp > (pSwapchain->imageCount - minImageCount)) {
-            skip_call |= log_msg(
-                my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                reinterpret_cast<uint64_t>(device), __LINE__, SWAPCHAIN_APP_ACQUIRES_TOO_MANY_IMAGES, swapchain_layer_name,
-                "vkAcquireNextImageKHR() called when it cannot succeed.  The application has acquired %d image(s) that have not "
-                "yet "
-                "been presented.  The maximum number of images that the application can simultaneously acquire from this swapchain "
-                "(including this call to vkCreateSwapchainKHR()) is %d.  That value is derived by subtracting "
-                "VkSurfaceCapabilitiesKHR::minImageCount (%d) from the number of images in the swapchain (%d) and adding 1.",
-                imagesAcquiredByApp, (pSwapchain->imageCount - minImageCount + 1), minImageCount, pSwapchain->imageCount);
-        }
-    }
-    lock.unlock();
-
-    if (!skip_call) {
-        // Call down the call chain:
-        result = my_data->device_dispatch_table->AcquireNextImageKHR(device, swapchain, timeout, semaphore, fence, pImageIndex);
-        lock.lock();
-
-        // Obtain this pointer again after locking:
-        {
-            auto it = my_data->swapchainMap.find(swapchain);
-            pSwapchain = (it == my_data->swapchainMap.end()) ? NULL : &it->second;
-        }
-        if (((result == VK_SUCCESS) || (result == VK_SUBOPTIMAL_KHR)) && pSwapchain) {
-            // Change the state of the image (now acquired by the application):
-            pSwapchain->images[*pImageIndex].acquiredByApp = true;
-        }
-        lock.unlock();
-
-        return result;
-    }
-    return VK_ERROR_VALIDATION_FAILED_EXT;
-}
-
-VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInfoKHR *pPresentInfo) {
-    // TODOs:
-    //
-    // - Implement a check for validity language that reads: Any given element of
-    //   sname:VkSemaphore in pname:pWaitSemaphores must: refer to a prior signal
-    //   of that sname:VkSemaphore that won't be consumed by any other wait on that
-    //   semaphore
-    // - Record/update the state of the swapchain, in case an error occurs
-    //   (e.g. VK_ERROR_OUT_OF_DATE_KHR).
-    VkResult result = VK_SUCCESS;
-    bool skip_call = false;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
-
-    // Note: pPresentInfo->pResults is allowed to be NULL
-
-    std::unique_lock<std::mutex> lock(global_lock);
-    for (uint32_t i = 0; pPresentInfo && (i < pPresentInfo->swapchainCount); i++) {
-        SwpSwapchain *pSwapchain = NULL;
-        {
-            auto it = my_data->swapchainMap.find(pPresentInfo->pSwapchains[i]);
-            pSwapchain = (it == my_data->swapchainMap.end()) ? NULL : &it->second;
-        }
-        if (pSwapchain) {
-            SwpQueue *pQueue = NULL;
-            {
-                auto it = my_data->queueMap.find(queue);
-                pQueue = (it == my_data->queueMap.end()) ? NULL : &it->second;
-            }
-            SwpSurface *pSurface = pSwapchain->pSurface;
-            if (pQueue && pSurface && pSurface->numQueueFamilyIndexSupport) {
-                uint32_t queueFamilyIndex = pQueue->queueFamilyIndex;
-                // Note: the 1st test is to ensure queueFamilyIndex is in range,
-                // and the 2nd test is the validation check:
-                if ((pSurface->numQueueFamilyIndexSupport > queueFamilyIndex) &&
-                    (!pSurface->pQueueFamilyIndexSupport[queueFamilyIndex])) {
-                    skip_call |=
-                        log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
-                                reinterpret_cast<const uint64_t &>(pPresentInfo->pSwapchains[i]), __LINE__,
-                                SWAPCHAIN_SURFACE_NOT_SUPPORTED_WITH_QUEUE, swapchain_layer_name,
-                                "vkQueuePresentKHR() called with a swapchain whose surface is not supported for presention "
-                                "on this device with the queueFamilyIndex (i.e. %d) of the given queue.",
-                                queueFamilyIndex);
-                }
-            }
-        }
-    }
-    lock.unlock();
-
-    if (!skip_call) {
-        // Call down the call chain:
-        result = my_data->device_dispatch_table->QueuePresentKHR(queue, pPresentInfo);
-        lock.lock();
-
-        if (pPresentInfo && ((result == VK_SUCCESS) || (result == VK_SUBOPTIMAL_KHR))) {
-            for (uint32_t i = 0; i < pPresentInfo->swapchainCount; i++) {
-                int index = pPresentInfo->pImageIndices[i];
-                SwpSwapchain *pSwapchain = NULL;
-                {
-                    auto it = my_data->swapchainMap.find(pPresentInfo->pSwapchains[i]);
-                    pSwapchain = (it == my_data->swapchainMap.end()) ? NULL : &it->second;
-                }
-                if (pSwapchain) {
-                    // Change the state of the image (no longer acquired by the
-                    // application):
-                    pSwapchain->images[index].acquiredByApp = false;
-                }
-            }
         }
         lock.unlock();
 
@@ -2025,8 +1674,6 @@ static PFN_vkVoidFunction intercept_khr_surface_command(const char *name, VkInst
 #endif // VK_USE_PLATFORM_XLIB_KHR
         {"vkDestroySurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(DestroySurfaceKHR)},
         {"vkGetPhysicalDeviceSurfaceSupportKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceSupportKHR)},
-        {"vkGetPhysicalDeviceSurfaceCapabilitiesKHR",
-         reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceCapabilitiesKHR)},
         {"vkGetPhysicalDeviceSurfaceFormatsKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceFormatsKHR)},
         {"vkGetPhysicalDeviceSurfacePresentModesKHR",
          reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfacePresentModesKHR)},
@@ -2073,8 +1720,6 @@ static PFN_vkVoidFunction intercept_khr_swapchain_command(const char *name, VkDe
         {"vkCreateSwapchainKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateSwapchainKHR)},
         {"vkDestroySwapchainKHR", reinterpret_cast<PFN_vkVoidFunction>(DestroySwapchainKHR)},
         {"vkGetSwapchainImagesKHR", reinterpret_cast<PFN_vkVoidFunction>(GetSwapchainImagesKHR)},
-        {"vkAcquireNextImageKHR", reinterpret_cast<PFN_vkVoidFunction>(AcquireNextImageKHR)},
-        {"vkQueuePresentKHR", reinterpret_cast<PFN_vkVoidFunction>(QueuePresentKHR)},
     };
 
     // do not check if VK_KHR_swapchain is enabled (why?)
