@@ -2072,15 +2072,15 @@ TEST_F(VkLayerTest, InvalidCommandPoolConsistency) {
 
     vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr, &command_pool_two);
 
-    VkCommandBuffer command_buffer[9];
+    VkCommandBuffer cb;
     VkCommandBufferAllocateInfo command_buffer_allocate_info{};
     command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     command_buffer_allocate_info.commandPool = command_pool_one;
-    command_buffer_allocate_info.commandBufferCount = 9;
+    command_buffer_allocate_info.commandBufferCount = 1;
     command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, command_buffer);
+    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, &cb);
 
-    vkFreeCommandBuffers(m_device->device(), command_pool_two, 4, &command_buffer[3]);
+    vkFreeCommandBuffers(m_device->device(), command_pool_two, 1, &cb);
 
     m_errorMonitor->VerifyFound();
 
