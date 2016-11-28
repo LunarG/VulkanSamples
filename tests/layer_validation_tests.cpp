@@ -10473,6 +10473,26 @@ TEST_F(VkLayerTest, InvalidImageLayout) {
         "Layout for output image is VK_IMAGE_LAYOUT_UNDEFINED but can only be TRANSFER_DST_OPTIMAL or GENERAL.");
     m_commandBuffer->CopyImage(src_image, VK_IMAGE_LAYOUT_GENERAL, dst_image, VK_IMAGE_LAYOUT_UNDEFINED, 1, &copyRegion);
     m_errorMonitor->VerifyFound();
+
+    VkClearColorValue clearValue = {};
+    VkImageSubresourceRange clearRange;
+    clearRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    clearRange.baseMipLevel = 0;
+    clearRange.baseArrayLayer = 0;
+    clearRange.layerCount = 1;
+    clearRange.levelCount = 1;
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "Layout for cleared image is VK_IMAGE_LAYOUT_UNDEFINED but can only be TRANSFER_DST_OPTIMAL or GENERAL.");
+    m_commandBuffer->ClearColorImage(dst_image, VK_IMAGE_LAYOUT_UNDEFINED, &clearValue, 1, &clearRange);
+    m_errorMonitor->VerifyFound();
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Cannot clear an image whose layout is "
+                                                                        "VK_IMAGE_LAYOUT_UNDEFINED and doesn't match the current "
+                                                                        "layout VK_IMAGE_LAYOUT_GENERAL.");
+    m_commandBuffer->ClearColorImage(dst_image, VK_IMAGE_LAYOUT_UNDEFINED, &clearValue, 1, &clearRange);
+    m_errorMonitor->VerifyFound();
+
     // Now cause error due to bad image layout transition in PipelineBarrier
     VkImageMemoryBarrier image_barrier[1] = {};
     image_barrier[0].oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;

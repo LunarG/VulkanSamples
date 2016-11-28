@@ -8242,6 +8242,52 @@ static bool VerifyDestImageLayout(layer_data *dev_data, GLOBAL_CB_NODE *cb_node,
     return skip_call;
 }
 
+static bool VerifyClearImageLayout(layer_data *dev_data, GLOBAL_CB_NODE *cb_node, VkImage image, VkImageSubresourceRange range,
+                                   VkImageLayout destImageLayout) {
+    bool skip_call = false;
+
+    VkImageSubresourceRange resolvedRange = range;
+    ResolveRemainingLevelsLayers(dev_data, &resolvedRange, image);
+
+    for (uint32_t levelIdx = 0; levelIdx < range.levelCount; ++levelIdx) {
+        uint32_t level = levelIdx + range.baseMipLevel;
+        for (uint32_t layerIdx = 0; layerIdx < range.layerCount; ++layerIdx) {
+            uint32_t layer = layerIdx + range.baseArrayLayer;
+            VkImageSubresource sub = {range.aspectMask, level, layer};
+            IMAGE_CMD_BUF_LAYOUT_NODE node;
+            if (!FindLayout(cb_node, image, sub, node)) {
+                SetLayout(cb_node, image, sub, IMAGE_CMD_BUF_LAYOUT_NODE(destImageLayout, destImageLayout));
+                continue;
+            }
+            if (node.layout != destImageLayout) {
+                skip_call |=
+                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0,
+                            __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS", "Cannot clear an image whose layout is %s and "
+                                                                            "doesn't match the current layout %s.",
+                            string_VkImageLayout(destImageLayout), string_VkImageLayout(node.layout));
+            }
+        }
+    }
+
+    if (destImageLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+        if (destImageLayout == VK_IMAGE_LAYOUT_GENERAL) {
+            auto image_state = getImageState(dev_data, image);
+            if (image_state->createInfo.tiling != VK_IMAGE_TILING_LINEAR) {
+                // LAYOUT_GENERAL is allowed, but may not be performance optimal, flag as perf warning.
+                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
+                                     (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                                     "Layout for cleared image should be TRANSFER_DST_OPTIMAL instead of GENERAL.");
+            }
+        } else {
+            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                                 DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS", "Layout for cleared image is %s but can only be "
+                                                                       "TRANSFER_DST_OPTIMAL or GENERAL.",
+                                 string_VkImageLayout(destImageLayout));
+        }
+    }
+    return skip_call;
+}
+
 // Test if two VkExtent3D structs are equivalent
 static inline bool IsExtentEqual(const VkExtent3D *extent, const VkExtent3D *other_extent) {
     bool result = true;
@@ -8799,6 +8845,9 @@ VKAPI_ATTR void VKAPI_CALL CmdClearColorImage(VkCommandBuffer commandBuffer, VkI
     } else {
         assert(0);
     }
+    for (uint32_t i = 0; i < rangeCount; ++i) {
+        skip_call |= VerifyClearImageLayout(dev_data, cb_node, image, pRanges[i], imageLayout);
+    }
     lock.unlock();
     if (!skip_call)
         dev_data->dispatch_table.CmdClearColorImage(commandBuffer, image, imageLayout, pColor, rangeCount, pRanges);
@@ -8828,6 +8877,9 @@ CmdClearDepthStencilImage(VkCommandBuffer commandBuffer, VkImage image, VkImageL
         skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdClearDepthStencilImage()");
     } else {
         assert(0);
+    }
+    for (uint32_t i = 0; i < rangeCount; ++i) {
+        skip_call |= VerifyClearImageLayout(dev_data, cb_node, image, pRanges[i], imageLayout);
     }
     lock.unlock();
     if (!skip_call)
