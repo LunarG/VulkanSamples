@@ -16644,12 +16644,13 @@ TEST_F(VkPositiveLayerTest, NonCoherentMemoryMapping) {
     VkDeviceMemory mem;
     VkMemoryRequirements mem_reqs;
     mem_reqs.memoryTypeBits = 0xFFFFFFFF;
+    const VkDeviceSize atom_size = m_device->props.limits.nonCoherentAtomSize;
     VkMemoryAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     alloc_info.pNext = NULL;
     alloc_info.memoryTypeIndex = 0;
 
-    static const VkDeviceSize allocation_size = 0x1000;
+    static const VkDeviceSize allocation_size = 32 * atom_size;
     alloc_info.allocationSize = allocation_size;
 
     // Find a memory configurations WITHOUT a COHERENT bit, otherwise exit
@@ -16673,8 +16674,7 @@ TEST_F(VkPositiveLayerTest, NonCoherentMemoryMapping) {
     err = vkAllocateMemory(m_device->device(), &alloc_info, NULL, &mem);
     ASSERT_VK_SUCCESS(err);
 
-    // Map/Flush/Invalidate using WHOLE_SIZE and zero offsets and entire
-    // mapped range
+    // Map/Flush/Invalidate using WHOLE_SIZE and zero offsets and entire mapped range
     m_errorMonitor->ExpectSuccess();
     err = vkMapMemory(m_device->device(), mem, 0, VK_WHOLE_SIZE, 0, (void **)&pData);
     ASSERT_VK_SUCCESS(err);
@@ -16690,14 +16690,13 @@ TEST_F(VkPositiveLayerTest, NonCoherentMemoryMapping) {
     m_errorMonitor->VerifyNotFound();
     vkUnmapMemory(m_device->device(), mem);
 
-    // Map/Flush/Invalidate using WHOLE_SIZE and a prime offset and entire
-    // mapped range
+    // Map/Flush/Invalidate using WHOLE_SIZE and an offset and entire mapped range
     m_errorMonitor->ExpectSuccess();
-    err = vkMapMemory(m_device->device(), mem, 13, VK_WHOLE_SIZE, 0, (void **)&pData);
+    err = vkMapMemory(m_device->device(), mem, 5 * atom_size, VK_WHOLE_SIZE, 0, (void **)&pData);
     ASSERT_VK_SUCCESS(err);
     mmr.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
     mmr.memory = mem;
-    mmr.offset = 13;
+    mmr.offset = 6 * atom_size;
     mmr.size = VK_WHOLE_SIZE;
     err = vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
     ASSERT_VK_SUCCESS(err);
@@ -16706,15 +16705,15 @@ TEST_F(VkPositiveLayerTest, NonCoherentMemoryMapping) {
     m_errorMonitor->VerifyNotFound();
     vkUnmapMemory(m_device->device(), mem);
 
-    // Map with prime offset and size
-    // Flush/Invalidate subrange of mapped area with prime offset and size
+    // Map with offset and size
+    // Flush/Invalidate subrange of mapped area with offset and size
     m_errorMonitor->ExpectSuccess();
-    err = vkMapMemory(m_device->device(), mem, allocation_size - 137, 109, 0, (void **)&pData);
+    err = vkMapMemory(m_device->device(), mem, 3 * atom_size, 9 * atom_size, 0, (void **)&pData);
     ASSERT_VK_SUCCESS(err);
     mmr.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
     mmr.memory = mem;
-    mmr.offset = allocation_size - 107;
-    mmr.size = 61;
+    mmr.offset = 4 * atom_size;
+    mmr.size = 2 * atom_size;
     err = vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
     ASSERT_VK_SUCCESS(err);
     err = vkInvalidateMappedMemoryRanges(m_device->device(), 1, &mmr);
@@ -16728,11 +16727,11 @@ TEST_F(VkPositiveLayerTest, NonCoherentMemoryMapping) {
     ASSERT_VK_SUCCESS(err);
     mmr.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
     mmr.memory = mem;
-    mmr.offset = allocation_size - 100;
+    mmr.offset = allocation_size - (4 * atom_size);
     mmr.size = VK_WHOLE_SIZE;
     err = vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
     ASSERT_VK_SUCCESS(err);
-    mmr.offset = allocation_size - 200;
+    mmr.offset = allocation_size - (6 * atom_size);
     mmr.size = VK_WHOLE_SIZE;
     err = vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
     ASSERT_VK_SUCCESS(err);
