@@ -3076,6 +3076,7 @@ TEST_F(VkLayerTest, DisabledIndependentBlend) {
     m_errorMonitor->VerifyFound();
 }
 
+#if 0
 TEST_F(VkLayerTest, RenderPassDepthStencilAttachmentUnused) {
     TEST_DESCRIPTION("Specify no depth attachement in renderpass then specify "
                      "depth attachments in subpass");
@@ -3103,6 +3104,7 @@ TEST_F(VkLayerTest, RenderPassDepthStencilAttachmentUnused) {
     vkCreateRenderPass(m_device->device(), &rpci, NULL, &rp);
     m_errorMonitor->VerifyFound();
 }
+#endif
 
 TEST_F(VkLayerTest, UnusedPreserveAttachment) {
     TEST_DESCRIPTION("Create a framebuffer where a subpass has a preserve "
