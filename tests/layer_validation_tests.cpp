@@ -15970,7 +15970,6 @@ TEST_F(VkPositiveLayerTest, IgnoreUnrelatedDescriptor) {
 
         m_errorMonitor->VerifyNotFound();
 
-        vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptor_set);
         vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
         vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
         vkDestroyBuffer(m_device->device(), buffer, NULL);
@@ -16082,7 +16081,6 @@ TEST_F(VkPositiveLayerTest, IgnoreUnrelatedDescriptor) {
 
         m_errorMonitor->VerifyNotFound();
 
-        vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptor_set);
         vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
         vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
         vkDestroyBufferView(m_device->device(), buffer_view, NULL);
