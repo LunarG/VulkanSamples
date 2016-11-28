@@ -14085,9 +14085,8 @@ TEST_F(VkLayerTest, ImageLayerUnsupportedFormat) {
     ASSERT_TRUE(image.initialized());
 
     // Create image with unsupported format - Expect FORMAT_UNSUPPORTED
-    VkImageCreateInfo image_create_info;
+    VkImageCreateInfo image_create_info = {};
     image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    image_create_info.pNext = NULL;
     image_create_info.imageType = VK_IMAGE_TYPE_2D;
     image_create_info.format = VK_FORMAT_UNDEFINED;
     image_create_info.extent.width = 32;
@@ -14098,7 +14097,6 @@ TEST_F(VkLayerTest, ImageLayerUnsupportedFormat) {
     image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
     image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
     image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-    image_create_info.flags = 0;
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "vkCreateImage: VkFormat for image must not be VK_FORMAT_UNDEFINED");
