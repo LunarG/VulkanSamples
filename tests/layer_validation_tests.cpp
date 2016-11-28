@@ -11566,6 +11566,7 @@ TEST_F(VkLayerTest, FramebufferIncompatible) {
     ASSERT_VK_SUCCESS(err);
     VkCommandBufferBeginInfo cbbi = {};
     VkCommandBufferInheritanceInfo cbii = {};
+    cbii.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
     cbii.renderPass = renderPass();
     cbii.framebuffer = fb;
     cbbi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
