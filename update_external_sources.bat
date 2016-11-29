@@ -154,9 +154,6 @@ echo SPIRV_HEADERS_REVISION=%SPIRV_HEADERS_REVISION%
 echo Creating and/or updating glslang, spirv-tools in %BASE_DIR%
 
 if %sync-glslang% equ 1 (
-   if exist %GLSLANG_DIR% (
-      rd /S /Q %GLSLANG_DIR%
-   )
    if not exist %GLSLANG_DIR% (
       call:create_glslang
    )
@@ -166,9 +163,6 @@ if %sync-glslang% equ 1 (
 )
 
 if %sync-spirv-tools% equ 1 (
-   if exist %SPIRV_TOOLS_DIR% (
-      rd /S /Q %SPIRV_TOOLS_DIR%
-   )
    if %errorlevel% neq 0 (goto:error)
    if not exist %SPIRV_TOOLS_DIR% (
       call:create_spirv-tools
@@ -264,18 +258,16 @@ goto:eof
    echo.
    echo Building %GLSLANG_DIR%
    cd  %GLSLANG_DIR%
-
-   REM Cleanup any old directories lying around.
-   if exist build32 (
-      rmdir /s /q build32
+   
+   if not exist build32 (
+       mkdir build32
    )
-   if exist build (
-      rmdir /s /q build
+   if not exist build (
+      mkdir build
    )
    
    echo Making 32-bit glslang
    echo *************************
-   mkdir build32
    set GLSLANG_BUILD_DIR=%GLSLANG_DIR%\build32
    cd %GLSLANG_BUILD_DIR%
 
@@ -305,7 +297,6 @@ goto:eof
  
    echo Making 64-bit glslang
    echo *************************
-   mkdir build
    set GLSLANG_BUILD_DIR=%GLSLANG_DIR%\build
    cd %GLSLANG_BUILD_DIR%
 
@@ -338,16 +329,15 @@ goto:eof
    cd  %SPIRV_TOOLS_DIR%
 
    REM Cleanup any old directories lying around.
-   if exist build32 (
-      rmdir /s /q build32
+   if not exist build32 (
+       mkdir build32
    )
-   if exist build (
-      rmdir /s /q build
+   if not exist build (
+      mkdir build
    )
 
    echo Making 32-bit spirv-tools
    echo *************************
-   mkdir build32
    set SPIRV_TOOLS_BUILD_DIR=%SPIRV_TOOLS_DIR%\build32
 
    cd %SPIRV_TOOLS_BUILD_DIR%
@@ -379,7 +369,6 @@ goto:eof
  
    echo Making 64-bit spirv-tools  
    echo *************************
-   mkdir build
    set SPIRV_TOOLS_BUILD_DIR=%SPIRV_TOOLS_DIR%\build
    cd %SPIRV_TOOLS_BUILD_DIR%
 
