@@ -1,0 +1,11 @@
+{
+    "file_format_version" : "1.0.0",
+    "layer" : {
+        "name": "VK_LAYER_LUNARG_monitor",
+        "type": "GLOBAL",
+        "library_path": ".\\VKLayer_monitor.dll",
+        "api_version": "1.0.33",
+        "implementation_version": "1",
+        "description": "Execution Monitoring Layer"
+    }
+}
