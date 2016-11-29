@@ -12719,6 +12719,39 @@ TEST_F(VkLayerTest, CreatePipelineVsFsMismatchByPrecision) {
     m_errorMonitor->VerifyFound();
 }
 
+TEST_F(VkLayerTest, CreatePipelineVsFsMismatchByPrecisionBlock) {
+    TEST_DESCRIPTION("Test that the RelaxedPrecision decoration is validated to match");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    char const *vsSource = "#version 450\n"
+                           "out block { layout(location=0) mediump float x; };\n"
+                           "void main() { gl_Position = vec4(0); x = 1.0; }\n";
+    char const *fsSource = "#version 450\n"
+                           "in block { layout(location=0) highp float x; };\n"
+                           "layout(location=0) out vec4 color;\n"
+                           "void main() { color = vec4(x); }\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddColorAttachment();
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendDummy();
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "differ in precision");
+
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+
+    m_errorMonitor->VerifyFound();
+}
+
 TEST_F(VkLayerTest, CreatePipelineAttribNotConsumed) {
     TEST_DESCRIPTION("Test that a warning is produced for a vertex attribute which is "
                      "not consumed by the vertex shader");
