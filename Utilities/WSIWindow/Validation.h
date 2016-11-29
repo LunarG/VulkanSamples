@@ -151,7 +151,7 @@
 //  Alternatively, vulkan_wrapper.h can be used to replace all Vulkan functions with a dispatch-table,
 //  which skips the loader, and calls the ICD directly, thereby improving performance.
 //  Android has no loader, and always uses vulkan_wrapper.h.
-//  For more details, see /source/loader/LoaderAndLayreInterface.md in the Vulkan SDK.
+//  For more details, see /source/loader/LoaderAndLayerInterface.md in the VS or LVL repo.
 //
 //  WARNING: If you enable USE_VULKAN_WRAPPER, make sure vulkan.h is NEVER #included before vulkan_wrapper.h
 //

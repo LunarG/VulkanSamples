@@ -1,3 +1,34 @@
+/*
+*--------------------------------------------------------------------------
+* Copyright (c) 2015-2016 Valve Corporation
+* Copyright (c) 2015-2016 LunarG, Inc.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*
+* Author: Rene Lindsay <rene@lunarg.com>
+*
+*/
+
+//----------------------------------------------------------------------------------------------------
+//  The android_main() function is the entry-point for Android, and calls the user's main() function.
+//  But first, it initialises the asset manager, so that fopen can be used to read assets from the APK.
+//
+//  The ShowKeyboard() function displays the Android soft-keyboard.
+//  The GetUnicodeChar() function converts key-stroke input to text.
+//
+//  (Please excuse the uncommented code... This unit is a work in progress.)
+//----------------------------------------------------------------------------------------------------
+
 #include "native.h"
 
 android_app* Android_App=0;                //Android native-actvity state

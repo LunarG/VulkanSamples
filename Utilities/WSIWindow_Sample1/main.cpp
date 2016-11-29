@@ -82,7 +82,7 @@ int main(int argc, char *argv[]){
     MyWindow Window;                                          // Create a Vulkan window
     Window.SetTitle("WSI-Window Sample1");                    // Set the window title
     Window.SetWinSize(640, 480);                              // Set the window size (Desktop)
-    VkSurfaceKHR surface = Window.GetSurface(inst);           // Create the Vulkan surface
+  //VkSurfaceKHR surface = Window.GetSurface(inst);           // Create the Vulkan surface
 
     Window.ShowKeyboard(true);                                // Show soft-keyboard (Android)
     LOGW("Test Warnings\n");

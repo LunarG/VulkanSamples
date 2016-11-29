@@ -69,7 +69,8 @@ class WSIWindow{
 public:
     WSIWindow(const char* title="WSIWindow", const uint width=640, const uint height=480);
     virtual ~WSIWindow();
-    CSurface& GetSurface(VkInstance instance);         // Returns Vulkan Surface, with CanPresent() function
+    CSurface& GetSurface(VkInstance instance);                     // Returns Vulkan Surface (VkSurfaceKHR).
+    bool CanPresent(VkPhysicalDevice gpu, uint32_t queue_family);  // Returns true if window can present to given queue type.
 
     //--State query functions--
     void GetWinPos  (int16_t& x, int16_t& y);          // Get the window's x,y position, relative to top-left
