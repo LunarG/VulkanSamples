@@ -1403,6 +1403,7 @@ struct interface_var {
     uint32_t offset;
     bool is_patch;
     bool is_block_member;
+    bool is_relaxed_precision;
     /* TODO: collect the name, too? Isn't required to be present. */
 };
 
@@ -1474,7 +1475,7 @@ static void collect_interface_block_members(shader_module const *src,
                 unsigned component = component_it == member_components.end() ? 0 : component_it->second;
 
                 for (unsigned int offset = 0; offset < num_locations; offset++) {
-                    interface_var v;
+                    interface_var v = {};
                     v.id = id;
                     /* TODO: member index in interface_var too? */
                     v.type_id = member_type_id;
@@ -1497,6 +1498,7 @@ static std::map<location_t, interface_var> collect_interface_by_location(
     std::unordered_map<unsigned, unsigned> var_components;
     std::unordered_map<unsigned, unsigned> blocks;
     std::unordered_map<unsigned, unsigned> var_patch;
+    std::unordered_map<unsigned, unsigned> var_relaxed_precision;
 
     for (auto insn : *src) {
 
@@ -1522,6 +1524,10 @@ static std::map<location_t, interface_var> collect_interface_by_location(
 
             if (insn.word(2) == spv::DecorationPatch) {
                 var_patch[insn.word(1)] = 1;
+            }
+
+            if (insn.word(2) == spv::DecorationRelaxedPrecision) {
+                var_relaxed_precision[insn.word(1)] = 1;
             }
         }
     }
@@ -1554,6 +1560,7 @@ static std::map<location_t, interface_var> collect_interface_by_location(
             int builtin = value_or_default(var_builtins, id, -1);
             unsigned component = value_or_default(var_components, id, 0); /* unspecified is OK, is 0 */
             bool is_patch = var_patch.find(id) != var_patch.end();
+            bool is_relaxed_precision = var_relaxed_precision.find(id) != var_relaxed_precision.end();
 
             /* All variables and interface block members in the Input or Output storage classes
              * must be decorated with either a builtin or an explicit location.
@@ -1568,12 +1575,12 @@ static std::map<location_t, interface_var> collect_interface_by_location(
                  * occupied multiple locations, emit one result for each. */
                 unsigned num_locations = get_locations_consumed_by_type(src, type, is_array_of_verts && !is_patch);
                 for (unsigned int offset = 0; offset < num_locations; offset++) {
-                    interface_var v;
+                    interface_var v = {};
                     v.id = id;
                     v.type_id = type;
                     v.offset = offset;
                     v.is_patch = is_patch;
-                    v.is_block_member = false;
+                    v.is_relaxed_precision = is_relaxed_precision;
                     out[std::make_pair(location + offset, component)] = v;
                 }
             } else if (builtin == -1) {
@@ -1605,12 +1612,10 @@ static std::vector<std::pair<uint32_t, interface_var>> collect_interface_by_inpu
                     if (def.opcode() == spv::OpVariable && insn.word(3) == spv::StorageClassUniformConstant) {
                         auto num_locations = get_locations_consumed_by_type(src, def.word(1), false);
                         for (unsigned int offset = 0; offset < num_locations; offset++) {
-                            interface_var v;
+                            interface_var v = {};
                             v.id = id;
                             v.type_id = def.word(1);
                             v.offset = offset;
-                            v.is_patch = false;
-                            v.is_block_member = false;
                             out.emplace_back(attachment_index + offset, v);
                         }
                     }
@@ -1655,12 +1660,9 @@ static std::vector<std::pair<descriptor_slot_t, interface_var>> collect_interfac
             unsigned set = value_or_default(var_sets, insn.word(2), 0);
             unsigned binding = value_or_default(var_bindings, insn.word(2), 0);
 
-            interface_var v;
+            interface_var v = {};
             v.id = insn.word(2);
             v.type_id = insn.word(1);
-            v.offset = 0;
-            v.is_patch = false;
-            v.is_block_member = false;
             out.emplace_back(std::make_pair(set, binding), v);
         }
     }
