@@ -1732,6 +1732,16 @@ static bool validate_interface_between_stages(debug_report_data *report_data, sh
                     pass = false;
                 }
             }
+            if (a_it->second.is_relaxed_precision != b_it->second.is_relaxed_precision) {
+                if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/ 0,
+                            __LINE__, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
+                            "Decoration mismatch on location %u.%u: %s and %s stages differ in precision",
+                            a_first.first, a_first.second,
+                            producer_stage->name,
+                            consumer_stage->name)) {
+                    pass = false;
+                }
+            }
             a_it++;
             b_it++;
         }
