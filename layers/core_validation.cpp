@@ -1449,6 +1449,7 @@ static void collect_interface_block_members(shader_module const *src,
     }
 
     std::unordered_map<unsigned, unsigned> member_components;
+    std::unordered_map<unsigned, unsigned> member_relaxed_precision;
 
     /* Walk all the OpMemberDecorate for type's result id -- first pass, collect components. */
     for (auto insn : *src) {
@@ -1458,6 +1459,10 @@ static void collect_interface_block_members(shader_module const *src,
             if (insn.word(3) == spv::DecorationComponent) {
                 unsigned component = insn.word(4);
                 member_components[member_index] = component;
+            }
+
+            if (insn.word(3) == spv::DecorationRelaxedPrecision) {
+                member_relaxed_precision[member_index] = 1;
             }
         }
     }
@@ -1473,6 +1478,7 @@ static void collect_interface_block_members(shader_module const *src,
                 unsigned num_locations = get_locations_consumed_by_type(src, member_type_id, false);
                 auto component_it = member_components.find(member_index);
                 unsigned component = component_it == member_components.end() ? 0 : component_it->second;
+                bool is_relaxed_precision = member_relaxed_precision.find(member_index) != member_relaxed_precision.end();
 
                 for (unsigned int offset = 0; offset < num_locations; offset++) {
                     interface_var v = {};
@@ -1482,6 +1488,7 @@ static void collect_interface_block_members(shader_module const *src,
                     v.offset = offset;
                     v.is_patch = is_patch;
                     v.is_block_member = true;
+                    v.is_relaxed_precision = is_relaxed_precision;
                     (*out)[std::make_pair(location + offset, component)] = v;
                 }
             }
