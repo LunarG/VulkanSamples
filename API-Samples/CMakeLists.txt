@@ -49,21 +49,6 @@ endfunction(sampleExtSPIRVShaders)
 # function to build a simple single-source-file sample
 #   - assumes S_TARGETS set to list of build targets
 function(sampleWithSingleFile)
-    # Projectwide settings.
-    # Product flavor (ABI).
-    # mips & mips64 does not work with -finline_functions flag.
-    set (SUPPORTED_ABI armeabi-v7a arm64-v8a x86 x86_64)
-    if (";${SUPPORTED_ABI};" MATCHES ";${ANDROID_ABI};")
-        set (FLAVOR "${ANDROID_ABI}")
-        set (ABI_FILTER "ndk.abiFilters.add(\"${ANDROID_ABI}\")")
-    else()
-        set (FLAVOR "all")
-        foreach(ABI ${SUPPORTED_ABI})
-            set (ABI_FILTER
-              "${ABI_FILTER}\n            ndk.abiFilters.add(\"${ABI}\")")
-        endforeach(ABI)
-    endif()
-
     foreach(TARG ${S_TARGETS})
         set(SAMPLE_NAME ${TARG})
         if(ANDROID)
@@ -84,7 +69,7 @@ function(sampleWithSingleFile)
             set (ASSET_DIR "")
             set (EXTRA_PERMISSIONS "")
             set (SHADERC_LINKAGE "")
-            set (VALIDATIONLAYER_LINKAGE "")
+            set (VALIDATIONLAYER_PACKING "")
 
             # Add extra setting for some samples.
             # shaderc usage.
@@ -96,7 +81,7 @@ function(sampleWithSingleFile)
              pipeline_derivative secondary_command_buffer separate_image_sampler spirv_assembly
              spirv_specialization template)
             if (";${SAMPLE_WITH_RESOURCES};" MATCHES ";${SAMPLE_NAME};")
-                set (ASSET_DIR "srcDir '../../data/'")
+                set (ASSET_DIR "sourceSets.main.assets.srcDirs '../../data'")
             endif()
 
             # Add external storage access permission.
@@ -108,7 +93,7 @@ function(sampleWithSingleFile)
             # Add validation layer settings.
             set (SAMPLE_WITH_TOOLS create_debug_report_callback enable_validation_with_callback)
             if (";${SAMPLE_WITH_TOOLS};" MATCHES ";${SAMPLE_NAME};")
-                set (VALIDATIONLAYER_LINKAGE "srcDir \"\${ndkDir}/sources/third_party/vulkan/src/build-android/jniLibs\"")
+                set (VALIDATIONLAYER_PACKING "sourceSets.main.jniLibs.srcDirs file(ndkDir).absolutePath +\n\t\t\t\t'/sources/third_party/vulkan/src/build-android/jniLibs'")
             endif()
 
             # Cook template files.
@@ -121,7 +106,7 @@ function(sampleWithSingleFile)
             foreach(TEMPLATE_FILE ${TEMPLATE_FILES})
                 configure_file(${TEMPLATE_FILE} ${TEMPLATE_FILE} @ONLY)
             endforeach(TEMPLATE_FILE)
-            SET(SETTINGS_GRADLE "${SETTINGS_GRADLE} ,\n':${SAMPLE_NAME}'")
+            SET(SETTINGS_GRADLE "${SETTINGS_GRADLE}include ':${SAMPLE_NAME}'\n")
         elseif(UNIX)
             add_executable(${SAMPLE_NAME} ${SAMPLE_NAME}/${SAMPLE_NAME}.cpp)
             target_link_libraries(${SAMPLE_NAME} ${UTILS_NAME} ${GLSLANG_LIBRARIES} ${XCB_LIBRARIES} ${VULKAN_LOADER} ${PTHREAD} ${SPIRV_TOOLS_LIBRARIES})
@@ -244,7 +229,9 @@ set (S_TARGETS
     spirv_assembly spirv_specialization memory_barriers)
 sampleWithSingleFile()
 
-add_subdirectory(utils)
+if (NOT ANDROID)
+    add_subdirectory(utils)
+endif()
 
 # targets that use spv shaders
 

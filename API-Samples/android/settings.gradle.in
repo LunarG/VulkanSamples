@@ -13,5 +13,4 @@
 // limitations under the License.
 
 // configure path to the source code generated on your machine
-include ':nativeactivity'@SETTINGS_GRADLE@
-project(':nativeactivity').projectDir = new File(settingsDir, 'external/nativeactivity')
+@SETTINGS_GRADLE@
