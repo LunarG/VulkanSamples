@@ -6871,6 +6871,7 @@ CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t
     if (skip) {
         for (i = 0; i < count; i++) {
             delete pipe_state[i];
+            pPipelines[i] = VK_NULL_HANDLE;
         }
     } else {
         lock.unlock();
