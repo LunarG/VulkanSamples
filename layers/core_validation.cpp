@@ -6851,7 +6851,6 @@ CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t
     //  1. Pipeline create state is first shadowed into PIPELINE_STATE struct
     //  2. Create state is then validated (which uses flags setup during shadowing)
     //  3. If everything looks good, we'll then create the pipeline and add NODE to pipelineMap
-    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip = false;
     // TODO : Improve this data struct w/ unique_ptrs so cleanup below is automatic
     vector<PIPELINE_STATE *> pipe_state(count);
@@ -6873,15 +6872,15 @@ CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t
             delete pipe_state[i];
             pPipelines[i] = VK_NULL_HANDLE;
         }
-    } else {
-        lock.unlock();
-        result =
-            dev_data->dispatch_table.CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pAllocator, pPipelines);
-        lock.lock();
-        for (i = 0; i < count; i++) {
-            pipe_state[i]->pipeline = pPipelines[i];
-            dev_data->pipelineMap[pipe_state[i]->pipeline] = pipe_state[i];
-        }
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+    }
+
+    lock.unlock();
+    auto result = dev_data->dispatch_table.CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pAllocator, pPipelines);
+    lock.lock();
+    for (i = 0; i < count; i++) {
+        pipe_state[i]->pipeline = pPipelines[i];
+        dev_data->pipelineMap[pipe_state[i]->pipeline] = pipe_state[i];
     }
 
     return result;
@@ -6891,7 +6890,6 @@ VKAPI_ATTR VkResult VKAPI_CALL
 CreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t count,
                        const VkComputePipelineCreateInfo *pCreateInfos, const VkAllocationCallbacks *pAllocator,
                        VkPipeline *pPipelines) {
-    VkResult result = VK_SUCCESS;
     bool skip = false;
 
     // TODO : Improve this data struct w/ unique_ptrs so cleanup below is automatic
@@ -6914,24 +6912,22 @@ CreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t 
         // skip |= verifyPipelineCreateState(dev_data, pPipeState[i]);
     }
 
-    if (!skip) {
-        lock.unlock();
-        result =
-            dev_data->dispatch_table.CreateComputePipelines(device, pipelineCache, count, pCreateInfos, pAllocator, pPipelines);
-        lock.lock();
-        for (i = 0; i < count; i++) {
-            pPipeState[i]->pipeline = pPipelines[i];
-            dev_data->pipelineMap[pPipeState[i]->pipeline] = pPipeState[i];
-        }
-        lock.unlock();
-    } else {
+    if (skip) {
         for (i = 0; i < count; i++) {
             // Clean up any locally allocated data structures
             delete pPipeState[i];
         }
-        lock.unlock();
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
+
+    lock.unlock();
+    auto result = dev_data->dispatch_table.CreateComputePipelines(device, pipelineCache, count, pCreateInfos, pAllocator, pPipelines);
+    lock.lock();
+    for (i = 0; i < count; i++) {
+        pPipeState[i]->pipeline = pPipelines[i];
+        dev_data->pipelineMap[pPipeState[i]->pipeline] = pPipeState[i];
+    }
+
     return result;
 }
 
