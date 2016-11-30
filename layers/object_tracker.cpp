@@ -3619,6 +3619,9 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
     }
     lock.unlock();
     if (skip_call) {
+        for (uint32_t i = 0; i < createInfoCount; i++) {
+            pPipelines[i] = VK_NULL_HANDLE;
+        }
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
     VkResult result = get_dispatch_table(ot_device_table_map, device)
@@ -3661,6 +3664,9 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateComputePipelines(VkDevice device, VkPipelin
     }
     lock.unlock();
     if (skip_call) {
+        for (uint32_t i = 0; i < createInfoCount; i++) {
+            pPipelines[i] = VK_NULL_HANDLE;
+        }
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
     VkResult result = get_dispatch_table(ot_device_table_map, device)
