@@ -96,6 +96,8 @@ class DescriptorSetLayout {
     VkDescriptorSetLayout GetDescriptorSetLayout() const { return layout_; };
     uint32_t GetTotalDescriptorCount() const { return descriptor_count_; };
     uint32_t GetDynamicDescriptorCount() const { return dynamic_descriptor_count_; };
+    // For a given binding, return the number of descriptors in that binding and all successive bindings
+    uint32_t GetConsecutiveDescriptorCountFromBinding(uint32_t) const;
     uint32_t GetBindingCount() const { return binding_count_; };
     // Fill passed-in set with bindings
     void FillBindingSet(std::unordered_set<uint32_t> *) const;
@@ -138,7 +140,7 @@ class DescriptorSetLayout {
 
   private:
     VkDescriptorSetLayout layout_;
-    std::unordered_map<uint32_t, uint32_t> binding_to_index_map_;
+    std::map<uint32_t, uint32_t> binding_to_index_map_;
     std::unordered_map<uint32_t, uint32_t> binding_to_global_start_index_map_;
     std::unordered_map<uint32_t, uint32_t> binding_to_global_end_index_map_;
     // For a given binding map to associated index in the dynamic offset array

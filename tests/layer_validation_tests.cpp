@@ -8922,10 +8922,7 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds) {
     // For overlapping Update, have arrayIndex exceed that of layout
     VkResult err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         " binding #0 with 1 total descriptors but update of 1 descriptors "
-                                         "starting at binding offset of 0 combined with update array element "
-                                         "offset of 1 oversteps the size of this descriptor set.");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00938);
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     // VkDescriptorSetObj descriptorSet(m_device);

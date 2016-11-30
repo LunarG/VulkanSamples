@@ -18,6 +18,9 @@
  * Author: Tobin Ehlis <tobine@google.com>
  */
 
+// Allow use of STL min and max functions in Windows
+#define NOMINMAX
+
 #include "descriptor_sets.h"
 #include "vk_enum_string_helper.h"
 #include "vk_safe_struct.h"
@@ -72,6 +75,18 @@ bool cvdescriptorset::DescriptorSetLayout::ValidateCreateInfo(debug_report_data 
         }
     }
     return skip;
+}
+
+// Return the number of descriptors for the given binding and all successive bindings
+uint32_t cvdescriptorset::DescriptorSetLayout::GetConsecutiveDescriptorCountFromBinding(uint32_t binding) const {
+    // If binding is invalid we'll return 0
+    uint32_t binding_count = 0;
+    auto bi_itr = binding_to_index_map_.find(binding);
+    while (bi_itr != binding_to_index_map_.end()) {
+        binding_count += bindings_[bi_itr->second].descriptorCount;
+        bi_itr++;
+    }
+    return binding_count;
 }
 
 // put all bindings into the given set
@@ -546,10 +561,21 @@ void cvdescriptorset::DescriptorSet::InvalidateBoundCmdBuffers() {
 }
 // Perform write update in given update struct
 void cvdescriptorset::DescriptorSet::PerformWriteUpdate(const VkWriteDescriptorSet *update) {
-    auto start_idx = p_layout_->GetGlobalStartIndexFromBinding(update->dstBinding) + update->dstArrayElement;
-    // perform update
-    for (uint32_t di = 0; di < update->descriptorCount; ++di) {
-        descriptors_[start_idx + di]->WriteUpdate(update, di);
+    // Perform update on a per-binding basis as consecutive updates roll over to next binding
+    auto descriptors_remaining = update->descriptorCount;
+    auto binding_being_updated = update->dstBinding;
+    auto offset = update->dstArrayElement;
+    while (descriptors_remaining) {
+        uint32_t update_count = std::min(descriptors_remaining, GetDescriptorCountFromBinding(binding_being_updated));
+        auto global_idx = p_layout_->GetGlobalStartIndexFromBinding(binding_being_updated) + offset;
+        // Loop over the updates for a single binding at a time
+        for (uint32_t di = 0; di < update_count; ++di) {
+            descriptors_[global_idx + di]->WriteUpdate(update, di);
+        }
+        // Roll over to next binding in case of consecutive update
+        descriptors_remaining -= update_count;
+        offset = 0;
+        binding_being_updated++;
     }
     if (update->descriptorCount)
         some_update_ = true;
@@ -1169,14 +1195,15 @@ bool cvdescriptorset::DescriptorSet::ValidateWriteUpdate(const debug_report_data
         *error_msg = error_str.str();
         return false;
     }
-    if ((start_idx + update->descriptorCount) > p_layout_->GetTotalDescriptorCount()) {
+    if (update->descriptorCount >
+        (p_layout_->GetConsecutiveDescriptorCountFromBinding(update->dstBinding) - update->dstArrayElement)) {
         *error_code = VALIDATION_ERROR_00938;
         std::stringstream error_str;
         error_str << "Attempting write update to descriptor set " << set_ << " binding #" << update->dstBinding << " with "
-                  << p_layout_->GetTotalDescriptorCount() << " total descriptors but update of " << update->descriptorCount
-                  << " descriptors starting at binding offset of " << p_layout_->GetGlobalStartIndexFromBinding(update->dstBinding)
-                  << " combined with update array element offset of " << update->dstArrayElement
-                  << " oversteps the size of this descriptor set";
+                  << p_layout_->GetConsecutiveDescriptorCountFromBinding(update->dstBinding)
+                  << " descriptors in that binding and all successive bindings of the set, but update of "
+                  << update->descriptorCount << " descriptors combined with update array element offset of "
+                  << update->dstArrayElement << " oversteps the available number of consecutive descriptors";
         *error_msg = error_str.str();
         return false;
     }
