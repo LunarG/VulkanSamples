@@ -6868,7 +6868,11 @@ CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t
     }
     skip |= PreCallCreateGraphicsPipelines(dev_data, count, pCreateInfos, pipe_state);
 
-    if (!skip) {
+    if (skip) {
+        for (i = 0; i < count; i++) {
+            delete pipe_state[i];
+        }
+    } else {
         lock.unlock();
         result =
             dev_data->dispatch_table.CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pAllocator, pPipelines);
@@ -6877,13 +6881,8 @@ CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t
             pipe_state[i]->pipeline = pPipelines[i];
             dev_data->pipelineMap[pipe_state[i]->pipeline] = pipe_state[i];
         }
-        lock.unlock();
-    } else {
-        for (i = 0; i < count; i++) {
-            delete pipe_state[i];
-        }
-        lock.unlock();
     }
+
     return result;
 }
 
