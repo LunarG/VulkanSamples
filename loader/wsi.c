@@ -626,7 +626,7 @@ out:
             i = 0;
             for (struct loader_icd_term *icd_term = ptr_instance->icd_terms;
                  icd_term != NULL; icd_term = icd_term->next, i++) {
-                if (NULL != (void *)pIcdSurface->real_icd_surfaces[i] &&
+                if ((VkSurfaceKHR)NULL != pIcdSurface->real_icd_surfaces[i] &&
                     NULL != icd_term->DestroySurfaceKHR) {
                     icd_term->DestroySurfaceKHR(
                         icd_term->instance, pIcdSurface->real_icd_surfaces[i],
