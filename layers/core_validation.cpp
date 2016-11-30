@@ -6921,6 +6921,7 @@ CreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t 
         for (i = 0; i < count; i++) {
             // Clean up any locally allocated data structures
             delete pPipeState[i];
+            pPipelines[i] = VK_NULL_HANDLE;
         }
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
@@ -6929,8 +6930,13 @@ CreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t 
     auto result = dev_data->dispatch_table.CreateComputePipelines(device, pipelineCache, count, pCreateInfos, pAllocator, pPipelines);
     lock.lock();
     for (i = 0; i < count; i++) {
-        pPipeState[i]->pipeline = pPipelines[i];
-        dev_data->pipelineMap[pPipeState[i]->pipeline] = pPipeState[i];
+        if (pPipelines[i] == VK_NULL_HANDLE) {
+            delete pPipeState[i];
+        }
+        else {
+            pPipeState[i]->pipeline = pPipelines[i];
+            dev_data->pipelineMap[pPipeState[i]->pipeline] = pPipeState[i];
+        }
     }
 
     return result;
