@@ -16523,17 +16523,17 @@ TEST_F(VkPositiveLayerTest, DynamicOffsetWithInactiveBinding) {
 
     const uint32_t BINDING_COUNT = 3;
     VkDescriptorSetLayoutBinding dsl_binding[BINDING_COUNT] = {};
-    dsl_binding[0].binding = 0;
+    dsl_binding[0].binding = 2;
     dsl_binding[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
     dsl_binding[0].descriptorCount = 1;
     dsl_binding[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
     dsl_binding[0].pImmutableSamplers = NULL;
-    dsl_binding[1].binding = 1;
+    dsl_binding[1].binding = 0;
     dsl_binding[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
     dsl_binding[1].descriptorCount = 1;
     dsl_binding[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
     dsl_binding[1].pImmutableSamplers = NULL;
-    dsl_binding[2].binding = 2;
+    dsl_binding[2].binding = 1;
     dsl_binding[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
     dsl_binding[2].descriptorCount = 1;
     dsl_binding[2].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
