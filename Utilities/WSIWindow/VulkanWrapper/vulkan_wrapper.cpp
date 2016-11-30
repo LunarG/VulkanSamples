@@ -14,21 +14,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "vulkan_wrapper.h"
-#ifndef _WIN32
+#ifdef _WIN32
+    #define VK_USE_PLATFORM_WIN32_KHR
+    #include <windows.h>
+    FARPROC __stdcall dlsym(HMODULE lib,LPCSTR fn) { return GetProcAddress(lib,fn); }
+#else
     #include <dlfcn.h>
 #endif
+
+#include "vulkan_wrapper.h"
+
 
 int InitVulkan(void) {
 #ifdef _WIN32
     HMODULE libvulkan = LoadLibrary("vulkan-1.dll");
-    #define dlsym(LIB,FUNC) GetProcAddress(LIB,FUNC)
 #else
     void* libvulkan = dlopen("libvulkan.so", RTLD_NOW | RTLD_LOCAL);
 #endif
 
-    if (!libvulkan)
-        return 0;
+	if (!libvulkan){ return 0; }
 
     // Vulkan supported, set function addresses
     vkCreateInstance = reinterpret_cast<PFN_vkCreateInstance>(dlsym(libvulkan, "vkCreateInstance"));

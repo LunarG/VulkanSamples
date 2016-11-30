@@ -79,5 +79,5 @@ void WindowImpl::TextInput(bool enabled){ textinput=enabled; }
 bool CSurface::CanPresent(VkPhysicalDevice gpu, uint32_t queue_family){
     VkBool32 can_present=false;
     VKERRCHECK(vkGetPhysicalDeviceSurfaceSupportKHR(gpu, queue_family, surface, &can_present));
-    return can_present;
+    return !!can_present;
 }

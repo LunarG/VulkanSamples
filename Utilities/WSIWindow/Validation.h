@@ -172,7 +172,6 @@ class CDebugReport{
     CDebugReport();
     PFN_vkCreateDebugReportCallbackEXT  vkCreateDebugReportCallbackEXT;
     PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT;
-  //PFN_vkDebugReportMessageEXT         vkDebugReportMessageEXT;
     VkDebugReportCallbackEXT            debug_report_callback;
 
     VkInstance                          instance;

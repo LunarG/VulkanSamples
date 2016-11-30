@@ -123,7 +123,6 @@ void CDebugReport::Init(VkInstance inst){
     assert(!!inst);
     vkCreateDebugReportCallbackEXT  = (PFN_vkCreateDebugReportCallbackEXT)  vkGetInstanceProcAddr(inst, "vkCreateDebugReportCallbackEXT" );
     vkDestroyDebugReportCallbackEXT = (PFN_vkDestroyDebugReportCallbackEXT) vkGetInstanceProcAddr(inst, "vkDestroyDebugReportCallbackEXT");
-  //vkDebugReportMessageEXT         = (PFN_vkDebugReportMessageEXT)         vkGetInstanceProcAddr(inst, "vkDebugReportMessageEXT"        );
 
     instance = inst;
     func     = DebugReportFn; //Use default debug-report function.
