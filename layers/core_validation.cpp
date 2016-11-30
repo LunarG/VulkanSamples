@@ -6879,8 +6879,13 @@ CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t
     auto result = dev_data->dispatch_table.CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pAllocator, pPipelines);
     lock.lock();
     for (i = 0; i < count; i++) {
-        pipe_state[i]->pipeline = pPipelines[i];
-        dev_data->pipelineMap[pipe_state[i]->pipeline] = pipe_state[i];
+        if (pPipelines[i] == VK_NULL_HANDLE) {
+            delete pipe_state[i];
+        }
+        else {
+            pipe_state[i]->pipeline = pPipelines[i];
+            dev_data->pipelineMap[pipe_state[i]->pipeline] = pipe_state[i];
+        }
     }
 
     return result;
