@@ -2156,7 +2156,7 @@ TEST_F(VkLayerTest, InvalidDescriptorPoolConsistency) {
 }
 
 TEST_F(VkLayerTest, CreateUnknownObject) {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Invalid Image Object ");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00788);
 
     TEST_DESCRIPTION("Pass an invalid image object handle into a Vulkan API call.");
 
@@ -2177,7 +2177,7 @@ TEST_F(VkLayerTest, PipelineNotBound) {
 
     TEST_DESCRIPTION("Pass in an invalid pipeline object handle into a Vulkan API call.");
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Invalid Pipeline Object ");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00601);
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -2324,7 +2324,7 @@ TEST_F(VkLayerTest, BindInvalidMemory) {
     VkResult err;
     bool pass;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Invalid Device Memory Object ");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00809);
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
@@ -2389,7 +2389,7 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject) {
     VkResult err;
     bool pass;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Invalid Image Object ");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00808);
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
@@ -3789,14 +3789,14 @@ TEST_F(VkLayerTest, InvalidDescriptorPool) {
     // ObjectTracker should catch this.
 
     ASSERT_NO_FATAL_FAILURE(InitState());
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Invalid Descriptor Pool Object 0xbaad6001");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00930);
     uint64_t fake_pool_handle = 0xbaad6001;
     VkDescriptorPool bad_pool = reinterpret_cast<VkDescriptorPool &>(fake_pool_handle);
     vkResetDescriptorPool(device(), bad_pool, 0);
     m_errorMonitor->VerifyFound();
 }
 
-TEST_F(VkPositiveLayerTest, InvalidDescriptorSet) {
+TEST_F(VkLayerTest, InvalidDescriptorSet) {
     // Attempt to bind an invalid Descriptor Set to a valid Command Buffer
     // ObjectTracker should catch this.
     // Create a valid cmd buffer
@@ -3805,7 +3805,7 @@ TEST_F(VkPositiveLayerTest, InvalidDescriptorSet) {
     uint64_t fake_set_handle = 0xbaad6001;
     VkDescriptorSet bad_set = reinterpret_cast<VkDescriptorSet &>(fake_set_handle);
     VkResult err;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Invalid Descriptor Set Object 0xbaad6001");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00982);
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
@@ -3848,7 +3848,7 @@ TEST_F(VkLayerTest, InvalidDescriptorSetLayout) {
     // ObjectTracker should catch this.
     uint64_t fake_layout_handle = 0xbaad6001;
     VkDescriptorSetLayout bad_layout = reinterpret_cast<VkDescriptorSetLayout &>(fake_layout_handle);
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Invalid Descriptor Set Layout Object 0xbaad6001");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00875);
     ASSERT_NO_FATAL_FAILURE(InitState());
     VkPipelineLayout pipeline_layout;
     VkPipelineLayoutCreateInfo plci = {};
@@ -5640,7 +5640,7 @@ TEST_F(VkLayerTest, InvalidPipeline) {
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Invalid Pipeline Object 0xbaad6001");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00601);
     BeginCommandBuffer();
     vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, bad_pipeline);
     m_errorMonitor->VerifyFound();
@@ -5743,8 +5743,7 @@ TEST_F(VkLayerTest, InvalidBufferViewObject) {
     // Create a single TEXEL_BUFFER descriptor and send it an invalid bufferView
     VkResult err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Attempted write update to texel buffer "
-                                                                        "descriptor with invalid buffer view");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00940);
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     VkDescriptorPoolSize ds_type_count = {};
@@ -6631,7 +6630,7 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility) {
     //  Second disturb early and late sets and verify INFO msgs
     // verify_set_layout_compatibility fail cases:
     // 1. invalid VkPipelineLayout (layout) passed into vkCmdBindDescriptorSets
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Invalid Pipeline Layout Object ");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00981);
     vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS,
                             (VkPipelineLayout)((size_t)0xbaadb1be), 0, 1, &descriptorSet[0], 0, NULL);
     m_errorMonitor->VerifyFound();
@@ -6739,7 +6738,7 @@ TEST_F(VkLayerTest, SecondaryCommandBufferNullRenderpass) {
     VkResult err;
     VkCommandBuffer draw_cmd;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, " must specify a valid renderpass parameter.");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00110);
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
@@ -9343,9 +9342,7 @@ TEST_F(VkLayerTest, ImageViewDescriptorUpdateError) {
     // imageView
     VkResult err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Attempted write update to combined "
-                                                                        "image sampler descriptor failed due "
-                                                                        "to: Invalid VkImageView:");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00943);
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     VkDescriptorPoolSize ds_type_count = {};
@@ -10262,7 +10259,6 @@ TEST_F(VkLayerTest, VertexBufferInvalid) {
 
     const char *deleted_buffer_in_command_buffer = "Cannot submit cmd buffer "
                                                    "using deleted buffer ";
-    const char *double_destroy_message = "Cannot free buffer 0x";
     const char *invalid_offset_message = "vkBindBufferMemory(): "
                                          "memoryOffset is 0x";
     const char *invalid_storage_buffer_offset_message = "vkBindBufferMemory(): "
@@ -10274,9 +10270,6 @@ TEST_F(VkLayerTest, VertexBufferInvalid) {
     const char *invalid_uniform_buffer_offset_message = "vkBindBufferMemory(): "
                                                         "uniform memoryOffset "
                                                         "is 0x";
-    const char *bind_null_buffer_message = "In vkBindBufferMemory, attempting"
-                                           " to Bind Obj(0x";
-    const char *free_invalid_buffer_message = "Invalid Device Memory Object 0x";
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
@@ -10332,7 +10325,7 @@ TEST_F(VkLayerTest, VertexBufferInvalid) {
         // Create and bind a vertex buffer in a reduced scope, and delete it
         // twice, the second through the destructor
         VkBufferTest buffer_test(m_device, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VkBufferTest::eDoubleDelete);
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, double_destroy_message);
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00680);
         buffer_test.TestDoubleDestroy();
     }
     m_errorMonitor->VerifyFound();
@@ -10375,7 +10368,7 @@ TEST_F(VkLayerTest, VertexBufferInvalid) {
 
     {
         // Attempt to bind a null buffer.
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, bind_null_buffer_message);
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00799);
         VkBufferTest buffer_test(m_device, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VkBufferTest::eBindNullBuffer);
         (void)buffer_test;
         m_errorMonitor->VerifyFound();
@@ -10383,7 +10376,7 @@ TEST_F(VkLayerTest, VertexBufferInvalid) {
 
     {
         // Attempt to use an invalid handle to delete a buffer.
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, free_invalid_buffer_message);
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00622);
         VkBufferTest buffer_test(m_device, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VkBufferTest::eFreeInvalidHandle);
         (void)buffer_test;
     }
