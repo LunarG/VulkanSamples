@@ -2685,12 +2685,6 @@ TEST_F(VkLayerTest, ImageSampleCounts) {
 }
 
 TEST_F(VkLayerTest, BlitImageFormats) {
-
-    // Image blit with mismatched formats
-    const char * expected_message =
-        "vkCmdBlitImage: If one of srcImage and dstImage images has signed/unsigned integer format,"
-        " the other one must also have signed/unsigned integer format";
-
     ASSERT_NO_FATAL_FAILURE(InitState());
 
     VkImageObj src_image(m_device);
@@ -2710,7 +2704,10 @@ TEST_F(VkLayerTest, BlitImageFormats) {
     blitRegion.dstSubresource.layerCount = 1;
     blitRegion.dstSubresource.mipLevel = 0;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, expected_message);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02191);
+
+    // TODO: there are 9 permutations of signed, unsigned, & other for source and dest
+    //       this test is only checking 2 of them at the moment
 
     // Unsigned int vs not an int
     BeginCommandBuffer();
@@ -2719,12 +2716,16 @@ TEST_F(VkLayerTest, BlitImageFormats) {
 
     m_errorMonitor->VerifyFound();
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, expected_message);
+    // Test should generate 2 VU failures
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02190);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02191);
 
     // Unsigned int vs signed int
     vkCmdBlitImage(m_commandBuffer->handle(), src_image.image(), src_image.layout(), dst_image2.image(),
                    dst_image2.layout(), 1, &blitRegion, VK_FILTER_NEAREST);
 
+    // TODO: Note that this only verifies that at least one of the VU enums was found
+    //       Also, if any were not seen, they'll remain in the target list (Soln TBD, JIRA task: VL-72)
     m_errorMonitor->VerifyFound();
 
     EndCommandBuffer();
@@ -14776,8 +14777,7 @@ TEST_F(VkLayerTest, MiscImageLayerTests) {
     m_errorMonitor->VerifyFound();
 
     region.bufferImageHeight = 128;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "If the format of srcImage is a depth, stencil, depth stencil or "
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "If the format of srcImage is an "
                                          "integer-based format then filter must be VK_FILTER_NEAREST");
     // Expect INVALID_FILTER
     VkImageObj intImage1(m_device);
