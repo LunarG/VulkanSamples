@@ -44,7 +44,7 @@
   //#define NDEBUG               //cuts 4kb off apk size
 #endif
 //------------------------------------------
-//--------------fix VS2013------------------
+//------------Fix for VS2013----------------
 #if _MSC_VER == 1800
   #define snprintf _snprintf
 #endif
@@ -62,70 +62,11 @@
                          }
 #endif
 //======================================================================================================
-
+// clang-format off
 //===============================================LOGGING================================================
 //  If enabled, the 6 LOG* functions print logging messages to the console, or Android LogCat.
 //  LOG* functions can be used in the same way as printf, but uses color-coding, for better readability.
 //  Turn off the ENABLE_LOGGING flag in CMake, to strip out log messages and reduce exe size for release.
-
-//#ifdef _WIN32
-//    #include <Windows.h>
-//      #ifdef WIN10PLUS        /* ANSI color-codes requires windows 10+ */
-//        #define ANSICODE(x) x /* Enable ANSI codes on Win10 */
-//      #else
-//        #define ANSICODE(x)   /* Disable ANSI codes on Win7/8 */
-//      #endif
-//      #define cTICK "\xFB"    /* On Windows, use Square-root as tick mark */
-//#elif __ANDROID__
-//    #include <native.h>
-//    #define ANSICODE(x)       /* Disable ANSI codes on Android */
-//    #define cTICK "\u2713"
-//#elif __LINUX__
-//    #include <xkbcommon/xkbcommon.h>
-//    #define ANSICODE(x) x     /* Enable ANSI codes on Linux */
-//    #define cTICK "\u2713"
-//#endif
-//----------------------------------------------------------------------------------
-/*
-//--- ANSI escape codes to set text colours. eg. printf(cRED"Red text." cRESET); ---
-#define cFAINT     ANSICODE("\033[38;2;96;96;96m")
-#define cBRIGHT    ANSICODE("\033[01m")
-#define cRED       ANSICODE("\033[31m")
-#define cGREEN     ANSICODE("\033[32m")
-#define cYELLOW    ANSICODE("\033[33m")
-#define cBLUE      ANSICODE("\033[34m")
-#define cMAGENTA   ANSICODE("\033[35m")
-#define cCYAN      ANSICODE("\033[36m")
-#define cRESET     ANSICODE("\033[00m") // reset to normal, white text
-#ifdef __LINUX__
-  #define cSTRIKEOUT ANSICODE("\033[09m") // linux only
-#else
-  #define cSTRIKEOUT // linux only
-#endif
-//----------------------------------------------------------------------------------
-
-//----------------Printing Log & Validation messages on Android vs PC---------------
-#ifdef ANDROID
-    #include <jni.h>
-    #include <android/log.h>
-    #define LOG_TAG    "WSIWindow"
-    #define _LOG(...)    __android_log_print(ANDROID_LOG_INFO   ,LOG_TAG,__VA_ARGS__)
-    #define _LOGV(...)   __android_log_print(ANDROID_LOG_VERBOSE,LOG_TAG,__VA_ARGS__)
-    #define _LOGD(...)   __android_log_print(ANDROID_LOG_DEBUG  ,LOG_TAG,__VA_ARGS__)
-    #define _LOGI(...)   __android_log_print(ANDROID_LOG_INFO   ,LOG_TAG,__VA_ARGS__)
-    #define _LOGW(...)   __android_log_print(ANDROID_LOG_WARN   ,LOG_TAG,__VA_ARGS__)
-    #define _LOGE(...)   __android_log_print(ANDROID_LOG_ERROR  ,LOG_TAG,__VA_ARGS__)
-    #define printf(...)  __android_log_print(ANDROID_LOG_INFO   ,LOG_TAG,__VA_ARGS__)
-#else // DESKTOP
-    #define _LOG(...)  {                                    printf(__VA_ARGS__); fflush(stdout);}
-    #define _LOGV(...) {printf(cCYAN   "PERF : "   cRESET); printf(__VA_ARGS__); fflush(stdout);}
-    #define _LOGD(...) {printf(cBLUE   "DEBUG: "   cRESET); printf(__VA_ARGS__); fflush(stdout);}
-    #define _LOGI(...) {printf(cGREEN  "INFO : "   cRESET); printf(__VA_ARGS__); fflush(stdout);}
-    #define _LOGW(...) {printf(cYELLOW "WARNING: " cRESET); printf(__VA_ARGS__); fflush(stdout);}
-    #define _LOGE(...) {printf(cRED    "ERROR: "   cRESET); printf(__VA_ARGS__); fflush(stdout);}
-#endif
-//----------------------------------------------------------------------------------
-*/
 
 #ifdef _WIN32
     #include <Windows.h>
@@ -138,8 +79,8 @@
     #define cTICK "\u2713"
 #endif
 
-enum eColor { eRESET, eRED, eGREEN, eYELLOW, eBLUE, eMAGENTA, eCYAN, eWHITE,     //faint
-              eFAINT,eBRED,eBGREEN,eBYELLOW,eBBLUE,eBMAGENTA,eBCYAN, eBRIGHT };  //bright
+enum eColor { eRESET, eRED, eGREEN, eYELLOW, eBLUE, eMAGENTA, eCYAN, eWHITE,     //faint colors
+              eFAINT,eBRED,eBGREEN,eBYELLOW,eBBLUE,eBMAGENTA,eBCYAN, eBRIGHT };  //bright colors
 void color(eColor color);
 //void print(eColor col,const char* format,...);
 
@@ -180,9 +121,7 @@ void color(eColor color);
     #define  LOGE(...) {}
 #endif
 //----------------------------------------------------------------------------------
-
-
-
+// clang-format on
 //======================================================================================================
 #include <assert.h>
 #include <stdio.h>   //for Windows.
@@ -205,8 +144,8 @@ void color(eColor color);
 #endif
 //======================================================================================================
 
-const char* VkResultStr(VkResult err);  //Convert vulkan result code to a string.
-void ShowVkResult(VkResult err);        //Print warnings and errors.
+const char* VkResultStr(VkResult err);      // Convert vulkan result code to a string.
+void ShowVkResult(VkResult err);            // Print warnings and errors.
 
 //============================================ CDebugReport ============================================
 class CDebugReport{

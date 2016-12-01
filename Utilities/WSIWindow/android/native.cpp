@@ -32,15 +32,19 @@
 #include "native.h"
 
 //----------------------------------------printf for Android----------------------------------------
+// Uses a 256 byte buffer to allow concatenating multiple printf's onto one log line.
+// The buffer gets flushed when the printf string ends in a '\n', or the buffer is full.
+// Alternative with no concatenation:
+//   #define printf(...)  __android_log_print(ANDROID_LOG_INFO, LOG_TAG,__VA_ARGS__)
+
 struct printBuf{
     static const int SIZE=256;
     char buf[SIZE];
     printBuf(){ clear(); }
     printBuf(const char* c){memset(buf,0,SIZE); strncpy(buf,c,SIZE-1);}
-    printBuf& operator+=(const char* c){strncat(buf,c,SIZE-len()-1); return *this;}
+    printBuf& operator+=(const char* c){strncat(buf,c,SIZE-len()-1); if(len()>=SIZE-1) flush(); return *this;}
     int len(){return strlen(buf);}
     void clear(){ memset(buf,0,SIZE); }
-    //void flush(){ _LOG("%s",buf); clear(); fflush(stdout);}
     void flush(){__android_log_print(ANDROID_LOG_INFO ,"WSIWindow","%s",buf); clear();}
 }printBuf;
 
@@ -51,7 +55,8 @@ int printf(const char* format,...){  //printf for Android
     vsnprintf(buf,sizeof(buf), format, argptr);
     va_end(argptr);
     printBuf+=buf;
-    if(buf[strlen(buf)-1]=='\n') printBuf.flush();
+    int len=strlen(buf);
+    if((len>=printBuf.SIZE-1) || (buf[len-1]=='\n')) printBuf.flush(); //flush on
     return strlen(buf);
 }
 //--------------------------------------------------------------------------------------------------
@@ -101,7 +106,7 @@ static int32_t handle_input(struct android_app* app, AInputEvent* event) {
 //------------------------------------------------
 */
 //====================Main====================
-int main(int argc, char *argv[]);          //Forward declaration of main function
+int main(int argc, char *argv[]);          // Forward declaration of main function
 
 void android_main(struct android_app* state) {
     printf("Native Activity\n");
@@ -157,11 +162,9 @@ void ShowKeyboard(bool visible,int flags){
     // Finished with the JVM.
     javaVM->DetachCurrentThread();
 }
-
 //======================================================================================
 
 //===============================Get Unicode from Keyboard==============================
-
 int GetUnicodeChar(int eventType, int keyCode, int metaState){
     JavaVM* javaVM = Android_App->activity->vm;
     JNIEnv* jniEnv = Android_App->activity->env;
@@ -182,5 +185,4 @@ int GetUnicodeChar(int eventType, int keyCode, int metaState){
     //LOGI("Keycode: %d  MetaState: %d Unicode: %d", keyCode, metaState, unicodeKey);
     return unicodeKey;
 }
-
 //======================================================================================

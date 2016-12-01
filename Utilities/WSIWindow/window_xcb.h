@@ -66,7 +66,7 @@ typedef struct xcb_input_touch_begin_event_t { //from xinput.h in XCB 1.12 (curr
 } xcb_input_touch_begin_event_t;
 #endif
 
-
+// clang-format off
 // Convert native EVDEV key-code to cross-platform USB HID code.
 const unsigned char EVDEV_TO_HID[256] = {
   0,  0,  0,  0,  0,  0,  0,  0,  0, 41, 30, 31, 32, 33, 34, 35,
@@ -86,7 +86,7 @@ const unsigned char EVDEV_TO_HID[256] = {
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
 };
-
+// clang-format on
 //=============================XCB==============================
 class Window_xcb : public WindowImpl{
     Display          *display;         //for XLib

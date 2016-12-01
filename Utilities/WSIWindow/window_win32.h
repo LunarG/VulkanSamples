@@ -30,7 +30,7 @@
 #include "WindowImpl.h"
 #include <windowsx.h>             //   Mouse
 //#pragma warning(disable:4996)
-
+// clang-format off
 // Convert native Win32 keyboard scancode to cross-platform USB HID code.
 const unsigned char WIN32_TO_HID[256] = {
       0,  0,  0,  0,  0,  0,  0,  0, 42, 43,  0,  0,  0, 40,  0,  0,    // 16
@@ -50,7 +50,7 @@ const unsigned char WIN32_TO_HID[256] = {
       0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,    //240
       0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0     //256
 };
-
+// clang-format on
 //=============================Win32============================
 class Window_win32 : public WindowImpl{
     HINSTANCE hInstance;

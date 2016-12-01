@@ -34,7 +34,7 @@
 #define WINDOW_ANDROID
 
 //========================================================
-
+// clang-format off
 // Convert native Android key-code to cross-platform USB HID code.
 const unsigned char ANDROID_TO_HID[256] = {
   0,227,231,  0,  0,  0,  0, 39, 30, 31, 32, 33, 34, 35, 36, 37,
@@ -54,7 +54,7 @@ const unsigned char ANDROID_TO_HID[256] = {
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
 };
-
+// clang-format on
 //==========================Android=============================
 class Window_android : public WindowImpl{
     android_app* app=0;

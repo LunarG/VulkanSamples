@@ -21,34 +21,6 @@
 
 #include "Validation.h"
 #include <string.h>   //for strlen
-//---------------- Enable ANSI Codes on Win10+ ----------------
-/*
-#if defined(WIN10PLUS)
-#if !defined(NDEBUG) || defined(ENABLE_LOGGING) || defined(ENABLE_VALIDATION)
-    struct INITANSI {
-        INITANSI() {
-            HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-            DWORD dwMode = 0;
-            GetConsoleMode(hOut, &dwMode);
-            dwMode |= 0x0004; // ENABLE_VIRTUAL_TERMINAL_PROCESSING
-            SetConsoleMode(hOut, dwMode);
-        }
-    }INITANSI;
-#endif
-#endif
-*/
-
-void color(eColor color){  //Sets Terminal text color (Win32 and Linux only)
-    #ifdef _WIN32
-        const char bgr[]={7,4,2,6,3,5,3,0, 8,12,10,14,9,13,11,15}; //RGB-to-BGR
-        HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-        SetConsoleTextAttribute(hConsole, bgr[color]);
-    #elif __LINUX__
-        printf("\033[%dm",(color&8)?1:0);       //faint or normal
-        if(color) printf("\033[3%dm",color&7);  //set text color
-    #endif
-}
-//--------------------------------------------------------------
 
 //--------------------Vulkan Dispatch Table---------------------
 //WARNING: vulkan_wrapper.h must be #included BEFORE vulkan.h
@@ -64,6 +36,19 @@ void color(eColor color){  //Sets Terminal text color (Win32 and Linux only)
     }}INITVULKAN;               //Run this function BEFORE main.
 #endif
 
+//-------------------------------------------------------------
+
+//-------------------------Text Color--------------------------
+void color(eColor color){  //Sets Terminal text color (Win32/Linux)
+    #ifdef _WIN32
+        const char bgr[]={7,4,2,6,1,5,3,0, 8,12,10,14,9,13,11,15}; //RGB-to-BGR
+        HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+        SetConsoleTextAttribute(hConsole, bgr[color]);
+    #elif __LINUX__
+        printf("\033[%dm",(color&8)?1:0);       //faint or normal
+        if(color) printf("\033[3%dm",color&7);  //set text color
+    #endif
+}
 //-------------------------------------------------------------
 
 //-----------------------Error Checking------------------------
@@ -174,15 +159,6 @@ void CDebugReport::Destroy(){
 }
 
 void CDebugReport::Print(){  //print the state of the report flags
-/*
-    _LOG("Debug Report flags : [%s" cRESET "%s" cRESET "%s" cRESET "%s" cRESET "%s" cRESET "] = %d\n",
-        (flags& 1) ? cGREEN "INFO:1 |" : cFAINT cSTRIKEOUT "info:0 |",
-        (flags& 2) ? cYELLOW"WARN:1 |" : cFAINT cSTRIKEOUT "warn:0 |",
-        (flags& 4) ? cCYAN  "PERF:1 |" : cFAINT cSTRIKEOUT "perf:0 |",
-        (flags& 8) ? cRED   "ERROR:1|" : cFAINT cSTRIKEOUT "error:0|",
-        (flags&16) ? cBLUE  "DEBUG:1"  : cFAINT cSTRIKEOUT "debug:0" ,flags);
-*/
-
     printf("Debug Report flags : [");
     if(flags&  1) {color(eGREEN);  printf("INFO:1 |");} else {color(eFAINT); printf("info:0 |");}
     if(flags&  2) {color(eYELLOW); printf("WARN:1 |");} else {color(eFAINT); printf("warn:0 |");}
