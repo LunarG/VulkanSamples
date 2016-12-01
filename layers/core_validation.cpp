@@ -858,39 +858,6 @@ static bool get_mem_for_type(layer_data *dev_data, uint64_t handle, VkDebugRepor
     return skip_call;
 }
 
-static void printCBList(layer_data *my_data) {
-    GLOBAL_CB_NODE *pCBInfo = NULL;
-
-    // Early out if info is not requested
-    if (!(my_data->report_data->active_flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)) {
-        return;
-    }
-
-    log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__,
-            MEMTRACK_NONE, "MEM", "Details of command buffer list (of size " PRINTF_SIZE_T_SPECIFIER " elements)",
-            my_data->commandBufferMap.size());
-    log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__,
-            MEMTRACK_NONE, "MEM", "==================");
-
-    if (my_data->commandBufferMap.size() <= 0)
-        return;
-
-    for (auto &cb_node : my_data->commandBufferMap) {
-        pCBInfo = cb_node.second;
-
-        log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0,
-                __LINE__, MEMTRACK_NONE, "MEM", "    CB Info (0x%p) has command buffer 0x%p", (void *)pCBInfo,
-                (void *)pCBInfo->commandBuffer);
-
-        if (pCBInfo->memObjs.size() <= 0)
-            continue;
-        for (auto obj : pCBInfo->memObjs) {
-            log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0,
-                    __LINE__, MEMTRACK_NONE, "MEM", "      Mem obj 0x%" PRIx64, (uint64_t)obj);
-        }
-    }
-}
-
 // Return a string representation of CMD_TYPE enum
 static string cmdTypeToString(CMD_TYPE cmd) {
     switch (cmd) {
@@ -4133,22 +4100,6 @@ static bool printPipeline(layer_data *my_data, const VkCommandBuffer cb) {
     return skip_call;
 }
 
-static void printCB(layer_data *my_data, const VkCommandBuffer cb) {
-    GLOBAL_CB_NODE *pCB = getCBNode(my_data, cb);
-    if (pCB && pCB->cmds.size() > 0) {
-        log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                DRAWSTATE_NONE, "DS", "Cmds in command buffer 0x%p", (void *)cb);
-        vector<CMD_NODE> cmds = pCB->cmds;
-        for (auto ii = cmds.begin(); ii != cmds.end(); ++ii) {
-            // TODO : Need to pass cmdbuffer as srcObj here
-            log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0,
-                    __LINE__, DRAWSTATE_NONE, "DS", "  CMD 0x%" PRIx64 ": %s", (*ii).cmdNumber, cmdTypeToString((*ii).type).c_str());
-        }
-    } else {
-        // Nothing to print
-    }
-}
-
 static bool synchAndPrintDSConfig(layer_data *my_data, const VkCommandBuffer cb) {
     bool skip_call = false;
     if (!(my_data->report_data->active_flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)) {
@@ -4458,7 +4409,6 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
     dev_data->bufferMap.clear();
     // Queues persist until device is destroyed
     dev_data->queueMap.clear();
-    printCBList(dev_data);
     // Report any memory leaks
     DEVICE_MEM_INFO *pInfo = NULL;
     if (!dev_data->memObjMap.empty()) {
@@ -4927,9 +4877,6 @@ QueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits, V
     if (skip_call) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
-
-    // TODO : Review these old print functions and clean up as appropriate
-    printCBList(dev_data);
 
     // Mark the fence in-use.
     if (pFence) {
@@ -6178,7 +6125,6 @@ FreeCommandBuffers(VkDevice device, VkCommandPool commandPool, uint32_t commandB
         // Remove commandBuffer reference from commandPoolMap
         pPool->commandBuffers.remove(pCommandBuffers[i]);
     }
-    printCBList(dev_data);
     lock.unlock();
 
     dev_data->dispatch_table.FreeCommandBuffers(device, commandPool, commandBufferCount, pCommandBuffers);
@@ -7270,7 +7216,6 @@ AllocateCommandBuffers(VkDevice device, const VkCommandBufferAllocateInfo *pCrea
                 pCB->device = device;
             }
         }
-        printCBList(dev_data);
         lock.unlock();
     }
     return result;
@@ -7468,7 +7413,6 @@ VKAPI_ATTR VkResult VKAPI_CALL EndCommandBuffer(VkCommandBuffer commandBuffer) {
             pCB->state = CB_RECORDED;
             // Reset CB status flags
             pCB->status = 0;
-            printCB(dev_data, commandBuffer);
         }
     } else {
         result = VK_ERROR_VALIDATION_FAILED_EXT;
