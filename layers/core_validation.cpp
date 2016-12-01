@@ -687,11 +687,8 @@ static void clear_cmd_buf_and_mem_references(layer_data *dev_data, const VkComma
 static bool ClearMemoryObjectBinding(layer_data *dev_data, uint64_t handle, VkDebugReportObjectTypeEXT type, VkDeviceMemory mem) {
     DEVICE_MEM_INFO *mem_info = getMemObjInfo(dev_data, mem);
     // This obj is bound to a memory object. Remove the reference to this object in that memory object's list
-    if (mem_info && !mem_info->obj_bindings.erase({handle, type})) {
-        return log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, type, handle, __LINE__, MEMTRACK_INVALID_OBJECT,
-                    "MEM", "While trying to clear mem binding for %s obj 0x%" PRIxLEAST64
-                           ", unable to find that object referenced by mem obj 0x%" PRIxLEAST64,
-                    object_type_to_string(type), handle, (uint64_t)mem);
+    if (mem_info) {
+        mem_info->obj_bindings.erase({handle, type});
     }
     return false;
 }
