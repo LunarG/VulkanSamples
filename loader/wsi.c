@@ -173,22 +173,19 @@ terminator_DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface,
                 if (icd_term->scanned_icd->interface_version >=
                     ICD_VER_SUPPORTS_ICD_SURFACE_KHR) {
                     if (NULL != icd_term->DestroySurfaceKHR &&
-                        NULL !=
-                            (void *)(uintptr_t)
-                                icd_surface->real_icd_surfaces[i]) {
+                        (VkSurfaceKHR)NULL !=
+                            icd_surface->real_icd_surfaces[i]) {
                         icd_term->DestroySurfaceKHR(
                             icd_term->instance,
                             icd_surface->real_icd_surfaces[i], pAllocator);
-                        icd_surface->real_icd_surfaces[i] =
-                            (VkSurfaceKHR)(uintptr_t)NULL;
+                        icd_surface->real_icd_surfaces[i] = (VkSurfaceKHR)NULL;
                     }
                 } else {
                     // The real_icd_surface for any ICD not supporting the
                     // proper interface version should be NULL.  If not, then
                     // we have a problem.
-                    assert(
-                        NULL ==
-                        (void *)(uintptr_t)icd_surface->real_icd_surfaces[i]);
+                    assert((VkSurfaceKHR)NULL ==
+                           icd_surface->real_icd_surfaces[i]);
                 }
             }
             loader_instance_heap_free(ptr_instance,
@@ -243,9 +240,8 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_GetPhysicalDeviceSurfaceSupportKHR(
 
     VkIcdSurface *icd_surface = (VkIcdSurface *)(uintptr_t)surface;
     if (NULL != icd_surface->real_icd_surfaces &&
-        NULL !=
-            (void *)(uintptr_t)
-                icd_surface->real_icd_surfaces[phys_dev_term->icd_index]) {
+        (VkSurfaceKHR)NULL !=
+            icd_surface->real_icd_surfaces[phys_dev_term->icd_index]) {
         return icd_term->GetPhysicalDeviceSurfaceSupportKHR(
             phys_dev_term->phys_dev, queueFamilyIndex,
             icd_surface->real_icd_surfaces[phys_dev_term->icd_index],
@@ -300,9 +296,8 @@ terminator_GetPhysicalDeviceSurfaceCapabilitiesKHR(
 
     VkIcdSurface *icd_surface = (VkIcdSurface *)(uintptr_t)surface;
     if (NULL != icd_surface->real_icd_surfaces &&
-        NULL !=
-            (void *)(uintptr_t)
-                icd_surface->real_icd_surfaces[phys_dev_term->icd_index]) {
+        (VkSurfaceKHR)NULL !=
+            icd_surface->real_icd_surfaces[phys_dev_term->icd_index]) {
         return icd_term->GetPhysicalDeviceSurfaceCapabilitiesKHR(
             phys_dev_term->phys_dev,
             icd_surface->real_icd_surfaces[phys_dev_term->icd_index],
@@ -357,9 +352,8 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_GetPhysicalDeviceSurfaceFormatsKHR(
 
     VkIcdSurface *icd_surface = (VkIcdSurface *)(uintptr_t)surface;
     if (NULL != icd_surface->real_icd_surfaces &&
-        NULL !=
-            (void *)(uintptr_t)
-                icd_surface->real_icd_surfaces[phys_dev_term->icd_index]) {
+        (VkSurfaceKHR)NULL !=
+            icd_surface->real_icd_surfaces[phys_dev_term->icd_index]) {
         return icd_term->GetPhysicalDeviceSurfaceFormatsKHR(
             phys_dev_term->phys_dev,
             icd_surface->real_icd_surfaces[phys_dev_term->icd_index],
@@ -414,9 +408,8 @@ terminator_GetPhysicalDeviceSurfacePresentModesKHR(
 
     VkIcdSurface *icd_surface = (VkIcdSurface *)(uintptr_t)surface;
     if (NULL != icd_surface->real_icd_surfaces &&
-        NULL !=
-            (void *)(uintptr_t)
-                icd_surface->real_icd_surfaces[phys_dev_term->icd_index]) {
+        (VkSurfaceKHR)NULL !=
+            icd_surface->real_icd_surfaces[phys_dev_term->icd_index]) {
         return icd_term->GetPhysicalDeviceSurfacePresentModesKHR(
             phys_dev_term->phys_dev,
             icd_surface->real_icd_surfaces[phys_dev_term->icd_index],
@@ -450,8 +443,8 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_vkCreateSwapchainKHR(
         VkIcdSurface *icd_surface =
             (VkIcdSurface *)(uintptr_t)pCreateInfo->surface;
         if (NULL != icd_surface->real_icd_surfaces) {
-            if (NULL !=
-                (void *)(uintptr_t)icd_surface->real_icd_surfaces[icd_index]) {
+            if ((VkSurfaceKHR)NULL !=
+                icd_surface->real_icd_surfaces[icd_index]) {
                 // We found the ICD, and there is an ICD KHR surface
                 // associated with it, so copy the CreateInfo struct
                 // and point it at the ICD's surface.
@@ -758,7 +751,7 @@ out:
             i = 0;
             for (struct loader_icd_term *icd_term = ptr_instance->icd_terms;
                  icd_term != NULL; icd_term = icd_term->next, i++) {
-                if (NULL != pIcdSurface->real_icd_surfaces[i] &&
+                if ((VkSurfaceKHR)NULL != pIcdSurface->real_icd_surfaces[i] &&
                     NULL != icd_term->DestroySurfaceKHR) {
                     icd_term->DestroySurfaceKHR(
                         icd_term->instance, pIcdSurface->real_icd_surfaces[i],
@@ -894,7 +887,7 @@ out:
             i = 0;
             for (struct loader_icd_term *icd_term = ptr_instance->icd_terms;
                  icd_term != NULL; icd_term = icd_term->next, i++) {
-                if (NULL != pIcdSurface->real_icd_surfaces[i] &&
+                if ((VkSurfaceKHR)NULL != pIcdSurface->real_icd_surfaces[i] &&
                     NULL != icd_term->DestroySurfaceKHR) {
                     icd_term->DestroySurfaceKHR(
                         icd_term->instance, pIcdSurface->real_icd_surfaces[i],
@@ -1020,7 +1013,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateXcbSurfaceKHR(
         }
     }
 
-    *pSurface = (VkSurfaceKHR)(uintptr_t)pIcdSurface;
+    *pSurface = (VkSurfaceKHR)pIcdSurface;
 
 out:
 
@@ -1029,8 +1022,7 @@ out:
             i = 0;
             for (struct loader_icd_term *icd_term = ptr_instance->icd_terms;
                  icd_term != NULL; icd_term = icd_term->next, i++) {
-                if (NULL !=
-                        (void *)(uintptr_t)pIcdSurface->real_icd_surfaces[i] &&
+                if ((VkSurfaceKHR)NULL != pIcdSurface->real_icd_surfaces[i] &&
                     NULL != icd_term->DestroySurfaceKHR) {
                     icd_term->DestroySurfaceKHR(
                         icd_term->instance, pIcdSurface->real_icd_surfaces[i],
@@ -1157,7 +1149,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateXlibSurfaceKHR(
         }
     }
 
-    *pSurface = (VkSurfaceKHR)(uintptr_t)pIcdSurface;
+    *pSurface = (VkSurfaceKHR)pIcdSurface;
 
 out:
 
@@ -1166,8 +1158,7 @@ out:
             i = 0;
             for (struct loader_icd_term *icd_term = ptr_instance->icd_terms;
                  icd_term != NULL; icd_term = icd_term->next, i++) {
-                if (NULL !=
-                        (void *)(uintptr_t)pIcdSurface->real_icd_surfaces[i] &&
+                if ((VkSurfaceKHR)NULL != pIcdSurface->real_icd_surfaces[i] &&
                     NULL != icd_term->DestroySurfaceKHR) {
                     icd_term->DestroySurfaceKHR(
                         icd_term->instance, pIcdSurface->real_icd_surfaces[i],
@@ -1572,7 +1563,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDisplayPlaneSurfaceKHR(
         }
     }
 
-    *pSurface = (VkSurfaceKHR)(uintptr_t)pIcdSurface;
+    *pSurface = (VkSurfaceKHR)pIcdSurface;
 
 out:
 
@@ -1581,8 +1572,7 @@ out:
             i = 0;
             for (struct loader_icd_term *icd_term = inst->icd_terms;
                  icd_term != NULL; icd_term = icd_term->next, i++) {
-                if (NULL !=
-                        (void *)(uintptr_t)pIcdSurface->real_icd_surfaces[i] &&
+                if ((VkSurfaceKHR)NULL != pIcdSurface->real_icd_surfaces[i] &&
                     NULL != icd_term->DestroySurfaceKHR) {
                     icd_term->DestroySurfaceKHR(
                         icd_term->instance, pIcdSurface->real_icd_surfaces[i],
