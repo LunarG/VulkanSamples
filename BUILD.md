@@ -5,10 +5,6 @@ This repository does not contain a Vulkan-capable driver.
 Before proceeding, it is strongly recommended that you obtain a Vulkan driver from your graphics hardware vendor
 and install it.
 
-Note: The sample Vulkan Intel driver for Linux (ICD) is being deprecated in favor of other driver options from Intel.
-This driver has been moved to the [VulkanTools repo](https://github.com/LunarG/VulkanTools).
-Further instructions regarding this ICD are available there.
-
 ## Contributing
 
 If you intend to contribute, the preferred work flow is for you to develop your contribution
@@ -19,7 +15,7 @@ Please see the [CONTRIBUTING](CONTRIBUTING.md) file in this respository for more
 
 To create your local git repository:
 ```
-git clone https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers 
+git clone https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers
 ```
 
 ## Linux Build
@@ -30,7 +26,7 @@ The build generates the loader, layers, and tests.
 This repo has been built and tested on Ubuntu 14.04.3 LTS, 14.10, 15.04, 15.10, and 16.04 LTS.
 It should be straightforward to use it on other Linux distros.
 
-These packages are needed to build this repository: 
+These packages are needed to build this repository:
 ```
 sudo apt-get install git cmake build-essential bison libx11-dev libxcb1-dev libxkbcommon-dev
 ```
@@ -205,7 +201,7 @@ Build all Windows targets after installing required software and cloning the Loa
 ```
 cd Vulkan-LoaderAndValidationLayers  # cd to the root of the cloned git repository
 update_external_sources.bat --all
-build_windows_targets.bat 
+build_windows_targets.bat
 ```
 
 At this point, you can use Windows Explorer to launch Visual Studio by double-clicking on the "VULKAN.sln" file in the \build folder.  Once Visual Studio comes up, you can select "Debug" or "Release" from a drop-down list.  You can start a build with either the menu (Build->Build Solution), or a keyboard shortcut (Ctrl+Shift+B).  As part of the build process, Python scripts will create additional Visual Studio files and projects, along with additional source files.  All of these auto-generated files are under the "build" folder.
@@ -313,7 +309,7 @@ The [Qt Creator IDE](https://qt.io/download-open-source/#section-2) can open a r
 - Then do the same with the Vulkan-LoaderAndValidationLayers CMakeList.txt file.
 - In order to debug with QtCreator, a [Microsoft WDK: eg WDK 10](http://go.microsoft.com/fwlink/p/?LinkId=526733) is required. Note that installing the WDK breaks the MSVC vcvarsall.bat build scripts provided by MSVC, requiring that the LIB, INCLUDE, and PATH env variables be set to the WDK paths by some other means
 
-## Loader and Validation Layer Dependencies 
+## Loader and Validation Layer Dependencies
 gslang and SPIRV-Tools repos are required to build and run Loader and Validation Layer components. They are not git sub-modules of Vulkan-LoaderAndValidationLayers but Vulkan-LoaderAndValidationLayers is linked to specific revisions of gslang and spirv-tools. These can be automatically cloned and built to predefined locations with the update\_external\_sources scripts. If a custom configuration is required, do the following steps:
 
 1) clone the repos:
@@ -347,7 +343,7 @@ _on windows_
     Especially valuable are the BASH shell and git packages.
   - If you don't want to use Cygwin, there are other shells and environments that can be used.
     You can also use a Git package that doesn't come from Cygwin.
-	
+
 - [Ninja on all platforms](https://github.com/ninja-build/ninja/releases). [The Ninja-build project](ninja-build.org). [Ninja Users Manual](ninja-build.org/manual.html) 
 
 - [QtCreator as IDE for CMake builds on all platforms](https://qt.io/download-open-source/#section-2)
