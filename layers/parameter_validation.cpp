@@ -5421,9 +5421,12 @@ VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectTagEXT(VkDevice device, VkDeb
     skip |= parameter_validation_vkDebugMarkerSetObjectTagEXT(my_data->report_data, pTagInfo);
 
     if (!skip) {
-        result = my_data->dispatch_table.DebugMarkerSetObjectTagEXT(device, pTagInfo);
-
-        validate_result(my_data->report_data, "vkDebugMarkerSetObjectTagEXT", result);
+        if (my_data->dispatch_table.DebugMarkerSetObjectTagEXT) {
+            result = my_data->dispatch_table.DebugMarkerSetObjectTagEXT(device, pTagInfo);
+            validate_result(my_data->report_data, "vkDebugMarkerSetObjectTagEXT", result);
+        } else {
+            result = VK_SUCCESS;
+        }
     }
 
     return result;
@@ -5438,9 +5441,12 @@ VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectNameEXT(VkDevice device, VkDe
     skip |= parameter_validation_vkDebugMarkerSetObjectNameEXT(my_data->report_data, pNameInfo);
 
     if (!skip) {
-        VkResult result = my_data->dispatch_table.DebugMarkerSetObjectNameEXT(device, pNameInfo);
-
-        validate_result(my_data->report_data, "vkDebugMarkerSetObjectNameEXT", result);
+        if (my_data->dispatch_table.DebugMarkerSetObjectNameEXT) {
+            result = my_data->dispatch_table.DebugMarkerSetObjectNameEXT(device, pNameInfo);
+            validate_result(my_data->report_data, "vkDebugMarkerSetObjectNameEXT", result);
+        } else {
+            result = VK_SUCCESS;
+        }
     }
 
     return result;
@@ -5453,7 +5459,7 @@ VKAPI_ATTR void VKAPI_CALL CmdDebugMarkerBeginEXT(VkCommandBuffer commandBuffer,
 
     skip |= parameter_validation_vkCmdDebugMarkerBeginEXT(my_data->report_data, pMarkerInfo);
 
-    if (!skip) {
+    if (!skip && my_data->dispatch_table.CmdDebugMarkerBeginEXT) {
         my_data->dispatch_table.CmdDebugMarkerBeginEXT(commandBuffer, pMarkerInfo);
     }
 }
@@ -5465,7 +5471,7 @@ VKAPI_ATTR void VKAPI_CALL CmdDebugMarkerInsertEXT(VkCommandBuffer commandBuffer
 
     skip |= parameter_validation_vkCmdDebugMarkerInsertEXT(my_data->report_data, pMarkerInfo);
 
-    if (!skip) {
+    if (!skip && my_data->dispatch_table.CmdDebugMarkerInsertEXT) {
         my_data->dispatch_table.CmdDebugMarkerInsertEXT(commandBuffer, pMarkerInfo);
     }
 }

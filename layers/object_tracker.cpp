@@ -3216,6 +3216,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physicalDevice, con
 
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
     device_data->report_data = layer_debug_report_create_device(phy_dev_data->report_data, *pDevice);
+    layer_init_device_dispatch_table(*pDevice, &device_data->dispatch_table, fpGetDeviceProcAddr);
 
     // Add link back to physDev
     device_data->physical_device = physicalDevice;
@@ -3690,7 +3691,11 @@ VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectTagEXT(VkDevice device, VkDeb
     if (skip_call) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
-    VkResult result = get_dispatch_table(ot_device_table_map, device)->DebugMarkerSetObjectTagEXT(device, pTagInfo);
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = VK_SUCCESS;
+    if (dev_data->dispatch_table.DebugMarkerSetObjectTagEXT) {
+        result = dev_data->dispatch_table.DebugMarkerSetObjectTagEXT(device, pTagInfo);
+    }
     return result;
 }
 
@@ -3702,7 +3707,11 @@ VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectNameEXT(VkDevice device, VkDe
     if (skip_call) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
-    VkResult result = get_dispatch_table(ot_device_table_map, device)->DebugMarkerSetObjectNameEXT(device, pNameInfo);
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = VK_SUCCESS;
+    if (dev_data->dispatch_table.DebugMarkerSetObjectNameEXT) {
+        result = dev_data->dispatch_table.DebugMarkerSetObjectNameEXT(device, pNameInfo);
+    }
     return result;
 }
 
@@ -3712,8 +3721,9 @@ VKAPI_ATTR void VKAPI_CALL CmdDebugMarkerBeginEXT(VkCommandBuffer commandBuffer,
     skip_call |=
         ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false, VALIDATION_ERROR_02014);
     lock.unlock();
-    if (!skip_call) {
-        get_dispatch_table(ot_device_table_map, commandBuffer)->CmdDebugMarkerBeginEXT(commandBuffer, pMarkerInfo);
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+    if (!skip_call && dev_data->dispatch_table.CmdDebugMarkerBeginEXT) {
+        dev_data->dispatch_table.CmdDebugMarkerBeginEXT(commandBuffer, pMarkerInfo);
     }
 }
 
@@ -3723,8 +3733,9 @@ VKAPI_ATTR void VKAPI_CALL CmdDebugMarkerEndEXT(VkCommandBuffer commandBuffer) {
     skip_call |=
         ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false, VALIDATION_ERROR_02022);
     lock.unlock();
-    if (!skip_call) {
-        get_dispatch_table(ot_device_table_map, commandBuffer)->CmdDebugMarkerEndEXT(commandBuffer);
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+    if (!skip_call && dev_data->dispatch_table.CmdDebugMarkerEndEXT) {
+        dev_data->dispatch_table.CmdDebugMarkerEndEXT(commandBuffer);
     }
 }
 
@@ -3734,8 +3745,9 @@ VKAPI_ATTR void VKAPI_CALL CmdDebugMarkerInsertEXT(VkCommandBuffer commandBuffer
     skip_call |=
         ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false, VALIDATION_ERROR_02025);
     lock.unlock();
-    if (!skip_call) {
-        get_dispatch_table(ot_device_table_map, commandBuffer)->CmdDebugMarkerInsertEXT(commandBuffer, pMarkerInfo);
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+    if (!skip_call && dev_data->dispatch_table.CmdDebugMarkerInsertEXT) {
+        dev_data->dispatch_table.CmdDebugMarkerInsertEXT(commandBuffer, pMarkerInfo);
     }
 }
 

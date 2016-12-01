@@ -113,11 +113,12 @@ struct layer_data {
     // Map of queue information structures, one per queue
     std::unordered_map<VkQueue, OT_QUEUE_INFO *> queue_info_map;
 
+    VkLayerDispatchTable dispatch_table;
     // Default constructor
     layer_data()
         : instance(nullptr), physical_device(nullptr), num_objects{}, num_total_objects(0), report_data(nullptr),
           wsi_enabled(false), wsi_display_swapchain_enabled(false), objtrack_extensions_enabled(false), num_tmp_callbacks(0),
-          tmp_dbg_create_infos(nullptr), tmp_callbacks(nullptr), object_map{} {
+          tmp_dbg_create_infos(nullptr), tmp_callbacks(nullptr), object_map{}, dispatch_table{} {
         object_map.resize(VK_DEBUG_REPORT_OBJECT_TYPE_RANGE_SIZE_EXT + 1);
     }
 };
