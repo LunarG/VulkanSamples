@@ -7,8 +7,6 @@ scripts/__pycache__
 VKConfig.h
 *.so
 *.so.*
-icd/common/libicd.a
-icd/intel/intel_gpa.c
 _out64
 out32/*
 out64/*
