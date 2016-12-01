@@ -11,12 +11,12 @@
 //#define LOGI(...)    __android_log_print(ANDROID_LOG_INFO ,LOG_TAG,__VA_ARGS__)
 //#define LOGE(...)    __android_log_print(ANDROID_LOG_ERROR,LOG_TAG,__VA_ARGS__)
 //---------------------------------------------------------------------------
-
 #include <android_native_app_glue.h>
 #include <vulkan_wrapper.h>
 #include "android_fopen.h"   // redirect fopen, to read files from asset folder
 
 extern android_app* Android_App;               // Native Activity state info
+int  printf(const char* format,...);           // printf for Android (allows multiple printf's per line)
 void ShowKeyboard(bool visible, int flags=0);  // Show/hide Android keyboard
 int  GetUnicodeChar(int eventType, int keyCode, int metaState);
 

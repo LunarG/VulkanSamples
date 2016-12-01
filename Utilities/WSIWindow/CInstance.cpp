@@ -71,7 +71,10 @@ void CPickList::Print(const char* listName){
       bool picked=false;
       char* name=Name(i);
       for(auto& pick : pickList) if(pick==name) picked=true;
-      printf("\t%s %s\n" cRESET, picked ? cTICK : cFAINT" ", name);
+      //printf("\t%s %s\n" cRESET, picked ? cTICK : cFAINT" ", name);
+
+      if(picked){ color(eRESET); printf("\t%s %s\n",cTICK, name); }
+      else      { color(eFAINT); printf("\t%s %s\n"," "  , name); }
   }
 }
 //----------------------------------------------------------------

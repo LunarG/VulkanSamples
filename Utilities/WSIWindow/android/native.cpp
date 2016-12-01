@@ -31,6 +31,34 @@
 
 #include "native.h"
 
+//----------------------------------------printf for Android----------------------------------------
+struct printBuf{
+    static const int SIZE=256;
+    char buf[SIZE];
+    printBuf(){ clear(); }
+    printBuf(const char* c){memset(buf,0,SIZE); strncpy(buf,c,SIZE-1);}
+    printBuf& operator+=(const char* c){strncat(buf,c,SIZE-len()-1); return *this;}
+    int len(){return strlen(buf);}
+    void clear(){ memset(buf,0,SIZE); }
+    //void flush(){ _LOG("%s",buf); clear(); fflush(stdout);}
+    void flush(){__android_log_print(ANDROID_LOG_INFO ,"WSIWindow","%s",buf); clear();}
+}printBuf;
+
+int printf(const char* format,...){  //printf for Android
+    char buf[printBuf.SIZE];
+    va_list argptr;
+    va_start(argptr, format);
+    vsnprintf(buf,sizeof(buf), format, argptr);
+    va_end(argptr);
+    printBuf+=buf;
+    if(buf[strlen(buf)-1]=='\n') printBuf.flush();
+    return strlen(buf);
+}
+//--------------------------------------------------------------------------------------------------
+
+
+
+
 android_app* Android_App=0;                //Android native-actvity state
 /*
 //--------------------TEMP------------------------

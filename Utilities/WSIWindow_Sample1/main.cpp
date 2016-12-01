@@ -33,6 +33,29 @@ class MyWindow : public WSIWindow{
     void OnMouseEvent(eAction action, int16_t x, int16_t y, uint8_t btn){
         const char* type[]={"up  ","down","move"};
         printf("Mouse: %s %d x %d Btn:%d\n",type[action],x,y,btn);
+/*
+        printf("\n");
+        color(eRESET);    printf(" eRESET");
+        color(eRED);      printf(" eRED");
+        color(eGREEN);    printf(" eGREEN");
+        color(eYELLOW);   printf(" eYELLOW");
+        color(eBLUE);     printf(" eBLUE");
+        color(eMAGENTA);  printf(" eMAGENTA");
+        color(eCYAN);     printf(" eCYAN");
+        color(eWHITE);    printf(" eWHITE");
+        printf("\n");
+        color(eFAINT);    printf(" eFAINT");
+        color(eBRED);     printf(" eBRED");
+        color(eBGREEN);   printf(" eBGREEN");
+        color(eBYELLOW);  printf(" eBYELLOW");
+        color(eBBLUE);    printf(" eBBLUE");
+        color(eBMAGENTA); printf(" eBMAGENTA");
+        color(eBCYAN);    printf(" eBCYAN");
+        color(eBRIGHT);   printf(" eBRIGHT");
+
+        color(eBBLUE);
+        printf(" TEST ");
+*/
     }
 
     //--Keyboard event handler--

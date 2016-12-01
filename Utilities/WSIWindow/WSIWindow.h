@@ -44,6 +44,7 @@
 // More Documentation
 // Keyboard: function to get native keycode
 // Keyboard: Clipboard and IME
+// Android: SetAndroidLogTag("");
 // Android: window resize events (WIP)
 // Android: IsKeyboardVisible() function?
 // Android: OnAppPauseEvent / OnAppResumeEvent / OnMemoryWarningEvent ?

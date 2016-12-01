@@ -22,6 +22,7 @@
 #include "Validation.h"
 #include <string.h>   //for strlen
 //---------------- Enable ANSI Codes on Win10+ ----------------
+/*
 #if defined(WIN10PLUS)
 #if !defined(NDEBUG) || defined(ENABLE_LOGGING) || defined(ENABLE_VALIDATION)
     struct INITANSI {
@@ -35,6 +36,18 @@
     }INITANSI;
 #endif
 #endif
+*/
+
+void color(eColor color){  //Sets Terminal text color (Win32 and Linux only)
+    #ifdef _WIN32
+        const char bgr[]={7,4,2,6,3,5,3,0, 8,12,10,14,9,13,11,15}; //RGB-to-BGR
+        HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+        SetConsoleTextAttribute(hConsole, bgr[color]);
+    #elif __LINUX__
+        printf("\033[%dm",(color&8)?1:0);       //faint or normal
+        if(color) printf("\033[3%dm",color&7);  //set text color
+    #endif
+}
 //--------------------------------------------------------------
 
 //--------------------Vulkan Dispatch Table---------------------
@@ -46,7 +59,8 @@
 #endif
     struct INITVULKAN{ INITVULKAN(){
         bool success = InitVulkan()==1;
-        LOG("Vulkan Dispatch-table: %s\n" cRESET, success?cGREEN"ENABLED":cRED"FAILED");
+        //LOG("Vulkan Dispatch-table: %s\n" cRESET, success?cGREEN"ENABLED":cRED"FAILED");
+        LOG("Vulkan Dispatch-table: %s\n", success?"ENABLED":"FAILED");
     }}INITVULKAN;               //Run this function BEFORE main.
 #endif
 
@@ -105,7 +119,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL
 DebugReportFn(VkDebugReportFlagsEXT msgFlags, VkDebugReportObjectTypeEXT objType, uint64_t srcObject,
         size_t location, int32_t msgCode, const char *pLayerPrefix, const char *pMsg, void *pUserData) {
     char buf[512];
-    snprintf(buf,sizeof(buf),cRESET "[%s] Code %d : %s\n", pLayerPrefix, msgCode, pMsg);
+    snprintf(buf,sizeof(buf),"[%s] Code %d : %s\n", pLayerPrefix, msgCode, pMsg);
     switch(msgFlags){
         case VK_DEBUG_REPORT_INFORMATION_BIT_EXT          : _LOGI("%s",buf);  return false;  // 1
         case VK_DEBUG_REPORT_WARNING_BIT_EXT              : _LOGW("%s",buf);  return false;  // 2
@@ -160,12 +174,22 @@ void CDebugReport::Destroy(){
 }
 
 void CDebugReport::Print(){  //print the state of the report flags
+/*
     _LOG("Debug Report flags : [%s" cRESET "%s" cRESET "%s" cRESET "%s" cRESET "%s" cRESET "] = %d\n",
         (flags& 1) ? cGREEN "INFO:1 |" : cFAINT cSTRIKEOUT "info:0 |",
         (flags& 2) ? cYELLOW"WARN:1 |" : cFAINT cSTRIKEOUT "warn:0 |",
         (flags& 4) ? cCYAN  "PERF:1 |" : cFAINT cSTRIKEOUT "perf:0 |",
         (flags& 8) ? cRED   "ERROR:1|" : cFAINT cSTRIKEOUT "error:0|",
         (flags&16) ? cBLUE  "DEBUG:1"  : cFAINT cSTRIKEOUT "debug:0" ,flags);
+*/
+
+    printf("Debug Report flags : [");
+    if(flags&  1) {color(eGREEN);  printf("INFO:1 |");} else {color(eFAINT); printf("info:0 |");}
+    if(flags&  2) {color(eYELLOW); printf("WARN:1 |");} else {color(eFAINT); printf("warn:0 |");}
+    if(flags&  4) {color(eCYAN);   printf("PERF:1 |");} else {color(eFAINT); printf("perf:0 |");}
+    if(flags&  8) {color(eRED);    printf("ERROR:1|");} else {color(eFAINT); printf("error:0|");}
+    if(flags& 16) {color(eBLUE);   printf("DEBUG:1" );} else {color(eFAINT); printf("debug:0" );}
+    color(eRESET); printf("] = %d\n",flags);
 }
 #else   //No Validation
 void CDebugReport::SetFlags(VkDebugReportFlagsEXT flags)              { LOGW("Vulkan Validation was not enabled at compile-time.\n"); }
