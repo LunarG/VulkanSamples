@@ -687,11 +687,8 @@ static void clear_cmd_buf_and_mem_references(layer_data *dev_data, const VkComma
 static bool ClearMemoryObjectBinding(layer_data *dev_data, uint64_t handle, VkDebugReportObjectTypeEXT type, VkDeviceMemory mem) {
     DEVICE_MEM_INFO *mem_info = getMemObjInfo(dev_data, mem);
     // This obj is bound to a memory object. Remove the reference to this object in that memory object's list
-    if (mem_info && !mem_info->obj_bindings.erase({handle, type})) {
-        return log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, type, handle, __LINE__, MEMTRACK_INVALID_OBJECT,
-                    "MEM", "While trying to clear mem binding for %s obj 0x%" PRIxLEAST64
-                           ", unable to find that object referenced by mem obj 0x%" PRIxLEAST64,
-                    object_type_to_string(type), handle, (uint64_t)mem);
+    if (mem_info) {
+        mem_info->obj_bindings.erase({handle, type});
     }
     return false;
 }
@@ -859,98 +856,6 @@ static bool get_mem_for_type(layer_data *dev_data, uint64_t handle, VkDebugRepor
                             object_type_to_string(type), handle);
     }
     return skip_call;
-}
-
-// Print details of MemObjInfo list
-static void print_mem_list(layer_data *dev_data) {
-    // Early out if info is not requested
-    if (!(dev_data->report_data->active_flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)) {
-        return;
-    }
-
-    // Just printing each msg individually for now, may want to package these into single large print
-    log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__,
-            MEMTRACK_NONE, "MEM", "Details of Memory Object list (of size " PRINTF_SIZE_T_SPECIFIER " elements)",
-            dev_data->memObjMap.size());
-    log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__,
-            MEMTRACK_NONE, "MEM", "=============================");
-
-    if (dev_data->memObjMap.size() <= 0)
-        return;
-
-    for (auto ii = dev_data->memObjMap.begin(); ii != dev_data->memObjMap.end(); ++ii) {
-        auto mem_info = (*ii).second.get();
-
-        log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0,
-                __LINE__, MEMTRACK_NONE, "MEM", "    ===MemObjInfo at 0x%p===", (void *)mem_info);
-        log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0,
-                __LINE__, MEMTRACK_NONE, "MEM", "    Mem object: 0x%" PRIxLEAST64, (uint64_t)(mem_info->mem));
-        log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0,
-                __LINE__, MEMTRACK_NONE, "MEM", "    Ref Count: " PRINTF_SIZE_T_SPECIFIER,
-                mem_info->cb_bindings.size() + mem_info->obj_bindings.size());
-        if (0 != mem_info->alloc_info.allocationSize) {
-            string pAllocInfoMsg = vk_print_vkmemoryallocateinfo(&mem_info->alloc_info, "MEM(INFO):         ");
-            log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0,
-                    __LINE__, MEMTRACK_NONE, "MEM", "    Mem Alloc info:\n%s", pAllocInfoMsg.c_str());
-        } else {
-            log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0,
-                    __LINE__, MEMTRACK_NONE, "MEM", "    Mem Alloc info is NULL (alloc done by vkCreateSwapchainKHR())");
-        }
-
-        log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0,
-                __LINE__, MEMTRACK_NONE, "MEM", "    VK OBJECT Binding list of size " PRINTF_SIZE_T_SPECIFIER " elements:",
-                mem_info->obj_bindings.size());
-        if (mem_info->obj_bindings.size() > 0) {
-            for (auto obj : mem_info->obj_bindings) {
-                log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
-                        0, __LINE__, MEMTRACK_NONE, "MEM", "       VK OBJECT 0x%" PRIx64, obj.handle);
-            }
-        }
-
-        log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0,
-                __LINE__, MEMTRACK_NONE, "MEM",
-                "    VK Command Buffer (CB) binding list of size " PRINTF_SIZE_T_SPECIFIER " elements",
-                mem_info->cb_bindings.size());
-        if (mem_info->cb_bindings.size() > 0) {
-            for (auto cb : mem_info->cb_bindings) {
-                log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
-                        0, __LINE__, MEMTRACK_NONE, "MEM", "      VK command buffer 0x%p", cb);
-            }
-        }
-    }
-}
-
-static void printCBList(layer_data *my_data) {
-    GLOBAL_CB_NODE *pCBInfo = NULL;
-
-    // Early out if info is not requested
-    if (!(my_data->report_data->active_flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)) {
-        return;
-    }
-
-    log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__,
-            MEMTRACK_NONE, "MEM", "Details of command buffer list (of size " PRINTF_SIZE_T_SPECIFIER " elements)",
-            my_data->commandBufferMap.size());
-    log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__,
-            MEMTRACK_NONE, "MEM", "==================");
-
-    if (my_data->commandBufferMap.size() <= 0)
-        return;
-
-    for (auto &cb_node : my_data->commandBufferMap) {
-        pCBInfo = cb_node.second;
-
-        log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0,
-                __LINE__, MEMTRACK_NONE, "MEM", "    CB Info (0x%p) has command buffer 0x%p", (void *)pCBInfo,
-                (void *)pCBInfo->commandBuffer);
-
-        if (pCBInfo->memObjs.size() <= 0)
-            continue;
-        for (auto obj : pCBInfo->memObjs) {
-            log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0,
-                    __LINE__, MEMTRACK_NONE, "MEM", "      Mem obj 0x%" PRIx64, (uint64_t)obj);
-        }
-    }
 }
 
 // Return a string representation of CMD_TYPE enum
@@ -1403,6 +1308,7 @@ struct interface_var {
     uint32_t offset;
     bool is_patch;
     bool is_block_member;
+    bool is_relaxed_precision;
     /* TODO: collect the name, too? Isn't required to be present. */
 };
 
@@ -1448,6 +1354,7 @@ static void collect_interface_block_members(shader_module const *src,
     }
 
     std::unordered_map<unsigned, unsigned> member_components;
+    std::unordered_map<unsigned, unsigned> member_relaxed_precision;
 
     /* Walk all the OpMemberDecorate for type's result id -- first pass, collect components. */
     for (auto insn : *src) {
@@ -1457,6 +1364,10 @@ static void collect_interface_block_members(shader_module const *src,
             if (insn.word(3) == spv::DecorationComponent) {
                 unsigned component = insn.word(4);
                 member_components[member_index] = component;
+            }
+
+            if (insn.word(3) == spv::DecorationRelaxedPrecision) {
+                member_relaxed_precision[member_index] = 1;
             }
         }
     }
@@ -1472,15 +1383,17 @@ static void collect_interface_block_members(shader_module const *src,
                 unsigned num_locations = get_locations_consumed_by_type(src, member_type_id, false);
                 auto component_it = member_components.find(member_index);
                 unsigned component = component_it == member_components.end() ? 0 : component_it->second;
+                bool is_relaxed_precision = member_relaxed_precision.find(member_index) != member_relaxed_precision.end();
 
                 for (unsigned int offset = 0; offset < num_locations; offset++) {
-                    interface_var v;
+                    interface_var v = {};
                     v.id = id;
                     /* TODO: member index in interface_var too? */
                     v.type_id = member_type_id;
                     v.offset = offset;
                     v.is_patch = is_patch;
                     v.is_block_member = true;
+                    v.is_relaxed_precision = is_relaxed_precision;
                     (*out)[std::make_pair(location + offset, component)] = v;
                 }
             }
@@ -1497,6 +1410,7 @@ static std::map<location_t, interface_var> collect_interface_by_location(
     std::unordered_map<unsigned, unsigned> var_components;
     std::unordered_map<unsigned, unsigned> blocks;
     std::unordered_map<unsigned, unsigned> var_patch;
+    std::unordered_map<unsigned, unsigned> var_relaxed_precision;
 
     for (auto insn : *src) {
 
@@ -1522,6 +1436,10 @@ static std::map<location_t, interface_var> collect_interface_by_location(
 
             if (insn.word(2) == spv::DecorationPatch) {
                 var_patch[insn.word(1)] = 1;
+            }
+
+            if (insn.word(2) == spv::DecorationRelaxedPrecision) {
+                var_relaxed_precision[insn.word(1)] = 1;
             }
         }
     }
@@ -1554,6 +1472,7 @@ static std::map<location_t, interface_var> collect_interface_by_location(
             int builtin = value_or_default(var_builtins, id, -1);
             unsigned component = value_or_default(var_components, id, 0); /* unspecified is OK, is 0 */
             bool is_patch = var_patch.find(id) != var_patch.end();
+            bool is_relaxed_precision = var_relaxed_precision.find(id) != var_relaxed_precision.end();
 
             /* All variables and interface block members in the Input or Output storage classes
              * must be decorated with either a builtin or an explicit location.
@@ -1568,12 +1487,12 @@ static std::map<location_t, interface_var> collect_interface_by_location(
                  * occupied multiple locations, emit one result for each. */
                 unsigned num_locations = get_locations_consumed_by_type(src, type, is_array_of_verts && !is_patch);
                 for (unsigned int offset = 0; offset < num_locations; offset++) {
-                    interface_var v;
+                    interface_var v = {};
                     v.id = id;
                     v.type_id = type;
                     v.offset = offset;
                     v.is_patch = is_patch;
-                    v.is_block_member = false;
+                    v.is_relaxed_precision = is_relaxed_precision;
                     out[std::make_pair(location + offset, component)] = v;
                 }
             } else if (builtin == -1) {
@@ -1605,12 +1524,10 @@ static std::vector<std::pair<uint32_t, interface_var>> collect_interface_by_inpu
                     if (def.opcode() == spv::OpVariable && insn.word(3) == spv::StorageClassUniformConstant) {
                         auto num_locations = get_locations_consumed_by_type(src, def.word(1), false);
                         for (unsigned int offset = 0; offset < num_locations; offset++) {
-                            interface_var v;
+                            interface_var v = {};
                             v.id = id;
                             v.type_id = def.word(1);
                             v.offset = offset;
-                            v.is_patch = false;
-                            v.is_block_member = false;
                             out.emplace_back(attachment_index + offset, v);
                         }
                     }
@@ -1655,12 +1572,9 @@ static std::vector<std::pair<descriptor_slot_t, interface_var>> collect_interfac
             unsigned set = value_or_default(var_sets, insn.word(2), 0);
             unsigned binding = value_or_default(var_bindings, insn.word(2), 0);
 
-            interface_var v;
+            interface_var v = {};
             v.id = insn.word(2);
             v.type_id = insn.word(1);
-            v.offset = 0;
-            v.is_patch = false;
-            v.is_block_member = false;
             out.emplace_back(std::make_pair(set, binding), v);
         }
     }
@@ -1727,6 +1641,16 @@ static bool validate_interface_between_stages(debug_report_data *report_data, sh
                             "per-%s in %s stage", a_first.first, a_first.second,
                             a_it->second.is_patch ? "patch" : "vertex", producer_stage->name,
                             b_it->second.is_patch ? "patch" : "vertex", consumer_stage->name)) {
+                    pass = false;
+                }
+            }
+            if (a_it->second.is_relaxed_precision != b_it->second.is_relaxed_precision) {
+                if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/ 0,
+                            __LINE__, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
+                            "Decoration mismatch on location %u.%u: %s and %s stages differ in precision",
+                            a_first.first, a_first.second,
+                            producer_stage->name,
+                            consumer_stage->name)) {
                     pass = false;
                 }
             }
@@ -4176,22 +4100,6 @@ static bool printPipeline(layer_data *my_data, const VkCommandBuffer cb) {
     return skip_call;
 }
 
-static void printCB(layer_data *my_data, const VkCommandBuffer cb) {
-    GLOBAL_CB_NODE *pCB = getCBNode(my_data, cb);
-    if (pCB && pCB->cmds.size() > 0) {
-        log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                DRAWSTATE_NONE, "DS", "Cmds in command buffer 0x%p", (void *)cb);
-        vector<CMD_NODE> cmds = pCB->cmds;
-        for (auto ii = cmds.begin(); ii != cmds.end(); ++ii) {
-            // TODO : Need to pass cmdbuffer as srcObj here
-            log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0,
-                    __LINE__, DRAWSTATE_NONE, "DS", "  CMD 0x%" PRIx64 ": %s", (*ii).cmdNumber, cmdTypeToString((*ii).type).c_str());
-        }
-    } else {
-        // Nothing to print
-    }
-}
-
 static bool synchAndPrintDSConfig(layer_data *my_data, const VkCommandBuffer cb) {
     bool skip_call = false;
     if (!(my_data->report_data->active_flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)) {
@@ -4501,12 +4409,6 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
     dev_data->bufferMap.clear();
     // Queues persist until device is destroyed
     dev_data->queueMap.clear();
-    log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-            (uint64_t)device, __LINE__, MEMTRACK_NONE, "MEM", "Printing List details prior to vkDestroyDevice()");
-    log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-            (uint64_t)device, __LINE__, MEMTRACK_NONE, "MEM", "================================================");
-    print_mem_list(dev_data);
-    printCBList(dev_data);
     // Report any memory leaks
     DEVICE_MEM_INFO *pInfo = NULL;
     if (!dev_data->memObjMap.empty()) {
@@ -4976,10 +4878,6 @@ QueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits, V
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
 
-    // TODO : Review these old print functions and clean up as appropriate
-    print_mem_list(dev_data);
-    printCBList(dev_data);
-
     // Mark the fence in-use.
     if (pFence) {
         SubmitFence(pQueue, pFence, std::max(1u, submitCount));
@@ -5097,7 +4995,6 @@ static bool PreCallValidateAllocateMemory(layer_data *dev_data) {
 
 static void PostCallRecordAllocateMemory(layer_data *dev_data, const VkMemoryAllocateInfo *pAllocateInfo, VkDeviceMemory *pMemory) {
     add_mem_obj_info(dev_data, dev_data->device, *pMemory, pAllocateInfo);
-    print_mem_list(dev_data);
     return;
 }
 
@@ -5955,7 +5852,6 @@ BindBufferMemory(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDeviceS
             }
         }
     }
-    print_mem_list(dev_data);
     lock.unlock();
     if (!skip_call) {
         result = dev_data->dispatch_table.BindBufferMemory(device, buffer, mem, memoryOffset);
@@ -6229,7 +6125,6 @@ FreeCommandBuffers(VkDevice device, VkCommandPool commandPool, uint32_t commandB
         // Remove commandBuffer reference from commandPoolMap
         pPool->commandBuffers.remove(pCommandBuffers[i]);
     }
-    printCBList(dev_data);
     lock.unlock();
 
     dev_data->dispatch_table.FreeCommandBuffers(device, commandPool, commandBufferCount, pCommandBuffers);
@@ -6851,7 +6746,6 @@ CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t
     //  1. Pipeline create state is first shadowed into PIPELINE_STATE struct
     //  2. Create state is then validated (which uses flags setup during shadowing)
     //  3. If everything looks good, we'll then create the pipeline and add NODE to pipelineMap
-    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip = false;
     // TODO : Improve this data struct w/ unique_ptrs so cleanup below is automatic
     vector<PIPELINE_STATE *> pipe_state(count);
@@ -6868,22 +6762,27 @@ CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t
     }
     skip |= PreCallCreateGraphicsPipelines(dev_data, count, pCreateInfos, pipe_state);
 
-    if (!skip) {
-        lock.unlock();
-        result =
-            dev_data->dispatch_table.CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pAllocator, pPipelines);
-        lock.lock();
+    if (skip) {
         for (i = 0; i < count; i++) {
+            delete pipe_state[i];
+            pPipelines[i] = VK_NULL_HANDLE;
+        }
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+    }
+
+    lock.unlock();
+    auto result = dev_data->dispatch_table.CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pAllocator, pPipelines);
+    lock.lock();
+    for (i = 0; i < count; i++) {
+        if (pPipelines[i] == VK_NULL_HANDLE) {
+            delete pipe_state[i];
+        }
+        else {
             pipe_state[i]->pipeline = pPipelines[i];
             dev_data->pipelineMap[pipe_state[i]->pipeline] = pipe_state[i];
         }
-        lock.unlock();
-    } else {
-        for (i = 0; i < count; i++) {
-            delete pipe_state[i];
-        }
-        lock.unlock();
     }
+
     return result;
 }
 
@@ -6891,8 +6790,7 @@ VKAPI_ATTR VkResult VKAPI_CALL
 CreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t count,
                        const VkComputePipelineCreateInfo *pCreateInfos, const VkAllocationCallbacks *pAllocator,
                        VkPipeline *pPipelines) {
-    VkResult result = VK_SUCCESS;
-    bool skip_call = false;
+    bool skip = false;
 
     // TODO : Improve this data struct w/ unique_ptrs so cleanup below is automatic
     vector<PIPELINE_STATE *> pPipeState(count);
@@ -6907,32 +6805,35 @@ CreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t 
         pPipeState[i] = new PIPELINE_STATE;
         pPipeState[i]->initComputePipeline(&pCreateInfos[i]);
         pPipeState[i]->pipeline_layout = *getPipelineLayout(dev_data, pCreateInfos[i].layout);
-        // memcpy(&pPipeState[i]->computePipelineCI, (const void *)&pCreateInfos[i], sizeof(VkComputePipelineCreateInfo));
 
         // TODO: Add Compute Pipeline Verification
-        skip_call |= !validate_compute_pipeline(dev_data->report_data, pPipeState[i], &dev_data->enabled_features,
+        skip |= !validate_compute_pipeline(dev_data->report_data, pPipeState[i], &dev_data->enabled_features,
                                                 dev_data->shaderModuleMap);
-        // skip_call |= verifyPipelineCreateState(dev_data, pPipeState[i]);
+        // skip |= verifyPipelineCreateState(dev_data, pPipeState[i]);
     }
 
-    if (!skip_call) {
-        lock.unlock();
-        result =
-            dev_data->dispatch_table.CreateComputePipelines(device, pipelineCache, count, pCreateInfos, pAllocator, pPipelines);
-        lock.lock();
-        for (i = 0; i < count; i++) {
-            pPipeState[i]->pipeline = pPipelines[i];
-            dev_data->pipelineMap[pPipeState[i]->pipeline] = pPipeState[i];
-        }
-        lock.unlock();
-    } else {
+    if (skip) {
         for (i = 0; i < count; i++) {
             // Clean up any locally allocated data structures
             delete pPipeState[i];
+            pPipelines[i] = VK_NULL_HANDLE;
         }
-        lock.unlock();
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
+
+    lock.unlock();
+    auto result = dev_data->dispatch_table.CreateComputePipelines(device, pipelineCache, count, pCreateInfos, pAllocator, pPipelines);
+    lock.lock();
+    for (i = 0; i < count; i++) {
+        if (pPipelines[i] == VK_NULL_HANDLE) {
+            delete pPipeState[i];
+        }
+        else {
+            pPipeState[i]->pipeline = pPipelines[i];
+            dev_data->pipelineMap[pPipeState[i]->pipeline] = pPipeState[i];
+        }
+    }
+
     return result;
 }
 
@@ -7315,7 +7216,6 @@ AllocateCommandBuffers(VkDevice device, const VkCommandBufferAllocateInfo *pCrea
                 pCB->device = device;
             }
         }
-        printCBList(dev_data);
         lock.unlock();
     }
     return result;
@@ -7513,7 +7413,6 @@ VKAPI_ATTR VkResult VKAPI_CALL EndCommandBuffer(VkCommandBuffer commandBuffer) {
             pCB->state = CB_RECORDED;
             // Reset CB status flags
             pCB->status = 0;
-            printCB(dev_data, commandBuffer);
         }
     } else {
         result = VK_ERROR_VALIDATION_FAILED_EXT;
@@ -11418,7 +11317,6 @@ VKAPI_ATTR VkResult VKAPI_CALL BindImageMemory(VkDevice device, VkImage image, V
             skip_call |= ValidateMemoryTypes(dev_data, mem_info, image_state->requirements.memoryTypeBits, "vkBindImageMemory");
         }
 
-        print_mem_list(dev_data);
         lock.unlock();
         if (!skip_call) {
             result = dev_data->dispatch_table.BindImageMemory(device, image, mem, memoryOffset);
@@ -11576,7 +11474,6 @@ QueueBindSparse(VkQueue queue, uint32_t bindInfoCount, const VkBindSparseInfo *p
                                          fence);
     }
 
-    print_mem_list(dev_data);
     lock.unlock();
 
     if (!skip_call)
@@ -11616,6 +11513,7 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, VkSwapchainC
                                               SURFACE_STATE *surface_state, SWAPCHAIN_NODE *old_swapchain_state) {
     auto most_recent_swapchain = surface_state->swapchain ? surface_state->swapchain : surface_state->old_swapchain;
 
+    // TODO: revisit this. some of these rules are being relaxed.
     if (most_recent_swapchain != old_swapchain_state || (surface_state->old_swapchain && surface_state->swapchain)) {
         if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                     reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_ALREADY_EXISTS, "DS",
@@ -11753,6 +11651,88 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, VkSwapchainC
                 return true;
         }
     }
+
+    // Validate pCreateInfo values with the results of
+    // vkGetPhysicalDeviceSurfaceFormatsKHR():
+    if (physical_device_state->vkGetPhysicalDeviceSurfaceFormatsKHRState != QUERY_DETAILS) {
+        if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                    reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_CREATE_BEFORE_QUERY, "DS",
+                    "vkCreateSwapchainKHR() called before calling vkGetPhysicalDeviceSurfaceFormatsKHR()."))
+            return true;
+    } else {
+        // Validate pCreateInfo->imageFormat against
+        // VkSurfaceFormatKHR::format:
+        bool foundFormat = false;
+        bool foundColorSpace = false;
+        bool foundMatch = false;
+        for (auto const &format : physical_device_state->surface_formats) {
+            if (pCreateInfo->imageFormat == format.format) {
+                // Validate pCreateInfo->imageColorSpace against
+                // VkSurfaceFormatKHR::colorSpace:
+                foundFormat = true;
+                if (pCreateInfo->imageColorSpace == format.colorSpace) {
+                    foundMatch = true;
+                    break;
+                }
+            } else {
+                if (pCreateInfo->imageColorSpace == format.colorSpace) {
+                    foundColorSpace = true;
+                }
+            }
+        }
+        if (!foundMatch) {
+            if (!foundFormat) {
+                if (!foundColorSpace) {
+                    if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_BAD_FORMAT, "DS",
+                                "vkCreateSwapchainKHR() called with neither a supported pCreateInfo->imageFormat "
+                                "(i.e. %d) nor a supported "
+                                "pCreateInfo->imageColorSpace (i.e. %d).",
+                                pCreateInfo->imageFormat, pCreateInfo->imageColorSpace))
+                        return true;
+                } else {
+                    if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_BAD_FORMAT, "DS",
+                                "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->imageFormat (i.e. %d)",
+                                pCreateInfo->imageFormat))
+                        return true;
+                }
+            } else if (!foundColorSpace) {
+                if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                            reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_BAD_FORMAT, "DS",
+                            "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->imageColorSpace (i.e. %d).",
+                            pCreateInfo->imageColorSpace))
+                    return true;
+            }
+        }
+    }
+
+    // Validate pCreateInfo values with the results of
+    // vkGetPhysicalDeviceSurfacePresentModesKHR():
+    if (physical_device_state->vkGetPhysicalDeviceSurfacePresentModesKHRState != QUERY_DETAILS) {
+        /* FIFO is required to always be supported */
+        if (pCreateInfo->presentMode != VK_PRESENT_MODE_FIFO_KHR) {
+            if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                 reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_CREATE_BEFORE_QUERY,
+                                 "DS", "vkCreateSwapchainKHR() called before calling "
+                                 "vkGetPhysicalDeviceSurfacePresentModesKHR()."))
+                return true;
+        }
+    } else {
+        // Validate pCreateInfo->presentMode against
+        // vkGetPhysicalDeviceSurfacePresentModesKHR():
+        bool foundMatch = std::find(physical_device_state->present_modes.begin(),
+                                    physical_device_state->present_modes.end(),
+                                    pCreateInfo->presentMode) != physical_device_state->present_modes.end();
+        if (!foundMatch) {
+            if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                        reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_BAD_PRESENT_MODE, "DS",
+                        "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->presentMode (i.e. %s).",
+                        string_VkPresentModeKHR(pCreateInfo->presentMode)))
+                return true;
+        }
+    }
+
 
     return false;
 }
@@ -12220,6 +12200,11 @@ VKAPI_ATTR void VKAPI_CALL DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR s
     }
 }
 
+VKAPI_ATTR VkResult VKAPI_CALL CreateDisplayPlaneSurfaceKHR(VkInstance instance, const VkDisplaySurfaceCreateInfoKHR *pCreateInfo,
+                                                            const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
+    return CreateSurface(instance, pCreateInfo, pAllocator, pSurface, &VkLayerInstanceDispatchTable::CreateDisplayPlaneSurfaceKHR);
+}
+
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
 VKAPI_ATTR VkResult VKAPI_CALL CreateAndroidSurfaceKHR(VkInstance instance, const VkAndroidSurfaceCreateInfoKHR *pCreateInfo,
                                                        const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
@@ -12299,6 +12284,132 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevi
 
     return result;
 }
+
+
+VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfacePresentModesKHR(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
+                                                                       uint32_t *pPresentModeCount,
+                                                                       VkPresentModeKHR *pPresentModes) {
+    bool skip_call = false;
+    auto instance_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
+    std::unique_lock<std::mutex> lock(global_lock);
+    // TODO: this isn't quite right. available modes may differ by surface AND physical device.
+    auto physical_device_state = getPhysicalDeviceState(instance_data, physicalDevice);
+    auto & call_state = physical_device_state->vkGetPhysicalDeviceSurfacePresentModesKHRState;
+
+    if (pPresentModes) {
+        // Compare the preliminary value of *pPresentModeCount with the value this time:
+        auto prev_mode_count = (uint32_t) physical_device_state->present_modes.size();
+        switch (call_state) {
+        case UNCALLED:
+            skip_call |= log_msg(
+                instance_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                reinterpret_cast<uint64_t>(physicalDevice), __LINE__, DEVLIMITS_MUST_QUERY_COUNT, "DL",
+                "vkGetPhysicalDeviceSurfacePresentModesKHR() called with non-NULL pPresentModeCount; but no prior positive "
+                "value has been seen for pPresentModeCount.");
+            break;
+        default:
+            // both query count and query details
+            if (*pPresentModeCount != prev_mode_count) {
+                skip_call |= log_msg(
+                        instance_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                        reinterpret_cast<uint64_t>(physicalDevice), __LINE__, DEVLIMITS_COUNT_MISMATCH, "DL",
+                        "vkGetPhysicalDeviceSurfacePresentModesKHR() called with *pPresentModeCount (%u) that differs from the value "
+                        "(%u) that was returned when pPresentModes was NULL.",
+                        *pPresentModeCount, prev_mode_count);
+            }
+            break;
+        }
+    }
+    lock.unlock();
+
+    if (skip_call)
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+
+    auto result = instance_data->dispatch_table.GetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, pPresentModeCount, pPresentModes);
+
+    if (result == VK_SUCCESS || result == VK_INCOMPLETE) {
+
+        lock.lock();
+
+        if (*pPresentModeCount) {
+            if (call_state < QUERY_COUNT) call_state = QUERY_COUNT;
+            if (*pPresentModeCount > physical_device_state->present_modes.size())
+                physical_device_state->present_modes.resize(*pPresentModeCount);
+        }
+        if (pPresentModes) {
+            if (call_state < QUERY_DETAILS) call_state = QUERY_DETAILS;
+            for (uint32_t i = 0; i < *pPresentModeCount; i++) {
+                physical_device_state->present_modes[i] = pPresentModes[i];
+            }
+        }
+    }
+
+    return result;
+}
+
+
+VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
+                                                                  uint32_t *pSurfaceFormatCount,
+                                                                  VkSurfaceFormatKHR *pSurfaceFormats) {
+    bool skip_call = false;
+    auto instance_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
+    std::unique_lock<std::mutex> lock(global_lock);
+    auto physical_device_state = getPhysicalDeviceState(instance_data, physicalDevice);
+    auto & call_state = physical_device_state->vkGetPhysicalDeviceSurfaceFormatsKHRState;
+
+    if (pSurfaceFormats) {
+        auto prev_format_count = (uint32_t) physical_device_state->surface_formats.size();
+
+        switch (call_state) {
+        case UNCALLED:
+            // Since we haven't recorded a preliminary value of *pSurfaceFormatCount, that likely means that the application didn't
+            // previously call this function with a NULL value of pSurfaceFormats:
+            skip_call |= log_msg(
+                instance_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                reinterpret_cast<uint64_t>(physicalDevice), __LINE__, DEVLIMITS_MUST_QUERY_COUNT, "DL",
+                "vkGetPhysicalDeviceSurfaceFormatsKHR() called with non-NULL pSurfaceFormatCount; but no prior positive "
+                "value has been seen for pSurfaceFormats.");
+            break;
+        default:
+            if (prev_format_count != *pSurfaceFormatCount) {
+                skip_call |= log_msg(
+                        instance_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                        reinterpret_cast<uint64_t>(physicalDevice), __LINE__, DEVLIMITS_COUNT_MISMATCH, "DL",
+                        "vkGetPhysicalDeviceSurfaceFormatsKHR() called with non-NULL pSurfaceFormatCount, and with pSurfaceFormats set to "
+                        "a value (%u) that is greater than the value (%u) that was returned when pSurfaceFormatCount was NULL.",
+                        *pSurfaceFormatCount, prev_format_count);
+            }
+            break;
+        }
+    }
+    lock.unlock();
+
+    if (skip_call)
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+
+    // Call down the call chain:
+    auto result = instance_data->dispatch_table.GetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, pSurfaceFormatCount,
+                                                                                   pSurfaceFormats);
+
+    if (result == VK_SUCCESS || result == VK_INCOMPLETE) {
+
+        lock.lock();
+
+        if (*pSurfaceFormatCount) {
+            if (call_state < QUERY_COUNT) call_state = QUERY_COUNT;
+            if (*pSurfaceFormatCount > physical_device_state->surface_formats.size())
+                physical_device_state->surface_formats.resize(*pSurfaceFormatCount);
+        }
+        if (pSurfaceFormats) {
+            if (call_state < QUERY_DETAILS) call_state = QUERY_DETAILS;
+            for (uint32_t i = 0; i < *pSurfaceFormatCount; i++) {
+                physical_device_state->surface_formats[i] = pSurfaceFormats[i];
+            }
+        }
+    }
+    return result;
+}
+
 
 VKAPI_ATTR VkResult VKAPI_CALL
 CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
@@ -12639,11 +12750,17 @@ intercept_khr_surface_command(const char *name, VkInstance instance) {
         {"vkCreateXlibSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateXlibSurfaceKHR),
             &instance_layer_data::xlibSurfaceExtensionEnabled},
 #endif // VK_USE_PLATFORM_XLIB_KHR
+        { "vkCreateDisplayPlaneSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateDisplayPlaneSurfaceKHR),
+            &instance_layer_data::displayExtensionEnabled},
         {"vkDestroySurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(DestroySurfaceKHR),
             &instance_layer_data::surfaceExtensionEnabled},
         {"vkGetPhysicalDeviceSurfaceCapabilitiesKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceCapabilitiesKHR),
             &instance_layer_data::surfaceExtensionEnabled},
         {"vkGetPhysicalDeviceSurfaceSupportKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceSupportKHR),
+            &instance_layer_data::surfaceExtensionEnabled},
+        {"vkGetPhysicalDeviceSurfacePresentModesKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfacePresentModesKHR),
+            &instance_layer_data::surfaceExtensionEnabled},
+        {"vkGetPhysicalDeviceSurfaceFormatsKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceFormatsKHR),
             &instance_layer_data::surfaceExtensionEnabled},
     };
 

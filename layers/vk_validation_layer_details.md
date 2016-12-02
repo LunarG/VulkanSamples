@@ -133,6 +133,8 @@ The Draw State portion of the core validation layer tracks state leading into Dr
 | Swapchain layer count | Layer count beyond capabilities | SWAPCHAIN_BAD_LAYER_COUNT | vkCreateSwapchainKHR | TODO | None |
 | Swapchain usage flags | Unsupported usage flags | SWAPCHAIN_BAD_USAGE_FLAGS | vkCreateSwapchainKHR | TODO | None |
 | Swapchain image acquisition | Acquiring too many images | SWAPCHAIN_TOO_MANY_IMAGES | vkAcquireNextImageKHR | TODO | None |
+| Swapchain creation | Bad Present Mode | SWAPCHAIN_BAD_PRESENT_MODE | vkCreateSwapchainKHR | TODO | None |
+| Swapchain creation | Bad Format | SWAPCHAIN_BAD_FORMAT | vkCreateSwapchainKHR | TODO | None |
 
 ### VK_LAYER_LUNARG_core_validation Draw State Pending Work
 

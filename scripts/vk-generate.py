@@ -228,9 +228,6 @@ class WinDefFileSubcommand(Subcommand):
     def run(self):
         library_exports = {
                 "all": [],
-                "icd": [
-                    "vk_icdGetInstanceProcAddr",
-                ],
                 "layer": [
                     "vkGetInstanceProcAddr",
                     "vkGetDeviceProcAddr",

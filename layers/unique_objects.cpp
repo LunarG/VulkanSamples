@@ -676,6 +676,26 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayModePropertiesKHR(VkPhysicalDevice phys
     }
     return result;
 }
+
+VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneCapabilitiesKHR(VkPhysicalDevice physicalDevice, VkDisplayModeKHR mode,
+                                                              uint32_t planeIndex, VkDisplayPlaneCapabilitiesKHR *pCapabilities) {
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    {
+        std::lock_guard<std::mutex> lock(global_lock);
+        auto it = dev_data->unique_id_mapping.find(reinterpret_cast<uint64_t &>(mode));
+        if (it == dev_data->unique_id_mapping.end()) {
+            uint64_t unique_id = global_unique_id++;
+            dev_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t &>(mode);
+
+            mode = reinterpret_cast<VkDisplayModeKHR &>(unique_id);
+        } else {
+            mode = reinterpret_cast<VkDisplayModeKHR &>(it->second);
+        }
+    }
+    VkResult result =
+        dev_data->instance_dispatch_table->GetDisplayPlaneCapabilitiesKHR(physicalDevice, mode, planeIndex, pCapabilities);
+    return result;
+}
 #endif
 
 } // namespace unique_objects

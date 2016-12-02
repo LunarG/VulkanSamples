@@ -405,7 +405,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
                                                 const VkAllocationCallbacks *pAllocator, VkRenderPass *pRenderPass) {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     bool skip_call = false;
-    bool depth_format_present = false;
 
     for (uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i) {
         if (pCreateInfo->pAttachments[i].format == VK_FORMAT_UNDEFINED) {
@@ -439,24 +438,8 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
             skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                  IMAGE_RENDERPASS_INVALID_ATTACHMENT, "IMAGE", "%s", ss.str().c_str());
         }
-
-        // Any depth buffers specified as attachments?
-        depth_format_present |= vk_format_is_depth_or_stencil(pCreateInfo->pAttachments[i].format);
     }
 
-    if (!depth_format_present) {
-        // No depth attachment is present, validate that subpasses set depthStencilAttachment to VK_ATTACHMENT_UNUSED;
-        for (uint32_t i = 0; i < pCreateInfo->subpassCount; i++) {
-            if (pCreateInfo->pSubpasses[i].pDepthStencilAttachment &&
-                pCreateInfo->pSubpasses[i].pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
-                std::stringstream ss;
-                ss << "vkCreateRenderPass has no depth/stencil attachment, yet subpass[" << i
-                   << "] has VkSubpassDescription::depthStencilAttachment value that is not VK_ATTACHMENT_UNUSED";
-                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
-                                     __LINE__, IMAGE_RENDERPASS_INVALID_DS_ATTACHMENT, "IMAGE", "%s", ss.str().c_str());
-            }
-        }
-    }
     if (skip_call) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }

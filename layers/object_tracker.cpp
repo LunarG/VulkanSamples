@@ -2726,6 +2726,27 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
     return result;
 }
 
+VKAPI_ATTR VkResult VKAPI_CALL CreateDisplayPlaneSurfaceKHR(VkInstance instance, const VkDisplaySurfaceCreateInfoKHR *pCreateInfo,
+                                                            const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
+    bool skip_call = false;
+    {
+        std::lock_guard<std::mutex> lock(global_lock);
+        skip_call |= ValidateObject(instance, instance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, false, VALIDATION_ERROR_01878);
+    }
+    if (skip_call) {
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+    }
+    VkResult result = get_dispatch_table(ot_instance_table_map, instance)
+                          ->CreateDisplayPlaneSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
+    {
+        std::lock_guard<std::mutex> lock(global_lock);
+        if (result == VK_SUCCESS) {
+            CreateObject(instance, *pSurface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, pAllocator);
+        }
+    }
+    return result;
+}
+
 #ifdef VK_USE_PLATFORM_WIN32_KHR
 VKAPI_ATTR VkResult VKAPI_CALL CreateWin32SurfaceKHR(VkInstance instance, const VkWin32SurfaceCreateInfoKHR *pCreateInfo,
                                                      const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
@@ -3065,6 +3086,8 @@ static inline PFN_vkVoidFunction InterceptWsiEnabledCommand(const char *name, Vk
         return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceFormatsKHR);
     if (!strcmp("vkGetPhysicalDeviceSurfacePresentModesKHR", name))
         return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfacePresentModesKHR);
+    if ((instanceExtMap[pTable].display_enabled == true) && !strcmp("vkCreateDisplayPlaneSurfaceKHR", name))
+        return reinterpret_cast<PFN_vkVoidFunction>(CreateDisplayPlaneSurfaceKHR);
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
     if ((instanceExtMap[pTable].win32_enabled == true) && !strcmp("vkCreateWin32SurfaceKHR", name))
@@ -3133,6 +3156,9 @@ static void CheckInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateI
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SURFACE_EXTENSION_NAME) == 0) {
             instanceExtMap[pDisp].wsi_enabled = true;
         }
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DISPLAY_EXTENSION_NAME) == 0) {
+            instanceExtMap[pDisp].display_enabled = true;
+        }
 #ifdef VK_USE_PLATFORM_XLIB_KHR
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XLIB_SURFACE_EXTENSION_NAME) == 0) {
             instanceExtMap[pDisp].xlib_enabled = true;
@@ -3190,6 +3216,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physicalDevice, con
 
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
     device_data->report_data = layer_debug_report_create_device(phy_dev_data->report_data, *pDevice);
+    layer_init_device_dispatch_table(*pDevice, &device_data->dispatch_table, fpGetDeviceProcAddr);
 
     // Add link back to physDev
     device_data->physical_device = physicalDevice;
@@ -3593,6 +3620,9 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
     }
     lock.unlock();
     if (skip_call) {
+        for (uint32_t i = 0; i < createInfoCount; i++) {
+            pPipelines[i] = VK_NULL_HANDLE;
+        }
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
     VkResult result = get_dispatch_table(ot_device_table_map, device)
@@ -3635,6 +3665,9 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateComputePipelines(VkDevice device, VkPipelin
     }
     lock.unlock();
     if (skip_call) {
+        for (uint32_t i = 0; i < createInfoCount; i++) {
+            pPipelines[i] = VK_NULL_HANDLE;
+        }
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
     VkResult result = get_dispatch_table(ot_device_table_map, device)
@@ -3658,7 +3691,11 @@ VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectTagEXT(VkDevice device, VkDeb
     if (skip_call) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
-    VkResult result = get_dispatch_table(ot_device_table_map, device)->DebugMarkerSetObjectTagEXT(device, pTagInfo);
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = VK_SUCCESS;
+    if (dev_data->dispatch_table.DebugMarkerSetObjectTagEXT) {
+        result = dev_data->dispatch_table.DebugMarkerSetObjectTagEXT(device, pTagInfo);
+    }
     return result;
 }
 
@@ -3670,7 +3707,11 @@ VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectNameEXT(VkDevice device, VkDe
     if (skip_call) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
-    VkResult result = get_dispatch_table(ot_device_table_map, device)->DebugMarkerSetObjectNameEXT(device, pNameInfo);
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = VK_SUCCESS;
+    if (dev_data->dispatch_table.DebugMarkerSetObjectNameEXT) {
+        result = dev_data->dispatch_table.DebugMarkerSetObjectNameEXT(device, pNameInfo);
+    }
     return result;
 }
 
@@ -3680,8 +3721,9 @@ VKAPI_ATTR void VKAPI_CALL CmdDebugMarkerBeginEXT(VkCommandBuffer commandBuffer,
     skip_call |=
         ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false, VALIDATION_ERROR_02014);
     lock.unlock();
-    if (!skip_call) {
-        get_dispatch_table(ot_device_table_map, commandBuffer)->CmdDebugMarkerBeginEXT(commandBuffer, pMarkerInfo);
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+    if (!skip_call && dev_data->dispatch_table.CmdDebugMarkerBeginEXT) {
+        dev_data->dispatch_table.CmdDebugMarkerBeginEXT(commandBuffer, pMarkerInfo);
     }
 }
 
@@ -3691,8 +3733,9 @@ VKAPI_ATTR void VKAPI_CALL CmdDebugMarkerEndEXT(VkCommandBuffer commandBuffer) {
     skip_call |=
         ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false, VALIDATION_ERROR_02022);
     lock.unlock();
-    if (!skip_call) {
-        get_dispatch_table(ot_device_table_map, commandBuffer)->CmdDebugMarkerEndEXT(commandBuffer);
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+    if (!skip_call && dev_data->dispatch_table.CmdDebugMarkerEndEXT) {
+        dev_data->dispatch_table.CmdDebugMarkerEndEXT(commandBuffer);
     }
 }
 
@@ -3702,8 +3745,9 @@ VKAPI_ATTR void VKAPI_CALL CmdDebugMarkerInsertEXT(VkCommandBuffer commandBuffer
     skip_call |=
         ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false, VALIDATION_ERROR_02025);
     lock.unlock();
-    if (!skip_call) {
-        get_dispatch_table(ot_device_table_map, commandBuffer)->CmdDebugMarkerInsertEXT(commandBuffer, pMarkerInfo);
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+    if (!skip_call && dev_data->dispatch_table.CmdDebugMarkerInsertEXT) {
+        dev_data->dispatch_table.CmdDebugMarkerInsertEXT(commandBuffer, pMarkerInfo);
     }
 }
 
