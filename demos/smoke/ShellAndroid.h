@@ -22,6 +22,8 @@
 
 class ShellAndroid : public Shell {
 public:
+    static std::vector<std::string> get_args(android_app &app);
+
     ShellAndroid(android_app &app, Game &game);
     ~ShellAndroid();
 

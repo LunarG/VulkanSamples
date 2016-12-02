@@ -65,6 +65,54 @@ private:
 
 } // namespace
 
+std::vector<std::string> ShellAndroid::get_args(android_app &app)
+{
+    const char intent_extra_data_key[] = "args";
+    std::vector<std::string> args;
+
+    JavaVM &vm = *app.activity->vm;
+    JNIEnv *p_env;
+    if (vm.AttachCurrentThread(&p_env, nullptr) != JNI_OK)
+        return args;
+
+    JNIEnv &env = *p_env;
+    jobject activity = app.activity->clazz;
+    jmethodID get_intent_method = env.GetMethodID(env.GetObjectClass(activity),
+            "getIntent", "()Landroid/content/Intent;");
+    jobject intent = env.CallObjectMethod(activity, get_intent_method);
+
+    jmethodID get_string_extra_method = env.GetMethodID(env.GetObjectClass(intent),
+            "getStringExtra", "(Ljava/lang/String;)Ljava/lang/String;");
+    jvalue get_string_extra_args;
+    get_string_extra_args.l = env.NewStringUTF(intent_extra_data_key);
+    jstring extra_str = static_cast<jstring>(env.CallObjectMethodA(intent,
+            get_string_extra_method, &get_string_extra_args));
+
+    std::string args_str;
+    if (extra_str) {
+        const char *extra_utf = env.GetStringUTFChars(extra_str, nullptr);
+        args_str = extra_utf;
+        env.ReleaseStringUTFChars(extra_str, extra_utf);
+
+        env.DeleteLocalRef(extra_str);
+    }
+
+    env.DeleteLocalRef(get_string_extra_args.l);
+    env.DeleteLocalRef(intent);
+
+    vm.DetachCurrentThread();
+
+    // split args_str
+    std::stringstream ss(args_str);
+    std::string arg;
+    while (std::getline(ss, arg, ' ')) {
+        if (!arg.empty())
+            args.push_back(arg);
+    }
+
+    return args;
+}
+
 ShellAndroid::ShellAndroid(android_app &app, Game &game) : Shell(game), app_(app)
 {
     instance_layers_.push_back("VK_LAYER_GOOGLE_threading");

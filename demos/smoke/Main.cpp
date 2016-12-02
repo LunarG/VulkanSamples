@@ -21,6 +21,11 @@
 
 namespace {
 
+Game *create_game(const std::vector<std::string> &args)
+{
+    return new Smoke(args);
+}
+
 Game *create_game(int argc, char **argv)
 {
     std::vector<std::string> args(argv, argv + argc);
@@ -67,7 +72,7 @@ int main(int argc, char **argv) {
 
 void android_main(android_app *app)
 {
-    Game *game = create_game(0, nullptr);
+    Game *game = create_game(ShellAndroid::get_args(*app));
 
     try {
         ShellAndroid shell(*app, *game);
