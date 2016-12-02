@@ -1,0 +1,19 @@
+---
+# We'll use defaults from the LLVM style, but with 4 columns indentation.
+BasedOnStyle: LLVM
+IndentWidth: 4
+ColumnLimit: 132
+---
+Language: Cpp
+DerivePointerAlignment: true
+PointerAlignment: Left
+
+IndentCaseLabels: true
+AlignConsecutiveAssignments: true
+
+AllowShortBlocksOnASingleLine: true
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: true
+AllowShortIfStatementsOnASingleLine: true
+AllowShortLoopsOnASingleLine: true
+...
