@@ -3719,6 +3719,7 @@ TEST_F(VkLayerTest, AllocDescriptorFromEmptyPool) {
 
     m_errorMonitor->VerifyFound();
 
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout_samp, NULL);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout_ub, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
