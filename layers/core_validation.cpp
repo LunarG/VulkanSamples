@@ -835,29 +835,6 @@ static bool SetSparseMemBinding(layer_data *dev_data, MEM_BINDING binding, uint6
     return skip_call;
 }
 
-// For handle of given object type, return memory binding
-static bool get_mem_for_type(layer_data *dev_data, uint64_t handle, VkDebugReportObjectTypeEXT type, VkDeviceMemory *mem) {
-    bool skip_call = false;
-    *mem = VK_NULL_HANDLE;
-    switch (type) {
-    case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT:
-        *mem = getImageState(dev_data, VkImage(handle))->binding.mem;
-        break;
-    case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT:
-        *mem = getBufferState(dev_data, VkBuffer(handle))->binding.mem;
-        break;
-    default:
-        assert(0);
-    }
-    if (!*mem) {
-        skip_call = log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, type, handle, __LINE__, MEMTRACK_INVALID_OBJECT,
-                            "MEM", "Trying to get mem binding for %s object 0x%" PRIxLEAST64
-                                   " but binding is NULL. Has memory been bound to this object?",
-                            object_type_to_string(type), handle);
-    }
-    return skip_call;
-}
-
 // Return a string representation of CMD_TYPE enum
 static string cmdTypeToString(CMD_TYPE cmd) {
     switch (cmd) {
