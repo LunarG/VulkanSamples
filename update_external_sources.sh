@@ -3,7 +3,13 @@
 
 set -e
 
-CURRENT_DIR="$(dirname "$(readlink -f ${BASH_SOURCE[0]})")"
+if [[ $(uname) == "Linux" ]]; then
+    CURRENT_DIR="$(dirname "$(readlink -f ${BASH_SOURCE[0]})")"
+elif [[ $(uname) == "Darwin" ]]; then
+    # Get greadlink with "brew install coreutils"
+    CURRENT_DIR="$(dirname "$(greadlink -f ${BASH_SOURCE[0]})")"
+fi
+
 REVISION_DIR="$CURRENT_DIR/external_revisions"
 
 GLSLANG_REVISION=$(cat "${REVISION_DIR}/glslang_revision")
