@@ -25,6 +25,7 @@
 #include "vk_enum_string_helper.h"
 #include "vk_safe_struct.h"
 #include <sstream>
+#include <algorithm>
 
 // Construct DescriptorSetLayout instance from given create info
 cvdescriptorset::DescriptorSetLayout::DescriptorSetLayout(const VkDescriptorSetLayoutCreateInfo *p_create_info,
