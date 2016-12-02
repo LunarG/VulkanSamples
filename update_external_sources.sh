@@ -5,10 +5,13 @@ set -e
 
 if [[ $(uname) == "Linux" ]]; then
     CURRENT_DIR="$(dirname "$(readlink -f ${BASH_SOURCE[0]})")"
+    CORE_COUNT=$(nproc || echo 4)
 elif [[ $(uname) == "Darwin" ]]; then
     # Get greadlink with "brew install coreutils"
     CURRENT_DIR="$(dirname "$(greadlink -f ${BASH_SOURCE[0]})")"
+    CORE_COUNT=$(sysctl -n hw.ncpu || echo 4)
 fi
+echo CORE_COUNT=$CORE_COUNT
 
 REVISION_DIR="$CURRENT_DIR/external_revisions"
 
@@ -73,7 +76,7 @@ function build_glslang () {
    mkdir -p build
    cd build
    cmake -D CMAKE_BUILD_TYPE=Release ..
-   make -j $(nproc)
+   make -j $CORE_COUNT
    make install
 }
 
@@ -83,7 +86,7 @@ function build_spirv-tools () {
    mkdir -p build
    cd build
    cmake -D CMAKE_BUILD_TYPE=Release ..
-   make -j $(nproc)
+   make -j $CORE_COUNT
 }
 
 # If any options are provided, just compile those tools
