@@ -67,6 +67,14 @@ private:
 
 ShellAndroid::ShellAndroid(android_app &app, Game &game) : Shell(game), app_(app)
 {
+    instance_layers_.push_back("VK_LAYER_GOOGLE_threading");
+    instance_layers_.push_back("VK_LAYER_LUNARG_parameter_validation");
+    instance_layers_.push_back("VK_LAYER_LUNARG_object_tracker");
+    instance_layers_.push_back("VK_LAYER_LUNARG_image");
+    instance_layers_.push_back("VK_LAYER_LUNARG_core_validation");
+    instance_layers_.push_back("VK_LAYER_LUNARG_swapchain");
+    instance_layers_.push_back("VK_LAYER_GOOGLE_unique_objects");
+
     instance_extensions_.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
 
     app_dummy();

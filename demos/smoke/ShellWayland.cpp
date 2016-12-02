@@ -109,6 +109,7 @@ void ShellWayland::handle_popup_done(
     void *data UNUSED, struct wl_shell_surface *shell_surface UNUSED) {}
 
 ShellWayland::ShellWayland(Game &game) : Shell(game) {
+    instance_layers_.push_back("VK_LAYER_LUNARG_standard_validation");
     instance_extensions_.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
 
     init_connection();
