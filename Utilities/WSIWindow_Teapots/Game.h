@@ -98,7 +98,7 @@ private:
             } else if (*it == "-h") {
                 ++it;
                 settings_.initial_height = std::stoi(*it); //stoi fails on Android
-            } else if (*it == "-v") {
+            } else if ((*it == "-v") || (*it == "--validate")) {
                 settings_.validate = true;
             } else if (*it == "-vv") {
                 settings_.validate = true;
