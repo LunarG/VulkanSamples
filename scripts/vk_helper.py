@@ -477,8 +477,6 @@ class StructWrapperGen:
             self.api_prefix = "vk"
         else:
             self.api_prefix = prefix
-        self.header_filename = os.path.join(out_dir, self.api_prefix+"_struct_wrappers.h")
-        self.class_filename = os.path.join(out_dir, self.api_prefix+"_struct_wrappers.cpp")
         self.safe_struct_header_filename = os.path.join(out_dir, self.api_prefix+"_safe_struct.h")
         self.safe_struct_source_filename = os.path.join(out_dir, self.api_prefix+"_safe_struct.cpp")
         self.string_helper_filename = os.path.join(out_dir, self.api_prefix+"_struct_string_helper.h")
@@ -487,8 +485,6 @@ class StructWrapperGen:
         # Safe Struct (ss) header and source files
         self.ssh = CommonFileGen(self.safe_struct_header_filename)
         self.sss = CommonFileGen(self.safe_struct_source_filename)
-        self.hfg = CommonFileGen(self.header_filename)
-        self.cfg = CommonFileGen(self.class_filename)
         self.shg = CommonFileGen(self.string_helper_filename)
         self.shcppg = CommonFileGen(self.string_helper_cpp_filename)
         self.vhg = CommonFileGen(self.validate_helper_filename)
@@ -496,7 +492,6 @@ class StructWrapperGen:
         self.size_helper_c_filename = os.path.join(out_dir, self.api_prefix+"_struct_size_helper.c")
         self.size_helper_gen = CommonFileGen(self.size_helper_filename)
         self.size_helper_c_gen = CommonFileGen(self.size_helper_c_filename)
-        #print(self.header_filename)
         self.header_txt = ""
         self.definition_txt = ""
 
@@ -510,22 +505,6 @@ class StructWrapperGen:
 
     def get_file_list(self):
         return [os.path.basename(self.header_filename), os.path.basename(self.class_filename), os.path.basename(self.string_helper_filename)]
-
-    # Generate class header file
-    def generateHeader(self):
-        self.hfg.setCopyright(self._generateCopyright())
-        self.hfg.setHeader(self._generateHeader())
-        self.hfg.setBody(self._generateClassDeclaration())
-        self.hfg.setFooter(self._generateFooter())
-        self.hfg.generate()
-
-    # Generate class definition
-    def generateBody(self):
-        self.cfg.setCopyright(self._generateCopyright())
-        self.cfg.setHeader(self._generateCppHeader())
-        self.cfg.setBody(self._generateClassDefinition())
-        self.cfg.setFooter(self._generateFooter())
-        self.cfg.generate()
 
     # Safe Structs are versions of vulkan structs with non-const safe ptrs
     #  that make shadowing structures and clean-up of shadowed structures very simple
@@ -1401,52 +1380,51 @@ class StructWrapperGen:
             add_platform_wrapper_exit(sh_funcs, typedef_fwd_dict[s])
 
         # Now generate generic functions to loop over entire struct chain (or just handle single generic structs)
-        if '_debug_' not in self.header_filename:
-            for follow_chain in [True, False]:
-                sh_funcs.append('%s' % self.lineinfo.get())
-                if follow_chain:
-                    sh_funcs.append('size_t get_struct_chain_size(const void* pStruct)\n{')
-                else:
-                    sh_funcs.append('size_t get_dynamic_struct_size(const void* pStruct)\n{')
-                indent = '    '
-                sh_funcs.append('%s// Just use VkApplicationInfo as struct until actual type is resolved' % (indent))
-                sh_funcs.append('%sVkApplicationInfo* pNext = (VkApplicationInfo*)pStruct;' % (indent))
-                sh_funcs.append('%ssize_t structSize = 0;' % (indent))
-                if follow_chain:
-                    sh_funcs.append('%swhile (pNext) {' % (indent))
-                    indent = '        '
-                sh_funcs.append('%sswitch (pNext->sType) {' % (indent))
-                indent += '    '
-                for e in enum_type_dict:
-                    if 'StructureType' in e:
-                        for v in sorted(enum_type_dict[e]):
-                            struct_name = get_struct_name_from_struct_type(v)
-                            if struct_name not in self.struct_dict:
-                                continue
+        for follow_chain in [True, False]:
+            sh_funcs.append('%s' % self.lineinfo.get())
+            if follow_chain:
+                sh_funcs.append('size_t get_struct_chain_size(const void* pStruct)\n{')
+            else:
+                sh_funcs.append('size_t get_dynamic_struct_size(const void* pStruct)\n{')
+            indent = '    '
+            sh_funcs.append('%s// Just use VkApplicationInfo as struct until actual type is resolved' % (indent))
+            sh_funcs.append('%sVkApplicationInfo* pNext = (VkApplicationInfo*)pStruct;' % (indent))
+            sh_funcs.append('%ssize_t structSize = 0;' % (indent))
+            if follow_chain:
+                sh_funcs.append('%swhile (pNext) {' % (indent))
+                indent = '        '
+            sh_funcs.append('%sswitch (pNext->sType) {' % (indent))
+            indent += '    '
+            for e in enum_type_dict:
+                if 'StructureType' in e:
+                    for v in sorted(enum_type_dict[e]):
+                        struct_name = get_struct_name_from_struct_type(v)
+                        if struct_name not in self.struct_dict:
+                            continue
 
-                            if 'WIN32' in v:
-                                sh_funcs.append("#ifdef VK_USE_PLATFORM_WIN32_KHR")
-                            sh_funcs.append('%scase %s:' % (indent, v))
-                            sh_funcs.append('%s{' % (indent))
-                            indent += '    '
-                            sh_funcs.append('%sstructSize += %s((%s*)pNext);' % (indent, self._get_size_helper_func_name(struct_name), struct_name))
-                            sh_funcs.append('%sbreak;' % (indent))
-                            indent = indent[:-4]
-                            sh_funcs.append('%s}' % (indent))
-                            if 'WIN32' in v:
-                                sh_funcs.append("#endif // VK_USE_PLATFORM_WIN32_KHR")
-                        sh_funcs.append('%sdefault:' % (indent))
+                        if 'WIN32' in v:
+                            sh_funcs.append("#ifdef VK_USE_PLATFORM_WIN32_KHR")
+                        sh_funcs.append('%scase %s:' % (indent, v))
+                        sh_funcs.append('%s{' % (indent))
                         indent += '    '
-                        sh_funcs.append('%sassert(0);' % (indent))
-                        sh_funcs.append('%sstructSize += 0;' % (indent))
+                        sh_funcs.append('%sstructSize += %s((%s*)pNext);' % (indent, self._get_size_helper_func_name(struct_name), struct_name))
+                        sh_funcs.append('%sbreak;' % (indent))
                         indent = indent[:-4]
+                        sh_funcs.append('%s}' % (indent))
+                        if 'WIN32' in v:
+                            sh_funcs.append("#endif // VK_USE_PLATFORM_WIN32_KHR")
+                    sh_funcs.append('%sdefault:' % (indent))
+                    indent += '    '
+                    sh_funcs.append('%sassert(0);' % (indent))
+                    sh_funcs.append('%sstructSize += 0;' % (indent))
+                    indent = indent[:-4]
+            indent = indent[:-4]
+            sh_funcs.append('%s}' % (indent))
+            if follow_chain:
+                sh_funcs.append('%spNext = (VkApplicationInfo*)pNext->pNext;' % (indent))
                 indent = indent[:-4]
                 sh_funcs.append('%s}' % (indent))
-                if follow_chain:
-                    sh_funcs.append('%spNext = (VkApplicationInfo*)pNext->pNext;' % (indent))
-                    indent = indent[:-4]
-                    sh_funcs.append('%s}' % (indent))
-                sh_funcs.append('%sreturn structSize;\n}' % indent)
+            sh_funcs.append('%sreturn structSize;\n}' % indent)
         return "\n".join(sh_funcs)
 
     def _generateSizeHelperHeader(self):
@@ -2004,28 +1982,6 @@ class CMakeGen:
         gv_funcs.append("}")
         return "".join(gv_funcs)
 
-
-
-
-
-#    def _generateHeader(self):
-#        hdr = []
-#        hdr.append('digraph g {\ngraph [\nrankdir = "LR"\n];')
-#        hdr.append('node [\nfontsize = "16"\nshape = "plaintext"\n];')
-#        hdr.append('edge [\n];\n')
-#        return "\n".join(hdr)
-#
-#    def _generateBody(self):
-#        body = []
-#        for s in sorted(self.struc_dict):
-#            field_num = 1
-#            body.append('"%s" [\nlabel = <<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0"> <TR><TD COLSPAN="2" PORT="f0">%s</TD></TR>' % (s, typedef_fwd_dict[s]))
-#            for m in sorted(self.struc_dict[s]):
-#                body.append('<TR><TD PORT="f%i">%s</TD><TD PORT="f%i">%s</TD></TR>' % (field_num, self.struc_dict[s][m]['full_type'], field_num+1, self.struc_dict[s][m]['name']))
-#                field_num += 2
-#            body.append('</TABLE>>\n];\n')
-#        return "".join(body)
-
 def main(argv=None):
     opts = handle_args()
     # Parse input file and fill out global dicts
@@ -2076,10 +2032,6 @@ def main(argv=None):
         sw = StructWrapperGen(struct_dict, os.path.basename(opts.input_file).strip(".h"), os.path.dirname(enum_sh_filename))
         #print(sw.get_class_name(struct))
         sw.set_include_headers([input_header,os.path.basename(enum_sh_filename),"stdint.h","cinttypes", "stdio.h","stdlib.h"])
-        print("Generating struct wrapper header to %s" % sw.header_filename)
-        sw.generateHeader()
-        print("Generating struct wrapper class to %s" % sw.class_filename)
-        sw.generateBody()
         sw.generateStringHelper()
         sw.generateValidateHelper()
         sw.set_include_headers([input_header,os.path.basename(enum_sh_filename),"stdint.h","stdio.h","stdlib.h","iostream","sstream","string"])
