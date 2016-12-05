@@ -35,7 +35,7 @@ int CPickList::IndexOf(const char *name) {
     for (uint32_t i = 0; i < Count(); ++i) {
         if (strcmp(name, Name(i)) == 0)
             return i;
-    } // forCount
+    }
     return -1;
 }
 
