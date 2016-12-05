@@ -42,7 +42,6 @@ def handle_args():
     parser.add_argument('--gen_struct_wrappers', required=False, action='store_true', default=False, help='Enable generation of struct wrapper classes.')
     parser.add_argument('--gen_struct_sizes', required=False, action='store_true', default=False, help='Enable generation of struct sizes.')
     parser.add_argument('--gen_cmake', required=False, action='store_true', default=False, help='Enable generation of cmake file for generated code.')
-    parser.add_argument('--gen_graphviz', required=False, action='store_true', default=False, help='Enable generation of graphviz dot file.')
     #parser.add_argument('--test', action='store_true', default=False, help='Run simple test.')
     return parser.parse_args()
 
@@ -1846,101 +1845,6 @@ class CMakeGen:
         body.append("target_include_directories (%s PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})\n" % os.path.basename(self.out_dir))
         return "\n".join(body)
 
-class GraphVizGen:
-    def __init__(self, struct_dict, prefix, out_dir):
-        self.struct_dict = struct_dict
-        self.api = prefix
-        if prefix == "vulkan":
-            self.api_prefix = "vk"
-        else:
-            self.api_prefix = prefix
-        self.out_file = os.path.join(out_dir, self.api_prefix+"_struct_graphviz_helper.h")
-        self.gvg = CommonFileGen(self.out_file)
-
-    def generate(self):
-        self.gvg.setCopyright("//This is the copyright\n")
-        self.gvg.setHeader(self._generateHeader())
-        self.gvg.setBody(self._generateBody())
-        #self.gvg.setFooter('}')
-        self.gvg.generate()
-
-    def set_include_headers(self, include_headers):
-        self.include_headers = include_headers
-
-    def _generateHeader(self):
-        header = []
-        header.append("//#includes, #defines, globals and such...\n")
-        for f in self.include_headers:
-            if 'vk_enum_string_helper' not in f:
-                header.append("#include <%s>\n" % f)
-        #header.append('#include "vk_enum_string_helper.h"\n\n// Function Prototypes\n')
-        header.append("\nchar* dynamic_gv_display(const void* pStruct, const char* prefix);\n")
-        return "".join(header)
-
-    def _get_gv_func_name(self, struct):
-        return "%s_gv_print_%s" % (self.api_prefix, struct.lower().strip("_"))
-
-    # Return elements to create formatted string for given struct member
-    def _get_struct_gv_print_formatted(self, struct_member, pre_var_name="", postfix = "\\n", struct_var_name="pStruct", struct_ptr=True, print_array=False, port_label=""):
-        struct_op = "->"
-        pre_var_name = '"%s "' % struct_member['full_type']
-        if not struct_ptr:
-            struct_op = "."
-        member_name = struct_member['name']
-        print_type = "p"
-        cast_type = ""
-        member_post = ""
-        array_index = ""
-        member_print_post = ""
-        print_delimiter = "%"
-        if struct_member['array'] and 'char' in struct_member['type'].lower(): # just print char array as string
-            print_type = "p"
-            print_array = False
-        elif struct_member['array'] and not print_array:
-            # Just print base address of array when not full print_array
-            cast_type = "(void*)"
-        elif is_type(struct_member['type'], 'enum'):
-            if struct_member['ptr']:
-                struct_var_name = "*" + struct_var_name
-                print_delimiter = "0x%"
-            cast_type = "string_%s" % struct_member['type']
-            print_type = "s"
-        elif is_type(struct_member['type'], 'struct'): # print struct address for now
-            cast_type = "(void*)"
-            print_delimiter = "0x%"
-            if not struct_member['ptr']:
-                cast_type = "(void*)&"
-        elif 'bool' in struct_member['type'].lower():
-            print_type = "s"
-            member_post = ' ? "TRUE" : "FALSE"'
-        elif 'float' in struct_member['type']:
-            print_type = "f"
-        elif 'uint64' in struct_member['type'] or 'gpusize' in struct_member['type'].lower():
-            print_type = '" PRId64 "'
-        elif 'uint8' in struct_member['type']:
-            print_type = "hu"
-        elif 'size' in struct_member['type'].lower():
-            print_type = '" PRINTF_SIZE_T_SPECIFIER "'
-            print_delimiter = ""
-        elif True in [ui_str.lower() in struct_member['type'].lower() for ui_str in ['uint', 'flags', 'samplemask']]:
-            print_type = "u"
-        elif 'int' in struct_member['type']:
-            print_type = "i"
-        elif struct_member['ptr']:
-            print_delimiter = "0x%"
-            pass
-        else:
-            #print("Unhandled struct type: %s" % struct_member['type'])
-            print_delimiter = "0x%"
-            cast_type = "(void*)"
-        if print_array and struct_member['array']:
-            member_print_post = "[%u]"
-            array_index = " i,"
-            member_post = "[i]"
-        print_out = "<TR><TD>%%s%s%s</TD><TD%s>%s%s%s</TD></TR>" % (member_name, member_print_post, port_label, print_delimiter, print_type, postfix) # section of print that goes inside of quotes
-        print_arg = ", %s,%s %s(%s%s%s)%s\n" % (pre_var_name, array_index, cast_type, struct_var_name, struct_op, member_name, member_post) # section of print passed to portion in quotes
-        return (print_out, print_arg)
-
     def _generateBody(self):
         gv_funcs = []
         array_func_list = [] # structs for which we'll generate an array version of their print function
@@ -2193,10 +2097,6 @@ def main(argv=None):
     if opts.gen_cmake:
         cmg = CMakeGen(sw, os.path.dirname(enum_sh_filename))
         cmg.generate()
-    if opts.gen_graphviz:
-        gv = GraphVizGen(struct_dict, os.path.basename(opts.input_file).strip(".h"), os.path.dirname(enum_sh_filename))
-        gv.set_include_headers([input_header,os.path.basename(enum_sh_filename),"stdint.h","stdio.h","stdlib.h", "cinttypes"])
-        gv.generate()
     print("DONE!")
     #print(typedef_rev_dict)
     #print(types_dict)
