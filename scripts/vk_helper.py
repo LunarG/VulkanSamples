@@ -293,7 +293,10 @@ class HeaderFileParser:
         members = members.strip().split(':', 1)[0] # strip bitfield element
         (member_type, member_name) = members.rsplit(None, 1)
         # Store counts to help recognize and size dynamic arrays
-        if 'count' in member_name.lower() and 'samplecount' != member_name.lower() and 'uint' in member_type:
+        # Add special case for pObjectEntryCounts -- though it meets the criteria for a 'count', it should not
+        # replace the previously identified (and correct) objectCount.
+        # TODO: convert to using vk.xml and avoid parsing the header
+        if 'count' in member_name.lower() and 'samplecount' != member_name.lower() and 'uint' in member_type and member_name != "pObjectEntryCounts":
             self.last_struct_count_name = member_name
         self.struct_dict[struct_type][num] = {}
         self.struct_dict[struct_type][num]['full_type'] = member_type
