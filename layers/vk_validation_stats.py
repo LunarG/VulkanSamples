@@ -149,7 +149,7 @@ class ValidationSource:
                         line_list = line.split()
                         enum = ''
                         for str in line_list:
-                            if 'VALIDATION_ERROR_' in str and '[VALIDATION_ERROR_' not in str:
+                            if 'VALIDATION_ERROR_' in str and True not in [ignore_str in str for ignore_str in ['[VALIDATION_ERROR_', 'VALIDATION_ERROR_UNDEFINED']]:
                                 enum = str.strip(',);')
                                 break
                         if enum != '':
