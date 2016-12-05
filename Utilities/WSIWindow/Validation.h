@@ -90,7 +90,7 @@ enum eColor {
     eBLUE,
     eMAGENTA,
     eCYAN,
-    eWHITE, // faint colors
+    eWHITE,
     eFAINT,
     eBRED,
     eBGREEN,
@@ -99,7 +99,7 @@ enum eColor {
     eBMAGENTA,
     eBCYAN,
     eBRIGHT
-}; // bright colors
+};
 void color(eColor color);
 // void print(eColor col,const char* format,...);
 #define print(COLOR, ...)                                                                                                          \
