@@ -41,7 +41,6 @@ def handle_args():
     parser.add_argument('--gen_enum_string_helper', required=False, action='store_true', default=False, help='Enable generation of helper header file to print string versions of enums.')
     parser.add_argument('--gen_struct_wrappers', required=False, action='store_true', default=False, help='Enable generation of struct wrapper classes.')
     parser.add_argument('--gen_struct_sizes', required=False, action='store_true', default=False, help='Enable generation of struct sizes.')
-    parser.add_argument('--gen_cmake', required=False, action='store_true', default=False, help='Enable generation of cmake file for generated code.')
     #parser.add_argument('--test', action='store_true', default=False, help='Run simple test.')
     return parser.parse_args()
 
@@ -1799,189 +1798,6 @@ class EnumCodeGen:
         return "\n".join(header)
 
 
-class CMakeGen:
-    def __init__(self, struct_wrapper=None, out_dir=None):
-        self.sw = struct_wrapper
-        self.include_headers = []
-        self.add_lib_file_list = self.sw.get_file_list()
-        self.out_dir = out_dir
-        self.out_file = os.path.join(self.out_dir, "CMakeLists.txt")
-        self.cmg = CommonFileGen(self.out_file)
-
-    def generate(self):
-        self.cmg.setBody(self._generateBody())
-        self.cmg.generate()
-
-    def _generateBody(self):
-        body = []
-        body.append("project(%s)" % os.path.basename(self.out_dir))
-        body.append("cmake_minimum_required(VERSION 2.8)\n")
-        body.append("add_library(${PROJECT_NAME} %s)\n" % " ".join(self.add_lib_file_list))
-        body.append('set(COMPILE_FLAGS "-fpermissive")')
-        body.append('set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMPILE_FLAGS}")\n')
-        body.append("include_directories(${SRC_DIR}/thirdparty/${GEN_API}/inc/)\n")
-        body.append("target_include_directories (%s PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})\n" % os.path.basename(self.out_dir))
-        return "\n".join(body)
-
-    def _generateBody(self):
-        gv_funcs = []
-        array_func_list = [] # structs for which we'll generate an array version of their print function
-        array_func_list.append('vkbufferviewattachinfo')
-        array_func_list.append('vkimageviewattachinfo')
-        array_func_list.append('vksamplerimageviewinfo')
-        array_func_list.append('vkdescriptortypecount')
-        # For first pass, generate prototype
-        for s in sorted(self.struct_dict):
-            gv_funcs.append('char* %s(const %s* pStruct, const char* myNodeName);\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
-            if s.lower().strip("_") in array_func_list:
-                if s.lower().strip("_") in ['vkbufferviewattachinfo', 'vkimageviewattachinfo']:
-                    gv_funcs.append('char* %s_array(uint32_t count, const %s* const* pStruct, const char* myNodeName);\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
-                else:
-                    gv_funcs.append('char* %s_array(uint32_t count, const %s* pStruct, const char* myNodeName);\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
-        gv_funcs.append('\n')
-        for s in sorted(self.struct_dict):
-            p_out = ""
-            p_args = ""
-            stp_list = [] # stp == "struct to print" a list of structs for this API call that should be printed as structs
-            # the fields below are a super-hacky way for now to get port labels into GV output, TODO : Clean this up!            
-            pl_dict = {}
-            struct_num = 0
-            # This isn't great but this pre-pass flags structs w/ pNext and other struct ptrs
-            for m in sorted(self.struct_dict[s]):
-                if 'pNext' == self.struct_dict[s][m]['name'] or is_type(self.struct_dict[s][m]['type'], 'struct'):
-                    stp_list.append(self.struct_dict[s][m])
-                    if 'pNext' == self.struct_dict[s][m]['name']:
-                        pl_dict[m] = ' PORT=\\"pNext\\"'
-                    else:
-                        pl_dict[m] = ' PORT=\\"struct%i\\"' % struct_num
-                    struct_num += 1
-            gv_funcs.append('char* %s(const %s* pStruct, const char* myNodeName)\n{\n    char* str;\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
-            num_stps = len(stp_list);
-            total_strlen_str = ''
-            if 0 != num_stps:
-                gv_funcs.append("    char* tmpStr;\n")
-                gv_funcs.append("    char nodeName[100];\n")
-                gv_funcs.append('    char* stp_strs[%i];\n' % num_stps)
-                for index in range(num_stps):
-                    if (stp_list[index]['ptr']):
-                        if 'pDescriptorInfo' == stp_list[index]['name']:
-                            gv_funcs.append('    if (pStruct->pDescriptorInfo && (0 != pStruct->descriptorCount)) {\n')
-                        else:
-                            gv_funcs.append('    if (pStruct->%s) {\n' % stp_list[index]['name'])
-                        if 'pNext' == stp_list[index]['name']:
-                            gv_funcs.append('        sprintf(nodeName, "pNext_0x%p", (void*)pStruct->pNext);\n')
-                            gv_funcs.append('        tmpStr = dynamic_gv_display((void*)pStruct->pNext, nodeName);\n')
-                            gv_funcs.append('        stp_strs[%i] = (char*)malloc(256+strlen(tmpStr)+strlen(nodeName)+strlen(myNodeName));\n' % index)
-                            gv_funcs.append('        sprintf(stp_strs[%i], "%%s\\n\\"%%s\\":pNext -> \\"%%s\\" [];\\n", tmpStr, myNodeName, nodeName);\n' % index)
-                            gv_funcs.append('        free(tmpStr);\n')
-                        else:
-                            gv_funcs.append('        sprintf(nodeName, "%s_0x%%p", (void*)pStruct->%s);\n' % (stp_list[index]['name'], stp_list[index]['name']))
-                            if stp_list[index]['name'] in ['pTypeCount', 'pSamplerImageViews']:
-                                gv_funcs.append('        tmpStr = %s_array(pStruct->count, pStruct->%s, nodeName);\n' % (self._get_gv_func_name(stp_list[index]['type']), stp_list[index]['name']))
-                            else:
-                                gv_funcs.append('        tmpStr = %s(pStruct->%s, nodeName);\n' % (self._get_gv_func_name(stp_list[index]['type']), stp_list[index]['name']))
-                            gv_funcs.append('        stp_strs[%i] = (char*)malloc(256+strlen(tmpStr)+strlen(nodeName)+strlen(myNodeName));\n' % (index))
-                            gv_funcs.append('        sprintf(stp_strs[%i], "%%s\\n\\"%%s\\":struct%i -> \\"%%s\\" [];\\n", tmpStr, myNodeName, nodeName);\n' % (index, index))
-                        gv_funcs.append('    }\n')
-                        gv_funcs.append("    else\n        stp_strs[%i] = \"\";\n" % (index))
-                    elif stp_list[index]['array']: # TODO : For now just printing first element of array
-                        gv_funcs.append('    sprintf(nodeName, "%s_0x%%p", (void*)&pStruct->%s[0]);\n' % (stp_list[index]['name'], stp_list[index]['name']))
-                        gv_funcs.append('    tmpStr = %s(&pStruct->%s[0], nodeName);\n' % (self._get_gv_func_name(stp_list[index]['type']), stp_list[index]['name']))
-                        gv_funcs.append('    stp_strs[%i] = (char*)malloc(256+strlen(tmpStr)+strlen(nodeName)+strlen(myNodeName));\n' % (index))
-                        gv_funcs.append('    sprintf(stp_strs[%i], "%%s\\n\\"%%s\\":struct%i -> \\"%%s\\" [];\\n", tmpStr, myNodeName, nodeName);\n' % (index, index))
-                    else:
-                        gv_funcs.append('    sprintf(nodeName, "%s_0x%%p", (void*)&pStruct->%s);\n' % (stp_list[index]['name'], stp_list[index]['name']))
-                        gv_funcs.append('    tmpStr = %s(&pStruct->%s, nodeName);\n' % (self._get_gv_func_name(stp_list[index]['type']), stp_list[index]['name']))
-                        gv_funcs.append('    stp_strs[%i] = (char*)malloc(256+strlen(tmpStr)+strlen(nodeName)+strlen(myNodeName));\n' % (index))
-                        gv_funcs.append('    sprintf(stp_strs[%i], "%%s\\n\\"%%s\\":struct%i -> \\"%%s\\" [];\\n", tmpStr, myNodeName, nodeName);\n' % (index, index))
-                    total_strlen_str += 'strlen(stp_strs[%i]) + ' % index
-            gv_funcs.append('    str = (char*)malloc(%ssizeof(char)*2048);\n' % (total_strlen_str))
-            gv_funcs.append('    sprintf(str, "\\"%s\\" [\\nlabel = <<TABLE BORDER=\\"0\\" CELLBORDER=\\"1\\" CELLSPACING=\\"0\\"><TR><TD COLSPAN=\\"2\\">%s (0x%p)</TD></TR>')
-            p_args = ", myNodeName, myNodeName, pStruct"
-            for m in sorted(self.struct_dict[s]):
-                plabel = ""
-                if m in pl_dict:
-                    plabel = pl_dict[m]
-                (p_out1, p_args1) = self._get_struct_gv_print_formatted(self.struct_dict[s][m], port_label=plabel)
-                p_out += p_out1
-                p_args += p_args1
-            p_out += '</TABLE>>\\n];\\n\\n"'
-            p_args += ");\n"
-            gv_funcs.append(p_out)
-            gv_funcs.append(p_args)
-            if 0 != num_stps:
-                gv_funcs.append('    for (int32_t stp_index = %i; stp_index >= 0; stp_index--) {\n' % (num_stps-1))
-                gv_funcs.append('        if (0 < strlen(stp_strs[stp_index])) {\n')
-                gv_funcs.append('            strncat(str, stp_strs[stp_index], strlen(stp_strs[stp_index]));\n')
-                gv_funcs.append('            free(stp_strs[stp_index]);\n')
-                gv_funcs.append('        }\n')
-                gv_funcs.append('    }\n')
-            gv_funcs.append("    return str;\n}\n")
-            if s.lower().strip("_") in array_func_list:
-                ptr_array = False
-                if s.lower().strip("_") in ['vkbufferviewattachinfo', 'vkimageviewattachinfo']:
-                    ptr_array = True
-                    gv_funcs.append('char* %s_array(uint32_t count, const %s* const* pStruct, const char* myNodeName)\n{\n    char* str;\n    char tmpStr[1024];\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
-                else:
-                    gv_funcs.append('char* %s_array(uint32_t count, const %s* pStruct, const char* myNodeName)\n{\n    char* str;\n    char tmpStr[1024];\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
-                gv_funcs.append('    str = (char*)malloc(sizeof(char)*1024*count);\n')
-                gv_funcs.append('    sprintf(str, "\\"%s\\" [\\nlabel = <<TABLE BORDER=\\"0\\" CELLBORDER=\\"1\\" CELLSPACING=\\"0\\"><TR><TD COLSPAN=\\"3\\">%s (0x%p)</TD></TR>", myNodeName, myNodeName, pStruct);\n')
-                gv_funcs.append('    for (uint32_t i=0; i < count; i++) {\n')
-                gv_funcs.append('        sprintf(tmpStr, "');
-                p_args = ""
-                p_out = ""
-                for m in sorted(self.struct_dict[s]):
-                    plabel = ""
-                    (p_out1, p_args1) = self._get_struct_gv_print_formatted(self.struct_dict[s][m], port_label=plabel)
-                    if 0 == m: # Add array index notation at end of first row
-                        p_out1 = '%s<TD ROWSPAN=\\"%i\\" PORT=\\"slot%%u\\">%%u</TD></TR>' % (p_out1[:-5], len(self.struct_dict[s]))
-                        p_args1 += ', i, i'
-                    p_out += p_out1
-                    p_args += p_args1
-                p_out += '"'
-                p_args += ");\n"
-                if ptr_array:
-                    p_args = p_args.replace('->', '[i]->')
-                else:
-                    p_args = p_args.replace('->', '[i].')
-                gv_funcs.append(p_out);
-                gv_funcs.append(p_args);
-                gv_funcs.append('        strncat(str, tmpStr, strlen(tmpStr));\n')
-                gv_funcs.append('    }\n')
-                gv_funcs.append('    strncat(str, "</TABLE>>\\n];\\n\\n", 20);\n')
-                gv_funcs.append('    return str;\n}\n')
-        # Add function to dynamically print out unknown struct
-        gv_funcs.append("char* dynamic_gv_display(const void* pStruct, const char* nodeName)\n{\n")
-        gv_funcs.append("    // Cast to APP_INFO ptr initially just to pull sType off struct\n")
-        gv_funcs.append("    VkStructureType sType = ((VkApplicationInfo*)pStruct)->sType;\n")
-        gv_funcs.append("    switch (sType)\n    {\n")
-        for e in enum_type_dict:
-            if "StructureType" in e:
-                for v in sorted(enum_type_dict[e]):
-                    struct_name = get_struct_name_from_struct_type(v)
-                    if struct_name not in self.struct_dict:
-                        continue
-
-                    print_func_name = self._get_gv_func_name(struct_name)
-                    # TODO : Hand-coded fixes for some exceptions
-                    #if 'VkPipelineCbStateCreateInfo' in struct_name:
-                    #    struct_name = 'VK_PIPELINE_CB_STATE'
-                    if 'VkSemaphoreCreateInfo' in struct_name:
-                        struct_name = 'VkSemaphoreCreateInfo'
-                        print_func_name = self._get_gv_func_name(struct_name)
-                    elif 'VkSemaphoreOpenInfo' in struct_name:
-                        struct_name = 'VkSemaphoreOpenInfo'
-                        print_func_name = self._get_gv_func_name(struct_name)
-                    gv_funcs.append('        case %s:\n' % (v))
-                    gv_funcs.append('            return %s((%s*)pStruct, nodeName);\n' % (print_func_name, struct_name))
-                    #gv_funcs.append('        }\n')
-                    #gv_funcs.append('        break;\n')
-                gv_funcs.append("        default:\n")
-                gv_funcs.append("        return NULL;\n")
-                gv_funcs.append("    }\n")
-        gv_funcs.append("}")
-        return "".join(gv_funcs)
-
 def main(argv=None):
     opts = handle_args()
     # Parse input file and fill out global dicts
@@ -2046,9 +1862,6 @@ def main(argv=None):
         st.set_include_headers(["stdio.h", "stdlib.h", input_header])
         st.generateSizeHelper()
         st.generateSizeHelperC()
-    if opts.gen_cmake:
-        cmg = CMakeGen(sw, os.path.dirname(enum_sh_filename))
-        cmg.generate()
     print("DONE!")
     #print(typedef_rev_dict)
     #print(types_dict)
