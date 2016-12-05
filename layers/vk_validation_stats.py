@@ -35,6 +35,9 @@ import platform
 #  4. Parse test file(s) and verify that reported tests exist
 #  5. Report out stats on number of checks, implemented checks, and duplicated checks
 #
+# If a mis-match is found during steps 2, 3, or 4, then the script exits w/ a non-zero error code
+#  otherwise, the script will exit(0)
+#
 # TODO:
 #  1. Would also like to report out number of existing checks that don't yet use new, unique enum
 #  2. Could use notes to store custom fields (like TODO) and print those out here
@@ -257,6 +260,7 @@ class TestParser:
                         self.tests_set.add(testname)
 
 def main(argv=None):
+    result = 0 # Non-zero result indicates an error case
     # parse db
     val_db = ValidationDatabase()
     val_db.read()
@@ -288,6 +292,7 @@ def main(argv=None):
         print(txt_color.green() + "  Database and Header match, GREAT!" + txt_color.endc())
     else:
         print(txt_color.red() + "  Uh oh, Database doesn't match Header :(" + txt_color.endc())
+        result = 1
         if len(db_missing) != 0:
             print(txt_color.red() + "   The following checks are in header but missing from database:" + txt_color.endc())
             for missing_enum in db_missing:
@@ -312,6 +317,7 @@ def main(argv=None):
     if len(imp_not_found) == 0 and len(imp_not_claimed) == 0:
         print(txt_color.green() + "  All claimed Database implemented checks have been found in source, and no source checks aren't claimed in Database, GREAT!" + txt_color.endc())
     else:
+        result = 1
         print(txt_color.red() + "  Uh oh, Database claimed implemented don't match Source :(" + txt_color.endc())
         if len(imp_not_found) != 0:
             print(txt_color.red() + "   The following %d checks are claimed to be implemented in Database, but weren't found in source:" % (len(imp_not_found)) + txt_color.endc())
@@ -338,10 +344,11 @@ def main(argv=None):
         print(txt_color.green() + "  All claimed tests have valid names. That's good!" + txt_color.endc())
     else:
         print(txt_color.red() + "  The following testnames in Database appear to be invalid:")
+        result = 1
         for bt in bad_testnames:
             print(txt_color.red() + "   %s" % (bt) + txt_color.endc())
 
-    return 0
+    return result
 
 if __name__ == "__main__":
     sys.exit(main())
