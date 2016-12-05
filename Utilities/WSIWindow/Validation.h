@@ -65,29 +65,49 @@
             printf("%s:%d\n", __FILE__, __LINE__);                                                                                 \
     }
 #endif
-//======================================================================================================
-// clang-format off
+
 //===============================================LOGGING================================================
 //  If enabled, the 6 LOG* functions print logging messages to the console, or Android LogCat.
 //  LOG* functions can be used in the same way as printf, but uses color-coding, for better readability.
 //  Turn off the ENABLE_LOGGING flag in CMake, to strip out log messages and reduce exe size for release.
 
 #ifdef _WIN32
-    #include <Windows.h>
-    #define cTICK "\xFB"    /* On Windows, use Square-root as tick mark */
+#include <Windows.h>
+#define cTICK "\xFB" /* On Windows, use Square-root as tick mark */
 #elif __ANDROID__
-    #include <native.h>
-    #define cTICK "\u2713"
+#include <native.h>
+#define cTICK "\u2713"
 #elif __LINUX__
-    #include <xkbcommon/xkbcommon.h>
-    #define cTICK "\u2713"
+#include <xkbcommon/xkbcommon.h>
+#define cTICK "\u2713"
 #endif
 
-enum eColor { eRESET, eRED, eGREEN, eYELLOW, eBLUE, eMAGENTA, eCYAN, eWHITE,     //faint colors
-              eFAINT,eBRED,eBGREEN,eBYELLOW,eBBLUE,eBMAGENTA,eBCYAN, eBRIGHT };  //bright colors
+enum eColor {
+    eRESET,
+    eRED,
+    eGREEN,
+    eYELLOW,
+    eBLUE,
+    eMAGENTA,
+    eCYAN,
+    eWHITE, // faint colors
+    eFAINT,
+    eBRED,
+    eBGREEN,
+    eBYELLOW,
+    eBBLUE,
+    eBMAGENTA,
+    eBCYAN,
+    eBRIGHT
+}; // bright colors
 void color(eColor color);
-//void print(eColor col,const char* format,...);
-#define print(COLOR,...) {color(COLOR); printf(__VA_ARGS__);  color(eRESET);}
+// void print(eColor col,const char* format,...);
+#define print(COLOR, ...)                                                                                                          \
+    {                                                                                                                              \
+        color(COLOR);                                                                                                              \
+        printf(__VA_ARGS__);                                                                                                       \
+        color(eRESET);                                                                                                             \
+    }
 // clang-format off
 #ifdef ANDROID
     #include <jni.h>
