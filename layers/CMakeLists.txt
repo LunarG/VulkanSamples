@@ -121,8 +121,6 @@ run_vk_helper(gen_enum_string_helper vk_enum_string_helper.h)
 run_vk_helper(gen_struct_wrappers
     vk_struct_string_helper.h
     vk_struct_string_helper_cpp.h
-    vk_struct_string_helper_no_addr.h
-    vk_struct_string_helper_no_addr_cpp.h
     vk_struct_size_helper.h
     vk_struct_size_helper.c
     vk_struct_wrappers.h
@@ -134,8 +132,6 @@ run_vk_helper(gen_struct_wrappers
 set_source_files_properties(
     vk_struct_string_helper.h
     vk_struct_string_helper_cpp.h
-    vk_struct_string_helper_no_addr.h
-    vk_struct_string_helper_no_addr_cpp.h
     vk_struct_size_helper.h
     vk_struct_size_helper.c
     vk_struct_wrappers.h
@@ -154,9 +150,7 @@ add_custom_target(generate_dispatch_table_helper DEPENDS
 
 add_custom_target(generate_vk_layer_helpers DEPENDS
     vk_struct_string_helper.h
-    vk_struct_string_helper_no_addr.h
     vk_struct_string_helper_cpp.h
-    vk_struct_string_helper_no_addr_cpp.h
     vk_struct_size_helper.h
     vk_struct_size_helper.c
     vk_struct_wrappers.h
