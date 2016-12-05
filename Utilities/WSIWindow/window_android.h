@@ -57,48 +57,55 @@ const unsigned char ANDROID_TO_HID[256] = {
 // clang-format on
 //==========================Android=============================
 class Window_android : public WindowImpl {
-    android_app* app = 0;
+    android_app *app = 0;
     CMTouch MTouch;
 
-    void SetTitle(const char* title){}; // TODO : Set window title?
+    void SetTitle(const char *title){}; // TODO : Set window title?
     void SetWinPos(uint x, uint y, uint w, uint h){};
     bool CanPresent(VkPhysicalDevice gpu, uint32_t queue_family) { return true; }
 
     void CreateSurface(VkInstance instance) {
-        if (surface) return;
+        if (surface) {
+            return;
+        }
         this->instance = instance;
         VkAndroidSurfaceCreateInfoKHR android_createInfo;
-        android_createInfo.sType  = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
-        android_createInfo.pNext  = NULL;
-        android_createInfo.flags  = 0;
+        android_createInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
+        android_createInfo.pNext = NULL;
+        android_createInfo.flags = 0;
         android_createInfo.window = app->window;
         VKERRCHECK(vkCreateAndroidSurfaceKHR(instance, &android_createInfo, NULL, &surface));
         LOGI("Vulkan Surface created\n");
     }
 
   public:
-    Window_android(const char* title, uint width, uint height) {
-        shape.width  = 0; // width;
+    Window_android(const char *title, uint width, uint height) {
+        shape.width = 0;  // width;
         shape.height = 0; // height;
-        running      = true;
+        running = true;
         // printf("Creating Android-Window...\n");
         app = Android_App;
 
         //---Wait for window to be created AND gain focus---
         while (!has_focus) {
             int events = 0;
-            struct android_poll_source* source;
-            int id = ALooper_pollOnce(100, NULL, &events, (void**)&source);
+            struct android_poll_source *source;
+            int id = ALooper_pollOnce(100, NULL, &events, (void **)&source);
             if (id == LOOPER_ID_MAIN) {
                 int8_t cmd = android_app_read_cmd(app);
                 android_app_pre_exec_cmd(app, cmd);
-                if (app->onAppCmd != NULL) app->onAppCmd(app, cmd);
-                if (cmd == APP_CMD_INIT_WINDOW) {
-                    shape.width  = (uint16_t)ANativeWindow_getWidth (app->window);
-                    shape.height = (uint16_t)ANativeWindow_getHeight(app->window);
-                    eventFIFO.push(ResizeEvent(shape.width, shape.height));        // post window-resize event
+                if (app->onAppCmd != NULL) {
+                    app->onAppCmd(app, cmd);
                 }
-                if (cmd == APP_CMD_GAINED_FOCUS) eventFIFO.push(FocusEvent(true)); // post focus-event
+                if (cmd == APP_CMD_INIT_WINDOW) {
+                    shape.width = (uint16_t)ANativeWindow_getWidth(app->window);
+                    shape.height = (uint16_t)ANativeWindow_getHeight(app->window);
+                    eventFIFO.push(ResizeEvent(shape.width, shape.height)); // post window-resize event
+                }
+                if (cmd == APP_CMD_GAINED_FOCUS) {
+                    eventFIFO.push(FocusEvent(true));
+                } // post focus-event
+
                 android_app_post_exec_cmd(app, cmd);
             }
         }
@@ -109,14 +116,16 @@ class Window_android : public WindowImpl {
     virtual ~Window_android(){};
 
     EventType GetEvent(bool wait_for_event = false) {
-        EventType event    = {};
-        static char buf[4] = {};                           // store char for text event
-        if (!eventFIFO.isEmpty()) return *eventFIFO.pop(); // pop message from message queue buffer
+        EventType event = {};
+        static char buf[4] = {}; // store char for text event
+        if (!eventFIFO.isEmpty()) {
+            return *eventFIFO.pop();
+        } // pop message from message queue buffer
 
         int events = 0;
-        struct android_poll_source* source;
+        struct android_poll_source *source;
         int timeoutMillis = wait_for_event ? -1 : 0; // Blocking or non-blocking mode
-        int id            = ALooper_pollOnce(timeoutMillis, NULL, &events, (void**)&source);
+        int id = ALooper_pollOnce(timeoutMillis, NULL, &events, (void **)&source);
         // ALooper_pollAll(0, NULL,&events,(void**)&source);
 
         // if(id>=0) printf("id=%d events=%d, source=%d",id,(int)events, source[0]);
@@ -125,67 +134,88 @@ class Window_android : public WindowImpl {
         if (id == LOOPER_ID_MAIN) {
             int8_t cmd = android_app_read_cmd(app);
             android_app_pre_exec_cmd(app, cmd);
-            if (app->onAppCmd != NULL) app->onAppCmd(app, cmd);
+            if (app->onAppCmd != NULL) {
+                app->onAppCmd(app, cmd);
+            }
             switch (cmd) {
-            case APP_CMD_GAINED_FOCUS: event = FocusEvent(true); break;
-            case APP_CMD_LOST_FOCUS: event   = FocusEvent(false); break;
-            default: break;
+            case APP_CMD_GAINED_FOCUS:
+                event = FocusEvent(true);
+                break;
+            case APP_CMD_LOST_FOCUS:
+                event = FocusEvent(false);
+                break;
+            default:
+                break;
             }
             android_app_post_exec_cmd(app, cmd);
             return event;
         } else if (id == LOOPER_ID_INPUT) {
-            AInputEvent* a_event = NULL;
+            AInputEvent *a_event = NULL;
             while (AInputQueue_getEvent(app->inputQueue, &a_event) >= 0) {
                 // LOGV("New input event: type=%d\n", AInputEvent_getType(event));
-                if (AInputQueue_preDispatchEvent(app->inputQueue, a_event)) { continue; }
-                int32_t handled                        = 0;
-                if (app->onInputEvent != NULL) handled = app->onInputEvent(app, a_event);
+                if (AInputQueue_preDispatchEvent(app->inputQueue, a_event)) {
+                    continue;
+                }
+                int32_t handled = 0;
+                if (app->onInputEvent != NULL) {
+                    handled = app->onInputEvent(app, a_event);
+                }
 
                 int32_t type = AInputEvent_getType(a_event);
                 if (type == AINPUT_EVENT_TYPE_KEY) { // KEYBOARD
                     int32_t a_action = AKeyEvent_getAction(a_event);
-                    int32_t keycode  = AKeyEvent_getKeyCode(a_event);
-                    uint8_t hidcode  = ANDROID_TO_HID[keycode];
+                    int32_t keycode = AKeyEvent_getKeyCode(a_event);
+                    uint8_t hidcode = ANDROID_TO_HID[keycode];
                     // printf("key action:%d keycode=%d",a_action,keycode);
                     switch (a_action) {
                     case AKEY_EVENT_ACTION_DOWN: {
                         int metaState = AKeyEvent_getMetaState(a_event);
-                        int unicode   = GetUnicodeChar(AKEY_EVENT_ACTION_DOWN, keycode, metaState);
-                        (int&)buf     = unicode;
-                        event = KeyEvent(eDOWN, hidcode);           // key pressed event (returned on this run)
-                        if (buf[0]) eventFIFO.push(TextEvent(buf)); // text typed event  (store in FIFO for next run)
+                        int unicode = GetUnicodeChar(AKEY_EVENT_ACTION_DOWN, keycode, metaState);
+                        (int &)buf = unicode;
+                        event = KeyEvent(eDOWN, hidcode); // key pressed event (returned on this run)
+                        if (buf[0]) {
+                            eventFIFO.push(TextEvent(buf));
+                        } // text typed event  (store in FIFO for next run)
                         break;
                     }
                     case AKEY_EVENT_ACTION_UP: {
-                        event = KeyEvent(eUP, hidcode);             // key released event
+                        event = KeyEvent(eUP, hidcode); // key released event
                         break;
                     }
-                    default: break;
+                    default:
+                        break;
                     }
 
                 } else if (type == AINPUT_EVENT_TYPE_MOTION) { // TOUCH-SCREEN
                     int32_t a_action = AMotionEvent_getAction(a_event);
-                    int action       = (a_action & 255); // get action-code from bottom 8 bits
-                    MTouch.count     = (int)AMotionEvent_getPointerCount(a_event);
+                    int action = (a_action & 255); // get action-code from bottom 8 bits
+                    MTouch.count = (int)AMotionEvent_getPointerCount(a_event);
                     if (action == AMOTION_EVENT_ACTION_MOVE) {
-                        forCount(MTouch.count) {
+                        for (uint32_t i = 0; i < Count(); ++i) {
                             uint8_t finger_id = (uint8_t)AMotionEvent_getPointerId(a_event, i);
-                            float x           = AMotionEvent_getX(a_event, i);
-                            float y           = AMotionEvent_getY(a_event, i);
-                            event             = MTouch.Event(eMOVE, x, y, finger_id);
+                            float x = AMotionEvent_getX(a_event, i);
+                            float y = AMotionEvent_getY(a_event, i);
+                            event = MTouch.Event(eMOVE, x, y, finger_id);
                         }
                     } else {
-                        size_t inx        = (size_t)(a_action >> 8); // get index from top 24 bits
+                        size_t inx = (size_t)(a_action >> 8); // get index from top 24 bits
                         uint8_t finger_id = (uint8_t)AMotionEvent_getPointerId(a_event, inx);
-                        float x           = AMotionEvent_getX(a_event, inx);
-                        float y           = AMotionEvent_getY(a_event, inx);
+                        float x = AMotionEvent_getX(a_event, inx);
+                        float y = AMotionEvent_getY(a_event, inx);
                         switch (action) {
-                            case AMOTION_EVENT_ACTION_POINTER_DOWN:
-                            case AMOTION_EVENT_ACTION_DOWN      :  event=MTouch.Event(eDOWN,x,y,finger_id);  break;
-                            case AMOTION_EVENT_ACTION_POINTER_UP:
-                            case AMOTION_EVENT_ACTION_UP        :  event=MTouch.Event(eUP  ,x,y,finger_id);  break;
-                            case AMOTION_EVENT_ACTION_CANCEL    :  MTouch.Clear();                           break;
-                            default:break;
+                        case AMOTION_EVENT_ACTION_POINTER_DOWN:
+                        case AMOTION_EVENT_ACTION_DOWN:
+                            event = MTouch.Event(eDOWN, x, y, finger_id);
+                            break;
+                        case AMOTION_EVENT_ACTION_POINTER_UP:
+                        case AMOTION_EVENT_ACTION_UP:
+                            event = MTouch.Event(eUP, x, y, finger_id);
+                            break;
+                        case AMOTION_EVENT_ACTION_CANCEL:
+                            MTouch.Clear();
+                            break;
+                        default:
+                            break;
                         }
                     }
                     //-------------------------Emulate mouse from touch events--------------------------

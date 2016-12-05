@@ -52,14 +52,18 @@
 
 //===========================================Check VkResult=============================================
 // Macro to check VkResult for errors(negative) or warnings(positive), and print as a string.
-#ifdef NDEBUG                           //In release builds, don't print VkResult strings.
-  #define VKERRCHECK(VKFN) { VKFN; }
-#else                                   //In debug builds, show warnings and errors. assert on error.
-#define VKERRCHECK(VKFN) { VkResult VKRESULT=VKFN;                              \
-                             ShowVkResult(VKRESULT);                            \
-                             assert(VKRESULT>=0);                               \
-                             if(VKRESULT) printf("%s:%d\n",__FILE__,__LINE__);  \
-                         }
+#ifdef NDEBUG // In release builds, don't print VkResult strings.
+#define VKERRCHECK(VKFN)                                                                                                           \
+    { VKFN; }
+#else // In debug builds, show warnings and errors. assert on error.
+#define VKERRCHECK(VKFN)                                                                                                           \
+    {                                                                                                                              \
+        VkResult VKRESULT = VKFN;                                                                                                  \
+        ShowVkResult(VKRESULT);                                                                                                    \
+        assert(VKRESULT >= 0);                                                                                                     \
+        if (VKRESULT)                                                                                                              \
+            printf("%s:%d\n", __FILE__, __LINE__);                                                                                 \
+    }
 #endif
 //======================================================================================================
 // clang-format off
@@ -84,7 +88,7 @@ enum eColor { eRESET, eRED, eGREEN, eYELLOW, eBLUE, eMAGENTA, eCYAN, eWHITE,    
 void color(eColor color);
 //void print(eColor col,const char* format,...);
 #define print(COLOR,...) {color(COLOR); printf(__VA_ARGS__);  color(eRESET);}
-
+// clang-format off
 #ifdef ANDROID
     #include <jni.h>
     #include <android/log.h>
@@ -122,7 +126,7 @@ void color(eColor color);
     #define  LOGE(...) {}
 #endif
 //----------------------------------------------------------------------------------
-
+// clang-format on
 //======================================================================================================
 #include <assert.h>
 #include <stdio.h> //for Windows.
@@ -139,31 +143,31 @@ void color(eColor color);
 //#define USE_VULKAN_WRAPPER
 
 #ifdef USE_VULKAN_WRAPPER
-#include <vulkan_wrapper.h>            // PC: Build dispatch table, so we can skip loader trampoline-code
+#include <vulkan_wrapper.h> // PC: Build dispatch table, so we can skip loader trampoline-code
 #else
-#include <vulkan/vulkan.h>             // Android: This must be included AFTER native.h
+#include <vulkan/vulkan.h> // Android: This must be included AFTER native.h
 #endif
 //======================================================================================================
 
-const char* VkResultStr(VkResult err); // Convert vulkan result code to a string.
+const char *VkResultStr(VkResult err); // Convert vulkan result code to a string.
 void ShowVkResult(VkResult err);       // Print warnings and errors.
 
 //============================================ CDebugReport ============================================
 class CDebugReport {
     CDebugReport();
-    PFN_vkCreateDebugReportCallbackEXT  vkCreateDebugReportCallbackEXT;
+    PFN_vkCreateDebugReportCallbackEXT vkCreateDebugReportCallbackEXT;
     PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT;
-    VkDebugReportCallbackEXT            debug_report_callback;
-    VkInstance                          instance;
-    PFN_vkDebugReportCallbackEXT        func;
-    VkDebugReportFlagsEXT               flags;
+    VkDebugReportCallbackEXT debug_report_callback;
+    VkInstance instance;
+    PFN_vkDebugReportCallbackEXT func;
+    VkDebugReportFlagsEXT flags;
 
     void Set(VkDebugReportFlagsEXT flags, PFN_vkDebugReportCallbackEXT debugFunc = 0);
     void Print(); // Print the debug report flags state.
 
-    friend class CInstance;                                   // CInstance calls Init and Destroy
-    void Init(VkInstance inst);                               // Initialize with default callback, and all flags enabled.
-    void Destroy();                                           // Destroy the debug report. Must be called BEFORE vkDestroyInstance()
+    friend class CInstance;     // CInstance calls Init and Destroy
+    void Init(VkInstance inst); // Initialize with default callback, and all flags enabled.
+    void Destroy();             // Destroy the debug report. Must be called BEFORE vkDestroyInstance()
   public:
     VkDebugReportFlagsEXT GetFlags() { return flags; }        // Returns current flag settings.
     void SetFlags(VkDebugReportFlagsEXT flags);               // Select which type of messages to display

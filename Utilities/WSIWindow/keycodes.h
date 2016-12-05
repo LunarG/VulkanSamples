@@ -41,10 +41,11 @@
 * but when text input is required, use the OnTextEvent instead, to get the correct
 * text symbol, according to the current configured keyboard layout settings.
 */
-// clang-format off
 
 #ifndef KEYCODE_H
 #define KEYCODE_H
+
+// clang-format off
 enum eKeycode {
     KEY_NONE         = 0, // Undefined. (No event)
     KEY_A            = 4,
@@ -143,32 +144,32 @@ enum eKeycode {
     KP_9              = 97,
     KP_0              = 98,
     KP_Point          = 99, // . and Del
- // KEY_NonUSBackslash = 100,  // \ and |
-    KP_Equals = 103,
-    KEY_F13   = 104,
-    KEY_F14   = 105,
-    KEY_F15   = 106,
-    KEY_F16   = 107,
-    KEY_F17   = 108,
-    KEY_F18   = 109,
-    KEY_F19   = 110,
-    KEY_F20   = 111,
-    KEY_F21   = 112,
-    KEY_F22   = 113,
-    KEY_F23   = 114,
-    KEY_F24   = 115,
- // KEY_Help  = 117,
-    KEY_Menu         = 118,
-    KEY_Mute         = 127,
-    KEY_VolumeUp     = 128,
-    KEY_VolumeDown   = 129,
-    KEY_LeftControl  = 224, // WARNING : Android has no Ctrl keys.
-    KEY_LeftShift    = 225,
-    KEY_LeftAlt      = 226,
-    KEY_LeftGUI      = 227,
-    KEY_RightControl = 228,
-    KEY_RightShift   = 229, // WARNING : Win32 fails to send a WM_KEYUP message if both shift keys are pressed, and one released.
-    KEY_RightAlt     = 230,
-    KEY_RightGUI     = 231
+    KP_Equals         = 103,
+    KEY_F13           = 104,
+    KEY_F14           = 105,
+    KEY_F15           = 106,
+    KEY_F16           = 107,
+    KEY_F17           = 108,
+    KEY_F18           = 109,
+    KEY_F19           = 110,
+    KEY_F20           = 111,
+    KEY_F21           = 112,
+    KEY_F22           = 113,
+    KEY_F23           = 114,
+    KEY_F24           = 115,
+ // KEY_Help          = 117,
+    KEY_Menu          = 118,
+    KEY_Mute          = 127,
+    KEY_VolumeUp      = 128,
+    KEY_VolumeDown    = 129,
+    KEY_LeftControl   = 224, // WARNING : Android has no Ctrl keys.
+    KEY_LeftShift     = 225,
+    KEY_LeftAlt       = 226,
+    KEY_LeftGUI       = 227,
+    KEY_RightControl  = 228,
+    KEY_RightShift    = 229, // WARNING : Win32 fails to send a WM_KEYUP message if both shift keys are pressed, and one released.
+    KEY_RightAlt      = 230,
+    KEY_RightGUI      = 231
 };
+// clang-format on
 #endif

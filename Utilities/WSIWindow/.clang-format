@@ -3,17 +3,4 @@
 BasedOnStyle: LLVM
 IndentWidth: 4
 ColumnLimit: 132
----
-Language: Cpp
-DerivePointerAlignment: true
-PointerAlignment: Left
-
-IndentCaseLabels: true
-AlignConsecutiveAssignments: true
-
-AllowShortBlocksOnASingleLine: true
-AllowShortCaseLabelsOnASingleLine: true
-AllowShortFunctionsOnASingleLine: true
-AllowShortIfStatementsOnASingleLine: true
-AllowShortLoopsOnASingleLine: true
 ...

@@ -25,7 +25,7 @@
 #include "window_xcb.h"
 //==============================================================
 
-WSIWindow::WSIWindow(const char* title, const uint width, const uint height) {
+WSIWindow::WSIWindow(const char *title, const uint width, const uint height) {
 #ifdef VK_USE_PLATFORM_XCB_KHR
     LOGI("PLATFORM: XCB\n");
     pimpl = new Window_xcb(title, width, height);
@@ -36,29 +36,35 @@ WSIWindow::WSIWindow(const char* title, const uint width, const uint height) {
     LOGI("PLATFORM: ANDROID\n");
     pimpl = new Window_android(title, width, height);
 #endif
-// TODO:
-//    #ifdef VK_USE_PLATFORM_XLIB_KHR
-//    #ifdef VK_USE_PLATFORM_MIR_KHR
-//    #ifdef VK_USE_PLATFORM_WAYLAND_KHR
+    // TODO:
+    //    #ifdef VK_USE_PLATFORM_XLIB_KHR
+    //    #ifdef VK_USE_PLATFORM_MIR_KHR
+    //    #ifdef VK_USE_PLATFORM_WAYLAND_KHR
 }
 
 WSIWindow::~WSIWindow() { delete (pimpl); }
 
-CSurface& WSIWindow::GetSurface(VkInstance instance) {
+CSurface &WSIWindow::GetSurface(VkInstance instance) {
     pimpl->CreateSurface(instance);
     return *pimpl;
 }
 
 bool WSIWindow::CanPresent(VkPhysicalDevice gpu, uint32_t queue_family) { return pimpl->CanPresent(gpu, queue_family); }
 
-void WSIWindow::GetWinPos  (int16_t& x, int16_t& y){x=pimpl->shape.x; y=pimpl->shape.y;}
-void WSIWindow::GetWinSize (int16_t& width, int16_t& height){width=pimpl->shape.width; height=pimpl->shape.height;}
-bool WSIWindow::GetKeyState(eKeycode key){ return pimpl->KeyState(key); }
-bool WSIWindow::GetBtnState(uint8_t  btn){ return pimpl->BtnState(btn); }
-void WSIWindow::GetMousePos(int16_t& x, int16_t& y){ pimpl->MousePos(x,y); }
+void WSIWindow::GetWinPos(int16_t &x, int16_t &y) {
+    x = pimpl->shape.x;
+    y = pimpl->shape.y;
+}
+void WSIWindow::GetWinSize(int16_t &width, int16_t &height) {
+    width = pimpl->shape.width;
+    height = pimpl->shape.height;
+}
+bool WSIWindow::GetKeyState(eKeycode key) { return pimpl->KeyState(key); }
+bool WSIWindow::GetBtnState(uint8_t btn) { return pimpl->BtnState(btn); }
+void WSIWindow::GetMousePos(int16_t &x, int16_t &y) { pimpl->MousePos(x, y); }
 
-void WSIWindow::SetTitle  (const char* title) { pimpl->SetTitle(title); }
-void WSIWindow::SetWinPos (uint16_t x, uint16_t y) { pimpl->SetWinPos(x, y, pimpl->shape.width, pimpl->shape.height); }
+void WSIWindow::SetTitle(const char *title) { pimpl->SetTitle(title); }
+void WSIWindow::SetWinPos(uint16_t x, uint16_t y) { pimpl->SetWinPos(x, y, pimpl->shape.width, pimpl->shape.height); }
 void WSIWindow::SetWinSize(uint16_t w, uint16_t h) { pimpl->SetWinPos(pimpl->shape.x, pimpl->shape.y, w, h); }
 
 void WSIWindow::ShowKeyboard(bool enabled) { pimpl->TextInput(enabled); } // On Android, show the soft-keyboard.
@@ -69,19 +75,36 @@ EventType WSIWindow::GetEvent(bool wait_for_event) { return pimpl->GetEvent(wait
 bool WSIWindow::ProcessEvents(bool wait_for_event) {
     EventType e = pimpl->GetEvent(wait_for_event);
     while (e.tag != EventType::NONE) {
-    // Calling the event handlers
-       switch (e.tag) {
-           case EventType::MOUSE : OnMouseEvent (e.mouse.action, e.mouse.x, e.mouse.y, e.mouse.btn);  break;
-           case EventType::KEY   : OnKeyEvent   (e.key.action, e.key.keycode);                        break;
-           case EventType::TEXT  : OnTextEvent  (e.text.str);                                         break;
-           case EventType::MOVE  : OnMoveEvent  (e.move.x, e.move.y);                                 break;
-           case EventType::RESIZE: OnResizeEvent(e.resize.width, e.resize.height);                    break;
-           case EventType::FOCUS : OnFocusEvent (e.focus.hasFocus);                                   break;
-           case EventType::TOUCH : OnTouchEvent (e.touch.action, e.touch.x, e.touch.y, e.touch.id);   break;
-           case EventType::CLOSE : OnCloseEvent (); return false;
-           default: break;
-       }
-       e = pimpl->GetEvent();
+        // Calling the event handlers
+        switch (e.tag) {
+        case EventType::MOUSE:
+            OnMouseEvent(e.mouse.action, e.mouse.x, e.mouse.y, e.mouse.btn);
+            break;
+        case EventType::KEY:
+            OnKeyEvent(e.key.action, e.key.keycode);
+            break;
+        case EventType::TEXT:
+            OnTextEvent(e.text.str);
+            break;
+        case EventType::MOVE:
+            OnMoveEvent(e.move.x, e.move.y);
+            break;
+        case EventType::RESIZE:
+            OnResizeEvent(e.resize.width, e.resize.height);
+            break;
+        case EventType::FOCUS:
+            OnFocusEvent(e.focus.hasFocus);
+            break;
+        case EventType::TOUCH:
+            OnTouchEvent(e.touch.action, e.touch.x, e.touch.y, e.touch.id);
+            break;
+        case EventType::CLOSE:
+            OnCloseEvent();
+            return false;
+        default:
+            break;
+        }
+        e = pimpl->GetEvent();
     }
     return pimpl->running;
 }

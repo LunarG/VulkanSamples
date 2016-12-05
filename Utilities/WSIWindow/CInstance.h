@@ -47,61 +47,58 @@
 using namespace std;
 typedef unsigned int uint;
 
-//---------------------------Macros-------------------------------
-#define forCount(COUNT) for (uint32_t i = 0; i < COUNT; ++i)
-//----------------------------------------------------------------
-// clang-format off
 //--------------------------CPickList-----------------------------
 // Used for picking items from an enumerated list.
 // ( See: CLayers / CExtensions / ... )
 class CPickList {
   protected:
-    vector<char*> pickList;
-public:
-    virtual char* Name(uint32_t inx)=0;                 // Return name of indexed item
-    virtual uint32_t Count()=0;                         // Return number of enumerated items
+    vector<char *> pickList;
 
-    int  IndexOf(const char* name);                     // Returns index of named item
-    void Pick   (initializer_list<const char*> list);   // Add multiple items to picklist. eg. Pick({"item1","item2"})
-    bool Pick   (const char* name);                     // Add named item to picklist.  Returns false if not found.
-    bool Pick   (const uint32_t inx);                   // Add indexed item to picklist. Returns false if out of range. (for 0, use: Pick(0u);)
-    void UnPick (const char* name);                     // Unpick named item.
-    void PickAll();                                     // Add all items to picklist
-    void Clear  ();                                     // Remove all items from picklist
+  public:
+    virtual char *Name(uint32_t inx) = 0; // Return name of indexed item
+    virtual uint32_t Count() = 0;         // Return number of enumerated items
 
-    bool     IsPicked(const char* name)const;           // Returns true if named item is in the picklist
-    char**   PickList()const;                           // Returns picklist as an array of C string pointers (for passing to Vulkan)
-    uint32_t PickCount()const;                          // Returns number of items in the picklist
-    void Print(const char* listName);                   // Prints the list of items found, with ticks next to the picked ones.
-  //operator vector<char*>&() const {return pickList;}
+    int IndexOf(const char *name);                  // Returns index of named item
+    void Pick(initializer_list<const char *> list); // Add multiple items to picklist. eg. Pick({"item1","item2"})
+    bool Pick(const char *name);                    // Add named item to picklist.  Returns false if not found.
+    bool Pick(const uint32_t inx); // Add indexed item to picklist. Returns false if out of range. (for 0, use: Pick(0u);)
+    void UnPick(const char *name); // Unpick named item.
+    void PickAll();                // Add all items to picklist
+    void Clear();                  // Remove all items from picklist
+
+    bool IsPicked(const char *name) const; // Returns true if named item is in the picklist
+    char **PickList() const;               // Returns picklist as an array of C string pointers (for passing to Vulkan)
+    uint32_t PickCount() const;            // Returns number of items in the picklist
+    void Print(const char *listName);      // Prints the list of items found, with ticks next to the picked ones.
+                                           // operator vector<char*>&() const {return pickList;}
 };
 //----------------------------------------------------------------
 //----------------------------CLayers-----------------------------
 struct CLayers : public CPickList {
     vector<VkLayerProperties> itemList;
     CLayers();
-    char* Name(uint32_t inx) { return itemList[inx].layerName; }
+    char *Name(uint32_t inx) { return itemList[inx].layerName; }
     uint32_t Count() { return (uint32_t)itemList.size(); }
-    void     Print() { CPickList::Print("Layers"); }
+    void Print() { CPickList::Print("Layers"); }
 };
 //----------------------------------------------------------------
 //--------------------------CExtensions---------------------------
 struct CExtensions : public CPickList {
     vector<VkExtensionProperties> itemList;
-    CExtensions(const char* layerName = NULL);
-    char* Name(uint32_t inx) { return itemList[inx].extensionName; }
+    CExtensions(const char *layerName = NULL);
+    char *Name(uint32_t inx) { return itemList[inx].extensionName; }
     uint32_t Count() { return (uint32_t)itemList.size(); }
-    void     Print() { CPickList::Print("Extensions"); }
+    void Print() { CPickList::Print("Extensions"); }
 };
 //----------------------------------------------------------------
 //---------------------------CInstance----------------------------
 class CInstance {
     VkInstance instance;
-    void Create(const CLayers& layers, const CExtensions& extensions, const char* appName, const char* engineName);
+    void Create(const CLayers &layers, const CExtensions &extensions, const char *appName, const char *engineName);
 
   public:
-    CInstance(const CLayers& layers, const CExtensions& extensions, const char* appName = "VulkanApp", const char* engineName = "");
-    CInstance(const bool enableValidation = true, const char* appName = "VulkanApp", const char* engineName = "");
+    CInstance(const CLayers &layers, const CExtensions &extensions, const char *appName = "VulkanApp", const char *engineName = "");
+    CInstance(const bool enableValidation = true, const char *appName = "VulkanApp", const char *engineName = "");
 
     ~CInstance();
     // CLayers     layers;

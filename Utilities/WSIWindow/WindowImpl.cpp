@@ -27,44 +27,45 @@
 
 //--Events--
 EventType WindowImpl::MouseEvent(eAction action, int16_t x, int16_t y, uint8_t btn) {
-    mousepos                           = {x, y};
-    if (action != eMOVE) btnstate[btn] = (action == eDOWN); // Keep track of button state
-    EventType e                        = {EventType::MOUSE, {action, x, y, btn}};
+    mousepos = {x, y};
+    if (action != eMOVE)
+        btnstate[btn] = (action == eDOWN); // Keep track of button state
+    EventType e = {EventType::MOUSE, {action, x, y, btn}};
     return e;
 }
 
 EventType WindowImpl::KeyEvent(eAction action, uint8_t key) {
     keystate[key] = (action == eDOWN);
-    EventType e   = {EventType::KEY};
-    e.key         = {action, (eKeycode)key};
+    EventType e = {EventType::KEY};
+    e.key = {action, (eKeycode)key};
     return e;
 }
 
-EventType WindowImpl::TextEvent(const char* str) {
+EventType WindowImpl::TextEvent(const char *str) {
     EventType e = {EventType::TEXT};
-    e.text.str  = str;
+    e.text.str = str;
     return e;
 }
 
 EventType WindowImpl::MoveEvent(int16_t x, int16_t y) {
-    shape.x     = x;
-    shape.y     = y;
+    shape.x = x;
+    shape.y = y;
     EventType e = {EventType::MOVE};
-    e.move      = {x, y};
+    e.move = {x, y};
     return e;
 }
 
 EventType WindowImpl::ResizeEvent(uint16_t width, uint16_t height) {
-    shape.width  = width;
+    shape.width = width;
     shape.height = height;
-    EventType e  = {EventType::RESIZE};
-    e.resize     = {width, height};
+    EventType e = {EventType::RESIZE};
+    e.resize = {width, height};
     return e;
 }
 
 EventType WindowImpl::FocusEvent(bool hasFocus) {
-    has_focus        = hasFocus;
-    EventType e      = {EventType::FOCUS};
+    has_focus = hasFocus;
+    EventType e = {EventType::FOCUS};
     e.focus.hasFocus = hasFocus;
     return e;
 }
