@@ -8243,11 +8243,36 @@ static bool VerifyDestImageLayout(layer_data *dev_data, GLOBAL_CB_NODE *cb_node,
 }
 
 static bool VerifyClearImageLayout(layer_data *dev_data, GLOBAL_CB_NODE *cb_node, VkImage image, VkImageSubresourceRange range,
-                                   VkImageLayout destImageLayout) {
+                                   VkImageLayout destImageLayout, const char *func_name) {
     bool skip_call = false;
 
     VkImageSubresourceRange resolvedRange = range;
     ResolveRemainingLevelsLayers(dev_data, &resolvedRange, image);
+
+    if (destImageLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+        if (destImageLayout == VK_IMAGE_LAYOUT_GENERAL) {
+            auto image_state = getImageState(dev_data, image);
+            if (image_state->createInfo.tiling != VK_IMAGE_TILING_LINEAR) {
+                // LAYOUT_GENERAL is allowed, but may not be performance optimal, flag as perf warning.
+                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
+                                     (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                                     "Layout for cleared image should be TRANSFER_DST_OPTIMAL instead of GENERAL.");
+            }
+        } else {
+            UNIQUE_VALIDATION_ERROR_CODE error_code = VALIDATION_ERROR_00000;
+            if (strcmp(func_name, "vkCmdClearColorImage()") == 0) {
+                error_code = VALIDATION_ERROR_01086;
+            } else if (strcmp(func_name, "vkCmdClearDepthStencilImage()") == 0) {
+                error_code = VALIDATION_ERROR_01101;
+            } else {
+                assert(0);
+            }
+            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                                 error_code, "DS", "Layout for cleared image is %s but can only be "
+                                                   "TRANSFER_DST_OPTIMAL or GENERAL. %s",
+                                 string_VkImageLayout(destImageLayout), validation_error_map[error_code]);
+        }
+    }
 
     for (uint32_t levelIdx = 0; levelIdx < range.levelCount; ++levelIdx) {
         uint32_t level = levelIdx + range.baseMipLevel;
@@ -8260,31 +8285,23 @@ static bool VerifyClearImageLayout(layer_data *dev_data, GLOBAL_CB_NODE *cb_node
                 continue;
             }
             if (node.layout != destImageLayout) {
-                skip_call |=
-                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0,
-                            __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS", "Cannot clear an image whose layout is %s and "
-                                                                            "doesn't match the current layout %s.",
-                            string_VkImageLayout(destImageLayout), string_VkImageLayout(node.layout));
+                UNIQUE_VALIDATION_ERROR_CODE error_code = VALIDATION_ERROR_00000;
+                if (strcmp(func_name, "vkCmdClearColorImage()") == 0) {
+                    error_code = VALIDATION_ERROR_01085;
+                } else if (strcmp(func_name, "vkCmdClearDepthStencilImage()") == 0) {
+                    error_code = VALIDATION_ERROR_01100;
+                } else {
+                    assert(0);
+                }
+                skip_call |= log_msg(
+                    dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0,
+                    __LINE__, error_code, "DS", "Cannot clear an image whose layout is %s and "
+                                                "doesn't match the current layout %s. %s",
+                    string_VkImageLayout(destImageLayout), string_VkImageLayout(node.layout), validation_error_map[error_code]);
             }
         }
     }
 
-    if (destImageLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-        if (destImageLayout == VK_IMAGE_LAYOUT_GENERAL) {
-            auto image_state = getImageState(dev_data, image);
-            if (image_state->createInfo.tiling != VK_IMAGE_TILING_LINEAR) {
-                // LAYOUT_GENERAL is allowed, but may not be performance optimal, flag as perf warning.
-                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
-                                     (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                                     "Layout for cleared image should be TRANSFER_DST_OPTIMAL instead of GENERAL.");
-            }
-        } else {
-            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                                 DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS", "Layout for cleared image is %s but can only be "
-                                                                       "TRANSFER_DST_OPTIMAL or GENERAL.",
-                                 string_VkImageLayout(destImageLayout));
-        }
-    }
     return skip_call;
 }
 
@@ -8846,7 +8863,7 @@ VKAPI_ATTR void VKAPI_CALL CmdClearColorImage(VkCommandBuffer commandBuffer, VkI
         assert(0);
     }
     for (uint32_t i = 0; i < rangeCount; ++i) {
-        skip_call |= VerifyClearImageLayout(dev_data, cb_node, image, pRanges[i], imageLayout);
+        skip_call |= VerifyClearImageLayout(dev_data, cb_node, image, pRanges[i], imageLayout, "vkCmdClearColorImage()");
     }
     lock.unlock();
     if (!skip_call)
@@ -8879,7 +8896,7 @@ CmdClearDepthStencilImage(VkCommandBuffer commandBuffer, VkImage image, VkImageL
         assert(0);
     }
     for (uint32_t i = 0; i < rangeCount; ++i) {
-        skip_call |= VerifyClearImageLayout(dev_data, cb_node, image, pRanges[i], imageLayout);
+        skip_call |= VerifyClearImageLayout(dev_data, cb_node, image, pRanges[i], imageLayout, "vkCmdClearDepthStencilImage()");
     }
     lock.unlock();
     if (!skip_call)
