@@ -8,6 +8,13 @@ set(LAYER_JSON_FILES
 set(VK_LAYER_RPATH /usr/lib/x86_64-linux-gnu/vulkan/layer:/usr/lib/i386-linux-gnu/vulkan/layer)
 set(CMAKE_INSTALL_RPATH ${VK_LAYER_RPATH})
 
+macro(run_vk_xml_generate dependency output)
+    add_custom_command(OUTPUT ${output}
+        COMMAND ${PYTHON_CMD} ${SCRIPTS_DIR}/lvl_genvk.py -registry ${SCRIPTS_DIR}/vk.xml ${output}
+        DEPENDS ${SCRIPTS_DIR}/vk.xml ${SCRIPTS_DIR}/generator.py ${SCRIPTS_DIR}/${dependency} ${SCRIPTS_DIR}/lvl_genvk.py ${SCRIPTS_DIR}/reg.py
+    )
+endmacro()
+
 if (WIN32)
     if (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
         foreach (config_file ${LAYER_JSON_FILES})
@@ -72,13 +79,11 @@ else()
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wpointer-arith -Wno-unused-function")
 endif()
 
-add_custom_command(OUTPUT vk_dispatch_table_helper.h
-    COMMAND ${PYTHON_CMD} ${SCRIPTS_DIR}/vk-generate.py AllPlatforms dispatch-table-ops layer > vk_dispatch_table_helper.h
-    DEPENDS ${SCRIPTS_DIR}/vk-generate.py ${SCRIPTS_DIR}/vulkan.py)
-
 add_custom_target(generate_tests_dispatch_table_helper DEPENDS
     vk_dispatch_table_helper.h
 )
+
+run_vk_xml_generate(dispatch_table_generator.py vk_dispatch_table_helper.h)
 
 set (WRAP_SRCS
        wrap_objects.cpp
