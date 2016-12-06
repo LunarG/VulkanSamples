@@ -5210,35 +5210,46 @@ static bool RetireFence(layer_data *dev_data, VkFence fence) {
     }
 }
 
+static bool PreCallValidateWaitForFences(layer_data *dev_data, uint32_t fence_count, const VkFence *fences) {
+    bool skip = false;
+    for (uint32_t i = 0; i < fence_count; i++) {
+        skip |= verifyWaitFenceState(dev_data, fences[i], "vkWaitForFences");
+    }
+    return skip;
+}
+
+static bool PostCallRecordWaitForFences(layer_data *dev_data, uint32_t fence_count, const VkFence *fences, VkBool32 wait_all) {
+    bool skip = false;
+    // When we know that all fences are complete we can retire any previous work
+    if ((VK_TRUE == wait_all) || (1 == fence_count)) {
+        for (uint32_t i = 0; i < fence_count; i++) {
+            skip |= RetireFence(dev_data, fences[i]);
+        }
+    }
+    // NOTE : Alternate case not handled here is when some fences have completed. In
+    //  this case for app to guarantee which fences completed it will have to call
+    //  vkGetFenceStatus() at which point we'll retire their previous work.
+    return skip;
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL
 WaitForFences(VkDevice device, uint32_t fenceCount, const VkFence *pFences, VkBool32 waitAll, uint64_t timeout) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    bool skip_call = false;
     // Verify fence status of submitted fences
     std::unique_lock<std::mutex> lock(global_lock);
-    for (uint32_t i = 0; i < fenceCount; i++) {
-        skip_call |= verifyWaitFenceState(dev_data, pFences[i], "vkWaitForFences");
-    }
+    bool skip = PreCallValidateWaitForFences(dev_data, fenceCount, pFences);
     lock.unlock();
-    if (skip_call)
+    if (skip)
         return VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkResult result = dev_data->dispatch_table.WaitForFences(device, fenceCount, pFences, waitAll, timeout);
 
     if (result == VK_SUCCESS) {
         lock.lock();
-        // When we know that all fences are complete we can clean/remove their CBs
-        if (waitAll || fenceCount == 1) {
-            for (uint32_t i = 0; i < fenceCount; i++) {
-                skip_call |= RetireFence(dev_data, pFences[i]);
-            }
-        }
-        // NOTE : Alternate case not handled here is when some fences have completed. In
-        //  this case for app to guarantee which fences completed it will have to call
-        //  vkGetFenceStatus() at which point we'll clean/remove their CBs if complete.
+        skip = PostCallRecordWaitForFences(dev_data, fenceCount, pFences, waitAll);
         lock.unlock();
     }
-    if (skip_call)
+    if (skip)
         return VK_ERROR_VALIDATION_FAILED_EXT;
     return result;
 }
