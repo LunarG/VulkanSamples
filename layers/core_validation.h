@@ -86,6 +86,10 @@ struct CHECK_DISABLED {
     bool free_descriptor_sets; // Skip validation prior to vkFreeDescriptorSets()
     bool allocate_descriptor_sets; // Skip validation prior to vkAllocateDescriptorSets()
     bool update_descriptor_sets;   // Skip validation prior to vkUpdateDescriptorSets()
+    bool wait_for_fences;
+    bool get_fence_state;
+    bool queue_wait_idle;
+    bool device_wait_idle;
 };
 
 /*

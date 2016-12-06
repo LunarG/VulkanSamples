@@ -5223,6 +5223,8 @@ static void RetireFence(layer_data *dev_data, VkFence fence) {
 }
 
 static bool PreCallValidateWaitForFences(layer_data *dev_data, uint32_t fence_count, const VkFence *fences) {
+    if (dev_data->instance_data->disabled.wait_for_fences)
+        return false;
     bool skip = false;
     for (uint32_t i = 0; i < fence_count; i++) {
         skip |= verifyWaitFenceState(dev_data, fences[i], "vkWaitForFences");
@@ -5264,6 +5266,8 @@ WaitForFences(VkDevice device, uint32_t fenceCount, const VkFence *pFences, VkBo
 }
 
 static bool PreCallValidateGetFenceStatus(layer_data *dev_data, VkFence fence) {
+    if (dev_data->instance_data->disabled.get_fence_state)
+        return false;
     return verifyWaitFenceState(dev_data, fence, "vkGetFenceStatus");
 }
 
@@ -5302,18 +5306,15 @@ VKAPI_ATTR void VKAPI_CALL GetDeviceQueue(VkDevice device, uint32_t queueFamilyI
     }
 }
 
-static bool PreCallValidateQueueWaitIdle(layer_data *dev_data, VkQueue queue,
-                                         QUEUE_NODE **queue_state) {
-  *queue_state = getQueueNode(dev_data, queue);
-  return VerifyQueueStateToSeq(
-      dev_data, *queue_state,
-      (*queue_state)->seq + (*queue_state)->submissions.size());
+static bool PreCallValidateQueueWaitIdle(layer_data *dev_data, VkQueue queue, QUEUE_NODE **queue_state) {
+    *queue_state = getQueueNode(dev_data, queue);
+    if (dev_data->instance_data->disabled.queue_wait_idle)
+        return false;
+    return VerifyQueueStateToSeq(dev_data, *queue_state, (*queue_state)->seq + (*queue_state)->submissions.size());
 }
 
-static void PostCallRecordQueueWaitIdle(layer_data *dev_data,
-                                        QUEUE_NODE *queue_state) {
-  RetireWorkOnQueue(dev_data, queue_state,
-                    queue_state->seq + queue_state->submissions.size());
+static void PostCallRecordQueueWaitIdle(layer_data *dev_data, QUEUE_NODE *queue_state) {
+    RetireWorkOnQueue(dev_data, queue_state, queue_state->seq + queue_state->submissions.size());
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL QueueWaitIdle(VkQueue queue) {
@@ -5325,14 +5326,16 @@ VKAPI_ATTR VkResult VKAPI_CALL QueueWaitIdle(VkQueue queue) {
     if (skip) return VK_ERROR_VALIDATION_FAILED_EXT;
     VkResult result = dev_data->dispatch_table.QueueWaitIdle(queue);
     if (VK_SUCCESS == result) {
-      lock.lock();
-      PostCallRecordQueueWaitIdle(dev_data, queue_state);
-      lock.unlock();
+        lock.lock();
+        PostCallRecordQueueWaitIdle(dev_data, queue_state);
+        lock.unlock();
     }
     return result;
 }
 
 static bool PreCallValidateDeviceWaitIdle(layer_data *dev_data) {
+    if (dev_data->instance_data->disabled.device_wait_idle)
+        return false;
     bool skip = false;
     for (auto &queue : dev_data->queueMap) {
         skip |= VerifyQueueStateToSeq(dev_data, &queue.second, queue.second.seq + queue.second.submissions.size());
