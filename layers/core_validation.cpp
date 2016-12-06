@@ -5316,18 +5316,33 @@ VKAPI_ATTR VkResult VKAPI_CALL QueueWaitIdle(VkQueue queue) {
     return result;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL DeviceWaitIdle(VkDevice device) {
-    bool skip_call = false;
-    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    std::unique_lock<std::mutex> lock(global_lock);
-    for (auto & queue : dev_data->queueMap) {
-        skip_call |= VerifyQueueStateToSeq(dev_data, &queue.second, queue.second.seq + queue.second.submissions.size());
+static bool PreCallValidateDeviceWaitIdle(layer_data *dev_data) {
+    bool skip = false;
+    for (auto &queue : dev_data->queueMap) {
+        skip |= VerifyQueueStateToSeq(dev_data, &queue.second, queue.second.seq + queue.second.submissions.size());
+    }
+    return skip;
+}
+
+static void PostCallRecordDeviceWaitIdle(layer_data *dev_data) {
+    for (auto &queue : dev_data->queueMap) {
         RetireWorkOnQueue(dev_data, &queue.second, queue.second.seq + queue.second.submissions.size());
     }
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL DeviceWaitIdle(VkDevice device) {
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    std::unique_lock<std::mutex> lock(global_lock);
+    bool skip = PreCallValidateDeviceWaitIdle(dev_data);
     lock.unlock();
-    if (skip_call)
+    if (skip)
         return VK_ERROR_VALIDATION_FAILED_EXT;
     VkResult result = dev_data->dispatch_table.DeviceWaitIdle(device);
+    if (VK_SUCCESS == result) {
+        lock.lock();
+        PostCallRecordDeviceWaitIdle(dev_data);
+        lock.unlock();
+    }
     return result;
 }
 
