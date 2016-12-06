@@ -107,8 +107,9 @@ static void ValidateQueueFlags(VkQueue queue, const char *function) {
             if ((instance_data->queue_family_properties[pQueueInfo->queue_node_index].queueFlags & VK_QUEUE_SPARSE_BINDING_BIT) ==
                 0) {
                 log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT,
-                        reinterpret_cast<uint64_t>(queue), __LINE__, OBJTRACK_UNKNOWN_OBJECT, LayerName,
-                        "Attempting %s on a non-memory-management capable queue -- VK_QUEUE_SPARSE_BINDING_BIT not set", function);
+                        reinterpret_cast<uint64_t>(queue), __LINE__, VALIDATION_ERROR_01651, LayerName,
+                        "Attempting %s on a non-memory-management capable queue -- VK_QUEUE_SPARSE_BINDING_BIT not set. %s",
+                        function, validation_error_map[VALIDATION_ERROR_01651]);
             }
         }
     }
@@ -147,17 +148,18 @@ static bool ValidateCommandBuffer(VkDevice device, VkCommandPool command_pool, V
 
         if (pNode->parent_object != reinterpret_cast<uint64_t &>(command_pool)) {
             skip_call |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, pNode->object_type, object_handle,
-                                 __LINE__, OBJTRACK_COMMAND_POOL_MISMATCH, LayerName,
+                                 __LINE__, VALIDATION_ERROR_00102, LayerName,
                                  "FreeCommandBuffers is attempting to free Command Buffer 0x%" PRIxLEAST64
-                                 " belonging to Command Pool 0x%" PRIxLEAST64 " from pool 0x%" PRIxLEAST64 ").",
+                                 " belonging to Command Pool 0x%" PRIxLEAST64 " from pool 0x%" PRIxLEAST64 "). %s",
                                  reinterpret_cast<uint64_t>(command_buffer), pNode->parent_object,
-                                 reinterpret_cast<uint64_t &>(command_pool));
+                                 reinterpret_cast<uint64_t &>(command_pool), validation_error_map[VALIDATION_ERROR_00102]);
         }
     } else {
-        skip_call |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, object_handle,
-                             __LINE__, OBJTRACK_NONE, LayerName, "Unable to remove command buffer obj 0x%" PRIxLEAST64
-                                                                 ". Was it created? Has it already been destroyed?",
-                             object_handle);
+        skip_call |=
+            log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                    object_handle, __LINE__, VALIDATION_ERROR_00097, LayerName, "Invalid %s Object 0x%" PRIxLEAST64 ". %s",
+                    object_name[VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT], object_handle,
+                    validation_error_map[VALIDATION_ERROR_00097]);
     }
     return skip_call;
 }
@@ -192,17 +194,18 @@ static bool ValidateDescriptorSet(VkDevice device, VkDescriptorPool descriptor_p
 
         if (pNode->parent_object != reinterpret_cast<uint64_t &>(descriptor_pool)) {
             skip_call |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, pNode->object_type, object_handle,
-                                 __LINE__, OBJTRACK_DESCRIPTOR_POOL_MISMATCH, LayerName,
+                                 __LINE__, VALIDATION_ERROR_00927, LayerName,
                                  "FreeDescriptorSets is attempting to free descriptorSet 0x%" PRIxLEAST64
-                                 " belonging to Descriptor Pool 0x%" PRIxLEAST64 " from pool 0x%" PRIxLEAST64 ").",
+                                 " belonging to Descriptor Pool 0x%" PRIxLEAST64 " from pool 0x%" PRIxLEAST64 "). %s",
                                  reinterpret_cast<uint64_t &>(descriptor_set), pNode->parent_object,
-                                 reinterpret_cast<uint64_t &>(descriptor_pool));
+                                 reinterpret_cast<uint64_t &>(descriptor_pool), validation_error_map[VALIDATION_ERROR_00927]);
         }
     } else {
-        skip_call |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, object_handle,
-                             __LINE__, OBJTRACK_NONE, LayerName, "Unable to remove descriptor set obj 0x%" PRIxLEAST64
-                                                                 ". Was it created? Has it already been destroyed?",
-                             object_handle);
+        skip_call |=
+            log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
+                    object_handle, __LINE__, VALIDATION_ERROR_00920, LayerName, "Invalid %s Object 0x%" PRIxLEAST64 ". %s",
+                    object_name[VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT], object_handle,
+                    validation_error_map[VALIDATION_ERROR_00920]);
     }
     return skip_call;
 }
