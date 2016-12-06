@@ -4582,26 +4582,46 @@ static bool validateAndIncrementResources(layer_data *dev_data, GLOBAL_CB_NODE *
     return skip_call;
 }
 
-// Note: This function assumes that the global lock is held by the calling
-// thread.
-// TODO: untangle this.
-static bool cleanInFlightCmdBuffer(layer_data *my_data, VkCommandBuffer cmdBuffer) {
-    bool skip_call = false;
-    GLOBAL_CB_NODE *pCB = getCBNode(my_data, cmdBuffer);
-    if (pCB) {
-        for (auto queryEventsPair : pCB->waitedEventsBeforeQueryReset) {
-            for (auto event : queryEventsPair.second) {
-                if (my_data->eventMap[event].needsSignaled) {
-                    skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, 0, DRAWSTATE_INVALID_QUERY, "DS",
-                                         "Cannot get query results on queryPool 0x%" PRIx64
-                                         " with index %d which was guarded by unsignaled event 0x%" PRIx64 ".",
-                                         (uint64_t)(queryEventsPair.first.pool), queryEventsPair.first.index, (uint64_t)(event));
+// Note: This function assumes that the global lock is held by the calling thread.
+// For the given queue, verify the queue state up to the given seq number.
+// Currently the only check is to make sure that if there are events to be waited on prior to
+//  a QueryReset, make sure that all such events have been signalled.
+static bool VerifyQueueStateToSeq(layer_data *my_data, QUEUE_NODE *queue, uint64_t seq) {
+    bool skip = false;
+    auto queue_seq = queue->seq;
+    // local copy of submissions as we're only simulating queue retirement
+    auto submissions = queue->submissions;
+    while (queue_seq < seq) {
+        auto &submission = submissions.front();
+        for (auto cb : submission.cbs) {
+            auto cb_node = getCBNode(my_data, cb);
+            if (cb_node) {
+                for (auto queryEventsPair : cb_node->waitedEventsBeforeQueryReset) {
+                    for (auto event : queryEventsPair.second) {
+                        if (my_data->eventMap[event].needsSignaled) {
+                            skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                            VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, 0, DRAWSTATE_INVALID_QUERY, "DS",
+                                            "Cannot get query results on queryPool 0x%" PRIx64
+                                            " with index %d which was guarded by unsignaled event 0x%" PRIx64 ".",
+                                            (uint64_t)(queryEventsPair.first.pool), queryEventsPair.first.index, (uint64_t)(event));
+                        }
+                    }
                 }
             }
         }
+        submissions.pop_front();
+        queue_seq++;
     }
-    return skip_call;
+    return skip;
+}
+
+// When the given fence is retired, verify outstanding queue operations through the point of the fence
+static bool VerifyQueueStateToFence(layer_data *dev_data, VkFence fence) {
+    auto fence_state = getFenceNode(dev_data, fence);
+    if (VK_NULL_HANDLE != fence_state->signaler.first) {
+        return VerifyQueueStateToSeq(dev_data, getQueueNode(dev_data, fence_state->signaler.first), fence_state->signaler.second);
+    }
+    return false;
 }
 
 // TODO: nuke this completely.
@@ -4626,9 +4646,7 @@ static void DecrementBoundResources(layer_data *dev_data, GLOBAL_CB_NODE const *
     }
 }
 
-static bool RetireWorkOnQueue(layer_data *dev_data, QUEUE_NODE *pQueue, uint64_t seq)
-{
-    bool skip_call = false; // TODO: extract everything that might fail to precheck
+static void RetireWorkOnQueue(layer_data *dev_data, QUEUE_NODE *pQueue, uint64_t seq) {
     std::unordered_map<VkQueue, uint64_t> otherQueueSeqs;
 
     // Roll this queue forward, one submission at a time.
@@ -4679,7 +4697,6 @@ static bool RetireWorkOnQueue(layer_data *dev_data, QUEUE_NODE *pQueue, uint64_t
                 dev_data->eventMap[eventStagePair.first].stageMask = eventStagePair.second;
             }
 
-            skip_call |= cleanInFlightCmdBuffer(dev_data, cb);
             removeInFlightCmdBuffer(dev_data, cb);
         }
 
@@ -4694,10 +4711,8 @@ static bool RetireWorkOnQueue(layer_data *dev_data, QUEUE_NODE *pQueue, uint64_t
 
     // Roll other queues forward to the highest seq we saw a wait for
     for (auto qs : otherQueueSeqs) {
-        skip_call |= RetireWorkOnQueue(dev_data, getQueueNode(dev_data, qs.first), qs.second);
+        RetireWorkOnQueue(dev_data, getQueueNode(dev_data, qs.first), qs.second);
     }
-
-    return skip_call;
 }
 
 
@@ -5191,22 +5206,19 @@ static inline bool verifyWaitFenceState(layer_data *dev_data, VkFence fence, con
     return skip_call;
 }
 
-static bool RetireFence(layer_data *dev_data, VkFence fence) {
+static void RetireFence(layer_data *dev_data, VkFence fence) {
     auto pFence = getFenceNode(dev_data, fence);
     if (pFence->signaler.first != VK_NULL_HANDLE) {
         /* Fence signaller is a queue -- use this as proof that prior operations
          * on that queue have completed.
          */
-        return RetireWorkOnQueue(dev_data,
-                                 getQueueNode(dev_data, pFence->signaler.first),
-                                 pFence->signaler.second);
+        RetireWorkOnQueue(dev_data, getQueueNode(dev_data, pFence->signaler.first), pFence->signaler.second);
     }
     else {
         /* Fence signaller is the WSI. We're not tracking what the WSI op
          * actually /was/ in CV yet, but we need to mark the fence as retired.
          */
         pFence->state = FENCE_RETIRED;
-        return false;
     }
 }
 
@@ -5214,22 +5226,21 @@ static bool PreCallValidateWaitForFences(layer_data *dev_data, uint32_t fence_co
     bool skip = false;
     for (uint32_t i = 0; i < fence_count; i++) {
         skip |= verifyWaitFenceState(dev_data, fences[i], "vkWaitForFences");
+        skip |= VerifyQueueStateToFence(dev_data, fences[i]);
     }
     return skip;
 }
 
-static bool PostCallRecordWaitForFences(layer_data *dev_data, uint32_t fence_count, const VkFence *fences, VkBool32 wait_all) {
-    bool skip = false;
-    // When we know that all fences are complete we can retire any previous work
+static void PostCallRecordWaitForFences(layer_data *dev_data, uint32_t fence_count, const VkFence *fences, VkBool32 wait_all) {
+    // When we know that all fences are complete we can clean/remove their CBs
     if ((VK_TRUE == wait_all) || (1 == fence_count)) {
         for (uint32_t i = 0; i < fence_count; i++) {
-            skip |= RetireFence(dev_data, fences[i]);
+            RetireFence(dev_data, fences[i]);
         }
     }
     // NOTE : Alternate case not handled here is when some fences have completed. In
     //  this case for app to guarantee which fences completed it will have to call
-    //  vkGetFenceStatus() at which point we'll retire their previous work.
-    return skip;
+    //  vkGetFenceStatus() at which point we'll clean/remove their CBs if complete.
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL
@@ -5246,11 +5257,9 @@ WaitForFences(VkDevice device, uint32_t fenceCount, const VkFence *pFences, VkBo
 
     if (result == VK_SUCCESS) {
         lock.lock();
-        skip = PostCallRecordWaitForFences(dev_data, fenceCount, pFences, waitAll);
+        PostCallRecordWaitForFences(dev_data, fenceCount, pFences, waitAll);
         lock.unlock();
     }
-    if (skip)
-        return VK_ERROR_VALIDATION_FAILED_EXT;
     return result;
 }
 
@@ -5258,7 +5267,7 @@ static bool PreCallValidateGetFenceStatus(layer_data *dev_data, VkFence fence) {
     return verifyWaitFenceState(dev_data, fence, "vkGetFenceStatus");
 }
 
-static bool PostCallRecordGetFenceStatus(layer_data *dev_data, VkFence fence) { return RetireFence(dev_data, fence); }
+static void PostCallRecordGetFenceStatus(layer_data *dev_data, VkFence fence) { RetireFence(dev_data, fence); }
 
 VKAPI_ATTR VkResult VKAPI_CALL GetFenceStatus(VkDevice device, VkFence fence) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -5271,11 +5280,9 @@ VKAPI_ATTR VkResult VKAPI_CALL GetFenceStatus(VkDevice device, VkFence fence) {
     VkResult result = dev_data->dispatch_table.GetFenceStatus(device, fence);
     if (result == VK_SUCCESS) {
         lock.lock();
-        skip |= PostCallRecordGetFenceStatus(dev_data, fence);
+        PostCallRecordGetFenceStatus(dev_data, fence);
         lock.unlock();
     }
-    if (skip)
-        return VK_ERROR_VALIDATION_FAILED_EXT;
     return result;
 }
 
@@ -5300,7 +5307,8 @@ VKAPI_ATTR VkResult VKAPI_CALL QueueWaitIdle(VkQueue queue) {
     bool skip_call = false;
     std::unique_lock<std::mutex> lock(global_lock);
     auto pQueue = getQueueNode(dev_data, queue);
-    skip_call |= RetireWorkOnQueue(dev_data, pQueue, pQueue->seq + pQueue->submissions.size());
+    skip_call |= VerifyQueueStateToSeq(dev_data, pQueue, pQueue->seq + pQueue->submissions.size());
+    RetireWorkOnQueue(dev_data, pQueue, pQueue->seq + pQueue->submissions.size());
     lock.unlock();
     if (skip_call)
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -5313,7 +5321,8 @@ VKAPI_ATTR VkResult VKAPI_CALL DeviceWaitIdle(VkDevice device) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
     for (auto & queue : dev_data->queueMap) {
-        skip_call |= RetireWorkOnQueue(dev_data, &queue.second, queue.second.seq + queue.second.submissions.size());
+        skip_call |= VerifyQueueStateToSeq(dev_data, &queue.second, queue.second.seq + queue.second.submissions.size());
+        RetireWorkOnQueue(dev_data, &queue.second, queue.second.seq + queue.second.submissions.size());
     }
     lock.unlock();
     if (skip_call)
