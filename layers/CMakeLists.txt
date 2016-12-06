@@ -113,10 +113,6 @@ else()
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wpointer-arith -Wno-unused-function -Wno-sign-compare")
 endif()
 
-add_custom_command(OUTPUT vk_dispatch_table_helper.h
-    COMMAND ${PYTHON_CMD} ${SCRIPTS_DIR}/vk-generate.py AllPlatforms dispatch-table-ops layer > vk_dispatch_table_helper.h
-    DEPENDS ${SCRIPTS_DIR}/vk-generate.py ${SCRIPTS_DIR}/vulkan.py)
-
 run_vk_helper(gen_enum_string_helper vk_enum_string_helper.h)
 run_vk_helper(gen_struct_wrappers
     vk_struct_string_helper.h
@@ -162,6 +158,7 @@ add_custom_target(generate_vk_layer_helpers DEPENDS
 run_vk_layer_xml_generate(threading_generator.py thread_check.h)
 run_vk_layer_xml_generate(parameter_validation_generator.py parameter_validation.h)
 run_vk_layer_xml_generate(unique_objects_generator.py unique_objects_wrappers.h)
+run_vk_layer_xml_generate(dispatch_table_generator.py vk_dispatch_table_helper.h)
 
 # Layer Utils Library
 # For Windows, we use a static lib because the Windows loader has a fairly restrictive loader search
