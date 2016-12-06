@@ -7,7 +7,7 @@ macro(run_vk_helper subcmd)
     )
 endmacro()
 
-macro(run_vk_layer_xml_generate dependency output)
+macro(run_vk_xml_generate dependency output)
     add_custom_command(OUTPUT ${output}
         COMMAND ${PYTHON_CMD} ${SCRIPTS_DIR}/lvl_genvk.py -registry ${SCRIPTS_DIR}/vk.xml ${output}
         DEPENDS ${SCRIPTS_DIR}/vk.xml ${SCRIPTS_DIR}/generator.py ${SCRIPTS_DIR}/${dependency} ${SCRIPTS_DIR}/lvl_genvk.py ${SCRIPTS_DIR}/reg.py
@@ -155,10 +155,10 @@ add_custom_target(generate_vk_layer_helpers DEPENDS
     vk_safe_struct.cpp
 )
 
-run_vk_layer_xml_generate(threading_generator.py thread_check.h)
-run_vk_layer_xml_generate(parameter_validation_generator.py parameter_validation.h)
-run_vk_layer_xml_generate(unique_objects_generator.py unique_objects_wrappers.h)
-run_vk_layer_xml_generate(dispatch_table_generator.py vk_dispatch_table_helper.h)
+run_vk_xml_generate(threading_generator.py thread_check.h)
+run_vk_xml_generate(parameter_validation_generator.py parameter_validation.h)
+run_vk_xml_generate(unique_objects_generator.py unique_objects_wrappers.h)
+run_vk_xml_generate(dispatch_table_generator.py vk_dispatch_table_helper.h)
 
 # Layer Utils Library
 # For Windows, we use a static lib because the Windows loader has a fairly restrictive loader search
