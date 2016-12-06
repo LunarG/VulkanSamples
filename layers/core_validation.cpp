@@ -5254,23 +5254,27 @@ WaitForFences(VkDevice device, uint32_t fenceCount, const VkFence *pFences, VkBo
     return result;
 }
 
+static bool PreCallValidateGetFenceStatus(layer_data *dev_data, VkFence fence) {
+    return verifyWaitFenceState(dev_data, fence, "vkGetFenceStatus");
+}
+
+static bool PostCallRecordGetFenceStatus(layer_data *dev_data, VkFence fence) { return RetireFence(dev_data, fence); }
+
 VKAPI_ATTR VkResult VKAPI_CALL GetFenceStatus(VkDevice device, VkFence fence) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    bool skip_call = false;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip_call = verifyWaitFenceState(dev_data, fence, "vkGetFenceStatus");
+    bool skip = PreCallValidateGetFenceStatus(dev_data, fence);
     lock.unlock();
-
-    if (skip_call)
+    if (skip)
         return VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkResult result = dev_data->dispatch_table.GetFenceStatus(device, fence);
-    lock.lock();
     if (result == VK_SUCCESS) {
-        skip_call |= RetireFence(dev_data, fence);
+        lock.lock();
+        skip |= PostCallRecordGetFenceStatus(dev_data, fence);
+        lock.unlock();
     }
-    lock.unlock();
-    if (skip_call)
+    if (skip)
         return VK_ERROR_VALIDATION_FAILED_EXT;
     return result;
 }
