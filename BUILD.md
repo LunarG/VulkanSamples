@@ -298,7 +298,7 @@ cd demos/smoke/android
 export ANDROID_SDK_HOME=<path to Android/Sdk>
 export ANDROID_NDK_HOME=<path to Android/Sdk/ndk-bundle>
 ./build-and-install
-adb shell am start com.example.Smoke/android.app.NativeActivity
+adb shell am start -a android.intent.action.MAIN -c android-intent.category.LAUNCH -n com.example.Smoke/android.app.NativeActivity --es args "--validate"
 ```
 
 ## Ninja Builds - All Platforms
