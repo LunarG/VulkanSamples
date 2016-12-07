@@ -22,6 +22,8 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 
     if (BUILD_WSI_MIR_SUPPORT)
         add_definitions(-DVK_USE_PLATFORM_MIR_KHR)
+        find_package(Mir REQUIRED)
+        include_directories(${MIR_INCLUDE_DIR})
     endif()
 else()
     message(FATAL_ERROR "Unsupported Platform!")
