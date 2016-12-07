@@ -277,7 +277,9 @@ static void CreateObject(T1 dispatchable_object, T2 object, VkDebugReportObjectT
 }
 
 template <typename T1, typename T2>
-static void DestroyObject(T1 dispatchable_object, T2 object, VkDebugReportObjectTypeEXT object_type, const VkAllocationCallbacks *pAllocator) {
+static void DestroyObject(T1 dispatchable_object, T2 object, VkDebugReportObjectTypeEXT object_type,
+                          const VkAllocationCallbacks *pAllocator, enum UNIQUE_VALIDATION_ERROR_CODE expected_custom_allocator_code,
+                          enum UNIQUE_VALIDATION_ERROR_CODE expected_default_allocator_code) {
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(dispatchable_object), layer_data_map);
 
     auto object_handle = handle_value(object);
@@ -300,12 +302,19 @@ static void DestroyObject(T1 dispatchable_object, T2 object, VkDebugReportObject
                     device_data->num_objects[pNode->object_type], object_name[pNode->object_type]);
 
             auto allocated_with_custom = (pNode->status & OBJSTATUS_CUSTOM_ALLOCATOR) ? true : false;
-            if (custom_allocator ^ allocated_with_custom) {
+            if (allocated_with_custom && !custom_allocator && expected_custom_allocator_code != VALIDATION_ERROR_UNDEFINED) {
+                // This check only verifies that custom allocation callabacks were provided to both Create and Destroy calls,
+                // it cannot verify that these allocation callbacks are compatible with each other.
                 log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, object_type, object_handle, __LINE__,
-                        OBJTRACK_ALLOCATOR_MISMATCH, LayerName,
-                        "Custom allocator %sspecified while destroying %s obj 0x%" PRIxLEAST64 " but %sspecified at creation",
-                        (custom_allocator ? "" : "not "), object_name[object_type], object_handle,
-                        (allocated_with_custom ? "" : "not "));
+                        expected_custom_allocator_code, LayerName,
+                        "Custom allocator not specified while destroying %s obj 0x%" PRIxLEAST64 " but specified at creation. %s",
+                        object_name[object_type], object_handle, validation_error_map[expected_custom_allocator_code]);
+            } else if (!allocated_with_custom && custom_allocator &&
+                       expected_default_allocator_code != VALIDATION_ERROR_UNDEFINED) {
+                log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, object_type, object_handle, __LINE__,
+                        expected_default_allocator_code, LayerName,
+                        "Custom allocator specified while destroying %s obj 0x%" PRIxLEAST64 " but not specified at creation. %s",
+                        object_name[object_type], object_handle, validation_error_map[expected_default_allocator_code]);
             }
 
             delete pNode;
@@ -321,7 +330,7 @@ static void DestroyObject(T1 dispatchable_object, T2 object, VkDebugReportObject
 
 template <typename T1, typename T2>
 static bool ValidateObject(T1 dispatchable_object, T2 object, VkDebugReportObjectTypeEXT object_type, bool null_allowed,
-                           int error_code) {
+                           enum UNIQUE_VALIDATION_ERROR_CODE error_code) {
     if (null_allowed && (object == VK_NULL_HANDLE)) {
         return false;
     }
@@ -341,14 +350,16 @@ static bool ValidateObject(T1 dispatchable_object, T2 object, VkDebugReportObjec
     return false;
 }
 
-static void DeviceReportUndestroyedObjects(VkDevice device, VkDebugReportObjectTypeEXT object_type) {
+static void DeviceReportUndestroyedObjects(VkDevice device, VkDebugReportObjectTypeEXT object_type,
+                                           enum UNIQUE_VALIDATION_ERROR_CODE error_code) {
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     for (auto item = device_data->object_map[object_type].begin(); item != device_data->object_map[object_type].end();) {
         OBJTRACK_NODE *object_info = item->second;
         log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, object_info->object_type, object_info->handle, __LINE__,
-                OBJTRACK_OBJECT_LEAK, LayerName,
-                "OBJ ERROR : For device 0x%" PRIxLEAST64 ", %s object 0x%" PRIxLEAST64 " has not been destroyed.",
-                reinterpret_cast<uint64_t>(device), object_name[object_type], object_info->handle);
+                error_code, LayerName,
+                "OBJ ERROR : For device 0x%" PRIxLEAST64 ", %s object 0x%" PRIxLEAST64 " has not been destroyed. %s",
+                reinterpret_cast<uint64_t>(device), object_name[object_type], object_info->handle,
+                validation_error_map[error_code]);
         item = device_data->object_map[object_type].erase(item);
     }
 }
@@ -371,7 +382,8 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
     // TODO: The instance handle can not be validated here. The loader will likely have to validate it.
     ValidateObject(instance, instance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, true, VALIDATION_ERROR_00021);
 
-    DestroyObject(instance, instance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pAllocator);
+    DestroyObject(instance, instance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pAllocator, VALIDATION_ERROR_00019,
+                  VALIDATION_ERROR_00020);
     // Report any remaining objects in LL
 
     for (auto iit = instance_data->object_map[VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT].begin();
@@ -384,28 +396,28 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
                 OBJTRACK_OBJECT_LEAK, LayerName, "OBJ ERROR : %s object 0x%" PRIxLEAST64 " has not been destroyed.",
                 string_VkDebugReportObjectTypeEXT(pNode->object_type), pNode->handle);
         // Semaphore:
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT);
+        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, VALIDATION_ERROR_00018);
         // DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT);
     }
     instance_data->object_map[VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT].clear();
@@ -441,31 +453,32 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
 
     std::unique_lock<std::mutex> lock(global_lock);
     ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, true, VALIDATION_ERROR_00052);
-    DestroyObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, pAllocator);
+    DestroyObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, pAllocator, VALIDATION_ERROR_00050,
+                  VALIDATION_ERROR_00051);
 
     // Report any remaining objects associated with this VkDevice object in LL
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT);
+    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT, VALIDATION_ERROR_00049);
     // DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT);
+    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT, VALIDATION_ERROR_00049);
     // DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT);
+    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, VALIDATION_ERROR_00049);
     // DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT);
 
     // Clean up Queue's MemRef Linked Lists
@@ -833,7 +846,8 @@ VKAPI_ATTR void VKAPI_CALL DestroyFence(VkDevice device, VkFence fence, const Vk
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyObject(device, fence, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, pAllocator);
+        DestroyObject(device, fence, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, pAllocator, VALIDATION_ERROR_00174,
+                      VALIDATION_ERROR_00175);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyFence(device, fence, pAllocator);
 }
@@ -923,7 +937,8 @@ VKAPI_ATTR void VKAPI_CALL DestroySemaphore(VkDevice device, VkSemaphore semapho
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyObject(device, semaphore, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT, pAllocator);
+        DestroyObject(device, semaphore, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT, pAllocator, VALIDATION_ERROR_00200,
+                      VALIDATION_ERROR_00201);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroySemaphore(device, semaphore, pAllocator);
 }
@@ -960,7 +975,8 @@ VKAPI_ATTR void VKAPI_CALL DestroyEvent(VkDevice device, VkEvent event, const Vk
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyObject(device, event, VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT, pAllocator);
+        DestroyObject(device, event, VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT, pAllocator, VALIDATION_ERROR_00214,
+                      VALIDATION_ERROR_00215);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyEvent(device, event, pAllocator);
 }
@@ -1039,7 +1055,8 @@ VKAPI_ATTR void VKAPI_CALL DestroyQueryPool(VkDevice device, VkQueryPool queryPo
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyObject(device, queryPool, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, pAllocator);
+        DestroyObject(device, queryPool, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, pAllocator, VALIDATION_ERROR_01013,
+                      VALIDATION_ERROR_01014);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyQueryPool(device, queryPool, pAllocator);
 }
@@ -1092,7 +1109,8 @@ VKAPI_ATTR void VKAPI_CALL DestroyBuffer(VkDevice device, VkBuffer buffer, const
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyObject(device, buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, pAllocator);
+        DestroyObject(device, buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, pAllocator, VALIDATION_ERROR_00677,
+                      VALIDATION_ERROR_00678);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyBuffer(device, buffer, pAllocator);
 }
@@ -1133,7 +1151,8 @@ VKAPI_ATTR void VKAPI_CALL DestroyBufferView(VkDevice device, VkBufferView buffe
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyObject(device, bufferView, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT, pAllocator);
+        DestroyObject(device, bufferView, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT, pAllocator, VALIDATION_ERROR_00702,
+                      VALIDATION_ERROR_00703);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyBufferView(device, bufferView, pAllocator);
 }
@@ -1170,7 +1189,8 @@ VKAPI_ATTR void VKAPI_CALL DestroyImage(VkDevice device, VkImage image, const Vk
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyObject(device, image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, pAllocator);
+        DestroyObject(device, image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, pAllocator, VALIDATION_ERROR_00744,
+                      VALIDATION_ERROR_00745);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyImage(device, image, pAllocator);
 }
@@ -1225,7 +1245,8 @@ VKAPI_ATTR void VKAPI_CALL DestroyImageView(VkDevice device, VkImageView imageVi
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyObject(device, imageView, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT, pAllocator);
+        DestroyObject(device, imageView, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT, pAllocator, VALIDATION_ERROR_00777,
+                      VALIDATION_ERROR_00778);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyImageView(device, imageView, pAllocator);
 }
@@ -1265,7 +1286,8 @@ VKAPI_ATTR void VKAPI_CALL DestroyShaderModule(VkDevice device, VkShaderModule s
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyObject(device, shaderModule, VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT, pAllocator);
+        DestroyObject(device, shaderModule, VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT, pAllocator, VALIDATION_ERROR_00479,
+                      VALIDATION_ERROR_00480);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyShaderModule(device, shaderModule, pAllocator);
 }
@@ -1305,7 +1327,8 @@ VKAPI_ATTR void VKAPI_CALL DestroyPipelineCache(VkDevice device, VkPipelineCache
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyObject(device, pipelineCache, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT, pAllocator);
+        DestroyObject(device, pipelineCache, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT, pAllocator, VALIDATION_ERROR_00583,
+                      VALIDATION_ERROR_00584);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyPipelineCache(device, pipelineCache, pAllocator);
 }
@@ -1362,7 +1385,8 @@ VKAPI_ATTR void VKAPI_CALL DestroyPipeline(VkDevice device, VkPipeline pipeline,
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyObject(device, pipeline, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, pAllocator);
+        DestroyObject(device, pipeline, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, pAllocator, VALIDATION_ERROR_00556,
+                      VALIDATION_ERROR_00557);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyPipeline(device, pipeline, pAllocator);
 }
@@ -1411,7 +1435,8 @@ VKAPI_ATTR void VKAPI_CALL DestroyPipelineLayout(VkDevice device, VkPipelineLayo
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyObject(device, pipelineLayout, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT, pAllocator);
+        DestroyObject(device, pipelineLayout, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT, pAllocator, VALIDATION_ERROR_00883,
+                      VALIDATION_ERROR_00884);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyPipelineLayout(device, pipelineLayout, pAllocator);
 }
@@ -1448,7 +1473,8 @@ VKAPI_ATTR void VKAPI_CALL DestroySampler(VkDevice device, VkSampler sampler, co
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyObject(device, sampler, VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT, pAllocator);
+        DestroyObject(device, sampler, VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT, pAllocator, VALIDATION_ERROR_00838,
+                      VALIDATION_ERROR_00839);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroySampler(device, sampler, pAllocator);
 }
@@ -1504,7 +1530,8 @@ VKAPI_ATTR void VKAPI_CALL DestroyDescriptorSetLayout(VkDevice device, VkDescrip
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyObject(device, descriptorSetLayout, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT, pAllocator);
+        DestroyObject(device, descriptorSetLayout, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT, pAllocator,
+                      VALIDATION_ERROR_00855, VALIDATION_ERROR_00856);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyDescriptorSetLayout(device, descriptorSetLayout, pAllocator);
 }
@@ -1548,8 +1575,8 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetDescriptorPool(VkDevice device, VkDescriptor
         OBJTRACK_NODE *pNode = (*itr).second;
         auto del_itr = itr++;
         if (pNode->parent_object == reinterpret_cast<uint64_t &>(descriptorPool)) {
-            DestroyObject(device, (VkDescriptorSet)((*del_itr).first),
-                                         VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, nullptr);
+            DestroyObject(device, (VkDescriptorSet)((*del_itr).first), VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, nullptr,
+                          VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
         }
     }
     lock.unlock();
@@ -1666,7 +1693,8 @@ VKAPI_ATTR void VKAPI_CALL DestroyFramebuffer(VkDevice device, VkFramebuffer fra
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyObject(device, framebuffer, VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT, pAllocator);
+        DestroyObject(device, framebuffer, VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT, pAllocator, VALIDATION_ERROR_00423,
+                      VALIDATION_ERROR_00424);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyFramebuffer(device, framebuffer, pAllocator);
 }
@@ -1704,7 +1732,8 @@ VKAPI_ATTR void VKAPI_CALL DestroyRenderPass(VkDevice device, VkRenderPass rende
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyObject(device, renderPass, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, pAllocator);
+        DestroyObject(device, renderPass, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, pAllocator, VALIDATION_ERROR_00394,
+                      VALIDATION_ERROR_00395);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyRenderPass(device, renderPass, pAllocator);
 }
@@ -2574,7 +2603,8 @@ VKAPI_ATTR void VKAPI_CALL DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR s
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyObject(instance, surface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, pAllocator);
+        DestroyObject(instance, surface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, pAllocator, VALIDATION_ERROR_01845,
+                      VALIDATION_ERROR_01846);
     }
     get_dispatch_table(ot_instance_table_map, instance)->DestroySurfaceKHR(instance, surface, pAllocator);
 }
@@ -3023,7 +3053,8 @@ VKAPI_ATTR void VKAPI_CALL DestroyDebugReportCallbackEXT(VkInstance instance, Vk
     pInstanceTable->DestroyDebugReportCallbackEXT(instance, msgCallback, pAllocator);
     layer_data *instance_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     layer_destroy_msg_callback(instance_data->report_data, msgCallback, pAllocator);
-    DestroyObject(instance, msgCallback, VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT, pAllocator);
+    DestroyObject(instance, msgCallback, VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT, pAllocator, VALIDATION_ERROR_02049,
+                  VALIDATION_ERROR_02050);
 }
 
 VKAPI_ATTR void VKAPI_CALL DebugReportMessageEXT(VkInstance instance, VkDebugReportFlagsEXT flags,
@@ -3330,7 +3361,8 @@ VKAPI_ATTR void VKAPI_CALL FreeMemory(VkDevice device, VkDeviceMemory memory, co
         get_dispatch_table(ot_device_table_map, device)->FreeMemory(device, memory, pAllocator);
 
         lock.lock();
-        DestroyObject(device, memory, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, pAllocator);
+        DestroyObject(device, memory, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, pAllocator, VALIDATION_ERROR_UNDEFINED,
+                      VALIDATION_ERROR_UNDEFINED);
     }
 }
 
@@ -3450,7 +3482,8 @@ VKAPI_ATTR void VKAPI_CALL FreeCommandBuffers(VkDevice device, VkCommandPool com
     }
 
     for (uint32_t i = 0; i < commandBufferCount; i++) {
-        DestroyObject(device, pCommandBuffers[i], VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, nullptr);
+        DestroyObject(device, pCommandBuffers[i], VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, nullptr,
+                      VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
     }
 
     lock.unlock();
@@ -3475,7 +3508,8 @@ VKAPI_ATTR void VKAPI_CALL DestroySwapchainKHR(VkDevice device, VkSwapchainKHR s
             ++itr;
         }
     }
-    DestroyObject(device, swapchain, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, pAllocator);
+    DestroyObject(device, swapchain, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, pAllocator, VALIDATION_ERROR_01938,
+                  VALIDATION_ERROR_01939);
     lock.unlock();
 
     get_dispatch_table(ot_device_table_map, device)->DestroySwapchainKHR(device, swapchain, pAllocator);
@@ -3494,7 +3528,8 @@ VKAPI_ATTR VkResult VKAPI_CALL FreeDescriptorSets(VkDevice device, VkDescriptorP
     }
 
     for (uint32_t i = 0; i < descriptorSetCount; i++) {
-        DestroyObject(device, pDescriptorSets[i], VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, nullptr);
+        DestroyObject(device, pDescriptorSets[i], VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, nullptr,
+                      VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
     }
 
     lock.unlock();
@@ -3526,11 +3561,12 @@ VKAPI_ATTR void VKAPI_CALL DestroyDescriptorPool(VkDevice device, VkDescriptorPo
         OBJTRACK_NODE *pNode = (*itr).second;
         auto del_itr = itr++;
         if (pNode->parent_object == reinterpret_cast<uint64_t &>(descriptorPool)) {
-            DestroyObject(device, (VkDescriptorSet)((*del_itr).first),
-                                         VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, nullptr);
+            DestroyObject(device, (VkDescriptorSet)((*del_itr).first), VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, nullptr,
+                          VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
         }
     }
-    DestroyObject(device, descriptorPool, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT, pAllocator);
+    DestroyObject(device, descriptorPool, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT, pAllocator, VALIDATION_ERROR_00902,
+                  VALIDATION_ERROR_00903);
     lock.unlock();
     get_dispatch_table(ot_device_table_map, device)->DestroyDescriptorPool(device, descriptorPool, pAllocator);
 }
@@ -3556,10 +3592,12 @@ VKAPI_ATTR void VKAPI_CALL DestroyCommandPool(VkDevice device, VkCommandPool com
         if (pNode->parent_object == reinterpret_cast<uint64_t &>(commandPool)) {
             skip_call |= ValidateCommandBuffer(device, commandPool, reinterpret_cast<VkCommandBuffer>((*del_itr).first));
             DestroyObject(device, reinterpret_cast<VkCommandBuffer>((*del_itr).first),
-                                      VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, nullptr);
+                          VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, nullptr, VALIDATION_ERROR_UNDEFINED,
+                          VALIDATION_ERROR_UNDEFINED);
         }
     }
-    DestroyObject(device, commandPool, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT, pAllocator);
+    DestroyObject(device, commandPool, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT, pAllocator, VALIDATION_ERROR_00078,
+                  VALIDATION_ERROR_00079);
     lock.unlock();
     get_dispatch_table(ot_device_table_map, device)->DestroyCommandPool(device, commandPool, pAllocator);
 }
