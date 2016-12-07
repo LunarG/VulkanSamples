@@ -39,6 +39,10 @@
 #define APP_NAME_STR_LEN 80
 #endif // _WIN32
 
+#if defined(VK_USE_PLATFORM_MIR_KHR)
+#warning "Cube does not have code for Mir at this time"
+#endif
+
 #ifdef ANDROID
 #include "vulkan_wrapper.h"
 #else
@@ -308,6 +312,7 @@ struct demo {
     struct wl_surface *window;
     struct wl_shell *shell;
     struct wl_shell_surface *shell_surface;
+#elif defined(VK_USE_PLATFORM_MIR_KHR)
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
     ANativeWindow* window;
 #endif
@@ -2087,6 +2092,7 @@ static void demo_cleanup(struct demo *demo) {
     wl_compositor_destroy(demo->compositor);
     wl_registry_destroy(demo->registry);
     wl_display_disconnect(demo->display);
+#elif defined(VK_USE_PLATFORM_MIR_KHR)
 #endif
 }
 
@@ -2503,6 +2509,7 @@ static void demo_run(struct demo *demo) {
     demo_draw(demo);
     demo->curFrame++;
 }
+#elif defined(VK_USE_PLATFORM_MIR_KHR)
 #endif
 
 /*
@@ -2648,6 +2655,7 @@ static void demo_init_vk(struct demo *demo) {
                 demo->extension_names[demo->enabled_extension_count++] =
                     VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME;
             }
+#elif defined(VK_USE_PLATFORM_MIR_KHR)
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
             if (!strcmp(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME,
                         instance_extensions[i].extensionName)) {
@@ -2703,6 +2711,7 @@ static void demo_init_vk(struct demo *demo) {
                  "look at the Getting Started guide for additional "
                  "information.\n",
                  "vkCreateInstance Failure");
+#elif defined(VK_USE_PLATFORM_MIR_KHR)
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
         ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
                  "the " VK_KHR_ANDROID_SURFACE_EXTENSION_NAME
@@ -2969,6 +2978,7 @@ static void demo_init_vk_swapchain(struct demo *demo) {
 
     err = vkCreateWaylandSurfaceKHR(demo->inst, &createInfo, NULL,
                                     &demo->surface);
+#elif defined(VK_USE_PLATFORM_MIR_KHR)
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
     VkAndroidSurfaceCreateInfoKHR createInfo;
     createInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
@@ -3149,6 +3159,7 @@ static void registry_handle_global_remove(void *data UNUSED,
 
 static const struct wl_registry_listener registry_listener = {
     registry_handle_global, registry_handle_global_remove};
+#elif defined(VK_USE_PLATFORM_MIR_KHR)
 #endif
 
 static void demo_init_connection(struct demo *demo) {
@@ -3184,6 +3195,7 @@ static void demo_init_connection(struct demo *demo) {
     demo->registry = wl_display_get_registry(demo->display);
     wl_registry_add_listener(demo->registry, &registry_listener, demo);
     wl_display_dispatch(demo->display);
+#elif defined(VK_USE_PLATFORM_MIR_KHR)
 #endif
 }
 
@@ -3458,6 +3470,7 @@ int main(int argc, char **argv) {
     demo_create_xlib_window(&demo);
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
     demo_create_window(&demo);
+#elif defined(VK_USE_PLATFORM_MIR_KHR)
 #endif
 
     demo_init_vk_swapchain(&demo);
@@ -3470,6 +3483,7 @@ int main(int argc, char **argv) {
     demo_run_xlib(&demo);
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
     demo_run(&demo);
+#elif defined(VK_USE_PLATFORM_MIR_KHR)
 #endif
 
     demo_cleanup(&demo);
