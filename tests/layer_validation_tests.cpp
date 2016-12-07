@@ -10399,6 +10399,7 @@ TEST_F(VkLayerTest, InvalidImageLayout) {
     // Create src & dst images to use for copy operations
     VkImage src_image;
     VkImage dst_image;
+    VkImage depth_image;
 
     const VkFormat tex_format = VK_FORMAT_B8G8R8A8_UNORM;
     const int32_t tex_width = 32;
@@ -10417,11 +10418,54 @@ TEST_F(VkLayerTest, InvalidImageLayout) {
     image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
     image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
     image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     image_create_info.flags = 0;
 
     VkResult err = vkCreateImage(m_device->device(), &image_create_info, NULL, &src_image);
     ASSERT_VK_SUCCESS(err);
+    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     err = vkCreateImage(m_device->device(), &image_create_info, NULL, &dst_image);
+    ASSERT_VK_SUCCESS(err);
+    image_create_info.format = VK_FORMAT_D32_SFLOAT;
+    image_create_info.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    err = vkCreateImage(m_device->device(), &image_create_info, NULL, &depth_image);
+    ASSERT_VK_SUCCESS(err);
+
+    // Allocate memory
+    VkMemoryRequirements img_mem_reqs = {};
+    VkMemoryAllocateInfo memAlloc = {};
+    VkDeviceMemory src_image_mem, dst_image_mem, depth_image_mem;
+    memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    memAlloc.pNext = NULL;
+    memAlloc.allocationSize = 0;
+    memAlloc.memoryTypeIndex = 0;
+
+    vkGetImageMemoryRequirements(m_device->device(), src_image, &img_mem_reqs);
+    memAlloc.allocationSize = img_mem_reqs.size;
+    bool pass = m_device->phy().set_memory_type(img_mem_reqs.memoryTypeBits, &memAlloc, 0);
+    ASSERT_TRUE(pass);
+    err = vkAllocateMemory(m_device->device(), &memAlloc, NULL, &src_image_mem);
+    ASSERT_VK_SUCCESS(err);
+
+    vkGetImageMemoryRequirements(m_device->device(), dst_image, &img_mem_reqs);
+    memAlloc.allocationSize = img_mem_reqs.size;
+    pass = m_device->phy().set_memory_type(img_mem_reqs.memoryTypeBits, &memAlloc, 0);
+    ASSERT_VK_SUCCESS(err);
+    err = vkAllocateMemory(m_device->device(), &memAlloc, NULL, &dst_image_mem);
+    ASSERT_VK_SUCCESS(err);
+
+    vkGetImageMemoryRequirements(m_device->device(), depth_image, &img_mem_reqs);
+    memAlloc.allocationSize = img_mem_reqs.size;
+    pass = m_device->phy().set_memory_type(img_mem_reqs.memoryTypeBits, &memAlloc, 0);
+    ASSERT_VK_SUCCESS(err);
+    err = vkAllocateMemory(m_device->device(), &memAlloc, NULL, &depth_image_mem);
+    ASSERT_VK_SUCCESS(err);
+
+    err = vkBindImageMemory(m_device->device(), src_image, src_image_mem, 0);
+    ASSERT_VK_SUCCESS(err);
+    err = vkBindImageMemory(m_device->device(), dst_image, dst_image_mem, 0);
+    ASSERT_VK_SUCCESS(err);
+    err = vkBindImageMemory(m_device->device(), depth_image, depth_image_mem, 0);
     ASSERT_VK_SUCCESS(err);
 
     BeginCommandBuffer();
@@ -10474,6 +10518,25 @@ TEST_F(VkLayerTest, InvalidImageLayout) {
     m_commandBuffer->CopyImage(src_image, VK_IMAGE_LAYOUT_GENERAL, dst_image, VK_IMAGE_LAYOUT_UNDEFINED, 1, &copyRegion);
     m_errorMonitor->VerifyFound();
 
+    // Convert dst and depth images to TRANSFER_DST for subsequent tests
+    VkImageMemoryBarrier transfer_dst_image_barrier[1] = {};
+    transfer_dst_image_barrier[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    transfer_dst_image_barrier[0].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    transfer_dst_image_barrier[0].newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    transfer_dst_image_barrier[0].srcAccessMask = 0;
+    transfer_dst_image_barrier[0].dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    transfer_dst_image_barrier[0].image = dst_image;
+    transfer_dst_image_barrier[0].subresourceRange.layerCount = image_create_info.arrayLayers;
+    transfer_dst_image_barrier[0].subresourceRange.levelCount = image_create_info.mipLevels;
+    transfer_dst_image_barrier[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
+                         NULL, 0, NULL, 1, transfer_dst_image_barrier);
+    transfer_dst_image_barrier[0].image = depth_image;
+    transfer_dst_image_barrier[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
+                         NULL, 0, NULL, 1, transfer_dst_image_barrier);
+
+    // Cause errors due to clearing with invalid image layouts
     VkClearColorValue clearValue = {};
     VkImageSubresourceRange clearRange;
     clearRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -10482,23 +10545,47 @@ TEST_F(VkLayerTest, InvalidImageLayout) {
     clearRange.layerCount = 1;
     clearRange.levelCount = 1;
 
-    m_errorMonitor->SetDesiredFailureMsg(
-        VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "Layout for cleared image is VK_IMAGE_LAYOUT_UNDEFINED but can only be TRANSFER_DST_OPTIMAL or GENERAL.");
+    // Fail due to explicitly prohibited layout for color clear (only GENERAL and TRANSFER_DST are permitted).
+    // Since the image is currently not in UNDEFINED layout, this will emit two errors.
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01086);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01085);
     m_commandBuffer->ClearColorImage(dst_image, VK_IMAGE_LAYOUT_UNDEFINED, &clearValue, 1, &clearRange);
     m_errorMonitor->VerifyFound();
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Cannot clear an image whose layout is "
-                                                                        "VK_IMAGE_LAYOUT_UNDEFINED and doesn't match the current "
-                                                                        "layout VK_IMAGE_LAYOUT_GENERAL.");
-    m_commandBuffer->ClearColorImage(dst_image, VK_IMAGE_LAYOUT_UNDEFINED, &clearValue, 1, &clearRange);
+    // Fail due to provided layout not matching actual current layout for color clear.
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01085);
+    m_commandBuffer->ClearColorImage(dst_image, VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &clearRange);
     m_errorMonitor->VerifyFound();
+    // This one should work correctly
+    m_errorMonitor->ExpectSuccess();
+    m_commandBuffer->ClearColorImage(dst_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearValue, 1, &clearRange);
+    m_errorMonitor->VerifyNotFound();
+
+    VkClearDepthStencilValue depthClearValue = {};
+    clearRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+
+    // Fail due to explicitly prohibited layout for depth clear (only GENERAL and TRANSFER_DST are permitted).
+    // Since the image is currently not in UNDEFINED layout, this will emit two errors.
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01101);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01100);
+    m_commandBuffer->ClearDepthStencilImage(depth_image, VK_IMAGE_LAYOUT_UNDEFINED, &depthClearValue, 1, &clearRange);
+    m_errorMonitor->VerifyFound();
+    // Fail due to provided layout not matching actual current layout for depth clear.
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01100);
+    m_commandBuffer->ClearDepthStencilImage(depth_image, VK_IMAGE_LAYOUT_GENERAL, &depthClearValue, 1, &clearRange);
+    m_errorMonitor->VerifyFound();
+    // This one should work correctly
+    m_errorMonitor->ExpectSuccess();
+    m_commandBuffer->ClearDepthStencilImage(depth_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &depthClearValue, 1, &clearRange);
+    m_errorMonitor->VerifyNotFound();
 
     // Now cause error due to bad image layout transition in PipelineBarrier
     VkImageMemoryBarrier image_barrier[1] = {};
+    image_barrier[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     image_barrier[0].oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+    image_barrier[0].newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
     image_barrier[0].image = src_image;
-    image_barrier[0].subresourceRange.layerCount = 2;
-    image_barrier[0].subresourceRange.levelCount = 2;
+    image_barrier[0].subresourceRange.layerCount = image_create_info.arrayLayers;
+    image_barrier[0].subresourceRange.levelCount = image_create_info.mipLevels;
     image_barrier[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "You cannot transition the layout from "
                                                                         "VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL when "
@@ -10585,8 +10672,12 @@ TEST_F(VkLayerTest, InvalidImageLayout) {
     vkCreateRenderPass(m_device->device(), &rpci, NULL, &rp);
     m_errorMonitor->VerifyFound();
 
+    vkFreeMemory(m_device->device(), src_image_mem, NULL);
+    vkFreeMemory(m_device->device(), dst_image_mem, NULL);
+    vkFreeMemory(m_device->device(), depth_image_mem, NULL);
     vkDestroyImage(m_device->device(), src_image, NULL);
     vkDestroyImage(m_device->device(), dst_image, NULL);
+    vkDestroyImage(m_device->device(), depth_image, NULL);
 }
 
 TEST_F(VkLayerTest, InvalidStorageImageLayout) {
