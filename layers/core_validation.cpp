@@ -10988,24 +10988,25 @@ CmdExecuteCommands(VkCommandBuffer commandBuffer, uint32_t commandBuffersCount, 
             if (!pSubCB) {
                 skip_call |=
                     log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                            DRAWSTATE_INVALID_SECONDARY_COMMAND_BUFFER, "DS",
-                            "vkCmdExecuteCommands() called w/ invalid Cmd Buffer 0x%p in element %u of pCommandBuffers array.",
-                            (void *)pCommandBuffers[i], i);
+                            VALIDATION_ERROR_00160, "DS",
+                            "vkCmdExecuteCommands() called w/ invalid Cmd Buffer 0x%p in element %u of pCommandBuffers array. %s",
+                            (void *)pCommandBuffers[i], i, validation_error_map[VALIDATION_ERROR_00160]);
             } else if (VK_COMMAND_BUFFER_LEVEL_PRIMARY == pSubCB->createInfo.level) {
                 skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
-                                     __LINE__, DRAWSTATE_INVALID_SECONDARY_COMMAND_BUFFER, "DS",
+                                     __LINE__, VALIDATION_ERROR_00153, "DS",
                                      "vkCmdExecuteCommands() called w/ Primary Cmd Buffer 0x%p in element %u of pCommandBuffers "
-                                     "array. All cmd buffers in pCommandBuffers array must be secondary.",
-                                     (void *)pCommandBuffers[i], i);
+                                     "array. All cmd buffers in pCommandBuffers array must be secondary. %s",
+                                     (void *)pCommandBuffers[i], i, validation_error_map[VALIDATION_ERROR_00153]);
             } else if (pCB->activeRenderPass) { // Secondary CB w/i RenderPass must have *CONTINUE_BIT set
                 auto secondary_rp_state = getRenderPassState(dev_data, pSubCB->beginInfo.pInheritanceInfo->renderPass);
                 if (!(pSubCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT)) {
                     skip_call |= log_msg(
                         dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                        (uint64_t)pCommandBuffers[i], __LINE__, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",
+                        (uint64_t)pCommandBuffers[i], __LINE__, VALIDATION_ERROR_02057, "DS",
                         "vkCmdExecuteCommands(): Secondary Command Buffer (0x%p) executed within render pass (0x%" PRIxLEAST64
-                        ") must have had vkBeginCommandBuffer() called w/ VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT set.",
-                        (void *)pCommandBuffers[i], (uint64_t)pCB->activeRenderPass->renderPass);
+                        ") must have had vkBeginCommandBuffer() called w/ VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT set. %s",
+                        (void *)pCommandBuffers[i], (uint64_t)pCB->activeRenderPass->renderPass,
+                        validation_error_map[VALIDATION_ERROR_02057]);
                 } else {
                     // Make sure render pass is compatible with parent command buffer pass if has continue
                     if (pCB->activeRenderPass->renderPass != secondary_rp_state->renderPass) {
@@ -11037,12 +11038,12 @@ CmdExecuteCommands(VkCommandBuffer commandBuffer, uint32_t commandBuffersCount, 
             // being recorded
             if (!(pSubCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT)) {
                 if (dev_data->globalInFlightCmdBuffers.find(pSubCB->commandBuffer) != dev_data->globalInFlightCmdBuffers.end()) {
-                    skip_call |= log_msg(
-                        dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                        (uint64_t)(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_CB_SIMULTANEOUS_USE, "DS",
-                        "Attempt to simultaneously execute command buffer 0x%" PRIxLEAST64
-                        " without VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set!",
-                        (uint64_t)(pCB->commandBuffer));
+                    skip_call |=
+                        log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)(pCB->commandBuffer), __LINE__,
+                                VALIDATION_ERROR_00154, "DS", "Attempt to simultaneously execute command buffer 0x%" PRIxLEAST64
+                                                              " without VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set! %s",
+                                (uint64_t)(pCB->commandBuffer), validation_error_map[VALIDATION_ERROR_00154]);
                 }
                 if (pCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT) {
                     // Warn that non-simultaneous secondary cmd buffer renders primary non-simultaneous
@@ -11060,12 +11061,12 @@ CmdExecuteCommands(VkCommandBuffer commandBuffer, uint32_t commandBuffersCount, 
             if (!pCB->activeQueries.empty() && !dev_data->enabled_features.inheritedQueries) {
                 skip_call |=
                     log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            reinterpret_cast<uint64_t>(pCommandBuffers[i]), __LINE__, DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
+                            reinterpret_cast<uint64_t>(pCommandBuffers[i]), __LINE__, VALIDATION_ERROR_02062, "DS",
                             "vkCmdExecuteCommands(): Secondary Command Buffer "
                             "(0x%" PRIxLEAST64 ") cannot be submitted with a query in "
                             "flight and inherited queries not "
-                            "supported on this device.",
-                            reinterpret_cast<uint64_t>(pCommandBuffers[i]));
+                            "supported on this device. %s",
+                            reinterpret_cast<uint64_t>(pCommandBuffers[i]), validation_error_map[VALIDATION_ERROR_02062]);
             }
             // Propagate layout transitions to the primary cmd buffer
             for (auto ilm_entry : pSubCB->imageLayoutMap) {
