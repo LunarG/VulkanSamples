@@ -12,26 +12,38 @@ set(API_NAME "Vulkan" CACHE STRING "API name to use when building")
 set(MAJOR "1")
 string(TOLOWER ${API_NAME} API_LOWERCASE)
 
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(PythonInterp 3 REQUIRED)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    include(FindPkgConfig)
     option(BUILD_WSI_XCB_SUPPORT "Build XCB WSI support" ON)
     option(BUILD_WSI_XLIB_SUPPORT "Build Xlib WSI support" ON)
     option(BUILD_WSI_WAYLAND_SUPPORT "Build Wayland WSI support" ON)
     option(BUILD_WSI_MIR_SUPPORT "Build Mir WSI support" ON)
     option(DEMOS_WSI_SELECTION "Select WSI to use to build demos" XCB)
-endif()
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+    if (BUILD_WSI_XCB_SUPPORT)
+        find_package(XCB REQUIRED)
+    endif()
+
+    if (BUILD_WSI_XLIB_SUPPORT)
+        find_package(X11 REQUIRED)
+    endif()
+
+    if (BUILD_WSI_WAYLAND_SUPPORT)
+        find_package(Wayland REQUIRED)
+    endif()
+
+    if (BUILD_WSI_MIR_SUPPORT)
+        find_package(Mir REQUIRED)
+    endif()
+endif()
 
 set(SCRIPTS_DIR "${CMAKE_SOURCE_DIR}/scripts")
 
 # Header file for CMake settings
 include_directories("${PROJECT_SOURCE_DIR}/include")
-
-if(NOT WIN32)
-    include(FindPkgConfig)
-endif()
 
 if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
     set(COMMON_COMPILE_FLAGS "-Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers")
@@ -50,9 +62,6 @@ if(WIN32)
 endif()
 
 if(NOT WIN32)
-    if (BUILD_WSI_XCB_SUPPORT)
-        find_package(XCB REQUIRED)
-    endif()
     set (BUILDTGT_DIR build)
     set (BINDATA_DIR Bin)
     set (LIBSOURCE_DIR Lib)
