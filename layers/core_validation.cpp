@@ -4586,20 +4586,23 @@ static bool validateAndIncrementResources(layer_data *dev_data, GLOBAL_CB_NODE *
 // For the given queue, verify the queue state up to the given seq number.
 // Currently the only check is to make sure that if there are events to be waited on prior to
 //  a QueryReset, make sure that all such events have been signalled.
-static bool VerifyQueueStateToSeq(layer_data *my_data, QUEUE_NODE *queue, uint64_t seq) {
+static bool VerifyQueueStateToSeq(layer_data *dev_data, QUEUE_NODE *queue, uint64_t seq) {
     bool skip = false;
     auto queue_seq = queue->seq;
-    // local copy of submissions as we're only simulating queue retirement
-    auto submissions = queue->submissions;
+    std::unordered_map<VkQueue, uint64_t> other_queue_seqs;
+    auto sub_it = queue->submissions.begin();
     while (queue_seq < seq) {
-        auto &submission = submissions.front();
-        for (auto cb : submission.cbs) {
-            auto cb_node = getCBNode(my_data, cb);
+        for (auto &wait : sub_it->waitSemaphores) {
+            auto &last_seq = other_queue_seqs[wait.queue];
+            last_seq = std::max(last_seq, wait.seq);
+        }
+        for (auto cb : sub_it->cbs) {
+            auto cb_node = getCBNode(dev_data, cb);
             if (cb_node) {
                 for (auto queryEventsPair : cb_node->waitedEventsBeforeQueryReset) {
                     for (auto event : queryEventsPair.second) {
-                        if (my_data->eventMap[event].needsSignaled) {
-                            skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                        if (dev_data->eventMap[event].needsSignaled) {
+                            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                             VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, 0, DRAWSTATE_INVALID_QUERY, "DS",
                                             "Cannot get query results on queryPool 0x%" PRIx64
                                             " with index %d which was guarded by unsignaled event 0x%" PRIx64 ".",
@@ -4609,8 +4612,11 @@ static bool VerifyQueueStateToSeq(layer_data *my_data, QUEUE_NODE *queue, uint64
                 }
             }
         }
-        submissions.pop_front();
+        sub_it++;
         queue_seq++;
+    }
+    for (auto qs : other_queue_seqs) {
+        skip |= VerifyQueueStateToSeq(dev_data, getQueueNode(dev_data, qs.first), qs.second);
     }
     return skip;
 }
@@ -5323,7 +5329,8 @@ VKAPI_ATTR VkResult VKAPI_CALL QueueWaitIdle(VkQueue queue) {
     std::unique_lock<std::mutex> lock(global_lock);
     bool skip = PreCallValidateQueueWaitIdle(dev_data, queue, &queue_state);
     lock.unlock();
-    if (skip) return VK_ERROR_VALIDATION_FAILED_EXT;
+    if (skip)
+        return VK_ERROR_VALIDATION_FAILED_EXT;
     VkResult result = dev_data->dispatch_table.QueueWaitIdle(queue);
     if (VK_SUCCESS == result) {
         lock.lock();
