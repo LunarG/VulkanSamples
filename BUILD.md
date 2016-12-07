@@ -23,12 +23,12 @@ git clone https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers
 The build process uses CMake to generate makefiles for this project.
 The build generates the loader, layers, and tests.
 
-This repo has been built and tested on Ubuntu 14.04.3 LTS, 14.10, 15.04, 15.10, and 16.04 LTS.
+This repo has been built and tested on the two most recent Ubuntu LTS versions.
 It should be straightforward to use it on other Linux distros.
 
 These packages are needed to build this repository:
 ```
-sudo apt-get install git cmake build-essential bison libx11-dev libxcb1-dev libxkbcommon-dev
+sudo apt-get install git cmake build-essential bison libx11-dev libxcb1-dev libxkbcommon-dev libmirclient-dev libwayland-dev
 ```
 
 Example debug build (Note that the update\_external\_sources script used below builds external tools into predefined locations. See **Loader and Validation Layer Dependencies** for more information and other options):
@@ -53,6 +53,11 @@ You can run the `vulkaninfo` application to see which driver, loader and layers 
 The `LoaderAndLayerInterface` document in the `loader` folder in this repository is a specification that
 describes both how ICDs and layers should be properly
 packaged, and how developers can point to ICDs and layers within their builds.
+
+### WSI Support Build Options
+By default, the Vulkan Loader and Validation Layers are built with support for all 4 Vulkan-defined WSI display systems, Xcb, Xlib, Wayland, and Mir.  It is recommended to build these modules with support for these
+display systems to maximize their usability across Linux platforms.
+If it is necessary to build these modules without support for one of the display systems, the appropriate CMake option of the form BUILD_WSI_xxx_SUPPORT can be set to OFF.   See the top-level CMakeLists.txt file for more info.
 
 ### Linux Install to System Directories
 
@@ -168,6 +173,12 @@ Some demos that can be found in the dbuild/demos directory are:
 - vulkaninfo: report GPU properties
 - cube: a textured spinning cube
 - smoke/smoke: A "smoke" test using a more complex Vulkan demo
+
+You can select which WSI subsystem is used to build the demos using a cmake option called DEMOS_WSI_SELECTION.
+Supported options are XCB (default), XLIB, WAYLAND, and MIR.  Note that you must build using the corresponding BUILD_WSI_*_SUPPORT enabled at the base repo level (all SUPPORT options are ON by default).
+For instance, creating a build that will use Xlib to build the demos, your cmake command line might look like:
+
+cmake -H. -Bbuild -DCMAKE_BUILD_TYPE=Debug -DDEMOS_WSI_SELECTION=XLIB
 
 ## Windows System Requirements
 
