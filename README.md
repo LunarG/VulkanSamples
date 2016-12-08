@@ -2,6 +2,11 @@
 
 This project provides Khronos official ICD loader and validation layers for Vulkan developers on Windows and Linux.
 
+## Travis-CI Build Status
+| Platform | Build Status |
+|:--------:|:------------:|
+| Linux    | [![Linux Build Status](https://travis-ci.org/KhronosGroup/Vulkan-LoaderAndValidationLayers.svg)](https://travis-ci.org/KhronosGroup/Vulkan-LoaderAndValidationLayers "Linux Build Status") |
+
 ## Introduction
 
 Vulkan is an Explicit API, enabling direct control over how GPUs actually work. No (or very little) validation
