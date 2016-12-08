@@ -21,10 +21,12 @@
 
 namespace {
 
+#if defined(VK_USE_PLATFORM_ANDROID_KHR)
 Game *create_game(const std::vector<std::string> &args)
 {
     return new Smoke(args);
 }
+#endif
 
 Game *create_game(int argc, char **argv)
 {
