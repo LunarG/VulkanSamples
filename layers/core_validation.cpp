@@ -8243,34 +8243,32 @@ static bool VerifyDestImageLayout(layer_data *dev_data, GLOBAL_CB_NODE *cb_node,
 }
 
 static bool VerifyClearImageLayout(layer_data *dev_data, GLOBAL_CB_NODE *cb_node, VkImage image, VkImageSubresourceRange range,
-                                   VkImageLayout destImageLayout, const char *func_name) {
-    bool skip_call = false;
+                                   VkImageLayout dest_image_layout, const char *func_name) {
+    bool skip = false;
 
     VkImageSubresourceRange resolvedRange = range;
     ResolveRemainingLevelsLayers(dev_data, &resolvedRange, image);
 
-    if (destImageLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-        if (destImageLayout == VK_IMAGE_LAYOUT_GENERAL) {
+    if (dest_image_layout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+        if (dest_image_layout == VK_IMAGE_LAYOUT_GENERAL) {
             auto image_state = getImageState(dev_data, image);
             if (image_state->createInfo.tiling != VK_IMAGE_TILING_LINEAR) {
                 // LAYOUT_GENERAL is allowed, but may not be performance optimal, flag as perf warning.
-                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
-                                     (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                                     "Layout for cleared image should be TRANSFER_DST_OPTIMAL instead of GENERAL.");
+                skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0,
+                                0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                                "%s: Layout for cleared image should be TRANSFER_DST_OPTIMAL instead of GENERAL.", func_name);
             }
         } else {
-            UNIQUE_VALIDATION_ERROR_CODE error_code = VALIDATION_ERROR_00000;
-            if (strcmp(func_name, "vkCmdClearColorImage()") == 0) {
-                error_code = VALIDATION_ERROR_01086;
-            } else if (strcmp(func_name, "vkCmdClearDepthStencilImage()") == 0) {
+            UNIQUE_VALIDATION_ERROR_CODE error_code = VALIDATION_ERROR_01086;
+            if (strcmp(func_name, "vkCmdClearDepthStencilImage()") == 0) {
                 error_code = VALIDATION_ERROR_01101;
             } else {
-                assert(0);
+                assert(strcmp(func_name, "vkCmdClearColorImage()") == 0);
             }
-            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                                 error_code, "DS", "Layout for cleared image is %s but can only be "
-                                                   "TRANSFER_DST_OPTIMAL or GENERAL. %s",
-                                 string_VkImageLayout(destImageLayout), validation_error_map[error_code]);
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                            error_code, "DS", "%s: Layout for cleared image is %s but can only be "
+                                              "TRANSFER_DST_OPTIMAL or GENERAL. %s",
+                            func_name, string_VkImageLayout(dest_image_layout), validation_error_map[error_code]);
         }
     }
 
@@ -8281,28 +8279,27 @@ static bool VerifyClearImageLayout(layer_data *dev_data, GLOBAL_CB_NODE *cb_node
             VkImageSubresource sub = {range.aspectMask, level, layer};
             IMAGE_CMD_BUF_LAYOUT_NODE node;
             if (!FindLayout(cb_node, image, sub, node)) {
-                SetLayout(cb_node, image, sub, IMAGE_CMD_BUF_LAYOUT_NODE(destImageLayout, destImageLayout));
+                SetLayout(cb_node, image, sub, IMAGE_CMD_BUF_LAYOUT_NODE(dest_image_layout, dest_image_layout));
                 continue;
             }
-            if (node.layout != destImageLayout) {
-                UNIQUE_VALIDATION_ERROR_CODE error_code = VALIDATION_ERROR_00000;
-                if (strcmp(func_name, "vkCmdClearColorImage()") == 0) {
-                    error_code = VALIDATION_ERROR_01085;
-                } else if (strcmp(func_name, "vkCmdClearDepthStencilImage()") == 0) {
+            if (node.layout != dest_image_layout) {
+                UNIQUE_VALIDATION_ERROR_CODE error_code = VALIDATION_ERROR_01085;
+                if (strcmp(func_name, "vkCmdClearDepthStencilImage()") == 0) {
                     error_code = VALIDATION_ERROR_01100;
                 } else {
-                    assert(0);
+                    assert(strcmp(func_name, "vkCmdClearColorImage()") == 0);
                 }
-                skip_call |= log_msg(
-                    dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0,
-                    __LINE__, error_code, "DS", "Cannot clear an image whose layout is %s and "
-                                                "doesn't match the current layout %s. %s",
-                    string_VkImageLayout(destImageLayout), string_VkImageLayout(node.layout), validation_error_map[error_code]);
+                skip |=
+                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0,
+                            __LINE__, error_code, "DS", "%s: Cannot clear an image whose layout is %s and "
+                                                        "doesn't match the current layout %s. %s",
+                            func_name, string_VkImageLayout(dest_image_layout), string_VkImageLayout(node.layout),
+                            validation_error_map[error_code]);
             }
         }
     }
 
-    return skip_call;
+    return skip;
 }
 
 // Test if two VkExtent3D structs are equivalent
