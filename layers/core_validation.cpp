@@ -11984,6 +11984,9 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device, const VkSwapc
     }
 
     // Spec requires that even if CreateSwapchainKHR fails, oldSwapchain behaves as replaced.
+    if (old_swapchain_state) {
+        old_swapchain_state->replaced = true;
+    }
     surface_state->old_swapchain = old_swapchain_state;
 
     return result;
