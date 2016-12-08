@@ -3516,15 +3516,38 @@ TEST_F(VkLayerTest, FramebufferCreateErrors) {
         vkDestroyFramebuffer(m_device->device(), fb, NULL);
     }
     vkDestroyImageView(m_device->device(), view, NULL);
-    // Request fb that exceeds max dimensions
     // reset attachment to color attachment
     fb_info.pAttachments = ivs;
+
+    // Request fb that exceeds max width
     fb_info.width = m_device->props.limits.maxFramebufferWidth + 1;
+    fb_info.height = 100;
+    fb_info.layers = 1;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00413);
+    err = vkCreateFramebuffer(device(), &fb_info, NULL, &fb);
+
+    m_errorMonitor->VerifyFound();
+    if (err == VK_SUCCESS) {
+        vkDestroyFramebuffer(m_device->device(), fb, NULL);
+    }
+
+    // Request fb that exceeds max height
+    fb_info.width = 100;
     fb_info.height = m_device->props.limits.maxFramebufferHeight + 1;
+    fb_info.layers = 1;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00414);
+    err = vkCreateFramebuffer(device(), &fb_info, NULL, &fb);
+
+    m_errorMonitor->VerifyFound();
+    if (err == VK_SUCCESS) {
+        vkDestroyFramebuffer(m_device->device(), fb, NULL);
+    }
+
+    // Request fb that exceeds max layers
+    fb_info.width = 100;
+    fb_info.height = 100;
     fb_info.layers = m_device->props.limits.maxFramebufferLayers + 1;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, " Requested VkFramebufferCreateInfo "
-                                                                        "dimensions exceed physical device "
-                                                                        "limits. ");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00415);
     err = vkCreateFramebuffer(device(), &fb_info, NULL, &fb);
 
     m_errorMonitor->VerifyFound();
