@@ -45,9 +45,10 @@ endif()
 
 if (WIN32)
     macro(add_vk_layer target)
-    add_custom_command(OUTPUT VkLayer_${target}.def
-        COMMAND ${PYTHON_CMD} ${SCRIPTS_DIR}/vk-generate.py ${DisplayServer} win-def-file VkLayer_${target} layer > VkLayer_${target}.def
-        DEPENDS ${SCRIPTS_DIR}/vk-generate.py ${SCRIPTS_DIR}/vulkan.py
+    FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/VkLayer_${target}.def DEF_FILE)
+    add_custom_target(copy-${target}-def-file ALL
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${DEF_FILE} VkLayer_${target}.def
+        VERBATIM
     )
     add_library(VkLayer_${target} SHARED ${ARGN} VkLayer_${target}.def)
     add_dependencies(VkLayer_${target} generate_tests_dispatch_table_helper VkLayer_utils)
