@@ -316,8 +316,6 @@ static void DestroyObject(T1 dispatchable_object, T2 object, VkDebugReportObject
     }
 }
 
-static const int VALIDATION_ERROR_UNDEFINED = -1;
-
 template <typename T1, typename T2>
 static bool ValidateObject(T1 dispatchable_object, T2 object, VkDebugReportObjectTypeEXT object_type, bool null_allowed,
                            int error_code) {

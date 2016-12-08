@@ -29,6 +29,7 @@
 //  When a given error occurs, these enum values should be passed to the as the messageCode
 //  parameter to the PFN_vkDebugReportCallbackEXT function
 enum UNIQUE_VALIDATION_ERROR_CODE {
+    VALIDATION_ERROR_UNDEFINED = -1,
     VALIDATION_ERROR_00000 = 0,
     VALIDATION_ERROR_00001 = 1,
     VALIDATION_ERROR_00002 = 2,
