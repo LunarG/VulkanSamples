@@ -24,7 +24,7 @@
 
 //---------------------------PickList-----------------------------
 bool CPickList::IsPicked(const char *name) const {
-    for (auto item : pickList) {
+    for (auto item : pick_list) {
         if (strcmp(name, item) == 0)
             return true;
     }
@@ -53,20 +53,20 @@ bool CPickList::Pick(const char *name) {
     return Pick(inx);
 }
 
-bool CPickList::Pick(const uint32_t inx) { // Add indexed item to picklist.
+bool CPickList::Pick(const uint32_t inx) { // Add indexed item to picklist. Returns false if item is out of range
     if (inx >= Count())
-        return false; //                      Return false if index is out of range.
-    for (const char *pickItem : pickList)
+        return false;
+    for (const char *pickItem : pick_list)
         if (pickItem == Name(inx))
-            return true;           //         Check if item was already picked
-    pickList.push_back(Name(inx)); //         if not, add item to pick-list
+            return true;            // Check if item was already picked
+    pick_list.push_back(Name(inx)); // if not, add item to pick-list
     return true;
 }
 
 void CPickList::UnPick(const char *name) {
     for (uint32_t i = 0; i < PickCount(); ++i) {
-        if (strcmp(name, pickList[i]) == 0)
-            pickList.erase(pickList.begin() + i);
+        if (strcmp(name, pick_list[i]) == 0)
+            pick_list.erase(pick_list.begin() + i);
     }
 }
 
@@ -74,16 +74,16 @@ void CPickList::PickAll() {
     for (uint32_t i = 0; i < Count(); ++i)
         Pick(i);
 } // Pick All items
-void CPickList::Clear() { pickList.clear(); } // Clear Picklist
-char **CPickList::PickList() const { return (char **)pickList.data(); }
-uint32_t CPickList::PickCount() const { return (uint32_t)pickList.size(); }
+void CPickList::Clear() { pick_list.clear(); } // Clear Picklist
+char **CPickList::PickList() const { return (char **)pick_list.data(); }
+uint32_t CPickList::PickCount() const { return (uint32_t)pick_list.size(); }
 
 void CPickList::Print(const char *listName) {
     printf("%s picked: %d of %d\n", listName, PickCount(), Count());
     for (uint32_t i = 0; i < Count(); ++i) {
         bool picked = false;
         char *name = Name(i);
-        for (auto &pick : pickList)
+        for (auto &pick : pick_list)
             if (pick == name) {
                 picked = true;
             }
@@ -103,8 +103,8 @@ CLayers::CLayers() {
         uint count = 0;
         result = vkEnumerateInstanceLayerProperties(&count, NULL);
         if (result == VK_SUCCESS && count > 0) {
-            itemList.resize(count);
-            result = vkEnumerateInstanceLayerProperties(&count, itemList.data());
+            item_list.resize(count);
+            result = vkEnumerateInstanceLayerProperties(&count, item_list.data());
         }
     } while (result == VK_INCOMPLETE);
     VKERRCHECK(result);
@@ -112,28 +112,29 @@ CLayers::CLayers() {
 //----------------------------------------------------------------
 
 //--------------------------Extensions----------------------------
-CExtensions::CExtensions(const char *layerName) {
+CExtensions::CExtensions(const char *layer_name) {
     VkResult result;
     do {
         uint count = 0;
-        result = vkEnumerateInstanceExtensionProperties(layerName, &count, NULL); // Get list size
-        if (result == VK_SUCCESS && count > 0) {
-            itemList.resize(count);                                                              // Resize buffer
-            result = vkEnumerateInstanceExtensionProperties(layerName, &count, itemList.data()); // Fetch list
-        }
+        result = vkEnumerateInstanceExtensionProperties(layer_name, &count, NULL);                 // Get list size
+        if (result == VK_SUCCESS && count > 0) {                                                   //
+            item_list.resize(count);                                                               // Resize buffer
+            result = vkEnumerateInstanceExtensionProperties(layer_name, &count, item_list.data()); // Fetch list
+        }                                                                                          //
     } while (result == VK_INCOMPLETE); // If list is incomplete, try again.
     VKERRCHECK(result);                // report errors
 }
 //----------------------------------------------------------------
 
 //---------------------------CInstance----------------------------
-CInstance::CInstance(const bool enableValidation, const char *appName, const char *engineName) {
+CInstance::CInstance(const bool enable_validation, const char *app_name, const char *engine_name) {
     CLayers layers;
 #ifdef ENABLE_VALIDATION
-    if (enableValidation) {
-        layers.Pick({"VK_LAYER_GOOGLE_threading", "VK_LAYER_LUNARG_parameter_validation", "VK_LAYER_LUNARG_object_tracker",
-                     "VK_LAYER_LUNARG_image", "VK_LAYER_LUNARG_core_validation", "VK_LAYER_LUNARG_swapchain",
-                     "VK_LAYER_GOOGLE_unique_objects"});
+    if (enable_validation) {
+        layers.Pick({"VK_LAYER_GOOGLE_threading",            // This list of layers is equivalent to:
+                     "VK_LAYER_LUNARG_parameter_validation", // VK_LAYER_LUNARG_standard_validation
+                     "VK_LAYER_LUNARG_object_tracker", "VK_LAYER_LUNARG_image", "VK_LAYER_LUNARG_core_validation",
+                     "VK_LAYER_LUNARG_swapchain", "VK_LAYER_GOOGLE_unique_objects"});
     }
     layers.Print();
 #endif
@@ -165,21 +166,21 @@ CInstance::CInstance(const bool enableValidation, const char *appName, const cha
     extensions.Print();
 #endif
     assert(extensions.PickCount() >= 2);
-    Create(layers, extensions, appName, engineName);
+    Create(layers, extensions, app_name, engine_name);
 }
 
-CInstance::CInstance(const CLayers &layers, const CExtensions &extensions, const char *appName, const char *engineName) {
-    Create(layers, extensions, appName, engineName);
+CInstance::CInstance(const CLayers &layers, const CExtensions &extensions, const char *app_name, const char *engine_name) {
+    Create(layers, extensions, app_name, engine_name);
 }
 
-void CInstance::Create(const CLayers &layers, const CExtensions &extensions, const char *appName, const char *engineName) {
+void CInstance::Create(const CLayers &layers, const CExtensions &extensions, const char *app_name, const char *engine_name) {
     // initialize the VkApplicationInfo structure
     VkApplicationInfo app_info = {};
     app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     app_info.pNext = NULL;
-    app_info.pApplicationName = appName;
+    app_info.pApplicationName = app_name;
     app_info.applicationVersion = 1;
-    app_info.pEngineName = engineName;
+    app_info.pEngineName = engine_name;
     app_info.engineVersion = 1;
     app_info.apiVersion = VK_API_VERSION_1_0;
 

@@ -27,7 +27,7 @@
  - Mouse input
  - Keyboard input (keycodes or localized text)
  - Window management
- - Multi-touch input (Android, Windows and Linux)
+ - Multi-touch input
 
 #### Todo (Contributions welcome)
  - Full screen mode
@@ -39,7 +39,7 @@
 ### CMake settings:
  - `ENABLE_VALIDATION :` Enable Vulkan Validation. (Turn this off for Release builds.)
  - `ENABLE_LOGGING . .:` Allow WSIWindow to print log messages to the Terminal, or Android LogCat.
- - `ENABLE_MULTITOUCH :` Enables Multi-touch on Windows and Linux.
+ - `ENABLE_MULTITOUCH :` Enables Multi-touch input, tracking up to 10 finders. Disable, to emulate mouse instead.
  - `USE_VULKAN_WRAPPER:` Builds a dispatch-table, to skip the Loader trampoline-code. (Required for Android)
  - `VULKAN_LOADER . . :` Full path (including filename) of the vulkan loader. (libvulkan.so or vulkan-1.lib).
  - `VULKAN_INCLUDE . .:` Set this to the path of the vulkan.h file.
@@ -49,7 +49,7 @@ Install the Vulkan SDK, CMake and Visual Studio.
 Use cmake-gui to load the CMakeLists.txt file.  
 Configure CMake settings if needed, and generate the Visual Studio project.  
 Use Visual Studio to open the generated solution.  
-Set WSIWindow_Test as the Startup project.  
+Set WSIWindow_Sample1 as the Startup project.  
 Compile and run the sample project.
 
 ### Linux
@@ -101,7 +101,7 @@ Also, the following extensions are loaded where available:
  > `VK_KHR_win32_surface . ` (On Windows)  
  > `VK_KHR_xcb_surface . . ` (On Linux)  
  > `VK_KHR_android_surface ` (On Android)  
- > `VK_KHR_debug_report. . ` (In Debug builds)   
+ > `VK_KHR_debug_report. . ` (When validation is enabled)   
  
 If you need direct control over which layers and extensions to load, use the CLayers and CExtensions classes to enumerate, display and pick the items you want, and then pass them to the CInstance constructor.
 
@@ -111,7 +111,7 @@ The CLayers class wraps "vkEnumerateInstanceLayerProperties" to simplify enumera
  - ` Pick . .:` Add one or more named items to the picklist. eg. layers.Pick({"layer1","layer2"});
  - ` PickAll :` Adds all available layers to the picklist.
  - ` PickList:` Returns the picklist as an array of layer names, which can be passed to CInstance.
- - ` Print . :` Prints the list of layers, with a tick next to the ones what have been picked.
+ - ` Print . :` Prints the list of available layers, with a tick next to the ones what have been picked.
 
 ### CExtensions class
 The CExtensions class wraps "vkEnumerateInstanceExtensionProperties" in much the same way as CLayers wraps the layers.
@@ -119,11 +119,13 @@ It provides the same functions as CLayers, for picking  extensions to load, and 
 
 ### WSIWindow class
 The WSIWindow class creates a Vulkan window, and provides function calls to query keyboard and mouse state, as well as callbacks, to notify you of system events. (window / keyboard / mouse / touch-screen)
-The WSIWindow constructor requires a VkInstance parameter, as well as the window's title, width and height.  These dimensions only apply to Linux and Windows, but are ignored on Android.
-However, right after window creation, the OnResizeEvent callback will be triggered, to return the actual window dimensions.  
-The "GetSurface" member function returns a **CSurface** class, which contains the VkSurfaceKHR of the window.
-CSurface also provides the CanPresent() funtion, which wraps the vkGetPhysicalDevice***PresentationSupportKHR functions. When creating a Vulkan queue, use CanPresent() to check if the queue family can present to this surface.
+WSIWindow provides member functions for setting the window width, height, position and title.  These dimensions only apply to Linux and Windows, but are ignored on Android.
+However, right after window creation, the OnResizeEvent callback will be triggered, to return the actual window dimensions. 
 
+The "GetSurface" member function takes a VkInstance as input (from CInstance), and returns a CSurface instance, which contains the VkSurfaceKHR of the window.  CSurface also provides the CanPresent() funtion, which wraps the `vkGetPhysicalDeviceSurfaceSupportKHR` function. When creating a Vulkan queue, use CanPresent() to check if the queue family can present to this surface.
+Alternatively, WSIWindow also contains a similar CanPresent() member function, which wraps the set of `vkGetPhysicalDevice***PresentationSupportKHR` funcions, and can be used to check queue compatibility BEFORE creating the VkSurfaceKHR.  
+  
+  
 #### The following query functions are provided:
  - `GetWinPos . :` Get the window's current position, relative to the top-left corner of the display  
  - `GetWinSize. :` Get the window's current width and height.
