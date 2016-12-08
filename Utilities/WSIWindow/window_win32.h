@@ -150,7 +150,9 @@ void Window_win32::CreateSurface(VkInstance instance) {
 
 EventType Window_win32::GetEvent(bool wait_for_event) {
     // EventType event;
-    if (!eventFIFO.isEmpty()) { return *eventFIFO.pop(); }
+    if (!eventFIFO.isEmpty()) {
+        return *eventFIFO.pop();
+    }
 
     MSG msg = {};
     if (wait_for_event)

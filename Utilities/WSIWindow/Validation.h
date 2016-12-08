@@ -46,7 +46,9 @@
 //------------------------------------------
 //------------Fix for VS2013----------------
 #if _MSC_VER == 1800
+#ifndef snprintf
 #define snprintf _snprintf
+#endif
 #endif
 //------------------------------------------
 
@@ -92,14 +94,15 @@ enum eColor {
     eCYAN,
     eWHITE,
     eFAINT,
-    eBRED,
-    eBGREEN,
-    eBYELLOW,
-    eBBLUE,
-    eBMAGENTA,
-    eBCYAN,
+    eBRIGHT_RED,
+    eBRIGHT_GREEN,
+    eBRIGHT_YELLOW,
+    eBRIGHT_BLUE,
+    eBRIGHT_MAGENTA,
+    eBRIGHT_CYAN,
     eBRIGHT
 };
+
 void color(eColor color);
 // void print(eColor col,const char* format,...);
 #define print(COLOR, ...)                                                                                                          \

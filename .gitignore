@@ -34,3 +34,4 @@ external
 *.creator.user
 *.files
 *.includes
+*.autosave

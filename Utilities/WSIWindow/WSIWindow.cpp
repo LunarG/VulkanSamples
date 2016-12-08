@@ -93,7 +93,7 @@ bool WSIWindow::ProcessEvents(bool wait_for_event) {
             OnResizeEvent(e.resize.width, e.resize.height);
             break;
         case EventType::FOCUS:
-            OnFocusEvent(e.focus.hasFocus);
+            OnFocusEvent(e.focus.has_focus);
             break;
         case EventType::TOUCH:
             OnTouchEvent(e.touch.action, e.touch.x, e.touch.y, e.touch.id);

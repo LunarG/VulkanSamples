@@ -107,6 +107,7 @@ void ShowVkResult(VkResult err) {
 //------------------------------------DEBUG REPORT CALLBACK-----------------------------------
 #ifdef ENABLE_VALIDATION
 
+// These parameter names are consistent with the vulkan header (i.e. lower camel case).
 VKAPI_ATTR VkBool32 VKAPI_CALL DebugReportFn(VkDebugReportFlagsEXT msgFlags, VkDebugReportObjectTypeEXT objType, uint64_t srcObject,
                                              size_t location, int32_t msgCode, const char *pLayerPrefix, const char *pMsg,
                                              void *pUserData) {
@@ -187,39 +188,17 @@ void CDebugReport::Destroy() {
 
 void CDebugReport::Print() { // print the state of the report flags
     printf("Debug Report flags : [");
-    if (flags & 1) {
-        print(eGREEN, "INFO:1 |");
-    } else {
-        print(eFAINT, "info:0 |");
-    }
-    if (flags & 2) {
-        print(eYELLOW, "WARN:1 |");
-    } else {
-        print(eFAINT, "warn:0 |");
-    }
-    if (flags & 4) {
-        print(eCYAN, "PERF:1 |");
-    } else {
-        print(eFAINT, "perf:0 |");
-    }
-    if (flags & 8) {
-        print(eRED, "ERROR:1|");
-    } else {
-        print(eFAINT, "error:0|");
-    }
-    if (flags & 16) {
-        print(eBLUE, "DEBUG:1");
-    } else {
-        print(eFAINT, "debug:0");
-    }
+    print((flags & 1) ? eGREEN : eFAINT, (flags & 1) ? "INFO:1 |" : "info:0 |");
+    print((flags & 2) ? eYELLOW : eFAINT, (flags & 2) ? "WARN:1 |" : "warn:0 |");
+    print((flags & 4) ? eCYAN : eFAINT, (flags & 4) ? "PERF:1 |" : "perf:0 |");
+    print((flags & 8) ? eRED : eFAINT, (flags & 8) ? "ERROR:1 |" : "error:0 |");
+    print((flags & 16) ? eBLUE : eFAINT, (flags & 16) ? "DEBUG:1" : "debug:0");
     print(eRESET, "] = %d\n", flags);
 }
 
 #else  // No Validation
-void CDebugReport::SetFlags(VkDebugReportFlagsEXT flags) { LOGW("Vulkan Validation was not enabled at compile-time.\n"); }
-void CDebugReport::SetCallback(PFN_vkDebugReportCallbackEXT debugFunc) {
-    LOGW("Vulkan Validation was not enabled at compile-time.\n");
-}
+void CDebugReport::SetFlags(VkDebugReportFlagsEXT flags) { LOGW("Vulkan Validation is disabled at compile-time.\n"); }
+void CDebugReport::SetCallback(PFN_vkDebugReportCallbackEXT debugFunc) { LOGW("Vulkan Validation is disabled at compile-time.\n"); }
 #endif // ENABLE_VALIDATION
 
 CDebugReport::CDebugReport()
