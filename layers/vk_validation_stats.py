@@ -73,7 +73,7 @@ class ValidationDatabase:
                     continue
                 db_line = line.split(self.delimiter)
                 if len(db_line) != 6:
-                    print "ERROR: Bad database line doesn't have 6 elements: %s" % (line)
+                    print("ERROR: Bad database line doesn't have 6 elements: %s" % (line))
                 error_enum = db_line[0]
                 implemented = db_line[1]
                 testname = db_line[2]
