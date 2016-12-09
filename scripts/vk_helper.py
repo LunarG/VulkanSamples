@@ -41,8 +41,6 @@ def handle_args():
     parser.add_argument('--gen_enum_string_helper', required=False, action='store_true', default=False, help='Enable generation of helper header file to print string versions of enums.')
     parser.add_argument('--gen_struct_wrappers', required=False, action='store_true', default=False, help='Enable generation of struct wrapper classes.')
     parser.add_argument('--gen_struct_sizes', required=False, action='store_true', default=False, help='Enable generation of struct sizes.')
-    parser.add_argument('--gen_cmake', required=False, action='store_true', default=False, help='Enable generation of cmake file for generated code.')
-    parser.add_argument('--gen_graphviz', required=False, action='store_true', default=False, help='Enable generation of graphviz dot file.')
     #parser.add_argument('--test', action='store_true', default=False, help='Run simple test.')
     return parser.parse_args()
 
@@ -478,21 +476,14 @@ class StructWrapperGen:
             self.api_prefix = "vk"
         else:
             self.api_prefix = prefix
-        self.header_filename = os.path.join(out_dir, self.api_prefix+"_struct_wrappers.h")
-        self.class_filename = os.path.join(out_dir, self.api_prefix+"_struct_wrappers.cpp")
         self.safe_struct_header_filename = os.path.join(out_dir, self.api_prefix+"_safe_struct.h")
         self.safe_struct_source_filename = os.path.join(out_dir, self.api_prefix+"_safe_struct.cpp")
         self.string_helper_filename = os.path.join(out_dir, self.api_prefix+"_struct_string_helper.h")
-        self.string_helper_no_addr_filename = os.path.join(out_dir, self.api_prefix+"_struct_string_helper_no_addr.h")
         self.string_helper_cpp_filename = os.path.join(out_dir, self.api_prefix+"_struct_string_helper_cpp.h")
-        self.string_helper_no_addr_cpp_filename = os.path.join(out_dir, self.api_prefix+"_struct_string_helper_no_addr_cpp.h")
         self.validate_helper_filename = os.path.join(out_dir, self.api_prefix+"_struct_validate_helper.h")
-        self.no_addr = False
         # Safe Struct (ss) header and source files
         self.ssh = CommonFileGen(self.safe_struct_header_filename)
         self.sss = CommonFileGen(self.safe_struct_source_filename)
-        self.hfg = CommonFileGen(self.header_filename)
-        self.cfg = CommonFileGen(self.class_filename)
         self.shg = CommonFileGen(self.string_helper_filename)
         self.shcppg = CommonFileGen(self.string_helper_cpp_filename)
         self.vhg = CommonFileGen(self.validate_helper_filename)
@@ -500,21 +491,11 @@ class StructWrapperGen:
         self.size_helper_c_filename = os.path.join(out_dir, self.api_prefix+"_struct_size_helper.c")
         self.size_helper_gen = CommonFileGen(self.size_helper_filename)
         self.size_helper_c_gen = CommonFileGen(self.size_helper_c_filename)
-        #print(self.header_filename)
         self.header_txt = ""
         self.definition_txt = ""
 
     def set_include_headers(self, include_headers):
         self.include_headers = include_headers
-
-    def set_no_addr(self, no_addr):
-        self.no_addr = no_addr
-        if self.no_addr:
-            self.shg = CommonFileGen(self.string_helper_no_addr_filename)
-            self.shcppg = CommonFileGen(self.string_helper_no_addr_cpp_filename)
-        else:
-            self.shg = CommonFileGen(self.string_helper_filename)
-            self.shcppg = CommonFileGen(self.string_helper_cpp_filename)
 
     # Return class name for given struct name
     def get_class_name(self, struct_name):
@@ -523,22 +504,6 @@ class StructWrapperGen:
 
     def get_file_list(self):
         return [os.path.basename(self.header_filename), os.path.basename(self.class_filename), os.path.basename(self.string_helper_filename)]
-
-    # Generate class header file
-    def generateHeader(self):
-        self.hfg.setCopyright(self._generateCopyright())
-        self.hfg.setHeader(self._generateHeader())
-        self.hfg.setBody(self._generateClassDeclaration())
-        self.hfg.setFooter(self._generateFooter())
-        self.hfg.generate()
-
-    # Generate class definition
-    def generateBody(self):
-        self.cfg.setCopyright(self._generateCopyright())
-        self.cfg.setHeader(self._generateCppHeader())
-        self.cfg.setBody(self._generateClassDefinition())
-        self.cfg.setFooter(self._generateFooter())
-        self.cfg.generate()
 
     # Safe Structs are versions of vulkan structs with non-const safe ptrs
     #  that make shadowing structures and clean-up of shadowed structures very simple
@@ -750,9 +715,6 @@ class StructWrapperGen:
             member_post = "[i]"
         print_out = "%%s%s%s = %s%s%s" % (member_name, member_print_post, print_delimiter, print_type, postfix) # section of print that goes inside of quotes
         print_arg = ", %s,%s %s(%s%s%s)%s" % (pre_var_name, array_index, cast_type, struct_var_name, struct_op, member_name, member_post) # section of print passed to portion in quotes
-        if self.no_addr and "p" == print_type:
-            print_out = "%%s%s%s = addr\\n" % (member_name, member_print_post) # section of print that goes inside of quotes
-            print_arg = ", %s" % (pre_var_name)
         return (print_out, print_arg)
 
     def _generateStringHelperFunctions(self):
@@ -798,10 +760,7 @@ class StructWrapperGen:
                             sh_funcs.append('        tmpStr = dynamic_display((void*)pStruct->pNext, prefix);')
                             sh_funcs.append('        len = 256+strlen(tmpStr);')
                             sh_funcs.append('        stp_strs[%i] = (char*)malloc(len);' % index)
-                            if self.no_addr:
-                                sh_funcs.append('        snprintf(stp_strs[%i], len, " %%spNext (addr)\\n%%s", prefix, tmpStr);' % index)
-                            else:
-                                sh_funcs.append('        snprintf(stp_strs[%i], len, " %%spNext (0x%%p)\\n%%s", prefix, (void*)pStruct->pNext, tmpStr);' % index)
+                            sh_funcs.append('        snprintf(stp_strs[%i], len, " %%spNext (0x%%p)\\n%%s", prefix, (void*)pStruct->pNext, tmpStr);' % index)
                             sh_funcs.append('        free(tmpStr);')
                         else:
                             if stp_list[index]['name'] in ['pImageViews', 'pBufferViews']:
@@ -811,28 +770,19 @@ class StructWrapperGen:
                                 sh_funcs.append('        tmpStr = %s(pStruct->%s, extra_indent);' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
                             sh_funcs.append('        len = 256+strlen(tmpStr)+strlen(prefix);')
                             sh_funcs.append('        stp_strs[%i] = (char*)malloc(len);' % (index))
-                            if self.no_addr:
-                                sh_funcs.append('        snprintf(stp_strs[%i], len, " %%s%s (addr)\\n%%s", prefix, tmpStr);' % (index, stp_list[index]['name']))
-                            else:
-                                sh_funcs.append('        snprintf(stp_strs[%i], len, " %%s%s (0x%%p)\\n%%s", prefix, (void*)pStruct->%s, tmpStr);' % (index, stp_list[index]['name'], stp_list[index]['name']))
+                            sh_funcs.append('        snprintf(stp_strs[%i], len, " %%s%s (0x%%p)\\n%%s", prefix, (void*)pStruct->%s, tmpStr);' % (index, stp_list[index]['name'], stp_list[index]['name']))
                         sh_funcs.append('    }')
                         sh_funcs.append("    else\n        stp_strs[%i] = \"\";" % (index))
                     elif stp_list[index]['array']:
                         sh_funcs.append('    tmpStr = %s(&pStruct->%s[0], extra_indent);' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
                         sh_funcs.append('    len = 256+strlen(tmpStr);')
                         sh_funcs.append('    stp_strs[%i] = (char*)malloc(len);' % (index))
-                        if self.no_addr:
-                            sh_funcs.append('    snprintf(stp_strs[%i], len, " %%s%s[0] (addr)\\n%%s", prefix, tmpStr);' % (index, stp_list[index]['name']))
-                        else:
-                            sh_funcs.append('    snprintf(stp_strs[%i], len, " %%s%s[0] (0x%%p)\\n%%s", prefix, (void*)&pStruct->%s[0], tmpStr);' % (index, stp_list[index]['name'], stp_list[index]['name']))
+                        sh_funcs.append('    snprintf(stp_strs[%i], len, " %%s%s[0] (0x%%p)\\n%%s", prefix, (void*)&pStruct->%s[0], tmpStr);' % (index, stp_list[index]['name'], stp_list[index]['name']))
                     else:
                         sh_funcs.append('    tmpStr = %s(&pStruct->%s, extra_indent);' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
                         sh_funcs.append('    len = 256+strlen(tmpStr);')
                         sh_funcs.append('    stp_strs[%i] = (char*)malloc(len);' % (index))
-                        if self.no_addr:
-                            sh_funcs.append('    snprintf(stp_strs[%i], len, " %%s%s (addr)\\n%%s", prefix, tmpStr);' % (index, stp_list[index]['name']))
-                        else:
-                            sh_funcs.append('    snprintf(stp_strs[%i], len, " %%s%s (0x%%p)\\n%%s", prefix, (void*)&pStruct->%s, tmpStr);' % (index, stp_list[index]['name'], stp_list[index]['name']))
+                        sh_funcs.append('    snprintf(stp_strs[%i], len, " %%s%s (0x%%p)\\n%%s", prefix, (void*)&pStruct->%s, tmpStr);' % (index, stp_list[index]['name'], stp_list[index]['name']))
                     total_strlen_str += 'strlen(stp_strs[%i]) + ' % index
             sh_funcs.append('    len = %ssizeof(char)*1024;' % (total_strlen_str))
             sh_funcs.append('    str = (char*)malloc(len);')
@@ -984,12 +934,8 @@ class StructWrapperGen:
                             sh_funcs.append('%s' % lineinfo.get())
                             sh_funcs.append('%sss[%u] << "0x" << %spStruct->%s[i];' % (indent, index, addr_char, stp_list[index]['name']))
                             sh_funcs.append('%stmp_str = %s(%spStruct->%s[i], extra_indent);' % (indent, self._get_sh_func_name(stp_list[index]['type']), addr_char, stp_list[index]['name']))
-                            if self.no_addr:
-                                sh_funcs.append('%s' % lineinfo.get())
-                                sh_funcs.append('%sstp_strs[%u] += " " + prefix + "%s[" + index_ss.str() + "] (addr)\\n" + tmp_str;' % (indent, index, stp_list[index]['name']))
-                            else:
-                                sh_funcs.append('%s' % lineinfo.get())
-                                sh_funcs.append('%sstp_strs[%u] += " " + prefix + "%s[" + index_ss.str() + "] (" + ss[%u].str() + ")\\n" + tmp_str;' % (indent, index, stp_list[index]['name'], index))
+                            sh_funcs.append('%s' % lineinfo.get())
+                            sh_funcs.append('%sstp_strs[%u] += " " + prefix + "%s[" + index_ss.str() + "] (" + ss[%u].str() + ")\\n" + tmp_str;' % (indent, index, stp_list[index]['name'], index))
                         else:
                             sh_funcs.append('%s' % lineinfo.get())
                             addr_char = ''
@@ -1028,12 +974,8 @@ class StructWrapperGen:
                                 sh_funcs.append('%s' % lineinfo.get())
                                 sh_funcs.append('        tmp_str = %s(pStruct->%s, extra_indent);' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
                         sh_funcs.append('        ss[%u] << "0x" << %spStruct->%s;' % (index, addr_char, stp_list[index]['name']))
-                        if self.no_addr:
-                            sh_funcs.append('%s' % lineinfo.get())
-                            sh_funcs.append('        stp_strs[%u] = " " + prefix + "%s (addr)\\n" + tmp_str;' % (index, stp_list[index]['name']))
-                        else:
-                            sh_funcs.append('%s' % lineinfo.get())
-                            sh_funcs.append('        stp_strs[%u] = " " + prefix + "%s (" + ss[%u].str() + ")\\n" + tmp_str;' % (index, stp_list[index]['name'], index))
+                        sh_funcs.append('%s' % lineinfo.get())
+                        sh_funcs.append('        stp_strs[%u] = " " + prefix + "%s (" + ss[%u].str() + ")\\n" + tmp_str;' % (index, stp_list[index]['name'], index))
                         sh_funcs.append('        ss[%u].str("");' % (index))
                         sh_funcs.append('    }')
                         sh_funcs.append('    else')
@@ -1042,12 +984,8 @@ class StructWrapperGen:
                         sh_funcs.append('%s' % lineinfo.get())
                         sh_funcs.append('    tmp_str = %s(&pStruct->%s, extra_indent);' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
                         sh_funcs.append('    ss[%u] << "0x" << %spStruct->%s;' % (index, addr_char, stp_list[index]['name']))
-                        if self.no_addr:
-                            sh_funcs.append('    stp_strs[%u] = " " + prefix + "%s (addr)\\n" + tmp_str;' % (index, stp_list[index]['name']))
-                            sh_funcs.append('%s' % lineinfo.get())
-                        else:
-                            sh_funcs.append('    stp_strs[%u] = " " + prefix + "%s (" + ss[%u].str() + ")\\n" + tmp_str;' % (index, stp_list[index]['name'], index))
-                            sh_funcs.append('%s' % lineinfo.get())
+                        sh_funcs.append('    stp_strs[%u] = " " + prefix + "%s (" + ss[%u].str() + ")\\n" + tmp_str;' % (index, stp_list[index]['name'], index))
+                        sh_funcs.append('%s' % lineinfo.get())
                         sh_funcs.append('    ss[%u].str("");' % index)
             # Now print one-line info for all data members
             index = 0
@@ -1055,12 +993,8 @@ class StructWrapperGen:
             for m in sorted(self.struct_dict[s]):
                 if not is_type(self.struct_dict[s][m]['type'], 'enum'):
                     if is_type(self.struct_dict[s][m]['type'], 'struct') and not self.struct_dict[s][m]['ptr']:
-                        if self.no_addr:
-                            sh_funcs.append('%s' % lineinfo.get())
-                            sh_funcs.append('    ss[%u].str("addr");' % (index))
-                        else:
-                            sh_funcs.append('%s' % lineinfo.get())
-                            sh_funcs.append('    ss[%u] << "0x" << &pStruct->%s;' % (index, self.struct_dict[s][m]['name']))
+                        sh_funcs.append('%s' % lineinfo.get())
+                        sh_funcs.append('    ss[%u] << "0x" << &pStruct->%s;' % (index, self.struct_dict[s][m]['name']))
                     elif self.struct_dict[s][m]['array']:
                         sh_funcs.append('%s' % lineinfo.get())
                         sh_funcs.append('    ss[%u] << "0x" << (void*)pStruct->%s;' % (index, self.struct_dict[s][m]['name']))
@@ -1445,52 +1379,51 @@ class StructWrapperGen:
             add_platform_wrapper_exit(sh_funcs, typedef_fwd_dict[s])
 
         # Now generate generic functions to loop over entire struct chain (or just handle single generic structs)
-        if '_debug_' not in self.header_filename:
-            for follow_chain in [True, False]:
-                sh_funcs.append('%s' % self.lineinfo.get())
-                if follow_chain:
-                    sh_funcs.append('size_t get_struct_chain_size(const void* pStruct)\n{')
-                else:
-                    sh_funcs.append('size_t get_dynamic_struct_size(const void* pStruct)\n{')
-                indent = '    '
-                sh_funcs.append('%s// Just use VkApplicationInfo as struct until actual type is resolved' % (indent))
-                sh_funcs.append('%sVkApplicationInfo* pNext = (VkApplicationInfo*)pStruct;' % (indent))
-                sh_funcs.append('%ssize_t structSize = 0;' % (indent))
-                if follow_chain:
-                    sh_funcs.append('%swhile (pNext) {' % (indent))
-                    indent = '        '
-                sh_funcs.append('%sswitch (pNext->sType) {' % (indent))
-                indent += '    '
-                for e in enum_type_dict:
-                    if 'StructureType' in e:
-                        for v in sorted(enum_type_dict[e]):
-                            struct_name = get_struct_name_from_struct_type(v)
-                            if struct_name not in self.struct_dict:
-                                continue
+        for follow_chain in [True, False]:
+            sh_funcs.append('%s' % self.lineinfo.get())
+            if follow_chain:
+                sh_funcs.append('size_t get_struct_chain_size(const void* pStruct)\n{')
+            else:
+                sh_funcs.append('size_t get_dynamic_struct_size(const void* pStruct)\n{')
+            indent = '    '
+            sh_funcs.append('%s// Just use VkApplicationInfo as struct until actual type is resolved' % (indent))
+            sh_funcs.append('%sVkApplicationInfo* pNext = (VkApplicationInfo*)pStruct;' % (indent))
+            sh_funcs.append('%ssize_t structSize = 0;' % (indent))
+            if follow_chain:
+                sh_funcs.append('%swhile (pNext) {' % (indent))
+                indent = '        '
+            sh_funcs.append('%sswitch (pNext->sType) {' % (indent))
+            indent += '    '
+            for e in enum_type_dict:
+                if 'StructureType' in e:
+                    for v in sorted(enum_type_dict[e]):
+                        struct_name = get_struct_name_from_struct_type(v)
+                        if struct_name not in self.struct_dict:
+                            continue
 
-                            if 'WIN32' in v:
-                                sh_funcs.append("#ifdef VK_USE_PLATFORM_WIN32_KHR")
-                            sh_funcs.append('%scase %s:' % (indent, v))
-                            sh_funcs.append('%s{' % (indent))
-                            indent += '    '
-                            sh_funcs.append('%sstructSize += %s((%s*)pNext);' % (indent, self._get_size_helper_func_name(struct_name), struct_name))
-                            sh_funcs.append('%sbreak;' % (indent))
-                            indent = indent[:-4]
-                            sh_funcs.append('%s}' % (indent))
-                            if 'WIN32' in v:
-                                sh_funcs.append("#endif // VK_USE_PLATFORM_WIN32_KHR")
-                        sh_funcs.append('%sdefault:' % (indent))
+                        if 'WIN32' in v:
+                            sh_funcs.append("#ifdef VK_USE_PLATFORM_WIN32_KHR")
+                        sh_funcs.append('%scase %s:' % (indent, v))
+                        sh_funcs.append('%s{' % (indent))
                         indent += '    '
-                        sh_funcs.append('%sassert(0);' % (indent))
-                        sh_funcs.append('%sstructSize += 0;' % (indent))
+                        sh_funcs.append('%sstructSize += %s((%s*)pNext);' % (indent, self._get_size_helper_func_name(struct_name), struct_name))
+                        sh_funcs.append('%sbreak;' % (indent))
                         indent = indent[:-4]
+                        sh_funcs.append('%s}' % (indent))
+                        if 'WIN32' in v:
+                            sh_funcs.append("#endif // VK_USE_PLATFORM_WIN32_KHR")
+                    sh_funcs.append('%sdefault:' % (indent))
+                    indent += '    '
+                    sh_funcs.append('%sassert(0);' % (indent))
+                    sh_funcs.append('%sstructSize += 0;' % (indent))
+                    indent = indent[:-4]
+            indent = indent[:-4]
+            sh_funcs.append('%s}' % (indent))
+            if follow_chain:
+                sh_funcs.append('%spNext = (VkApplicationInfo*)pNext->pNext;' % (indent))
                 indent = indent[:-4]
                 sh_funcs.append('%s}' % (indent))
-                if follow_chain:
-                    sh_funcs.append('%spNext = (VkApplicationInfo*)pNext->pNext;' % (indent))
-                    indent = indent[:-4]
-                    sh_funcs.append('%s}' % (indent))
-                sh_funcs.append('%sreturn structSize;\n}' % indent)
+            sh_funcs.append('%sreturn structSize;\n}' % indent)
         return "\n".join(sh_funcs)
 
     def _generateSizeHelperHeader(self):
@@ -1865,306 +1798,6 @@ class EnumCodeGen:
         return "\n".join(header)
 
 
-class CMakeGen:
-    def __init__(self, struct_wrapper=None, out_dir=None):
-        self.sw = struct_wrapper
-        self.include_headers = []
-        self.add_lib_file_list = self.sw.get_file_list()
-        self.out_dir = out_dir
-        self.out_file = os.path.join(self.out_dir, "CMakeLists.txt")
-        self.cmg = CommonFileGen(self.out_file)
-
-    def generate(self):
-        self.cmg.setBody(self._generateBody())
-        self.cmg.generate()
-
-    def _generateBody(self):
-        body = []
-        body.append("project(%s)" % os.path.basename(self.out_dir))
-        body.append("cmake_minimum_required(VERSION 2.8)\n")
-        body.append("add_library(${PROJECT_NAME} %s)\n" % " ".join(self.add_lib_file_list))
-        body.append('set(COMPILE_FLAGS "-fpermissive")')
-        body.append('set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMPILE_FLAGS}")\n')
-        body.append("include_directories(${SRC_DIR}/thirdparty/${GEN_API}/inc/)\n")
-        body.append("target_include_directories (%s PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})\n" % os.path.basename(self.out_dir))
-        return "\n".join(body)
-
-class GraphVizGen:
-    def __init__(self, struct_dict, prefix, out_dir):
-        self.struct_dict = struct_dict
-        self.api = prefix
-        if prefix == "vulkan":
-            self.api_prefix = "vk"
-        else:
-            self.api_prefix = prefix
-        self.out_file = os.path.join(out_dir, self.api_prefix+"_struct_graphviz_helper.h")
-        self.gvg = CommonFileGen(self.out_file)
-
-    def generate(self):
-        self.gvg.setCopyright("//This is the copyright\n")
-        self.gvg.setHeader(self._generateHeader())
-        self.gvg.setBody(self._generateBody())
-        #self.gvg.setFooter('}')
-        self.gvg.generate()
-
-    def set_include_headers(self, include_headers):
-        self.include_headers = include_headers
-
-    def _generateHeader(self):
-        header = []
-        header.append("//#includes, #defines, globals and such...\n")
-        for f in self.include_headers:
-            if 'vk_enum_string_helper' not in f:
-                header.append("#include <%s>\n" % f)
-        #header.append('#include "vk_enum_string_helper.h"\n\n// Function Prototypes\n')
-        header.append("\nchar* dynamic_gv_display(const void* pStruct, const char* prefix);\n")
-        return "".join(header)
-
-    def _get_gv_func_name(self, struct):
-        return "%s_gv_print_%s" % (self.api_prefix, struct.lower().strip("_"))
-
-    # Return elements to create formatted string for given struct member
-    def _get_struct_gv_print_formatted(self, struct_member, pre_var_name="", postfix = "\\n", struct_var_name="pStruct", struct_ptr=True, print_array=False, port_label=""):
-        struct_op = "->"
-        pre_var_name = '"%s "' % struct_member['full_type']
-        if not struct_ptr:
-            struct_op = "."
-        member_name = struct_member['name']
-        print_type = "p"
-        cast_type = ""
-        member_post = ""
-        array_index = ""
-        member_print_post = ""
-        print_delimiter = "%"
-        if struct_member['array'] and 'char' in struct_member['type'].lower(): # just print char array as string
-            print_type = "p"
-            print_array = False
-        elif struct_member['array'] and not print_array:
-            # Just print base address of array when not full print_array
-            cast_type = "(void*)"
-        elif is_type(struct_member['type'], 'enum'):
-            if struct_member['ptr']:
-                struct_var_name = "*" + struct_var_name
-                print_delimiter = "0x%"
-            cast_type = "string_%s" % struct_member['type']
-            print_type = "s"
-        elif is_type(struct_member['type'], 'struct'): # print struct address for now
-            cast_type = "(void*)"
-            print_delimiter = "0x%"
-            if not struct_member['ptr']:
-                cast_type = "(void*)&"
-        elif 'bool' in struct_member['type'].lower():
-            print_type = "s"
-            member_post = ' ? "TRUE" : "FALSE"'
-        elif 'float' in struct_member['type']:
-            print_type = "f"
-        elif 'uint64' in struct_member['type'] or 'gpusize' in struct_member['type'].lower():
-            print_type = '" PRId64 "'
-        elif 'uint8' in struct_member['type']:
-            print_type = "hu"
-        elif 'size' in struct_member['type'].lower():
-            print_type = '" PRINTF_SIZE_T_SPECIFIER "'
-            print_delimiter = ""
-        elif True in [ui_str.lower() in struct_member['type'].lower() for ui_str in ['uint', 'flags', 'samplemask']]:
-            print_type = "u"
-        elif 'int' in struct_member['type']:
-            print_type = "i"
-        elif struct_member['ptr']:
-            print_delimiter = "0x%"
-            pass
-        else:
-            #print("Unhandled struct type: %s" % struct_member['type'])
-            print_delimiter = "0x%"
-            cast_type = "(void*)"
-        if print_array and struct_member['array']:
-            member_print_post = "[%u]"
-            array_index = " i,"
-            member_post = "[i]"
-        print_out = "<TR><TD>%%s%s%s</TD><TD%s>%s%s%s</TD></TR>" % (member_name, member_print_post, port_label, print_delimiter, print_type, postfix) # section of print that goes inside of quotes
-        print_arg = ", %s,%s %s(%s%s%s)%s\n" % (pre_var_name, array_index, cast_type, struct_var_name, struct_op, member_name, member_post) # section of print passed to portion in quotes
-        return (print_out, print_arg)
-
-    def _generateBody(self):
-        gv_funcs = []
-        array_func_list = [] # structs for which we'll generate an array version of their print function
-        array_func_list.append('vkbufferviewattachinfo')
-        array_func_list.append('vkimageviewattachinfo')
-        array_func_list.append('vksamplerimageviewinfo')
-        array_func_list.append('vkdescriptortypecount')
-        # For first pass, generate prototype
-        for s in sorted(self.struct_dict):
-            gv_funcs.append('char* %s(const %s* pStruct, const char* myNodeName);\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
-            if s.lower().strip("_") in array_func_list:
-                if s.lower().strip("_") in ['vkbufferviewattachinfo', 'vkimageviewattachinfo']:
-                    gv_funcs.append('char* %s_array(uint32_t count, const %s* const* pStruct, const char* myNodeName);\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
-                else:
-                    gv_funcs.append('char* %s_array(uint32_t count, const %s* pStruct, const char* myNodeName);\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
-        gv_funcs.append('\n')
-        for s in sorted(self.struct_dict):
-            p_out = ""
-            p_args = ""
-            stp_list = [] # stp == "struct to print" a list of structs for this API call that should be printed as structs
-            # the fields below are a super-hacky way for now to get port labels into GV output, TODO : Clean this up!            
-            pl_dict = {}
-            struct_num = 0
-            # This isn't great but this pre-pass flags structs w/ pNext and other struct ptrs
-            for m in sorted(self.struct_dict[s]):
-                if 'pNext' == self.struct_dict[s][m]['name'] or is_type(self.struct_dict[s][m]['type'], 'struct'):
-                    stp_list.append(self.struct_dict[s][m])
-                    if 'pNext' == self.struct_dict[s][m]['name']:
-                        pl_dict[m] = ' PORT=\\"pNext\\"'
-                    else:
-                        pl_dict[m] = ' PORT=\\"struct%i\\"' % struct_num
-                    struct_num += 1
-            gv_funcs.append('char* %s(const %s* pStruct, const char* myNodeName)\n{\n    char* str;\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
-            num_stps = len(stp_list);
-            total_strlen_str = ''
-            if 0 != num_stps:
-                gv_funcs.append("    char* tmpStr;\n")
-                gv_funcs.append("    char nodeName[100];\n")
-                gv_funcs.append('    char* stp_strs[%i];\n' % num_stps)
-                for index in range(num_stps):
-                    if (stp_list[index]['ptr']):
-                        if 'pDescriptorInfo' == stp_list[index]['name']:
-                            gv_funcs.append('    if (pStruct->pDescriptorInfo && (0 != pStruct->descriptorCount)) {\n')
-                        else:
-                            gv_funcs.append('    if (pStruct->%s) {\n' % stp_list[index]['name'])
-                        if 'pNext' == stp_list[index]['name']:
-                            gv_funcs.append('        sprintf(nodeName, "pNext_0x%p", (void*)pStruct->pNext);\n')
-                            gv_funcs.append('        tmpStr = dynamic_gv_display((void*)pStruct->pNext, nodeName);\n')
-                            gv_funcs.append('        stp_strs[%i] = (char*)malloc(256+strlen(tmpStr)+strlen(nodeName)+strlen(myNodeName));\n' % index)
-                            gv_funcs.append('        sprintf(stp_strs[%i], "%%s\\n\\"%%s\\":pNext -> \\"%%s\\" [];\\n", tmpStr, myNodeName, nodeName);\n' % index)
-                            gv_funcs.append('        free(tmpStr);\n')
-                        else:
-                            gv_funcs.append('        sprintf(nodeName, "%s_0x%%p", (void*)pStruct->%s);\n' % (stp_list[index]['name'], stp_list[index]['name']))
-                            if stp_list[index]['name'] in ['pTypeCount', 'pSamplerImageViews']:
-                                gv_funcs.append('        tmpStr = %s_array(pStruct->count, pStruct->%s, nodeName);\n' % (self._get_gv_func_name(stp_list[index]['type']), stp_list[index]['name']))
-                            else:
-                                gv_funcs.append('        tmpStr = %s(pStruct->%s, nodeName);\n' % (self._get_gv_func_name(stp_list[index]['type']), stp_list[index]['name']))
-                            gv_funcs.append('        stp_strs[%i] = (char*)malloc(256+strlen(tmpStr)+strlen(nodeName)+strlen(myNodeName));\n' % (index))
-                            gv_funcs.append('        sprintf(stp_strs[%i], "%%s\\n\\"%%s\\":struct%i -> \\"%%s\\" [];\\n", tmpStr, myNodeName, nodeName);\n' % (index, index))
-                        gv_funcs.append('    }\n')
-                        gv_funcs.append("    else\n        stp_strs[%i] = \"\";\n" % (index))
-                    elif stp_list[index]['array']: # TODO : For now just printing first element of array
-                        gv_funcs.append('    sprintf(nodeName, "%s_0x%%p", (void*)&pStruct->%s[0]);\n' % (stp_list[index]['name'], stp_list[index]['name']))
-                        gv_funcs.append('    tmpStr = %s(&pStruct->%s[0], nodeName);\n' % (self._get_gv_func_name(stp_list[index]['type']), stp_list[index]['name']))
-                        gv_funcs.append('    stp_strs[%i] = (char*)malloc(256+strlen(tmpStr)+strlen(nodeName)+strlen(myNodeName));\n' % (index))
-                        gv_funcs.append('    sprintf(stp_strs[%i], "%%s\\n\\"%%s\\":struct%i -> \\"%%s\\" [];\\n", tmpStr, myNodeName, nodeName);\n' % (index, index))
-                    else:
-                        gv_funcs.append('    sprintf(nodeName, "%s_0x%%p", (void*)&pStruct->%s);\n' % (stp_list[index]['name'], stp_list[index]['name']))
-                        gv_funcs.append('    tmpStr = %s(&pStruct->%s, nodeName);\n' % (self._get_gv_func_name(stp_list[index]['type']), stp_list[index]['name']))
-                        gv_funcs.append('    stp_strs[%i] = (char*)malloc(256+strlen(tmpStr)+strlen(nodeName)+strlen(myNodeName));\n' % (index))
-                        gv_funcs.append('    sprintf(stp_strs[%i], "%%s\\n\\"%%s\\":struct%i -> \\"%%s\\" [];\\n", tmpStr, myNodeName, nodeName);\n' % (index, index))
-                    total_strlen_str += 'strlen(stp_strs[%i]) + ' % index
-            gv_funcs.append('    str = (char*)malloc(%ssizeof(char)*2048);\n' % (total_strlen_str))
-            gv_funcs.append('    sprintf(str, "\\"%s\\" [\\nlabel = <<TABLE BORDER=\\"0\\" CELLBORDER=\\"1\\" CELLSPACING=\\"0\\"><TR><TD COLSPAN=\\"2\\">%s (0x%p)</TD></TR>')
-            p_args = ", myNodeName, myNodeName, pStruct"
-            for m in sorted(self.struct_dict[s]):
-                plabel = ""
-                if m in pl_dict:
-                    plabel = pl_dict[m]
-                (p_out1, p_args1) = self._get_struct_gv_print_formatted(self.struct_dict[s][m], port_label=plabel)
-                p_out += p_out1
-                p_args += p_args1
-            p_out += '</TABLE>>\\n];\\n\\n"'
-            p_args += ");\n"
-            gv_funcs.append(p_out)
-            gv_funcs.append(p_args)
-            if 0 != num_stps:
-                gv_funcs.append('    for (int32_t stp_index = %i; stp_index >= 0; stp_index--) {\n' % (num_stps-1))
-                gv_funcs.append('        if (0 < strlen(stp_strs[stp_index])) {\n')
-                gv_funcs.append('            strncat(str, stp_strs[stp_index], strlen(stp_strs[stp_index]));\n')
-                gv_funcs.append('            free(stp_strs[stp_index]);\n')
-                gv_funcs.append('        }\n')
-                gv_funcs.append('    }\n')
-            gv_funcs.append("    return str;\n}\n")
-            if s.lower().strip("_") in array_func_list:
-                ptr_array = False
-                if s.lower().strip("_") in ['vkbufferviewattachinfo', 'vkimageviewattachinfo']:
-                    ptr_array = True
-                    gv_funcs.append('char* %s_array(uint32_t count, const %s* const* pStruct, const char* myNodeName)\n{\n    char* str;\n    char tmpStr[1024];\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
-                else:
-                    gv_funcs.append('char* %s_array(uint32_t count, const %s* pStruct, const char* myNodeName)\n{\n    char* str;\n    char tmpStr[1024];\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
-                gv_funcs.append('    str = (char*)malloc(sizeof(char)*1024*count);\n')
-                gv_funcs.append('    sprintf(str, "\\"%s\\" [\\nlabel = <<TABLE BORDER=\\"0\\" CELLBORDER=\\"1\\" CELLSPACING=\\"0\\"><TR><TD COLSPAN=\\"3\\">%s (0x%p)</TD></TR>", myNodeName, myNodeName, pStruct);\n')
-                gv_funcs.append('    for (uint32_t i=0; i < count; i++) {\n')
-                gv_funcs.append('        sprintf(tmpStr, "');
-                p_args = ""
-                p_out = ""
-                for m in sorted(self.struct_dict[s]):
-                    plabel = ""
-                    (p_out1, p_args1) = self._get_struct_gv_print_formatted(self.struct_dict[s][m], port_label=plabel)
-                    if 0 == m: # Add array index notation at end of first row
-                        p_out1 = '%s<TD ROWSPAN=\\"%i\\" PORT=\\"slot%%u\\">%%u</TD></TR>' % (p_out1[:-5], len(self.struct_dict[s]))
-                        p_args1 += ', i, i'
-                    p_out += p_out1
-                    p_args += p_args1
-                p_out += '"'
-                p_args += ");\n"
-                if ptr_array:
-                    p_args = p_args.replace('->', '[i]->')
-                else:
-                    p_args = p_args.replace('->', '[i].')
-                gv_funcs.append(p_out);
-                gv_funcs.append(p_args);
-                gv_funcs.append('        strncat(str, tmpStr, strlen(tmpStr));\n')
-                gv_funcs.append('    }\n')
-                gv_funcs.append('    strncat(str, "</TABLE>>\\n];\\n\\n", 20);\n')
-                gv_funcs.append('    return str;\n}\n')
-        # Add function to dynamically print out unknown struct
-        gv_funcs.append("char* dynamic_gv_display(const void* pStruct, const char* nodeName)\n{\n")
-        gv_funcs.append("    // Cast to APP_INFO ptr initially just to pull sType off struct\n")
-        gv_funcs.append("    VkStructureType sType = ((VkApplicationInfo*)pStruct)->sType;\n")
-        gv_funcs.append("    switch (sType)\n    {\n")
-        for e in enum_type_dict:
-            if "StructureType" in e:
-                for v in sorted(enum_type_dict[e]):
-                    struct_name = get_struct_name_from_struct_type(v)
-                    if struct_name not in self.struct_dict:
-                        continue
-
-                    print_func_name = self._get_gv_func_name(struct_name)
-                    # TODO : Hand-coded fixes for some exceptions
-                    #if 'VkPipelineCbStateCreateInfo' in struct_name:
-                    #    struct_name = 'VK_PIPELINE_CB_STATE'
-                    if 'VkSemaphoreCreateInfo' in struct_name:
-                        struct_name = 'VkSemaphoreCreateInfo'
-                        print_func_name = self._get_gv_func_name(struct_name)
-                    elif 'VkSemaphoreOpenInfo' in struct_name:
-                        struct_name = 'VkSemaphoreOpenInfo'
-                        print_func_name = self._get_gv_func_name(struct_name)
-                    gv_funcs.append('        case %s:\n' % (v))
-                    gv_funcs.append('            return %s((%s*)pStruct, nodeName);\n' % (print_func_name, struct_name))
-                    #gv_funcs.append('        }\n')
-                    #gv_funcs.append('        break;\n')
-                gv_funcs.append("        default:\n")
-                gv_funcs.append("        return NULL;\n")
-                gv_funcs.append("    }\n")
-        gv_funcs.append("}")
-        return "".join(gv_funcs)
-
-
-
-
-
-#    def _generateHeader(self):
-#        hdr = []
-#        hdr.append('digraph g {\ngraph [\nrankdir = "LR"\n];')
-#        hdr.append('node [\nfontsize = "16"\nshape = "plaintext"\n];')
-#        hdr.append('edge [\n];\n')
-#        return "\n".join(hdr)
-#
-#    def _generateBody(self):
-#        body = []
-#        for s in sorted(self.struc_dict):
-#            field_num = 1
-#            body.append('"%s" [\nlabel = <<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0"> <TR><TD COLSPAN="2" PORT="f0">%s</TD></TR>' % (s, typedef_fwd_dict[s]))
-#            for m in sorted(self.struc_dict[s]):
-#                body.append('<TR><TD PORT="f%i">%s</TD><TD PORT="f%i">%s</TD></TR>' % (field_num, self.struc_dict[s][m]['full_type'], field_num+1, self.struc_dict[s][m]['name']))
-#                field_num += 2
-#            body.append('</TABLE>>\n];\n')
-#        return "".join(body)
-
 def main(argv=None):
     opts = handle_args()
     # Parse input file and fill out global dicts
@@ -2215,20 +1848,9 @@ def main(argv=None):
         sw = StructWrapperGen(struct_dict, os.path.basename(opts.input_file).strip(".h"), os.path.dirname(enum_sh_filename))
         #print(sw.get_class_name(struct))
         sw.set_include_headers([input_header,os.path.basename(enum_sh_filename),"stdint.h","cinttypes", "stdio.h","stdlib.h"])
-        print("Generating struct wrapper header to %s" % sw.header_filename)
-        sw.generateHeader()
-        print("Generating struct wrapper class to %s" % sw.class_filename)
-        sw.generateBody()
         sw.generateStringHelper()
         sw.generateValidateHelper()
-        # Generate a 2nd helper file that excludes addrs
-        sw.set_no_addr(True)
-        sw.generateStringHelper()
-        sw.set_no_addr(False)
         sw.set_include_headers([input_header,os.path.basename(enum_sh_filename),"stdint.h","stdio.h","stdlib.h","iostream","sstream","string"])
-        sw.set_no_addr(True)
-        sw.generateStringHelperCpp()
-        sw.set_no_addr(False)
         sw.generateStringHelperCpp()
         sw.set_include_headers(["stdio.h", "stdlib.h", input_header])
         sw.generateSizeHelper()
@@ -2240,13 +1862,6 @@ def main(argv=None):
         st.set_include_headers(["stdio.h", "stdlib.h", input_header])
         st.generateSizeHelper()
         st.generateSizeHelperC()
-    if opts.gen_cmake:
-        cmg = CMakeGen(sw, os.path.dirname(enum_sh_filename))
-        cmg.generate()
-    if opts.gen_graphviz:
-        gv = GraphVizGen(struct_dict, os.path.basename(opts.input_file).strip(".h"), os.path.dirname(enum_sh_filename))
-        gv.set_include_headers([input_header,os.path.basename(enum_sh_filename),"stdint.h","stdio.h","stdlib.h", "cinttypes"])
-        gv.generate()
     print("DONE!")
     #print(typedef_rev_dict)
     #print(types_dict)

@@ -1,0 +1,9 @@
+language: c++
+os: linux
+dist: trusty
+before_install: sudo apt-get install git cmake build-essential bison libx11-dev libxcb1-dev libwayland-dev libmirclient-dev
+script:
+  - ./update_external_sources.sh
+  - cmake -H. -Bdbuild -DCMAKE_BUILD_TYPE=Debug
+  - cd dbuild
+  - make

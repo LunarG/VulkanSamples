@@ -83,6 +83,8 @@ xcb_atom_t intern_atom(xcb_connection_t *c, xcb_intern_atom_cookie_t cookie)
 
 ShellXcb::ShellXcb(Game &game) : Shell(game)
 {
+    if (game.settings().validate)
+        instance_layers_.push_back("VK_LAYER_LUNARG_standard_validation");
     instance_extensions_.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
 
     init_connection();

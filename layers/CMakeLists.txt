@@ -1,5 +1,31 @@
 cmake_minimum_required (VERSION 2.8.11)
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    add_definitions(-DVK_USE_PLATFORM_WIN32_KHR -DWIN32_LEAN_AND_MEAN)
+    set(DisplayServer Win32)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Android")
+    add_definitions(-DVK_USE_PLATFORM_ANDROID_KHR)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    if (BUILD_WSI_XCB_SUPPORT)
+        add_definitions(-DVK_USE_PLATFORM_XCB_KHR)
+    endif()
+
+    if (BUILD_WSI_XLIB_SUPPORT)
+       add_definitions(-DVK_USE_PLATFORM_XLIB_KHR)
+    endif()
+
+    if (BUILD_WSI_WAYLAND_SUPPORT)
+       add_definitions(-DVK_USE_PLATFORM_WAYLAND_KHR)
+    endif()
+
+    if (BUILD_WSI_MIR_SUPPORT)
+        add_definitions(-DVK_USE_PLATFORM_MIR_KHR)
+        include_directories(${MIR_INCLUDE_DIR})
+    endif()
+else()
+    message(FATAL_ERROR "Unsupported Platform!")
+endif()
+
 macro(run_vk_helper subcmd)
     add_custom_command(OUTPUT ${ARGN}
         COMMAND ${PYTHON_CMD} ${SCRIPTS_DIR}/vk_helper.py --${subcmd} ${PROJECT_SOURCE_DIR}/include/vulkan/vulkan.h --abs_out_dir ${CMAKE_CURRENT_BINARY_DIR}
@@ -7,7 +33,7 @@ macro(run_vk_helper subcmd)
     )
 endmacro()
 
-macro(run_vk_layer_xml_generate dependency output)
+macro(run_vk_xml_generate dependency output)
     add_custom_command(OUTPUT ${output}
         COMMAND ${PYTHON_CMD} ${SCRIPTS_DIR}/lvl_genvk.py -registry ${SCRIPTS_DIR}/vk.xml ${output}
         DEPENDS ${SCRIPTS_DIR}/vk.xml ${SCRIPTS_DIR}/generator.py ${SCRIPTS_DIR}/${dependency} ${SCRIPTS_DIR}/lvl_genvk.py ${SCRIPTS_DIR}/reg.py
@@ -78,9 +104,10 @@ endif()
 
 if (WIN32)
     macro(add_vk_layer target)
-    add_custom_command(OUTPUT VkLayer_${target}.def
-        COMMAND ${PYTHON_CMD} ${SCRIPTS_DIR}/vk-generate.py ${DisplayServer} win-def-file VkLayer_${target} layer > VkLayer_${target}.def
-        DEPENDS ${SCRIPTS_DIR}/vk-generate.py ${SCRIPTS_DIR}/vulkan.py
+    FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/VkLayer_${target}.def DEF_FILE)
+    add_custom_target(copy-${target}-def-file ALL
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${DEF_FILE} VkLayer_${target}.def
+        VERBATIM
     )
     add_library(VkLayer_${target} SHARED ${ARGN} VkLayer_${target}.def)
     target_link_Libraries(VkLayer_${target} VkLayer_utils)
@@ -113,16 +140,10 @@ else()
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wpointer-arith -Wno-unused-function -Wno-sign-compare")
 endif()
 
-add_custom_command(OUTPUT vk_dispatch_table_helper.h
-    COMMAND ${PYTHON_CMD} ${SCRIPTS_DIR}/vk-generate.py AllPlatforms dispatch-table-ops layer > vk_dispatch_table_helper.h
-    DEPENDS ${SCRIPTS_DIR}/vk-generate.py ${SCRIPTS_DIR}/vulkan.py)
-
 run_vk_helper(gen_enum_string_helper vk_enum_string_helper.h)
 run_vk_helper(gen_struct_wrappers
     vk_struct_string_helper.h
     vk_struct_string_helper_cpp.h
-    vk_struct_string_helper_no_addr.h
-    vk_struct_string_helper_no_addr_cpp.h
     vk_struct_size_helper.h
     vk_struct_size_helper.c
     vk_struct_wrappers.h
@@ -134,8 +155,6 @@ run_vk_helper(gen_struct_wrappers
 set_source_files_properties(
     vk_struct_string_helper.h
     vk_struct_string_helper_cpp.h
-    vk_struct_string_helper_no_addr.h
-    vk_struct_string_helper_no_addr_cpp.h
     vk_struct_size_helper.h
     vk_struct_size_helper.c
     vk_struct_wrappers.h
@@ -154,9 +173,7 @@ add_custom_target(generate_dispatch_table_helper DEPENDS
 
 add_custom_target(generate_vk_layer_helpers DEPENDS
     vk_struct_string_helper.h
-    vk_struct_string_helper_no_addr.h
     vk_struct_string_helper_cpp.h
-    vk_struct_string_helper_no_addr_cpp.h
     vk_struct_size_helper.h
     vk_struct_size_helper.c
     vk_struct_wrappers.h
@@ -165,9 +182,10 @@ add_custom_target(generate_vk_layer_helpers DEPENDS
     vk_safe_struct.cpp
 )
 
-run_vk_layer_xml_generate(threading_generator.py thread_check.h)
-run_vk_layer_xml_generate(parameter_validation_generator.py parameter_validation.h)
-run_vk_layer_xml_generate(unique_objects_generator.py unique_objects_wrappers.h)
+run_vk_xml_generate(threading_generator.py thread_check.h)
+run_vk_xml_generate(parameter_validation_generator.py parameter_validation.h)
+run_vk_xml_generate(unique_objects_generator.py unique_objects_wrappers.h)
+run_vk_xml_generate(dispatch_table_generator.py vk_dispatch_table_helper.h)
 
 # Layer Utils Library
 # For Windows, we use a static lib because the Windows loader has a fairly restrictive loader search

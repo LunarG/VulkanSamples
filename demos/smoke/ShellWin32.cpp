@@ -57,6 +57,8 @@ private:
 
 ShellWin32::ShellWin32(Game &game) : Shell(game), hwnd_(nullptr)
 {
+    if (game.settings().validate)
+        instance_layers_.push_back("VK_LAYER_LUNARG_standard_validation");
     instance_extensions_.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
     init_vk();
 }

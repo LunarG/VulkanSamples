@@ -23,6 +23,7 @@ from generator import write
 from threading_generator import  ThreadGeneratorOptions, ThreadOutputGenerator
 from parameter_validation_generator import ParamCheckerGeneratorOptions, ParamCheckerOutputGenerator
 from unique_objects_generator import UniqueObjectsGeneratorOptions, UniqueObjectsOutputGenerator
+from dispatch_table_generator import DispatchTableOutputGenerator, DispatchTableOutputGeneratorOptions
 
 # Simple timer functions
 startTime = None
@@ -159,6 +160,30 @@ def makeGenOpts(extensions = [], protect = True, directory = '.'):
             apientryp         = 'VKAPI_PTR *',
             alignFuncParam    = 48)
         ]
+
+
+    # Options for dispatch table helper generator
+    genOpts['vk_dispatch_table_helper.h'] = [
+          DispatchTableOutputGenerator,
+          DispatchTableOutputGeneratorOptions(
+            filename          = 'vk_dispatch_table_helper.h',
+            directory         = directory,
+            apiname           = 'vulkan',
+            profile           = None,
+            versions          = allVersions,
+            emitversions      = allVersions,
+            defaultExtensions = 'vulkan',
+            addExtensions     = addExtensions,
+            removeExtensions  = removeExtensions,
+            prefixText        = prefixStrings + vkPrefixStrings,
+            protectFeature    = False,
+            apicall           = 'VKAPI_ATTR ',
+            apientry          = 'VKAPI_CALL ',
+            apientryp         = 'VKAPI_PTR *',
+            alignFuncParam    = 48)
+        ]
+
+
 
 # Generate a target based on the options in the matching genOpts{} object.
 # This is encapsulated in a function so it can be profiled and/or timed.

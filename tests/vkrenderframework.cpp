@@ -1410,6 +1410,16 @@ void VkCommandBufferObj::ResolveImage(VkImage srcImage, VkImageLayout srcImageLa
     vkCmdResolveImage(handle(), srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount, pRegions);
 }
 
+void VkCommandBufferObj::ClearColorImage(VkImage image, VkImageLayout imageLayout, const VkClearColorValue *pColor,
+                                         uint32_t rangeCount, const VkImageSubresourceRange *pRanges) {
+    vkCmdClearColorImage(handle(), image, imageLayout, pColor, rangeCount, pRanges);
+}
+
+void VkCommandBufferObj::ClearDepthStencilImage(VkImage image, VkImageLayout imageLayout, const VkClearDepthStencilValue *pColor,
+                                                uint32_t rangeCount, const VkImageSubresourceRange *pRanges) {
+    vkCmdClearDepthStencilImage(handle(), image, imageLayout, pColor, rangeCount, pRanges);
+}
+
 void VkCommandBufferObj::PrepareAttachments() {
     uint32_t i;
     const VkFlags output_mask = VK_ACCESS_HOST_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |

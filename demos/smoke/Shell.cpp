@@ -32,9 +32,7 @@ Shell::Shell(Game &game)
     instance_extensions_.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
     device_extensions_.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
-    // require "standard" validation layers
     if (settings_.validate) {
-        instance_layers_.push_back("VK_LAYER_LUNARG_standard_validation");
         instance_extensions_.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
     }
 }

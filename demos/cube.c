@@ -39,6 +39,10 @@
 #define APP_NAME_STR_LEN 80
 #endif // _WIN32
 
+#if defined(VK_USE_PLATFORM_MIR_KHR)
+#warning "Cube does not have code for Mir at this time"
+#endif
+
 #ifdef ANDROID
 #include "vulkan_wrapper.h"
 #else
@@ -291,18 +295,16 @@ struct demo {
     char name[APP_NAME_STR_LEN]; // Name to put on the window/icon
     HWND window;                 // hWnd - window handle
     POINT minsize;               // minimum window size
-#elif defined(VK_USE_PLATFORM_XLIB_KHR) | defined(VK_USE_PLATFORM_XCB_KHR)
+#elif defined(VK_USE_PLATFORM_XLIB_KHR)
     Display* display;
-#if defined(VK_USE_PLATFORM_XLIB_KHR)
     Window xlib_window;
     Atom xlib_wm_delete_window;
-#endif
-#if defined(VK_USE_PLATFORM_XCB_KHR)
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
+    Display* display;
     xcb_connection_t *connection;
     xcb_screen_t *screen;
     xcb_window_t xcb_window;
     xcb_intern_atom_reply_t *atom_wm_delete_window;
-#endif
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
     struct wl_display *display;
     struct wl_registry *registry;
@@ -310,13 +312,13 @@ struct demo {
     struct wl_surface *window;
     struct wl_shell *shell;
     struct wl_shell_surface *shell_surface;
+#elif defined(VK_USE_PLATFORM_MIR_KHR)
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
     ANativeWindow* window;
 #endif
     VkSurfaceKHR surface;
     bool prepared;
     bool use_staging_buffer;
-    bool use_xlib;
     bool separate_present_queue;
 
     VkInstance inst;
@@ -2076,16 +2078,7 @@ static void demo_cleanup(struct demo *demo) {
     vkDestroySurfaceKHR(demo->inst, demo->surface, NULL);
     vkDestroyInstance(demo->inst, NULL);
 
-#if defined(VK_USE_PLATFORM_XLIB_KHR) && defined(VK_USE_PLATFORM_XCB_KHR)
-    if (demo->use_xlib) {
-        XDestroyWindow(demo->display, demo->xlib_window);
-        XCloseDisplay(demo->display);
-    } else {
-        xcb_destroy_window(demo->connection, demo->xcb_window);
-        xcb_disconnect(demo->connection);
-    }
-    free(demo->atom_wm_delete_window);
-#elif defined(VK_USE_PLATFORM_XLIB_KHR)
+#if defined(VK_USE_PLATFORM_XLIB_KHR)
     XDestroyWindow(demo->display, demo->xlib_window);
     XCloseDisplay(demo->display);
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
@@ -2099,6 +2092,7 @@ static void demo_cleanup(struct demo *demo) {
     wl_compositor_destroy(demo->compositor);
     wl_registry_destroy(demo->registry);
     wl_display_disconnect(demo->display);
+#elif defined(VK_USE_PLATFORM_MIR_KHR)
 #endif
 }
 
@@ -2347,8 +2341,7 @@ static void demo_run_xlib(struct demo *demo) {
             demo->quit = true;
     }
 }
-#endif // VK_USE_PLATFORM_XLIB_KHR
-#ifdef VK_USE_PLATFORM_XCB_KHR
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
 static void demo_handle_xcb_event(struct demo *demo,
                               const xcb_generic_event_t *event) {
     uint8_t event_code = event->response_type & 0x7f;
@@ -2516,6 +2509,7 @@ static void demo_run(struct demo *demo) {
     demo_draw(demo);
     demo->curFrame++;
 }
+#elif defined(VK_USE_PLATFORM_MIR_KHR)
 #endif
 
 /*
@@ -2614,9 +2608,6 @@ static void demo_init_vk(struct demo *demo) {
     /* Look for instance extensions */
     VkBool32 surfaceExtFound = 0;
     VkBool32 platformSurfaceExtFound = 0;
-#if defined(VK_USE_PLATFORM_XLIB_KHR)
-    VkBool32 xlibSurfaceExtFound = 0;
-#endif
     memset(demo->extension_names, 0, sizeof(demo->extension_names));
 
     err = vkEnumerateInstanceExtensionProperties(
@@ -2643,33 +2634,29 @@ static void demo_init_vk(struct demo *demo) {
                 demo->extension_names[demo->enabled_extension_count++] =
                     VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
             }
-#endif
-#if defined(VK_USE_PLATFORM_XLIB_KHR)
+#elif defined(VK_USE_PLATFORM_XLIB_KHR)
             if (!strcmp(VK_KHR_XLIB_SURFACE_EXTENSION_NAME,
                         instance_extensions[i].extensionName)) {
                 platformSurfaceExtFound = 1;
-                xlibSurfaceExtFound = 1;
                 demo->extension_names[demo->enabled_extension_count++] =
                     VK_KHR_XLIB_SURFACE_EXTENSION_NAME;
             }
-#endif
-#if defined(VK_USE_PLATFORM_XCB_KHR)
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
             if (!strcmp(VK_KHR_XCB_SURFACE_EXTENSION_NAME,
                         instance_extensions[i].extensionName)) {
                 platformSurfaceExtFound = 1;
                 demo->extension_names[demo->enabled_extension_count++] =
                     VK_KHR_XCB_SURFACE_EXTENSION_NAME;
             }
-#endif
-#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
             if (!strcmp(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME,
                         instance_extensions[i].extensionName)) {
                 platformSurfaceExtFound = 1;
                 demo->extension_names[demo->enabled_extension_count++] =
                     VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME;
             }
-#endif
-#if defined(VK_USE_PLATFORM_ANDROID_KHR)
+#elif defined(VK_USE_PLATFORM_MIR_KHR)
+#elif defined(VK_USE_PLATFORM_ANDROID_KHR)
             if (!strcmp(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME,
                         instance_extensions[i].extensionName)) {
                 platformSurfaceExtFound = 1;
@@ -2724,6 +2711,7 @@ static void demo_init_vk(struct demo *demo) {
                  "look at the Getting Started guide for additional "
                  "information.\n",
                  "vkCreateInstance Failure");
+#elif defined(VK_USE_PLATFORM_MIR_KHR)
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
         ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
                  "the " VK_KHR_ANDROID_SURFACE_EXTENSION_NAME
@@ -2732,10 +2720,7 @@ static void demo_init_vk(struct demo *demo) {
                  "look at the Getting Started guide for additional "
                  "information.\n",
                  "vkCreateInstance Failure");
-#endif
-    }
-#if defined(VK_USE_PLATFORM_XLIB_KHR)
-    if (demo->use_xlib && !xlibSurfaceExtFound) {
+#elif defined(VK_USE_PLATFORM_XLIB_KHR)
         ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
                  "the " VK_KHR_XLIB_SURFACE_EXTENSION_NAME
                  " extension.\n\nDo you have a compatible "
@@ -2743,8 +2728,8 @@ static void demo_init_vk(struct demo *demo) {
                  "look at the Getting Started guide for additional "
                  "information.\n",
                  "vkCreateInstance Failure");
-    }
 #endif
+    }
     const VkApplicationInfo app = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
         .pNext = NULL,
@@ -2983,7 +2968,7 @@ static void demo_init_vk_swapchain(struct demo *demo) {
 
     err =
         vkCreateWin32SurfaceKHR(demo->inst, &createInfo, NULL, &demo->surface);
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR) && !defined(VK_USE_PLATFORM_XCB_KHR)
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
     VkWaylandSurfaceCreateInfoKHR createInfo;
     createInfo.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
     createInfo.pNext = NULL;
@@ -2993,6 +2978,7 @@ static void demo_init_vk_swapchain(struct demo *demo) {
 
     err = vkCreateWaylandSurfaceKHR(demo->inst, &createInfo, NULL,
                                     &demo->surface);
+#elif defined(VK_USE_PLATFORM_MIR_KHR)
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
     VkAndroidSurfaceCreateInfoKHR createInfo;
     createInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
@@ -3001,32 +2987,26 @@ static void demo_init_vk_swapchain(struct demo *demo) {
     createInfo.window = (ANativeWindow*)(demo->window);
 
     err = vkCreateAndroidSurfaceKHR(demo->inst, &createInfo, NULL, &demo->surface);
-#endif
-    if (demo->use_xlib) {
-#if defined(VK_USE_PLATFORM_XLIB_KHR)
-        VkXlibSurfaceCreateInfoKHR createInfo;
-        createInfo.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
-        createInfo.pNext = NULL;
-        createInfo.flags = 0;
-        createInfo.dpy = demo->display;
-        createInfo.window = demo->xlib_window;
+#elif defined(VK_USE_PLATFORM_XLIB_KHR)
+    VkXlibSurfaceCreateInfoKHR createInfo;
+    createInfo.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
+    createInfo.pNext = NULL;
+    createInfo.flags = 0;
+    createInfo.dpy = demo->display;
+    createInfo.window = demo->xlib_window;
 
-        err = vkCreateXlibSurfaceKHR(demo->inst, &createInfo, NULL,
+    err = vkCreateXlibSurfaceKHR(demo->inst, &createInfo, NULL,
                                      &demo->surface);
-#endif
-    }
-    else {
-#if defined(VK_USE_PLATFORM_XCB_KHR)
-        VkXcbSurfaceCreateInfoKHR createInfo;
-        createInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
-        createInfo.pNext = NULL;
-        createInfo.flags = 0;
-        createInfo.connection = demo->connection;
-        createInfo.window = demo->xcb_window;
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
+    VkXcbSurfaceCreateInfoKHR createInfo;
+    createInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
+    createInfo.pNext = NULL;
+    createInfo.flags = 0;
+    createInfo.connection = demo->connection;
+    createInfo.window = demo->xcb_window;
 
-        err = vkCreateXcbSurfaceKHR(demo->inst, &createInfo, NULL, &demo->surface);
+    err = vkCreateXcbSurfaceKHR(demo->inst, &createInfo, NULL, &demo->surface);
 #endif
-    }
     assert(!err);
 
     // Iterate over each queue to learn whether it supports presenting:
@@ -3158,7 +3138,7 @@ static void demo_init_vk_swapchain(struct demo *demo) {
     vkGetPhysicalDeviceMemoryProperties(demo->gpu, &demo->memory_properties);
 }
 
-#if defined(VK_USE_PLATFORM_WAYLAND_KHR) && !defined(VK_USE_PLATFORM_XCB_KHR)
+#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
 static void registry_handle_global(void *data, struct wl_registry *registry,
                                    uint32_t name, const char *interface,
                                    uint32_t version UNUSED) {
@@ -3179,6 +3159,7 @@ static void registry_handle_global_remove(void *data UNUSED,
 
 static const struct wl_registry_listener registry_listener = {
     registry_handle_global, registry_handle_global_remove};
+#elif defined(VK_USE_PLATFORM_MIR_KHR)
 #endif
 
 static void demo_init_connection(struct demo *demo) {
@@ -3214,6 +3195,7 @@ static void demo_init_connection(struct demo *demo) {
     demo->registry = wl_display_get_registry(demo->display);
     wl_registry_add_listener(demo->registry, &registry_listener, demo);
     wl_display_dispatch(demo->display);
+#elif defined(VK_USE_PLATFORM_MIR_KHR)
 #endif
 }
 
@@ -3245,12 +3227,10 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
             demo->validate = true;
             continue;
         }
-#if defined(VK_USE_PLATFORM_XLIB_KHR)
         if (strcmp(argv[i], "--xlib") == 0) {
-            demo->use_xlib = true;
+            fprintf(stderr, "--xlib is deprecated and no longer does anything");
             continue;
         }
-#endif
         if (strcmp(argv[i], "--c") == 0 && demo->frameCount == INT32_MAX &&
             i < argc - 1 && sscanf(argv[i + 1], "%d", &demo->frameCount) == 1 &&
             demo->frameCount >= 0) {
@@ -3266,9 +3246,6 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
         ERR_EXIT("Usage: cube [--validate]\n", "Usage");
 #else
         fprintf(stderr, "Usage:\n  %s [--use_staging] [--validate] [--break] "
-#if defined(VK_USE_PLATFORM_XLIB_KHR)
-                        "[--xlib] "
-#endif
                         "[--c <framecount>] [--suppress_popups] [--present_mode <present mode enum>]\n"
                         "VK_PRESENT_MODE_IMMEDIATE_KHR = %d\n"
                         "VK_PRESENT_MODE_MAILBOX_KHR = %d\n"
@@ -3281,8 +3258,7 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
 #endif
     }
 
-    if (!demo->use_xlib)
-        demo_init_connection(demo);
+    demo_init_connection(demo);
 
     demo_init_vk(demo);
 
@@ -3488,35 +3464,26 @@ int main(int argc, char **argv) {
     struct demo demo;
 
     demo_init(&demo, argc, argv);
-#if defined(VK_USE_PLATFORM_XLIB_KHR) && defined(VK_USE_PLATFORM_XCB_KHR)
-    if (demo.use_xlib)
-        demo_create_xlib_window(&demo);
-    else
-        demo_create_xcb_window(&demo);
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
+#if defined(VK_USE_PLATFORM_XCB_KHR)
     demo_create_xcb_window(&demo);
 #elif defined(VK_USE_PLATFORM_XLIB_KHR)
-    demo.use_xlib = true;
     demo_create_xlib_window(&demo);
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
     demo_create_window(&demo);
+#elif defined(VK_USE_PLATFORM_MIR_KHR)
 #endif
 
     demo_init_vk_swapchain(&demo);
 
     demo_prepare(&demo);
 
-#if defined(VK_USE_PLATFORM_XLIB_KHR) && defined(VK_USE_PLATFORM_XCB_KHR)
-    if (demo.use_xlib)
-        demo_run_xlib(&demo);
-    else
-        demo_run_xcb(&demo);
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
+#if defined(VK_USE_PLATFORM_XCB_KHR)
     demo_run_xcb(&demo);
 #elif defined(VK_USE_PLATFORM_XLIB_KHR)
     demo_run_xlib(&demo);
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
     demo_run(&demo);
+#elif defined(VK_USE_PLATFORM_MIR_KHR)
 #endif
 
     demo_cleanup(&demo);

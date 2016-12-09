@@ -186,6 +186,10 @@ class VkCommandBufferObj : public vk_testing::CommandBuffer {
                    uint32_t regionCount, const VkImageCopy *pRegions);
     void ResolveImage(VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage, VkImageLayout dstImageLayout,
                       uint32_t regionCount, const VkImageResolve *pRegions);
+    void ClearColorImage(VkImage image, VkImageLayout imageLayout, const VkClearColorValue *pColor, uint32_t rangeCount,
+                         const VkImageSubresourceRange *pRanges);
+    void ClearDepthStencilImage(VkImage image, VkImageLayout imageLayout, const VkClearDepthStencilValue *pColor,
+                                uint32_t rangeCount, const VkImageSubresourceRange *pRanges);
 
   protected:
     VkDeviceObj *m_device;
