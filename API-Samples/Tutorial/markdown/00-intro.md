@@ -47,7 +47,7 @@ At the end of the tutorial, you will have a complete Vulkan program
 that you can use as a starting point for learning more about Vulkan.
 
 To get an idea of what this samples progression looks like, please visit the
-<a href="https://vulkan.lunarg.com/app/doc/latest/windows/samples_index.html" target="_blank">LunarG Samples Progression Index</a>.
+<a href="https://vulkan.lunarg.com/doc/sdk/latest/windows/samples_index.html" target="_blank">LunarG Samples Progression Index</a>.
 
 ### How to use the Samples Tutorial
 
