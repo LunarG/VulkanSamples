@@ -123,7 +123,9 @@ class ValidationHeader:
                     if 'VALIDATION_ERROR_MAX_ENUM' in line:
                         grab_enums = False
                         break # done
-                    if 'VALIDATION_ERROR_' in line:
+                    elif 'VALIDATION_ERROR_UNDEFINED' in line:
+                        continue
+                    elif 'VALIDATION_ERROR_' in line:
                         enum = line.split(' = ')[0]
                         self.enums.append(enum)
         #print "Found %d error enums. First is %s and last is %s." % (len(self.enums), self.enums[0], self.enums[-1])
@@ -143,13 +145,13 @@ class ValidationSource:
                         continue
                     # Find enums
                     #if 'VALIDATION_ERROR_' in line and True not in [ignore in line for ignore in ['[VALIDATION_ERROR_', 'UNIQUE_VALIDATION_ERROR_CODE']]:
-                    if 'VALIDATION_ERROR_' in line and 'UNIQUE_VALIDATION_ERROR_CODE' not in line:
+                    if ' VALIDATION_ERROR_' in line:
                         # Need to isolate the validation error enum
                         #print("Line has check:%s" % (line))
                         line_list = line.split()
                         enum = ''
                         for str in line_list:
-                            if 'VALIDATION_ERROR_' in str and True not in [ignore_str in str for ignore_str in ['[VALIDATION_ERROR_', 'VALIDATION_ERROR_UNDEFINED']]:
+                            if 'VALIDATION_ERROR_' in str and True not in [ignore_str in str for ignore_str in ['[VALIDATION_ERROR_', 'VALIDATION_ERROR_UNDEFINED', 'UNIQUE_VALIDATION_ERROR_CODE']]:
                                 enum = str.strip(',);')
                                 break
                         if enum != '':
