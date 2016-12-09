@@ -8272,11 +8272,11 @@ static bool VerifyClearImageLayout(layer_data *dev_data, GLOBAL_CB_NODE *cb_node
         }
     }
 
-    for (uint32_t levelIdx = 0; levelIdx < range.levelCount; ++levelIdx) {
-        uint32_t level = levelIdx + range.baseMipLevel;
-        for (uint32_t layerIdx = 0; layerIdx < range.layerCount; ++layerIdx) {
-            uint32_t layer = layerIdx + range.baseArrayLayer;
-            VkImageSubresource sub = {range.aspectMask, level, layer};
+    for (uint32_t levelIdx = 0; levelIdx < resolvedRange.levelCount; ++levelIdx) {
+        uint32_t level = levelIdx + resolvedRange.baseMipLevel;
+        for (uint32_t layerIdx = 0; layerIdx < resolvedRange.layerCount; ++layerIdx) {
+            uint32_t layer = layerIdx + resolvedRange.baseArrayLayer;
+            VkImageSubresource sub = {resolvedRange.aspectMask, level, layer};
             IMAGE_CMD_BUF_LAYOUT_NODE node;
             if (!FindLayout(cb_node, image, sub, node)) {
                 SetLayout(cb_node, image, sub, IMAGE_CMD_BUF_LAYOUT_NODE(dest_image_layout, dest_image_layout));
