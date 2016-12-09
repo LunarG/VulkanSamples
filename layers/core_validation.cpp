@@ -8472,14 +8472,29 @@ static inline bool ValidateCopyBufferImageTransferGranularityRequirements(layer_
                                                                           const IMAGE_STATE *img, const VkBufferImageCopy *region,
                                                                           const uint32_t i, const char *function) {
     bool skip = false;
-    VkExtent3D granularity = GetScaledItg(dev_data, cb_node, img);
-    skip |= CheckItgSize(dev_data, cb_node, region->bufferOffset, granularity.width, i, function, "bufferOffset");
-    skip |= CheckItgInt(dev_data, cb_node, region->bufferRowLength, granularity.width, i, function, "bufferRowLength");
-    skip |= CheckItgInt(dev_data, cb_node, region->bufferImageHeight, granularity.width, i, function, "bufferImageHeight");
-    skip |= CheckItgOffset(dev_data, cb_node, &region->imageOffset, &granularity, i, function, "imageOffset");
-    VkExtent3D subresource_extent = GetImageSubresourceExtent(img, &region->imageSubresource);
-    skip |= CheckItgExtent(dev_data, cb_node, &region->imageExtent, &region->imageOffset, &granularity, &subresource_extent, i,
-                           function, "imageExtent");
+    if (vk_format_is_compressed(img->createInfo.format) == true) {
+        // TODO: Add granularity checking for compressed formats
+
+        // bufferRowLength must be a multiple of the compressed texel block width
+        // bufferImageHeight must be a multiple of the compressed texel block height
+        // all members of imageOffset must be a multiple of the corresponding dimensions of the compressed texel block
+        // bufferOffset must be a multiple of the compressed texel block size in bytes
+        // imageExtent.width must be a multiple of the compressed texel block width or (imageExtent.width + imageOffset.x)
+        //     must equal the image subresource width
+        // imageExtent.height must be a multiple of the compressed texel block height or (imageExtent.height + imageOffset.y)
+        //     must equal the image subresource height
+        // imageExtent.depth must be a multiple of the compressed texel block depth or (imageExtent.depth + imageOffset.z)
+        //     must equal the image subresource depth
+    } else {
+        VkExtent3D granularity = GetScaledItg(dev_data, cb_node, img);
+        skip |= CheckItgSize(dev_data, cb_node, region->bufferOffset, granularity.width, i, function, "bufferOffset");
+        skip |= CheckItgInt(dev_data, cb_node, region->bufferRowLength, granularity.width, i, function, "bufferRowLength");
+        skip |= CheckItgInt(dev_data, cb_node, region->bufferImageHeight, granularity.width, i, function, "bufferImageHeight");
+        skip |= CheckItgOffset(dev_data, cb_node, &region->imageOffset, &granularity, i, function, "imageOffset");
+        VkExtent3D subresource_extent = GetImageSubresourceExtent(img, &region->imageSubresource);
+        skip |= CheckItgExtent(dev_data, cb_node, &region->imageExtent, &region->imageOffset, &granularity, &subresource_extent, i,
+                               function, "imageExtent");
+    }
     return skip;
 }
 
