@@ -126,20 +126,14 @@ struct AppInstance {
 #ifdef VK_USE_PLATFORM_WIN32_KHR
     HINSTANCE h_instance; // Windows Instance
     HWND h_wnd;           // window handle
-#endif
-
-#ifdef VK_USE_PLATFORM_XCB_KHR
+#elif VK_USE_PLATFORM_XCB_KHR
     xcb_connection_t *xcb_connection;
     xcb_screen_t *xcb_screen;
     xcb_window_t xcb_window;
-#endif
-
-#ifdef VK_USE_PLATFORM_XLIB_KHR
+#elif VK_USE_PLATFORM_XLIB_KHR
     Display *xlib_display;
     Window xlib_window;
-#endif
-
-#ifdef VK_USE_PLATFORM_ANDROID_KHR // TODO
+#elif VK_USE_PLATFORM_ANDROID_KHR // TODO
     ANativeWindow *window;
 #endif
 };
@@ -429,7 +423,9 @@ static const char *VkFormatString(VkFormat fmt) {
         return "UNKNOWN_FORMAT";
     }
 }
-
+#if defined(VK_USE_PLATFORM_XCB_KHR)     || \
+    defined(VK_USE_PLATFORM_XLIB_KHR)    || \
+    defined(VK_USE_PLATFORM_WIN32_KHR)
 static const char *VkPresentModeString(VkPresentModeKHR mode) {
     switch (mode) {
 #define STR(r)                                                                 \
@@ -444,6 +440,7 @@ static const char *VkPresentModeString(VkPresentModeKHR mode) {
         return "UNKNOWN_FORMAT";
     }
 }
+#endif
 
 static void AppDevInitFormats(struct AppDev *dev) {
     VkFormat f;
@@ -627,9 +624,10 @@ static void AppCreateInstance(struct AppInstance *inst) {
         }
     }
 
-#if defined(VK_USE_PLATFORM_XCB_KHR)   || \
-    defined(VK_USE_PLATFORM_XLIB_KHR)  || \
-    defined(VK_USE_PLATFORM_WIN32_KHR) || \
+#if defined(VK_USE_PLATFORM_XCB_KHR)     || \
+    defined(VK_USE_PLATFORM_XLIB_KHR)    || \
+    defined(VK_USE_PLATFORM_WAYLAND_KHR) || \
+    defined(VK_USE_PLATFORM_WIN32_KHR)   || \
     defined(VK_USE_PLATFORM_ANDROID_KHR)
     if (ext_count)
         for (i = 0; ((i < inst->global_extension_count) &&
@@ -640,18 +638,19 @@ static void AppCreateInstance(struct AppInstance *inst) {
             if (!strcmp(VK_KHR_WIN32_SURFACE_EXTENSION_NAME, found_name)) {
                 ext_names[ext_count++] = VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
             }
-#endif
-#ifdef VK_USE_PLATFORM_XCB_KHR
+#elif VK_USE_PLATFORM_XCB_KHR
             if (!strcmp(VK_KHR_XCB_SURFACE_EXTENSION_NAME, found_name)) {
                 ext_names[ext_count++] = VK_KHR_XCB_SURFACE_EXTENSION_NAME;
             }
-#endif
-#ifdef VK_USE_PLATFORM_XLIB_KHR
+#elif VK_USE_PLATFORM_XLIB_KHR
             if (!strcmp(VK_KHR_XLIB_SURFACE_EXTENSION_NAME, found_name)) {
                 ext_names[ext_count++] = VK_KHR_XLIB_SURFACE_EXTENSION_NAME;
             }
-#endif
-#ifdef VK_USE_PLATFORM_ANDROID_KHR
+#elif VK_USE_PLATFORM_WAYLAND_KHR
+            if (!strcmp(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME, found_name)) {
+                ext_names[ext_count++] = VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME;
+            }
+#elif VK_USE_PLATFORM_ANDROID_KHR
             if (!strcmp(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME, found_name)) {
                 ext_names[ext_count++] = VK_KHR_ANDROID_SURFACE_EXTENSION_NAME;
             }
@@ -861,8 +860,8 @@ static void AppDestroyWin32Window(struct AppInstance *inst) {
 #endif //VK_USE_PLATFORM_WIN32_KHR
 //-----------------------------------------------------------
 
-#if defined(VK_USE_PLATFORM_XCB_KHR)  || \
-    defined(VK_USE_PLATFORM_XLIB_KHR) || \
+#if defined(VK_USE_PLATFORM_XCB_KHR)     || \
+    defined(VK_USE_PLATFORM_XLIB_KHR)    || \
     defined(VK_USE_PLATFORM_WIN32_KHR)
 static void AppDestroySurface(struct AppInstance *inst) { //same for all platforms
     vkDestroySurfaceKHR(inst->instance, inst->surface, NULL);
@@ -921,11 +920,11 @@ static void AppDestroyXcbWindow(struct AppInstance *inst) {
     xcb_destroy_window(inst->xcb_connection, inst->xcb_window);
     xcb_disconnect(inst->xcb_connection);
 }
-#endif //VK_USE_PLATFORM_XCB_KHR
+//VK_USE_PLATFORM_XCB_KHR
 //-----------------------------------------------------------
 
 //----------------------------XLib---------------------------
-#ifdef VK_USE_PLATFORM_XLIB_KHR
+#elif VK_USE_PLATFORM_XLIB_KHR
 static void AppCreateXlibWindow(struct AppInstance *inst) {
     long visualMask = VisualScreenMask;
     int numberOfVisuals;
@@ -968,8 +967,8 @@ static void AppDestroyXlibWindow(struct AppInstance *inst) {
 #endif //VK_USE_PLATFORM_XLIB_KHR
 //-----------------------------------------------------------
 
-#if defined(VK_USE_PLATFORM_XCB_KHR)  || \
-    defined(VK_USE_PLATFORM_XLIB_KHR) || \
+#if defined(VK_USE_PLATFORM_XCB_KHR)     || \
+    defined(VK_USE_PLATFORM_XLIB_KHR)    || \
     defined(VK_USE_PLATFORM_WIN32_KHR)
 static int AppDumpSurfaceFormats(struct AppInstance *inst, struct AppGpu *gpu){
     // Get the list of VkFormat's that are supported:
@@ -1538,10 +1537,17 @@ int main(int argc, char **argv) {
     int format_count = 0;
     int present_mode_count = 0;
 
+#if defined(VK_USE_PLATFORM_XCB_KHR) || defined(VK_USE_PLATFORM_XLIB_KHR)
+    if (getenv("DISPLAY") == NULL) {
+        printf("'DISPLAY' environment variable not set... Exiting!\n");
+        fflush(stdout);
+        exit(1);
+    }
+#endif
 //--WIN32--
 #ifdef VK_USE_PLATFORM_WIN32_KHR
     if (HasExtension(VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
-                      inst.global_extension_count, inst.global_extensions)) {
+                     inst.global_extension_count, inst.global_extensions)) {
         AppCreateWin32Window(&inst);
         for (i = 0; i < gpu_count; i++) {
             AppCreateWin32Surface(&inst);
@@ -1553,16 +1559,8 @@ int main(int argc, char **argv) {
         }
         AppDestroyWin32Window(&inst);
     }
-#endif
-#if defined(VK_USE_PLATFORM_XCB_KHR) || defined(VK_USE_PLATFORM_XLIB_KHR)
-    if (getenv("DISPLAY") == NULL) {
-        printf("'DISPLAY' environment variable not set... Exiting!\n");
-        fflush(stdout);
-        exit(1);
-    }
-#endif
 //--XCB--
-#ifdef VK_USE_PLATFORM_XCB_KHR
+#elif VK_USE_PLATFORM_XCB_KHR
     if (HasExtension(VK_KHR_XCB_SURFACE_EXTENSION_NAME,
                       inst.global_extension_count, inst.global_extensions)) {
         AppCreateXcbWindow(&inst);
@@ -1576,9 +1574,8 @@ int main(int argc, char **argv) {
         }
         AppDestroyXcbWindow(&inst);
     }
-#endif
 //--XLIB--
-#ifdef VK_USE_PLATFORM_XLIB_KHR
+#elif VK_USE_PLATFORM_XLIB_KHR
     if (HasExtension(VK_KHR_XLIB_SURFACE_EXTENSION_NAME,
                       inst.global_extension_count, inst.global_extensions)) {
         AppCreateXlibWindow(&inst);
