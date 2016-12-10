@@ -19,15 +19,18 @@
  * Author: Ian Elliott <ianelliott@google.com>
  */
 
+// For Windows, this #include must come before other Vk headers.
+#include <vk_loader_platform.h>
+
+#include "swapchain.h"
+#include "vk_enum_string_helper.h"
+#include "vk_layer_extension_utils.h"
+#include "vk_layer_utils.h"
+#include "vk_validation_error_messages.h"
 #include <mutex>
 #include <stdio.h>
 #include <string.h>
-#include <vk_loader_platform.h>
 #include <vulkan/vk_icd.h>
-#include "swapchain.h"
-#include "vk_layer_extension_utils.h"
-#include "vk_enum_string_helper.h"
-#include "vk_layer_utils.h"
 
 namespace swapchain {
 
@@ -58,8 +61,8 @@ static void checkDeviceRegisterExtensions(VkPhysicalDevice physicalDevice, const
         // TBD: Should we leave error in (since Swapchain really needs this
         // link)?
         log_msg(my_instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
-                reinterpret_cast<uint64_t>(physicalDevice), __LINE__, SWAPCHAIN_INVALID_HANDLE, "Swapchain",
-                "vkCreateDevice() called with a non-valid VkPhysicalDevice.");
+                reinterpret_cast<uint64_t>(physicalDevice), __LINE__, VALIDATION_ERROR_00031, "Swapchain",
+                "vkCreateDevice() called with a non-valid VkPhysicalDevice. %s", validation_error_map[VALIDATION_ERROR_00031]);
     }
     my_device_data->deviceMap[device].device = device;
 }
@@ -105,6 +108,8 @@ static const char *sharingModeStr(VkSharingMode value) {
     return string_VkSharingMode(value);
 }
 
+// TODO This overload is only preserved for validateCreateSwapchainKHR(), which doesn't have a VU msgCode defined yet.
+// When a VU msgCode is defined, this overload can be deleted, and the latter form used instead.
 static bool ValidateQueueFamilyIndex(layer_data *my_data, uint32_t queue_family_index, uint32_t queue_family_count,
                                      VkPhysicalDevice physical_device, const char *function) {
     bool skip_call = false;
@@ -115,6 +120,20 @@ static bool ValidateQueueFamilyIndex(layer_data *my_data, uint32_t queue_family_
                             "%s() called with a queueFamilyIndex that is too large (i.e. %d).  The maximum value (returned by "
                             "vkGetPhysicalDeviceQueueFamilyProperties) is only %d.",
                             function, queue_family_index, queue_family_count);
+    }
+    return skip_call;
+}
+
+static bool ValidateQueueFamilyIndex(layer_data *my_data, uint32_t queue_family_index, uint32_t queue_family_count,
+                                     VkPhysicalDevice physical_device, const char *function,
+                                     /*enum*/ UNIQUE_VALIDATION_ERROR_CODE msgCode) {
+    bool skip_call = false;
+    if (queue_family_index >= queue_family_count) {
+        skip_call = log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                            reinterpret_cast<uint64_t>(physical_device), __LINE__, msgCode, swapchain_layer_name,
+                            "%s() called with a queueFamilyIndex that is too large (i.e. %d).  The maximum value (returned by "
+                            "vkGetPhysicalDeviceQueueFamilyProperties) is only %d. %s",
+                            function, queue_family_index, queue_family_count, validation_error_map[msgCode]);
     }
     return skip_call;
 }
@@ -187,9 +206,10 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
             if (pPhysicalDevice) {
                 if (pPhysicalDevice->pDevice) {
                     log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                            reinterpret_cast<uint64_t>(pPhysicalDevice->pDevice->device), __LINE__,
-                            SWAPCHAIN_DEL_OBJECT_BEFORE_CHILDREN, swapchain_layer_name,
-                            "VkDestroyInstance() called before all of its associated VkDevices were destroyed.");
+                            reinterpret_cast<uint64_t>(pPhysicalDevice->pDevice->device), __LINE__, VALIDATION_ERROR_00018,
+                            swapchain_layer_name,
+                            "VkDestroyInstance() called before all of its associated VkDevices were destroyed. %s",
+                            validation_error_map[VALIDATION_ERROR_00018]);
                 }
             }
 
@@ -203,9 +223,9 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
             SwpSurface *pSurface = it->second;
             if (pSurface) {
                 log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-                        reinterpret_cast<uint64_t>(pInstance->instance), __LINE__, SWAPCHAIN_DEL_OBJECT_BEFORE_CHILDREN,
-                        swapchain_layer_name,
-                        "VkDestroyInstance() called before all of its associated VkSurfaceKHRs were destroyed.");
+                        reinterpret_cast<uint64_t>(pInstance->instance), __LINE__, VALIDATION_ERROR_00018, swapchain_layer_name,
+                        "VkDestroyInstance() called before all of its associated VkSurfaceKHRs were destroyed. %s",
+                        validation_error_map[VALIDATION_ERROR_00018]);
             }
         }
         my_data->instanceMap.erase(instance);
@@ -356,7 +376,8 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceMirPresentationSupportKHR(VkPhys
 
     if (pPhysicalDevice->gotQueueFamilyPropertyCount) {
         skip_call |= ValidateQueueFamilyIndex(my_data, queueFamilyIndex, pPhysicalDevice->numOfQueueFamilies,
-                                              pPhysicalDevice->physicalDevice, "vkGetPhysicalDeviceMirPresentationSupportKHR");
+                                              pPhysicalDevice->physicalDevice, "vkGetPhysicalDeviceMirPresentationSupportKHR",
+                                              VALIDATION_ERROR_01893);
     }
     lock.unlock();
 
@@ -425,7 +446,8 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceWaylandPresentationSupportKHR(Vk
 
     if (pPhysicalDevice->gotQueueFamilyPropertyCount) {
         skip_call |= ValidateQueueFamilyIndex(my_data, queueFamilyIndex, pPhysicalDevice->numOfQueueFamilies,
-                                              pPhysicalDevice->physicalDevice, "vkGetPhysicalDeviceWaylandPresentationSupportKHR");
+                                              pPhysicalDevice->physicalDevice, "vkGetPhysicalDeviceWaylandPresentationSupportKHR",
+                                              VALIDATION_ERROR_01896);
     }
     lock.unlock();
 
@@ -493,7 +515,8 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceWin32PresentationSupportKHR(VkPh
 
     if (pPhysicalDevice->gotQueueFamilyPropertyCount) {
         skip_call |= ValidateQueueFamilyIndex(my_data, queueFamilyIndex, pPhysicalDevice->numOfQueueFamilies,
-                                              pPhysicalDevice->physicalDevice, "vkGetPhysicalDeviceWin32PresentationSupportKHR");
+                                              pPhysicalDevice->physicalDevice, "vkGetPhysicalDeviceWin32PresentationSupportKHR",
+                                              VALIDATION_ERROR_01899);
     }
     lock.unlock();
 
@@ -561,7 +584,8 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceXcbPresentationSupportKHR(VkPhys
 
     if (pPhysicalDevice->gotQueueFamilyPropertyCount) {
         skip_call |= ValidateQueueFamilyIndex(my_data, queueFamilyIndex, pPhysicalDevice->numOfQueueFamilies,
-                                              pPhysicalDevice->physicalDevice, "vkGetPhysicalDeviceXcbPresentationSupportKHR");
+                                              pPhysicalDevice->physicalDevice, "vkGetPhysicalDeviceXcbPresentationSupportKHR",
+                                              VALIDATION_ERROR_01901);
     }
     lock.unlock();
 
@@ -630,7 +654,8 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceXlibPresentationSupportKHR(VkPhy
 
     if (pPhysicalDevice->gotQueueFamilyPropertyCount) {
         skip_call |= ValidateQueueFamilyIndex(my_data, queueFamilyIndex, pPhysicalDevice->numOfQueueFamilies,
-                                              pPhysicalDevice->physicalDevice, "vkGetPhysicalDeviceXlibPresentationSupportKHR");
+                                              pPhysicalDevice->physicalDevice, "vkGetPhysicalDeviceXlibPresentationSupportKHR",
+                                              VALIDATION_ERROR_01904);
     }
     lock.unlock();
 
@@ -696,11 +721,11 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneSupportedDisplaysKHR(VkPhysicalDev
     if (pPhysicalDevice->gotDisplayPlanePropertyCount && planeIndex >= pPhysicalDevice->displayPlanePropertyCount) {
         skip_call |=
             log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-                    reinterpret_cast<uint64_t>(pPhysicalDevice->pInstance->instance), __LINE__, SWAPCHAIN_PLANE_INDEX_TOO_LARGE,
+                    reinterpret_cast<uint64_t>(pPhysicalDevice->pInstance->instance), __LINE__, VALIDATION_ERROR_01857,
                     swapchain_layer_name,
                     "vkGetDisplayPlaneSupportedDisplaysKHR(): planeIndex must be in the range [0, %d] that was returned by "
-                    "vkGetPhysicalDeviceDisplayPlanePropertiesKHR. Do you have the plane index hardcoded?",
-                    pPhysicalDevice->displayPlanePropertyCount - 1);
+                    "vkGetPhysicalDeviceDisplayPlanePropertiesKHR. Do you have the plane index hardcoded? %s",
+                    pPhysicalDevice->displayPlanePropertyCount - 1, validation_error_map[VALIDATION_ERROR_01857]);
     }
     lock.unlock();
 
@@ -802,10 +827,10 @@ VKAPI_ATTR void VKAPI_CALL DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR s
             pSurface->pInstance->surfaces.erase(surface);
         }
         if (!pSurface->swapchains.empty()) {
-            skip_call |=
-                log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-                        reinterpret_cast<uint64_t>(instance), __LINE__, SWAPCHAIN_DEL_OBJECT_BEFORE_CHILDREN, swapchain_layer_name,
-                        "vkDestroySurfaceKHR() called before all of its associated VkSwapchainKHRs were destroyed.");
+            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+                                 reinterpret_cast<uint64_t>(instance), __LINE__, VALIDATION_ERROR_01844, swapchain_layer_name,
+                                 "vkDestroySurfaceKHR() called before all of its associated VkSwapchainKHRs were destroyed. %s",
+                                 validation_error_map[VALIDATION_ERROR_01844]);
 
             // Empty and then delete all SwpSwapchains
             for (auto it = pSurface->swapchains.begin(); it != pSurface->swapchains.end(); it++) {
@@ -915,8 +940,9 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
         }
         if (!pDevice->swapchains.empty()) {
             log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                    reinterpret_cast<uint64_t>(device), __LINE__, SWAPCHAIN_DEL_OBJECT_BEFORE_CHILDREN, swapchain_layer_name,
-                    "vkDestroyDevice() called before all of its associated VkSwapchainKHRs were destroyed.");
+                    reinterpret_cast<uint64_t>(device), __LINE__, VALIDATION_ERROR_00049, swapchain_layer_name,
+                    "vkDestroyDevice() called before all of its associated VkSwapchainKHRs were destroyed. %s",
+                    validation_error_map[VALIDATION_ERROR_00049]);
 
             // Empty and then delete all SwpSwapchain's
             for (auto it = pDevice->swapchains.begin(); it != pDevice->swapchains.end(); it++) {
@@ -957,7 +983,8 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevi
             "vkGetPhysicalDeviceSurfaceSupportKHR() called before calling the vkGetPhysicalDeviceQueueFamilyProperties function.");
     } else if (pPhysicalDevice->gotQueueFamilyPropertyCount) {
         skip_call |= ValidateQueueFamilyIndex(my_data, queueFamilyIndex, pPhysicalDevice->numOfQueueFamilies,
-                                              pPhysicalDevice->physicalDevice, "vkGetPhysicalDeviceSurfaceSupportKHR");
+                                              pPhysicalDevice->physicalDevice, "vkGetPhysicalDeviceSurfaceSupportKHR",
+                                              VALIDATION_ERROR_01889);
     }
 
     lock.unlock();
@@ -1032,27 +1059,35 @@ static bool validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
         // surface:
         SwpSurface *pSurface = ((pPhysicalDevice) ? pPhysicalDevice->supportedSurfaces[pCreateInfo->surface] : NULL);
         if (!pSurface) {
-            skip_call |=
-                log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                        reinterpret_cast<uint64_t>(device), __LINE__, SWAPCHAIN_CREATE_UNSUPPORTED_SURFACE, swapchain_layer_name,
-                        "The surface in pCreateInfo->surface, that was given to vkCreateSwapchainKHR(), must be a surface "
-                        "that is supported by the device as determined by vkGetPhysicalDeviceSurfaceSupportKHR().  "
-                        "However, vkGetPhysicalDeviceSurfaceSupportKHR() was never called with this surface.");
+            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                 reinterpret_cast<uint64_t>(device), __LINE__, VALIDATION_ERROR_01922, swapchain_layer_name,
+                                 "The surface in pCreateInfo->surface, that was given to vkCreateSwapchainKHR(), must be a surface "
+                                 "that is supported by the device as determined by vkGetPhysicalDeviceSurfaceSupportKHR().  "
+                                 "However, vkGetPhysicalDeviceSurfaceSupportKHR() was never called with this surface. %s",
+                                 validation_error_map[VALIDATION_ERROR_01922]);
         }
 
     }
 
     // Validate pCreateInfo->imageSharingMode and related values:
     if (pCreateInfo->imageSharingMode == VK_SHARING_MODE_CONCURRENT) {
-        if ((pCreateInfo->queueFamilyIndexCount <= 1) || !pCreateInfo->pQueueFamilyIndices) {
+        if (pCreateInfo->queueFamilyIndexCount <= 1) {
             skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                                 reinterpret_cast<uint64_t>(device), __LINE__, SWAPCHAIN_CREATE_SWAP_BAD_SHARING_VALUES,
-                                 swapchain_layer_name,
+                                 reinterpret_cast<uint64_t>(device), __LINE__, VALIDATION_ERROR_02338, swapchain_layer_name,
                                  "vkCreateSwapchainKHR() called with a supported pCreateInfo->sharingMode of (i.e. %s), but with a "
-                                 "bad value(s) for pCreateInfo->queueFamilyIndexCount or pCreateInfo->pQueueFamilyIndices).",
-                                 sharingModeStr(pCreateInfo->imageSharingMode));
+                                 "bad value(s) for pCreateInfo->queueFamilyIndexCount or pCreateInfo->pQueueFamilyIndices). %s",
+                                 sharingModeStr(pCreateInfo->imageSharingMode), validation_error_map[VALIDATION_ERROR_02338]);
+        }
+
+        if (!pCreateInfo->pQueueFamilyIndices) {
+            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                 reinterpret_cast<uint64_t>(device), __LINE__, VALIDATION_ERROR_02337, swapchain_layer_name,
+                                 "vkCreateSwapchainKHR() called with a supported pCreateInfo->sharingMode of (i.e. %s), but with a "
+                                 "bad value(s) for pCreateInfo->queueFamilyIndexCount or pCreateInfo->pQueueFamilyIndices). %s",
+                                 sharingModeStr(pCreateInfo->imageSharingMode), validation_error_map[VALIDATION_ERROR_02337]);
         }
     }
+
     return skip_call;
 }
 
