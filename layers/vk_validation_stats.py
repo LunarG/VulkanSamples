@@ -149,21 +149,22 @@ class ValidationSource:
                         # Need to isolate the validation error enum
                         #print("Line has check:%s" % (line))
                         line_list = line.split()
-                        enum = ''
+                        enum_list = []
                         for str in line_list:
                             if 'VALIDATION_ERROR_' in str and True not in [ignore_str in str for ignore_str in ['[VALIDATION_ERROR_', 'VALIDATION_ERROR_UNDEFINED', 'UNIQUE_VALIDATION_ERROR_CODE']]:
-                                enum = str.strip(',);')
-                                break
-                        if enum != '':
-                            if enum not in self.enum_count_dict:
-                                self.enum_count_dict[enum] = 1
-                                #print "Found enum %s implemented for first time in file %s" % (enum, sf)
-                            else:
-                                self.enum_count_dict[enum] = self.enum_count_dict[enum] + 1
-                                #print "Found enum %s implemented for %d time in file %s" % (enum, self.enum_count_dict[enum], sf)
-                                duplicate_checks = duplicate_checks + 1
-                        #else:
-                            #print("Didn't find actual check in line:%s" % (line))
+                                enum_list.append(str.strip(',);'))
+                                #break
+                        for enum in enum_list:
+                            if enum != '':
+                                if enum not in self.enum_count_dict:
+                                    self.enum_count_dict[enum] = 1
+                                    #print "Found enum %s implemented for first time in file %s" % (enum, sf)
+                                else:
+                                    self.enum_count_dict[enum] = self.enum_count_dict[enum] + 1
+                                    #print "Found enum %s implemented for %d time in file %s" % (enum, self.enum_count_dict[enum], sf)
+                                    duplicate_checks = duplicate_checks + 1
+                            #else:
+                                #print("Didn't find actual check in line:%s" % (line))
         #print "Found %d unique implemented checks and %d are duplicated at least once" % (len(self.enum_count_dict.keys()), duplicate_checks)
 
 # Class to parse the validation layer test source and store testnames
