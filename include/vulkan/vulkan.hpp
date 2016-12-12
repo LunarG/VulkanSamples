@@ -33,6 +33,7 @@
 #include <initializer_list>
 #include <string>
 #include <system_error>
+#include <tuple>
 #include <type_traits>
 #include <vulkan/vulkan.h>
 #ifndef VULKAN_HPP_DISABLE_ENHANCED_MODE
@@ -40,7 +41,7 @@
 # include <vector>
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
 
-static_assert( VK_HEADER_VERSION ==  34 , "Wrong VK_HEADER_VERSION!" );
+static_assert( VK_HEADER_VERSION ==  37 , "Wrong VK_HEADER_VERSION!" );
 
 // 32-bit vulkan is not typesafe for handles, so don't allow copy constructors on this platform by default.
 // To enable this feature on 32-bit platforms please define VULKAN_HPP_TYPESAFE_CONVERSION
@@ -65,8 +66,30 @@ static_assert( VK_HEADER_VERSION ==  34 , "Wrong VK_HEADER_VERSION!" );
 # endif
 #endif
 
+
+#if !defined(VULKAN_HPP_INLINE)
+# if defined(__clang___)
+#  if __has_attribute(always_inline)
+#   define VULKAN_HPP_INLINE __attribute__((always_inline)) __inline__
+#  else
+#    define VULKAN_HPP_INLINE inline
+#  endif
+# elif defined(__GNUC__)
+#  define VULKAN_HPP_INLINE __attribute__((always_inline)) __inline__
+# elif defined(_MSC_VER)
+#  define VULKAN_HPP_INLINE __forceinline
+# else
+#  define VULKAN_HPP_INLINE inline
+# endif
+#endif
+
 namespace vk
 {
+  template <typename FlagBitsType> struct FlagTraits
+  {
+    enum { allFlags = 0 };
+  };
+
   template <typename BitType, typename MaskType = VkFlags>
   class Flags
   {
@@ -136,6 +159,13 @@ namespace vk
       return !m_mask;
     }
 
+    Flags<BitType> operator~() const
+    {
+      Flags<BitType> result(*this);
+      result.m_mask ^= FlagTraits<BitType>::allFlags;
+      return result;
+    }
+
     bool operator==(Flags<BitType> const& rhs) const
     {
       return m_mask == rhs.m_mask;
@@ -178,11 +208,13 @@ namespace vk
     return flags ^ bit;
   }
 
+
   template <typename RefType>
   class Optional
   {
   public:
     Optional(RefType & reference) { m_ptr = &reference; }
+    Optional(RefType * ptr) { m_ptr = ptr; }
     Optional(std::nullptr_t) { m_ptr = nullptr; }
 
     operator RefType*() const { return m_ptr; }
@@ -314,7 +346,7 @@ namespace vk
     eErrorInvalidShaderNV = VK_ERROR_INVALID_SHADER_NV
   };
 
-  inline std::string to_string(Result value)
+  VULKAN_HPP_INLINE std::string to_string(Result value)
   {
     switch (value)
     {
@@ -362,18 +394,18 @@ namespace vk
 # undef noexcept
 #endif
 
-  inline const std::error_category& errorCategory()
+  VULKAN_HPP_INLINE const std::error_category& errorCategory()
   {
     static ErrorCategoryImpl instance;
     return instance;
   }
 
-  inline std::error_code make_error_code(Result e)
+  VULKAN_HPP_INLINE std::error_code make_error_code(Result e)
   {
     return std::error_code(static_cast<int>(e), errorCategory());
   }
 
-  inline std::error_condition make_error_condition(Result e)
+  VULKAN_HPP_INLINE std::error_condition make_error_condition(Result e)
   {
     return std::error_condition(static_cast<int>(e), errorCategory());
   }
@@ -399,6 +431,8 @@ namespace vk
 
     Result  result;
     T       value;
+
+    operator std::tuple<Result&, T&>() { return std::tuple<Result&, T&>(result, value); }
   };
 
   template <typename T>
@@ -420,7 +454,7 @@ namespace vk
 #endif
   };
 
-  inline ResultValueType<void>::type createResultValue( Result result, char const * message )
+  VULKAN_HPP_INLINE ResultValueType<void>::type createResultValue( Result result, char const * message )
   {
 #ifdef VULKAN_HPP_NO_EXCEPTIONS
     assert( result == Result::eSuccess );
@@ -434,7 +468,7 @@ namespace vk
   }
 
   template <typename T>
-  inline typename ResultValueType<T>::type createResultValue( Result result, T & data, char const * message )
+  VULKAN_HPP_INLINE typename ResultValueType<T>::type createResultValue( Result result, T & data, char const * message )
   {
 #ifdef VULKAN_HPP_NO_EXCEPTIONS
     assert( result == Result::eSuccess );
@@ -448,7 +482,7 @@ namespace vk
 #endif
   }
 
-  inline Result createResultValue( Result result, char const * message, std::initializer_list<Result> successCodes )
+  VULKAN_HPP_INLINE Result createResultValue( Result result, char const * message, std::initializer_list<Result> successCodes )
   {
 #ifdef VULKAN_HPP_NO_EXCEPTIONS
     assert( std::find( successCodes.begin(), successCodes.end(), result ) != successCodes.end() );
@@ -462,7 +496,7 @@ namespace vk
   }
 
   template <typename T>
-  inline ResultValue<T> createResultValue( Result result, T & data, char const * message, std::initializer_list<Result> successCodes )
+  VULKAN_HPP_INLINE ResultValue<T> createResultValue( Result result, T & data, char const * message, std::initializer_list<Result> successCodes )
   {
 #ifdef VULKAN_HPP_NO_EXCEPTIONS
     assert( std::find( successCodes.begin(), successCodes.end(), result ) != successCodes.end() );
@@ -487,7 +521,7 @@ namespace vk
 
   using FramebufferCreateFlags = Flags<FramebufferCreateFlagBits, VkFramebufferCreateFlags>;
 
-  inline FramebufferCreateFlags operator|( FramebufferCreateFlagBits bit0, FramebufferCreateFlagBits bit1 )
+  VULKAN_HPP_INLINE FramebufferCreateFlags operator|( FramebufferCreateFlagBits bit0, FramebufferCreateFlagBits bit1 )
   {
     return FramebufferCreateFlags( bit0 ) | bit1;
   }
@@ -498,7 +532,7 @@ namespace vk
 
   using QueryPoolCreateFlags = Flags<QueryPoolCreateFlagBits, VkQueryPoolCreateFlags>;
 
-  inline QueryPoolCreateFlags operator|( QueryPoolCreateFlagBits bit0, QueryPoolCreateFlagBits bit1 )
+  VULKAN_HPP_INLINE QueryPoolCreateFlags operator|( QueryPoolCreateFlagBits bit0, QueryPoolCreateFlagBits bit1 )
   {
     return QueryPoolCreateFlags( bit0 ) | bit1;
   }
@@ -509,7 +543,7 @@ namespace vk
 
   using RenderPassCreateFlags = Flags<RenderPassCreateFlagBits, VkRenderPassCreateFlags>;
 
-  inline RenderPassCreateFlags operator|( RenderPassCreateFlagBits bit0, RenderPassCreateFlagBits bit1 )
+  VULKAN_HPP_INLINE RenderPassCreateFlags operator|( RenderPassCreateFlagBits bit0, RenderPassCreateFlagBits bit1 )
   {
     return RenderPassCreateFlags( bit0 ) | bit1;
   }
@@ -520,7 +554,7 @@ namespace vk
 
   using SamplerCreateFlags = Flags<SamplerCreateFlagBits, VkSamplerCreateFlags>;
 
-  inline SamplerCreateFlags operator|( SamplerCreateFlagBits bit0, SamplerCreateFlagBits bit1 )
+  VULKAN_HPP_INLINE SamplerCreateFlags operator|( SamplerCreateFlagBits bit0, SamplerCreateFlagBits bit1 )
   {
     return SamplerCreateFlags( bit0 ) | bit1;
   }
@@ -531,7 +565,7 @@ namespace vk
 
   using PipelineLayoutCreateFlags = Flags<PipelineLayoutCreateFlagBits, VkPipelineLayoutCreateFlags>;
 
-  inline PipelineLayoutCreateFlags operator|( PipelineLayoutCreateFlagBits bit0, PipelineLayoutCreateFlagBits bit1 )
+  VULKAN_HPP_INLINE PipelineLayoutCreateFlags operator|( PipelineLayoutCreateFlagBits bit0, PipelineLayoutCreateFlagBits bit1 )
   {
     return PipelineLayoutCreateFlags( bit0 ) | bit1;
   }
@@ -542,7 +576,7 @@ namespace vk
 
   using PipelineCacheCreateFlags = Flags<PipelineCacheCreateFlagBits, VkPipelineCacheCreateFlags>;
 
-  inline PipelineCacheCreateFlags operator|( PipelineCacheCreateFlagBits bit0, PipelineCacheCreateFlagBits bit1 )
+  VULKAN_HPP_INLINE PipelineCacheCreateFlags operator|( PipelineCacheCreateFlagBits bit0, PipelineCacheCreateFlagBits bit1 )
   {
     return PipelineCacheCreateFlags( bit0 ) | bit1;
   }
@@ -553,7 +587,7 @@ namespace vk
 
   using PipelineDepthStencilStateCreateFlags = Flags<PipelineDepthStencilStateCreateFlagBits, VkPipelineDepthStencilStateCreateFlags>;
 
-  inline PipelineDepthStencilStateCreateFlags operator|( PipelineDepthStencilStateCreateFlagBits bit0, PipelineDepthStencilStateCreateFlagBits bit1 )
+  VULKAN_HPP_INLINE PipelineDepthStencilStateCreateFlags operator|( PipelineDepthStencilStateCreateFlagBits bit0, PipelineDepthStencilStateCreateFlagBits bit1 )
   {
     return PipelineDepthStencilStateCreateFlags( bit0 ) | bit1;
   }
@@ -564,7 +598,7 @@ namespace vk
 
   using PipelineDynamicStateCreateFlags = Flags<PipelineDynamicStateCreateFlagBits, VkPipelineDynamicStateCreateFlags>;
 
-  inline PipelineDynamicStateCreateFlags operator|( PipelineDynamicStateCreateFlagBits bit0, PipelineDynamicStateCreateFlagBits bit1 )
+  VULKAN_HPP_INLINE PipelineDynamicStateCreateFlags operator|( PipelineDynamicStateCreateFlagBits bit0, PipelineDynamicStateCreateFlagBits bit1 )
   {
     return PipelineDynamicStateCreateFlags( bit0 ) | bit1;
   }
@@ -575,7 +609,7 @@ namespace vk
 
   using PipelineColorBlendStateCreateFlags = Flags<PipelineColorBlendStateCreateFlagBits, VkPipelineColorBlendStateCreateFlags>;
 
-  inline PipelineColorBlendStateCreateFlags operator|( PipelineColorBlendStateCreateFlagBits bit0, PipelineColorBlendStateCreateFlagBits bit1 )
+  VULKAN_HPP_INLINE PipelineColorBlendStateCreateFlags operator|( PipelineColorBlendStateCreateFlagBits bit0, PipelineColorBlendStateCreateFlagBits bit1 )
   {
     return PipelineColorBlendStateCreateFlags( bit0 ) | bit1;
   }
@@ -586,7 +620,7 @@ namespace vk
 
   using PipelineMultisampleStateCreateFlags = Flags<PipelineMultisampleStateCreateFlagBits, VkPipelineMultisampleStateCreateFlags>;
 
-  inline PipelineMultisampleStateCreateFlags operator|( PipelineMultisampleStateCreateFlagBits bit0, PipelineMultisampleStateCreateFlagBits bit1 )
+  VULKAN_HPP_INLINE PipelineMultisampleStateCreateFlags operator|( PipelineMultisampleStateCreateFlagBits bit0, PipelineMultisampleStateCreateFlagBits bit1 )
   {
     return PipelineMultisampleStateCreateFlags( bit0 ) | bit1;
   }
@@ -597,7 +631,7 @@ namespace vk
 
   using PipelineRasterizationStateCreateFlags = Flags<PipelineRasterizationStateCreateFlagBits, VkPipelineRasterizationStateCreateFlags>;
 
-  inline PipelineRasterizationStateCreateFlags operator|( PipelineRasterizationStateCreateFlagBits bit0, PipelineRasterizationStateCreateFlagBits bit1 )
+  VULKAN_HPP_INLINE PipelineRasterizationStateCreateFlags operator|( PipelineRasterizationStateCreateFlagBits bit0, PipelineRasterizationStateCreateFlagBits bit1 )
   {
     return PipelineRasterizationStateCreateFlags( bit0 ) | bit1;
   }
@@ -608,7 +642,7 @@ namespace vk
 
   using PipelineViewportStateCreateFlags = Flags<PipelineViewportStateCreateFlagBits, VkPipelineViewportStateCreateFlags>;
 
-  inline PipelineViewportStateCreateFlags operator|( PipelineViewportStateCreateFlagBits bit0, PipelineViewportStateCreateFlagBits bit1 )
+  VULKAN_HPP_INLINE PipelineViewportStateCreateFlags operator|( PipelineViewportStateCreateFlagBits bit0, PipelineViewportStateCreateFlagBits bit1 )
   {
     return PipelineViewportStateCreateFlags( bit0 ) | bit1;
   }
@@ -619,7 +653,7 @@ namespace vk
 
   using PipelineTessellationStateCreateFlags = Flags<PipelineTessellationStateCreateFlagBits, VkPipelineTessellationStateCreateFlags>;
 
-  inline PipelineTessellationStateCreateFlags operator|( PipelineTessellationStateCreateFlagBits bit0, PipelineTessellationStateCreateFlagBits bit1 )
+  VULKAN_HPP_INLINE PipelineTessellationStateCreateFlags operator|( PipelineTessellationStateCreateFlagBits bit0, PipelineTessellationStateCreateFlagBits bit1 )
   {
     return PipelineTessellationStateCreateFlags( bit0 ) | bit1;
   }
@@ -630,7 +664,7 @@ namespace vk
 
   using PipelineInputAssemblyStateCreateFlags = Flags<PipelineInputAssemblyStateCreateFlagBits, VkPipelineInputAssemblyStateCreateFlags>;
 
-  inline PipelineInputAssemblyStateCreateFlags operator|( PipelineInputAssemblyStateCreateFlagBits bit0, PipelineInputAssemblyStateCreateFlagBits bit1 )
+  VULKAN_HPP_INLINE PipelineInputAssemblyStateCreateFlags operator|( PipelineInputAssemblyStateCreateFlagBits bit0, PipelineInputAssemblyStateCreateFlagBits bit1 )
   {
     return PipelineInputAssemblyStateCreateFlags( bit0 ) | bit1;
   }
@@ -641,7 +675,7 @@ namespace vk
 
   using PipelineVertexInputStateCreateFlags = Flags<PipelineVertexInputStateCreateFlagBits, VkPipelineVertexInputStateCreateFlags>;
 
-  inline PipelineVertexInputStateCreateFlags operator|( PipelineVertexInputStateCreateFlagBits bit0, PipelineVertexInputStateCreateFlagBits bit1 )
+  VULKAN_HPP_INLINE PipelineVertexInputStateCreateFlags operator|( PipelineVertexInputStateCreateFlagBits bit0, PipelineVertexInputStateCreateFlagBits bit1 )
   {
     return PipelineVertexInputStateCreateFlags( bit0 ) | bit1;
   }
@@ -652,7 +686,7 @@ namespace vk
 
   using PipelineShaderStageCreateFlags = Flags<PipelineShaderStageCreateFlagBits, VkPipelineShaderStageCreateFlags>;
 
-  inline PipelineShaderStageCreateFlags operator|( PipelineShaderStageCreateFlagBits bit0, PipelineShaderStageCreateFlagBits bit1 )
+  VULKAN_HPP_INLINE PipelineShaderStageCreateFlags operator|( PipelineShaderStageCreateFlagBits bit0, PipelineShaderStageCreateFlagBits bit1 )
   {
     return PipelineShaderStageCreateFlags( bit0 ) | bit1;
   }
@@ -663,7 +697,7 @@ namespace vk
 
   using DescriptorSetLayoutCreateFlags = Flags<DescriptorSetLayoutCreateFlagBits, VkDescriptorSetLayoutCreateFlags>;
 
-  inline DescriptorSetLayoutCreateFlags operator|( DescriptorSetLayoutCreateFlagBits bit0, DescriptorSetLayoutCreateFlagBits bit1 )
+  VULKAN_HPP_INLINE DescriptorSetLayoutCreateFlags operator|( DescriptorSetLayoutCreateFlagBits bit0, DescriptorSetLayoutCreateFlagBits bit1 )
   {
     return DescriptorSetLayoutCreateFlags( bit0 ) | bit1;
   }
@@ -674,7 +708,7 @@ namespace vk
 
   using BufferViewCreateFlags = Flags<BufferViewCreateFlagBits, VkBufferViewCreateFlags>;
 
-  inline BufferViewCreateFlags operator|( BufferViewCreateFlagBits bit0, BufferViewCreateFlagBits bit1 )
+  VULKAN_HPP_INLINE BufferViewCreateFlags operator|( BufferViewCreateFlagBits bit0, BufferViewCreateFlagBits bit1 )
   {
     return BufferViewCreateFlags( bit0 ) | bit1;
   }
@@ -685,7 +719,7 @@ namespace vk
 
   using InstanceCreateFlags = Flags<InstanceCreateFlagBits, VkInstanceCreateFlags>;
 
-  inline InstanceCreateFlags operator|( InstanceCreateFlagBits bit0, InstanceCreateFlagBits bit1 )
+  VULKAN_HPP_INLINE InstanceCreateFlags operator|( InstanceCreateFlagBits bit0, InstanceCreateFlagBits bit1 )
   {
     return InstanceCreateFlags( bit0 ) | bit1;
   }
@@ -696,7 +730,7 @@ namespace vk
 
   using DeviceCreateFlags = Flags<DeviceCreateFlagBits, VkDeviceCreateFlags>;
 
-  inline DeviceCreateFlags operator|( DeviceCreateFlagBits bit0, DeviceCreateFlagBits bit1 )
+  VULKAN_HPP_INLINE DeviceCreateFlags operator|( DeviceCreateFlagBits bit0, DeviceCreateFlagBits bit1 )
   {
     return DeviceCreateFlags( bit0 ) | bit1;
   }
@@ -707,7 +741,7 @@ namespace vk
 
   using DeviceQueueCreateFlags = Flags<DeviceQueueCreateFlagBits, VkDeviceQueueCreateFlags>;
 
-  inline DeviceQueueCreateFlags operator|( DeviceQueueCreateFlagBits bit0, DeviceQueueCreateFlagBits bit1 )
+  VULKAN_HPP_INLINE DeviceQueueCreateFlags operator|( DeviceQueueCreateFlagBits bit0, DeviceQueueCreateFlagBits bit1 )
   {
     return DeviceQueueCreateFlags( bit0 ) | bit1;
   }
@@ -718,7 +752,7 @@ namespace vk
 
   using ImageViewCreateFlags = Flags<ImageViewCreateFlagBits, VkImageViewCreateFlags>;
 
-  inline ImageViewCreateFlags operator|( ImageViewCreateFlagBits bit0, ImageViewCreateFlagBits bit1 )
+  VULKAN_HPP_INLINE ImageViewCreateFlags operator|( ImageViewCreateFlagBits bit0, ImageViewCreateFlagBits bit1 )
   {
     return ImageViewCreateFlags( bit0 ) | bit1;
   }
@@ -729,7 +763,7 @@ namespace vk
 
   using SemaphoreCreateFlags = Flags<SemaphoreCreateFlagBits, VkSemaphoreCreateFlags>;
 
-  inline SemaphoreCreateFlags operator|( SemaphoreCreateFlagBits bit0, SemaphoreCreateFlagBits bit1 )
+  VULKAN_HPP_INLINE SemaphoreCreateFlags operator|( SemaphoreCreateFlagBits bit0, SemaphoreCreateFlagBits bit1 )
   {
     return SemaphoreCreateFlags( bit0 ) | bit1;
   }
@@ -740,7 +774,7 @@ namespace vk
 
   using ShaderModuleCreateFlags = Flags<ShaderModuleCreateFlagBits, VkShaderModuleCreateFlags>;
 
-  inline ShaderModuleCreateFlags operator|( ShaderModuleCreateFlagBits bit0, ShaderModuleCreateFlagBits bit1 )
+  VULKAN_HPP_INLINE ShaderModuleCreateFlags operator|( ShaderModuleCreateFlagBits bit0, ShaderModuleCreateFlagBits bit1 )
   {
     return ShaderModuleCreateFlags( bit0 ) | bit1;
   }
@@ -751,7 +785,7 @@ namespace vk
 
   using EventCreateFlags = Flags<EventCreateFlagBits, VkEventCreateFlags>;
 
-  inline EventCreateFlags operator|( EventCreateFlagBits bit0, EventCreateFlagBits bit1 )
+  VULKAN_HPP_INLINE EventCreateFlags operator|( EventCreateFlagBits bit0, EventCreateFlagBits bit1 )
   {
     return EventCreateFlags( bit0 ) | bit1;
   }
@@ -762,7 +796,7 @@ namespace vk
 
   using MemoryMapFlags = Flags<MemoryMapFlagBits, VkMemoryMapFlags>;
 
-  inline MemoryMapFlags operator|( MemoryMapFlagBits bit0, MemoryMapFlagBits bit1 )
+  VULKAN_HPP_INLINE MemoryMapFlags operator|( MemoryMapFlagBits bit0, MemoryMapFlagBits bit1 )
   {
     return MemoryMapFlags( bit0 ) | bit1;
   }
@@ -773,7 +807,7 @@ namespace vk
 
   using SubpassDescriptionFlags = Flags<SubpassDescriptionFlagBits, VkSubpassDescriptionFlags>;
 
-  inline SubpassDescriptionFlags operator|( SubpassDescriptionFlagBits bit0, SubpassDescriptionFlagBits bit1 )
+  VULKAN_HPP_INLINE SubpassDescriptionFlags operator|( SubpassDescriptionFlagBits bit0, SubpassDescriptionFlagBits bit1 )
   {
     return SubpassDescriptionFlags( bit0 ) | bit1;
   }
@@ -784,7 +818,7 @@ namespace vk
 
   using DescriptorPoolResetFlags = Flags<DescriptorPoolResetFlagBits, VkDescriptorPoolResetFlags>;
 
-  inline DescriptorPoolResetFlags operator|( DescriptorPoolResetFlagBits bit0, DescriptorPoolResetFlagBits bit1 )
+  VULKAN_HPP_INLINE DescriptorPoolResetFlags operator|( DescriptorPoolResetFlagBits bit0, DescriptorPoolResetFlagBits bit1 )
   {
     return DescriptorPoolResetFlags( bit0 ) | bit1;
   }
@@ -795,7 +829,7 @@ namespace vk
 
   using SwapchainCreateFlagsKHR = Flags<SwapchainCreateFlagBitsKHR, VkSwapchainCreateFlagsKHR>;
 
-  inline SwapchainCreateFlagsKHR operator|( SwapchainCreateFlagBitsKHR bit0, SwapchainCreateFlagBitsKHR bit1 )
+  VULKAN_HPP_INLINE SwapchainCreateFlagsKHR operator|( SwapchainCreateFlagBitsKHR bit0, SwapchainCreateFlagBitsKHR bit1 )
   {
     return SwapchainCreateFlagsKHR( bit0 ) | bit1;
   }
@@ -806,7 +840,7 @@ namespace vk
 
   using DisplayModeCreateFlagsKHR = Flags<DisplayModeCreateFlagBitsKHR, VkDisplayModeCreateFlagsKHR>;
 
-  inline DisplayModeCreateFlagsKHR operator|( DisplayModeCreateFlagBitsKHR bit0, DisplayModeCreateFlagBitsKHR bit1 )
+  VULKAN_HPP_INLINE DisplayModeCreateFlagsKHR operator|( DisplayModeCreateFlagBitsKHR bit0, DisplayModeCreateFlagBitsKHR bit1 )
   {
     return DisplayModeCreateFlagsKHR( bit0 ) | bit1;
   }
@@ -817,7 +851,7 @@ namespace vk
 
   using DisplaySurfaceCreateFlagsKHR = Flags<DisplaySurfaceCreateFlagBitsKHR, VkDisplaySurfaceCreateFlagsKHR>;
 
-  inline DisplaySurfaceCreateFlagsKHR operator|( DisplaySurfaceCreateFlagBitsKHR bit0, DisplaySurfaceCreateFlagBitsKHR bit1 )
+  VULKAN_HPP_INLINE DisplaySurfaceCreateFlagsKHR operator|( DisplaySurfaceCreateFlagBitsKHR bit0, DisplaySurfaceCreateFlagBitsKHR bit1 )
   {
     return DisplaySurfaceCreateFlagsKHR( bit0 ) | bit1;
   }
@@ -831,7 +865,7 @@ namespace vk
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
   using AndroidSurfaceCreateFlagsKHR = Flags<AndroidSurfaceCreateFlagBitsKHR, VkAndroidSurfaceCreateFlagsKHR>;
 
-  inline AndroidSurfaceCreateFlagsKHR operator|( AndroidSurfaceCreateFlagBitsKHR bit0, AndroidSurfaceCreateFlagBitsKHR bit1 )
+  VULKAN_HPP_INLINE AndroidSurfaceCreateFlagsKHR operator|( AndroidSurfaceCreateFlagBitsKHR bit0, AndroidSurfaceCreateFlagBitsKHR bit1 )
   {
     return AndroidSurfaceCreateFlagsKHR( bit0 ) | bit1;
   }
@@ -846,7 +880,7 @@ namespace vk
 #ifdef VK_USE_PLATFORM_MIR_KHR
   using MirSurfaceCreateFlagsKHR = Flags<MirSurfaceCreateFlagBitsKHR, VkMirSurfaceCreateFlagsKHR>;
 
-  inline MirSurfaceCreateFlagsKHR operator|( MirSurfaceCreateFlagBitsKHR bit0, MirSurfaceCreateFlagBitsKHR bit1 )
+  VULKAN_HPP_INLINE MirSurfaceCreateFlagsKHR operator|( MirSurfaceCreateFlagBitsKHR bit0, MirSurfaceCreateFlagBitsKHR bit1 )
   {
     return MirSurfaceCreateFlagsKHR( bit0 ) | bit1;
   }
@@ -861,7 +895,7 @@ namespace vk
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
   using WaylandSurfaceCreateFlagsKHR = Flags<WaylandSurfaceCreateFlagBitsKHR, VkWaylandSurfaceCreateFlagsKHR>;
 
-  inline WaylandSurfaceCreateFlagsKHR operator|( WaylandSurfaceCreateFlagBitsKHR bit0, WaylandSurfaceCreateFlagBitsKHR bit1 )
+  VULKAN_HPP_INLINE WaylandSurfaceCreateFlagsKHR operator|( WaylandSurfaceCreateFlagBitsKHR bit0, WaylandSurfaceCreateFlagBitsKHR bit1 )
   {
     return WaylandSurfaceCreateFlagsKHR( bit0 ) | bit1;
   }
@@ -876,7 +910,7 @@ namespace vk
 #ifdef VK_USE_PLATFORM_WIN32_KHR
   using Win32SurfaceCreateFlagsKHR = Flags<Win32SurfaceCreateFlagBitsKHR, VkWin32SurfaceCreateFlagsKHR>;
 
-  inline Win32SurfaceCreateFlagsKHR operator|( Win32SurfaceCreateFlagBitsKHR bit0, Win32SurfaceCreateFlagBitsKHR bit1 )
+  VULKAN_HPP_INLINE Win32SurfaceCreateFlagsKHR operator|( Win32SurfaceCreateFlagBitsKHR bit0, Win32SurfaceCreateFlagBitsKHR bit1 )
   {
     return Win32SurfaceCreateFlagsKHR( bit0 ) | bit1;
   }
@@ -891,7 +925,7 @@ namespace vk
 #ifdef VK_USE_PLATFORM_XLIB_KHR
   using XlibSurfaceCreateFlagsKHR = Flags<XlibSurfaceCreateFlagBitsKHR, VkXlibSurfaceCreateFlagsKHR>;
 
-  inline XlibSurfaceCreateFlagsKHR operator|( XlibSurfaceCreateFlagBitsKHR bit0, XlibSurfaceCreateFlagBitsKHR bit1 )
+  VULKAN_HPP_INLINE XlibSurfaceCreateFlagsKHR operator|( XlibSurfaceCreateFlagBitsKHR bit0, XlibSurfaceCreateFlagBitsKHR bit1 )
   {
     return XlibSurfaceCreateFlagsKHR( bit0 ) | bit1;
   }
@@ -906,7 +940,7 @@ namespace vk
 #ifdef VK_USE_PLATFORM_XCB_KHR
   using XcbSurfaceCreateFlagsKHR = Flags<XcbSurfaceCreateFlagBitsKHR, VkXcbSurfaceCreateFlagsKHR>;
 
-  inline XcbSurfaceCreateFlagsKHR operator|( XcbSurfaceCreateFlagBitsKHR bit0, XcbSurfaceCreateFlagBitsKHR bit1 )
+  VULKAN_HPP_INLINE XcbSurfaceCreateFlagsKHR operator|( XcbSurfaceCreateFlagBitsKHR bit0, XcbSurfaceCreateFlagBitsKHR bit1 )
   {
     return XcbSurfaceCreateFlagsKHR( bit0 ) | bit1;
   }
@@ -2051,6 +2085,120 @@ namespace vk
     VkPipelineCache m_pipelineCache;
   };
   static_assert( sizeof( PipelineCache ) == sizeof( VkPipelineCache ), "handle and wrapper have different size!" );
+
+  class ObjectTableNVX
+  {
+  public:
+    ObjectTableNVX()
+      : m_objectTableNVX(VK_NULL_HANDLE)
+    {}
+
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
+    ObjectTableNVX(VkObjectTableNVX objectTableNVX)
+       : m_objectTableNVX(objectTableNVX)
+    {}
+
+    ObjectTableNVX& operator=(VkObjectTableNVX objectTableNVX)
+    {
+      m_objectTableNVX = objectTableNVX;
+      return *this;
+    }
+#endif
+
+    bool operator==(ObjectTableNVX const &rhs) const
+    {
+      return m_objectTableNVX == rhs.m_objectTableNVX;
+    }
+
+    bool operator!=(ObjectTableNVX const &rhs) const
+    {
+      return m_objectTableNVX != rhs.m_objectTableNVX;
+    }
+
+    bool operator<(ObjectTableNVX const &rhs) const
+    {
+      return m_objectTableNVX < rhs.m_objectTableNVX;
+    }
+
+#if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
+    explicit
+#endif
+    operator VkObjectTableNVX() const
+    {
+      return m_objectTableNVX;
+    }
+
+    explicit operator bool() const
+    {
+      return m_objectTableNVX != VK_NULL_HANDLE;
+    }
+
+    bool operator!() const
+    {
+      return m_objectTableNVX == VK_NULL_HANDLE;
+    }
+
+  private:
+    VkObjectTableNVX m_objectTableNVX;
+  };
+  static_assert( sizeof( ObjectTableNVX ) == sizeof( VkObjectTableNVX ), "handle and wrapper have different size!" );
+
+  class IndirectCommandsLayoutNVX
+  {
+  public:
+    IndirectCommandsLayoutNVX()
+      : m_indirectCommandsLayoutNVX(VK_NULL_HANDLE)
+    {}
+
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
+    IndirectCommandsLayoutNVX(VkIndirectCommandsLayoutNVX indirectCommandsLayoutNVX)
+       : m_indirectCommandsLayoutNVX(indirectCommandsLayoutNVX)
+    {}
+
+    IndirectCommandsLayoutNVX& operator=(VkIndirectCommandsLayoutNVX indirectCommandsLayoutNVX)
+    {
+      m_indirectCommandsLayoutNVX = indirectCommandsLayoutNVX;
+      return *this;
+    }
+#endif
+
+    bool operator==(IndirectCommandsLayoutNVX const &rhs) const
+    {
+      return m_indirectCommandsLayoutNVX == rhs.m_indirectCommandsLayoutNVX;
+    }
+
+    bool operator!=(IndirectCommandsLayoutNVX const &rhs) const
+    {
+      return m_indirectCommandsLayoutNVX != rhs.m_indirectCommandsLayoutNVX;
+    }
+
+    bool operator<(IndirectCommandsLayoutNVX const &rhs) const
+    {
+      return m_indirectCommandsLayoutNVX < rhs.m_indirectCommandsLayoutNVX;
+    }
+
+#if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
+    explicit
+#endif
+    operator VkIndirectCommandsLayoutNVX() const
+    {
+      return m_indirectCommandsLayoutNVX;
+    }
+
+    explicit operator bool() const
+    {
+      return m_indirectCommandsLayoutNVX != VK_NULL_HANDLE;
+    }
+
+    bool operator!() const
+    {
+      return m_indirectCommandsLayoutNVX == VK_NULL_HANDLE;
+    }
+
+  private:
+    VkIndirectCommandsLayoutNVX m_indirectCommandsLayoutNVX;
+  };
+  static_assert( sizeof( IndirectCommandsLayoutNVX ) == sizeof( VkIndirectCommandsLayoutNVX ), "handle and wrapper have different size!" );
 
   class DisplayKHR
   {
@@ -4758,10 +4906,23 @@ namespace vk
 
   using CullModeFlags = Flags<CullModeFlagBits, VkCullModeFlags>;
 
-  inline CullModeFlags operator|( CullModeFlagBits bit0, CullModeFlagBits bit1 )
+  VULKAN_HPP_INLINE CullModeFlags operator|( CullModeFlagBits bit0, CullModeFlagBits bit1 )
   {
     return CullModeFlags( bit0 ) | bit1;
   }
+
+  VULKAN_HPP_INLINE CullModeFlags operator~( CullModeFlagBits bits )
+  {
+    return ~( CullModeFlags( bits ) );
+  }
+
+  template <> struct FlagTraits<CullModeFlagBits>
+  {
+    enum
+    {
+      allFlags = VkFlags(CullModeFlagBits::eNone) | VkFlags(CullModeFlagBits::eFront) | VkFlags(CullModeFlagBits::eBack) | VkFlags(CullModeFlagBits::eFrontAndBack)
+    };
+  };
 
   enum class FrontFace
   {
@@ -5362,7 +5523,13 @@ namespace vk
     eImportMemoryWin32HandleInfoNV = VK_STRUCTURE_TYPE_IMPORT_MEMORY_WIN32_HANDLE_INFO_NV,
     eExportMemoryWin32HandleInfoNV = VK_STRUCTURE_TYPE_EXPORT_MEMORY_WIN32_HANDLE_INFO_NV,
     eWin32KeyedMutexAcquireReleaseInfoNV = VK_STRUCTURE_TYPE_WIN32_KEYED_MUTEX_ACQUIRE_RELEASE_INFO_NV,
-    eValidationFlagsEXT = VK_STRUCTURE_TYPE_VALIDATION_FLAGS_EXT
+    eValidationFlagsEXT = VK_STRUCTURE_TYPE_VALIDATION_FLAGS_EXT,
+    eObjectTableCreateInfoNVX = VK_STRUCTURE_TYPE_OBJECT_TABLE_CREATE_INFO_NVX,
+    eIndirectCommandsLayoutCreateInfoNVX = VK_STRUCTURE_TYPE_INDIRECT_COMMANDS_LAYOUT_CREATE_INFO_NVX,
+    eCmdProcessCommandsInfoNVX = VK_STRUCTURE_TYPE_CMD_PROCESS_COMMANDS_INFO_NVX,
+    eCmdReserveSpaceForCommandsInfoNVX = VK_STRUCTURE_TYPE_CMD_RESERVE_SPACE_FOR_COMMANDS_INFO_NVX,
+    eDeviceGeneratedCommandsLimitsNVX = VK_STRUCTURE_TYPE_DEVICE_GENERATED_COMMANDS_LIMITS_NVX,
+    eDeviceGeneratedCommandsFeaturesNVX = VK_STRUCTURE_TYPE_DEVICE_GENERATED_COMMANDS_FEATURES_NVX
   };
 
   struct ApplicationInfo
@@ -8938,6 +9105,252 @@ namespace vk
   static_assert( sizeof( Win32KeyedMutexAcquireReleaseInfoNV ) == sizeof( VkWin32KeyedMutexAcquireReleaseInfoNV ), "struct and wrapper have different size!" );
 #endif /*VK_USE_PLATFORM_WIN32_KHR*/
 
+  struct DeviceGeneratedCommandsFeaturesNVX
+  {
+    DeviceGeneratedCommandsFeaturesNVX( Bool32 computeBindingPointSupport_ = 0 )
+      : sType( StructureType::eDeviceGeneratedCommandsFeaturesNVX )
+      , pNext( nullptr )
+      , computeBindingPointSupport( computeBindingPointSupport_ )
+    {
+    }
+
+    DeviceGeneratedCommandsFeaturesNVX( VkDeviceGeneratedCommandsFeaturesNVX const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(DeviceGeneratedCommandsFeaturesNVX) );
+    }
+
+    DeviceGeneratedCommandsFeaturesNVX& operator=( VkDeviceGeneratedCommandsFeaturesNVX const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(DeviceGeneratedCommandsFeaturesNVX) );
+      return *this;
+    }
+
+    DeviceGeneratedCommandsFeaturesNVX& setSType( StructureType sType_ )
+    {
+      sType = sType_;
+      return *this;
+    }
+
+    DeviceGeneratedCommandsFeaturesNVX& setPNext( const void* pNext_ )
+    {
+      pNext = pNext_;
+      return *this;
+    }
+
+    DeviceGeneratedCommandsFeaturesNVX& setComputeBindingPointSupport( Bool32 computeBindingPointSupport_ )
+    {
+      computeBindingPointSupport = computeBindingPointSupport_;
+      return *this;
+    }
+
+    operator const VkDeviceGeneratedCommandsFeaturesNVX&() const
+    {
+      return *reinterpret_cast<const VkDeviceGeneratedCommandsFeaturesNVX*>(this);
+    }
+
+    bool operator==( DeviceGeneratedCommandsFeaturesNVX const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( computeBindingPointSupport == rhs.computeBindingPointSupport );
+    }
+
+    bool operator!=( DeviceGeneratedCommandsFeaturesNVX const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    const void* pNext;
+    Bool32 computeBindingPointSupport;
+  };
+  static_assert( sizeof( DeviceGeneratedCommandsFeaturesNVX ) == sizeof( VkDeviceGeneratedCommandsFeaturesNVX ), "struct and wrapper have different size!" );
+
+  struct DeviceGeneratedCommandsLimitsNVX
+  {
+    DeviceGeneratedCommandsLimitsNVX( uint32_t maxIndirectCommandsLayoutTokenCount_ = 0, uint32_t maxObjectEntryCounts_ = 0, uint32_t minSequenceCountBufferOffsetAlignment_ = 0, uint32_t minSequenceIndexBufferOffsetAlignment_ = 0, uint32_t minCommandsTokenBufferOffsetAlignment_ = 0 )
+      : sType( StructureType::eDeviceGeneratedCommandsLimitsNVX )
+      , pNext( nullptr )
+      , maxIndirectCommandsLayoutTokenCount( maxIndirectCommandsLayoutTokenCount_ )
+      , maxObjectEntryCounts( maxObjectEntryCounts_ )
+      , minSequenceCountBufferOffsetAlignment( minSequenceCountBufferOffsetAlignment_ )
+      , minSequenceIndexBufferOffsetAlignment( minSequenceIndexBufferOffsetAlignment_ )
+      , minCommandsTokenBufferOffsetAlignment( minCommandsTokenBufferOffsetAlignment_ )
+    {
+    }
+
+    DeviceGeneratedCommandsLimitsNVX( VkDeviceGeneratedCommandsLimitsNVX const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(DeviceGeneratedCommandsLimitsNVX) );
+    }
+
+    DeviceGeneratedCommandsLimitsNVX& operator=( VkDeviceGeneratedCommandsLimitsNVX const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(DeviceGeneratedCommandsLimitsNVX) );
+      return *this;
+    }
+
+    DeviceGeneratedCommandsLimitsNVX& setSType( StructureType sType_ )
+    {
+      sType = sType_;
+      return *this;
+    }
+
+    DeviceGeneratedCommandsLimitsNVX& setPNext( const void* pNext_ )
+    {
+      pNext = pNext_;
+      return *this;
+    }
+
+    DeviceGeneratedCommandsLimitsNVX& setMaxIndirectCommandsLayoutTokenCount( uint32_t maxIndirectCommandsLayoutTokenCount_ )
+    {
+      maxIndirectCommandsLayoutTokenCount = maxIndirectCommandsLayoutTokenCount_;
+      return *this;
+    }
+
+    DeviceGeneratedCommandsLimitsNVX& setMaxObjectEntryCounts( uint32_t maxObjectEntryCounts_ )
+    {
+      maxObjectEntryCounts = maxObjectEntryCounts_;
+      return *this;
+    }
+
+    DeviceGeneratedCommandsLimitsNVX& setMinSequenceCountBufferOffsetAlignment( uint32_t minSequenceCountBufferOffsetAlignment_ )
+    {
+      minSequenceCountBufferOffsetAlignment = minSequenceCountBufferOffsetAlignment_;
+      return *this;
+    }
+
+    DeviceGeneratedCommandsLimitsNVX& setMinSequenceIndexBufferOffsetAlignment( uint32_t minSequenceIndexBufferOffsetAlignment_ )
+    {
+      minSequenceIndexBufferOffsetAlignment = minSequenceIndexBufferOffsetAlignment_;
+      return *this;
+    }
+
+    DeviceGeneratedCommandsLimitsNVX& setMinCommandsTokenBufferOffsetAlignment( uint32_t minCommandsTokenBufferOffsetAlignment_ )
+    {
+      minCommandsTokenBufferOffsetAlignment = minCommandsTokenBufferOffsetAlignment_;
+      return *this;
+    }
+
+    operator const VkDeviceGeneratedCommandsLimitsNVX&() const
+    {
+      return *reinterpret_cast<const VkDeviceGeneratedCommandsLimitsNVX*>(this);
+    }
+
+    bool operator==( DeviceGeneratedCommandsLimitsNVX const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( maxIndirectCommandsLayoutTokenCount == rhs.maxIndirectCommandsLayoutTokenCount )
+          && ( maxObjectEntryCounts == rhs.maxObjectEntryCounts )
+          && ( minSequenceCountBufferOffsetAlignment == rhs.minSequenceCountBufferOffsetAlignment )
+          && ( minSequenceIndexBufferOffsetAlignment == rhs.minSequenceIndexBufferOffsetAlignment )
+          && ( minCommandsTokenBufferOffsetAlignment == rhs.minCommandsTokenBufferOffsetAlignment );
+    }
+
+    bool operator!=( DeviceGeneratedCommandsLimitsNVX const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    const void* pNext;
+    uint32_t maxIndirectCommandsLayoutTokenCount;
+    uint32_t maxObjectEntryCounts;
+    uint32_t minSequenceCountBufferOffsetAlignment;
+    uint32_t minSequenceIndexBufferOffsetAlignment;
+    uint32_t minCommandsTokenBufferOffsetAlignment;
+  };
+  static_assert( sizeof( DeviceGeneratedCommandsLimitsNVX ) == sizeof( VkDeviceGeneratedCommandsLimitsNVX ), "struct and wrapper have different size!" );
+
+  struct CmdReserveSpaceForCommandsInfoNVX
+  {
+    CmdReserveSpaceForCommandsInfoNVX( ObjectTableNVX objectTable_ = ObjectTableNVX(), IndirectCommandsLayoutNVX indirectCommandsLayout_ = IndirectCommandsLayoutNVX(), uint32_t maxSequencesCount_ = 0 )
+      : sType( StructureType::eCmdReserveSpaceForCommandsInfoNVX )
+      , pNext( nullptr )
+      , objectTable( objectTable_ )
+      , indirectCommandsLayout( indirectCommandsLayout_ )
+      , maxSequencesCount( maxSequencesCount_ )
+    {
+    }
+
+    CmdReserveSpaceForCommandsInfoNVX( VkCmdReserveSpaceForCommandsInfoNVX const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(CmdReserveSpaceForCommandsInfoNVX) );
+    }
+
+    CmdReserveSpaceForCommandsInfoNVX& operator=( VkCmdReserveSpaceForCommandsInfoNVX const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(CmdReserveSpaceForCommandsInfoNVX) );
+      return *this;
+    }
+
+    CmdReserveSpaceForCommandsInfoNVX& setSType( StructureType sType_ )
+    {
+      sType = sType_;
+      return *this;
+    }
+
+    CmdReserveSpaceForCommandsInfoNVX& setPNext( const void* pNext_ )
+    {
+      pNext = pNext_;
+      return *this;
+    }
+
+    CmdReserveSpaceForCommandsInfoNVX& setObjectTable( ObjectTableNVX objectTable_ )
+    {
+      objectTable = objectTable_;
+      return *this;
+    }
+
+    CmdReserveSpaceForCommandsInfoNVX& setIndirectCommandsLayout( IndirectCommandsLayoutNVX indirectCommandsLayout_ )
+    {
+      indirectCommandsLayout = indirectCommandsLayout_;
+      return *this;
+    }
+
+    CmdReserveSpaceForCommandsInfoNVX& setMaxSequencesCount( uint32_t maxSequencesCount_ )
+    {
+      maxSequencesCount = maxSequencesCount_;
+      return *this;
+    }
+
+    operator const VkCmdReserveSpaceForCommandsInfoNVX&() const
+    {
+      return *reinterpret_cast<const VkCmdReserveSpaceForCommandsInfoNVX*>(this);
+    }
+
+    bool operator==( CmdReserveSpaceForCommandsInfoNVX const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( objectTable == rhs.objectTable )
+          && ( indirectCommandsLayout == rhs.indirectCommandsLayout )
+          && ( maxSequencesCount == rhs.maxSequencesCount );
+    }
+
+    bool operator!=( CmdReserveSpaceForCommandsInfoNVX const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    const void* pNext;
+    ObjectTableNVX objectTable;
+    IndirectCommandsLayoutNVX indirectCommandsLayout;
+    uint32_t maxSequencesCount;
+  };
+  static_assert( sizeof( CmdReserveSpaceForCommandsInfoNVX ) == sizeof( VkCmdReserveSpaceForCommandsInfoNVX ), "struct and wrapper have different size!" );
+
   enum class SubpassContents
   {
     eInline = VK_SUBPASS_CONTENTS_INLINE,
@@ -9158,10 +9571,23 @@ namespace vk
 
   using QueueFlags = Flags<QueueFlagBits, VkQueueFlags>;
 
-  inline QueueFlags operator|( QueueFlagBits bit0, QueueFlagBits bit1 )
+  VULKAN_HPP_INLINE QueueFlags operator|( QueueFlagBits bit0, QueueFlagBits bit1 )
   {
     return QueueFlags( bit0 ) | bit1;
   }
+
+  VULKAN_HPP_INLINE QueueFlags operator~( QueueFlagBits bits )
+  {
+    return ~( QueueFlags( bits ) );
+  }
+
+  template <> struct FlagTraits<QueueFlagBits>
+  {
+    enum
+    {
+      allFlags = VkFlags(QueueFlagBits::eGraphics) | VkFlags(QueueFlagBits::eCompute) | VkFlags(QueueFlagBits::eTransfer) | VkFlags(QueueFlagBits::eSparseBinding)
+    };
+  };
 
   struct QueueFamilyProperties
   {
@@ -9201,10 +9627,23 @@ namespace vk
 
   using MemoryPropertyFlags = Flags<MemoryPropertyFlagBits, VkMemoryPropertyFlags>;
 
-  inline MemoryPropertyFlags operator|( MemoryPropertyFlagBits bit0, MemoryPropertyFlagBits bit1 )
+  VULKAN_HPP_INLINE MemoryPropertyFlags operator|( MemoryPropertyFlagBits bit0, MemoryPropertyFlagBits bit1 )
   {
     return MemoryPropertyFlags( bit0 ) | bit1;
   }
+
+  VULKAN_HPP_INLINE MemoryPropertyFlags operator~( MemoryPropertyFlagBits bits )
+  {
+    return ~( MemoryPropertyFlags( bits ) );
+  }
+
+  template <> struct FlagTraits<MemoryPropertyFlagBits>
+  {
+    enum
+    {
+      allFlags = VkFlags(MemoryPropertyFlagBits::eDeviceLocal) | VkFlags(MemoryPropertyFlagBits::eHostVisible) | VkFlags(MemoryPropertyFlagBits::eHostCoherent) | VkFlags(MemoryPropertyFlagBits::eHostCached) | VkFlags(MemoryPropertyFlagBits::eLazilyAllocated)
+    };
+  };
 
   struct MemoryType
   {
@@ -9236,10 +9675,23 @@ namespace vk
 
   using MemoryHeapFlags = Flags<MemoryHeapFlagBits, VkMemoryHeapFlags>;
 
-  inline MemoryHeapFlags operator|( MemoryHeapFlagBits bit0, MemoryHeapFlagBits bit1 )
+  VULKAN_HPP_INLINE MemoryHeapFlags operator|( MemoryHeapFlagBits bit0, MemoryHeapFlagBits bit1 )
   {
     return MemoryHeapFlags( bit0 ) | bit1;
   }
+
+  VULKAN_HPP_INLINE MemoryHeapFlags operator~( MemoryHeapFlagBits bits )
+  {
+    return ~( MemoryHeapFlags( bits ) );
+  }
+
+  template <> struct FlagTraits<MemoryHeapFlagBits>
+  {
+    enum
+    {
+      allFlags = VkFlags(MemoryHeapFlagBits::eDeviceLocal)
+    };
+  };
 
   struct MemoryHeap
   {
@@ -9309,15 +9761,30 @@ namespace vk
     eHostRead = VK_ACCESS_HOST_READ_BIT,
     eHostWrite = VK_ACCESS_HOST_WRITE_BIT,
     eMemoryRead = VK_ACCESS_MEMORY_READ_BIT,
-    eMemoryWrite = VK_ACCESS_MEMORY_WRITE_BIT
+    eMemoryWrite = VK_ACCESS_MEMORY_WRITE_BIT,
+    eCommandProcessReadNVX = VK_ACCESS_COMMAND_PROCESS_READ_BIT_NVX,
+    eCommandProcessWriteNVX = VK_ACCESS_COMMAND_PROCESS_WRITE_BIT_NVX
   };
 
   using AccessFlags = Flags<AccessFlagBits, VkAccessFlags>;
 
-  inline AccessFlags operator|( AccessFlagBits bit0, AccessFlagBits bit1 )
+  VULKAN_HPP_INLINE AccessFlags operator|( AccessFlagBits bit0, AccessFlagBits bit1 )
   {
     return AccessFlags( bit0 ) | bit1;
   }
+
+  VULKAN_HPP_INLINE AccessFlags operator~( AccessFlagBits bits )
+  {
+    return ~( AccessFlags( bits ) );
+  }
+
+  template <> struct FlagTraits<AccessFlagBits>
+  {
+    enum
+    {
+      allFlags = VkFlags(AccessFlagBits::eIndirectCommandRead) | VkFlags(AccessFlagBits::eIndexRead) | VkFlags(AccessFlagBits::eVertexAttributeRead) | VkFlags(AccessFlagBits::eUniformRead) | VkFlags(AccessFlagBits::eInputAttachmentRead) | VkFlags(AccessFlagBits::eShaderRead) | VkFlags(AccessFlagBits::eShaderWrite) | VkFlags(AccessFlagBits::eColorAttachmentRead) | VkFlags(AccessFlagBits::eColorAttachmentWrite) | VkFlags(AccessFlagBits::eDepthStencilAttachmentRead) | VkFlags(AccessFlagBits::eDepthStencilAttachmentWrite) | VkFlags(AccessFlagBits::eTransferRead) | VkFlags(AccessFlagBits::eTransferWrite) | VkFlags(AccessFlagBits::eHostRead) | VkFlags(AccessFlagBits::eHostWrite) | VkFlags(AccessFlagBits::eMemoryRead) | VkFlags(AccessFlagBits::eMemoryWrite) | VkFlags(AccessFlagBits::eCommandProcessReadNVX) | VkFlags(AccessFlagBits::eCommandProcessWriteNVX)
+    };
+  };
 
   struct MemoryBarrier
   {
@@ -9525,10 +9992,23 @@ namespace vk
 
   using BufferUsageFlags = Flags<BufferUsageFlagBits, VkBufferUsageFlags>;
 
-  inline BufferUsageFlags operator|( BufferUsageFlagBits bit0, BufferUsageFlagBits bit1 )
+  VULKAN_HPP_INLINE BufferUsageFlags operator|( BufferUsageFlagBits bit0, BufferUsageFlagBits bit1 )
   {
     return BufferUsageFlags( bit0 ) | bit1;
   }
+
+  VULKAN_HPP_INLINE BufferUsageFlags operator~( BufferUsageFlagBits bits )
+  {
+    return ~( BufferUsageFlags( bits ) );
+  }
+
+  template <> struct FlagTraits<BufferUsageFlagBits>
+  {
+    enum
+    {
+      allFlags = VkFlags(BufferUsageFlagBits::eTransferSrc) | VkFlags(BufferUsageFlagBits::eTransferDst) | VkFlags(BufferUsageFlagBits::eUniformTexelBuffer) | VkFlags(BufferUsageFlagBits::eStorageTexelBuffer) | VkFlags(BufferUsageFlagBits::eUniformBuffer) | VkFlags(BufferUsageFlagBits::eStorageBuffer) | VkFlags(BufferUsageFlagBits::eIndexBuffer) | VkFlags(BufferUsageFlagBits::eVertexBuffer) | VkFlags(BufferUsageFlagBits::eIndirectBuffer)
+    };
+  };
 
   enum class BufferCreateFlagBits
   {
@@ -9539,10 +10019,23 @@ namespace vk
 
   using BufferCreateFlags = Flags<BufferCreateFlagBits, VkBufferCreateFlags>;
 
-  inline BufferCreateFlags operator|( BufferCreateFlagBits bit0, BufferCreateFlagBits bit1 )
+  VULKAN_HPP_INLINE BufferCreateFlags operator|( BufferCreateFlagBits bit0, BufferCreateFlagBits bit1 )
   {
     return BufferCreateFlags( bit0 ) | bit1;
   }
+
+  VULKAN_HPP_INLINE BufferCreateFlags operator~( BufferCreateFlagBits bits )
+  {
+    return ~( BufferCreateFlags( bits ) );
+  }
+
+  template <> struct FlagTraits<BufferCreateFlagBits>
+  {
+    enum
+    {
+      allFlags = VkFlags(BufferCreateFlagBits::eSparseBinding) | VkFlags(BufferCreateFlagBits::eSparseResidency) | VkFlags(BufferCreateFlagBits::eSparseAliased)
+    };
+  };
 
   struct BufferCreateInfo
   {
@@ -9667,10 +10160,23 @@ namespace vk
 
   using ShaderStageFlags = Flags<ShaderStageFlagBits, VkShaderStageFlags>;
 
-  inline ShaderStageFlags operator|( ShaderStageFlagBits bit0, ShaderStageFlagBits bit1 )
+  VULKAN_HPP_INLINE ShaderStageFlags operator|( ShaderStageFlagBits bit0, ShaderStageFlagBits bit1 )
   {
     return ShaderStageFlags( bit0 ) | bit1;
   }
+
+  VULKAN_HPP_INLINE ShaderStageFlags operator~( ShaderStageFlagBits bits )
+  {
+    return ~( ShaderStageFlags( bits ) );
+  }
+
+  template <> struct FlagTraits<ShaderStageFlagBits>
+  {
+    enum
+    {
+      allFlags = VkFlags(ShaderStageFlagBits::eVertex) | VkFlags(ShaderStageFlagBits::eTessellationControl) | VkFlags(ShaderStageFlagBits::eTessellationEvaluation) | VkFlags(ShaderStageFlagBits::eGeometry) | VkFlags(ShaderStageFlagBits::eFragment) | VkFlags(ShaderStageFlagBits::eCompute) | VkFlags(ShaderStageFlagBits::eAllGraphics) | VkFlags(ShaderStageFlagBits::eAll)
+    };
+  };
 
   struct DescriptorSetLayoutBinding
   {
@@ -10108,10 +10614,23 @@ namespace vk
 
   using ImageUsageFlags = Flags<ImageUsageFlagBits, VkImageUsageFlags>;
 
-  inline ImageUsageFlags operator|( ImageUsageFlagBits bit0, ImageUsageFlagBits bit1 )
+  VULKAN_HPP_INLINE ImageUsageFlags operator|( ImageUsageFlagBits bit0, ImageUsageFlagBits bit1 )
   {
     return ImageUsageFlags( bit0 ) | bit1;
   }
+
+  VULKAN_HPP_INLINE ImageUsageFlags operator~( ImageUsageFlagBits bits )
+  {
+    return ~( ImageUsageFlags( bits ) );
+  }
+
+  template <> struct FlagTraits<ImageUsageFlagBits>
+  {
+    enum
+    {
+      allFlags = VkFlags(ImageUsageFlagBits::eTransferSrc) | VkFlags(ImageUsageFlagBits::eTransferDst) | VkFlags(ImageUsageFlagBits::eSampled) | VkFlags(ImageUsageFlagBits::eStorage) | VkFlags(ImageUsageFlagBits::eColorAttachment) | VkFlags(ImageUsageFlagBits::eDepthStencilAttachment) | VkFlags(ImageUsageFlagBits::eTransientAttachment) | VkFlags(ImageUsageFlagBits::eInputAttachment)
+    };
+  };
 
   enum class ImageCreateFlagBits
   {
@@ -10124,10 +10643,23 @@ namespace vk
 
   using ImageCreateFlags = Flags<ImageCreateFlagBits, VkImageCreateFlags>;
 
-  inline ImageCreateFlags operator|( ImageCreateFlagBits bit0, ImageCreateFlagBits bit1 )
+  VULKAN_HPP_INLINE ImageCreateFlags operator|( ImageCreateFlagBits bit0, ImageCreateFlagBits bit1 )
   {
     return ImageCreateFlags( bit0 ) | bit1;
   }
+
+  VULKAN_HPP_INLINE ImageCreateFlags operator~( ImageCreateFlagBits bits )
+  {
+    return ~( ImageCreateFlags( bits ) );
+  }
+
+  template <> struct FlagTraits<ImageCreateFlagBits>
+  {
+    enum
+    {
+      allFlags = VkFlags(ImageCreateFlagBits::eSparseBinding) | VkFlags(ImageCreateFlagBits::eSparseResidency) | VkFlags(ImageCreateFlagBits::eSparseAliased) | VkFlags(ImageCreateFlagBits::eMutableFormat) | VkFlags(ImageCreateFlagBits::eCubeCompatible)
+    };
+  };
 
   enum class PipelineCreateFlagBits
   {
@@ -10138,10 +10670,23 @@ namespace vk
 
   using PipelineCreateFlags = Flags<PipelineCreateFlagBits, VkPipelineCreateFlags>;
 
-  inline PipelineCreateFlags operator|( PipelineCreateFlagBits bit0, PipelineCreateFlagBits bit1 )
+  VULKAN_HPP_INLINE PipelineCreateFlags operator|( PipelineCreateFlagBits bit0, PipelineCreateFlagBits bit1 )
   {
     return PipelineCreateFlags( bit0 ) | bit1;
   }
+
+  VULKAN_HPP_INLINE PipelineCreateFlags operator~( PipelineCreateFlagBits bits )
+  {
+    return ~( PipelineCreateFlags( bits ) );
+  }
+
+  template <> struct FlagTraits<PipelineCreateFlagBits>
+  {
+    enum
+    {
+      allFlags = VkFlags(PipelineCreateFlagBits::eDisableOptimization) | VkFlags(PipelineCreateFlagBits::eAllowDerivatives) | VkFlags(PipelineCreateFlagBits::eDerivative)
+    };
+  };
 
   struct ComputePipelineCreateInfo
   {
@@ -10253,10 +10798,23 @@ namespace vk
 
   using ColorComponentFlags = Flags<ColorComponentFlagBits, VkColorComponentFlags>;
 
-  inline ColorComponentFlags operator|( ColorComponentFlagBits bit0, ColorComponentFlagBits bit1 )
+  VULKAN_HPP_INLINE ColorComponentFlags operator|( ColorComponentFlagBits bit0, ColorComponentFlagBits bit1 )
   {
     return ColorComponentFlags( bit0 ) | bit1;
   }
+
+  VULKAN_HPP_INLINE ColorComponentFlags operator~( ColorComponentFlagBits bits )
+  {
+    return ~( ColorComponentFlags( bits ) );
+  }
+
+  template <> struct FlagTraits<ColorComponentFlagBits>
+  {
+    enum
+    {
+      allFlags = VkFlags(ColorComponentFlagBits::eR) | VkFlags(ColorComponentFlagBits::eG) | VkFlags(ColorComponentFlagBits::eB) | VkFlags(ColorComponentFlagBits::eA)
+    };
+  };
 
   struct PipelineColorBlendAttachmentState
   {
@@ -10480,10 +11038,23 @@ namespace vk
 
   using FenceCreateFlags = Flags<FenceCreateFlagBits, VkFenceCreateFlags>;
 
-  inline FenceCreateFlags operator|( FenceCreateFlagBits bit0, FenceCreateFlagBits bit1 )
+  VULKAN_HPP_INLINE FenceCreateFlags operator|( FenceCreateFlagBits bit0, FenceCreateFlagBits bit1 )
   {
     return FenceCreateFlags( bit0 ) | bit1;
   }
+
+  VULKAN_HPP_INLINE FenceCreateFlags operator~( FenceCreateFlagBits bits )
+  {
+    return ~( FenceCreateFlags( bits ) );
+  }
+
+  template <> struct FlagTraits<FenceCreateFlagBits>
+  {
+    enum
+    {
+      allFlags = VkFlags(FenceCreateFlagBits::eSignaled)
+    };
+  };
 
   struct FenceCreateInfo
   {
@@ -10569,10 +11140,23 @@ namespace vk
 
   using FormatFeatureFlags = Flags<FormatFeatureFlagBits, VkFormatFeatureFlags>;
 
-  inline FormatFeatureFlags operator|( FormatFeatureFlagBits bit0, FormatFeatureFlagBits bit1 )
+  VULKAN_HPP_INLINE FormatFeatureFlags operator|( FormatFeatureFlagBits bit0, FormatFeatureFlagBits bit1 )
   {
     return FormatFeatureFlags( bit0 ) | bit1;
   }
+
+  VULKAN_HPP_INLINE FormatFeatureFlags operator~( FormatFeatureFlagBits bits )
+  {
+    return ~( FormatFeatureFlags( bits ) );
+  }
+
+  template <> struct FlagTraits<FormatFeatureFlagBits>
+  {
+    enum
+    {
+      allFlags = VkFlags(FormatFeatureFlagBits::eSampledImage) | VkFlags(FormatFeatureFlagBits::eStorageImage) | VkFlags(FormatFeatureFlagBits::eStorageImageAtomic) | VkFlags(FormatFeatureFlagBits::eUniformTexelBuffer) | VkFlags(FormatFeatureFlagBits::eStorageTexelBuffer) | VkFlags(FormatFeatureFlagBits::eStorageTexelBufferAtomic) | VkFlags(FormatFeatureFlagBits::eVertexBuffer) | VkFlags(FormatFeatureFlagBits::eColorAttachment) | VkFlags(FormatFeatureFlagBits::eColorAttachmentBlend) | VkFlags(FormatFeatureFlagBits::eDepthStencilAttachment) | VkFlags(FormatFeatureFlagBits::eBlitSrc) | VkFlags(FormatFeatureFlagBits::eBlitDst) | VkFlags(FormatFeatureFlagBits::eSampledImageFilterLinear) | VkFlags(FormatFeatureFlagBits::eSampledImageFilterCubicIMG)
+    };
+  };
 
   struct FormatProperties
   {
@@ -10606,10 +11190,23 @@ namespace vk
 
   using QueryControlFlags = Flags<QueryControlFlagBits, VkQueryControlFlags>;
 
-  inline QueryControlFlags operator|( QueryControlFlagBits bit0, QueryControlFlagBits bit1 )
+  VULKAN_HPP_INLINE QueryControlFlags operator|( QueryControlFlagBits bit0, QueryControlFlagBits bit1 )
   {
     return QueryControlFlags( bit0 ) | bit1;
   }
+
+  VULKAN_HPP_INLINE QueryControlFlags operator~( QueryControlFlagBits bits )
+  {
+    return ~( QueryControlFlags( bits ) );
+  }
+
+  template <> struct FlagTraits<QueryControlFlagBits>
+  {
+    enum
+    {
+      allFlags = VkFlags(QueryControlFlagBits::ePrecise)
+    };
+  };
 
   enum class QueryResultFlagBits
   {
@@ -10621,10 +11218,23 @@ namespace vk
 
   using QueryResultFlags = Flags<QueryResultFlagBits, VkQueryResultFlags>;
 
-  inline QueryResultFlags operator|( QueryResultFlagBits bit0, QueryResultFlagBits bit1 )
+  VULKAN_HPP_INLINE QueryResultFlags operator|( QueryResultFlagBits bit0, QueryResultFlagBits bit1 )
   {
     return QueryResultFlags( bit0 ) | bit1;
   }
+
+  VULKAN_HPP_INLINE QueryResultFlags operator~( QueryResultFlagBits bits )
+  {
+    return ~( QueryResultFlags( bits ) );
+  }
+
+  template <> struct FlagTraits<QueryResultFlagBits>
+  {
+    enum
+    {
+      allFlags = VkFlags(QueryResultFlagBits::e64) | VkFlags(QueryResultFlagBits::eWait) | VkFlags(QueryResultFlagBits::eWithAvailability) | VkFlags(QueryResultFlagBits::ePartial)
+    };
+  };
 
   enum class CommandBufferUsageFlagBits
   {
@@ -10635,10 +11245,23 @@ namespace vk
 
   using CommandBufferUsageFlags = Flags<CommandBufferUsageFlagBits, VkCommandBufferUsageFlags>;
 
-  inline CommandBufferUsageFlags operator|( CommandBufferUsageFlagBits bit0, CommandBufferUsageFlagBits bit1 )
+  VULKAN_HPP_INLINE CommandBufferUsageFlags operator|( CommandBufferUsageFlagBits bit0, CommandBufferUsageFlagBits bit1 )
   {
     return CommandBufferUsageFlags( bit0 ) | bit1;
   }
+
+  VULKAN_HPP_INLINE CommandBufferUsageFlags operator~( CommandBufferUsageFlagBits bits )
+  {
+    return ~( CommandBufferUsageFlags( bits ) );
+  }
+
+  template <> struct FlagTraits<CommandBufferUsageFlagBits>
+  {
+    enum
+    {
+      allFlags = VkFlags(CommandBufferUsageFlagBits::eOneTimeSubmit) | VkFlags(CommandBufferUsageFlagBits::eRenderPassContinue) | VkFlags(CommandBufferUsageFlagBits::eSimultaneousUse)
+    };
+  };
 
   enum class QueryPipelineStatisticFlagBits
   {
@@ -10657,10 +11280,23 @@ namespace vk
 
   using QueryPipelineStatisticFlags = Flags<QueryPipelineStatisticFlagBits, VkQueryPipelineStatisticFlags>;
 
-  inline QueryPipelineStatisticFlags operator|( QueryPipelineStatisticFlagBits bit0, QueryPipelineStatisticFlagBits bit1 )
+  VULKAN_HPP_INLINE QueryPipelineStatisticFlags operator|( QueryPipelineStatisticFlagBits bit0, QueryPipelineStatisticFlagBits bit1 )
   {
     return QueryPipelineStatisticFlags( bit0 ) | bit1;
   }
+
+  VULKAN_HPP_INLINE QueryPipelineStatisticFlags operator~( QueryPipelineStatisticFlagBits bits )
+  {
+    return ~( QueryPipelineStatisticFlags( bits ) );
+  }
+
+  template <> struct FlagTraits<QueryPipelineStatisticFlagBits>
+  {
+    enum
+    {
+      allFlags = VkFlags(QueryPipelineStatisticFlagBits::eInputAssemblyVertices) | VkFlags(QueryPipelineStatisticFlagBits::eInputAssemblyPrimitives) | VkFlags(QueryPipelineStatisticFlagBits::eVertexShaderInvocations) | VkFlags(QueryPipelineStatisticFlagBits::eGeometryShaderInvocations) | VkFlags(QueryPipelineStatisticFlagBits::eGeometryShaderPrimitives) | VkFlags(QueryPipelineStatisticFlagBits::eClippingInvocations) | VkFlags(QueryPipelineStatisticFlagBits::eClippingPrimitives) | VkFlags(QueryPipelineStatisticFlagBits::eFragmentShaderInvocations) | VkFlags(QueryPipelineStatisticFlagBits::eTessellationControlShaderPatches) | VkFlags(QueryPipelineStatisticFlagBits::eTessellationEvaluationShaderInvocations) | VkFlags(QueryPipelineStatisticFlagBits::eComputeShaderInvocations)
+    };
+  };
 
   struct CommandBufferInheritanceInfo
   {
@@ -10945,10 +11581,23 @@ namespace vk
 
   using ImageAspectFlags = Flags<ImageAspectFlagBits, VkImageAspectFlags>;
 
-  inline ImageAspectFlags operator|( ImageAspectFlagBits bit0, ImageAspectFlagBits bit1 )
+  VULKAN_HPP_INLINE ImageAspectFlags operator|( ImageAspectFlagBits bit0, ImageAspectFlagBits bit1 )
   {
     return ImageAspectFlags( bit0 ) | bit1;
   }
+
+  VULKAN_HPP_INLINE ImageAspectFlags operator~( ImageAspectFlagBits bits )
+  {
+    return ~( ImageAspectFlags( bits ) );
+  }
+
+  template <> struct FlagTraits<ImageAspectFlagBits>
+  {
+    enum
+    {
+      allFlags = VkFlags(ImageAspectFlagBits::eColor) | VkFlags(ImageAspectFlagBits::eDepth) | VkFlags(ImageAspectFlagBits::eStencil) | VkFlags(ImageAspectFlagBits::eMetadata)
+    };
+  };
 
   struct ImageSubresource
   {
@@ -11770,10 +12419,23 @@ namespace vk
 
   using SparseImageFormatFlags = Flags<SparseImageFormatFlagBits, VkSparseImageFormatFlags>;
 
-  inline SparseImageFormatFlags operator|( SparseImageFormatFlagBits bit0, SparseImageFormatFlagBits bit1 )
+  VULKAN_HPP_INLINE SparseImageFormatFlags operator|( SparseImageFormatFlagBits bit0, SparseImageFormatFlagBits bit1 )
   {
     return SparseImageFormatFlags( bit0 ) | bit1;
   }
+
+  VULKAN_HPP_INLINE SparseImageFormatFlags operator~( SparseImageFormatFlagBits bits )
+  {
+    return ~( SparseImageFormatFlags( bits ) );
+  }
+
+  template <> struct FlagTraits<SparseImageFormatFlagBits>
+  {
+    enum
+    {
+      allFlags = VkFlags(SparseImageFormatFlagBits::eSingleMiptail) | VkFlags(SparseImageFormatFlagBits::eAlignedMipSize) | VkFlags(SparseImageFormatFlagBits::eNonstandardBlockSize)
+    };
+  };
 
   struct SparseImageFormatProperties
   {
@@ -11836,10 +12498,23 @@ namespace vk
 
   using SparseMemoryBindFlags = Flags<SparseMemoryBindFlagBits, VkSparseMemoryBindFlags>;
 
-  inline SparseMemoryBindFlags operator|( SparseMemoryBindFlagBits bit0, SparseMemoryBindFlagBits bit1 )
+  VULKAN_HPP_INLINE SparseMemoryBindFlags operator|( SparseMemoryBindFlagBits bit0, SparseMemoryBindFlagBits bit1 )
   {
     return SparseMemoryBindFlags( bit0 ) | bit1;
   }
+
+  VULKAN_HPP_INLINE SparseMemoryBindFlags operator~( SparseMemoryBindFlagBits bits )
+  {
+    return ~( SparseMemoryBindFlags( bits ) );
+  }
+
+  template <> struct FlagTraits<SparseMemoryBindFlagBits>
+  {
+    enum
+    {
+      allFlags = VkFlags(SparseMemoryBindFlagBits::eMetadata)
+    };
+  };
 
   struct SparseMemoryBind
   {
@@ -12354,15 +13029,29 @@ namespace vk
     eBottomOfPipe = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
     eHost = VK_PIPELINE_STAGE_HOST_BIT,
     eAllGraphics = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
-    eAllCommands = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT
+    eAllCommands = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+    eCommandProcessNVX = VK_PIPELINE_STAGE_COMMAND_PROCESS_BIT_NVX
   };
 
   using PipelineStageFlags = Flags<PipelineStageFlagBits, VkPipelineStageFlags>;
 
-  inline PipelineStageFlags operator|( PipelineStageFlagBits bit0, PipelineStageFlagBits bit1 )
+  VULKAN_HPP_INLINE PipelineStageFlags operator|( PipelineStageFlagBits bit0, PipelineStageFlagBits bit1 )
   {
     return PipelineStageFlags( bit0 ) | bit1;
   }
+
+  VULKAN_HPP_INLINE PipelineStageFlags operator~( PipelineStageFlagBits bits )
+  {
+    return ~( PipelineStageFlags( bits ) );
+  }
+
+  template <> struct FlagTraits<PipelineStageFlagBits>
+  {
+    enum
+    {
+      allFlags = VkFlags(PipelineStageFlagBits::eTopOfPipe) | VkFlags(PipelineStageFlagBits::eDrawIndirect) | VkFlags(PipelineStageFlagBits::eVertexInput) | VkFlags(PipelineStageFlagBits::eVertexShader) | VkFlags(PipelineStageFlagBits::eTessellationControlShader) | VkFlags(PipelineStageFlagBits::eTessellationEvaluationShader) | VkFlags(PipelineStageFlagBits::eGeometryShader) | VkFlags(PipelineStageFlagBits::eFragmentShader) | VkFlags(PipelineStageFlagBits::eEarlyFragmentTests) | VkFlags(PipelineStageFlagBits::eLateFragmentTests) | VkFlags(PipelineStageFlagBits::eColorAttachmentOutput) | VkFlags(PipelineStageFlagBits::eComputeShader) | VkFlags(PipelineStageFlagBits::eTransfer) | VkFlags(PipelineStageFlagBits::eBottomOfPipe) | VkFlags(PipelineStageFlagBits::eHost) | VkFlags(PipelineStageFlagBits::eAllGraphics) | VkFlags(PipelineStageFlagBits::eAllCommands) | VkFlags(PipelineStageFlagBits::eCommandProcessNVX)
+    };
+  };
 
   enum class CommandPoolCreateFlagBits
   {
@@ -12372,10 +13061,23 @@ namespace vk
 
   using CommandPoolCreateFlags = Flags<CommandPoolCreateFlagBits, VkCommandPoolCreateFlags>;
 
-  inline CommandPoolCreateFlags operator|( CommandPoolCreateFlagBits bit0, CommandPoolCreateFlagBits bit1 )
+  VULKAN_HPP_INLINE CommandPoolCreateFlags operator|( CommandPoolCreateFlagBits bit0, CommandPoolCreateFlagBits bit1 )
   {
     return CommandPoolCreateFlags( bit0 ) | bit1;
   }
+
+  VULKAN_HPP_INLINE CommandPoolCreateFlags operator~( CommandPoolCreateFlagBits bits )
+  {
+    return ~( CommandPoolCreateFlags( bits ) );
+  }
+
+  template <> struct FlagTraits<CommandPoolCreateFlagBits>
+  {
+    enum
+    {
+      allFlags = VkFlags(CommandPoolCreateFlagBits::eTransient) | VkFlags(CommandPoolCreateFlagBits::eResetCommandBuffer)
+    };
+  };
 
   struct CommandPoolCreateInfo
   {
@@ -12457,10 +13159,23 @@ namespace vk
 
   using CommandPoolResetFlags = Flags<CommandPoolResetFlagBits, VkCommandPoolResetFlags>;
 
-  inline CommandPoolResetFlags operator|( CommandPoolResetFlagBits bit0, CommandPoolResetFlagBits bit1 )
+  VULKAN_HPP_INLINE CommandPoolResetFlags operator|( CommandPoolResetFlagBits bit0, CommandPoolResetFlagBits bit1 )
   {
     return CommandPoolResetFlags( bit0 ) | bit1;
   }
+
+  VULKAN_HPP_INLINE CommandPoolResetFlags operator~( CommandPoolResetFlagBits bits )
+  {
+    return ~( CommandPoolResetFlags( bits ) );
+  }
+
+  template <> struct FlagTraits<CommandPoolResetFlagBits>
+  {
+    enum
+    {
+      allFlags = VkFlags(CommandPoolResetFlagBits::eReleaseResources)
+    };
+  };
 
   enum class CommandBufferResetFlagBits
   {
@@ -12469,10 +13184,23 @@ namespace vk
 
   using CommandBufferResetFlags = Flags<CommandBufferResetFlagBits, VkCommandBufferResetFlags>;
 
-  inline CommandBufferResetFlags operator|( CommandBufferResetFlagBits bit0, CommandBufferResetFlagBits bit1 )
+  VULKAN_HPP_INLINE CommandBufferResetFlags operator|( CommandBufferResetFlagBits bit0, CommandBufferResetFlagBits bit1 )
   {
     return CommandBufferResetFlags( bit0 ) | bit1;
   }
+
+  VULKAN_HPP_INLINE CommandBufferResetFlags operator~( CommandBufferResetFlagBits bits )
+  {
+    return ~( CommandBufferResetFlags( bits ) );
+  }
+
+  template <> struct FlagTraits<CommandBufferResetFlagBits>
+  {
+    enum
+    {
+      allFlags = VkFlags(CommandBufferResetFlagBits::eReleaseResources)
+    };
+  };
 
   enum class SampleCountFlagBits
   {
@@ -12487,10 +13215,23 @@ namespace vk
 
   using SampleCountFlags = Flags<SampleCountFlagBits, VkSampleCountFlags>;
 
-  inline SampleCountFlags operator|( SampleCountFlagBits bit0, SampleCountFlagBits bit1 )
+  VULKAN_HPP_INLINE SampleCountFlags operator|( SampleCountFlagBits bit0, SampleCountFlagBits bit1 )
   {
     return SampleCountFlags( bit0 ) | bit1;
   }
+
+  VULKAN_HPP_INLINE SampleCountFlags operator~( SampleCountFlagBits bits )
+  {
+    return ~( SampleCountFlags( bits ) );
+  }
+
+  template <> struct FlagTraits<SampleCountFlagBits>
+  {
+    enum
+    {
+      allFlags = VkFlags(SampleCountFlagBits::e1) | VkFlags(SampleCountFlagBits::e2) | VkFlags(SampleCountFlagBits::e4) | VkFlags(SampleCountFlagBits::e8) | VkFlags(SampleCountFlagBits::e16) | VkFlags(SampleCountFlagBits::e32) | VkFlags(SampleCountFlagBits::e64)
+    };
+  };
 
   struct ImageFormatProperties
   {
@@ -13294,10 +14035,23 @@ namespace vk
 
   using AttachmentDescriptionFlags = Flags<AttachmentDescriptionFlagBits, VkAttachmentDescriptionFlags>;
 
-  inline AttachmentDescriptionFlags operator|( AttachmentDescriptionFlagBits bit0, AttachmentDescriptionFlagBits bit1 )
+  VULKAN_HPP_INLINE AttachmentDescriptionFlags operator|( AttachmentDescriptionFlagBits bit0, AttachmentDescriptionFlagBits bit1 )
   {
     return AttachmentDescriptionFlags( bit0 ) | bit1;
   }
+
+  VULKAN_HPP_INLINE AttachmentDescriptionFlags operator~( AttachmentDescriptionFlagBits bits )
+  {
+    return ~( AttachmentDescriptionFlags( bits ) );
+  }
+
+  template <> struct FlagTraits<AttachmentDescriptionFlagBits>
+  {
+    enum
+    {
+      allFlags = VkFlags(AttachmentDescriptionFlagBits::eMayAlias)
+    };
+  };
 
   struct AttachmentDescription
   {
@@ -13423,10 +14177,23 @@ namespace vk
 
   using StencilFaceFlags = Flags<StencilFaceFlagBits, VkStencilFaceFlags>;
 
-  inline StencilFaceFlags operator|( StencilFaceFlagBits bit0, StencilFaceFlagBits bit1 )
+  VULKAN_HPP_INLINE StencilFaceFlags operator|( StencilFaceFlagBits bit0, StencilFaceFlagBits bit1 )
   {
     return StencilFaceFlags( bit0 ) | bit1;
   }
+
+  VULKAN_HPP_INLINE StencilFaceFlags operator~( StencilFaceFlagBits bits )
+  {
+    return ~( StencilFaceFlags( bits ) );
+  }
+
+  template <> struct FlagTraits<StencilFaceFlagBits>
+  {
+    enum
+    {
+      allFlags = VkFlags(StencilFaceFlagBits::eFront) | VkFlags(StencilFaceFlagBits::eBack) | VkFlags(StencilFaceFlagBits::eVkStencilFrontAndBack)
+    };
+  };
 
   enum class DescriptorPoolCreateFlagBits
   {
@@ -13435,10 +14202,23 @@ namespace vk
 
   using DescriptorPoolCreateFlags = Flags<DescriptorPoolCreateFlagBits, VkDescriptorPoolCreateFlags>;
 
-  inline DescriptorPoolCreateFlags operator|( DescriptorPoolCreateFlagBits bit0, DescriptorPoolCreateFlagBits bit1 )
+  VULKAN_HPP_INLINE DescriptorPoolCreateFlags operator|( DescriptorPoolCreateFlagBits bit0, DescriptorPoolCreateFlagBits bit1 )
   {
     return DescriptorPoolCreateFlags( bit0 ) | bit1;
   }
+
+  VULKAN_HPP_INLINE DescriptorPoolCreateFlags operator~( DescriptorPoolCreateFlagBits bits )
+  {
+    return ~( DescriptorPoolCreateFlags( bits ) );
+  }
+
+  template <> struct FlagTraits<DescriptorPoolCreateFlagBits>
+  {
+    enum
+    {
+      allFlags = VkFlags(DescriptorPoolCreateFlagBits::eFreeDescriptorSet)
+    };
+  };
 
   struct DescriptorPoolCreateInfo
   {
@@ -13538,10 +14318,2432 @@ namespace vk
 
   using DependencyFlags = Flags<DependencyFlagBits, VkDependencyFlags>;
 
-  inline DependencyFlags operator|( DependencyFlagBits bit0, DependencyFlagBits bit1 )
+  VULKAN_HPP_INLINE DependencyFlags operator|( DependencyFlagBits bit0, DependencyFlagBits bit1 )
   {
     return DependencyFlags( bit0 ) | bit1;
   }
+
+  VULKAN_HPP_INLINE DependencyFlags operator~( DependencyFlagBits bits )
+  {
+    return ~( DependencyFlags( bits ) );
+  }
+
+  template <> struct FlagTraits<DependencyFlagBits>
+  {
+    enum
+    {
+      allFlags = VkFlags(DependencyFlagBits::eByRegion)
+    };
+  };
+
+  struct SubpassDependency
+  {
+    SubpassDependency( uint32_t srcSubpass_ = 0, uint32_t dstSubpass_ = 0, PipelineStageFlags srcStageMask_ = PipelineStageFlags(), PipelineStageFlags dstStageMask_ = PipelineStageFlags(), AccessFlags srcAccessMask_ = AccessFlags(), AccessFlags dstAccessMask_ = AccessFlags(), DependencyFlags dependencyFlags_ = DependencyFlags() )
+      : srcSubpass( srcSubpass_ )
+      , dstSubpass( dstSubpass_ )
+      , srcStageMask( srcStageMask_ )
+      , dstStageMask( dstStageMask_ )
+      , srcAccessMask( srcAccessMask_ )
+      , dstAccessMask( dstAccessMask_ )
+      , dependencyFlags( dependencyFlags_ )
+    {
+    }
+
+    SubpassDependency( VkSubpassDependency const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(SubpassDependency) );
+    }
+
+    SubpassDependency& operator=( VkSubpassDependency const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(SubpassDependency) );
+      return *this;
+    }
+
+    SubpassDependency& setSrcSubpass( uint32_t srcSubpass_ )
+    {
+      srcSubpass = srcSubpass_;
+      return *this;
+    }
+
+    SubpassDependency& setDstSubpass( uint32_t dstSubpass_ )
+    {
+      dstSubpass = dstSubpass_;
+      return *this;
+    }
+
+    SubpassDependency& setSrcStageMask( PipelineStageFlags srcStageMask_ )
+    {
+      srcStageMask = srcStageMask_;
+      return *this;
+    }
+
+    SubpassDependency& setDstStageMask( PipelineStageFlags dstStageMask_ )
+    {
+      dstStageMask = dstStageMask_;
+      return *this;
+    }
+
+    SubpassDependency& setSrcAccessMask( AccessFlags srcAccessMask_ )
+    {
+      srcAccessMask = srcAccessMask_;
+      return *this;
+    }
+
+    SubpassDependency& setDstAccessMask( AccessFlags dstAccessMask_ )
+    {
+      dstAccessMask = dstAccessMask_;
+      return *this;
+    }
+
+    SubpassDependency& setDependencyFlags( DependencyFlags dependencyFlags_ )
+    {
+      dependencyFlags = dependencyFlags_;
+      return *this;
+    }
+
+    operator const VkSubpassDependency&() const
+    {
+      return *reinterpret_cast<const VkSubpassDependency*>(this);
+    }
+
+    bool operator==( SubpassDependency const& rhs ) const
+    {
+      return ( srcSubpass == rhs.srcSubpass )
+          && ( dstSubpass == rhs.dstSubpass )
+          && ( srcStageMask == rhs.srcStageMask )
+          && ( dstStageMask == rhs.dstStageMask )
+          && ( srcAccessMask == rhs.srcAccessMask )
+          && ( dstAccessMask == rhs.dstAccessMask )
+          && ( dependencyFlags == rhs.dependencyFlags );
+    }
+
+    bool operator!=( SubpassDependency const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+    uint32_t srcSubpass;
+    uint32_t dstSubpass;
+    PipelineStageFlags srcStageMask;
+    PipelineStageFlags dstStageMask;
+    AccessFlags srcAccessMask;
+    AccessFlags dstAccessMask;
+    DependencyFlags dependencyFlags;
+  };
+  static_assert( sizeof( SubpassDependency ) == sizeof( VkSubpassDependency ), "struct and wrapper have different size!" );
+
+  struct RenderPassCreateInfo
+  {
+    RenderPassCreateInfo( RenderPassCreateFlags flags_ = RenderPassCreateFlags(), uint32_t attachmentCount_ = 0, const AttachmentDescription* pAttachments_ = nullptr, uint32_t subpassCount_ = 0, const SubpassDescription* pSubpasses_ = nullptr, uint32_t dependencyCount_ = 0, const SubpassDependency* pDependencies_ = nullptr )
+      : sType( StructureType::eRenderPassCreateInfo )
+      , pNext( nullptr )
+      , flags( flags_ )
+      , attachmentCount( attachmentCount_ )
+      , pAttachments( pAttachments_ )
+      , subpassCount( subpassCount_ )
+      , pSubpasses( pSubpasses_ )
+      , dependencyCount( dependencyCount_ )
+      , pDependencies( pDependencies_ )
+    {
+    }
+
+    RenderPassCreateInfo( VkRenderPassCreateInfo const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(RenderPassCreateInfo) );
+    }
+
+    RenderPassCreateInfo& operator=( VkRenderPassCreateInfo const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(RenderPassCreateInfo) );
+      return *this;
+    }
+
+    RenderPassCreateInfo& setSType( StructureType sType_ )
+    {
+      sType = sType_;
+      return *this;
+    }
+
+    RenderPassCreateInfo& setPNext( const void* pNext_ )
+    {
+      pNext = pNext_;
+      return *this;
+    }
+
+    RenderPassCreateInfo& setFlags( RenderPassCreateFlags flags_ )
+    {
+      flags = flags_;
+      return *this;
+    }
+
+    RenderPassCreateInfo& setAttachmentCount( uint32_t attachmentCount_ )
+    {
+      attachmentCount = attachmentCount_;
+      return *this;
+    }
+
+    RenderPassCreateInfo& setPAttachments( const AttachmentDescription* pAttachments_ )
+    {
+      pAttachments = pAttachments_;
+      return *this;
+    }
+
+    RenderPassCreateInfo& setSubpassCount( uint32_t subpassCount_ )
+    {
+      subpassCount = subpassCount_;
+      return *this;
+    }
+
+    RenderPassCreateInfo& setPSubpasses( const SubpassDescription* pSubpasses_ )
+    {
+      pSubpasses = pSubpasses_;
+      return *this;
+    }
+
+    RenderPassCreateInfo& setDependencyCount( uint32_t dependencyCount_ )
+    {
+      dependencyCount = dependencyCount_;
+      return *this;
+    }
+
+    RenderPassCreateInfo& setPDependencies( const SubpassDependency* pDependencies_ )
+    {
+      pDependencies = pDependencies_;
+      return *this;
+    }
+
+    operator const VkRenderPassCreateInfo&() const
+    {
+      return *reinterpret_cast<const VkRenderPassCreateInfo*>(this);
+    }
+
+    bool operator==( RenderPassCreateInfo const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( flags == rhs.flags )
+          && ( attachmentCount == rhs.attachmentCount )
+          && ( pAttachments == rhs.pAttachments )
+          && ( subpassCount == rhs.subpassCount )
+          && ( pSubpasses == rhs.pSubpasses )
+          && ( dependencyCount == rhs.dependencyCount )
+          && ( pDependencies == rhs.pDependencies );
+    }
+
+    bool operator!=( RenderPassCreateInfo const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    const void* pNext;
+    RenderPassCreateFlags flags;
+    uint32_t attachmentCount;
+    const AttachmentDescription* pAttachments;
+    uint32_t subpassCount;
+    const SubpassDescription* pSubpasses;
+    uint32_t dependencyCount;
+    const SubpassDependency* pDependencies;
+  };
+  static_assert( sizeof( RenderPassCreateInfo ) == sizeof( VkRenderPassCreateInfo ), "struct and wrapper have different size!" );
+
+  enum class PresentModeKHR
+  {
+    eImmediate = VK_PRESENT_MODE_IMMEDIATE_KHR,
+    eMailbox = VK_PRESENT_MODE_MAILBOX_KHR,
+    eFifo = VK_PRESENT_MODE_FIFO_KHR,
+    eFifoRelaxed = VK_PRESENT_MODE_FIFO_RELAXED_KHR
+  };
+
+  enum class ColorSpaceKHR
+  {
+    eSrgbNonlinear = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR
+  };
+
+  struct SurfaceFormatKHR
+  {
+    operator const VkSurfaceFormatKHR&() const
+    {
+      return *reinterpret_cast<const VkSurfaceFormatKHR*>(this);
+    }
+
+    bool operator==( SurfaceFormatKHR const& rhs ) const
+    {
+      return ( format == rhs.format )
+          && ( colorSpace == rhs.colorSpace );
+    }
+
+    bool operator!=( SurfaceFormatKHR const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+    Format format;
+    ColorSpaceKHR colorSpace;
+  };
+  static_assert( sizeof( SurfaceFormatKHR ) == sizeof( VkSurfaceFormatKHR ), "struct and wrapper have different size!" );
+
+  enum class DisplayPlaneAlphaFlagBitsKHR
+  {
+    eOpaque = VK_DISPLAY_PLANE_ALPHA_OPAQUE_BIT_KHR,
+    eGlobal = VK_DISPLAY_PLANE_ALPHA_GLOBAL_BIT_KHR,
+    ePerPixel = VK_DISPLAY_PLANE_ALPHA_PER_PIXEL_BIT_KHR,
+    ePerPixelPremultiplied = VK_DISPLAY_PLANE_ALPHA_PER_PIXEL_PREMULTIPLIED_BIT_KHR
+  };
+
+  using DisplayPlaneAlphaFlagsKHR = Flags<DisplayPlaneAlphaFlagBitsKHR, VkDisplayPlaneAlphaFlagsKHR>;
+
+  VULKAN_HPP_INLINE DisplayPlaneAlphaFlagsKHR operator|( DisplayPlaneAlphaFlagBitsKHR bit0, DisplayPlaneAlphaFlagBitsKHR bit1 )
+  {
+    return DisplayPlaneAlphaFlagsKHR( bit0 ) | bit1;
+  }
+
+  VULKAN_HPP_INLINE DisplayPlaneAlphaFlagsKHR operator~( DisplayPlaneAlphaFlagBitsKHR bits )
+  {
+    return ~( DisplayPlaneAlphaFlagsKHR( bits ) );
+  }
+
+  template <> struct FlagTraits<DisplayPlaneAlphaFlagBitsKHR>
+  {
+    enum
+    {
+      allFlags = VkFlags(DisplayPlaneAlphaFlagBitsKHR::eOpaque) | VkFlags(DisplayPlaneAlphaFlagBitsKHR::eGlobal) | VkFlags(DisplayPlaneAlphaFlagBitsKHR::ePerPixel) | VkFlags(DisplayPlaneAlphaFlagBitsKHR::ePerPixelPremultiplied)
+    };
+  };
+
+  struct DisplayPlaneCapabilitiesKHR
+  {
+    operator const VkDisplayPlaneCapabilitiesKHR&() const
+    {
+      return *reinterpret_cast<const VkDisplayPlaneCapabilitiesKHR*>(this);
+    }
+
+    bool operator==( DisplayPlaneCapabilitiesKHR const& rhs ) const
+    {
+      return ( supportedAlpha == rhs.supportedAlpha )
+          && ( minSrcPosition == rhs.minSrcPosition )
+          && ( maxSrcPosition == rhs.maxSrcPosition )
+          && ( minSrcExtent == rhs.minSrcExtent )
+          && ( maxSrcExtent == rhs.maxSrcExtent )
+          && ( minDstPosition == rhs.minDstPosition )
+          && ( maxDstPosition == rhs.maxDstPosition )
+          && ( minDstExtent == rhs.minDstExtent )
+          && ( maxDstExtent == rhs.maxDstExtent );
+    }
+
+    bool operator!=( DisplayPlaneCapabilitiesKHR const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+    DisplayPlaneAlphaFlagsKHR supportedAlpha;
+    Offset2D minSrcPosition;
+    Offset2D maxSrcPosition;
+    Extent2D minSrcExtent;
+    Extent2D maxSrcExtent;
+    Offset2D minDstPosition;
+    Offset2D maxDstPosition;
+    Extent2D minDstExtent;
+    Extent2D maxDstExtent;
+  };
+  static_assert( sizeof( DisplayPlaneCapabilitiesKHR ) == sizeof( VkDisplayPlaneCapabilitiesKHR ), "struct and wrapper have different size!" );
+
+  enum class CompositeAlphaFlagBitsKHR
+  {
+    eOpaque = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+    ePreMultiplied = VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR,
+    ePostMultiplied = VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
+    eInherit = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR
+  };
+
+  using CompositeAlphaFlagsKHR = Flags<CompositeAlphaFlagBitsKHR, VkCompositeAlphaFlagsKHR>;
+
+  VULKAN_HPP_INLINE CompositeAlphaFlagsKHR operator|( CompositeAlphaFlagBitsKHR bit0, CompositeAlphaFlagBitsKHR bit1 )
+  {
+    return CompositeAlphaFlagsKHR( bit0 ) | bit1;
+  }
+
+  VULKAN_HPP_INLINE CompositeAlphaFlagsKHR operator~( CompositeAlphaFlagBitsKHR bits )
+  {
+    return ~( CompositeAlphaFlagsKHR( bits ) );
+  }
+
+  template <> struct FlagTraits<CompositeAlphaFlagBitsKHR>
+  {
+    enum
+    {
+      allFlags = VkFlags(CompositeAlphaFlagBitsKHR::eOpaque) | VkFlags(CompositeAlphaFlagBitsKHR::ePreMultiplied) | VkFlags(CompositeAlphaFlagBitsKHR::ePostMultiplied) | VkFlags(CompositeAlphaFlagBitsKHR::eInherit)
+    };
+  };
+
+  enum class SurfaceTransformFlagBitsKHR
+  {
+    eIdentity = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
+    eRotate90 = VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR,
+    eRotate180 = VK_SURFACE_TRANSFORM_ROTATE_180_BIT_KHR,
+    eRotate270 = VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR,
+    eHorizontalMirror = VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_BIT_KHR,
+    eHorizontalMirrorRotate90 = VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_90_BIT_KHR,
+    eHorizontalMirrorRotate180 = VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_180_BIT_KHR,
+    eHorizontalMirrorRotate270 = VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_270_BIT_KHR,
+    eInherit = VK_SURFACE_TRANSFORM_INHERIT_BIT_KHR
+  };
+
+  using SurfaceTransformFlagsKHR = Flags<SurfaceTransformFlagBitsKHR, VkSurfaceTransformFlagsKHR>;
+
+  VULKAN_HPP_INLINE SurfaceTransformFlagsKHR operator|( SurfaceTransformFlagBitsKHR bit0, SurfaceTransformFlagBitsKHR bit1 )
+  {
+    return SurfaceTransformFlagsKHR( bit0 ) | bit1;
+  }
+
+  VULKAN_HPP_INLINE SurfaceTransformFlagsKHR operator~( SurfaceTransformFlagBitsKHR bits )
+  {
+    return ~( SurfaceTransformFlagsKHR( bits ) );
+  }
+
+  template <> struct FlagTraits<SurfaceTransformFlagBitsKHR>
+  {
+    enum
+    {
+      allFlags = VkFlags(SurfaceTransformFlagBitsKHR::eIdentity) | VkFlags(SurfaceTransformFlagBitsKHR::eRotate90) | VkFlags(SurfaceTransformFlagBitsKHR::eRotate180) | VkFlags(SurfaceTransformFlagBitsKHR::eRotate270) | VkFlags(SurfaceTransformFlagBitsKHR::eHorizontalMirror) | VkFlags(SurfaceTransformFlagBitsKHR::eHorizontalMirrorRotate90) | VkFlags(SurfaceTransformFlagBitsKHR::eHorizontalMirrorRotate180) | VkFlags(SurfaceTransformFlagBitsKHR::eHorizontalMirrorRotate270) | VkFlags(SurfaceTransformFlagBitsKHR::eInherit)
+    };
+  };
+
+  struct DisplayPropertiesKHR
+  {
+    operator const VkDisplayPropertiesKHR&() const
+    {
+      return *reinterpret_cast<const VkDisplayPropertiesKHR*>(this);
+    }
+
+    bool operator==( DisplayPropertiesKHR const& rhs ) const
+    {
+      return ( display == rhs.display )
+          && ( displayName == rhs.displayName )
+          && ( physicalDimensions == rhs.physicalDimensions )
+          && ( physicalResolution == rhs.physicalResolution )
+          && ( supportedTransforms == rhs.supportedTransforms )
+          && ( planeReorderPossible == rhs.planeReorderPossible )
+          && ( persistentContent == rhs.persistentContent );
+    }
+
+    bool operator!=( DisplayPropertiesKHR const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+    DisplayKHR display;
+    const char* displayName;
+    Extent2D physicalDimensions;
+    Extent2D physicalResolution;
+    SurfaceTransformFlagsKHR supportedTransforms;
+    Bool32 planeReorderPossible;
+    Bool32 persistentContent;
+  };
+  static_assert( sizeof( DisplayPropertiesKHR ) == sizeof( VkDisplayPropertiesKHR ), "struct and wrapper have different size!" );
+
+  struct DisplaySurfaceCreateInfoKHR
+  {
+    DisplaySurfaceCreateInfoKHR( DisplaySurfaceCreateFlagsKHR flags_ = DisplaySurfaceCreateFlagsKHR(), DisplayModeKHR displayMode_ = DisplayModeKHR(), uint32_t planeIndex_ = 0, uint32_t planeStackIndex_ = 0, SurfaceTransformFlagBitsKHR transform_ = SurfaceTransformFlagBitsKHR::eIdentity, float globalAlpha_ = 0, DisplayPlaneAlphaFlagBitsKHR alphaMode_ = DisplayPlaneAlphaFlagBitsKHR::eOpaque, Extent2D imageExtent_ = Extent2D() )
+      : sType( StructureType::eDisplaySurfaceCreateInfoKHR )
+      , pNext( nullptr )
+      , flags( flags_ )
+      , displayMode( displayMode_ )
+      , planeIndex( planeIndex_ )
+      , planeStackIndex( planeStackIndex_ )
+      , transform( transform_ )
+      , globalAlpha( globalAlpha_ )
+      , alphaMode( alphaMode_ )
+      , imageExtent( imageExtent_ )
+    {
+    }
+
+    DisplaySurfaceCreateInfoKHR( VkDisplaySurfaceCreateInfoKHR const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(DisplaySurfaceCreateInfoKHR) );
+    }
+
+    DisplaySurfaceCreateInfoKHR& operator=( VkDisplaySurfaceCreateInfoKHR const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(DisplaySurfaceCreateInfoKHR) );
+      return *this;
+    }
+
+    DisplaySurfaceCreateInfoKHR& setSType( StructureType sType_ )
+    {
+      sType = sType_;
+      return *this;
+    }
+
+    DisplaySurfaceCreateInfoKHR& setPNext( const void* pNext_ )
+    {
+      pNext = pNext_;
+      return *this;
+    }
+
+    DisplaySurfaceCreateInfoKHR& setFlags( DisplaySurfaceCreateFlagsKHR flags_ )
+    {
+      flags = flags_;
+      return *this;
+    }
+
+    DisplaySurfaceCreateInfoKHR& setDisplayMode( DisplayModeKHR displayMode_ )
+    {
+      displayMode = displayMode_;
+      return *this;
+    }
+
+    DisplaySurfaceCreateInfoKHR& setPlaneIndex( uint32_t planeIndex_ )
+    {
+      planeIndex = planeIndex_;
+      return *this;
+    }
+
+    DisplaySurfaceCreateInfoKHR& setPlaneStackIndex( uint32_t planeStackIndex_ )
+    {
+      planeStackIndex = planeStackIndex_;
+      return *this;
+    }
+
+    DisplaySurfaceCreateInfoKHR& setTransform( SurfaceTransformFlagBitsKHR transform_ )
+    {
+      transform = transform_;
+      return *this;
+    }
+
+    DisplaySurfaceCreateInfoKHR& setGlobalAlpha( float globalAlpha_ )
+    {
+      globalAlpha = globalAlpha_;
+      return *this;
+    }
+
+    DisplaySurfaceCreateInfoKHR& setAlphaMode( DisplayPlaneAlphaFlagBitsKHR alphaMode_ )
+    {
+      alphaMode = alphaMode_;
+      return *this;
+    }
+
+    DisplaySurfaceCreateInfoKHR& setImageExtent( Extent2D imageExtent_ )
+    {
+      imageExtent = imageExtent_;
+      return *this;
+    }
+
+    operator const VkDisplaySurfaceCreateInfoKHR&() const
+    {
+      return *reinterpret_cast<const VkDisplaySurfaceCreateInfoKHR*>(this);
+    }
+
+    bool operator==( DisplaySurfaceCreateInfoKHR const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( flags == rhs.flags )
+          && ( displayMode == rhs.displayMode )
+          && ( planeIndex == rhs.planeIndex )
+          && ( planeStackIndex == rhs.planeStackIndex )
+          && ( transform == rhs.transform )
+          && ( globalAlpha == rhs.globalAlpha )
+          && ( alphaMode == rhs.alphaMode )
+          && ( imageExtent == rhs.imageExtent );
+    }
+
+    bool operator!=( DisplaySurfaceCreateInfoKHR const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    const void* pNext;
+    DisplaySurfaceCreateFlagsKHR flags;
+    DisplayModeKHR displayMode;
+    uint32_t planeIndex;
+    uint32_t planeStackIndex;
+    SurfaceTransformFlagBitsKHR transform;
+    float globalAlpha;
+    DisplayPlaneAlphaFlagBitsKHR alphaMode;
+    Extent2D imageExtent;
+  };
+  static_assert( sizeof( DisplaySurfaceCreateInfoKHR ) == sizeof( VkDisplaySurfaceCreateInfoKHR ), "struct and wrapper have different size!" );
+
+  struct SurfaceCapabilitiesKHR
+  {
+    operator const VkSurfaceCapabilitiesKHR&() const
+    {
+      return *reinterpret_cast<const VkSurfaceCapabilitiesKHR*>(this);
+    }
+
+    bool operator==( SurfaceCapabilitiesKHR const& rhs ) const
+    {
+      return ( minImageCount == rhs.minImageCount )
+          && ( maxImageCount == rhs.maxImageCount )
+          && ( currentExtent == rhs.currentExtent )
+          && ( minImageExtent == rhs.minImageExtent )
+          && ( maxImageExtent == rhs.maxImageExtent )
+          && ( maxImageArrayLayers == rhs.maxImageArrayLayers )
+          && ( supportedTransforms == rhs.supportedTransforms )
+          && ( currentTransform == rhs.currentTransform )
+          && ( supportedCompositeAlpha == rhs.supportedCompositeAlpha )
+          && ( supportedUsageFlags == rhs.supportedUsageFlags );
+    }
+
+    bool operator!=( SurfaceCapabilitiesKHR const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+    uint32_t minImageCount;
+    uint32_t maxImageCount;
+    Extent2D currentExtent;
+    Extent2D minImageExtent;
+    Extent2D maxImageExtent;
+    uint32_t maxImageArrayLayers;
+    SurfaceTransformFlagsKHR supportedTransforms;
+    SurfaceTransformFlagBitsKHR currentTransform;
+    CompositeAlphaFlagsKHR supportedCompositeAlpha;
+    ImageUsageFlags supportedUsageFlags;
+  };
+  static_assert( sizeof( SurfaceCapabilitiesKHR ) == sizeof( VkSurfaceCapabilitiesKHR ), "struct and wrapper have different size!" );
+
+  struct SwapchainCreateInfoKHR
+  {
+    SwapchainCreateInfoKHR( SwapchainCreateFlagsKHR flags_ = SwapchainCreateFlagsKHR(), SurfaceKHR surface_ = SurfaceKHR(), uint32_t minImageCount_ = 0, Format imageFormat_ = Format::eUndefined, ColorSpaceKHR imageColorSpace_ = ColorSpaceKHR::eSrgbNonlinear, Extent2D imageExtent_ = Extent2D(), uint32_t imageArrayLayers_ = 0, ImageUsageFlags imageUsage_ = ImageUsageFlags(), SharingMode imageSharingMode_ = SharingMode::eExclusive, uint32_t queueFamilyIndexCount_ = 0, const uint32_t* pQueueFamilyIndices_ = nullptr, SurfaceTransformFlagBitsKHR preTransform_ = SurfaceTransformFlagBitsKHR::eIdentity, CompositeAlphaFlagBitsKHR compositeAlpha_ = CompositeAlphaFlagBitsKHR::eOpaque, PresentModeKHR presentMode_ = PresentModeKHR::eImmediate, Bool32 clipped_ = 0, SwapchainKHR oldSwapchain_ = SwapchainKHR() )
+      : sType( StructureType::eSwapchainCreateInfoKHR )
+      , pNext( nullptr )
+      , flags( flags_ )
+      , surface( surface_ )
+      , minImageCount( minImageCount_ )
+      , imageFormat( imageFormat_ )
+      , imageColorSpace( imageColorSpace_ )
+      , imageExtent( imageExtent_ )
+      , imageArrayLayers( imageArrayLayers_ )
+      , imageUsage( imageUsage_ )
+      , imageSharingMode( imageSharingMode_ )
+      , queueFamilyIndexCount( queueFamilyIndexCount_ )
+      , pQueueFamilyIndices( pQueueFamilyIndices_ )
+      , preTransform( preTransform_ )
+      , compositeAlpha( compositeAlpha_ )
+      , presentMode( presentMode_ )
+      , clipped( clipped_ )
+      , oldSwapchain( oldSwapchain_ )
+    {
+    }
+
+    SwapchainCreateInfoKHR( VkSwapchainCreateInfoKHR const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(SwapchainCreateInfoKHR) );
+    }
+
+    SwapchainCreateInfoKHR& operator=( VkSwapchainCreateInfoKHR const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(SwapchainCreateInfoKHR) );
+      return *this;
+    }
+
+    SwapchainCreateInfoKHR& setSType( StructureType sType_ )
+    {
+      sType = sType_;
+      return *this;
+    }
+
+    SwapchainCreateInfoKHR& setPNext( const void* pNext_ )
+    {
+      pNext = pNext_;
+      return *this;
+    }
+
+    SwapchainCreateInfoKHR& setFlags( SwapchainCreateFlagsKHR flags_ )
+    {
+      flags = flags_;
+      return *this;
+    }
+
+    SwapchainCreateInfoKHR& setSurface( SurfaceKHR surface_ )
+    {
+      surface = surface_;
+      return *this;
+    }
+
+    SwapchainCreateInfoKHR& setMinImageCount( uint32_t minImageCount_ )
+    {
+      minImageCount = minImageCount_;
+      return *this;
+    }
+
+    SwapchainCreateInfoKHR& setImageFormat( Format imageFormat_ )
+    {
+      imageFormat = imageFormat_;
+      return *this;
+    }
+
+    SwapchainCreateInfoKHR& setImageColorSpace( ColorSpaceKHR imageColorSpace_ )
+    {
+      imageColorSpace = imageColorSpace_;
+      return *this;
+    }
+
+    SwapchainCreateInfoKHR& setImageExtent( Extent2D imageExtent_ )
+    {
+      imageExtent = imageExtent_;
+      return *this;
+    }
+
+    SwapchainCreateInfoKHR& setImageArrayLayers( uint32_t imageArrayLayers_ )
+    {
+      imageArrayLayers = imageArrayLayers_;
+      return *this;
+    }
+
+    SwapchainCreateInfoKHR& setImageUsage( ImageUsageFlags imageUsage_ )
+    {
+      imageUsage = imageUsage_;
+      return *this;
+    }
+
+    SwapchainCreateInfoKHR& setImageSharingMode( SharingMode imageSharingMode_ )
+    {
+      imageSharingMode = imageSharingMode_;
+      return *this;
+    }
+
+    SwapchainCreateInfoKHR& setQueueFamilyIndexCount( uint32_t queueFamilyIndexCount_ )
+    {
+      queueFamilyIndexCount = queueFamilyIndexCount_;
+      return *this;
+    }
+
+    SwapchainCreateInfoKHR& setPQueueFamilyIndices( const uint32_t* pQueueFamilyIndices_ )
+    {
+      pQueueFamilyIndices = pQueueFamilyIndices_;
+      return *this;
+    }
+
+    SwapchainCreateInfoKHR& setPreTransform( SurfaceTransformFlagBitsKHR preTransform_ )
+    {
+      preTransform = preTransform_;
+      return *this;
+    }
+
+    SwapchainCreateInfoKHR& setCompositeAlpha( CompositeAlphaFlagBitsKHR compositeAlpha_ )
+    {
+      compositeAlpha = compositeAlpha_;
+      return *this;
+    }
+
+    SwapchainCreateInfoKHR& setPresentMode( PresentModeKHR presentMode_ )
+    {
+      presentMode = presentMode_;
+      return *this;
+    }
+
+    SwapchainCreateInfoKHR& setClipped( Bool32 clipped_ )
+    {
+      clipped = clipped_;
+      return *this;
+    }
+
+    SwapchainCreateInfoKHR& setOldSwapchain( SwapchainKHR oldSwapchain_ )
+    {
+      oldSwapchain = oldSwapchain_;
+      return *this;
+    }
+
+    operator const VkSwapchainCreateInfoKHR&() const
+    {
+      return *reinterpret_cast<const VkSwapchainCreateInfoKHR*>(this);
+    }
+
+    bool operator==( SwapchainCreateInfoKHR const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( flags == rhs.flags )
+          && ( surface == rhs.surface )
+          && ( minImageCount == rhs.minImageCount )
+          && ( imageFormat == rhs.imageFormat )
+          && ( imageColorSpace == rhs.imageColorSpace )
+          && ( imageExtent == rhs.imageExtent )
+          && ( imageArrayLayers == rhs.imageArrayLayers )
+          && ( imageUsage == rhs.imageUsage )
+          && ( imageSharingMode == rhs.imageSharingMode )
+          && ( queueFamilyIndexCount == rhs.queueFamilyIndexCount )
+          && ( pQueueFamilyIndices == rhs.pQueueFamilyIndices )
+          && ( preTransform == rhs.preTransform )
+          && ( compositeAlpha == rhs.compositeAlpha )
+          && ( presentMode == rhs.presentMode )
+          && ( clipped == rhs.clipped )
+          && ( oldSwapchain == rhs.oldSwapchain );
+    }
+
+    bool operator!=( SwapchainCreateInfoKHR const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    const void* pNext;
+    SwapchainCreateFlagsKHR flags;
+    SurfaceKHR surface;
+    uint32_t minImageCount;
+    Format imageFormat;
+    ColorSpaceKHR imageColorSpace;
+    Extent2D imageExtent;
+    uint32_t imageArrayLayers;
+    ImageUsageFlags imageUsage;
+    SharingMode imageSharingMode;
+    uint32_t queueFamilyIndexCount;
+    const uint32_t* pQueueFamilyIndices;
+    SurfaceTransformFlagBitsKHR preTransform;
+    CompositeAlphaFlagBitsKHR compositeAlpha;
+    PresentModeKHR presentMode;
+    Bool32 clipped;
+    SwapchainKHR oldSwapchain;
+  };
+  static_assert( sizeof( SwapchainCreateInfoKHR ) == sizeof( VkSwapchainCreateInfoKHR ), "struct and wrapper have different size!" );
+
+  enum class DebugReportFlagBitsEXT
+  {
+    eInformation = VK_DEBUG_REPORT_INFORMATION_BIT_EXT,
+    eWarning = VK_DEBUG_REPORT_WARNING_BIT_EXT,
+    ePerformanceWarning = VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
+    eError = VK_DEBUG_REPORT_ERROR_BIT_EXT,
+    eDebug = VK_DEBUG_REPORT_DEBUG_BIT_EXT
+  };
+
+  using DebugReportFlagsEXT = Flags<DebugReportFlagBitsEXT, VkDebugReportFlagsEXT>;
+
+  VULKAN_HPP_INLINE DebugReportFlagsEXT operator|( DebugReportFlagBitsEXT bit0, DebugReportFlagBitsEXT bit1 )
+  {
+    return DebugReportFlagsEXT( bit0 ) | bit1;
+  }
+
+  VULKAN_HPP_INLINE DebugReportFlagsEXT operator~( DebugReportFlagBitsEXT bits )
+  {
+    return ~( DebugReportFlagsEXT( bits ) );
+  }
+
+  template <> struct FlagTraits<DebugReportFlagBitsEXT>
+  {
+    enum
+    {
+      allFlags = VkFlags(DebugReportFlagBitsEXT::eInformation) | VkFlags(DebugReportFlagBitsEXT::eWarning) | VkFlags(DebugReportFlagBitsEXT::ePerformanceWarning) | VkFlags(DebugReportFlagBitsEXT::eError) | VkFlags(DebugReportFlagBitsEXT::eDebug)
+    };
+  };
+
+  struct DebugReportCallbackCreateInfoEXT
+  {
+    DebugReportCallbackCreateInfoEXT( DebugReportFlagsEXT flags_ = DebugReportFlagsEXT(), PFN_vkDebugReportCallbackEXT pfnCallback_ = nullptr, void* pUserData_ = nullptr )
+      : sType( StructureType::eDebugReportCallbackCreateInfoEXT )
+      , pNext( nullptr )
+      , flags( flags_ )
+      , pfnCallback( pfnCallback_ )
+      , pUserData( pUserData_ )
+    {
+    }
+
+    DebugReportCallbackCreateInfoEXT( VkDebugReportCallbackCreateInfoEXT const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(DebugReportCallbackCreateInfoEXT) );
+    }
+
+    DebugReportCallbackCreateInfoEXT& operator=( VkDebugReportCallbackCreateInfoEXT const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(DebugReportCallbackCreateInfoEXT) );
+      return *this;
+    }
+
+    DebugReportCallbackCreateInfoEXT& setSType( StructureType sType_ )
+    {
+      sType = sType_;
+      return *this;
+    }
+
+    DebugReportCallbackCreateInfoEXT& setPNext( const void* pNext_ )
+    {
+      pNext = pNext_;
+      return *this;
+    }
+
+    DebugReportCallbackCreateInfoEXT& setFlags( DebugReportFlagsEXT flags_ )
+    {
+      flags = flags_;
+      return *this;
+    }
+
+    DebugReportCallbackCreateInfoEXT& setPfnCallback( PFN_vkDebugReportCallbackEXT pfnCallback_ )
+    {
+      pfnCallback = pfnCallback_;
+      return *this;
+    }
+
+    DebugReportCallbackCreateInfoEXT& setPUserData( void* pUserData_ )
+    {
+      pUserData = pUserData_;
+      return *this;
+    }
+
+    operator const VkDebugReportCallbackCreateInfoEXT&() const
+    {
+      return *reinterpret_cast<const VkDebugReportCallbackCreateInfoEXT*>(this);
+    }
+
+    bool operator==( DebugReportCallbackCreateInfoEXT const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( flags == rhs.flags )
+          && ( pfnCallback == rhs.pfnCallback )
+          && ( pUserData == rhs.pUserData );
+    }
+
+    bool operator!=( DebugReportCallbackCreateInfoEXT const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    const void* pNext;
+    DebugReportFlagsEXT flags;
+    PFN_vkDebugReportCallbackEXT pfnCallback;
+    void* pUserData;
+  };
+  static_assert( sizeof( DebugReportCallbackCreateInfoEXT ) == sizeof( VkDebugReportCallbackCreateInfoEXT ), "struct and wrapper have different size!" );
+
+  enum class DebugReportObjectTypeEXT
+  {
+    eUnknown = VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT,
+    eInstance = VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+    ePhysicalDevice = VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+    eDevice = VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+    eQueue = VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT,
+    eSemaphore = VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
+    eCommandBuffer = VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+    eFence = VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
+    eDeviceMemory = VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
+    eBuffer = VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
+    eImage = VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+    eEvent = VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT,
+    eQueryPool = VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT,
+    eBufferView = VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT,
+    eImageView = VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT,
+    eShaderModule = VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT,
+    ePipelineCache = VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT,
+    ePipelineLayout = VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT,
+    eRenderPass = VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
+    ePipeline = VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
+    eDescriptorSetLayout = VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT,
+    eSampler = VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT,
+    eDescriptorPool = VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT,
+    eDescriptorSet = VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
+    eFramebuffer = VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT,
+    eCommandPool = VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT,
+    eSurfaceKhr = VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT,
+    eSwapchainKhr = VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
+    eDebugReport = VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT,
+    eDisplayKhr = VK_DEBUG_REPORT_OBJECT_TYPE_DISPLAY_KHR_EXT,
+    eDisplayModeKhr = VK_DEBUG_REPORT_OBJECT_TYPE_DISPLAY_MODE_KHR_EXT,
+    eObjectTableNvx = VK_DEBUG_REPORT_OBJECT_TYPE_OBJECT_TABLE_NVX_EXT,
+    eIndirectCommandsLayoutNvx = VK_DEBUG_REPORT_OBJECT_TYPE_INDIRECT_COMMANDS_LAYOUT_NVX_EXT
+  };
+
+  struct DebugMarkerObjectNameInfoEXT
+  {
+    DebugMarkerObjectNameInfoEXT( DebugReportObjectTypeEXT objectType_ = DebugReportObjectTypeEXT::eUnknown, uint64_t object_ = 0, const char* pObjectName_ = nullptr )
+      : sType( StructureType::eDebugMarkerObjectNameInfoEXT )
+      , pNext( nullptr )
+      , objectType( objectType_ )
+      , object( object_ )
+      , pObjectName( pObjectName_ )
+    {
+    }
+
+    DebugMarkerObjectNameInfoEXT( VkDebugMarkerObjectNameInfoEXT const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(DebugMarkerObjectNameInfoEXT) );
+    }
+
+    DebugMarkerObjectNameInfoEXT& operator=( VkDebugMarkerObjectNameInfoEXT const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(DebugMarkerObjectNameInfoEXT) );
+      return *this;
+    }
+
+    DebugMarkerObjectNameInfoEXT& setSType( StructureType sType_ )
+    {
+      sType = sType_;
+      return *this;
+    }
+
+    DebugMarkerObjectNameInfoEXT& setPNext( const void* pNext_ )
+    {
+      pNext = pNext_;
+      return *this;
+    }
+
+    DebugMarkerObjectNameInfoEXT& setObjectType( DebugReportObjectTypeEXT objectType_ )
+    {
+      objectType = objectType_;
+      return *this;
+    }
+
+    DebugMarkerObjectNameInfoEXT& setObject( uint64_t object_ )
+    {
+      object = object_;
+      return *this;
+    }
+
+    DebugMarkerObjectNameInfoEXT& setPObjectName( const char* pObjectName_ )
+    {
+      pObjectName = pObjectName_;
+      return *this;
+    }
+
+    operator const VkDebugMarkerObjectNameInfoEXT&() const
+    {
+      return *reinterpret_cast<const VkDebugMarkerObjectNameInfoEXT*>(this);
+    }
+
+    bool operator==( DebugMarkerObjectNameInfoEXT const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( objectType == rhs.objectType )
+          && ( object == rhs.object )
+          && ( pObjectName == rhs.pObjectName );
+    }
+
+    bool operator!=( DebugMarkerObjectNameInfoEXT const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    const void* pNext;
+    DebugReportObjectTypeEXT objectType;
+    uint64_t object;
+    const char* pObjectName;
+  };
+  static_assert( sizeof( DebugMarkerObjectNameInfoEXT ) == sizeof( VkDebugMarkerObjectNameInfoEXT ), "struct and wrapper have different size!" );
+
+  struct DebugMarkerObjectTagInfoEXT
+  {
+    DebugMarkerObjectTagInfoEXT( DebugReportObjectTypeEXT objectType_ = DebugReportObjectTypeEXT::eUnknown, uint64_t object_ = 0, uint64_t tagName_ = 0, size_t tagSize_ = 0, const void* pTag_ = nullptr )
+      : sType( StructureType::eDebugMarkerObjectTagInfoEXT )
+      , pNext( nullptr )
+      , objectType( objectType_ )
+      , object( object_ )
+      , tagName( tagName_ )
+      , tagSize( tagSize_ )
+      , pTag( pTag_ )
+    {
+    }
+
+    DebugMarkerObjectTagInfoEXT( VkDebugMarkerObjectTagInfoEXT const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(DebugMarkerObjectTagInfoEXT) );
+    }
+
+    DebugMarkerObjectTagInfoEXT& operator=( VkDebugMarkerObjectTagInfoEXT const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(DebugMarkerObjectTagInfoEXT) );
+      return *this;
+    }
+
+    DebugMarkerObjectTagInfoEXT& setSType( StructureType sType_ )
+    {
+      sType = sType_;
+      return *this;
+    }
+
+    DebugMarkerObjectTagInfoEXT& setPNext( const void* pNext_ )
+    {
+      pNext = pNext_;
+      return *this;
+    }
+
+    DebugMarkerObjectTagInfoEXT& setObjectType( DebugReportObjectTypeEXT objectType_ )
+    {
+      objectType = objectType_;
+      return *this;
+    }
+
+    DebugMarkerObjectTagInfoEXT& setObject( uint64_t object_ )
+    {
+      object = object_;
+      return *this;
+    }
+
+    DebugMarkerObjectTagInfoEXT& setTagName( uint64_t tagName_ )
+    {
+      tagName = tagName_;
+      return *this;
+    }
+
+    DebugMarkerObjectTagInfoEXT& setTagSize( size_t tagSize_ )
+    {
+      tagSize = tagSize_;
+      return *this;
+    }
+
+    DebugMarkerObjectTagInfoEXT& setPTag( const void* pTag_ )
+    {
+      pTag = pTag_;
+      return *this;
+    }
+
+    operator const VkDebugMarkerObjectTagInfoEXT&() const
+    {
+      return *reinterpret_cast<const VkDebugMarkerObjectTagInfoEXT*>(this);
+    }
+
+    bool operator==( DebugMarkerObjectTagInfoEXT const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( objectType == rhs.objectType )
+          && ( object == rhs.object )
+          && ( tagName == rhs.tagName )
+          && ( tagSize == rhs.tagSize )
+          && ( pTag == rhs.pTag );
+    }
+
+    bool operator!=( DebugMarkerObjectTagInfoEXT const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    const void* pNext;
+    DebugReportObjectTypeEXT objectType;
+    uint64_t object;
+    uint64_t tagName;
+    size_t tagSize;
+    const void* pTag;
+  };
+  static_assert( sizeof( DebugMarkerObjectTagInfoEXT ) == sizeof( VkDebugMarkerObjectTagInfoEXT ), "struct and wrapper have different size!" );
+
+  enum class DebugReportErrorEXT
+  {
+    eNone = VK_DEBUG_REPORT_ERROR_NONE_EXT,
+    eCallbackRef = VK_DEBUG_REPORT_ERROR_CALLBACK_REF_EXT
+  };
+
+  enum class RasterizationOrderAMD
+  {
+    eStrict = VK_RASTERIZATION_ORDER_STRICT_AMD,
+    eRelaxed = VK_RASTERIZATION_ORDER_RELAXED_AMD
+  };
+
+  struct PipelineRasterizationStateRasterizationOrderAMD
+  {
+    PipelineRasterizationStateRasterizationOrderAMD( RasterizationOrderAMD rasterizationOrder_ = RasterizationOrderAMD::eStrict )
+      : sType( StructureType::ePipelineRasterizationStateRasterizationOrderAMD )
+      , pNext( nullptr )
+      , rasterizationOrder( rasterizationOrder_ )
+    {
+    }
+
+    PipelineRasterizationStateRasterizationOrderAMD( VkPipelineRasterizationStateRasterizationOrderAMD const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(PipelineRasterizationStateRasterizationOrderAMD) );
+    }
+
+    PipelineRasterizationStateRasterizationOrderAMD& operator=( VkPipelineRasterizationStateRasterizationOrderAMD const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(PipelineRasterizationStateRasterizationOrderAMD) );
+      return *this;
+    }
+
+    PipelineRasterizationStateRasterizationOrderAMD& setSType( StructureType sType_ )
+    {
+      sType = sType_;
+      return *this;
+    }
+
+    PipelineRasterizationStateRasterizationOrderAMD& setPNext( const void* pNext_ )
+    {
+      pNext = pNext_;
+      return *this;
+    }
+
+    PipelineRasterizationStateRasterizationOrderAMD& setRasterizationOrder( RasterizationOrderAMD rasterizationOrder_ )
+    {
+      rasterizationOrder = rasterizationOrder_;
+      return *this;
+    }
+
+    operator const VkPipelineRasterizationStateRasterizationOrderAMD&() const
+    {
+      return *reinterpret_cast<const VkPipelineRasterizationStateRasterizationOrderAMD*>(this);
+    }
+
+    bool operator==( PipelineRasterizationStateRasterizationOrderAMD const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( rasterizationOrder == rhs.rasterizationOrder );
+    }
+
+    bool operator!=( PipelineRasterizationStateRasterizationOrderAMD const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    const void* pNext;
+    RasterizationOrderAMD rasterizationOrder;
+  };
+  static_assert( sizeof( PipelineRasterizationStateRasterizationOrderAMD ) == sizeof( VkPipelineRasterizationStateRasterizationOrderAMD ), "struct and wrapper have different size!" );
+
+  enum class ExternalMemoryHandleTypeFlagBitsNV
+  {
+    eOpaqueWin32 = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT_NV,
+    eOpaqueWin32Kmt = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT_NV,
+    eD3D11Image = VK_EXTERNAL_MEMORY_HANDLE_TYPE_D3D11_IMAGE_BIT_NV,
+    eD3D11ImageKmt = VK_EXTERNAL_MEMORY_HANDLE_TYPE_D3D11_IMAGE_KMT_BIT_NV
+  };
+
+  using ExternalMemoryHandleTypeFlagsNV = Flags<ExternalMemoryHandleTypeFlagBitsNV, VkExternalMemoryHandleTypeFlagsNV>;
+
+  VULKAN_HPP_INLINE ExternalMemoryHandleTypeFlagsNV operator|( ExternalMemoryHandleTypeFlagBitsNV bit0, ExternalMemoryHandleTypeFlagBitsNV bit1 )
+  {
+    return ExternalMemoryHandleTypeFlagsNV( bit0 ) | bit1;
+  }
+
+  VULKAN_HPP_INLINE ExternalMemoryHandleTypeFlagsNV operator~( ExternalMemoryHandleTypeFlagBitsNV bits )
+  {
+    return ~( ExternalMemoryHandleTypeFlagsNV( bits ) );
+  }
+
+  template <> struct FlagTraits<ExternalMemoryHandleTypeFlagBitsNV>
+  {
+    enum
+    {
+      allFlags = VkFlags(ExternalMemoryHandleTypeFlagBitsNV::eOpaqueWin32) | VkFlags(ExternalMemoryHandleTypeFlagBitsNV::eOpaqueWin32Kmt) | VkFlags(ExternalMemoryHandleTypeFlagBitsNV::eD3D11Image) | VkFlags(ExternalMemoryHandleTypeFlagBitsNV::eD3D11ImageKmt)
+    };
+  };
+
+  struct ExternalMemoryImageCreateInfoNV
+  {
+    ExternalMemoryImageCreateInfoNV( ExternalMemoryHandleTypeFlagsNV handleTypes_ = ExternalMemoryHandleTypeFlagsNV() )
+      : sType( StructureType::eExternalMemoryImageCreateInfoNV )
+      , pNext( nullptr )
+      , handleTypes( handleTypes_ )
+    {
+    }
+
+    ExternalMemoryImageCreateInfoNV( VkExternalMemoryImageCreateInfoNV const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(ExternalMemoryImageCreateInfoNV) );
+    }
+
+    ExternalMemoryImageCreateInfoNV& operator=( VkExternalMemoryImageCreateInfoNV const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(ExternalMemoryImageCreateInfoNV) );
+      return *this;
+    }
+
+    ExternalMemoryImageCreateInfoNV& setSType( StructureType sType_ )
+    {
+      sType = sType_;
+      return *this;
+    }
+
+    ExternalMemoryImageCreateInfoNV& setPNext( const void* pNext_ )
+    {
+      pNext = pNext_;
+      return *this;
+    }
+
+    ExternalMemoryImageCreateInfoNV& setHandleTypes( ExternalMemoryHandleTypeFlagsNV handleTypes_ )
+    {
+      handleTypes = handleTypes_;
+      return *this;
+    }
+
+    operator const VkExternalMemoryImageCreateInfoNV&() const
+    {
+      return *reinterpret_cast<const VkExternalMemoryImageCreateInfoNV*>(this);
+    }
+
+    bool operator==( ExternalMemoryImageCreateInfoNV const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( handleTypes == rhs.handleTypes );
+    }
+
+    bool operator!=( ExternalMemoryImageCreateInfoNV const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    const void* pNext;
+    ExternalMemoryHandleTypeFlagsNV handleTypes;
+  };
+  static_assert( sizeof( ExternalMemoryImageCreateInfoNV ) == sizeof( VkExternalMemoryImageCreateInfoNV ), "struct and wrapper have different size!" );
+
+  struct ExportMemoryAllocateInfoNV
+  {
+    ExportMemoryAllocateInfoNV( ExternalMemoryHandleTypeFlagsNV handleTypes_ = ExternalMemoryHandleTypeFlagsNV() )
+      : sType( StructureType::eExportMemoryAllocateInfoNV )
+      , pNext( nullptr )
+      , handleTypes( handleTypes_ )
+    {
+    }
+
+    ExportMemoryAllocateInfoNV( VkExportMemoryAllocateInfoNV const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(ExportMemoryAllocateInfoNV) );
+    }
+
+    ExportMemoryAllocateInfoNV& operator=( VkExportMemoryAllocateInfoNV const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(ExportMemoryAllocateInfoNV) );
+      return *this;
+    }
+
+    ExportMemoryAllocateInfoNV& setSType( StructureType sType_ )
+    {
+      sType = sType_;
+      return *this;
+    }
+
+    ExportMemoryAllocateInfoNV& setPNext( const void* pNext_ )
+    {
+      pNext = pNext_;
+      return *this;
+    }
+
+    ExportMemoryAllocateInfoNV& setHandleTypes( ExternalMemoryHandleTypeFlagsNV handleTypes_ )
+    {
+      handleTypes = handleTypes_;
+      return *this;
+    }
+
+    operator const VkExportMemoryAllocateInfoNV&() const
+    {
+      return *reinterpret_cast<const VkExportMemoryAllocateInfoNV*>(this);
+    }
+
+    bool operator==( ExportMemoryAllocateInfoNV const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( handleTypes == rhs.handleTypes );
+    }
+
+    bool operator!=( ExportMemoryAllocateInfoNV const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    const void* pNext;
+    ExternalMemoryHandleTypeFlagsNV handleTypes;
+  };
+  static_assert( sizeof( ExportMemoryAllocateInfoNV ) == sizeof( VkExportMemoryAllocateInfoNV ), "struct and wrapper have different size!" );
+
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+  struct ImportMemoryWin32HandleInfoNV
+  {
+    ImportMemoryWin32HandleInfoNV( ExternalMemoryHandleTypeFlagsNV handleType_ = ExternalMemoryHandleTypeFlagsNV(), HANDLE handle_ = 0 )
+      : sType( StructureType::eImportMemoryWin32HandleInfoNV )
+      , pNext( nullptr )
+      , handleType( handleType_ )
+      , handle( handle_ )
+    {
+    }
+
+    ImportMemoryWin32HandleInfoNV( VkImportMemoryWin32HandleInfoNV const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(ImportMemoryWin32HandleInfoNV) );
+    }
+
+    ImportMemoryWin32HandleInfoNV& operator=( VkImportMemoryWin32HandleInfoNV const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(ImportMemoryWin32HandleInfoNV) );
+      return *this;
+    }
+
+    ImportMemoryWin32HandleInfoNV& setSType( StructureType sType_ )
+    {
+      sType = sType_;
+      return *this;
+    }
+
+    ImportMemoryWin32HandleInfoNV& setPNext( const void* pNext_ )
+    {
+      pNext = pNext_;
+      return *this;
+    }
+
+    ImportMemoryWin32HandleInfoNV& setHandleType( ExternalMemoryHandleTypeFlagsNV handleType_ )
+    {
+      handleType = handleType_;
+      return *this;
+    }
+
+    ImportMemoryWin32HandleInfoNV& setHandle( HANDLE handle_ )
+    {
+      handle = handle_;
+      return *this;
+    }
+
+    operator const VkImportMemoryWin32HandleInfoNV&() const
+    {
+      return *reinterpret_cast<const VkImportMemoryWin32HandleInfoNV*>(this);
+    }
+
+    bool operator==( ImportMemoryWin32HandleInfoNV const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( handleType == rhs.handleType )
+          && ( handle == rhs.handle );
+    }
+
+    bool operator!=( ImportMemoryWin32HandleInfoNV const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    const void* pNext;
+    ExternalMemoryHandleTypeFlagsNV handleType;
+    HANDLE handle;
+  };
+  static_assert( sizeof( ImportMemoryWin32HandleInfoNV ) == sizeof( VkImportMemoryWin32HandleInfoNV ), "struct and wrapper have different size!" );
+#endif /*VK_USE_PLATFORM_WIN32_KHR*/
+
+  enum class ExternalMemoryFeatureFlagBitsNV
+  {
+    eDedicatedOnly = VK_EXTERNAL_MEMORY_FEATURE_DEDICATED_ONLY_BIT_NV,
+    eExportable = VK_EXTERNAL_MEMORY_FEATURE_EXPORTABLE_BIT_NV,
+    eImportable = VK_EXTERNAL_MEMORY_FEATURE_IMPORTABLE_BIT_NV
+  };
+
+  using ExternalMemoryFeatureFlagsNV = Flags<ExternalMemoryFeatureFlagBitsNV, VkExternalMemoryFeatureFlagsNV>;
+
+  VULKAN_HPP_INLINE ExternalMemoryFeatureFlagsNV operator|( ExternalMemoryFeatureFlagBitsNV bit0, ExternalMemoryFeatureFlagBitsNV bit1 )
+  {
+    return ExternalMemoryFeatureFlagsNV( bit0 ) | bit1;
+  }
+
+  VULKAN_HPP_INLINE ExternalMemoryFeatureFlagsNV operator~( ExternalMemoryFeatureFlagBitsNV bits )
+  {
+    return ~( ExternalMemoryFeatureFlagsNV( bits ) );
+  }
+
+  template <> struct FlagTraits<ExternalMemoryFeatureFlagBitsNV>
+  {
+    enum
+    {
+      allFlags = VkFlags(ExternalMemoryFeatureFlagBitsNV::eDedicatedOnly) | VkFlags(ExternalMemoryFeatureFlagBitsNV::eExportable) | VkFlags(ExternalMemoryFeatureFlagBitsNV::eImportable)
+    };
+  };
+
+  struct ExternalImageFormatPropertiesNV
+  {
+    operator const VkExternalImageFormatPropertiesNV&() const
+    {
+      return *reinterpret_cast<const VkExternalImageFormatPropertiesNV*>(this);
+    }
+
+    bool operator==( ExternalImageFormatPropertiesNV const& rhs ) const
+    {
+      return ( imageFormatProperties == rhs.imageFormatProperties )
+          && ( externalMemoryFeatures == rhs.externalMemoryFeatures )
+          && ( exportFromImportedHandleTypes == rhs.exportFromImportedHandleTypes )
+          && ( compatibleHandleTypes == rhs.compatibleHandleTypes );
+    }
+
+    bool operator!=( ExternalImageFormatPropertiesNV const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+    ImageFormatProperties imageFormatProperties;
+    ExternalMemoryFeatureFlagsNV externalMemoryFeatures;
+    ExternalMemoryHandleTypeFlagsNV exportFromImportedHandleTypes;
+    ExternalMemoryHandleTypeFlagsNV compatibleHandleTypes;
+  };
+  static_assert( sizeof( ExternalImageFormatPropertiesNV ) == sizeof( VkExternalImageFormatPropertiesNV ), "struct and wrapper have different size!" );
+
+  enum class ValidationCheckEXT
+  {
+    eAll = VK_VALIDATION_CHECK_ALL_EXT
+  };
+
+  struct ValidationFlagsEXT
+  {
+    ValidationFlagsEXT( uint32_t disabledValidationCheckCount_ = 0, ValidationCheckEXT* pDisabledValidationChecks_ = nullptr )
+      : sType( StructureType::eValidationFlagsEXT )
+      , pNext( nullptr )
+      , disabledValidationCheckCount( disabledValidationCheckCount_ )
+      , pDisabledValidationChecks( pDisabledValidationChecks_ )
+    {
+    }
+
+    ValidationFlagsEXT( VkValidationFlagsEXT const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(ValidationFlagsEXT) );
+    }
+
+    ValidationFlagsEXT& operator=( VkValidationFlagsEXT const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(ValidationFlagsEXT) );
+      return *this;
+    }
+
+    ValidationFlagsEXT& setSType( StructureType sType_ )
+    {
+      sType = sType_;
+      return *this;
+    }
+
+    ValidationFlagsEXT& setPNext( const void* pNext_ )
+    {
+      pNext = pNext_;
+      return *this;
+    }
+
+    ValidationFlagsEXT& setDisabledValidationCheckCount( uint32_t disabledValidationCheckCount_ )
+    {
+      disabledValidationCheckCount = disabledValidationCheckCount_;
+      return *this;
+    }
+
+    ValidationFlagsEXT& setPDisabledValidationChecks( ValidationCheckEXT* pDisabledValidationChecks_ )
+    {
+      pDisabledValidationChecks = pDisabledValidationChecks_;
+      return *this;
+    }
+
+    operator const VkValidationFlagsEXT&() const
+    {
+      return *reinterpret_cast<const VkValidationFlagsEXT*>(this);
+    }
+
+    bool operator==( ValidationFlagsEXT const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( disabledValidationCheckCount == rhs.disabledValidationCheckCount )
+          && ( pDisabledValidationChecks == rhs.pDisabledValidationChecks );
+    }
+
+    bool operator!=( ValidationFlagsEXT const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    const void* pNext;
+    uint32_t disabledValidationCheckCount;
+    ValidationCheckEXT* pDisabledValidationChecks;
+  };
+  static_assert( sizeof( ValidationFlagsEXT ) == sizeof( VkValidationFlagsEXT ), "struct and wrapper have different size!" );
+
+  enum class IndirectCommandsLayoutUsageFlagBitsNVX
+  {
+    eUnorderedSequences = VK_INDIRECT_COMMANDS_LAYOUT_USAGE_UNORDERED_SEQUENCES_BIT_NVX,
+    eSparseSequences = VK_INDIRECT_COMMANDS_LAYOUT_USAGE_SPARSE_SEQUENCES_BIT_NVX,
+    eEmptyExecutions = VK_INDIRECT_COMMANDS_LAYOUT_USAGE_EMPTY_EXECUTIONS_BIT_NVX,
+    eIndexedSequences = VK_INDIRECT_COMMANDS_LAYOUT_USAGE_INDEXED_SEQUENCES_BIT_NVX
+  };
+
+  using IndirectCommandsLayoutUsageFlagsNVX = Flags<IndirectCommandsLayoutUsageFlagBitsNVX, VkIndirectCommandsLayoutUsageFlagsNVX>;
+
+  VULKAN_HPP_INLINE IndirectCommandsLayoutUsageFlagsNVX operator|( IndirectCommandsLayoutUsageFlagBitsNVX bit0, IndirectCommandsLayoutUsageFlagBitsNVX bit1 )
+  {
+    return IndirectCommandsLayoutUsageFlagsNVX( bit0 ) | bit1;
+  }
+
+  VULKAN_HPP_INLINE IndirectCommandsLayoutUsageFlagsNVX operator~( IndirectCommandsLayoutUsageFlagBitsNVX bits )
+  {
+    return ~( IndirectCommandsLayoutUsageFlagsNVX( bits ) );
+  }
+
+  template <> struct FlagTraits<IndirectCommandsLayoutUsageFlagBitsNVX>
+  {
+    enum
+    {
+      allFlags = VkFlags(IndirectCommandsLayoutUsageFlagBitsNVX::eUnorderedSequences) | VkFlags(IndirectCommandsLayoutUsageFlagBitsNVX::eSparseSequences) | VkFlags(IndirectCommandsLayoutUsageFlagBitsNVX::eEmptyExecutions) | VkFlags(IndirectCommandsLayoutUsageFlagBitsNVX::eIndexedSequences)
+    };
+  };
+
+  enum class ObjectEntryUsageFlagBitsNVX
+  {
+    eGraphics = VK_OBJECT_ENTRY_USAGE_GRAPHICS_BIT_NVX,
+    eCompute = VK_OBJECT_ENTRY_USAGE_COMPUTE_BIT_NVX
+  };
+
+  using ObjectEntryUsageFlagsNVX = Flags<ObjectEntryUsageFlagBitsNVX, VkObjectEntryUsageFlagsNVX>;
+
+  VULKAN_HPP_INLINE ObjectEntryUsageFlagsNVX operator|( ObjectEntryUsageFlagBitsNVX bit0, ObjectEntryUsageFlagBitsNVX bit1 )
+  {
+    return ObjectEntryUsageFlagsNVX( bit0 ) | bit1;
+  }
+
+  VULKAN_HPP_INLINE ObjectEntryUsageFlagsNVX operator~( ObjectEntryUsageFlagBitsNVX bits )
+  {
+    return ~( ObjectEntryUsageFlagsNVX( bits ) );
+  }
+
+  template <> struct FlagTraits<ObjectEntryUsageFlagBitsNVX>
+  {
+    enum
+    {
+      allFlags = VkFlags(ObjectEntryUsageFlagBitsNVX::eGraphics) | VkFlags(ObjectEntryUsageFlagBitsNVX::eCompute)
+    };
+  };
+
+  enum class IndirectCommandsTokenTypeNVX
+  {
+    eVkIndirectCommandsTokenPipeline = VK_INDIRECT_COMMANDS_TOKEN_PIPELINE_NVX,
+    eVkIndirectCommandsTokenDescriptorSet = VK_INDIRECT_COMMANDS_TOKEN_DESCRIPTOR_SET_NVX,
+    eVkIndirectCommandsTokenIndexBuffer = VK_INDIRECT_COMMANDS_TOKEN_INDEX_BUFFER_NVX,
+    eVkIndirectCommandsTokenVertexBuffer = VK_INDIRECT_COMMANDS_TOKEN_VERTEX_BUFFER_NVX,
+    eVkIndirectCommandsTokenPushConstant = VK_INDIRECT_COMMANDS_TOKEN_PUSH_CONSTANT_NVX,
+    eVkIndirectCommandsTokenDrawIndexed = VK_INDIRECT_COMMANDS_TOKEN_DRAW_INDEXED_NVX,
+    eVkIndirectCommandsTokenDraw = VK_INDIRECT_COMMANDS_TOKEN_DRAW_NVX,
+    eVkIndirectCommandsTokenDispatch = VK_INDIRECT_COMMANDS_TOKEN_DISPATCH_NVX
+  };
+
+  struct IndirectCommandsTokenNVX
+  {
+    IndirectCommandsTokenNVX( IndirectCommandsTokenTypeNVX tokenType_ = IndirectCommandsTokenTypeNVX::eVkIndirectCommandsTokenPipeline, Buffer buffer_ = Buffer(), DeviceSize offset_ = 0 )
+      : tokenType( tokenType_ )
+      , buffer( buffer_ )
+      , offset( offset_ )
+    {
+    }
+
+    IndirectCommandsTokenNVX( VkIndirectCommandsTokenNVX const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(IndirectCommandsTokenNVX) );
+    }
+
+    IndirectCommandsTokenNVX& operator=( VkIndirectCommandsTokenNVX const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(IndirectCommandsTokenNVX) );
+      return *this;
+    }
+
+    IndirectCommandsTokenNVX& setTokenType( IndirectCommandsTokenTypeNVX tokenType_ )
+    {
+      tokenType = tokenType_;
+      return *this;
+    }
+
+    IndirectCommandsTokenNVX& setBuffer( Buffer buffer_ )
+    {
+      buffer = buffer_;
+      return *this;
+    }
+
+    IndirectCommandsTokenNVX& setOffset( DeviceSize offset_ )
+    {
+      offset = offset_;
+      return *this;
+    }
+
+    operator const VkIndirectCommandsTokenNVX&() const
+    {
+      return *reinterpret_cast<const VkIndirectCommandsTokenNVX*>(this);
+    }
+
+    bool operator==( IndirectCommandsTokenNVX const& rhs ) const
+    {
+      return ( tokenType == rhs.tokenType )
+          && ( buffer == rhs.buffer )
+          && ( offset == rhs.offset );
+    }
+
+    bool operator!=( IndirectCommandsTokenNVX const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+    IndirectCommandsTokenTypeNVX tokenType;
+    Buffer buffer;
+    DeviceSize offset;
+  };
+  static_assert( sizeof( IndirectCommandsTokenNVX ) == sizeof( VkIndirectCommandsTokenNVX ), "struct and wrapper have different size!" );
+
+  struct IndirectCommandsLayoutTokenNVX
+  {
+    IndirectCommandsLayoutTokenNVX( IndirectCommandsTokenTypeNVX tokenType_ = IndirectCommandsTokenTypeNVX::eVkIndirectCommandsTokenPipeline, uint32_t bindingUnit_ = 0, uint32_t dynamicCount_ = 0, uint32_t divisor_ = 0 )
+      : tokenType( tokenType_ )
+      , bindingUnit( bindingUnit_ )
+      , dynamicCount( dynamicCount_ )
+      , divisor( divisor_ )
+    {
+    }
+
+    IndirectCommandsLayoutTokenNVX( VkIndirectCommandsLayoutTokenNVX const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(IndirectCommandsLayoutTokenNVX) );
+    }
+
+    IndirectCommandsLayoutTokenNVX& operator=( VkIndirectCommandsLayoutTokenNVX const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(IndirectCommandsLayoutTokenNVX) );
+      return *this;
+    }
+
+    IndirectCommandsLayoutTokenNVX& setTokenType( IndirectCommandsTokenTypeNVX tokenType_ )
+    {
+      tokenType = tokenType_;
+      return *this;
+    }
+
+    IndirectCommandsLayoutTokenNVX& setBindingUnit( uint32_t bindingUnit_ )
+    {
+      bindingUnit = bindingUnit_;
+      return *this;
+    }
+
+    IndirectCommandsLayoutTokenNVX& setDynamicCount( uint32_t dynamicCount_ )
+    {
+      dynamicCount = dynamicCount_;
+      return *this;
+    }
+
+    IndirectCommandsLayoutTokenNVX& setDivisor( uint32_t divisor_ )
+    {
+      divisor = divisor_;
+      return *this;
+    }
+
+    operator const VkIndirectCommandsLayoutTokenNVX&() const
+    {
+      return *reinterpret_cast<const VkIndirectCommandsLayoutTokenNVX*>(this);
+    }
+
+    bool operator==( IndirectCommandsLayoutTokenNVX const& rhs ) const
+    {
+      return ( tokenType == rhs.tokenType )
+          && ( bindingUnit == rhs.bindingUnit )
+          && ( dynamicCount == rhs.dynamicCount )
+          && ( divisor == rhs.divisor );
+    }
+
+    bool operator!=( IndirectCommandsLayoutTokenNVX const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+    IndirectCommandsTokenTypeNVX tokenType;
+    uint32_t bindingUnit;
+    uint32_t dynamicCount;
+    uint32_t divisor;
+  };
+  static_assert( sizeof( IndirectCommandsLayoutTokenNVX ) == sizeof( VkIndirectCommandsLayoutTokenNVX ), "struct and wrapper have different size!" );
+
+  struct IndirectCommandsLayoutCreateInfoNVX
+  {
+    IndirectCommandsLayoutCreateInfoNVX( PipelineBindPoint pipelineBindPoint_ = PipelineBindPoint::eGraphics, IndirectCommandsLayoutUsageFlagsNVX flags_ = IndirectCommandsLayoutUsageFlagsNVX(), uint32_t tokenCount_ = 0, const IndirectCommandsLayoutTokenNVX* pTokens_ = nullptr )
+      : sType( StructureType::eIndirectCommandsLayoutCreateInfoNVX )
+      , pNext( nullptr )
+      , pipelineBindPoint( pipelineBindPoint_ )
+      , flags( flags_ )
+      , tokenCount( tokenCount_ )
+      , pTokens( pTokens_ )
+    {
+    }
+
+    IndirectCommandsLayoutCreateInfoNVX( VkIndirectCommandsLayoutCreateInfoNVX const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(IndirectCommandsLayoutCreateInfoNVX) );
+    }
+
+    IndirectCommandsLayoutCreateInfoNVX& operator=( VkIndirectCommandsLayoutCreateInfoNVX const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(IndirectCommandsLayoutCreateInfoNVX) );
+      return *this;
+    }
+
+    IndirectCommandsLayoutCreateInfoNVX& setSType( StructureType sType_ )
+    {
+      sType = sType_;
+      return *this;
+    }
+
+    IndirectCommandsLayoutCreateInfoNVX& setPNext( const void* pNext_ )
+    {
+      pNext = pNext_;
+      return *this;
+    }
+
+    IndirectCommandsLayoutCreateInfoNVX& setPipelineBindPoint( PipelineBindPoint pipelineBindPoint_ )
+    {
+      pipelineBindPoint = pipelineBindPoint_;
+      return *this;
+    }
+
+    IndirectCommandsLayoutCreateInfoNVX& setFlags( IndirectCommandsLayoutUsageFlagsNVX flags_ )
+    {
+      flags = flags_;
+      return *this;
+    }
+
+    IndirectCommandsLayoutCreateInfoNVX& setTokenCount( uint32_t tokenCount_ )
+    {
+      tokenCount = tokenCount_;
+      return *this;
+    }
+
+    IndirectCommandsLayoutCreateInfoNVX& setPTokens( const IndirectCommandsLayoutTokenNVX* pTokens_ )
+    {
+      pTokens = pTokens_;
+      return *this;
+    }
+
+    operator const VkIndirectCommandsLayoutCreateInfoNVX&() const
+    {
+      return *reinterpret_cast<const VkIndirectCommandsLayoutCreateInfoNVX*>(this);
+    }
+
+    bool operator==( IndirectCommandsLayoutCreateInfoNVX const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( pipelineBindPoint == rhs.pipelineBindPoint )
+          && ( flags == rhs.flags )
+          && ( tokenCount == rhs.tokenCount )
+          && ( pTokens == rhs.pTokens );
+    }
+
+    bool operator!=( IndirectCommandsLayoutCreateInfoNVX const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    const void* pNext;
+    PipelineBindPoint pipelineBindPoint;
+    IndirectCommandsLayoutUsageFlagsNVX flags;
+    uint32_t tokenCount;
+    const IndirectCommandsLayoutTokenNVX* pTokens;
+  };
+  static_assert( sizeof( IndirectCommandsLayoutCreateInfoNVX ) == sizeof( VkIndirectCommandsLayoutCreateInfoNVX ), "struct and wrapper have different size!" );
+
+  enum class ObjectEntryTypeNVX
+  {
+    eVkObjectEntryDescriptorSet = VK_OBJECT_ENTRY_DESCRIPTOR_SET_NVX,
+    eVkObjectEntryPipeline = VK_OBJECT_ENTRY_PIPELINE_NVX,
+    eVkObjectEntryIndexBuffer = VK_OBJECT_ENTRY_INDEX_BUFFER_NVX,
+    eVkObjectEntryVertexBuffer = VK_OBJECT_ENTRY_VERTEX_BUFFER_NVX,
+    eVkObjectEntryPushConstant = VK_OBJECT_ENTRY_PUSH_CONSTANT_NVX
+  };
+
+  struct ObjectTableCreateInfoNVX
+  {
+    ObjectTableCreateInfoNVX( uint32_t objectCount_ = 0, const ObjectEntryTypeNVX* pObjectEntryTypes_ = nullptr, const uint32_t* pObjectEntryCounts_ = nullptr, const ObjectEntryUsageFlagsNVX* pObjectEntryUsageFlags_ = nullptr, uint32_t maxUniformBuffersPerDescriptor_ = 0, uint32_t maxStorageBuffersPerDescriptor_ = 0, uint32_t maxStorageImagesPerDescriptor_ = 0, uint32_t maxSampledImagesPerDescriptor_ = 0, uint32_t maxPipelineLayouts_ = 0 )
+      : sType( StructureType::eObjectTableCreateInfoNVX )
+      , pNext( nullptr )
+      , objectCount( objectCount_ )
+      , pObjectEntryTypes( pObjectEntryTypes_ )
+      , pObjectEntryCounts( pObjectEntryCounts_ )
+      , pObjectEntryUsageFlags( pObjectEntryUsageFlags_ )
+      , maxUniformBuffersPerDescriptor( maxUniformBuffersPerDescriptor_ )
+      , maxStorageBuffersPerDescriptor( maxStorageBuffersPerDescriptor_ )
+      , maxStorageImagesPerDescriptor( maxStorageImagesPerDescriptor_ )
+      , maxSampledImagesPerDescriptor( maxSampledImagesPerDescriptor_ )
+      , maxPipelineLayouts( maxPipelineLayouts_ )
+    {
+    }
+
+    ObjectTableCreateInfoNVX( VkObjectTableCreateInfoNVX const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(ObjectTableCreateInfoNVX) );
+    }
+
+    ObjectTableCreateInfoNVX& operator=( VkObjectTableCreateInfoNVX const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(ObjectTableCreateInfoNVX) );
+      return *this;
+    }
+
+    ObjectTableCreateInfoNVX& setSType( StructureType sType_ )
+    {
+      sType = sType_;
+      return *this;
+    }
+
+    ObjectTableCreateInfoNVX& setPNext( const void* pNext_ )
+    {
+      pNext = pNext_;
+      return *this;
+    }
+
+    ObjectTableCreateInfoNVX& setObjectCount( uint32_t objectCount_ )
+    {
+      objectCount = objectCount_;
+      return *this;
+    }
+
+    ObjectTableCreateInfoNVX& setPObjectEntryTypes( const ObjectEntryTypeNVX* pObjectEntryTypes_ )
+    {
+      pObjectEntryTypes = pObjectEntryTypes_;
+      return *this;
+    }
+
+    ObjectTableCreateInfoNVX& setPObjectEntryCounts( const uint32_t* pObjectEntryCounts_ )
+    {
+      pObjectEntryCounts = pObjectEntryCounts_;
+      return *this;
+    }
+
+    ObjectTableCreateInfoNVX& setPObjectEntryUsageFlags( const ObjectEntryUsageFlagsNVX* pObjectEntryUsageFlags_ )
+    {
+      pObjectEntryUsageFlags = pObjectEntryUsageFlags_;
+      return *this;
+    }
+
+    ObjectTableCreateInfoNVX& setMaxUniformBuffersPerDescriptor( uint32_t maxUniformBuffersPerDescriptor_ )
+    {
+      maxUniformBuffersPerDescriptor = maxUniformBuffersPerDescriptor_;
+      return *this;
+    }
+
+    ObjectTableCreateInfoNVX& setMaxStorageBuffersPerDescriptor( uint32_t maxStorageBuffersPerDescriptor_ )
+    {
+      maxStorageBuffersPerDescriptor = maxStorageBuffersPerDescriptor_;
+      return *this;
+    }
+
+    ObjectTableCreateInfoNVX& setMaxStorageImagesPerDescriptor( uint32_t maxStorageImagesPerDescriptor_ )
+    {
+      maxStorageImagesPerDescriptor = maxStorageImagesPerDescriptor_;
+      return *this;
+    }
+
+    ObjectTableCreateInfoNVX& setMaxSampledImagesPerDescriptor( uint32_t maxSampledImagesPerDescriptor_ )
+    {
+      maxSampledImagesPerDescriptor = maxSampledImagesPerDescriptor_;
+      return *this;
+    }
+
+    ObjectTableCreateInfoNVX& setMaxPipelineLayouts( uint32_t maxPipelineLayouts_ )
+    {
+      maxPipelineLayouts = maxPipelineLayouts_;
+      return *this;
+    }
+
+    operator const VkObjectTableCreateInfoNVX&() const
+    {
+      return *reinterpret_cast<const VkObjectTableCreateInfoNVX*>(this);
+    }
+
+    bool operator==( ObjectTableCreateInfoNVX const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( objectCount == rhs.objectCount )
+          && ( pObjectEntryTypes == rhs.pObjectEntryTypes )
+          && ( pObjectEntryCounts == rhs.pObjectEntryCounts )
+          && ( pObjectEntryUsageFlags == rhs.pObjectEntryUsageFlags )
+          && ( maxUniformBuffersPerDescriptor == rhs.maxUniformBuffersPerDescriptor )
+          && ( maxStorageBuffersPerDescriptor == rhs.maxStorageBuffersPerDescriptor )
+          && ( maxStorageImagesPerDescriptor == rhs.maxStorageImagesPerDescriptor )
+          && ( maxSampledImagesPerDescriptor == rhs.maxSampledImagesPerDescriptor )
+          && ( maxPipelineLayouts == rhs.maxPipelineLayouts );
+    }
+
+    bool operator!=( ObjectTableCreateInfoNVX const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    const void* pNext;
+    uint32_t objectCount;
+    const ObjectEntryTypeNVX* pObjectEntryTypes;
+    const uint32_t* pObjectEntryCounts;
+    const ObjectEntryUsageFlagsNVX* pObjectEntryUsageFlags;
+    uint32_t maxUniformBuffersPerDescriptor;
+    uint32_t maxStorageBuffersPerDescriptor;
+    uint32_t maxStorageImagesPerDescriptor;
+    uint32_t maxSampledImagesPerDescriptor;
+    uint32_t maxPipelineLayouts;
+  };
+  static_assert( sizeof( ObjectTableCreateInfoNVX ) == sizeof( VkObjectTableCreateInfoNVX ), "struct and wrapper have different size!" );
+
+  struct ObjectTableEntryNVX
+  {
+    ObjectTableEntryNVX( ObjectEntryTypeNVX type_ = ObjectEntryTypeNVX::eVkObjectEntryDescriptorSet, ObjectEntryUsageFlagsNVX flags_ = ObjectEntryUsageFlagsNVX() )
+      : type( type_ )
+      , flags( flags_ )
+    {
+    }
+
+    ObjectTableEntryNVX( VkObjectTableEntryNVX const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(ObjectTableEntryNVX) );
+    }
+
+    ObjectTableEntryNVX& operator=( VkObjectTableEntryNVX const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(ObjectTableEntryNVX) );
+      return *this;
+    }
+
+    ObjectTableEntryNVX& setType( ObjectEntryTypeNVX type_ )
+    {
+      type = type_;
+      return *this;
+    }
+
+    ObjectTableEntryNVX& setFlags( ObjectEntryUsageFlagsNVX flags_ )
+    {
+      flags = flags_;
+      return *this;
+    }
+
+    operator const VkObjectTableEntryNVX&() const
+    {
+      return *reinterpret_cast<const VkObjectTableEntryNVX*>(this);
+    }
+
+    bool operator==( ObjectTableEntryNVX const& rhs ) const
+    {
+      return ( type == rhs.type )
+          && ( flags == rhs.flags );
+    }
+
+    bool operator!=( ObjectTableEntryNVX const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+    ObjectEntryTypeNVX type;
+    ObjectEntryUsageFlagsNVX flags;
+  };
+  static_assert( sizeof( ObjectTableEntryNVX ) == sizeof( VkObjectTableEntryNVX ), "struct and wrapper have different size!" );
+
+  struct ObjectTablePipelineEntryNVX
+  {
+    ObjectTablePipelineEntryNVX( ObjectEntryTypeNVX type_ = ObjectEntryTypeNVX::eVkObjectEntryDescriptorSet, ObjectEntryUsageFlagsNVX flags_ = ObjectEntryUsageFlagsNVX(), Pipeline pipeline_ = Pipeline() )
+      : type( type_ )
+      , flags( flags_ )
+      , pipeline( pipeline_ )
+    {
+    }
+
+    ObjectTablePipelineEntryNVX( VkObjectTablePipelineEntryNVX const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(ObjectTablePipelineEntryNVX) );
+    }
+
+    ObjectTablePipelineEntryNVX& operator=( VkObjectTablePipelineEntryNVX const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(ObjectTablePipelineEntryNVX) );
+      return *this;
+    }
+
+    ObjectTablePipelineEntryNVX& setType( ObjectEntryTypeNVX type_ )
+    {
+      type = type_;
+      return *this;
+    }
+
+    ObjectTablePipelineEntryNVX& setFlags( ObjectEntryUsageFlagsNVX flags_ )
+    {
+      flags = flags_;
+      return *this;
+    }
+
+    ObjectTablePipelineEntryNVX& setPipeline( Pipeline pipeline_ )
+    {
+      pipeline = pipeline_;
+      return *this;
+    }
+
+    operator const VkObjectTablePipelineEntryNVX&() const
+    {
+      return *reinterpret_cast<const VkObjectTablePipelineEntryNVX*>(this);
+    }
+
+    bool operator==( ObjectTablePipelineEntryNVX const& rhs ) const
+    {
+      return ( type == rhs.type )
+          && ( flags == rhs.flags )
+          && ( pipeline == rhs.pipeline );
+    }
+
+    bool operator!=( ObjectTablePipelineEntryNVX const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+    ObjectEntryTypeNVX type;
+    ObjectEntryUsageFlagsNVX flags;
+    Pipeline pipeline;
+  };
+  static_assert( sizeof( ObjectTablePipelineEntryNVX ) == sizeof( VkObjectTablePipelineEntryNVX ), "struct and wrapper have different size!" );
+
+  struct ObjectTableDescriptorSetEntryNVX
+  {
+    ObjectTableDescriptorSetEntryNVX( ObjectEntryTypeNVX type_ = ObjectEntryTypeNVX::eVkObjectEntryDescriptorSet, ObjectEntryUsageFlagsNVX flags_ = ObjectEntryUsageFlagsNVX(), PipelineLayout pipelineLayout_ = PipelineLayout(), DescriptorSet descriptorSet_ = DescriptorSet() )
+      : type( type_ )
+      , flags( flags_ )
+      , pipelineLayout( pipelineLayout_ )
+      , descriptorSet( descriptorSet_ )
+    {
+    }
+
+    ObjectTableDescriptorSetEntryNVX( VkObjectTableDescriptorSetEntryNVX const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(ObjectTableDescriptorSetEntryNVX) );
+    }
+
+    ObjectTableDescriptorSetEntryNVX& operator=( VkObjectTableDescriptorSetEntryNVX const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(ObjectTableDescriptorSetEntryNVX) );
+      return *this;
+    }
+
+    ObjectTableDescriptorSetEntryNVX& setType( ObjectEntryTypeNVX type_ )
+    {
+      type = type_;
+      return *this;
+    }
+
+    ObjectTableDescriptorSetEntryNVX& setFlags( ObjectEntryUsageFlagsNVX flags_ )
+    {
+      flags = flags_;
+      return *this;
+    }
+
+    ObjectTableDescriptorSetEntryNVX& setPipelineLayout( PipelineLayout pipelineLayout_ )
+    {
+      pipelineLayout = pipelineLayout_;
+      return *this;
+    }
+
+    ObjectTableDescriptorSetEntryNVX& setDescriptorSet( DescriptorSet descriptorSet_ )
+    {
+      descriptorSet = descriptorSet_;
+      return *this;
+    }
+
+    operator const VkObjectTableDescriptorSetEntryNVX&() const
+    {
+      return *reinterpret_cast<const VkObjectTableDescriptorSetEntryNVX*>(this);
+    }
+
+    bool operator==( ObjectTableDescriptorSetEntryNVX const& rhs ) const
+    {
+      return ( type == rhs.type )
+          && ( flags == rhs.flags )
+          && ( pipelineLayout == rhs.pipelineLayout )
+          && ( descriptorSet == rhs.descriptorSet );
+    }
+
+    bool operator!=( ObjectTableDescriptorSetEntryNVX const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+    ObjectEntryTypeNVX type;
+    ObjectEntryUsageFlagsNVX flags;
+    PipelineLayout pipelineLayout;
+    DescriptorSet descriptorSet;
+  };
+  static_assert( sizeof( ObjectTableDescriptorSetEntryNVX ) == sizeof( VkObjectTableDescriptorSetEntryNVX ), "struct and wrapper have different size!" );
+
+  struct ObjectTableVertexBufferEntryNVX
+  {
+    ObjectTableVertexBufferEntryNVX( ObjectEntryTypeNVX type_ = ObjectEntryTypeNVX::eVkObjectEntryDescriptorSet, ObjectEntryUsageFlagsNVX flags_ = ObjectEntryUsageFlagsNVX(), Buffer buffer_ = Buffer() )
+      : type( type_ )
+      , flags( flags_ )
+      , buffer( buffer_ )
+    {
+    }
+
+    ObjectTableVertexBufferEntryNVX( VkObjectTableVertexBufferEntryNVX const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(ObjectTableVertexBufferEntryNVX) );
+    }
+
+    ObjectTableVertexBufferEntryNVX& operator=( VkObjectTableVertexBufferEntryNVX const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(ObjectTableVertexBufferEntryNVX) );
+      return *this;
+    }
+
+    ObjectTableVertexBufferEntryNVX& setType( ObjectEntryTypeNVX type_ )
+    {
+      type = type_;
+      return *this;
+    }
+
+    ObjectTableVertexBufferEntryNVX& setFlags( ObjectEntryUsageFlagsNVX flags_ )
+    {
+      flags = flags_;
+      return *this;
+    }
+
+    ObjectTableVertexBufferEntryNVX& setBuffer( Buffer buffer_ )
+    {
+      buffer = buffer_;
+      return *this;
+    }
+
+    operator const VkObjectTableVertexBufferEntryNVX&() const
+    {
+      return *reinterpret_cast<const VkObjectTableVertexBufferEntryNVX*>(this);
+    }
+
+    bool operator==( ObjectTableVertexBufferEntryNVX const& rhs ) const
+    {
+      return ( type == rhs.type )
+          && ( flags == rhs.flags )
+          && ( buffer == rhs.buffer );
+    }
+
+    bool operator!=( ObjectTableVertexBufferEntryNVX const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+    ObjectEntryTypeNVX type;
+    ObjectEntryUsageFlagsNVX flags;
+    Buffer buffer;
+  };
+  static_assert( sizeof( ObjectTableVertexBufferEntryNVX ) == sizeof( VkObjectTableVertexBufferEntryNVX ), "struct and wrapper have different size!" );
+
+  struct ObjectTableIndexBufferEntryNVX
+  {
+    ObjectTableIndexBufferEntryNVX( ObjectEntryTypeNVX type_ = ObjectEntryTypeNVX::eVkObjectEntryDescriptorSet, ObjectEntryUsageFlagsNVX flags_ = ObjectEntryUsageFlagsNVX(), Buffer buffer_ = Buffer() )
+      : type( type_ )
+      , flags( flags_ )
+      , buffer( buffer_ )
+    {
+    }
+
+    ObjectTableIndexBufferEntryNVX( VkObjectTableIndexBufferEntryNVX const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(ObjectTableIndexBufferEntryNVX) );
+    }
+
+    ObjectTableIndexBufferEntryNVX& operator=( VkObjectTableIndexBufferEntryNVX const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(ObjectTableIndexBufferEntryNVX) );
+      return *this;
+    }
+
+    ObjectTableIndexBufferEntryNVX& setType( ObjectEntryTypeNVX type_ )
+    {
+      type = type_;
+      return *this;
+    }
+
+    ObjectTableIndexBufferEntryNVX& setFlags( ObjectEntryUsageFlagsNVX flags_ )
+    {
+      flags = flags_;
+      return *this;
+    }
+
+    ObjectTableIndexBufferEntryNVX& setBuffer( Buffer buffer_ )
+    {
+      buffer = buffer_;
+      return *this;
+    }
+
+    operator const VkObjectTableIndexBufferEntryNVX&() const
+    {
+      return *reinterpret_cast<const VkObjectTableIndexBufferEntryNVX*>(this);
+    }
+
+    bool operator==( ObjectTableIndexBufferEntryNVX const& rhs ) const
+    {
+      return ( type == rhs.type )
+          && ( flags == rhs.flags )
+          && ( buffer == rhs.buffer );
+    }
+
+    bool operator!=( ObjectTableIndexBufferEntryNVX const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+    ObjectEntryTypeNVX type;
+    ObjectEntryUsageFlagsNVX flags;
+    Buffer buffer;
+  };
+  static_assert( sizeof( ObjectTableIndexBufferEntryNVX ) == sizeof( VkObjectTableIndexBufferEntryNVX ), "struct and wrapper have different size!" );
+
+  struct ObjectTablePushConstantEntryNVX
+  {
+    ObjectTablePushConstantEntryNVX( ObjectEntryTypeNVX type_ = ObjectEntryTypeNVX::eVkObjectEntryDescriptorSet, ObjectEntryUsageFlagsNVX flags_ = ObjectEntryUsageFlagsNVX(), PipelineLayout pipelineLayout_ = PipelineLayout(), ShaderStageFlags stageFlags_ = ShaderStageFlags() )
+      : type( type_ )
+      , flags( flags_ )
+      , pipelineLayout( pipelineLayout_ )
+      , stageFlags( stageFlags_ )
+    {
+    }
+
+    ObjectTablePushConstantEntryNVX( VkObjectTablePushConstantEntryNVX const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(ObjectTablePushConstantEntryNVX) );
+    }
+
+    ObjectTablePushConstantEntryNVX& operator=( VkObjectTablePushConstantEntryNVX const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(ObjectTablePushConstantEntryNVX) );
+      return *this;
+    }
+
+    ObjectTablePushConstantEntryNVX& setType( ObjectEntryTypeNVX type_ )
+    {
+      type = type_;
+      return *this;
+    }
+
+    ObjectTablePushConstantEntryNVX& setFlags( ObjectEntryUsageFlagsNVX flags_ )
+    {
+      flags = flags_;
+      return *this;
+    }
+
+    ObjectTablePushConstantEntryNVX& setPipelineLayout( PipelineLayout pipelineLayout_ )
+    {
+      pipelineLayout = pipelineLayout_;
+      return *this;
+    }
+
+    ObjectTablePushConstantEntryNVX& setStageFlags( ShaderStageFlags stageFlags_ )
+    {
+      stageFlags = stageFlags_;
+      return *this;
+    }
+
+    operator const VkObjectTablePushConstantEntryNVX&() const
+    {
+      return *reinterpret_cast<const VkObjectTablePushConstantEntryNVX*>(this);
+    }
+
+    bool operator==( ObjectTablePushConstantEntryNVX const& rhs ) const
+    {
+      return ( type == rhs.type )
+          && ( flags == rhs.flags )
+          && ( pipelineLayout == rhs.pipelineLayout )
+          && ( stageFlags == rhs.stageFlags );
+    }
+
+    bool operator!=( ObjectTablePushConstantEntryNVX const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+    ObjectEntryTypeNVX type;
+    ObjectEntryUsageFlagsNVX flags;
+    PipelineLayout pipelineLayout;
+    ShaderStageFlags stageFlags;
+  };
+  static_assert( sizeof( ObjectTablePushConstantEntryNVX ) == sizeof( VkObjectTablePushConstantEntryNVX ), "struct and wrapper have different size!" );
+
+  VULKAN_HPP_INLINE Result enumerateInstanceLayerProperties( uint32_t* pPropertyCount, LayerProperties* pProperties )
+  {
+    return static_cast<Result>( vkEnumerateInstanceLayerProperties( pPropertyCount, reinterpret_cast<VkLayerProperties*>( pProperties ) ) );
+  }
+
+#ifndef VULKAN_HPP_DISABLE_ENHANCED_MODE
+  template <typename Allocator = std::allocator<LayerProperties>>
+  typename ResultValueType<std::vector<LayerProperties,Allocator>>::type enumerateInstanceLayerProperties()
+  {
+    std::vector<LayerProperties,Allocator> properties;
+    uint32_t propertyCount;
+    Result result;
+    do
+    {
+      result = static_cast<Result>( vkEnumerateInstanceLayerProperties( &propertyCount, nullptr ) );
+      if ( ( result == Result::eSuccess ) && propertyCount )
+      {
+        properties.resize( propertyCount );
+        result = static_cast<Result>( vkEnumerateInstanceLayerProperties( &propertyCount, reinterpret_cast<VkLayerProperties*>( properties.data() ) ) );
+      }
+    } while ( result == Result::eIncomplete );
+    assert( propertyCount <= properties.size() ); 
+    properties.resize( propertyCount ); 
+    return createResultValue( result, properties, "vk::enumerateInstanceLayerProperties" );
+  }
+#endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
+
+  VULKAN_HPP_INLINE Result enumerateInstanceExtensionProperties( const char* pLayerName, uint32_t* pPropertyCount, ExtensionProperties* pProperties )
+  {
+    return static_cast<Result>( vkEnumerateInstanceExtensionProperties( pLayerName, pPropertyCount, reinterpret_cast<VkExtensionProperties*>( pProperties ) ) );
+  }
+
+#ifndef VULKAN_HPP_DISABLE_ENHANCED_MODE
+  template <typename Allocator = std::allocator<ExtensionProperties>>
+  typename ResultValueType<std::vector<ExtensionProperties,Allocator>>::type enumerateInstanceExtensionProperties( Optional<const std::string> layerName = nullptr )
+  {
+    std::vector<ExtensionProperties,Allocator> properties;
+    uint32_t propertyCount;
+    Result result;
+    do
+    {
+      result = static_cast<Result>( vkEnumerateInstanceExtensionProperties( layerName ? layerName->c_str() : nullptr, &propertyCount, nullptr ) );
+      if ( ( result == Result::eSuccess ) && propertyCount )
+      {
+        properties.resize( propertyCount );
+        result = static_cast<Result>( vkEnumerateInstanceExtensionProperties( layerName ? layerName->c_str() : nullptr, &propertyCount, reinterpret_cast<VkExtensionProperties*>( properties.data() ) ) );
+      }
+    } while ( result == Result::eIncomplete );
+    assert( propertyCount <= properties.size() ); 
+    properties.resize( propertyCount ); 
+    return createResultValue( result, properties, "vk::enumerateInstanceExtensionProperties" );
+  }
+#endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
+
+  // forward declarations
+  struct CmdProcessCommandsInfoNVX;
 
   class CommandBuffer
   {
@@ -14278,6 +17480,30 @@ namespace vk
     }
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
 
+    void processCommandsNVX( const CmdProcessCommandsInfoNVX* pProcessCommandsInfo ) const
+    {
+      vkCmdProcessCommandsNVX( m_commandBuffer, reinterpret_cast<const VkCmdProcessCommandsInfoNVX*>( pProcessCommandsInfo ) );
+    }
+
+#ifndef VULKAN_HPP_DISABLE_ENHANCED_MODE
+    void processCommandsNVX( const CmdProcessCommandsInfoNVX & processCommandsInfo ) const
+    {
+      vkCmdProcessCommandsNVX( m_commandBuffer, reinterpret_cast<const VkCmdProcessCommandsInfoNVX*>( &processCommandsInfo ) );
+    }
+#endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
+
+    void reserveSpaceForCommandsNVX( const CmdReserveSpaceForCommandsInfoNVX* pReserveSpaceInfo ) const
+    {
+      vkCmdReserveSpaceForCommandsNVX( m_commandBuffer, reinterpret_cast<const VkCmdReserveSpaceForCommandsInfoNVX*>( pReserveSpaceInfo ) );
+    }
+
+#ifndef VULKAN_HPP_DISABLE_ENHANCED_MODE
+    void reserveSpaceForCommandsNVX( const CmdReserveSpaceForCommandsInfoNVX & reserveSpaceInfo ) const
+    {
+      vkCmdReserveSpaceForCommandsNVX( m_commandBuffer, reinterpret_cast<const VkCmdReserveSpaceForCommandsInfoNVX*>( &reserveSpaceInfo ) );
+    }
+#endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
+
 #if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     explicit
 #endif
@@ -14300,221 +17526,6 @@ namespace vk
     VkCommandBuffer m_commandBuffer;
   };
   static_assert( sizeof( CommandBuffer ) == sizeof( VkCommandBuffer ), "handle and wrapper have different size!" );
-
-  struct SubpassDependency
-  {
-    SubpassDependency( uint32_t srcSubpass_ = 0, uint32_t dstSubpass_ = 0, PipelineStageFlags srcStageMask_ = PipelineStageFlags(), PipelineStageFlags dstStageMask_ = PipelineStageFlags(), AccessFlags srcAccessMask_ = AccessFlags(), AccessFlags dstAccessMask_ = AccessFlags(), DependencyFlags dependencyFlags_ = DependencyFlags() )
-      : srcSubpass( srcSubpass_ )
-      , dstSubpass( dstSubpass_ )
-      , srcStageMask( srcStageMask_ )
-      , dstStageMask( dstStageMask_ )
-      , srcAccessMask( srcAccessMask_ )
-      , dstAccessMask( dstAccessMask_ )
-      , dependencyFlags( dependencyFlags_ )
-    {
-    }
-
-    SubpassDependency( VkSubpassDependency const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(SubpassDependency) );
-    }
-
-    SubpassDependency& operator=( VkSubpassDependency const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(SubpassDependency) );
-      return *this;
-    }
-
-    SubpassDependency& setSrcSubpass( uint32_t srcSubpass_ )
-    {
-      srcSubpass = srcSubpass_;
-      return *this;
-    }
-
-    SubpassDependency& setDstSubpass( uint32_t dstSubpass_ )
-    {
-      dstSubpass = dstSubpass_;
-      return *this;
-    }
-
-    SubpassDependency& setSrcStageMask( PipelineStageFlags srcStageMask_ )
-    {
-      srcStageMask = srcStageMask_;
-      return *this;
-    }
-
-    SubpassDependency& setDstStageMask( PipelineStageFlags dstStageMask_ )
-    {
-      dstStageMask = dstStageMask_;
-      return *this;
-    }
-
-    SubpassDependency& setSrcAccessMask( AccessFlags srcAccessMask_ )
-    {
-      srcAccessMask = srcAccessMask_;
-      return *this;
-    }
-
-    SubpassDependency& setDstAccessMask( AccessFlags dstAccessMask_ )
-    {
-      dstAccessMask = dstAccessMask_;
-      return *this;
-    }
-
-    SubpassDependency& setDependencyFlags( DependencyFlags dependencyFlags_ )
-    {
-      dependencyFlags = dependencyFlags_;
-      return *this;
-    }
-
-    operator const VkSubpassDependency&() const
-    {
-      return *reinterpret_cast<const VkSubpassDependency*>(this);
-    }
-
-    bool operator==( SubpassDependency const& rhs ) const
-    {
-      return ( srcSubpass == rhs.srcSubpass )
-          && ( dstSubpass == rhs.dstSubpass )
-          && ( srcStageMask == rhs.srcStageMask )
-          && ( dstStageMask == rhs.dstStageMask )
-          && ( srcAccessMask == rhs.srcAccessMask )
-          && ( dstAccessMask == rhs.dstAccessMask )
-          && ( dependencyFlags == rhs.dependencyFlags );
-    }
-
-    bool operator!=( SubpassDependency const& rhs ) const
-    {
-      return !operator==( rhs );
-    }
-
-    uint32_t srcSubpass;
-    uint32_t dstSubpass;
-    PipelineStageFlags srcStageMask;
-    PipelineStageFlags dstStageMask;
-    AccessFlags srcAccessMask;
-    AccessFlags dstAccessMask;
-    DependencyFlags dependencyFlags;
-  };
-  static_assert( sizeof( SubpassDependency ) == sizeof( VkSubpassDependency ), "struct and wrapper have different size!" );
-
-  struct RenderPassCreateInfo
-  {
-    RenderPassCreateInfo( RenderPassCreateFlags flags_ = RenderPassCreateFlags(), uint32_t attachmentCount_ = 0, const AttachmentDescription* pAttachments_ = nullptr, uint32_t subpassCount_ = 0, const SubpassDescription* pSubpasses_ = nullptr, uint32_t dependencyCount_ = 0, const SubpassDependency* pDependencies_ = nullptr )
-      : sType( StructureType::eRenderPassCreateInfo )
-      , pNext( nullptr )
-      , flags( flags_ )
-      , attachmentCount( attachmentCount_ )
-      , pAttachments( pAttachments_ )
-      , subpassCount( subpassCount_ )
-      , pSubpasses( pSubpasses_ )
-      , dependencyCount( dependencyCount_ )
-      , pDependencies( pDependencies_ )
-    {
-    }
-
-    RenderPassCreateInfo( VkRenderPassCreateInfo const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(RenderPassCreateInfo) );
-    }
-
-    RenderPassCreateInfo& operator=( VkRenderPassCreateInfo const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(RenderPassCreateInfo) );
-      return *this;
-    }
-
-    RenderPassCreateInfo& setSType( StructureType sType_ )
-    {
-      sType = sType_;
-      return *this;
-    }
-
-    RenderPassCreateInfo& setPNext( const void* pNext_ )
-    {
-      pNext = pNext_;
-      return *this;
-    }
-
-    RenderPassCreateInfo& setFlags( RenderPassCreateFlags flags_ )
-    {
-      flags = flags_;
-      return *this;
-    }
-
-    RenderPassCreateInfo& setAttachmentCount( uint32_t attachmentCount_ )
-    {
-      attachmentCount = attachmentCount_;
-      return *this;
-    }
-
-    RenderPassCreateInfo& setPAttachments( const AttachmentDescription* pAttachments_ )
-    {
-      pAttachments = pAttachments_;
-      return *this;
-    }
-
-    RenderPassCreateInfo& setSubpassCount( uint32_t subpassCount_ )
-    {
-      subpassCount = subpassCount_;
-      return *this;
-    }
-
-    RenderPassCreateInfo& setPSubpasses( const SubpassDescription* pSubpasses_ )
-    {
-      pSubpasses = pSubpasses_;
-      return *this;
-    }
-
-    RenderPassCreateInfo& setDependencyCount( uint32_t dependencyCount_ )
-    {
-      dependencyCount = dependencyCount_;
-      return *this;
-    }
-
-    RenderPassCreateInfo& setPDependencies( const SubpassDependency* pDependencies_ )
-    {
-      pDependencies = pDependencies_;
-      return *this;
-    }
-
-    operator const VkRenderPassCreateInfo&() const
-    {
-      return *reinterpret_cast<const VkRenderPassCreateInfo*>(this);
-    }
-
-    bool operator==( RenderPassCreateInfo const& rhs ) const
-    {
-      return ( sType == rhs.sType )
-          && ( pNext == rhs.pNext )
-          && ( flags == rhs.flags )
-          && ( attachmentCount == rhs.attachmentCount )
-          && ( pAttachments == rhs.pAttachments )
-          && ( subpassCount == rhs.subpassCount )
-          && ( pSubpasses == rhs.pSubpasses )
-          && ( dependencyCount == rhs.dependencyCount )
-          && ( pDependencies == rhs.pDependencies );
-    }
-
-    bool operator!=( RenderPassCreateInfo const& rhs ) const
-    {
-      return !operator==( rhs );
-    }
-
-  private:
-    StructureType sType;
-
-  public:
-    const void* pNext;
-    RenderPassCreateFlags flags;
-    uint32_t attachmentCount;
-    const AttachmentDescription* pAttachments;
-    uint32_t subpassCount;
-    const SubpassDescription* pSubpasses;
-    uint32_t dependencyCount;
-    const SubpassDependency* pDependencies;
-  };
-  static_assert( sizeof( RenderPassCreateInfo ) == sizeof( VkRenderPassCreateInfo ), "struct and wrapper have different size!" );
 
   struct SubmitInfo
   {
@@ -14744,931 +17755,6 @@ namespace vk
     VkQueue m_queue;
   };
   static_assert( sizeof( Queue ) == sizeof( VkQueue ), "handle and wrapper have different size!" );
-
-  enum class PresentModeKHR
-  {
-    eImmediate = VK_PRESENT_MODE_IMMEDIATE_KHR,
-    eMailbox = VK_PRESENT_MODE_MAILBOX_KHR,
-    eFifo = VK_PRESENT_MODE_FIFO_KHR,
-    eFifoRelaxed = VK_PRESENT_MODE_FIFO_RELAXED_KHR
-  };
-
-  enum class ColorSpaceKHR
-  {
-    eSrgbNonlinear = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR
-  };
-
-  struct SurfaceFormatKHR
-  {
-    operator const VkSurfaceFormatKHR&() const
-    {
-      return *reinterpret_cast<const VkSurfaceFormatKHR*>(this);
-    }
-
-    bool operator==( SurfaceFormatKHR const& rhs ) const
-    {
-      return ( format == rhs.format )
-          && ( colorSpace == rhs.colorSpace );
-    }
-
-    bool operator!=( SurfaceFormatKHR const& rhs ) const
-    {
-      return !operator==( rhs );
-    }
-
-    Format format;
-    ColorSpaceKHR colorSpace;
-  };
-  static_assert( sizeof( SurfaceFormatKHR ) == sizeof( VkSurfaceFormatKHR ), "struct and wrapper have different size!" );
-
-  enum class DisplayPlaneAlphaFlagBitsKHR
-  {
-    eOpaque = VK_DISPLAY_PLANE_ALPHA_OPAQUE_BIT_KHR,
-    eGlobal = VK_DISPLAY_PLANE_ALPHA_GLOBAL_BIT_KHR,
-    ePerPixel = VK_DISPLAY_PLANE_ALPHA_PER_PIXEL_BIT_KHR,
-    ePerPixelPremultiplied = VK_DISPLAY_PLANE_ALPHA_PER_PIXEL_PREMULTIPLIED_BIT_KHR
-  };
-
-  using DisplayPlaneAlphaFlagsKHR = Flags<DisplayPlaneAlphaFlagBitsKHR, VkDisplayPlaneAlphaFlagsKHR>;
-
-  inline DisplayPlaneAlphaFlagsKHR operator|( DisplayPlaneAlphaFlagBitsKHR bit0, DisplayPlaneAlphaFlagBitsKHR bit1 )
-  {
-    return DisplayPlaneAlphaFlagsKHR( bit0 ) | bit1;
-  }
-
-  struct DisplayPlaneCapabilitiesKHR
-  {
-    operator const VkDisplayPlaneCapabilitiesKHR&() const
-    {
-      return *reinterpret_cast<const VkDisplayPlaneCapabilitiesKHR*>(this);
-    }
-
-    bool operator==( DisplayPlaneCapabilitiesKHR const& rhs ) const
-    {
-      return ( supportedAlpha == rhs.supportedAlpha )
-          && ( minSrcPosition == rhs.minSrcPosition )
-          && ( maxSrcPosition == rhs.maxSrcPosition )
-          && ( minSrcExtent == rhs.minSrcExtent )
-          && ( maxSrcExtent == rhs.maxSrcExtent )
-          && ( minDstPosition == rhs.minDstPosition )
-          && ( maxDstPosition == rhs.maxDstPosition )
-          && ( minDstExtent == rhs.minDstExtent )
-          && ( maxDstExtent == rhs.maxDstExtent );
-    }
-
-    bool operator!=( DisplayPlaneCapabilitiesKHR const& rhs ) const
-    {
-      return !operator==( rhs );
-    }
-
-    DisplayPlaneAlphaFlagsKHR supportedAlpha;
-    Offset2D minSrcPosition;
-    Offset2D maxSrcPosition;
-    Extent2D minSrcExtent;
-    Extent2D maxSrcExtent;
-    Offset2D minDstPosition;
-    Offset2D maxDstPosition;
-    Extent2D minDstExtent;
-    Extent2D maxDstExtent;
-  };
-  static_assert( sizeof( DisplayPlaneCapabilitiesKHR ) == sizeof( VkDisplayPlaneCapabilitiesKHR ), "struct and wrapper have different size!" );
-
-  enum class CompositeAlphaFlagBitsKHR
-  {
-    eOpaque = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-    ePreMultiplied = VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR,
-    ePostMultiplied = VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
-    eInherit = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR
-  };
-
-  using CompositeAlphaFlagsKHR = Flags<CompositeAlphaFlagBitsKHR, VkCompositeAlphaFlagsKHR>;
-
-  inline CompositeAlphaFlagsKHR operator|( CompositeAlphaFlagBitsKHR bit0, CompositeAlphaFlagBitsKHR bit1 )
-  {
-    return CompositeAlphaFlagsKHR( bit0 ) | bit1;
-  }
-
-  enum class SurfaceTransformFlagBitsKHR
-  {
-    eIdentity = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
-    eRotate90 = VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR,
-    eRotate180 = VK_SURFACE_TRANSFORM_ROTATE_180_BIT_KHR,
-    eRotate270 = VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR,
-    eHorizontalMirror = VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_BIT_KHR,
-    eHorizontalMirrorRotate90 = VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_90_BIT_KHR,
-    eHorizontalMirrorRotate180 = VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_180_BIT_KHR,
-    eHorizontalMirrorRotate270 = VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_270_BIT_KHR,
-    eInherit = VK_SURFACE_TRANSFORM_INHERIT_BIT_KHR
-  };
-
-  using SurfaceTransformFlagsKHR = Flags<SurfaceTransformFlagBitsKHR, VkSurfaceTransformFlagsKHR>;
-
-  inline SurfaceTransformFlagsKHR operator|( SurfaceTransformFlagBitsKHR bit0, SurfaceTransformFlagBitsKHR bit1 )
-  {
-    return SurfaceTransformFlagsKHR( bit0 ) | bit1;
-  }
-
-  struct DisplayPropertiesKHR
-  {
-    operator const VkDisplayPropertiesKHR&() const
-    {
-      return *reinterpret_cast<const VkDisplayPropertiesKHR*>(this);
-    }
-
-    bool operator==( DisplayPropertiesKHR const& rhs ) const
-    {
-      return ( display == rhs.display )
-          && ( displayName == rhs.displayName )
-          && ( physicalDimensions == rhs.physicalDimensions )
-          && ( physicalResolution == rhs.physicalResolution )
-          && ( supportedTransforms == rhs.supportedTransforms )
-          && ( planeReorderPossible == rhs.planeReorderPossible )
-          && ( persistentContent == rhs.persistentContent );
-    }
-
-    bool operator!=( DisplayPropertiesKHR const& rhs ) const
-    {
-      return !operator==( rhs );
-    }
-
-    DisplayKHR display;
-    const char* displayName;
-    Extent2D physicalDimensions;
-    Extent2D physicalResolution;
-    SurfaceTransformFlagsKHR supportedTransforms;
-    Bool32 planeReorderPossible;
-    Bool32 persistentContent;
-  };
-  static_assert( sizeof( DisplayPropertiesKHR ) == sizeof( VkDisplayPropertiesKHR ), "struct and wrapper have different size!" );
-
-  struct DisplaySurfaceCreateInfoKHR
-  {
-    DisplaySurfaceCreateInfoKHR( DisplaySurfaceCreateFlagsKHR flags_ = DisplaySurfaceCreateFlagsKHR(), DisplayModeKHR displayMode_ = DisplayModeKHR(), uint32_t planeIndex_ = 0, uint32_t planeStackIndex_ = 0, SurfaceTransformFlagBitsKHR transform_ = SurfaceTransformFlagBitsKHR::eIdentity, float globalAlpha_ = 0, DisplayPlaneAlphaFlagBitsKHR alphaMode_ = DisplayPlaneAlphaFlagBitsKHR::eOpaque, Extent2D imageExtent_ = Extent2D() )
-      : sType( StructureType::eDisplaySurfaceCreateInfoKHR )
-      , pNext( nullptr )
-      , flags( flags_ )
-      , displayMode( displayMode_ )
-      , planeIndex( planeIndex_ )
-      , planeStackIndex( planeStackIndex_ )
-      , transform( transform_ )
-      , globalAlpha( globalAlpha_ )
-      , alphaMode( alphaMode_ )
-      , imageExtent( imageExtent_ )
-    {
-    }
-
-    DisplaySurfaceCreateInfoKHR( VkDisplaySurfaceCreateInfoKHR const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(DisplaySurfaceCreateInfoKHR) );
-    }
-
-    DisplaySurfaceCreateInfoKHR& operator=( VkDisplaySurfaceCreateInfoKHR const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(DisplaySurfaceCreateInfoKHR) );
-      return *this;
-    }
-
-    DisplaySurfaceCreateInfoKHR& setSType( StructureType sType_ )
-    {
-      sType = sType_;
-      return *this;
-    }
-
-    DisplaySurfaceCreateInfoKHR& setPNext( const void* pNext_ )
-    {
-      pNext = pNext_;
-      return *this;
-    }
-
-    DisplaySurfaceCreateInfoKHR& setFlags( DisplaySurfaceCreateFlagsKHR flags_ )
-    {
-      flags = flags_;
-      return *this;
-    }
-
-    DisplaySurfaceCreateInfoKHR& setDisplayMode( DisplayModeKHR displayMode_ )
-    {
-      displayMode = displayMode_;
-      return *this;
-    }
-
-    DisplaySurfaceCreateInfoKHR& setPlaneIndex( uint32_t planeIndex_ )
-    {
-      planeIndex = planeIndex_;
-      return *this;
-    }
-
-    DisplaySurfaceCreateInfoKHR& setPlaneStackIndex( uint32_t planeStackIndex_ )
-    {
-      planeStackIndex = planeStackIndex_;
-      return *this;
-    }
-
-    DisplaySurfaceCreateInfoKHR& setTransform( SurfaceTransformFlagBitsKHR transform_ )
-    {
-      transform = transform_;
-      return *this;
-    }
-
-    DisplaySurfaceCreateInfoKHR& setGlobalAlpha( float globalAlpha_ )
-    {
-      globalAlpha = globalAlpha_;
-      return *this;
-    }
-
-    DisplaySurfaceCreateInfoKHR& setAlphaMode( DisplayPlaneAlphaFlagBitsKHR alphaMode_ )
-    {
-      alphaMode = alphaMode_;
-      return *this;
-    }
-
-    DisplaySurfaceCreateInfoKHR& setImageExtent( Extent2D imageExtent_ )
-    {
-      imageExtent = imageExtent_;
-      return *this;
-    }
-
-    operator const VkDisplaySurfaceCreateInfoKHR&() const
-    {
-      return *reinterpret_cast<const VkDisplaySurfaceCreateInfoKHR*>(this);
-    }
-
-    bool operator==( DisplaySurfaceCreateInfoKHR const& rhs ) const
-    {
-      return ( sType == rhs.sType )
-          && ( pNext == rhs.pNext )
-          && ( flags == rhs.flags )
-          && ( displayMode == rhs.displayMode )
-          && ( planeIndex == rhs.planeIndex )
-          && ( planeStackIndex == rhs.planeStackIndex )
-          && ( transform == rhs.transform )
-          && ( globalAlpha == rhs.globalAlpha )
-          && ( alphaMode == rhs.alphaMode )
-          && ( imageExtent == rhs.imageExtent );
-    }
-
-    bool operator!=( DisplaySurfaceCreateInfoKHR const& rhs ) const
-    {
-      return !operator==( rhs );
-    }
-
-  private:
-    StructureType sType;
-
-  public:
-    const void* pNext;
-    DisplaySurfaceCreateFlagsKHR flags;
-    DisplayModeKHR displayMode;
-    uint32_t planeIndex;
-    uint32_t planeStackIndex;
-    SurfaceTransformFlagBitsKHR transform;
-    float globalAlpha;
-    DisplayPlaneAlphaFlagBitsKHR alphaMode;
-    Extent2D imageExtent;
-  };
-  static_assert( sizeof( DisplaySurfaceCreateInfoKHR ) == sizeof( VkDisplaySurfaceCreateInfoKHR ), "struct and wrapper have different size!" );
-
-  struct SurfaceCapabilitiesKHR
-  {
-    operator const VkSurfaceCapabilitiesKHR&() const
-    {
-      return *reinterpret_cast<const VkSurfaceCapabilitiesKHR*>(this);
-    }
-
-    bool operator==( SurfaceCapabilitiesKHR const& rhs ) const
-    {
-      return ( minImageCount == rhs.minImageCount )
-          && ( maxImageCount == rhs.maxImageCount )
-          && ( currentExtent == rhs.currentExtent )
-          && ( minImageExtent == rhs.minImageExtent )
-          && ( maxImageExtent == rhs.maxImageExtent )
-          && ( maxImageArrayLayers == rhs.maxImageArrayLayers )
-          && ( supportedTransforms == rhs.supportedTransforms )
-          && ( currentTransform == rhs.currentTransform )
-          && ( supportedCompositeAlpha == rhs.supportedCompositeAlpha )
-          && ( supportedUsageFlags == rhs.supportedUsageFlags );
-    }
-
-    bool operator!=( SurfaceCapabilitiesKHR const& rhs ) const
-    {
-      return !operator==( rhs );
-    }
-
-    uint32_t minImageCount;
-    uint32_t maxImageCount;
-    Extent2D currentExtent;
-    Extent2D minImageExtent;
-    Extent2D maxImageExtent;
-    uint32_t maxImageArrayLayers;
-    SurfaceTransformFlagsKHR supportedTransforms;
-    SurfaceTransformFlagBitsKHR currentTransform;
-    CompositeAlphaFlagsKHR supportedCompositeAlpha;
-    ImageUsageFlags supportedUsageFlags;
-  };
-  static_assert( sizeof( SurfaceCapabilitiesKHR ) == sizeof( VkSurfaceCapabilitiesKHR ), "struct and wrapper have different size!" );
-
-  struct SwapchainCreateInfoKHR
-  {
-    SwapchainCreateInfoKHR( SwapchainCreateFlagsKHR flags_ = SwapchainCreateFlagsKHR(), SurfaceKHR surface_ = SurfaceKHR(), uint32_t minImageCount_ = 0, Format imageFormat_ = Format::eUndefined, ColorSpaceKHR imageColorSpace_ = ColorSpaceKHR::eSrgbNonlinear, Extent2D imageExtent_ = Extent2D(), uint32_t imageArrayLayers_ = 0, ImageUsageFlags imageUsage_ = ImageUsageFlags(), SharingMode imageSharingMode_ = SharingMode::eExclusive, uint32_t queueFamilyIndexCount_ = 0, const uint32_t* pQueueFamilyIndices_ = nullptr, SurfaceTransformFlagBitsKHR preTransform_ = SurfaceTransformFlagBitsKHR::eIdentity, CompositeAlphaFlagBitsKHR compositeAlpha_ = CompositeAlphaFlagBitsKHR::eOpaque, PresentModeKHR presentMode_ = PresentModeKHR::eImmediate, Bool32 clipped_ = 0, SwapchainKHR oldSwapchain_ = SwapchainKHR() )
-      : sType( StructureType::eSwapchainCreateInfoKHR )
-      , pNext( nullptr )
-      , flags( flags_ )
-      , surface( surface_ )
-      , minImageCount( minImageCount_ )
-      , imageFormat( imageFormat_ )
-      , imageColorSpace( imageColorSpace_ )
-      , imageExtent( imageExtent_ )
-      , imageArrayLayers( imageArrayLayers_ )
-      , imageUsage( imageUsage_ )
-      , imageSharingMode( imageSharingMode_ )
-      , queueFamilyIndexCount( queueFamilyIndexCount_ )
-      , pQueueFamilyIndices( pQueueFamilyIndices_ )
-      , preTransform( preTransform_ )
-      , compositeAlpha( compositeAlpha_ )
-      , presentMode( presentMode_ )
-      , clipped( clipped_ )
-      , oldSwapchain( oldSwapchain_ )
-    {
-    }
-
-    SwapchainCreateInfoKHR( VkSwapchainCreateInfoKHR const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(SwapchainCreateInfoKHR) );
-    }
-
-    SwapchainCreateInfoKHR& operator=( VkSwapchainCreateInfoKHR const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(SwapchainCreateInfoKHR) );
-      return *this;
-    }
-
-    SwapchainCreateInfoKHR& setSType( StructureType sType_ )
-    {
-      sType = sType_;
-      return *this;
-    }
-
-    SwapchainCreateInfoKHR& setPNext( const void* pNext_ )
-    {
-      pNext = pNext_;
-      return *this;
-    }
-
-    SwapchainCreateInfoKHR& setFlags( SwapchainCreateFlagsKHR flags_ )
-    {
-      flags = flags_;
-      return *this;
-    }
-
-    SwapchainCreateInfoKHR& setSurface( SurfaceKHR surface_ )
-    {
-      surface = surface_;
-      return *this;
-    }
-
-    SwapchainCreateInfoKHR& setMinImageCount( uint32_t minImageCount_ )
-    {
-      minImageCount = minImageCount_;
-      return *this;
-    }
-
-    SwapchainCreateInfoKHR& setImageFormat( Format imageFormat_ )
-    {
-      imageFormat = imageFormat_;
-      return *this;
-    }
-
-    SwapchainCreateInfoKHR& setImageColorSpace( ColorSpaceKHR imageColorSpace_ )
-    {
-      imageColorSpace = imageColorSpace_;
-      return *this;
-    }
-
-    SwapchainCreateInfoKHR& setImageExtent( Extent2D imageExtent_ )
-    {
-      imageExtent = imageExtent_;
-      return *this;
-    }
-
-    SwapchainCreateInfoKHR& setImageArrayLayers( uint32_t imageArrayLayers_ )
-    {
-      imageArrayLayers = imageArrayLayers_;
-      return *this;
-    }
-
-    SwapchainCreateInfoKHR& setImageUsage( ImageUsageFlags imageUsage_ )
-    {
-      imageUsage = imageUsage_;
-      return *this;
-    }
-
-    SwapchainCreateInfoKHR& setImageSharingMode( SharingMode imageSharingMode_ )
-    {
-      imageSharingMode = imageSharingMode_;
-      return *this;
-    }
-
-    SwapchainCreateInfoKHR& setQueueFamilyIndexCount( uint32_t queueFamilyIndexCount_ )
-    {
-      queueFamilyIndexCount = queueFamilyIndexCount_;
-      return *this;
-    }
-
-    SwapchainCreateInfoKHR& setPQueueFamilyIndices( const uint32_t* pQueueFamilyIndices_ )
-    {
-      pQueueFamilyIndices = pQueueFamilyIndices_;
-      return *this;
-    }
-
-    SwapchainCreateInfoKHR& setPreTransform( SurfaceTransformFlagBitsKHR preTransform_ )
-    {
-      preTransform = preTransform_;
-      return *this;
-    }
-
-    SwapchainCreateInfoKHR& setCompositeAlpha( CompositeAlphaFlagBitsKHR compositeAlpha_ )
-    {
-      compositeAlpha = compositeAlpha_;
-      return *this;
-    }
-
-    SwapchainCreateInfoKHR& setPresentMode( PresentModeKHR presentMode_ )
-    {
-      presentMode = presentMode_;
-      return *this;
-    }
-
-    SwapchainCreateInfoKHR& setClipped( Bool32 clipped_ )
-    {
-      clipped = clipped_;
-      return *this;
-    }
-
-    SwapchainCreateInfoKHR& setOldSwapchain( SwapchainKHR oldSwapchain_ )
-    {
-      oldSwapchain = oldSwapchain_;
-      return *this;
-    }
-
-    operator const VkSwapchainCreateInfoKHR&() const
-    {
-      return *reinterpret_cast<const VkSwapchainCreateInfoKHR*>(this);
-    }
-
-    bool operator==( SwapchainCreateInfoKHR const& rhs ) const
-    {
-      return ( sType == rhs.sType )
-          && ( pNext == rhs.pNext )
-          && ( flags == rhs.flags )
-          && ( surface == rhs.surface )
-          && ( minImageCount == rhs.minImageCount )
-          && ( imageFormat == rhs.imageFormat )
-          && ( imageColorSpace == rhs.imageColorSpace )
-          && ( imageExtent == rhs.imageExtent )
-          && ( imageArrayLayers == rhs.imageArrayLayers )
-          && ( imageUsage == rhs.imageUsage )
-          && ( imageSharingMode == rhs.imageSharingMode )
-          && ( queueFamilyIndexCount == rhs.queueFamilyIndexCount )
-          && ( pQueueFamilyIndices == rhs.pQueueFamilyIndices )
-          && ( preTransform == rhs.preTransform )
-          && ( compositeAlpha == rhs.compositeAlpha )
-          && ( presentMode == rhs.presentMode )
-          && ( clipped == rhs.clipped )
-          && ( oldSwapchain == rhs.oldSwapchain );
-    }
-
-    bool operator!=( SwapchainCreateInfoKHR const& rhs ) const
-    {
-      return !operator==( rhs );
-    }
-
-  private:
-    StructureType sType;
-
-  public:
-    const void* pNext;
-    SwapchainCreateFlagsKHR flags;
-    SurfaceKHR surface;
-    uint32_t minImageCount;
-    Format imageFormat;
-    ColorSpaceKHR imageColorSpace;
-    Extent2D imageExtent;
-    uint32_t imageArrayLayers;
-    ImageUsageFlags imageUsage;
-    SharingMode imageSharingMode;
-    uint32_t queueFamilyIndexCount;
-    const uint32_t* pQueueFamilyIndices;
-    SurfaceTransformFlagBitsKHR preTransform;
-    CompositeAlphaFlagBitsKHR compositeAlpha;
-    PresentModeKHR presentMode;
-    Bool32 clipped;
-    SwapchainKHR oldSwapchain;
-  };
-  static_assert( sizeof( SwapchainCreateInfoKHR ) == sizeof( VkSwapchainCreateInfoKHR ), "struct and wrapper have different size!" );
-
-  enum class DebugReportFlagBitsEXT
-  {
-    eInformation = VK_DEBUG_REPORT_INFORMATION_BIT_EXT,
-    eWarning = VK_DEBUG_REPORT_WARNING_BIT_EXT,
-    ePerformanceWarning = VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
-    eError = VK_DEBUG_REPORT_ERROR_BIT_EXT,
-    eDebug = VK_DEBUG_REPORT_DEBUG_BIT_EXT
-  };
-
-  using DebugReportFlagsEXT = Flags<DebugReportFlagBitsEXT, VkDebugReportFlagsEXT>;
-
-  inline DebugReportFlagsEXT operator|( DebugReportFlagBitsEXT bit0, DebugReportFlagBitsEXT bit1 )
-  {
-    return DebugReportFlagsEXT( bit0 ) | bit1;
-  }
-
-  struct DebugReportCallbackCreateInfoEXT
-  {
-    DebugReportCallbackCreateInfoEXT( DebugReportFlagsEXT flags_ = DebugReportFlagsEXT(), PFN_vkDebugReportCallbackEXT pfnCallback_ = nullptr, void* pUserData_ = nullptr )
-      : sType( StructureType::eDebugReportCallbackCreateInfoEXT )
-      , pNext( nullptr )
-      , flags( flags_ )
-      , pfnCallback( pfnCallback_ )
-      , pUserData( pUserData_ )
-    {
-    }
-
-    DebugReportCallbackCreateInfoEXT( VkDebugReportCallbackCreateInfoEXT const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(DebugReportCallbackCreateInfoEXT) );
-    }
-
-    DebugReportCallbackCreateInfoEXT& operator=( VkDebugReportCallbackCreateInfoEXT const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(DebugReportCallbackCreateInfoEXT) );
-      return *this;
-    }
-
-    DebugReportCallbackCreateInfoEXT& setSType( StructureType sType_ )
-    {
-      sType = sType_;
-      return *this;
-    }
-
-    DebugReportCallbackCreateInfoEXT& setPNext( const void* pNext_ )
-    {
-      pNext = pNext_;
-      return *this;
-    }
-
-    DebugReportCallbackCreateInfoEXT& setFlags( DebugReportFlagsEXT flags_ )
-    {
-      flags = flags_;
-      return *this;
-    }
-
-    DebugReportCallbackCreateInfoEXT& setPfnCallback( PFN_vkDebugReportCallbackEXT pfnCallback_ )
-    {
-      pfnCallback = pfnCallback_;
-      return *this;
-    }
-
-    DebugReportCallbackCreateInfoEXT& setPUserData( void* pUserData_ )
-    {
-      pUserData = pUserData_;
-      return *this;
-    }
-
-    operator const VkDebugReportCallbackCreateInfoEXT&() const
-    {
-      return *reinterpret_cast<const VkDebugReportCallbackCreateInfoEXT*>(this);
-    }
-
-    bool operator==( DebugReportCallbackCreateInfoEXT const& rhs ) const
-    {
-      return ( sType == rhs.sType )
-          && ( pNext == rhs.pNext )
-          && ( flags == rhs.flags )
-          && ( pfnCallback == rhs.pfnCallback )
-          && ( pUserData == rhs.pUserData );
-    }
-
-    bool operator!=( DebugReportCallbackCreateInfoEXT const& rhs ) const
-    {
-      return !operator==( rhs );
-    }
-
-  private:
-    StructureType sType;
-
-  public:
-    const void* pNext;
-    DebugReportFlagsEXT flags;
-    PFN_vkDebugReportCallbackEXT pfnCallback;
-    void* pUserData;
-  };
-  static_assert( sizeof( DebugReportCallbackCreateInfoEXT ) == sizeof( VkDebugReportCallbackCreateInfoEXT ), "struct and wrapper have different size!" );
-
-  enum class DebugReportObjectTypeEXT
-  {
-    eUnknown = VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT,
-    eInstance = VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-    ePhysicalDevice = VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
-    eDevice = VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-    eQueue = VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT,
-    eSemaphore = VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
-    eCommandBuffer = VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-    eFence = VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
-    eDeviceMemory = VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
-    eBuffer = VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
-    eImage = VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-    eEvent = VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT,
-    eQueryPool = VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT,
-    eBufferView = VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT,
-    eImageView = VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT,
-    eShaderModule = VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT,
-    ePipelineCache = VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT,
-    ePipelineLayout = VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT,
-    eRenderPass = VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
-    ePipeline = VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
-    eDescriptorSetLayout = VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT,
-    eSampler = VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT,
-    eDescriptorPool = VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT,
-    eDescriptorSet = VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
-    eFramebuffer = VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT,
-    eCommandPool = VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT,
-    eSurfaceKhr = VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT,
-    eSwapchainKhr = VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
-    eDebugReport = VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT
-  };
-
-  struct DebugMarkerObjectNameInfoEXT
-  {
-    DebugMarkerObjectNameInfoEXT( DebugReportObjectTypeEXT objectType_ = DebugReportObjectTypeEXT::eUnknown, uint64_t object_ = 0, const char* pObjectName_ = nullptr )
-      : sType( StructureType::eDebugMarkerObjectNameInfoEXT )
-      , pNext( nullptr )
-      , objectType( objectType_ )
-      , object( object_ )
-      , pObjectName( pObjectName_ )
-    {
-    }
-
-    DebugMarkerObjectNameInfoEXT( VkDebugMarkerObjectNameInfoEXT const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(DebugMarkerObjectNameInfoEXT) );
-    }
-
-    DebugMarkerObjectNameInfoEXT& operator=( VkDebugMarkerObjectNameInfoEXT const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(DebugMarkerObjectNameInfoEXT) );
-      return *this;
-    }
-
-    DebugMarkerObjectNameInfoEXT& setSType( StructureType sType_ )
-    {
-      sType = sType_;
-      return *this;
-    }
-
-    DebugMarkerObjectNameInfoEXT& setPNext( const void* pNext_ )
-    {
-      pNext = pNext_;
-      return *this;
-    }
-
-    DebugMarkerObjectNameInfoEXT& setObjectType( DebugReportObjectTypeEXT objectType_ )
-    {
-      objectType = objectType_;
-      return *this;
-    }
-
-    DebugMarkerObjectNameInfoEXT& setObject( uint64_t object_ )
-    {
-      object = object_;
-      return *this;
-    }
-
-    DebugMarkerObjectNameInfoEXT& setPObjectName( const char* pObjectName_ )
-    {
-      pObjectName = pObjectName_;
-      return *this;
-    }
-
-    operator const VkDebugMarkerObjectNameInfoEXT&() const
-    {
-      return *reinterpret_cast<const VkDebugMarkerObjectNameInfoEXT*>(this);
-    }
-
-    bool operator==( DebugMarkerObjectNameInfoEXT const& rhs ) const
-    {
-      return ( sType == rhs.sType )
-          && ( pNext == rhs.pNext )
-          && ( objectType == rhs.objectType )
-          && ( object == rhs.object )
-          && ( pObjectName == rhs.pObjectName );
-    }
-
-    bool operator!=( DebugMarkerObjectNameInfoEXT const& rhs ) const
-    {
-      return !operator==( rhs );
-    }
-
-  private:
-    StructureType sType;
-
-  public:
-    const void* pNext;
-    DebugReportObjectTypeEXT objectType;
-    uint64_t object;
-    const char* pObjectName;
-  };
-  static_assert( sizeof( DebugMarkerObjectNameInfoEXT ) == sizeof( VkDebugMarkerObjectNameInfoEXT ), "struct and wrapper have different size!" );
-
-  struct DebugMarkerObjectTagInfoEXT
-  {
-    DebugMarkerObjectTagInfoEXT( DebugReportObjectTypeEXT objectType_ = DebugReportObjectTypeEXT::eUnknown, uint64_t object_ = 0, uint64_t tagName_ = 0, size_t tagSize_ = 0, const void* pTag_ = nullptr )
-      : sType( StructureType::eDebugMarkerObjectTagInfoEXT )
-      , pNext( nullptr )
-      , objectType( objectType_ )
-      , object( object_ )
-      , tagName( tagName_ )
-      , tagSize( tagSize_ )
-      , pTag( pTag_ )
-    {
-    }
-
-    DebugMarkerObjectTagInfoEXT( VkDebugMarkerObjectTagInfoEXT const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(DebugMarkerObjectTagInfoEXT) );
-    }
-
-    DebugMarkerObjectTagInfoEXT& operator=( VkDebugMarkerObjectTagInfoEXT const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(DebugMarkerObjectTagInfoEXT) );
-      return *this;
-    }
-
-    DebugMarkerObjectTagInfoEXT& setSType( StructureType sType_ )
-    {
-      sType = sType_;
-      return *this;
-    }
-
-    DebugMarkerObjectTagInfoEXT& setPNext( const void* pNext_ )
-    {
-      pNext = pNext_;
-      return *this;
-    }
-
-    DebugMarkerObjectTagInfoEXT& setObjectType( DebugReportObjectTypeEXT objectType_ )
-    {
-      objectType = objectType_;
-      return *this;
-    }
-
-    DebugMarkerObjectTagInfoEXT& setObject( uint64_t object_ )
-    {
-      object = object_;
-      return *this;
-    }
-
-    DebugMarkerObjectTagInfoEXT& setTagName( uint64_t tagName_ )
-    {
-      tagName = tagName_;
-      return *this;
-    }
-
-    DebugMarkerObjectTagInfoEXT& setTagSize( size_t tagSize_ )
-    {
-      tagSize = tagSize_;
-      return *this;
-    }
-
-    DebugMarkerObjectTagInfoEXT& setPTag( const void* pTag_ )
-    {
-      pTag = pTag_;
-      return *this;
-    }
-
-    operator const VkDebugMarkerObjectTagInfoEXT&() const
-    {
-      return *reinterpret_cast<const VkDebugMarkerObjectTagInfoEXT*>(this);
-    }
-
-    bool operator==( DebugMarkerObjectTagInfoEXT const& rhs ) const
-    {
-      return ( sType == rhs.sType )
-          && ( pNext == rhs.pNext )
-          && ( objectType == rhs.objectType )
-          && ( object == rhs.object )
-          && ( tagName == rhs.tagName )
-          && ( tagSize == rhs.tagSize )
-          && ( pTag == rhs.pTag );
-    }
-
-    bool operator!=( DebugMarkerObjectTagInfoEXT const& rhs ) const
-    {
-      return !operator==( rhs );
-    }
-
-  private:
-    StructureType sType;
-
-  public:
-    const void* pNext;
-    DebugReportObjectTypeEXT objectType;
-    uint64_t object;
-    uint64_t tagName;
-    size_t tagSize;
-    const void* pTag;
-  };
-  static_assert( sizeof( DebugMarkerObjectTagInfoEXT ) == sizeof( VkDebugMarkerObjectTagInfoEXT ), "struct and wrapper have different size!" );
-
-  enum class DebugReportErrorEXT
-  {
-    eNone = VK_DEBUG_REPORT_ERROR_NONE_EXT,
-    eCallbackRef = VK_DEBUG_REPORT_ERROR_CALLBACK_REF_EXT
-  };
-
-  enum class RasterizationOrderAMD
-  {
-    eStrict = VK_RASTERIZATION_ORDER_STRICT_AMD,
-    eRelaxed = VK_RASTERIZATION_ORDER_RELAXED_AMD
-  };
-
-  struct PipelineRasterizationStateRasterizationOrderAMD
-  {
-    PipelineRasterizationStateRasterizationOrderAMD( RasterizationOrderAMD rasterizationOrder_ = RasterizationOrderAMD::eStrict )
-      : sType( StructureType::ePipelineRasterizationStateRasterizationOrderAMD )
-      , pNext( nullptr )
-      , rasterizationOrder( rasterizationOrder_ )
-    {
-    }
-
-    PipelineRasterizationStateRasterizationOrderAMD( VkPipelineRasterizationStateRasterizationOrderAMD const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(PipelineRasterizationStateRasterizationOrderAMD) );
-    }
-
-    PipelineRasterizationStateRasterizationOrderAMD& operator=( VkPipelineRasterizationStateRasterizationOrderAMD const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(PipelineRasterizationStateRasterizationOrderAMD) );
-      return *this;
-    }
-
-    PipelineRasterizationStateRasterizationOrderAMD& setSType( StructureType sType_ )
-    {
-      sType = sType_;
-      return *this;
-    }
-
-    PipelineRasterizationStateRasterizationOrderAMD& setPNext( const void* pNext_ )
-    {
-      pNext = pNext_;
-      return *this;
-    }
-
-    PipelineRasterizationStateRasterizationOrderAMD& setRasterizationOrder( RasterizationOrderAMD rasterizationOrder_ )
-    {
-      rasterizationOrder = rasterizationOrder_;
-      return *this;
-    }
-
-    operator const VkPipelineRasterizationStateRasterizationOrderAMD&() const
-    {
-      return *reinterpret_cast<const VkPipelineRasterizationStateRasterizationOrderAMD*>(this);
-    }
-
-    bool operator==( PipelineRasterizationStateRasterizationOrderAMD const& rhs ) const
-    {
-      return ( sType == rhs.sType )
-          && ( pNext == rhs.pNext )
-          && ( rasterizationOrder == rhs.rasterizationOrder );
-    }
-
-    bool operator!=( PipelineRasterizationStateRasterizationOrderAMD const& rhs ) const
-    {
-      return !operator==( rhs );
-    }
-
-  private:
-    StructureType sType;
-
-  public:
-    const void* pNext;
-    RasterizationOrderAMD rasterizationOrder;
-  };
-  static_assert( sizeof( PipelineRasterizationStateRasterizationOrderAMD ) == sizeof( VkPipelineRasterizationStateRasterizationOrderAMD ), "struct and wrapper have different size!" );
-
-  enum class ExternalMemoryHandleTypeFlagBitsNV
-  {
-    eOpaqueWin32 = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT_NV,
-    eOpaqueWin32Kmt = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT_NV,
-    eD3D11Image = VK_EXTERNAL_MEMORY_HANDLE_TYPE_D3D11_IMAGE_BIT_NV,
-    eD3D11ImageKmt = VK_EXTERNAL_MEMORY_HANDLE_TYPE_D3D11_IMAGE_KMT_BIT_NV
-  };
-
-  using ExternalMemoryHandleTypeFlagsNV = Flags<ExternalMemoryHandleTypeFlagBitsNV, VkExternalMemoryHandleTypeFlagsNV>;
-
-  inline ExternalMemoryHandleTypeFlagsNV operator|( ExternalMemoryHandleTypeFlagBitsNV bit0, ExternalMemoryHandleTypeFlagBitsNV bit1 )
-  {
-    return ExternalMemoryHandleTypeFlagsNV( bit0 ) | bit1;
-  }
 
   class Device
   {
@@ -16827,6 +18913,100 @@ namespace vk
 #endif /*VK_USE_PLATFORM_WIN32_KHR*/
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
 
+    Result createIndirectCommandsLayoutNVX( const IndirectCommandsLayoutCreateInfoNVX* pCreateInfo, const AllocationCallbacks* pAllocator, IndirectCommandsLayoutNVX* pIndirectCommandsLayout ) const
+    {
+      return static_cast<Result>( vkCreateIndirectCommandsLayoutNVX( m_device, reinterpret_cast<const VkIndirectCommandsLayoutCreateInfoNVX*>( pCreateInfo ), reinterpret_cast<const VkAllocationCallbacks*>( pAllocator ), reinterpret_cast<VkIndirectCommandsLayoutNVX*>( pIndirectCommandsLayout ) ) );
+    }
+
+#ifndef VULKAN_HPP_DISABLE_ENHANCED_MODE
+    ResultValueType<IndirectCommandsLayoutNVX>::type createIndirectCommandsLayoutNVX( const IndirectCommandsLayoutCreateInfoNVX & createInfo, Optional<const AllocationCallbacks> allocator = nullptr ) const
+    {
+      IndirectCommandsLayoutNVX indirectCommandsLayout;
+      Result result = static_cast<Result>( vkCreateIndirectCommandsLayoutNVX( m_device, reinterpret_cast<const VkIndirectCommandsLayoutCreateInfoNVX*>( &createInfo ), reinterpret_cast<const VkAllocationCallbacks*>( static_cast<const AllocationCallbacks*>( allocator)), reinterpret_cast<VkIndirectCommandsLayoutNVX*>( &indirectCommandsLayout ) ) );
+      return createResultValue( result, indirectCommandsLayout, "vk::Device::createIndirectCommandsLayoutNVX" );
+    }
+#endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
+
+    void destroyIndirectCommandsLayoutNVX( IndirectCommandsLayoutNVX indirectCommandsLayout, const AllocationCallbacks* pAllocator ) const
+    {
+      vkDestroyIndirectCommandsLayoutNVX( m_device, static_cast<VkIndirectCommandsLayoutNVX>( indirectCommandsLayout ), reinterpret_cast<const VkAllocationCallbacks*>( pAllocator ) );
+    }
+
+#ifndef VULKAN_HPP_DISABLE_ENHANCED_MODE
+    void destroyIndirectCommandsLayoutNVX( IndirectCommandsLayoutNVX indirectCommandsLayout, Optional<const AllocationCallbacks> allocator = nullptr ) const
+    {
+      vkDestroyIndirectCommandsLayoutNVX( m_device, static_cast<VkIndirectCommandsLayoutNVX>( indirectCommandsLayout ), reinterpret_cast<const VkAllocationCallbacks*>( static_cast<const AllocationCallbacks*>( allocator)) );
+    }
+#endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
+
+    Result createObjectTableNVX( const ObjectTableCreateInfoNVX* pCreateInfo, const AllocationCallbacks* pAllocator, ObjectTableNVX* pObjectTable ) const
+    {
+      return static_cast<Result>( vkCreateObjectTableNVX( m_device, reinterpret_cast<const VkObjectTableCreateInfoNVX*>( pCreateInfo ), reinterpret_cast<const VkAllocationCallbacks*>( pAllocator ), reinterpret_cast<VkObjectTableNVX*>( pObjectTable ) ) );
+    }
+
+#ifndef VULKAN_HPP_DISABLE_ENHANCED_MODE
+    ResultValueType<ObjectTableNVX>::type createObjectTableNVX( const ObjectTableCreateInfoNVX & createInfo, Optional<const AllocationCallbacks> allocator = nullptr ) const
+    {
+      ObjectTableNVX objectTable;
+      Result result = static_cast<Result>( vkCreateObjectTableNVX( m_device, reinterpret_cast<const VkObjectTableCreateInfoNVX*>( &createInfo ), reinterpret_cast<const VkAllocationCallbacks*>( static_cast<const AllocationCallbacks*>( allocator)), reinterpret_cast<VkObjectTableNVX*>( &objectTable ) ) );
+      return createResultValue( result, objectTable, "vk::Device::createObjectTableNVX" );
+    }
+#endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
+
+    void destroyObjectTableNVX( ObjectTableNVX objectTable, const AllocationCallbacks* pAllocator ) const
+    {
+      vkDestroyObjectTableNVX( m_device, static_cast<VkObjectTableNVX>( objectTable ), reinterpret_cast<const VkAllocationCallbacks*>( pAllocator ) );
+    }
+
+#ifndef VULKAN_HPP_DISABLE_ENHANCED_MODE
+    void destroyObjectTableNVX( ObjectTableNVX objectTable, Optional<const AllocationCallbacks> allocator = nullptr ) const
+    {
+      vkDestroyObjectTableNVX( m_device, static_cast<VkObjectTableNVX>( objectTable ), reinterpret_cast<const VkAllocationCallbacks*>( static_cast<const AllocationCallbacks*>( allocator)) );
+    }
+#endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
+
+    Result registerObjectsNVX( ObjectTableNVX objectTable, uint32_t objectCount, const ObjectTableEntryNVX* const* ppObjectTableEntries, const uint32_t* pObjectIndices ) const
+    {
+      return static_cast<Result>( vkRegisterObjectsNVX( m_device, static_cast<VkObjectTableNVX>( objectTable ), objectCount, reinterpret_cast<const VkObjectTableEntryNVX* const*>( ppObjectTableEntries ), pObjectIndices ) );
+    }
+
+#ifndef VULKAN_HPP_DISABLE_ENHANCED_MODE
+    ResultValueType<void>::type registerObjectsNVX( ObjectTableNVX objectTable, ArrayProxy<const ObjectTableEntryNVX* const> pObjectTableEntries, ArrayProxy<const uint32_t> objectIndices ) const
+    {
+#ifdef VULKAN_HPP_NO_EXCEPTIONS
+      assert( pObjectTableEntries.size() == objectIndices.size() );
+#else
+      if ( pObjectTableEntries.size() != objectIndices.size() )
+      {
+        throw std::logic_error( "vk::Device::registerObjectsNVX: pObjectTableEntries.size() != objectIndices.size()" );
+      }
+#endif  // VULKAN_HPP_NO_EXCEPTIONS
+      Result result = static_cast<Result>( vkRegisterObjectsNVX( m_device, static_cast<VkObjectTableNVX>( objectTable ), pObjectTableEntries.size() , reinterpret_cast<const VkObjectTableEntryNVX* const*>( pObjectTableEntries.data() ), objectIndices.data() ) );
+      return createResultValue( result, "vk::Device::registerObjectsNVX" );
+    }
+#endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
+
+    Result unregisterObjectsNVX( ObjectTableNVX objectTable, uint32_t objectCount, const ObjectEntryTypeNVX* pObjectEntryTypes, const uint32_t* pObjectIndices ) const
+    {
+      return static_cast<Result>( vkUnregisterObjectsNVX( m_device, static_cast<VkObjectTableNVX>( objectTable ), objectCount, reinterpret_cast<const VkObjectEntryTypeNVX*>( pObjectEntryTypes ), pObjectIndices ) );
+    }
+
+#ifndef VULKAN_HPP_DISABLE_ENHANCED_MODE
+    ResultValueType<void>::type unregisterObjectsNVX( ObjectTableNVX objectTable, ArrayProxy<const ObjectEntryTypeNVX> objectEntryTypes, ArrayProxy<const uint32_t> objectIndices ) const
+    {
+#ifdef VULKAN_HPP_NO_EXCEPTIONS
+      assert( objectEntryTypes.size() == objectIndices.size() );
+#else
+      if ( objectEntryTypes.size() != objectIndices.size() )
+      {
+        throw std::logic_error( "vk::Device::unregisterObjectsNVX: objectEntryTypes.size() != objectIndices.size()" );
+      }
+#endif  // VULKAN_HPP_NO_EXCEPTIONS
+      Result result = static_cast<Result>( vkUnregisterObjectsNVX( m_device, static_cast<VkObjectTableNVX>( objectTable ), objectEntryTypes.size() , reinterpret_cast<const VkObjectEntryTypeNVX*>( objectEntryTypes.data() ), objectIndices.data() ) );
+      return createResultValue( result, "vk::Device::unregisterObjectsNVX" );
+    }
+#endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
+
 #if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     explicit
 #endif
@@ -16849,293 +19029,6 @@ namespace vk
     VkDevice m_device;
   };
   static_assert( sizeof( Device ) == sizeof( VkDevice ), "handle and wrapper have different size!" );
-
-  struct ExternalMemoryImageCreateInfoNV
-  {
-    ExternalMemoryImageCreateInfoNV( ExternalMemoryHandleTypeFlagsNV handleTypes_ = ExternalMemoryHandleTypeFlagsNV() )
-      : sType( StructureType::eExternalMemoryImageCreateInfoNV )
-      , pNext( nullptr )
-      , handleTypes( handleTypes_ )
-    {
-    }
-
-    ExternalMemoryImageCreateInfoNV( VkExternalMemoryImageCreateInfoNV const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(ExternalMemoryImageCreateInfoNV) );
-    }
-
-    ExternalMemoryImageCreateInfoNV& operator=( VkExternalMemoryImageCreateInfoNV const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(ExternalMemoryImageCreateInfoNV) );
-      return *this;
-    }
-
-    ExternalMemoryImageCreateInfoNV& setSType( StructureType sType_ )
-    {
-      sType = sType_;
-      return *this;
-    }
-
-    ExternalMemoryImageCreateInfoNV& setPNext( const void* pNext_ )
-    {
-      pNext = pNext_;
-      return *this;
-    }
-
-    ExternalMemoryImageCreateInfoNV& setHandleTypes( ExternalMemoryHandleTypeFlagsNV handleTypes_ )
-    {
-      handleTypes = handleTypes_;
-      return *this;
-    }
-
-    operator const VkExternalMemoryImageCreateInfoNV&() const
-    {
-      return *reinterpret_cast<const VkExternalMemoryImageCreateInfoNV*>(this);
-    }
-
-    bool operator==( ExternalMemoryImageCreateInfoNV const& rhs ) const
-    {
-      return ( sType == rhs.sType )
-          && ( pNext == rhs.pNext )
-          && ( handleTypes == rhs.handleTypes );
-    }
-
-    bool operator!=( ExternalMemoryImageCreateInfoNV const& rhs ) const
-    {
-      return !operator==( rhs );
-    }
-
-  private:
-    StructureType sType;
-
-  public:
-    const void* pNext;
-    ExternalMemoryHandleTypeFlagsNV handleTypes;
-  };
-  static_assert( sizeof( ExternalMemoryImageCreateInfoNV ) == sizeof( VkExternalMemoryImageCreateInfoNV ), "struct and wrapper have different size!" );
-
-  struct ExportMemoryAllocateInfoNV
-  {
-    ExportMemoryAllocateInfoNV( ExternalMemoryHandleTypeFlagsNV handleTypes_ = ExternalMemoryHandleTypeFlagsNV() )
-      : sType( StructureType::eExportMemoryAllocateInfoNV )
-      , pNext( nullptr )
-      , handleTypes( handleTypes_ )
-    {
-    }
-
-    ExportMemoryAllocateInfoNV( VkExportMemoryAllocateInfoNV const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(ExportMemoryAllocateInfoNV) );
-    }
-
-    ExportMemoryAllocateInfoNV& operator=( VkExportMemoryAllocateInfoNV const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(ExportMemoryAllocateInfoNV) );
-      return *this;
-    }
-
-    ExportMemoryAllocateInfoNV& setSType( StructureType sType_ )
-    {
-      sType = sType_;
-      return *this;
-    }
-
-    ExportMemoryAllocateInfoNV& setPNext( const void* pNext_ )
-    {
-      pNext = pNext_;
-      return *this;
-    }
-
-    ExportMemoryAllocateInfoNV& setHandleTypes( ExternalMemoryHandleTypeFlagsNV handleTypes_ )
-    {
-      handleTypes = handleTypes_;
-      return *this;
-    }
-
-    operator const VkExportMemoryAllocateInfoNV&() const
-    {
-      return *reinterpret_cast<const VkExportMemoryAllocateInfoNV*>(this);
-    }
-
-    bool operator==( ExportMemoryAllocateInfoNV const& rhs ) const
-    {
-      return ( sType == rhs.sType )
-          && ( pNext == rhs.pNext )
-          && ( handleTypes == rhs.handleTypes );
-    }
-
-    bool operator!=( ExportMemoryAllocateInfoNV const& rhs ) const
-    {
-      return !operator==( rhs );
-    }
-
-  private:
-    StructureType sType;
-
-  public:
-    const void* pNext;
-    ExternalMemoryHandleTypeFlagsNV handleTypes;
-  };
-  static_assert( sizeof( ExportMemoryAllocateInfoNV ) == sizeof( VkExportMemoryAllocateInfoNV ), "struct and wrapper have different size!" );
-
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-  struct ImportMemoryWin32HandleInfoNV
-  {
-    ImportMemoryWin32HandleInfoNV( ExternalMemoryHandleTypeFlagsNV handleType_ = ExternalMemoryHandleTypeFlagsNV(), HANDLE handle_ = 0 )
-      : sType( StructureType::eImportMemoryWin32HandleInfoNV )
-      , pNext( nullptr )
-      , handleType( handleType_ )
-      , handle( handle_ )
-    {
-    }
-
-    ImportMemoryWin32HandleInfoNV( VkImportMemoryWin32HandleInfoNV const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(ImportMemoryWin32HandleInfoNV) );
-    }
-
-    ImportMemoryWin32HandleInfoNV& operator=( VkImportMemoryWin32HandleInfoNV const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(ImportMemoryWin32HandleInfoNV) );
-      return *this;
-    }
-
-    ImportMemoryWin32HandleInfoNV& setSType( StructureType sType_ )
-    {
-      sType = sType_;
-      return *this;
-    }
-
-    ImportMemoryWin32HandleInfoNV& setPNext( const void* pNext_ )
-    {
-      pNext = pNext_;
-      return *this;
-    }
-
-    ImportMemoryWin32HandleInfoNV& setHandleType( ExternalMemoryHandleTypeFlagsNV handleType_ )
-    {
-      handleType = handleType_;
-      return *this;
-    }
-
-    ImportMemoryWin32HandleInfoNV& setHandle( HANDLE handle_ )
-    {
-      handle = handle_;
-      return *this;
-    }
-
-    operator const VkImportMemoryWin32HandleInfoNV&() const
-    {
-      return *reinterpret_cast<const VkImportMemoryWin32HandleInfoNV*>(this);
-    }
-
-    bool operator==( ImportMemoryWin32HandleInfoNV const& rhs ) const
-    {
-      return ( sType == rhs.sType )
-          && ( pNext == rhs.pNext )
-          && ( handleType == rhs.handleType )
-          && ( handle == rhs.handle );
-    }
-
-    bool operator!=( ImportMemoryWin32HandleInfoNV const& rhs ) const
-    {
-      return !operator==( rhs );
-    }
-
-  private:
-    StructureType sType;
-
-  public:
-    const void* pNext;
-    ExternalMemoryHandleTypeFlagsNV handleType;
-    HANDLE handle;
-  };
-  static_assert( sizeof( ImportMemoryWin32HandleInfoNV ) == sizeof( VkImportMemoryWin32HandleInfoNV ), "struct and wrapper have different size!" );
-#endif /*VK_USE_PLATFORM_WIN32_KHR*/
-
-  enum class ExternalMemoryFeatureFlagBitsNV
-  {
-    eDedicatedOnly = VK_EXTERNAL_MEMORY_FEATURE_DEDICATED_ONLY_BIT_NV,
-    eExportable = VK_EXTERNAL_MEMORY_FEATURE_EXPORTABLE_BIT_NV,
-    eImportable = VK_EXTERNAL_MEMORY_FEATURE_IMPORTABLE_BIT_NV
-  };
-
-  using ExternalMemoryFeatureFlagsNV = Flags<ExternalMemoryFeatureFlagBitsNV, VkExternalMemoryFeatureFlagsNV>;
-
-  inline ExternalMemoryFeatureFlagsNV operator|( ExternalMemoryFeatureFlagBitsNV bit0, ExternalMemoryFeatureFlagBitsNV bit1 )
-  {
-    return ExternalMemoryFeatureFlagsNV( bit0 ) | bit1;
-  }
-
-  struct ExternalImageFormatPropertiesNV
-  {
-    ExternalImageFormatPropertiesNV( ImageFormatProperties imageFormatProperties_ = ImageFormatProperties(), ExternalMemoryFeatureFlagsNV externalMemoryFeatures_ = ExternalMemoryFeatureFlagsNV(), ExternalMemoryHandleTypeFlagsNV exportFromImportedHandleTypes_ = ExternalMemoryHandleTypeFlagsNV(), ExternalMemoryHandleTypeFlagsNV compatibleHandleTypes_ = ExternalMemoryHandleTypeFlagsNV() )
-      : imageFormatProperties( imageFormatProperties_ )
-      , externalMemoryFeatures( externalMemoryFeatures_ )
-      , exportFromImportedHandleTypes( exportFromImportedHandleTypes_ )
-      , compatibleHandleTypes( compatibleHandleTypes_ )
-    {
-    }
-
-    ExternalImageFormatPropertiesNV( VkExternalImageFormatPropertiesNV const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(ExternalImageFormatPropertiesNV) );
-    }
-
-    ExternalImageFormatPropertiesNV& operator=( VkExternalImageFormatPropertiesNV const & rhs )
-    {
-      memcpy( this, &rhs, sizeof(ExternalImageFormatPropertiesNV) );
-      return *this;
-    }
-
-    ExternalImageFormatPropertiesNV& setImageFormatProperties( ImageFormatProperties imageFormatProperties_ )
-    {
-      imageFormatProperties = imageFormatProperties_;
-      return *this;
-    }
-
-    ExternalImageFormatPropertiesNV& setExternalMemoryFeatures( ExternalMemoryFeatureFlagsNV externalMemoryFeatures_ )
-    {
-      externalMemoryFeatures = externalMemoryFeatures_;
-      return *this;
-    }
-
-    ExternalImageFormatPropertiesNV& setExportFromImportedHandleTypes( ExternalMemoryHandleTypeFlagsNV exportFromImportedHandleTypes_ )
-    {
-      exportFromImportedHandleTypes = exportFromImportedHandleTypes_;
-      return *this;
-    }
-
-    ExternalImageFormatPropertiesNV& setCompatibleHandleTypes( ExternalMemoryHandleTypeFlagsNV compatibleHandleTypes_ )
-    {
-      compatibleHandleTypes = compatibleHandleTypes_;
-      return *this;
-    }
-
-    operator const VkExternalImageFormatPropertiesNV&() const
-    {
-      return *reinterpret_cast<const VkExternalImageFormatPropertiesNV*>(this);
-    }
-
-    bool operator==( ExternalImageFormatPropertiesNV const& rhs ) const
-    {
-      return ( imageFormatProperties == rhs.imageFormatProperties )
-          && ( externalMemoryFeatures == rhs.externalMemoryFeatures )
-          && ( exportFromImportedHandleTypes == rhs.exportFromImportedHandleTypes )
-          && ( compatibleHandleTypes == rhs.compatibleHandleTypes );
-    }
-
-    bool operator!=( ExternalImageFormatPropertiesNV const& rhs ) const
-    {
-      return !operator==( rhs );
-    }
-
-    ImageFormatProperties imageFormatProperties;
-    ExternalMemoryFeatureFlagsNV externalMemoryFeatures;
-    ExternalMemoryHandleTypeFlagsNV exportFromImportedHandleTypes;
-    ExternalMemoryHandleTypeFlagsNV compatibleHandleTypes;
-  };
-  static_assert( sizeof( ExternalImageFormatPropertiesNV ) == sizeof( VkExternalImageFormatPropertiesNV ), "struct and wrapper have different size!" );
 
   class PhysicalDevice
   {
@@ -17659,6 +19552,18 @@ namespace vk
     }
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
 
+    void getGeneratedCommandsPropertiesNVX( DeviceGeneratedCommandsFeaturesNVX* pFeatures, DeviceGeneratedCommandsLimitsNVX* pLimits ) const
+    {
+      vkGetPhysicalDeviceGeneratedCommandsPropertiesNVX( m_physicalDevice, reinterpret_cast<VkDeviceGeneratedCommandsFeaturesNVX*>( pFeatures ), reinterpret_cast<VkDeviceGeneratedCommandsLimitsNVX*>( pLimits ) );
+    }
+
+#ifndef VULKAN_HPP_DISABLE_ENHANCED_MODE
+    void getGeneratedCommandsPropertiesNVX( DeviceGeneratedCommandsFeaturesNVX & features, DeviceGeneratedCommandsLimitsNVX & limits ) const
+    {
+      vkGetPhysicalDeviceGeneratedCommandsPropertiesNVX( m_physicalDevice, reinterpret_cast<VkDeviceGeneratedCommandsFeaturesNVX*>( &features ), reinterpret_cast<VkDeviceGeneratedCommandsLimitsNVX*>( &limits ) );
+    }
+#endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
+
 #if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     explicit
 #endif
@@ -17935,6 +19840,14 @@ namespace vk
 #ifndef VULKAN_HPP_DISABLE_ENHANCED_MODE
     void debugReportMessageEXT( DebugReportFlagsEXT flags, DebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const std::string & layerPrefix, const std::string & message ) const
     {
+#ifdef VULKAN_HPP_NO_EXCEPTIONS
+      assert( layerPrefix.size() == message.size() );
+#else
+      if ( layerPrefix.size() != message.size() )
+      {
+        throw std::logic_error( "vk::Instance::debugReportMessageEXT: layerPrefix.size() != message.size()" );
+      }
+#endif  // VULKAN_HPP_NO_EXCEPTIONS
       vkDebugReportMessageEXT( m_instance, static_cast<VkDebugReportFlagsEXT>( flags ), static_cast<VkDebugReportObjectTypeEXT>( objectType ), object, location, messageCode, layerPrefix.c_str(), message.c_str() );
     }
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
@@ -17962,70 +19875,129 @@ namespace vk
   };
   static_assert( sizeof( Instance ) == sizeof( VkInstance ), "handle and wrapper have different size!" );
 
-  enum class ValidationCheckEXT
+  struct CmdProcessCommandsInfoNVX
   {
-    eAll = VK_VALIDATION_CHECK_ALL_EXT
-  };
-
-  struct ValidationFlagsEXT
-  {
-    ValidationFlagsEXT( uint32_t disabledValidationCheckCount_ = 0, ValidationCheckEXT* pDisabledValidationChecks_ = nullptr )
-      : sType( StructureType::eValidationFlagsEXT )
+    CmdProcessCommandsInfoNVX( ObjectTableNVX objectTable_ = ObjectTableNVX(), IndirectCommandsLayoutNVX indirectCommandsLayout_ = IndirectCommandsLayoutNVX(), uint32_t indirectCommandsTokenCount_ = 0, const IndirectCommandsTokenNVX* pIndirectCommandsTokens_ = nullptr, uint32_t maxSequencesCount_ = 0, CommandBuffer targetCommandBuffer_ = CommandBuffer(), Buffer sequencesCountBuffer_ = Buffer(), DeviceSize sequencesCountOffset_ = 0, Buffer sequencesIndexBuffer_ = Buffer(), DeviceSize sequencesIndexOffset_ = 0 )
+      : sType( StructureType::eCmdProcessCommandsInfoNVX )
       , pNext( nullptr )
-      , disabledValidationCheckCount( disabledValidationCheckCount_ )
-      , pDisabledValidationChecks( pDisabledValidationChecks_ )
+      , objectTable( objectTable_ )
+      , indirectCommandsLayout( indirectCommandsLayout_ )
+      , indirectCommandsTokenCount( indirectCommandsTokenCount_ )
+      , pIndirectCommandsTokens( pIndirectCommandsTokens_ )
+      , maxSequencesCount( maxSequencesCount_ )
+      , targetCommandBuffer( targetCommandBuffer_ )
+      , sequencesCountBuffer( sequencesCountBuffer_ )
+      , sequencesCountOffset( sequencesCountOffset_ )
+      , sequencesIndexBuffer( sequencesIndexBuffer_ )
+      , sequencesIndexOffset( sequencesIndexOffset_ )
     {
     }
 
-    ValidationFlagsEXT( VkValidationFlagsEXT const & rhs )
+    CmdProcessCommandsInfoNVX( VkCmdProcessCommandsInfoNVX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ValidationFlagsEXT) );
+      memcpy( this, &rhs, sizeof(CmdProcessCommandsInfoNVX) );
     }
 
-    ValidationFlagsEXT& operator=( VkValidationFlagsEXT const & rhs )
+    CmdProcessCommandsInfoNVX& operator=( VkCmdProcessCommandsInfoNVX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ValidationFlagsEXT) );
+      memcpy( this, &rhs, sizeof(CmdProcessCommandsInfoNVX) );
       return *this;
     }
 
-    ValidationFlagsEXT& setSType( StructureType sType_ )
+    CmdProcessCommandsInfoNVX& setSType( StructureType sType_ )
     {
       sType = sType_;
       return *this;
     }
 
-    ValidationFlagsEXT& setPNext( const void* pNext_ )
+    CmdProcessCommandsInfoNVX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
       return *this;
     }
 
-    ValidationFlagsEXT& setDisabledValidationCheckCount( uint32_t disabledValidationCheckCount_ )
+    CmdProcessCommandsInfoNVX& setObjectTable( ObjectTableNVX objectTable_ )
     {
-      disabledValidationCheckCount = disabledValidationCheckCount_;
+      objectTable = objectTable_;
       return *this;
     }
 
-    ValidationFlagsEXT& setPDisabledValidationChecks( ValidationCheckEXT* pDisabledValidationChecks_ )
+    CmdProcessCommandsInfoNVX& setIndirectCommandsLayout( IndirectCommandsLayoutNVX indirectCommandsLayout_ )
     {
-      pDisabledValidationChecks = pDisabledValidationChecks_;
+      indirectCommandsLayout = indirectCommandsLayout_;
       return *this;
     }
 
-    operator const VkValidationFlagsEXT&() const
+    CmdProcessCommandsInfoNVX& setIndirectCommandsTokenCount( uint32_t indirectCommandsTokenCount_ )
     {
-      return *reinterpret_cast<const VkValidationFlagsEXT*>(this);
+      indirectCommandsTokenCount = indirectCommandsTokenCount_;
+      return *this;
     }
 
-    bool operator==( ValidationFlagsEXT const& rhs ) const
+    CmdProcessCommandsInfoNVX& setPIndirectCommandsTokens( const IndirectCommandsTokenNVX* pIndirectCommandsTokens_ )
+    {
+      pIndirectCommandsTokens = pIndirectCommandsTokens_;
+      return *this;
+    }
+
+    CmdProcessCommandsInfoNVX& setMaxSequencesCount( uint32_t maxSequencesCount_ )
+    {
+      maxSequencesCount = maxSequencesCount_;
+      return *this;
+    }
+
+    CmdProcessCommandsInfoNVX& setTargetCommandBuffer( CommandBuffer targetCommandBuffer_ )
+    {
+      targetCommandBuffer = targetCommandBuffer_;
+      return *this;
+    }
+
+    CmdProcessCommandsInfoNVX& setSequencesCountBuffer( Buffer sequencesCountBuffer_ )
+    {
+      sequencesCountBuffer = sequencesCountBuffer_;
+      return *this;
+    }
+
+    CmdProcessCommandsInfoNVX& setSequencesCountOffset( DeviceSize sequencesCountOffset_ )
+    {
+      sequencesCountOffset = sequencesCountOffset_;
+      return *this;
+    }
+
+    CmdProcessCommandsInfoNVX& setSequencesIndexBuffer( Buffer sequencesIndexBuffer_ )
+    {
+      sequencesIndexBuffer = sequencesIndexBuffer_;
+      return *this;
+    }
+
+    CmdProcessCommandsInfoNVX& setSequencesIndexOffset( DeviceSize sequencesIndexOffset_ )
+    {
+      sequencesIndexOffset = sequencesIndexOffset_;
+      return *this;
+    }
+
+    operator const VkCmdProcessCommandsInfoNVX&() const
+    {
+      return *reinterpret_cast<const VkCmdProcessCommandsInfoNVX*>(this);
+    }
+
+    bool operator==( CmdProcessCommandsInfoNVX const& rhs ) const
     {
       return ( sType == rhs.sType )
           && ( pNext == rhs.pNext )
-          && ( disabledValidationCheckCount == rhs.disabledValidationCheckCount )
-          && ( pDisabledValidationChecks == rhs.pDisabledValidationChecks );
+          && ( objectTable == rhs.objectTable )
+          && ( indirectCommandsLayout == rhs.indirectCommandsLayout )
+          && ( indirectCommandsTokenCount == rhs.indirectCommandsTokenCount )
+          && ( pIndirectCommandsTokens == rhs.pIndirectCommandsTokens )
+          && ( maxSequencesCount == rhs.maxSequencesCount )
+          && ( targetCommandBuffer == rhs.targetCommandBuffer )
+          && ( sequencesCountBuffer == rhs.sequencesCountBuffer )
+          && ( sequencesCountOffset == rhs.sequencesCountOffset )
+          && ( sequencesIndexBuffer == rhs.sequencesIndexBuffer )
+          && ( sequencesIndexOffset == rhs.sequencesIndexOffset );
     }
 
-    bool operator!=( ValidationFlagsEXT const& rhs ) const
+    bool operator!=( CmdProcessCommandsInfoNVX const& rhs ) const
     {
       return !operator==( rhs );
     }
@@ -18035,18 +20007,26 @@ namespace vk
 
   public:
     const void* pNext;
-    uint32_t disabledValidationCheckCount;
-    ValidationCheckEXT* pDisabledValidationChecks;
+    ObjectTableNVX objectTable;
+    IndirectCommandsLayoutNVX indirectCommandsLayout;
+    uint32_t indirectCommandsTokenCount;
+    const IndirectCommandsTokenNVX* pIndirectCommandsTokens;
+    uint32_t maxSequencesCount;
+    CommandBuffer targetCommandBuffer;
+    Buffer sequencesCountBuffer;
+    DeviceSize sequencesCountOffset;
+    Buffer sequencesIndexBuffer;
+    DeviceSize sequencesIndexOffset;
   };
-  static_assert( sizeof( ValidationFlagsEXT ) == sizeof( VkValidationFlagsEXT ), "struct and wrapper have different size!" );
+  static_assert( sizeof( CmdProcessCommandsInfoNVX ) == sizeof( VkCmdProcessCommandsInfoNVX ), "struct and wrapper have different size!" );
 
-  inline Result createInstance( const InstanceCreateInfo* pCreateInfo, const AllocationCallbacks* pAllocator, Instance* pInstance )
+  VULKAN_HPP_INLINE Result createInstance( const InstanceCreateInfo* pCreateInfo, const AllocationCallbacks* pAllocator, Instance* pInstance )
   {
     return static_cast<Result>( vkCreateInstance( reinterpret_cast<const VkInstanceCreateInfo*>( pCreateInfo ), reinterpret_cast<const VkAllocationCallbacks*>( pAllocator ), reinterpret_cast<VkInstance*>( pInstance ) ) );
   }
 
 #ifndef VULKAN_HPP_DISABLE_ENHANCED_MODE
-  inline ResultValueType<Instance>::type createInstance( const InstanceCreateInfo & createInfo, Optional<const AllocationCallbacks> allocator = nullptr )
+  VULKAN_HPP_INLINE ResultValueType<Instance>::type createInstance( const InstanceCreateInfo & createInfo, Optional<const AllocationCallbacks> allocator = nullptr )
   {
     Instance instance;
     Result result = static_cast<Result>( vkCreateInstance( reinterpret_cast<const VkInstanceCreateInfo*>( &createInfo ), reinterpret_cast<const VkAllocationCallbacks*>( static_cast<const AllocationCallbacks*>( allocator)), reinterpret_cast<VkInstance*>( &instance ) ) );
@@ -18054,455 +20034,401 @@ namespace vk
   }
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
 
-  inline Result enumerateInstanceLayerProperties( uint32_t* pPropertyCount, LayerProperties* pProperties )
-  {
-    return static_cast<Result>( vkEnumerateInstanceLayerProperties( pPropertyCount, reinterpret_cast<VkLayerProperties*>( pProperties ) ) );
-  }
-
-#ifndef VULKAN_HPP_DISABLE_ENHANCED_MODE
-  template <typename Allocator = std::allocator<LayerProperties>>
-  typename ResultValueType<std::vector<LayerProperties,Allocator>>::type enumerateInstanceLayerProperties()
-  {
-    std::vector<LayerProperties,Allocator> properties;
-    uint32_t propertyCount;
-    Result result;
-    do
-    {
-      result = static_cast<Result>( vkEnumerateInstanceLayerProperties( &propertyCount, nullptr ) );
-      if ( ( result == Result::eSuccess ) && propertyCount )
-      {
-        properties.resize( propertyCount );
-        result = static_cast<Result>( vkEnumerateInstanceLayerProperties( &propertyCount, reinterpret_cast<VkLayerProperties*>( properties.data() ) ) );
-      }
-    } while ( result == Result::eIncomplete );
-    assert( propertyCount <= properties.size() ); 
-    properties.resize( propertyCount ); 
-    return createResultValue( result, properties, "vk::enumerateInstanceLayerProperties" );
-  }
-#endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
-
-  inline Result enumerateInstanceExtensionProperties( const char* pLayerName, uint32_t* pPropertyCount, ExtensionProperties* pProperties )
-  {
-    return static_cast<Result>( vkEnumerateInstanceExtensionProperties( pLayerName, pPropertyCount, reinterpret_cast<VkExtensionProperties*>( pProperties ) ) );
-  }
-
-#ifndef VULKAN_HPP_DISABLE_ENHANCED_MODE
-  template <typename Allocator = std::allocator<ExtensionProperties>>
-  typename ResultValueType<std::vector<ExtensionProperties,Allocator>>::type enumerateInstanceExtensionProperties( Optional<const std::string> layerName = nullptr )
-  {
-    std::vector<ExtensionProperties,Allocator> properties;
-    uint32_t propertyCount;
-    Result result;
-    do
-    {
-      result = static_cast<Result>( vkEnumerateInstanceExtensionProperties( layerName ? layerName->c_str() : nullptr, &propertyCount, nullptr ) );
-      if ( ( result == Result::eSuccess ) && propertyCount )
-      {
-        properties.resize( propertyCount );
-        result = static_cast<Result>( vkEnumerateInstanceExtensionProperties( layerName ? layerName->c_str() : nullptr, &propertyCount, reinterpret_cast<VkExtensionProperties*>( properties.data() ) ) );
-      }
-    } while ( result == Result::eIncomplete );
-    assert( propertyCount <= properties.size() ); 
-    properties.resize( propertyCount ); 
-    return createResultValue( result, properties, "vk::enumerateInstanceExtensionProperties" );
-  }
-#endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
-
-  inline std::string to_string(FramebufferCreateFlagBits)
+  VULKAN_HPP_INLINE std::string to_string(FramebufferCreateFlagBits)
   {
     return "(void)";
   }
 
-  inline std::string to_string(FramebufferCreateFlags)
+  VULKAN_HPP_INLINE std::string to_string(FramebufferCreateFlags)
   {
     return "{}";
   }
 
-  inline std::string to_string(QueryPoolCreateFlagBits)
+  VULKAN_HPP_INLINE std::string to_string(QueryPoolCreateFlagBits)
   {
     return "(void)";
   }
 
-  inline std::string to_string(QueryPoolCreateFlags)
+  VULKAN_HPP_INLINE std::string to_string(QueryPoolCreateFlags)
   {
     return "{}";
   }
 
-  inline std::string to_string(RenderPassCreateFlagBits)
+  VULKAN_HPP_INLINE std::string to_string(RenderPassCreateFlagBits)
   {
     return "(void)";
   }
 
-  inline std::string to_string(RenderPassCreateFlags)
+  VULKAN_HPP_INLINE std::string to_string(RenderPassCreateFlags)
   {
     return "{}";
   }
 
-  inline std::string to_string(SamplerCreateFlagBits)
+  VULKAN_HPP_INLINE std::string to_string(SamplerCreateFlagBits)
   {
     return "(void)";
   }
 
-  inline std::string to_string(SamplerCreateFlags)
+  VULKAN_HPP_INLINE std::string to_string(SamplerCreateFlags)
   {
     return "{}";
   }
 
-  inline std::string to_string(PipelineLayoutCreateFlagBits)
+  VULKAN_HPP_INLINE std::string to_string(PipelineLayoutCreateFlagBits)
   {
     return "(void)";
   }
 
-  inline std::string to_string(PipelineLayoutCreateFlags)
+  VULKAN_HPP_INLINE std::string to_string(PipelineLayoutCreateFlags)
   {
     return "{}";
   }
 
-  inline std::string to_string(PipelineCacheCreateFlagBits)
+  VULKAN_HPP_INLINE std::string to_string(PipelineCacheCreateFlagBits)
   {
     return "(void)";
   }
 
-  inline std::string to_string(PipelineCacheCreateFlags)
+  VULKAN_HPP_INLINE std::string to_string(PipelineCacheCreateFlags)
   {
     return "{}";
   }
 
-  inline std::string to_string(PipelineDepthStencilStateCreateFlagBits)
+  VULKAN_HPP_INLINE std::string to_string(PipelineDepthStencilStateCreateFlagBits)
   {
     return "(void)";
   }
 
-  inline std::string to_string(PipelineDepthStencilStateCreateFlags)
+  VULKAN_HPP_INLINE std::string to_string(PipelineDepthStencilStateCreateFlags)
   {
     return "{}";
   }
 
-  inline std::string to_string(PipelineDynamicStateCreateFlagBits)
+  VULKAN_HPP_INLINE std::string to_string(PipelineDynamicStateCreateFlagBits)
   {
     return "(void)";
   }
 
-  inline std::string to_string(PipelineDynamicStateCreateFlags)
+  VULKAN_HPP_INLINE std::string to_string(PipelineDynamicStateCreateFlags)
   {
     return "{}";
   }
 
-  inline std::string to_string(PipelineColorBlendStateCreateFlagBits)
+  VULKAN_HPP_INLINE std::string to_string(PipelineColorBlendStateCreateFlagBits)
   {
     return "(void)";
   }
 
-  inline std::string to_string(PipelineColorBlendStateCreateFlags)
+  VULKAN_HPP_INLINE std::string to_string(PipelineColorBlendStateCreateFlags)
   {
     return "{}";
   }
 
-  inline std::string to_string(PipelineMultisampleStateCreateFlagBits)
+  VULKAN_HPP_INLINE std::string to_string(PipelineMultisampleStateCreateFlagBits)
   {
     return "(void)";
   }
 
-  inline std::string to_string(PipelineMultisampleStateCreateFlags)
+  VULKAN_HPP_INLINE std::string to_string(PipelineMultisampleStateCreateFlags)
   {
     return "{}";
   }
 
-  inline std::string to_string(PipelineRasterizationStateCreateFlagBits)
+  VULKAN_HPP_INLINE std::string to_string(PipelineRasterizationStateCreateFlagBits)
   {
     return "(void)";
   }
 
-  inline std::string to_string(PipelineRasterizationStateCreateFlags)
+  VULKAN_HPP_INLINE std::string to_string(PipelineRasterizationStateCreateFlags)
   {
     return "{}";
   }
 
-  inline std::string to_string(PipelineViewportStateCreateFlagBits)
+  VULKAN_HPP_INLINE std::string to_string(PipelineViewportStateCreateFlagBits)
   {
     return "(void)";
   }
 
-  inline std::string to_string(PipelineViewportStateCreateFlags)
+  VULKAN_HPP_INLINE std::string to_string(PipelineViewportStateCreateFlags)
   {
     return "{}";
   }
 
-  inline std::string to_string(PipelineTessellationStateCreateFlagBits)
+  VULKAN_HPP_INLINE std::string to_string(PipelineTessellationStateCreateFlagBits)
   {
     return "(void)";
   }
 
-  inline std::string to_string(PipelineTessellationStateCreateFlags)
+  VULKAN_HPP_INLINE std::string to_string(PipelineTessellationStateCreateFlags)
   {
     return "{}";
   }
 
-  inline std::string to_string(PipelineInputAssemblyStateCreateFlagBits)
+  VULKAN_HPP_INLINE std::string to_string(PipelineInputAssemblyStateCreateFlagBits)
   {
     return "(void)";
   }
 
-  inline std::string to_string(PipelineInputAssemblyStateCreateFlags)
+  VULKAN_HPP_INLINE std::string to_string(PipelineInputAssemblyStateCreateFlags)
   {
     return "{}";
   }
 
-  inline std::string to_string(PipelineVertexInputStateCreateFlagBits)
+  VULKAN_HPP_INLINE std::string to_string(PipelineVertexInputStateCreateFlagBits)
   {
     return "(void)";
   }
 
-  inline std::string to_string(PipelineVertexInputStateCreateFlags)
+  VULKAN_HPP_INLINE std::string to_string(PipelineVertexInputStateCreateFlags)
   {
     return "{}";
   }
 
-  inline std::string to_string(PipelineShaderStageCreateFlagBits)
+  VULKAN_HPP_INLINE std::string to_string(PipelineShaderStageCreateFlagBits)
   {
     return "(void)";
   }
 
-  inline std::string to_string(PipelineShaderStageCreateFlags)
+  VULKAN_HPP_INLINE std::string to_string(PipelineShaderStageCreateFlags)
   {
     return "{}";
   }
 
-  inline std::string to_string(DescriptorSetLayoutCreateFlagBits)
+  VULKAN_HPP_INLINE std::string to_string(DescriptorSetLayoutCreateFlagBits)
   {
     return "(void)";
   }
 
-  inline std::string to_string(DescriptorSetLayoutCreateFlags)
+  VULKAN_HPP_INLINE std::string to_string(DescriptorSetLayoutCreateFlags)
   {
     return "{}";
   }
 
-  inline std::string to_string(BufferViewCreateFlagBits)
+  VULKAN_HPP_INLINE std::string to_string(BufferViewCreateFlagBits)
   {
     return "(void)";
   }
 
-  inline std::string to_string(BufferViewCreateFlags)
+  VULKAN_HPP_INLINE std::string to_string(BufferViewCreateFlags)
   {
     return "{}";
   }
 
-  inline std::string to_string(InstanceCreateFlagBits)
+  VULKAN_HPP_INLINE std::string to_string(InstanceCreateFlagBits)
   {
     return "(void)";
   }
 
-  inline std::string to_string(InstanceCreateFlags)
+  VULKAN_HPP_INLINE std::string to_string(InstanceCreateFlags)
   {
     return "{}";
   }
 
-  inline std::string to_string(DeviceCreateFlagBits)
+  VULKAN_HPP_INLINE std::string to_string(DeviceCreateFlagBits)
   {
     return "(void)";
   }
 
-  inline std::string to_string(DeviceCreateFlags)
+  VULKAN_HPP_INLINE std::string to_string(DeviceCreateFlags)
   {
     return "{}";
   }
 
-  inline std::string to_string(DeviceQueueCreateFlagBits)
+  VULKAN_HPP_INLINE std::string to_string(DeviceQueueCreateFlagBits)
   {
     return "(void)";
   }
 
-  inline std::string to_string(DeviceQueueCreateFlags)
+  VULKAN_HPP_INLINE std::string to_string(DeviceQueueCreateFlags)
   {
     return "{}";
   }
 
-  inline std::string to_string(ImageViewCreateFlagBits)
+  VULKAN_HPP_INLINE std::string to_string(ImageViewCreateFlagBits)
   {
     return "(void)";
   }
 
-  inline std::string to_string(ImageViewCreateFlags)
+  VULKAN_HPP_INLINE std::string to_string(ImageViewCreateFlags)
   {
     return "{}";
   }
 
-  inline std::string to_string(SemaphoreCreateFlagBits)
+  VULKAN_HPP_INLINE std::string to_string(SemaphoreCreateFlagBits)
   {
     return "(void)";
   }
 
-  inline std::string to_string(SemaphoreCreateFlags)
+  VULKAN_HPP_INLINE std::string to_string(SemaphoreCreateFlags)
   {
     return "{}";
   }
 
-  inline std::string to_string(ShaderModuleCreateFlagBits)
+  VULKAN_HPP_INLINE std::string to_string(ShaderModuleCreateFlagBits)
   {
     return "(void)";
   }
 
-  inline std::string to_string(ShaderModuleCreateFlags)
+  VULKAN_HPP_INLINE std::string to_string(ShaderModuleCreateFlags)
   {
     return "{}";
   }
 
-  inline std::string to_string(EventCreateFlagBits)
+  VULKAN_HPP_INLINE std::string to_string(EventCreateFlagBits)
   {
     return "(void)";
   }
 
-  inline std::string to_string(EventCreateFlags)
+  VULKAN_HPP_INLINE std::string to_string(EventCreateFlags)
   {
     return "{}";
   }
 
-  inline std::string to_string(MemoryMapFlagBits)
+  VULKAN_HPP_INLINE std::string to_string(MemoryMapFlagBits)
   {
     return "(void)";
   }
 
-  inline std::string to_string(MemoryMapFlags)
+  VULKAN_HPP_INLINE std::string to_string(MemoryMapFlags)
   {
     return "{}";
   }
 
-  inline std::string to_string(SubpassDescriptionFlagBits)
+  VULKAN_HPP_INLINE std::string to_string(SubpassDescriptionFlagBits)
   {
     return "(void)";
   }
 
-  inline std::string to_string(SubpassDescriptionFlags)
+  VULKAN_HPP_INLINE std::string to_string(SubpassDescriptionFlags)
   {
     return "{}";
   }
 
-  inline std::string to_string(DescriptorPoolResetFlagBits)
+  VULKAN_HPP_INLINE std::string to_string(DescriptorPoolResetFlagBits)
   {
     return "(void)";
   }
 
-  inline std::string to_string(DescriptorPoolResetFlags)
+  VULKAN_HPP_INLINE std::string to_string(DescriptorPoolResetFlags)
   {
     return "{}";
   }
 
-  inline std::string to_string(SwapchainCreateFlagBitsKHR)
+  VULKAN_HPP_INLINE std::string to_string(SwapchainCreateFlagBitsKHR)
   {
     return "(void)";
   }
 
-  inline std::string to_string(SwapchainCreateFlagsKHR)
+  VULKAN_HPP_INLINE std::string to_string(SwapchainCreateFlagsKHR)
   {
     return "{}";
   }
 
-  inline std::string to_string(DisplayModeCreateFlagBitsKHR)
+  VULKAN_HPP_INLINE std::string to_string(DisplayModeCreateFlagBitsKHR)
   {
     return "(void)";
   }
 
-  inline std::string to_string(DisplayModeCreateFlagsKHR)
+  VULKAN_HPP_INLINE std::string to_string(DisplayModeCreateFlagsKHR)
   {
     return "{}";
   }
 
-  inline std::string to_string(DisplaySurfaceCreateFlagBitsKHR)
+  VULKAN_HPP_INLINE std::string to_string(DisplaySurfaceCreateFlagBitsKHR)
   {
     return "(void)";
   }
 
-  inline std::string to_string(DisplaySurfaceCreateFlagsKHR)
+  VULKAN_HPP_INLINE std::string to_string(DisplaySurfaceCreateFlagsKHR)
   {
     return "{}";
   }
 
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
-  inline std::string to_string(AndroidSurfaceCreateFlagBitsKHR)
+  VULKAN_HPP_INLINE std::string to_string(AndroidSurfaceCreateFlagBitsKHR)
   {
     return "(void)";
   }
 #endif /*VK_USE_PLATFORM_ANDROID_KHR*/
 
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
-  inline std::string to_string(AndroidSurfaceCreateFlagsKHR)
+  VULKAN_HPP_INLINE std::string to_string(AndroidSurfaceCreateFlagsKHR)
   {
     return "{}";
   }
 #endif /*VK_USE_PLATFORM_ANDROID_KHR*/
 
 #ifdef VK_USE_PLATFORM_MIR_KHR
-  inline std::string to_string(MirSurfaceCreateFlagBitsKHR)
+  VULKAN_HPP_INLINE std::string to_string(MirSurfaceCreateFlagBitsKHR)
   {
     return "(void)";
   }
 #endif /*VK_USE_PLATFORM_MIR_KHR*/
 
 #ifdef VK_USE_PLATFORM_MIR_KHR
-  inline std::string to_string(MirSurfaceCreateFlagsKHR)
+  VULKAN_HPP_INLINE std::string to_string(MirSurfaceCreateFlagsKHR)
   {
     return "{}";
   }
 #endif /*VK_USE_PLATFORM_MIR_KHR*/
 
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
-  inline std::string to_string(WaylandSurfaceCreateFlagBitsKHR)
+  VULKAN_HPP_INLINE std::string to_string(WaylandSurfaceCreateFlagBitsKHR)
   {
     return "(void)";
   }
 #endif /*VK_USE_PLATFORM_WAYLAND_KHR*/
 
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
-  inline std::string to_string(WaylandSurfaceCreateFlagsKHR)
+  VULKAN_HPP_INLINE std::string to_string(WaylandSurfaceCreateFlagsKHR)
   {
     return "{}";
   }
 #endif /*VK_USE_PLATFORM_WAYLAND_KHR*/
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-  inline std::string to_string(Win32SurfaceCreateFlagBitsKHR)
+  VULKAN_HPP_INLINE std::string to_string(Win32SurfaceCreateFlagBitsKHR)
   {
     return "(void)";
   }
 #endif /*VK_USE_PLATFORM_WIN32_KHR*/
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-  inline std::string to_string(Win32SurfaceCreateFlagsKHR)
+  VULKAN_HPP_INLINE std::string to_string(Win32SurfaceCreateFlagsKHR)
   {
     return "{}";
   }
 #endif /*VK_USE_PLATFORM_WIN32_KHR*/
 
 #ifdef VK_USE_PLATFORM_XLIB_KHR
-  inline std::string to_string(XlibSurfaceCreateFlagBitsKHR)
+  VULKAN_HPP_INLINE std::string to_string(XlibSurfaceCreateFlagBitsKHR)
   {
     return "(void)";
   }
 #endif /*VK_USE_PLATFORM_XLIB_KHR*/
 
 #ifdef VK_USE_PLATFORM_XLIB_KHR
-  inline std::string to_string(XlibSurfaceCreateFlagsKHR)
+  VULKAN_HPP_INLINE std::string to_string(XlibSurfaceCreateFlagsKHR)
   {
     return "{}";
   }
 #endif /*VK_USE_PLATFORM_XLIB_KHR*/
 
 #ifdef VK_USE_PLATFORM_XCB_KHR
-  inline std::string to_string(XcbSurfaceCreateFlagBitsKHR)
+  VULKAN_HPP_INLINE std::string to_string(XcbSurfaceCreateFlagBitsKHR)
   {
     return "(void)";
   }
 #endif /*VK_USE_PLATFORM_XCB_KHR*/
 
 #ifdef VK_USE_PLATFORM_XCB_KHR
-  inline std::string to_string(XcbSurfaceCreateFlagsKHR)
+  VULKAN_HPP_INLINE std::string to_string(XcbSurfaceCreateFlagsKHR)
   {
     return "{}";
   }
 #endif /*VK_USE_PLATFORM_XCB_KHR*/
 
-  inline std::string to_string(ImageLayout value)
+  VULKAN_HPP_INLINE std::string to_string(ImageLayout value)
   {
     switch (value)
     {
@@ -18520,7 +20446,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(AttachmentLoadOp value)
+  VULKAN_HPP_INLINE std::string to_string(AttachmentLoadOp value)
   {
     switch (value)
     {
@@ -18531,7 +20457,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(AttachmentStoreOp value)
+  VULKAN_HPP_INLINE std::string to_string(AttachmentStoreOp value)
   {
     switch (value)
     {
@@ -18541,7 +20467,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(ImageType value)
+  VULKAN_HPP_INLINE std::string to_string(ImageType value)
   {
     switch (value)
     {
@@ -18552,7 +20478,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(ImageTiling value)
+  VULKAN_HPP_INLINE std::string to_string(ImageTiling value)
   {
     switch (value)
     {
@@ -18562,7 +20488,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(ImageViewType value)
+  VULKAN_HPP_INLINE std::string to_string(ImageViewType value)
   {
     switch (value)
     {
@@ -18577,7 +20503,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(CommandBufferLevel value)
+  VULKAN_HPP_INLINE std::string to_string(CommandBufferLevel value)
   {
     switch (value)
     {
@@ -18587,7 +20513,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(ComponentSwizzle value)
+  VULKAN_HPP_INLINE std::string to_string(ComponentSwizzle value)
   {
     switch (value)
     {
@@ -18602,7 +20528,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(DescriptorType value)
+  VULKAN_HPP_INLINE std::string to_string(DescriptorType value)
   {
     switch (value)
     {
@@ -18621,7 +20547,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(QueryType value)
+  VULKAN_HPP_INLINE std::string to_string(QueryType value)
   {
     switch (value)
     {
@@ -18632,7 +20558,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(BorderColor value)
+  VULKAN_HPP_INLINE std::string to_string(BorderColor value)
   {
     switch (value)
     {
@@ -18646,7 +20572,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(PipelineBindPoint value)
+  VULKAN_HPP_INLINE std::string to_string(PipelineBindPoint value)
   {
     switch (value)
     {
@@ -18656,7 +20582,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(PipelineCacheHeaderVersion value)
+  VULKAN_HPP_INLINE std::string to_string(PipelineCacheHeaderVersion value)
   {
     switch (value)
     {
@@ -18665,7 +20591,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(PrimitiveTopology value)
+  VULKAN_HPP_INLINE std::string to_string(PrimitiveTopology value)
   {
     switch (value)
     {
@@ -18684,7 +20610,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(SharingMode value)
+  VULKAN_HPP_INLINE std::string to_string(SharingMode value)
   {
     switch (value)
     {
@@ -18694,7 +20620,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(IndexType value)
+  VULKAN_HPP_INLINE std::string to_string(IndexType value)
   {
     switch (value)
     {
@@ -18704,7 +20630,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(Filter value)
+  VULKAN_HPP_INLINE std::string to_string(Filter value)
   {
     switch (value)
     {
@@ -18715,7 +20641,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(SamplerMipmapMode value)
+  VULKAN_HPP_INLINE std::string to_string(SamplerMipmapMode value)
   {
     switch (value)
     {
@@ -18725,7 +20651,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(SamplerAddressMode value)
+  VULKAN_HPP_INLINE std::string to_string(SamplerAddressMode value)
   {
     switch (value)
     {
@@ -18738,7 +20664,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(CompareOp value)
+  VULKAN_HPP_INLINE std::string to_string(CompareOp value)
   {
     switch (value)
     {
@@ -18754,7 +20680,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(PolygonMode value)
+  VULKAN_HPP_INLINE std::string to_string(PolygonMode value)
   {
     switch (value)
     {
@@ -18765,7 +20691,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(CullModeFlagBits value)
+  VULKAN_HPP_INLINE std::string to_string(CullModeFlagBits value)
   {
     switch (value)
     {
@@ -18777,7 +20703,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(CullModeFlags value)
+  VULKAN_HPP_INLINE std::string to_string(CullModeFlags value)
   {
     if (!value) return "{}";
     std::string result;
@@ -18788,7 +20714,7 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(FrontFace value)
+  VULKAN_HPP_INLINE std::string to_string(FrontFace value)
   {
     switch (value)
     {
@@ -18798,7 +20724,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(BlendFactor value)
+  VULKAN_HPP_INLINE std::string to_string(BlendFactor value)
   {
     switch (value)
     {
@@ -18825,7 +20751,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(BlendOp value)
+  VULKAN_HPP_INLINE std::string to_string(BlendOp value)
   {
     switch (value)
     {
@@ -18838,7 +20764,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(StencilOp value)
+  VULKAN_HPP_INLINE std::string to_string(StencilOp value)
   {
     switch (value)
     {
@@ -18854,7 +20780,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(LogicOp value)
+  VULKAN_HPP_INLINE std::string to_string(LogicOp value)
   {
     switch (value)
     {
@@ -18878,7 +20804,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(InternalAllocationType value)
+  VULKAN_HPP_INLINE std::string to_string(InternalAllocationType value)
   {
     switch (value)
     {
@@ -18887,7 +20813,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(SystemAllocationScope value)
+  VULKAN_HPP_INLINE std::string to_string(SystemAllocationScope value)
   {
     switch (value)
     {
@@ -18900,7 +20826,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(PhysicalDeviceType value)
+  VULKAN_HPP_INLINE std::string to_string(PhysicalDeviceType value)
   {
     switch (value)
     {
@@ -18913,7 +20839,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(VertexInputRate value)
+  VULKAN_HPP_INLINE std::string to_string(VertexInputRate value)
   {
     switch (value)
     {
@@ -18923,7 +20849,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(Format value)
+  VULKAN_HPP_INLINE std::string to_string(Format value)
   {
     switch (value)
     {
@@ -19124,7 +21050,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(StructureType value)
+  VULKAN_HPP_INLINE std::string to_string(StructureType value)
   {
     switch (value)
     {
@@ -19202,11 +21128,17 @@ namespace vk
     case StructureType::eExportMemoryWin32HandleInfoNV: return "ExportMemoryWin32HandleInfoNV";
     case StructureType::eWin32KeyedMutexAcquireReleaseInfoNV: return "Win32KeyedMutexAcquireReleaseInfoNV";
     case StructureType::eValidationFlagsEXT: return "ValidationFlagsEXT";
+    case StructureType::eObjectTableCreateInfoNVX: return "ObjectTableCreateInfoNVX";
+    case StructureType::eIndirectCommandsLayoutCreateInfoNVX: return "IndirectCommandsLayoutCreateInfoNVX";
+    case StructureType::eCmdProcessCommandsInfoNVX: return "CmdProcessCommandsInfoNVX";
+    case StructureType::eCmdReserveSpaceForCommandsInfoNVX: return "CmdReserveSpaceForCommandsInfoNVX";
+    case StructureType::eDeviceGeneratedCommandsLimitsNVX: return "DeviceGeneratedCommandsLimitsNVX";
+    case StructureType::eDeviceGeneratedCommandsFeaturesNVX: return "DeviceGeneratedCommandsFeaturesNVX";
     default: return "invalid";
     }
   }
 
-  inline std::string to_string(SubpassContents value)
+  VULKAN_HPP_INLINE std::string to_string(SubpassContents value)
   {
     switch (value)
     {
@@ -19216,7 +21148,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(DynamicState value)
+  VULKAN_HPP_INLINE std::string to_string(DynamicState value)
   {
     switch (value)
     {
@@ -19233,7 +21165,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(QueueFlagBits value)
+  VULKAN_HPP_INLINE std::string to_string(QueueFlagBits value)
   {
     switch (value)
     {
@@ -19245,7 +21177,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(QueueFlags value)
+  VULKAN_HPP_INLINE std::string to_string(QueueFlags value)
   {
     if (!value) return "{}";
     std::string result;
@@ -19256,7 +21188,7 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(MemoryPropertyFlagBits value)
+  VULKAN_HPP_INLINE std::string to_string(MemoryPropertyFlagBits value)
   {
     switch (value)
     {
@@ -19269,7 +21201,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(MemoryPropertyFlags value)
+  VULKAN_HPP_INLINE std::string to_string(MemoryPropertyFlags value)
   {
     if (!value) return "{}";
     std::string result;
@@ -19281,7 +21213,7 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(MemoryHeapFlagBits value)
+  VULKAN_HPP_INLINE std::string to_string(MemoryHeapFlagBits value)
   {
     switch (value)
     {
@@ -19290,7 +21222,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(MemoryHeapFlags value)
+  VULKAN_HPP_INLINE std::string to_string(MemoryHeapFlags value)
   {
     if (!value) return "{}";
     std::string result;
@@ -19298,7 +21230,7 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(AccessFlagBits value)
+  VULKAN_HPP_INLINE std::string to_string(AccessFlagBits value)
   {
     switch (value)
     {
@@ -19319,11 +21251,13 @@ namespace vk
     case AccessFlagBits::eHostWrite: return "HostWrite";
     case AccessFlagBits::eMemoryRead: return "MemoryRead";
     case AccessFlagBits::eMemoryWrite: return "MemoryWrite";
+    case AccessFlagBits::eCommandProcessReadNVX: return "CommandProcessReadNVX";
+    case AccessFlagBits::eCommandProcessWriteNVX: return "CommandProcessWriteNVX";
     default: return "invalid";
     }
   }
 
-  inline std::string to_string(AccessFlags value)
+  VULKAN_HPP_INLINE std::string to_string(AccessFlags value)
   {
     if (!value) return "{}";
     std::string result;
@@ -19344,10 +21278,12 @@ namespace vk
     if (value & AccessFlagBits::eHostWrite) result += "HostWrite | ";
     if (value & AccessFlagBits::eMemoryRead) result += "MemoryRead | ";
     if (value & AccessFlagBits::eMemoryWrite) result += "MemoryWrite | ";
+    if (value & AccessFlagBits::eCommandProcessReadNVX) result += "CommandProcessReadNVX | ";
+    if (value & AccessFlagBits::eCommandProcessWriteNVX) result += "CommandProcessWriteNVX | ";
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(BufferUsageFlagBits value)
+  VULKAN_HPP_INLINE std::string to_string(BufferUsageFlagBits value)
   {
     switch (value)
     {
@@ -19364,7 +21300,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(BufferUsageFlags value)
+  VULKAN_HPP_INLINE std::string to_string(BufferUsageFlags value)
   {
     if (!value) return "{}";
     std::string result;
@@ -19380,7 +21316,7 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(BufferCreateFlagBits value)
+  VULKAN_HPP_INLINE std::string to_string(BufferCreateFlagBits value)
   {
     switch (value)
     {
@@ -19391,7 +21327,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(BufferCreateFlags value)
+  VULKAN_HPP_INLINE std::string to_string(BufferCreateFlags value)
   {
     if (!value) return "{}";
     std::string result;
@@ -19401,7 +21337,7 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(ShaderStageFlagBits value)
+  VULKAN_HPP_INLINE std::string to_string(ShaderStageFlagBits value)
   {
     switch (value)
     {
@@ -19417,7 +21353,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(ShaderStageFlags value)
+  VULKAN_HPP_INLINE std::string to_string(ShaderStageFlags value)
   {
     if (!value) return "{}";
     std::string result;
@@ -19432,7 +21368,7 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(ImageUsageFlagBits value)
+  VULKAN_HPP_INLINE std::string to_string(ImageUsageFlagBits value)
   {
     switch (value)
     {
@@ -19448,7 +21384,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(ImageUsageFlags value)
+  VULKAN_HPP_INLINE std::string to_string(ImageUsageFlags value)
   {
     if (!value) return "{}";
     std::string result;
@@ -19463,7 +21399,7 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(ImageCreateFlagBits value)
+  VULKAN_HPP_INLINE std::string to_string(ImageCreateFlagBits value)
   {
     switch (value)
     {
@@ -19476,7 +21412,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(ImageCreateFlags value)
+  VULKAN_HPP_INLINE std::string to_string(ImageCreateFlags value)
   {
     if (!value) return "{}";
     std::string result;
@@ -19488,7 +21424,7 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(PipelineCreateFlagBits value)
+  VULKAN_HPP_INLINE std::string to_string(PipelineCreateFlagBits value)
   {
     switch (value)
     {
@@ -19499,7 +21435,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(PipelineCreateFlags value)
+  VULKAN_HPP_INLINE std::string to_string(PipelineCreateFlags value)
   {
     if (!value) return "{}";
     std::string result;
@@ -19509,7 +21445,7 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(ColorComponentFlagBits value)
+  VULKAN_HPP_INLINE std::string to_string(ColorComponentFlagBits value)
   {
     switch (value)
     {
@@ -19521,7 +21457,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(ColorComponentFlags value)
+  VULKAN_HPP_INLINE std::string to_string(ColorComponentFlags value)
   {
     if (!value) return "{}";
     std::string result;
@@ -19532,7 +21468,7 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(FenceCreateFlagBits value)
+  VULKAN_HPP_INLINE std::string to_string(FenceCreateFlagBits value)
   {
     switch (value)
     {
@@ -19541,7 +21477,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(FenceCreateFlags value)
+  VULKAN_HPP_INLINE std::string to_string(FenceCreateFlags value)
   {
     if (!value) return "{}";
     std::string result;
@@ -19549,7 +21485,7 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(FormatFeatureFlagBits value)
+  VULKAN_HPP_INLINE std::string to_string(FormatFeatureFlagBits value)
   {
     switch (value)
     {
@@ -19571,7 +21507,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(FormatFeatureFlags value)
+  VULKAN_HPP_INLINE std::string to_string(FormatFeatureFlags value)
   {
     if (!value) return "{}";
     std::string result;
@@ -19592,7 +21528,7 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(QueryControlFlagBits value)
+  VULKAN_HPP_INLINE std::string to_string(QueryControlFlagBits value)
   {
     switch (value)
     {
@@ -19601,7 +21537,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(QueryControlFlags value)
+  VULKAN_HPP_INLINE std::string to_string(QueryControlFlags value)
   {
     if (!value) return "{}";
     std::string result;
@@ -19609,7 +21545,7 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(QueryResultFlagBits value)
+  VULKAN_HPP_INLINE std::string to_string(QueryResultFlagBits value)
   {
     switch (value)
     {
@@ -19621,7 +21557,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(QueryResultFlags value)
+  VULKAN_HPP_INLINE std::string to_string(QueryResultFlags value)
   {
     if (!value) return "{}";
     std::string result;
@@ -19632,7 +21568,7 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(CommandBufferUsageFlagBits value)
+  VULKAN_HPP_INLINE std::string to_string(CommandBufferUsageFlagBits value)
   {
     switch (value)
     {
@@ -19643,7 +21579,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(CommandBufferUsageFlags value)
+  VULKAN_HPP_INLINE std::string to_string(CommandBufferUsageFlags value)
   {
     if (!value) return "{}";
     std::string result;
@@ -19653,7 +21589,7 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(QueryPipelineStatisticFlagBits value)
+  VULKAN_HPP_INLINE std::string to_string(QueryPipelineStatisticFlagBits value)
   {
     switch (value)
     {
@@ -19672,7 +21608,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(QueryPipelineStatisticFlags value)
+  VULKAN_HPP_INLINE std::string to_string(QueryPipelineStatisticFlags value)
   {
     if (!value) return "{}";
     std::string result;
@@ -19690,7 +21626,7 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(ImageAspectFlagBits value)
+  VULKAN_HPP_INLINE std::string to_string(ImageAspectFlagBits value)
   {
     switch (value)
     {
@@ -19702,7 +21638,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(ImageAspectFlags value)
+  VULKAN_HPP_INLINE std::string to_string(ImageAspectFlags value)
   {
     if (!value) return "{}";
     std::string result;
@@ -19713,7 +21649,7 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(SparseImageFormatFlagBits value)
+  VULKAN_HPP_INLINE std::string to_string(SparseImageFormatFlagBits value)
   {
     switch (value)
     {
@@ -19724,7 +21660,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(SparseImageFormatFlags value)
+  VULKAN_HPP_INLINE std::string to_string(SparseImageFormatFlags value)
   {
     if (!value) return "{}";
     std::string result;
@@ -19734,7 +21670,7 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(SparseMemoryBindFlagBits value)
+  VULKAN_HPP_INLINE std::string to_string(SparseMemoryBindFlagBits value)
   {
     switch (value)
     {
@@ -19743,7 +21679,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(SparseMemoryBindFlags value)
+  VULKAN_HPP_INLINE std::string to_string(SparseMemoryBindFlags value)
   {
     if (!value) return "{}";
     std::string result;
@@ -19751,7 +21687,7 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(PipelineStageFlagBits value)
+  VULKAN_HPP_INLINE std::string to_string(PipelineStageFlagBits value)
   {
     switch (value)
     {
@@ -19772,11 +21708,12 @@ namespace vk
     case PipelineStageFlagBits::eHost: return "Host";
     case PipelineStageFlagBits::eAllGraphics: return "AllGraphics";
     case PipelineStageFlagBits::eAllCommands: return "AllCommands";
+    case PipelineStageFlagBits::eCommandProcessNVX: return "CommandProcessNVX";
     default: return "invalid";
     }
   }
 
-  inline std::string to_string(PipelineStageFlags value)
+  VULKAN_HPP_INLINE std::string to_string(PipelineStageFlags value)
   {
     if (!value) return "{}";
     std::string result;
@@ -19797,10 +21734,11 @@ namespace vk
     if (value & PipelineStageFlagBits::eHost) result += "Host | ";
     if (value & PipelineStageFlagBits::eAllGraphics) result += "AllGraphics | ";
     if (value & PipelineStageFlagBits::eAllCommands) result += "AllCommands | ";
+    if (value & PipelineStageFlagBits::eCommandProcessNVX) result += "CommandProcessNVX | ";
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(CommandPoolCreateFlagBits value)
+  VULKAN_HPP_INLINE std::string to_string(CommandPoolCreateFlagBits value)
   {
     switch (value)
     {
@@ -19810,7 +21748,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(CommandPoolCreateFlags value)
+  VULKAN_HPP_INLINE std::string to_string(CommandPoolCreateFlags value)
   {
     if (!value) return "{}";
     std::string result;
@@ -19819,7 +21757,7 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(CommandPoolResetFlagBits value)
+  VULKAN_HPP_INLINE std::string to_string(CommandPoolResetFlagBits value)
   {
     switch (value)
     {
@@ -19828,7 +21766,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(CommandPoolResetFlags value)
+  VULKAN_HPP_INLINE std::string to_string(CommandPoolResetFlags value)
   {
     if (!value) return "{}";
     std::string result;
@@ -19836,7 +21774,7 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(CommandBufferResetFlagBits value)
+  VULKAN_HPP_INLINE std::string to_string(CommandBufferResetFlagBits value)
   {
     switch (value)
     {
@@ -19845,7 +21783,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(CommandBufferResetFlags value)
+  VULKAN_HPP_INLINE std::string to_string(CommandBufferResetFlags value)
   {
     if (!value) return "{}";
     std::string result;
@@ -19853,7 +21791,7 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(SampleCountFlagBits value)
+  VULKAN_HPP_INLINE std::string to_string(SampleCountFlagBits value)
   {
     switch (value)
     {
@@ -19868,7 +21806,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(SampleCountFlags value)
+  VULKAN_HPP_INLINE std::string to_string(SampleCountFlags value)
   {
     if (!value) return "{}";
     std::string result;
@@ -19882,7 +21820,7 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(AttachmentDescriptionFlagBits value)
+  VULKAN_HPP_INLINE std::string to_string(AttachmentDescriptionFlagBits value)
   {
     switch (value)
     {
@@ -19891,7 +21829,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(AttachmentDescriptionFlags value)
+  VULKAN_HPP_INLINE std::string to_string(AttachmentDescriptionFlags value)
   {
     if (!value) return "{}";
     std::string result;
@@ -19899,7 +21837,7 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(StencilFaceFlagBits value)
+  VULKAN_HPP_INLINE std::string to_string(StencilFaceFlagBits value)
   {
     switch (value)
     {
@@ -19910,7 +21848,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(StencilFaceFlags value)
+  VULKAN_HPP_INLINE std::string to_string(StencilFaceFlags value)
   {
     if (!value) return "{}";
     std::string result;
@@ -19920,7 +21858,7 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(DescriptorPoolCreateFlagBits value)
+  VULKAN_HPP_INLINE std::string to_string(DescriptorPoolCreateFlagBits value)
   {
     switch (value)
     {
@@ -19929,7 +21867,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(DescriptorPoolCreateFlags value)
+  VULKAN_HPP_INLINE std::string to_string(DescriptorPoolCreateFlags value)
   {
     if (!value) return "{}";
     std::string result;
@@ -19937,7 +21875,7 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(DependencyFlagBits value)
+  VULKAN_HPP_INLINE std::string to_string(DependencyFlagBits value)
   {
     switch (value)
     {
@@ -19946,7 +21884,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(DependencyFlags value)
+  VULKAN_HPP_INLINE std::string to_string(DependencyFlags value)
   {
     if (!value) return "{}";
     std::string result;
@@ -19954,7 +21892,7 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(PresentModeKHR value)
+  VULKAN_HPP_INLINE std::string to_string(PresentModeKHR value)
   {
     switch (value)
     {
@@ -19966,7 +21904,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(ColorSpaceKHR value)
+  VULKAN_HPP_INLINE std::string to_string(ColorSpaceKHR value)
   {
     switch (value)
     {
@@ -19975,7 +21913,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(DisplayPlaneAlphaFlagBitsKHR value)
+  VULKAN_HPP_INLINE std::string to_string(DisplayPlaneAlphaFlagBitsKHR value)
   {
     switch (value)
     {
@@ -19987,7 +21925,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(DisplayPlaneAlphaFlagsKHR value)
+  VULKAN_HPP_INLINE std::string to_string(DisplayPlaneAlphaFlagsKHR value)
   {
     if (!value) return "{}";
     std::string result;
@@ -19998,7 +21936,7 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(CompositeAlphaFlagBitsKHR value)
+  VULKAN_HPP_INLINE std::string to_string(CompositeAlphaFlagBitsKHR value)
   {
     switch (value)
     {
@@ -20010,7 +21948,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(CompositeAlphaFlagsKHR value)
+  VULKAN_HPP_INLINE std::string to_string(CompositeAlphaFlagsKHR value)
   {
     if (!value) return "{}";
     std::string result;
@@ -20021,7 +21959,7 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(SurfaceTransformFlagBitsKHR value)
+  VULKAN_HPP_INLINE std::string to_string(SurfaceTransformFlagBitsKHR value)
   {
     switch (value)
     {
@@ -20038,7 +21976,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(SurfaceTransformFlagsKHR value)
+  VULKAN_HPP_INLINE std::string to_string(SurfaceTransformFlagsKHR value)
   {
     if (!value) return "{}";
     std::string result;
@@ -20054,7 +21992,7 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(DebugReportFlagBitsEXT value)
+  VULKAN_HPP_INLINE std::string to_string(DebugReportFlagBitsEXT value)
   {
     switch (value)
     {
@@ -20067,7 +22005,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(DebugReportFlagsEXT value)
+  VULKAN_HPP_INLINE std::string to_string(DebugReportFlagsEXT value)
   {
     if (!value) return "{}";
     std::string result;
@@ -20079,7 +22017,7 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(DebugReportObjectTypeEXT value)
+  VULKAN_HPP_INLINE std::string to_string(DebugReportObjectTypeEXT value)
   {
     switch (value)
     {
@@ -20112,11 +22050,15 @@ namespace vk
     case DebugReportObjectTypeEXT::eSurfaceKhr: return "SurfaceKhr";
     case DebugReportObjectTypeEXT::eSwapchainKhr: return "SwapchainKhr";
     case DebugReportObjectTypeEXT::eDebugReport: return "DebugReport";
+    case DebugReportObjectTypeEXT::eDisplayKhr: return "DisplayKhr";
+    case DebugReportObjectTypeEXT::eDisplayModeKhr: return "DisplayModeKhr";
+    case DebugReportObjectTypeEXT::eObjectTableNvx: return "ObjectTableNvx";
+    case DebugReportObjectTypeEXT::eIndirectCommandsLayoutNvx: return "IndirectCommandsLayoutNvx";
     default: return "invalid";
     }
   }
 
-  inline std::string to_string(DebugReportErrorEXT value)
+  VULKAN_HPP_INLINE std::string to_string(DebugReportErrorEXT value)
   {
     switch (value)
     {
@@ -20126,7 +22068,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(RasterizationOrderAMD value)
+  VULKAN_HPP_INLINE std::string to_string(RasterizationOrderAMD value)
   {
     switch (value)
     {
@@ -20136,7 +22078,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(ExternalMemoryHandleTypeFlagBitsNV value)
+  VULKAN_HPP_INLINE std::string to_string(ExternalMemoryHandleTypeFlagBitsNV value)
   {
     switch (value)
     {
@@ -20148,7 +22090,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(ExternalMemoryHandleTypeFlagsNV value)
+  VULKAN_HPP_INLINE std::string to_string(ExternalMemoryHandleTypeFlagsNV value)
   {
     if (!value) return "{}";
     std::string result;
@@ -20159,7 +22101,7 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(ExternalMemoryFeatureFlagBitsNV value)
+  VULKAN_HPP_INLINE std::string to_string(ExternalMemoryFeatureFlagBitsNV value)
   {
     switch (value)
     {
@@ -20170,7 +22112,7 @@ namespace vk
     }
   }
 
-  inline std::string to_string(ExternalMemoryFeatureFlagsNV value)
+  VULKAN_HPP_INLINE std::string to_string(ExternalMemoryFeatureFlagsNV value)
   {
     if (!value) return "{}";
     std::string result;
@@ -20180,11 +22122,82 @@ namespace vk
     return "{" + result.substr(0, result.size() - 3) + "}";
   }
 
-  inline std::string to_string(ValidationCheckEXT value)
+  VULKAN_HPP_INLINE std::string to_string(ValidationCheckEXT value)
   {
     switch (value)
     {
     case ValidationCheckEXT::eAll: return "All";
+    default: return "invalid";
+    }
+  }
+
+  VULKAN_HPP_INLINE std::string to_string(IndirectCommandsLayoutUsageFlagBitsNVX value)
+  {
+    switch (value)
+    {
+    case IndirectCommandsLayoutUsageFlagBitsNVX::eUnorderedSequences: return "UnorderedSequences";
+    case IndirectCommandsLayoutUsageFlagBitsNVX::eSparseSequences: return "SparseSequences";
+    case IndirectCommandsLayoutUsageFlagBitsNVX::eEmptyExecutions: return "EmptyExecutions";
+    case IndirectCommandsLayoutUsageFlagBitsNVX::eIndexedSequences: return "IndexedSequences";
+    default: return "invalid";
+    }
+  }
+
+  VULKAN_HPP_INLINE std::string to_string(IndirectCommandsLayoutUsageFlagsNVX value)
+  {
+    if (!value) return "{}";
+    std::string result;
+    if (value & IndirectCommandsLayoutUsageFlagBitsNVX::eUnorderedSequences) result += "UnorderedSequences | ";
+    if (value & IndirectCommandsLayoutUsageFlagBitsNVX::eSparseSequences) result += "SparseSequences | ";
+    if (value & IndirectCommandsLayoutUsageFlagBitsNVX::eEmptyExecutions) result += "EmptyExecutions | ";
+    if (value & IndirectCommandsLayoutUsageFlagBitsNVX::eIndexedSequences) result += "IndexedSequences | ";
+    return "{" + result.substr(0, result.size() - 3) + "}";
+  }
+
+  VULKAN_HPP_INLINE std::string to_string(ObjectEntryUsageFlagBitsNVX value)
+  {
+    switch (value)
+    {
+    case ObjectEntryUsageFlagBitsNVX::eGraphics: return "Graphics";
+    case ObjectEntryUsageFlagBitsNVX::eCompute: return "Compute";
+    default: return "invalid";
+    }
+  }
+
+  VULKAN_HPP_INLINE std::string to_string(ObjectEntryUsageFlagsNVX value)
+  {
+    if (!value) return "{}";
+    std::string result;
+    if (value & ObjectEntryUsageFlagBitsNVX::eGraphics) result += "Graphics | ";
+    if (value & ObjectEntryUsageFlagBitsNVX::eCompute) result += "Compute | ";
+    return "{" + result.substr(0, result.size() - 3) + "}";
+  }
+
+  VULKAN_HPP_INLINE std::string to_string(IndirectCommandsTokenTypeNVX value)
+  {
+    switch (value)
+    {
+    case IndirectCommandsTokenTypeNVX::eVkIndirectCommandsTokenPipeline: return "VkIndirectCommandsTokenPipeline";
+    case IndirectCommandsTokenTypeNVX::eVkIndirectCommandsTokenDescriptorSet: return "VkIndirectCommandsTokenDescriptorSet";
+    case IndirectCommandsTokenTypeNVX::eVkIndirectCommandsTokenIndexBuffer: return "VkIndirectCommandsTokenIndexBuffer";
+    case IndirectCommandsTokenTypeNVX::eVkIndirectCommandsTokenVertexBuffer: return "VkIndirectCommandsTokenVertexBuffer";
+    case IndirectCommandsTokenTypeNVX::eVkIndirectCommandsTokenPushConstant: return "VkIndirectCommandsTokenPushConstant";
+    case IndirectCommandsTokenTypeNVX::eVkIndirectCommandsTokenDrawIndexed: return "VkIndirectCommandsTokenDrawIndexed";
+    case IndirectCommandsTokenTypeNVX::eVkIndirectCommandsTokenDraw: return "VkIndirectCommandsTokenDraw";
+    case IndirectCommandsTokenTypeNVX::eVkIndirectCommandsTokenDispatch: return "VkIndirectCommandsTokenDispatch";
+    default: return "invalid";
+    }
+  }
+
+  VULKAN_HPP_INLINE std::string to_string(ObjectEntryTypeNVX value)
+  {
+    switch (value)
+    {
+    case ObjectEntryTypeNVX::eVkObjectEntryDescriptorSet: return "VkObjectEntryDescriptorSet";
+    case ObjectEntryTypeNVX::eVkObjectEntryPipeline: return "VkObjectEntryPipeline";
+    case ObjectEntryTypeNVX::eVkObjectEntryIndexBuffer: return "VkObjectEntryIndexBuffer";
+    case ObjectEntryTypeNVX::eVkObjectEntryVertexBuffer: return "VkObjectEntryVertexBuffer";
+    case ObjectEntryTypeNVX::eVkObjectEntryPushConstant: return "VkObjectEntryPushConstant";
     default: return "invalid";
     }
   }
