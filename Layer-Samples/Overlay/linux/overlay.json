@@ -4,7 +4,7 @@
         "name": "VK_LAYER_LUNARG_overlay",
         "type": "GLOBAL",
         "library_path": "./libVKLayer_overlay.so",
-        "api_version": "1.0.3",
+        "api_version": "1.0.37",
         "implementation_version": "1",
         "description": "Example Overlay Layer"
     }
