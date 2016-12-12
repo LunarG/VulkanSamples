@@ -763,13 +763,14 @@ void Smoke::on_tick()
 
 void Smoke::on_frame(float frame_pred)
 {
+    frame_count++;
+
     // Limit number of frames if argument was specified
     if (settings_.max_frame_count != -1 &&
         frame_count == settings_.max_frame_count) {
-        quit();
-        return;
+        // Tell the Game we're done after this frame is drawn.
+        Game::quit();
     }
-    frame_count++;
 
     auto &data = frame_data_[frame_data_index_];
 
