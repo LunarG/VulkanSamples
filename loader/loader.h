@@ -249,6 +249,11 @@ struct loader_icd_term {
     PFN_vkCreateDisplayPlaneSurfaceKHR CreateDisplayPlaneSurfaceKHR;
     PFN_vkDestroySurfaceKHR DestroySurfaceKHR;
     PFN_vkCreateSwapchainKHR CreateSwapchainKHR;
+
+    // NVX_device_generated_commands
+    PFN_vkGetPhysicalDeviceGeneratedCommandsPropertiesNVX
+        GetPhysicalDeviceGeneratedCommandsPropertiesNVX;
+
     struct loader_icd_term *next;
 };
 

@@ -290,6 +290,27 @@ static inline void loader_init_device_extension_dispatch_table(
         (PFN_vkCmdDebugMarkerEndEXT)gpa(dev, "vkCmdDebugMarkerEndEXT");
     table->CmdDebugMarkerInsertEXT =
         (PFN_vkCmdDebugMarkerInsertEXT)gpa(dev, "vkCmdDebugMarkerInsertEXT");
+
+    // NVX_device_generated_commands
+    table->CmdProcessCommandsNVX =
+        (PFN_vkCmdProcessCommandsNVX)gpa(dev, "vkCmdProcessCommandsNVX");
+    table->CmdReserveSpaceForCommandsNVX =
+        (PFN_vkCmdReserveSpaceForCommandsNVX)gpa(
+            dev, "vkCmdReserveSpaceForCommandsNVX");
+    table->CreateIndirectCommandsLayoutNVX =
+        (PFN_vkCreateIndirectCommandsLayoutNVX)gpa(
+            dev, "vkCreateIndirectCommandsLayoutNVX");
+    table->DestroyIndirectCommandsLayoutNVX =
+        (PFN_vkDestroyIndirectCommandsLayoutNVX)gpa(
+            dev, "vkDestroyIndirectCommandsLayoutNVX");
+    table->CreateObjectTableNVX =
+        (PFN_vkCreateObjectTableNVX)gpa(dev, "vkCreateObjectTableNVX");
+    table->DestroyObjectTableNVX =
+        (PFN_vkDestroyObjectTableNVX)gpa(dev, "vkDestroyObjectTableNVX");
+    table->RegisterObjectsNVX =
+        (PFN_vkRegisterObjectsNVX)gpa(dev, "vkRegisterObjectsNVX");
+    table->UnregisterObjectsNVX =
+        (PFN_vkUnregisterObjectsNVX)gpa(dev, "vkUnregisterObjectsNVX");
 }
 
 static inline void *
@@ -687,6 +708,11 @@ static inline void loader_init_instance_extension_dispatch_table(
     table->CreateDisplayPlaneSurfaceKHR =
         (PFN_vkCreateDisplayPlaneSurfaceKHR)gpa(
             inst, "vkCreateDisplayPlaneSurfaceKHR");
+
+    // NVX_device_generated_commands (physical device commands)
+    table->GetPhysicalDeviceGeneratedCommandsPropertiesNVX =
+        (PFN_vkGetPhysicalDeviceGeneratedCommandsPropertiesNVX)gpa(
+            inst, "vkGetPhysicalDeviceGeneratedCommandsPropertiesNVX");
 }
 
 static inline void *
@@ -786,6 +812,10 @@ loader_lookup_instance_dispatch_table(const VkLayerInstanceDispatchTable *table,
         return (void *)table->DestroyDebugReportCallbackEXT;
     if (!strcmp(name, "DebugReportMessageEXT"))
         return (void *)table->DebugReportMessageEXT;
+
+    // NVX_device_generated_commands
+    if (!strcmp(name, "GetPhysicalDeviceGeneratedCommandsPropertiesNVX"))
+        return (void *)table->GetPhysicalDeviceGeneratedCommandsPropertiesNVX;
 
     *found_name = false;
     return NULL;

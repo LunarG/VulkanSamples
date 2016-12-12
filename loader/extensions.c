@@ -215,6 +215,101 @@ VKAPI_ATTR VkResult VKAPI_CALL vkGetMemoryWin32HandleNV(
 
 #endif // VK_USE_PLATFORM_WIN32_KHR
 
+// Definitions for the VK_NVX_device_generated_commands
+
+VKAPI_ATTR void VKAPI_CALL vkCmdProcessCommandsNVX(
+    VkCommandBuffer commandBuffer,
+    const VkCmdProcessCommandsInfoNVX *pProcessCommandsInfo) {
+    const VkLayerDispatchTable *disp = loader_get_dispatch(commandBuffer);
+    disp->CmdProcessCommandsNVX(commandBuffer, pProcessCommandsInfo);
+}
+
+VKAPI_ATTR void VKAPI_CALL vkCmdReserveSpaceForCommandsNVX(
+    VkCommandBuffer commandBuffer,
+    const VkCmdReserveSpaceForCommandsInfoNVX *pReserveSpaceInfo) {
+    const VkLayerDispatchTable *disp = loader_get_dispatch(commandBuffer);
+    disp->CmdReserveSpaceForCommandsNVX(commandBuffer, pReserveSpaceInfo);
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateIndirectCommandsLayoutNVX(
+    VkDevice device, const VkIndirectCommandsLayoutCreateInfoNVX *pCreateInfo,
+    const VkAllocationCallbacks *pAllocator,
+    VkIndirectCommandsLayoutNVX *pIndirectCommandsLayout) {
+    const VkLayerDispatchTable *disp = loader_get_dispatch(device);
+    return disp->CreateIndirectCommandsLayoutNVX(
+        device, pCreateInfo, pAllocator, pIndirectCommandsLayout);
+}
+
+VKAPI_ATTR void VKAPI_CALL vkDestroyIndirectCommandsLayoutNVX(
+    VkDevice device, VkIndirectCommandsLayoutNVX indirectCommandsLayout,
+    const VkAllocationCallbacks *pAllocator) {
+    const VkLayerDispatchTable *disp = loader_get_dispatch(device);
+    disp->DestroyIndirectCommandsLayoutNVX(device, indirectCommandsLayout,
+                                           pAllocator);
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateObjectTableNVX(
+    VkDevice device, const VkObjectTableCreateInfoNVX *pCreateInfo,
+    const VkAllocationCallbacks *pAllocator, VkObjectTableNVX *pObjectTable) {
+    const VkLayerDispatchTable *disp = loader_get_dispatch(device);
+    return disp->CreateObjectTableNVX(device, pCreateInfo, pAllocator,
+                                      pObjectTable);
+}
+
+VKAPI_ATTR void VKAPI_CALL
+vkDestroyObjectTableNVX(VkDevice device, VkObjectTableNVX objectTable,
+                        const VkAllocationCallbacks *pAllocator) {
+    const VkLayerDispatchTable *disp = loader_get_dispatch(device);
+    disp->DestroyObjectTableNVX(device, objectTable, pAllocator);
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkRegisterObjectsNVX(
+    VkDevice device, VkObjectTableNVX objectTable, uint32_t objectCount,
+    const VkObjectTableEntryNVX *const *ppObjectTableEntries,
+    const uint32_t *pObjectIndices) {
+    const VkLayerDispatchTable *disp = loader_get_dispatch(device);
+    return disp->RegisterObjectsNVX(device, objectTable, objectCount,
+                                    ppObjectTableEntries, pObjectIndices);
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkUnregisterObjectsNVX(
+    VkDevice device, VkObjectTableNVX objectTable, uint32_t objectCount,
+    const VkObjectEntryTypeNVX *pObjectEntryTypes,
+    const uint32_t *pObjectIndices) {
+    const VkLayerDispatchTable *disp = loader_get_dispatch(device);
+    return disp->UnregisterObjectsNVX(device, objectTable, objectCount,
+                                      pObjectEntryTypes, pObjectIndices);
+}
+
+VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceGeneratedCommandsPropertiesNVX(
+    VkPhysicalDevice physicalDevice,
+    VkDeviceGeneratedCommandsFeaturesNVX *pFeatures,
+    VkDeviceGeneratedCommandsLimitsNVX *pLimits) {
+    const VkLayerInstanceDispatchTable *disp;
+    VkPhysicalDevice unwrapped_phys_dev =
+        loader_unwrap_physical_device(physicalDevice);
+    disp = loader_get_instance_dispatch(physicalDevice);
+    disp->GetPhysicalDeviceGeneratedCommandsPropertiesNVX(unwrapped_phys_dev,
+                                                          pFeatures, pLimits);
+}
+
+VKAPI_ATTR void VKAPI_CALL
+terminator_GetPhysicalDeviceGeneratedCommandsPropertiesNVX(
+    VkPhysicalDevice physicalDevice,
+    VkDeviceGeneratedCommandsFeaturesNVX *pFeatures,
+    VkDeviceGeneratedCommandsLimitsNVX *pLimits) {
+    struct loader_physical_device_term *phys_dev_term =
+        (struct loader_physical_device_term *)physicalDevice;
+    struct loader_icd_term *icd_term = phys_dev_term->this_icd_term;
+    if (NULL == icd_term->GetPhysicalDeviceGeneratedCommandsPropertiesNVX) {
+        loader_log(icd_term->this_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "ICD associated with VkPhysicalDevice does not support "
+                   "vkGetPhysicalDeviceGeneratedCommandsPropertiesNVX");
+    }
+    icd_term->GetPhysicalDeviceGeneratedCommandsPropertiesNVX(
+        phys_dev_term->phys_dev, pFeatures, pLimits);
+}
+
 // GPA helpers for non-KHR extensions
 
 bool extension_instance_gpa(struct loader_instance *ptr_instance,
@@ -266,6 +361,45 @@ bool extension_instance_gpa(struct loader_instance *ptr_instance,
     }
 
 #endif // VK_USE_PLATFORM_WIN32_KHR
+
+    // Functions for the VK_NVX_device_generated_commands extension
+
+    if (!strcmp("vkCmdProcessCommandsNVX", name)) {
+        *addr = (void *)vkCmdProcessCommandsNVX;
+        return true;
+    }
+    if (!strcmp("vkCmdReserveSpaceForCommandsNVX", name)) {
+        *addr = (void *)vkCmdReserveSpaceForCommandsNVX;
+        return true;
+    }
+    if (!strcmp("vkCreateIndirectCommandsLayoutNVX", name)) {
+        *addr = (void *)vkCreateIndirectCommandsLayoutNVX;
+        return true;
+    }
+    if (!strcmp("vkDestroyIndirectCommandsLayoutNVX", name)) {
+        *addr = (void *)vkDestroyIndirectCommandsLayoutNVX;
+        return true;
+    }
+    if (!strcmp("vkCreateObjectTableNVX", name)) {
+        *addr = (void *)vkCreateObjectTableNVX;
+        return true;
+    }
+    if (!strcmp("vkDestroyObjectTableNVX", name)) {
+        *addr = (void *)vkDestroyObjectTableNVX;
+        return true;
+    }
+    if (!strcmp("vkRegisterObjectsNVX", name)) {
+        *addr = (void *)vkRegisterObjectsNVX;
+        return true;
+    }
+    if (!strcmp("vkUnregisterObjectsNVX", name)) {
+        *addr = (void *)vkUnregisterObjectsNVX;
+        return true;
+    }
+    if (!strcmp("vkGetPhysicalDeviceGeneratedCommandsPropertiesNVX", name)) {
+        *addr = (void *)vkGetPhysicalDeviceGeneratedCommandsPropertiesNVX;
+        return true;
+    }
 
     return false;
 }
