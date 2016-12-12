@@ -3792,6 +3792,7 @@ static bool checkGraphicsOrComputeBit(const layer_data *my_data, VkQueueFlags fl
 
 // Add specified CMD to the CmdBuffer in given pCB, flagging errors if CB is not
 //  in the recording state or if there's an issue with the Cmd ordering
+// TODO: Tease apart validation and CB state updates
 static bool addCmd(layer_data *my_data, GLOBAL_CB_NODE *pCB, const CMD_TYPE cmd, const char *caller_name) {
     bool skip_call = false;
     auto pPool = getCommandPoolNode(my_data, pCB->createInfo.commandPool);
@@ -9022,6 +9023,7 @@ CmdResetEvent(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags
         dev_data->dispatch_table.CmdResetEvent(commandBuffer, event, stageMask);
 }
 
+// TODO: Separate validation and layout state updates
 static bool TransitionImageLayouts(VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
                                    const VkImageMemoryBarrier *pImgMemBarriers) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
