@@ -3885,9 +3885,9 @@ TEST_F(VkLayerTest, WriteDescriptorSetIntegrityCheck) {
     VkDescriptorPoolSize ds_type_count[4] = {};
     ds_type_count[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     ds_type_count[0].descriptorCount = 1;
-    ds_type_count[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    ds_type_count[1].type = VK_DESCRIPTOR_TYPE_SAMPLER;
     ds_type_count[1].descriptorCount = 1;
-    ds_type_count[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    ds_type_count[2].type = VK_DESCRIPTOR_TYPE_SAMPLER;
     ds_type_count[2].descriptorCount = 1;
     ds_type_count[3].type = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
     ds_type_count[3].descriptorCount = 1;
@@ -3994,12 +3994,29 @@ TEST_F(VkLayerTest, WriteDescriptorSetIntegrityCheck) {
     VkBuffer dyub;
     err = vkCreateBuffer(m_device->device(), &buffCI, NULL, &dyub);
     ASSERT_VK_SUCCESS(err);
-    VkDescriptorBufferInfo buffInfo = {};
-    buffInfo.buffer = dyub;
-    buffInfo.offset = 0;
-    buffInfo.range = 1024;
 
-    descriptor_write.pBufferInfo = &buffInfo;
+    VkDeviceMemory mem;
+    VkMemoryRequirements mem_reqs;
+    vkGetBufferMemoryRequirements(m_device->device(), dyub, &mem_reqs);
+
+    VkMemoryAllocateInfo mem_alloc_info = {};
+    mem_alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    mem_alloc_info.allocationSize = mem_reqs.size;
+    m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc_info, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    err = vkAllocateMemory(m_device->device(), &mem_alloc_info, NULL, &mem);
+    ASSERT_VK_SUCCESS(err);
+
+    err = vkBindBufferMemory(m_device->device(), dyub, mem, 0);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorBufferInfo buffInfo[2] = {};
+    buffInfo[0].buffer = dyub;
+    buffInfo[0].offset = 0;
+    buffInfo[0].range = 1024;
+    buffInfo[1].buffer = dyub;
+    buffInfo[1].offset = 0;
+    buffInfo[1].range = 1024;
+    descriptor_write.pBufferInfo = buffInfo;
     descriptor_write.descriptorCount = 2;
 
     // 2) The stateFlags don't match between the first and second descriptor
@@ -4021,6 +4038,7 @@ TEST_F(VkLayerTest, WriteDescriptorSetIntegrityCheck) {
     m_errorMonitor->VerifyFound();
 
     vkDestroyBuffer(m_device->device(), dyub, NULL);
+    vkFreeMemory(m_device->device(), mem, NULL);
     vkDestroySampler(m_device->device(), sampler, NULL);
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
