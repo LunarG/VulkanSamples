@@ -67,23 +67,26 @@
  *
  * Index vs Binding - A layout is created with an array of VkDescriptorSetLayoutBinding
  *  where each array index will have a corresponding binding# that is defined in that struct.
- *  This class, therefore, provides utility functions where you can retrieve data for
- *  layout bindings based on either the original index into the pBindings array, or based
- *  on the binding#.
- *  Typically if you want to cover all of the bindings in a layout, you can do that by
- *   iterating over GetBindingCount() bindings and using the Get*FromIndex() functions.
- *  Otherwise, you can use the Get*FromBinding() functions to just grab binding info
- *   for a particular binding#.
+ *  The binding#, then, is decoupled from VkDescriptorSetLayoutBinding index, which allows
+ *  bindings to be defined out-of-order. This DescriptorSetLayout class, however, stores
+ *  the bindings internally in-order. This is useful for operations which may "roll over"
+ *  from a single binding to the next consecutive binding.
  *
- * Global Index - The "Index" referenced above is the index into the original pBindings
- *  array. So there are as many indices as there are bindings.
+ *  Note that although the bindings are stored in-order, there still may be "gaps" in the
+ *  binding#. For example, if the binding creation order is 8, 7, 10, 3, 4, then the
+ *  internal binding array will have five entries stored in binding order 3, 4, 7, 8, 10.
+ *  To process all of the bindings in a layout you can iterate from 0 to GetBindingCount()
+ *  and use the Get*FromIndex() functions for each index. To just process a single binding,
+ *  use the Get*FromBinding() functions.
+ *
+ * Global Index - The binding vector index has as many indices as there are bindings.
  *  This class also has the concept of a Global Index. For the global index functions,
  *  there are as many global indices as there are descriptors in the layout.
  *  For the global index, consider all of the bindings to be a flat array where
- *  descriptor 0 of pBinding[0] is index 0 and each descriptor in the layout increments
- *  from there. So if pBinding[0] in this example had descriptorCount of 10, then
- *  the GlobalStartIndex of pBinding[1] will be 10 where 0-9 are the global indices
- *  for pBinding[0].
+ *  descriptor 0 of of the lowest binding# is index 0 and each descriptor in the layout
+ *  increments from there. So if the lowest binding# in this example had descriptorCount of
+ *  10, then the GlobalStartIndex of the 2nd lowest binding# will be 10 where 0-9 are the
+ *  global indices for the lowest binding#.
  */
 namespace cvdescriptorset {
 class DescriptorSetLayout {
@@ -97,6 +100,7 @@ class DescriptorSetLayout {
     uint32_t GetTotalDescriptorCount() const { return descriptor_count_; };
     uint32_t GetDynamicDescriptorCount() const { return dynamic_descriptor_count_; };
     // For a given binding, return the number of descriptors in that binding and all successive bindings
+    // TODO : I think this can die with the update
     uint32_t GetConsecutiveDescriptorCountFromBinding(uint32_t) const;
     uint32_t GetBindingCount() const { return binding_count_; };
     // Fill passed-in set with bindings
@@ -109,8 +113,7 @@ class DescriptorSetLayout {
     // Return true if binding 1 beyond given exists and has same type, stageFlags & immutable sampler use
     bool IsNextBindingConsistent(const uint32_t) const;
     // Various Get functions that can either be passed a binding#, which will
-    //  be automatically translated into the appropriate index from the original
-    //  pBindings array, or the index# can be passed in directly
+    //  be automatically translated into the appropriate index, or the index# can be passed in directly
     VkDescriptorSetLayoutBinding const *GetDescriptorSetLayoutBindingPtrFromBinding(const uint32_t) const;
     VkDescriptorSetLayoutBinding const *GetDescriptorSetLayoutBindingPtrFromIndex(const uint32_t) const;
     uint32_t GetDescriptorCountFromBinding(const uint32_t) const;

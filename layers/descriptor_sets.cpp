@@ -31,29 +31,48 @@
 cvdescriptorset::DescriptorSetLayout::DescriptorSetLayout(const VkDescriptorSetLayoutCreateInfo *p_create_info,
                                                           const VkDescriptorSetLayout layout)
     : layout_(layout), binding_count_(p_create_info->bindingCount), descriptor_count_(0), dynamic_descriptor_count_(0) {
-    uint32_t global_index = 0;
     // Dyn array indicies are ordered by binding # and array index of any array within the binding
     //  so we store up bindings w/ count in ordered map in order to create dyn array mappings below
     std::map<uint32_t, uint32_t> binding_to_dyn_count;
     for (uint32_t i = 0; i < binding_count_; ++i) {
+        auto binding_num = p_create_info->pBindings[i].binding;
         descriptor_count_ += p_create_info->pBindings[i].descriptorCount;
-        binding_to_index_map_[p_create_info->pBindings[i].binding] = i;
-        binding_to_global_start_index_map_[p_create_info->pBindings[i].binding] = global_index;
-        global_index += p_create_info->pBindings[i].descriptorCount ? p_create_info->pBindings[i].descriptorCount - 1 : 0;
-        binding_to_global_end_index_map_[p_create_info->pBindings[i].binding] = global_index;
-        global_index += p_create_info->pBindings[i].descriptorCount ? 1 : 0;
-        bindings_.push_back(safe_VkDescriptorSetLayoutBinding(&p_create_info->pBindings[i]));
+        uint32_t insert_index = 0; // Track vector index where we insert element
+        if (bindings_.empty() || binding_num > bindings_.back().binding) {
+            bindings_.push_back(safe_VkDescriptorSetLayoutBinding(&p_create_info->pBindings[i]));
+            insert_index = bindings_.size() - 1;
+        } else { // out-of-order binding number, need to insert into vector in-order
+            auto it = bindings_.begin();
+            // Find currently binding's spot in vector
+            while (binding_num > it->binding) {
+                assert(it != bindings_.end());
+                ++insert_index;
+                ++it;
+            }
+            bindings_.insert(it, safe_VkDescriptorSetLayoutBinding(&p_create_info->pBindings[i]));
+        }
         // In cases where we should ignore pImmutableSamplers make sure it's NULL
         if ((p_create_info->pBindings[i].pImmutableSamplers) &&
             ((p_create_info->pBindings[i].descriptorType != VK_DESCRIPTOR_TYPE_SAMPLER) &&
              (p_create_info->pBindings[i].descriptorType != VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER))) {
-            bindings_.back().pImmutableSamplers = nullptr;
+            bindings_[insert_index].pImmutableSamplers = nullptr;
         }
         if (p_create_info->pBindings[i].descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ||
             p_create_info->pBindings[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
             binding_to_dyn_count[p_create_info->pBindings[i].binding] = p_create_info->pBindings[i].descriptorCount;
             dynamic_descriptor_count_ += p_create_info->pBindings[i].descriptorCount;
         }
+    }
+    assert(bindings_.size() == binding_count_);
+    uint32_t global_index = 0;
+    // Vector order is finalized so create maps of bindings to indices
+    for (uint32_t i = 0; i < binding_count_; ++i) {
+        auto binding_num = bindings_[i].binding;
+        binding_to_index_map_[binding_num] = i;
+        binding_to_global_start_index_map_[binding_num] = global_index;
+        global_index += bindings_[i].descriptorCount ? bindings_[i].descriptorCount - 1 : 0;
+        binding_to_global_end_index_map_[binding_num] = global_index;
+        global_index += bindings_[i].descriptorCount ? 1 : 0;
     }
     // Now create dyn offset array mapping for any dynamic descriptors
     uint32_t dyn_array_idx = 0;
