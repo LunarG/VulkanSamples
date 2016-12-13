@@ -5637,7 +5637,7 @@ static bool InsertMemoryRange(layer_data const *dev_data, uint64_t handle, DEVIC
     range.end = memoryOffset + memRequirements.size - 1;
     range.aliases.clear();
     // Update Memory aliasing
-    // Save aliase ranges so we can copy into final map entry below. Can't do it in loop b/c we don't yet have final ptr. If we
+    // Save aliased ranges so we can copy into final map entry below. Can't do it in loop b/c we don't yet have final ptr. If we
     // inserted into map before loop to get the final ptr, then we may enter loop when not needed & we check range against itself
     std::unordered_set<MEMORY_RANGE *> tmp_alias_ranges;
     for (auto &obj_range_pair : mem_info->bound_ranges) {
