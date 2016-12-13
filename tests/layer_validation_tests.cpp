@@ -16707,7 +16707,6 @@ TEST_F(VkPositiveLayerTest, TestAliasedMemoryTracking) {
     m_errorMonitor->VerifyNotFound();
 
     vkFreeMemory(m_device->device(), mem, NULL);
-    vkDestroyBuffer(m_device->device(), buffer, NULL);
     vkDestroyImage(m_device->device(), image, NULL);
 }
 
