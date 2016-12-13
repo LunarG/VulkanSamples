@@ -263,17 +263,20 @@ static void CreateObject(T1 dispatchable_object, T2 object, VkDebugReportObjectT
     auto object_handle = handle_value(object);
     bool custom_allocator = pAllocator != nullptr;
 
-    log_msg(instance_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, object_type, object_handle,
-            __LINE__, OBJTRACK_NONE, LayerName, "OBJ[0x%" PRIxLEAST64 "] : CREATE %s object 0x%" PRIxLEAST64, object_track_index++,
-            object_name[object_type], object_handle);
+    if (!instance_data->object_map[object_type].count(object_handle)) {
+        log_msg(instance_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, object_type, object_handle, __LINE__,
+                OBJTRACK_NONE, LayerName, "OBJ[0x%" PRIxLEAST64 "] : CREATE %s object 0x%" PRIxLEAST64, object_track_index++,
+                object_name[object_type], object_handle);
 
-    OBJTRACK_NODE *pNewObjNode = new OBJTRACK_NODE;
-    pNewObjNode->object_type = object_type;
-    pNewObjNode->status = custom_allocator ? OBJSTATUS_CUSTOM_ALLOCATOR : OBJSTATUS_NONE;
-    pNewObjNode->handle = object_handle;
-    instance_data->object_map[object_type][object_handle] = pNewObjNode;
-    instance_data->num_objects[object_type]++;
-    instance_data->num_total_objects++;
+        OBJTRACK_NODE *pNewObjNode = new OBJTRACK_NODE;
+        pNewObjNode->object_type = object_type;
+        pNewObjNode->status = custom_allocator ? OBJSTATUS_CUSTOM_ALLOCATOR : OBJSTATUS_NONE;
+        pNewObjNode->handle = object_handle;
+
+        instance_data->object_map[object_type][object_handle] = pNewObjNode;
+        instance_data->num_objects[object_type]++;
+        instance_data->num_total_objects++;
+    }
 }
 
 template <typename T1, typename T2>
