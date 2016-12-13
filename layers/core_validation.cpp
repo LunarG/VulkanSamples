@@ -5604,7 +5604,7 @@ static bool rangesIntersect(layer_data const *dev_data, MEMORY_RANGE const *rang
 // TODO : For ranges where there is no alias, we may want to create new buffer ranges that are valid
 static void SetMemRangesValid(layer_data const *dev_data, DEVICE_MEM_INFO *mem_info, VkDeviceSize offset, VkDeviceSize end) {
     bool tmp_bool = false;
-    MEMORY_RANGE map_range;
+    MEMORY_RANGE map_range = {};
     map_range.linear = true;
     map_range.start = offset;
     map_range.end = end;
