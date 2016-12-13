@@ -1528,11 +1528,10 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDisplayPlaneSurfaceKHR(
         goto out;
     }
 
-    // The VK_KHR_display path will continue to use the old path (hence the
-    // false as the last parameter).
+    // Next, if so, proceed with the implementation of this function:
     pIcdSurface =
         AllocateIcdSurfaceStruct(inst, sizeof(pIcdSurface->display_surf.base),
-                                 sizeof(pIcdSurface->display_surf), false);
+                                 sizeof(pIcdSurface->display_surf), true);
     if (pIcdSurface == NULL) {
         vkRes = VK_ERROR_OUT_OF_HOST_MEMORY;
         goto out;
