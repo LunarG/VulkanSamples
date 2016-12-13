@@ -346,5 +346,4 @@ add_subdirectory(Sample-Programs/Hologram)
 
 if (BUILD_SAMPLE_LAYERS)
     add_subdirectory(Layer-Samples/Overlay)
-    add_subdirectory(Layer-Samples/Monitor)
 endif()
