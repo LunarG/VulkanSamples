@@ -5572,17 +5572,19 @@ static bool rangesIntersect(layer_data const *dev_data, MEMORY_RANGE const *rang
         return false;
 
     if (range1->linear != range2->linear) {
-        // In linear vs. non-linear case, it's an error to alias
+        // In linear vs. non-linear case, warn of aliasing
         const char *r1_linear_str = range1->linear ? "Linear" : "Non-linear";
         const char *r1_type_str = range1->image ? "image" : "buffer";
         const char *r2_linear_str = range2->linear ? "linear" : "non-linear";
         const char *r2_type_str = range2->image ? "image" : "buffer";
         auto obj_type = range1->image ? VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT : VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT;
-        *skip_call |=
-            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, obj_type, range1->handle, 0, MEMTRACK_INVALID_ALIASING,
-                    "MEM", "%s %s 0x%" PRIx64 " is aliased with %s %s 0x%" PRIx64
-                           " which is in violation of the Buffer-Image Granularity section of the Vulkan specification.",
-                    r1_linear_str, r1_type_str, range1->handle, r2_linear_str, r2_type_str, range2->handle);
+        *skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, obj_type, range1->handle, 0,
+                              MEMTRACK_INVALID_ALIASING, "MEM", "%s %s 0x%" PRIx64 " is aliased with %s %s 0x%" PRIx64
+                                                                " which may indicate a bug. For further info refer to the "
+                                                                "Buffer-Image Granularity section of the Vulkan specification. "
+                                                                "(https://www.khronos.org/registry/vulkan/specs/1.0-extensions/"
+                                                                "xhtml/vkspec.html#resources-bufferimagegranularity)",
+                              r1_linear_str, r1_type_str, range1->handle, r2_linear_str, r2_type_str, range2->handle);
     }
     // Ranges intersect
     return true;
