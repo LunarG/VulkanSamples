@@ -264,7 +264,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                 if (self.genOpts.protectProto):
                     write(self.genOpts.protectProto,
                           self.genOpts.protectProtoStr, file=self.outFile)
-                write('\n'.join(self.sections['command']), end='', file=self.outFile)
+                write('\n'.join(self.sections['command']), end=u'', file=self.outFile)
             if (self.featureExtraProtect != None):
                 write('#endif /*', self.featureExtraProtect, '*/', file=self.outFile)
             else:

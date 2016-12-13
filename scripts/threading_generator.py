@@ -325,7 +325,7 @@ class ThreadOutputGenerator(OutputGenerator):
                     self.newline()
             #write('// endFeature looking at self.sections[command]', file=self.outFile)
             if (self.sections['command']):
-                write('\n'.join(self.sections['command']), end='', file=self.outFile)
+                write('\n'.join(self.sections['command']), end=u'', file=self.outFile)
                 self.newline()
             if (self.featureExtraProtect != None):
                 write('#endif /*', self.featureExtraProtect, '*/', file=self.outFile)
