@@ -172,6 +172,9 @@ class ErrorMonitor {
                 // Return true to avoid calling layers/driver with this error.
                 // And don't erase the "" string, so it remains if another error is found.
                 result = VK_TRUE;
+                found_expected = true;
+                m_msgFound = VK_TRUE;
+                m_failure_message_strings.insert(errorString);
             } else if (errorString.find(desired_msg) != string::npos) {
                 found_expected = true;
                 m_failure_message_strings.insert(errorString);
