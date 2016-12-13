@@ -245,9 +245,12 @@ struct layer_data {
     counter<VkSemaphore> c_VkSemaphore;
     counter<VkShaderModule> c_VkShaderModule;
     counter<VkDebugReportCallbackEXT> c_VkDebugReportCallbackEXT;
+    counter<VkObjectTableNVX> c_VkObjectTableNVX;
+    counter<VkIndirectCommandsLayoutNVX>c_VkIndirectCommandsLayoutNVX;
 #else  // DISTINCT_NONDISPATCHABLE_HANDLES
     counter<uint64_t> c_uint64_t;
 #endif // DISTINCT_NONDISPATCHABLE_HANDLES
+
     layer_data()
         : report_data(nullptr), num_tmp_callbacks(0), tmp_dbg_create_infos(nullptr), tmp_callbacks(nullptr),
           c_VkCommandBuffer("VkCommandBuffer", VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT),
@@ -274,7 +277,9 @@ struct layer_data {
           c_VkSampler("VkSampler", VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT),
           c_VkSemaphore("VkSemaphore", VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT),
           c_VkShaderModule("VkShaderModule", VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT),
-          c_VkDebugReportCallbackEXT("VkDebugReportCallbackEXT", VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT)
+          c_VkDebugReportCallbackEXT("VkDebugReportCallbackEXT", VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT),
+          c_VkObjectTableNVX("VkObjectTableNVX", VK_DEBUG_REPORT_OBJECT_TYPE_OBJECT_TABLE_NVX_EXT),
+          c_VkIndirectCommandsLayoutNVX("VkIndirectCommandsLayoutNVX", VK_DEBUG_REPORT_OBJECT_TYPE_INDIRECT_COMMANDS_LAYOUT_NVX_EXT)
 #else  // DISTINCT_NONDISPATCHABLE_HANDLES
           c_uint64_t("NON_DISPATCHABLE_HANDLE", VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT)
 #endif // DISTINCT_NONDISPATCHABLE_HANDLES
@@ -316,9 +321,12 @@ WRAPPER(VkSampler)
 WRAPPER(VkSemaphore)
 WRAPPER(VkShaderModule)
 WRAPPER(VkDebugReportCallbackEXT)
+WRAPPER(VkObjectTableNVX)
+WRAPPER(VkIndirectCommandsLayoutNVX)
 #else  // DISTINCT_NONDISPATCHABLE_HANDLES
 WRAPPER(uint64_t)
 #endif // DISTINCT_NONDISPATCHABLE_HANDLES
+
 
 static std::unordered_map<void *, layer_data *> layer_data_map;
 static std::mutex command_pool_lock;

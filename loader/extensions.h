@@ -45,3 +45,11 @@ terminator_GetPhysicalDeviceExternalImageFormatPropertiesNV(
     VkImageTiling tiling, VkImageUsageFlags usage, VkImageCreateFlags flags,
     VkExternalMemoryHandleTypeFlagsNV externalHandleType,
     VkExternalImageFormatPropertiesNV *pExternalImageFormatProperties);
+
+// Instance extension terminators for the VK_NVX_device_generated_commands
+// extension
+VKAPI_ATTR void VKAPI_CALL
+terminator_GetPhysicalDeviceGeneratedCommandsPropertiesNVX(
+    VkPhysicalDevice physicalDevice,
+    VkDeviceGeneratedCommandsFeaturesNVX *pFeatures,
+    VkDeviceGeneratedCommandsLimitsNVX *pLimits);

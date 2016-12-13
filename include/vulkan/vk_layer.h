@@ -173,6 +173,14 @@ typedef struct VkLayerDispatchTable_ {
     PFN_vkCmdDebugMarkerBeginEXT CmdDebugMarkerBeginEXT;
     PFN_vkCmdDebugMarkerEndEXT CmdDebugMarkerEndEXT;
     PFN_vkCmdDebugMarkerInsertEXT CmdDebugMarkerInsertEXT;
+    PFN_vkCmdProcessCommandsNVX CmdProcessCommandsNVX;
+    PFN_vkCmdReserveSpaceForCommandsNVX CmdReserveSpaceForCommandsNVX;
+    PFN_vkCreateIndirectCommandsLayoutNVX CreateIndirectCommandsLayoutNVX;
+    PFN_vkDestroyIndirectCommandsLayoutNVX DestroyIndirectCommandsLayoutNVX;
+    PFN_vkCreateObjectTableNVX CreateObjectTableNVX;
+    PFN_vkDestroyObjectTableNVX DestroyObjectTableNVX;
+    PFN_vkRegisterObjectsNVX RegisterObjectsNVX;
+    PFN_vkUnregisterObjectsNVX UnregisterObjectsNVX;
 } VkLayerDispatchTable;
 
 typedef struct VkLayerInstanceDispatchTable_ {
@@ -245,6 +253,8 @@ typedef struct VkLayerInstanceDispatchTable_ {
         CreateDisplayPlaneSurfaceKHR;
     PFN_vkGetPhysicalDeviceExternalImageFormatPropertiesNV
         GetPhysicalDeviceExternalImageFormatPropertiesNV;
+    PFN_vkGetPhysicalDeviceGeneratedCommandsPropertiesNVX
+        GetPhysicalDeviceGeneratedCommandsPropertiesNVX;
 } VkLayerInstanceDispatchTable;
 
 // ------------------------------------------------------------------------------------------------

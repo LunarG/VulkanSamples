@@ -2757,27 +2757,6 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
     return result;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL CreateDisplayPlaneSurfaceKHR(VkInstance instance, const VkDisplaySurfaceCreateInfoKHR *pCreateInfo,
-                                                            const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
-    bool skip_call = false;
-    {
-        std::lock_guard<std::mutex> lock(global_lock);
-        skip_call |= ValidateObject(instance, instance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, false, VALIDATION_ERROR_01878);
-    }
-    if (skip_call) {
-        return VK_ERROR_VALIDATION_FAILED_EXT;
-    }
-    VkResult result = get_dispatch_table(ot_instance_table_map, instance)
-                          ->CreateDisplayPlaneSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
-    {
-        std::lock_guard<std::mutex> lock(global_lock);
-        if (result == VK_SUCCESS) {
-            CreateObject(instance, *pSurface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, pAllocator);
-        }
-    }
-    return result;
-}
-
 #ifdef VK_USE_PLATFORM_WIN32_KHR
 VKAPI_ATTR VkResult VKAPI_CALL CreateWin32SurfaceKHR(VkInstance instance, const VkWin32SurfaceCreateInfoKHR *pCreateInfo,
                                                      const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
@@ -3103,6 +3082,9 @@ static inline PFN_vkVoidFunction InterceptMsgCallbackGetProcAddrCommand(const ch
     return debug_report_get_instance_proc_addr(instance_data->report_data, name);
 }
 
+VKAPI_ATTR VkResult VKAPI_CALL CreateDisplayPlaneSurfaceKHR(VkInstance instance, const VkDisplaySurfaceCreateInfoKHR *pCreateInfo,
+    const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface);
+
 static inline PFN_vkVoidFunction InterceptWsiEnabledCommand(const char *name, VkInstance instance) {
     VkLayerInstanceDispatchTable *pTable = get_dispatch_table(ot_instance_table_map, instance);
     if (instanceExtMap.size() == 0 || !instanceExtMap[pTable].wsi_enabled)
@@ -3163,6 +3145,7 @@ static void CheckDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo,
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     device_data->wsi_enabled = false;
     device_data->wsi_display_swapchain_enabled = false;
+    device_data->wsi_display_extension_enabled = false;
     device_data->objtrack_extensions_enabled = false;
 
     for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
@@ -3171,6 +3154,9 @@ static void CheckDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo,
         }
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME) == 0) {
             device_data->wsi_display_swapchain_enabled = true;
+        }
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DISPLAY_EXTENSION_NAME) == 0) {
+            device_data->wsi_display_extension_enabled = true;
         }
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], "OBJTRACK_EXTENSIONS") == 0) {
             device_data->objtrack_extensions_enabled = true;
@@ -3811,6 +3797,137 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceExternalImageFormatPropertiesNV(
     return result;
 }
 
+// VK_KHR_display Extension
+VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceDisplayPropertiesKHR(VkPhysicalDevice physicalDevice, uint32_t *pPropertyCount,
+                                                                     VkDisplayPropertiesKHR *pProperties) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skip = false;
+    {
+        std::unique_lock<std::mutex> lock(global_lock);
+        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
+                               VALIDATION_ERROR_01851);
+    }
+    if (!skip) {
+        result = get_dispatch_table(ot_instance_table_map, physicalDevice)
+            ->GetPhysicalDeviceDisplayPropertiesKHR(physicalDevice, pPropertyCount, pProperties);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceDisplayPlanePropertiesKHR(VkPhysicalDevice physicalDevice, uint32_t *pPropertyCount,
+                                                                          VkDisplayPlanePropertiesKHR *pProperties) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skip = false;
+    {
+        std::unique_lock<std::mutex> lock(global_lock);
+        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
+                               VALIDATION_ERROR_01854);
+    }
+    if (!skip) {
+        result = get_dispatch_table(ot_instance_table_map, physicalDevice)
+            ->GetPhysicalDeviceDisplayPlanePropertiesKHR(physicalDevice, pPropertyCount, pProperties);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneSupportedDisplaysKHR(VkPhysicalDevice physicalDevice, uint32_t planeIndex,
+                                                                   uint32_t *pDisplayCount, VkDisplayKHR *pDisplays) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skip = false;
+    {
+        std::unique_lock<std::mutex> lock(global_lock);
+        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
+                               VALIDATION_ERROR_01858);
+    }
+    result = get_dispatch_table(ot_instance_table_map, physicalDevice)
+                 ->GetDisplayPlaneSupportedDisplaysKHR(physicalDevice, planeIndex, pDisplayCount, pDisplays);
+    if (((result == VK_SUCCESS) || (result == VK_INCOMPLETE)) && (pDisplays != NULL)) {
+        std::lock_guard<std::mutex> lock(global_lock);
+        for (uint32_t displays = 0; displays < *pDisplayCount; displays++) {
+            CreateObject(physicalDevice, pDisplays[displays], VK_DEBUG_REPORT_OBJECT_TYPE_DISPLAY_KHR_EXT, nullptr);
+        }
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL GetDisplayModePropertiesKHR(VkPhysicalDevice physicalDevice, VkDisplayKHR display,
+                                                           uint32_t *pPropertyCount, VkDisplayModePropertiesKHR *pProperties) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skip = false;
+    {
+        std::unique_lock<std::mutex> lock(global_lock);
+        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
+                               VALIDATION_ERROR_01861);
+        skip |= ValidateObject(physicalDevice, display, VK_DEBUG_REPORT_OBJECT_TYPE_DISPLAY_KHR_EXT, false,
+                               VALIDATION_ERROR_01862);
+    }
+    result = get_dispatch_table(ot_instance_table_map, physicalDevice)
+                 ->GetDisplayModePropertiesKHR(physicalDevice, display, pPropertyCount, pProperties);
+
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL CreateDisplayModeKHR(VkPhysicalDevice physicalDevice, VkDisplayKHR display,
+                                                    const VkDisplayModeCreateInfoKHR *pCreateInfo,
+                                                    const VkAllocationCallbacks *pAllocator, VkDisplayModeKHR *pMode) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skip = false;
+    {
+        std::unique_lock<std::mutex> lock(global_lock);
+        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
+                               VALIDATION_ERROR_01865);
+        skip |= ValidateObject(physicalDevice, display, VK_DEBUG_REPORT_OBJECT_TYPE_DISPLAY_KHR_EXT, false,
+                               VALIDATION_ERROR_01866);
+    }
+    result = get_dispatch_table(ot_instance_table_map, physicalDevice)
+                 ->CreateDisplayModeKHR(physicalDevice, display, pCreateInfo, pAllocator, pMode);
+    {
+        std::lock_guard<std::mutex> lock(global_lock);
+        if (result == VK_SUCCESS) {
+            CreateObject(physicalDevice, *pMode, VK_DEBUG_REPORT_OBJECT_TYPE_DISPLAY_MODE_KHR_EXT, pAllocator);
+        }
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneCapabilitiesKHR(VkPhysicalDevice physicalDevice, VkDisplayModeKHR mode,
+                                                              uint32_t planeIndex, VkDisplayPlaneCapabilitiesKHR *pCapabilities) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skip = false;
+    {
+        std::unique_lock<std::mutex> lock(global_lock);
+        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
+                               VALIDATION_ERROR_01875);
+        skip |= ValidateObject(physicalDevice, mode, VK_DEBUG_REPORT_OBJECT_TYPE_DISPLAY_MODE_KHR_EXT, false,
+                               VALIDATION_ERROR_01876);
+    }
+    result = get_dispatch_table(ot_instance_table_map, physicalDevice)
+                 ->GetDisplayPlaneCapabilitiesKHR(physicalDevice, mode, planeIndex, pCapabilities);
+
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL CreateDisplayPlaneSurfaceKHR(VkInstance instance, const VkDisplaySurfaceCreateInfoKHR *pCreateInfo,
+    const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
+    bool skip_call = false;
+    {
+        std::lock_guard<std::mutex> lock(global_lock);
+        skip_call |= ValidateObject(instance, instance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, false, VALIDATION_ERROR_01878);
+    }
+    if (skip_call) {
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+    }
+    VkResult result = get_dispatch_table(ot_instance_table_map, instance)
+        ->CreateDisplayPlaneSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
+    {
+        std::lock_guard<std::mutex> lock(global_lock);
+        if (result == VK_SUCCESS) {
+            CreateObject(instance, *pSurface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, pAllocator);
+        }
+    }
+    return result;
+}
+
 #ifdef VK_USE_PLATFORM_WIN32_KHR
 // VK_NV_external_memory_win32 Extension
 VKAPI_ATTR VkResult VKAPI_CALL GetMemoryWin32HandleNV(VkDevice device, VkDeviceMemory memory,
@@ -4190,6 +4307,23 @@ static inline PFN_vkVoidFunction InterceptWsiEnabledCommand(const char *name, Vk
             if (!strcmp("vkCreateSharedSwapchainsKHR", name)) {
                 return reinterpret_cast<PFN_vkVoidFunction>(CreateSharedSwapchainsKHR);
             }
+        }
+
+        if (device_data->wsi_display_extension_enabled) {
+            if (!strcmp("vkGetPhysicalDeviceDisplayPropertiesKHR", name))
+                return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceDisplayPropertiesKHR);
+            if (!strcmp("vkGetPhysicalDeviceDisplayPlanePropertiesKHR", name))
+                return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceDisplayPlanePropertiesKHR);
+            if (!strcmp("vkGetDisplayPlaneSupportedDisplaysKHR", name))
+                return reinterpret_cast<PFN_vkVoidFunction>(GetDisplayPlaneSupportedDisplaysKHR);
+            if (!strcmp("vkGetDisplayModePropertiesKHR", name))
+                return reinterpret_cast<PFN_vkVoidFunction>(GetDisplayModePropertiesKHR);
+            if (!strcmp("vkCreateDisplayModeKHR", name))
+                return reinterpret_cast<PFN_vkVoidFunction>(CreateDisplayModeKHR);
+            if (!strcmp("vkGetDisplayPlaneCapabilitiesKHR", name))
+                return reinterpret_cast<PFN_vkVoidFunction>(GetDisplayPlaneCapabilitiesKHR);
+            if (!strcmp("vkCreateDisplayPlaneSurfaceKHR", name))
+                return reinterpret_cast<PFN_vkVoidFunction>(CreateDisplayPlaneSurfaceKHR);
         }
     }
 

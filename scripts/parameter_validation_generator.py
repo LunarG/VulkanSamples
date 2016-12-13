@@ -801,8 +801,12 @@ class ParamCheckerOutputGenerator(OutputGenerator):
             expr.append(indent + '{')
             indent = self.incIndent(indent)
             # Prefix for value name to display in error message
-            memberNamePrefix = '{}{}[{}].'.format(prefix, value.name, indexName)
-            memberDisplayNamePrefix = ('{}[%i].'.format(valueDisplayName), indexName)
+            if value.ispointer == 2:
+                memberNamePrefix = '{}{}[{}]->'.format(prefix, value.name, indexName)
+                memberDisplayNamePrefix = ('{}[%i]->'.format(valueDisplayName), indexName)
+            else:
+                memberNamePrefix = '{}{}[{}].'.format(prefix, value.name, indexName)
+                memberDisplayNamePrefix = ('{}[%i].'.format(valueDisplayName), indexName)
         else:
             memberNamePrefix = '{}{}->'.format(prefix, value.name)
             memberDisplayNamePrefix = '{}->'.format(valueDisplayName)
@@ -821,6 +825,8 @@ class ParamCheckerOutputGenerator(OutputGenerator):
     def genFuncBody(self, funcName, values, valuePrefix, displayNamePrefix, structTypeName):
         lines = []    # Generated lines of code
         unused = []   # Unused variable names
+        if funcName == "vkRegisterObjectsNVX":
+            indent = 0
         for value in values:
             usedLines = []
             lenParam = None
@@ -925,6 +931,8 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                         usedLines.append('skipCall |= validate_bool32(report_data, "{}", {ppp}"{}"{pps}, {}{});\n'.format(funcName, valueDisplayName, valuePrefix, value.name, **postProcSpec))
                     elif value.israngedenum:
                         enumRange = self.enumRanges[value.type]
+                        if value.type == "VkObjectEntryTypeNVX":
+                            garbage = 2
                         usedLines.append('skipCall |= validate_ranged_enum(report_data, "{}", {ppp}"{}"{pps}, "{}", {}, {}, {}{});\n'.format(funcName, valueDisplayName, value.type, enumRange[0], enumRange[1], valuePrefix, value.name, **postProcSpec))
                     #
                     # If this is a struct, see if it contains members that need to be checked

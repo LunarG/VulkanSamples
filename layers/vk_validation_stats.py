@@ -35,6 +35,9 @@ import platform
 #  4. Parse test file(s) and verify that reported tests exist
 #  5. Report out stats on number of checks, implemented checks, and duplicated checks
 #
+# If a mis-match is found during steps 2, 3, or 4, then the script exits w/ a non-zero error code
+#  otherwise, the script will exit(0)
+#
 # TODO:
 #  1. Would also like to report out number of existing checks that don't yet use new, unique enum
 #  2. Could use notes to store custom fields (like TODO) and print those out here
@@ -73,7 +76,7 @@ class ValidationDatabase:
                     continue
                 db_line = line.split(self.delimiter)
                 if len(db_line) != 6:
-                    print "ERROR: Bad database line doesn't have 6 elements: %s" % (line)
+                    print("ERROR: Bad database line doesn't have 6 elements: %s" % (line))
                 error_enum = db_line[0]
                 implemented = db_line[1]
                 testname = db_line[2]
@@ -120,7 +123,9 @@ class ValidationHeader:
                     if 'VALIDATION_ERROR_MAX_ENUM' in line:
                         grab_enums = False
                         break # done
-                    if 'VALIDATION_ERROR_' in line:
+                    elif 'VALIDATION_ERROR_UNDEFINED' in line:
+                        continue
+                    elif 'VALIDATION_ERROR_' in line:
                         enum = line.split(' = ')[0]
                         self.enums.append(enum)
         #print "Found %d error enums. First is %s and last is %s." % (len(self.enums), self.enums[0], self.enums[-1])
@@ -140,25 +145,26 @@ class ValidationSource:
                         continue
                     # Find enums
                     #if 'VALIDATION_ERROR_' in line and True not in [ignore in line for ignore in ['[VALIDATION_ERROR_', 'UNIQUE_VALIDATION_ERROR_CODE']]:
-                    if 'VALIDATION_ERROR_' in line and 'UNIQUE_VALIDATION_ERROR_CODE' not in line:
+                    if ' VALIDATION_ERROR_' in line:
                         # Need to isolate the validation error enum
                         #print("Line has check:%s" % (line))
                         line_list = line.split()
-                        enum = ''
+                        enum_list = []
                         for str in line_list:
-                            if 'VALIDATION_ERROR_' in str and '[VALIDATION_ERROR_' not in str:
-                                enum = str.strip(',);')
-                                break
-                        if enum != '':
-                            if enum not in self.enum_count_dict:
-                                self.enum_count_dict[enum] = 1
-                                #print "Found enum %s implemented for first time in file %s" % (enum, sf)
-                            else:
-                                self.enum_count_dict[enum] = self.enum_count_dict[enum] + 1
-                                #print "Found enum %s implemented for %d time in file %s" % (enum, self.enum_count_dict[enum], sf)
-                                duplicate_checks = duplicate_checks + 1
-                        #else:
-                            #print("Didn't find actual check in line:%s" % (line))
+                            if 'VALIDATION_ERROR_' in str and True not in [ignore_str in str for ignore_str in ['[VALIDATION_ERROR_', 'VALIDATION_ERROR_UNDEFINED', 'UNIQUE_VALIDATION_ERROR_CODE']]:
+                                enum_list.append(str.strip(',);'))
+                                #break
+                        for enum in enum_list:
+                            if enum != '':
+                                if enum not in self.enum_count_dict:
+                                    self.enum_count_dict[enum] = 1
+                                    #print "Found enum %s implemented for first time in file %s" % (enum, sf)
+                                else:
+                                    self.enum_count_dict[enum] = self.enum_count_dict[enum] + 1
+                                    #print "Found enum %s implemented for %d time in file %s" % (enum, self.enum_count_dict[enum], sf)
+                                    duplicate_checks = duplicate_checks + 1
+                            #else:
+                                #print("Didn't find actual check in line:%s" % (line))
         #print "Found %d unique implemented checks and %d are duplicated at least once" % (len(self.enum_count_dict.keys()), duplicate_checks)
 
 # Class to parse the validation layer test source and store testnames
@@ -257,6 +263,7 @@ class TestParser:
                         self.tests_set.add(testname)
 
 def main(argv=None):
+    result = 0 # Non-zero result indicates an error case
     # parse db
     val_db = ValidationDatabase()
     val_db.read()
@@ -288,6 +295,7 @@ def main(argv=None):
         print(txt_color.green() + "  Database and Header match, GREAT!" + txt_color.endc())
     else:
         print(txt_color.red() + "  Uh oh, Database doesn't match Header :(" + txt_color.endc())
+        result = 1
         if len(db_missing) != 0:
             print(txt_color.red() + "   The following checks are in header but missing from database:" + txt_color.endc())
             for missing_enum in db_missing:
@@ -312,6 +320,7 @@ def main(argv=None):
     if len(imp_not_found) == 0 and len(imp_not_claimed) == 0:
         print(txt_color.green() + "  All claimed Database implemented checks have been found in source, and no source checks aren't claimed in Database, GREAT!" + txt_color.endc())
     else:
+        result = 1
         print(txt_color.red() + "  Uh oh, Database claimed implemented don't match Source :(" + txt_color.endc())
         if len(imp_not_found) != 0:
             print(txt_color.red() + "   The following %d checks are claimed to be implemented in Database, but weren't found in source:" % (len(imp_not_found)) + txt_color.endc())
@@ -338,10 +347,11 @@ def main(argv=None):
         print(txt_color.green() + "  All claimed tests have valid names. That's good!" + txt_color.endc())
     else:
         print(txt_color.red() + "  The following testnames in Database appear to be invalid:")
+        result = 1
         for bt in bad_testnames:
             print(txt_color.red() + "   %s" % (bt) + txt_color.endc())
 
-    return 0
+    return result
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -82,6 +82,7 @@ struct layer_data {
     bool swapchain_enabled = false;
     bool display_swapchain_enabled = false;
     bool amd_negative_viewport_height_enabled = false;
+    bool nvx_device_generated_commands_enabled = false;
 
     VkLayerDispatchTable dispatch_table = {};
 };
@@ -1612,6 +1613,9 @@ static void CheckDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo,
         }
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_AMD_NEGATIVE_VIEWPORT_HEIGHT_EXTENSION_NAME) == 0) {
             device_data->amd_negative_viewport_height_enabled = true;
+        }
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_NVX_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME) == 0) {
+            device_data->nvx_device_generated_commands_enabled = true;
         }
     }
 }
@@ -5520,7 +5524,147 @@ VKAPI_ATTR VkResult VKAPI_CALL GetMemoryWin32HandleNV(VkDevice device, VkDeviceM
 }
 #endif // VK_USE_PLATFORM_WIN32_KHR
 
+// VK_NVX_device_generated_commands extension
 
+VKAPI_ATTR void VKAPI_CALL CmdProcessCommandsNVX(VkCommandBuffer commandBuffer,
+                                                 const VkCmdProcessCommandsInfoNVX *pProcessCommandsInfo) {
+    bool skip = false;
+    layer_data *device_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+    assert(device_data != nullptr);
+    debug_report_data *report_data = device_data->report_data;
+
+    skip |= require_device_extension(device_data, &layer_data::nvx_device_generated_commands_enabled, "vkCmdProcessCommandsNVX",
+                                     VK_NVX_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME);
+    skip |= parameter_validation_vkCmdProcessCommandsNVX(report_data, pProcessCommandsInfo);
+
+    if (!skip) {
+        device_data->dispatch_table.CmdProcessCommandsNVX(commandBuffer, pProcessCommandsInfo);
+    }
+}
+
+VKAPI_ATTR void VKAPI_CALL CmdReserveSpaceForCommandsNVX(VkCommandBuffer commandBuffer,
+                                                         const VkCmdReserveSpaceForCommandsInfoNVX *pReserveSpaceInfo) {
+    bool skip = false;
+    layer_data *device_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+    assert(device_data != nullptr);
+    debug_report_data *report_data = device_data->report_data;
+
+    skip |= require_device_extension(device_data, &layer_data::nvx_device_generated_commands_enabled,
+                                     "vkCmdReserveSpaceForCommandsNVX", VK_NVX_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME);
+    skip |= parameter_validation_vkCmdReserveSpaceForCommandsNVX(report_data, pReserveSpaceInfo);
+
+    if (!skip) {
+        device_data->dispatch_table.CmdReserveSpaceForCommandsNVX(commandBuffer, pReserveSpaceInfo);
+    }
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL CreateIndirectCommandsLayoutNVX(VkDevice device,
+                                                               const VkIndirectCommandsLayoutCreateInfoNVX *pCreateInfo,
+                                                               const VkAllocationCallbacks *pAllocator,
+                                                               VkIndirectCommandsLayoutNVX *pIndirectCommandsLayout) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skip = false;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+    skip |= require_device_extension(my_data, &layer_data::nvx_device_generated_commands_enabled,
+                                     "vkCreateIndirectCommandsLayoutNVX", VK_NVX_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME);
+    skip |= parameter_validation_vkCreateIndirectCommandsLayoutNVX(my_data->report_data, pCreateInfo, pAllocator,
+                                                                   pIndirectCommandsLayout);
+    if (!skip) {
+        result = my_data->dispatch_table.CreateIndirectCommandsLayoutNVX(device, pCreateInfo, pAllocator, pIndirectCommandsLayout);
+
+        validate_result(my_data->report_data, "vkCreateIndirectCommandsLayoutNVX", result);
+    }
+    return result;
+}
+
+VKAPI_ATTR void VKAPI_CALL DestroyIndirectCommandsLayoutNVX(VkDevice device, VkIndirectCommandsLayoutNVX indirectCommandsLayout,
+                                                            const VkAllocationCallbacks *pAllocator) {
+    bool skip = false;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+    skip |= require_device_extension(my_data, &layer_data::nvx_device_generated_commands_enabled,
+                                     "vkDestroyIndirectCommandsLayoutNVX", VK_NVX_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME);
+    skip |= parameter_validation_vkDestroyIndirectCommandsLayoutNVX(my_data->report_data, indirectCommandsLayout, pAllocator);
+    if (!skip) {
+        my_data->dispatch_table.DestroyIndirectCommandsLayoutNVX(device, indirectCommandsLayout, pAllocator);
+    }
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL CreateObjectTableNVX(VkDevice device, const VkObjectTableCreateInfoNVX *pCreateInfo,
+                                                    const VkAllocationCallbacks *pAllocator, VkObjectTableNVX *pObjectTable) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skip = false;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+    skip |= require_device_extension(my_data, &layer_data::nvx_device_generated_commands_enabled, "vkCreateObjectTableNVX",
+                                     VK_NVX_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME);
+    skip |= parameter_validation_vkCreateObjectTableNVX(my_data->report_data, pCreateInfo, pAllocator, pObjectTable);
+    if (!skip) {
+        result = my_data->dispatch_table.CreateObjectTableNVX(device, pCreateInfo, pAllocator, pObjectTable);
+    }
+    return result;
+}
+
+VKAPI_ATTR void VKAPI_CALL DestroyObjectTableNVX(VkDevice device, VkObjectTableNVX objectTable,
+                                                 const VkAllocationCallbacks *pAllocator) {
+    bool skip = false;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+    skip |= require_device_extension(my_data, &layer_data::nvx_device_generated_commands_enabled, "vkDestroyObjectTableNVX",
+                                     VK_NVX_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME);
+    skip |= parameter_validation_vkDestroyObjectTableNVX(my_data->report_data, objectTable, pAllocator);
+    if (!skip) {
+        my_data->dispatch_table.DestroyObjectTableNVX(device, objectTable, pAllocator);
+    }
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL RegisterObjectsNVX(VkDevice device, VkObjectTableNVX objectTable, uint32_t objectCount,
+                                                  const VkObjectTableEntryNVX *const *ppObjectTableEntries,
+                                                  const uint32_t *pObjectIndices) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skip = false;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+    skip |= require_device_extension(my_data, &layer_data::nvx_device_generated_commands_enabled, "vkRegisterObjectsNVX",
+                                     VK_NVX_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME);
+    skip |= parameter_validation_vkRegisterObjectsNVX(my_data->report_data, objectTable, objectCount, ppObjectTableEntries,
+                                                      pObjectIndices);
+    if (!skip) {
+        result = my_data->dispatch_table.RegisterObjectsNVX(device, objectTable, objectCount, ppObjectTableEntries, pObjectIndices);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL UnregisterObjectsNVX(VkDevice device, VkObjectTableNVX objectTable, uint32_t objectCount,
+                                                    const VkObjectEntryTypeNVX *pObjectEntryTypes, const uint32_t *pObjectIndices) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skip = false;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+    skip |= require_device_extension(my_data, &layer_data::nvx_device_generated_commands_enabled, "vkUnregisterObjectsNVX",
+                                     VK_NVX_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME);
+    skip |= parameter_validation_vkUnregisterObjectsNVX(my_data->report_data, objectTable, objectCount, pObjectEntryTypes,
+                                                        pObjectIndices);
+    if (!skip) {
+        result = my_data->dispatch_table.UnregisterObjectsNVX(device, objectTable, objectCount, pObjectEntryTypes, pObjectIndices);
+    }
+    return result;
+}
+
+VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceGeneratedCommandsPropertiesNVX(VkPhysicalDevice physicalDevice,
+                                                                           VkDeviceGeneratedCommandsFeaturesNVX *pFeatures,
+                                                                           VkDeviceGeneratedCommandsLimitsNVX *pLimits) {
+    bool skip = false;
+    auto my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
+    assert(my_data != NULL);
+
+    skip |= parameter_validation_vkGetPhysicalDeviceGeneratedCommandsPropertiesNVX(my_data->report_data, pFeatures, pLimits);
+
+    if (!skip) {
+        my_data->dispatch_table.GetPhysicalDeviceGeneratedCommandsPropertiesNVX(physicalDevice, pFeatures, pLimits);
+    }
+}
 
 static PFN_vkVoidFunction intercept_core_instance_command(const char *name);
 
@@ -5601,7 +5745,11 @@ static PFN_vkVoidFunction intercept_core_instance_command(const char *name) {
         {"vkEnumerateDeviceLayerProperties", reinterpret_cast<PFN_vkVoidFunction>(EnumerateDeviceLayerProperties)},
         {"vkEnumerateInstanceExtensionProperties", reinterpret_cast<PFN_vkVoidFunction>(EnumerateInstanceExtensionProperties)},
         {"vkEnumerateDeviceExtensionProperties", reinterpret_cast<PFN_vkVoidFunction>(EnumerateDeviceExtensionProperties)},
-        {"vkGetPhysicalDeviceExternalImageFormatPropertiesNV", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceExternalImageFormatPropertiesNV) },
+        {"vkGetPhysicalDeviceExternalImageFormatPropertiesNV",
+         reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceExternalImageFormatPropertiesNV)},
+        // NVX_device_generated_commands
+        {"vkGetPhysicalDeviceGeneratedCommandsPropertiesNVX",
+         reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceGeneratedCommandsPropertiesNVX)},
     };
 
     for (size_t i = 0; i < ARRAY_SIZE(core_instance_commands); i++) {
@@ -5734,15 +5882,23 @@ static PFN_vkVoidFunction intercept_core_device_command(const char *name) {
         {"vkCmdNextSubpass", reinterpret_cast<PFN_vkVoidFunction>(CmdNextSubpass)},
         {"vkCmdExecuteCommands", reinterpret_cast<PFN_vkVoidFunction>(CmdExecuteCommands)},
         {"vkCmdEndRenderPass", reinterpret_cast<PFN_vkVoidFunction>(CmdEndRenderPass)},
-        {"vkDebugMarkerSetObjectTagEXT", reinterpret_cast<PFN_vkVoidFunction>(DebugMarkerSetObjectTagEXT) },
-        {"vkDebugMarkerSetObjectNameEXT", reinterpret_cast<PFN_vkVoidFunction>(DebugMarkerSetObjectNameEXT) },
-        {"vkCmdDebugMarkerBeginEXT", reinterpret_cast<PFN_vkVoidFunction>(CmdDebugMarkerBeginEXT) },
-        {"vkCmdDebugMarkerInsertEXT", reinterpret_cast<PFN_vkVoidFunction>(CmdDebugMarkerInsertEXT) },
+        {"vkDebugMarkerSetObjectTagEXT", reinterpret_cast<PFN_vkVoidFunction>(DebugMarkerSetObjectTagEXT)},
+        {"vkDebugMarkerSetObjectNameEXT", reinterpret_cast<PFN_vkVoidFunction>(DebugMarkerSetObjectNameEXT)},
+        {"vkCmdDebugMarkerBeginEXT", reinterpret_cast<PFN_vkVoidFunction>(CmdDebugMarkerBeginEXT)},
+        {"vkCmdDebugMarkerInsertEXT", reinterpret_cast<PFN_vkVoidFunction>(CmdDebugMarkerInsertEXT)},
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-        {"vkGetMemoryWin32HandleNV", reinterpret_cast<PFN_vkVoidFunction>(GetMemoryWin32HandleNV) },
+        {"vkGetMemoryWin32HandleNV", reinterpret_cast<PFN_vkVoidFunction>(GetMemoryWin32HandleNV)},
 #endif // VK_USE_PLATFORM_WIN32_KHR
-};
-
+        // NVX_device_generated_commands
+        {"vkCmdProcessCommandsNVX", reinterpret_cast<PFN_vkVoidFunction>(CmdProcessCommandsNVX)},
+        {"vkCmdReserveSpaceForCommandsNVX", reinterpret_cast<PFN_vkVoidFunction>(CmdReserveSpaceForCommandsNVX)},
+        {"vkCreateIndirectCommandsLayoutNVX", reinterpret_cast<PFN_vkVoidFunction>(CreateIndirectCommandsLayoutNVX)},
+        {"vkDestroyIndirectCommandsLayoutNVX", reinterpret_cast<PFN_vkVoidFunction>(DestroyIndirectCommandsLayoutNVX)},
+        {"vkCreateObjectTableNVX", reinterpret_cast<PFN_vkVoidFunction>(CreateObjectTableNVX)},
+        {"vkDestroyObjectTableNVX", reinterpret_cast<PFN_vkVoidFunction>(DestroyObjectTableNVX)},
+        {"vkRegisterObjectsNVX", reinterpret_cast<PFN_vkVoidFunction>(RegisterObjectsNVX)},
+        {"vkUnregisterObjectsNVX", reinterpret_cast<PFN_vkVoidFunction>(UnregisterObjectsNVX)},
+    };
 
     for (size_t i = 0; i < ARRAY_SIZE(core_device_commands); i++) {
         if (!strcmp(core_device_commands[i].name, name))

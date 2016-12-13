@@ -152,6 +152,7 @@ struct layer_data {
     unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> imageLayoutMap;
     unordered_map<VkRenderPass, unique_ptr<RENDER_PASS_STATE>> renderPassMap;
     unordered_map<VkShaderModule, unique_ptr<shader_module>> shaderModuleMap;
+
     VkDevice device = VK_NULL_HANDLE;
     VkPhysicalDevice physical_device = VK_NULL_HANDLE;
 
@@ -3791,6 +3792,7 @@ static bool checkGraphicsOrComputeBit(const layer_data *my_data, VkQueueFlags fl
 
 // Add specified CMD to the CmdBuffer in given pCB, flagging errors if CB is not
 //  in the recording state or if there's an issue with the Cmd ordering
+// TODO: Tease apart validation and CB state updates
 static bool addCmd(layer_data *my_data, GLOBAL_CB_NODE *pCB, const CMD_TYPE cmd, const char *caller_name) {
     bool skip_call = false;
     auto pPool = getCommandPoolNode(my_data, pCB->createInfo.commandPool);
@@ -8272,11 +8274,11 @@ static bool VerifyClearImageLayout(layer_data *dev_data, GLOBAL_CB_NODE *cb_node
         }
     }
 
-    for (uint32_t levelIdx = 0; levelIdx < range.levelCount; ++levelIdx) {
-        uint32_t level = levelIdx + range.baseMipLevel;
-        for (uint32_t layerIdx = 0; layerIdx < range.layerCount; ++layerIdx) {
-            uint32_t layer = layerIdx + range.baseArrayLayer;
-            VkImageSubresource sub = {range.aspectMask, level, layer};
+    for (uint32_t levelIdx = 0; levelIdx < resolvedRange.levelCount; ++levelIdx) {
+        uint32_t level = levelIdx + resolvedRange.baseMipLevel;
+        for (uint32_t layerIdx = 0; layerIdx < resolvedRange.layerCount; ++layerIdx) {
+            uint32_t layer = layerIdx + resolvedRange.baseArrayLayer;
+            VkImageSubresource sub = {resolvedRange.aspectMask, level, layer};
             IMAGE_CMD_BUF_LAYOUT_NODE node;
             if (!FindLayout(cb_node, image, sub, node)) {
                 SetLayout(cb_node, image, sub, IMAGE_CMD_BUF_LAYOUT_NODE(dest_image_layout, dest_image_layout));
@@ -9021,6 +9023,7 @@ CmdResetEvent(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags
         dev_data->dispatch_table.CmdResetEvent(commandBuffer, event, stageMask);
 }
 
+// TODO: Separate validation and layout state updates
 static bool TransitionImageLayouts(VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
                                    const VkImageMemoryBarrier *pImgMemBarriers) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
@@ -9384,66 +9387,148 @@ bool validateEventStageMask(VkQueue queue, GLOBAL_CB_NODE *pCB, uint32_t eventCo
     return skip_call;
 }
 
-VKAPI_ATTR void VKAPI_CALL
-CmdWaitEvents(VkCommandBuffer commandBuffer, uint32_t eventCount, const VkEvent *pEvents, VkPipelineStageFlags sourceStageMask,
-              VkPipelineStageFlags dstStageMask, uint32_t memoryBarrierCount, const VkMemoryBarrier *pMemoryBarriers,
-              uint32_t bufferMemoryBarrierCount, const VkBufferMemoryBarrier *pBufferMemoryBarriers,
-              uint32_t imageMemoryBarrierCount, const VkImageMemoryBarrier *pImageMemoryBarriers) {
-    bool skip_call = false;
+// Note that we only check bits that HAVE required queueflags -- don't care entries are skipped
+static std::unordered_map<VkPipelineStageFlags, VkQueueFlags> supported_pipeline_stages_table = {
+    {VK_PIPELINE_STAGE_COMMAND_PROCESS_BIT_NVX, VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT},
+    {VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT},
+    {VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, VK_QUEUE_GRAPHICS_BIT},
+    {VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, VK_QUEUE_GRAPHICS_BIT},
+    {VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT, VK_QUEUE_GRAPHICS_BIT},
+    {VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT, VK_QUEUE_GRAPHICS_BIT},
+    {VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT, VK_QUEUE_GRAPHICS_BIT},
+    {VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_QUEUE_GRAPHICS_BIT},
+    {VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_QUEUE_GRAPHICS_BIT},
+    {VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_QUEUE_GRAPHICS_BIT},
+    {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_QUEUE_GRAPHICS_BIT},
+    {VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_QUEUE_COMPUTE_BIT},
+    {VK_PIPELINE_STAGE_TRANSFER_BIT, VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT},
+    {VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_QUEUE_GRAPHICS_BIT}};
+
+static const VkPipelineStageFlags stage_flag_bit_array[] = {VK_PIPELINE_STAGE_COMMAND_PROCESS_BIT_NVX,
+                                                            VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT,
+                                                            VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+                                                            VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+                                                            VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT,
+                                                            VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT,
+                                                            VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT,
+                                                            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                                                            VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+                                                            VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+                                                            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                                                            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                                                            VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                                            VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT};
+
+bool CheckStageMaskQueueCompatibility(layer_data *dev_data, VkCommandBuffer command_buffer, VkPipelineStageFlags stage_mask,
+                                      VkQueueFlags queue_flags, const char *function, const char *src_or_dest,
+                                      UNIQUE_VALIDATION_ERROR_CODE error_code) {
+    bool skip = false;
+    // Lookup each bit in the stagemask and check for overlap between its table bits and queue_flags
+    for (const auto &item : stage_flag_bit_array) {
+        if (stage_mask & item) {
+            if ((supported_pipeline_stages_table[item] & queue_flags) == 0) {
+                skip |=
+                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            reinterpret_cast<uint64_t &>(command_buffer), __LINE__, error_code, "DL",
+                            "%s(): %s flag %s is not compatible with the queue family properties of this "
+                            "command buffer. %s",
+                            function, src_or_dest, string_VkPipelineStageFlagBits(static_cast<VkPipelineStageFlagBits>(item)),
+                            validation_error_map[error_code]);
+            }
+        }
+    }
+    return skip;
+}
+
+bool ValidateStageMasksAgainstQueueCapabilities(layer_data *dev_data, GLOBAL_CB_NODE *cb_state,
+                                                VkPipelineStageFlags source_stage_mask, VkPipelineStageFlags dest_stage_mask,
+                                                const char *function, UNIQUE_VALIDATION_ERROR_CODE error_code) {
+    bool skip = false;
+    uint32_t queue_family_index = dev_data->commandPoolMap[cb_state->createInfo.commandPool].queueFamilyIndex;
+    instance_layer_data *instance_data = get_my_data_ptr(get_dispatch_key(dev_data->physical_device), instance_layer_data_map);
+    auto physical_device_state = getPhysicalDeviceState(instance_data, dev_data->physical_device);
+
+    // Any pipeline stage included in srcStageMask or dstStageMask must be supported by the capabilities of the queue family
+    // specified by the queueFamilyIndex member of the VkCommandPoolCreateInfo structure that was used to create the VkCommandPool
+    // that commandBuffer was allocated from, as specified in the table of supported pipeline stages.
+
+    if (queue_family_index < physical_device_state->queue_family_properties.size()) {
+        VkQueueFlags specified_queue_flags = physical_device_state->queue_family_properties[queue_family_index].queueFlags;
+
+        if ((source_stage_mask & VK_PIPELINE_STAGE_ALL_COMMANDS_BIT) == 0) {
+            skip |= CheckStageMaskQueueCompatibility(dev_data, cb_state->commandBuffer, source_stage_mask, specified_queue_flags,
+                                                     function, "srcStageMask", error_code);
+        }
+        if ((dest_stage_mask & VK_PIPELINE_STAGE_ALL_COMMANDS_BIT) == 0) {
+            skip |= CheckStageMaskQueueCompatibility(dev_data, cb_state->commandBuffer, dest_stage_mask, specified_queue_flags,
+                                                     function, "dstStageMask", error_code);
+        }
+    }
+    return skip;
+}
+
+VKAPI_ATTR void VKAPI_CALL CmdWaitEvents(VkCommandBuffer commandBuffer, uint32_t eventCount, const VkEvent *pEvents,
+                                         VkPipelineStageFlags sourceStageMask, VkPipelineStageFlags dstStageMask,
+                                         uint32_t memoryBarrierCount, const VkMemoryBarrier *pMemoryBarriers,
+                                         uint32_t bufferMemoryBarrierCount, const VkBufferMemoryBarrier *pBufferMemoryBarriers,
+                                         uint32_t imageMemoryBarrierCount, const VkImageMemoryBarrier *pImageMemoryBarriers) {
+    bool skip = false;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
-    GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
-    if (pCB) {
-        auto firstEventIndex = pCB->events.size();
+    GLOBAL_CB_NODE *cb_state = getCBNode(dev_data, commandBuffer);
+    if (cb_state) {
+        skip |= ValidateStageMasksAgainstQueueCapabilities(dev_data, cb_state, sourceStageMask, dstStageMask, "vkCmdWaitEvents",
+                                                           VALIDATION_ERROR_02510);
+        auto first_event_index = cb_state->events.size();
         for (uint32_t i = 0; i < eventCount; ++i) {
             auto event_state = getEventNode(dev_data, pEvents[i]);
             if (event_state) {
                 addCommandBufferBinding(&event_state->cb_bindings,
                                         {reinterpret_cast<const uint64_t &>(pEvents[i]), VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT},
-                                        pCB);
-                event_state->cb_bindings.insert(pCB);
+                                        cb_state);
+                event_state->cb_bindings.insert(cb_state);
             }
-            pCB->waitedEvents.insert(pEvents[i]);
-            pCB->events.push_back(pEvents[i]);
+            cb_state->waitedEvents.insert(pEvents[i]);
+            cb_state->events.push_back(pEvents[i]);
         }
-        std::function<bool(VkQueue)> eventUpdate =
-            std::bind(validateEventStageMask, std::placeholders::_1, pCB, eventCount, firstEventIndex, sourceStageMask);
-        pCB->eventUpdates.push_back(eventUpdate);
-        if (pCB->state == CB_RECORDING) {
-            skip_call |= addCmd(dev_data, pCB, CMD_WAITEVENTS, "vkCmdWaitEvents()");
+        std::function<bool(VkQueue)> event_update =
+            std::bind(validateEventStageMask, std::placeholders::_1, cb_state, eventCount, first_event_index, sourceStageMask);
+        cb_state->eventUpdates.push_back(event_update);
+        if (cb_state->state == CB_RECORDING) {
+            skip |= addCmd(dev_data, cb_state, CMD_WAITEVENTS, "vkCmdWaitEvents()");
         } else {
-            skip_call |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdWaitEvents()");
+            skip |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdWaitEvents()");
         }
-        skip_call |= TransitionImageLayouts(commandBuffer, imageMemoryBarrierCount, pImageMemoryBarriers);
-        skip_call |=
-            ValidateBarriers("vkCmdWaitEvents", commandBuffer, memoryBarrierCount, pMemoryBarriers, bufferMemoryBarrierCount,
-                             pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
+        skip |= TransitionImageLayouts(commandBuffer, imageMemoryBarrierCount, pImageMemoryBarriers);
+        skip |= ValidateBarriers("vkCmdWaitEvents", commandBuffer, memoryBarrierCount, pMemoryBarriers, bufferMemoryBarrierCount,
+                                 pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
     }
     lock.unlock();
-    if (!skip_call)
+    if (!skip)
         dev_data->dispatch_table.CmdWaitEvents(commandBuffer, eventCount, pEvents, sourceStageMask, dstStageMask,
                                                memoryBarrierCount, pMemoryBarriers, bufferMemoryBarrierCount, pBufferMemoryBarriers,
                                                imageMemoryBarrierCount, pImageMemoryBarriers);
 }
 
-VKAPI_ATTR void VKAPI_CALL
-CmdPipelineBarrier(VkCommandBuffer commandBuffer, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask,
-                   VkDependencyFlags dependencyFlags, uint32_t memoryBarrierCount, const VkMemoryBarrier *pMemoryBarriers,
-                   uint32_t bufferMemoryBarrierCount, const VkBufferMemoryBarrier *pBufferMemoryBarriers,
-                   uint32_t imageMemoryBarrierCount, const VkImageMemoryBarrier *pImageMemoryBarriers) {
-    bool skip_call = false;
+VKAPI_ATTR void VKAPI_CALL CmdPipelineBarrier(VkCommandBuffer commandBuffer, VkPipelineStageFlags srcStageMask,
+                                              VkPipelineStageFlags dstStageMask, VkDependencyFlags dependencyFlags,
+                                              uint32_t memoryBarrierCount, const VkMemoryBarrier *pMemoryBarriers,
+                                              uint32_t bufferMemoryBarrierCount, const VkBufferMemoryBarrier *pBufferMemoryBarriers,
+                                              uint32_t imageMemoryBarrierCount, const VkImageMemoryBarrier *pImageMemoryBarriers) {
+    bool skip = false;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
-    GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
-    if (pCB) {
-        skip_call |= addCmd(dev_data, pCB, CMD_PIPELINEBARRIER, "vkCmdPipelineBarrier()");
-        skip_call |= TransitionImageLayouts(commandBuffer, imageMemoryBarrierCount, pImageMemoryBarriers);
-        skip_call |=
-            ValidateBarriers("vkCmdPipelineBarrier", commandBuffer, memoryBarrierCount, pMemoryBarriers, bufferMemoryBarrierCount,
-                             pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
+    GLOBAL_CB_NODE *cb_state = getCBNode(dev_data, commandBuffer);
+    if (cb_state) {
+        skip |= ValidateStageMasksAgainstQueueCapabilities(dev_data, cb_state, srcStageMask, dstStageMask, "vkCmdPipelineBarrier",
+                                                           VALIDATION_ERROR_02513);
+        skip |= addCmd(dev_data, cb_state, CMD_PIPELINEBARRIER, "vkCmdPipelineBarrier()");
+        skip |= TransitionImageLayouts(commandBuffer, imageMemoryBarrierCount, pImageMemoryBarriers);
+        skip |= ValidateBarriers("vkCmdPipelineBarrier", commandBuffer, memoryBarrierCount, pMemoryBarriers,
+                                 bufferMemoryBarrierCount, pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
     }
     lock.unlock();
-    if (!skip_call)
+    if (!skip)
         dev_data->dispatch_table.CmdPipelineBarrier(commandBuffer, srcStageMask, dstStageMask, dependencyFlags, memoryBarrierCount,
                                                     pMemoryBarriers, bufferMemoryBarrierCount, pBufferMemoryBarriers,
                                                     imageMemoryBarrierCount, pImageMemoryBarriers);

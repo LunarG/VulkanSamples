@@ -158,6 +158,10 @@ const VkLayerInstanceDispatchTable instance_disp = {
     .CreateDisplayModeKHR = terminator_CreateDisplayModeKHR,
     .GetDisplayPlaneCapabilitiesKHR = terminator_GetDisplayPlaneCapabilitiesKHR,
     .CreateDisplayPlaneSurfaceKHR = terminator_CreateDisplayPlaneSurfaceKHR,
+
+    // NVX_device_generated_commands
+    .GetPhysicalDeviceGeneratedCommandsPropertiesNVX =
+        terminator_GetPhysicalDeviceGeneratedCommandsPropertiesNVX,
 };
 
 LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_init);
@@ -1680,7 +1684,10 @@ static bool loader_icd_init_entrys(struct loader_icd_term *icd_term,
     LOOKUP_GIPA(CreateWaylandSurfaceKHR, false);
     LOOKUP_GIPA(GetPhysicalDeviceWaylandPresentationSupportKHR, false);
 #endif
+    // NV_external_memory_capabilities
     LOOKUP_GIPA(GetPhysicalDeviceExternalImageFormatPropertiesNV, false);
+    // NVX_device_generated_commands
+    LOOKUP_GIPA(GetPhysicalDeviceGeneratedCommandsPropertiesNVX, false);
 
 #undef LOOKUP_GIPA
 

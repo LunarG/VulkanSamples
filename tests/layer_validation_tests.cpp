@@ -8235,7 +8235,8 @@ TEST_F(VkLayerTest, InvalidBarriers) {
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Buffer Barriers cannot be used during a render pass");
     vk_testing::Buffer buffer;
-    buffer.init(*m_device, 256);
+    VkMemoryPropertyFlags mem_reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    buffer.init_as_src_and_dst(*m_device, 256, mem_reqs);
     VkBufferMemoryBarrier buf_barrier = {};
     buf_barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
     buf_barrier.pNext = NULL;
@@ -8339,6 +8340,66 @@ TEST_F(VkLayerTest, InvalidBarriers) {
     vkCmdPipelineBarrier(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
                          nullptr, 0, nullptr, 1, &img_barrier);
     m_errorMonitor->VerifyFound();
+
+    // Attempt to mismatch barriers/waitEvents calls with incompatible queues
+
+    // Create command pool with incompatible queueflags
+    const std::vector<VkQueueFamilyProperties> queue_props = m_device->queue_props;
+    uint32_t queue_family_index = UINT32_MAX;
+    for (uint32_t i = 0; i < queue_props.size(); i++) {
+        if ((queue_props[i].queueFlags & VK_QUEUE_COMPUTE_BIT) == 0) {
+            queue_family_index = i;
+            break;
+        }
+    }
+    if (queue_family_index == UINT32_MAX) {
+        printf("No non-compute queue found; skipped.\n");
+        return;
+    }
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02513);
+
+    VkCommandPool command_pool;
+    VkCommandPoolCreateInfo pool_create_info{};
+    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    pool_create_info.queueFamilyIndex = queue_family_index;
+    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr, &command_pool);
+
+    // Allocate a command buffer
+    VkCommandBuffer bad_command_buffer;
+    VkCommandBufferAllocateInfo command_buffer_allocate_info = {};
+    command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    command_buffer_allocate_info.commandPool = command_pool;
+    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    command_buffer_allocate_info.commandBufferCount = 1;
+    ASSERT_VK_SUCCESS(vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, &bad_command_buffer));
+
+    VkCommandBufferBeginInfo cbbi = {};
+    cbbi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    vkBeginCommandBuffer(bad_command_buffer, &cbbi);
+    buf_barrier.offset = 0;
+    buf_barrier.size = VK_WHOLE_SIZE;
+    vkCmdPipelineBarrier(bad_command_buffer, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 1,
+                         &buf_barrier, 0, nullptr);
+    m_errorMonitor->VerifyFound();
+
+    if ((queue_props[queue_family_index].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0) {
+        vkEndCommandBuffer(bad_command_buffer);
+        vkDestroyCommandPool(m_device->device(), command_pool, NULL);
+        printf("The non-compute queue does not support graphics; skipped.\n");
+        return;
+    }
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02510);
+    VkEvent event;
+    VkEventCreateInfo event_create_info{};
+    event_create_info.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
+    vkCreateEvent(m_device->device(), &event_create_info, nullptr, &event);
+    vkCmdWaitEvents(bad_command_buffer, 1, &event, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, nullptr, 0,
+                    nullptr, 0, nullptr);
+    m_errorMonitor->VerifyFound();
+
+    vkEndCommandBuffer(bad_command_buffer);
+    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
 }
 
 TEST_F(VkLayerTest, LayoutFromPresentWithoutAccessMemoryRead) {
