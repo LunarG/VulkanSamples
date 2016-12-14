@@ -5572,17 +5572,19 @@ static bool rangesIntersect(layer_data const *dev_data, MEMORY_RANGE const *rang
         return false;
 
     if (range1->linear != range2->linear) {
-        // In linear vs. non-linear case, it's an error to alias
+        // In linear vs. non-linear case, warn of aliasing
         const char *r1_linear_str = range1->linear ? "Linear" : "Non-linear";
         const char *r1_type_str = range1->image ? "image" : "buffer";
         const char *r2_linear_str = range2->linear ? "linear" : "non-linear";
         const char *r2_type_str = range2->image ? "image" : "buffer";
         auto obj_type = range1->image ? VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT : VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT;
-        *skip_call |=
-            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, obj_type, range1->handle, 0, MEMTRACK_INVALID_ALIASING,
-                    "MEM", "%s %s 0x%" PRIx64 " is aliased with %s %s 0x%" PRIx64
-                           " which is in violation of the Buffer-Image Granularity section of the Vulkan specification.",
-                    r1_linear_str, r1_type_str, range1->handle, r2_linear_str, r2_type_str, range2->handle);
+        *skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, obj_type, range1->handle, 0,
+                              MEMTRACK_INVALID_ALIASING, "MEM", "%s %s 0x%" PRIx64 " is aliased with %s %s 0x%" PRIx64
+                                                                " which may indicate a bug. For further info refer to the "
+                                                                "Buffer-Image Granularity section of the Vulkan specification. "
+                                                                "(https://www.khronos.org/registry/vulkan/specs/1.0-extensions/"
+                                                                "xhtml/vkspec.html#resources-bufferimagegranularity)",
+                              r1_linear_str, r1_type_str, range1->handle, r2_linear_str, r2_type_str, range2->handle);
     }
     // Ranges intersect
     return true;
@@ -5602,7 +5604,7 @@ static bool rangesIntersect(layer_data const *dev_data, MEMORY_RANGE const *rang
 // TODO : For ranges where there is no alias, we may want to create new buffer ranges that are valid
 static void SetMemRangesValid(layer_data const *dev_data, DEVICE_MEM_INFO *mem_info, VkDeviceSize offset, VkDeviceSize end) {
     bool tmp_bool = false;
-    MEMORY_RANGE map_range;
+    MEMORY_RANGE map_range = {};
     map_range.linear = true;
     map_range.start = offset;
     map_range.end = end;
@@ -5635,7 +5637,7 @@ static bool InsertMemoryRange(layer_data const *dev_data, uint64_t handle, DEVIC
     range.end = memoryOffset + memRequirements.size - 1;
     range.aliases.clear();
     // Update Memory aliasing
-    // Save aliase ranges so we can copy into final map entry below. Can't do it in loop b/c we don't yet have final ptr. If we
+    // Save aliased ranges so we can copy into final map entry below. Can't do it in loop b/c we don't yet have final ptr. If we
     // inserted into map before loop to get the final ptr, then we may enter loop when not needed & we check range against itself
     std::unordered_set<MEMORY_RANGE *> tmp_alias_ranges;
     for (auto &obj_range_pair : mem_info->bound_ranges) {
@@ -11308,10 +11310,10 @@ MapMemory(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize
         SetMemRangesValid(dev_data, mem_info, offset, end_offset);
         if ((dev_data->phys_dev_mem_props.memoryTypes[mem_info->alloc_info.memoryTypeIndex].propertyFlags &
              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == 0) {
-            skip_call =
-                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
-                        (uint64_t)mem, __LINE__, MEMTRACK_INVALID_STATE, "MEM",
-                        "Mapping Memory without VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT set: mem obj 0x%" PRIxLEAST64, (uint64_t)mem);
+            skip_call = log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
+                                (uint64_t)mem, __LINE__, VALIDATION_ERROR_00629, "MEM",
+                                "Mapping Memory without VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT set: mem obj 0x%" PRIxLEAST64 ". %s",
+                                (uint64_t)mem, validation_error_map[VALIDATION_ERROR_00629]);
         }
     }
     skip_call |= ValidateMapMemRange(dev_data, mem, offset, size);
@@ -11753,15 +11755,27 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, VkSwapchainC
         auto &capabilities = physical_device_state->surfaceCapabilities;
         // Validate pCreateInfo->minImageCount against
         // VkSurfaceCapabilitiesKHR::{min|max}ImageCount:
-        if ((pCreateInfo->minImageCount < capabilities.minImageCount) ||
-            ((capabilities.maxImageCount > 0) && (pCreateInfo->minImageCount > capabilities.maxImageCount))) {
+
+        if (pCreateInfo->minImageCount < capabilities.minImageCount) {
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                        reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_BAD_IMAGE_COUNT, "DS",
+                        reinterpret_cast<uint64_t>(dev_data->device), __LINE__, VALIDATION_ERROR_02331, "DS",
                         "vkCreateSwapchainKHR() called with pCreateInfo->minImageCount = %d, which is outside the bounds returned "
-                        "by vkGetPhysicalDeviceSurfaceCapabilitiesKHR() (i.e. minImageCount = %d, maxImageCount = %d).",
-                        pCreateInfo->minImageCount, capabilities.minImageCount, capabilities.maxImageCount))
+                        "by vkGetPhysicalDeviceSurfaceCapabilitiesKHR() (i.e. minImageCount = %d, maxImageCount = %d). %s",
+                        pCreateInfo->minImageCount, capabilities.minImageCount, capabilities.maxImageCount,
+                        validation_error_map[VALIDATION_ERROR_02331]))
                 return true;
         }
+
+        if ((capabilities.maxImageCount > 0) && (pCreateInfo->minImageCount > capabilities.maxImageCount)) {
+            if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                        reinterpret_cast<uint64_t>(dev_data->device), __LINE__, VALIDATION_ERROR_02332, "DS",
+                        "vkCreateSwapchainKHR() called with pCreateInfo->minImageCount = %d, which is outside the bounds returned "
+                        "by vkGetPhysicalDeviceSurfaceCapabilitiesKHR() (i.e. minImageCount = %d, maxImageCount = %d). %s",
+                        pCreateInfo->minImageCount, capabilities.minImageCount, capabilities.maxImageCount,
+                        validation_error_map[VALIDATION_ERROR_02332]))
+                return true;
+        }
+
         // Validate pCreateInfo->imageExtent against
         // VkSurfaceCapabilitiesKHR::{current|min|max}ImageExtent:
         if ((capabilities.currentExtent.width == -1) && ((pCreateInfo->imageExtent.width < capabilities.minImageExtent.width) ||
@@ -11769,23 +11783,25 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, VkSwapchainC
                                                          (pCreateInfo->imageExtent.height < capabilities.minImageExtent.height) ||
                                                          (pCreateInfo->imageExtent.height > capabilities.maxImageExtent.height))) {
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                        reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_BAD_EXTENTS, "DS",
+                        reinterpret_cast<uint64_t>(dev_data->device), __LINE__, VALIDATION_ERROR_02334, "DS",
                         "vkCreateSwapchainKHR() called with pCreateInfo->imageExtent = (%d,%d), which is outside the "
                         "bounds returned by vkGetPhysicalDeviceSurfaceCapabilitiesKHR(): currentExtent = (%d,%d), "
-                        "minImageExtent = (%d,%d), maxImageExtent = (%d,%d).",
+                        "minImageExtent = (%d,%d), maxImageExtent = (%d,%d). %s",
                         pCreateInfo->imageExtent.width, pCreateInfo->imageExtent.height, capabilities.currentExtent.width,
                         capabilities.currentExtent.height, capabilities.minImageExtent.width, capabilities.minImageExtent.height,
-                        capabilities.maxImageExtent.width, capabilities.maxImageExtent.height))
+                        capabilities.maxImageExtent.width, capabilities.maxImageExtent.height,
+                        validation_error_map[VALIDATION_ERROR_02334]))
                 return true;
         }
         if ((capabilities.currentExtent.width != -1) && ((pCreateInfo->imageExtent.width != capabilities.currentExtent.width) ||
                                                          (pCreateInfo->imageExtent.height != capabilities.currentExtent.height))) {
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                        reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_BAD_EXTENTS, "DS",
+                        reinterpret_cast<uint64_t>(dev_data->device), __LINE__, VALIDATION_ERROR_02334, "DS",
                         "vkCreateSwapchainKHR() called with pCreateInfo->imageExtent = (%d,%d), which is not equal to the "
-                        "currentExtent = (%d,%d) returned by vkGetPhysicalDeviceSurfaceCapabilitiesKHR().",
+                        "currentExtent = (%d,%d) returned by vkGetPhysicalDeviceSurfaceCapabilitiesKHR(). %s",
                         pCreateInfo->imageExtent.width, pCreateInfo->imageExtent.height, capabilities.currentExtent.width,
-                        capabilities.currentExtent.height))
+                        capabilities.currentExtent.height,
+                        validation_error_map[VALIDATION_ERROR_02334]))
                 return true;
         }
         // pCreateInfo->preTransform should have exactly one bit set, and that
@@ -11813,8 +11829,8 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, VkSwapchainC
             }
             // Log the message that we've built up:
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                        reinterpret_cast<uint64_t &>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_BAD_PRE_TRANSFORM, "DS", "%s",
-                        errorString.c_str()))
+                        reinterpret_cast<uint64_t &>(dev_data->device), __LINE__, VALIDATION_ERROR_02339, "DS", "%s. %s",
+                        errorString.c_str(), validation_error_map[VALIDATION_ERROR_02339]))
                 return true;
         }
 
@@ -11843,28 +11859,29 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, VkSwapchainC
             }
             // Log the message that we've built up:
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                        reinterpret_cast<uint64_t &>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_BAD_COMPOSITE_ALPHA, "DS",
-                        "%s", errorString.c_str()))
+                        reinterpret_cast<uint64_t &>(dev_data->device), __LINE__, VALIDATION_ERROR_02340, "DS", "%s. %s",
+                        errorString.c_str(), validation_error_map[VALIDATION_ERROR_02340]))
                 return true;
         }
         // Validate pCreateInfo->imageArrayLayers against
         // VkSurfaceCapabilitiesKHR::maxImageArrayLayers:
         if ((pCreateInfo->imageArrayLayers < 1) || (pCreateInfo->imageArrayLayers > capabilities.maxImageArrayLayers)) {
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                        reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_BAD_LAYER_COUNT, "DS",
+                        reinterpret_cast<uint64_t>(dev_data->device), __LINE__, VALIDATION_ERROR_02335, "DS",
                         "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->imageArrayLayers (i.e. %d).  "
-                        "Minimum value is 1, maximum value is %d.",
-                        pCreateInfo->imageArrayLayers, capabilities.maxImageArrayLayers))
+                        "Minimum value is 1, maximum value is %d. %s",
+                        pCreateInfo->imageArrayLayers, capabilities.maxImageArrayLayers,
+                        validation_error_map[VALIDATION_ERROR_02335]))
                 return true;
         }
         // Validate pCreateInfo->imageUsage against
         // VkSurfaceCapabilitiesKHR::supportedUsageFlags:
         if (pCreateInfo->imageUsage != (pCreateInfo->imageUsage & capabilities.supportedUsageFlags)) {
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                        reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_BAD_USAGE_FLAGS, "DS",
+                        reinterpret_cast<uint64_t>(dev_data->device), __LINE__, VALIDATION_ERROR_02336, "DS",
                         "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->imageUsage (i.e. 0x%08x).  "
-                        "Supported flag bits are 0x%08x.",
-                        pCreateInfo->imageUsage, capabilities.supportedUsageFlags))
+                        "Supported flag bits are 0x%08x. %s",
+                        pCreateInfo->imageUsage, capabilities.supportedUsageFlags, validation_error_map[VALIDATION_ERROR_02336]))
                 return true;
         }
     }
@@ -11899,26 +11916,17 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, VkSwapchainC
         }
         if (!foundMatch) {
             if (!foundFormat) {
-                if (!foundColorSpace) {
-                    if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                                reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_BAD_FORMAT, "DS",
-                                "vkCreateSwapchainKHR() called with neither a supported pCreateInfo->imageFormat "
-                                "(i.e. %d) nor a supported "
-                                "pCreateInfo->imageColorSpace (i.e. %d).",
-                                pCreateInfo->imageFormat, pCreateInfo->imageColorSpace))
-                        return true;
-                } else {
-                    if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                                reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_BAD_FORMAT, "DS",
-                                "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->imageFormat (i.e. %d)",
-                                pCreateInfo->imageFormat))
-                        return true;
-                }
-            } else if (!foundColorSpace) {
                 if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                            reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_BAD_FORMAT, "DS",
-                            "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->imageColorSpace (i.e. %d).",
-                            pCreateInfo->imageColorSpace))
+                            reinterpret_cast<uint64_t>(dev_data->device), __LINE__, VALIDATION_ERROR_02333, "DS",
+                            "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->imageFormat (i.e. %d). %s",
+                            pCreateInfo->imageFormat, validation_error_map[VALIDATION_ERROR_02333]))
+                    return true;
+            }
+            if (!foundColorSpace) {
+                if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                            reinterpret_cast<uint64_t>(dev_data->device), __LINE__, VALIDATION_ERROR_02333, "DS",
+                            "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->imageColorSpace (i.e. %d). %s",
+                            pCreateInfo->imageColorSpace, validation_error_map[VALIDATION_ERROR_02333]))
                     return true;
             }
         }
@@ -11943,9 +11951,9 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, VkSwapchainC
                                     pCreateInfo->presentMode) != physical_device_state->present_modes.end();
         if (!foundMatch) {
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                        reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_BAD_PRESENT_MODE, "DS",
-                        "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->presentMode (i.e. %s).",
-                        string_VkPresentModeKHR(pCreateInfo->presentMode)))
+                        reinterpret_cast<uint64_t>(dev_data->device), __LINE__, VALIDATION_ERROR_02341, "DS",
+                        "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->presentMode (i.e. %s). %s",
+                        string_VkPresentModeKHR(pCreateInfo->presentMode), validation_error_map[VALIDATION_ERROR_02341]))
                 return true;
         }
     }
@@ -11976,6 +11984,9 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device, const VkSwapc
     }
 
     // Spec requires that even if CreateSwapchainKHR fails, oldSwapchain behaves as replaced.
+    if (old_swapchain_state) {
+        old_swapchain_state->replaced = true;
+    }
     surface_state->old_swapchain = old_swapchain_state;
 
     return result;
@@ -12119,11 +12130,11 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
                     for (auto layout : layouts) {
                         if (layout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
                             skip_call |=
-                                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT,
-                                            reinterpret_cast<uint64_t &>(queue), __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                                            "Images passed to present must be in layout "
-                                            "VK_IMAGE_LAYOUT_PRESENT_SRC_KHR but is in %s",
-                                            string_VkImageLayout(layout));
+                                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT,
+                                        reinterpret_cast<uint64_t &>(queue), __LINE__, VALIDATION_ERROR_01964, "DS",
+                                        "Images passed to present must be in layout "
+                                        "VK_IMAGE_LAYOUT_PRESENT_SRC_KHR but is in %s. %s",
+                                        string_VkImageLayout(layout), validation_error_map[VALIDATION_ERROR_01964]);
                         }
                     }
                 }
@@ -12143,11 +12154,12 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
                                 DRAWSTATE_SWAPCHAIN_UNSUPPORTED_QUEUE, "DS", "vkQueuePresentKHR: Presenting image without calling "
                                                                              "vkGetPhysicalDeviceSurfaceSupportKHR");
                 } else if (!support_it->second) {
-                    skip_call |= log_msg(
-                        dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
-                        reinterpret_cast<uint64_t const &>(pPresentInfo->pSwapchains[i]), __LINE__,
-                        DRAWSTATE_SWAPCHAIN_UNSUPPORTED_QUEUE, "DS", "vkQueuePresentKHR: Presenting image on queue that cannot "
-                                                                     "present to this surface");
+                    skip_call |=
+                        log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
+                                reinterpret_cast<uint64_t const &>(pPresentInfo->pSwapchains[i]), __LINE__, VALIDATION_ERROR_01961,
+                                "DS", "vkQueuePresentKHR: Presenting image on queue that cannot "
+                                      "present to this surface. %s",
+                                validation_error_map[VALIDATION_ERROR_01961]);
                 }
             }
         }
@@ -12221,8 +12233,9 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
     auto pSemaphore = getSemaphoreNode(dev_data, semaphore);
     if (pSemaphore && pSemaphore->signaled) {
         skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
-                             reinterpret_cast<const uint64_t &>(semaphore), __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
-                             "vkAcquireNextImageKHR: Semaphore must not be currently signaled or in a wait state");
+                             reinterpret_cast<const uint64_t &>(semaphore), __LINE__, VALIDATION_ERROR_01952, "DS",
+                             "vkAcquireNextImageKHR: Semaphore must not be currently signaled or in a wait state. %s",
+                             validation_error_map[VALIDATION_ERROR_01952]);
     }
 
     auto pFence = getFenceNode(dev_data, fence);
@@ -12231,6 +12244,14 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
     }
 
     auto swapchain_data = getSwapchainNode(dev_data, swapchain);
+
+    if (swapchain_data->replaced) {
+        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
+                             reinterpret_cast<uint64_t &>(swapchain), __LINE__, DRAWSTATE_SWAPCHAIN_REPLACED, "DS",
+                             "vkAcquireNextImageKHR: This swapchain has been replaced. The application can still "
+                             "present any images it has acquired, but cannot acquire any more.");
+    }
+
     auto physical_device_state = getPhysicalDeviceState(dev_data->instance_data, dev_data->physical_device);
     if (physical_device_state->vkGetPhysicalDeviceSurfaceCapabilitiesKHRState != UNCALLED) {
         uint64_t acquired_images = std::count_if(swapchain_data->images.begin(), swapchain_data->images.end(),
@@ -12317,9 +12338,10 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumeratePhysicalDevices(VkInstance instance, uin
         }
         return result;
     } else {
+        // This seems redundant with object_tracker
         log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, 0, __LINE__,
-                DEVLIMITS_INVALID_INSTANCE, "DL", "Invalid instance (0x%" PRIxLEAST64 ") passed into vkEnumeratePhysicalDevices().",
-                (uint64_t)instance);
+                VALIDATION_ERROR_00023, "DL", "Invalid instance (0x%" PRIxLEAST64 ") passed into vkEnumeratePhysicalDevices(). %s",
+                (uint64_t)instance, validation_error_map[VALIDATION_ERROR_00023]);
     }
     return VK_ERROR_VALIDATION_FAILED_EXT;
 }
@@ -12374,9 +12396,9 @@ GetPhysicalDeviceQueueFamilyProperties(VkPhysicalDevice physicalDevice, uint32_t
     }
     else {
         log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0,
-            __LINE__, DEVLIMITS_INVALID_PHYSICAL_DEVICE, "DL",
-            "Invalid physicalDevice (0x%" PRIxLEAST64 ") passed into vkGetPhysicalDeviceQueueFamilyProperties().",
-            (uint64_t)physicalDevice);
+                __LINE__, VALIDATION_ERROR_00028, "DL",
+                "Invalid physicalDevice (0x%" PRIxLEAST64 ") passed into vkGetPhysicalDeviceQueueFamilyProperties(). %s",
+                (uint64_t)physicalDevice, validation_error_map[VALIDATION_ERROR_00028]);
     }
 }
 

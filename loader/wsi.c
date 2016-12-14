@@ -512,8 +512,7 @@ vkQueuePresentKHR(VkQueue queue, const VkPresentInfoKHR *pPresentInfo) {
 
 static VkIcdSurface *AllocateIcdSurfaceStruct(struct loader_instance *instance,
                                               size_t base_size,
-                                              size_t platform_size,
-                                              bool create_icd_surfs) {
+                                              size_t platform_size) {
     // Next, if so, proceed with the implementation of this function:
     VkIcdSurface *pIcdSurface = loader_instance_heap_alloc(
         instance, sizeof(VkIcdSurface), VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
@@ -526,19 +525,15 @@ static VkIcdSurface *AllocateIcdSurfaceStruct(struct loader_instance *instance,
             (uint8_t *)(&pIcdSurface->base_size) - (uint8_t *)pIcdSurface);
         pIcdSurface->entire_size = sizeof(VkIcdSurface);
 
-        if (create_icd_surfs) {
-            pIcdSurface->real_icd_surfaces = loader_instance_heap_alloc(
-                instance, sizeof(VkSurfaceKHR) * instance->total_icd_count,
-                VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
-            if (pIcdSurface->real_icd_surfaces == NULL) {
-                loader_instance_heap_free(instance, pIcdSurface);
-                pIcdSurface = NULL;
-            } else {
-                memset(pIcdSurface->real_icd_surfaces, 0,
-                       sizeof(VkSurfaceKHR) * instance->total_icd_count);
-            }
+        pIcdSurface->real_icd_surfaces = loader_instance_heap_alloc(
+            instance, sizeof(VkSurfaceKHR) * instance->total_icd_count,
+            VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+        if (pIcdSurface->real_icd_surfaces == NULL) {
+            loader_instance_heap_free(instance, pIcdSurface);
+            pIcdSurface = NULL;
         } else {
-            pIcdSurface->real_icd_surfaces = NULL;
+            memset(pIcdSurface->real_icd_surfaces, 0,
+                   sizeof(VkSurfaceKHR) * instance->total_icd_count);
         }
     }
     return pIcdSurface;
@@ -584,7 +579,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateWin32SurfaceKHR(
     // Next, if so, proceed with the implementation of this function:
     pIcdSurface = AllocateIcdSurfaceStruct(ptr_instance,
                                            sizeof(pIcdSurface->win_surf.base),
-                                           sizeof(pIcdSurface->win_surf), true);
+                                           sizeof(pIcdSurface->win_surf));
     if (pIcdSurface == NULL) {
         vkRes = VK_ERROR_OUT_OF_HOST_MEMORY;
         goto out;
@@ -716,7 +711,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateMirSurfaceKHR(
     // Next, if so, proceed with the implementation of this function:
     pIcdSurface = AllocateIcdSurfaceStruct(ptr_instance,
                                            sizeof(pIcdSurface->mir_surf.base),
-                                           sizeof(pIcdSurface->mir_surf), true);
+                                           sizeof(pIcdSurface->mir_surf));
     if (pIcdSurface == NULL) {
         vkRes = VK_ERROR_OUT_OF_HOST_MEMORY;
         goto out;
@@ -852,7 +847,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateWaylandSurfaceKHR(
     // Next, if so, proceed with the implementation of this function:
     pIcdSurface = AllocateIcdSurfaceStruct(
         ptr_instance, sizeof(pIcdSurface->wayland_surf.base),
-        sizeof(pIcdSurface->wayland_surf), true);
+        sizeof(pIcdSurface->wayland_surf));
     if (pIcdSurface == NULL) {
         vkRes = VK_ERROR_OUT_OF_HOST_MEMORY;
         goto out;
@@ -987,7 +982,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateXcbSurfaceKHR(
     // Next, if so, proceed with the implementation of this function:
     pIcdSurface = AllocateIcdSurfaceStruct(ptr_instance,
                                            sizeof(pIcdSurface->xcb_surf.base),
-                                           sizeof(pIcdSurface->xcb_surf), true);
+                                           sizeof(pIcdSurface->xcb_surf));
     if (pIcdSurface == NULL) {
         vkRes = VK_ERROR_OUT_OF_HOST_MEMORY;
         goto out;
@@ -1123,7 +1118,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateXlibSurfaceKHR(
     // Next, if so, proceed with the implementation of this function:
     pIcdSurface = AllocateIcdSurfaceStruct(
         ptr_instance, sizeof(pIcdSurface->xlib_surf.base),
-        sizeof(pIcdSurface->xlib_surf), true);
+        sizeof(pIcdSurface->xlib_surf));
     if (pIcdSurface == NULL) {
         vkRes = VK_ERROR_OUT_OF_HOST_MEMORY;
         goto out;
@@ -1528,11 +1523,10 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDisplayPlaneSurfaceKHR(
         goto out;
     }
 
-    // The VK_KHR_display path will continue to use the old path (hence the
-    // false as the last parameter).
+    // Next, if so, proceed with the implementation of this function:
     pIcdSurface =
         AllocateIcdSurfaceStruct(inst, sizeof(pIcdSurface->display_surf.base),
-                                 sizeof(pIcdSurface->display_surf), false);
+                                 sizeof(pIcdSurface->display_surf));
     if (pIcdSurface == NULL) {
         vkRes = VK_ERROR_OUT_OF_HOST_MEMORY;
         goto out;
