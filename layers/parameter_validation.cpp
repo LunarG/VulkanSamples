@@ -2332,20 +2332,13 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateBuffer(VkDevice device, const VkBufferCreat
     assert(device_data != nullptr);
     debug_report_data *report_data = device_data->report_data;
 
-    // TODO: Add check for VALIDATION_ERROR_00660
-    // TODO: Add check for VALIDATION_ERROR_00661
-    // TODO: Add check for VALIDATION_ERROR_00662
-    // TODO: Add check for VALIDATION_ERROR_00670
-    // TODO: Add check for VALIDATION_ERROR_00671
-    // TODO: Add check for VALIDATION_ERROR_00672
-    // TODO: Add check for VALIDATION_ERROR_00673
-    // TODO: Add check for VALIDATION_ERROR_00674
-    // TODO: Add check for VALIDATION_ERROR_00675
-    // TODO: Note that the above errors need to be generated from the next function, which is codegened.
-    // TODO: Add check for VALIDATION_ERROR_00663
     skip |= parameter_validation_vkCreateBuffer(report_data, pCreateInfo, pAllocator, pBuffer);
 
     if (pCreateInfo != nullptr) {
+        // Buffer size must be greater than 0 (error 00663)
+        skip |=
+            ValidateGreaterThan(report_data, "vkCreateBuffer", "pCreateInfo->size", static_cast<uint32_t>(pCreateInfo->size), 0u);
+
         // Validation for parameters excluded from the generated validation code due to a 'noautovalidity' tag in vk.xml
         if (pCreateInfo->sharingMode == VK_SHARING_MODE_CONCURRENT) {
             // If sharingMode is VK_SHARING_MODE_CONCURRENT, queueFamilyIndexCount must be greater than 1
@@ -2371,6 +2364,17 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateBuffer(VkDevice device, const VkBufferCreat
             // Ensure that the queue family indices were specified at device creation
             skip |= validate_queue_family_indices(device_data, "vkCreateBuffer", "pCreateInfo->pQueueFamilyIndices",
                                                        pCreateInfo->queueFamilyIndexCount, pCreateInfo->pQueueFamilyIndices);
+        }
+
+        // If flags contains VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT or VK_BUFFER_CREATE_SPARSE_ALIASED_BIT, it must also contain
+        // VK_BUFFER_CREATE_SPARSE_BINDING_BIT
+        if (((pCreateInfo->flags & (VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT | VK_BUFFER_CREATE_SPARSE_ALIASED_BIT)) != 0) &&
+            ((pCreateInfo->flags & VK_BUFFER_CREATE_SPARSE_BINDING_BIT) != VK_BUFFER_CREATE_SPARSE_BINDING_BIT)) {
+            skip |=
+                log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                        __LINE__, VALIDATION_ERROR_00669, LayerName,
+                        "vkCreateBuffer: if pCreateInfo->flags contains VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT or "
+                        "VK_BUFFER_CREATE_SPARSE_ALIASED_BIT, it must also contain VK_BUFFER_CREATE_SPARSE_BINDING_BIT");
         }
     }
 
@@ -2511,8 +2515,9 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateI
         if (((pCreateInfo->flags & (VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT | VK_IMAGE_CREATE_SPARSE_ALIASED_BIT)) != 0) &&
             ((pCreateInfo->flags & VK_IMAGE_CREATE_SPARSE_BINDING_BIT) != VK_IMAGE_CREATE_SPARSE_BINDING_BIT)) {
             skip |=
-                log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, LayerName,
-                        "vkCreateImage: pCreateInfo->flags contains VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT or "
+                log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
+                        __LINE__, VALIDATION_ERROR_02160, LayerName,
+                        "vkCreateImage: if pCreateInfo->flags contains VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT or "
                         "VK_IMAGE_CREATE_SPARSE_ALIASED_BIT, it must also contain VK_IMAGE_CREATE_SPARSE_BINDING_BIT");
         }
     }
