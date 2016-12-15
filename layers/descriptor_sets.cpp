@@ -97,18 +97,6 @@ bool cvdescriptorset::DescriptorSetLayout::ValidateCreateInfo(debug_report_data 
     return skip;
 }
 
-// Return the number of descriptors for the given binding and all successive bindings
-uint32_t cvdescriptorset::DescriptorSetLayout::GetConsecutiveDescriptorCountFromBinding(uint32_t binding) const {
-    // If binding is invalid we'll return 0
-    uint32_t binding_count = 0;
-    auto bi_itr = binding_to_index_map_.find(binding);
-    while (bi_itr != binding_to_index_map_.end()) {
-        binding_count += bindings_[bi_itr->second].descriptorCount;
-        bi_itr++;
-    }
-    return binding_count;
-}
-
 // put all bindings into the given set
 void cvdescriptorset::DescriptorSetLayout::FillBindingSet(std::unordered_set<uint32_t> *binding_set) const {
     for (auto binding_index_pair : binding_to_index_map_)
@@ -1215,12 +1203,11 @@ bool cvdescriptorset::DescriptorSet::ValidateWriteUpdate(const debug_report_data
         *error_msg = error_str.str();
         return false;
     }
-    if (update->descriptorCount >
-        (p_layout_->GetConsecutiveDescriptorCountFromBinding(update->dstBinding) - update->dstArrayElement)) {
+    if (update->descriptorCount > (descriptors_.size() - start_idx)) {
         *error_code = VALIDATION_ERROR_00938;
         std::stringstream error_str;
         error_str << "Attempting write update to descriptor set " << set_ << " binding #" << update->dstBinding << " with "
-                  << p_layout_->GetConsecutiveDescriptorCountFromBinding(update->dstBinding)
+                  << descriptors_.size() - start_idx
                   << " descriptors in that binding and all successive bindings of the set, but update of "
                   << update->descriptorCount << " descriptors combined with update array element offset of "
                   << update->dstArrayElement << " oversteps the available number of consecutive descriptors";
