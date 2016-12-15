@@ -5369,21 +5369,31 @@ VKAPI_ATTR void VKAPI_CALL DestroyFence(VkDevice device, VkFence fence, const Vk
     }
 }
 
+static bool PreCallValidateDestroySemaphore(layer_data *dev_data, VkSemaphore semaphore, SEMAPHORE_NODE **sema_node,
+                                            VK_OBJECT *obj_struct) {
+    *sema_node = getSemaphoreNode(dev_data, semaphore);
+    *obj_struct = {reinterpret_cast<uint64_t &>(semaphore), VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT};
+    bool skip = false;
+    if (*sema_node) {
+        skip |= ValidateObjectNotInUse(dev_data, *sema_node, *obj_struct, VALIDATION_ERROR_00199);
+    }
+    return skip;
+}
+
+static void PostCallRecordDestroySemaphore(layer_data *dev_data, VkSemaphore sema) { dev_data->semaphoreMap.erase(sema); }
+
 VKAPI_ATTR void VKAPI_CALL
 DestroySemaphore(VkDevice device, VkSemaphore semaphore, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    bool skip = false;
+    SEMAPHORE_NODE *sema_node;
+    VK_OBJECT obj_struct;
     std::unique_lock<std::mutex> lock(global_lock);
-    auto sema_node = getSemaphoreNode(dev_data, semaphore);
-    if (sema_node) {
-        skip |= ValidateObjectNotInUse(dev_data, sema_node,
-                                       {reinterpret_cast<uint64_t &>(semaphore), VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT},
-                                       VALIDATION_ERROR_00199);
-    }
+    bool skip = PreCallValidateDestroySemaphore(dev_data, semaphore, &sema_node, &obj_struct);
     if (!skip) {
-        dev_data->semaphoreMap.erase(semaphore);
         lock.unlock();
         dev_data->dispatch_table.DestroySemaphore(device, semaphore, pAllocator);
+        lock.lock();
+        PostCallRecordDestroySemaphore(dev_data, semaphore);
     }
 }
 
