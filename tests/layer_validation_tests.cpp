@@ -1288,6 +1288,49 @@ TEST_F(VkLayerTest, CallBeginCommandBufferBeforeCompletion)
 }
 #endif
 
+TEST_F(VkLayerTest, SparseBindingImageBufferCreate) {
+    TEST_DESCRIPTION("Create buffer/image with sparse attributes but without the sparse_binding bit set");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00669);
+    VkBuffer buffer;
+    VkBufferCreateInfo buf_info = {};
+    buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buf_info.pNext = NULL;
+    buf_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    buf_info.size = 2048;
+    buf_info.queueFamilyIndexCount = 0;
+    buf_info.pQueueFamilyIndices = NULL;
+    buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    buf_info.flags = VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT;
+    vkCreateBuffer(m_device->device(), &buf_info, NULL, &buffer);
+    m_errorMonitor->VerifyFound();
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02160);
+    VkImage image;
+    VkImageCreateInfo image_create_info = {};
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.pNext = NULL;
+    image_create_info.imageType = VK_IMAGE_TYPE_2D;
+    image_create_info.format = VK_FORMAT_R8G8B8A8_UNORM;
+    image_create_info.extent.width = 512;
+    image_create_info.extent.height = 64;
+    image_create_info.extent.depth = 1;
+    image_create_info.mipLevels = 1;
+    image_create_info.arrayLayers = 1;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    image_create_info.queueFamilyIndexCount = 0;
+    image_create_info.pQueueFamilyIndices = NULL;
+    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    image_create_info.flags = VK_BUFFER_CREATE_SPARSE_ALIASED_BIT;
+    vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
+    m_errorMonitor->VerifyFound();
+}
+
 TEST_F(VkLayerTest, InvalidMemoryAliasing) {
     TEST_DESCRIPTION("Create a buffer and image, allocate memory, and bind the "
                      "buffer and image to memory such that they will alias.");
