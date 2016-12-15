@@ -134,14 +134,14 @@ void ShellXcb::create_window()
             value_mask, value_list);
 
     xcb_intern_atom_cookie_t utf8_string_cookie = intern_atom_cookie(c_, "UTF8_STRING");
-    xcb_intern_atom_cookie_t _net_wm_name_cookie = intern_atom_cookie(c_, "_NET_WM_NAME");
+    xcb_intern_atom_cookie_t wm_name_cookie = intern_atom_cookie(c_, "WM_NAME");
     xcb_intern_atom_cookie_t wm_protocols_cookie = intern_atom_cookie(c_, "WM_PROTOCOLS");
     xcb_intern_atom_cookie_t wm_delete_window_cookie = intern_atom_cookie(c_, "WM_DELETE_WINDOW");
 
     // set title
     xcb_atom_t utf8_string = intern_atom(c_, utf8_string_cookie);
-    xcb_atom_t _net_wm_name = intern_atom(c_, _net_wm_name_cookie);
-    xcb_change_property(c_, XCB_PROP_MODE_REPLACE, win_, _net_wm_name,
+    xcb_atom_t wm_name = intern_atom(c_, wm_name_cookie);
+    xcb_change_property(c_, XCB_PROP_MODE_REPLACE, win_, wm_name,
             utf8_string, 8, settings_.name.size(), settings_.name.c_str());
 
     // advertise WM_DELETE_WINDOW
