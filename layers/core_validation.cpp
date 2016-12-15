@@ -5337,23 +5337,36 @@ VKAPI_ATTR VkResult VKAPI_CALL DeviceWaitIdle(VkDevice device) {
     return result;
 }
 
+static bool PreCallValidateDestroyFence(layer_data *dev_data, VkFence fence, FENCE_NODE **fence_node, VK_OBJECT *obj_struct) {
+    *fence_node = getFenceNode(dev_data, fence);
+    *obj_struct = {reinterpret_cast<uint64_t &>(fence), VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT};
+    bool skip = false;
+    if (*fence_node) {
+        if ((*fence_node)->state == FENCE_INFLIGHT) {
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
+                            (uint64_t)(fence), __LINE__, DRAWSTATE_INVALID_FENCE, "DS", "Fence 0x%" PRIx64 " is in use.",
+                            (uint64_t)(fence));
+        }
+    }
+    return skip;
+}
+
+static void PostCallRecordDestroyFence(layer_data *dev_data, VkFence fence) { dev_data->fenceMap.erase(fence); }
+
 VKAPI_ATTR void VKAPI_CALL DestroyFence(VkDevice device, VkFence fence, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    bool skip_call = false;
+    // Common data objects used pre & post call
+    FENCE_NODE *fence_node = nullptr;
+    VK_OBJECT obj_struct;
     std::unique_lock<std::mutex> lock(global_lock);
-    auto fence_pair = dev_data->fenceMap.find(fence);
-    if (fence_pair != dev_data->fenceMap.end()) {
-        if (fence_pair->second.state == FENCE_INFLIGHT) {
-            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
-                                 (uint64_t)(fence), __LINE__, DRAWSTATE_INVALID_FENCE, "DS", "Fence 0x%" PRIx64 " is in use.",
-                                 (uint64_t)(fence));
-        }
-        dev_data->fenceMap.erase(fence_pair);
-    }
-    lock.unlock();
+    bool skip = PreCallValidateDestroyFence(dev_data, fence, &fence_node, &obj_struct);
 
-    if (!skip_call)
+    if (!skip) {
+        lock.unlock();
         dev_data->dispatch_table.DestroyFence(device, fence, pAllocator);
+        lock.lock();
+        PostCallRecordDestroyFence(dev_data, fence);
+    }
 }
 
 VKAPI_ATTR void VKAPI_CALL
