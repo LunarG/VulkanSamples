@@ -5259,20 +5259,24 @@ VKAPI_ATTR VkResult VKAPI_CALL GetFenceStatus(VkDevice device, VkFence fence) {
     return result;
 }
 
+static void PostCallRecordGetDeviceQueue(layer_data *dev_data, uint32_t q_family_index, VkQueue queue) {
+    // Add queue to tracking set only if it is new
+    auto result = dev_data->queues.emplace(queue);
+    if (result.second == true) {
+        QUEUE_NODE *queue_state = &dev_data->queueMap[queue];
+        queue_state->queue = queue;
+        queue_state->queueFamilyIndex = q_family_index;
+        queue_state->seq = 0;
+    }
+}
+
 VKAPI_ATTR void VKAPI_CALL GetDeviceQueue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex,
                                                             VkQueue *pQueue) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     dev_data->dispatch_table.GetDeviceQueue(device, queueFamilyIndex, queueIndex, pQueue);
     std::lock_guard<std::mutex> lock(global_lock);
 
-    // Add queue to tracking set only if it is new
-    auto result = dev_data->queues.emplace(*pQueue);
-    if (result.second == true) {
-        QUEUE_NODE *pQNode = &dev_data->queueMap[*pQueue];
-        pQNode->queue = *pQueue;
-        pQNode->queueFamilyIndex = queueFamilyIndex;
-        pQNode->seq = 0;
-    }
+    PostCallRecordGetDeviceQueue(dev_data, queueFamilyIndex, *pQueue);
 }
 
 static bool PreCallValidateQueueWaitIdle(layer_data *dev_data, VkQueue queue, QUEUE_NODE **queue_state) {
