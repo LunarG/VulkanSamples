@@ -90,6 +90,7 @@ struct CHECK_DISABLED {
     bool get_fence_state;
     bool queue_wait_idle;
     bool device_wait_idle;
+    bool destroy_fence;
 };
 
 /*

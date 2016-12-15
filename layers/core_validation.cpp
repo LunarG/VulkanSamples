@@ -5340,6 +5340,8 @@ VKAPI_ATTR VkResult VKAPI_CALL DeviceWaitIdle(VkDevice device) {
 static bool PreCallValidateDestroyFence(layer_data *dev_data, VkFence fence, FENCE_NODE **fence_node, VK_OBJECT *obj_struct) {
     *fence_node = getFenceNode(dev_data, fence);
     *obj_struct = {reinterpret_cast<uint64_t &>(fence), VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT};
+    if (dev_data->instance_data->disabled.destroy_fence)
+        return false;
     bool skip = false;
     if (*fence_node) {
         if ((*fence_node)->state == FENCE_INFLIGHT) {
