@@ -95,14 +95,14 @@ const std::string UnsupportedResultString = "Unhandled VkResult";
 const uint32_t ExtEnumBaseValue = 1000000000;
 
 template <typename T> bool is_extension_added_token(T value) {
-    return (std::abs(static_cast<int32_t>(value)) >= ExtEnumBaseValue);
+    return (static_cast<uint32_t>(std::abs(static_cast<int32_t>(value))) >= ExtEnumBaseValue);
 }
 
 // VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE token is a special case that was converted from a core token to an
 // extension added token.  Its original value was intentionally preserved after the conversion, so it does not use
 // the base value that other extension added tokens use, and it does not fall within the enum's begin/end range.
 template <> bool is_extension_added_token(VkSamplerAddressMode value) {
-    bool result = (std::abs(static_cast<int32_t>(value)) >= ExtEnumBaseValue);
+    bool result = (static_cast<uint32_t>(std::abs(static_cast<int32_t>(value))) >= ExtEnumBaseValue);
     return (result || (value == VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE));
 }
 

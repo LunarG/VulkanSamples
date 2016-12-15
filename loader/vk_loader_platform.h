@@ -234,7 +234,6 @@ loader_platform_thread_cond_broadcast(loader_platform_thread_cond *pCond) {
 #ifdef __cplusplus
 #include <iostream>
 #include <string>
-using namespace std;
 #endif // __cplusplus
 
 // VK Library Filenames, Paths, etc.:

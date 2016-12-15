@@ -3799,8 +3799,7 @@ VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo,
                 continue;
             if ((fpGIPA = layer_prop->functions.get_instance_proc_addr) ==
                 NULL) {
-                if (layer_prop->functions.str_gipa == NULL ||
-                    strlen(layer_prop->functions.str_gipa) == 0) {
+                if (strlen(layer_prop->functions.str_gipa) == 0) {
                     fpGIPA = (PFN_vkGetInstanceProcAddr)
                         loader_platform_get_proc_address(
                             lib_handle, "vkGetInstanceProcAddr");
@@ -3914,8 +3913,7 @@ loader_create_device_chain(const struct loader_physical_device_tramp *pd,
                 continue;
             if ((fpGIPA = layer_prop->functions.get_instance_proc_addr) ==
                 NULL) {
-                if (layer_prop->functions.str_gipa == NULL ||
-                    strlen(layer_prop->functions.str_gipa) == 0) {
+                if (strlen(layer_prop->functions.str_gipa) == 0) {
                     fpGIPA = (PFN_vkGetInstanceProcAddr)
                         loader_platform_get_proc_address(
                             lib_handle, "vkGetInstanceProcAddr");
@@ -3933,8 +3931,7 @@ loader_create_device_chain(const struct loader_physical_device_tramp *pd,
                 }
             }
             if ((fpGDPA = layer_prop->functions.get_device_proc_addr) == NULL) {
-                if (layer_prop->functions.str_gdpa == NULL ||
-                    strlen(layer_prop->functions.str_gdpa) == 0) {
+                if (strlen(layer_prop->functions.str_gdpa) == 0) {
                     fpGDPA = (PFN_vkGetDeviceProcAddr)
                         loader_platform_get_proc_address(lib_handle,
                                                          "vkGetDeviceProcAddr");
@@ -4464,7 +4461,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_EnumeratePhysicalDevices(
         }
         res = icd_term->EnumeratePhysicalDevices(
             icd_term->instance, &(phys_devs[i].count), phys_devs[i].phys_devs);
-        if ((res == VK_SUCCESS)) {
+        if (res == VK_SUCCESS) {
             inst->total_gpu_count += phys_devs[i].count;
         } else {
             return res;

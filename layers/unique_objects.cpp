@@ -28,18 +28,21 @@
 #include <list>
 #include <memory>
 
+// For Windows, this #include must come before other Vk headers.
 #include "vk_loader_platform.h"
-#include "vulkan/vk_layer.h"
-#include "vk_layer_config.h"
-#include "vk_layer_extension_utils.h"
-#include "vk_layer_utils.h"
-#include "vk_layer_table.h"
-#include "vk_layer_logging.h"
+
 #include "unique_objects.h"
 #include "vk_dispatch_table_helper.h"
-#include "vk_struct_string_helper_cpp.h"
+#include "vk_layer_config.h"
 #include "vk_layer_data.h"
+#include "vk_layer_extension_utils.h"
+#include "vk_layer_logging.h"
+#include "vk_layer_table.h"
 #include "vk_layer_utils.h"
+#include "vk_layer_utils.h"
+#include "vk_struct_string_helper_cpp.h"
+#include "vk_validation_error_messages.h"
+#include "vulkan/vk_layer.h"
 
 // This intentionally includes a cpp file
 #include "vk_safe_struct.cpp"
@@ -101,7 +104,7 @@ static void checkInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateI
         layer_data *instance_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
         if (!white_list(pCreateInfo->ppEnabledExtensionNames[i], kUniqueObjectsSupportedInstanceExtensions)) {
             log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                    0, "UniqueObjects",
+                    VALIDATION_ERROR_UNDEFINED, "UniqueObjects",
                     "Instance Extension %s is not supported by this layer.  Using this extension may adversely affect "
                     "validation results and/or produce undefined behavior.",
                     pCreateInfo->ppEnabledExtensionNames[i]);
@@ -129,7 +132,7 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo
         // Check for recognized device extensions
         if (!white_list(pCreateInfo->ppEnabledExtensionNames[i], kUniqueObjectsSupportedDeviceExtensions)) {
             log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                    0, "UniqueObjects",
+                    VALIDATION_ERROR_UNDEFINED, "UniqueObjects",
                     "Device Extension %s is not supported by this layer.  Using this extension may adversely affect "
                     "validation results and/or produce undefined behavior.",
                     pCreateInfo->ppEnabledExtensionNames[i]);
@@ -260,7 +263,7 @@ static const VkLayerProperties globalLayerProps = {"VK_LAYER_GOOGLE_unique_objec
                                                    "Google Validation Layer"};
 
 static inline PFN_vkVoidFunction layer_intercept_proc(const char *name) {
-    for (int i = 0; i < sizeof(procmap) / sizeof(procmap[0]); i++) {
+    for (unsigned int i = 0; i < sizeof(procmap) / sizeof(procmap[0]); i++) {
         if (!strcmp(name, procmap[i].name))
             return procmap[i].pFunc;
     }

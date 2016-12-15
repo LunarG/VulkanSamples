@@ -41,6 +41,7 @@ def handle_args():
     parser.add_argument('--gen_enum_string_helper', required=False, action='store_true', default=False, help='Enable generation of helper header file to print string versions of enums.')
     parser.add_argument('--gen_struct_wrappers', required=False, action='store_true', default=False, help='Enable generation of struct wrapper classes.')
     parser.add_argument('--gen_struct_sizes', required=False, action='store_true', default=False, help='Enable generation of struct sizes.')
+    parser.add_argument('--quiet', required=False, action='store_true', default=False, help='Suppress output from running the script.')
     #parser.add_argument('--test', action='store_true', default=False, help='Run simple test.')
     return parser.parse_args()
 
@@ -470,7 +471,7 @@ class CommonFileGen:
 # The wrapper class wraps the structs and includes utility functions for
 #  setting/getting member values and displaying the struct data in various formats
 class StructWrapperGen:
-    def __init__(self, in_struct_dict, prefix, out_dir):
+    def __init__(self, in_struct_dict, prefix, out_dir, quiet):
         self.struct_dict = in_struct_dict
         self.include_headers = []
         self.lineinfo = sourcelineinfo()
@@ -496,6 +497,7 @@ class StructWrapperGen:
         self.size_helper_c_gen = CommonFileGen(self.size_helper_c_filename)
         self.header_txt = ""
         self.definition_txt = ""
+        self.quiet = quiet
 
     def set_include_headers(self, include_headers):
         self.include_headers = include_headers
@@ -524,7 +526,8 @@ class StructWrapperGen:
 
     # Generate c-style .h file that contains functions for printing structs
     def generateStringHelper(self):
-        print("Generating struct string helper")
+        if not self.quiet:
+            print("Generating struct string helper")
         self.shg.setCopyright(self._generateCopyright())
         self.shg.setHeader(self._generateStringHelperHeader())
         self.shg.setBody(self._generateStringHelperFunctions())
@@ -532,7 +535,8 @@ class StructWrapperGen:
 
     # Generate cpp-style .h file that contains functions for printing structs
     def generateStringHelperCpp(self):
-        print("Generating struct string helper cpp")
+        if not self.quiet:
+            print("Generating struct string helper cpp")
         self.shcppg.setCopyright(self._generateCopyright())
         self.shcppg.setHeader(self._generateStringHelperHeaderCpp())
         self.shcppg.setBody(self._generateStringHelperFunctionsCpp())
@@ -540,14 +544,16 @@ class StructWrapperGen:
 
     # Generate c-style .h file that contains functions for printing structs
     def generateValidateHelper(self):
-        print("Generating struct validate helper")
+        if not self.quiet:
+            print("Generating struct validate helper")
         self.vhg.setCopyright(self._generateCopyright())
         self.vhg.setHeader(self._generateValidateHelperHeader())
         self.vhg.setBody(self._generateValidateHelperFunctions())
         self.vhg.generate()
 
     def generateSizeHelper(self):
-        print("Generating struct size helper")
+        if not self.quiet:
+            print("Generating struct size helper")
         self.size_helper_gen.setCopyright(self._generateCopyright())
         self.size_helper_gen.setHeader(self._generateSizeHelperHeader())
         self.size_helper_gen.setBody(self._generateSizeHelperFunctions())
@@ -555,7 +561,8 @@ class StructWrapperGen:
         self.size_helper_gen.generate()
 
     def generateSizeHelperC(self):
-        print("Generating struct size helper c")
+        if not self.quiet:
+            print("Generating struct size helper c")
         self.size_helper_c_gen.setCopyright(self._generateCopyright())
         self.size_helper_c_gen.setHeader(self._generateSizeHelperHeaderC())
         self.size_helper_c_gen.setBody(self._generateSizeHelperFunctionsC())
@@ -1836,19 +1843,22 @@ def main(argv=None):
         enum_sh_filename = os.path.join(os.getcwd(), opts.rel_out_dir, prefix+"_enum_string_helper.h")
     enum_sh_filename = os.path.abspath(enum_sh_filename)
     if not os.path.exists(os.path.dirname(enum_sh_filename)):
-        print("Creating output dir %s" % os.path.dirname(enum_sh_filename))
+        if not opts.quiet:
+            print("Creating output dir %s" % os.path.dirname(enum_sh_filename))
         os.mkdir(os.path.dirname(enum_sh_filename))
     if opts.gen_enum_string_helper:
-        print("Generating enum string helper to %s" % enum_sh_filename)
+        if not opts.quiet:
+            print("Generating enum string helper to %s" % enum_sh_filename)
         enum_vh_filename = os.path.join(os.path.dirname(enum_sh_filename), prefix+"_enum_validate_helper.h")
-        print("Generating enum validate helper to %s" % enum_vh_filename)
+        if not opts.quiet:
+            print("Generating enum validate helper to %s" % enum_vh_filename)
         eg = EnumCodeGen(enum_type_dict, enum_val_dict, typedef_fwd_dict, os.path.basename(opts.input_file), enum_sh_filename, enum_vh_filename)
         eg.generateStringHelper()
         eg.generateEnumValidate()
     #for struct in struct_dict:
     #print(struct)
     if opts.gen_struct_wrappers:
-        sw = StructWrapperGen(struct_dict, os.path.basename(opts.input_file).strip(".h"), os.path.dirname(enum_sh_filename))
+        sw = StructWrapperGen(struct_dict, os.path.basename(opts.input_file).strip(".h"), os.path.dirname(enum_sh_filename), opts.quiet)
         #print(sw.get_class_name(struct))
         sw.set_include_headers([input_header,os.path.basename(enum_sh_filename),"stdint.h","cinttypes", "stdio.h","stdlib.h"])
         sw.generateStringHelper()
@@ -1861,11 +1871,12 @@ def main(argv=None):
         sw.generateSafeStructHeader()
         sw.generateSafeStructs()
     if opts.gen_struct_sizes:
-        st = StructWrapperGen(struct_dict, os.path.basename(opts.input_file).strip(".h"), os.path.dirname(enum_sh_filename))
+        st = StructWrapperGen(struct_dict, os.path.basename(opts.input_file).strip(".h"), os.path.dirname(enum_sh_filename), opts.quiet)
         st.set_include_headers(["stdio.h", "stdlib.h", input_header])
         st.generateSizeHelper()
         st.generateSizeHelperC()
-    print("DONE!")
+    if not opts.quiet:
+        print("DONE!")
     #print(typedef_rev_dict)
     #print(types_dict)
     #recreate_structs()
