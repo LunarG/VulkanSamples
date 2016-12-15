@@ -5375,6 +5375,8 @@ static bool PreCallValidateDestroySemaphore(layer_data *dev_data, VkSemaphore se
                                             VK_OBJECT *obj_struct) {
     *sema_node = getSemaphoreNode(dev_data, semaphore);
     *obj_struct = {reinterpret_cast<uint64_t &>(semaphore), VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT};
+    if (dev_data->instance_data->disabled.destroy_semaphore)
+        return false;
     bool skip = false;
     if (*sema_node) {
         skip |= ValidateObjectNotInUse(dev_data, *sema_node, *obj_struct, VALIDATION_ERROR_00199);

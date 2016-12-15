@@ -91,6 +91,7 @@ struct CHECK_DISABLED {
     bool queue_wait_idle;
     bool device_wait_idle;
     bool destroy_fence;
+    bool destroy_semaphore;
 };
 
 /*
