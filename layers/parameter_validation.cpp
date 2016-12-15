@@ -41,7 +41,6 @@
 #include "vulkan/vk_layer.h"
 #include "vk_layer_config.h"
 #include "vk_dispatch_table_helper.h"
-#include "vk_enum_validate_helper.h"
 #include "vk_struct_validate_helper.h"
 
 #include "vk_layer_table.h"
@@ -3869,15 +3868,10 @@ bool PreBeginCommandBuffer(layer_data *dev_data, VkCommandBuffer commandBuffer, 
                         "Cannot set inherited occlusionQueryEnable in vkBeginCommandBuffer() when device does not support "
                         "inheritedQueries.");
         }
-
-        if ((dev_data->physical_device_features.inheritedQueries != VK_FALSE) && (pInfo->occlusionQueryEnable != VK_FALSE) &&
-            (!validate_VkQueryControlFlagBits(VkQueryControlFlagBits(pInfo->queryFlags)))) {
-            skip |=
-                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                        reinterpret_cast<uint64_t>(commandBuffer), __LINE__, DEVICE_FEATURE, LayerName,
-                        "Cannot enable in occlusion queries in vkBeginCommandBuffer() and set queryFlags to %d which is not a "
-                        "valid combination of VkQueryControlFlagBits.",
-                        pInfo->queryFlags);
+        // VALIDATION_ERROR_00117 check
+        if ((dev_data->physical_device_features.inheritedQueries != VK_FALSE) && (pInfo->occlusionQueryEnable != VK_FALSE)) {
+            skip |= validate_flags(dev_data->report_data, "vkBeginCommandBuffer", "pBeginInfo->pInheritanceInfo->queryFlags",
+                                   "VkQueryControlFlagBits", AllVkQueryControlFlagBits, pInfo->queryFlags, false);
         }
     }
     return skip;
