@@ -171,7 +171,7 @@ class EVENT_STATE : public BASE_NODE {
     VkPipelineStageFlags stageMask;
 };
 
-class QUEUE_NODE {
+class QUEUE_STATE {
   public:
     VkQueue queue;
     uint32_t queueFamilyIndex;

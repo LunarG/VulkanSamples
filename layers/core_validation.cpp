@@ -145,7 +145,7 @@ struct layer_data {
     unordered_map<VkPipelineLayout, PIPELINE_LAYOUT_NODE> pipelineLayoutMap;
     unordered_map<VkDeviceMemory, unique_ptr<DEVICE_MEM_INFO>> memObjMap;
     unordered_map<VkFence, FENCE_NODE> fenceMap;
-    unordered_map<VkQueue, QUEUE_NODE> queueMap;
+    unordered_map<VkQueue, QUEUE_STATE> queueMap;
     unordered_map<VkEvent, EVENT_STATE> eventMap;
     unordered_map<QueryObject, bool> queryToStateMap;
     unordered_map<VkQueryPool, QUERY_POOL_NODE> queryPoolMap;
@@ -353,7 +353,7 @@ QUERY_POOL_NODE *getQueryPoolNode(layer_data *dev_data, VkQueryPool query_pool) 
     return &it->second;
 }
 
-QUEUE_NODE *getQueueNode(layer_data *dev_data, VkQueue queue) {
+QUEUE_STATE *getQueueState(layer_data *dev_data, VkQueue queue) {
     auto it = dev_data->queueMap.find(queue);
     if (it == dev_data->queueMap.end()) {
         return nullptr;
@@ -4549,7 +4549,7 @@ static bool validateAndIncrementResources(layer_data *dev_data, GLOBAL_CB_NODE *
 // For the given queue, verify the queue state up to the given seq number.
 // Currently the only check is to make sure that if there are events to be waited on prior to
 //  a QueryReset, make sure that all such events have been signalled.
-static bool VerifyQueueStateToSeq(layer_data *dev_data, QUEUE_NODE *queue, uint64_t seq) {
+static bool VerifyQueueStateToSeq(layer_data *dev_data, QUEUE_STATE *queue, uint64_t seq) {
     bool skip = false;
     auto queue_seq = queue->seq;
     std::unordered_map<VkQueue, uint64_t> other_queue_seqs;
@@ -4579,7 +4579,7 @@ static bool VerifyQueueStateToSeq(layer_data *dev_data, QUEUE_NODE *queue, uint6
         queue_seq++;
     }
     for (auto qs : other_queue_seqs) {
-        skip |= VerifyQueueStateToSeq(dev_data, getQueueNode(dev_data, qs.first), qs.second);
+        skip |= VerifyQueueStateToSeq(dev_data, getQueueState(dev_data, qs.first), qs.second);
     }
     return skip;
 }
@@ -4588,7 +4588,7 @@ static bool VerifyQueueStateToSeq(layer_data *dev_data, QUEUE_NODE *queue, uint6
 static bool VerifyQueueStateToFence(layer_data *dev_data, VkFence fence) {
     auto fence_state = getFenceNode(dev_data, fence);
     if (VK_NULL_HANDLE != fence_state->signaler.first) {
-        return VerifyQueueStateToSeq(dev_data, getQueueNode(dev_data, fence_state->signaler.first), fence_state->signaler.second);
+        return VerifyQueueStateToSeq(dev_data, getQueueState(dev_data, fence_state->signaler.first), fence_state->signaler.second);
     }
     return false;
 }
@@ -4615,7 +4615,7 @@ static void DecrementBoundResources(layer_data *dev_data, GLOBAL_CB_NODE const *
     }
 }
 
-static void RetireWorkOnQueue(layer_data *dev_data, QUEUE_NODE *pQueue, uint64_t seq) {
+static void RetireWorkOnQueue(layer_data *dev_data, QUEUE_STATE *pQueue, uint64_t seq) {
     std::unordered_map<VkQueue, uint64_t> otherQueueSeqs;
 
     // Roll this queue forward, one submission at a time.
@@ -4680,16 +4680,14 @@ static void RetireWorkOnQueue(layer_data *dev_data, QUEUE_NODE *pQueue, uint64_t
 
     // Roll other queues forward to the highest seq we saw a wait for
     for (auto qs : otherQueueSeqs) {
-        RetireWorkOnQueue(dev_data, getQueueNode(dev_data, qs.first), qs.second);
+        RetireWorkOnQueue(dev_data, getQueueState(dev_data, qs.first), qs.second);
     }
 }
 
 
 // Submit a fence to a queue, delimiting previous fences and previous untracked
 // work by it.
-static void
-SubmitFence(QUEUE_NODE *pQueue, FENCE_NODE *pFence, uint64_t submitCount)
-{
+static void SubmitFence(QUEUE_STATE *pQueue, FENCE_NODE *pFence, uint64_t submitCount) {
     pFence->state = FENCE_INFLIGHT;
     pFence->signaler.first = pQueue->queue;
     pFence->signaler.second = pQueue->seq + pQueue->submissions.size() + submitCount;
@@ -4752,15 +4750,15 @@ static bool validateCommandBufferState(layer_data *dev_data, GLOBAL_CB_NODE *pCB
 static bool validateQueueFamilyIndices(layer_data *dev_data, GLOBAL_CB_NODE *pCB, VkQueue queue) {
     bool skip_call = false;
     auto pPool = getCommandPoolNode(dev_data, pCB->createInfo.commandPool);
-    auto queue_node = getQueueNode(dev_data, queue);
+    auto queue_state = getQueueState(dev_data, queue);
 
-    if (pPool && queue_node && (pPool->queueFamilyIndex != queue_node->queueFamilyIndex)) {
+    if (pPool && queue_state && (pPool->queueFamilyIndex != queue_state->queueFamilyIndex)) {
         skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-            reinterpret_cast<uint64_t>(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_QUEUE_FAMILY, "DS",
-            "vkQueueSubmit: Primary command buffer 0x%" PRIxLEAST64
-            " created in queue family %d is being submitted on queue 0x%" PRIxLEAST64 " from queue family %d.",
-            reinterpret_cast<uint64_t>(pCB->commandBuffer), pPool->queueFamilyIndex,
-            reinterpret_cast<uint64_t>(queue), queue_node->queueFamilyIndex);
+                             reinterpret_cast<uint64_t>(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_QUEUE_FAMILY, "DS",
+                             "vkQueueSubmit: Primary command buffer 0x%" PRIxLEAST64
+                             " created in queue family %d is being submitted on queue 0x%" PRIxLEAST64 " from queue family %d.",
+                             reinterpret_cast<uint64_t>(pCB->commandBuffer), pPool->queueFamilyIndex,
+                             reinterpret_cast<uint64_t>(queue), queue_state->queueFamilyIndex);
     }
 
     return skip_call;
@@ -4831,7 +4829,7 @@ QueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits, V
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     std::unique_lock<std::mutex> lock(global_lock);
 
-    auto pQueue = getQueueNode(dev_data, queue);
+    auto pQueue = getQueueState(dev_data, queue);
     auto pFence = getFenceNode(dev_data, fence);
     skip_call |= ValidateFenceForSubmit(dev_data, pFence);
 
@@ -5181,7 +5179,7 @@ static void RetireFence(layer_data *dev_data, VkFence fence) {
         /* Fence signaller is a queue -- use this as proof that prior operations
          * on that queue have completed.
          */
-        RetireWorkOnQueue(dev_data, getQueueNode(dev_data, pFence->signaler.first), pFence->signaler.second);
+        RetireWorkOnQueue(dev_data, getQueueState(dev_data, pFence->signaler.first), pFence->signaler.second);
     }
     else {
         /* Fence signaller is the WSI. We're not tracking what the WSI op
@@ -5263,7 +5261,7 @@ static void PostCallRecordGetDeviceQueue(layer_data *dev_data, uint32_t q_family
     // Add queue to tracking set only if it is new
     auto result = dev_data->queues.emplace(queue);
     if (result.second == true) {
-        QUEUE_NODE *queue_state = &dev_data->queueMap[queue];
+        QUEUE_STATE *queue_state = &dev_data->queueMap[queue];
         queue_state->queue = queue;
         queue_state->queueFamilyIndex = q_family_index;
         queue_state->seq = 0;
@@ -5279,20 +5277,20 @@ VKAPI_ATTR void VKAPI_CALL GetDeviceQueue(VkDevice device, uint32_t queueFamilyI
     PostCallRecordGetDeviceQueue(dev_data, queueFamilyIndex, *pQueue);
 }
 
-static bool PreCallValidateQueueWaitIdle(layer_data *dev_data, VkQueue queue, QUEUE_NODE **queue_state) {
-    *queue_state = getQueueNode(dev_data, queue);
+static bool PreCallValidateQueueWaitIdle(layer_data *dev_data, VkQueue queue, QUEUE_STATE **queue_state) {
+    *queue_state = getQueueState(dev_data, queue);
     if (dev_data->instance_data->disabled.queue_wait_idle)
         return false;
     return VerifyQueueStateToSeq(dev_data, *queue_state, (*queue_state)->seq + (*queue_state)->submissions.size());
 }
 
-static void PostCallRecordQueueWaitIdle(layer_data *dev_data, QUEUE_NODE *queue_state) {
+static void PostCallRecordQueueWaitIdle(layer_data *dev_data, QUEUE_STATE *queue_state) {
     RetireWorkOnQueue(dev_data, queue_state, queue_state->seq + queue_state->submissions.size());
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL QueueWaitIdle(VkQueue queue) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
-    QUEUE_NODE *queue_state = nullptr;
+    QUEUE_STATE *queue_state = nullptr;
     std::unique_lock<std::mutex> lock(global_lock);
     bool skip = PreCallValidateQueueWaitIdle(dev_data, queue, &queue_state);
     lock.unlock();
@@ -11555,7 +11553,7 @@ QueueBindSparse(VkQueue queue, uint32_t bindInfoCount, const VkBindSparseInfo *p
     bool skip_call = false;
     std::unique_lock<std::mutex> lock(global_lock);
     auto pFence = getFenceNode(dev_data, fence);
-    auto pQueue = getQueueNode(dev_data, queue);
+    auto pQueue = getQueueState(dev_data, queue);
 
     // First verify that fence is not in use
     skip_call |= ValidateFenceForSubmit(dev_data, pFence);
@@ -12056,7 +12054,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
     bool skip_call = false;
 
     std::lock_guard<std::mutex> lock(global_lock);
-    auto queue_state = getQueueNode(dev_data, queue);
+    auto queue_state = getQueueState(dev_data, queue);
 
     for (uint32_t i = 0; i < pPresentInfo->waitSemaphoreCount; ++i) {
         auto pSemaphore = getSemaphoreNode(dev_data, pPresentInfo->pWaitSemaphores[i]);
