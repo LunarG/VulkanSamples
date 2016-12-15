@@ -183,7 +183,7 @@ static const VkLayerProperties layerProps = {
 };
 
 static inline PFN_vkVoidFunction layer_intercept_proc(const char *name) {
-    for (int i = 0; i < sizeof(procmap) / sizeof(procmap[0]); i++) {
+    for (unsigned int i = 0; i < sizeof(procmap) / sizeof(procmap[0]); i++) {
         if (!strcmp(name, procmap[i].name))
             return procmap[i].pFunc;
     }

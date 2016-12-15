@@ -28,8 +28,6 @@
 #include <vector>
 #include <unordered_map>
 
-using namespace std;
-
 // Swapchain ERROR codes
 enum SWAPCHAIN_ERROR {
     SWAPCHAIN_INVALID_HANDLE,             // Handle used that isn't currently valid
@@ -93,11 +91,11 @@ struct SwpInstance {
     VkInstance instance;
 
     // Remember the VkSurfaceKHR's that are created for this VkInstance:
-    unordered_map<VkSurfaceKHR, SwpSurface *> surfaces;
+    std::unordered_map<VkSurfaceKHR, SwpSurface *> surfaces;
 
     // When vkEnumeratePhysicalDevices is called, the VkPhysicalDevice's are
     // remembered:
-    unordered_map<const void *, SwpPhysicalDevice *> physicalDevices;
+    std::unordered_map<const void *, SwpPhysicalDevice *> physicalDevices;
 
     // Set to true if VK_KHR_DISPLAY_EXTENSION_NAME was enabled for this VkInstance:
     bool displayExtensionEnabled;
@@ -113,7 +111,7 @@ struct SwpSurface {
 
     // When vkCreateSwapchainKHR is called, the VkSwapchainKHR's are
     // remembered:
-    unordered_map<VkSwapchainKHR, SwpSwapchain *> swapchains;
+    std::unordered_map<VkSwapchainKHR, SwpSwapchain *> swapchains;
 
     // Value of pQueueFamilyPropertyCount that was returned by the
     // vkGetPhysicalDeviceQueueFamilyProperties() function:
@@ -144,7 +142,7 @@ struct SwpPhysicalDevice {
 
     // Record all surfaces that vkGetPhysicalDeviceSurfaceSupportKHR() was
     // called for:
-    unordered_map<VkSurfaceKHR, SwpSurface *> supportedSurfaces;
+    std::unordered_map<VkSurfaceKHR, SwpSurface *> supportedSurfaces;
 
     // Count returned by vkGetPhysicalDeviceDisplayPlanePropertiesKHR():
     uint32_t displayPlanePropertyCount;
@@ -161,10 +159,10 @@ struct SwpDevice {
 
     // When vkCreateSwapchainKHR is called, the VkSwapchainKHR's are
     // remembered:
-    unordered_map<VkSwapchainKHR, SwpSwapchain *> swapchains;
+    std::unordered_map<VkSwapchainKHR, SwpSwapchain *> swapchains;
 
     // When vkGetDeviceQueue is called, the VkQueue's are remembered:
-    unordered_map<VkQueue, SwpQueue *> queues;
+    std::unordered_map<VkQueue, SwpQueue *> queues;
 };
 
 // Create one of these for each VkImage within a VkSwapchainKHR:

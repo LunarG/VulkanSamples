@@ -86,6 +86,10 @@ static const VkDeviceMemory MEMTRACKER_SWAP_CHAIN_IMAGE_KEY = (VkDeviceMemory)(-
 // 2nd special memory handle used to flag object as unbound from memory
 static const VkDeviceMemory MEMORY_UNBOUND = VkDeviceMemory(~((uint64_t)(0)) - 1);
 
+// A special value of (0xFFFFFFFF, 0xFFFFFFFF) indicates that the surface size will be determined
+// by the extent of a swapchain targeting the surface.
+static const uint32_t kSurfaceSizeFromSwapchain = 0xFFFFFFFFu;
+
 struct devExts {
     bool wsi_enabled;
     bool wsi_display_swapchain_enabled;
@@ -11778,10 +11782,11 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, VkSwapchainC
 
         // Validate pCreateInfo->imageExtent against
         // VkSurfaceCapabilitiesKHR::{current|min|max}ImageExtent:
-        if ((capabilities.currentExtent.width == -1) && ((pCreateInfo->imageExtent.width < capabilities.minImageExtent.width) ||
-                                                         (pCreateInfo->imageExtent.width > capabilities.maxImageExtent.width) ||
-                                                         (pCreateInfo->imageExtent.height < capabilities.minImageExtent.height) ||
-                                                         (pCreateInfo->imageExtent.height > capabilities.maxImageExtent.height))) {
+        if ((capabilities.currentExtent.width == kSurfaceSizeFromSwapchain) &&
+            ((pCreateInfo->imageExtent.width < capabilities.minImageExtent.width) ||
+             (pCreateInfo->imageExtent.width > capabilities.maxImageExtent.width) ||
+             (pCreateInfo->imageExtent.height < capabilities.minImageExtent.height) ||
+             (pCreateInfo->imageExtent.height > capabilities.maxImageExtent.height))) {
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                         reinterpret_cast<uint64_t>(dev_data->device), __LINE__, VALIDATION_ERROR_02334, "DS",
                         "vkCreateSwapchainKHR() called with pCreateInfo->imageExtent = (%d,%d), which is outside the "
@@ -11793,8 +11798,9 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, VkSwapchainC
                         validation_error_map[VALIDATION_ERROR_02334]))
                 return true;
         }
-        if ((capabilities.currentExtent.width != -1) && ((pCreateInfo->imageExtent.width != capabilities.currentExtent.width) ||
-                                                         (pCreateInfo->imageExtent.height != capabilities.currentExtent.height))) {
+        if ((capabilities.currentExtent.width != kSurfaceSizeFromSwapchain) &&
+            ((pCreateInfo->imageExtent.width != capabilities.currentExtent.width) ||
+             (pCreateInfo->imageExtent.height != capabilities.currentExtent.height))) {
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                         reinterpret_cast<uint64_t>(dev_data->device), __LINE__, VALIDATION_ERROR_02334, "DS",
                         "vkCreateSwapchainKHR() called with pCreateInfo->imageExtent = (%d,%d), which is not equal to the "
