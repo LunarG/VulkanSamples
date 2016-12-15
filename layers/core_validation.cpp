@@ -4354,19 +4354,6 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
     dev_data->queueMap.clear();
     // Report any memory leaks
     DEVICE_MEM_INFO *pInfo = NULL;
-    if (!dev_data->memObjMap.empty()) {
-        for (auto ii = dev_data->memObjMap.begin(); ii != dev_data->memObjMap.end(); ++ii) {
-            pInfo = (*ii).second.get();
-            if (pInfo->alloc_info.allocationSize != 0) {
-                // Valid Usage: All child objects created on device must have been destroyed prior to destroying device
-                skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
-                                (uint64_t)pInfo->mem, __LINE__, MEMTRACK_MEMORY_LEAK, "MEM",
-                                "Mem Object 0x%" PRIx64 " has not been freed. You should clean up this memory by calling "
-                                "vkFreeMemory(0x%" PRIx64 ") prior to vkDestroyDevice().",
-                                (uint64_t)(pInfo->mem), (uint64_t)(pInfo->mem));
-            }
-        }
-    }
     layer_debug_report_destroy_device(device);
     lock.unlock();
 
@@ -4701,8 +4688,9 @@ static bool validateCommandBufferSimultaneousUse(layer_data *dev_data, GLOBAL_CB
     if (dev_data->globalInFlightCmdBuffers.count(pCB->commandBuffer) &&
         !(pCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT)) {
         skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                             0, __LINE__, DRAWSTATE_INVALID_CB_SIMULTANEOUS_USE, "DS",
-                             "Command Buffer 0x%p is already in use and is not marked for simultaneous use.", pCB->commandBuffer);
+                             0, __LINE__, VALIDATION_ERROR_00133, "DS",
+                             "Command Buffer 0x%p is already in use and is not marked for simultaneous use. %s", pCB->commandBuffer,
+                             validation_error_map[VALIDATION_ERROR_00133]);
     }
     return skip_call;
 }
@@ -4754,10 +4742,11 @@ static bool validateQueueFamilyIndices(layer_data *dev_data, GLOBAL_CB_NODE *pCB
 
     if (pPool && queue_state && (pPool->queueFamilyIndex != queue_state->queueFamilyIndex)) {
         skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                             reinterpret_cast<uint64_t>(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_QUEUE_FAMILY, "DS",
-                             "vkQueueSubmit: Primary command buffer 0x%p"
-                             " created in queue family %d is being submitted on queue 0x%p from queue family %d.",
-                             pCB->commandBuffer, pPool->queueFamilyIndex, queue, queue_state->queueFamilyIndex);
+                             reinterpret_cast<uint64_t>(pCB->commandBuffer), __LINE__, VALIDATION_ERROR_00139, "DS",
+                             "vkQueueSubmit: Primary command buffer 0x%p created in queue family %d is being submitted on queue "
+                             "0x%p from queue family %d. %s",
+                             pCB->commandBuffer, pPool->queueFamilyIndex, queue, queue_state->queueFamilyIndex,
+                             validation_error_map[VALIDATION_ERROR_00139]);
     }
 
     return skip_call;
@@ -4779,13 +4768,13 @@ static bool validatePrimaryCommandBufferState(layer_data *dev_data, GLOBAL_CB_NO
             skip_call |= validateAndIncrementResources(dev_data, pSubCB);
             if ((pSubCB->primaryCommandBuffer != pCB->commandBuffer) &&
                 !(pSubCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT)) {
-                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0,
-                        __LINE__, DRAWSTATE_COMMAND_BUFFER_SINGLE_SUBMIT_VIOLATION, "DS",
-                        "Commandbuffer 0x%p was submitted with secondary buffer 0x%p"
-                        " but that buffer has subsequently been bound to "
-                        "primary cmd buffer 0x%p"
-                        " and it does not have VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set.",
-                        pCB->commandBuffer, secondaryCmdBuffer, pSubCB->primaryCommandBuffer);
+                log_msg(
+                    dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0,
+                    __LINE__, VALIDATION_ERROR_00135, "DS",
+                    "Commandbuffer 0x%p was submitted with secondary buffer 0x%p but that buffer has subsequently been bound to "
+                    "primary cmd buffer 0x%p and it does not have VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set. %s",
+                    pCB->commandBuffer, secondaryCmdBuffer, pSubCB->primaryCommandBuffer,
+                    validation_error_map[VALIDATION_ERROR_00135]);
             }
         }
     }
@@ -4802,12 +4791,14 @@ ValidateFenceForSubmit(layer_data *dev_data, FENCE_NODE *pFence)
 
     if (pFence) {
         if (pFence->state == FENCE_INFLIGHT) {
+            // TODO: opportunities for VALIDATION_ERROR_00127, VALIDATION_ERROR_01647, VALIDATION_ERROR_01953
             skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
                                  (uint64_t)(pFence->fence), __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
                                  "Fence 0x%" PRIx64 " is already in use by another submission.", (uint64_t)(pFence->fence));
         }
 
         else if (pFence->state == FENCE_RETIRED) {
+            // TODO: opportunities for VALIDATION_ERROR_00126, VALIDATION_ERROR_01646, VALIDATION_ERROR_01953
             skip_call |=
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
                         reinterpret_cast<uint64_t &>(pFence->fence), __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
@@ -5075,11 +5066,11 @@ static bool ValidateMapMemRange(layer_data *my_data, VkDeviceMemory mem, VkDevic
             }
         } else {
             if ((offset + size) > mem_info->alloc_info.allocationSize) {
-                skip_call =
-                    log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
-                            (uint64_t)mem, __LINE__, MEMTRACK_INVALID_MAP, "MEM",
-                            "Mapping Memory from 0x%" PRIx64 " to 0x%" PRIx64 " oversteps total array size 0x%" PRIx64, offset,
-                            size + offset, mem_info->alloc_info.allocationSize);
+                skip_call = log_msg(
+                    my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
+                    (uint64_t)mem, __LINE__, VALIDATION_ERROR_00628, "MEM",
+                    "Mapping Memory from 0x%" PRIx64 " to 0x%" PRIx64 " oversteps total array size 0x%" PRIx64 ". %s", offset,
+                    size + offset, mem_info->alloc_info.allocationSize, validation_error_map[VALIDATION_ERROR_00628]);
             }
         }
     }
@@ -5101,8 +5092,9 @@ static bool deleteMemRanges(layer_data *my_data, VkDeviceMemory mem) {
         if (!mem_info->mem_range.size) {
             // Valid Usage: memory must currently be mapped
             skip_call = log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
-                                (uint64_t)mem, __LINE__, MEMTRACK_INVALID_MAP, "MEM",
-                                "Unmapping Memory without memory being mapped: mem obj 0x%" PRIxLEAST64, (uint64_t)mem);
+                                (uint64_t)mem, __LINE__, VALIDATION_ERROR_00649, "MEM",
+                                "Unmapping Memory without memory being mapped: mem obj 0x%" PRIxLEAST64 ". %s", (uint64_t)mem,
+                                validation_error_map[VALIDATION_ERROR_00649]);
         }
         mem_info->mem_range.size = 0;
         if (mem_info->shadow_copy) {
@@ -5578,8 +5570,9 @@ static bool validateIdleBuffer(const layer_data *my_data, VkBuffer buffer) {
     } else {
         if (buffer_state->in_use.load()) {
             skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
-                                 (uint64_t)(buffer), __LINE__, DRAWSTATE_OBJECT_INUSE, "DS",
-                                 "Cannot free buffer 0x%" PRIxLEAST64 " that is in use by a command buffer.", (uint64_t)(buffer));
+                                 (uint64_t)(buffer), __LINE__, VALIDATION_ERROR_00676, "DS",
+                                 "Cannot free buffer 0x%" PRIxLEAST64 " that is in use by a command buffer. %s", (uint64_t)(buffer),
+                                 validation_error_map[VALIDATION_ERROR_00676]);
         }
     }
     return skip_call;
@@ -5854,15 +5847,16 @@ VKAPI_ATTR void VKAPI_CALL DestroyImage(VkDevice device, VkImage image, const Vk
 }
 
 static bool ValidateMemoryTypes(const layer_data *dev_data, const DEVICE_MEM_INFO *mem_info, const uint32_t memory_type_bits,
-                                  const char *funcName) {
+                                const char *funcName, UNIQUE_VALIDATION_ERROR_CODE msgCode) {
     bool skip_call = false;
     if (((1 << mem_info->alloc_info.memoryTypeIndex) & memory_type_bits) == 0) {
-        skip_call = log_msg(
-            dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
-            reinterpret_cast<const uint64_t &>(mem_info->mem), __LINE__, MEMTRACK_INVALID_MEM_TYPE, "MT",
-            "%s(): MemoryRequirements->memoryTypeBits (0x%X) for this object type are not compatible with the memory "
-            "type (0x%X) of this memory object 0x%" PRIx64 ".",
-            funcName, memory_type_bits, mem_info->alloc_info.memoryTypeIndex, reinterpret_cast<const uint64_t &>(mem_info->mem));
+        skip_call =
+            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
+                    reinterpret_cast<const uint64_t &>(mem_info->mem), __LINE__, msgCode, "MT",
+                    "%s(): MemoryRequirements->memoryTypeBits (0x%X) for this object type are not compatible with the memory "
+                    "type (0x%X) of this memory object 0x%" PRIx64 ". %s",
+                    funcName, memory_type_bits, mem_info->alloc_info.memoryTypeIndex,
+                    reinterpret_cast<const uint64_t &>(mem_info->mem), validation_error_map[msgCode]);
     }
     return skip_call;
 }
@@ -5899,18 +5893,18 @@ BindBufferMemory(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDeviceS
         auto mem_info = getMemObjInfo(dev_data, mem);
         if (mem_info) {
             skip_call |= InsertBufferMemoryRange(dev_data, buffer, mem_info, memoryOffset, buffer_state->requirements);
-            skip_call |= ValidateMemoryTypes(dev_data, mem_info, buffer_state->requirements.memoryTypeBits, "BindBufferMemory");
+            skip_call |= ValidateMemoryTypes(dev_data, mem_info, buffer_state->requirements.memoryTypeBits, "vkBindBufferMemory()",
+                                             VALIDATION_ERROR_00797);
         }
 
         // Validate memory requirements alignment
         if (vk_safe_modulo(memoryOffset, buffer_state->requirements.alignment) != 0) {
-            skip_call |=
-                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0,
-                        __LINE__, DRAWSTATE_INVALID_BUFFER_MEMORY_OFFSET, "DS",
-                        "vkBindBufferMemory(): memoryOffset is 0x%" PRIxLEAST64 " but must be an integer multiple of the "
-                        "VkMemoryRequirements::alignment value 0x%" PRIxLEAST64
-                        ", returned from a call to vkGetBufferMemoryRequirements with buffer",
-                        memoryOffset, buffer_state->requirements.alignment);
+            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                 VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, VALIDATION_ERROR_02174, "DS",
+                                 "vkBindBufferMemory(): memoryOffset is 0x%" PRIxLEAST64 " but must be an integer multiple of the "
+                                 "VkMemoryRequirements::alignment value 0x%" PRIxLEAST64
+                                 ", returned from a call to vkGetBufferMemoryRequirements with buffer. %s",
+                                 memoryOffset, buffer_state->requirements.alignment, validation_error_map[VALIDATION_ERROR_02174]);
         }
 
         // Validate device limits alignments
@@ -5926,6 +5920,11 @@ BindBufferMemory(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDeviceS
             "minUniformBufferOffsetAlignment",
             "minStorageBufferOffsetAlignment"
         };
+        static const UNIQUE_VALIDATION_ERROR_CODE msgCode[3] = {
+            VALIDATION_ERROR_00794,
+            VALIDATION_ERROR_00795,
+            VALIDATION_ERROR_00796
+        };
 
         // Keep this one fresh!
         const VkDeviceSize offset_requirement[3] = {
@@ -5938,12 +5937,12 @@ BindBufferMemory(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDeviceS
         for (int i = 0; i < 3; i++) {
             if (usage & usage_list[i]) {
                 if (vk_safe_modulo(memoryOffset, offset_requirement[i]) != 0) {
-                    skip_call |=
-                        log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
-                                0, __LINE__, DRAWSTATE_INVALID_TEXEL_BUFFER_OFFSET, "DS",
-                                "vkBindBufferMemory(): %s memoryOffset is 0x%" PRIxLEAST64 " but must be a multiple of "
-                                "device limit %s 0x%" PRIxLEAST64,
-                                memory_type[i], memoryOffset, offset_name[i], offset_requirement[i]);
+                    skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, msgCode[i], "DS",
+                                         "vkBindBufferMemory(): %s memoryOffset is 0x%" PRIxLEAST64 " but must be a multiple of "
+                                         "device limit %s 0x%" PRIxLEAST64 ". %s",
+                                         memory_type[i], memoryOffset, offset_name[i], offset_requirement[i],
+                                         validation_error_map[msgCode[i]]);
                 }
             }
         }
@@ -11744,7 +11743,8 @@ VKAPI_ATTR VkResult VKAPI_CALL BindImageMemory(VkDevice device, VkImage image, V
         if (mem_info) {
             skip_call |= InsertImageMemoryRange(dev_data, image, mem_info, memoryOffset, image_state->requirements,
                                                 image_state->createInfo.tiling == VK_IMAGE_TILING_LINEAR);
-            skip_call |= ValidateMemoryTypes(dev_data, mem_info, image_state->requirements.memoryTypeBits, "vkBindImageMemory");
+            skip_call |= ValidateMemoryTypes(dev_data, mem_info, image_state->requirements.memoryTypeBits, "vkBindImageMemory()",
+                                             VALIDATION_ERROR_00806);
         }
 
         lock.unlock();
