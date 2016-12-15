@@ -41,7 +41,6 @@
 #include "vulkan/vk_layer.h"
 #include "vk_layer_config.h"
 #include "vk_dispatch_table_helper.h"
-#include "vk_struct_validate_helper.h"
 
 #include "vk_layer_table.h"
 #include "vk_layer_data.h"
