@@ -484,13 +484,11 @@ class StructWrapperGen:
         self.safe_struct_source_filename = os.path.join(out_dir, self.api_prefix+"_safe_struct.cpp")
         self.string_helper_filename = os.path.join(out_dir, self.api_prefix+"_struct_string_helper.h")
         self.string_helper_cpp_filename = os.path.join(out_dir, self.api_prefix+"_struct_string_helper_cpp.h")
-        self.validate_helper_filename = os.path.join(out_dir, self.api_prefix+"_struct_validate_helper.h")
         # Safe Struct (ss) header and source files
         self.ssh = CommonFileGen(self.safe_struct_header_filename)
         self.sss = CommonFileGen(self.safe_struct_source_filename)
         self.shg = CommonFileGen(self.string_helper_filename)
         self.shcppg = CommonFileGen(self.string_helper_cpp_filename)
-        self.vhg = CommonFileGen(self.validate_helper_filename)
         self.size_helper_filename = os.path.join(out_dir, self.api_prefix+"_struct_size_helper.h")
         self.size_helper_c_filename = os.path.join(out_dir, self.api_prefix+"_struct_size_helper.c")
         self.size_helper_gen = CommonFileGen(self.size_helper_filename)
@@ -541,15 +539,6 @@ class StructWrapperGen:
         self.shcppg.setHeader(self._generateStringHelperHeaderCpp())
         self.shcppg.setBody(self._generateStringHelperFunctionsCpp())
         self.shcppg.generate()
-
-    # Generate c-style .h file that contains functions for printing structs
-    def generateValidateHelper(self):
-        if not self.quiet:
-            print("Generating struct validate helper")
-        self.vhg.setCopyright(self._generateCopyright())
-        self.vhg.setHeader(self._generateValidateHelperHeader())
-        self.vhg.setBody(self._generateValidateHelperFunctions())
-        self.vhg.generate()
 
     def generateSizeHelper(self):
         if not self.quiet:
@@ -1262,50 +1251,6 @@ class StructWrapperGen:
         header.append("std::string dynamic_display(const void* pStruct, const std::string prefix);\n")
         return "".join(header)
 
-    def _generateValidateHelperFunctions(self):
-        sh_funcs = []
-        # We do two passes, first pass just generates prototypes for all the functsions
-        for s in sorted(self.struct_dict):
-
-            # Wrap this in platform check since it may contain undefined structs or functions
-            add_platform_wrapper_entry(sh_funcs, typedef_fwd_dict[s])
-            sh_funcs.append('uint32_t %s(const %s* pStruct);' % (self._get_vh_func_name(s), typedef_fwd_dict[s]))
-            add_platform_wrapper_exit(sh_funcs, typedef_fwd_dict[s])
-
-        sh_funcs.append('\n')
-        for s in sorted(self.struct_dict):
-
-            # Wrap this in platform check since it may contain undefined structs or functions
-            add_platform_wrapper_entry(sh_funcs, typedef_fwd_dict[s])
-
-            sh_funcs.append('uint32_t %s(const %s* pStruct)\n{' % (self._get_vh_func_name(s), typedef_fwd_dict[s]))
-            for m in sorted(self.struct_dict[s]):
-                # TODO : Need to handle arrays of enums like in VkRenderPassCreateInfo struct
-                if is_type(self.struct_dict[s][m]['type'], 'enum') and not self.struct_dict[s][m]['ptr']:
-                    sh_funcs.append('    if (!validate_%s(pStruct->%s))\n        return 0;' % (self.struct_dict[s][m]['type'], self.struct_dict[s][m]['name']))
-                # TODO : Need a little refinement to this code to make sure type of struct matches expected input (ptr, const...)
-                if is_type(self.struct_dict[s][m]['type'], 'struct'):
-                    if (self.struct_dict[s][m]['ptr']):
-                        sh_funcs.append('    if (pStruct->%s && !%s((const %s*)pStruct->%s))\n        return 0;' % (self.struct_dict[s][m]['name'], self._get_vh_func_name(self.struct_dict[s][m]['type']), self.struct_dict[s][m]['type'], self.struct_dict[s][m]['name']))
-                    else:
-                        sh_funcs.append('    if (!%s((const %s*)&pStruct->%s))\n        return 0;' % (self._get_vh_func_name(self.struct_dict[s][m]['type']), self.struct_dict[s][m]['type'], self.struct_dict[s][m]['name']))
-            sh_funcs.append("    return 1;\n}")
-
-            # End of platform wrapped section
-            add_platform_wrapper_exit(sh_funcs, typedef_fwd_dict[s])
-
-        return "\n".join(sh_funcs)
-
-    def _generateValidateHelperHeader(self):
-        header = []
-        header.append("//#includes, #defines, globals and such...\n")
-        for f in self.include_headers:
-            if 'vk_enum_validate_helper' not in f:
-                header.append("#include <%s>\n" % f)
-        header.append('#include "vk_enum_validate_helper.h"\n\n// Function Prototypes\n')
-        #header.append("char* dynamic_display(const void* pStruct, const char* prefix);\n")
-        return "".join(header)
-
     def _generateSizeHelperFunctions(self):
         sh_funcs = []
         # just generates prototypes for all the functions
@@ -1746,44 +1691,18 @@ class StructWrapperGen:
         return "\n".join(ss_src)
 
 class EnumCodeGen:
-    def __init__(self, enum_type_dict=None, enum_val_dict=None, typedef_fwd_dict=None, in_file=None, out_sh_file=None, out_vh_file=None):
+    def __init__(self, enum_type_dict=None, enum_val_dict=None, typedef_fwd_dict=None, in_file=None, out_sh_file=None):
         self.et_dict = enum_type_dict
         self.ev_dict = enum_val_dict
         self.tf_dict = typedef_fwd_dict
         self.in_file = in_file
         self.out_sh_file = out_sh_file
         self.eshfg = CommonFileGen(self.out_sh_file)
-        self.out_vh_file = out_vh_file
-        self.evhfg = CommonFileGen(self.out_vh_file)
 
     def generateStringHelper(self):
         self.eshfg.setHeader(self._generateSHHeader())
         self.eshfg.setBody(self._generateSHBody())
         self.eshfg.generate()
-
-    def generateEnumValidate(self):
-        self.evhfg.setHeader(self._generateSHHeader())
-        self.evhfg.setBody(self._generateVHBody())
-        self.evhfg.generate()
-
-    def _generateVHBody(self):
-        body = []
-        for bet in sorted(self.et_dict):
-            fet = self.tf_dict[bet]
-            body.append("static inline uint32_t validate_%s(%s input_value)\n{" % (fet, fet))
-            # TODO : This is not ideal, but allows for flag combinations. Need more rigorous validation of realistic flag combinations
-            if 'flagbits' in bet.lower():
-                body.append('    if (input_value > (%s))' % (' | '.join(self.et_dict[bet])))
-                body.append('        return 0;')
-                body.append('    return 1;')
-                body.append('}\n\n')
-            else:
-                body.append('    switch ((%s)input_value)\n    {' % (fet))
-                for e in sorted(self.et_dict[bet]):
-                    if (self.ev_dict[e]['unique']):
-                        body.append('        case %s:' % (e))
-                body.append('            return 1;\n        default:\n            return 0;\n    }\n}\n\n')
-        return "\n".join(body)
 
     def _generateSHBody(self):
         body = []
@@ -1849,12 +1768,8 @@ def main(argv=None):
     if opts.gen_enum_string_helper:
         if not opts.quiet:
             print("Generating enum string helper to %s" % enum_sh_filename)
-        enum_vh_filename = os.path.join(os.path.dirname(enum_sh_filename), prefix+"_enum_validate_helper.h")
-        if not opts.quiet:
-            print("Generating enum validate helper to %s" % enum_vh_filename)
-        eg = EnumCodeGen(enum_type_dict, enum_val_dict, typedef_fwd_dict, os.path.basename(opts.input_file), enum_sh_filename, enum_vh_filename)
+        eg = EnumCodeGen(enum_type_dict, enum_val_dict, typedef_fwd_dict, os.path.basename(opts.input_file), enum_sh_filename)
         eg.generateStringHelper()
-        eg.generateEnumValidate()
     #for struct in struct_dict:
     #print(struct)
     if opts.gen_struct_wrappers:
@@ -1862,7 +1777,6 @@ def main(argv=None):
         #print(sw.get_class_name(struct))
         sw.set_include_headers([input_header,os.path.basename(enum_sh_filename),"stdint.h","cinttypes", "stdio.h","stdlib.h"])
         sw.generateStringHelper()
-        sw.generateValidateHelper()
         sw.set_include_headers([input_header,os.path.basename(enum_sh_filename),"stdint.h","stdio.h","stdlib.h","iostream","sstream","string"])
         sw.generateStringHelperCpp()
         sw.set_include_headers(["stdio.h", "stdlib.h", input_header])
