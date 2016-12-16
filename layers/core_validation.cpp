@@ -3311,54 +3311,11 @@ static bool verifyPipelineCreateState(layer_data *my_data, std::vector<PIPELINE_
                                          pPipeline->graphicsPipelineCI.pRasterizationState->lineWidth);
         }
     }
-    // Viewport state must be included if rasterization is enabled.
-    // If the viewport state is included, the viewport and scissor counts should always match.
-    // NOTE : Even if these are flagged as dynamic, counts need to be set correctly for shader compiler
-    if (!pPipeline->graphicsPipelineCI.pRasterizationState ||
-        (pPipeline->graphicsPipelineCI.pRasterizationState->rasterizerDiscardEnable == VK_FALSE)) {
-        if (!pPipeline->graphicsPipelineCI.pViewportState) {
-            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                                 DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS", "Gfx Pipeline pViewportState is null. Even if viewport "
-                                                                            "and scissors are dynamic PSO must include "
-                                                                            "viewportCount and scissorCount in pViewportState.");
-        } else if (pPipeline->graphicsPipelineCI.pViewportState->scissorCount !=
-                   pPipeline->graphicsPipelineCI.pViewportState->viewportCount) {
-            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                                 DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
-                                 "Gfx Pipeline viewport count (%u) must match scissor count (%u).",
-                                 pPipeline->graphicsPipelineCI.pViewportState->viewportCount,
-                                 pPipeline->graphicsPipelineCI.pViewportState->scissorCount);
-        } else {
-            // If viewport or scissor are not dynamic, then verify that data is appropriate for count
-            bool dynViewport = isDynamic(pPipeline, VK_DYNAMIC_STATE_VIEWPORT);
-            bool dynScissor = isDynamic(pPipeline, VK_DYNAMIC_STATE_SCISSOR);
-            if (!dynViewport) {
-                if (pPipeline->graphicsPipelineCI.pViewportState->viewportCount &&
-                    !pPipeline->graphicsPipelineCI.pViewportState->pViewports) {
-                    skip_call |=
-                        log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                                DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
-                                "Gfx Pipeline viewportCount is %u, but pViewports is NULL. For non-zero viewportCount, you "
-                                "must either include pViewports data, or include viewport in pDynamicState and set it with "
-                                "vkCmdSetViewport().",
-                                pPipeline->graphicsPipelineCI.pViewportState->viewportCount);
-                }
-            }
-            if (!dynScissor) {
-                if (pPipeline->graphicsPipelineCI.pViewportState->scissorCount &&
-                    !pPipeline->graphicsPipelineCI.pViewportState->pScissors) {
-                    skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
-                                         __LINE__, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
-                                         "Gfx Pipeline scissorCount is %u, but pScissors is NULL. For non-zero scissorCount, you "
-                                         "must either include pScissors data, or include scissor in pDynamicState and set it with "
-                                         "vkCmdSetScissor().",
-                                         pPipeline->graphicsPipelineCI.pViewportState->scissorCount);
-                }
-            }
-        }
 
-        // If rasterization is not disabled, and subpass uses a depth/stencil
-        // attachment, pDepthStencilState must be a pointer to a valid structure
+    // If rasterization is not disabled and subpass uses a depth/stencil attachment, pDepthStencilState must be a pointer to a
+    // valid structure
+    if (pPipeline->graphicsPipelineCI.pRasterizationState &&
+        (pPipeline->graphicsPipelineCI.pRasterizationState->rasterizerDiscardEnable == VK_FALSE)) {
         auto subpass_desc = renderPass ? &renderPass->createInfo.pSubpasses[pPipeline->graphicsPipelineCI.subpass] : nullptr;
         if (subpass_desc && subpass_desc->pDepthStencilAttachment &&
             subpass_desc->pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
