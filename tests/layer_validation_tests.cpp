@@ -470,7 +470,7 @@ void VkLayerTest::VKTriangleTest(const char *vertShaderText, const char *fragSha
         rs_state.lineWidth = 1.0f;
         pipelineobj.SetRasterization(&rs_state);
     }
-    // Viewport and scissors must stay in synch or other errors will occur than
+    // Viewport and scissors must stay in sync or other errors will occur than
     // the ones we want
     if (failMask & BsoFailViewport) {
         pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_VIEWPORT);
@@ -6059,6 +6059,11 @@ TEST_F(VkLayerTest, InvalidDynamicOffsetCases) {
     pipe.AddShader(&fs);
     pipe.AddColorAttachment();
     pipe.CreateVKPipeline(pipeline_layout, renderPass());
+
+    VkViewport viewport = {0, 0, 16, 16, 0, 1};
+    vkCmdSetViewport(m_commandBuffer->handle(), 0, 1, &viewport);
+    VkRect2D scissor = {{0, 0}, {16, 16}};
+    vkCmdSetScissor(m_commandBuffer->handle(), 0, 1, &scissor);
 
     vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
     // This update should succeed, but offset size of 512 will overstep buffer
