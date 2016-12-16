@@ -7233,12 +7233,13 @@ TEST_F(VkLayerTest, PSOViewportScissorCountMismatch) {
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
-// Don't set viewport state in PSO. This is an error b/c we always need this
-// state
-//  for the counts even if the data is going to be set dynamically.
+
+// Don't set viewport state in PSO. This is an error b/c we always need this state for the counts even if the data is going to be
+// set dynamically.
 TEST_F(VkLayerTest, PSOViewportStateNotSet) {
-    // Attempt to Create Gfx Pipeline w/o a VS
     VkResult err;
+
+    TEST_DESCRIPTION("Create a graphics pipeline with rasterization enabled but no viewport state.");
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02113);
 
@@ -7283,6 +7284,26 @@ TEST_F(VkLayerTest, PSOViewportStateNotSet) {
     err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
+    VkPipelineInputAssemblyStateCreateInfo ia_ci = {};
+    ia_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    ia_ci.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+
+    VkPipelineVertexInputStateCreateInfo vi_ci = {};
+    vi_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vi_ci.pNext = nullptr;
+    vi_ci.vertexBindingDescriptionCount = 0;
+    vi_ci.pVertexBindingDescriptions = nullptr;
+    vi_ci.vertexAttributeDescriptionCount = 0;
+    vi_ci.pVertexAttributeDescriptions = nullptr;
+
+    VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci = {};
+    pipe_ms_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    pipe_ms_state_ci.pNext = NULL;
+    pipe_ms_state_ci.rasterizationSamples = VK_SAMPLE_COUNT_4_BIT;
+    pipe_ms_state_ci.sampleShadingEnable = 0;
+    pipe_ms_state_ci.minSampleShading = 1.0;
+    pipe_ms_state_ci.pSampleMask = NULL;
+
     VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
     pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipeline_layout_ci.setLayoutCount = 1;
@@ -7303,8 +7324,8 @@ TEST_F(VkLayerTest, PSOViewportStateNotSet) {
     memset(&shaderStages, 0, 2 * sizeof(VkPipelineShaderStageCreateInfo));
 
     VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
-    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this); // We shouldn't need a fragment shader
-    // but add it to be able to run on more devices
+    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+    // We shouldn't need a fragment shader but add it to be able to run on more devices
     shaderStages[0] = vs.GetStageCreateInfo();
     shaderStages[1] = fs.GetStageCreateInfo();
 
@@ -7322,9 +7343,12 @@ TEST_F(VkLayerTest, PSOViewportStateNotSet) {
     gp_ci.stageCount = 2;
     gp_ci.pStages = shaderStages;
     gp_ci.pRasterizationState = &rs_state_ci;
-    gp_ci.pViewportState = NULL; // Not setting VP state w/o dynamic vp state
-                                 // should cause validation error
+    // Not setting VP state w/o dynamic vp state should cause validation error
+    gp_ci.pViewportState = NULL;
     gp_ci.pDynamicState = &dyn_state_ci;
+    gp_ci.pVertexInputState = &vi_ci;
+    gp_ci.pInputAssemblyState = &ia_ci;
+    gp_ci.pMultisampleState = &pipe_ms_state_ci;
     gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
     gp_ci.layout = pipeline_layout;
     gp_ci.renderPass = renderPass();
