@@ -5432,22 +5432,34 @@ VKAPI_ATTR void VKAPI_CALL DestroyEvent(VkDevice device, VkEvent event, const Vk
     }
 }
 
+static bool PreCallValidateDestroyQueryPool(layer_data *dev_data, VkQueryPool query_pool, QUERY_POOL_NODE **qp_state,
+                                            VK_OBJECT *obj_struct) {
+    *qp_state = getQueryPoolNode(dev_data, query_pool);
+    *obj_struct = {reinterpret_cast<uint64_t &>(query_pool), VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT};
+    bool skip = false;
+    if (*qp_state) {
+        skip |= ValidateObjectNotInUse(dev_data, *qp_state, *obj_struct, VALIDATION_ERROR_01012);
+    }
+    return skip;
+}
+
+static void PostCallRecordDestroyQueryPool(layer_data *dev_data, VkQueryPool query_pool, QUERY_POOL_NODE *qp_state, VK_OBJECT obj_struct) {
+    invalidateCommandBuffers(dev_data, qp_state->cb_bindings, obj_struct);
+    dev_data->queryPoolMap.erase(query_pool);
+}
+
 VKAPI_ATTR void VKAPI_CALL
 DestroyQueryPool(VkDevice device, VkQueryPool queryPool, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    bool skip = false;
+    QUERY_POOL_NODE *qp_state = nullptr;
+    VK_OBJECT obj_struct;
     std::unique_lock<std::mutex> lock(global_lock);
-    auto qp_node = getQueryPoolNode(dev_data, queryPool);
-    if (qp_node) {
-        VK_OBJECT obj_struct = {reinterpret_cast<uint64_t &>(queryPool), VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT};
-        skip |= ValidateObjectNotInUse(dev_data, qp_node, obj_struct, VALIDATION_ERROR_01012);
-        // Any bound cmd buffers are now invalid
-        invalidateCommandBuffers(dev_data, qp_node->cb_bindings, obj_struct);
-    }
+    bool skip = PreCallValidateDestroyQueryPool(dev_data, queryPool, &qp_state, &obj_struct);
     if (!skip) {
-        dev_data->queryPoolMap.erase(queryPool);
         lock.unlock();
         dev_data->dispatch_table.DestroyQueryPool(device, queryPool, pAllocator);
+        lock.lock();
+        PostCallRecordDestroyQueryPool(dev_data, queryPool, qp_state, obj_struct);
     }
 }
 
