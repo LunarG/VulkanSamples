@@ -7124,9 +7124,11 @@ VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
 */
-// Set scissor and viewport counts to different numbers
+
 TEST_F(VkLayerTest, PSOViewportScissorCountMismatch) {
     VkResult err;
+
+    TEST_DESCRIPTION("Set scissor and viewport counts to different numbers");
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01434);
 
@@ -7180,12 +7182,13 @@ TEST_F(VkLayerTest, PSOViewportScissorCountMismatch) {
     err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
     ASSERT_VK_SUCCESS(err);
 
-    VkViewport vp = {}; // Just need dummy vp to point to
+    VkViewport vp = {};
 
     VkPipelineViewportStateCreateInfo vp_state_ci = {};
     vp_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     vp_state_ci.scissorCount = 0;
-    vp_state_ci.viewportCount = 1; // Count mismatch should cause error
+    // Count mismatch should cause error
+    vp_state_ci.viewportCount = 1;
     vp_state_ci.pViewports = &vp;
 
     VkPipelineRasterizationStateCreateInfo rs_state_ci = {};
@@ -7196,6 +7199,26 @@ TEST_F(VkLayerTest, PSOViewportScissorCountMismatch) {
     rs_state_ci.depthClampEnable = VK_FALSE;
     rs_state_ci.rasterizerDiscardEnable = VK_FALSE;
     rs_state_ci.depthBiasEnable = VK_FALSE;
+
+    VkPipelineVertexInputStateCreateInfo vi_ci = {};
+    vi_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vi_ci.pNext = nullptr;
+    vi_ci.vertexBindingDescriptionCount = 0;
+    vi_ci.pVertexBindingDescriptions = nullptr;
+    vi_ci.vertexAttributeDescriptionCount = 0;
+    vi_ci.pVertexAttributeDescriptions = nullptr;
+
+    VkPipelineInputAssemblyStateCreateInfo ia_ci = {};
+    ia_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    ia_ci.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+
+    VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci = {};
+    pipe_ms_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    pipe_ms_state_ci.pNext = NULL;
+    pipe_ms_state_ci.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    pipe_ms_state_ci.sampleShadingEnable = 0;
+    pipe_ms_state_ci.minSampleShading = 1.0;
+    pipe_ms_state_ci.pSampleMask = NULL;
 
     VkPipelineShaderStageCreateInfo shaderStages[2];
     memset(&shaderStages, 0, 2 * sizeof(VkPipelineShaderStageCreateInfo));
@@ -7210,7 +7233,10 @@ TEST_F(VkLayerTest, PSOViewportScissorCountMismatch) {
     gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     gp_ci.stageCount = 2;
     gp_ci.pStages = shaderStages;
+    gp_ci.pVertexInputState = &vi_ci;
+    gp_ci.pInputAssemblyState = &ia_ci;
     gp_ci.pViewportState = &vp_state_ci;
+    gp_ci.pMultisampleState = &pipe_ms_state_ci;
     gp_ci.pRasterizationState = &rs_state_ci;
     gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
     gp_ci.layout = pipeline_layout;
