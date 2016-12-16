@@ -5436,6 +5436,8 @@ static bool PreCallValidateDestroyQueryPool(layer_data *dev_data, VkQueryPool qu
                                             VK_OBJECT *obj_struct) {
     *qp_state = getQueryPoolNode(dev_data, query_pool);
     *obj_struct = {reinterpret_cast<uint64_t &>(query_pool), VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT};
+    if (dev_data->instance_data->disabled.destroy_query_pool)
+        return false;
     bool skip = false;
     if (*qp_state) {
         skip |= ValidateObjectNotInUse(dev_data, *qp_state, *obj_struct, VALIDATION_ERROR_01012);
