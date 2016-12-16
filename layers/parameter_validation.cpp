@@ -2888,6 +2888,14 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
                         i, i, validation_error_map[VALIDATION_ERROR_02113]);
                 }
             } else {
+                if (pCreateInfos[i].pViewportState->scissorCount != pCreateInfos[i].pViewportState->viewportCount) {
+                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                                    VALIDATION_ERROR_01434, LayerName,
+                                    "Graphics Pipeline viewport count (%u) must match scissor count (%u). %s",
+                                    pCreateInfos[i].pViewportState->viewportCount, pCreateInfos[i].pViewportState->scissorCount,
+                                    validation_error_map[VALIDATION_ERROR_01434]);
+                }
+
                 skip |=
                     validate_struct_pnext(report_data, "vkCreateGraphicsPipelines",
                                           ParameterName("pCreateInfos[%i].pViewportState->pNext", ParameterName::IndexVector{i}),
