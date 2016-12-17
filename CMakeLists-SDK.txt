@@ -189,6 +189,12 @@ else()
     include_directories("/usr/include/vulkan")
 endif()
 
+option(USE_VULKAN_WRAPPER "Build a dispatch-table, to skip loader trampoline code." OFF) 
+if (USE_VULKAN_WRAPPER) 
+    add_definitions(-DUSE_VULKAN_WRAPPER) 
+endif() 
+
 add_subdirectory(API-Samples)
+add_subdirectory(Utilities)
 add_subdirectory(Sample-Programs/Hologram)
 add_subdirectory(Layer-Samples/Overlay)

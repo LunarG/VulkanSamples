@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+#ifndef GLM_FORCE_RADIANS
+#define GLM_FORCE_RADIANS  /* for GLM */
+#endif
+
 #include <array>
 
 #include <glm/gtc/type_ptr.hpp>
@@ -97,7 +101,7 @@ void Hologram::attach_shell(Shell &sh)
     queue_family_ = ctx.game_queue_family;
     format_ = ctx.format.format;
 
-    vk::GetPhysicalDeviceProperties(physical_dev_, &physical_dev_props_);
+    vkGetPhysicalDeviceProperties(physical_dev_, &physical_dev_props_);
 
     if (use_push_constants_ &&
         sizeof(ShaderParamBlock) > physical_dev_props_.limits.maxPushConstantsSize) {
@@ -106,7 +110,7 @@ void Hologram::attach_shell(Shell &sh)
     }
 
     VkPhysicalDeviceMemoryProperties mem_props;
-    vk::GetPhysicalDeviceMemoryProperties(physical_dev_, &mem_props);
+    vkGetPhysicalDeviceMemoryProperties(physical_dev_, &mem_props);
     mem_flags_.reserve(mem_props.memoryTypeCount);
     for (uint32_t i = 0; i < mem_props.memoryTypeCount; i++)
         mem_flags_.push_back(mem_props.memoryTypes[i].propertyFlags);
@@ -153,13 +157,13 @@ void Hologram::detach_shell()
 
     destroy_frame_data();
 
-    vk::DestroyPipeline(dev_, pipeline_, nullptr);
-    vk::DestroyPipelineLayout(dev_, pipeline_layout_, nullptr);
+    vkDestroyPipeline(dev_, pipeline_, nullptr);
+    vkDestroyPipelineLayout(dev_, pipeline_layout_, nullptr);
     if (!use_push_constants_)
-        vk::DestroyDescriptorSetLayout(dev_, desc_set_layout_, nullptr);
-    vk::DestroyShaderModule(dev_, fs_, nullptr);
-    vk::DestroyShaderModule(dev_, vs_, nullptr);
-    vk::DestroyRenderPass(dev_, render_pass_, nullptr);
+        vkDestroyDescriptorSetLayout(dev_, desc_set_layout_, nullptr);
+    vkDestroyShaderModule(dev_, fs_, nullptr);
+    vkDestroyShaderModule(dev_, vs_, nullptr);
+    vkDestroyRenderPass(dev_, render_pass_, nullptr);
 
     delete meshes_;
 
@@ -213,7 +217,7 @@ void Hologram::create_render_pass()
     render_pass_info.dependencyCount = (uint32_t)subpass_deps.size();
     render_pass_info.pDependencies = subpass_deps.data();
 
-    vk::assert_success(vk::CreateRenderPass(dev_, &render_pass_info, nullptr, &render_pass_));
+    vk::assert_success(vkCreateRenderPass(dev_, &render_pass_info, nullptr, &render_pass_));
 }
 
 void Hologram::create_shader_modules()
@@ -229,12 +233,12 @@ void Hologram::create_shader_modules()
         sh_info.codeSize = sizeof(Hologram_vert);
         sh_info.pCode = Hologram_vert;
     }
-    vk::assert_success(vk::CreateShaderModule(dev_, &sh_info, nullptr, &vs_));
+    vk::assert_success(vkCreateShaderModule(dev_, &sh_info, nullptr, &vs_));
 
 #include "Hologram.frag.h"
     sh_info.codeSize = sizeof(Hologram_frag);
     sh_info.pCode = Hologram_frag;
-    vk::assert_success(vk::CreateShaderModule(dev_, &sh_info, nullptr, &fs_));
+    vk::assert_success(vkCreateShaderModule(dev_, &sh_info, nullptr, &fs_));
 }
 
 void Hologram::create_descriptor_set_layout()
@@ -253,7 +257,7 @@ void Hologram::create_descriptor_set_layout()
     layout_info.bindingCount = 1;
     layout_info.pBindings = &layout_binding;
 
-    vk::assert_success(vk::CreateDescriptorSetLayout(dev_, &layout_info,
+    vk::assert_success(vkCreateDescriptorSetLayout(dev_, &layout_info,
                 nullptr, &desc_set_layout_));
 }
 
@@ -276,7 +280,7 @@ void Hologram::create_pipeline_layout()
         pipeline_layout_info.pSetLayouts = &desc_set_layout_;
     }
 
-    vk::assert_success(vk::CreatePipelineLayout(dev_, &pipeline_layout_info,
+    vk::assert_success(vkCreatePipelineLayout(dev_, &pipeline_layout_info,
                 nullptr, &pipeline_layout_));
 }
 
@@ -360,7 +364,7 @@ void Hologram::create_pipeline()
     pipeline_info.layout = pipeline_layout_;
     pipeline_info.renderPass = render_pass_;
     pipeline_info.subpass = 0;
-    vk::assert_success(vk::CreateGraphicsPipelines(dev_, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &pipeline_));
+    vk::assert_success(vkCreateGraphicsPipelines(dev_, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &pipeline_));
 }
 
 void Hologram::create_frame_data(int count)
@@ -382,22 +386,22 @@ void Hologram::create_frame_data(int count)
 void Hologram::destroy_frame_data()
 {
     if (!use_push_constants_) {
-        vk::DestroyDescriptorPool(dev_, desc_pool_, nullptr);
+        vkDestroyDescriptorPool(dev_, desc_pool_, nullptr);
 
-        vk::UnmapMemory(dev_, frame_data_mem_);
-        vk::FreeMemory(dev_, frame_data_mem_, nullptr);
+        vkUnmapMemory(dev_, frame_data_mem_);
+        vkFreeMemory(dev_, frame_data_mem_, nullptr);
 
         for (auto &data : frame_data_)
-            vk::DestroyBuffer(dev_, data.buf, nullptr);
+            vkDestroyBuffer(dev_, data.buf, nullptr);
     }
 
     for (auto cmd_pool : worker_cmd_pools_)
-        vk::DestroyCommandPool(dev_, cmd_pool, nullptr);
+        vkDestroyCommandPool(dev_, cmd_pool, nullptr);
     worker_cmd_pools_.clear();
-    vk::DestroyCommandPool(dev_, primary_cmd_pool_, nullptr);
+    vkDestroyCommandPool(dev_, primary_cmd_pool_, nullptr);
 
     for (auto &data : frame_data_)
-        vk::DestroyFence(dev_, data.fence, nullptr);
+        vkDestroyFence(dev_, data.fence, nullptr);
 
     frame_data_.clear();
 }
@@ -409,7 +413,7 @@ void Hologram::create_fences()
     fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
     for (auto &data : frame_data_)
-        vk::assert_success(vk::CreateFence(dev_, &fence_info, nullptr, &data.fence));
+        vk::assert_success(vkCreateFence(dev_, &fence_info, nullptr, &data.fence));
 }
 
 void Hologram::create_command_buffers()
@@ -431,14 +435,14 @@ void Hologram::create_command_buffers()
         auto &cmd_pool = cmd_pools[i];
         auto &cmds = cmds_vec[i];
 
-        vk::assert_success(vk::CreateCommandPool(dev_, &cmd_pool_info,
+        vk::assert_success(vkCreateCommandPool(dev_, &cmd_pool_info,
                     nullptr, &cmd_pool));
 
         cmd_info.commandPool = cmd_pool;
         cmd_info.level = (cmd_pool == cmd_pools.back()) ?
             VK_COMMAND_BUFFER_LEVEL_PRIMARY : VK_COMMAND_BUFFER_LEVEL_SECONDARY;
 
-        vk::assert_success(vk::AllocateCommandBuffers(dev_, &cmd_info, cmds.data()));
+        vk::assert_success(vkAllocateCommandBuffers(dev_, &cmd_info, cmds.data()));
     }
 
     // update frame_data_
@@ -478,13 +482,13 @@ void Hologram::create_buffers()
     buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
     for (auto &data : frame_data_)
-        vk::assert_success(vk::CreateBuffer(dev_, &buf_info, nullptr, &data.buf));
+        vk::assert_success(vkCreateBuffer(dev_, &buf_info, nullptr, &data.buf));
 }
 
 void Hologram::create_buffer_memory()
 {
     VkMemoryRequirements mem_reqs;
-    vk::GetBufferMemoryRequirements(dev_, frame_data_[0].buf, &mem_reqs);
+    vkGetBufferMemoryRequirements(dev_, frame_data_[0].buf, &mem_reqs);
 
     VkDeviceSize aligned_size = mem_reqs.size;
     if (aligned_size % mem_reqs.alignment)
@@ -506,14 +510,14 @@ void Hologram::create_buffer_memory()
         }
     }
 
-    vk::AllocateMemory(dev_, &mem_info, nullptr, &frame_data_mem_);
+    vkAllocateMemory(dev_, &mem_info, nullptr, &frame_data_mem_);
 
     void *ptr;
-    vk::MapMemory(dev_, frame_data_mem_, 0, VK_WHOLE_SIZE, 0, &ptr);
+    vkMapMemory(dev_, frame_data_mem_, 0, VK_WHOLE_SIZE, 0, &ptr);
 
     VkDeviceSize offset = 0;
     for (auto &data : frame_data_) {
-        vk::BindBufferMemory(dev_, data.buf, frame_data_mem_, offset);
+        vkBindBufferMemory(dev_, data.buf, frame_data_mem_, offset);
         data.base = reinterpret_cast<uint8_t *>(ptr) + offset;
         offset += aligned_size;
     }
@@ -533,7 +537,7 @@ void Hologram::create_descriptor_sets()
     desc_pool_info.pPoolSizes = &desc_pool_size;
 
     // create descriptor pool
-    vk::assert_success(vk::CreateDescriptorPool(dev_, &desc_pool_info,
+    vk::assert_success(vkCreateDescriptorPool(dev_, &desc_pool_info,
                 nullptr, &desc_pool_));
 
     std::vector<VkDescriptorSetLayout> set_layouts(frame_data_.size(), desc_set_layout_);
@@ -545,7 +549,7 @@ void Hologram::create_descriptor_sets()
 
     // create descriptor sets
     std::vector<VkDescriptorSet> desc_sets(frame_data_.size(), VK_NULL_HANDLE);
-    vk::assert_success(vk::AllocateDescriptorSets(dev_, &set_info, desc_sets.data()));
+    vk::assert_success(vkAllocateDescriptorSets(dev_, &set_info, desc_sets.data()));
 
     std::vector<VkDescriptorBufferInfo> desc_bufs(frame_data_.size());
     std::vector<VkWriteDescriptorSet> desc_writes(frame_data_.size());
@@ -572,7 +576,7 @@ void Hologram::create_descriptor_sets()
         desc_writes[i] = desc_write;
     }
 
-    vk::UpdateDescriptorSets(dev_,
+    vkUpdateDescriptorSets(dev_,
             static_cast<uint32_t>(desc_writes.size()),
             desc_writes.data(), 0, nullptr);
 }
@@ -590,9 +594,9 @@ void Hologram::attach_swapchain()
 void Hologram::detach_swapchain()
 {
     for (auto fb : framebuffers_)
-        vk::DestroyFramebuffer(dev_, fb, nullptr);
+        vkDestroyFramebuffer(dev_, fb, nullptr);
     for (auto view : image_views_)
-        vk::DestroyImageView(dev_, view, nullptr);
+        vkDestroyImageView(dev_, view, nullptr);
 
     framebuffers_.clear();
     image_views_.clear();
@@ -633,7 +637,7 @@ void Hologram::prepare_framebuffers(VkSwapchainKHR swapchain)
         view_info.subresourceRange.layerCount = 1;
 
         VkImageView view;
-        vk::assert_success(vk::CreateImageView(dev_, &view_info, nullptr, &view));
+        vk::assert_success(vkCreateImageView(dev_, &view_info, nullptr, &view));
         image_views_.push_back(view);
 
         VkFramebufferCreateInfo fb_info = {};
@@ -646,7 +650,7 @@ void Hologram::prepare_framebuffers(VkSwapchainKHR swapchain)
         fb_info.layers = 1;
 
         VkFramebuffer fb;
-        vk::assert_success(vk::CreateFramebuffer(dev_, &fb_info, nullptr, &fb));
+        vk::assert_success(vkCreateFramebuffer(dev_, &fb_info, nullptr, &fb));
         framebuffers_.push_back(fb);
     }
 }
@@ -655,11 +659,10 @@ void Hologram::update_camera()
 {
     const glm::vec3 center(0.0f);
     const glm::vec3 up(0.f, 0.0f, 1.0f);
-    const glm::mat4 view = glm::lookAt(camera_.eye_pos, center, up);
-
     float aspect = static_cast<float>(extent_.width) / static_cast<float>(extent_.height);
-    const glm::mat4 projection = glm::perspective(0.4f, aspect, 0.1f, 100.0f);
 
+    const glm::mat4 view = glm::lookAt(camera_.eye_pos, center, up);
+    const glm::mat4 projection = glm::perspective(0.4f, aspect, 0.1f, 100.0f);
     // Vulkan clip space has inverted Y and half Z.
     const glm::mat4 clip(1.0f,  0.0f, 0.0f, 0.0f,
                          0.0f, -1.0f, 0.0f, 0.0f,
@@ -679,7 +682,7 @@ void Hologram::draw_object(const Simulation::Object &obj, FrameData &data, VkCom
         memcpy(params.view_projection, glm::value_ptr(camera_.view_projection), sizeof(camera_.view_projection));
         params.alpha = sim_fade_ ? obj.alpha : 0.5f;
 
-        vk::CmdPushConstants(cmd, pipeline_layout_, VK_SHADER_STAGE_VERTEX_BIT,
+        vkCmdPushConstants(cmd, pipeline_layout_, VK_SHADER_STAGE_VERTEX_BIT,
                 0, sizeof(params), &params);
     } else {
         ShaderParamBlock *params =
@@ -690,7 +693,7 @@ void Hologram::draw_object(const Simulation::Object &obj, FrameData &data, VkCom
         memcpy(params->view_projection, glm::value_ptr(camera_.view_projection), sizeof(camera_.view_projection));
         params->alpha = sim_fade_ ? obj.alpha : 0.5f;
 
-        vk::CmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
+        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
                 pipeline_layout_, 0, 1, &data.desc_set, 1, &obj.frame_data_offset);
     }
 
@@ -717,12 +720,12 @@ void Hologram::draw_objects(Worker &worker)
     begin_info.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
     begin_info.pInheritanceInfo = &inherit_info;
 
-    vk::BeginCommandBuffer(cmd, &begin_info);
+    vkBeginCommandBuffer(cmd, &begin_info);
 
-    vk::CmdSetViewport(cmd, 0, 1, &viewport_);
-    vk::CmdSetScissor(cmd, 0, 1, &scissor_);
+    vkCmdSetViewport(cmd, 0, 1, &viewport_);
+    vkCmdSetScissor(cmd, 0, 1, &scissor_);
 
-    vk::CmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_);
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_);
 
     meshes_->cmd_bind_buffers(cmd);
 
@@ -732,7 +735,7 @@ void Hologram::draw_objects(Worker &worker)
         draw_object(obj, data, cmd);
     }
 
-    vk::EndCommandBuffer(cmd);
+    vkEndCommandBuffer(cmd);
 
     if (!use_push_constants_) {
         // This flush is not technically required, but it helps API tracing tools track changes in
@@ -743,26 +746,23 @@ void Hologram::draw_objects(Worker &worker)
         range.memory = frame_data_mem_;
         range.offset = (data.base - frame_data_[0].base) + sim_.objects()[worker.object_begin_].frame_data_offset;
         range.size = aligned_object_data_size * (worker.object_end_ - worker.object_begin_);
-        vk::FlushMappedMemoryRanges(dev_, 1, &range);
+        vkFlushMappedMemoryRanges(dev_, 1, &range);
     }
 }
 
-void Hologram::on_key(Key key)
-{
+void Hologram::on_key(eKeycode key){
     switch (key) {
-    case KEY_SHUTDOWN:
-    case KEY_ESC:
-        shell_->quit();
-        break;
-    case KEY_UP:
+    case KEY_Up: // for desktop
+    case KEY_W:  // for Android
         camera_.eye_pos -= glm::vec3(0.05f);
         update_camera();
         break;
-    case KEY_DOWN:
+    case KEY_Down: // for desktop
+    case KEY_S:    // for Android
         camera_.eye_pos += glm::vec3(0.05f);
         update_camera();
         break;
-    case KEY_SPACE:
+    case KEY_Space:
         sim_paused_ = !sim_paused_;
         break;
     case KEY_F:
@@ -787,8 +787,8 @@ void Hologram::on_frame(float frame_pred)
     auto &data = frame_data_[frame_data_index_];
 
     // wait for the last submission since we reuse frame data
-    vk::assert_success(vk::WaitForFences(dev_, 1, &data.fence, true, UINT64_MAX));
-    vk::assert_success(vk::ResetFences(dev_, 1, &data.fence));
+    vk::assert_success(vkWaitForFences(dev_, 1, &data.fence, true, UINT64_MAX));
+    vk::assert_success(vkResetFences(dev_, 1, &data.fence));
 
     const Shell::BackBuffer &back = shell_->context().acquired_back_buffer;
 
@@ -796,7 +796,7 @@ void Hologram::on_frame(float frame_pred)
     for (auto &worker : workers_)
         worker->draw_objects(framebuffers_[back.image_index]);
 
-    VkResult res = vk::BeginCommandBuffer(data.primary_cmd, &primary_cmd_begin_info_);
+    VkResult res = vkBeginCommandBuffer(data.primary_cmd, &primary_cmd_begin_info_);
 
     if (!use_push_constants_) {
         VkBufferMemoryBarrier buf_barrier = {};
@@ -808,32 +808,32 @@ void Hologram::on_frame(float frame_pred)
         buf_barrier.buffer = data.buf;
         buf_barrier.offset = 0;
         buf_barrier.size = VK_WHOLE_SIZE;
-        vk::CmdPipelineBarrier(data.primary_cmd,
+        vkCmdPipelineBarrier(data.primary_cmd,
                                VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
                                0, 0, nullptr, 1, &buf_barrier, 0, nullptr);
     }
 
     render_pass_begin_info_.framebuffer = framebuffers_[back.image_index];
     render_pass_begin_info_.renderArea.extent = extent_;
-    vk::CmdBeginRenderPass(data.primary_cmd, &render_pass_begin_info_,
+    vkCmdBeginRenderPass(data.primary_cmd, &render_pass_begin_info_,
             VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
     // record render pass commands
     for (auto &worker : workers_)
         worker->wait_idle();
-    vk::CmdExecuteCommands(data.primary_cmd,
+    vkCmdExecuteCommands(data.primary_cmd,
             static_cast<uint32_t>(data.worker_cmds.size()),
             data.worker_cmds.data());
 
-    vk::CmdEndRenderPass(data.primary_cmd);
-    vk::EndCommandBuffer(data.primary_cmd);
+    vkCmdEndRenderPass(data.primary_cmd);
+    vkEndCommandBuffer(data.primary_cmd);
 
     // wait for the image to be owned and signal for render completion
     primary_cmd_submit_info_.pWaitSemaphores = &back.acquire_semaphore;
     primary_cmd_submit_info_.pCommandBuffers = &data.primary_cmd;
     primary_cmd_submit_info_.pSignalSemaphores = &back.render_semaphore;
 
-    res = vk::QueueSubmit(queue_, 1, &primary_cmd_submit_info_, data.fence);
+    res = vkQueueSubmit(queue_, 1, &primary_cmd_submit_info_, data.fence);
 
     frame_data_index_ = (frame_data_index_ + 1) % frame_data_.size();
 

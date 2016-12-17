@@ -126,7 +126,7 @@ Window_xcb::Window_xcb(const char *title, uint width, uint height) {
     running = true;
 
     LOGI("Creating XCB-Window...\n");
-    
+
     // --Init Connection-- XCB only
     // int scr;
     // xcb_connection = xcb_connect(NULL, &scr);
@@ -136,7 +136,7 @@ Window_xcb::Window_xcb(const char *title, uint width, uint height) {
     // while(scr-- > 0) xcb_screen_next(&iter);
     // xcb_screen = iter.data;
     //-------------------
-    
+
     //----XLib + XCB----
     display = XOpenDisplay(NULL);
     assert(display && "Failed to open Display"); // for XLIB functions
@@ -151,7 +151,7 @@ Window_xcb::Window_xcb(const char *title, uint width, uint height) {
     uint32_t value_mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
     uint32_t value_list[2];
     value_list[0] = xcb_screen->black_pixel;
-// clang-format off
+    // clang-format off
     value_list[1] = XCB_EVENT_MASK_KEY_PRESS |          // 1
                     XCB_EVENT_MASK_KEY_RELEASE |        // 2
                     XCB_EVENT_MASK_BUTTON_PRESS |       // 4
@@ -164,7 +164,7 @@ Window_xcb::Window_xcb(const char *title, uint width, uint height) {
                     XCB_EVENT_MASK_STRUCTURE_NOTIFY |   // 131072   Window move/resize events
                   //XCB_EVENT_MASK_RESIZE_REDIRECT |    // 262144
                     XCB_EVENT_MASK_FOCUS_CHANGE;        // 2097152  Window focus
-// clang-format on
+    // clang-format on
 
     xcb_window = xcb_generate_id(xcb_connection);
     xcb_create_window(xcb_connection, XCB_COPY_FROM_PARENT, xcb_window, xcb_screen->root, 0, 0, width, height, 0,
@@ -333,15 +333,12 @@ EventType Window_xcb::GetEvent(bool wait_for_event) {
             break;
         }
         case XCB_CONFIGURE_NOTIFY: { // Window Reshape (move or resize)
-            if (!(e.response_type & 128))
-                break; // only respond if message was sent with "SendEvent", (or x,y will be 0,0)
             auto &e = *(xcb_configure_notify_event_t *)x_event;
-            if (has_focus) {
-                if (e.width != shape.width || e.height != shape.height)
-                    event = ResizeEvent(e.width, e.height); // window resized
-                else if (e.x != shape.x || e.y != shape.y)
-                    event = MoveEvent(e.x, e.y); // window moved
-            }
+            // bool se=(e.response_type & 128);  // true if message was sent with "SendEvent"
+            if (e.width != shape.width || e.height != shape.height)
+                event = ResizeEvent(e.width, e.height); // window resized
+            else if (e.x != shape.x || e.y != shape.y)
+                event = MoveEvent(e.x, e.y); // window moved
             break;
         }
         case XCB_FOCUS_IN:

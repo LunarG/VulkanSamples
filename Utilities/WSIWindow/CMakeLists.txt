@@ -121,7 +121,8 @@ endif()
 #=================================================================
 #=======================Find Vulkan Header========================
 find_path(VULKAN_INCLUDE vulkan/vulkan.h DOC "Path to Vulkan header file. (vulkan.h)")
-find_path(VULKAN_INCLUDE vulkan/vulkan.h PATH "$ENV{VULKAN_SDK}/include")    # Search in Vulkan SDK
+find_path(VULKAN_INCLUDE vulkan/vulkan.h PATH "$ENV{VULKAN_SDK}/include")    # Search in Vulkan SDK, if VULKAN_SDK is set
+find_path(VULKAN_INCLUDE vulkan/vulkan.h PATH "../../../x86_64/include")     # Search in Vulkan SDK, if VULKAN_SDK is not set
 find_path(VULKAN_INCLUDE vulkan/vulkan.h PATH "../../include")               # Search in VulkanSamples
 find_path(VULKAN_INCLUDE vulkan/vulkan.h PATH "VulkanWrapper")               # Search in VulkanWrapper
 target_include_directories(${LIBRARY_NAME} PUBLIC "${VULKAN_INCLUDE}")       # include vulkan.h

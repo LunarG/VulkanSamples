@@ -1,0 +1,37 @@
+# Sets the minimum version of CMake required to build the native
+# library. You should either keep the default value or only pass a
+# value of 3.4.0 or lower.
+cmake_minimum_required(VERSION 3.4.1)
+
+add_definitions(-DVK_USE_PLATFORM_ANDROID_KHR)
+add_definitions(-DGLM_FORCE_RADIANS)
+add_definitions(-DUSE_VULKAN_WRAPPER)
+
+  message("Platform = ${ANDROID_PLATFORM}")
+
+# Set path to header files.
+  include_directories( ${ANDROID_NDK}/sources/android/native_app_glue )
+  #include_directories( src/cpp                                        )
+  include_directories( ../..                                          )
+  include_directories( ../../../../Utilities/WSIWindow                )
+  include_directories( ../../../../Utilities/WSIWindow/android        )
+  include_directories( ../../../../Utilities/WSIWindow/VulkanWrapper  )
+  include_directories( ../../generated                                )  # TODO: regenerate these files
+  include_directories( ../../../../API-Samples/utils                  )  # PATH TO GLM
+  include_directories( ../../../../include                            )  # /vulkan/vulkan.h for VulkanSamples
+  include_directories( ../../../../../x86_64/include                  )  # /vulkan/vulkan.h for SDK
+
+# Set path to source files.
+  aux_source_directory( ${ANDROID_NDK}/sources/android/native_app_glue SRC_LIST)
+  #aux_source_directory( src/cpp                                        SRC_LIST)
+  aux_source_directory( ../..                                          SRC_LIST)
+  aux_source_directory( ../../../../Utilities/WSIWindow                SRC_LIST)
+  aux_source_directory( ../../../../Utilities/WSIWindow/android        SRC_LIST)
+  aux_source_directory( ../../../../Utilities/WSIWindow/VulkanWrapper  SRC_LIST)
+
+# Create native shared library
+add_library(native SHARED ${SRC_LIST})
+
+# Link to external libraries
+target_link_libraries(native log android)
+

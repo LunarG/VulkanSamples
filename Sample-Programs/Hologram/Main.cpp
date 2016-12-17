@@ -1,88 +1,150 @@
 /*
- * Copyright (C) 2016 Google, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+*--------------------------------------------------------------------------
+* Copyright (C) 2016 Google, Inc.
+* Copyright (c) 2015-2016 Valve Corporation
+* Copyright (c) 2015-2016 LunarG, Inc.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*
+* Author: Chia-I Wu <olvaffe@gmail.com>
+* Author: Rene Lindsay <rene@lunarg.com>
+*
+*--------------------------------------------------------------------------
+*
+* This sample project demonstrates multi-thread command buffer recording.
+* It also demonstates how to use WSIWindow to create a Vulkan window, and
+* add event handlers for window, keyboard, and touchscreen events.
+* It runs on Windows, Linux and Android.
+*
+*/
 
+#include "WSIWindow.h"
 #include <string>
 #include <vector>
 
 #include "Hologram.h"
+#include "ShellWSI.h"
 
-namespace {
+Game *create_game(const std::vector<std::string> &args) { return new Hologram(args); }
 
-Game *create_game(const std::vector<std::string> &args)
-{
-    return new Hologram(args);
-}
-
-Game *create_game(int argc, char **argv)
-{
+Game *create_game(int argc, char **argv) {
     std::vector<std::string> args(argv, argv + argc);
     return create_game(args);
 }
 
-} // namespace
+//----------------------SWIWindow event handlers----------------------
+class MyWindow : public WSIWindow {
 
-#if defined(VK_USE_PLATFORM_XCB_KHR)
-
-#include "ShellXcb.h"
-
-int main(int argc, char **argv)
-{
-    Game *game = create_game(argc, argv);
-    {
-        ShellXcb shell(*game);
-        shell.run();
+    //--Keyboard event handler--
+    void OnKeyEvent(eAction action, eKeycode keycode) {
+        VkDebugReportFlagsEXT flags = DebugReport->GetFlags();
+        if (action == eDOWN)
+            switch (keycode) {
+            case KEY_Escape:
+            case KEY_Q:
+                Close();
+                break; // Close window if 'Q' or Escape is pressed
+            case KEY_A:
+                animate ^= true;
+                break; // Toggle animate flag
+            //--Toggle DebugReport flags (Requires -v command-line flag)--
+            case KEY_1:
+                DebugReport->SetFlags(flags ^ VK_DEBUG_REPORT_INFORMATION_BIT_EXT);
+                break; // 1
+            case KEY_2:
+                DebugReport->SetFlags(flags ^ VK_DEBUG_REPORT_WARNING_BIT_EXT);
+                break; // 2
+            case KEY_3:
+                DebugReport->SetFlags(flags ^ VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT);
+                break; // 4
+            case KEY_4:
+                DebugReport->SetFlags(flags ^ VK_DEBUG_REPORT_ERROR_BIT_EXT);
+                break; // 8
+            case KEY_5:
+                DebugReport->SetFlags(flags ^ VK_DEBUG_REPORT_DEBUG_BIT_EXT);
+                break; // 16
+            //------------------------------------------------------------
+            default:
+                game->on_key(keycode);
+                break; // Pass other keys to game
+                // KEY_SPACE: Pause
+                // KEY_F: Enable fade-mode
+                // KEY_W: Moves camera forward
+                // KEY_S: Moves camera backward
+            }
     }
-    delete game;
 
+    void OnTouchEvent(eAction action, float x, float y, uint8_t id) {
+        if (action == eDOWN) {
+            ShowKeyboard(true); // Touch screen to show android keyboard
+        }
+    }
+
+    //--Window resize event handler--
+    void OnResizeEvent(uint16_t width, uint16_t height) {
+        printf("Resize window: %d x %d\n", width, height);
+        shell->resize_swapchain(width, height); // resize image to match window dimensions
+    }
+
+  public:
+    Game *game;                // Hologram demo
+    ShellWSI *shell;           // Vulkan Swapchain and context
+    bool animate;              // blocking / non-blocking event-loop (A key)
+    CDebugReport *DebugReport; // used to toggle vulkan validation flags
+};
+//-------------------------------------------------------------------
+
+//-------------------------------main--------------------------------
+int main(int argc, char *argv[]) {
+    //--Create game object and fetch settings--
+    Game *game = create_game(argc, argv);
+    Game::Settings settings = game->settings();
+    int width = settings.initial_width;
+    int height = settings.initial_height;
+    const char *title = settings.name.c_str();
+    // settings.validate=true;                   // Enable Validation without using -v flag (for Android)
+
+    //--Create Instance and Window--
+    CInstance inst(settings.validate);           // Create a Vulkan Instance
+    MyWindow Window;                             // Create a window
+    Window.SetTitle(title);                      // Set the window title
+    Window.SetWinSize(width, height);            // Set the window size
+    CSurface &Surface = Window.GetSurface(inst); // Create the Vulkan Surface
+
+    //--Set Debug report flags--
+    if (settings.validate_verbose)
+        inst.DebugReport.SetFlags(31); // -vv Full Validation
+    else if (settings.validate)
+        inst.DebugReport.SetFlags(10); // -v  Errors & Warnings only
+    else
+        inst.DebugReport.SetFlags(0); //      No Validation
+
+    //--Create shell object--
+    ShellWSI shell(*game, inst, &Surface);
+
+    Window.shell = &shell;
+    Window.game = game;
+    Window.animate = settings.animate;
+    Window.DebugReport = &inst.DebugReport;
+
+    Window.ShowKeyboard(true);
+
+    //--Run main message loop--
+    while (Window.ProcessEvents(!Window.animate)) { // Main event loop, runs until window is closed.
+        shell.step();                               // Render next frame
+    }
+    shell.quit();
+    delete game;
     return 0;
 }
-
-#elif defined(VK_USE_PLATFORM_ANDROID_KHR)
-
-#include <android/log.h>
-#include "ShellAndroid.h"
-
-void android_main(android_app *app)
-{
-    Game *game = create_game(ShellAndroid::get_args(*app));
-    try {
-        ShellAndroid shell(*app, *game);
-        shell.run();
-    } catch (const std::runtime_error &e) {
-        __android_log_print(ANDROID_LOG_ERROR, game->settings().name.c_str(),
-                "%s", e.what());
-    }
-
-    delete game;
-}
-
-#elif defined(VK_USE_PLATFORM_WIN32_KHR)
-
-#include "ShellWin32.h"
-
-int main(int argc, char **argv)
-{
-    Game *game = create_game(argc, argv);
-    {
-        ShellWin32 shell(*game);
-        shell.run();
-    }
-    delete game;
-
-    return 0;
-}
-
-#endif // VK_USE_PLATFORM_XCB_KHR
+//-------------------------------------------------------------------

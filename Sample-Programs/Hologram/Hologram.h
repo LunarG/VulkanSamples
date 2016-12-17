@@ -24,7 +24,6 @@
 #include <thread>
 #include <vector>
 
-#include <vulkan/vulkan.h>
 #include <glm/glm.hpp>
 
 #include "Simulation.h"
@@ -43,7 +42,7 @@ public:
     void attach_swapchain();
     void detach_swapchain();
 
-    void on_key(Key key);
+    void on_key(eKeycode key);
     void on_tick();
 
     void on_frame(float frame_pred);

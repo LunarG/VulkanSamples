@@ -451,7 +451,7 @@ Meshes::Meshes(VkDevice dev, const std::vector<VkMemoryPropertyFlags> &mem_flags
     allocate_resources(vb_size, ib_size, mem_flags);
 
     uint8_t *vb_data, *ib_data;
-    vk::assert_success(vk::MapMemory(dev_, mem_, 0, VK_WHOLE_SIZE,
+    vk::assert_success(vkMapMemory(dev_, mem_, 0, VK_WHOLE_SIZE,
                 0, reinterpret_cast<void **>(&vb_data)));
     ib_data = vb_data + ib_mem_offset_;
 
@@ -462,28 +462,28 @@ Meshes::Meshes(VkDevice dev, const std::vector<VkMemoryPropertyFlags> &mem_flags
         ib_data += mesh.index_buffer_size();
     }
 
-    vk::UnmapMemory(dev_, mem_);
+    vkUnmapMemory(dev_, mem_);
 }
 
 Meshes::~Meshes()
 {
-    vk::FreeMemory(dev_, mem_, nullptr);
-    vk::DestroyBuffer(dev_, vb_, nullptr);
-    vk::DestroyBuffer(dev_, ib_, nullptr);
+    vkFreeMemory(dev_, mem_, nullptr);
+    vkDestroyBuffer(dev_, vb_, nullptr);
+    vkDestroyBuffer(dev_, ib_, nullptr);
 }
 
 void Meshes::cmd_bind_buffers(VkCommandBuffer cmd) const
 {
     const VkDeviceSize vb_offset = 0;
-    vk::CmdBindVertexBuffers(cmd, 0, 1, &vb_, &vb_offset);
+    vkCmdBindVertexBuffers(cmd, 0, 1, &vb_, &vb_offset);
 
-    vk::CmdBindIndexBuffer(cmd, ib_, 0, index_type_);
+    vkCmdBindIndexBuffer(cmd, ib_, 0, index_type_);
 }
 
 void Meshes::cmd_draw(VkCommandBuffer cmd, Type type) const
 {
     const auto &draw = draw_commands_[type];
-    vk::CmdDrawIndexed(cmd, draw.indexCount, draw.instanceCount,
+    vkCmdDrawIndexed(cmd, draw.indexCount, draw.instanceCount,
             draw.firstIndex, draw.vertexOffset, draw.firstInstance);
 }
 
@@ -494,15 +494,15 @@ void Meshes::allocate_resources(VkDeviceSize vb_size, VkDeviceSize ib_size, cons
     buf_info.size = vb_size;
     buf_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
     buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    vk::CreateBuffer(dev_, &buf_info, nullptr, &vb_);
+    vkCreateBuffer(dev_, &buf_info, nullptr, &vb_);
 
     buf_info.size = ib_size;
     buf_info.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-    vk::CreateBuffer(dev_, &buf_info, nullptr, &ib_);
+    vkCreateBuffer(dev_, &buf_info, nullptr, &ib_);
 
     VkMemoryRequirements vb_mem_reqs, ib_mem_reqs;
-    vk::GetBufferMemoryRequirements(dev_, vb_, &vb_mem_reqs);
-    vk::GetBufferMemoryRequirements(dev_, ib_, &ib_mem_reqs);
+    vkGetBufferMemoryRequirements(dev_, vb_, &vb_mem_reqs);
+    vkGetBufferMemoryRequirements(dev_, ib_, &ib_mem_reqs);
 
     // indices follow vertices
     ib_mem_offset_ = vb_mem_reqs.size +
@@ -524,8 +524,8 @@ void Meshes::allocate_resources(VkDeviceSize vb_size, VkDeviceSize ib_size, cons
         }
     }
 
-    vk::AllocateMemory(dev_, &mem_info, nullptr, &mem_);
+    vkAllocateMemory(dev_, &mem_info, nullptr, &mem_);
 
-    vk::BindBufferMemory(dev_, vb_, mem_, 0);
-    vk::BindBufferMemory(dev_, ib_, mem_, ib_mem_offset_);
+    vkBindBufferMemory(dev_, vb_, mem_, 0);
+    vkBindBufferMemory(dev_, ib_, mem_, ib_mem_offset_);
 }

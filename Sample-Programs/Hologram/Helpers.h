@@ -17,69 +17,66 @@
 #ifndef HELPERS_H
 #define HELPERS_H
 
+#include "Validation.h"
 #include <vector>
-#include <sstream>
 #include <stdexcept>
-#include <vulkan/vulkan.h>
-
-#include "HelpersDispatchTable.h"
 
 namespace vk {
 
-inline VkResult assert_success(VkResult res)
-{
+inline VkResult assert_success(VkResult res) {
+#ifdef __ANDROID__
+    VKERRCHECK(res);
+#else
     if (res != VK_SUCCESS) {
-        std::stringstream ss;
-        ss << "VkResult " << res << " returned";
-        throw std::runtime_error(ss.str());
+        throw std::runtime_error(VkResultStr(res));
     }
-
+#endif
     return res;
 }
 
 inline VkResult enumerate(const char *layer, std::vector<VkExtensionProperties> &exts)
 {
     uint32_t count = 0;
-    vk::EnumerateInstanceExtensionProperties(layer, &count, nullptr);
+    vkEnumerateInstanceExtensionProperties(layer, &count, nullptr);
 
     exts.resize(count);
-    return vk::EnumerateInstanceExtensionProperties(layer, &count, exts.data());
+    return vkEnumerateInstanceExtensionProperties(layer, &count, exts.data());
 }
 
 inline VkResult enumerate(VkPhysicalDevice phy, const char *layer, std::vector<VkExtensionProperties> &exts)
 {
     uint32_t count = 0;
-    vk::EnumerateDeviceExtensionProperties(phy, layer, &count, nullptr);
-
+    vkEnumerateDeviceExtensionProperties(phy, layer, &count, nullptr);
+    if(!count) LOGW("No devices found by: 'vkEnumeratePhysicalDevices'.\n");  //Probably the Intel driver?
     exts.resize(count);
-    return vk::EnumerateDeviceExtensionProperties(phy, layer, &count, exts.data());
+    return vkEnumerateDeviceExtensionProperties(phy, layer, &count, exts.data());
 }
 
 inline VkResult enumerate(VkInstance instance, std::vector<VkPhysicalDevice> &phys)
 {
     uint32_t count = 0;
-    vk::EnumeratePhysicalDevices(instance, &count, nullptr);
+    vkEnumeratePhysicalDevices(instance, &count, nullptr);
 
     phys.resize(count);
-    return vk::EnumeratePhysicalDevices(instance, &count, phys.data());
+    return vkEnumeratePhysicalDevices(instance, &count, phys.data());
 }
 
 inline VkResult enumerate(std::vector<VkLayerProperties> &layer_props)
 {
     uint32_t count = 0;
-    vk::EnumerateInstanceLayerProperties(&count, nullptr);
+    vkEnumerateInstanceLayerProperties(&count, nullptr);
 
     layer_props.resize(count);
-    return vk::EnumerateInstanceLayerProperties(&count, layer_props.data());
+    return vkEnumerateInstanceLayerProperties(&count, layer_props.data());
 }
 
 inline VkResult get(VkPhysicalDevice phy, std::vector<VkQueueFamilyProperties> &queues)
 {
     uint32_t count = 0;
-    vk::GetPhysicalDeviceQueueFamilyProperties(phy, &count, nullptr);
+    vkGetPhysicalDeviceQueueFamilyProperties(phy, &count, nullptr);
 
     queues.resize(count);
-    vk::GetPhysicalDeviceQueueFamilyProperties(phy, &count, queues.data());
+    vkGetPhysicalDeviceQueueFamilyProperties(phy, &count, queues.data());
 
     return VK_SUCCESS;
 }
@@ -87,28 +84,28 @@ inline VkResult get(VkPhysicalDevice phy, std::vector<VkQueueFamilyProperties> &
 inline VkResult get(VkPhysicalDevice phy, VkSurfaceKHR surface, std::vector<VkSurfaceFormatKHR> &formats)
 {
     uint32_t count = 0;
-    vk::GetPhysicalDeviceSurfaceFormatsKHR(phy, surface, &count, nullptr);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(phy, surface, &count, nullptr);
 
     formats.resize(count);
-    return vk::GetPhysicalDeviceSurfaceFormatsKHR(phy, surface, &count, formats.data());
+    return vkGetPhysicalDeviceSurfaceFormatsKHR(phy, surface, &count, formats.data());
 }
 
 inline VkResult get(VkPhysicalDevice phy, VkSurfaceKHR surface, std::vector<VkPresentModeKHR> &modes)
 {
     uint32_t count = 0;
-    vk::GetPhysicalDeviceSurfacePresentModesKHR(phy, surface, &count, nullptr);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(phy, surface, &count, nullptr);
 
     modes.resize(count);
-    return vk::GetPhysicalDeviceSurfacePresentModesKHR(phy, surface, &count, modes.data());
+    return vkGetPhysicalDeviceSurfacePresentModesKHR(phy, surface, &count, modes.data());
 }
 
 inline VkResult get(VkDevice dev, VkSwapchainKHR swapchain, std::vector<VkImage> &images)
 {
     uint32_t count = 0;
-    vk::GetSwapchainImagesKHR(dev, swapchain, &count, nullptr);
+    vkGetSwapchainImagesKHR(dev, swapchain, &count, nullptr);
 
     images.resize(count);
-    return vk::GetSwapchainImagesKHR(dev, swapchain, &count, images.data());
+    return vkGetSwapchainImagesKHR(dev, swapchain, &count, images.data());
 }
 
 } // namespace vk

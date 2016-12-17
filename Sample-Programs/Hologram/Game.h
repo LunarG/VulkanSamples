@@ -19,6 +19,7 @@
 
 #include <string>
 #include <vector>
+#include "keycodes.h"
 
 class Shell;
 
@@ -53,18 +54,7 @@ public:
     virtual void attach_swapchain() {}
     virtual void detach_swapchain() {}
 
-    enum Key {
-        // virtual keys
-        KEY_SHUTDOWN,
-        // physical keys
-        KEY_UNKNOWN,
-        KEY_ESC,
-        KEY_UP,
-        KEY_DOWN,
-        KEY_SPACE,
-        KEY_F,
-    };
-    virtual void on_key(Key key) {}
+    virtual void on_key(eKeycode key) {}
     virtual void on_tick() {}
 
     virtual void on_frame(float frame_pred) {}
@@ -98,15 +88,16 @@ protected:
 private:
     void parse_args(const std::vector<std::string> &args)
     {
+#ifndef ANDROID
         for (auto it = args.begin(); it != args.end(); ++it) {
             if (*it == "-b") {
                 settings_.vsync = false;
             } else if (*it == "-w") {
                 ++it;
-                settings_.initial_width = std::stoi(*it);
+                settings_.initial_width = std::stoi(*it); // stoi fails on Android
             } else if (*it == "-h") {
                 ++it;
-                settings_.initial_height = std::stoi(*it);
+                settings_.initial_height = std::stoi(*it); // stoi fails on Android
             } else if ((*it == "-v") || (*it == "--validate")) {
                 settings_.validate = true;
             } else if (*it == "-vv") {
@@ -120,6 +111,7 @@ private:
                 settings_.no_present = true;
             }
         }
+#endif
     }
 };
 

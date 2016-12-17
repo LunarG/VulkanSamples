@@ -14,6 +14,8 @@ add_definitions(-DUSE_VULKAN_WRAPPER)
   include_directories( ../../../WSIWindow                             )
   include_directories( ../../../WSIWindow/android                     )
   include_directories( ../../../WSIWindow/VulkanWrapper               )
+  include_directories( ../../../../include                            ) # /vulkan/vulkan.h in VulkanSamples
+  include_directories( ../../../../../x86_64/include                  ) # /vulkan/vulkan.h in SDK
 
 # Set path to source files.
   aux_source_directory( ${ANDROID_NDK}/sources/android/native_app_glue SRC_LIST)
