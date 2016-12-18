@@ -2914,6 +2914,46 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
                                          i);
                 }
 
+                if (device_data->physical_device_features.multiViewport == false) {
+                    if (pCreateInfos[i].pViewportState->viewportCount != 1) {
+                        skip |=
+                            log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                    __LINE__, VALIDATION_ERROR_01430, LayerName,
+                                    "vkCreateGraphicsPipelines: The multiViewport feature is not enabled, so "
+                                    "pCreateInfos[%d].pViewportState->viewportCount must be 1 but is %d. %s",
+                                    i, pCreateInfos[i].pViewportState->viewportCount, validation_error_map[VALIDATION_ERROR_01430]);
+                    }
+                    if (pCreateInfos[i].pViewportState->scissorCount != 1) {
+                        skip |=
+                            log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                    __LINE__, VALIDATION_ERROR_01431, LayerName,
+                                    "vkCreateGraphicsPipelines: The multiViewport feature is not enabled, so "
+                                    "pCreateInfos[%d].pViewportState->scissorCount must be 1 but is %d. %s",
+                                    i, pCreateInfos[i].pViewportState->scissorCount, validation_error_map[VALIDATION_ERROR_01431]);
+                    }
+                } else {
+                    if ((pCreateInfos[i].pViewportState->viewportCount < 1) ||
+                        (pCreateInfos[i].pViewportState->viewportCount > device_data->device_limits.maxViewports)) {
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                        __LINE__, VALIDATION_ERROR_01432, LayerName,
+                                        "vkCreateGraphicsPipelines: multiViewport feature is enabled; "
+                                        "pCreateInfos[%d].pViewportState->viewportCount is %d but must be between 1 and "
+                                        "maxViewports (%d), inclusive. %s",
+                                        i, pCreateInfos[i].pViewportState->viewportCount, device_data->device_limits.maxViewports,
+                                        validation_error_map[VALIDATION_ERROR_01432]);
+                    }
+                    if ((pCreateInfos[i].pViewportState->scissorCount < 1) ||
+                        (pCreateInfos[i].pViewportState->scissorCount > device_data->device_limits.maxViewports)) {
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                        __LINE__, VALIDATION_ERROR_01433, LayerName,
+                                        "vkCreateGraphicsPipelines: multiViewport feature is enabled; "
+                                        "pCreateInfos[%d].pViewportState->scissorCount is %d but must be between 1 and "
+                                        "maxViewports (%d), inclusive. %s",
+                                        i, pCreateInfos[i].pViewportState->scissorCount, device_data->device_limits.maxViewports,
+                                        validation_error_map[VALIDATION_ERROR_01433]);
+                    }
+                }
+
                 if (pCreateInfos[i].pDynamicState != nullptr) {
                     bool has_dynamic_viewport = false;
                     bool has_dynamic_scissor = false;
@@ -2926,15 +2966,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
                         }
                     }
 
-                    // viewportCount must be greater than 0
-                    // TODO: viewportCount must be 1 when multiple_viewport feature is not enabled
-                    if (pCreateInfos[i].pViewportState->viewportCount == 0) {
-                        skip |= log_msg(
-                            report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                            REQUIRED_PARAMETER, LayerName,
-                            "vkCreateGraphicsPipelines: pCreateInfos[%d].pViewportState->viewportCount must be greater than 0", i);
-                    }
-
                     // If no element of the pDynamicStates member of pDynamicState is VK_DYNAMIC_STATE_VIEWPORT, the pViewports
                     // member of pViewportState must be a pointer to an array of pViewportState->viewportCount VkViewport structures
                     if (!has_dynamic_viewport && (pCreateInfos[i].pViewportState->pViewports == nullptr)) {
@@ -2944,15 +2975,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
                                     "vkCreateGraphicsPipelines: if pCreateInfos[%d].pDynamicState->pDynamicStates does not contain "
                                     "VK_DYNAMIC_STATE_VIEWPORT, pCreateInfos[%d].pViewportState->pViewports must not be NULL. %s",
                                     i, i, validation_error_map[VALIDATION_ERROR_02110]);
-                    }
-
-                    // scissorCount must be greater than 0
-                    // TODO: scissorCount must be 1 when multiple_viewport feature is not enabled
-                    if (pCreateInfos[i].pViewportState->scissorCount == 0) {
-                        skip |= log_msg(
-                            report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                            REQUIRED_PARAMETER, LayerName,
-                            "vkCreateGraphicsPipelines: pCreateInfos[%d].pViewportState->scissorCount must be greater than 0", i);
                     }
 
                     // If no element of the pDynamicStates member of pDynamicState is VK_DYNAMIC_STATE_SCISSOR, the pScissors member
