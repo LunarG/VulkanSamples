@@ -7129,10 +7129,10 @@ VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 }
 */
 
-TEST_F(VkLayerTest, PSOViewportScissorCountMismatch) {
+TEST_F(VkLayerTest, PSOViewportScissorCountTests) {
     VkResult err;
 
-    TEST_DESCRIPTION("Set scissor and viewport counts to different numbers");
+    TEST_DESCRIPTION("Test various cases of viewport and scissor count validation");
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01434);
 
@@ -7190,9 +7190,9 @@ TEST_F(VkLayerTest, PSOViewportScissorCountMismatch) {
 
     VkPipelineViewportStateCreateInfo vp_state_ci = {};
     vp_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-    vp_state_ci.scissorCount = 0;
+    vp_state_ci.scissorCount = 1;
     // Count mismatch should cause error
-    vp_state_ci.viewportCount = 1;
+    vp_state_ci.viewportCount = 2;
     vp_state_ci.pViewports = &vp;
 
     VkPipelineRasterizationStateCreateInfo rs_state_ci = {};
