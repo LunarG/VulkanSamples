@@ -5730,28 +5730,41 @@ static void RemoveBufferMemoryRange(uint64_t handle, DEVICE_MEM_INFO *mem_info) 
 
 static void RemoveImageMemoryRange(uint64_t handle, DEVICE_MEM_INFO *mem_info) { RemoveMemoryRange(handle, mem_info, true); }
 
+static bool PreCallValidateDestroyBuffer(layer_data *dev_data, VkBuffer buffer, BUFFER_STATE **buffer_state,
+                                         VK_OBJECT *obj_struct) {
+    *buffer_state = getBufferState(dev_data, buffer);
+    *obj_struct = {reinterpret_cast<uint64_t &>(buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT};
+    bool skip = false;
+    if (*buffer_state) {
+        skip |= validateIdleBuffer(dev_data, buffer);
+    }
+    return skip;
+}
+
+static void PostCallRecordDestroyBuffer(layer_data *dev_data, VkBuffer buffer, BUFFER_STATE *buffer_state, VK_OBJECT obj_struct) {
+    invalidateCommandBuffers(dev_data, buffer_state->cb_bindings, obj_struct);
+    for (auto mem_binding : buffer_state->GetBoundMemory()) {
+        auto mem_info = getMemObjInfo(dev_data, mem_binding);
+        if (mem_info) {
+            RemoveBufferMemoryRange(reinterpret_cast<uint64_t &>(buffer), mem_info);
+        }
+    }
+    ClearMemoryObjectBindings(dev_data, reinterpret_cast<uint64_t &>(buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT);
+    dev_data->bufferMap.erase(buffer_state->buffer);
+}
+
 VKAPI_ATTR void VKAPI_CALL DestroyBuffer(VkDevice device, VkBuffer buffer,
                                          const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    BUFFER_STATE *buffer_state = nullptr;
+    VK_OBJECT obj_struct;
     std::unique_lock<std::mutex> lock(global_lock);
-    if (!validateIdleBuffer(dev_data, buffer)) {
-        // Clean up memory binding and range information for buffer
-        auto buffer_state = getBufferState(dev_data, buffer);
-        if (buffer_state) {
-            // Any bound cmd buffers are now invalid
-            invalidateCommandBuffers(dev_data, buffer_state->cb_bindings,
-                                     {reinterpret_cast<uint64_t &>(buffer_state->buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT});
-            for (auto mem_binding : buffer_state->GetBoundMemory()) {
-                auto mem_info = getMemObjInfo(dev_data, mem_binding);
-                if (mem_info) {
-                    RemoveBufferMemoryRange(reinterpret_cast<uint64_t &>(buffer), mem_info);
-                }
-            }
-            ClearMemoryObjectBindings(dev_data, reinterpret_cast<uint64_t &>(buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT);
-            dev_data->bufferMap.erase(buffer_state->buffer);
-        }
+    bool skip = PreCallValidateDestroyBuffer(dev_data, buffer, &buffer_state, &obj_struct);
+    if (!skip) {
         lock.unlock();
         dev_data->dispatch_table.DestroyBuffer(device, buffer, pAllocator);
+        lock.lock();
+        PostCallRecordDestroyBuffer(dev_data, buffer, buffer_state, obj_struct);
     }
 }
 
