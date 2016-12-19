@@ -8020,11 +8020,10 @@ VKAPI_ATTR void VKAPI_CALL CmdDraw(VkCommandBuffer commandBuffer, uint32_t verte
         pCB->drawCount[DRAW]++;
         skip_call |= validate_and_update_draw_state(dev_data, pCB, false, VK_PIPELINE_BIND_POINT_GRAPHICS, "vkCmdDraw");
         MarkStoreImagesAndBuffersAsWritten(dev_data, pCB);
-        // TODO : Need to pass commandBuffer as srcObj here
         skip_call |=
-            log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0,
-                    __LINE__, DRAWSTATE_NONE, "DS", "vkCmdDraw() call 0x%" PRIx64 ", reporting descriptor set state:",
-                    g_drawCount[DRAW]++);
+            log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                    reinterpret_cast<uint64_t &>(commandBuffer), __LINE__, DRAWSTATE_NONE, "DS",
+                    "vkCmdDraw() call 0x%" PRIx64 ", reporting descriptor set state:", g_drawCount[DRAW]++);
         skip_call |= synchAndPrintDSConfig(dev_data, commandBuffer);
         if (!skip_call) {
             updateResourceTrackingOnDraw(pCB);
@@ -8048,11 +8047,10 @@ VKAPI_ATTR void VKAPI_CALL CmdDrawIndexed(VkCommandBuffer commandBuffer, uint32_
         pCB->drawCount[DRAW_INDEXED]++;
         skip_call |= validate_and_update_draw_state(dev_data, pCB, true, VK_PIPELINE_BIND_POINT_GRAPHICS, "vkCmdDrawIndexed");
         MarkStoreImagesAndBuffersAsWritten(dev_data, pCB);
-        // TODO : Need to pass commandBuffer as srcObj here
-        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT,
-                             VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_NONE, "DS",
-                             "vkCmdDrawIndexed() call 0x%" PRIx64 ", reporting descriptor set state:",
-                             g_drawCount[DRAW_INDEXED]++);
+        skip_call |=
+            log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                    reinterpret_cast<uint64_t &>(commandBuffer), __LINE__, DRAWSTATE_NONE, "DS",
+                    "vkCmdDrawIndexed() call 0x%" PRIx64 ", reporting descriptor set state:", g_drawCount[DRAW_INDEXED]++);
         skip_call |= synchAndPrintDSConfig(dev_data, commandBuffer);
         if (!skip_call) {
             updateResourceTrackingOnDraw(pCB);
@@ -8079,11 +8077,10 @@ CmdDrawIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize off
         cb_node->drawCount[DRAW_INDIRECT]++;
         skip_call |= validate_and_update_draw_state(dev_data, cb_node, false, VK_PIPELINE_BIND_POINT_GRAPHICS, "vkCmdDrawIndirect");
         MarkStoreImagesAndBuffersAsWritten(dev_data, cb_node);
-        // TODO : Need to pass commandBuffer as srcObj here
-        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT,
-                             VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_NONE, "DS",
-                             "vkCmdDrawIndirect() call 0x%" PRIx64 ", reporting descriptor set state:",
-                             g_drawCount[DRAW_INDIRECT]++);
+        skip_call |=
+            log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                    reinterpret_cast<uint64_t &>(commandBuffer), __LINE__, DRAWSTATE_NONE, "DS",
+                    "vkCmdDrawIndirect() call 0x%" PRIx64 ", reporting descriptor set state:", g_drawCount[DRAW_INDIRECT]++);
         skip_call |= synchAndPrintDSConfig(dev_data, commandBuffer);
         if (!skip_call) {
             updateResourceTrackingOnDraw(cb_node);
@@ -8113,11 +8110,10 @@ CmdDrawIndexedIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceS
         skip_call |=
             validate_and_update_draw_state(dev_data, cb_node, true, VK_PIPELINE_BIND_POINT_GRAPHICS, "vkCmdDrawIndexedIndirect");
         MarkStoreImagesAndBuffersAsWritten(dev_data, cb_node);
-        // TODO : Need to pass commandBuffer as srcObj here
-        skip_call |=
-            log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0,
-                    __LINE__, DRAWSTATE_NONE, "DS", "vkCmdDrawIndexedIndirect() call 0x%" PRIx64 ", reporting descriptor set state:",
-                    g_drawCount[DRAW_INDEXED_INDIRECT]++);
+        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT,
+                             VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t &>(commandBuffer), __LINE__,
+                             DRAWSTATE_NONE, "DS", "vkCmdDrawIndexedIndirect() call 0x%" PRIx64 ", reporting descriptor set state:",
+                             g_drawCount[DRAW_INDEXED_INDIRECT]++);
         skip_call |= synchAndPrintDSConfig(dev_data, commandBuffer);
         if (!skip_call) {
             updateResourceTrackingOnDraw(cb_node);
