@@ -3821,11 +3821,7 @@ static bool addCmd(layer_data *my_data, GLOBAL_CB_NODE *pCB, const CMD_TYPE cmd,
         skip_call |= report_error_no_cb_begin(my_data, pCB->commandBuffer, caller_name);
     } else {
         skip_call |= validateCmdsInCmdBuffer(my_data, pCB, cmd);
-        CMD_NODE cmdNode = {};
-        // init cmd node and append to end of cmd LL
-        cmdNode.cmdNumber = ++pCB->numCmds;
-        cmdNode.type = cmd;
-        pCB->cmds.push_back(cmdNode);
+        pCB->last_cmd = cmd;    // TODO: replace this with better ->state tracking.
     }
     return skip_call;
 }
@@ -3916,7 +3912,7 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
     GLOBAL_CB_NODE *pCB = dev_data->commandBufferMap[cb];
     if (pCB) {
         pCB->in_use.store(0);
-        pCB->cmds.clear();
+        pCB->last_cmd = CMD_NONE;
         // Reset CB state (note that createInfo is not cleared)
         pCB->commandBuffer = cb;
         memset(&pCB->beginInfo, 0, sizeof(VkCommandBufferBeginInfo));
@@ -7444,7 +7440,7 @@ BeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo
                         "vkBeginCommandBuffer(): Cannot call Begin on command buffer (0x%" PRIxLEAST64
                         ") in the RECORDING state. Must first call vkEndCommandBuffer().",
                         (uint64_t)commandBuffer);
-        } else if (CB_RECORDED == cb_node->state || (CB_INVALID == cb_node->state && CMD_END == cb_node->cmds.back().type)) {
+        } else if (CB_RECORDED == cb_node->state || (CB_INVALID == cb_node->state && CMD_END == cb_node->last_cmd)) {
             VkCommandPool cmdPool = cb_node->createInfo.commandPool;
             auto pPool = getCommandPoolNode(dev_data, cmdPool);
             if (!(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT & pPool->createFlags)) {
