@@ -20,6 +20,7 @@
 #pragma once
 #include "vulkan/vulkan.h"
 #include "vulkan/vk_layer.h"
+#include <string>
 #include <unordered_map>
 #include <stdbool.h>
 #include <stdio.h>
