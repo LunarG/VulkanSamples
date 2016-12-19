@@ -995,9 +995,9 @@ class StructWrapperGen:
                 init_list = init_list[:-1] # hack off final comma
             if s in custom_construct_txt:
                 construct_txt = custom_construct_txt[s]
-            ss_src.append("\n%s::%s(const %s* pInStruct) : %s\n{\n%s}" % (ss_name, ss_name, s, init_list, construct_txt))
+            ss_src.append("\n%s::%s(const %s* pInStruct) :%s\n{\n%s}" % (ss_name, ss_name, s, init_list, construct_txt))
             if '' != default_init_list:
-                default_init_list = " : %s" % (default_init_list[:-1])
+                default_init_list = " :%s" % (default_init_list[:-1])
             ss_src.append("\n%s::%s()%s\n{}" % (ss_name, ss_name, default_init_list))
             # Create slight variation of init and construct txt for copy constructor that takes a src object reference vs. struct ptr
             copy_construct_init = init_func_txt.replace('pInStruct->', 'src.')
@@ -1040,6 +1040,9 @@ class EnumCodeGen:
                 if (self.ev_dict[e]['unique']):
                     body.append('        case %s:\n            return "%s";' % (e, e))
             body.append('        default:\n            return "Unhandled %s";\n    }\n}\n\n' % (fet))
+        if len(body) > 0 and body[-1].endswith("\n\n"):
+            # strip extra newline from end
+            body[-1] = body[-1][:-1]
         return "\n".join(body)
 
     def _generateSHHeader(self):

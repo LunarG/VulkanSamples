@@ -127,6 +127,7 @@ class DispatchTableOutputGenerator(OutputGenerator):
         instance_table += self.OutputDispatchTable('instance')
 
         write(device_table, file=self.outFile);
+        write("\n", file=self.outFile)
         write(instance_table, file=self.outFile);
 
         # Finish processing in superclass
@@ -192,5 +193,5 @@ class DispatchTableOutputGenerator(OutputGenerator):
             table += '    table->%s = (PFN_%s) gpa(%s, "%s");\n' % (base_name, item[0], table_type, item[0])
             if item[1] is not None:
                 table += '#endif // %s\n' % item[1]
-        table += '}\n\n'
+        table += '}'
         return table
