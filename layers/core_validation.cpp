@@ -5734,6 +5734,8 @@ static bool PreCallValidateDestroyBuffer(layer_data *dev_data, VkBuffer buffer, 
                                          VK_OBJECT *obj_struct) {
     *buffer_state = getBufferState(dev_data, buffer);
     *obj_struct = {reinterpret_cast<uint64_t &>(buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT};
+    if (dev_data->instance_data->disabled.destroy_buffer)
+        return false;
     bool skip = false;
     if (*buffer_state) {
         skip |= validateIdleBuffer(dev_data, buffer);
