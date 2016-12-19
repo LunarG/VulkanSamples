@@ -68,8 +68,7 @@ vkGetInstanceProcAddr(VkInstance instance, const char *pName) {
     // extensions.
     // Device extensions are returned if a layer or ICD supports the extension.
     // Instance extensions are returned if the extension is enabled and the
-    // loader
-    // or someone else supports the extension
+    // loader or someone else supports the extension
     return trampolineGetProcAddr(ptr_instance, pName);
 }
 

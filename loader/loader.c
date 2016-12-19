@@ -4024,7 +4024,7 @@ VkResult loader_validate_layers(const struct loader_instance *inst,
 VkResult loader_validate_instance_extensions(
     const struct loader_instance *inst,
     const struct loader_extension_list *icd_exts,
-    const struct loader_layer_list *instance_layer,
+    const struct loader_layer_list *instance_layers,
     const VkInstanceCreateInfo *pCreateInfo) {
 
     VkExtensionProperties *extension_prop;
@@ -4052,7 +4052,7 @@ VkResult loader_validate_instance_extensions(
         /* Not in global list, search layer extension lists */
         for (uint32_t j = 0; j < pCreateInfo->enabledLayerCount; j++) {
             layer_prop = loader_get_layer_property(
-                pCreateInfo->ppEnabledLayerNames[j], instance_layer);
+                pCreateInfo->ppEnabledLayerNames[j], instance_layers);
             if (!layer_prop) {
                 /* Should NOT get here, loader_validate_layers
                  * should have already filtered this case out.
