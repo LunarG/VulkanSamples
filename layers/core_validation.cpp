@@ -5464,77 +5464,108 @@ DestroyQueryPool(VkDevice device, VkQueryPool queryPool, const VkAllocationCallb
         PostCallRecordDestroyQueryPool(dev_data, queryPool, qp_state, obj_struct);
     }
 }
-
-VKAPI_ATTR VkResult VKAPI_CALL GetQueryPoolResults(VkDevice device, VkQueryPool queryPool, uint32_t firstQuery,
-                                                   uint32_t queryCount, size_t dataSize, void *pData, VkDeviceSize stride,
-                                                   VkQueryResultFlags flags) {
-    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    unordered_map<QueryObject, vector<VkCommandBuffer>> queriesInFlight;
-    std::unique_lock<std::mutex> lock(global_lock);
-    for (auto cmdBuffer : dev_data->globalInFlightCmdBuffers) {
-        auto pCB = getCBNode(dev_data, cmdBuffer);
-        for (auto queryStatePair : pCB->queryToStateMap) {
-            queriesInFlight[queryStatePair.first].push_back(cmdBuffer);
+static bool PreCallValidateGetQueryPoolResults(layer_data *dev_data, VkQueryPool query_pool, uint32_t first_query,
+                                               uint32_t query_count, VkQueryResultFlags flags,
+                                               unordered_map<QueryObject, vector<VkCommandBuffer>> *queries_in_flight) {
+    for (auto cmd_buffer : dev_data->globalInFlightCmdBuffers) {
+        auto cb = getCBNode(dev_data, cmd_buffer);
+        for (auto query_state_pair : cb->queryToStateMap) {
+            (*queries_in_flight)[query_state_pair.first].push_back(cmd_buffer);
         }
     }
-    bool skip_call = false;
-    for (uint32_t i = 0; i < queryCount; ++i) {
-        QueryObject query = {queryPool, firstQuery + i};
-        auto queryElement = queriesInFlight.find(query);
-        auto queryToStateElement = dev_data->queryToStateMap.find(query);
-        if (queryToStateElement != dev_data->queryToStateMap.end()) {
+    bool skip = false;
+    for (uint32_t i = 0; i < query_count; ++i) {
+        QueryObject query = {query_pool, first_query + i};
+        auto qif_pair = queries_in_flight->find(query);
+        auto query_state_pair = dev_data->queryToStateMap.find(query);
+        if (query_state_pair != dev_data->queryToStateMap.end()) {
             // Available and in flight
-            if (queryElement != queriesInFlight.end() && queryToStateElement != dev_data->queryToStateMap.end() &&
-                queryToStateElement->second) {
-                for (auto cmdBuffer : queryElement->second) {
-                    auto pCB = getCBNode(dev_data, cmdBuffer);
-                    auto queryEventElement = pCB->waitedEventsBeforeQueryReset.find(query);
-                    if (queryEventElement == pCB->waitedEventsBeforeQueryReset.end()) {
-                        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                             VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
-                                             "Cannot get query results on queryPool 0x%" PRIx64 " with index %d which is in flight.",
-                                             (uint64_t)(queryPool), firstQuery + i);
-                    } else {
-                        for (auto event : queryEventElement->second) {
+            if (qif_pair != queries_in_flight->end() && query_state_pair != dev_data->queryToStateMap.end() &&
+                query_state_pair->second) {
+                for (auto cmd_buffer : qif_pair->second) {
+                    auto cb = getCBNode(dev_data, cmd_buffer);
+                    auto query_event_pair = cb->waitedEventsBeforeQueryReset.find(query);
+                    if (query_event_pair == cb->waitedEventsBeforeQueryReset.end()) {
+                        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                        VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
+                                        "Cannot get query results on queryPool 0x%" PRIx64 " with index %d which is in flight.",
+                                        (uint64_t)(query_pool), first_query + i);
+                    }
+                }
+                // Unavailable and in flight
+            } else if (qif_pair != queries_in_flight->end() && query_state_pair != dev_data->queryToStateMap.end() &&
+                       !query_state_pair->second) {
+                // TODO : Can there be the same query in use by multiple command buffers in flight?
+                bool make_available = false;
+                for (auto cmd_buffer : qif_pair->second) {
+                    auto cb = getCBNode(dev_data, cmd_buffer);
+                    make_available |= cb->queryToStateMap[query];
+                }
+                if (!(((flags & VK_QUERY_RESULT_PARTIAL_BIT) || (flags & VK_QUERY_RESULT_WAIT_BIT)) && make_available)) {
+                    skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                    VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
+                                    "Cannot get query results on queryPool 0x%" PRIx64 " with index %d which is unavailable.",
+                                    (uint64_t)(query_pool), first_query + i);
+                }
+                // Unavailable
+            } else if (query_state_pair != dev_data->queryToStateMap.end() && !query_state_pair->second) {
+                skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0,
+                                __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
+                                "Cannot get query results on queryPool 0x%" PRIx64 " with index %d which is unavailable.",
+                                (uint64_t)(query_pool), first_query + i);
+                // Uninitialized
+            } else if (query_state_pair == dev_data->queryToStateMap.end()) {
+                skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0,
+                                __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
+                                "Cannot get query results on queryPool 0x%" PRIx64
+                                " with index %d as data has not been collected for this index.",
+                                (uint64_t)(query_pool), first_query + i);
+            }
+        }
+    }
+    return skip;
+}
+
+static void PostCallRecordGetQueryPoolResults(layer_data *dev_data, VkQueryPool query_pool, uint32_t first_query,
+                                              uint32_t query_count,
+                                              unordered_map<QueryObject, vector<VkCommandBuffer>> *queries_in_flight) {
+    for (uint32_t i = 0; i < query_count; ++i) {
+        QueryObject query = {query_pool, first_query + i};
+        auto qif_pair = queries_in_flight->find(query);
+        auto query_state_pair = dev_data->queryToStateMap.find(query);
+        if (query_state_pair != dev_data->queryToStateMap.end()) {
+            // Available and in flight
+            if (qif_pair != queries_in_flight->end() && query_state_pair != dev_data->queryToStateMap.end() &&
+                query_state_pair->second) {
+                for (auto cmd_buffer : qif_pair->second) {
+                    auto cb = getCBNode(dev_data, cmd_buffer);
+                    auto query_event_pair = cb->waitedEventsBeforeQueryReset.find(query);
+                    if (query_event_pair != cb->waitedEventsBeforeQueryReset.end()) {
+                        for (auto event : query_event_pair->second) {
                             dev_data->eventMap[event].needsSignaled = true;
                         }
                     }
                 }
-                // Unavailable and in flight
-            } else if (queryElement != queriesInFlight.end() && queryToStateElement != dev_data->queryToStateMap.end() &&
-                       !queryToStateElement->second) {
-                // TODO : Can there be the same query in use by multiple command buffers in flight?
-                bool make_available = false;
-                for (auto cmdBuffer : queryElement->second) {
-                    auto pCB = getCBNode(dev_data, cmdBuffer);
-                    make_available |= pCB->queryToStateMap[query];
-                }
-                if (!(((flags & VK_QUERY_RESULT_PARTIAL_BIT) || (flags & VK_QUERY_RESULT_WAIT_BIT)) && make_available)) {
-                    skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
-                                         "Cannot get query results on queryPool 0x%" PRIx64 " with index %d which is unavailable.",
-                                         (uint64_t)(queryPool), firstQuery + i);
-                }
-                // Unavailable
-            } else if (queryToStateElement != dev_data->queryToStateMap.end() && !queryToStateElement->second) {
-                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                     VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
-                                     "Cannot get query results on queryPool 0x%" PRIx64 " with index %d which is unavailable.",
-                                     (uint64_t)(queryPool), firstQuery + i);
-                // Unitialized
-            } else if (queryToStateElement == dev_data->queryToStateMap.end()) {
-                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                     VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
-                                     "Cannot get query results on queryPool 0x%" PRIx64
-                                     " with index %d as data has not been collected for this index.",
-                                     (uint64_t)(queryPool), firstQuery + i);
             }
         }
     }
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL GetQueryPoolResults(VkDevice device, VkQueryPool queryPool, uint32_t firstQuery, uint32_t queryCount,
+                                                   size_t dataSize, void *pData, VkDeviceSize stride, VkQueryResultFlags flags) {
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    unordered_map<QueryObject, vector<VkCommandBuffer>> queries_in_flight;
+    std::unique_lock<std::mutex> lock(global_lock);
+    bool skip = PreCallValidateGetQueryPoolResults(dev_data, queryPool, firstQuery, queryCount, flags, &queries_in_flight);
     lock.unlock();
-    if (skip_call)
+    if (skip)
         return VK_ERROR_VALIDATION_FAILED_EXT;
-    return dev_data->dispatch_table.GetQueryPoolResults(device, queryPool, firstQuery, queryCount, dataSize, pData, stride, flags);
+    VkResult result =
+        dev_data->dispatch_table.GetQueryPoolResults(device, queryPool, firstQuery, queryCount, dataSize, pData, stride, flags);
+    lock.lock();
+    PostCallRecordGetQueryPoolResults(dev_data, queryPool, firstQuery, queryCount, &queries_in_flight);
+    lock.unlock();
+    return result;
 }
 
 static bool validateIdleBuffer(const layer_data *my_data, VkBuffer buffer) {
