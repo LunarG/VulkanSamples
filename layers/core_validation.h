@@ -93,6 +93,7 @@ struct CHECK_DISABLED {
     bool destroy_fence;
     bool destroy_semaphore;
     bool destroy_query_pool;
+    bool get_query_pool_results;
 };
 
 /*

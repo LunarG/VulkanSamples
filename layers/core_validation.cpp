@@ -5473,6 +5473,8 @@ static bool PreCallValidateGetQueryPoolResults(layer_data *dev_data, VkQueryPool
             (*queries_in_flight)[query_state_pair.first].push_back(cmd_buffer);
         }
     }
+    if (dev_data->instance_data->disabled.get_query_pool_results)
+        return false;
     bool skip = false;
     for (uint32_t i = 0; i < query_count; ++i) {
         QueryObject query = {query_pool, first_query + i};
