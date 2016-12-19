@@ -40,7 +40,7 @@ cvdescriptorset::DescriptorSetLayout::DescriptorSetLayout(const VkDescriptorSetL
         uint32_t insert_index = 0; // Track vector index where we insert element
         if (bindings_.empty() || binding_num > bindings_.back().binding) {
             bindings_.push_back(safe_VkDescriptorSetLayoutBinding(&p_create_info->pBindings[i]));
-            insert_index = bindings_.size() - 1;
+            insert_index = static_cast<uint32_t>(bindings_.size()) - 1;
         } else { // out-of-order binding number, need to insert into vector in-order
             auto it = bindings_.begin();
             // Find currently binding's spot in vector
