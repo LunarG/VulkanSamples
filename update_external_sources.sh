@@ -7,8 +7,7 @@ if [[ $(uname) == "Linux" ]]; then
     CURRENT_DIR="$(dirname "$(readlink -f ${BASH_SOURCE[0]})")"
     CORE_COUNT=$(nproc || echo 4)
 elif [[ $(uname) == "Darwin" ]]; then
-    # Get greadlink with "brew install coreutils"
-    CURRENT_DIR="$(dirname "$(greadlink -f ${BASH_SOURCE[0]})")"
+    CURRENT_DIR="$(dirname "$(python -c 'import os,sys;print(os.path.realpath(sys.argv[1]))' ${BASH_SOURCE[0]})")"
     CORE_COUNT=$(sysctl -n hw.ncpu || echo 4)
 fi
 echo CORE_COUNT=$CORE_COUNT
