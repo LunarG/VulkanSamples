@@ -7134,8 +7134,6 @@ TEST_F(VkLayerTest, PSOViewportScissorCountTests) {
 
     TEST_DESCRIPTION("Test various cases of viewport and scissor count validation");
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01434);
-
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
@@ -7187,12 +7185,10 @@ TEST_F(VkLayerTest, PSOViewportScissorCountTests) {
     ASSERT_VK_SUCCESS(err);
 
     VkViewport vp = {};
-
     VkPipelineViewportStateCreateInfo vp_state_ci = {};
     vp_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     vp_state_ci.scissorCount = 1;
-    // Count mismatch should cause error
-    vp_state_ci.viewportCount = 2;
+    vp_state_ci.viewportCount = 1;
     vp_state_ci.pViewports = &vp;
 
     VkPipelineRasterizationStateCreateInfo rs_state_ci = {};
@@ -7229,7 +7225,6 @@ TEST_F(VkLayerTest, PSOViewportScissorCountTests) {
 
     VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
     VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
-    // We shouldn't need a fragment shader but add it to be able to run on more devices
     shaderStages[0] = vs.GetStageCreateInfo();
     shaderStages[1] = fs.GetStageCreateInfo();
 
@@ -7251,12 +7246,44 @@ TEST_F(VkLayerTest, PSOViewportScissorCountTests) {
 
     VkPipeline pipeline;
     VkPipelineCache pipelineCache;
-
     err = vkCreatePipelineCache(m_device->device(), &pc_ci, NULL, &pipelineCache);
     ASSERT_VK_SUCCESS(err);
-    err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, NULL, &pipeline);
 
-    m_errorMonitor->VerifyFound();
+    if (!m_device->phy().features().multiViewport) {
+        printf("MultiViewport feature is disabled -- skipping enabled-state checks.\n");
+
+        // Check case where multiViewport is disabled and viewport count is not 1
+        // We check scissor/viewport simultaneously since separating them would trigger the mismatch error, 1434.
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01430);
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01431);
+        vp_state_ci.scissorCount = 0;
+        vp_state_ci.viewportCount = 0;
+        err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, NULL, &pipeline);
+        m_errorMonitor->VerifyFound();
+    } else {
+        if (m_device->props.limits.maxViewports == 1) {
+            printf("Device limit maxViewports is 1, skipping tests that require higher limits.\n");
+        } else {
+            printf("MultiViewport feature is enabled -- skipping disabled-state checks.\n");
+
+            // Check is that viewportcount and scissorcount match
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01434);
+            vp_state_ci.scissorCount = 1;
+            vp_state_ci.viewportCount = m_device->props.limits.maxViewports;
+            err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, NULL, &pipeline);
+            m_errorMonitor->VerifyFound();
+
+
+            // Check case where multiViewport is enabled and viewport count is greater than max
+            // We check scissor/viewport simultaneously since separating them would trigger the mismatch error, 1434.
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01432);
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01433);
+            vp_state_ci.scissorCount = m_device->props.limits.maxViewports + 1;
+            vp_state_ci.viewportCount = m_device->props.limits.maxViewports + 1;
+            err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, NULL, &pipeline);
+            m_errorMonitor->VerifyFound();
+        }
+    }
 
     vkDestroyPipelineCache(m_device->device(), pipelineCache, NULL);
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
