@@ -4047,27 +4047,29 @@ static bool synchAndPrintDSConfig(layer_data *my_data, const VkCommandBuffer cb)
 
 // Flags validation error if the associated call is made inside a render pass. The apiName
 // routine should ONLY be called outside a render pass.
-static bool insideRenderPass(const layer_data *my_data, GLOBAL_CB_NODE *pCB, const char *apiName) {
+static bool insideRenderPass(const layer_data *my_data, GLOBAL_CB_NODE *pCB, const char *apiName,
+                             UNIQUE_VALIDATION_ERROR_CODE msgCode) {
     bool inside = false;
     if (pCB->activeRenderPass) {
         inside = log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                         (uint64_t)pCB->commandBuffer, __LINE__, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
-                         "%s: It is invalid to issue this call inside an active render pass (0x%" PRIxLEAST64 ")", apiName,
-                         (uint64_t)pCB->activeRenderPass->renderPass);
+                         (uint64_t)pCB->commandBuffer, __LINE__, msgCode, "DS",
+                         "%s: It is invalid to issue this call inside an active render pass (0x%" PRIxLEAST64 "). %s", apiName,
+                         (uint64_t)pCB->activeRenderPass->renderPass, validation_error_map[msgCode]);
     }
     return inside;
 }
 
 // Flags validation error if the associated call is made outside a render pass. The apiName
 // routine should ONLY be called inside a render pass.
-static bool outsideRenderPass(const layer_data *my_data, GLOBAL_CB_NODE *pCB, const char *apiName) {
+static bool outsideRenderPass(const layer_data *my_data, GLOBAL_CB_NODE *pCB, const char *apiName,
+                              UNIQUE_VALIDATION_ERROR_CODE msgCode) {
     bool outside = false;
     if (((pCB->createInfo.level == VK_COMMAND_BUFFER_LEVEL_PRIMARY) && (!pCB->activeRenderPass)) ||
         ((pCB->createInfo.level == VK_COMMAND_BUFFER_LEVEL_SECONDARY) && (!pCB->activeRenderPass) &&
          !(pCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT))) {
         outside = log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                          (uint64_t)pCB->commandBuffer, __LINE__, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
-                          "%s: This call must be issued inside an active render pass.", apiName);
+                          (uint64_t)pCB->commandBuffer, __LINE__, msgCode, "DS",
+                          "%s: This call must be issued inside an active render pass. %s", apiName, validation_error_map[msgCode]);
     }
     return outside;
 }
@@ -4180,7 +4182,8 @@ static void checkDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo,
 }
 
 // Verify that queue family has been properly requested
-bool ValidateRequestedQueueFamilyProperties(instance_layer_data *instance_data, VkPhysicalDevice gpu, const VkDeviceCreateInfo *create_info) {
+static bool ValidateRequestedQueueFamilyProperties(instance_layer_data *instance_data, VkPhysicalDevice gpu,
+                                                   const VkDeviceCreateInfo *create_info) {
     bool skip_call = false;
     auto physical_device_state = getPhysicalDeviceState(instance_data, gpu);
     // First check is app has actually requested queueFamilyProperties
@@ -7494,7 +7497,7 @@ VKAPI_ATTR VkResult VKAPI_CALL EndCommandBuffer(VkCommandBuffer commandBuffer) {
         if ((VK_COMMAND_BUFFER_LEVEL_PRIMARY == pCB->createInfo.level) || !(pCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT)) {
             // This needs spec clarification to update valid usage, see comments in PR:
             // https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers/pull/516#discussion_r63013756
-            skip_call |= insideRenderPass(dev_data, pCB, "vkEndCommandBuffer");
+            skip_call |= insideRenderPass(dev_data, pCB, "vkEndCommandBuffer()", VALIDATION_ERROR_00123);
         }
         skip_call |= addCmd(dev_data, pCB, CMD_END, "vkEndCommandBuffer()");
         for (auto query : pCB->activeQueries) {
@@ -8037,7 +8040,7 @@ VKAPI_ATTR void VKAPI_CALL CmdDraw(VkCommandBuffer commandBuffer, uint32_t verte
         if (!skip_call) {
             updateResourceTrackingOnDraw(pCB);
         }
-        skip_call |= outsideRenderPass(dev_data, pCB, "vkCmdDraw");
+        skip_call |= outsideRenderPass(dev_data, pCB, "vkCmdDraw()", VALIDATION_ERROR_01365);
     }
     lock.unlock();
     if (!skip_call)
@@ -8065,7 +8068,7 @@ VKAPI_ATTR void VKAPI_CALL CmdDrawIndexed(VkCommandBuffer commandBuffer, uint32_
         if (!skip_call) {
             updateResourceTrackingOnDraw(pCB);
         }
-        skip_call |= outsideRenderPass(dev_data, pCB, "vkCmdDrawIndexed");
+        skip_call |= outsideRenderPass(dev_data, pCB, "vkCmdDrawIndexed()", VALIDATION_ERROR_01372);
     }
     lock.unlock();
     if (!skip_call)
@@ -8096,7 +8099,7 @@ CmdDrawIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize off
         if (!skip_call) {
             updateResourceTrackingOnDraw(cb_node);
         }
-        skip_call |= outsideRenderPass(dev_data, cb_node, "vkCmdDrawIndirect()");
+        skip_call |= outsideRenderPass(dev_data, cb_node, "vkCmdDrawIndirect()", VALIDATION_ERROR_01381);
     } else {
         assert(0);
     }
@@ -8130,7 +8133,7 @@ CmdDrawIndexedIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceS
         if (!skip_call) {
             updateResourceTrackingOnDraw(cb_node);
         }
-        skip_call |= outsideRenderPass(dev_data, cb_node, "vkCmdDrawIndexedIndirect()");
+        skip_call |= outsideRenderPass(dev_data, cb_node, "vkCmdDrawIndexedIndirect()", VALIDATION_ERROR_01393);
     } else {
         assert(0);
     }
@@ -8148,7 +8151,7 @@ VKAPI_ATTR void VKAPI_CALL CmdDispatch(VkCommandBuffer commandBuffer, uint32_t x
         skip_call |= validate_and_update_draw_state(dev_data, pCB, false, VK_PIPELINE_BIND_POINT_COMPUTE, "vkCmdDispatch");
         skip_call |= markStoreImagesAndBuffersAsWritten(dev_data, pCB);
         skip_call |= addCmd(dev_data, pCB, CMD_DISPATCH, "vkCmdDispatch()");
-        skip_call |= insideRenderPass(dev_data, pCB, "vkCmdDispatch");
+        skip_call |= insideRenderPass(dev_data, pCB, "vkCmdDispatch()", VALIDATION_ERROR_01562);
     }
     lock.unlock();
     if (!skip_call)
@@ -8170,7 +8173,7 @@ CmdDispatchIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize
             validate_and_update_draw_state(dev_data, cb_node, false, VK_PIPELINE_BIND_POINT_COMPUTE, "vkCmdDispatchIndirect");
         skip_call |= markStoreImagesAndBuffersAsWritten(dev_data, cb_node);
         skip_call |= addCmd(dev_data, cb_node, CMD_DISPATCHINDIRECT, "vkCmdDispatchIndirect()");
-        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdDispatchIndirect()");
+        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdDispatchIndirect()", VALIDATION_ERROR_01569);
     }
     lock.unlock();
     if (!skip_call)
@@ -8209,7 +8212,7 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer
         cb_node->validate_functions.push_back(function);
 
         skip_call |= addCmd(dev_data, cb_node, CMD_COPYBUFFER, "vkCmdCopyBuffer()");
-        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyBuffer()");
+        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyBuffer()", VALIDATION_ERROR_01172);
     } else {
         // Param_checker will flag errors on invalid objects, just assert here as debugging aid
         assert(0);
@@ -8587,7 +8590,7 @@ CmdCopyImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcI
         cb_node->validate_functions.push_back(function);
 
         skip_call |= addCmd(dev_data, cb_node, CMD_COPYIMAGE, "vkCmdCopyImage()");
-        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyImage()");
+        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyImage()", VALIDATION_ERROR_01194);
         for (uint32_t i = 0; i < regionCount; ++i) {
             skip_call |= VerifySourceImageLayout(dev_data, cb_node, srcImage, pRegions[i].srcSubresource, srcImageLayout);
             skip_call |= VerifyDestImageLayout(dev_data, cb_node, dstImage, pRegions[i].dstSubresource, dstImageLayout);
@@ -8651,7 +8654,7 @@ CmdBlitImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcI
         cb_node->validate_functions.push_back(function);
 
         skip_call |= addCmd(dev_data, cb_node, CMD_BLITIMAGE, "vkCmdBlitImage()");
-        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdBlitImage()");
+        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdBlitImage()", VALIDATION_ERROR_01300);
     } else {
         assert(0);
     }
@@ -8692,7 +8695,7 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBufferToImage(VkCommandBuffer commandBuffer, V
         cb_node->validate_functions.push_back(function);
 
         skip_call |= addCmd(dev_data, cb_node, CMD_COPYBUFFERTOIMAGE, "vkCmdCopyBufferToImage()");
-        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyBufferToImage()");
+        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyBufferToImage()", VALIDATION_ERROR_01242);
         for (uint32_t i = 0; i < regionCount; ++i) {
             skip_call |= VerifyDestImageLayout(dev_data, cb_node, dstImage, pRegions[i].imageSubresource, dstImageLayout);
             skip_call |= ValidateCopyBufferImageTransferGranularityRequirements(dev_data, cb_node, dst_image_state, &pRegions[i], i,
@@ -8741,7 +8744,7 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyImageToBuffer(VkCommandBuffer commandBuffer, V
         cb_node->validate_functions.push_back(function);
 
         skip_call |= addCmd(dev_data, cb_node, CMD_COPYIMAGETOBUFFER, "vkCmdCopyImageToBuffer()");
-        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyImageToBuffer()");
+        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyImageToBuffer()", VALIDATION_ERROR_01260);
         for (uint32_t i = 0; i < regionCount; ++i) {
             skip_call |= VerifySourceImageLayout(dev_data, cb_node, srcImage, pRegions[i].imageSubresource, srcImageLayout);
             skip_call |= ValidateCopyBufferImageTransferGranularityRequirements(dev_data, cb_node, src_image_state, &pRegions[i], i,
@@ -8777,7 +8780,7 @@ VKAPI_ATTR void VKAPI_CALL CmdUpdateBuffer(VkCommandBuffer commandBuffer, VkBuff
         cb_node->validate_functions.push_back(function);
 
         skip_call |= addCmd(dev_data, cb_node, CMD_UPDATEBUFFER, "vkCmdUpdateBuffer()");
-        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyUpdateBuffer()");
+        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdUpdateBuffer()", VALIDATION_ERROR_01155);
     } else {
         assert(0);
     }
@@ -8808,7 +8811,7 @@ CmdFillBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize ds
         cb_node->validate_functions.push_back(function);
 
         skip_call |= addCmd(dev_data, cb_node, CMD_FILLBUFFER, "vkCmdFillBuffer()");
-        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyFillBuffer()");
+        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdFillBuffer()", VALIDATION_ERROR_01142);
     } else {
         assert(0);
     }
@@ -8840,7 +8843,7 @@ VKAPI_ATTR void VKAPI_CALL CmdClearAttachments(VkCommandBuffer commandBuffer, ui
                                  " It is recommended you use RenderPass LOAD_OP_CLEAR on Attachments prior to any Draw.",
                                  (uint64_t)(commandBuffer));
         }
-        skip_call |= outsideRenderPass(dev_data, pCB, "vkCmdClearAttachments()");
+        skip_call |= outsideRenderPass(dev_data, pCB, "vkCmdClearAttachments()", VALIDATION_ERROR_01122);
     }
 
     // Validate that attachment is in reference list of active subpass
@@ -8927,7 +8930,7 @@ VKAPI_ATTR void VKAPI_CALL CmdClearColorImage(VkCommandBuffer commandBuffer, VkI
         cb_node->validate_functions.push_back(function);
 
         skip_call |= addCmd(dev_data, cb_node, CMD_CLEARCOLORIMAGE, "vkCmdClearColorImage()");
-        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdClearColorImage()");
+        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdClearColorImage()", VALIDATION_ERROR_01096);
     } else {
         assert(0);
     }
@@ -8960,7 +8963,7 @@ CmdClearDepthStencilImage(VkCommandBuffer commandBuffer, VkImage image, VkImageL
         cb_node->validate_functions.push_back(function);
 
         skip_call |= addCmd(dev_data, cb_node, CMD_CLEARDEPTHSTENCILIMAGE, "vkCmdClearDepthStencilImage()");
-        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdClearDepthStencilImage()");
+        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdClearDepthStencilImage()", VALIDATION_ERROR_01111);
     } else {
         assert(0);
     }
@@ -8999,7 +9002,7 @@ CmdResolveImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout s
         cb_node->validate_functions.push_back(function);
 
         skip_call |= addCmd(dev_data, cb_node, CMD_RESOLVEIMAGE, "vkCmdResolveImage()");
-        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdResolveImage()");
+        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdResolveImage()", VALIDATION_ERROR_01335);
     } else {
         assert(0);
     }
@@ -9030,7 +9033,7 @@ CmdSetEvent(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags s
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         skip_call |= addCmd(dev_data, pCB, CMD_SETEVENT, "vkCmdSetEvent()");
-        skip_call |= insideRenderPass(dev_data, pCB, "vkCmdSetEvent");
+        skip_call |= insideRenderPass(dev_data, pCB, "vkCmdSetEvent()", VALIDATION_ERROR_00238);
         auto event_state = getEventNode(dev_data, event);
         if (event_state) {
             addCommandBufferBinding(&event_state->cb_bindings,
@@ -9058,7 +9061,7 @@ CmdResetEvent(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         skip_call |= addCmd(dev_data, pCB, CMD_RESETEVENT, "vkCmdResetEvent()");
-        skip_call |= insideRenderPass(dev_data, pCB, "vkCmdResetEvent");
+        skip_call |= insideRenderPass(dev_data, pCB, "vkCmdResetEvent()", VALIDATION_ERROR_00249);
         auto event_state = getEventNode(dev_data, event);
         if (event_state) {
             addCommandBufferBinding(&event_state->cb_bindings,
@@ -9671,7 +9674,7 @@ CmdResetQueryPool(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t
         } else {
             skip_call |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdResetQueryPool()");
         }
-        skip_call |= insideRenderPass(dev_data, pCB, "vkCmdQueryPool");
+        skip_call |= insideRenderPass(dev_data, pCB, "vkCmdResetQueryPool()", VALIDATION_ERROR_01025);
         addCommandBufferBinding(&getQueryPoolNode(dev_data, queryPool)->cb_bindings,
                                 {reinterpret_cast<uint64_t &>(queryPool), VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT}, pCB);
     }
@@ -9744,7 +9747,7 @@ CmdCopyQueryPoolResults(VkCommandBuffer commandBuffer, VkQueryPool queryPool, ui
         } else {
             skip_call |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdCopyQueryPoolResults()");
         }
-        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyQueryPoolResults()");
+        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyQueryPoolResults()", VALIDATION_ERROR_01074);
         addCommandBufferBinding(&getQueryPoolNode(dev_data, queryPool)->cb_bindings,
                                 {reinterpret_cast<uint64_t &>(queryPool), VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT}, cb_node);
     } else {
@@ -10877,7 +10880,7 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
             }
             skip_call |= VerifyRenderAreaBounds(dev_data, pRenderPassBegin);
             skip_call |= VerifyFramebufferAndRenderPassLayouts(dev_data, cb_node, pRenderPassBegin);
-            skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdBeginRenderPass");
+            skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdBeginRenderPass()", VALIDATION_ERROR_00440);
             skip_call |= ValidateDependencies(dev_data, framebuffer, renderPass);
             skip_call |= validatePrimaryCommandBuffer(dev_data, cb_node, "vkCmdBeginRenderPass");
             skip_call |= addCmd(dev_data, cb_node, CMD_BEGINRENDERPASS, "vkCmdBeginRenderPass()");
@@ -10911,7 +10914,7 @@ VKAPI_ATTR void VKAPI_CALL CmdNextSubpass(VkCommandBuffer commandBuffer, VkSubpa
     if (pCB) {
         skip_call |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdNextSubpass");
         skip_call |= addCmd(dev_data, pCB, CMD_NEXTSUBPASS, "vkCmdNextSubpass()");
-        skip_call |= outsideRenderPass(dev_data, pCB, "vkCmdNextSubpass");
+        skip_call |= outsideRenderPass(dev_data, pCB, "vkCmdNextSubpass()", VALIDATION_ERROR_00458);
 
         auto subpassCount = pCB->activeRenderPass->createInfo.subpassCount;
         if (pCB->activeSubpass == subpassCount - 1) {
@@ -10973,7 +10976,7 @@ VKAPI_ATTR void VKAPI_CALL CmdEndRenderPass(VkCommandBuffer commandBuffer) {
                 }
             }
         }
-        skip_call |= outsideRenderPass(dev_data, pCB, "vkCmdEndRenderpass");
+        skip_call |= outsideRenderPass(dev_data, pCB, "vkCmdEndRenderpass()", VALIDATION_ERROR_00464);
         skip_call |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdEndRenderPass");
         skip_call |= addCmd(dev_data, pCB, CMD_ENDRENDERPASS, "vkCmdEndRenderPass()");
     }
