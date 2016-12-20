@@ -506,6 +506,10 @@ LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(
     loader_deactivate_layers(ptr_instance, NULL,
                              &ptr_instance->activated_layer_list);
     if (ptr_instance->phys_devs_tramp) {
+        for (uint32_t i = 0; i < ptr_instance->phys_dev_count_tramp; i++) {
+            loader_instance_heap_free(ptr_instance,
+                                      ptr_instance->phys_devs_tramp[i]);
+        }
         loader_instance_heap_free(ptr_instance, ptr_instance->phys_devs_tramp);
     }
     if (callback_setup) {
@@ -526,7 +530,6 @@ vkEnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysicalDeviceCount,
                            VkPhysicalDevice *pPhysicalDevices) {
     const VkLayerInstanceDispatchTable *disp;
     VkResult res;
-    uint32_t count, i;
     struct loader_instance *inst;
     disp = loader_get_instance_dispatch(instance);
 
@@ -550,32 +553,73 @@ vkEnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysicalDeviceCount,
         loader_platform_thread_unlock_mutex(&loader_lock);
         return VK_ERROR_INITIALIZATION_FAILED;
     }
-    count = (inst->total_gpu_count < *pPhysicalDeviceCount)
-                ? inst->total_gpu_count
-                : *pPhysicalDeviceCount;
-    *pPhysicalDeviceCount = count;
-    if (NULL == inst->phys_devs_tramp) {
-        inst->phys_devs_tramp =
-            (struct loader_physical_device_tramp *)loader_instance_heap_alloc(
-                inst, inst->total_gpu_count *
-                          sizeof(struct loader_physical_device_tramp),
-                VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-    }
-    if (NULL == inst->phys_devs_tramp) {
+
+    // create a new array for the physical devices
+    uint32_t new_phys_dev_count = (inst->total_gpu_count < *pPhysicalDeviceCount)
+                                     ? inst->total_gpu_count
+                                     : *pPhysicalDeviceCount;
+    *pPhysicalDeviceCount = new_phys_dev_count;
+    struct loader_physical_device_tramp **new_phys_devs =
+        (struct loader_physical_device_tramp **)loader_instance_heap_alloc(
+            inst, new_phys_dev_count *
+                      sizeof(struct loader_physical_device_tramp *),
+            VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+    if (NULL == new_phys_devs) {
         loader_platform_thread_unlock_mutex(&loader_lock);
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
 
-    for (i = 0; i < count; i++) {
+    // copy or create everything to fill the new array of physical devices
+    for (uint32_t i = 0; i < new_phys_dev_count; i++) {
 
-        // initialize the loader's physicalDevice object
-        loader_set_dispatch((void *)&inst->phys_devs_tramp[i], inst->disp);
-        inst->phys_devs_tramp[i].this_instance = inst;
-        inst->phys_devs_tramp[i].phys_dev = pPhysicalDevices[i];
+        // check if this physical device is already in the old buffer
+        new_phys_devs[i] = NULL;
+        for (uint32_t j = 0; j < inst->phys_dev_count_tramp; j++) {
+            if (pPhysicalDevices[i] == inst->phys_devs_tramp[j]->phys_dev) {
+                new_phys_devs[i] = inst->phys_devs_tramp[j];
+                break;
+            }
+        }
+
+        // if this physical  device isn't in the old buffer, create it
+        if (NULL == new_phys_devs[i]) {
+            new_phys_devs[i] = (struct loader_physical_device_tramp *)
+                loader_instance_heap_alloc(
+                    inst, sizeof(struct loader_physical_device_tramp),
+                    VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+
+            // initialize the loader's physicalDevice object
+            loader_set_dispatch((void *)new_phys_devs[i], inst->disp);
+            new_phys_devs[i]->this_instance = inst;
+            new_phys_devs[i]->phys_dev = pPhysicalDevices[i];
+        }
 
         // copy wrapped object into Application provided array
-        pPhysicalDevices[i] = (VkPhysicalDevice)&inst->phys_devs_tramp[i];
+        pPhysicalDevices[i] = (VkPhysicalDevice)new_phys_devs[i];
     }
+
+    // free everything that didn't carry over to the new array of physical
+    // devices
+    if (NULL != inst->phys_devs_tramp) {
+        for (uint32_t i = 0; i < inst->phys_dev_count_tramp; i++) {
+            bool found = false;
+            for (uint32_t j = 0; j < inst->phys_dev_count_tramp; j++) {
+                if (inst->phys_devs_tramp[i] == new_phys_devs[j]) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                loader_instance_heap_free(inst, inst->phys_devs_tramp[i]);
+            }
+        }
+        loader_instance_heap_free(inst, inst->phys_devs_tramp);
+    }
+    
+    // swap in the new physical device list
+    inst->phys_dev_count_tramp = new_phys_dev_count;
+    inst->phys_devs_tramp = new_phys_devs;
+    
     loader_platform_thread_unlock_mutex(&loader_lock);
     return res;
 }
