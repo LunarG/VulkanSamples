@@ -695,9 +695,12 @@ VK_LAYER_EXPORT VkStringErrorFlags vk_string_validate(const int max_length, cons
     int num_char_bytes = 0;
     int i, j;
 
-    for (i = 0; i < max_length; i++) {
+    for (i = 0; i <= max_length; i++) {
         if (utf8[i] == 0) {
             break;
+        } else if (i == max_length) {
+          result = VK_STRING_ERROR_LENGTH;
+          break;
         } else if ((utf8[i] >= 0xa) && (utf8[i] < 0x7f)) {
             num_char_bytes = 0;
         } else if ((utf8[i] & UTF8_ONE_BYTE_MASK) == UTF8_ONE_BYTE_CODE) {
