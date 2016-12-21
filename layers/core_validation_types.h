@@ -608,6 +608,7 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     std::unordered_map<VkEvent, VkPipelineStageFlags> eventToStageMap;
     std::vector<DRAW_DATA> drawData;
     DRAW_DATA currentDrawData;
+    bool vertex_buffer_used; // Track for perf warning to make sure any bound vtx buffer used
     VkCommandBuffer primaryCommandBuffer;
     // Track images and buffers that are updated by this CB at the point of a draw
     std::unordered_set<VkImageView> updateImages;

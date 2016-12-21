@@ -2924,7 +2924,7 @@ static bool ValidatePipelineDrawtimeState(layer_data const *my_data, LAST_BOUND_
             }
         }
     } else {
-        if (!pCB->currentDrawData.buffers.empty()) {
+        if (!pCB->currentDrawData.buffers.empty() && !pCB->vertex_buffer_used) {
             skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0,
                                  0, __LINE__, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS",
                                  "Vertex buffers are bound to command buffer (0x%p"
@@ -3151,6 +3151,9 @@ static void UpdateDrawState(
         }
         // For given active slots record updated images & buffers
         UpdateDrawtimeDescriptorState(my_data, cb_state, *active_set_binding_pairs);
+    }
+    if (pPipe->vertexBindingDescriptions.size() > 0) {
+        cb_state->vertex_buffer_used = true;
     }
 }
 
@@ -3974,6 +3977,7 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
         pCB->eventToStageMap.clear();
         pCB->drawData.clear();
         pCB->currentDrawData.buffers.clear();
+        pCB->vertex_buffer_used = false;
         pCB->primaryCommandBuffer = VK_NULL_HANDLE;
         // Make sure any secondaryCommandBuffers are removed from globalInFlight
         for (auto secondary_cb : pCB->secondaryCommandBuffers) {
@@ -8024,6 +8028,21 @@ static void MarkStoreImagesAndBuffersAsWritten(layer_data *dev_data, GLOBAL_CB_N
     }
 }
 
+static bool PreCallValidateCmdDraw(
+    layer_data *dev_data, VkCommandBuffer cmd_buffer, bool indexed, VkPipelineBindPoint bind_point, GLOBAL_CB_NODE **cb_state,
+    vector<std::tuple<cvdescriptorset::DescriptorSet *, std::map<uint32_t, descriptor_req>, std::vector<uint32_t> const *>>
+        *active_set_bindings_pairs,
+    std::unordered_set<uint32_t> *active_bindings, const char *caller) {
+    bool skip = false;
+    *cb_state = getCBNode(dev_data, cmd_buffer);
+    if (*cb_state) {
+        skip |= ValidateCmd(dev_data, *cb_state, CMD_DRAW, caller);
+        skip |= ValidateDrawState(dev_data, *cb_state, indexed, bind_point, active_set_bindings_pairs, active_bindings, caller);
+        skip |= outsideRenderPass(dev_data, *cb_state, caller, VALIDATION_ERROR_01365);
+    }
+    return skip;
+}
+
 static void PostCallRecordCmdDraw(
     layer_data *dev_data, GLOBAL_CB_NODE *cb_state, VkPipelineBindPoint bind_point,
     vector<std::tuple<cvdescriptorset::DescriptorSet *, std::map<uint32_t, descriptor_req>, std::vector<uint32_t> const *>>
@@ -8038,28 +8057,20 @@ static void PostCallRecordCmdDraw(
 
 VKAPI_ATTR void VKAPI_CALL CmdDraw(VkCommandBuffer commandBuffer, uint32_t vertexCount, uint32_t instanceCount,
                                    uint32_t firstVertex, uint32_t firstInstance) {
-    bool skip_call = false;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     // Need a vector (vs. std::set) of active Sets for dynamicOffset validation in case same set bound w/ different offsets
     vector<std::tuple<cvdescriptorset::DescriptorSet *, std::map<uint32_t, descriptor_req>, std::vector<uint32_t> const *>>
         active_set_bindings_pairs;
     std::unordered_set<uint32_t> active_bindings;
+    GLOBAL_CB_NODE *cb_state = nullptr;
     std::unique_lock<std::mutex> lock(global_lock);
-    GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
-    if (pCB) {
-        skip_call |= ValidateCmd(dev_data, pCB, CMD_DRAW, "vkCmdDraw()");
-        // TODO : Split this into validate/state update. Also at state update time, set bool to note if/when
-        //  vtx buffers are consumed and only flag perf warning if bound vtx buffers have not been consumed
-        skip_call |= ValidateDrawState(dev_data, pCB, false, VK_PIPELINE_BIND_POINT_GRAPHICS, &active_set_bindings_pairs,
-                                       &active_bindings, "vkCmdDraw");
-        // TODO : This is only validation
-        skip_call |= outsideRenderPass(dev_data, pCB, "vkCmdDraw()", VALIDATION_ERROR_01365);
-    }
+    bool skip = PreCallValidateCmdDraw(dev_data, commandBuffer, false, VK_PIPELINE_BIND_POINT_GRAPHICS, &cb_state,
+                                       &active_set_bindings_pairs, &active_bindings, "vkCmdDraw()");
     lock.unlock();
-    if (!skip_call) {
+    if (!skip) {
         dev_data->dispatch_table.CmdDraw(commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
         lock.lock();
-        PostCallRecordCmdDraw(dev_data, pCB, VK_PIPELINE_BIND_POINT_GRAPHICS, &active_set_bindings_pairs, &active_bindings);
+        PostCallRecordCmdDraw(dev_data, cb_state, VK_PIPELINE_BIND_POINT_GRAPHICS, &active_set_bindings_pairs, &active_bindings);
         lock.unlock();
     }
 }
