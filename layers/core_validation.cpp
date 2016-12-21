@@ -2852,7 +2852,7 @@ cvdescriptorset::DescriptorSet *getSetNode(const layer_data *my_data, VkDescript
 //     descriptor update must not overflow the size of its buffer being updated
 //  2. Grow updateImages for given pCB to include any bound STORAGE_IMAGE descriptor images
 //  3. Grow updateBuffers for pCB to include buffers from STORAGE*_BUFFER descriptor buffers
-static bool ValidateAndUpdateDrawtimeDescriptorState(
+static bool ValidateDrawtimeDescriptorState(
     layer_data *dev_data, GLOBAL_CB_NODE *pCB,
     const vector<std::tuple<cvdescriptorset::DescriptorSet *, std::map<uint32_t, descriptor_req>, std::vector<uint32_t> const *>>
         &activeSetBindingsPairs,
@@ -2870,9 +2870,18 @@ static bool ValidateAndUpdateDrawtimeDescriptorState(
                               "Descriptor set 0x%" PRIxLEAST64 " encountered the following validation error at %s() time: %s",
                               reinterpret_cast<const uint64_t &>(set), function, err_str.c_str());
         }
-        set_node->GetStorageUpdates(std::get<1>(set_bindings_pair), &pCB->updateBuffers, &pCB->updateImages);
     }
     return result;
+}
+// Add any updated buffers and images to the cmd buffer's respective update[Buffers|Images] set
+static void UpdateDrawtimeDescriptorState(
+    layer_data *dev_data, GLOBAL_CB_NODE *pCB,
+    const vector<std::tuple<cvdescriptorset::DescriptorSet *, std::map<uint32_t, descriptor_req>, std::vector<uint32_t> const *>>
+        &activeSetBindingsPairs) {
+    for (auto set_bindings_pair : activeSetBindingsPairs) {
+        cvdescriptorset::DescriptorSet *set_node = std::get<0>(set_bindings_pair);
+        set_node->GetStorageUpdates(std::get<1>(set_bindings_pair), &pCB->updateBuffers, &pCB->updateImages);
+    }
 }
 
 // For given pipeline, return number of MSAA samples, or one if MSAA disabled
@@ -2897,7 +2906,7 @@ static void list_bits(std::ostream& s, uint32_t bits) {
 }
 
 // Validate draw-time state related to the PSO
-static bool validatePipelineDrawtimeState(layer_data const *my_data, LAST_BOUND_STATE const &state, const GLOBAL_CB_NODE *pCB,
+static bool ValidatePipelineDrawtimeState(layer_data const *my_data, LAST_BOUND_STATE const &state, const GLOBAL_CB_NODE *pCB,
                                           PIPELINE_STATE const *pPipeline) {
     bool skip_call = false;
 
@@ -3120,12 +3129,13 @@ static bool ValidateAndUpdateDrawState(layer_data *my_data, GLOBAL_CB_NODE *cb_n
             }
         }
         // For given active slots, verify any dynamic descriptors and record updated images & buffers
-        result |= ValidateAndUpdateDrawtimeDescriptorState(my_data, cb_node, activeSetBindingsPairs, function);
+        result |= ValidateDrawtimeDescriptorState(my_data, cb_node, activeSetBindingsPairs, function);
+        UpdateDrawtimeDescriptorState(my_data, cb_node, activeSetBindingsPairs);
     }
 
     // Check general pipeline state that needs to be validated at drawtime
     if (VK_PIPELINE_BIND_POINT_GRAPHICS == bindPoint)
-        result |= validatePipelineDrawtimeState(my_data, state, cb_node, pPipe);
+        result |= ValidatePipelineDrawtimeState(my_data, state, cb_node, pPipe);
 
     return result;
 }
