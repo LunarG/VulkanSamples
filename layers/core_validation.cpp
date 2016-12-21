@@ -2098,8 +2098,6 @@ static VkDescriptorSetLayoutBinding const * get_descriptor_binding(PIPELINE_LAYO
 
 // Block of code at start here for managing/tracking Pipeline state that this layer cares about
 
-static uint64_t g_drawCount[NUM_DRAW_TYPES] = {0, 0, 0, 0};
-
 // TODO : Should be tracking lastBound per commandBuffer and when draws occur, report based on that cmd buffer lastBound
 //   Then need to synchronize the accesses based on cmd buffer so that if I'm reading state on one cmd buffer, updates
 //   to that same cmd buffer by separate thread are not changing state from underneath us
@@ -4045,34 +4043,6 @@ static void set_cb_pso_status(GLOBAL_CB_NODE *pCB, const PIPELINE_STATE *pPipe) 
         }
         pCB->status |= psoDynStateMask;
     }
-}
-
-// Print the last bound Gfx Pipeline
-static bool printPipeline(layer_data *my_data, const VkCommandBuffer cb) {
-    bool skip_call = false;
-    GLOBAL_CB_NODE *pCB = getCBNode(my_data, cb);
-    if (pCB) {
-        PIPELINE_STATE *pPipeTrav = pCB->lastBound[VK_PIPELINE_BIND_POINT_GRAPHICS].pipeline_state;
-        if (!pPipeTrav) {
-            // nothing to print
-        } else {
-            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
-                                 __LINE__, DRAWSTATE_NONE, "DS", "%s",
-                                 vk_print_vkgraphicspipelinecreateinfo(
-                                     reinterpret_cast<const VkGraphicsPipelineCreateInfo *>(&pPipeTrav->graphicsPipelineCI), "{DS}")
-                                     .c_str());
-        }
-    }
-    return skip_call;
-}
-
-static bool synchAndPrintDSConfig(layer_data *my_data, const VkCommandBuffer cb) {
-    bool skip_call = false;
-    if (!(my_data->report_data->active_flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)) {
-        return skip_call;
-    }
-    skip_call |= printPipeline(my_data, cb);
-    return skip_call;
 }
 
 // Flags validation error if the associated call is made inside a render pass. The apiName
@@ -8082,12 +8052,6 @@ VKAPI_ATTR void VKAPI_CALL CmdDraw(VkCommandBuffer commandBuffer, uint32_t verte
         //  vtx buffers are consumed and only flag perf warning if bound vtx buffers have not been consumed
         skip_call |= ValidateDrawState(dev_data, pCB, false, VK_PIPELINE_BIND_POINT_GRAPHICS, &active_set_bindings_pairs,
                                        &active_bindings, "vkCmdDraw");
-        // TODO : Do we need to do this anymore?
-        skip_call |=
-            log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                    reinterpret_cast<uint64_t &>(commandBuffer), __LINE__, DRAWSTATE_NONE, "DS",
-                    "vkCmdDraw() call 0x%" PRIx64 ", reporting descriptor set state:", g_drawCount[DRAW]++);
-        skip_call |= synchAndPrintDSConfig(dev_data, commandBuffer);
         // TODO : This is only validation
         skip_call |= outsideRenderPass(dev_data, pCB, "vkCmdDraw()", VALIDATION_ERROR_01365);
     }
@@ -8118,11 +8082,6 @@ VKAPI_ATTR void VKAPI_CALL CmdDrawIndexed(VkCommandBuffer commandBuffer, uint32_
                                        &active_bindings, "vkCmdDrawIndexed");
         UpdateDrawState(dev_data, pCB, VK_PIPELINE_BIND_POINT_GRAPHICS, &active_set_bindings_pairs, &active_bindings);
         MarkStoreImagesAndBuffersAsWritten(dev_data, pCB);
-        skip_call |=
-            log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                    reinterpret_cast<uint64_t &>(commandBuffer), __LINE__, DRAWSTATE_NONE, "DS",
-                    "vkCmdDrawIndexed() call 0x%" PRIx64 ", reporting descriptor set state:", g_drawCount[DRAW_INDEXED]++);
-        skip_call |= synchAndPrintDSConfig(dev_data, commandBuffer);
         if (!skip_call) {
             updateResourceTrackingOnDraw(pCB);
         }
@@ -8154,11 +8113,6 @@ CmdDrawIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize off
                                        &active_bindings, "vkCmdDrawIndirect");
         UpdateDrawState(dev_data, cb_node, VK_PIPELINE_BIND_POINT_GRAPHICS, &active_set_bindings_pairs, &active_bindings);
         MarkStoreImagesAndBuffersAsWritten(dev_data, cb_node);
-        skip_call |=
-            log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                    reinterpret_cast<uint64_t &>(commandBuffer), __LINE__, DRAWSTATE_NONE, "DS",
-                    "vkCmdDrawIndirect() call 0x%" PRIx64 ", reporting descriptor set state:", g_drawCount[DRAW_INDIRECT]++);
-        skip_call |= synchAndPrintDSConfig(dev_data, commandBuffer);
         if (!skip_call) {
             updateResourceTrackingOnDraw(cb_node);
         }
@@ -8192,11 +8146,6 @@ CmdDrawIndexedIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceS
                                        &active_bindings, "vkCmdDrawIndexedIndirect");
         UpdateDrawState(dev_data, cb_node, VK_PIPELINE_BIND_POINT_GRAPHICS, &active_set_bindings_pairs, &active_bindings);
         MarkStoreImagesAndBuffersAsWritten(dev_data, cb_node);
-        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT,
-                             VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t &>(commandBuffer), __LINE__,
-                             DRAWSTATE_NONE, "DS", "vkCmdDrawIndexedIndirect() call 0x%" PRIx64 ", reporting descriptor set state:",
-                             g_drawCount[DRAW_INDEXED_INDIRECT]++);
-        skip_call |= synchAndPrintDSConfig(dev_data, commandBuffer);
         if (!skip_call) {
             updateResourceTrackingOnDraw(cb_node);
         }
