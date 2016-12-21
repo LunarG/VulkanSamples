@@ -31,7 +31,7 @@
 #include "vk_layer_logging.h"
 #include "threading.h"
 #include "vk_dispatch_table_helper.h"
-#include "vk_struct_string_helper_cpp.h"
+#include "vk_enum_string_helper.h"
 #include "vk_layer_data.h"
 #include "vk_layer_utils.h"
 

@@ -36,10 +36,11 @@
 #include <unordered_map>
 #include <vector>
 #include <bitset>
+#include <sstream>
 
 #include "vk_loader_platform.h"
 #include "vk_dispatch_table_helper.h"
-#include "vk_struct_string_helper_cpp.h"
+#include "vk_enum_string_helper.h"
 #include "image.h"
 #include "vk_layer_config.h"
 #include "vk_layer_extension_utils.h"
