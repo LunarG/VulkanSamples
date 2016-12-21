@@ -351,9 +351,18 @@ void ShellWSI::acquire_back_buffer(){
     // reset the fence
     vk::assert_success(vkResetFences(ctx_.dev, 1, &buf.present_fence));
 
-    vk::assert_success(vkAcquireNextImageKHR(ctx_.dev, ctx_.swapchain,
-                UINT64_MAX, buf.acquire_semaphore, VK_NULL_HANDLE,
-                &buf.image_index));
+    VkResult result = vkAcquireNextImageKHR(ctx_.dev, ctx_.swapchain,
+                                            UINT64_MAX,
+                                            buf.acquire_semaphore,
+                                            VK_NULL_HANDLE,
+                                            &buf.image_index);
+    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+        resize_swapchain(0,0);  //Remove this?
+        acquire_back_buffer();
+        return;
+    } else {
+        vk::assert_success(result);
+    }
 
     ctx_.acquired_back_buffer = buf;
     ctx_.back_buffers.pop();

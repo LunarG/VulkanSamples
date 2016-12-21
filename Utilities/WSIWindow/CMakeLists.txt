@@ -59,11 +59,11 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         find_package(X11_XCB REQUIRED)
         include_directories(${X11_XCB_INCLUDE_DIR})
         target_link_libraries(${LIBRARY_NAME} ${X11_XCB_LIBRARIES})
-        #---XInput--- (MultiTouch)
-        if (ENABLE_MULTITOUCH)               #adds 8.5KB to exe size
-            target_link_libraries(${LIBRARY_NAME} ${X11_Xinput_LIB})
+        #---XInput--- #adds 8.5KB to exe size
+        target_link_libraries(${LIBRARY_NAME} ${X11_Xinput_LIB})
+        #if (ENABLE_MULTITOUCH)
             add_definitions(-DENABLE_MULTITOUCH)
-        endif()
+        #endif()
     endif()
 
 #    if (BUILD_WSI_XLIB_SUPPORT)

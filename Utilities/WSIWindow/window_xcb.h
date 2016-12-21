@@ -28,13 +28,13 @@
 
 //-------------------------------------------------
 #include "WindowImpl.h"
-//#include <xcb/xcb.h>             // XCB only
-//#include <X11/Xlib.h>            // XLib only
-#include <X11/Xlib-xcb.h>        // Xlib + XCB
-#include <xkbcommon/xkbcommon.h> // Keyboard
+//#include <xcb/xcb.h>              // XCB only
+//#include <X11/Xlib.h>             // XLib only
+#include <X11/Xlib-xcb.h>           // Xlib + XCB
+#include <xkbcommon/xkbcommon.h>    // Keyboard
+#include <X11/extensions/XInput2.h> // MultiTouch
 //-------------------------------------------------
 #ifdef ENABLE_MULTITOUCH
-#include <X11/extensions/XInput2.h> // MultiTouch
 typedef uint16_t xcb_input_device_id_t;
 typedef uint32_t xcb_input_fp1616_t;
 
@@ -233,7 +233,7 @@ void Window_xcb::CreateSurface(VkInstance instance) {
 
 //---------------------------------------------------------------------------
 bool Window_xcb::InitTouch() {
-#ifdef ENABLE_MULTITOUCH
+    XIEventMask mask = {};
     int ev, err;
     if (!XQueryExtension(display, "XInputExtension", &xi_opcode, &ev, &err)) {
         LOGW("XInputExtension not available.\n");
@@ -242,12 +242,16 @@ bool Window_xcb::InitTouch() {
 
     // check the version of XInput
     int major = 2;
-    int minor = 3;
+    int minor = 0;
+#ifdef ENABLE_MULTITOUCH
+    minor = 3;
+#endif
     if (XIQueryVersion(display, &major, &minor) != Success) {
         LOGW("No XI2 support. (%d.%d only)\n", major, minor);
         return false;
     }
 
+#ifdef ENABLE_MULTITOUCH
     { // select device
         int cnt;
         XIDeviceInfo *di = XIQueryDevice(display, XIAllDevices, &cnt);
@@ -265,27 +269,38 @@ bool Window_xcb::InitTouch() {
         XIFreeDeviceInfo(di);
     }
 
-    { // select which events to listen to
-        unsigned char buf[3] = {};
-        XIEventMask mask = {};
-        mask.deviceid = xi_devid;
-        mask.mask_len = XIMaskLen(XI_TouchEnd);
-        mask.mask = buf;
-        XISetMask(mask.mask, XI_TouchBegin);
-        XISetMask(mask.mask, XI_TouchUpdate);
-        XISetMask(mask.mask, XI_TouchEnd);
-        XISelectEvents(display, xcb_window, &mask, 1);
-    }
-    return true;
+    // select which events to listen to
+    unsigned char buf[3] = {};
+    mask.deviceid = xi_devid;
+    mask.mask_len = XIMaskLen(XI_TouchEnd);
+    mask.mask = buf;
+    XISetMask(mask.mask, XI_TouchBegin);
+    XISetMask(mask.mask, XI_TouchUpdate);
+    XISetMask(mask.mask, XI_TouchEnd);
+    XISelectEvents(display, xcb_window, &mask, 1);
 #else
-    return false;
+    // select which events to listen to
+    mask.deviceid = XIAllMasterDevices;
+    mask.mask_len = XIMaskLen(XI_RawMotion);
+    mask.mask = calloc(mask.mask_len, sizeof(char));
+    XISetMask(mask.mask, XI_Enter);
+    XISetMask(mask.mask, XI_Leave);
+    XISetMask(mask.mask, XI_ButtonPress);
+    XISetMask(mask.mask, XI_ButtonRelease);
+    XISetMask(mask.mask, XI_KeyPress);
+    XISetMask(mask.mask, XI_KeyRelease);
+    XISelectEvents(display, xcb_window, &mask, 1);
+    free(mask.mask);
 #endif
+
+    return true;
 }
 //---------------------------------------------------------------------------
 
 EventType Window_xcb::GetEvent(bool wait_for_event) {
     EventType event = {};
     static char buf[4] = {}; // store char for text event
+
     if (!eventFIFO.isEmpty())
         return *eventFIFO.pop(); // pop message from message queue buffer
 
@@ -294,12 +309,14 @@ EventType Window_xcb::GetEvent(bool wait_for_event) {
         x_event = xcb_wait_for_event(xcb_connection); // Blocking mode
     else
         x_event = xcb_poll_for_event(xcb_connection); // Non-blocking mode
+
     if (x_event) {
         xcb_button_press_event_t &e = *(xcb_button_press_event_t *)x_event; // xcb_motion_notify_event_t
         int16_t mx = e.event_x;
         int16_t my = e.event_y;
         uint8_t btn = e.detail;
         uint8_t bestBtn = BtnState(1) ? 1 : BtnState(2) ? 2 : BtnState(3) ? 3 : 0; // If multiple buttons pressed, pick left one.
+
         switch (x_event->response_type & ~0x80) {
         case XCB_MOTION_NOTIFY:
             event = MouseEvent(eMOVE, mx, my, bestBtn);
@@ -349,46 +366,91 @@ EventType Window_xcb::GetEvent(bool wait_for_event) {
             if (has_focus)
                 event = FocusEvent(false);
             break; // window lost focus
-#ifdef ENABLE_MULTITOUCH
         case XCB_GE_GENERIC: { // Multi touch screen events
-            xcb_input_touch_begin_event_t &te = *(xcb_input_touch_begin_event_t *)x_event;
-            if (te.extension == xi_opcode) { // make sure this event is from the touch device
+            xcb_ge_generic_event_t *generic_event = (xcb_ge_generic_event_t*)x_event;
+
+            switch (generic_event->event_type) {
+            case XI_ButtonPress: {
+                xcb_button_press_event_t *bp = (xcb_button_press_event_t*)generic_event;
+                event = MouseEvent(eDOWN, bp->event_x, bp->event_y, bp->state);
+                break;
+            }
+            case XI_ButtonRelease: {
+                xcb_button_release_event_t *br = (xcb_button_release_event_t*)generic_event;
+                event = MouseEvent(eUP, br->event_x, br->event_y, br->state);
+                break;
+            }
+            case XI_KeyPress: {
+                xcb_key_press_event_t *kp = (xcb_key_press_event_t*)generic_event;
+                uint8_t keycode = EVDEV_TO_HID[kp->state];
+                event = KeyEvent(eDOWN, keycode); // key pressed event
+                xkb_state_key_get_utf8(k_state, btn, buf, sizeof(buf));
+                xkb_state_update_key(k_state, btn, XKB_KEY_DOWN);
+                if (buf[0])
+                    eventFIFO.push(TextEvent(buf)); // text typed event (store in FIFO for next run)
+                break;
+            }
+            case XI_KeyRelease: {
+                xcb_key_release_event_t *kr = (xcb_key_release_event_t*)generic_event;
+                uint8_t keycode = EVDEV_TO_HID[kr->state];
+                event = KeyEvent(eUP, keycode); // key released event
+                xkb_state_update_key(k_state, btn, XKB_KEY_UP);
+                break;
+            }
+            case XI_DeviceChanged:
+                // Brainpain
+                event = FocusEvent(false);
+                break;
+            case XI_TouchBegin: {
+#ifdef ENABLE_MULTITOUCH
+                xcb_input_touch_begin_event_t &te = *(xcb_input_touch_begin_event_t *)x_event;
                 float x = te.event_x / 65536.f;
                 float y = te.event_y / 65536.f;
-                switch (te.event_type) {
-                case XI_TouchBegin: {
-                    for (uint32_t i = 0; i < CMTouch::MAX_POINTERS; ++i)
-                        if (touchID[i] == 0) {                    // Find first empty slot
-                            touchID[i] = te.detail;               // Claim slot
-                            event = MTouch.Event(eDOWN, x, y, i); // touch down event
-                            break;
-                        }
-                    break;
-                }
-                case XI_TouchUpdate: {
-                    for (uint32_t i = 0; i < CMTouch::MAX_POINTERS; ++i)
-                        if (touchID[i] == te.detail) {            // Find finger id
-                            event = MTouch.Event(eMOVE, x, y, i); // Touch move event
-                            break;
-                        }
-                    break;
-                }
-                case XI_TouchEnd: {
-                    for (uint32_t i = 0; i < CMTouch::MAX_POINTERS; ++i)
-                        if (touchID[i] == te.detail) {          // Find finger id
-                            touchID[i] = 0;                     // Clear the slot
-                            event = MTouch.Event(eUP, x, y, i); // Touch up event
-                            break;
-                        }
-                    break;
-                }
-                default:
-                    break;
-                } // switch
-            }     // if
+                for (uint32_t i = 0; i < CMTouch::MAX_POINTERS; ++i)
+                    if (touchID[i] == 0) {                    // Find first empty slot
+                        touchID[i] = te.detail;               // Claim slot
+                        event = MTouch.Event(eDOWN, x, y, i); // touch down event
+                        break;
+                    }
+#endif
+                break;
+            }
+            case XI_TouchUpdate: {
+#ifdef ENABLE_MULTITOUCH
+                xcb_input_touch_begin_event_t &te = *(xcb_input_touch_begin_event_t *)x_event;
+                float x = te.event_x / 65536.f;
+                float y = te.event_y / 65536.f;
+                for (uint32_t i = 0; i < CMTouch::MAX_POINTERS; ++i)
+                    if (touchID[i] == te.detail) {            // Find finger id
+                        event = MTouch.Event(eMOVE, x, y, i); // Touch move event
+                        break;
+                    }
+#endif
+                break;
+            }
+            case XI_TouchEnd: {
+#ifdef ENABLE_MULTITOUCH
+                xcb_input_touch_begin_event_t &te = *(xcb_input_touch_begin_event_t *)x_event;
+                float x = te.event_x / 65536.f;
+                float y = te.event_y / 65536.f;
+                for (uint32_t i = 0; i < CMTouch::MAX_POINTERS; ++i)
+                    if (touchID[i] == te.detail) {          // Find finger id
+                        touchID[i] = 0;                     // Clear the slot
+                        event = MTouch.Event(eUP, x, y, i); // Touch up event
+                        break;
+                    }
+#endif
+                break;
+            }
+            default:
+                // printf("GENERIC_EVENT: Type %d; Response type %d\n",
+                //        generic_event->event_type,
+                //        (x_event->response_type & ~0x80));
+                break;
+            } // switch
+
             break;
         } // XCB_GE_GENERIC
-#endif
         default:
             // printf("EVENT: %d",(x_event->response_type & ~0x80));  //get event numerical value
             break;
