@@ -8028,6 +8028,13 @@ static void MarkStoreImagesAndBuffersAsWritten(layer_data *dev_data, GLOBAL_CB_N
     }
 }
 
+static void PostCallRecordCmdDraw(layer_data *dev_data, GLOBAL_CB_NODE *cb_state) {
+    MarkStoreImagesAndBuffersAsWritten(dev_data, cb_state);
+    updateResourceTrackingOnDraw(cb_state);
+    UpdateCmdBufferLastCmd(dev_data, cb_state, CMD_DRAW);
+    cb_state->drawCount[DRAW]++;
+}
+
 VKAPI_ATTR void VKAPI_CALL CmdDraw(VkCommandBuffer commandBuffer, uint32_t vertexCount, uint32_t instanceCount,
                                    uint32_t firstVertex, uint32_t firstInstance) {
     bool skip_call = false;
@@ -8036,28 +8043,25 @@ VKAPI_ATTR void VKAPI_CALL CmdDraw(VkCommandBuffer commandBuffer, uint32_t verte
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         skip_call |= ValidateCmd(dev_data, pCB, CMD_DRAW, "vkCmdDraw()");
-        UpdateCmdBufferLastCmd(dev_data, pCB, CMD_DRAW);
-        pCB->drawCount[DRAW]++; // TODO : This should be in
         // TODO : Split this into validate/state update. Also at state update time, set bool to note if/when
         //  vtx buffers are consumed and only flag perf warning if bound vtx buffers have not been consumed
         skip_call |= validate_and_update_draw_state(dev_data, pCB, false, VK_PIPELINE_BIND_POINT_GRAPHICS, "vkCmdDraw");
-        MarkStoreImagesAndBuffersAsWritten(dev_data, pCB); // state update only
         // TODO : Do we need to do this anymore?
         skip_call |=
             log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                     reinterpret_cast<uint64_t &>(commandBuffer), __LINE__, DRAWSTATE_NONE, "DS",
                     "vkCmdDraw() call 0x%" PRIx64 ", reporting descriptor set state:", g_drawCount[DRAW]++);
         skip_call |= synchAndPrintDSConfig(dev_data, commandBuffer);
-        if (!skip_call) {
-            // TODO : This should go to Post-call
-            updateResourceTrackingOnDraw(pCB);
-        }
         // TODO : This is only validation
         skip_call |= outsideRenderPass(dev_data, pCB, "vkCmdDraw()", VALIDATION_ERROR_01365);
     }
     lock.unlock();
-    if (!skip_call)
+    if (!skip_call) {
         dev_data->dispatch_table.CmdDraw(commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
+        lock.lock();
+        PostCallRecordCmdDraw(dev_data, pCB);
+        lock.unlock();
+    }
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdDrawIndexed(VkCommandBuffer commandBuffer, uint32_t indexCount,
