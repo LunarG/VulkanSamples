@@ -763,7 +763,7 @@ bool cvdescriptorset::ValidateImageUpdate(VkImageView image_view, VkImageLayout 
         usage = image_node->createInfo.usage;
         // Validate that memory is bound to image
         if (ValidateMemoryIsBoundToImage(dev_data, image_node, "vkUpdateDescriptorSets()")) {
-            // TODO : Need new code(s) for language in 11.6 Memory Association
+            *error_code = VALIDATION_ERROR_02524;
             *error_msg = "No memory bound to image.";
             return false;
         }
@@ -1298,7 +1298,7 @@ bool cvdescriptorset::DescriptorSet::ValidateBufferUpdate(VkDescriptorBufferInfo
         return false;
     }
     if (ValidateMemoryIsBoundToBuffer(device_data_, buffer_node, "vkUpdateDescriptorSets()")) {
-        // TODO : This is a repeat code, need new code(s) for language in 11.6 Memory Association
+        *error_code = VALIDATION_ERROR_02525;
         *error_msg = "No memory bound to buffer.";
         return false;
     }
