@@ -55,7 +55,10 @@ layer_source_files = [
 header_file = 'vk_validation_error_messages.h'
 # TODO : Don't hardcode linux path format if we want this to run on windows
 test_file = '../tests/layer_validation_tests.cpp'
-
+# List of enums that are allowed to be used more than once so don't warn on their duplicates
+duplicate_exceptions = [
+'VALIDATION_ERROR_00942', # This is a descriptor set write update error that we use for a couple copy cases as well
+]
 
 class ValidationDatabase:
     def __init__(self, filename=db_file):
@@ -320,7 +323,7 @@ def main(argv=None):
         if db_imp not in val_source.enum_count_dict:
             imp_not_found.append(db_imp)
     for src_enum in val_source.enum_count_dict:
-        if val_source.enum_count_dict[src_enum]['count'] > 1:
+        if val_source.enum_count_dict[src_enum]['count'] > 1 and src_enum not in duplicate_exceptions:
             multiple_uses = True
         if src_enum not in val_db.db_implemented_enums:
             imp_not_claimed.append(src_enum)
@@ -342,7 +345,7 @@ def main(argv=None):
         print(txt_color.yellow() + "  Note that some checks are used multiple times. These may be good candidates for new valid usage spec language." + txt_color.endc())
         print(txt_color.yellow() + "  Here is a list of each check used multiple times with its number of uses:" + txt_color.endc())
         for enum in val_source.enum_count_dict:
-            if val_source.enum_count_dict[enum]['count'] > 1:
+            if val_source.enum_count_dict[enum]['count'] > 1 and enum not in duplicate_exceptions:
                 print(txt_color.yellow() + "   %s: %d uses in file,line:" % (enum, val_source.enum_count_dict[enum]['count']) + txt_color.endc())
                 for file_line in val_source.enum_count_dict[enum]['file_line']:
                     print(txt_color.yellow() + "   \t%s" % (file_line) + txt_color.endc())
