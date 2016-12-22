@@ -57,8 +57,14 @@ header_file = 'vk_validation_error_messages.h'
 test_file = '../tests/layer_validation_tests.cpp'
 # List of enums that are allowed to be used more than once so don't warn on their duplicates
 duplicate_exceptions = [
-'VALIDATION_ERROR_00942', # This is a descriptor set write update error that we use for a couple copy cases as well
+'VALIDATION_ERROR_00018', # This covers the broad case that all child objects must be destroyed at DestroyInstance time
+'VALIDATION_ERROR_00049', # This covers the broad case that all child objects must be destroyed at DestroyDevice time
 'VALIDATION_ERROR_00648', # This is a case for VkMappedMemoryRange struct that is used by both Flush & Invalidate MappedMemoryRange
+'VALIDATION_ERROR_00741', # This is a blanket case for all invalid image aspect bit errors. The spec link has appropriate details for all separate cases.
+'VALIDATION_ERROR_00768', # This case covers two separate checks which are done independently
+'VALIDATION_ERROR_00769', # This case covers two separate checks which are done independently
+'VALIDATION_ERROR_00942', # This is a descriptor set write update error that we use for a couple copy cases as well
+'VALIDATION_ERROR_02525', # Used twice for the same error codepath as both a param & to set a variable, so not really a duplicate
 ]
 
 class ValidationDatabase:
