@@ -1287,16 +1287,10 @@ bool cvdescriptorset::DescriptorSet::ValidateBufferUsage(BUFFER_STATE const *buf
 // If there's an error, update the error_msg string with details and return false, else return true
 bool cvdescriptorset::DescriptorSet::ValidateBufferUpdate(VkDescriptorBufferInfo const *buffer_info, VkDescriptorType type,
                                                           UNIQUE_VALIDATION_ERROR_CODE *error_code, std::string *error_msg) const {
-    // TODO : Defaulting to 00962 for all cases here. Need to create new error codes for a few cases below.
-    *error_code = VALIDATION_ERROR_00962;
     // First make sure that buffer is valid
     auto buffer_node = getBufferState(device_data_, buffer_info->buffer);
-    if (!buffer_node) {
-        std::stringstream error_str;
-        error_str << "Invalid VkBuffer: " << buffer_info->buffer;
-        *error_msg = error_str.str();
-        return false;
-    }
+    // Any invalid buffer should already be caught by object_tracker
+    assert(buffer_node);
     if (ValidateMemoryIsBoundToBuffer(device_data_, buffer_node, "vkUpdateDescriptorSets()", VALIDATION_ERROR_02525)) {
         *error_code = VALIDATION_ERROR_02525;
         *error_msg = "No memory bound to buffer.";
