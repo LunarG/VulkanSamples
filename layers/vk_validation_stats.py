@@ -58,6 +58,7 @@ test_file = '../tests/layer_validation_tests.cpp'
 # List of enums that are allowed to be used more than once so don't warn on their duplicates
 duplicate_exceptions = [
 'VALIDATION_ERROR_00942', # This is a descriptor set write update error that we use for a couple copy cases as well
+'VALIDATION_ERROR_00648', # This is a case for VkMappedMemoryRange struct that is used by both Flush & Invalidate MappedMemoryRange
 ]
 
 class ValidationDatabase:
