@@ -27,6 +27,7 @@ build
 build32
 dbuild
 external
+build-android/external
 *.config
 *.creator
 *.creator.user
