@@ -134,14 +134,17 @@ class ValidationHeader:
 class ValidationSource:
     def __init__(self, source_file_list):
         self.source_files = source_file_list
-        self.enum_count_dict = {} # dict of enum values to the count of how much they're used
+        self.enum_count_dict = {} # dict of enum values to the count of how much they're used, and location of where they're used
         # 1790 is a special case that provides an exception when an extension is enabled. No specific error is flagged, but the exception is handled so add it here
-        self.enum_count_dict['VALIDATION_ERROR_01790'] = 1
+        self.enum_count_dict['VALIDATION_ERROR_01790'] = {}
+        self.enum_count_dict['VALIDATION_ERROR_01790']['count'] = 1
     def parse(self):
         duplicate_checks = 0
         for sf in self.source_files:
+            line_num = 0
             with open(sf) as f:
                 for line in f:
+                    line_num = line_num + 1
                     if True in [line.strip().startswith(comment) for comment in ['//', '/*']]:
                         continue
                     # Find enums
@@ -158,10 +161,14 @@ class ValidationSource:
                         for enum in enum_list:
                             if enum != '':
                                 if enum not in self.enum_count_dict:
-                                    self.enum_count_dict[enum] = 1
+                                    self.enum_count_dict[enum] = {}
+                                    self.enum_count_dict[enum]['count'] = 1
+                                    self.enum_count_dict[enum]['file_line'] = []
+                                    self.enum_count_dict[enum]['file_line'].append('%s,%d' % (sf, line_num))
                                     #print "Found enum %s implemented for first time in file %s" % (enum, sf)
                                 else:
-                                    self.enum_count_dict[enum] = self.enum_count_dict[enum] + 1
+                                    self.enum_count_dict[enum]['count'] = self.enum_count_dict[enum]['count'] + 1
+                                    self.enum_count_dict[enum]['file_line'].append('%s,%d' % (sf, line_num))
                                     #print "Found enum %s implemented for %d time in file %s" % (enum, self.enum_count_dict[enum], sf)
                                     duplicate_checks = duplicate_checks + 1
                             #else:
@@ -313,7 +320,7 @@ def main(argv=None):
         if db_imp not in val_source.enum_count_dict:
             imp_not_found.append(db_imp)
     for src_enum in val_source.enum_count_dict:
-        if val_source.enum_count_dict[src_enum] > 1:
+        if val_source.enum_count_dict[src_enum]['count'] > 1:
             multiple_uses = True
         if src_enum not in val_db.db_implemented_enums:
             imp_not_claimed.append(src_enum)
@@ -335,8 +342,10 @@ def main(argv=None):
         print(txt_color.yellow() + "  Note that some checks are used multiple times. These may be good candidates for new valid usage spec language." + txt_color.endc())
         print(txt_color.yellow() + "  Here is a list of each check used multiple times with its number of uses:" + txt_color.endc())
         for enum in val_source.enum_count_dict:
-            if val_source.enum_count_dict[enum] > 1:
-                print(txt_color.yellow() + "   %s: %d" % (enum, val_source.enum_count_dict[enum]) + txt_color.endc())
+            if val_source.enum_count_dict[enum]['count'] > 1:
+                print(txt_color.yellow() + "   %s: %d uses in file,line:" % (enum, val_source.enum_count_dict[enum]['count']) + txt_color.endc())
+                for file_line in val_source.enum_count_dict[enum]['file_line']:
+                    print(txt_color.yellow() + "   \t%s" % (file_line) + txt_color.endc())
     # Now check that tests claimed to be implemented are actual test names
     bad_testnames = []
     for enum in val_db.db_enum_to_tests:
