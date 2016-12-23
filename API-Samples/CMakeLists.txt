@@ -32,7 +32,7 @@ include_directories( ${SAMPLES_DATA_DIR} ${GLSLANG_SPIRV_INCLUDE_DIR} ${GLMINC_P
 
 # Additional includes for spirv-tools
 include_directories(${SPIRV_TOOLS_INCLUDE_DIR})
-                    
+
 # function to build a single-source-file sample that uses glsl shaders;
 #   - assumes SAMPLE_GLSL_VERT_SHADERS and SAMPLE_GLSL_FRAG_SHADERS is set to
 #     the list of shader files of that type, with .vert and .frag omitted
@@ -167,11 +167,11 @@ endfunction(sampleInlineGLSLShaders)
 
 if(WIN32)
     set (MOVE_CMD "move")
-    set (VULKAN_LOADER_NAME "vulkan-${MAJOR}")
+    set (VULKAN_LOADER_NAME "${API_LOWERCASE}-${MAJOR}")
 else()
     set (MOVE_CMD "mv")
     set (PTHREAD "pthread")
-    set (VULKAN_LOADER_NAME "vulkan")
+    set (VULKAN_LOADER_NAME "${API_LOWERCASE}")
 endif()
 
 if(EXISTS "${CMAKE_SOURCE_DIR}/layers")
@@ -240,7 +240,7 @@ endif()
 option(ANDROID OFF)
 
 # simple one file sample targets, no additional files
-set (S_TARGETS 
+set (S_TARGETS
     01-init_instance 02-enumerate_devices 03-init_device 04-init_command_buffer
     05-init_swapchain 06-init_depth_buffer 07-init_uniform_buffer
     08-init_pipeline_layout 09-init_descriptor_set 10-init_render_pass
@@ -272,4 +272,3 @@ endif()
 # set(SAMPLE_GLSL_FRAG_SHADERS glslshader)
 # set(SAMPLE_GLSL_VERT_SHADERS glslshader)
 # sampleExtGLSLShaders()
-
