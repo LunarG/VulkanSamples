@@ -78,7 +78,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 #        add_definitions(-DVK_USE_PLATFORM_MIR_KHR)
 #    endif()
 
-    set (VULKAN_LOADER_NAME "vulkan")
+    set (VULKAN_LOADER_NAME "${API_LOWERCASE}")
 endif()
 #=================================================================
 #=============================WINDOWS=============================
@@ -87,12 +87,12 @@ if(WIN32)
     #set(VULKAN_SDK $ENV{VULKAN_SDK} CACHE PATH "Path to the Vulkan SDK.")
     #target_link_libraries(${LIBRARY_NAME} "${VULKAN_SDK}/bin/vulkan-1.lib")
     #target_include_directories(${LIBRARY_NAME} PUBLIC "${VULKAN_SDK}/include")
-    
+
     if(NOT ${CMAKE_SYSTEM_VERSION} VERSION_LESS 10)                          # Check for Windows 10+
         target_compile_definitions(${LIBRARY_NAME} PUBLIC -DWIN10PLUS)       # define WIN10PLUS
     endif()
 
-    set (VULKAN_LOADER_NAME "vulkan-${MAJOR}")
+    set (VULKAN_LOADER_NAME "${API_LOWERCASE}-${MAJOR}")
 endif()
 #=================================================================
 #=============================ANDROID=============================
@@ -106,13 +106,13 @@ if(TARGET ${VULKAN_LOADER_NAME})                                                
     target_link_libraries(${LIBRARY_NAME} ${VULKAN_LOADER_NAME})                 # Set dependency and link to loader target
 else()                                                                           # If loader is not being built here,
     find_library(VULKAN_LOADER                                                   # then search for a pre-built one.
-        NAMES "vulkan" "vulkan-{MAJOR}" "vulkan-1"
+        NAMES "${API_LOWERCASE}" "${API_LOWERCASE}-{MAJOR}" "${API_LOWERCASE}-1"
         HINTS "${CMAKE_SOURCE_DIR}/../${BINDATA_DIR}"                            # For SDK build?
               "${CMAKE_SOURCE_DIR}/../x86_64/lib"                                # for SDK build?
               "../../build/${CMAKE_BUILD_TYPE}/loader"                           # Search in VulkanSamples
               "$ENV{VULKAN_SDK}/lib"                                             # Search in Vulkan SDK on Linux  : /lib/libvulkan.so
               "$ENV{VULKAN_SDK}/bin"                                             # Search in Vulkan SDK on Windows: /bin/vulkan-1.lib
-        DOC "Path + Filename of Vulkan loader. (libvulkan.so or vulkan-1.lib)")  # MUST INCLUDE FILENAME
+        DOC "Path + Filename of Vulkan loader. (lib${API_LOWERCASE}.so or ${API_LOWERCASE}-1.lib)")  # MUST INCLUDE FILENAME
     if(EXISTS ${VULKAN_LOADER})
         target_link_libraries(${LIBRARY_NAME} ${VULKAN_LOADER})                  # Link to loader
     endif()
