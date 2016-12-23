@@ -4353,7 +4353,6 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
     // Queues persist until device is destroyed
     dev_data->queueMap.clear();
     // Report any memory leaks
-    DEVICE_MEM_INFO *pInfo = NULL;
     layer_debug_report_destroy_device(device);
     lock.unlock();
 
