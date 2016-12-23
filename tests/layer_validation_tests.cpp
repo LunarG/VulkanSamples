@@ -6345,11 +6345,11 @@ TEST_F(VkLayerTest, InvalidPushConstants) {
     const std::array<PipelineLayoutTestCase, 11> cmd_range_tests = {{
         {{VK_SHADER_STAGE_VERTEX_BIT, 0, 0}, "vkCmdPushConstants: parameter size must be greater than 0"},
         {{VK_SHADER_STAGE_VERTEX_BIT, 0, 1},
-         "vkCmdPushConstants() call has push constants with size 1. Size "
-         "must be greater than zero and a multiple of 4."},
+         "vkCmdPushConstants() call has push constants index 0 with size 1. "
+         "Size must be a multiple of 4."},
         {{VK_SHADER_STAGE_VERTEX_BIT, 4, 1},
-         "vkCmdPushConstants() call has push constants with size 1. Size "
-         "must be greater than zero and a multiple of 4."},
+         "vkCmdPushConstants() call has push constants index 0 with size 1. "
+         "Size must be a multiple of 4."},
         {{VK_SHADER_STAGE_VERTEX_BIT, 1, 4},
          "vkCmdPushConstants() call has push constants with offset 1. "
          "Offset must be a multiple of 4."},
