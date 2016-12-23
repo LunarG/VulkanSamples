@@ -1835,7 +1835,7 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetCommandBuffer(VkCommandBuffer commandBuffer,
     {
         std::lock_guard<std::mutex> lock(global_lock);
         skip_call |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                                    VALIDATION_ERROR_00090);
+                                    VALIDATION_ERROR_00094);
     }
     if (skip_call) {
         return VK_ERROR_VALIDATION_FAILED_EXT;

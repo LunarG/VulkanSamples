@@ -90,6 +90,11 @@ struct CHECK_DISABLED {
     bool get_fence_state;
     bool queue_wait_idle;
     bool device_wait_idle;
+    bool destroy_fence;
+    bool destroy_semaphore;
+    bool destroy_query_pool;
+    bool get_query_pool_results;
+    bool destroy_buffer;
 };
 
 /*
@@ -171,7 +176,7 @@ class EVENT_STATE : public BASE_NODE {
     VkPipelineStageFlags stageMask;
 };
 
-class QUEUE_NODE {
+class QUEUE_STATE {
   public:
     VkQueue queue;
     uint32_t queueFamilyIndex;

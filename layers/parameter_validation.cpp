@@ -41,8 +41,6 @@
 #include "vulkan/vk_layer.h"
 #include "vk_layer_config.h"
 #include "vk_dispatch_table_helper.h"
-#include "vk_enum_validate_helper.h"
-#include "vk_struct_validate_helper.h"
 
 #include "vk_layer_table.h"
 #include "vk_layer_data.h"
@@ -2888,6 +2886,14 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
                         i, i, validation_error_map[VALIDATION_ERROR_02113]);
                 }
             } else {
+                if (pCreateInfos[i].pViewportState->scissorCount != pCreateInfos[i].pViewportState->viewportCount) {
+                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                                    VALIDATION_ERROR_01434, LayerName,
+                                    "Graphics Pipeline viewport count (%u) must match scissor count (%u). %s",
+                                    pCreateInfos[i].pViewportState->viewportCount, pCreateInfos[i].pViewportState->scissorCount,
+                                    validation_error_map[VALIDATION_ERROR_01434]);
+                }
+
                 skip |=
                     validate_struct_pnext(report_data, "vkCreateGraphicsPipelines",
                                           ParameterName("pCreateInfos[%i].pViewportState->pNext", ParameterName::IndexVector{i}),
@@ -2906,6 +2912,46 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
                                          i);
                 }
 
+                if (device_data->physical_device_features.multiViewport == false) {
+                    if (pCreateInfos[i].pViewportState->viewportCount != 1) {
+                        skip |=
+                            log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                    __LINE__, VALIDATION_ERROR_01430, LayerName,
+                                    "vkCreateGraphicsPipelines: The multiViewport feature is not enabled, so "
+                                    "pCreateInfos[%d].pViewportState->viewportCount must be 1 but is %d. %s",
+                                    i, pCreateInfos[i].pViewportState->viewportCount, validation_error_map[VALIDATION_ERROR_01430]);
+                    }
+                    if (pCreateInfos[i].pViewportState->scissorCount != 1) {
+                        skip |=
+                            log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                    __LINE__, VALIDATION_ERROR_01431, LayerName,
+                                    "vkCreateGraphicsPipelines: The multiViewport feature is not enabled, so "
+                                    "pCreateInfos[%d].pViewportState->scissorCount must be 1 but is %d. %s",
+                                    i, pCreateInfos[i].pViewportState->scissorCount, validation_error_map[VALIDATION_ERROR_01431]);
+                    }
+                } else {
+                    if ((pCreateInfos[i].pViewportState->viewportCount < 1) ||
+                        (pCreateInfos[i].pViewportState->viewportCount > device_data->device_limits.maxViewports)) {
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                        __LINE__, VALIDATION_ERROR_01432, LayerName,
+                                        "vkCreateGraphicsPipelines: multiViewport feature is enabled; "
+                                        "pCreateInfos[%d].pViewportState->viewportCount is %d but must be between 1 and "
+                                        "maxViewports (%d), inclusive. %s",
+                                        i, pCreateInfos[i].pViewportState->viewportCount, device_data->device_limits.maxViewports,
+                                        validation_error_map[VALIDATION_ERROR_01432]);
+                    }
+                    if ((pCreateInfos[i].pViewportState->scissorCount < 1) ||
+                        (pCreateInfos[i].pViewportState->scissorCount > device_data->device_limits.maxViewports)) {
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                        __LINE__, VALIDATION_ERROR_01433, LayerName,
+                                        "vkCreateGraphicsPipelines: multiViewport feature is enabled; "
+                                        "pCreateInfos[%d].pViewportState->scissorCount is %d but must be between 1 and "
+                                        "maxViewports (%d), inclusive. %s",
+                                        i, pCreateInfos[i].pViewportState->scissorCount, device_data->device_limits.maxViewports,
+                                        validation_error_map[VALIDATION_ERROR_01433]);
+                    }
+                }
+
                 if (pCreateInfos[i].pDynamicState != nullptr) {
                     bool has_dynamic_viewport = false;
                     bool has_dynamic_scissor = false;
@@ -2918,17 +2964,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
                         }
                     }
 
-                    // viewportCount must be greater than 0
-                    // TODO: viewportCount must be 1 when multiple_viewport feature is not enabled
-                    if (pCreateInfos[i].pViewportState->viewportCount == 0) {
-                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                             __LINE__, REQUIRED_PARAMETER, LayerName,
-                                             "vkCreateGraphicsPipelines: if pCreateInfos[%d].pDynamicState->pDynamicStates does "
-                                             "not contain VK_DYNAMIC_STATE_VIEWPORT, pCreateInfos[%d].pViewportState->viewportCount "
-                                             "must be greater than 0",
-                                             i, i);
-                    }
-
                     // If no element of the pDynamicStates member of pDynamicState is VK_DYNAMIC_STATE_VIEWPORT, the pViewports
                     // member of pViewportState must be a pointer to an array of pViewportState->viewportCount VkViewport structures
                     if (!has_dynamic_viewport && (pCreateInfos[i].pViewportState->pViewports == nullptr)) {
@@ -2938,17 +2973,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
                                     "vkCreateGraphicsPipelines: if pCreateInfos[%d].pDynamicState->pDynamicStates does not contain "
                                     "VK_DYNAMIC_STATE_VIEWPORT, pCreateInfos[%d].pViewportState->pViewports must not be NULL. %s",
                                     i, i, validation_error_map[VALIDATION_ERROR_02110]);
-                    }
-
-                    // scissorCount must be greater than 0
-                    // TODO: scissorCount must be 1 when multiple_viewport feature is not enabled
-                    if (pCreateInfos[i].pViewportState->scissorCount == 0) {
-                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                             __LINE__, REQUIRED_PARAMETER, LayerName,
-                                             "vkCreateGraphicsPipelines: if pCreateInfos[%d].pDynamicState->pDynamicStates does "
-                                             "not contain VK_DYNAMIC_STATE_SCISSOR, pCreateInfos[%d].pViewportState->scissorCount "
-                                             "must be greater than 0",
-                                             i, i);
                     }
 
                     // If no element of the pDynamicStates member of pDynamicState is VK_DYNAMIC_STATE_SCISSOR, the pScissors member
@@ -3843,15 +3867,10 @@ bool PreBeginCommandBuffer(layer_data *dev_data, VkCommandBuffer commandBuffer, 
                         "Cannot set inherited occlusionQueryEnable in vkBeginCommandBuffer() when device does not support "
                         "inheritedQueries.");
         }
-
-        if ((dev_data->physical_device_features.inheritedQueries != VK_FALSE) && (pInfo->occlusionQueryEnable != VK_FALSE) &&
-            (!validate_VkQueryControlFlagBits(VkQueryControlFlagBits(pInfo->queryFlags)))) {
-            skip |=
-                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                        reinterpret_cast<uint64_t>(commandBuffer), __LINE__, DEVICE_FEATURE, LayerName,
-                        "Cannot enable in occlusion queries in vkBeginCommandBuffer() and set queryFlags to %d which is not a "
-                        "valid combination of VkQueryControlFlagBits.",
-                        pInfo->queryFlags);
+        // VALIDATION_ERROR_00117 check
+        if ((dev_data->physical_device_features.inheritedQueries != VK_FALSE) && (pInfo->occlusionQueryEnable != VK_FALSE)) {
+            skip |= validate_flags(dev_data->report_data, "vkBeginCommandBuffer", "pBeginInfo->pInheritanceInfo->queryFlags",
+                                   "VkQueryControlFlagBits", AllVkQueryControlFlagBits, pInfo->queryFlags, false);
         }
     }
     return skip;

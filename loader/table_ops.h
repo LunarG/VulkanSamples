@@ -29,7 +29,7 @@
 #include "loader.h"
 #include "vk_loader_platform.h"
 
-static VkResult vkDevExtError(VkDevice dev) {
+static VkResult VKAPI_CALL vkDevExtError(VkDevice dev) {
     struct loader_device *found_dev;
     // The device going in is a trampoline device
     struct loader_icd_term *icd_term =

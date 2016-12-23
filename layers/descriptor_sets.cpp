@@ -40,7 +40,7 @@ cvdescriptorset::DescriptorSetLayout::DescriptorSetLayout(const VkDescriptorSetL
         uint32_t insert_index = 0; // Track vector index where we insert element
         if (bindings_.empty() || binding_num > bindings_.back().binding) {
             bindings_.push_back(safe_VkDescriptorSetLayoutBinding(&p_create_info->pBindings[i]));
-            insert_index = bindings_.size() - 1;
+            insert_index = static_cast<uint32_t>(bindings_.size()) - 1;
         } else { // out-of-order binding number, need to insert into vector in-order
             auto it = bindings_.begin();
             // Find currently binding's spot in vector
@@ -699,7 +699,8 @@ void cvdescriptorset::DescriptorSet::PerformCopyUpdate(const VkCopyDescriptorSet
 // Bind cb_node to this set and this set to cb_node.
 // Prereq: This should be called for a set that has been confirmed to be active for the given cb_node, meaning it's going
 //   to be used in a draw by the given cb_node
-void cvdescriptorset::DescriptorSet::BindCommandBuffer(GLOBAL_CB_NODE *cb_node, const std::unordered_set<uint32_t> &bindings) {
+void cvdescriptorset::DescriptorSet::BindCommandBuffer(GLOBAL_CB_NODE *cb_node,
+                                                       const std::unordered_set<uint32_t> *active_bindings) {
     // bind cb to this descriptor set
     cb_bindings.insert(cb_node);
     // Add bindings for descriptor set, the set's pool, and individual objects in the set
@@ -709,7 +710,7 @@ void cvdescriptorset::DescriptorSet::BindCommandBuffer(GLOBAL_CB_NODE *cb_node, 
         {reinterpret_cast<uint64_t &>(pool_state_->pool), VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT});
     // For the active slots, use set# to look up descriptorSet from boundDescriptorSets, and bind all of that descriptor set's
     // resources
-    for (auto binding : bindings) {
+    for (auto binding : *active_bindings) {
         auto start_idx = p_layout_->GetGlobalStartIndexFromBinding(binding);
         auto end_idx = p_layout_->GetGlobalEndIndexFromBinding(binding);
         for (uint32_t i = start_idx; i <= end_idx; ++i) {
@@ -761,8 +762,8 @@ bool cvdescriptorset::ValidateImageUpdate(VkImageView image_view, VkImageLayout 
         format = image_node->createInfo.format;
         usage = image_node->createInfo.usage;
         // Validate that memory is bound to image
-        if (ValidateMemoryIsBoundToImage(dev_data, image_node, "vkUpdateDescriptorSets()")) {
-            // TODO : Need new code(s) for language in 11.6 Memory Association
+        if (ValidateMemoryIsBoundToImage(dev_data, image_node, "vkUpdateDescriptorSets()", VALIDATION_ERROR_02524)) {
+            *error_code = VALIDATION_ERROR_02524;
             *error_msg = "No memory bound to image.";
             return false;
         }
@@ -1286,18 +1287,12 @@ bool cvdescriptorset::DescriptorSet::ValidateBufferUsage(BUFFER_STATE const *buf
 // If there's an error, update the error_msg string with details and return false, else return true
 bool cvdescriptorset::DescriptorSet::ValidateBufferUpdate(VkDescriptorBufferInfo const *buffer_info, VkDescriptorType type,
                                                           UNIQUE_VALIDATION_ERROR_CODE *error_code, std::string *error_msg) const {
-    // TODO : Defaulting to 00962 for all cases here. Need to create new error codes for a few cases below.
-    *error_code = VALIDATION_ERROR_00962;
     // First make sure that buffer is valid
     auto buffer_node = getBufferState(device_data_, buffer_info->buffer);
-    if (!buffer_node) {
-        std::stringstream error_str;
-        error_str << "Invalid VkBuffer: " << buffer_info->buffer;
-        *error_msg = error_str.str();
-        return false;
-    }
-    if (ValidateMemoryIsBoundToBuffer(device_data_, buffer_node, "vkUpdateDescriptorSets()")) {
-        // TODO : This is a repeat code, need new code(s) for language in 11.6 Memory Association
+    // Any invalid buffer should already be caught by object_tracker
+    assert(buffer_node);
+    if (ValidateMemoryIsBoundToBuffer(device_data_, buffer_node, "vkUpdateDescriptorSets()", VALIDATION_ERROR_02525)) {
+        *error_code = VALIDATION_ERROR_02525;
         *error_msg = "No memory bound to buffer.";
         return false;
     }

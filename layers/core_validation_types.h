@@ -337,6 +337,7 @@ struct RENDER_PASS_STATE : public BASE_NODE {
 
 // Cmd Buffer Tracking
 enum CMD_TYPE {
+    CMD_NONE,
     CMD_BINDPIPELINE,
     CMD_BINDPIPELINEDELTA,
     CMD_SETVIEWPORTSTATE,
@@ -387,12 +388,6 @@ enum CMD_TYPE {
     CMD_ENDRENDERPASS,
     CMD_EXECUTECOMMANDS,
     CMD_END, // Should be last command in any RECORDED cmd buffer
-};
-
-// Data structure for holding sequence of cmds in cmd buffer
-struct CMD_NODE {
-    CMD_TYPE type;
-    uint64_t cmdNumber;
 };
 
 enum CB_STATE {
@@ -581,7 +576,7 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     CB_STATE state;                     // Track cmd buffer update state
     uint64_t submitCount;               // Number of times CB has been submitted
     CBStatusFlags status;               // Track status of various bindings on cmd buffer
-    std::vector<CMD_NODE> cmds;              // vector of commands bound to this command buffer
+    CMD_TYPE last_cmd;                  // Last command written to the CB
     // Currently storing "lastBound" objects on per-CB basis
     //  long-term may want to create caches of "lastBound" states and could have
     //  each individual CMD_NODE referencing its own "lastBound" state
@@ -613,6 +608,7 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     std::unordered_map<VkEvent, VkPipelineStageFlags> eventToStageMap;
     std::vector<DRAW_DATA> drawData;
     DRAW_DATA currentDrawData;
+    bool vertex_buffer_used; // Track for perf warning to make sure any bound vtx buffer used
     VkCommandBuffer primaryCommandBuffer;
     // Track images and buffers that are updated by this CB at the point of a draw
     std::unordered_set<VkImageView> updateImages;
@@ -658,8 +654,8 @@ IMAGE_VIEW_STATE *getImageViewState(const layer_data *, VkImageView);
 VkSwapchainKHR getSwapchainFromImage(const layer_data *, VkImage);
 SWAPCHAIN_NODE *getSwapchainNode(const layer_data *, VkSwapchainKHR);
 void invalidateCommandBuffers(const layer_data *, std::unordered_set<GLOBAL_CB_NODE *> const &, VK_OBJECT);
-bool ValidateMemoryIsBoundToBuffer(const layer_data *, const BUFFER_STATE *, const char *);
-bool ValidateMemoryIsBoundToImage(const layer_data *, const IMAGE_STATE *, const char *);
+bool ValidateMemoryIsBoundToBuffer(const layer_data *, const BUFFER_STATE *, const char *, UNIQUE_VALIDATION_ERROR_CODE);
+bool ValidateMemoryIsBoundToImage(const layer_data *, const IMAGE_STATE *, const char *, UNIQUE_VALIDATION_ERROR_CODE);
 void AddCommandBufferBindingSampler(GLOBAL_CB_NODE *, SAMPLER_STATE *);
 void AddCommandBufferBindingImage(const layer_data *, GLOBAL_CB_NODE *, IMAGE_STATE *);
 void AddCommandBufferBindingImageView(const layer_data *, GLOBAL_CB_NODE *, IMAGE_VIEW_STATE *);

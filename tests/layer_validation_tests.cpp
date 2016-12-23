@@ -470,7 +470,7 @@ void VkLayerTest::VKTriangleTest(const char *vertShaderText, const char *fragSha
         rs_state.lineWidth = 1.0f;
         pipelineobj.SetRasterization(&rs_state);
     }
-    // Viewport and scissors must stay in synch or other errors will occur than
+    // Viewport and scissors must stay in sync or other errors will occur than
     // the ones we want
     if (failMask & BsoFailViewport) {
         pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_VIEWPORT);
@@ -1344,6 +1344,7 @@ TEST_F(VkLayerTest, InvalidMemoryAliasing) {
     VkDeviceMemory mem;     // buffer will be bound first
     VkDeviceMemory mem_img; // image bound first
     VkMemoryRequirements buff_mem_reqs, img_mem_reqs;
+    VkMemoryRequirements buff_mem_reqs2, img_mem_reqs2;
 
     VkBufferCreateInfo buf_info = {};
     buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -1404,6 +1405,8 @@ TEST_F(VkLayerTest, InvalidMemoryAliasing) {
     err = vkBindBufferMemory(m_device->device(), buffer, mem, 0);
     ASSERT_VK_SUCCESS(err);
 
+    vkGetImageMemoryRequirements(m_device->device(), image2, &img_mem_reqs2);
+
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT, " is aliased with linear buffer 0x");
     // VALIDATION FAILURE due to image mapping overlapping buffer mapping
     err = vkBindImageMemory(m_device->device(), image, mem, 0);
@@ -1418,6 +1421,7 @@ TEST_F(VkLayerTest, InvalidMemoryAliasing) {
     err = vkBindImageMemory(m_device->device(), image2, mem_img, 0);
     ASSERT_VK_SUCCESS(err);
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT, "is aliased with non-linear image 0x");
+    vkGetBufferMemoryRequirements(m_device->device(), buffer2, &buff_mem_reqs2);
     err = vkBindBufferMemory(m_device->device(), buffer2, mem_img, 0);
     m_errorMonitor->VerifyFound();
 
@@ -2681,12 +2685,6 @@ TEST_F(VkLayerTest, ImageSampleCounts) {
 }
 
 TEST_F(VkLayerTest, BlitImageFormats) {
-
-    // Image blit with mismatched formats
-    const char * expected_message =
-        "vkCmdBlitImage: If one of srcImage and dstImage images has signed/unsigned integer format,"
-        " the other one must also have signed/unsigned integer format";
-
     ASSERT_NO_FATAL_FAILURE(InitState());
 
     VkImageObj src_image(m_device);
@@ -2706,7 +2704,10 @@ TEST_F(VkLayerTest, BlitImageFormats) {
     blitRegion.dstSubresource.layerCount = 1;
     blitRegion.dstSubresource.mipLevel = 0;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, expected_message);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02191);
+
+    // TODO: there are 9 permutations of signed, unsigned, & other for source and dest
+    //       this test is only checking 2 of them at the moment
 
     // Unsigned int vs not an int
     BeginCommandBuffer();
@@ -2715,12 +2716,16 @@ TEST_F(VkLayerTest, BlitImageFormats) {
 
     m_errorMonitor->VerifyFound();
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, expected_message);
+    // Test should generate 2 VU failures
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02190);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02191);
 
     // Unsigned int vs signed int
     vkCmdBlitImage(m_commandBuffer->handle(), src_image.image(), src_image.layout(), dst_image2.image(),
                    dst_image2.layout(), 1, &blitRegion, VK_FILTER_NEAREST);
 
+    // TODO: Note that this only verifies that at least one of the VU enums was found
+    //       Also, if any were not seen, they'll remain in the target list (Soln TBD, JIRA task: VL-72)
     m_errorMonitor->VerifyFound();
 
     EndCommandBuffer();
@@ -4138,6 +4143,7 @@ TEST_F(VkLayerTest, InvalidCmdBufferBufferDestroyed) {
     vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
 
     m_errorMonitor->VerifyFound();
+    vkQueueWaitIdle(m_device->m_queue);
     vkFreeMemory(m_device->handle(), mem, NULL);
 }
 
@@ -6060,6 +6066,11 @@ TEST_F(VkLayerTest, InvalidDynamicOffsetCases) {
     pipe.AddColorAttachment();
     pipe.CreateVKPipeline(pipeline_layout, renderPass());
 
+    VkViewport viewport = {0, 0, 16, 16, 0, 1};
+    vkCmdSetViewport(m_commandBuffer->handle(), 0, 1, &viewport);
+    VkRect2D scissor = {{0, 0}, {16, 16}};
+    vkCmdSetScissor(m_commandBuffer->handle(), 0, 1, &scissor);
+
     vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
     // This update should succeed, but offset size of 512 will overstep buffer
     // /w range 1024 & size 1024
@@ -7119,12 +7130,11 @@ VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
 */
-// Set scissor and viewport counts to different numbers
-TEST_F(VkLayerTest, PSOViewportScissorCountMismatch) {
+
+TEST_F(VkLayerTest, PSOViewportScissorCountTests) {
     VkResult err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "Gfx Pipeline viewport count (1) must match scissor count (0).");
+    TEST_DESCRIPTION("Test various cases of viewport and scissor count validation");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -7176,12 +7186,11 @@ TEST_F(VkLayerTest, PSOViewportScissorCountMismatch) {
     err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
     ASSERT_VK_SUCCESS(err);
 
-    VkViewport vp = {}; // Just need dummy vp to point to
-
+    VkViewport vp = {};
     VkPipelineViewportStateCreateInfo vp_state_ci = {};
     vp_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-    vp_state_ci.scissorCount = 0;
-    vp_state_ci.viewportCount = 1; // Count mismatch should cause error
+    vp_state_ci.scissorCount = 1;
+    vp_state_ci.viewportCount = 1;
     vp_state_ci.pViewports = &vp;
 
     VkPipelineRasterizationStateCreateInfo rs_state_ci = {};
@@ -7193,12 +7202,31 @@ TEST_F(VkLayerTest, PSOViewportScissorCountMismatch) {
     rs_state_ci.rasterizerDiscardEnable = VK_FALSE;
     rs_state_ci.depthBiasEnable = VK_FALSE;
 
+    VkPipelineVertexInputStateCreateInfo vi_ci = {};
+    vi_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vi_ci.pNext = nullptr;
+    vi_ci.vertexBindingDescriptionCount = 0;
+    vi_ci.pVertexBindingDescriptions = nullptr;
+    vi_ci.vertexAttributeDescriptionCount = 0;
+    vi_ci.pVertexAttributeDescriptions = nullptr;
+
+    VkPipelineInputAssemblyStateCreateInfo ia_ci = {};
+    ia_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    ia_ci.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+
+    VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci = {};
+    pipe_ms_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    pipe_ms_state_ci.pNext = NULL;
+    pipe_ms_state_ci.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    pipe_ms_state_ci.sampleShadingEnable = 0;
+    pipe_ms_state_ci.minSampleShading = 1.0;
+    pipe_ms_state_ci.pSampleMask = NULL;
+
     VkPipelineShaderStageCreateInfo shaderStages[2];
     memset(&shaderStages, 0, 2 * sizeof(VkPipelineShaderStageCreateInfo));
 
     VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
-    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this); // We shouldn't need a fragment shader
-    // but add it to be able to run on more devices
+    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
     shaderStages[0] = vs.GetStageCreateInfo();
     shaderStages[1] = fs.GetStageCreateInfo();
 
@@ -7206,7 +7234,10 @@ TEST_F(VkLayerTest, PSOViewportScissorCountMismatch) {
     gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     gp_ci.stageCount = 2;
     gp_ci.pStages = shaderStages;
+    gp_ci.pVertexInputState = &vi_ci;
+    gp_ci.pInputAssemblyState = &ia_ci;
     gp_ci.pViewportState = &vp_state_ci;
+    gp_ci.pMultisampleState = &pipe_ms_state_ci;
     gp_ci.pRasterizationState = &rs_state_ci;
     gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
     gp_ci.layout = pipeline_layout;
@@ -7217,26 +7248,59 @@ TEST_F(VkLayerTest, PSOViewportScissorCountMismatch) {
 
     VkPipeline pipeline;
     VkPipelineCache pipelineCache;
-
     err = vkCreatePipelineCache(m_device->device(), &pc_ci, NULL, &pipelineCache);
     ASSERT_VK_SUCCESS(err);
-    err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, NULL, &pipeline);
 
-    m_errorMonitor->VerifyFound();
+    if (!m_device->phy().features().multiViewport) {
+        printf("MultiViewport feature is disabled -- skipping enabled-state checks.\n");
+
+        // Check case where multiViewport is disabled and viewport count is not 1
+        // We check scissor/viewport simultaneously since separating them would trigger the mismatch error, 1434.
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01430);
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01431);
+        vp_state_ci.scissorCount = 0;
+        vp_state_ci.viewportCount = 0;
+        err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, NULL, &pipeline);
+        m_errorMonitor->VerifyFound();
+    } else {
+        if (m_device->props.limits.maxViewports == 1) {
+            printf("Device limit maxViewports is 1, skipping tests that require higher limits.\n");
+        } else {
+            printf("MultiViewport feature is enabled -- skipping disabled-state checks.\n");
+
+            // Check is that viewportcount and scissorcount match
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01434);
+            vp_state_ci.scissorCount = 1;
+            vp_state_ci.viewportCount = m_device->props.limits.maxViewports;
+            err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, NULL, &pipeline);
+            m_errorMonitor->VerifyFound();
+
+
+            // Check case where multiViewport is enabled and viewport count is greater than max
+            // We check scissor/viewport simultaneously since separating them would trigger the mismatch error, 1434.
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01432);
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01433);
+            vp_state_ci.scissorCount = m_device->props.limits.maxViewports + 1;
+            vp_state_ci.viewportCount = m_device->props.limits.maxViewports + 1;
+            err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, NULL, &pipeline);
+            m_errorMonitor->VerifyFound();
+        }
+    }
 
     vkDestroyPipelineCache(m_device->device(), pipelineCache, NULL);
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
-// Don't set viewport state in PSO. This is an error b/c we always need this
-// state
-//  for the counts even if the data is going to be set dynamically.
+
+// Don't set viewport state in PSO. This is an error b/c we always need this state for the counts even if the data is going to be
+// set dynamically.
 TEST_F(VkLayerTest, PSOViewportStateNotSet) {
-    // Attempt to Create Gfx Pipeline w/o a VS
     VkResult err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Gfx Pipeline pViewportState is null. Even if ");
+    TEST_DESCRIPTION("Create a graphics pipeline with rasterization enabled but no viewport state.");
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02113);
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -7278,6 +7342,26 @@ TEST_F(VkLayerTest, PSOViewportStateNotSet) {
     alloc_info.pSetLayouts = &ds_layout;
     err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
+
+    VkPipelineInputAssemblyStateCreateInfo ia_ci = {};
+    ia_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    ia_ci.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+
+    VkPipelineVertexInputStateCreateInfo vi_ci = {};
+    vi_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vi_ci.pNext = nullptr;
+    vi_ci.vertexBindingDescriptionCount = 0;
+    vi_ci.pVertexBindingDescriptions = nullptr;
+    vi_ci.vertexAttributeDescriptionCount = 0;
+    vi_ci.pVertexAttributeDescriptions = nullptr;
+
+    VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci = {};
+    pipe_ms_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    pipe_ms_state_ci.pNext = NULL;
+    pipe_ms_state_ci.rasterizationSamples = VK_SAMPLE_COUNT_4_BIT;
+    pipe_ms_state_ci.sampleShadingEnable = 0;
+    pipe_ms_state_ci.minSampleShading = 1.0;
+    pipe_ms_state_ci.pSampleMask = NULL;
 
     VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
     pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -7299,8 +7383,8 @@ TEST_F(VkLayerTest, PSOViewportStateNotSet) {
     memset(&shaderStages, 0, 2 * sizeof(VkPipelineShaderStageCreateInfo));
 
     VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
-    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this); // We shouldn't need a fragment shader
-    // but add it to be able to run on more devices
+    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+    // We shouldn't need a fragment shader but add it to be able to run on more devices
     shaderStages[0] = vs.GetStageCreateInfo();
     shaderStages[1] = fs.GetStageCreateInfo();
 
@@ -7318,9 +7402,12 @@ TEST_F(VkLayerTest, PSOViewportStateNotSet) {
     gp_ci.stageCount = 2;
     gp_ci.pStages = shaderStages;
     gp_ci.pRasterizationState = &rs_state_ci;
-    gp_ci.pViewportState = NULL; // Not setting VP state w/o dynamic vp state
-                                 // should cause validation error
+    // Not setting VP state w/o dynamic vp state should cause validation error
+    gp_ci.pViewportState = NULL;
     gp_ci.pDynamicState = &dyn_state_ci;
+    gp_ci.pVertexInputState = &vi_ci;
+    gp_ci.pInputAssemblyState = &ia_ci;
+    gp_ci.pMultisampleState = &pipe_ms_state_ci;
     gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
     gp_ci.layout = pipeline_layout;
     gp_ci.renderPass = renderPass();
@@ -7342,14 +7429,13 @@ TEST_F(VkLayerTest, PSOViewportStateNotSet) {
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
-// Create PSO w/o non-zero viewportCount but no viewport data
-// Then run second test where dynamic scissor count doesn't match PSO scissor
-// count
+
+// Create PSO w/o non-zero viewportCount but no viewport data, then run second test where dynamic scissor count doesn't match PSO
+// scissor count
 TEST_F(VkLayerTest, PSOViewportCountWithoutDataAndDynScissorMismatch) {
     VkResult err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "Gfx Pipeline viewportCount is 1, but pViewports is NULL. ");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02110);
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
@@ -7421,12 +7507,20 @@ TEST_F(VkLayerTest, PSOViewportCountWithoutDataAndDynScissorMismatch) {
     dyn_state_ci.dynamicStateCount = 1;
     dyn_state_ci.pDynamicStates = &sc_state;
 
+    VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci = {};
+    pipe_ms_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    pipe_ms_state_ci.pNext = NULL;
+    pipe_ms_state_ci.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    pipe_ms_state_ci.sampleShadingEnable = 0;
+    pipe_ms_state_ci.minSampleShading = 1.0;
+    pipe_ms_state_ci.pSampleMask = NULL;
+
     VkPipelineShaderStageCreateInfo shaderStages[2];
     memset(&shaderStages, 0, 2 * sizeof(VkPipelineShaderStageCreateInfo));
 
     VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
-    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this); // We shouldn't need a fragment shader
-    // but add it to be able to run on more devices
+    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+    // We shouldn't need a fragment shader but add it to be able to run on more devices
     shaderStages[0] = vs.GetStageCreateInfo();
     shaderStages[1] = fs.GetStageCreateInfo();
 
@@ -7444,6 +7538,7 @@ TEST_F(VkLayerTest, PSOViewportCountWithoutDataAndDynScissorMismatch) {
 
     VkPipelineRasterizationStateCreateInfo rs_ci = {};
     rs_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rs_ci.lineWidth = m_device->props.limits.lineWidthRange[0];
     rs_ci.pNext = nullptr;
 
     VkPipelineColorBlendAttachmentState att = {};
@@ -7466,6 +7561,7 @@ TEST_F(VkLayerTest, PSOViewportCountWithoutDataAndDynScissorMismatch) {
     gp_ci.pRasterizationState = &rs_ci;
     gp_ci.pColorBlendState = &cb_ci;
     gp_ci.pDynamicState = &dyn_state_ci;
+    gp_ci.pMultisampleState = &pipe_ms_state_ci;
     gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
     gp_ci.layout = pipeline_layout;
     gp_ci.renderPass = renderPass();
@@ -7506,13 +7602,13 @@ TEST_F(VkLayerTest, PSOViewportCountWithoutDataAndDynScissorMismatch) {
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
     vkDestroyPipeline(m_device->device(), pipeline, NULL);
 }
-// Create PSO w/o non-zero scissorCount but no scissor data
-// Then run second test where dynamic viewportCount doesn't match PSO
+
+// Create PSO w/o non-zero scissorCount but no scissor data, then run second test where dynamic viewportCount doesn't match PSO
 // viewportCount
 TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch) {
     VkResult err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Gfx Pipeline scissorCount is 1, but pScissors is NULL. ");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02111);
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
@@ -7584,12 +7680,20 @@ TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch) {
     dyn_state_ci.dynamicStateCount = 1;
     dyn_state_ci.pDynamicStates = &vp_state;
 
+    VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci = {};
+    pipe_ms_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    pipe_ms_state_ci.pNext = NULL;
+    pipe_ms_state_ci.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    pipe_ms_state_ci.sampleShadingEnable = 0;
+    pipe_ms_state_ci.minSampleShading = 1.0;
+    pipe_ms_state_ci.pSampleMask = NULL;
+
     VkPipelineShaderStageCreateInfo shaderStages[2];
     memset(&shaderStages, 0, 2 * sizeof(VkPipelineShaderStageCreateInfo));
 
     VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
-    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this); // We shouldn't need a fragment shader
-    // but add it to be able to run on more devices
+    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+    // We shouldn't need a fragment shader but add it to be able to run on more devices
     shaderStages[0] = vs.GetStageCreateInfo();
     shaderStages[1] = fs.GetStageCreateInfo();
 
@@ -7607,6 +7711,7 @@ TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch) {
 
     VkPipelineRasterizationStateCreateInfo rs_ci = {};
     rs_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rs_ci.lineWidth = m_device->props.limits.lineWidthRange[0];
     rs_ci.pNext = nullptr;
 
     VkPipelineColorBlendAttachmentState att = {};
@@ -7629,6 +7734,7 @@ TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch) {
     gp_ci.pRasterizationState = &rs_ci;
     gp_ci.pColorBlendState = &cb_ci;
     gp_ci.pDynamicState = &dyn_state_ci;
+    gp_ci.pMultisampleState = &pipe_ms_state_ci;
     gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
     gp_ci.layout = pipeline_layout;
     gp_ci.renderPass = renderPass();
@@ -7656,7 +7762,9 @@ TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch) {
     ASSERT_VK_SUCCESS(err);
     BeginCommandBuffer();
     vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-    VkViewport viewports[1] = {}; // don't care about data
+    VkViewport viewports[1] = {};
+    viewports[0].width = 8;
+    viewports[0].height = 8;
     // Count of 2 doesn't match PSO count of 1
     vkCmdSetViewport(m_commandBuffer->GetBufferHandle(), 1, 1, viewports);
     Draw(1, 0, 0, 0);
@@ -14577,14 +14685,14 @@ TEST_F(VkLayerTest, MiscImageLayerTests) {
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
+    // TODO: Ideally we should check if a format is supported, before using it.
     VkImageObj image(m_device);
-    image.init(128, 128, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-               VK_IMAGE_TILING_OPTIMAL, 0);
+    image.init(128, 128, VK_FORMAT_R16G16B16A16_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+               VK_IMAGE_TILING_OPTIMAL, 0); // 64bpp
     ASSERT_TRUE(image.initialized());
-
     vk_testing::Buffer buffer;
     VkMemoryPropertyFlags reqs = 0;
-    buffer.init_as_src(*m_device, 128 * 128 * 4, reqs);
+    buffer.init_as_src(*m_device, 128 * 128 * 8, reqs);
     VkBufferImageCopy region = {};
     region.bufferRowLength = 128;
     region.bufferImageHeight = 128;
@@ -14594,6 +14702,23 @@ TEST_F(VkLayerTest, MiscImageLayerTests) {
     region.imageExtent.height = 4;
     region.imageExtent.width = 4;
     region.imageExtent.depth = 1;
+
+    VkImageObj image2(m_device);
+    image2.init(128, 128, VK_FORMAT_R8G8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+               VK_IMAGE_TILING_OPTIMAL, 0); // 16bpp
+    ASSERT_TRUE(image2.initialized());
+    vk_testing::Buffer buffer2;
+    VkMemoryPropertyFlags reqs2 = 0;
+    buffer2.init_as_src(*m_device, 128 * 128 * 2, reqs2);
+    VkBufferImageCopy region2 = {};
+    region2.bufferRowLength = 128;
+    region2.bufferImageHeight = 128;
+    region2.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    // layerCount can't be 0 - Expect MISMATCHED_IMAGE_ASPECT
+    region2.imageSubresource.layerCount = 1;
+    region2.imageExtent.height = 4;
+    region2.imageExtent.width = 4;
+    region2.imageExtent.depth = 1;
     m_commandBuffer->BeginCommandBuffer();
 
     // Image must have offset.z of 0 and extent.depth of 1
@@ -14617,7 +14742,7 @@ TEST_F(VkLayerTest, MiscImageLayerTests) {
     region.imageOffset.z = 0;
     // BufferOffset must be a multiple of the calling command's VkImage parameter's texel size
     // Introduce failure by setting bufferOffset to 1 and 1/2 texels
-    region.bufferOffset = 6;
+    region.bufferOffset = 4;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01263);
     vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer.handle(), image.handle(),
                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
@@ -14625,10 +14750,10 @@ TEST_F(VkLayerTest, MiscImageLayerTests) {
 
     // BufferOffset must be a multiple of 4
     // Introduce failure by setting bufferOffset to a value not divisible by 4
-    region.bufferOffset = 6;
+    region2.bufferOffset = 6;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01264);
-    vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer.handle(), image.handle(),
-                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer2.handle(), image2.handle(),
+                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region2);
     m_errorMonitor->VerifyFound();
 
     // BufferRowLength must be 0, or greater than or equal to the width member of imageExtent
@@ -14652,8 +14777,7 @@ TEST_F(VkLayerTest, MiscImageLayerTests) {
     m_errorMonitor->VerifyFound();
 
     region.bufferImageHeight = 128;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "If the format of srcImage is a depth, stencil, depth stencil or "
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "If the format of srcImage is an "
                                          "integer-based format then filter must be VK_FILTER_NEAREST");
     // Expect INVALID_FILTER
     VkImageObj intImage1(m_device);

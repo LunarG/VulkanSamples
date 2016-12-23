@@ -29,11 +29,10 @@ else()
 endif()
 
 if (WIN32)
-    FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${API_LOWERCASE}-${MAJOR}.def DEF_FILE)
-    add_custom_target(copy-def-file ALL
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${DEF_FILE} ${CMAKE_CURRENT_BINARY_DIR}/${API_LOWERCASE}-${MAJOR}.def
-        VERBATIM
-    )
+	FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/vulkan-${MAJOR}.def DEF_FILE)
+	FILE(READ ${DEF_FILE} DEF_TEXT)
+	STRING(REGEX REPLACE "vulkan-${MAJOR}.dll" "${API_LOWERCASE}-${MAJOR}.dll" DEF_EDITED "${DEF_TEXT}" )
+	FILE(WRITE "${CMAKE_CURRENT_BINARY_DIR}/${API_LOWERCASE}-${MAJOR}.def" "${DEF_EDITED}")
 endif()
 
 # DEBUG enables runtime loader ICD verification
@@ -88,7 +87,7 @@ if (WIN32)
     target_compile_options(loader-norm PUBLIC "$<$<CONFIG:DEBUG>:${LOCAL_C_FLAGS_DBG}>")
     add_library(loader-opt OBJECT ${OPT_LOADER_SRCS})
     target_compile_options(loader-opt PUBLIC "$<$<CONFIG:DEBUG>:${LOCAL_C_FLAGS_REL}>")
-    add_library(${API_LOWERCASE}-${MAJOR} SHARED $<TARGET_OBJECTS:loader-opt> $<TARGET_OBJECTS:loader-norm> ${CMAKE_CURRENT_SOURCE_DIR}/${API_LOWERCASE}-${MAJOR}.def ${CMAKE_CURRENT_SOURCE_DIR}/loader.rc)
+    add_library(${API_LOWERCASE}-${MAJOR} SHARED $<TARGET_OBJECTS:loader-opt> $<TARGET_OBJECTS:loader-norm> ${CMAKE_CURRENT_BINARY_DIR}/${API_LOWERCASE}-${MAJOR}.def ${CMAKE_CURRENT_SOURCE_DIR}/loader.rc)
     add_library(VKstatic.${MAJOR} STATIC $<TARGET_OBJECTS:loader-opt> $<TARGET_OBJECTS:loader-norm>)
     set_target_properties(VKstatic.${MAJOR} PROPERTIES OUTPUT_NAME VKstatic.${MAJOR})
     target_link_libraries(${API_LOWERCASE}-${MAJOR} shlwapi)
@@ -111,7 +110,7 @@ else()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wpointer-arith")
 
     add_library(${API_LOWERCASE} SHARED ${LOADER_SRCS})
-    set_target_properties(${API_LOWERCASE} PROPERTIES SOVERSION "1" VERSION "1.0.37")
+    set_target_properties(${API_LOWERCASE} PROPERTIES SOVERSION "1" VERSION "1.0.38")
     target_link_libraries(${API_LOWERCASE} -ldl -lpthread -lm)
     install(TARGETS ${API_LOWERCASE} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()
