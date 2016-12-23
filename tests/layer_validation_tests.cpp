@@ -14684,14 +14684,14 @@ TEST_F(VkLayerTest, MiscImageLayerTests) {
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
+    // TODO: Ideally we should check if a format is supported, before using it.
     VkImageObj image(m_device);
-    image.init(128, 128, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-               VK_IMAGE_TILING_OPTIMAL, 0);
+    image.init(128, 128, VK_FORMAT_R16G16B16A16_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+               VK_IMAGE_TILING_OPTIMAL, 0); // 64bpp
     ASSERT_TRUE(image.initialized());
-
     vk_testing::Buffer buffer;
     VkMemoryPropertyFlags reqs = 0;
-    buffer.init_as_src(*m_device, 128 * 128 * 4, reqs);
+    buffer.init_as_src(*m_device, 128 * 128 * 8, reqs);
     VkBufferImageCopy region = {};
     region.bufferRowLength = 128;
     region.bufferImageHeight = 128;
@@ -14701,6 +14701,23 @@ TEST_F(VkLayerTest, MiscImageLayerTests) {
     region.imageExtent.height = 4;
     region.imageExtent.width = 4;
     region.imageExtent.depth = 1;
+
+    VkImageObj image2(m_device);
+    image2.init(128, 128, VK_FORMAT_R8G8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+               VK_IMAGE_TILING_OPTIMAL, 0); // 16bpp
+    ASSERT_TRUE(image2.initialized());
+    vk_testing::Buffer buffer2;
+    VkMemoryPropertyFlags reqs2 = 0;
+    buffer2.init_as_src(*m_device, 128 * 128 * 2, reqs2);
+    VkBufferImageCopy region2 = {};
+    region2.bufferRowLength = 128;
+    region2.bufferImageHeight = 128;
+    region2.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    // layerCount can't be 0 - Expect MISMATCHED_IMAGE_ASPECT
+    region2.imageSubresource.layerCount = 1;
+    region2.imageExtent.height = 4;
+    region2.imageExtent.width = 4;
+    region2.imageExtent.depth = 1;
     m_commandBuffer->BeginCommandBuffer();
 
     // Image must have offset.z of 0 and extent.depth of 1
@@ -14724,7 +14741,7 @@ TEST_F(VkLayerTest, MiscImageLayerTests) {
     region.imageOffset.z = 0;
     // BufferOffset must be a multiple of the calling command's VkImage parameter's texel size
     // Introduce failure by setting bufferOffset to 1 and 1/2 texels
-    region.bufferOffset = 6;
+    region.bufferOffset = 4;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01263);
     vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer.handle(), image.handle(),
                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
@@ -14732,10 +14749,10 @@ TEST_F(VkLayerTest, MiscImageLayerTests) {
 
     // BufferOffset must be a multiple of 4
     // Introduce failure by setting bufferOffset to a value not divisible by 4
-    region.bufferOffset = 6;
+    region2.bufferOffset = 6;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01264);
-    vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer.handle(), image.handle(),
-                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer2.handle(), image2.handle(),
+                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region2);
     m_errorMonitor->VerifyFound();
 
     // BufferRowLength must be 0, or greater than or equal to the width member of imageExtent
