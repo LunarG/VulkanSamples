@@ -91,7 +91,7 @@ template <typename T> class counter {
                 // There are no readers.  Two writers just collided.
                 if (use_data->thread != tid) {
                     skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, objectType, (uint64_t)(object),
-                                        /*location*/ 0, THREADING_CHECKER_MULTIPLE_THREADS, "THREADING",
+                                        0, THREADING_CHECKER_MULTIPLE_THREADS, "THREADING",
                                         "THREADING ERROR : object of type %s is simultaneously used in thread %ld and thread %ld",
                                         typeName, use_data->thread, tid);
                     if (skipCall) {
@@ -118,7 +118,7 @@ template <typename T> class counter {
                 // There are readers.  This writer collided with them.
                 if (use_data->thread != tid) {
                     skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, objectType, (uint64_t)(object),
-                                        /*location*/ 0, THREADING_CHECKER_MULTIPLE_THREADS, "THREADING",
+                                        0, THREADING_CHECKER_MULTIPLE_THREADS, "THREADING",
                                         "THREADING ERROR : object of type %s is simultaneously used in thread %ld and thread %ld",
                                         typeName, use_data->thread, tid);
                     if (skipCall) {
@@ -170,7 +170,7 @@ template <typename T> class counter {
         } else if (uses[object].writer_count > 0 && uses[object].thread != tid) {
             // There is a writer of the object.
             skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, objectType, (uint64_t)(object),
-                                /*location*/ 0, THREADING_CHECKER_MULTIPLE_THREADS, "THREADING",
+                                0, THREADING_CHECKER_MULTIPLE_THREADS, "THREADING",
                                 "THREADING ERROR : object of type %s is simultaneously used in thread %ld and thread %ld", typeName,
                                 uses[object].thread, tid);
             if (skipCall) {
