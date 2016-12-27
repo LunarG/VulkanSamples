@@ -222,28 +222,27 @@ struct spirv_inst_iter {
 
     bool operator!=(spirv_inst_iter const &other) { return it != other.it; }
 
-    spirv_inst_iter operator++(int) { /* x++ */
+    spirv_inst_iter operator++(int) { // x++
         spirv_inst_iter ii = *this;
         it += len();
         return ii;
     }
 
-    spirv_inst_iter operator++() { /* ++x; */
+    spirv_inst_iter operator++() { // ++x;
         it += len();
         return *this;
     }
 
-    /* The iterator and the value are the same thing. */
+    // The iterator and the value are the same thing.
     spirv_inst_iter &operator*() { return *this; }
     spirv_inst_iter const &operator*() const { return *this; }
 };
 
 struct shader_module {
-    /* the spirv image itself */
+    // The spirv image itself
     vector<uint32_t> words;
-    /* a mapping of <id> to the first word of its def. this is useful because walking type
-     * trees, constant expressions, etc requires jumping all over the instruction stream.
-     */
+    // A mapping of <id> to the first word of its def. this is useful because walking type
+    // trees, constant expressions, etc requires jumping all over the instruction stream.
     unordered_map<unsigned, unsigned> def_index;
 
     shader_module(VkShaderModuleCreateInfo const *pCreateInfo)
@@ -253,13 +252,13 @@ struct shader_module {
         build_def_index(this);
     }
 
-    /* expose begin() / end() to enable range-based for */
-    spirv_inst_iter begin() const { return spirv_inst_iter(words.begin(), words.begin() + 5); } /* first insn */
-    spirv_inst_iter end() const { return spirv_inst_iter(words.begin(), words.end()); }         /* just past last insn */
-    /* given an offset into the module, produce an iterator there. */
+    // Expose begin() / end() to enable range-based for
+    spirv_inst_iter begin() const { return spirv_inst_iter(words.begin(), words.begin() + 5); } // First insn
+    spirv_inst_iter end() const { return spirv_inst_iter(words.begin(), words.end()); }         // Just past last insn
+    // Given an offset into the module, produce an iterator there.
     spirv_inst_iter at(unsigned offset) const { return spirv_inst_iter(words.begin(), words.begin() + offset); }
 
-    /* gets an iterator to the definition of an id */
+    // Gets an iterator to the definition of an id
     spirv_inst_iter get_def(unsigned id) const {
         auto it = def_index.find(id);
         if (it == def_index.end()) {
@@ -944,7 +943,7 @@ static string cmdTypeToString(CMD_TYPE cmd) {
 static void build_def_index(shader_module *module) {
     for (auto insn : *module) {
         switch (insn.opcode()) {
-        /* Types */
+        // Types
         case spv::OpTypeVoid:
         case spv::OpTypeBool:
         case spv::OpTypeInt:
@@ -968,7 +967,7 @@ static void build_def_index(shader_module *module) {
             module->def_index[insn.word(1)] = insn.offset();
             break;
 
-        /* Fixed constants */
+        // Fixed constants
         case spv::OpConstantTrue:
         case spv::OpConstantFalse:
         case spv::OpConstant:
@@ -978,7 +977,7 @@ static void build_def_index(shader_module *module) {
             module->def_index[insn.word(2)] = insn.offset();
             break;
 
-        /* Specialization constants */
+        // Specialization constants
         case spv::OpSpecConstantTrue:
         case spv::OpSpecConstantFalse:
         case spv::OpSpecConstant:
@@ -987,18 +986,18 @@ static void build_def_index(shader_module *module) {
             module->def_index[insn.word(2)] = insn.offset();
             break;
 
-        /* Variables */
+        // Variables
         case spv::OpVariable:
             module->def_index[insn.word(2)] = insn.offset();
             break;
 
-        /* Functions */
+        // Functions
         case spv::OpFunction:
             module->def_index[insn.word(2)] = insn.offset();
             break;
 
         default:
-            /* We don't care about any other defs for now. */
+            // We don't care about any other defs for now.
             break;
         }
     }
@@ -1050,15 +1049,14 @@ static char const *storage_class_name(unsigned sc) {
     }
 }
 
-/* get the value of an integral constant */
+// Get the value of an integral constant
 unsigned get_constant_value(shader_module const *src, unsigned id) {
     auto value = src->get_def(id);
     assert(value != src->end());
 
     if (value.opcode() != spv::OpConstant) {
-        /* TODO: Either ensure that the specialization transform is already performed on a module we're
-            considering here, OR -- specialize on the fly now.
-            */
+        // TODO: Either ensure that the specialization transform is already performed on a module we're
+        //       considering here, OR -- specialize on the fly now.
         return 1;
     }
 
@@ -1141,7 +1139,7 @@ static bool is_narrow_numeric_type(spirv_inst_iter type)
 
 
 static bool types_match(shader_module const *a, shader_module const *b, unsigned a_type, unsigned b_type, bool a_arrayed, bool b_arrayed, bool relaxed) {
-    /* walk two type trees together, and complain about differences */
+    // Walk two type trees together, and complain about differences
     auto a_insn = a->get_def(a_type);
     auto b_insn = b->get_def(b_type);
     assert(a_insn != a->end());
@@ -1152,7 +1150,7 @@ static bool types_match(shader_module const *a, shader_module const *b, unsigned
     }
 
     if (b_arrayed && b_insn.opcode() == spv::OpTypeArray) {
-        /* we probably just found the extra level of arrayness in b_type: compare the type inside it to a_type */
+        // We probably just found the extra level of arrayness in b_type: compare the type inside it to a_type
         return types_match(a, b, a_type, b_insn.word(2), a_arrayed, false, relaxed);
     }
 
@@ -1165,12 +1163,12 @@ static bool types_match(shader_module const *a, shader_module const *b, unsigned
     }
 
     if (a_insn.opcode() == spv::OpTypePointer) {
-        /* match on pointee type. storage class is expected to differ */
+        // Match on pointee type. storage class is expected to differ
         return types_match(a, b, a_insn.word(3), b_insn.word(3), a_arrayed, b_arrayed, relaxed);
     }
 
     if (a_arrayed || b_arrayed) {
-        /* if we havent resolved array-of-verts by here, we're not going to. */
+        // If we havent resolved array-of-verts by here, we're not going to.
         return false;
     }
 
@@ -1178,13 +1176,13 @@ static bool types_match(shader_module const *a, shader_module const *b, unsigned
     case spv::OpTypeBool:
         return true;
     case spv::OpTypeInt:
-        /* match on width, signedness */
+        // Match on width, signedness
         return a_insn.word(2) == b_insn.word(2) && a_insn.word(3) == b_insn.word(3);
     case spv::OpTypeFloat:
-        /* match on width */
+        // Match on width
         return a_insn.word(2) == b_insn.word(2);
     case spv::OpTypeVector:
-        /* match on element type, count. */
+        // Match on element type, count.
         if (!types_match(a, b, a_insn.word(2), b_insn.word(2), a_arrayed, b_arrayed, false))
             return false;
         if (relaxed && is_narrow_numeric_type(a->get_def(a_insn.word(2)))) {
@@ -1194,19 +1192,18 @@ static bool types_match(shader_module const *a, shader_module const *b, unsigned
             return a_insn.word(3) == b_insn.word(3);
         }
     case spv::OpTypeMatrix:
-        /* match on element type, count. */
+        // Match on element type, count.
         return types_match(a, b, a_insn.word(2), b_insn.word(2), a_arrayed, b_arrayed, false) && a_insn.word(3) == b_insn.word(3);
     case spv::OpTypeArray:
-        /* match on element type, count. these all have the same layout. we don't get here if
-         * b_arrayed. This differs from vector & matrix types in that the array size is the id of a constant instruction,
-         * not a literal within OpTypeArray */
+        // Match on element type, count. these all have the same layout. we don't get here if b_arrayed. This differs from
+        // vector & matrix types in that the array size is the id of a constant instruction, * not a literal within OpTypeArray
         return types_match(a, b, a_insn.word(2), b_insn.word(2), a_arrayed, b_arrayed, false) &&
                get_constant_value(a, a_insn.word(3)) == get_constant_value(b, b_insn.word(3));
     case spv::OpTypeStruct:
-        /* match on all element types */
+        // Match on all element types
         {
             if (a_insn.len() != b_insn.len()) {
-                return false; /* structs cannot match if member counts differ */
+                return false; // Structs cannot match if member counts differ
             }
 
             for (unsigned i = 2; i < a_insn.len(); i++) {
@@ -1218,9 +1215,7 @@ static bool types_match(shader_module const *a, shader_module const *b, unsigned
             return true;
         }
     default:
-        /* remaining types are CLisms, or may not appear in the interfaces we
-         * are interested in. Just claim no match.
-         */
+        // Remaining types are CLisms, or may not appear in the interfaces we are interested in. Just claim no match.
         return false;
     }
 }
@@ -1239,8 +1234,8 @@ static unsigned get_locations_consumed_by_type(shader_module const *src, unsigne
 
     switch (insn.opcode()) {
     case spv::OpTypePointer:
-        /* see through the ptr -- this is only ever at the toplevel for graphics shaders;
-         * we're never actually passing pointers around. */
+        // See through the ptr -- this is only ever at the toplevel for graphics shaders we're never actually passing
+        // pointers around.
         return get_locations_consumed_by_type(src, insn.word(3), strip_array_level);
     case spv::OpTypeArray:
         if (strip_array_level) {
@@ -1249,23 +1244,21 @@ static unsigned get_locations_consumed_by_type(shader_module const *src, unsigne
             return get_constant_value(src, insn.word(3)) * get_locations_consumed_by_type(src, insn.word(2), false);
         }
     case spv::OpTypeMatrix:
-        /* num locations is the dimension * element size */
+        // Num locations is the dimension * element size
         return insn.word(3) * get_locations_consumed_by_type(src, insn.word(2), false);
     case spv::OpTypeVector: {
         auto scalar_type = src->get_def(insn.word(2));
         auto bit_width = (scalar_type.opcode() == spv::OpTypeInt || scalar_type.opcode() == spv::OpTypeFloat) ?
             scalar_type.word(2) : 32;
 
-        /* locations are 128-bit wide; 3- and 4-component vectors of 64 bit
-         * types require two. */
+        // Locations are 128-bit wide; 3- and 4-component vectors of 64 bit types require two.
         return (bit_width * insn.word(3) + 127) / 128;
     }
     default:
-        /* everything else is just 1. */
+        // Everything else is just 1.
         return 1;
 
-        /* TODO: extend to handle 64bit scalar types, whose vectors may need
-         * multiple locations. */
+        // TODO: extend to handle 64bit scalar types, whose vectors may need multiple locations.
     }
 }
 
@@ -1293,7 +1286,7 @@ struct interface_var {
     bool is_patch;
     bool is_block_member;
     bool is_relaxed_precision;
-    /* TODO: collect the name, too? Isn't required to be present. */
+    // TODO: collect the name, too? Isn't required to be present.
 };
 
 struct shader_stage_attributes {
@@ -1330,17 +1323,17 @@ static void collect_interface_block_members(shader_module const *src,
                                             std::map<location_t, interface_var> *out,
                                             std::unordered_map<unsigned, unsigned> const &blocks, bool is_array_of_verts,
                                             uint32_t id, uint32_t type_id, bool is_patch) {
-    /* Walk down the type_id presented, trying to determine whether it's actually an interface block. */
+    // Walk down the type_id presented, trying to determine whether it's actually an interface block.
     auto type = get_struct_type(src, src->get_def(type_id), is_array_of_verts && !is_patch);
     if (type == src->end() || blocks.find(type.word(1)) == blocks.end()) {
-        /* this isn't an interface block. */
+        // This isn't an interface block.
         return;
     }
 
     std::unordered_map<unsigned, unsigned> member_components;
     std::unordered_map<unsigned, unsigned> member_relaxed_precision;
 
-    /* Walk all the OpMemberDecorate for type's result id -- first pass, collect components. */
+    // Walk all the OpMemberDecorate for type's result id -- first pass, collect components.
     for (auto insn : *src) {
         if (insn.opcode() == spv::OpMemberDecorate && insn.word(1) == type.word(1)) {
             unsigned member_index = insn.word(2);
@@ -1356,7 +1349,7 @@ static void collect_interface_block_members(shader_module const *src,
         }
     }
 
-    /* Second pass -- produce the output, from Location decorations */
+    // Second pass -- produce the output, from Location decorations
     for (auto insn : *src) {
         if (insn.opcode() == spv::OpMemberDecorate && insn.word(1) == type.word(1)) {
             unsigned member_index = insn.word(2);
@@ -1372,7 +1365,7 @@ static void collect_interface_block_members(shader_module const *src,
                 for (unsigned int offset = 0; offset < num_locations; offset++) {
                     interface_var v = {};
                     v.id = id;
-                    /* TODO: member index in interface_var too? */
+                    // TODO: member index in interface_var too?
                     v.type_id = member_type_id;
                     v.offset = offset;
                     v.is_patch = is_patch;
@@ -1398,9 +1391,8 @@ static std::map<location_t, interface_var> collect_interface_by_location(
 
     for (auto insn : *src) {
 
-        /* We consider two interface models: SSO rendezvous-by-location, and
-         * builtins. Complain about anything that fits neither model.
-         */
+        // We consider two interface models: SSO rendezvous-by-location, and builtins. Complain about anything that
+        // fits neither model.
         if (insn.opcode() == spv::OpDecorate) {
             if (insn.word(2) == spv::DecorationLocation) {
                 var_locations[insn.word(1)] = insn.word(3);
@@ -1428,13 +1420,11 @@ static std::map<location_t, interface_var> collect_interface_by_location(
         }
     }
 
-    /* TODO: handle grouped decorations */
-    /* TODO: handle index=1 dual source outputs from FS -- two vars will
-     * have the same location, and we DON'T want to clobber. */
+    // TODO: handle grouped decorations
+    // TODO: handle index=1 dual source outputs from FS -- two vars will have the same location, and we DON'T want to clobber.
 
-    /* find the end of the entrypoint's name string. additional zero bytes follow the actual null
-       terminator, to fill out the rest of the word - so we only need to look at the last byte in
-       the word to determine which word contains the terminator. */
+    // Find the end of the entrypoint's name string. additional zero bytes follow the actual null terminator, to fill out the
+    // rest of the word - so we only need to look at the last byte in the word to determine which word contains the terminator.
     uint32_t word = 3;
     while (entrypoint.word(word) & 0xff000000u) {
         ++word;
@@ -1454,21 +1444,20 @@ static std::map<location_t, interface_var> collect_interface_by_location(
 
             int location = value_or_default(var_locations, id, -1);
             int builtin = value_or_default(var_builtins, id, -1);
-            unsigned component = value_or_default(var_components, id, 0); /* unspecified is OK, is 0 */
+            unsigned component = value_or_default(var_components, id, 0); // Unspecified is OK, is 0
             bool is_patch = var_patch.find(id) != var_patch.end();
             bool is_relaxed_precision = var_relaxed_precision.find(id) != var_relaxed_precision.end();
 
-            /* All variables and interface block members in the Input or Output storage classes
-             * must be decorated with either a builtin or an explicit location.
-             *
-             * TODO: integrate the interface block support here. For now, don't complain --
-             * a valid SPIRV module will only hit this path for the interface block case, as the
-             * individual members of the type are decorated, rather than variable declarations.
-             */
+            // All variables and interface block members in the Input or Output storage classes must be decorated with either
+            // a builtin or an explicit location.
+            //
+            // TODO: integrate the interface block support here. For now, don't complain -- a valid SPIRV module will only hit
+            // this path for the interface block case, as the individual members of the type are decorated, rather than
+            // variable declarations.
 
             if (location != -1) {
-                /* A user-defined interface variable, with a location. Where a variable
-                 * occupied multiple locations, emit one result for each. */
+                // A user-defined interface variable, with a location. Where a variable occupied multiple locations, emit
+                // one result for each.
                 unsigned num_locations = get_locations_consumed_by_type(src, type, is_array_of_verts && !is_patch);
                 for (unsigned int offset = 0; offset < num_locations; offset++) {
                     interface_var v = {};
@@ -1480,7 +1469,7 @@ static std::map<location_t, interface_var> collect_interface_by_location(
                     out[std::make_pair(location + offset, component)] = v;
                 }
             } else if (builtin == -1) {
-                /* An interface block instance */
+                // An interface block instance
                 collect_interface_block_members(src, &out, blocks, is_array_of_verts, id, type, is_patch);
             }
         }
@@ -1531,9 +1520,8 @@ static std::vector<std::pair<descriptor_slot_t, interface_var>> collect_interfac
     std::unordered_map<unsigned, unsigned> var_bindings;
 
     for (auto insn : *src) {
-        /* All variables in the Uniform or UniformConstant storage classes are required to be decorated with both
-         * DecorationDescriptorSet and DecorationBinding.
-         */
+        // All variables in the Uniform or UniformConstant storage classes are required to be decorated with both
+        // DecorationDescriptorSet and DecorationBinding.
         if (insn.opcode() == spv::OpDecorate) {
             if (insn.word(2) == spv::DecorationDescriptorSet) {
                 var_sets[insn.word(1)] = insn.word(3);
@@ -1578,7 +1566,7 @@ static bool validate_interface_between_stages(debug_report_data *report_data, sh
     auto a_it = outputs.begin();
     auto b_it = inputs.begin();
 
-    /* maps sorted by key (location); walk them together to find mismatches */
+    // Maps sorted by key (location); walk them together to find mismatches
     while ((outputs.size() > 0 && a_it != outputs.end()) || (inputs.size() && b_it != inputs.end())) {
         bool a_at_end = outputs.size() == 0 || a_it == outputs.end();
         bool b_at_end = inputs.size() == 0 || b_it == inputs.end();
@@ -1619,7 +1607,7 @@ static bool validate_interface_between_stages(debug_report_data *report_data, sh
                 }
             }
             if (a_it->second.is_patch != b_it->second.is_patch) {
-                if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/ 0,
+                if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, 0,
                             __LINE__, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
                             "Decoration mismatch on location %u.%u: is per-%s in %s stage but "
                             "per-%s in %s stage", a_first.first, a_first.second,
@@ -1629,7 +1617,7 @@ static bool validate_interface_between_stages(debug_report_data *report_data, sh
                 }
             }
             if (a_it->second.is_relaxed_precision != b_it->second.is_relaxed_precision) {
-                if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/ 0,
+                if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, 0,
                             __LINE__, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
                             "Decoration mismatch on location %u.%u: %s and %s stages differ in precision",
                             a_first.first, a_first.second,
@@ -1648,7 +1636,7 @@ static bool validate_interface_between_stages(debug_report_data *report_data, sh
 
 enum FORMAT_TYPE {
     FORMAT_TYPE_UNDEFINED,
-    FORMAT_TYPE_FLOAT, /* UNORM, SNORM, FLOAT, USCALED, SSCALED, SRGB -- anything we consider float in the shader */
+    FORMAT_TYPE_FLOAT, // UNORM, SNORM, FLOAT, USCALED, SSCALED, SRGB -- anything we consider float in the shader
     FORMAT_TYPE_SINT,
     FORMAT_TYPE_UINT,
 };
@@ -1706,8 +1694,7 @@ static unsigned get_format_type(VkFormat fmt) {
     }
 }
 
-/* characterizes a SPIR-V type appearing in an interface to a FF stage,
- * for comparison to a VkFormat's characterization above. */
+// characterizes a SPIR-V type appearing in an interface to a FF stage, for comparison to a VkFormat's characterization above.
 static unsigned get_fundamental_type(shader_module const *src, unsigned type) {
     auto insn = src->get_def(type);
     assert(insn != src->end());
@@ -1739,9 +1726,8 @@ static uint32_t get_shader_stage_id(VkShaderStageFlagBits stage) {
 }
 
 static bool validate_vi_consistency(debug_report_data *report_data, VkPipelineVertexInputStateCreateInfo const *vi) {
-    /* walk the binding descriptions, which describe the step rate and stride of each vertex buffer.
-     * each binding should be specified only once.
-     */
+    // Walk the binding descriptions, which describe the step rate and stride of each vertex buffer.  Each binding should
+    // be specified only once.
     std::unordered_map<uint32_t, VkVertexInputBindingDescription const *> bindings;
     bool pass = true;
 
@@ -1768,7 +1754,7 @@ static bool validate_vi_against_vs_inputs(debug_report_data *report_data, VkPipe
 
     auto inputs = collect_interface_by_location(vs, entrypoint, spv::StorageClassInput, false);
 
-    /* Build index by location */
+    // Build index by location
     std::map<uint32_t, VkVertexInputAttributeDescription const *> attribs;
     if (vi) {
         for (unsigned i = 0; i < vi->vertexAttributeDescriptionCount; i++) {
@@ -1797,7 +1783,7 @@ static bool validate_vi_against_vs_inputs(debug_report_data *report_data, VkPipe
             used = false;
             it_a++;
         } else if (!b_at_end && (a_at_end || b_first < a_first)) {
-            if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/ 0,
+            if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, 0,
                         __LINE__, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC", "Vertex shader consumes input at location %d but not provided",
                         b_first)) {
                 pass = false;
@@ -1807,7 +1793,7 @@ static bool validate_vi_against_vs_inputs(debug_report_data *report_data, VkPipe
             unsigned attrib_type = get_format_type(it_a->second->format);
             unsigned input_type = get_fundamental_type(vs, it_b->second.type_id);
 
-            /* type checking */
+            // Type checking
             if (attrib_type != FORMAT_TYPE_UNDEFINED && input_type != FORMAT_TYPE_UNDEFINED && attrib_type != input_type) {
                 if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                             __LINE__, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
@@ -1818,7 +1804,7 @@ static bool validate_vi_against_vs_inputs(debug_report_data *report_data, VkPipe
                 }
             }
 
-            /* OK! */
+            // OK!
             used = true;
             it_b++;
         }
@@ -1843,14 +1829,14 @@ static bool validate_fs_outputs_against_render_pass(debug_report_data *report_da
 
     bool pass = true;
 
-    /* TODO: dual source blend index (spv::DecIndex, zero if not provided) */
+    // TODO: dual source blend index (spv::DecIndex, zero if not provided)
 
     auto outputs = collect_interface_by_location(fs, entrypoint, spv::StorageClassOutput, false);
 
     auto it_a = outputs.begin();
     auto it_b = color_attachments.begin();
 
-    /* Walk attachment list and outputs together */
+    // Walk attachment list and outputs together
 
     while ((outputs.size() > 0 && it_a != outputs.end()) || (color_attachments.size() > 0 && it_b != color_attachments.end())) {
         bool a_at_end = outputs.size() == 0 || it_a == outputs.end();
@@ -1874,7 +1860,7 @@ static bool validate_fs_outputs_against_render_pass(debug_report_data *report_da
             unsigned output_type = get_fundamental_type(fs, it_a->second.type_id);
             unsigned att_type = get_format_type(it_b->second);
 
-            /* type checking */
+            // Type checking
             if (att_type != FORMAT_TYPE_UNDEFINED && output_type != FORMAT_TYPE_UNDEFINED && att_type != output_type) {
                 if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                             __LINE__, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
@@ -1885,7 +1871,7 @@ static bool validate_fs_outputs_against_render_pass(debug_report_data *report_da
                 }
             }
 
-            /* OK! */
+            // OK!
             it_a++;
             it_b++;
         }
@@ -1894,15 +1880,13 @@ static bool validate_fs_outputs_against_render_pass(debug_report_data *report_da
     return pass;
 }
 
-/* For some analyses, we need to know about all ids referenced by the static call tree of a particular
- * entrypoint. This is important for identifying the set of shader resources actually used by an entrypoint,
- * for example.
- * Note: we only explore parts of the image which might actually contain ids we care about for the above analyses.
- *  - NOT the shader input/output interfaces.
- *
- * TODO: The set of interesting opcodes here was determined by eyeballing the SPIRV spec. It might be worth
- * converting parts of this to be generated from the machine-readable spec instead.
- */
+// For some analyses, we need to know about all ids referenced by the static call tree of a particular entrypoint. This is
+// important for identifying the set of shader resources actually used by an entrypoint, for example.
+// Note: we only explore parts of the image which might actually contain ids we care about for the above analyses.
+//  - NOT the shader input/output interfaces.
+//
+// TODO: The set of interesting opcodes here was determined by eyeballing the SPIRV spec. It might be worth
+// converting parts of this to be generated from the machine-readable spec instead.
 static std::unordered_set<uint32_t> mark_accessible_ids(shader_module const *src, spirv_inst_iter entrypoint) {
     std::unordered_set<uint32_t> ids;
     std::unordered_set<uint32_t> worklist;
@@ -1915,19 +1899,19 @@ static std::unordered_set<uint32_t> mark_accessible_ids(shader_module const *src
 
         auto insn = src->get_def(id);
         if (insn == src->end()) {
-            /* id is something we didn't collect in build_def_index. that's OK -- we'll stumble
-             * across all kinds of things here that we may not care about. */
+            // ID is something we didn't collect in build_def_index. that's OK -- we'll stumble across all kinds of things here
+            // that we may not care about.
             continue;
         }
 
-        /* try to add to the output set */
+        // Try to add to the output set
         if (!ids.insert(id).second) {
-            continue; /* if we already saw this id, we don't want to walk it again. */
+            continue; // If we already saw this id, we don't want to walk it again.
         }
 
         switch (insn.opcode()) {
         case spv::OpFunction:
-            /* scan whole body of the function, enlisting anything interesting */
+            // Scan whole body of the function, enlisting anything interesting
             while (++insn, insn.opcode() != spv::OpFunctionEnd) {
                 switch (insn.opcode()) {
                 case spv::OpLoad:
@@ -1946,15 +1930,15 @@ static std::unordered_set<uint32_t> mark_accessible_ids(shader_module const *src
                 case spv::OpAtomicAnd:
                 case spv::OpAtomicOr:
                 case spv::OpAtomicXor:
-                    worklist.insert(insn.word(3)); /* ptr */
+                    worklist.insert(insn.word(3)); // ptr
                     break;
                 case spv::OpStore:
                 case spv::OpAtomicStore:
-                    worklist.insert(insn.word(1)); /* ptr */
+                    worklist.insert(insn.word(1)); // ptr
                     break;
                 case spv::OpAccessChain:
                 case spv::OpInBoundsAccessChain:
-                    worklist.insert(insn.word(3)); /* base ptr */
+                    worklist.insert(insn.word(3)); // base ptr
                     break;
                 case spv::OpSampledImage:
                 case spv::OpImageSampleImplicitLod:
@@ -1989,20 +1973,20 @@ static std::unordered_set<uint32_t> mark_accessible_ids(shader_module const *src
                 case spv::OpImageSparseGather:
                 case spv::OpImageSparseDrefGather:
                 case spv::OpImageTexelPointer:
-                    worklist.insert(insn.word(3)); /* image or sampled image */
+                    worklist.insert(insn.word(3)); // Image or sampled image
                     break;
                 case spv::OpImageWrite:
-                    worklist.insert(insn.word(1)); /* image -- different operand order to above */
+                    worklist.insert(insn.word(1)); // Image -- different operand order to above
                     break;
                 case spv::OpFunctionCall:
                     for (uint32_t i = 3; i < insn.len(); i++) {
-                        worklist.insert(insn.word(i)); /* fn itself, and all args */
+                        worklist.insert(insn.word(i)); // fn itself, and all args
                     }
                     break;
 
                 case spv::OpExtInst:
                     for (uint32_t i = 5; i < insn.len(); i++) {
-                        worklist.insert(insn.word(i)); /* operands to ext inst */
+                        worklist.insert(insn.word(i)); // Operands to ext inst
                     }
                     break;
                 }
@@ -2020,19 +2004,18 @@ static bool validate_push_constant_block_against_pipeline(debug_report_data *rep
                                                           VkShaderStageFlagBits stage) {
     bool pass = true;
 
-    /* strip off ptrs etc */
+    // Strip off ptrs etc
     type = get_struct_type(src, type, false);
     assert(type != src->end());
 
-    /* validate directly off the offsets. this isn't quite correct for arrays
-     * and matrices, but is a good first step. TODO: arrays, matrices, weird
-     * sizes */
+    // Validate directly off the offsets. this isn't quite correct for arrays and matrices, but is a good first step.
+    // TODO: arrays, matrices, weird sizes
     for (auto insn : *src) {
         if (insn.opcode() == spv::OpMemberDecorate && insn.word(1) == type.word(1)) {
 
             if (insn.word(3) == spv::DecorationOffset) {
                 unsigned offset = insn.word(4);
-                auto size = 4; /* bytes; TODO: calculate this based on the type */
+                auto size = 4; // Bytes; TODO: calculate this based on the type
 
                 bool found_range = false;
                 for (auto const &range : *push_constant_ranges) {
@@ -2346,7 +2329,7 @@ static bool validate_specialization_offsets(debug_report_data *report_data, VkPi
         for (auto i = 0u; i < spec->mapEntryCount; i++) {
             if (spec->pMapEntries[i].offset + spec->pMapEntries[i].size > spec->dataSize) {
                 if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                            /*dev*/ 0, __LINE__, SHADER_CHECKER_BAD_SPECIALIZATION, "SC",
+                            0, __LINE__, SHADER_CHECKER_BAD_SPECIALIZATION, "SC",
                             "Specialization entry %u (for constant id %u) references memory outside provided "
                             "specialization data (bytes %u.." PRINTF_SIZE_T_SPECIFIER "; " PRINTF_SIZE_T_SPECIFIER
                             " bytes provided)",
@@ -2368,8 +2351,7 @@ static bool descriptor_type_match(shader_module const *module, uint32_t type_id,
 
     descriptor_count = 1;
 
-    /* Strip off any array or ptrs. Where we remove array levels, adjust the
-     * descriptor count for each dimension. */
+    // Strip off any array or ptrs. Where we remove array levels, adjust the  descriptor count for each dimension.
     while (type.opcode() == spv::OpTypeArray || type.opcode() == spv::OpTypePointer) {
         if (type.opcode() == spv::OpTypeArray) {
             descriptor_count *= get_constant_value(module, type.word(3));
@@ -2394,7 +2376,7 @@ static bool descriptor_type_match(shader_module const *module, uint32_t type_id,
             }
         }
 
-        /* Invalid */
+        // Invalid
         return false;
     }
 
@@ -2404,10 +2386,8 @@ static bool descriptor_type_match(shader_module const *module, uint32_t type_id,
 
     case spv::OpTypeSampledImage:
         if (descriptor_type == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) {
-            /* Slight relaxation for some GLSL historical madness: samplerBuffer
-             * doesn't really have a sampler, and a texel buffer descriptor
-             * doesn't really provide one. Allow this slight mismatch.
-             */
+            // Slight relaxation for some GLSL historical madness: samplerBuffer doesn't really have a sampler, and a texel
+            // buffer descriptor doesn't really provide one. Allow this slight mismatch.
             auto image_type = module->get_def(type.word(2));
             auto dim = image_type.word(3);
             auto sampled = image_type.word(7);
@@ -2416,11 +2396,8 @@ static bool descriptor_type_match(shader_module const *module, uint32_t type_id,
         return descriptor_type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 
     case spv::OpTypeImage: {
-        /* Many descriptor types backing image types-- depends on dimension
-         * and whether the image will be used with a sampler. SPIRV for
-         * Vulkan requires that sampled be 1 or 2 -- leaving the decision to
-         * runtime is unacceptable.
-         */
+        // Many descriptor types backing image types-- depends on dimension and whether the image will be used with a sampler.
+        // SPIRV for Vulkan requires that sampled be 1 or 2 -- leaving the decision to runtime is unacceptable.
         auto dim = type.word(3);
         auto sampled = type.word(7);
 
@@ -2440,11 +2417,9 @@ static bool descriptor_type_match(shader_module const *module, uint32_t type_id,
         }
     }
 
-    /* We shouldn't really see any other junk types -- but if we do, they're
-     * a mismatch.
-     */
+    // We shouldn't really see any other junk types -- but if we do, they're a mismatch.
     default:
-        return false; /* Mismatch */
+        return false; // Mismatch
     }
 }
 
@@ -2650,7 +2625,7 @@ validate_pipeline_shader_stage(debug_report_data *report_data, VkPipelineShaderS
     auto module_it = shaderModuleMap.find(pStage->module);
     auto module = *out_module = module_it->second.get();
 
-    /* find the entrypoint */
+    // Find the entrypoint
     auto entrypoint = *out_entrypoint = find_entrypoint(module, pStage->pName, pStage->stage);
     if (entrypoint == module->end()) {
         if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
@@ -2661,13 +2636,13 @@ validate_pipeline_shader_stage(debug_report_data *report_data, VkPipelineShaderS
         }
     }
 
-    /* validate shader capabilities against enabled device features */
+    // Validate shader capabilities against enabled device features
     pass &= validate_shader_capabilities(report_data, module, enabledFeatures);
 
-    /* mark accessible ids */
+    // Mark accessible ids
     auto accessible_ids = mark_accessible_ids(module, entrypoint);
 
-    /* validate descriptor set layout against what the entrypoint actually uses */
+    // Validate descriptor set layout against what the entrypoint actually uses
     auto descriptor_uses = collect_interface_by_descriptor_slot(report_data, module, accessible_ids);
 
     auto pipelineLayout = pipeline->pipeline_layout;
@@ -2675,13 +2650,13 @@ validate_pipeline_shader_stage(debug_report_data *report_data, VkPipelineShaderS
     pass &= validate_specialization_offsets(report_data, pStage);
     pass &= validate_push_constant_usage(report_data, &pipelineLayout.push_constant_ranges, module, accessible_ids, pStage->stage);
 
-    /* validate descriptor use */
+    // Validate descriptor use
     for (auto use : descriptor_uses) {
         // While validating shaders capture which slots are used by the pipeline
         auto & reqs = pipeline->active_slots[use.first.first][use.first.second];
         reqs = descriptor_req(reqs | descriptor_type_to_reqs(module, use.second.type_id));
 
-        /* verify given pipelineLayout has requested setLayout with requested binding */
+        // Verify given pipelineLayout has requested setLayout with requested binding
         const auto &binding = get_descriptor_binding(&pipelineLayout, use.first);
         unsigned required_descriptor_count;
 
@@ -2694,7 +2669,7 @@ validate_pipeline_shader_stage(debug_report_data *report_data, VkPipelineShaderS
             }
         } else if (~binding->stageFlags & pStage->stage) {
             if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                        /*dev*/ 0, __LINE__, SHADER_CHECKER_DESCRIPTOR_NOT_ACCESSIBLE_FROM_STAGE, "SC",
+                        0, __LINE__, SHADER_CHECKER_DESCRIPTOR_NOT_ACCESSIBLE_FROM_STAGE, "SC",
                         "Shader uses descriptor slot %u.%u (used "
                         "as type `%s`) but descriptor not "
                         "accessible from stage %s",
@@ -2703,7 +2678,7 @@ validate_pipeline_shader_stage(debug_report_data *report_data, VkPipelineShaderS
                 pass = false;
             }
         } else if (!descriptor_type_match(module, use.second.type_id, binding->descriptorType,
-                                          /*out*/ required_descriptor_count)) {
+                                          required_descriptor_count)) {
             if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__,
                         SHADER_CHECKER_DESCRIPTOR_TYPE_MISMATCH, "SC", "Type mismatch on descriptor slot "
                                                                        "%u.%u (used as type `%s`) but "
@@ -2723,7 +2698,7 @@ validate_pipeline_shader_stage(debug_report_data *report_data, VkPipelineShaderS
         }
     }
 
-    /* validate use of input attachments against subpass structure */
+    // Validate use of input attachments against subpass structure
     if (pStage->stage == VK_SHADER_STAGE_FRAGMENT_BIT) {
         auto input_attachment_uses = collect_interface_by_input_attachment_index(report_data, module, accessible_ids);
 
@@ -3429,7 +3404,7 @@ static bool validateUpdateConsistency(layer_data *my_data, const VkDevice device
         actualType = ((VkWriteDescriptorSet *)pUpdateStruct)->descriptorType;
         break;
     case VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET:
-        /* no need to validate */
+        // No need to validate
         return false;
         break;
     default:
@@ -4150,7 +4125,7 @@ CreateInstance(const VkInstanceCreateInfo *pCreateInfo, const VkAllocationCallba
     return result;
 }
 
-/* hook DestroyInstance to remove tableInstanceMap entry */
+// Hook DestroyInstance to remove tableInstanceMap entry
 VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocationCallbacks *pAllocator) {
     // TODOSC : Shouldn't need any customization here
     dispatch_key key = get_dispatch_key(instance);
@@ -5167,15 +5142,12 @@ static inline bool verifyWaitFenceState(layer_data *dev_data, VkFence fence, con
 static void RetireFence(layer_data *dev_data, VkFence fence) {
     auto pFence = getFenceNode(dev_data, fence);
     if (pFence->signaler.first != VK_NULL_HANDLE) {
-        /* Fence signaller is a queue -- use this as proof that prior operations
-         * on that queue have completed.
-         */
+        // Fence signaller is a queue -- use this as proof that prior operations on that queue have completed.
         RetireWorkOnQueue(dev_data, getQueueState(dev_data, pFence->signaler.first), pFence->signaler.second);
     }
     else {
-        /* Fence signaller is the WSI. We're not tracking what the WSI op
-         * actually /was/ in CV yet, but we need to mark the fence as retired.
-         */
+        // Fence signaller is the WSI. We're not tracking what the WSI op actually /was/ in CV yet, but we need to mark
+        // the fence as retired.
         pFence->state = FENCE_RETIRED;
     }
 }
@@ -6532,14 +6504,12 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateI
 }
 
 static void ResolveRemainingLevelsLayers(layer_data *dev_data, VkImageSubresourceRange *range, VkImage image) {
-    /* expects global_lock to be held by caller */
+    // Expects global_lock to be held by caller
 
     auto image_state = getImageState(dev_data, image);
     if (image_state) {
-        /* If the caller used the special values VK_REMAINING_MIP_LEVELS and
-         * VK_REMAINING_ARRAY_LAYERS, resolve them now in our internal state to
-         * the actual values.
-         */
+        // If the caller used the special values VK_REMAINING_MIP_LEVELS and VK_REMAINING_ARRAY_LAYERS, resolve them now in our
+        // internal state to the actual values.
         if (range->levelCount == VK_REMAINING_MIP_LEVELS) {
             range->levelCount = image_state->createInfo.mipLevels - range->baseMipLevel;
         }
@@ -6554,7 +6524,7 @@ static void ResolveRemainingLevelsLayers(layer_data *dev_data, VkImageSubresourc
 // values VK_REMAINING_MIP_LEVELS or VK_REMAINING_ARRAY_LAYERS.
 static void ResolveRemainingLevelsLayers(layer_data *dev_data, uint32_t *levels, uint32_t *layers, VkImageSubresourceRange range,
                                          VkImage image) {
-    /* expects global_lock to be held by caller */
+    // Expects global_lock to be held by caller
 
     *levels = range.levelCount;
     *layers = range.layerCount;
@@ -8002,7 +7972,7 @@ VKAPI_ATTR void VKAPI_CALL CmdBindVertexBuffers(VkCommandBuffer commandBuffer, u
         dev_data->dispatch_table.CmdBindVertexBuffers(commandBuffer, firstBinding, bindingCount, pBuffers, pOffsets);
 }
 
-/* expects global_lock to be held by caller */
+// Expects global_lock to be held by caller
 static void MarkStoreImagesAndBuffersAsWritten(layer_data *dev_data, GLOBAL_CB_NODE *pCB) {
     for (auto imageView : pCB->updateImages) {
         auto view_state = getImageViewState(dev_data, imageView);
@@ -10501,13 +10471,11 @@ static bool ValidateLayouts(const layer_data *dev_data, VkDevice device, const V
 
             switch (subpass.pColorAttachments[j].layout) {
             case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-                /* This is ideal. */
+                // This is ideal.
                 break;
 
             case VK_IMAGE_LAYOUT_GENERAL:
-                /* May not be optimal; TODO: reconsider this warning based on
-                 * other constraints?
-                 */
+                // May not be optimal; TODO: reconsider this warning based on other constraints?
                 skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
                                 VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
                                 "Layout for color attachment is GENERAL but should be COLOR_ATTACHMENT_OPTIMAL.");
@@ -10530,21 +10498,19 @@ static bool ValidateLayouts(const layer_data *dev_data, VkDevice device, const V
             switch (subpass.pDepthStencilAttachment->layout) {
             case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
             case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
-                /* These are ideal. */
+                // These are ideal.
                 break;
 
             case VK_IMAGE_LAYOUT_GENERAL:
-                /* May not be optimal; TODO: reconsider this warning based on
-                 * other constraints? GENERAL can be better than doing a bunch
-                 * of transitions.
-                 */
+                // May not be optimal; TODO: reconsider this warning based on other constraints? GENERAL can be better than doing
+                // a bunch of transitions.
                 skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
                                 VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
                                 "GENERAL layout for depth attachment may not give optimal performance.");
                 break;
 
             default:
-                /* No other layouts are acceptable */
+                // No other layouts are acceptable
                 skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
                                 __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
                                 "Layout for depth attachment is %s but can only be DEPTH_STENCIL_ATTACHMENT_OPTIMAL, "
@@ -10567,20 +10533,18 @@ static bool ValidateLayouts(const layer_data *dev_data, VkDevice device, const V
             switch (subpass.pInputAttachments[j].layout) {
             case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
             case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-                /* These are ideal. */
+                // These are ideal.
                 break;
 
             case VK_IMAGE_LAYOUT_GENERAL:
-                /* May not be optimal. TODO: reconsider this warning based on
-                 * other constraints.
-                 */
+                // May not be optimal. TODO: reconsider this warning based on other constraints.
                 skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
                                 VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
                                 "Layout for input attachment is GENERAL but should be READ_ONLY_OPTIMAL.");
                 break;
 
             default:
-                /* No other layouts are acceptable */
+                // No other layouts are acceptable
                 skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                 DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
                                 "Layout for input attachment is %s but can only be READ_ONLY_OPTIMAL or GENERAL.",
@@ -10633,7 +10597,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateShaderModule(VkDevice device, const VkShade
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     bool skip_call = false;
 
-    /* Use SPIRV-Tools validator to try and catch any issues with the module itself */
+    // Use SPIRV-Tools validator to try and catch any issues with the module itself
     spv_context ctx = spvContextCreate(SPV_ENV_VULKAN_1_0);
     spv_const_binary_t binary { pCreateInfo->pCode, pCreateInfo->codeSize / sizeof(uint32_t) };
     spv_diagnostic diag = nullptr;
@@ -12148,7 +12112,7 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, VkSwapchainC
     // Validate pCreateInfo values with the results of
     // vkGetPhysicalDeviceSurfacePresentModesKHR():
     if (physical_device_state->vkGetPhysicalDeviceSurfacePresentModesKHRState != QUERY_DETAILS) {
-        /* FIFO is required to always be supported */
+        // FIFO is required to always be supported
         if (pCreateInfo->presentMode != VK_PRESENT_MODE_FIFO_KHR) {
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                  reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_CREATE_BEFORE_QUERY,
