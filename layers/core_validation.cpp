@@ -8263,7 +8263,7 @@ VKAPI_ATTR void VKAPI_CALL CmdDispatch(VkCommandBuffer commandBuffer, uint32_t x
     if (!skip) {
         dev_data->dispatch_table.CmdDispatch(commandBuffer, x, y, z);
         lock.lock();
-        PostCallRecordCmdDraw(dev_data, cb_state, VK_PIPELINE_BIND_POINT_COMPUTE, &active_set_bindings_pairs, &active_bindings);
+        PostCallRecordCmdDispatch(dev_data, cb_state, VK_PIPELINE_BIND_POINT_COMPUTE, &active_set_bindings_pairs, &active_bindings);
         lock.unlock();
     }
 }
