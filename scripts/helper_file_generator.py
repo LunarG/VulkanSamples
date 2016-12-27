@@ -136,8 +136,9 @@ class HelperFileOutputGenerator(OutputGenerator):
         groupElem = groupinfo.elem
         value_list = []
         for elem in groupElem.findall('enum'):
-            #indent = elem.get('name')
-            value_list.append(elem.get('name'))
+            if elem.get('supported') != 'disabled':
+                item_name = elem.get('name')
+                value_list.append(item_name)
         if value_list is not None:
             self.enum_output += self.GenerateEnumStringConversion(groupName, value_list)
     #
