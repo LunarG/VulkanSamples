@@ -38,7 +38,6 @@ def handle_args():
     parser.add_argument('input_file', help='The input header file from which code will be generated.')
     parser.add_argument('--rel_out_dir', required=False, default='vktrace_gen', help='Path relative to exec path to write output files. Will be created if needed.')
     parser.add_argument('--abs_out_dir', required=False, default=None, help='Absolute path to write output files. Will be created if needed.')
-    parser.add_argument('--gen_enum_string_helper', required=False, action='store_true', default=False, help='Enable generation of helper header file to print string versions of enums.')
     parser.add_argument('--gen_struct_wrappers', required=False, action='store_true', default=False, help='Enable generation of struct wrapper classes.')
     parser.add_argument('--gen_struct_sizes', required=False, action='store_true', default=False, help='Enable generation of struct sizes.')
     parser.add_argument('--quiet', required=False, action='store_true', default=False, help='Suppress output from running the script.')
@@ -1015,46 +1014,6 @@ class StructWrapperGen:
                 ss_src.append('#endif')
         return "\n".join(ss_src)
 
-class EnumCodeGen:
-    def __init__(self, enum_type_dict=None, enum_val_dict=None, typedef_fwd_dict=None, in_file=None, out_sh_file=None):
-        self.et_dict = enum_type_dict
-        self.ev_dict = enum_val_dict
-        self.tf_dict = typedef_fwd_dict
-        self.in_file = in_file
-        self.out_sh_file = out_sh_file
-        self.eshfg = CommonFileGen(self.out_sh_file)
-
-    def generateStringHelper(self):
-        self.eshfg.setHeader(self._generateSHHeader())
-        self.eshfg.setBody(self._generateSHBody())
-        self.eshfg.generate()
-
-    def _generateSHBody(self):
-        body = []
-#        with open(self.out_file, "a") as hf:
-            # bet == base_enum_type, fet == final_enum_type
-        for bet in sorted(self.et_dict):
-            fet = self.tf_dict[bet]
-            body.append("static inline const char* string_%s(%s input_value)\n{\n    switch ((%s)input_value)\n    {" % (fet, fet, fet))
-            for e in sorted(self.et_dict[bet]):
-                if (self.ev_dict[e]['unique']):
-                    body.append('        case %s:\n            return "%s";' % (e, e))
-            body.append('        default:\n            return "Unhandled %s";\n    }\n}\n\n' % (fet))
-        if len(body) > 0 and body[-1].endswith("\n\n"):
-            # strip extra newline from end
-            body[-1] = body[-1][:-1]
-        return "\n".join(body)
-
-    def _generateSHHeader(self):
-        header = []
-        header.append('#pragma once\n')
-        header.append('#ifdef _WIN32\n')
-        header.append('#pragma warning( disable : 4065 )\n')
-        header.append('#endif\n')
-        header.append('#include <vulkan/%s>\n\n\n' % self.in_file)
-        return "\n".join(header)
-
-
 def main(argv=None):
     opts = handle_args()
     # Parse input file and fill out global dicts
@@ -1093,13 +1052,6 @@ def main(argv=None):
         if not opts.quiet:
             print("Creating output dir %s" % os.path.dirname(enum_sh_filename))
         os.mkdir(os.path.dirname(enum_sh_filename))
-    if opts.gen_enum_string_helper:
-        if not opts.quiet:
-            print("Generating enum string helper to %s" % enum_sh_filename)
-        eg = EnumCodeGen(enum_type_dict, enum_val_dict, typedef_fwd_dict, os.path.basename(opts.input_file), enum_sh_filename)
-        eg.generateStringHelper()
-    #for struct in struct_dict:
-    #print(struct)
     if opts.gen_struct_wrappers:
         sw = StructWrapperGen(struct_dict, os.path.basename(opts.input_file).strip(".h"), os.path.dirname(enum_sh_filename), opts.quiet)
         #print(sw.get_class_name(struct))
