@@ -8239,7 +8239,7 @@ static bool PreCallValidateCmdDispatch(
         *active_set_bindings_pairs,
     std::unordered_set<uint32_t> *active_bindings, const char *caller) {
     return ValidateCmdDrawType(dev_data, cmd_buffer, indexed, bind_point, CMD_DISPATCH, cb_state, active_set_bindings_pairs,
-                               active_bindings, caller, VALIDATION_ERROR_01365);
+                               active_bindings, caller, VALIDATION_ERROR_01562);
 }
 
 static void PostCallRecordCmdDispatch(
