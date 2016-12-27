@@ -15728,7 +15728,7 @@ TEST_F(VkLayerTest, ClearImageErrors) {
     ds_image_create_info.extent.width = 64;
     ds_image_create_info.extent.height = 64;
     ds_image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-    ds_image_create_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    ds_image_create_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
     vk_testing::Image ds_image;
     ds_image.init(*m_device, (const VkImageCreateInfo &)ds_image_create_info, reqs);
@@ -15746,7 +15746,7 @@ TEST_F(VkLayerTest, ClearImageErrors) {
                                                                         "image created without "
                                                                         "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
 
-    vkCmdClearColorImage(m_commandBuffer->GetBufferHandle(), ds_image.handle(), VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1,
+    vkCmdClearColorImage(m_commandBuffer->GetBufferHandle(), color_image.handle(), VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1,
                          &color_range);
 
     m_errorMonitor->VerifyFound();
@@ -15756,7 +15756,7 @@ TEST_F(VkLayerTest, ClearImageErrors) {
                                          "vkCmdClearDepthStencilImage called without a depth/stencil image.");
 
     vkCmdClearDepthStencilImage(m_commandBuffer->GetBufferHandle(), color_image.handle(),
-                                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, &clear_value, 1, &ds_range);
+                                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_value, 1, &ds_range);
 
     m_errorMonitor->VerifyFound();
 }
