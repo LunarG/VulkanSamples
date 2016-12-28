@@ -16869,6 +16869,16 @@ TEST_F(VkPositiveLayerTest, TestAliasedMemoryTracking) {
     vkDestroyBuffer(m_device->device(), buffer, NULL);
     vkDeviceWaitIdle(m_device->device());
 
+    // Use optimal as some platforms report linear support but then fail image creation
+    VkImageTiling image_tiling = VK_IMAGE_TILING_OPTIMAL;
+    VkImageFormatProperties image_format_properties;
+    vkGetPhysicalDeviceImageFormatProperties(gpu(), VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TYPE_2D, image_tiling,
+                                             VK_IMAGE_USAGE_TRANSFER_SRC_BIT, 0, &image_format_properties);
+    if (image_format_properties.maxExtent.width == 0) {
+        printf("Image format not supported; skipped.\n");
+        vkFreeMemory(m_device->device(), mem, NULL);
+        return;
+    }
     VkImageCreateInfo image_create_info = {};
     image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     image_create_info.pNext = NULL;
@@ -16880,19 +16890,13 @@ TEST_F(VkPositiveLayerTest, TestAliasedMemoryTracking) {
     image_create_info.mipLevels = 1;
     image_create_info.arrayLayers = 1;
     image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
-    image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+    image_create_info.tiling = image_tiling;
     image_create_info.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
     image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     image_create_info.queueFamilyIndexCount = 0;
     image_create_info.pQueueFamilyIndices = NULL;
     image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     image_create_info.flags = 0;
-
-    VkMemoryAllocateInfo mem_alloc = {};
-    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    mem_alloc.pNext = NULL;
-    mem_alloc.allocationSize = 0;
-    mem_alloc.memoryTypeIndex = 0;
 
     /* Create a mappable image.  It will be the texture if linear images are ok
     * to be textures or it will be the staging image if they are not.
@@ -16902,10 +16906,16 @@ TEST_F(VkPositiveLayerTest, TestAliasedMemoryTracking) {
 
     vkGetImageMemoryRequirements(m_device->device(), image, &mem_reqs);
 
+    VkMemoryAllocateInfo mem_alloc = {};
+    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    mem_alloc.pNext = NULL;
+    mem_alloc.allocationSize = 0;
+    mem_alloc.memoryTypeIndex = 0;
     mem_alloc.allocationSize = mem_reqs.size;
 
     pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
     if (!pass) {
+        vkFreeMemory(m_device->device(), mem, NULL);
         vkDestroyImage(m_device->device(), image, NULL);
         return;
     }
