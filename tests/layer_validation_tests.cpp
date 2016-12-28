@@ -7958,7 +7958,7 @@ TEST_F(VkLayerTest, PSOLineWidthInvalid) {
 TEST_F(VkLayerTest, NullRenderPass) {
     // Bind a NULL RenderPass
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "You cannot use a NULL RenderPass object in vkCmdBeginRenderPass()");
+                                         "vkCmdBeginRenderPass: required parameter pRenderPassBegin specified as NULL");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
