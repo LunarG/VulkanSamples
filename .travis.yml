@@ -1,4 +1,7 @@
 language: c++
+compiler:
+  - clang
+  - gcc
 os: linux
 dist: trusty
 before_install: sudo apt-get install git cmake build-essential bison libx11-dev libxcb1-dev libwayland-dev libmirclient-dev
