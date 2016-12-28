@@ -267,6 +267,19 @@ class HelperFileOutputGenerator(OutputGenerator):
         outstring += '}\n'
         return outstring
     #
+    # Combine enum string helper header file preamble with body text and return
+    def GenerateEnumStringHelperHeader(self):
+            enum_string_helper_header = '\n'
+            enum_string_helper_header += '#pragma once\n'
+            enum_string_helper_header += '#ifdef _WIN32\n'
+            enum_string_helper_header += '#pragma warning( disable : 4065 )\n'
+            enum_string_helper_header += '#endif\n'
+            enum_string_helper_header += '\n'
+            enum_string_helper_header += '#include <vulkan/vulkan.h>\n'
+            enum_string_helper_header += '\n'
+            enum_string_helper_header += self.enum_output
+            return enum_string_helper_header
+    #
     # struct_size_header: build function prototypes for header file
     def GenerateStructSizeHeader(self):
         outstring = ''
@@ -283,35 +296,68 @@ class HelperFileOutputGenerator(OutputGenerator):
         outstring += '#endif'
         return outstring
     #
+    # Combine struct size helper header file preamble with body text and return
+    def GenerateStructSizeHelperHeader(self):
+        struct_size_helper_header = '\n'
+        struct_size_helper_header += '#ifdef __cplusplus\n'
+        struct_size_helper_header += 'extern "C" {\n'
+        struct_size_helper_header += '#endif\n'
+        struct_size_helper_header += '\n'
+        struct_size_helper_header += '#include <stdio.h>\n'
+        struct_size_helper_header += '#include <stdlib.h>\n'
+        struct_size_helper_header += '#include <vulkan/vulkan.h>\n'
+        struct_size_helper_header += '\n'
+        struct_size_helper_header += '// Function Prototypes\n'
+        struct_size_helper_header += self.GenerateStructSizeHeader()
+        return struct_size_helper_header
+
+    #
+    # struct_size_helper source -- create bodies of struct size helper functions
+    def GenerateStructSizeSource(self):
+        outstring = ''
+        for item in self.structMembers:
+
+            if item.name == 'VkBindSparseInfo':
+                stop = 'here'
+
+            lower_case_name = item.name.lower()
+            if item.ifdef_protect != None:
+                outstring += '#ifdef %s\n' % item.ifdef_protect
+            outstring += 'size_t vk_size_%s(const %s* struct_ptr) {\n' % (item.name.lower(), item.name)
+            outstring += '    size_t struct_size = 0;\n'
+            outstring += '    if (struct_ptr) {\n'
+            outstring += '        struct_size = sizeof(%s);\n' % item.name
+            outstring += '    }\n'
+            outstring += '    return struct_size\n'
+            outstring += '}\n'
+            if item.ifdef_protect != None:
+                outstring += '#endif // %s\n' % item.ifdef_protect
+        outstring += '#ifdef __cplusplus\n'
+        outstring += '}\n'
+        outstring += '#endif'
+        return outstring
+    #
+    # Combine struct size helper source file preamble with body text and return
+    def GenerateStructSizeHelperSource(self):
+        struct_size_helper_source = '\n'
+        struct_size_helper_source += '#include "vk_struct_size_helper.h"\n'
+        struct_size_helper_source += '#include <string.h>\n'
+        struct_size_helper_source += '#include <assert.h>\n'
+        struct_size_helper_source += '\n'
+        struct_size_helper_source += '// Function Definitions\n'
+        struct_size_helper_source += self.GenerateStructSizeSource()
+        return struct_size_helper_source
+
+
+
+
+    #
     # Create a helper file and return it as a string
     def OutputDestFile(self):
         out_file_entries = ''
         if self.helper_file_type == 'enum_string_header':
-            out_file_entries = '\n'
-            out_file_entries += '#pragma once\n'
-            out_file_entries += '#ifdef _WIN32\n'
-            out_file_entries += '#pragma warning( disable : 4065 )\n'
-            out_file_entries += '#endif\n'
-            out_file_entries += '\n'
-            out_file_entries += '#include <vulkan/vulkan.h>\n'
-            out_file_entries += '\n'
-            out_file_entries += self.enum_output
+            return self.GenerateEnumStringHelperHeader()
         elif self.helper_file_type == 'struct_size_header':
-            out_file_entries = '\n'
-            out_file_entries += '#ifdef __cplusplus\n'
-            out_file_entries += 'extern "C" {\n'
-            out_file_entries += '#endif\n'
-            out_file_entries += '\n'
-            out_file_entries += '#include <stdio.h>\n'
-            out_file_entries += '#include <stdlib.h>\n'
-            out_file_entries += '#include <vulkan/vulkan.h>\n'
-            out_file_entries += '\n'
-            out_file_entries += '// Function Prototypes\n'
-            out_file_entries += self.GenerateStructSizeHeader()
+            return self.GenerateStructSizeHelperHeader()
         elif self.helper_file_type == 'struct_size_source':
-            out_file_entries = '\n'
-            out_file_entries += 'Helper File source code\n'
-            out_file_entries += '\n'
-            out_file_entries += 'helper file.c \n'
-            out_file_entries += '\n'
-        return out_file_entries
+            return self.GenerateStructSizeHelperSource()
