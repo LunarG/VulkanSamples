@@ -75,10 +75,10 @@ class HelperFileOutputGenerator(OutputGenerator):
                  diagFile = sys.stdout):
         OutputGenerator.__init__(self, errFile, warnFile, diagFile)
         # Internal state - accumulators for different inner block text
-        self.enum_output = ''      # string built up of enum string routines
-        self.enum_list = ()
+        self.enum_output = ''                             # string built up of enum string routines
+        self.struct_size_h_output = ''                    # string built up of struct size header output
+        self.struct_size_c_output = ''                    # string built up of struct size source output
         # Internal state - accumulators for different inner block text
-        ########## self.sections = dict([(section, []) for section in self.ALL_SECTIONS])
         self.structNames = []                             # List of Vulkan struct typenames
         self.structTypes = dict()                         # Map of Vulkan struct typename to required VkStructureType
         self.handleTypes = set()                          # Set of handle type names
@@ -89,7 +89,7 @@ class HelperFileOutputGenerator(OutputGenerator):
         self.StructType = namedtuple('StructType', ['name', 'value'])
         self.CommandParam = namedtuple('CommandParam', ['type', 'name', 'ispointer', 'isconst', 'iscount', 'len', 'extstructs', 'cdecl', 'islocal', 'iscreate', 'isdestroy'])
         self.CommandData = namedtuple('CommandData', ['name', 'return_type', 'params', 'cdecl'])
-        self.StructMemberData = namedtuple('StructMemberData', ['name', 'members'])
+        self.StructMemberData = namedtuple('StructMemberData', ['name', 'members', 'ifdef_protect'])
     #
     # Called once at the beginning of each run
     def beginFile(self, genOpts):
@@ -249,7 +249,7 @@ class HelperFileOutputGenerator(OutputGenerator):
                                                  islocal=False,
                                                  iscreate=False,
                                                  isdestroy=False))
-        self.structMembers.append(self.StructMemberData(name=typeName, members=membersInfo))
+        self.structMembers.append(self.StructMemberData(name=typeName, members=membersInfo, ifdef_protect=self.featureExtraProtect))
     #
     # Enum_string_header: Create a routine to convert an enumerated value into a string
     def GenerateEnumStringConversion(self, groupName, value_list):
@@ -258,7 +258,6 @@ class HelperFileOutputGenerator(OutputGenerator):
         outstring += '{\n'
         outstring += '    switch ((%s)input_value)\n' % groupName
         outstring += '    {\n'
-
         for item in value_list:
             outstring += '        case %s:\n' % item
             outstring += '            return "%s";\n' % item
@@ -266,6 +265,22 @@ class HelperFileOutputGenerator(OutputGenerator):
         outstring += '            return "Unhandled %s";\n' % groupName
         outstring += '    }\n'
         outstring += '}\n'
+        return outstring
+    #
+    # struct_size_header: build function prototypes for header file
+    def GenerateStructSizeHeader(self):
+        outstring = ''
+        outstring += 'size_t get_struct_chain_size(const void* struct_ptr);\n'
+        for item in self.structMembers:
+            lower_case_name = item.name.lower()
+            if item.ifdef_protect != None:
+                outstring += '#ifdef %s\n' % item.ifdef_protect
+            outstring += 'size_t vk_size_%s(const %s* struct_ptr);\n' % (item.name.lower(), item.name)
+            if item.ifdef_protect != None:
+                outstring += '#endif // %s\n' % item.ifdef_protect
+        outstring += '#ifdef __cplusplus\n'
+        outstring += '}\n'
+        outstring += '#endif'
         return outstring
     #
     # Create a helper file and return it as a string
@@ -283,10 +298,16 @@ class HelperFileOutputGenerator(OutputGenerator):
             out_file_entries += self.enum_output
         elif self.helper_file_type == 'struct_size_header':
             out_file_entries = '\n'
-            out_file_entries += 'Helper File header code\n'
+            out_file_entries += '#ifdef __cplusplus\n'
+            out_file_entries += 'extern "C" {\n'
+            out_file_entries += '#endif\n'
             out_file_entries += '\n'
-            out_file_entries += 'helper file.h \n'
+            out_file_entries += '#include <stdio.h>\n'
+            out_file_entries += '#include <stdlib.h>\n'
+            out_file_entries += '#include <vulkan/vulkan.h>\n'
             out_file_entries += '\n'
+            out_file_entries += '// Function Prototypes\n'
+            out_file_entries += self.GenerateStructSizeHeader()
         elif self.helper_file_type == 'struct_size_source':
             out_file_entries = '\n'
             out_file_entries += 'Helper File source code\n'
