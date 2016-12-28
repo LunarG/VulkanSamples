@@ -116,8 +116,8 @@ class HelperFileOutputGenerator(OutputGenerator):
         copyright += ' * limitations under the License.\n'
         copyright += ' *\n'
         copyright += ' * Author: Mark Lobodzinski <mark@lunarg.com>\n'
-        copyright += ' * Author: Courtney Goeltzenleuchter <courtney@google.com>\n'
-        copyright += ' * Author: Tobin Ehlis <tobin@google.com>\n'
+        copyright += ' * Author: Courtney Goeltzenleuchter <courtneygo@google.com>\n'
+        copyright += ' * Author: Tobin Ehlis <tobine@google.com>\n'
         copyright += ' *\n'
         copyright += ' ****************************************************************************/\n'
         write(copyright, file=self.outFile)
