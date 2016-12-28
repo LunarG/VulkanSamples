@@ -15660,6 +15660,23 @@ TEST_F(VkLayerTest, DepthStencilImageViewWithColorAspectBitError) {
     err = vkCreateImage(m_device->device(), &image_create_info, NULL, &image_good);
     ASSERT_VK_SUCCESS(err);
 
+    // ---Bind image memory---
+    VkMemoryRequirements img_mem_reqs;
+    vkGetImageMemoryRequirements(m_device->device(), image_bad, &img_mem_reqs);
+    VkMemoryAllocateInfo image_alloc_info = {};
+    image_alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    image_alloc_info.pNext = NULL;
+    image_alloc_info.memoryTypeIndex = 0;
+    image_alloc_info.allocationSize = img_mem_reqs.size;
+    bool pass = m_device->phy().set_memory_type(img_mem_reqs.memoryTypeBits, &image_alloc_info, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    ASSERT_TRUE(pass);
+    VkDeviceMemory mem;
+    err = vkAllocateMemory(m_device->device(), &image_alloc_info, NULL, &mem);
+    ASSERT_VK_SUCCESS(err);
+    err = vkBindImageMemory(m_device->device(), image_bad, mem, 0);
+    ASSERT_VK_SUCCESS(err);
+    // -----------------------
+
     VkImageViewCreateInfo image_view_create_info = {};
     image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     image_view_create_info.image = image_bad;
@@ -15669,7 +15686,7 @@ TEST_F(VkLayerTest, DepthStencilImageViewWithColorAspectBitError) {
     image_view_create_info.subresourceRange.baseMipLevel = 0;
     image_view_create_info.subresourceRange.layerCount = 1;
     image_view_create_info.subresourceRange.levelCount = 1;
-    image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT;
 
     VkImageView view;
     err = vkCreateImageView(m_device->device(), &image_view_create_info, NULL, &view);
@@ -15680,6 +15697,8 @@ TEST_F(VkLayerTest, DepthStencilImageViewWithColorAspectBitError) {
     vkDestroyImage(m_device->device(), image_good, NULL);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
+
+    vkFreeMemory(m_device->device(), mem, NULL);
 }
 
 TEST_F(VkLayerTest, ClearImageErrors) {
