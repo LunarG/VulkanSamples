@@ -134,15 +134,17 @@ class HelperFileOutputGenerator(OutputGenerator):
     def genGroup(self, groupinfo, groupName):
         OutputGenerator.genGroup(self, groupinfo, groupName)
         groupElem = groupinfo.elem
-        value_list = []
-        for elem in groupElem.findall('enum'):
-            if elem.get('supported') != 'disabled':
-                item_name = elem.get('name')
-                value_list.append(item_name)
-        if value_list is not None:
-            self.enum_output += self.GenerateEnumStringConversion(groupName, value_list)
+        # For enum_string_helper
+        if self.helper_file_type == 'enum_string_helper':
+            value_list = []
+            for elem in groupElem.findall('enum'):
+                if elem.get('supported') != 'disabled':
+                    item_name = elem.get('name')
+                    value_list.append(item_name)
+            if value_list is not None:
+                self.enum_output += self.GenerateEnumStringConversion(groupName, value_list)
     #
-    # Create a routine to convert an enumerated value into a string
+    # Enum_string_helper: Create a routine to convert an enumerated value into a string
     def GenerateEnumStringConversion(self, groupName, value_list):
         outstring = '\n'
         outstring += 'static inline const char* string_%s(%s input_value)\n' % (groupName, groupName)
@@ -161,13 +163,21 @@ class HelperFileOutputGenerator(OutputGenerator):
     #
     # Create a helper file and return it as a string
     def OutputDestFile(self):
-        out_file_entries = '\n'
-        out_file_entries += '#pragma once\n'
-        out_file_entries += '#ifdef _WIN32\n'
-        out_file_entries += '#pragma warning( disable : 4065 )\n'
-        out_file_entries += '#endif\n'
-        out_file_entries += '\n'
-        out_file_entries += '#include <vulkan/vulkan.h>\n'
-        out_file_entries += '\n'
-        out_file_entries += self.enum_output
+        if self.helper_file_type == 'enum_string_helper':
+            out_file_entries = '\n'
+            out_file_entries += '#pragma once\n'
+            out_file_entries += '#ifdef _WIN32\n'
+            out_file_entries += '#pragma warning( disable : 4065 )\n'
+            out_file_entries += '#endif\n'
+            out_file_entries += '\n'
+            out_file_entries += '#include <vulkan/vulkan.h>\n'
+            out_file_entries += '\n'
+            out_file_entries += self.enum_output
+        elif self.helper_file_type == 'test':
+            out_file_entries = '\n'
+            out_file_entries += 'TEST FILE!!!!!\n'
+            out_file_entries += '\n'
+            out_file_entries += 'THISLL BE SOMETHING, SOMEDAY. \n'
+            out_file_entries += 'MORE STUFF HERE\n'
+            out_file_entries += '\n'
         return out_file_entries
