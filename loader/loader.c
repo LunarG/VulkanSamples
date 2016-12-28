@@ -4318,7 +4318,7 @@ VKAPI_ATTR void VKAPI_CALL terminator_DestroyInstance(
     loader_destroy_generic_list(
         ptr_instance, (struct loader_generic_list *)&ptr_instance->ext_list);
     if (ptr_instance->phys_devs_term) {
-        for (uint32_t i = 0; i < ptr_instance->total_gpu_count; i++) {
+        for (uint32_t i = 0; i < ptr_instance->phys_dev_count_term; i++) {
             loader_instance_heap_free(ptr_instance,
                                       ptr_instance->phys_devs_term[i]);
         }
