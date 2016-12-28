@@ -8022,8 +8022,8 @@ static void UpdateStateCmdDrawDispatchType(
     vector<std::tuple<cvdescriptorset::DescriptorSet *, std::map<uint32_t, descriptor_req>, std::vector<uint32_t> const *>>
         *active_set_bindings_pairs,
     std::unordered_set<uint32_t> *active_bindings) {
-    MarkStoreImagesAndBuffersAsWritten(dev_data, cb_state);
     UpdateDrawState(dev_data, cb_state, bind_point, active_set_bindings_pairs, active_bindings);
+    MarkStoreImagesAndBuffersAsWritten(dev_data, cb_state);
     UpdateCmdBufferLastCmd(dev_data, cb_state, cmd_type);
 }
 
