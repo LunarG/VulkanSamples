@@ -184,7 +184,7 @@ def makeGenOpts(extensions = [], removeExtensions = [], protect = True, director
             alignFuncParam    = 48)
         ]
 
-    # Options for helper file generator
+    # Helper file generator options for vk_enum_string_helper.h
     genOpts['vk_enum_string_helper.h'] = [
           HelperFileOutputGenerator,
           HelperFileOutputGeneratorOptions(
@@ -202,9 +202,31 @@ def makeGenOpts(extensions = [], removeExtensions = [], protect = True, director
             apicall           = 'VKAPI_ATTR ',
             apientry          = 'VKAPI_CALL ',
             apientryp         = 'VKAPI_PTR *',
-            alignFuncParam    = 48)
+            alignFuncParam    = 48,
+            helper_file_type  = 'enum_string_helper')
         ]
 
+    # Helper file generator options for vk_test.h
+    genOpts['vk_test.h'] = [
+          HelperFileOutputGenerator,
+          HelperFileOutputGeneratorOptions(
+            filename          = 'vk_test.h',
+            directory         = directory,
+            apiname           = 'vulkan',
+            profile           = None,
+            versions          = allVersions,
+            emitversions      = allVersions,
+            defaultExtensions = 'vulkan',
+            addExtensions     = addExtensions,
+            removeExtensions  = removeExtensions,
+            prefixText        = prefixStrings + vkPrefixStrings,
+            protectFeature    = False,
+            apicall           = 'VKAPI_ATTR ',
+            apientry          = 'VKAPI_CALL ',
+            apientryp         = 'VKAPI_PTR *',
+            alignFuncParam    = 48,
+            helper_file_type  = 'test')
+        ]
 
 
 
