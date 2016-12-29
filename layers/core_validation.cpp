@@ -51,7 +51,6 @@
 #if defined(__GNUC__)
 #pragma GCC diagnostic warning "-Wwrite-strings"
 #endif
-#include "vk_struct_size_helper.h"
 #include "core_validation.h"
 #include "vk_layer_table.h"
 #include "vk_layer_data.h"
