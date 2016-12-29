@@ -310,16 +310,19 @@ class HelperFileOutputGenerator(OutputGenerator):
         struct_size_helper_header += '// Function Prototypes\n'
         struct_size_helper_header += self.GenerateStructSizeHeader()
         return struct_size_helper_header
-
+    #
+    # Helper function for declaring a counter variable only once
+    def DeclareCounter(self, string_var, declare_flag):
+        if declare_flag == False:
+            string_var += '        uint32_t i = 0;\n'
+            declare_flag = True
+        return string_var, declare_flag
     #
     # struct_size_helper source -- create bodies of struct size helper functions
     def GenerateStructSizeSource(self):
         outstring = ''
         for item in self.structMembers:
-
-            if item.name == 'VkBindSparseInfo':
-                stop = 'here'
-
+            outstring += '\n'
             lower_case_name = item.name.lower()
             if item.ifdef_protect != None:
                 outstring += '#ifdef %s\n' % item.ifdef_protect
@@ -327,6 +330,32 @@ class HelperFileOutputGenerator(OutputGenerator):
             outstring += '    size_t struct_size = 0;\n'
             outstring += '    if (struct_ptr) {\n'
             outstring += '        struct_size = sizeof(%s);\n' % item.name
+            counter_declared = False
+            for member in item.members:
+                vulkan_type = next((i for i, v in enumerate(self.structMembers) if v[0] == member.type), None)
+                if member.ispointer == True:
+                    if vulkan_type is not None:
+                        # If this is another Vulkan structure call generated size function
+                        if member.len is not None:
+                            outstring, counter_declared = self.DeclareCounter(outstring, counter_declared)
+                            outstring += '        for (i = 0; i < pStruct->%s; i++) {\n' % member.len
+                            outstring += '            struct_size += vk_size_%s(&struct_ptr->%s[i]);\n' % (member.type.lower(), member.name)
+                            outstring += '        }\n'
+                        else:
+                            outstring += '        struct_size += vk_size_%s(struct_ptr->%s);\n' % (member.type.lower(), member.name)
+                    else:
+                        if member.type == 'char':
+                            # Deal with sizes of character strings
+                            if member.len is not None:
+                                outstring, counter_declared = self.DeclareCounter(outstring, counter_declared)
+                                outstring += '        for (i = 0; i < pStruct->%s; i++) {\n' % member.len
+                                outstring += '            struct_size += (sizeof(char*) + (sizeof(char) * (1 + strlen(pStruct->%s[i]))));\n' % (member.name)
+                                outstring += '        }\n'
+                            else:
+                                outstring += '        struct_size += (struct_ptr->%s != NULL) ? sizeof(char)*(1+strlen(struct_ptr->%s)) : 0;\n' % (member.name, member.name)
+                        else:
+                            if member.len is not None:
+                                outstring += '        struct_size += struct_ptr->%s * sizeof(%s);\n' % (member.len, member.name)
             outstring += '    }\n'
             outstring += '    return struct_size\n'
             outstring += '}\n'
@@ -347,17 +376,14 @@ class HelperFileOutputGenerator(OutputGenerator):
         struct_size_helper_source += '// Function Definitions\n'
         struct_size_helper_source += self.GenerateStructSizeSource()
         return struct_size_helper_source
-
-
-
-
     #
     # Create a helper file and return it as a string
     def OutputDestFile(self):
-        out_file_entries = ''
         if self.helper_file_type == 'enum_string_header':
             return self.GenerateEnumStringHelperHeader()
         elif self.helper_file_type == 'struct_size_header':
             return self.GenerateStructSizeHelperHeader()
         elif self.helper_file_type == 'struct_size_source':
             return self.GenerateStructSizeHelperSource()
+        else:
+            return 'Bad Helper Generator Option %s' % self.helper_file_type
