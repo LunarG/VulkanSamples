@@ -700,7 +700,7 @@ void cvdescriptorset::DescriptorSet::PerformCopyUpdate(const VkCopyDescriptorSet
 // Prereq: This should be called for a set that has been confirmed to be active for the given cb_node, meaning it's going
 //   to be used in a draw by the given cb_node
 void cvdescriptorset::DescriptorSet::BindCommandBuffer(GLOBAL_CB_NODE *cb_node,
-                                                       const std::unordered_set<uint32_t> *active_bindings) {
+                                                       const std::map<uint32_t, descriptor_req> &binding_req_map) {
     // bind cb to this descriptor set
     cb_bindings.insert(cb_node);
     // Add bindings for descriptor set, the set's pool, and individual objects in the set
@@ -710,7 +710,8 @@ void cvdescriptorset::DescriptorSet::BindCommandBuffer(GLOBAL_CB_NODE *cb_node,
         {reinterpret_cast<uint64_t &>(pool_state_->pool), VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT});
     // For the active slots, use set# to look up descriptorSet from boundDescriptorSets, and bind all of that descriptor set's
     // resources
-    for (auto binding : *active_bindings) {
+    for (auto binding_req_pair : binding_req_map) {
+        auto binding = binding_req_pair.first;
         auto start_idx = p_layout_->GetGlobalStartIndexFromBinding(binding);
         auto end_idx = p_layout_->GetGlobalEndIndexFromBinding(binding);
         for (uint32_t i = start_idx; i <= end_idx; ++i) {

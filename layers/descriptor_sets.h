@@ -365,7 +365,7 @@ class DescriptorSet : public BASE_NODE {
     // Return unordered_set of all command buffers that this set is bound to
     std::unordered_set<GLOBAL_CB_NODE *> GetBoundCmdBuffers() const { return cb_bindings; }
     // Bind given cmd_buffer to this descriptor set
-    void BindCommandBuffer(GLOBAL_CB_NODE *, const std::unordered_set<uint32_t> *);
+    void BindCommandBuffer(GLOBAL_CB_NODE *, const std::map<uint32_t, descriptor_req> &);
     // If given cmd_buffer is in the cb_bindings set, remove it
     void RemoveBoundCommandBuffer(GLOBAL_CB_NODE *cb_node) { cb_bindings.erase(cb_node); }
     VkSampler const *GetImmutableSamplerPtrFromBinding(const uint32_t index) const {
