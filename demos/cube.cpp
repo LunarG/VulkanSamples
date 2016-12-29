@@ -525,7 +525,7 @@ struct Demo {
             vk::CommandBufferUsageFlagBits::eSimultaneousUse);
 
         vk::ClearValue const clearValues[2] = {
-            vk::ClearColorValue(std::array<float, 4>({0.2f, 0.2f, 0.2f, 0.2f})),
+            vk::ClearColorValue(std::array<float, 4>({{0.2f, 0.2f, 0.2f, 0.2f}})),
             vk::ClearDepthStencilValue(1.0f, 0u)};
 
         auto const passInfo =

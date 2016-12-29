@@ -40,7 +40,7 @@ struct ShaderParamBlock {
 Smoke::Smoke(const std::vector<std::string> &args)
     : Game("Smoke", args), multithread_(true), use_push_constants_(false),
       sim_paused_(false), sim_(5000), camera_(2.5f), frame_data_(),
-      render_pass_clear_value_({{ 0.0f, 0.1f, 0.2f, 1.0f }}),
+      render_pass_clear_value_({{{ 0.0f, 0.1f, 0.2f, 1.0f }}}),
       render_pass_begin_info_(),
       primary_cmd_begin_info_(), primary_cmd_submit_info_()
 {
@@ -335,8 +335,8 @@ void Smoke::create_pipeline()
     blend_info.pAttachments = &blend_attachment;
 
     std::array<VkDynamicState, 2> dynamic_states = {
-        VK_DYNAMIC_STATE_VIEWPORT,
-        VK_DYNAMIC_STATE_SCISSOR
+        {VK_DYNAMIC_STATE_VIEWPORT,
+         VK_DYNAMIC_STATE_SCISSOR}
     };
     struct VkPipelineDynamicStateCreateInfo dynamic_info = {};
     dynamic_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;

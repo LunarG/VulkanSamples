@@ -25,7 +25,7 @@ namespace {
 class MeshPicker {
 public:
     MeshPicker() :
-        pattern_({
+        pattern_({{
                 Meshes::MESH_PYRAMID,
                 Meshes::MESH_ICOSPHERE,
                 Meshes::MESH_TEAPOT,
@@ -36,7 +36,7 @@ public:
                 Meshes::MESH_PYRAMID,
                 Meshes::MESH_PYRAMID,
                 Meshes::MESH_PYRAMID,
-                }), cur_(-1)
+                }}), cur_(-1)
     {
     }
 

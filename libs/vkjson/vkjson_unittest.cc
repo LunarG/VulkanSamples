@@ -81,9 +81,9 @@ int main(int argc, char* argv[]) {
     EXPECT(!memcmp(&kv.second, &it->second, sizeof(kv.second)));
   }
 
-  VkImageFormatProperties props = {0};
+  VkImageFormatProperties props = {};
   json = VkJsonImageFormatPropertiesToJson(props);
-  VkImageFormatProperties props2 = {0};
+  VkImageFormatProperties props2 = {};
   result = VkJsonImageFormatPropertiesFromJson(json, &props2, &errors);
   EXPECT(result);
   if (!result)
