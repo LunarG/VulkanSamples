@@ -164,6 +164,34 @@ const VkLayerInstanceDispatchTable instance_disp = {
         terminator_GetPhysicalDeviceGeneratedCommandsPropertiesNVX,
 };
 
+// A null-terminated list of all of the instance extensions supported by the
+// loader
+static const char *const LOADER_INSTANCE_EXTENSIONS[] = {
+    VK_KHR_SURFACE_EXTENSION_NAME,
+    VK_KHR_DISPLAY_EXTENSION_NAME,
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+    VK_KHR_XLIB_SURFACE_EXTENSION_NAME,
+#endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
+    VK_KHR_XCB_SURFACE_EXTENSION_NAME,
+#endif
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+    VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME,
+#endif
+#ifdef VK_USE_PLATFORM_MIR_KHR
+    VK_KHR_MIR_SURFACE_EXTENSION_NAME,
+#endif
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+    VK_KHR_ANDROID_SURFACE_EXTENSION_NAME,
+#endif
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+    VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
+#endif
+    VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
+    VK_NV_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME,
+    VK_EXT_VALIDATION_FLAGS_EXTENSION_NAME,
+    NULL};
+
 LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_init);
 
 void *loader_instance_heap_alloc(const struct loader_instance *instance,
@@ -1237,6 +1265,30 @@ VkResult loader_get_icd_loader_instance_extensions(
                       .EnumerateInstanceExtensionProperties,
             icd_tramp_list->scanned_list[i].lib_name, &icd_exts);
         if (VK_SUCCESS == res) {
+            // Remove any extensions not recognized by the loader
+            for (int32_t j = 0; j < (int32_t)icd_exts.count; j++) {
+
+                // See if the extension is in the list of supported extensions
+                bool found = false;
+                for (uint32_t k = 0; LOADER_INSTANCE_EXTENSIONS[k] != NULL;
+                     k++) {
+                    if (strcmp(icd_exts.list[j].extensionName,
+                               LOADER_INSTANCE_EXTENSIONS[k]) == 0) {
+                        found = true;
+                        break;
+                    }
+                }
+
+                // If it isn't in the list, remove it
+                if (!found) {
+                    for (uint32_t k = j + 1; k < icd_exts.count; k++) {
+                        icd_exts.list[k - 1] = icd_exts.list[k];
+                    }
+                    --icd_exts.count;
+                    --j;
+                }
+            }
+
             res = loader_add_to_ext_list(inst, inst_exts, icd_exts.count,
                                          icd_exts.list);
         }
@@ -4037,6 +4089,21 @@ VkResult loader_validate_instance_extensions(
             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                        "Loader: Instance ppEnabledExtensionNames contains "
                        "string that is too long or is badly formed");
+            return VK_ERROR_EXTENSION_NOT_PRESENT;
+        }
+
+        // See if the extension is in the list of supported extensions
+        bool found = false;
+        for (uint32_t j = 0; LOADER_INSTANCE_EXTENSIONS[j] != NULL; j++) {
+            if (strcmp(pCreateInfo->ppEnabledExtensionNames[i],
+                       LOADER_INSTANCE_EXTENSIONS[j]) == 0) {
+                found = true;
+                break;
+            }
+        }
+
+        // If it isn't in the list, return an error
+        if (!found) {
             return VK_ERROR_EXTENSION_NOT_PRESENT;
         }
 
