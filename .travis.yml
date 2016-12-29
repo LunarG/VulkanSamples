@@ -1,12 +1,50 @@
-language: c++
-compiler:
-  - clang
-  - gcc
-os: linux
+# Build Configuration for Travis CI
+# https://travis-ci.org
+
 dist: trusty
-before_install: sudo apt-get install git cmake build-essential bison libx11-dev libxcb1-dev libwayland-dev libmirclient-dev
+sudo: required
+language: cpp
+
+matrix:
+  include:
+    # Android build.
+    - os: linux
+      compiler: gcc
+      env: VULKAN_BUILD_TARGET=ANDROID ANDROID_TARGET=android-21 ANDROID_ABI=armeabi-v7a
+    # Linux GCC debug build.
+    - os: linux
+      compiler: gcc
+      env: VULKAN_BUILD_TARGET=LINUX
+    # Linux clang debug build.
+    - os: linux
+      compiler: clang
+      env: VULKAN_BUILD_TARGET=LINUX
+
+before_install: 
+  # Install the appropriate Linux packages.
+  - if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then
+      sudo apt-get -y install libwayland-dev libmirclient-dev;
+    fi
+
+  # Install the Android NDK.
+  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then
+      export ARCH=`uname -m`;
+      wget http://dl.google.com/android/repository/android-ndk-r12b-linux-${ARCH}.zip;
+      unzip -u -q android-ndk-r12b-linux-${ARCH}.zip;
+      export ANDROID_NDK_HOME=`pwd`/android-ndk-r12b;
+      export JAVA_HOME="/usr/lib/jvm/java-8-oracle";
+      export PATH="$ANDROID_NDK_HOME:$PATH";
+    fi
+
 script:
-  - ./update_external_sources.sh
-  - cmake -H. -Bdbuild -DCMAKE_BUILD_TYPE=Debug
-  - cd dbuild
-  - make
+  - if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then
+      ./update_external_sources.sh;
+      cmake -H. -Bdbuild -DCMAKE_BUILD_TYPE=Debug;
+      make -C dbuild;
+    fi
+  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then
+      cd build-android;
+      ./update_external_sources_android.sh;
+      ./android-generate.sh;
+      ndk-build APP_ABI=$ANDROID_ABI;
+    fi
