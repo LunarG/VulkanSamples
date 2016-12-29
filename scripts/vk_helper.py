@@ -39,7 +39,6 @@ def handle_args():
     parser.add_argument('--rel_out_dir', required=False, default='vktrace_gen', help='Path relative to exec path to write output files. Will be created if needed.')
     parser.add_argument('--abs_out_dir', required=False, default=None, help='Absolute path to write output files. Will be created if needed.')
     parser.add_argument('--gen_struct_wrappers', required=False, action='store_true', default=False, help='Enable generation of struct wrapper classes.')
-    parser.add_argument('--gen_struct_sizes', required=False, action='store_true', default=False, help='Enable generation of struct sizes.')
     parser.add_argument('--quiet', required=False, action='store_true', default=False, help='Suppress output from running the script.')
     #parser.add_argument('--test', action='store_true', default=False, help='Run simple test.')
     return parser.parse_args()
@@ -485,10 +484,6 @@ class StructWrapperGen:
         # Safe Struct (ss) header and source files
         self.ssh = CommonFileGen(self.safe_struct_header_filename)
         self.sss = CommonFileGen(self.safe_struct_source_filename)
-        self.size_helper_filename = os.path.join(out_dir, self.api_prefix+"_struct_size_helper.h")
-        self.size_helper_c_filename = os.path.join(out_dir, self.api_prefix+"_struct_size_helper.c")
-        self.size_helper_gen = CommonFileGen(self.size_helper_filename)
-        self.size_helper_c_gen = CommonFileGen(self.size_helper_c_filename)
         self.header_txt = ""
         self.definition_txt = ""
         self.quiet = quiet
@@ -517,23 +512,6 @@ class StructWrapperGen:
         self.sss.setHeader(self._generateSafeStructSourceHeader())
         self.sss.setBody(self._generateSafeStructSource())
         self.sss.generate()
-
-    def generateSizeHelper(self):
-        if not self.quiet:
-            print("Generating struct size helper")
-        self.size_helper_gen.setCopyright(self._generateCopyright())
-        self.size_helper_gen.setHeader(self._generateSizeHelperHeader())
-        self.size_helper_gen.setBody(self._generateSizeHelperFunctions())
-        self.size_helper_gen.setFooter(self._generateSizeHelperFooter())
-        self.size_helper_gen.generate()
-
-    def generateSizeHelperC(self):
-        if not self.quiet:
-            print("Generating struct size helper c")
-        self.size_helper_c_gen.setCopyright(self._generateCopyright())
-        self.size_helper_c_gen.setHeader(self._generateSizeHelperHeaderC())
-        self.size_helper_c_gen.setBody(self._generateSizeHelperFunctionsC())
-        self.size_helper_c_gen.generate()
 
     def _generateCopyright(self):
         copyright = []
@@ -576,164 +554,6 @@ class StructWrapperGen:
 
     def _get_size_helper_func_name(self, struct):
         return self._get_func_name(struct, 'size')
-
-    def _generateSizeHelperFunctions(self):
-        sh_funcs = []
-        # just generates prototypes for all the functions
-        for s in sorted(self.struct_dict):
-
-            # Wrap this in platform check since it may contain undefined structs or functions
-            add_platform_wrapper_entry(sh_funcs, typedef_fwd_dict[s])
-            sh_funcs.append('size_t %s(const %s* pStruct);' % (self._get_size_helper_func_name(s), typedef_fwd_dict[s]))
-            add_platform_wrapper_exit(sh_funcs, typedef_fwd_dict[s])
-
-        return "\n".join(sh_funcs)
-
-    def _generateSizeHelperFunctionsC(self):
-        sh_funcs = []
-        # generate function definitions
-        for s in sorted(self.struct_dict):
-
-            # Wrap this in platform check since it may contain undefined structs or functions
-            add_platform_wrapper_entry(sh_funcs, typedef_fwd_dict[s])
-
-            skip_list = [] # Used when struct elements need to be skipped because size already accounted for
-            sh_funcs.append('size_t %s(const %s* pStruct)\n{' % (self._get_size_helper_func_name(s), typedef_fwd_dict[s]))
-            indent = '    '
-            sh_funcs.append('%ssize_t structSize = 0;' % (indent))
-            sh_funcs.append('%sif (pStruct) {' % (indent))
-            indent = '        '
-            sh_funcs.append('%sstructSize = sizeof(%s);' % (indent, typedef_fwd_dict[s]))
-            i_decl = False
-            for m in sorted(self.struct_dict[s]):
-                if m in skip_list:
-                    continue
-                if self.struct_dict[s][m]['dyn_array']:
-                    if self.struct_dict[s][m]['full_type'].count('*') > 1:
-                        if not is_type(self.struct_dict[s][m]['type'], 'struct') and not 'char' in self.struct_dict[s][m]['type'].lower():
-                            if 'ppMemoryBarriers' == self.struct_dict[s][m]['name']:
-                                # TODO : For now be conservative and consider all memBarrier ptrs as largest possible struct
-                                sh_funcs.append('%sstructSize += pStruct->%s*(sizeof(%s*) + sizeof(VkImageMemoryBarrier));' % (indent, self.struct_dict[s][m]['array_size'], self.struct_dict[s][m]['type']))
-                            else:
-                                sh_funcs.append('%sstructSize += pStruct->%s*(sizeof(%s*) + sizeof(%s));' % (indent, self.struct_dict[s][m]['array_size'], self.struct_dict[s][m]['type'], self.struct_dict[s][m]['type']))
-                        else: # This is an array of char* or array of struct ptrs
-                            if not i_decl:
-                                sh_funcs.append('%suint32_t i = 0;' % (indent))
-                                i_decl = True
-                            sh_funcs.append('%sfor (i = 0; i < pStruct->%s; i++) {' % (indent, self.struct_dict[s][m]['array_size']))
-                            indent = '            '
-                            if is_type(self.struct_dict[s][m]['type'], 'struct'):
-                                sh_funcs.append('%sstructSize += (sizeof(%s*) + %s(pStruct->%s[i]));' % (indent, self.struct_dict[s][m]['type'], self._get_size_helper_func_name(self.struct_dict[s][m]['type']), self.struct_dict[s][m]['name']))
-                            else:
-                                sh_funcs.append('%sstructSize += (sizeof(char*) + (sizeof(char) * (1 + strlen(pStruct->%s[i]))));' % (indent, self.struct_dict[s][m]['name']))
-                            indent = '        '
-                            sh_funcs.append('%s}' % (indent))
-                    else:
-                        if is_type(self.struct_dict[s][m]['type'], 'struct'):
-                            if not i_decl:
-                                sh_funcs.append('%suint32_t i = 0;' % (indent))
-                                i_decl = True
-                            sh_funcs.append('%sfor (i = 0; i < pStruct->%s; i++) {' % (indent, self.struct_dict[s][m]['array_size']))
-                            indent = '            '
-                            sh_funcs.append('%sstructSize += %s(&pStruct->%s[i]);' % (indent, self._get_size_helper_func_name(self.struct_dict[s][m]['type']), self.struct_dict[s][m]['name']))
-                            indent = '        '
-                            sh_funcs.append('%s}' % (indent))
-                        else:
-                            sh_funcs.append('%sstructSize += pStruct->%s*sizeof(%s);' % (indent, self.struct_dict[s][m]['array_size'], self.struct_dict[s][m]['type']))
-                elif self.struct_dict[s][m]['ptr'] and 'pNext' != self.struct_dict[s][m]['name'] and 'dpy' != self.struct_dict[s][m]['name']:
-                    if 'char' in self.struct_dict[s][m]['type'].lower():
-                        sh_funcs.append('%sstructSize += (pStruct->%s != NULL) ? sizeof(%s)*(1+strlen(pStruct->%s)) : 0;' % (indent, self.struct_dict[s][m]['name'], self.struct_dict[s][m]['type'], self.struct_dict[s][m]['name']))
-                    elif is_type(self.struct_dict[s][m]['type'], 'struct'):
-                        sh_funcs.append('%sstructSize += %s(pStruct->%s);' % (indent, self._get_size_helper_func_name(self.struct_dict[s][m]['type']), self.struct_dict[s][m]['name']))
-                    elif 'void' not in self.struct_dict[s][m]['type'].lower():
-                        if (self.struct_dict[s][m]['type'] != 'xcb_connection_t'):
-                            sh_funcs.append('%sstructSize += sizeof(%s);' % (indent, self.struct_dict[s][m]['type']))
-                elif 'size_t' == self.struct_dict[s][m]['type'].lower():
-                    sh_funcs.append('%sstructSize += pStruct->%s;' % (indent, self.struct_dict[s][m]['name']))
-                    skip_list.append(m+1)
-            indent = '    '
-            sh_funcs.append('%s}' % (indent))
-            sh_funcs.append("%sreturn structSize;\n}" % (indent))
-
-            # End of platform wrapped section
-            add_platform_wrapper_exit(sh_funcs, typedef_fwd_dict[s])
-
-        # Now generate generic functions to loop over entire struct chain (or just handle single generic structs)
-        for follow_chain in [True, False]:
-            sh_funcs.append('%s' % self.lineinfo.get())
-            if follow_chain:
-                sh_funcs.append('size_t get_struct_chain_size(const void* pStruct)\n{')
-            else:
-                sh_funcs.append('size_t get_dynamic_struct_size(const void* pStruct)\n{')
-            indent = '    '
-            sh_funcs.append('%s// Just use VkApplicationInfo as struct until actual type is resolved' % (indent))
-            sh_funcs.append('%sVkApplicationInfo* pNext = (VkApplicationInfo*)pStruct;' % (indent))
-            sh_funcs.append('%ssize_t structSize = 0;' % (indent))
-            if follow_chain:
-                sh_funcs.append('%swhile (pNext) {' % (indent))
-                indent = '        '
-            sh_funcs.append('%sswitch (pNext->sType) {' % (indent))
-            indent += '    '
-            for e in enum_type_dict:
-                if 'StructureType' in e:
-                    for v in sorted(enum_type_dict[e]):
-                        struct_name = get_struct_name_from_struct_type(v)
-                        if struct_name not in self.struct_dict:
-                            continue
-
-                        if 'WIN32' in v:
-                            sh_funcs.append("#ifdef VK_USE_PLATFORM_WIN32_KHR")
-                        sh_funcs.append('%scase %s:' % (indent, v))
-                        sh_funcs.append('%s{' % (indent))
-                        indent += '    '
-                        sh_funcs.append('%sstructSize += %s((%s*)pNext);' % (indent, self._get_size_helper_func_name(struct_name), struct_name))
-                        sh_funcs.append('%sbreak;' % (indent))
-                        indent = indent[:-4]
-                        sh_funcs.append('%s}' % (indent))
-                        if 'WIN32' in v:
-                            sh_funcs.append("#endif // VK_USE_PLATFORM_WIN32_KHR")
-                    sh_funcs.append('%sdefault:' % (indent))
-                    indent += '    '
-                    sh_funcs.append('%sassert(0);' % (indent))
-                    sh_funcs.append('%sstructSize += 0;' % (indent))
-                    indent = indent[:-4]
-            indent = indent[:-4]
-            sh_funcs.append('%s}' % (indent))
-            if follow_chain:
-                sh_funcs.append('%spNext = (VkApplicationInfo*)pNext->pNext;' % (indent))
-                indent = indent[:-4]
-                sh_funcs.append('%s}' % (indent))
-            sh_funcs.append('%sreturn structSize;\n}' % indent)
-        return "\n".join(sh_funcs)
-
-    def _generateSizeHelperHeader(self):
-        header = []
-        header.append('\n#ifdef __cplusplus\n')
-        header.append('extern "C" {\n')
-        header.append('#endif\n')
-        header.append("\n")
-        header.append("//#includes, #defines, globals and such...\n")
-        for f in self.include_headers:
-            header.append("#include <%s>\n" % f)
-        header.append('\n// Function Prototypes\n')
-        header.append("size_t get_struct_chain_size(const void* pStruct);\n")
-        header.append("size_t get_dynamic_struct_size(const void* pStruct);\n")
-        return "".join(header)
-
-    def _generateSizeHelperHeaderC(self):
-        header = []
-        header.append('#include "vk_struct_size_helper.h"')
-        header.append('#include <string.h>')
-        header.append('#include <assert.h>')
-        header.append('\n// Function definitions\n')
-        return "\n".join(header)
-
-    def _generateSizeHelperFooter(self):
-        footer = []
-        footer.append('\n\n#ifdef __cplusplus')
-        footer.append('}')
-        footer.append('#endif')
-        return "\n".join(footer)
 
     def _generateHeader(self):
         header = []
@@ -1052,18 +872,10 @@ def main(argv=None):
         os.mkdir(os.path.dirname(enum_sh_filename))
     if opts.gen_struct_wrappers:
         sw = StructWrapperGen(struct_dict, os.path.basename(opts.input_file).strip(".h"), os.path.dirname(enum_sh_filename), opts.quiet)
-        #print(sw.get_class_name(struct))
         sw.set_include_headers([input_header,os.path.basename(enum_sh_filename),"stdint.h","cinttypes", "stdio.h","stdlib.h"])
         sw.set_include_headers(["stdio.h", "stdlib.h", input_header])
-        sw.generateSizeHelper()
-        sw.generateSizeHelperC()
         sw.generateSafeStructHeader()
         sw.generateSafeStructs()
-    if opts.gen_struct_sizes:
-        st = StructWrapperGen(struct_dict, os.path.basename(opts.input_file).strip(".h"), os.path.dirname(enum_sh_filename), opts.quiet)
-        st.set_include_headers(["stdio.h", "stdlib.h", input_header])
-        st.generateSizeHelper()
-        st.generateSizeHelperC()
     if not opts.quiet:
         print("DONE!")
     #print(typedef_rev_dict)
