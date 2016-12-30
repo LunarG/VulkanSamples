@@ -5,7 +5,7 @@ This project provides Khronos official ICD loader and validation layers for Vulk
 ## Travis-CI Build Status
 | Platform | Build Status |
 |:--------:|:------------:|
-| Linux    | [![Linux Build Status](https://travis-ci.org/KhronosGroup/Vulkan-LoaderAndValidationLayers.svg)](https://travis-ci.org/KhronosGroup/Vulkan-LoaderAndValidationLayers "Linux Build Status") |
+| Linux/Android | [![Linux Build Status](https://travis-ci.org/KhronosGroup/Vulkan-LoaderAndValidationLayers.svg)](https://travis-ci.org/KhronosGroup/Vulkan-LoaderAndValidationLayers "Linux Build Status") |
 
 ## Introduction
 
