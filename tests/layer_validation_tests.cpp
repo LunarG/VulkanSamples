@@ -3802,9 +3802,7 @@ TEST_F(VkLayerTest, AllocDescriptorFromEmptyPool) {
 TEST_F(VkLayerTest, FreeDescriptorFromOneShotPool) {
     VkResult err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "It is invalid to call vkFreeDescriptorSets() with a pool created "
-                                         "without setting VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT.");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00922);
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -3948,8 +3946,6 @@ TEST_F(VkLayerTest, WriteDescriptorSetIntegrityCheck) {
         "vkUpdateDescriptorSets: if pDescriptorWrites[0].descriptorType is VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, "
         "VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC or "
         "VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, pDescriptorWrites[0].pBufferInfo must not be NULL";
-    const char *stateFlag_ErrorMessage = "Attempting write update to descriptor set ";
-    const char *immutable_ErrorMessage = "Attempting write update to descriptor set ";
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, invalid_BufferInfo_ErrorMessage);
 
@@ -4092,7 +4088,7 @@ TEST_F(VkLayerTest, WriteDescriptorSetIntegrityCheck) {
     descriptor_write.descriptorCount = 2;
 
     // 2) The stateFlags don't match between the first and second descriptor
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, stateFlag_ErrorMessage);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00938);
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
     m_errorMonitor->VerifyFound();
 
@@ -4105,7 +4101,7 @@ TEST_F(VkLayerTest, WriteDescriptorSetIntegrityCheck) {
     VkDescriptorImageInfo imageInfo = {};
     imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     descriptor_write.pImageInfo = &imageInfo;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, immutable_ErrorMessage);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00938);
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
     m_errorMonitor->VerifyFound();
 
@@ -4514,7 +4510,7 @@ TEST_F(VkLayerTest, FramebufferInUseDestroyedSignaled) {
     submit_info.pCommandBuffers = &m_commandBuffer->handle();
     vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
     // Destroy framebuffer while in-flight
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Cannot delete framebuffer 0x");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00422);
     vkDestroyFramebuffer(m_device->device(), fb, NULL);
     m_errorMonitor->VerifyFound();
     // Wait for queue to complete so we can safely destroy everything
@@ -4598,7 +4594,7 @@ TEST_F(VkLayerTest, FramebufferImageInUseDestroyedSignaled) {
     // Submit cmd buffer to put framebuffer and children in-flight
     vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
     // Destroy image attached to framebuffer while in-flight
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Cannot delete image 0x");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00743);
     vkDestroyImage(m_device->device(), image, NULL);
     m_errorMonitor->VerifyFound();
     // Wait for queue to complete so we can safely destroy image and other objects
@@ -6879,10 +6875,10 @@ TEST_F(VkLayerTest, CommandBufferResetErrors) {
     // Calls AllocateCommandBuffers
     VkCommandBufferObj commandBuffer(m_device, m_commandPool);
 
-    // Force the failure by setting the Renderpass and Framebuffer fields with
-    // (fake) data
-    VkCommandBufferBeginInfo cmd_buf_info = {};
+    // Force the failure by setting the Renderpass and Framebuffer fields with (fake) data
     VkCommandBufferInheritanceInfo cmd_buf_hinfo = {};
+    cmd_buf_hinfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+    VkCommandBufferBeginInfo cmd_buf_info = {};
     cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     cmd_buf_info.pNext = NULL;
     cmd_buf_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
@@ -6894,13 +6890,13 @@ TEST_F(VkLayerTest, CommandBufferResetErrors) {
     vkBeginCommandBuffer(commandBuffer.GetBufferHandle(), &cmd_buf_info);
     m_errorMonitor->VerifyFound();
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Attempt to reset command buffer ");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00093);
     VkCommandBufferResetFlags flags = 0; // Don't care about flags for this test
     // Reset attempt will trigger error due to incorrect CommandPool state
     vkResetCommandBuffer(commandBuffer.GetBufferHandle(), flags);
     m_errorMonitor->VerifyFound();
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, " attempts to implicitly reset cmdBuffer created from ");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00105);
     // Transition CB to RECORDED state
     vkEndCommandBuffer(commandBuffer.GetBufferHandle());
     // Now attempting to Begin will implicitly reset, which triggers error
@@ -8058,9 +8054,7 @@ TEST_F(VkLayerTest, RenderPassClearOpMismatch) {
     rp_begin.framebuffer = framebuffer();
     rp_begin.clearValueCount = 0; // Should be 1
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, " has a clearValueCount of 0 but "
-                                                                        "there must be at least 1 entries in "
-                                                                        "pClearValues array to account for ");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00442);
 
     vkCmdBeginRenderPass(m_commandBuffer->GetBufferHandle(), &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -8978,7 +8972,7 @@ TEST_F(VkLayerTest, DSBufferInfoErrors) {
 
     descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     descriptor_write.dstSet = descriptor_set;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, " offset of 257 is greater than buffer ");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00959);
 
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
 
@@ -8986,8 +8980,7 @@ TEST_F(VkLayerTest, DSBufferInfoErrors) {
     // Now cause error due to range of 0
     buff_info.offset = 0;
     buff_info.range = 0;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         " range is not VK_WHOLE_SIZE and is zero, which is not allowed.");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00960);
 
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
 
@@ -8995,7 +8988,7 @@ TEST_F(VkLayerTest, DSBufferInfoErrors) {
     // Now cause error due to range exceeding buffer size - offset
     buff_info.offset = 128;
     buff_info.range = 200;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, " range is 200 which is greater than buffer size ");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00961);
 
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
 
@@ -9573,8 +9566,7 @@ TEST_F(VkLayerTest, SampleDescriptorUpdateError) {
     // Create a single Sampler descriptor and send it an invalid Sampler
     VkResult err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "Attempted write update to sampler descriptor with invalid sampler");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00942);
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     // TODO : Farm Descriptor setup code to helper function(s) to reduce copied
@@ -10174,8 +10166,7 @@ TEST_F(VkLayerTest, MissingClearAttachment) {
     TEST_DESCRIPTION("Points to a wrong colorAttachment index in a VkClearAttachment "
                      "structure passed to vkCmdClearAttachments");
     ASSERT_NO_FATAL_FAILURE(InitState());
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "vkCmdClearAttachments() color attachment index 1 out of range for active subpass 0");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01114);
 
     VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailCmdClearAttachments);
     m_errorMonitor->VerifyFound();
@@ -11152,8 +11143,6 @@ TEST_F(VkLayerTest, InUseDestroyedSignaled) {
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     const char *submit_with_deleted_event_message = "Cannot submit cmd buffer using deleted event 0x";
-    const char *cannot_delete_event_message = "Cannot delete event 0x";
-    const char *cannot_delete_semaphore_message = "Cannot delete semaphore 0x";
     const char *cannot_destroy_fence_message = "Fence 0x";
 
     BeginCommandBuffer();
@@ -11272,11 +11261,11 @@ TEST_F(VkLayerTest, InUseDestroyedSignaled) {
     submit_info.pSignalSemaphores = &semaphore;
     vkQueueSubmit(m_device->m_queue, 1, &submit_info, fence);
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, cannot_delete_event_message);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00213);
     vkDestroyEvent(m_device->device(), event, nullptr);
     m_errorMonitor->VerifyFound();
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, cannot_delete_semaphore_message);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00199);
     vkDestroySemaphore(m_device->device(), semaphore, nullptr);
     m_errorMonitor->VerifyFound();
 
@@ -11318,7 +11307,7 @@ TEST_F(VkLayerTest, QueryPoolInUseDestroyedSignaled) {
     // Submit cmd buffer and then destroy query pool while in-flight
     vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Cannot delete query pool 0x");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01012);
     vkDestroyQueryPool(m_device->handle(), query_pool, NULL);
     m_errorMonitor->VerifyFound();
 
@@ -11343,7 +11332,7 @@ TEST_F(VkLayerTest, PipelineInUseDestroyedSignaled) {
     VkResult err = vkCreatePipelineLayout(m_device->handle(), &pipeline_layout_ci, NULL, &pipeline_layout);
     ASSERT_VK_SUCCESS(err);
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Cannot delete pipeline 0x");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00555);
     // Create PSO to be used for draw-time errors below
     VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
     VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
@@ -11511,7 +11500,7 @@ TEST_F(VkLayerTest, ImageViewInUseDestroyedSignaled) {
     pipe.AddColorAttachment();
     pipe.CreateVKPipeline(pipeline_layout, renderPass());
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Cannot delete image view 0x");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00776);
 
     BeginCommandBuffer();
     // Bind pipeline to cmd buffer
@@ -11666,7 +11655,7 @@ TEST_F(VkLayerTest, BufferViewInUseDestroyedSignaled) {
     pipe.AddColorAttachment();
     pipe.CreateVKPipeline(pipeline_layout, renderPass());
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Cannot delete buffer view 0x");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00701);
 
     BeginCommandBuffer();
     VkViewport viewport = {0, 0, 16, 16, 0, 1};
@@ -11833,7 +11822,7 @@ TEST_F(VkLayerTest, SamplerInUseDestroyedSignaled) {
     pipe.AddColorAttachment();
     pipe.CreateVKPipeline(pipeline_layout, renderPass());
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Cannot delete sampler 0x");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00837);
 
     BeginCommandBuffer();
     // Bind pipeline to cmd buffer
@@ -14321,7 +14310,7 @@ TEST_F(VkLayerTest, AttachmentDescriptionUndefinedFormat) {
 TEST_F(VkLayerTest, InvalidImageView) {
     VkResult err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "vkCreateImageView called with baseMipLevel 10 ");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00768);
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
@@ -14422,11 +14411,7 @@ TEST_F(VkLayerTest, CreateImageViewNoMemoryBoundToImage) {
 
 TEST_F(VkLayerTest, InvalidImageViewAspect) {
     TEST_DESCRIPTION("Create an image and try to create a view with an invalid aspectMask");
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "vkCreateImageView(): Color image "
-                                                                        "formats must have ONLY the "
-                                                                        "VK_IMAGE_ASPECT_COLOR_BIT set");
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "Color image formats must have the VK_IMAGE_ASPECT_COLOR_BIT set.");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00741);
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
@@ -14456,8 +14441,7 @@ TEST_F(VkLayerTest, CopyImageLayerCountMismatch) {
     VkResult err;
     bool pass;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "vkCmdCopyImage: number of layers in source and destination subresources for pRegions");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01198);
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
@@ -14621,7 +14605,7 @@ TEST_F(VkLayerTest, ImageLayerViewTests) {
     imgViewInfo.subresourceRange.levelCount = 1;
     imgViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "vkCreateImageView called with baseMipLevel");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00768);
     // View can't have baseMipLevel >= image's mipLevels - Expect
     // VIEW_CREATE_ERROR
     imgViewInfo.subresourceRange.baseMipLevel = 1;
@@ -14629,7 +14613,7 @@ TEST_F(VkLayerTest, ImageLayerViewTests) {
     m_errorMonitor->VerifyFound();
     imgViewInfo.subresourceRange.baseMipLevel = 0;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "vkCreateImageView called with baseArrayLayer");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00769);
     // View can't have baseArrayLayer >= image's arraySize - Expect
     // VIEW_CREATE_ERROR
     imgViewInfo.subresourceRange.baseArrayLayer = 1;
@@ -14668,9 +14652,7 @@ TEST_F(VkLayerTest, ImageLayerViewTests) {
     m_errorMonitor->VerifyFound();
     imgViewInfo.format = VK_FORMAT_B8G8R8A8_UNORM;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Formats MUST be IDENTICAL unless "
-                                                                        "VK_IMAGE_CREATE_MUTABLE_FORMAT BIT "
-                                                                        "was set on image creation.");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02172);
     // Same compatibility class but no MUTABLE_FORMAT bit - Expect
     // VIEW_CREATE_ERROR
     imgViewInfo.format = VK_FORMAT_B8G8R8A8_UINT;
@@ -14678,9 +14660,7 @@ TEST_F(VkLayerTest, ImageLayerViewTests) {
     m_errorMonitor->VerifyFound();
     imgViewInfo.format = VK_FORMAT_B8G8R8A8_UNORM;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "can support ImageViews with "
-                                                                        "differing formats but they must be "
-                                                                        "in the same compatibility class.");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02171);
     // TODO: Update framework to easily passing mutable flag into ImageObj init
     //   For now just allowing image for this one test to not have memory bound
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
@@ -14997,8 +14977,7 @@ TEST_F(VkLayerTest, CopyImageFormatSizeMismatch) {
     bool pass;
 
     // Create color images with different format sizes and try to copy between them
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "vkCmdCopyImage called with unmatched source and dest image format sizes");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01184);
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
