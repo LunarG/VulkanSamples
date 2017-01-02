@@ -8772,6 +8772,24 @@ TEST_F(VkLayerTest, DSUsageBitsErrors) {
     VkBuffer buffer;
     err = vkCreateBuffer(m_device->device(), &buff_ci, NULL, &buffer);
     ASSERT_VK_SUCCESS(err);
+    VkMemoryRequirements mem_reqs;
+    vkGetBufferMemoryRequirements(m_device->device(), buffer, &mem_reqs);
+    VkMemoryAllocateInfo mem_alloc_info = {};
+    mem_alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    mem_alloc_info.pNext = NULL;
+    mem_alloc_info.memoryTypeIndex = 0;
+    mem_alloc_info.allocationSize = mem_reqs.size;
+    bool pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc_info, 0);
+    if (!pass) {
+        vkDestroyBuffer(m_device->device(), buffer, NULL);
+        vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
+        return;
+    }
+    VkDeviceMemory mem;
+    err = vkAllocateMemory(m_device->device(), &mem_alloc_info, NULL, &mem);
+    ASSERT_VK_SUCCESS(err);
+    err = vkBindBufferMemory(m_device->device(), buffer, mem, 0);
+    ASSERT_VK_SUCCESS(err);
 
     VkBufferViewCreateInfo buff_view_ci = {};
     buff_view_ci.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
@@ -8779,6 +8797,7 @@ TEST_F(VkLayerTest, DSUsageBitsErrors) {
     buff_view_ci.format = VK_FORMAT_R8_UNORM;
     buff_view_ci.range = VK_WHOLE_SIZE;
     VkBufferView buff_view;
+    // Note that this hits VALIDATION_ERROR_00694 due to no usage bit set, but we want call to go through
     err = vkCreateBufferView(m_device->device(), &buff_view_ci, NULL, &buff_view);
     ASSERT_VK_SUCCESS(err);
 
@@ -8802,9 +8821,8 @@ TEST_F(VkLayerTest, DSUsageBitsErrors) {
     err = vkCreateImage(m_device->device(), &image_ci, NULL, &image);
     ASSERT_VK_SUCCESS(err);
     // Bind memory to image
-    VkMemoryRequirements mem_reqs;
     VkDeviceMemory image_mem;
-    bool pass;
+
     VkMemoryAllocateInfo mem_alloc = {};
     mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     mem_alloc.pNext = NULL;
@@ -8845,22 +8863,24 @@ TEST_F(VkLayerTest, DSUsageBitsErrors) {
     descriptor_write.pImageInfo = &img_info;
 
     // These error messages align with VkDescriptorType struct
-    const char *error_msgs[] = {"", // placeholder, no error for SAMPLER descriptor
-                                " does not have VK_IMAGE_USAGE_SAMPLED_BIT set.",
-                                " does not have VK_IMAGE_USAGE_SAMPLED_BIT set.",
-                                " does not have VK_IMAGE_USAGE_STORAGE_BIT set.",
-                                " does not have VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT set.",
-                                " does not have VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT set.",
-                                " does not have VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT set.",
-                                " does not have VK_BUFFER_USAGE_STORAGE_BUFFER_BIT set.",
-                                " does not have VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT set.",
-                                " does not have VK_BUFFER_USAGE_STORAGE_BUFFER_BIT set.",
-                                " does not have VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT set."};
+    UNIQUE_VALIDATION_ERROR_CODE error_codes[] = {
+        VALIDATION_ERROR_00943, // placeholder, no error for SAMPLER descriptor
+        VALIDATION_ERROR_00943, // COMBINED_IMAGE_SAMPLER
+        VALIDATION_ERROR_00943, // SAMPLED_IMAGE
+        VALIDATION_ERROR_00943, // STORAGE_IMAGE
+        VALIDATION_ERROR_00950, // UNIFORM_TEXEL_BUFFER
+        VALIDATION_ERROR_00951, // STORAGE_TEXEL_BUFFER
+        VALIDATION_ERROR_00946, // UNIFORM_BUFFER
+        VALIDATION_ERROR_00947, // STORAGE_BUFFER
+        VALIDATION_ERROR_00946, // UNIFORM_BUFFER_DYNAMIC
+        VALIDATION_ERROR_00947, // STORAGE_BUFFER_DYNAMIC
+        VALIDATION_ERROR_00943  // INPUT_ATTACHMENT
+    };
     // Start loop at 1 as SAMPLER desc type has no usage bit error
     for (uint32_t i = 1; i < VK_DESCRIPTOR_TYPE_RANGE_SIZE; ++i) {
         descriptor_write.descriptorType = VkDescriptorType(i);
         descriptor_write.dstSet = descriptor_sets[i];
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, error_msgs[i]);
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, error_codes[i]);
 
         vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
 
@@ -8873,7 +8893,7 @@ TEST_F(VkLayerTest, DSUsageBitsErrors) {
     vkDestroyImageView(m_device->device(), image_view, NULL);
     vkDestroyBuffer(m_device->device(), buffer, NULL);
     vkDestroyBufferView(m_device->device(), buff_view, NULL);
-    vkFreeDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_TYPE_RANGE_SIZE, descriptor_sets);
+    vkFreeMemory(m_device->device(), mem, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
 
