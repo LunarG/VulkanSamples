@@ -3516,15 +3516,38 @@ TEST_F(VkLayerTest, FramebufferCreateErrors) {
         vkDestroyFramebuffer(m_device->device(), fb, NULL);
     }
     vkDestroyImageView(m_device->device(), view, NULL);
-    // Request fb that exceeds max dimensions
     // reset attachment to color attachment
     fb_info.pAttachments = ivs;
+
+    // Request fb that exceeds max width
     fb_info.width = m_device->props.limits.maxFramebufferWidth + 1;
+    fb_info.height = 100;
+    fb_info.layers = 1;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00413);
+    err = vkCreateFramebuffer(device(), &fb_info, NULL, &fb);
+
+    m_errorMonitor->VerifyFound();
+    if (err == VK_SUCCESS) {
+        vkDestroyFramebuffer(m_device->device(), fb, NULL);
+    }
+
+    // Request fb that exceeds max height
+    fb_info.width = 100;
     fb_info.height = m_device->props.limits.maxFramebufferHeight + 1;
+    fb_info.layers = 1;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00414);
+    err = vkCreateFramebuffer(device(), &fb_info, NULL, &fb);
+
+    m_errorMonitor->VerifyFound();
+    if (err == VK_SUCCESS) {
+        vkDestroyFramebuffer(m_device->device(), fb, NULL);
+    }
+
+    // Request fb that exceeds max layers
+    fb_info.width = 100;
+    fb_info.height = 100;
     fb_info.layers = m_device->props.limits.maxFramebufferLayers + 1;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, " Requested VkFramebufferCreateInfo "
-                                                                        "dimensions exceed physical device "
-                                                                        "limits. ");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00415);
     err = vkCreateFramebuffer(device(), &fb_info, NULL, &fb);
 
     m_errorMonitor->VerifyFound();
@@ -6322,11 +6345,11 @@ TEST_F(VkLayerTest, InvalidPushConstants) {
     const std::array<PipelineLayoutTestCase, 11> cmd_range_tests = {{
         {{VK_SHADER_STAGE_VERTEX_BIT, 0, 0}, "vkCmdPushConstants: parameter size must be greater than 0"},
         {{VK_SHADER_STAGE_VERTEX_BIT, 0, 1},
-         "vkCmdPushConstants() call has push constants with size 1. Size "
-         "must be greater than zero and a multiple of 4."},
+         "vkCmdPushConstants() call has push constants index 0 with size 1. "
+         "Size must be a multiple of 4."},
         {{VK_SHADER_STAGE_VERTEX_BIT, 4, 1},
-         "vkCmdPushConstants() call has push constants with size 1. Size "
-         "must be greater than zero and a multiple of 4."},
+         "vkCmdPushConstants() call has push constants index 0 with size 1. "
+         "Size must be a multiple of 4."},
         {{VK_SHADER_STAGE_VERTEX_BIT, 1, 4},
          "vkCmdPushConstants() call has push constants with offset 1. "
          "Offset must be a multiple of 4."},
@@ -7958,7 +7981,7 @@ TEST_F(VkLayerTest, PSOLineWidthInvalid) {
 TEST_F(VkLayerTest, NullRenderPass) {
     // Bind a NULL RenderPass
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "You cannot use a NULL RenderPass object in vkCmdBeginRenderPass()");
+                                         "vkCmdBeginRenderPass: required parameter pRenderPassBegin specified as NULL");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -14781,9 +14804,11 @@ TEST_F(VkLayerTest, MiscImageLayerTests) {
                                          "integer-based format then filter must be VK_FILTER_NEAREST");
     // Expect INVALID_FILTER
     VkImageObj intImage1(m_device);
-    intImage1.init(128, 128, VK_FORMAT_R8_UINT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
+    intImage1.init(128, 128, VK_FORMAT_R8_UINT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+                   VK_IMAGE_TILING_OPTIMAL, 0);
     VkImageObj intImage2(m_device);
-    intImage2.init(128, 128, VK_FORMAT_R8_UINT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
+    intImage2.init(128, 128, VK_FORMAT_R8_UINT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+                   VK_IMAGE_TILING_OPTIMAL, 0);
     VkImageBlit blitRegion = {};
     blitRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     blitRegion.srcSubresource.baseArrayLayer = 0;
@@ -14795,7 +14820,7 @@ TEST_F(VkLayerTest, MiscImageLayerTests) {
     blitRegion.dstSubresource.mipLevel = 0;
 
     vkCmdBlitImage(m_commandBuffer->GetBufferHandle(), intImage1.handle(), intImage1.layout(), intImage2.handle(),
-                   intImage2.layout(), 16, &blitRegion, VK_FILTER_LINEAR);
+                   intImage2.layout(), 1, &blitRegion, VK_FILTER_LINEAR);
     m_errorMonitor->VerifyFound();
 
     // Look for NULL-blit warning
@@ -15658,6 +15683,23 @@ TEST_F(VkLayerTest, DepthStencilImageViewWithColorAspectBitError) {
     err = vkCreateImage(m_device->device(), &image_create_info, NULL, &image_good);
     ASSERT_VK_SUCCESS(err);
 
+    // ---Bind image memory---
+    VkMemoryRequirements img_mem_reqs;
+    vkGetImageMemoryRequirements(m_device->device(), image_bad, &img_mem_reqs);
+    VkMemoryAllocateInfo image_alloc_info = {};
+    image_alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    image_alloc_info.pNext = NULL;
+    image_alloc_info.memoryTypeIndex = 0;
+    image_alloc_info.allocationSize = img_mem_reqs.size;
+    bool pass = m_device->phy().set_memory_type(img_mem_reqs.memoryTypeBits, &image_alloc_info, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    ASSERT_TRUE(pass);
+    VkDeviceMemory mem;
+    err = vkAllocateMemory(m_device->device(), &image_alloc_info, NULL, &mem);
+    ASSERT_VK_SUCCESS(err);
+    err = vkBindImageMemory(m_device->device(), image_bad, mem, 0);
+    ASSERT_VK_SUCCESS(err);
+    // -----------------------
+
     VkImageViewCreateInfo image_view_create_info = {};
     image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     image_view_create_info.image = image_bad;
@@ -15667,7 +15709,7 @@ TEST_F(VkLayerTest, DepthStencilImageViewWithColorAspectBitError) {
     image_view_create_info.subresourceRange.baseMipLevel = 0;
     image_view_create_info.subresourceRange.layerCount = 1;
     image_view_create_info.subresourceRange.levelCount = 1;
-    image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT;
 
     VkImageView view;
     err = vkCreateImageView(m_device->device(), &image_view_create_info, NULL, &view);
@@ -15678,6 +15720,8 @@ TEST_F(VkLayerTest, DepthStencilImageViewWithColorAspectBitError) {
     vkDestroyImage(m_device->device(), image_good, NULL);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
+
+    vkFreeMemory(m_device->device(), mem, NULL);
 }
 
 TEST_F(VkLayerTest, ClearImageErrors) {
@@ -15726,7 +15770,7 @@ TEST_F(VkLayerTest, ClearImageErrors) {
     ds_image_create_info.extent.width = 64;
     ds_image_create_info.extent.height = 64;
     ds_image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-    ds_image_create_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    ds_image_create_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
     vk_testing::Image ds_image;
     ds_image.init(*m_device, (const VkImageCreateInfo &)ds_image_create_info, reqs);
@@ -15744,7 +15788,7 @@ TEST_F(VkLayerTest, ClearImageErrors) {
                                                                         "image created without "
                                                                         "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
 
-    vkCmdClearColorImage(m_commandBuffer->GetBufferHandle(), ds_image.handle(), VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1,
+    vkCmdClearColorImage(m_commandBuffer->GetBufferHandle(), color_image.handle(), VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1,
                          &color_range);
 
     m_errorMonitor->VerifyFound();
@@ -15754,7 +15798,7 @@ TEST_F(VkLayerTest, ClearImageErrors) {
                                          "vkCmdClearDepthStencilImage called without a depth/stencil image.");
 
     vkCmdClearDepthStencilImage(m_commandBuffer->GetBufferHandle(), color_image.handle(),
-                                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, &clear_value, 1, &ds_range);
+                                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_value, 1, &ds_range);
 
     m_errorMonitor->VerifyFound();
 }
@@ -16848,6 +16892,16 @@ TEST_F(VkPositiveLayerTest, TestAliasedMemoryTracking) {
     vkDestroyBuffer(m_device->device(), buffer, NULL);
     vkDeviceWaitIdle(m_device->device());
 
+    // Use optimal as some platforms report linear support but then fail image creation
+    VkImageTiling image_tiling = VK_IMAGE_TILING_OPTIMAL;
+    VkImageFormatProperties image_format_properties;
+    vkGetPhysicalDeviceImageFormatProperties(gpu(), VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TYPE_2D, image_tiling,
+                                             VK_IMAGE_USAGE_TRANSFER_SRC_BIT, 0, &image_format_properties);
+    if (image_format_properties.maxExtent.width == 0) {
+        printf("Image format not supported; skipped.\n");
+        vkFreeMemory(m_device->device(), mem, NULL);
+        return;
+    }
     VkImageCreateInfo image_create_info = {};
     image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     image_create_info.pNext = NULL;
@@ -16859,19 +16913,13 @@ TEST_F(VkPositiveLayerTest, TestAliasedMemoryTracking) {
     image_create_info.mipLevels = 1;
     image_create_info.arrayLayers = 1;
     image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
-    image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+    image_create_info.tiling = image_tiling;
     image_create_info.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
     image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     image_create_info.queueFamilyIndexCount = 0;
     image_create_info.pQueueFamilyIndices = NULL;
     image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     image_create_info.flags = 0;
-
-    VkMemoryAllocateInfo mem_alloc = {};
-    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    mem_alloc.pNext = NULL;
-    mem_alloc.allocationSize = 0;
-    mem_alloc.memoryTypeIndex = 0;
 
     /* Create a mappable image.  It will be the texture if linear images are ok
     * to be textures or it will be the staging image if they are not.
@@ -16881,10 +16929,16 @@ TEST_F(VkPositiveLayerTest, TestAliasedMemoryTracking) {
 
     vkGetImageMemoryRequirements(m_device->device(), image, &mem_reqs);
 
+    VkMemoryAllocateInfo mem_alloc = {};
+    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    mem_alloc.pNext = NULL;
+    mem_alloc.allocationSize = 0;
+    mem_alloc.memoryTypeIndex = 0;
     mem_alloc.allocationSize = mem_reqs.size;
 
     pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
     if (!pass) {
+        vkFreeMemory(m_device->device(), mem, NULL);
         vkDestroyImage(m_device->device(), image, NULL);
         return;
     }

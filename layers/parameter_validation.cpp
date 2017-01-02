@@ -2755,7 +2755,7 @@ bool PreCreateGraphicsPipelines(VkDevice device, const VkGraphicsPipelineCreateI
 
     // TODO: Handle count
     if (pCreateInfos != nullptr) {
-        if (pCreateInfos->flags | VK_PIPELINE_CREATE_DERIVATIVE_BIT) {
+        if (pCreateInfos->flags & VK_PIPELINE_CREATE_DERIVATIVE_BIT) {
             if (pCreateInfos->basePipelineIndex != -1) {
                 if (pCreateInfos->basePipelineHandle != VK_NULL_HANDLE) {
                     log_msg(data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,

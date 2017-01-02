@@ -190,7 +190,7 @@ class ValidationSource:
 class TestParser:
     def __init__(self, test_file_list, test_group_name=['VkLayerTest', 'VkPositiveLayerTest', 'VkWsiEnabledLayerTest']):
         self.test_files = test_file_list
-        self.tests_set = set()
+        self.test_to_errors = {} # Dict where testname maps to list of error enums found in that test
         self.test_trigger_txt_list = []
         for tg in test_group_name:
             self.test_trigger_txt_list.append('TEST_F(%s' % tg)
@@ -200,6 +200,7 @@ class TestParser:
     def parse(self):
         # For each test file, parse test names into set
         grab_next_line = False # handle testname on separate line than wildcard
+        testname = ''
         for test_file in self.test_files:
             with open(test_file) as tf:
                 for line in tf:
@@ -214,11 +215,18 @@ class TestParser:
                         if ('' == testname):
                             grab_next_line = True
                             continue
-                        self.tests_set.add(testname)
+                        self.test_to_errors[testname] = []
                     if grab_next_line: # test name on its own line
                         grab_next_line = False
                         testname = testname.strip().strip(' {)')
-                        self.tests_set.add(testname)
+                        self.test_to_errors[testname] = []
+                    if ' VALIDATION_ERROR_' in line:
+                        line_list = line.split()
+                        for str in line_list:
+                            if 'VALIDATION_ERROR_' in str and True not in [ignore_str in str for ignore_str in ['VALIDATION_ERROR_UNDEFINED', 'UNIQUE_VALIDATION_ERROR_CODE', 'VALIDATION_ERROR_MAX_ENUM']]:
+                                print("Trying to add enums for line: %s")
+                                print("Adding enum %s to test %s" % (str.strip(',);'), testname))
+                                self.test_to_errors[testname].append(str.strip(',);'))
 
 # Little helper class for coloring cmd line output
 class bcolors:
@@ -245,40 +253,6 @@ class bcolors:
 
     def endc(self):
         return self.ENDC
-
-# Class to parse the validation layer test source and store testnames
-class TestParser:
-    def __init__(self, test_file_list, test_group_name=['VkLayerTest', 'VkPositiveLayerTest', 'VkWsiEnabledLayerTest']):
-        self.test_files = test_file_list
-        self.tests_set = set()
-        self.test_trigger_txt_list = []
-        for tg in test_group_name:
-            self.test_trigger_txt_list.append('TEST_F(%s' % tg)
-            #print('Test trigger test list: %s' % (self.test_trigger_txt_list))
-
-    # Parse test files into internal data struct
-    def parse(self):
-        # For each test file, parse test names into set
-        grab_next_line = False # handle testname on separate line than wildcard
-        for test_file in self.test_files:
-            with open(test_file) as tf:
-                for line in tf:
-                    if True in [line.strip().startswith(comment) for comment in ['//', '/*']]:
-                        continue
-
-                    if True in [ttt in line for ttt in self.test_trigger_txt_list]:
-                        #print('Test wildcard in line: %s' % (line))
-                        testname = line.split(',')[-1]
-                        testname = testname.strip().strip(' {)')
-                        #print('Inserting test: "%s"' % (testname))
-                        if ('' == testname):
-                            grab_next_line = True
-                            continue
-                        self.tests_set.add(testname)
-                    if grab_next_line: # test name on its own line
-                        grab_next_line = False
-                        testname = testname.strip().strip(' {)')
-                        self.tests_set.add(testname)
 
 def main(argv=None):
     result = 0 # Non-zero result indicates an error case
@@ -358,10 +332,29 @@ def main(argv=None):
                     print(txt_color.yellow() + "   \t%s" % (file_line) + txt_color.endc())
     # Now check that tests claimed to be implemented are actual test names
     bad_testnames = []
+    tests_missing_enum = {} # Report tests that don't use validation error enum to check for error case
     for enum in val_db.db_enum_to_tests:
         for testname in val_db.db_enum_to_tests[enum]:
-            if testname not in test_parser.tests_set:
+            if testname not in test_parser.test_to_errors:
                 bad_testnames.append(testname)
+            else:
+                enum_found = False
+                for test_enum in test_parser.test_to_errors[testname]:
+                    if test_enum == enum:
+                        #print("Found test that correctly checks for enum: %s" % (enum))
+                        enum_found = True
+                if not enum_found:
+                    #print("Test %s is not using enum %s to check for error" % (testname, enum))
+                    if testname not in tests_missing_enum:
+                        tests_missing_enum[testname] = []
+                    tests_missing_enum[testname].append(enum)
+    if tests_missing_enum:
+        print(txt_color.yellow() + "  \nThe following tests do not use their reported enums to check for the validation error. You may want to update these to pass the expected enum to SetDesiredFailureMsg:" + txt_color.endc())
+        for testname in tests_missing_enum:
+            print(txt_color.yellow() + "   Testname %s does not explicitly check for these ids:" % (testname) + txt_color.endc())
+            for enum in tests_missing_enum[testname]:
+                print(txt_color.yellow() + "    %s" % (enum) + txt_color.endc())
+    # TODO : Go through all enums found in the test file and make sure they're correctly documented in the database file
     print(" Database file claims that %d checks have tests written." % len(val_db.db_enum_to_tests))
     if len(bad_testnames) == 0:
         print(txt_color.green() + "  All claimed tests have valid names. That's good!" + txt_color.endc())

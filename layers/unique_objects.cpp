@@ -40,7 +40,7 @@
 #include "vk_layer_table.h"
 #include "vk_layer_utils.h"
 #include "vk_layer_utils.h"
-#include "vk_struct_string_helper_cpp.h"
+#include "vk_enum_string_helper.h"
 #include "vk_validation_error_messages.h"
 #include "vulkan/vk_layer.h"
 

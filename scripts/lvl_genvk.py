@@ -24,6 +24,7 @@ from threading_generator import  ThreadGeneratorOptions, ThreadOutputGenerator
 from parameter_validation_generator import ParamCheckerGeneratorOptions, ParamCheckerOutputGenerator
 from unique_objects_generator import UniqueObjectsGeneratorOptions, UniqueObjectsOutputGenerator
 from dispatch_table_generator import DispatchTableOutputGenerator, DispatchTableOutputGeneratorOptions
+from helper_file_generator import HelperFileOutputGenerator, HelperFileOutputGeneratorOptions
 
 # Simple timer functions
 startTime = None
@@ -182,6 +183,28 @@ def makeGenOpts(extensions = [], removeExtensions = [], protect = True, director
             apientryp         = 'VKAPI_PTR *',
             alignFuncParam    = 48)
         ]
+
+    # Options for helper file generator
+    genOpts['vk_enum_string_helper.h'] = [
+          HelperFileOutputGenerator,
+          HelperFileOutputGeneratorOptions(
+            filename          = 'vk_enum_string_helper.h',
+            directory         = directory,
+            apiname           = 'vulkan',
+            profile           = None,
+            versions          = allVersions,
+            emitversions      = allVersions,
+            defaultExtensions = 'vulkan',
+            addExtensions     = addExtensions,
+            removeExtensions  = removeExtensions,
+            prefixText        = prefixStrings + vkPrefixStrings,
+            protectFeature    = False,
+            apicall           = 'VKAPI_ATTR ',
+            apientry          = 'VKAPI_CALL ',
+            apientryp         = 'VKAPI_PTR *',
+            alignFuncParam    = 48)
+        ]
+
 
 
 
