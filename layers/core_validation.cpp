@@ -6512,8 +6512,7 @@ static bool ValidateImageAspectMask(layer_data *dev_data, VkImage image, VkForma
                             (uint64_t)image, __LINE__, VALIDATION_ERROR_00741, "IMAGE",
                             "%s: Color image formats must have the VK_IMAGE_ASPECT_COLOR_BIT set. %s", func_name,
                             validation_error_map[VALIDATION_ERROR_00741]);
-        }
-        if ((aspect_mask & VK_IMAGE_ASPECT_COLOR_BIT) != aspect_mask) {
+        } else if ((aspect_mask & VK_IMAGE_ASPECT_COLOR_BIT) != aspect_mask) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                             (uint64_t)image, __LINE__, VALIDATION_ERROR_00741, "IMAGE",
                             "%s: Color image formats must have ONLY the VK_IMAGE_ASPECT_COLOR_BIT set. %s", func_name,
@@ -6526,8 +6525,7 @@ static bool ValidateImageAspectMask(layer_data *dev_data, VkImage image, VkForma
                                                                                         "at least one of VK_IMAGE_ASPECT_DEPTH_BIT "
                                                                                         "and VK_IMAGE_ASPECT_STENCIL_BIT set. %s",
                             func_name, validation_error_map[VALIDATION_ERROR_00741]);
-        }
-        if ((aspect_mask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) != aspect_mask) {
+        } else if ((aspect_mask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) != aspect_mask) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                             (uint64_t)image, __LINE__, VALIDATION_ERROR_00741, "IMAGE",
                             "%s: Combination depth/stencil image formats can have only the VK_IMAGE_ASPECT_DEPTH_BIT and "
@@ -6540,8 +6538,7 @@ static bool ValidateImageAspectMask(layer_data *dev_data, VkImage image, VkForma
                             (uint64_t)image, __LINE__, VALIDATION_ERROR_00741, "IMAGE",
                             "%s: Depth-only image formats must have the VK_IMAGE_ASPECT_DEPTH_BIT set. %s", func_name,
                             validation_error_map[VALIDATION_ERROR_00741]);
-        }
-        if ((aspect_mask & VK_IMAGE_ASPECT_DEPTH_BIT) != aspect_mask) {
+        } else if ((aspect_mask & VK_IMAGE_ASPECT_DEPTH_BIT) != aspect_mask) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                             (uint64_t)image, __LINE__, VALIDATION_ERROR_00741, "IMAGE",
                             "%s: Depth-only image formats can have only the VK_IMAGE_ASPECT_DEPTH_BIT set. %s", func_name,
@@ -6553,8 +6550,7 @@ static bool ValidateImageAspectMask(layer_data *dev_data, VkImage image, VkForma
                             (uint64_t)image, __LINE__, VALIDATION_ERROR_00741, "IMAGE",
                             "%s: Stencil-only image formats must have the VK_IMAGE_ASPECT_STENCIL_BIT set. %s", func_name,
                             validation_error_map[VALIDATION_ERROR_00741]);
-        }
-        if ((aspect_mask & VK_IMAGE_ASPECT_STENCIL_BIT) != aspect_mask) {
+        } else if ((aspect_mask & VK_IMAGE_ASPECT_STENCIL_BIT) != aspect_mask) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                             (uint64_t)image, __LINE__, VALIDATION_ERROR_00741, "IMAGE",
                             "%s: Stencil-only image formats can have only the VK_IMAGE_ASPECT_STENCIL_BIT set. %s", func_name,
