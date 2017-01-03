@@ -27,6 +27,11 @@ android:
     - build-tools-23.0.2
     - android-23
 
+cache:
+  directories:
+    - external
+    - build-android/external
+
 before_install: 
   # Install the appropriate Linux packages.
   - if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then
