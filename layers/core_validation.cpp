@@ -3138,6 +3138,7 @@ static bool verifyPipelineCreateState(layer_data *my_data, std::vector<PIPELINE_
         PIPELINE_STATE *pBasePipeline = nullptr;
         if (!((pPipeline->graphicsPipelineCI.basePipelineHandle != VK_NULL_HANDLE) ^
               (pPipeline->graphicsPipelineCI.basePipelineIndex != -1))) {
+            // This check is a superset of VALIDATION_ERROR_00526 and VALIDATION_ERROR_00528
             skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                  DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
                                  "Invalid Pipeline CreateInfo: exactly one of base pipeline index and handle must be specified");
@@ -3145,8 +3146,9 @@ static bool verifyPipelineCreateState(layer_data *my_data, std::vector<PIPELINE_
             if (pPipeline->graphicsPipelineCI.basePipelineIndex >= pipelineIndex) {
                 skip_call |=
                     log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                            DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
-                            "Invalid Pipeline CreateInfo: base pipeline must occur earlier in array than derivative pipeline.");
+                            VALIDATION_ERROR_00518, "DS",
+                            "Invalid Pipeline CreateInfo: base pipeline must occur earlier in array than derivative pipeline. %s",
+                            validation_error_map[VALIDATION_ERROR_00518]);
             } else {
                 pBasePipeline = pPipelines[pPipeline->graphicsPipelineCI.basePipelineIndex];
             }
@@ -3171,10 +3173,11 @@ static bool verifyPipelineCreateState(layer_data *my_data, std::vector<PIPELINE_
                     // only attachment state, so memcmp is best suited for the comparison
                     if (memcmp(static_cast<const void *>(pAttachments), static_cast<const void *>(&pAttachments[i]),
                                sizeof(pAttachments[0]))) {
-                        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
-                                             __LINE__, DRAWSTATE_INDEPENDENT_BLEND, "DS",
-                                             "Invalid Pipeline CreateInfo: If independent blend feature not "
-                                             "enabled, all elements of pAttachments must be identical");
+                        skip_call |=
+                            log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                                    VALIDATION_ERROR_01532, "DS", "Invalid Pipeline CreateInfo: If independent blend feature not "
+                                                                  "enabled, all elements of pAttachments must be identical. %s",
+                                    validation_error_map[VALIDATION_ERROR_01532]);
                         break;
                     }
                 }
@@ -3184,8 +3187,9 @@ static bool verifyPipelineCreateState(layer_data *my_data, std::vector<PIPELINE_
             (pPipeline->graphicsPipelineCI.pColorBlendState->logicOpEnable != VK_FALSE)) {
             skip_call |=
                 log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                        DRAWSTATE_DISABLED_LOGIC_OP, "DS",
-                        "Invalid Pipeline CreateInfo: If logic operations feature not enabled, logicOpEnable must be VK_FALSE");
+                        VALIDATION_ERROR_01533, "DS",
+                        "Invalid Pipeline CreateInfo: If logic operations feature not enabled, logicOpEnable must be VK_FALSE. %s",
+                        validation_error_map[VALIDATION_ERROR_01533]);
         }
     }
 
@@ -3195,9 +3199,10 @@ static bool verifyPipelineCreateState(layer_data *my_data, std::vector<PIPELINE_
     auto renderPass = getRenderPassState(my_data, pPipeline->graphicsPipelineCI.renderPass);
     if (renderPass && pPipeline->graphicsPipelineCI.subpass >= renderPass->createInfo.subpassCount) {
         skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                             DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS", "Invalid Pipeline CreateInfo State: Subpass index %u "
-                                                                            "is out of range for this renderpass (0..%u)",
-                             pPipeline->graphicsPipelineCI.subpass, renderPass->createInfo.subpassCount - 1);
+                             VALIDATION_ERROR_02122, "DS", "Invalid Pipeline CreateInfo State: Subpass index %u "
+                                                           "is out of range for this renderpass (0..%u). %s",
+                             pPipeline->graphicsPipelineCI.subpass, renderPass->createInfo.subpassCount - 1,
+                             validation_error_map[VALIDATION_ERROR_02122]);
     }
 
     if (!validate_and_capture_pipeline_shader_state(my_data->report_data, pPipeline, &my_data->enabled_features,
@@ -3217,25 +3222,31 @@ static bool verifyPipelineCreateState(layer_data *my_data, std::vector<PIPELINE_
     }
     // VS is required
     if (!(pPipeline->active_shaders & VK_SHADER_STAGE_VERTEX_BIT)) {
-        skip_call |=
-            log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                    DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS", "Invalid Pipeline CreateInfo State: Vertex Shader required");
+        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                             VALIDATION_ERROR_00532, "DS", "Invalid Pipeline CreateInfo State: Vertex Shader required. %s",
+                             validation_error_map[VALIDATION_ERROR_00532]);
     }
     // Either both or neither TC/TE shaders should be defined
-    if (((pPipeline->active_shaders & VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT) == 0) !=
-        ((pPipeline->active_shaders & VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT) == 0)) {
+    if ((pPipeline->active_shaders & VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT) &&
+        !(pPipeline->active_shaders & VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT)) {
         skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                             DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
-                             "Invalid Pipeline CreateInfo State: TE and TC shaders must be included or excluded as a pair");
+                             VALIDATION_ERROR_00534, "DS",
+                             "Invalid Pipeline CreateInfo State: TE and TC shaders must be included or excluded as a pair. %s",
+                             validation_error_map[VALIDATION_ERROR_00534]);
+    }
+    if (!(pPipeline->active_shaders & VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT) &&
+        (pPipeline->active_shaders & VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT)) {
+        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                             VALIDATION_ERROR_00535, "DS",
+                             "Invalid Pipeline CreateInfo State: TE and TC shaders must be included or excluded as a pair. %s",
+                             validation_error_map[VALIDATION_ERROR_00535]);
     }
     // Compute shaders should be specified independent of Gfx shaders
-    if ((pPipeline->active_shaders & VK_SHADER_STAGE_COMPUTE_BIT) &&
-        (pPipeline->active_shaders &
-         (VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT |
-          VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT))) {
+    if (pPipeline->active_shaders & VK_SHADER_STAGE_COMPUTE_BIT) {
         skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                             DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
-                             "Invalid Pipeline CreateInfo State: Do not specify Compute Shader for Gfx Pipeline");
+                             VALIDATION_ERROR_00533, "DS",
+                             "Invalid Pipeline CreateInfo State: Do not specify Compute Shader for Gfx Pipeline. %s",
+                             validation_error_map[VALIDATION_ERROR_00533]);
     }
     // VK_PRIMITIVE_TOPOLOGY_PATCH_LIST primitive topology is only valid for tessellation pipelines.
     // Mismatching primitive topology and tessellation fails graphics pipeline creation.
@@ -3243,35 +3254,36 @@ static bool verifyPipelineCreateState(layer_data *my_data, std::vector<PIPELINE_
         (!pPipeline->graphicsPipelineCI.pInputAssemblyState ||
          pPipeline->graphicsPipelineCI.pInputAssemblyState->topology != VK_PRIMITIVE_TOPOLOGY_PATCH_LIST)) {
         skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                             DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS", "Invalid Pipeline CreateInfo State: "
-                                                                            "VK_PRIMITIVE_TOPOLOGY_PATCH_LIST must be set as IA "
-                                                                            "topology for tessellation pipelines");
+                             VALIDATION_ERROR_02099, "DS", "Invalid Pipeline CreateInfo State: "
+                                                           "VK_PRIMITIVE_TOPOLOGY_PATCH_LIST must be set as IA "
+                                                           "topology for tessellation pipelines. %s",
+                             validation_error_map[VALIDATION_ERROR_02099]);
     }
     if (pPipeline->graphicsPipelineCI.pInputAssemblyState &&
         pPipeline->graphicsPipelineCI.pInputAssemblyState->topology == VK_PRIMITIVE_TOPOLOGY_PATCH_LIST) {
         if (~pPipeline->active_shaders & VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT) {
-            skip_call |=
-                log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                        DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS", "Invalid Pipeline CreateInfo State: "
-                                                                       "VK_PRIMITIVE_TOPOLOGY_PATCH_LIST primitive "
-                                                                       "topology is only valid for tessellation pipelines");
-        }
-        if (!pPipeline->graphicsPipelineCI.pTessellationState) {
             skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                                 DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
-                                 "Invalid Pipeline CreateInfo State: "
-                                 "pTessellationState is NULL when VK_PRIMITIVE_TOPOLOGY_PATCH_LIST primitive "
-                                 "topology used. pTessellationState must not be NULL in this case.");
-        } else if (!pPipeline->graphicsPipelineCI.pTessellationState->patchControlPoints ||
-                   (pPipeline->graphicsPipelineCI.pTessellationState->patchControlPoints > 32)) {
-            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                                 DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS", "Invalid Pipeline CreateInfo State: "
-                                                                                "VK_PRIMITIVE_TOPOLOGY_PATCH_LIST primitive "
-                                                                                "topology used with patchControlPoints value %u."
-                                                                                " patchControlPoints should be >0 and <=32.",
-                                 pPipeline->graphicsPipelineCI.pTessellationState->patchControlPoints);
+                                 VALIDATION_ERROR_02100, "DS", "Invalid Pipeline CreateInfo State: "
+                                                               "VK_PRIMITIVE_TOPOLOGY_PATCH_LIST primitive "
+                                                               "topology is only valid for tessellation pipelines. %s",
+                                 validation_error_map[VALIDATION_ERROR_02100]);
         }
     }
+
+    if (pPipeline->graphicsPipelineCI.pTessellationState &&
+        ((pPipeline->graphicsPipelineCI.pTessellationState->patchControlPoints == 0) ||
+         (pPipeline->graphicsPipelineCI.pTessellationState->patchControlPoints >
+          my_data->phys_dev_properties.properties.limits.maxTessellationPatchSize))) {
+        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                             VALIDATION_ERROR_01426, "DS", "Invalid Pipeline CreateInfo State: "
+                                                           "VK_PRIMITIVE_TOPOLOGY_PATCH_LIST primitive "
+                                                           "topology used with patchControlPoints value %u."
+                                                           " patchControlPoints should be >0 and <=%u. %s",
+                             pPipeline->graphicsPipelineCI.pTessellationState->patchControlPoints,
+                             my_data->phys_dev_properties.properties.limits.maxTessellationPatchSize,
+                             validation_error_map[VALIDATION_ERROR_01426]);
+    }
+
     // If a rasterization state is provided, make sure that the line width conforms to the HW.
     if (pPipeline->graphicsPipelineCI.pRasterizationState) {
         if (!isDynamic(pPipeline, VK_DYNAMIC_STATE_LINE_WIDTH)) {
@@ -3289,11 +3301,12 @@ static bool verifyPipelineCreateState(layer_data *my_data, std::vector<PIPELINE_
         if (subpass_desc && subpass_desc->pDepthStencilAttachment &&
             subpass_desc->pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
             if (!pPipeline->graphicsPipelineCI.pDepthStencilState) {
-                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                     __LINE__, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
+                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT,
+                                     0, __LINE__, VALIDATION_ERROR_02115, "DS",
                                      "Invalid Pipeline CreateInfo State: "
                                      "pDepthStencilState is NULL when rasterization is enabled and subpass uses a "
-                                     "depth/stencil attachment");
+                                     "depth/stencil attachment. %s",
+                                     validation_error_map[VALIDATION_ERROR_02115]);
             }
         }
     }
