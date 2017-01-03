@@ -59,11 +59,20 @@ test_file = '../tests/layer_validation_tests.cpp'
 duplicate_exceptions = [
 'VALIDATION_ERROR_00018', # This covers the broad case that all child objects must be destroyed at DestroyInstance time
 'VALIDATION_ERROR_00049', # This covers the broad case that all child objects must be destroyed at DestroyDevice time
+'VALIDATION_ERROR_00515', # Covers valid shader module handle for both Compute & Graphics pipelines
 'VALIDATION_ERROR_00648', # This is a case for VkMappedMemoryRange struct that is used by both Flush & Invalidate MappedMemoryRange
 'VALIDATION_ERROR_00741', # This is a blanket case for all invalid image aspect bit errors. The spec link has appropriate details for all separate cases.
 'VALIDATION_ERROR_00768', # This case covers two separate checks which are done independently
 'VALIDATION_ERROR_00769', # This case covers two separate checks which are done independently
 'VALIDATION_ERROR_00942', # This is a descriptor set write update error that we use for a couple copy cases as well
+'VALIDATION_ERROR_00988', # Single error for mis-matched stageFlags of vkCmdPushConstants() that is flagged for no stage flags & mis-matched flags
+'VALIDATION_ERROR_01088', # Handles both depth/stencil & compressed image errors for vkCmdClearColorImage()
+'VALIDATION_ERROR_01223', # Used for the mipLevel check of both dst & src images on vkCmdCopyImage call
+'VALIDATION_ERROR_01224', # Used for the arraySize check of both dst & src images on vkCmdCopyImage call
+'VALIDATION_ERROR_01450', # Used for both x & y bounds of viewport
+'VALIDATION_ERROR_01489', # Used for both x & y value of scissors to make sure they're not negative
+'VALIDATION_ERROR_01926', # Surface of VkSwapchainCreateInfoKHR must be valid when creating both single or shared swapchains
+'VALIDATION_ERROR_02333', # Single error for both imageFormat & imageColorSpace requirements when creating swapchain
 'VALIDATION_ERROR_02525', # Used twice for the same error codepath as both a param & to set a variable, so not really a duplicate
 ]
 

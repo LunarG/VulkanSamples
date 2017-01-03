@@ -596,7 +596,7 @@ bool cvdescriptorset::DescriptorSet::ValidateCopyUpdate(const debug_report_data 
                                                         std::string *error_msg) {
     // Verify idle ds
     if (in_use.load()) {
-        // TODO : Re-using Allocate Idle error code, need copy update idle error code
+        // TODO : Re-using Free Idle error code, need copy update idle error code
         *error_code = VALIDATION_ERROR_00919;
         std::stringstream error_str;
         error_str << "Cannot call vkUpdateDescriptorSets() to perform copy update on descriptor set " << set_
@@ -763,6 +763,8 @@ bool cvdescriptorset::ValidateImageUpdate(VkImageView image_view, VkImageLayout 
         format = image_node->createInfo.format;
         usage = image_node->createInfo.usage;
         // Validate that memory is bound to image
+        // TODO: This should have its own valid usage id apart from 2524 which is from CreateImageView case. The only
+        //  the error here occurs is if memory bound to a created imageView has been freed.
         if (ValidateMemoryIsBoundToImage(dev_data, image_node, "vkUpdateDescriptorSets()", VALIDATION_ERROR_02524)) {
             *error_code = VALIDATION_ERROR_02524;
             *error_msg = "No memory bound to image.";
@@ -1169,7 +1171,7 @@ bool cvdescriptorset::DescriptorSet::ValidateWriteUpdate(const debug_report_data
                                                          UNIQUE_VALIDATION_ERROR_CODE *error_code, std::string *error_msg) {
     // Verify idle ds
     if (in_use.load()) {
-        // TODO : Re-using Allocate Idle error code, need write update idle error code
+        // TODO : Re-using Free Idle error code, need write update idle error code
         *error_code = VALIDATION_ERROR_00919;
         std::stringstream error_str;
         error_str << "Cannot call vkUpdateDescriptorSets() to perform write update on descriptor set " << set_
