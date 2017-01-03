@@ -6,7 +6,7 @@ This project provides Khronos official ICD loader and validation layers for Vulk
 | Platform | Build Status |
 |:--------:|:------------:|
 | Linux/Android | [![Build Status](https://travis-ci.org/KhronosGroup/Vulkan-LoaderAndValidationLayers.svg)](https://travis-ci.org/KhronosGroup/Vulkan-LoaderAndValidationLayers) |
-| Windows | [![Build status](https://ci.appveyor.com/api/projects/status/bqt1lmd6ja0e1amf/branch/master?svg=true)](https://ci.appveyor.com/project/karl-lunarg/vulkan-loaderandvalidationlayers/branch/master) |
+| Windows |[![Build status](https://ci.appveyor.com/api/projects/status/ri4584d6qramrjiv/branch/master?svg=true)](https://ci.appveyor.com/project/Khronoswebmaster/vulkan-loaderandvalidationlayers/branch/master) |
 
 
 ## Introduction
