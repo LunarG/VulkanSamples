@@ -250,6 +250,50 @@ def makeGenOpts(extensions = [], removeExtensions = [], protect = True, director
             helper_file_type  = 'struct_size_source')
         ]
 
+    # Helper file generator options for vk_safe_struct.h
+    genOpts['vk_safe_struct.h'] = [
+          HelperFileOutputGenerator,
+          HelperFileOutputGeneratorOptions(
+            filename          = 'vk_safe_struct.h',
+            directory         = directory,
+            apiname           = 'vulkan',
+            profile           = None,
+            versions          = allVersions,
+            emitversions      = allVersions,
+            defaultExtensions = 'vulkan',
+            addExtensions     = addExtensions,
+            removeExtensions  = removeExtensions,
+            prefixText        = prefixStrings + vkPrefixStrings,
+            protectFeature    = False,
+            apicall           = 'VKAPI_ATTR ',
+            apientry          = 'VKAPI_CALL ',
+            apientryp         = 'VKAPI_PTR *',
+            alignFuncParam    = 48,
+            helper_file_type  = 'safe_struct_header')
+        ]
+
+    # Helper file generator options for vk_safe_struct.cpp
+    genOpts['vk_safe_struct.cpp'] = [
+          HelperFileOutputGenerator,
+          HelperFileOutputGeneratorOptions(
+            filename          = 'vk_safe_struct.cpp',
+            directory         = directory,
+            apiname           = 'vulkan',
+            profile           = None,
+            versions          = allVersions,
+            emitversions      = allVersions,
+            defaultExtensions = 'vulkan',
+            addExtensions     = addExtensions,
+            removeExtensions  = removeExtensions,
+            prefixText        = prefixStrings + vkPrefixStrings,
+            protectFeature    = False,
+            apicall           = 'VKAPI_ATTR ',
+            apientry          = 'VKAPI_CALL ',
+            apientryp         = 'VKAPI_PTR *',
+            alignFuncParam    = 48,
+            helper_file_type  = 'safe_struct_source')
+        ]
+
 
 
 # Generate a target based on the options in the matching genOpts{} object.
