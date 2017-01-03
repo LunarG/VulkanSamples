@@ -11240,13 +11240,8 @@ CmdExecuteCommands(VkCommandBuffer commandBuffer, uint32_t commandBuffersCount, 
         GLOBAL_CB_NODE *pSubCB = NULL;
         for (uint32_t i = 0; i < commandBuffersCount; i++) {
             pSubCB = getCBNode(dev_data, pCommandBuffers[i]);
-            if (!pSubCB) {
-                skip_call |=
-                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                            VALIDATION_ERROR_00160, "DS",
-                            "vkCmdExecuteCommands() called w/ invalid Cmd Buffer 0x%p in element %u of pCommandBuffers array. %s",
-                            pCommandBuffers[i], i, validation_error_map[VALIDATION_ERROR_00160]);
-            } else if (VK_COMMAND_BUFFER_LEVEL_PRIMARY == pSubCB->createInfo.level) {
+            assert(pSubCB);
+            if (VK_COMMAND_BUFFER_LEVEL_PRIMARY == pSubCB->createInfo.level) {
                 skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
                                      __LINE__, VALIDATION_ERROR_00153, "DS",
                                      "vkCmdExecuteCommands() called w/ Primary Cmd Buffer 0x%p in element %u of pCommandBuffers "
