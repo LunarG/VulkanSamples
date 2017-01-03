@@ -6,6 +6,8 @@ sudo: required
 language: cpp
 
 matrix:
+  # Show final status immediately if a test fails.
+  fast_finish: true
   include:
     # Android build.
     - os: linux
@@ -55,8 +57,9 @@ script:
       make -C dbuild;
     fi
   - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then
-      cd build-android;
+      pushd build-android;
       ./update_external_sources_android.sh;
       ./android-generate.sh;
       ndk-build APP_ABI=$ANDROID_ABI;
+      popd;
     fi
