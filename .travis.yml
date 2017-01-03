@@ -10,7 +10,7 @@ matrix:
     # Android build.
     - os: linux
       compiler: gcc
-      env: VULKAN_BUILD_TARGET=ANDROID ANDROID_TARGET=android-21 ANDROID_ABI=armeabi-v7a
+      env: VULKAN_BUILD_TARGET=ANDROID ANDROID_TARGET=android-23 ANDROID_ABI=armeabi-v7a
     # Linux GCC debug build.
     - os: linux
       compiler: gcc
@@ -19,6 +19,13 @@ matrix:
     - os: linux
       compiler: clang
       env: VULKAN_BUILD_TARGET=LINUX
+
+android:
+  components:
+    - tools
+    - platform-tools
+    - build-tools-23.0.2
+    - android-23
 
 before_install: 
   # Install the appropriate Linux packages.
