@@ -6637,18 +6637,6 @@ static bool PreCallValidateCreateImageView(layer_data *dev_data, const VkImageVi
 
         // Validate correct image aspect bits for desired formats and format consistency
         skip |= ValidateImageAspectMask(dev_data, image_state->image, image_format, aspect_mask, "vkCreateImageView()");
-        if (vk_format_is_color(image_format) && !vk_format_is_color(view_format)) {
-            std::stringstream ss;
-            ss << "vkCreateImageView: The image view's format can differ from the parent image's format, but both must be "
-               << "color formats.  ImageFormat is " << string_VkFormat(image_format) << " ImageViewFormat is "
-               << string_VkFormat(view_format);
-            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                            (uint64_t)create_info->image, __LINE__, VALIDATION_ERROR_02171, "IMAGE", "%s %s", ss.str().c_str(),
-                            validation_error_map[VALIDATION_ERROR_02171]);
-            // TODO:  Uncompressed formats are compatible if they occupy they same number of bits per pixel.
-            //        Compressed formats are compatible if the only difference between them is the numerical type of
-            //        the uncompressed pixels (e.g. signed vs. unsigned, or sRGB vs. UNORM encoding).
-        }
     }
     return skip;
 }
