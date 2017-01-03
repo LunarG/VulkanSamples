@@ -134,6 +134,9 @@ class HelperFileOutputGenerator(OutputGenerator):
     def endFile(self):
         dest_file = ''
         dest_file += self.OutputDestFile()
+        # Remove blank lines at EOF
+        if dest_file.endswith('\n'):
+            dest_file = dest_file[:-1]
         write(dest_file, file=self.outFile);
         # Finish processing in superclass
         OutputGenerator.endFile(self)
