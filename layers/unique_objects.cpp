@@ -648,15 +648,12 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneSupportedDisplaysKHR(VkPhysicalDev
 VKAPI_ATTR VkResult VKAPI_CALL GetDisplayModePropertiesKHR(VkPhysicalDevice physicalDevice, VkDisplayKHR display,
                                                            uint32_t *pPropertyCount, VkDisplayModePropertiesKHR *pProperties) {
     layer_data *my_map_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
-    safe_VkDisplayModePropertiesKHR *local_pProperties = NULL;
+    VkDisplayModePropertiesKHR *local_pProperties = NULL;
     {
         std::lock_guard<std::mutex> lock(global_lock);
         display = (VkDisplayKHR)my_map_data->unique_id_mapping[reinterpret_cast<uint64_t &>(display)];
         if (pProperties) {
-            local_pProperties = new safe_VkDisplayModePropertiesKHR[*pPropertyCount];
-            for (uint32_t idx0 = 0; idx0 < *pPropertyCount; ++idx0) {
-                local_pProperties[idx0].initialize(&pProperties[idx0]);
-            }
+            local_pProperties = new VkDisplayModePropertiesKHR[*pPropertyCount];
         }
     }
 
