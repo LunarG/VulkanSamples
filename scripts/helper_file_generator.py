@@ -68,7 +68,7 @@ class HelperFileOutputGeneratorOptions(GeneratorOptions):
 #
 # HelperFileOutputGenerator - subclass of OutputGenerator. Outputs Vulkan helper files
 class HelperFileOutputGenerator(OutputGenerator):
-    """Generate Windows def file based on XML element attributes"""
+    """Generate helper file based on XML element attributes"""
     def __init__(self,
                  errFile = sys.stderr,
                  warnFile = sys.stderr,
@@ -130,7 +130,7 @@ class HelperFileOutputGenerator(OutputGenerator):
         copyright += ' ****************************************************************************/\n'
         write(copyright, file=self.outFile)
     #
-    # Write generate and write def file content to output file
+    # Write generated file content to output file
     def endFile(self):
         dest_file = ''
         dest_file += self.OutputDestFile()
