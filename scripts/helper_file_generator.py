@@ -447,18 +447,37 @@ class HelperFileOutputGenerator(OutputGenerator):
     # safe_struct header: build function prototypes for header file
     def GenerateSafeStructHeader(self):
         safe_struct_header = ''
-        safe_struct_header += 'size_t get_struct_chain_size(const void* struct_ptr);\n'
         for item in self.structMembers:
-            lower_case_name = item.name.lower()
-            if item.ifdef_protect != None:
-                safe_struct_header += '#ifdef %s\n' % item.ifdef_protect
-            safe_struct_header += 'size_t vk_size_%s(const %s* struct_ptr);\n' % (item.name.lower(), item.name)
-            if item.ifdef_protect != None:
-                safe_struct_header += '#endif // %s\n' % item.ifdef_protect
-        safe_struct_header += '#ifdef __cplusplus\n'
-        safe_struct_header += '}\n'
-        safe_struct_header += '#endif'
+            if self.GenSafeStruct(item) == True:
+                safe_struct_header += '\n'
+                if item.ifdef_protect != None:
+                    safe_struct_header += '#ifdef %s\n' % item.ifdef_protect
+                safe_struct_header += 'struct safe_%s {\n' % (item.name)
+                for member in item.members:
+                    safe_struct_header += '%s;\n' % member.cdecl
+                # Boilerplate
+                safe_struct_header += '    safe_%s(const %s* in_struct);\n' % (item.name, item.name)
+                safe_struct_header += '    safe_%s(const safe_%s& src);\n' % (item.name, item.name)
+                safe_struct_header += '    safe_%s();\n' % item.name
+                safe_struct_header += '    ~safe_%s();\n' % item.name
+                safe_struct_header += '    void initialize(const %s* in_struct);\n' % item.name
+                safe_struct_header += '    void initialize(const safe_%s* src);\n' % item.name
+                safe_struct_header += '    %s *ptr() { return reinterpret_cast<%s *>(this); }\n' % (item.name, item.name)
+                safe_struct_header += '    %s const *ptr() const { return reinterpret_cast<%s const *>(this); }\n' % (item.name, item.name)
+                safe_struct_header += '};\n'
+                if item.ifdef_protect != None:
+                    safe_struct_header += '#endif // %s\n' % item.ifdef_protect
         return safe_struct_header
+    #
+    # Determine if a structure needs a safe_struct helper function
+    # That is, it has an sType or one of its members is a pointer
+    def GenSafeStruct(self, structure):
+        if 'sType' == structure.name:
+            return True
+        for member in structure.members:
+            if member.ispointer == True:
+                return True
+        return False
     #
     # Combine safe struct helper source file preamble with body text and return
     def GenerateSafeStructHelperSource(self):
@@ -474,7 +493,6 @@ class HelperFileOutputGenerator(OutputGenerator):
         safe_struct_body = ''
         for item in self.structMembers:
             safe_struct_body += '\n'
-            lower_case_name = item.name.lower()
             if item.ifdef_protect != None:
                 safe_struct_body += '#ifdef %s\n' % item.ifdef_protect
             safe_struct_body += 'size_t vk_size_%s(const %s* struct_ptr) {\n' % (item.name.lower(), item.name)
