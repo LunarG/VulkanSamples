@@ -106,10 +106,10 @@ class HelperFileOutputGenerator(OutputGenerator):
         copyright += '\n'
         copyright += '/***************************************************************************\n'
         copyright += ' *\n'
-        copyright += ' * Copyright (c) 2015-2016 The Khronos Group Inc.\n'
-        copyright += ' * Copyright (c) 2015-2016 Valve Corporation\n'
-        copyright += ' * Copyright (c) 2015-2016 LunarG, Inc.\n'
-        copyright += ' * Copyright (c) 2015-2016 Google Inc.\n'
+        copyright += ' * Copyright (c) 2015-2017 The Khronos Group Inc.\n'
+        copyright += ' * Copyright (c) 2015-2017 Valve Corporation\n'
+        copyright += ' * Copyright (c) 2015-2017 LunarG, Inc.\n'
+        copyright += ' * Copyright (c) 2015-2017 Google Inc.\n'
         copyright += ' *\n'
         copyright += ' * Licensed under the Apache License, Version 2.0 (the "License");\n'
         copyright += ' * you may not use this file except in compliance with the License.\n'
@@ -432,6 +432,85 @@ class HelperFileOutputGenerator(OutputGenerator):
         struct_size_helper_source += self.GenerateStructSizeSource()
         return struct_size_helper_source
     #
+    # Combine safe struct helper header file preamble with body text and return
+    def GenerateSafeStructHelperHeader(self):
+        safe_struct_helper_header = '\n'
+        safe_struct_helper_header += '#pragma once\n'
+        safe_struct_helper_header += '#include <vulkan/vulkan.h>\n'
+        safe_struct_helper_header += '\n'
+        safe_struct_helper_header += self.GenerateSafeStructHeader()
+        return safe_struct_helper_header
+    #
+    # safe_struct header: build function prototypes for header file
+    def GenerateSafeStructHeader(self):
+        safe_struct_header = ''
+        safe_struct_header += 'size_t get_struct_chain_size(const void* struct_ptr);\n'
+        for item in self.structMembers:
+            lower_case_name = item.name.lower()
+            if item.ifdef_protect != None:
+                safe_struct_header += '#ifdef %s\n' % item.ifdef_protect
+            safe_struct_header += 'size_t vk_size_%s(const %s* struct_ptr);\n' % (item.name.lower(), item.name)
+            if item.ifdef_protect != None:
+                safe_struct_header += '#endif // %s\n' % item.ifdef_protect
+        safe_struct_header += '#ifdef __cplusplus\n'
+        safe_struct_header += '}\n'
+        safe_struct_header += '#endif'
+        return safe_struct_header
+    #
+    # Combine safe struct helper source file preamble with body text and return
+    def GenerateSafeStructHelperSource(self):
+        safe_struct_helper_source = '\n'
+        safe_struct_helper_source += '#include "vk_safe_struct.h"\n'
+        safe_struct_helper_source += '#include <string.h>\n'
+        safe_struct_helper_source += '\n'
+        safe_struct_helper_source += self.GenerateSafeStructSource()
+        return safe_struct_helper_source
+    #
+    # safe_struct source -- create bodies of safe struct helper functions
+    def GenerateSafeStructSource(self):
+        safe_struct_body = ''
+        for item in self.structMembers:
+            safe_struct_body += '\n'
+            lower_case_name = item.name.lower()
+            if item.ifdef_protect != None:
+                safe_struct_body += '#ifdef %s\n' % item.ifdef_protect
+            safe_struct_body += 'size_t vk_size_%s(const %s* struct_ptr) {\n' % (item.name.lower(), item.name)
+            safe_struct_body += '    size_t struct_size = 0;\n'
+            safe_struct_body += '    if (struct_ptr) {\n'
+            safe_struct_body += '        struct_size = sizeof(%s);\n' % item.name
+            counter_declared = False
+            for member in item.members:
+                vulkan_type = next((i for i, v in enumerate(self.structMembers) if v[0] == member.type), None)
+                if member.ispointer == True:
+                    if vulkan_type is not None:
+                        # If this is another Vulkan structure call generated size function
+                        if member.len is not None:
+                            safe_struct_body, counter_declared = self.DeclareCounter(safe_struct_body, counter_declared)
+                            safe_struct_body += '        for (i = 0; i < struct_ptr->%s; i++) {\n' % member.len
+                            safe_struct_body += '            struct_size += vk_size_%s(&struct_ptr->%s[i]);\n' % (member.type.lower(), member.name)
+                            safe_struct_body += '        }\n'
+                        else:
+                            safe_struct_body += '        struct_size += vk_size_%s(struct_ptr->%s);\n' % (member.type.lower(), member.name)
+                    else:
+                        if member.type == 'char':
+                            # Deal with sizes of character strings
+                            if member.len is not None:
+                                safe_struct_body, counter_declared = self.DeclareCounter(safe_struct_body, counter_declared)
+                                safe_struct_body += '        for (i = 0; i < struct_ptr->%s; i++) {\n' % member.len
+                                safe_struct_body += '            struct_size += (sizeof(char*) + (sizeof(char) * (1 + strlen(struct_ptr->%s[i]))));\n' % (member.name)
+                                safe_struct_body += '        }\n'
+                            else:
+                                safe_struct_body += '        struct_size += (struct_ptr->%s != NULL) ? sizeof(char)*(1+strlen(struct_ptr->%s)) : 0;\n' % (member.name, member.name)
+                        else:
+                            if member.len is not None:
+                                safe_struct_body += '        struct_size += struct_ptr->%s * sizeof(%s);\n' % (member.len, member.name)
+            safe_struct_body += '    }\n'
+            safe_struct_body += '    return struct_size\n'
+            safe_struct_body += '}\n'
+            if item.ifdef_protect != None:
+                safe_struct_body += '#endif // %s\n' % item.ifdef_protect
+        return safe_struct_body
+    #
     # Create a helper file and return it as a string
     def OutputDestFile(self):
         if self.helper_file_type == 'enum_string_header':
@@ -440,6 +519,10 @@ class HelperFileOutputGenerator(OutputGenerator):
             return self.GenerateStructSizeHelperHeader()
         elif self.helper_file_type == 'struct_size_source':
             return self.GenerateStructSizeHelperSource()
+        elif self.helper_file_type == 'safe_struct_header':
+            return self.GenerateSafeStructHelperHeader()
+        elif self.helper_file_type == 'safe_struct_source':
+            return self.GenerateSafeStructHelperSource()
         else:
             return 'Bad Helper Generator Option %s' % self.helper_file_type
 
