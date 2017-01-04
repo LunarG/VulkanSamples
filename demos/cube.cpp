@@ -2178,7 +2178,7 @@ struct Demo {
         mat4x4 VP;
         mat4x4_mul(VP, projection_matrix, view_matrix);
 
-        // Rotate 22.5 degrees around the Y axis
+        // Rotate around the Y axis
         mat4x4 Model;
         mat4x4_dup(Model, model_matrix);
         mat4x4_rotate(model_matrix, Model, 0.0f, 1.0f, 0.0f,
@@ -2385,12 +2385,12 @@ struct Demo {
                 quit = true;
                 break;
             case 0x71: // left arrow key
-                spin_angle += spin_increment;
-                break;
-            case 0x72: // right arrow key
                 spin_angle -= spin_increment;
                 break;
-            case 0x41:
+            case 0x72: // right arrow key
+                spin_angle += spin_increment;
+                break;
+            case 0x41: // space bar
                 pause = !pause;
                 break;
             }
@@ -2415,11 +2415,10 @@ struct Demo {
             if (pause) {
                 XNextEvent(display, &event);
                 handle_xlib_event(&event);
-            } else {
-                while (XPending(display) > 0) {
-                    XNextEvent(display, &event);
-                    handle_xlib_event(&event);
-                }
+            }
+            while (XPending(display) > 0) {
+                XNextEvent(display, &event);
+                handle_xlib_event(&event);
             }
 
             update_data_buffer();
@@ -2454,12 +2453,12 @@ struct Demo {
                 quit = true;
                 break;
             case 0x71: // left arrow key
-                spin_angle += spin_increment;
-                break;
-            case 0x72: // right arrow key
                 spin_angle -= spin_increment;
                 break;
-            case 0x41:
+            case 0x72: // right arrow key
+                spin_angle += spin_increment;
+                break;
+            case 0x41: // space bar
                 pause = !pause;
                 break;
             }
@@ -2488,11 +2487,11 @@ struct Demo {
                 event = xcb_wait_for_event(connection);
             } else {
                 event = xcb_poll_for_event(connection);
-                while (event) {
-                    handle_xcb_event(event);
-                    free(event);
-                    event = xcb_poll_for_event(connection);
-                }
+            }
+            while (event) {
+                handle_xcb_event(event);
+                free(event);
+                event = xcb_poll_for_event(connection);
             }
 
             update_data_buffer();

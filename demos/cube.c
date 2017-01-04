@@ -743,7 +743,7 @@ void demo_update_data_buffer(struct demo *demo) {
 
     mat4x4_mul(VP, demo->projection_matrix, demo->view_matrix);
 
-    // Rotate 22.5 degrees around the Y axis
+    // Rotate around the Y axis
     mat4x4_dup(Model, demo->model_matrix);
     mat4x4_rotate(demo->model_matrix, Model, 0.0f, 1.0f, 0.0f,
                   (float)degreesToRadians(demo->spin_angle));
@@ -2295,12 +2295,12 @@ static void demo_handle_xlib_event(struct demo *demo, const XEvent *event) {
             demo->quit = true;
             break;
         case 0x71: // left arrow key
-            demo->spin_angle += demo->spin_increment;
-            break;
-        case 0x72: // right arrow key
             demo->spin_angle -= demo->spin_increment;
             break;
-        case 0x41:
+        case 0x72: // right arrow key
+            demo->spin_angle += demo->spin_increment;
+            break;
+        case 0x41: // space bar
             demo->pause = !demo->pause;
             break;
         }
@@ -2327,11 +2327,10 @@ static void demo_run_xlib(struct demo *demo) {
         if (demo->pause) {
             XNextEvent(demo->display, &event);
             demo_handle_xlib_event(demo, &event);
-        } else {
-            while (XPending(demo->display) > 0) {
-                XNextEvent(demo->display, &event);
-                demo_handle_xlib_event(demo, &event);
-            }
+        }
+        while (XPending(demo->display) > 0) {
+            XNextEvent(demo->display, &event);
+            demo_handle_xlib_event(demo, &event);
         }
 
         demo_update_data_buffer(demo);
@@ -2364,12 +2363,12 @@ static void demo_handle_xcb_event(struct demo *demo,
             demo->quit = true;
             break;
         case 0x71: // left arrow key
-            demo->spin_angle += demo->spin_increment;
-            break;
-        case 0x72: // right arrow key
             demo->spin_angle -= demo->spin_increment;
             break;
-        case 0x41:
+        case 0x72: // right arrow key
+            demo->spin_angle += demo->spin_increment;
+            break;
+        case 0x41: // space bar
             demo->pause = !demo->pause;
             break;
         }
@@ -2396,13 +2395,14 @@ static void demo_run_xcb(struct demo *demo) {
 
         if (demo->pause) {
             event = xcb_wait_for_event(demo->connection);
-        } else {
+        }
+        else {
             event = xcb_poll_for_event(demo->connection);
-            while(event) {
-                demo_handle_xcb_event(demo, event);
-                free(event);
-                event = xcb_poll_for_event(demo->connection);
-            }
+        }
+        while (event) {
+            demo_handle_xcb_event(demo, event);
+            free(event);
+            event = xcb_poll_for_event(demo->connection);
         }
 
         demo_update_data_buffer(demo);
