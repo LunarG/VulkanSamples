@@ -8892,7 +8892,7 @@ VKAPI_ATTR void VKAPI_CALL CmdClearAttachments(VkCommandBuffer commandBuffer, ui
                 auto image_view_state = getImageViewState(dev_data, image_view);
                 auto aspects_present = image_view_state->create_info.subresourceRange.aspectMask;
                 auto extra_aspects = clear_desc->aspectMask & ~aspects_present;
-
+                // TODO: This is a different check than 01125. Need a new valid usage statement for this case, or should kill check.
                 if (extra_aspects) {
                     skip_call |= log_msg(
                             dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT,

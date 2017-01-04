@@ -1221,6 +1221,7 @@ bool cvdescriptorset::DescriptorSet::ValidateWriteUpdate(const debug_report_data
     // Verify consecutive bindings match (if needed)
     if (!p_layout_->VerifyUpdateConsistency(update->dstBinding, update->dstArrayElement, update->descriptorCount, "write update to",
                                             set_, error_msg)) {
+        // TODO : Should break out "consecutive binding updates" language into valid usage statements
         *error_code = VALIDATION_ERROR_00938;
         return false;
     }
