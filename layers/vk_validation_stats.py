@@ -59,6 +59,8 @@ test_file = '../tests/layer_validation_tests.cpp'
 duplicate_exceptions = [
 'VALIDATION_ERROR_00018', # This covers the broad case that all child objects must be destroyed at DestroyInstance time
 'VALIDATION_ERROR_00049', # This covers the broad case that all child objects must be destroyed at DestroyDevice time
+'VALIDATION_ERROR_00112', # Obj tracker check makes sure non-null framebuffer is valid & CV check makes sure it's compatible w/ renderpass framebuffer
+'VALIDATION_ERROR_00324', # This is an aliasing error that we report twice, for each of the two allocations that are aliasing
 'VALIDATION_ERROR_00515', # Covers valid shader module handle for both Compute & Graphics pipelines
 'VALIDATION_ERROR_00648', # This is a case for VkMappedMemoryRange struct that is used by both Flush & Invalidate MappedMemoryRange
 'VALIDATION_ERROR_00741', # This is a blanket case for all invalid image aspect bit errors. The spec link has appropriate details for all separate cases.
@@ -72,6 +74,7 @@ duplicate_exceptions = [
 'VALIDATION_ERROR_01450', # Used for both x & y bounds of viewport
 'VALIDATION_ERROR_01489', # Used for both x & y value of scissors to make sure they're not negative
 'VALIDATION_ERROR_01926', # Surface of VkSwapchainCreateInfoKHR must be valid when creating both single or shared swapchains
+'VALIDATION_ERROR_01935', # oldSwapchain of VkSwapchainCreateInfoKHR must be valid when creating both single or shared swapchains
 'VALIDATION_ERROR_02333', # Single error for both imageFormat & imageColorSpace requirements when creating swapchain
 'VALIDATION_ERROR_02525', # Used twice for the same error codepath as both a param & to set a variable, so not really a duplicate
 ]
