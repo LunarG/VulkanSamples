@@ -266,18 +266,19 @@ class HeaderFileParser:
     #  3a. Name of dynam array must end in 's' char OR
     #  3b. Name of count var minus 'count' must be contained in name of dynamic array
     def _is_dynamic_array(self, full_type, name):
-        exceptions = ['pEnabledFeatures', 'pWaitDstStageMask', 'pSampleMask']
-        if name in exceptions:
+        negative_exceptions = ['pEnabledFeatures', 'pSampleMask']
+        positive_exceptions = ['pWaitDstStageMask']
+        if name in negative_exceptions:
             return False
+        if name in positive_exceptions:
+            return True
         if '' != self.last_struct_count_name:
             if 'const' in full_type and '*' in full_type:
                 if name.endswith('s') or self.last_struct_count_name.lower().replace('count', '') in name.lower():
                     return True
-
                 # VkWriteDescriptorSet
                 if self.last_struct_count_name == "descriptorCount":
                     return True
-
         return False
 
     # populate struct dicts based on struct lines
