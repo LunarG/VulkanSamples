@@ -7305,45 +7305,30 @@ BeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo
                             commandBuffer, validation_error_map[VALIDATION_ERROR_00106]);
             } else {
                 if (pBeginInfo->flags & VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT) {
-                    if (!pInfo->renderPass) { // renderpass should NOT be null for a Secondary CB
-                        skip_call |=
-                            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                    VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t>(commandBuffer),
-                                    __LINE__, VALIDATION_ERROR_00110, "DS", "vkBeginCommandBuffer(): Secondary Command Buffers "
-                                                                            "(0x%p) must specify a valid renderpass parameter. %s",
-                                    commandBuffer, validation_error_map[VALIDATION_ERROR_00110]);
-                    } 
-                    if (!pInfo->framebuffer) { // framebuffer may be null for a Secondary CB, but this affects perf
-                        skip_call |= log_msg(
-                            dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            reinterpret_cast<uint64_t>(commandBuffer), __LINE__, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",
-                            "vkBeginCommandBuffer(): Secondary Command Buffers (0x%p) may perform better if a "
-                            "valid framebuffer parameter is specified.",
-                            commandBuffer);
-                    } else {
-                        string errorString = "";
-                        auto framebuffer = getFramebufferState(dev_data, pInfo->framebuffer);
-                        if (framebuffer) {
-                            if ((framebuffer->createInfo.renderPass != pInfo->renderPass) &&
-                                !verify_renderpass_compatibility(dev_data, framebuffer->renderPassCreateInfo.ptr(),
-                                                                 getRenderPassState(dev_data, pInfo->renderPass)->createInfo.ptr(),
-                                                                 errorString)) {
-                                // renderPass that framebuffer was created with must be compatible with local renderPass
-                                skip_call |= log_msg(
-                                    dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                    VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t>(commandBuffer),
-                                    __LINE__, VALIDATION_ERROR_00112, "DS",
-                                    "vkBeginCommandBuffer(): Secondary Command "
-                                    "Buffer (0x%p) renderPass (0x%" PRIxLEAST64 ") is incompatible w/ framebuffer "
-                                    "(0x%" PRIxLEAST64 ") w/ render pass (0x%" PRIxLEAST64 ") due to: %s. %s",
-                                    commandBuffer, reinterpret_cast<const uint64_t &>(pInfo->renderPass),
-                                    reinterpret_cast<const uint64_t &>(pInfo->framebuffer),
-                                    reinterpret_cast<uint64_t &>(framebuffer->createInfo.renderPass), errorString.c_str(),
-                                    validation_error_map[VALIDATION_ERROR_00112]);
-                            }
-                            // Connect this framebuffer and its children to this cmdBuffer
-                            AddFramebufferBinding(dev_data, cb_node, framebuffer);
+                    // Object_tracker makes sure these objects are valid
+                    assert(pInfo->renderPass);
+                    assert(pInfo->framebuffer);
+                    string errorString = "";
+                    auto framebuffer = getFramebufferState(dev_data, pInfo->framebuffer);
+                    if (framebuffer) {
+                        if ((framebuffer->createInfo.renderPass != pInfo->renderPass) &&
+                            !verify_renderpass_compatibility(dev_data, framebuffer->renderPassCreateInfo.ptr(),
+                                                             getRenderPassState(dev_data, pInfo->renderPass)->createInfo.ptr(),
+                                                             errorString)) {
+                            // renderPass that framebuffer was created with must be compatible with local renderPass
+                            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                                 VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                                 reinterpret_cast<uint64_t>(commandBuffer), __LINE__, VALIDATION_ERROR_00112, "DS",
+                                                 "vkBeginCommandBuffer(): Secondary Command "
+                                                 "Buffer (0x%p) renderPass (0x%" PRIxLEAST64 ") is incompatible w/ framebuffer "
+                                                 "(0x%" PRIxLEAST64 ") w/ render pass (0x%" PRIxLEAST64 ") due to: %s. %s",
+                                                 commandBuffer, reinterpret_cast<const uint64_t &>(pInfo->renderPass),
+                                                 reinterpret_cast<const uint64_t &>(pInfo->framebuffer),
+                                                 reinterpret_cast<uint64_t &>(framebuffer->createInfo.renderPass),
+                                                 errorString.c_str(), validation_error_map[VALIDATION_ERROR_00112]);
                         }
+                        // Connect this framebuffer and its children to this cmdBuffer
+                        AddFramebufferBinding(dev_data, cb_node, framebuffer);
                     }
                 }
                 if ((pInfo->occlusionQueryEnable == VK_FALSE || dev_data->enabled_features.occlusionQueryPrecise == VK_FALSE) &&
