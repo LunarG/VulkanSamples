@@ -3911,12 +3911,7 @@ TEST_F(VkLayerTest, WriteDescriptorSetIntegrityCheck) {
                      "     the descriptor types and stageflags must all be the same."
                      "3) Immutable Sampler state must match across descriptors");
 
-    const char *invalid_BufferInfo_ErrorMessage =
-        "vkUpdateDescriptorSets: if pDescriptorWrites[0].descriptorType is VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, "
-        "VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC or "
-        "VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, pDescriptorWrites[0].pBufferInfo must not be NULL";
-
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, invalid_BufferInfo_ErrorMessage);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00941);
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     VkDescriptorPoolSize ds_type_count[4] = {};
