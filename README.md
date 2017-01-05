@@ -7,6 +7,12 @@
     samples with a long description set:
     `$ src/get-descripts.sh`
 
+## CI Build Status
+| Platform | Build Status |
+|:--------:|:------------:|
+| Linux/Android | [![Build Status](https://travis-ci.org/LunarG/VulkanSamples.svg?branch=master)](https://travis-ci.org/LunarG/VulkanSamples) |
+| Windows | [![Build status](https://ci.appveyor.com/api/projects/status/c5l2y9nk7wve9xvu/branch/master?svg=true)](https://ci.appveyor.com/project/karl-lunarg/vulkansamples/branch/master) |
+
 ## Structure
   - The Vulkan Samples repo is a set of source and data files in a specific
     directory hierarchy:
