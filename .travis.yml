@@ -37,7 +37,7 @@ cache:
 before_install: 
   # Install the appropriate Linux packages.
   - if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then
-      sudo apt-get -y install libwayland-dev libmirclient-dev;
+      sudo apt-get -y install libxkbcommon-dev libwayland-dev libmirclient-dev;
     fi
 
   # Install the Android NDK.
