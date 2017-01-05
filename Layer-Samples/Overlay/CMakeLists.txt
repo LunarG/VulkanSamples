@@ -82,6 +82,7 @@ else()
 endif()
 
 target_link_libraries(VKLayer_overlay ${LAYER_UTILS_LIB})
+add_dependencies(VKLayer_overlay generate_dispatch_table_helper generate_vk_layer_helpers VkLayer_utils)
 set_target_properties(VKLayer_overlay PROPERTIES CXX_FLAGS "-Wno-unused-function")
 
 if(SDK_INCLUDE_PATH)
