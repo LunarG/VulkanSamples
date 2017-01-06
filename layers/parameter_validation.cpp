@@ -1743,7 +1743,7 @@ bool PreGetDeviceQueue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queu
     if (queue_data->second <= queueIndex) {
         log_msg(my_device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, INVALID_USAGE,
                 LayerName,
-                "VkGetDeviceQueue parameter, uint32_t queueIndex %d, must be less than the number of queues given when the device "
+                "vkGetDeviceQueue() parameter, uint32_t queueIndex %d, must be less than the number of queues given when the device "
                 "was created.",
                 queueIndex);
         return false;
@@ -2276,7 +2276,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateQueryPool(VkDevice device, const VkQueryPoo
             ((pCreateInfo->pipelineStatistics & (~AllVkQueryPipelineStatisticFlagBits)) != 0)) {
             skip |=
                 log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                        UNRECOGNIZED_VALUE, LayerName, "vkCreateQueryPool: if pCreateInfo->queryType is "
+                        UNRECOGNIZED_VALUE, LayerName, "vkCreateQueryPool(): if pCreateInfo->queryType is "
                                                        "VK_QUERY_TYPE_PIPELINE_STATISTICS, pCreateInfo->pipelineStatistics must be "
                                                        "a valid combination of VkQueryPipelineStatisticFlagBits values");
         }
@@ -2444,7 +2444,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateI
             if (pCreateInfo->queueFamilyIndexCount <= 1) {
                 skip |=
                     log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                            INVALID_USAGE, LayerName, "vkCreateImage: if pCreateInfo->sharingMode is VK_SHARING_MODE_CONCURRENT, "
+                            INVALID_USAGE, LayerName, "vkCreateImage(): if pCreateInfo->sharingMode is VK_SHARING_MODE_CONCURRENT, "
                                                       "pCreateInfo->queueFamilyIndexCount must be greater than 1");
             }
 
@@ -2453,7 +2453,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateI
             if (pCreateInfo->pQueueFamilyIndices == nullptr) {
                 skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
                                      __LINE__, REQUIRED_PARAMETER, LayerName,
-                                     "vkCreateImage: if pCreateInfo->sharingMode is VK_SHARING_MODE_CONCURRENT, "
+                                     "vkCreateImage(): if pCreateInfo->sharingMode is VK_SHARING_MODE_CONCURRENT, "
                                      "pCreateInfo->pQueueFamilyIndices must be a pointer to an array of "
                                      "pCreateInfo->queueFamilyIndexCount uint32_t values");
             }
@@ -2477,7 +2477,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateI
         // If imageType is VK_IMAGE_TYPE_1D, both extent.height and extent.depth must be 1
         if ((pCreateInfo->imageType == VK_IMAGE_TYPE_1D) && (pCreateInfo->extent.height != 1) && (pCreateInfo->extent.depth != 1)) {
             skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                                 LayerName, "vkCreateImage: if pCreateInfo->imageType is VK_IMAGE_TYPE_1D, both "
+                                 LayerName, "vkCreateImage(): if pCreateInfo->imageType is VK_IMAGE_TYPE_1D, both "
                                             "pCreateInfo->extent.height and pCreateInfo->extent.depth must be 1");
         }
 
@@ -2487,7 +2487,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateI
             if ((pCreateInfo->flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) &&
                 (pCreateInfo->extent.width != pCreateInfo->extent.height)) {
                 skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                                     LayerName, "vkCreateImage: if pCreateInfo->imageType is VK_IMAGE_TYPE_2D and "
+                                     LayerName, "vkCreateImage(): if pCreateInfo->imageType is VK_IMAGE_TYPE_2D and "
                                                 "pCreateInfo->flags contains VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT, "
                                                 "pCreateInfo->extent.width and pCreateInfo->extent.height must be equal");
             }
@@ -2495,7 +2495,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateI
             if (pCreateInfo->extent.depth != 1) {
                 skip |=
                     log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, LayerName,
-                            "vkCreateImage: if pCreateInfo->imageType is VK_IMAGE_TYPE_2D, pCreateInfo->extent.depth must be 1");
+                            "vkCreateImage(): if pCreateInfo->imageType is VK_IMAGE_TYPE_2D, pCreateInfo->extent.depth must be 1");
             }
         }
 
@@ -2504,7 +2504,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateI
         if (pCreateInfo->mipLevels > (floor(log2(maxDim)) + 1)) {
             skip |=
                 log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, LayerName,
-                        "vkCreateImage: pCreateInfo->mipLevels must be less than or equal to "
+                        "vkCreateImage(): pCreateInfo->mipLevels must be less than or equal to "
                         "floor(log2(max(pCreateInfo->extent.width, pCreateInfo->extent.height, pCreateInfo->extent.depth)))+1");
         }
 
@@ -3416,7 +3416,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorSetLayout(VkDevice device, const 
                     skip |=
                         log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                                 UNRECOGNIZED_VALUE, LayerName,
-                                "vkCreateDescriptorSetLayout: if pCreateInfo->pBindings[%d].descriptorCount is not 0, "
+                                "vkCreateDescriptorSetLayout(): if pCreateInfo->pBindings[%d].descriptorCount is not 0, "
                                 "pCreateInfo->pBindings[%d].stageFlags must be a valid combination of VkShaderStageFlagBits values",
                                 i, i);
                 }
@@ -3560,7 +3560,7 @@ VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSets(VkDevice device, uint32_t descri
                 skip |=
                     log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                             REQUIRED_PARAMETER, LayerName,
-                            "vkUpdateDescriptorSets: parameter pDescriptorWrites[%d].descriptorCount must be greater than 0", i);
+                            "vkUpdateDescriptorSets(): parameter pDescriptorWrites[%d].descriptorCount must be greater than 0", i);
             }
 
             if ((pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER) ||
@@ -3574,7 +3574,7 @@ VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSets(VkDevice device, uint32_t descri
                 if (pDescriptorWrites[i].pImageInfo == nullptr) {
                     skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
                                          __LINE__, REQUIRED_PARAMETER, LayerName,
-                                         "vkUpdateDescriptorSets: if pDescriptorWrites[%d].descriptorType is "
+                                         "vkUpdateDescriptorSets(): if pDescriptorWrites[%d].descriptorType is "
                                          "VK_DESCRIPTOR_TYPE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, "
                                          "VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE or "
                                          "VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, pDescriptorWrites[%d].pImageInfo must not be NULL",
@@ -3606,7 +3606,7 @@ VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSets(VkDevice device, uint32_t descri
                 if (pDescriptorWrites[i].pBufferInfo == nullptr) {
                     skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
                                          __LINE__, REQUIRED_PARAMETER, LayerName,
-                                         "vkUpdateDescriptorSets: if pDescriptorWrites[%d].descriptorType is "
+                                         "vkUpdateDescriptorSets(): if pDescriptorWrites[%d].descriptorType is "
                                          "VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, "
                                          "VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC or VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, "
                                          "pDescriptorWrites[%d].pBufferInfo must not be NULL",
@@ -3626,7 +3626,7 @@ VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSets(VkDevice device, uint32_t descri
                 if (pDescriptorWrites[i].pTexelBufferView == nullptr) {
                     skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
                                          __LINE__, REQUIRED_PARAMETER, LayerName,
-                                         "vkUpdateDescriptorSets: if pDescriptorWrites[%d].descriptorType is "
+                                         "vkUpdateDescriptorSets(): if pDescriptorWrites[%d].descriptorType is "
                                          "VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER or VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, "
                                          "pDescriptorWrites[%d].pTexelBufferView must not be NULL",
                                          i, i);
@@ -4287,14 +4287,14 @@ bool PreCmdCopyImage(VkCommandBuffer commandBuffer, const VkImageCopy *pRegions)
                                                     VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0) {
             log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                     UNRECOGNIZED_VALUE, LayerName,
-                    "vkCmdCopyImage parameter, VkImageAspect pRegions->srcSubresource.aspectMask, is an unrecognized enumerator");
+                    "vkCmdCopyImage() parameter, VkImageAspect pRegions->srcSubresource.aspectMask, is an unrecognized enumerator");
             return false;
         }
         if ((pRegions->dstSubresource.aspectMask & (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT |
                                                     VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0) {
             log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                     UNRECOGNIZED_VALUE, LayerName,
-                    "vkCmdCopyImage parameter, VkImageAspect pRegions->dstSubresource.aspectMask, is an unrecognized enumerator");
+                    "vkCmdCopyImage() parameter, VkImageAspect pRegions->dstSubresource.aspectMask, is an unrecognized enumerator");
             return false;
         }
     }
@@ -4326,14 +4326,14 @@ bool PreCmdBlitImage(VkCommandBuffer commandBuffer, const VkImageBlit *pRegions)
                                                     VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0) {
             log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                     UNRECOGNIZED_VALUE, LayerName,
-                    "vkCmdCopyImage parameter, VkImageAspect pRegions->srcSubresource.aspectMask, is an unrecognized enumerator");
+                    "vkCmdBlitImage() parameter, VkImageAspect pRegions->srcSubresource.aspectMask, is an unrecognized enumerator");
             return false;
         }
         if ((pRegions->dstSubresource.aspectMask & (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT |
                                                     VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0) {
             log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                     UNRECOGNIZED_VALUE, LayerName,
-                    "vkCmdCopyImage parameter, VkImageAspect pRegions->dstSubresource.aspectMask, is an unrecognized enumerator");
+                    "vkCmdBlitImage() parameter, VkImageAspect pRegions->dstSubresource.aspectMask, is an unrecognized enumerator");
             return false;
         }
     }
@@ -4365,7 +4365,7 @@ bool PreCmdCopyBufferToImage(VkCommandBuffer commandBuffer, const VkBufferImageC
                                                       VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0) {
             log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                     UNRECOGNIZED_VALUE, LayerName,
-                    "vkCmdCopyBufferToImage parameter, VkImageAspect pRegions->imageSubresource.aspectMask, is an unrecognized "
+                    "vkCmdCopyBufferToImage() parameter, VkImageAspect pRegions->imageSubresource.aspectMask, is an unrecognized "
                     "enumerator");
             return false;
         }
@@ -4434,18 +4434,18 @@ VKAPI_ATTR void VKAPI_CALL CmdUpdateBuffer(VkCommandBuffer commandBuffer, VkBuff
     if (dstOffset & 3) {
         skip |= log_msg(
             my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__, INVALID_USAGE,
-            LayerName, "CmdUpdateBuffer parameter, VkDeviceSize dstOffset (0x%" PRIxLEAST64 "), is not a multiple of 4", dstOffset);
+            LayerName, "vkCmdUpdateBuffer() parameter, VkDeviceSize dstOffset (0x%" PRIxLEAST64 "), is not a multiple of 4", dstOffset);
     }
 
     if ((dataSize <= 0) || (dataSize > 65536)) {
         skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__,
-                             INVALID_USAGE, LayerName, "CmdUpdateBuffer parameter, VkDeviceSize dataSize (0x%" PRIxLEAST64
+                             INVALID_USAGE, LayerName, "vkCmdUpdateBuffer() parameter, VkDeviceSize dataSize (0x%" PRIxLEAST64
                                                        "), must be greater than zero and less than or equal to 65536",
                              dataSize);
     } else if (dataSize & 3) {
         skip |= log_msg(
             my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__, INVALID_USAGE,
-            LayerName, "CmdUpdateBuffer parameter, VkDeviceSize dataSize (0x%" PRIxLEAST64 "), is not a multiple of 4", dataSize);
+            LayerName, "vkCmdUpdateBuffer() parameter, VkDeviceSize dataSize (0x%" PRIxLEAST64 "), is not a multiple of 4", dataSize);
     }
 
     if (!skip) {
@@ -4464,18 +4464,18 @@ VKAPI_ATTR void VKAPI_CALL CmdFillBuffer(VkCommandBuffer commandBuffer, VkBuffer
     if (dstOffset & 3) {
         skip |= log_msg(
             my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__, INVALID_USAGE,
-            LayerName, "vkCmdFillBuffer parameter, VkDeviceSize dstOffset (0x%" PRIxLEAST64 "), is not a multiple of 4", dstOffset);
+            LayerName, "vkCmdFillBuffer() parameter, VkDeviceSize dstOffset (0x%" PRIxLEAST64 "), is not a multiple of 4", dstOffset);
     }
 
     if (size != VK_WHOLE_SIZE) {
         if (size <= 0) {
             skip |= log_msg(
                 my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__, INVALID_USAGE,
-                LayerName, "vkCmdFillBuffer parameter, VkDeviceSize size (0x%" PRIxLEAST64 "), must be greater than zero", size);
+                LayerName, "vkCmdFillBuffer() parameter, VkDeviceSize size (0x%" PRIxLEAST64 "), must be greater than zero", size);
         } else if (size & 3) {
             skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__,
                                  INVALID_USAGE, LayerName,
-                                 "vkCmdFillBuffer parameter, VkDeviceSize size (0x%" PRIxLEAST64 "), is not a multiple of 4", size);
+                                 "vkCmdFillBuffer() parameter, VkDeviceSize size (0x%" PRIxLEAST64 "), is not a multiple of 4", size);
         }
     }
 
