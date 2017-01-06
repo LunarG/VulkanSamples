@@ -225,7 +225,6 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         self.structNames = []
         self.stypes = []
         self.structTypes = dict()
-        self.handleTypes = set()
         self.commands = []
         self.structMembers = []
         self.validatedStructs = dict()
