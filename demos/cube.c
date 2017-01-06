@@ -434,10 +434,6 @@ dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
 
     assert(message);
 
-    // We know we're submitting queues without fences, ignore this
-    if (strstr(pMsg, "vkQueueSubmit parameter, VkFence fence, is null pointer"))
-        return false;
-
     if (msgFlags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT) {
         sprintf(message, "INFORMATION: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
         validation_error = 1;
