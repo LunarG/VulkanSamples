@@ -109,84 +109,87 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL myDbgFunc(VkFlags msgFlags, VkDebugReportO
 
 // ErrorMonitor Usage:
 //
-// Call SetDesiredFailureMsg with: a string to be compared against all
+// Call SetDesiredFailureMsg with a string to be compared against all
 // encountered log messages, or a validation error enum identifying
 // desired error message. Passing NULL or VALIDATION_ERROR_MAX_ENUM
 // will match all log messages. logMsg will return true for skipCall
 // only if msg is matched or NULL.
 //
-// Call DesiredMsgFound to determine if the desired failure message
-// was encountered.
+// Call VerifyFound to determine if all desired failure messages
+// were encountered. Call VerifyNotFound to determine if any unexpected
+// failure was encountered.
 class ErrorMonitor {
   public:
     ErrorMonitor() {
-        test_platform_thread_create_mutex(&m_mutex);
-        test_platform_thread_lock_mutex(&m_mutex);
-        m_msgFlags = VK_DEBUG_REPORT_ERROR_BIT_EXT;
-        m_bailout = NULL;
-        test_platform_thread_unlock_mutex(&m_mutex);
+        test_platform_thread_create_mutex(&mutex_);
+        test_platform_thread_lock_mutex(&mutex_);
+        Reset();
+        test_platform_thread_unlock_mutex(&mutex_);
     }
 
-    ~ErrorMonitor() { test_platform_thread_delete_mutex(&m_mutex); }
+    ~ErrorMonitor() { test_platform_thread_delete_mutex(&mutex_); }
 
-    // ErrorMonitor will look for an error message containing the specified string
+    // Set monitor to pristine state
+    void Reset() {
+        message_flags_ = VK_DEBUG_REPORT_ERROR_BIT_EXT;
+        bailout_ = NULL;
+        message_found_ = VK_FALSE;
+        failure_message_strings_.clear();
+        desired_message_strings_.clear();
+        desired_message_ids_.clear();
+        other_messages_.clear();
+        message_outstanding_count_ = 0;
+    }
+
+    // ErrorMonitor will look for an error message containing the specified string(s)
     void SetDesiredFailureMsg(VkFlags msgFlags, const char *msgString) {
-        // Also discard all collected messages to this point
-        test_platform_thread_lock_mutex(&m_mutex);
-        m_failure_message_strings.clear();
-        // If we are looking for a matching string, ignore any IDs
-        m_desired_message_ids.clear();
-        m_otherMsgs.clear();
-        m_desired_message_strings.insert(msgString);
-        m_msgFound = VK_FALSE;
-        m_msgFlags = msgFlags;
-        test_platform_thread_unlock_mutex(&m_mutex);
+        test_platform_thread_lock_mutex(&mutex_);
+        desired_message_strings_.insert(msgString);
+        message_flags_ |= msgFlags;
+        message_outstanding_count_++;
+        test_platform_thread_unlock_mutex(&mutex_);
     }
 
-    // ErrorMonitor will look for a message ID matching the specified one
+    // ErrorMonitor will look for a message ID matching the specified one(s)
     void SetDesiredFailureMsg(VkFlags msgFlags, UNIQUE_VALIDATION_ERROR_CODE msg_id) {
-        // Also discard all collected messages to this point
-        test_platform_thread_lock_mutex(&m_mutex);
-        m_failure_message_strings.clear();
-        // If we are looking for IDs don't look for strings
-        m_desired_message_strings.clear();
-        m_otherMsgs.clear();
-        m_desired_message_ids.insert(msg_id);
-        m_msgFound = VK_FALSE;
-        m_msgFlags = msgFlags;
-        test_platform_thread_unlock_mutex(&m_mutex);
+        test_platform_thread_lock_mutex(&mutex_);
+        desired_message_ids_.insert(msg_id);
+        message_flags_ |= msgFlags;
+        message_outstanding_count_++;
+        test_platform_thread_unlock_mutex(&mutex_);
     }
 
     VkBool32 CheckForDesiredMsg(uint32_t message_code, const char *msgString) {
         VkBool32 result = VK_FALSE;
-        test_platform_thread_lock_mutex(&m_mutex);
-        if (m_bailout != NULL) {
-            *m_bailout = true;
+        test_platform_thread_lock_mutex(&mutex_);
+        if (bailout_ != NULL) {
+            *bailout_ = true;
         }
         string errorString(msgString);
         bool found_expected = false;
 
-        for (auto desired_msg : m_desired_message_strings) {
+        for (auto desired_msg : desired_message_strings_) {
             if (desired_msg.length() == 0) {
                 // An empty desired_msg string "" indicates a positive test - not expecting an error.
                 // Return true to avoid calling layers/driver with this error.
                 // And don't erase the "" string, so it remains if another error is found.
                 result = VK_TRUE;
                 found_expected = true;
-                m_msgFound = VK_TRUE;
-                m_failure_message_strings.insert(errorString);
+                message_found_ = VK_TRUE;
+                failure_message_strings_.insert(errorString);
             } else if (errorString.find(desired_msg) != string::npos) {
                 found_expected = true;
-                m_failure_message_strings.insert(errorString);
-                m_msgFound = VK_TRUE;
+                message_outstanding_count_--;
+                failure_message_strings_.insert(errorString);
+                message_found_ = VK_TRUE;
                 result = VK_TRUE;
                 // We only want one match for each expected error so remove from set here
                 // Since we're about the break the loop it's ok to remove from set we're iterating over
-                m_desired_message_strings.erase(desired_msg);
+                desired_message_strings_.erase(desired_msg);
                 break;
             }
         }
-        for (auto desired_id : m_desired_message_ids) {
+        for (auto desired_id : desired_message_ids_) {
             if (desired_id == VALIDATION_ERROR_MAX_ENUM) {
                 // A message ID set to MAX_ENUM indicates a positive test - not expecting an error.
                 // Return true to avoid calling layers/driver with this error.
@@ -195,9 +198,10 @@ class ErrorMonitor {
                 // Double-check that the string matches the error enum
                 if (errorString.find(validation_error_map[desired_id]) != string::npos) {
                     found_expected = true;
+                    message_outstanding_count_--;
                     result = VK_TRUE;
-                    m_msgFound = VK_TRUE;
-                    m_desired_message_ids.erase(desired_id);
+                    message_found_ = VK_TRUE;
+                    desired_message_ids_.erase(desired_id);
                     break;
                 } else {
                     // Treat this message as a regular unexpected error, but print a warning jic
@@ -209,19 +213,21 @@ class ErrorMonitor {
 
         if (!found_expected) {
             printf("Unexpected: %s\n", msgString);
-            m_otherMsgs.push_back(errorString);
+            other_messages_.push_back(errorString);
         }
-        test_platform_thread_unlock_mutex(&m_mutex);
+        test_platform_thread_unlock_mutex(&mutex_);
         return result;
     }
 
-    vector<string> GetOtherFailureMsgs(void) { return m_otherMsgs; }
+    vector<string> GetOtherFailureMsgs(void) { return other_messages_; }
 
-    VkDebugReportFlagsEXT GetMessageFlags(void) { return m_msgFlags; }
+    VkDebugReportFlagsEXT GetMessageFlags(void) { return message_flags_; }
 
-    VkBool32 DesiredMsgFound(void) { return m_msgFound; }
+    VkBool32 AnyDesiredMsgFound(void) { return message_found_; }
 
-    void SetBailout(bool *bailout) { m_bailout = bailout; }
+    VkBool32 AllDesiredMsgsFound(void) { return (0 == message_outstanding_count_); }
+
+    void SetBailout(bool *bailout) { bailout_ = bailout; }
 
     void DumpFailureMsgs(void) {
         vector<string> otherMsgs = GetOtherFailureMsgs();
@@ -237,43 +243,46 @@ class ErrorMonitor {
 
     // ExpectSuccess now takes an optional argument allowing a custom combination of debug flags
     void ExpectSuccess(VkDebugReportFlagsEXT message_flag_mask = VK_DEBUG_REPORT_ERROR_BIT_EXT) {
-        m_msgFlags = message_flag_mask;
         // Match ANY message matching specified type
         SetDesiredFailureMsg(message_flag_mask, "");
+        message_flags_ = message_flag_mask; // override mask handling in SetDesired...
     }
 
     void VerifyFound() {
         // Not seeing the desired message is a failure. /Before/ throwing, dump any other messages.
-        if (!DesiredMsgFound()) {
+        if (!AllDesiredMsgsFound()) {
             DumpFailureMsgs();
-            for (auto desired_msg : m_desired_message_strings) {
+            for (auto desired_msg : desired_message_strings_) {
                 FAIL() << "Did not receive expected error '" << desired_msg << "'";
             }
-            for (auto desired_id : m_desired_message_ids) {
+            for (auto desired_id : desired_message_ids_) {
                 FAIL() << "Did not receive expected error '" << desired_id << "'";
             }
         }
+        Reset();
     }
 
     void VerifyNotFound() {
         // ExpectSuccess() configured us to match anything. Any error is a failure.
-        if (DesiredMsgFound()) {
+        if (AnyDesiredMsgFound()) {
             DumpFailureMsgs();
-            for (auto msg : m_failure_message_strings) {
+            for (auto msg : failure_message_strings_) {
                 FAIL() << "Expected to succeed but got error: " << msg;
             }
         }
+        Reset();
     }
 
   private:
-    VkFlags m_msgFlags;
-    std::unordered_set<uint32_t>m_desired_message_ids;
-    std::unordered_set<string> m_desired_message_strings;
-    std::unordered_set<string> m_failure_message_strings;
-    vector<string> m_otherMsgs;
-    test_platform_thread_mutex m_mutex;
-    bool *m_bailout;
-    VkBool32 m_msgFound;
+    VkFlags                         message_flags_;
+    std::unordered_set<uint32_t>    desired_message_ids_;
+    std::unordered_set<string>      desired_message_strings_;
+    std::unordered_set<string>      failure_message_strings_;
+    vector<string>                  other_messages_;
+    test_platform_thread_mutex      mutex_;
+    bool                            *bailout_;
+    VkBool32                        message_found_;
+    int                             message_outstanding_count_;
 };
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL myDbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType, uint64_t srcObject,
@@ -5371,7 +5380,6 @@ TEST_F(VkLayerTest, InvalidCmdBufferDescriptorSetImageSamplerDestroyed) {
     // Now update descriptor to be valid, but then free descriptor
     img_info.imageView = view2;
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, " that is invalid because bound descriptor set ");
     m_commandBuffer->BeginCommandBuffer();
     m_commandBuffer->BeginRenderPass(m_renderPassBeginInfo);
     vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
@@ -5382,17 +5390,26 @@ TEST_F(VkLayerTest, InvalidCmdBufferDescriptorSetImageSamplerDestroyed) {
     Draw(1, 0, 0, 0);
     m_commandBuffer->EndRenderPass();
     m_commandBuffer->EndCommandBuffer();
-    // Destroy descriptor set invalidates the cb, causing error on submit
+
+    // Immediately try to destroy the descriptor set in the active command buffer - failure expected
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Cannot call vkFreeDescriptorSets() on descriptor set 0x");
     vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
     m_errorMonitor->VerifyFound();
-    // Attempt to submit cmd buffer
+
+    // Try again once the queue is idle - should succeed w/o error
+    // TODO - thought the particular error above doesn't re-occur, there are other 'unexpecteds' still to clean up
+    vkQueueWaitIdle(m_device->m_queue);
+    vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
+
+    // Attempt to submit cmd buffer containing the freed descriptor set
     submit_info = {};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &m_commandBuffer->handle();
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, " that is invalid because bound descriptor set ");
     vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
     m_errorMonitor->VerifyFound();
+
     // Cleanup
     vkFreeMemory(m_device->device(), image_memory, NULL);
     vkDestroySampler(m_device->device(), sampler2, NULL);
@@ -8477,9 +8494,6 @@ TEST_F(VkLayerTest, InvalidBarriers) {
     // Now exercise barrier aspect bit errors, first DS
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "Combination depth/stencil image formats can have only the VK_IMAGE_ASPECT_DEPTH_BIT and VK_IMAGE_ASPECT_STENCIL_BIT set.");
-    m_errorMonitor->SetDesiredFailureMsg(
-        VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "Depth/stencil image formats must have at least one of VK_IMAGE_ASPECT_DEPTH_BIT and VK_IMAGE_ASPECT_STENCIL_BIT set.");
     VkDepthStencilObj ds_image(m_device);
     ds_image.Init(m_device, 128, 128, VK_FORMAT_D24_UNORM_S8_UINT);
@@ -8487,35 +8501,53 @@ TEST_F(VkLayerTest, InvalidBarriers) {
     img_barrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     img_barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
     img_barrier.image = ds_image.handle();
-    // Use of COLOR aspect on DS image is error
-    img_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+    // Not having DEPTH or STENCIL set is an error
+    img_barrier.subresourceRange.aspectMask = 0;
     vkCmdPipelineBarrier(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
                          nullptr, 0, nullptr, 1, &img_barrier);
     m_errorMonitor->VerifyFound();
+
+    // Having anything other than DEPTH or STENCIL is an error
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "Combination depth/stencil image formats can have only the VK_IMAGE_ASPECT_DEPTH_BIT and VK_IMAGE_ASPECT_STENCIL_BIT set.");
+    img_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_COLOR_BIT;
+    vkCmdPipelineBarrier(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
+                         nullptr, 0, nullptr, 1, &img_barrier);
+    m_errorMonitor->VerifyFound();
+
     // Now test depth-only
     VkFormatProperties format_props;
-
     vkGetPhysicalDeviceFormatProperties(m_device->phy().handle(), VK_FORMAT_D16_UNORM, &format_props);
     if (format_props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                             "Depth-only image formats must have the VK_IMAGE_ASPECT_DEPTH_BIT set.");
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                             "Depth-only image formats can have only the VK_IMAGE_ASPECT_DEPTH_BIT set.");
         VkDepthStencilObj d_image(m_device);
         d_image.Init(m_device, 128, 128, VK_FORMAT_D16_UNORM);
         ASSERT_TRUE(d_image.initialized());
         img_barrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         img_barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
         img_barrier.image = d_image.handle();
-        // Use of COLOR aspect on depth image is error
-        img_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+        // DEPTH bit must be set
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             "Depth-only image formats must have the VK_IMAGE_ASPECT_DEPTH_BIT set.");
+        img_barrier.subresourceRange.aspectMask = 0;
+        vkCmdPipelineBarrier(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0,
+                             0, nullptr, 0, nullptr, 1, &img_barrier);
+        m_errorMonitor->VerifyFound();
+
+        // No bits other than DEPTH may be set
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             "Depth-only image formats can have only the VK_IMAGE_ASPECT_DEPTH_BIT set.");
+        img_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_COLOR_BIT;
         vkCmdPipelineBarrier(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0,
                              0, nullptr, 0, nullptr, 1, &img_barrier);
         m_errorMonitor->VerifyFound();
     }
+
+    // Now test stencil-only
     vkGetPhysicalDeviceFormatProperties(m_device->phy().handle(), VK_FORMAT_S8_UINT, &format_props);
     if (format_props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
-        // Now test stencil-only
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                              "Stencil-only image formats must have the VK_IMAGE_ASPECT_STENCIL_BIT set.");
         VkDepthStencilObj s_image(m_device);
@@ -8530,19 +8562,27 @@ TEST_F(VkLayerTest, InvalidBarriers) {
                              0, nullptr, 0, nullptr, 1, &img_barrier);
         m_errorMonitor->VerifyFound();
     }
+
     // Finally test color
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "Color image formats must have the VK_IMAGE_ASPECT_COLOR_BIT set.");
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "Color image formats must have ONLY the VK_IMAGE_ASPECT_COLOR_BIT set.");
     VkImageObj c_image(m_device);
     c_image.init(128, 128, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
     ASSERT_TRUE(c_image.initialized());
     img_barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     img_barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
     img_barrier.image = c_image.handle();
-    // Set aspect to depth (non-color)
-    img_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+
+    // COLOR bit must be set
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "Color image formats must have the VK_IMAGE_ASPECT_COLOR_BIT set.");
+    img_barrier.subresourceRange.aspectMask = 0;
+    vkCmdPipelineBarrier(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
+                         nullptr, 0, nullptr, 1, &img_barrier);
+    m_errorMonitor->VerifyFound();
+
+    // No bits other than COLOR may be set
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "Color image formats must have ONLY the VK_IMAGE_ASPECT_COLOR_BIT set.");
+    img_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT;
     vkCmdPipelineBarrier(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
                          nullptr, 0, nullptr, 1, &img_barrier);
     m_errorMonitor->VerifyFound();
@@ -10442,15 +10482,11 @@ TEST_F(VkLayerTest, MismatchCountQueueCreateRequestedFeature) {
                      "Use invalid Queue Family Index in vkCreateDevice");
     ASSERT_NO_FATAL_FAILURE(InitState());
 
-    const char *mismatch_count_message = "Call to vkEnumeratePhysicalDevices() "
-                                         "w/ pPhysicalDeviceCount value ";
-
     const char *invalid_queueFamilyIndex_message = "Invalid queue create request in vkCreateDevice(). Invalid "
                                                    "queueFamilyIndex ";
 
     const char *unavailable_feature_message = "While calling vkCreateDevice(), requesting feature #";
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT, mismatch_count_message);
     // The following test fails with recent NVidia drivers.
     // By the time core_validation is reached, the NVidia
     // driver has sanitized the invalid condition and core_validation
@@ -11184,8 +11220,9 @@ TEST_F(VkLayerTest, SimultaneousUse) {
     vkCmdEndRenderPass(m_commandBuffer->GetBufferHandle());
     vkEndCommandBuffer(m_commandBuffer->handle());
 
-    m_errorMonitor->SetDesiredFailureMsg(0, "");
+    m_errorMonitor->ExpectSuccess(0);
     vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
+    m_errorMonitor->VerifyNotFound();
 
     command_buffer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
     vkBeginCommandBuffer(m_commandBuffer->handle(), &command_buffer_begin_info);
@@ -11285,7 +11322,7 @@ TEST_F(VkLayerTest, InUseDestroyedSignaled) {
     vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
     m_errorMonitor->VerifyFound();
 
-    m_errorMonitor->SetDesiredFailureMsg(0, "");
+    m_errorMonitor->ExpectSuccess(0); // disable all log message processing with flags==0
     vkResetCommandBuffer(m_commandBuffer->handle(), 0);
 
     vkCreateEvent(m_device->device(), &event_create_info, nullptr, &event);
@@ -11381,6 +11418,7 @@ TEST_F(VkLayerTest, InUseDestroyedSignaled) {
     submit_info.signalSemaphoreCount = 1;
     submit_info.pSignalSemaphores = &semaphore;
     vkQueueSubmit(m_device->m_queue, 1, &submit_info, fence);
+    m_errorMonitor->Reset(); // resume logmsg processing
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00213);
     vkDestroyEvent(m_device->device(), event, nullptr);
@@ -12016,8 +12054,9 @@ TEST_F(VkLayerTest, QueueForwardProgressFenceWait) {
     submit_info.signalSemaphoreCount = 1;
     submit_info.pSignalSemaphores = &semaphore;
     vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
-    m_errorMonitor->SetDesiredFailureMsg(0, "");
+    m_errorMonitor->ExpectSuccess(0);
     vkResetCommandBuffer(m_commandBuffer->handle(), 0);
+    m_errorMonitor->VerifyNotFound();
     m_commandBuffer->BeginCommandBuffer();
     m_commandBuffer->EndCommandBuffer();
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, queue_forward_progress_message);
@@ -14773,9 +14812,6 @@ TEST_F(VkLayerTest, ImageLayerViewTests) {
     m_errorMonitor->VerifyFound();
     imgViewInfo.subresourceRange.levelCount = 1;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "vkCreateImageView called with 0 in "
-                                                                        "pCreateInfo->subresourceRange."
-                                                                        "layerCount");
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "if pCreateInfo->viewType is VK_IMAGE_TYPE_2D, pCreateInfo->subresourceRange.layerCount must be 1");
@@ -14785,7 +14821,6 @@ TEST_F(VkLayerTest, ImageLayerViewTests) {
     m_errorMonitor->VerifyFound();
     imgViewInfo.subresourceRange.layerCount = 1;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "but both must be color formats");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Formats MUST be IDENTICAL unless "
                                                                         "VK_IMAGE_CREATE_MUTABLE_FORMAT BIT "
                                                                         "was set on image creation.");
