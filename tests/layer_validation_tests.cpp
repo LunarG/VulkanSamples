@@ -9963,6 +9963,11 @@ TEST_F(VkLayerTest, NumSamplesMismatch) {
     m_commandBuffer->BeginRenderPass(m_renderPassBeginInfo);
     vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
 
+    VkViewport viewport = {0, 0, 16, 16, 0, 1};
+    vkCmdSetViewport(m_commandBuffer->handle(), 0, 1, &viewport);
+    VkRect2D scissor = {{0, 0}, {16, 16}};
+    vkCmdSetScissor(m_commandBuffer->handle(), 0, 1, &scissor);
+
     // Render triangle (the error should trigger on the attempt to draw).
     Draw(3, 1, 0, 0);
 
