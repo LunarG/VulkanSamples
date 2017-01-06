@@ -14888,11 +14888,11 @@ TEST_F(VkLayerTest, ImageFormatLimits) {
     VkImageFormatProperties imgFmtProps;
     vkGetPhysicalDeviceImageFormatProperties(gpu(), image_create_info.format, image_create_info.imageType, image_create_info.tiling,
                                              image_create_info.usage, image_create_info.flags, &imgFmtProps);
-    image_create_info.extent.depth = imgFmtProps.maxExtent.depth + 1;
+    image_create_info.extent.width = imgFmtProps.maxExtent.width + 1;
     // Expect INVALID_FORMAT_LIMITS_VIOLATION
     vkCreateImage(m_device->handle(), &image_create_info, NULL, &nullImg);
     m_errorMonitor->VerifyFound();
-    image_create_info.extent.depth = 1;
+    image_create_info.extent.width = 1;
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "exceeds allowable maximum supported by format of");
     image_create_info.mipLevels = imgFmtProps.maxMipLevels + 1;
