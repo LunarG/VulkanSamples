@@ -26,13 +26,6 @@ else()
     message(FATAL_ERROR "Unsupported Platform!")
 endif()
 
-macro(run_vk_helper subcmd)
-    add_custom_command(OUTPUT ${ARGN}
-        COMMAND ${PYTHON_CMD} ${SCRIPTS_DIR}/vk_helper.py --${subcmd} ${PROJECT_SOURCE_DIR}/include/vulkan/vulkan.h --abs_out_dir ${CMAKE_CURRENT_BINARY_DIR}
-        DEPENDS ${SCRIPTS_DIR}/vk_helper.py ${PROJECT_SOURCE_DIR}/include/vulkan/vulkan.h
-    )
-endmacro()
-
 macro(run_vk_xml_generate dependency output)
     add_custom_command(OUTPUT ${output}
         COMMAND ${PYTHON_CMD} ${SCRIPTS_DIR}/lvl_genvk.py -registry ${SCRIPTS_DIR}/vk.xml ${output}
@@ -111,13 +104,13 @@ if (WIN32)
     )
     add_library(VkLayer_${target} SHARED ${ARGN} VkLayer_${target}.def)
     target_link_Libraries(VkLayer_${target} VkLayer_utils)
-    add_dependencies(VkLayer_${target} generate_dispatch_table_helper generate_vk_layer_helpers generate_vk_helper_files VkLayer_utils)
+    add_dependencies(VkLayer_${target} generate_dispatch_table_helper generate_vk_helper_files VkLayer_utils)
     endmacro()
 else()
     macro(add_vk_layer target)
     add_library(VkLayer_${target} SHARED ${ARGN})
     target_link_Libraries(VkLayer_${target} VkLayer_utils)
-    add_dependencies(VkLayer_${target} generate_dispatch_table_helper generate_vk_layer_helpers generate_vk_helper_files VkLayer_utils)
+    add_dependencies(VkLayer_${target} generate_dispatch_table_helper generate_vk_helper_files VkLayer_utils)
     set_target_properties(VkLayer_${target} PROPERTIES LINK_FLAGS "-Wl,-Bsymbolic,--exclude-libs,ALL")
     install(TARGETS VkLayer_${target} DESTINATION ${CMAKE_INSTALL_LIBDIR})
     endmacro()
@@ -140,31 +133,20 @@ else()
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wpointer-arith -Wno-unused-function -Wno-sign-compare")
 endif()
 
-run_vk_helper(gen_struct_wrappers
-    vk_safe_struct.h
-    vk_safe_struct.cpp
-)
-
-set_source_files_properties(
-    vk_safe_struct.h
-    vk_safe_struct.cpp
-    PROPERTIES GENERATED TRUE)
-
 add_custom_target(generate_vk_helper_files DEPENDS
     vk_enum_string_helper.h
     vk_struct_size_helper.h
     vk_struct_size_helper.c
+    vk_safe_struct.h
+    vk_safe_struct.cpp
 )
 
 add_custom_target(generate_dispatch_table_helper DEPENDS
     vk_dispatch_table_helper.h
 )
 
-add_custom_target(generate_vk_layer_helpers DEPENDS
-    vk_safe_struct.h
-    vk_safe_struct.cpp
-)
-
+run_vk_xml_generate(helper_file_generator.py vk_safe_struct.h)
+run_vk_xml_generate(helper_file_generator.py vk_safe_struct.cpp)
 run_vk_xml_generate(helper_file_generator.py vk_struct_size_helper.h)
 run_vk_xml_generate(helper_file_generator.py vk_struct_size_helper.c)
 run_vk_xml_generate(helper_file_generator.py vk_enum_string_helper.h)
