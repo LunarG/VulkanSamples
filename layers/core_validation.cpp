@@ -12413,6 +12413,14 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
                         acquired_images);
         }
     }
+
+    if (swapchain_data->images.size() == 0) {
+        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
+                             reinterpret_cast<uint64_t const &>(swapchain), __LINE__, DRAWSTATE_SWAPCHAIN_IMAGES_NOT_FOUND, "DS",
+                             "vkAcquireNextImageKHR: No images found to acquire from. Application probably did not call "
+                             "vkGetSwapchainImagesKHR after swapchain creation.");
+    }
+
     lock.unlock();
 
     if (skip_call)
