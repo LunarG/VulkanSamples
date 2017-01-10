@@ -36,30 +36,22 @@ cache:
 
 before_install: 
   # Install the appropriate Linux packages.
-  - if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then
-      sudo apt-get -y install libxkbcommon-dev libwayland-dev libmirclient-dev;
-    fi
+  - if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then sudo apt-get -y install libxkbcommon-dev libwayland-dev libmirclient-dev; fi
 
   # Install the Android NDK.
-  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then
-      export ARCH=`uname -m`;
-      wget http://dl.google.com/android/repository/android-ndk-r13b-linux-${ARCH}.zip;
-      unzip -u -q android-ndk-r13b-linux-${ARCH}.zip;
-      export ANDROID_NDK_HOME=`pwd`/android-ndk-r13b;
-      export JAVA_HOME="/usr/lib/jvm/java-8-oracle";
-      export PATH="$ANDROID_NDK_HOME:$PATH";
-    fi
+  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then export ARCH=`uname -m`; fi
+  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then wget http://dl.google.com/android/repository/android-ndk-r13b-linux-${ARCH}.zip; fi
+  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then unzip -u -q android-ndk-r13b-linux-${ARCH}.zip; fi
+  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then export ANDROID_NDK_HOME=`pwd`/android-ndk-r13b; fi
+  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then export JAVA_HOME="/usr/lib/jvm/java-8-oracle"; fi
+  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then export PATH="$ANDROID_NDK_HOME:$PATH"; fi
 
 script:
-  - if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then
-      ./update_external_sources.sh;
-      cmake -H. -Bdbuild -DCMAKE_BUILD_TYPE=Debug;
-      make -C dbuild;
-    fi
-  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then
-      pushd build-android;
-      ./update_external_sources_android.sh;
-      ./android-generate.sh;
-      ndk-build APP_ABI=$ANDROID_ABI;
-      popd;
-    fi
+  - if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then ./update_external_sources.sh; fi
+  - if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then cmake -H. -Bdbuild -DCMAKE_BUILD_TYPE=Debug; fi
+  - if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then make -C dbuild; fi
+  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then pushd build-android; fi
+  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then ./update_external_sources_android.sh; fi
+  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then ./android-generate.sh; fi
+  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then ndk-build APP_ABI=$ANDROID_ABI; fi
+  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then popd; fi
