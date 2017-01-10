@@ -9097,6 +9097,32 @@ CmdResetEvent(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags
         dev_data->dispatch_table.CmdResetEvent(commandBuffer, event, stageMask);
 }
 
+static bool TransitionImageAspectLayout(layer_data *dev_data, GLOBAL_CB_NODE *pCB, const VkImageMemoryBarrier *mem_barrier,
+                                        uint32_t level, uint32_t layer, VkImageAspectFlags aspect)
+{
+    if (!(mem_barrier->subresourceRange.aspectMask & aspect)) {
+        return false;
+    }
+    VkImageSubresource sub = {aspect, level, layer};
+    IMAGE_CMD_BUF_LAYOUT_NODE node;
+    if (!FindLayout(pCB, mem_barrier->image, sub, node)) {
+        SetLayout(pCB, mem_barrier->image, sub,
+                  IMAGE_CMD_BUF_LAYOUT_NODE(mem_barrier->oldLayout, mem_barrier->newLayout));
+        return false;
+    }
+    bool skip = false;
+    if (mem_barrier->oldLayout == VK_IMAGE_LAYOUT_UNDEFINED) {
+        // TODO: Set memory invalid which is in mem_tracker currently
+    } else if (node.layout != mem_barrier->oldLayout) {
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
+                        __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                        "You cannot transition the layout of aspect %d from %s when current layout is %s.",
+                        aspect, string_VkImageLayout(mem_barrier->oldLayout), string_VkImageLayout(node.layout));
+    }
+    SetLayout(pCB, mem_barrier->image, sub, mem_barrier->newLayout);
+    return skip;
+}
+
 // TODO: Separate validation and layout state updates
 static bool TransitionImageLayouts(VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
                                    const VkImageMemoryBarrier *pImgMemBarriers) {
@@ -9118,22 +9144,10 @@ static bool TransitionImageLayouts(VkCommandBuffer cmdBuffer, uint32_t memBarrie
             uint32_t level = mem_barrier->subresourceRange.baseMipLevel + j;
             for (uint32_t k = 0; k < layerCount; k++) {
                 uint32_t layer = mem_barrier->subresourceRange.baseArrayLayer + k;
-                VkImageSubresource sub = {mem_barrier->subresourceRange.aspectMask, level, layer};
-                IMAGE_CMD_BUF_LAYOUT_NODE node;
-                if (!FindLayout(pCB, mem_barrier->image, sub, node)) {
-                    SetLayout(pCB, mem_barrier->image, sub,
-                              IMAGE_CMD_BUF_LAYOUT_NODE(mem_barrier->oldLayout, mem_barrier->newLayout));
-                    continue;
-                }
-                if (mem_barrier->oldLayout == VK_IMAGE_LAYOUT_UNDEFINED) {
-                    // TODO: Set memory invalid which is in mem_tracker currently
-                } else if (node.layout != mem_barrier->oldLayout) {
-                    skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
-                                    __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS", "You cannot transition the layout from %s "
-                                                                                    "when current layout is %s.",
-                                    string_VkImageLayout(mem_barrier->oldLayout), string_VkImageLayout(node.layout));
-                }
-                SetLayout(pCB, mem_barrier->image, sub, mem_barrier->newLayout);
+                skip |= TransitionImageAspectLayout(dev_data, pCB, mem_barrier, level, layer, VK_IMAGE_ASPECT_COLOR_BIT);
+                skip |= TransitionImageAspectLayout(dev_data, pCB, mem_barrier, level, layer, VK_IMAGE_ASPECT_DEPTH_BIT);
+                skip |= TransitionImageAspectLayout(dev_data, pCB, mem_barrier, level, layer, VK_IMAGE_ASPECT_STENCIL_BIT);
+                skip |= TransitionImageAspectLayout(dev_data, pCB, mem_barrier, level, layer, VK_IMAGE_ASPECT_METADATA_BIT);
             }
         }
     }
