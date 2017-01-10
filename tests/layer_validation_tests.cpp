@@ -13998,7 +13998,7 @@ TEST_F(VkLayerTest, CreatePipelineInputAttachmentMissingArray) {
     TEST_DESCRIPTION("Test that an error is produced for a shader consuming an input attachment "
                      "which is not included in the subpass description -- array case");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "consumes input attachment index 1 but not provided in subpass");
+                                         "consumes input attachment index 0 but not provided in subpass");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
@@ -14012,10 +14012,10 @@ TEST_F(VkLayerTest, CreatePipelineInputAttachmentMissingArray) {
                            "}\n";
     char const *fsSource = "#version 450\n"
                            "\n"
-                           "layout(input_attachment_index=0, set=0, binding=0) uniform subpassInput xs[2];\n"
+                           "layout(input_attachment_index=0, set=0, binding=0) uniform subpassInput xs[1];\n"
                            "layout(location=0) out vec4 color;\n"
                            "void main() {\n"
-                           "   color = subpassLoad(xs[1]);\n"
+                           "   color = subpassLoad(xs[0]);\n"
                            "}\n";
 
     VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
