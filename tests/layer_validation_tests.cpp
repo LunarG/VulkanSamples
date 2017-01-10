@@ -12891,7 +12891,7 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatchArraySize) {
                      "across the vertex->fragment shader interface");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Type mismatch on location 0.0: 'ptr to "
                                                                         "output arr[2] of float32' vs 'ptr to "
-                                                                        "input arr[3] of float32'");
+                                                                        "input arr[1] of float32'");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -12908,10 +12908,10 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatchArraySize) {
                            "}\n";
     char const *fsSource = "#version 450\n"
                            "\n"
-                           "layout(location=0) in float x[3];\n"
+                           "layout(location=0) in float x[1];\n"
                            "layout(location=0) out vec4 color;\n"
                            "void main(){\n"
-                           "   color = vec4(x[0] + x[1] + x[2]);\n"
+                           "   color = vec4(x[0]);\n"
                            "}\n";
 
     VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
@@ -12930,7 +12930,6 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatchArraySize) {
 
     m_errorMonitor->VerifyFound();
 }
-
 
 TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatch) {
     TEST_DESCRIPTION("Test that an error is produced for mismatched types across "
