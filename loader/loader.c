@@ -435,6 +435,9 @@ VKAPI_ATTR VkResult VKAPI_CALL vkSetInstanceDispatch(VkInstance instance,
 
     struct loader_instance *inst = loader_get_instance(instance);
     if (!inst) {
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "vkSetInstanceDispatch: Can not retrieve Instance "
+                   "dispatch table.");
         return VK_ERROR_INITIALIZATION_FAILED;
     }
     loader_set_dispatch(object, inst->disp);
@@ -687,7 +690,8 @@ loader_get_next_layer_property(const struct loader_instance *inst,
             VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
         if (layer_list->list == NULL) {
             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                       "Out of memory can't add any layer properties to list");
+                       "loader_get_next_layer_property: Out of memory can "
+                       "not add any layer properties to list");
             return NULL;
         }
         memset(layer_list->list, 0,
@@ -703,7 +707,8 @@ loader_get_next_layer_property(const struct loader_instance *inst,
             layer_list->capacity * 2, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
         if (layer_list->list == NULL) {
             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                       "realloc failed for layer list");
+                       "loader_get_next_layer_property: realloc failed for "
+                       "layer list");
             return NULL;
         }
         layer_list->capacity *= 2;
@@ -762,8 +767,10 @@ static VkResult loader_add_instance_extensions(
 
     res = fp_get_props(NULL, &count, NULL);
     if (res != VK_SUCCESS) {
-        loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
-                   "Error getting Instance extension count from %s", lib_name);
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "loader_add_instance_extensions: Error getting Instance "
+                   "extension count from %s",
+                   lib_name);
         goto out;
     }
 
@@ -776,8 +783,10 @@ static VkResult loader_add_instance_extensions(
 
     res = fp_get_props(NULL, &count, ext_props);
     if (res != VK_SUCCESS) {
-        loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
-                   "Error getting Instance extensions from %s", lib_name);
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "loader_add_instance_extensions: Error getting Instance "
+                   "extensions from %s",
+                   lib_name);
         goto out;
     }
 
@@ -796,8 +805,9 @@ static VkResult loader_add_instance_extensions(
                        ext_props[i].extensionName, lib_name, spec_version);
             res = loader_add_to_ext_list(inst, ext_list, 1, &ext_props[i]);
             if (res != VK_SUCCESS) {
-                loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
-                           "Failed to add %s to Instance extension list",
+                loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                           "loader_add_instance_extensions: Failed to add %s "
+                           "to Instance extension list",
                            lib_name);
                 goto out;
             }
@@ -859,6 +869,9 @@ VkResult loader_add_device_extensions(const struct loader_instance *inst,
     if (res == VK_SUCCESS && count > 0) {
         ext_props = loader_stack_alloc(count * sizeof(VkExtensionProperties));
         if (!ext_props) {
+            loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                       "loader_add_device_extensions: Failed to allocate space"
+                       " for device extension properties.");
             return VK_ERROR_OUT_OF_HOST_MEMORY;
         }
         res = fpEnumerateDeviceExtensionProperties(physical_device, NULL,
@@ -877,13 +890,14 @@ VkResult loader_add_device_extensions(const struct loader_instance *inst,
                        "Device Extension: %s (%s) version %s",
                        ext_props[i].extensionName, lib_name, spec_version);
             res = loader_add_to_ext_list(inst, ext_list, 1, &ext_props[i]);
-            if (res != VK_SUCCESS)
+            if (res != VK_SUCCESS) {
                 return res;
+            }
         }
     } else {
         loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "Error getting physical device extension info count from "
-                   "library %s",
+                   "loader_add_device_extensions: Error getting physical "
+                   "device extension info count from library %s",
                    lib_name);
         return res;
     }
@@ -900,6 +914,9 @@ VkResult loader_init_generic_list(const struct loader_instance *inst,
     list_info->list = loader_instance_heap_alloc(
         inst, capacity, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (list_info->list == NULL) {
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "loader_init_generic_list: Failed to allocate space "
+                   "for generic list");
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
     memset(list_info->list, 0, capacity);
@@ -953,8 +970,12 @@ VkResult loader_add_to_ext_list(const struct loader_instance *inst,
                 inst, ext_list->list, ext_list->capacity,
                 ext_list->capacity * 2, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
 
-            if (ext_list->list == NULL)
+            if (ext_list->list == NULL) {
+                loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                           "loader_add_to_ext_list: Failed to reallocate "
+                           "space for extension list");
                 return VK_ERROR_OUT_OF_HOST_MEMORY;
+            }
 
             // double capacity
             ext_list->capacity *= 2;
@@ -1002,8 +1023,12 @@ loader_add_to_dev_ext_list(const struct loader_instance *inst,
             inst, ext_list->list, ext_list->capacity, ext_list->capacity * 2,
             VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
 
-        if (ext_list->list == NULL)
+        if (ext_list->list == NULL) {
+            loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                       "loader_add_to_dev_ext_list: Failed to reallocate "
+                       "space for device extension list");
             return VK_ERROR_OUT_OF_HOST_MEMORY;
+        }
 
         // double capacity
         ext_list->capacity *= 2;
@@ -1016,6 +1041,10 @@ loader_add_to_dev_ext_list(const struct loader_instance *inst,
         loader_instance_heap_alloc(inst, sizeof(char *) * entry_count,
                                    VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (ext_list->list[idx].entrypoints == NULL) {
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "loader_add_to_dev_ext_list: Failed to allocate space "
+                   "for device extension entrypoint list in list %d",
+                   idx);
         ext_list->list[idx].entrypoint_count = 0;
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
@@ -1030,6 +1059,10 @@ loader_add_to_dev_ext_list(const struct loader_instance *inst,
             loader_instance_heap_free(inst, ext_list->list[idx].entrypoints);
             ext_list->list[idx].entrypoint_count = 0;
             ext_list->list[idx].entrypoints = NULL;
+            loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                       "loader_add_to_dev_ext_list: Failed to allocate space "
+                       "for device extension entrypoint %d name",
+                       i);
             return VK_ERROR_OUT_OF_HOST_MEMORY;
         }
         strcpy(ext_list->list[idx].entrypoints[i], entrys[i]);
@@ -1057,7 +1090,9 @@ loader_add_layer_names_to_list(const struct loader_instance *inst,
         layer_prop = loader_get_layer_property(search_target, search_list);
         if (!layer_prop) {
             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                       "Unable to find layer %s", search_target);
+                       "loader_add_layer_names_to_list: Unable to find layer"
+                       " %s",
+                       search_target);
             err = VK_ERROR_LAYER_NOT_PRESENT;
             continue;
         }
@@ -1157,8 +1192,8 @@ VkResult loader_add_to_layer_list(const struct loader_instance *inst,
                 VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
             if (NULL == list->list) {
                 loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                           "realloc failed for layer list when attempting to "
-                           "add new layer");
+                           "loader_add_to_layer_list: Realloc failed for "
+                           "when attempting to add new layer");
                 return VK_ERROR_OUT_OF_HOST_MEMORY;
             }
             // double capacity
@@ -1198,7 +1233,9 @@ void loader_find_layer_name_add_list(
     }
     if (!found) {
         loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
-                   "Warning, couldn't find layer name %s to activate", name);
+                   "loader_find_layer_name_add_list: Failed to find layer name "
+                   "%s to activate",
+                   name);
     }
 }
 
@@ -1365,7 +1402,8 @@ loader_create_logical_device(const struct loader_instance *inst,
 
     if (!new_dev) {
         loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "Failed to alloc struct loader-device");
+                   "loader_create_logical_device: Failed to alloc struct "
+                   "loader_device");
         return NULL;
     }
 
@@ -1525,7 +1563,8 @@ loader_scanned_icd_init(const struct loader_instance *inst,
     if (NULL == icd_tramp_list->scanned_list) {
         loader_log(
             inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-            "realloc failed for layer list when attempting to add new layer");
+            "loader_scanned_icd_init: Realloc failed for layer list when "
+            "attempting to add new layer");
         err = VK_ERROR_OUT_OF_HOST_MEMORY;
     }
     return err;
@@ -1547,8 +1586,8 @@ loader_scanned_icd_add(const struct loader_instance *inst,
     /* TODO implement smarter opening/closing of libraries. For now this
      * function leaves libraries open and the scanned_icd_clear closes them */
     handle = loader_platform_open_library(filename);
-    if (!handle) {
-        loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+    if (NULL == handle) {
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                    loader_platform_open_library_error(filename));
         goto out;
     }
@@ -1560,46 +1599,50 @@ loader_scanned_icd_add(const struct loader_instance *inst,
     if (!loader_get_icd_interface_version(fp_negotiate_icd_version,
                                           &interface_vers)) {
         loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "ICD (%s) doesn't support interface version compatible"
-                   "with loader, skip this ICD %s",
+                   "loader_scanned_icd_add: ICD %s doesn't support interface"
+                   " version compatible with loader, skip this ICD.",
                    filename);
         goto out;
     }
 
     fp_get_proc_addr =
         loader_platform_get_proc_address(handle, "vk_icdGetInstanceProcAddr");
-    if (!fp_get_proc_addr) {
+    if (NULL == fp_get_proc_addr) {
         assert(interface_vers == 0);
         // Use deprecated interface from version 0
         fp_get_proc_addr =
             loader_platform_get_proc_address(handle, "vkGetInstanceProcAddr");
-        if (!fp_get_proc_addr) {
+        if (NULL == fp_get_proc_addr) {
             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                       loader_platform_get_proc_address_error(
-                           "vk_icdGetInstanceProcAddr"));
+                       "loader_scanned_icd_add: Attempt to retreive either "
+                       " \'vkGetInstanceProcAddr\' or "
+                       "\'vk_icdGetInstanceProcAddr\' from ICD %s failed.",
+                       filename);
             goto out;
         } else {
             loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
-                       "Using deprecated ICD interface of "
-                       "vkGetInstanceProcAddr instead of "
-                       "vk_icdGetInstanceProcAddr for ICD %s",
+                       "loader_scanned_icd_add: Using deprecated ICD "
+                       "interface of \'vkGetInstanceProcAddr\' instead of "
+                       "\'vk_icdGetInstanceProcAddr\' for ICD %s",
                        filename);
         }
         fp_create_inst =
             loader_platform_get_proc_address(handle, "vkCreateInstance");
-        if (!fp_create_inst) {
+        if (NULL == fp_create_inst) {
             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                       "Couldn't get vkCreateInstance via dlsym/loadlibrary "
-                       "for ICD %s",
+                       "loader_scanned_icd_add:  Failed querying "
+                       "\'vkCreateInstance\' via dlsym/loadlibrary for "
+                       "ICD %s",
                        filename);
             goto out;
         }
         fp_get_inst_ext_props = loader_platform_get_proc_address(
             handle, "vkEnumerateInstanceExtensionProperties");
-        if (!fp_get_inst_ext_props) {
+        if (NULL == fp_get_inst_ext_props) {
             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                       "Couldn't get vkEnumerateInstanceExtensionProperties "
-                       "via dlsym/loadlibrary for ICD %s",
+                       "loader_scanned_icd_add: Could not get \'vkEnumerate"
+                       "InstanceExtensionProperties\' via dlsym/loadlibrary "
+                       "for ICD %s",
                        filename);
             goto out;
         }
@@ -1610,20 +1653,22 @@ loader_scanned_icd_add(const struct loader_instance *inst,
 
         fp_create_inst =
             (PFN_vkCreateInstance)fp_get_proc_addr(NULL, "vkCreateInstance");
-        if (!fp_create_inst) {
+        if (NULL == fp_create_inst) {
             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                       "Couldn't get vkCreateInstance via "
-                       "vk_icdGetInstanceProcAddr for ICD %s",
+                       "loader_scanned_icd_add: Could not get "
+                       "\'vkCreateInstance\' via \'vk_icdGetInstanceProcAddr\'"
+                       " for ICD %s",
                        filename);
             goto out;
         }
         fp_get_inst_ext_props =
             (PFN_vkEnumerateInstanceExtensionProperties)fp_get_proc_addr(
                 NULL, "vkEnumerateInstanceExtensionProperties");
-        if (!fp_get_inst_ext_props) {
+        if (NULL == fp_get_inst_ext_props) {
             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                       "Couldn't get vkEnumerateInstanceExtensionProperties "
-                       "via vk_icdGetInstanceProcAddr for ICD %s",
+                       "loader_scanned_icd_add: Could not get \'vkEnumerate"
+                       "InstanceExtensionProperties\' via "
+                       "\'vk_icdGetInstanceProcAddr\' for ICD %s",
                        filename);
             goto out;
         }
@@ -1639,7 +1684,9 @@ loader_scanned_icd_add(const struct loader_instance *inst,
         if (NULL == icd_tramp_list->scanned_list) {
             res = VK_ERROR_OUT_OF_HOST_MEMORY;
             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                       "realloc failed on icd library list");
+                       "loader_scanned_icd_add: Realloc failed on icd library"
+                       " list for ICD %s",
+                       filename);
             goto out;
         }
         // double capacity
@@ -1658,9 +1705,10 @@ loader_scanned_icd_add(const struct loader_instance *inst,
     new_scanned_icd->lib_name = (char *)loader_instance_heap_alloc(
         inst, strlen(filename) + 1, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (NULL == new_scanned_icd->lib_name) {
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "loader_scanned_icd_add: Out of memory can't add ICD %s",
+                   filename);
         res = VK_ERROR_OUT_OF_HOST_MEMORY;
-        loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
-                   "Out of memory can't add icd");
         goto out;
     }
     strcpy(new_scanned_icd->lib_name, filename);
@@ -1907,6 +1955,8 @@ static VkResult loader_get_json(const struct loader_instance *inst,
     VkResult res = VK_SUCCESS;
 
     if (NULL == json) {
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "loader_get_json: Received invalid JSON file");
         res = VK_ERROR_INITIALIZATION_FAILED;
         goto out;
     }
@@ -1915,9 +1965,9 @@ static VkResult loader_get_json(const struct loader_instance *inst,
 
     file = fopen(filename, "rb");
     if (!file) {
-        res = VK_ERROR_INITIALIZATION_FAILED;
         loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "Couldn't open JSON file %s", filename);
+                   "loader_get_json: Failed to open JSON file %s", filename);
+        res = VK_ERROR_INITIALIZATION_FAILED;
         goto out;
     }
     fseek(file, 0, SEEK_END);
@@ -1925,15 +1975,17 @@ static VkResult loader_get_json(const struct loader_instance *inst,
     fseek(file, 0, SEEK_SET);
     json_buf = (char *)loader_stack_alloc(len + 1);
     if (json_buf == NULL) {
-        res = VK_ERROR_OUT_OF_HOST_MEMORY;
         loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "Out of memory can't get JSON file");
+                   "loader_get_json: Failed to allocate space for "
+                   " JSON file %s buffer of length %d",
+                   filename, len);
+        res = VK_ERROR_OUT_OF_HOST_MEMORY;
         goto out;
     }
     if (fread(json_buf, sizeof(char), len, file) != len) {
-        res = VK_ERROR_INITIALIZATION_FAILED;
         loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "fread failed can't get JSON file");
+                   "loader_get_json: Failed to read JSON file %s.", filename);
+        res = VK_ERROR_INITIALIZATION_FAILED;
         goto out;
     }
     json_buf[len] = '\0';
@@ -1941,9 +1993,12 @@ static VkResult loader_get_json(const struct loader_instance *inst,
     // parse text from file
     *json = cJSON_Parse(json_buf);
     if (*json == NULL) {
-        res = VK_ERROR_OUT_OF_HOST_MEMORY;
         loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "Can't parse JSON file %s", filename);
+                   "loader_get_json: Failed to parse JSON file %s, "
+                   " this is usually because something ran out of "
+                   " memory.",
+                   filename);
+        res = VK_ERROR_OUT_OF_HOST_MEMORY;
         goto out;
     }
 
@@ -1963,26 +2018,30 @@ VkResult loader_copy_layer_properties(const struct loader_instance *inst,
                                       struct loader_layer_properties *src) {
     uint32_t cnt, i;
     memcpy(dst, src, sizeof(*src));
-    dst->instance_extension_list.list =
-        loader_instance_heap_alloc(inst, sizeof(VkExtensionProperties) *
-                                             src->instance_extension_list.count,
-                                   VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+    dst->instance_extension_list.list = loader_instance_heap_alloc(
+        inst,
+        sizeof(VkExtensionProperties) * src->instance_extension_list.count,
+        VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (NULL == dst->instance_extension_list.list) {
         loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "alloc failed for instance extension list");
+                   "loader_copy_layer_properties: Failed to allocate space "
+                   " for instance extension list of size %d.",
+                   src->instance_extension_list.count);
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
     dst->instance_extension_list.capacity =
         sizeof(VkExtensionProperties) * src->instance_extension_list.count;
     memcpy(dst->instance_extension_list.list, src->instance_extension_list.list,
            dst->instance_extension_list.capacity);
-    dst->device_extension_list.list =
-        loader_instance_heap_alloc(inst, sizeof(struct loader_dev_ext_props) *
-                                             src->device_extension_list.count,
-                                   VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+    dst->device_extension_list.list = loader_instance_heap_alloc(
+        inst,
+        sizeof(struct loader_dev_ext_props) * src->device_extension_list.count,
+        VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (NULL == dst->device_extension_list.list) {
         loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "alloc failed for device extension list");
+                   "loader_copy_layer_properties: Failed to allocate space "
+                   " for device extension list of size %d.",
+                   src->device_extension_list.count);
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
     memset(dst->device_extension_list.list, 0,
@@ -2000,9 +2059,10 @@ VkResult loader_copy_layer_properties(const struct loader_instance *inst,
             loader_instance_heap_alloc(inst, sizeof(char *) * cnt,
                                        VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
         if (NULL == dst->device_extension_list.list->entrypoints) {
-            loader_log(
-                inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                "alloc failed for device extension list entrypoint array");
+            loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                       "loader_copy_layer_properties: Failed to allocate space "
+                       " for device extension entrypoint list of size %d.",
+                       cnt);
             return VK_ERROR_OUT_OF_HOST_MEMORY;
         }
         memset(dst->device_extension_list.list->entrypoints, 0,
@@ -2015,9 +2075,11 @@ VkResult loader_copy_layer_properties(const struct loader_instance *inst,
                     strlen(src->device_extension_list.list->entrypoints[i]) + 1,
                     VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
             if (NULL == dst->device_extension_list.list->entrypoints[i]) {
-                loader_log(
-                    inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                    "alloc failed for device extension list entrypoint %d", i);
+                loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                           "loader_copy_layer_properties: Failed to "
+                           "allocate space for device extension entrypoint "
+                           "%d name of length",
+                           i);
                 return VK_ERROR_OUT_OF_HOST_MEMORY;
             }
             strcpy(dst->device_extension_list.list->entrypoints[i],
@@ -2095,7 +2157,8 @@ VkResult loader_expand_layer_names(
         VK_SYSTEM_ALLOCATION_SCOPE_COMMAND);
     if (NULL == pp_dst_layers) {
         loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "alloc failed for dst layer array");
+                   "loader_expand_layer_names:: Failed to allocate space for "
+                   "std_validation layer names in pp_dst_layers.");
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
 
@@ -2551,8 +2614,9 @@ loader_add_layer_properties(const struct loader_instance *inst,
     }
     if (file_major_vers != 1 || file_minor_vers != 0 || file_patch_vers > 1) {
         loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
-                   "%s Unexpected manifest file version (expected 1.0.0 or "
-                   "1.0.1), may cause errors",
+                   "loader_add_layer_properties: Unexpected manifest file "
+                   " version (expected 1.0.0 or 1.0.1) in %s, may cause "
+                   "errors",
                    filename);
     }
     cJSON_Free(file_vers);
@@ -2563,16 +2627,18 @@ loader_add_layer_properties(const struct loader_instance *inst,
         if (file_major_vers == 1 && file_minor_vers == 0 &&
             file_patch_vers == 0) {
             loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
-                       "\"layers\" tag not officially added until file version "
-                       "1.0.1, but %s is reporting version %s",
+                       "loader_add_layer_properties: \"layers\" tag not "
+                       "supported until file version 1.0.1, but %s is "
+                       "reporting version %s",
                        filename, file_vers);
         }
         for (int curLayer = 0; curLayer < numItems; curLayer++) {
             layer_node = cJSON_GetArrayItem(layers_node, curLayer);
             if (layer_node == NULL) {
                 loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
-                           "Can't find \"layers\" array element %d object in "
-                           "manifest JSON file %s, skipping this file",
+                           "loader_add_layer_properties: Can not find "
+                           "\"layers\" array element %d object in manifest "
+                           "JSON file %s.  Skipping this file",
                            curLayer, filename);
                 return;
             }
@@ -2584,8 +2650,8 @@ loader_add_layer_properties(const struct loader_instance *inst,
         layer_node = cJSON_GetObjectItem(json, "layer");
         if (layer_node == NULL) {
             loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
-                       "Can't find \"layer\" object in manifest JSON file %s, "
-                       "skipping this file",
+                       "loader_add_layer_properties: Can not find \"layer\" "
+                       "object in manifest JSON file %s.  Skipping this file.",
                        filename);
             return;
         }
@@ -2606,9 +2672,9 @@ loader_add_layer_properties(const struct loader_instance *inst,
             (file_major_vers > 1 ||
              !(file_minor_vers == 0 && file_patch_vers == 0))) {
             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                       "Multiple \"layer\" nodes are deprecated starting in "
-                       "file version \"1.0.1\".  Please use \"layers\" : [] "
-                       "array instead in %s.",
+                       "loader_add_layer_properties: Multiple \"layer\" nodes"
+                       " are deprecated starting in file version \"1.0.1\".  "
+                       "Please use \"layers\" : [] array instead in %s.",
                        filename);
         } else {
             do {
@@ -2690,10 +2756,10 @@ loader_get_manifest_files(const struct loader_instance *inst,
     home_location = NULL;
     if (location == NULL) {
 #endif
-        loader_log(
-            inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-            "Can't get manifest files with NULL location, env_override=%s",
-            (env_override != NULL) ? env_override : "");
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "loader_get_manifest_files: Can not get manifest files with "
+                   "NULL location, env_override=%s",
+                   (env_override != NULL) ? env_override : "");
         res = VK_ERROR_INITIALIZATION_FAILED;
         goto out;
     }
@@ -2709,7 +2775,9 @@ loader_get_manifest_files(const struct loader_instance *inst,
         loc = loader_stack_alloc(strlen(location) + 1);
         if (loc == NULL) {
             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                       "Out of memory can't get manifest files");
+                       "loader_get_manifest_files: Failed to allocate "
+                       " %d bytes for manifest file location.",
+                       strlen(location));
             res = VK_ERROR_OUT_OF_HOST_MEMORY;
             goto out;
         }
@@ -2718,9 +2786,11 @@ loader_get_manifest_files(const struct loader_instance *inst,
         reg = loader_get_registry_files(inst, loc);
         if (reg == NULL) {
             if (!is_layer) {
-                loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                           "Registry lookup failed can't get ICD manifest "
-                           "files, do you have a Vulkan driver installed");
+                loader_log(
+                    inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                    "loader_get_manifest_files: Registry lookup failed "
+                    " to get ICD manifest files.  Possibly missing Vulkan"
+                    " driver?");
                 // This typically only fails when out of memory, which is
                 // critical
                 // if this is for the loader.
@@ -2730,7 +2800,8 @@ loader_get_manifest_files(const struct loader_instance *inst,
                     // warning only for layers
                     loader_log(
                         inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
-                        "Registry lookup failed can't get layer manifest files");
+                        "loader_get_manifest_files: Registry lookup failed "
+                        " to get layer manifest files.");
                 }
                 // Return success for now since it's not critical for layers
                 res = VK_SUCCESS;
@@ -2743,8 +2814,11 @@ loader_get_manifest_files(const struct loader_instance *inst,
     } else {
         loc = loader_stack_alloc(strlen(override) + 1);
         if (loc == NULL) {
-            loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                       "Out of memory can't get manifest files");
+            loader_log(
+                inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                "loader_get_manifest_files: Failed to allocate space for "
+                " override environment variable of length %d",
+                strlen(override) + 1);
             res = VK_ERROR_OUT_OF_HOST_MEMORY;
             goto out;
         }
@@ -2779,7 +2853,9 @@ loader_get_manifest_files(const struct loader_instance *inst,
             dir = loader_stack_alloc(strlen(loc) + 1);
             if (dir == NULL) {
                 loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                           "Out of memory can't get manifest files");
+                           "loader_get_manifest_files: Failed to allocate "
+                           " space for relative location path length %d",
+                           strlen(loc) + 1);
                 goto out;
             }
             strcpy(dir, loc);
@@ -2808,7 +2884,8 @@ loader_get_manifest_files(const struct loader_instance *inst,
                 }
                 if (out_files->filename_list == NULL) {
                     loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                               "Out of memory can't alloc manifest file list");
+                               "loader_get_manifest_files: Failed to allocate "
+                               " space for manifest file name list");
                     res = VK_ERROR_OUT_OF_HOST_MEMORY;
                     goto out;
                 }
@@ -2818,7 +2895,9 @@ loader_get_manifest_files(const struct loader_instance *inst,
                         VK_SYSTEM_ALLOCATION_SCOPE_COMMAND);
                 if (out_files->filename_list[out_files->count] == NULL) {
                     loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                               "Out of memory can't get manifest files");
+                               "loader_get_manifest_files: Failed to allocate "
+                               " space for manifest file %d list",
+                               out_files->count);
                     res = VK_ERROR_OUT_OF_HOST_MEMORY;
                     goto out;
                 }
@@ -2858,7 +2937,8 @@ loader_get_manifest_files(const struct loader_instance *inst,
                                                     strlen(home_location));
                 if (home_loc == NULL) {
                     loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                               "Out of memory can't get manifest files");
+                               "loader_get_manifest_files: Failed to allocate "
+                               " space for manifest file XDG Home location");
                     res = VK_ERROR_OUT_OF_HOST_MEMORY;
                     goto out;
                 }
@@ -2887,8 +2967,10 @@ loader_get_manifest_files(const struct loader_instance *inst,
                     char *home_loc = loader_stack_alloc(strlen(home) + 16 +
                                                         strlen(home_location));
                     if (home_loc == NULL) {
-                        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                                   "Out of memory can't get manifest files");
+                        loader_log(
+                            inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                            "loader_get_manifest_files: Failed to allocate "
+                            " space for manifest file Home location");
                         res = VK_ERROR_OUT_OF_HOST_MEMORY;
                         goto out;
                     }
@@ -3011,6 +3093,10 @@ VkResult loader_icd_scan(const struct loader_instance *inst,
             if (num_good_icds == 0) {
                 res = VK_ERROR_INITIALIZATION_FAILED;
             }
+            loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                       "loader_icd_scan: ICD JSON %s does not have a"
+                       " \'file_format_version\' field. Skipping ICD JSON.",
+                       file_str);
             cJSON_Delete(json);
             json = NULL;
             continue;
@@ -3022,12 +3108,17 @@ VkResult loader_icd_scan(const struct loader_instance *inst,
             if (num_good_icds == 0) {
                 res = VK_ERROR_OUT_OF_HOST_MEMORY;
             }
+            loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                       "loader_icd_scan: Failed retrieving ICD JSON %s"
+                       " \'file_format_version\' field.  Skipping ICD JSON",
+                       file_str);
             cJSON_Delete(json);
             json = NULL;
             continue;
         }
         loader_log(inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
-                   "Found manifest file %s, version %s", file_str, file_vers);
+                   "Found ICD manifest file %s, version %s", file_str,
+                   file_vers);
         // Get the major/minor/and patch as integers for easier comparison
         vers_tok = strtok(file_vers, ".\"\n\r");
         if (NULL != vers_tok) {
@@ -3043,9 +3134,8 @@ VkResult loader_icd_scan(const struct loader_instance *inst,
         }
         if (file_major_vers != 1 || file_minor_vers != 0 || file_patch_vers > 1)
             loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
-                       "Unexpected manifest file version (expected 1.0.0 or "
-                       "1.0.1), may "
-                       "cause errors");
+                       "loader_icd_scan: Unexpected manifest file version "
+                       "(expected 1.0.0 or 1.0.1), may cause errors");
         cJSON_Free(file_vers);
         itemICD = cJSON_GetObjectItem(json, "ICD");
         if (itemICD != NULL) {
@@ -3053,13 +3143,13 @@ VkResult loader_icd_scan(const struct loader_instance *inst,
             if (item != NULL) {
                 char *temp = cJSON_Print(item);
                 if (!temp || strlen(temp) == 0) {
-                    loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
-                               "Can't find \"library_path\" in ICD JSON file "
-                               "%s, skipping",
-                               file_str);
                     if (num_good_icds == 0) {
                         res = VK_ERROR_OUT_OF_HOST_MEMORY;
                     }
+                    loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                               "loader_icd_scan: Failed retrieving ICD JSON %s"
+                               " \'library_path\' field.  Skipping ICD JSON.",
+                               file_str);
                     cJSON_Free(temp);
                     cJSON_Delete(json);
                     json = NULL;
@@ -3069,11 +3159,11 @@ VkResult loader_icd_scan(const struct loader_instance *inst,
                 temp[strlen(temp) - 1] = '\0';
                 char *library_path = loader_stack_alloc(strlen(temp) + 1);
                 if (NULL == library_path) {
-                    loader_log(
-                        inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
-                        "Can't allocate space for \"library_path\" in ICD "
-                        "JSON file %s, skipping",
-                        file_str);
+                    loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                               "loader_icd_scan: Failed to allocate space for "
+                               "ICD JSON %s \'library_path\' value.  Skipping "
+                               " ICD JSON.",
+                               file_str);
                     res = VK_ERROR_OUT_OF_HOST_MEMORY;
                     cJSON_Free(temp);
                     cJSON_Delete(json);
@@ -3084,8 +3174,8 @@ VkResult loader_icd_scan(const struct loader_instance *inst,
                 cJSON_Free(temp);
                 if (strlen(library_path) == 0) {
                     loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
-                               "Can't find \"library_path\" in ICD JSON file "
-                               "%s, skipping",
+                               "loader_icd_scan: ICD JSON %s \'library_path\'"
+                               " field is empty.  Skipping ICD JSON.",
                                file_str);
                     cJSON_Delete(json);
                     json = NULL;
@@ -3095,7 +3185,7 @@ VkResult loader_icd_scan(const struct loader_instance *inst,
                 // Print out the paths being searched if debugging is enabled
                 loader_log(
                     inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0,
-                    "Searching for ICD drivers named %s default dir %s\n",
+                    "Searching for ICD drivers named %s, using default dir %s",
                     library_path, DEFAULT_VK_DRIVERS_PATH);
                 if (loader_platform_is_path(library_path)) {
                     // a relative or absolute path
@@ -3116,30 +3206,56 @@ VkResult loader_icd_scan(const struct loader_instance *inst,
                 if (item != NULL) {
                     temp = cJSON_Print(item);
                     if (NULL == temp) {
+                        loader_log(
+                            inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                            "loader_icd_scan: Failed retrieving ICD JSON %s"
+                            " \'api_version\' field.  Skipping ICD JSON.",
+                            file_str);
+
                         // Only reason the print can fail is if there was an
                         // allocation issue
-                        res = VK_ERROR_OUT_OF_HOST_MEMORY;
-                        goto out;
+                        if (num_good_icds == 0) {
+                            res = VK_ERROR_OUT_OF_HOST_MEMORY;
+                        }
+
+                        cJSON_Free(temp);
+                        cJSON_Delete(json);
+                        json = NULL;
+                        continue;
                     }
                     vers = loader_make_version(temp);
                     cJSON_Free(temp);
+                } else {
+                    loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                               "loader_icd_scan: ICD JSON %s does not have an"
+                               " \'api_version\' field.",
+                               file_str);
                 }
+
                 res = loader_scanned_icd_add(inst, icd_tramp_list, fullpath,
                                              vers);
                 if (VK_SUCCESS != res) {
-                    goto out;
+                    loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                               "loader_icd_scan: Failed to add ICD JSON %s. "
+                               " Skipping ICD JSON.",
+                               fullpath);
+                    cJSON_Free(temp);
+                    cJSON_Delete(json);
+                    json = NULL;
+                    continue;
                 }
                 num_good_icds++;
             } else {
                 loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
-                           "Can't find \"library_path\" object in ICD JSON "
-                           "file %s, skipping",
+                           "loader_icd_scan: Failed to find \'library_path\' "
+                           "object in ICD JSON file %s.  Skipping ICD JSON.",
                            file_str);
             }
         } else {
             loader_log(
                 inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
-                "Can't find \"ICD\" object in ICD JSON file %s, skipping",
+                "loader_icd_scan: Can not find \'ICD\' object in ICD JSON "
+                "file %s.  Skipping ICD JSON",
                 file_str);
         }
 
@@ -3148,6 +3264,7 @@ VkResult loader_icd_scan(const struct loader_instance *inst,
     }
 
 out:
+
     if (NULL != json) {
         cJSON_Delete(json);
     }
@@ -3473,8 +3590,9 @@ static bool loader_add_dev_ext_table(struct loader_instance *inst,
             inst, strlen(funcName) + 1, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
         if (inst->disp_hash[idx].func_name == NULL) {
             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                       "loader_add_dev_ext_table() can't allocate memory for "
-                       "func_name");
+                       "loader_add_dev_ext_table: Failed to allocate memory "
+                       "for func_name %s",
+                       funcName);
             return false;
         }
         strncpy(inst->disp_hash[idx].func_name, funcName, strlen(funcName) + 1);
@@ -3488,7 +3606,9 @@ static bool loader_add_dev_ext_table(struct loader_instance *inst,
                                        VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
         if (list->index == NULL) {
             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                       "loader_add_dev_ext_table() can't allocate list memory");
+                       "loader_add_dev_ext_table: Failed to allocate memory "
+                       "for list index",
+                       funcName);
             return false;
         }
         list->capacity = 8 * sizeof(*(list->index));
@@ -3497,9 +3617,10 @@ static bool loader_add_dev_ext_table(struct loader_instance *inst,
             inst, list->index, list->capacity, list->capacity * 2,
             VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
         if (list->index == NULL) {
-            loader_log(
-                inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                "loader_add_dev_ext_table() can't reallocate list memory");
+            loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                       "loader_add_dev_ext_table: Failed to reallocate memory "
+                       "for list index",
+                       funcName);
             return false;
         }
         list->capacity *= 2;
@@ -3514,9 +3635,11 @@ static bool loader_add_dev_ext_table(struct loader_instance *inst,
                 inst, strlen(funcName) + 1,
                 VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
             if (inst->disp_hash[i].func_name == NULL) {
-                loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                           "loader_add_dev_ext_table() can't rallocate "
-                           "func_name memory");
+                loader_log(
+                    inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                    "loader_add_dev_ext_table: Failed to allocate memory "
+                    "for func_name %s",
+                    funcName);
                 return false;
             }
             strncpy(inst->disp_hash[i].func_name, funcName,
@@ -3529,9 +3652,11 @@ static bool loader_add_dev_ext_table(struct loader_instance *inst,
         i = (i + 1) % MAX_NUM_DEV_EXTS;
     } while (i != idx);
 
-    loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-               "loader_add_dev_ext_table() couldn't insert into hash table; is "
-               "it full?");
+    loader_log(
+        inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+        "loader_add_dev_ext_table:  Could not insert into hash table; is "
+        "it full?");
+
     return false;
 }
 
@@ -3627,11 +3752,11 @@ loader_open_layer_lib(const struct loader_instance *inst,
     if ((prop->lib_handle = loader_platform_open_library(prop->lib_name)) ==
         NULL) {
         loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   loader_platform_open_library_error(prop->lib_name));
+                   "loader_open_layer_lib: Failed to open library %s",
+                   prop->lib_name);
     } else {
         loader_log(inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0,
-                   "Chain: %s: Loading layer library %s", chain_type,
-                   prop->lib_name);
+                   "Loading layer library %s", prop->lib_name);
     }
 
     return prop->lib_handle;
@@ -3770,7 +3895,8 @@ loader_enable_instance_layers(struct loader_instance *inst,
 
     if (!loader_init_layer_list(inst, &inst->activated_layer_list)) {
         loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "Failed to alloc Instance activated layer list");
+                   "loader_enable_instance_layers: Failed to initialize"
+                   " the layer list");
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
 
@@ -3836,7 +3962,8 @@ VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo,
             sizeof(VkLayerInstanceLink) * inst->activated_layer_list.count);
         if (!layer_instance_link_info) {
             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                       "Failed to alloc Instance objects for layer");
+                       "loader_create_instance_chain: Failed to alloc Instance"
+                       " objects for layer");
             return VK_ERROR_OUT_OF_HOST_MEMORY;
         }
 
@@ -3861,10 +3988,10 @@ VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo,
                         loader_platform_get_proc_address(
                             lib_handle, layer_prop->functions.str_gipa);
                 if (!fpGIPA) {
-                    loader_log(
-                        inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                        "Failed to find vkGetInstanceProcAddr in layer %s",
-                        layer_prop->lib_name);
+                    loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                               "loader_create_instance_chain: Failed to find "
+                               "\'vkGetInstanceProcAddr\' in layer %s",
+                               layer_prop->lib_name);
                     continue;
                 }
             }
@@ -3900,6 +4027,9 @@ VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo,
         res =
             fpCreateInstance(&loader_create_info, pAllocator, created_instance);
     } else {
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "loader_create_instance_chain: Failed to find "
+                   "\'vkCreateInstance\'");
         // Couldn't find CreateInstance function!
         res = VK_ERROR_INITIALIZATION_FAILED;
     }
@@ -3943,7 +4073,8 @@ loader_create_device_chain(const struct loader_physical_device_tramp *pd,
         sizeof(VkLayerDeviceLink) * dev->activated_layer_list.count);
     if (!layer_device_link_info) {
         loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "Failed to alloc Device objects for layer");
+                   "loader_create_device_chain: Failed to alloc Device objects"
+                   " for layer.  Skipping Layer.");
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
 
@@ -3977,7 +4108,9 @@ loader_create_device_chain(const struct loader_physical_device_tramp *pd,
                 if (!fpGIPA) {
                     loader_log(
                         inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                        "Failed to find vkGetInstanceProcAddr in layer %s",
+                        "loader_create_device_chain: Failed to find "
+                        "\'vkGetInstanceProcAddr\' in layer %s.  Skipping"
+                        " layer.",
                         layer_prop->lib_name);
                     continue;
                 }
@@ -4038,6 +4171,10 @@ loader_create_device_chain(const struct loader_physical_device_tramp *pd,
         }
         dev->chain_device = created_device;
     } else {
+        loader_log(
+            inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+            "loader_create_device_chain: Failed to find \'vkCreateDevice\' "
+            "in layer %s");
         // Couldn't find CreateDevice function!
         return VK_ERROR_INITIALIZATION_FAILED;
     }
@@ -4060,13 +4197,17 @@ VkResult loader_validate_layers(const struct loader_instance *inst,
             vk_string_validate(MaxLoaderStringLength, ppEnabledLayerNames[i]);
         if (result != VK_STRING_ERROR_NONE) {
             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                       "Loader: Device ppEnabledLayerNames contains string "
-                       "that is too long or is badly formed");
+                       "loader_validate_layers: Device ppEnabledLayerNames "
+                       " contains string that is too long or is badly formed");
             return VK_ERROR_LAYER_NOT_PRESENT;
         }
 
         prop = loader_get_layer_property(ppEnabledLayerNames[i], list);
         if (!prop) {
+            loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                       "loader_validate_layers: Layer %d does not exist in "
+                       "the list of available layers",
+                       i);
             return VK_ERROR_LAYER_NOT_PRESENT;
         }
     }
@@ -4087,7 +4228,8 @@ VkResult loader_validate_instance_extensions(
             MaxLoaderStringLength, pCreateInfo->ppEnabledExtensionNames[i]);
         if (result != VK_STRING_ERROR_NONE) {
             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                       "Loader: Instance ppEnabledExtensionNames contains "
+                       "loader_validate_instance_extensions: Instance "
+                       "ppEnabledExtensionNames contains "
                        "string that is too long or is badly formed");
             return VK_ERROR_EXTENSION_NOT_PRESENT;
         }
@@ -4104,6 +4246,10 @@ VkResult loader_validate_instance_extensions(
 
         // If it isn't in the list, return an error
         if (!found) {
+            loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                       "loader_validate_instance_extensions: Extension %d "
+                       "not found in list of available extensions.",
+                       i);
             return VK_ERROR_EXTENSION_NOT_PRESENT;
         }
 
@@ -4138,8 +4284,11 @@ VkResult loader_validate_instance_extensions(
         }
 
         if (!extension_prop) {
-            /* Didn't find extension name in any of the global layers, error out
-             */
+            // Didn't find extension name in any of the global layers, error out
+            loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                       "loader_validate_instance_extensions: Extension %d "
+                       "not found in enabled layer list extensions.",
+                       i);
             return VK_ERROR_EXTENSION_NOT_PRESENT;
         }
     }
@@ -4160,7 +4309,8 @@ VkResult loader_validate_device_extensions(
             MaxLoaderStringLength, pCreateInfo->ppEnabledExtensionNames[i]);
         if (result != VK_STRING_ERROR_NONE) {
             loader_log(phys_dev->this_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                       0, "Loader: Device ppEnabledExtensionNames contains "
+                       0, "loader_validate_device_extensions: Device "
+                          "ppEnabledExtensionNames contains "
                           "string that is too long or is badly formed");
             return VK_ERROR_EXTENSION_NOT_PRESENT;
         }
@@ -4172,32 +4322,32 @@ VkResult loader_validate_device_extensions(
             continue;
         }
 
-        /* Not in global list, search activated layer extension lists */
+        // Not in global list, search activated layer extension lists
         for (uint32_t j = 0; j < activated_device_layers->count; j++) {
             layer_prop = &activated_device_layers->list[j];
 
             extension_prop = get_dev_extension_property(
                 extension_name, &layer_prop->device_extension_list);
             if (extension_prop) {
-                /* Found the extension in one of the layers enabled by the app.
-                 */
+                // Found the extension in one of the layers enabled by the app.
                 break;
             }
         }
 
         if (!extension_prop) {
-            /* Didn't find extension name in any of the device layers, error out
-             */
+            // Didn't find extension name in any of the device layers, error out
+            loader_log(phys_dev->this_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                       0, "loader_validate_device_extensions: Extension %d "
+                          "not found in enabled layer list extensions.",
+                       i);
             return VK_ERROR_EXTENSION_NOT_PRESENT;
         }
     }
     return VK_SUCCESS;
 }
 
-/**
- * Terminator functions for the Instance chain
- * All named terminator_<Vulakn API name>
- */
+// Terminator functions for the Instance chain
+// All named terminator_<Vulakn API name>
 VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateInstance(
     const VkInstanceCreateInfo *pCreateInfo,
     const VkAllocationCallbacks *pAllocator, VkInstance *pInstance) {
@@ -4214,16 +4364,17 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateInstance(
     icd_create_info.enabledLayerCount = 0;
     icd_create_info.ppEnabledLayerNames = NULL;
 
-    /*
-     * NOTE: Need to filter the extensions to only those
-     * supported by the ICD.
-     * No ICD will advertise support for layers. An ICD
-     * library could support a layer, but it would be
-     * independent of the actual ICD, just in the same library.
-     */
+    // NOTE: Need to filter the extensions to only those supported by the ICD.
+    //       No ICD will advertise support for layers. An ICD library could
+    //       support a layer, but it would be independent of the actual ICD,
+    //       just in the same library.
     filtered_extension_names =
         loader_stack_alloc(pCreateInfo->enabledExtensionCount * sizeof(char *));
     if (!filtered_extension_names) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "terminator_CreateInstance: Failed create extension name "
+                   "array for %d extensions",
+                   pCreateInfo->enabledExtensionCount);
         res = VK_ERROR_OUT_OF_HOST_MEMORY;
         goto out;
     }
@@ -4234,6 +4385,11 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateInstance(
         icd_term = loader_icd_add(
             ptr_instance, &ptr_instance->icd_tramp_list.scanned_list[i]);
         if (NULL == icd_term) {
+            loader_log(icd_term->this_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                       0,
+                       "terminator_CreateInstance: Failed to add ICD %d to ICD "
+                       "trampoline list.",
+                       i);
             res = VK_ERROR_OUT_OF_HOST_MEMORY;
             goto out;
         }
@@ -4302,7 +4458,9 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateInstance(
             goto out;
         } else if (VK_SUCCESS != icd_result) {
             loader_log(ptr_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
-                       "ICD ignored: failed to CreateInstance in ICD %d", i);
+                       "terminator_CreateInstance: Failed to CreateInstance in "
+                       "ICD %d.  Skipping ICD.",
+                       i);
             ptr_instance->icd_terms = icd_term->next;
             icd_term->next = NULL;
             loader_icd_destroy(ptr_instance, icd_term, pAllocator);
@@ -4312,9 +4470,10 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateInstance(
         if (!loader_icd_init_entrys(icd_term, icd_term->instance,
                                     ptr_instance->icd_tramp_list.scanned_list[i]
                                         .GetInstanceProcAddr)) {
-            loader_log(ptr_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
-                       "ICD ignored: failed to CreateInstance and find "
-                       "entrypoints with ICD");
+            loader_log(
+                ptr_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                "terminator_CreateInstance: Failed to CreateInstance and find "
+                "entrypoints with ICD.  Skipping ICD.");
             continue;
         }
 
@@ -4412,7 +4571,8 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDevice(
 
     if (fpCreateDevice == NULL) {
         loader_log(icd_term->this_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "No vkCreateDevice command exposed by ICD %s",
+                   "terminator_CreateDevice: No vkCreateDevice command exposed "
+                   "by ICD %s",
                    icd_term->scanned_icd->lib_name);
         res = VK_ERROR_INITIALIZATION_FAILED;
         goto out;
@@ -4421,17 +4581,18 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDevice(
     VkDeviceCreateInfo localCreateInfo;
     memcpy(&localCreateInfo, pCreateInfo, sizeof(localCreateInfo));
 
-    /*
-     * NOTE: Need to filter the extensions to only those
-     * supported by the ICD.
-     * No ICD will advertise support for layers. An ICD
-     * library could support a layer, but it would be
-     * independent of the actual ICD, just in the same library.
-     */
+    // NOTE: Need to filter the extensions to only those supported by the ICD.
+    //       No ICD will advertise support for layers. An ICD library could
+    //       support a layer, but it would be independent of the actual ICD,
+    //       just in the same library.
     char **filtered_extension_names = NULL;
     filtered_extension_names =
         loader_stack_alloc(pCreateInfo->enabledExtensionCount * sizeof(char *));
-    if (!filtered_extension_names) {
+    if (NULL == filtered_extension_names) {
+        loader_log(icd_term->this_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "terminator_CreateDevice: Failed to create extension name "
+                   "storage for %d extensions %d",
+                   pCreateInfo->enabledExtensionCount);
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
 
@@ -4442,7 +4603,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDevice(
     localCreateInfo.ppEnabledExtensionNames =
         (const char *const *)filtered_extension_names;
 
-    /* Get the physical device (ICD) extensions  */
+    // Get the physical device (ICD) extensions
     res = loader_init_generic_list(icd_term->this_instance,
                                    (struct loader_generic_list *)&icd_exts,
                                    sizeof(VkExtensionProperties));
@@ -4477,7 +4638,8 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDevice(
                          &dev->icd_device);
     if (res != VK_SUCCESS) {
         loader_log(icd_term->this_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "vkCreateDevice call failed in ICD %s",
+                   "terminator_CreateDevice: Failed in ICD %s vkCreateDevice"
+                   "call",
                    icd_term->scanned_icd->lib_name);
         goto out;
     }
@@ -4513,6 +4675,10 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_EnumeratePhysicalDevices(
     icd_phys_devs = (struct loader_phys_dev_per_icd *)loader_stack_alloc(
         sizeof(struct loader_phys_dev_per_icd) * inst->total_icd_count);
     if (NULL == icd_phys_devs) {
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "terminator_EnumeratePhysicalDevices failed to allocate "
+                   "temporary icd physical device array for %d ICDs",
+                   inst->total_icd_count);
         res = VK_ERROR_OUT_OF_HOST_MEMORY;
         goto out;
     }
@@ -4522,7 +4688,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_EnumeratePhysicalDevices(
         if (NULL == icd_term) {
             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                        "Invalid ICD encountered during"
-                       "vkEnumeratePhysicalDevices");
+                       "terminator_EnumeratePhysicalDevices");
             assert(false);
         }
 
@@ -4538,16 +4704,26 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_EnumeratePhysicalDevices(
             icd_phys_devs[i].phys_devs = (VkPhysicalDevice *)loader_stack_alloc(
                 icd_phys_devs[i].count * sizeof(VkPhysicalDevice));
             if (NULL == icd_phys_devs[i].phys_devs) {
+                loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                           "terminator_EnumeratePhysicalDevices failed to "
+                           "allocate temporary icd physical device storage for "
+                           "ICD %d with %d phys devs.",
+                           i, icd_phys_devs[i].count);
                 res = VK_ERROR_OUT_OF_HOST_MEMORY;
                 goto out;
             }
 
-            // Query the VkPhysicalDevice values for each of the physical devices
+            // Query the VkPhysicalDevice values for each of the physical
+            // devices
             // associated with this ICD.
             res = icd_term->EnumeratePhysicalDevices(
                 icd_term->instance, &(icd_phys_devs[i].count),
                 icd_phys_devs[i].phys_devs);
             if (res != VK_SUCCESS) {
+                loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                           "terminator_EnumeratePhysicalDevices: ICD Enumerate"
+                           " call failed for ICD %d",
+                           i);
                 goto out;
             }
 
@@ -4561,6 +4737,9 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_EnumeratePhysicalDevices(
     }
 
     if (inst->total_gpu_count == 0) {
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "terminator_EnumeratePhysicalDevices: Determined 0 available"
+                   "ICDs");
         res = VK_ERROR_INITIALIZATION_FAILED;
         goto out;
     }
@@ -4581,11 +4760,16 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_EnumeratePhysicalDevices(
             sizeof(struct loader_physical_device_term *) * new_phys_dev_count,
             VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
         if (NULL == new_phys_devs) {
+            loader_log(
+                inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                "terminator_EnumeratePhysicalDevices: Failed to allocate "
+                "new physical device array");
             res = VK_ERROR_OUT_OF_HOST_MEMORY;
             goto out;
         }
-        memset(new_phys_devs, 0, sizeof(struct loader_physical_device_term *) *
-                                     new_phys_dev_count);
+        memset(new_phys_devs, 0,
+               sizeof(struct loader_physical_device_term *) *
+                   new_phys_dev_count);
 
         // Copy or create everything to fill the new array of physical devices
         uint32_t idx = 0;
@@ -4613,6 +4797,10 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_EnumeratePhysicalDevices(
                         VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
                     if (NULL == new_phys_devs[idx]) {
                         copy_count = idx;
+                        loader_log(
+                            inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                            "terminator_EnumeratePhysicalDevices: Failed "
+                            " to create new physical device storage.");
                         res = VK_ERROR_OUT_OF_HOST_MEMORY;
                         goto out;
                     }
@@ -4703,10 +4891,10 @@ VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceProperties(
     struct loader_physical_device_term *phys_dev_term =
         (struct loader_physical_device_term *)physicalDevice;
     struct loader_icd_term *icd_term = phys_dev_term->this_icd_term;
-
-    if (icd_term->GetPhysicalDeviceProperties)
+    if (NULL != icd_term->GetPhysicalDeviceProperties) {
         icd_term->GetPhysicalDeviceProperties(phys_dev_term->phys_dev,
                                               pProperties);
+    }
 }
 
 VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceQueueFamilyProperties(
@@ -4715,10 +4903,10 @@ VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceQueueFamilyProperties(
     struct loader_physical_device_term *phys_dev_term =
         (struct loader_physical_device_term *)physicalDevice;
     struct loader_icd_term *icd_term = phys_dev_term->this_icd_term;
-
-    if (icd_term->GetPhysicalDeviceQueueFamilyProperties)
+    if (NULL != icd_term->GetPhysicalDeviceQueueFamilyProperties) {
         icd_term->GetPhysicalDeviceQueueFamilyProperties(
             phys_dev_term->phys_dev, pQueueFamilyPropertyCount, pProperties);
+    }
 }
 
 VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceMemoryProperties(
@@ -4727,10 +4915,10 @@ VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceMemoryProperties(
     struct loader_physical_device_term *phys_dev_term =
         (struct loader_physical_device_term *)physicalDevice;
     struct loader_icd_term *icd_term = phys_dev_term->this_icd_term;
-
-    if (icd_term->GetPhysicalDeviceMemoryProperties)
+    if (NULL != icd_term->GetPhysicalDeviceMemoryProperties) {
         icd_term->GetPhysicalDeviceMemoryProperties(phys_dev_term->phys_dev,
                                                     pProperties);
+    }
 }
 
 VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceFeatures(
@@ -4738,9 +4926,9 @@ VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceFeatures(
     struct loader_physical_device_term *phys_dev_term =
         (struct loader_physical_device_term *)physicalDevice;
     struct loader_icd_term *icd_term = phys_dev_term->this_icd_term;
-
-    if (icd_term->GetPhysicalDeviceFeatures)
+    if (NULL != icd_term->GetPhysicalDeviceFeatures) {
         icd_term->GetPhysicalDeviceFeatures(phys_dev_term->phys_dev, pFeatures);
+    }
 }
 
 VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceFormatProperties(
@@ -4749,10 +4937,10 @@ VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceFormatProperties(
     struct loader_physical_device_term *phys_dev_term =
         (struct loader_physical_device_term *)physicalDevice;
     struct loader_icd_term *icd_term = phys_dev_term->this_icd_term;
-
-    if (icd_term->GetPhysicalDeviceFormatProperties)
+    if (NULL != icd_term->GetPhysicalDeviceFormatProperties) {
         icd_term->GetPhysicalDeviceFormatProperties(phys_dev_term->phys_dev,
                                                     format, pFormatInfo);
+    }
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL
@@ -4763,10 +4951,12 @@ terminator_GetPhysicalDeviceImageFormatProperties(
     struct loader_physical_device_term *phys_dev_term =
         (struct loader_physical_device_term *)physicalDevice;
     struct loader_icd_term *icd_term = phys_dev_term->this_icd_term;
-
-    if (!icd_term->GetPhysicalDeviceImageFormatProperties)
+    if (NULL == icd_term->GetPhysicalDeviceImageFormatProperties) {
+        loader_log(icd_term->this_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "Encountered the vkEnumerateDeviceLayerProperties "
+                   "terminator.  This means a layer improperly continued.");
         return VK_ERROR_INITIALIZATION_FAILED;
-
+    }
     return icd_term->GetPhysicalDeviceImageFormatProperties(
         phys_dev_term->phys_dev, format, type, tiling, usage, flags,
         pImageFormatProperties);
@@ -4781,11 +4971,11 @@ terminator_GetPhysicalDeviceSparseImageFormatProperties(
     struct loader_physical_device_term *phys_dev_term =
         (struct loader_physical_device_term *)physicalDevice;
     struct loader_icd_term *icd_term = phys_dev_term->this_icd_term;
-
-    if (icd_term->GetPhysicalDeviceSparseImageFormatProperties)
+    if (NULL != icd_term->GetPhysicalDeviceSparseImageFormatProperties) {
         icd_term->GetPhysicalDeviceSparseImageFormatProperties(
             phys_dev_term->phys_dev, format, type, samples, usage, tiling,
             pNumProperties, pProperties);
+    }
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL terminator_EnumerateDeviceExtensionProperties(
@@ -4916,8 +5106,13 @@ out:
 VKAPI_ATTR VkResult VKAPI_CALL terminator_EnumerateDeviceLayerProperties(
     VkPhysicalDevice physicalDevice, uint32_t *pPropertyCount,
     VkLayerProperties *pProperties) {
-
-    // should never get here this call isn't dispatched down the chain
+    struct loader_physical_device_term *phys_dev_term =
+        (struct loader_physical_device_term *)physicalDevice;
+    struct loader_icd_term *icd_term = phys_dev_term->this_icd_term;
+    loader_log(icd_term->this_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+               "Encountered the vkEnumerateDeviceLayerProperties "
+               "terminator.  This means a layer improperly continued.");
+    // Should never get here this call isn't dispatched down the chain
     return VK_ERROR_INITIALIZATION_FAILED;
 }
 

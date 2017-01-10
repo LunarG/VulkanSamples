@@ -386,6 +386,9 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
         ptr_instance, sizeof(VkLayerInstanceDispatchTable),
         VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (ptr_instance->disp == NULL) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "vkCreateInstance:  Failed to allocate Instance dispatch"
+                   " table.");
         res = VK_ERROR_OUT_OF_HOST_MEMORY;
         goto out;
     }
@@ -560,6 +563,10 @@ vkEnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysicalDeviceCount,
     temp_pd_array = (VkPhysicalDevice *)loader_stack_alloc(
         sizeof(VkPhysicalDevice) * new_pd_count);
     if (NULL == temp_pd_array) {
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "vkEnumeratePhysicalDevices:  Failed to allocate temporary "
+                   "physical device array of size %d",
+                   new_pd_count);
         res = VK_ERROR_OUT_OF_HOST_MEMORY;
         goto out;
     }
@@ -580,6 +587,10 @@ vkEnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysicalDeviceCount,
             inst, new_pd_count * sizeof(struct loader_physical_device_tramp *),
             VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (NULL == new_phys_devs) {
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "vkEnumeratePhysicalDevices:  Failed to allocate physical "
+                   "device trampoline array of size %d",
+                   new_pd_count);
         res = VK_ERROR_OUT_OF_HOST_MEMORY;
         goto out;
     }
@@ -606,6 +617,10 @@ vkEnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysicalDeviceCount,
                     inst, sizeof(struct loader_physical_device_tramp),
                     VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
             if (NULL == new_phys_devs[new_idx]) {
+                loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                           "vkEnumeratePhysicalDevices:  Failed to allocate "
+                           "physical device trampoline object %d",
+                           new_idx);
                 new_pd_count = new_idx;
                 res = VK_ERROR_OUT_OF_HOST_MEMORY;
                 goto out;
@@ -755,6 +770,8 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(
         loader_init_generic_list(inst, (struct loader_generic_list *)&icd_exts,
                                  sizeof(VkExtensionProperties));
     if (VK_SUCCESS != res) {
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "vkCreateDevice:  Failed to create ICD extension list");
         goto out;
     }
 
@@ -762,6 +779,8 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(
         inst, inst->disp->EnumerateDeviceExtensionProperties,
         phys_dev->phys_dev, "Unknown", &icd_exts);
     if (res != VK_SUCCESS) {
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "vkCreateDevice:  Failed to add extensions to list");
         goto out;
     }
 
@@ -769,6 +788,8 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(
     res = loader_validate_device_extensions(
         phys_dev, &inst->activated_layer_list, &icd_exts, pCreateInfo);
     if (res != VK_SUCCESS) {
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "vkCreateDevice:  Failed to validate extensions in list");
         goto out;
     }
 
@@ -785,6 +806,10 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(
         loader_device_heap_alloc(dev, inst->activated_layer_list.capacity,
                                  VK_SYSTEM_ALLOCATION_SCOPE_DEVICE);
     if (dev->activated_layer_list.list == NULL) {
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "vkCreateDevice:  Failed to allocate activated layer"
+                   "list of size %d.",
+                   inst->activated_layer_list.capacity);
         res = VK_ERROR_OUT_OF_HOST_MEMORY;
         goto out;
     }
@@ -795,6 +820,8 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(
     res = loader_create_device_chain(phys_dev, pCreateInfo, pAllocator, inst,
                                      dev);
     if (res != VK_SUCCESS) {
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "vkCreateDevice:  Failed to create device chain.");
         goto out;
     }
 
@@ -985,8 +1012,14 @@ vkEnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice,
                                  sizeof(struct loader_layer_properties);
         enabled_layers->list = loader_instance_heap_alloc(inst, enabled_layers->capacity,
                                 VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-        if (!enabled_layers->list)
+        if (!enabled_layers->list) {
+            loader_log(
+                inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                "vkEnumerateDeviceLayerProperties:  Failed to allocate enabled"
+                "layer list of size %d",
+                enabled_layers->capacity);
             return VK_ERROR_OUT_OF_HOST_MEMORY;
+        }
 
         uint32_t j = 0;
         for (uint32_t i = 0; i < inst->activated_layer_list.count; j++) {
