@@ -158,6 +158,7 @@ private:
     std::vector<VkCommandPool> worker_cmd_pools_;
     VkDescriptorPool desc_pool_;
     VkDeviceMemory frame_data_mem_;
+    VkDeviceSize frame_data_aligned_size_;
     std::vector<FrameData> frame_data_;
     int frame_data_index_;
 
