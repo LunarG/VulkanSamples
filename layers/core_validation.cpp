@@ -12309,9 +12309,43 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSharedSwapchainsKHR(VkDevice device, uint32
                                                          const VkSwapchainCreateInfoKHR *pCreateInfos,
                                                          const VkAllocationCallbacks *pAllocator, VkSwapchainKHR *pSwapchains) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    std::vector<SURFACE_STATE *> surface_state;
+    std::vector<SWAPCHAIN_NODE *> old_swapchain_state;
 
+    if (pCreateInfos) {
+        std::unique_lock<std::mutex> lock(global_lock);
+        for (uint32_t i = 0; i < swapchainCount; i++) {
+            surface_state.push_back(getSurfaceState(dev_data->instance_data, pCreateInfos[i].surface));
+            old_swapchain_state.push_back(getSwapchainNode(dev_data, pCreateInfos[i].oldSwapchain));
+            if (PreCallValidateCreateSwapchainKHR(dev_data, &pCreateInfos[i], surface_state[i], old_swapchain_state[i])) {
+                return VK_ERROR_VALIDATION_FAILED_EXT;
+            }
+        }
+    }
     VkResult result =
         dev_data->dispatch_table.CreateSharedSwapchainsKHR(device, swapchainCount, pCreateInfos, pAllocator, pSwapchains);
+
+    std::lock_guard<std::mutex> lock(global_lock);
+    if (VK_SUCCESS == result) {
+        for (uint32_t i = 0; i < swapchainCount; i++) {
+            auto swapchain_state = unique_ptr<SWAPCHAIN_NODE>(new SWAPCHAIN_NODE(&pCreateInfos[i], pSwapchains[i]));
+            surface_state[i]->swapchain = swapchain_state.get();
+            dev_data->device_extensions.swapchainMap[pSwapchains[i]] = std::move(swapchain_state);
+        }
+    } else {
+        for (uint32_t i = 0; i < swapchainCount; i++) {
+            surface_state[i]->swapchain = nullptr;
+        }
+    }
+
+    // Spec requires that even if CreateSharedSwapchainKHR fails, oldSwapchain behaves as replaced.
+    for (uint32_t i = 0; i < swapchainCount; i++) {
+        if (old_swapchain_state[i]) {
+            old_swapchain_state[i]->replaced = true;
+        }
+        surface_state[i]->old_swapchain = old_swapchain_state[i];
+    }
+
     return result;
 }
 
