@@ -4871,8 +4871,8 @@ out:
         } else {
             // Otherwise, we've encountered an error, so we should free the
             // new buffers.
-            for (uint32_t i = 0; i < copy_count; i++) {
-                loader_instance_heap_free(inst, new_phys_devs[i]);
+            for (uint32_t j = 0; j < copy_count; j++) {
+                loader_instance_heap_free(inst, new_phys_devs[j]);
             }
             loader_instance_heap_free(inst, new_phys_devs);
 
