@@ -65,6 +65,7 @@ class Specification:
         self.val_error_dict = {} # string for enum is key that references 'error_msg' and 'api'
         self.error_db_dict = {} # dict of previous error values read in from database file
         self.delimiter = '~^~' # delimiter for db file
+        self.implicit_count = 0
         self.copyright = """/* THIS FILE IS GENERATED.  DO NOT EDIT. */
 
 /*
@@ -120,6 +121,7 @@ class Specification:
         prev_link = '' # Last seen link id within the spec
         api_function = '' # API call that a check appears under
         error_strings = set() # Flag any exact duplicate error strings and skip them
+        implicit_count = 0
         for tag in self.root.iter(): # iterate down tree
             # Grab most recent section heading and link
             if tag.tag in ['{http://www.w3.org/1999/xhtml}h2', '{http://www.w3.org/1999/xhtml}h3']:
@@ -146,9 +148,14 @@ class Specification:
             elif tag.tag == '{http://www.w3.org/1999/xhtml}div' and tag.get('class') == 'sidebar':
                 # parse down sidebar to check for valid usage cases
                 valid_usage = False
+                implicit = False
                 for elem in tag.iter():
                     if elem.tag == '{http://www.w3.org/1999/xhtml}strong' and None != elem.text and 'Valid Usage' in elem.text:
                         valid_usage = True
+                        if '(Implicit)' in elem.text:
+                            implicit = True
+                        else:
+                            implicit = False
                     elif valid_usage and elem.tag == '{http://www.w3.org/1999/xhtml}li': # grab actual valid usage requirements
                         error_msg_str = "%s '%s' which states '%s' (%s#%s)" % (error_msg_prefix, prev_heading, "".join(elem.itertext()).replace('\n', ''), spec_url, prev_link)
                         # Some txt has multiple spaces so split on whitespace and join w/ single space
@@ -162,6 +169,10 @@ class Specification:
                             self.val_error_dict[enum_str] = {}
                             self.val_error_dict[enum_str]['error_msg'] = error_msg_str.encode("ascii", "ignore").replace("\\", "/")
                             self.val_error_dict[enum_str]['api'] = api_function
+                            self.val_error_dict[enum_str]['implicit'] = False
+                            if implicit:
+                                self.val_error_dict[enum_str]['implicit'] = True
+                                self.implicit_count = self.implicit_count + 1
                             unique_enum_id = unique_enum_id + 1
         #print "Validation Error Dict has a total of %d unique errors and contents are:\n%s" % (unique_enum_id, self.val_error_dict)
     def genHeader(self, header_file):
@@ -212,6 +223,7 @@ class Specification:
                 repeat_string = repeat_string + 1
                 print "String '%s' repeated %d times" % (es, repeat_string)
         print "Found %d repeat strings" % (repeat_string)
+        print "Found %d implicit checks" % (self.implicit_count)
     def genDB(self, db_file):
         """Generate a database of check_enum, check_coded?, testname, error_string"""
         db_lines = []
@@ -231,11 +243,17 @@ class Specification:
             implemented = 'U'
             testname = 'Unknown'
             note = ''
+            implicit = self.val_error_dict[enum]['implicit']
             # If we have an existing db entry for this enum, use its implemented/testname values
             if enum in self.error_db_dict:
                 implemented = self.error_db_dict[enum]['check_implemented']
                 testname = self.error_db_dict[enum]['testname']
                 note = self.error_db_dict[enum]['note']
+            if implicit and 'implicit' not in note: # add implicit note
+                if '' != note:
+                    note = "implicit, %s" % (note)
+                else:
+                    note = "implicit"
             #print "delimiter: %s, id: %s, str: %s" % (self.delimiter, enum, self.val_error_dict[enum])
             # No existing entry so default to N for implemented and None for testname
             db_lines.append("%s%s%s%s%s%s%s%s%s%s%s" % (enum, self.delimiter, implemented, self.delimiter, testname, self.delimiter, self.val_error_dict[enum]['api'], self.delimiter, self.val_error_dict[enum]['error_msg'], self.delimiter, note))
@@ -305,6 +323,7 @@ class Specification:
             update_enum = enum
             update_msg = self.val_error_dict[enum]['error_msg']
             update_api = self.val_error_dict[enum]['api']
+            implicit = self.val_error_dict[enum]['implicit']
             # Any user-forced remap takes precendence
             if enum_list[-1] in remap_dict:
                 enum_list[-1] = remap_dict[enum_list[-1]]
@@ -363,6 +382,7 @@ class Specification:
             updated_val_error_dict[update_enum] = {}
             updated_val_error_dict[update_enum]['error_msg'] = update_msg
             updated_val_error_dict[update_enum]['api'] = update_api
+            updated_val_error_dict[update_enum]['implicit'] = implicit
         # Assign parsed dict to be the udpated dict based on db compare
         print "In compareDB parsed %d entries" % (ids_parsed)
         return updated_val_error_dict
