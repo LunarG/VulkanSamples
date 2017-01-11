@@ -83,8 +83,6 @@ static int ConsoleIsExclusive(void) {
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
-#define MAX_GPUS 8
-
 #define MAX_QUEUE_TYPES 5
 #define APP_SHORT_NAME "vulkaninfo"
 
@@ -752,6 +750,8 @@ static void AppGpuInit(struct AppGpu *gpu, uint32_t id,
     for (i = 0; i < gpu->queue_count; i++) {
         float *queue_priorities =
             malloc(gpu->queue_props[i].queueCount * sizeof(float));
+        if (!queue_priorities)
+            ERR_EXIT(VK_ERROR_OUT_OF_HOST_MEMORY);
         memset(queue_priorities, 0,
                gpu->queue_props[i].queueCount * sizeof(float));
         gpu->queue_reqs[i].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -978,6 +978,8 @@ static int AppDumpSurfaceFormats(struct AppInstance *inst, struct AppGpu *gpu){
     assert(!err);
 
     VkSurfaceFormatKHR *surf_formats = (VkSurfaceFormatKHR *)malloc(format_count * sizeof(VkSurfaceFormatKHR));
+    if (!surf_formats)
+        ERR_EXIT(VK_ERROR_OUT_OF_HOST_MEMORY);
     err = inst->vkGetPhysicalDeviceSurfaceFormatsKHR(gpu->obj, inst->surface, &format_count, surf_formats);
     assert(!err);
     printf("Formats:\t\tcount = %d\n", format_count);
@@ -997,6 +999,8 @@ static int AppDumpSurfacePresentModes(struct AppInstance *inst, struct AppGpu *g
     assert(!err);
 
     VkPresentModeKHR *surf_present_modes = (VkPresentModeKHR *)malloc(present_mode_count * sizeof(VkPresentInfoKHR));
+    if (!surf_present_modes)
+        ERR_EXIT(VK_ERROR_OUT_OF_HOST_MEMORY);
     err = inst->vkGetPhysicalDeviceSurfacePresentModesKHR(gpu->obj, inst->surface, &present_mode_count, surf_present_modes);
     assert(!err);
     printf("Present Modes:\t\tcount = %d\n", present_mode_count);
@@ -1449,8 +1453,8 @@ static void ConsoleEnlarge() {
 
 int main(int argc, char **argv) {
     unsigned int major, minor, patch;
-    struct AppGpu gpus[MAX_GPUS];
-    VkPhysicalDevice objs[MAX_GPUS];
+    struct AppGpu *gpus;
+    VkPhysicalDevice *objs;
     uint32_t gpu_count, i;
     VkResult err;
     struct AppInstance inst;
@@ -1479,14 +1483,16 @@ int main(int argc, char **argv) {
     err = vkEnumeratePhysicalDevices(inst.instance, &gpu_count, NULL);
     if (err)
         ERR_EXIT(err);
-    if (gpu_count > MAX_GPUS) {
-        printf("Too many GPUS found \n");
-        ERR_EXIT(-1);
-    }
+    objs = malloc(sizeof(objs[0]) * gpu_count);
+    if (!objs)
+        ERR_EXIT(VK_ERROR_OUT_OF_HOST_MEMORY);
     err = vkEnumeratePhysicalDevices(inst.instance, &gpu_count, objs);
     if (err)
         ERR_EXIT(err);
 
+    gpus = malloc(sizeof(gpus[0]) * gpu_count);
+    if (!gpus)
+        ERR_EXIT(VK_ERROR_OUT_OF_HOST_MEMORY);
     for (i = 0; i < gpu_count; i++) {
         AppGpuInit(&gpus[i], i, objs[i]);
         printf("\n\n");
@@ -1602,6 +1608,8 @@ int main(int argc, char **argv) {
 
     for (i = 0; i < gpu_count; i++)
         AppGpuDestroy(&gpus[i]);
+    free(gpus);
+    free(objs);
 
     AppDestroyInstance(&inst);
 
