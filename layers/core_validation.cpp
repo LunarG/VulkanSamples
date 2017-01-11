@@ -12311,27 +12311,27 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
     return result;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL CreateSharedSwapchainsKHR(VkDevice device, uint32_t swapchainCount,
-                                                         const VkSwapchainCreateInfoKHR *pCreateInfos,
-                                                         const VkAllocationCallbacks *pAllocator, VkSwapchainKHR *pSwapchains) {
-    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    std::vector<SURFACE_STATE *> surface_state;
-    std::vector<SWAPCHAIN_NODE *> old_swapchain_state;
-
+static bool PreCallValidateCreateSharedSwapchainsKHR(layer_data *dev_data, uint32_t swapchainCount,
+                                                     const VkSwapchainCreateInfoKHR *pCreateInfos, VkSwapchainKHR *pSwapchains,
+                                                     std::vector<SURFACE_STATE *> &surface_state,
+                                                     std::vector<SWAPCHAIN_NODE *> &old_swapchain_state) {
     if (pCreateInfos) {
-        std::unique_lock<std::mutex> lock(global_lock);
+        std::lock_guard<std::mutex> lock(global_lock);
         for (uint32_t i = 0; i < swapchainCount; i++) {
             surface_state.push_back(getSurfaceState(dev_data->instance_data, pCreateInfos[i].surface));
             old_swapchain_state.push_back(getSwapchainNode(dev_data, pCreateInfos[i].oldSwapchain));
             if (PreCallValidateCreateSwapchainKHR(dev_data, &pCreateInfos[i], surface_state[i], old_swapchain_state[i])) {
-                return VK_ERROR_VALIDATION_FAILED_EXT;
+                return true;
             }
         }
     }
-    VkResult result =
-        dev_data->dispatch_table.CreateSharedSwapchainsKHR(device, swapchainCount, pCreateInfos, pAllocator, pSwapchains);
+    return false;
+}
 
-    std::lock_guard<std::mutex> lock(global_lock);
+static void PostCallRecordCreateSharedSwapchainsKHR(layer_data *dev_data, VkResult result, uint32_t swapchainCount,
+                                                    const VkSwapchainCreateInfoKHR *pCreateInfos, VkSwapchainKHR *pSwapchains,
+                                                    std::vector<SURFACE_STATE *> &surface_state,
+                                                    std::vector<SWAPCHAIN_NODE *> &old_swapchain_state) {
     if (VK_SUCCESS == result) {
         for (uint32_t i = 0; i < swapchainCount; i++) {
             auto swapchain_state = unique_ptr<SWAPCHAIN_NODE>(new SWAPCHAIN_NODE(&pCreateInfos[i], pSwapchains[i]));
@@ -12343,7 +12343,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSharedSwapchainsKHR(VkDevice device, uint32
             surface_state[i]->swapchain = nullptr;
         }
     }
-
     // Spec requires that even if CreateSharedSwapchainKHR fails, oldSwapchain behaves as replaced.
     for (uint32_t i = 0; i < swapchainCount; i++) {
         if (old_swapchain_state[i]) {
@@ -12351,6 +12350,26 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSharedSwapchainsKHR(VkDevice device, uint32
         }
         surface_state[i]->old_swapchain = old_swapchain_state[i];
     }
+    return;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL CreateSharedSwapchainsKHR(VkDevice device, uint32_t swapchainCount,
+                                                         const VkSwapchainCreateInfoKHR *pCreateInfos,
+                                                         const VkAllocationCallbacks *pAllocator, VkSwapchainKHR *pSwapchains) {
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    std::vector<SURFACE_STATE *> surface_state;
+    std::vector<SWAPCHAIN_NODE *> old_swapchain_state;
+
+    if (PreCallValidateCreateSharedSwapchainsKHR(dev_data, swapchainCount, pCreateInfos, pSwapchains, surface_state,
+                                                 old_swapchain_state)) {
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+    }
+
+    VkResult result =
+        dev_data->dispatch_table.CreateSharedSwapchainsKHR(device, swapchainCount, pCreateInfos, pAllocator, pSwapchains);
+
+    PostCallRecordCreateSharedSwapchainsKHR(dev_data, result, swapchainCount, pCreateInfos, pSwapchains, surface_state,
+                                            old_swapchain_state);
 
     return result;
 }
