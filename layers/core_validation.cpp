@@ -12062,18 +12062,9 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, VkSwapchainC
     return false;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device, const VkSwapchainCreateInfoKHR *pCreateInfo,
-                                                  const VkAllocationCallbacks *pAllocator,
-                                                  VkSwapchainKHR *pSwapchain) {
-    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    auto surface_state = getSurfaceState(dev_data->instance_data, pCreateInfo->surface);
-    auto old_swapchain_state = getSwapchainNode(dev_data, pCreateInfo->oldSwapchain);
-
-    if (PreCallValidateCreateSwapchainKHR(dev_data, pCreateInfo, surface_state, old_swapchain_state))
-        return VK_ERROR_VALIDATION_FAILED_EXT;
-
-    VkResult result = dev_data->dispatch_table.CreateSwapchainKHR(device, pCreateInfo, pAllocator, pSwapchain);
-
+static void PostCallRecordCreateSwapchainKHR(layer_data *dev_data, VkResult result, const VkSwapchainCreateInfoKHR *pCreateInfo,
+                                             VkSwapchainKHR *pSwapchain, SURFACE_STATE *surface_state,
+                                             SWAPCHAIN_NODE *old_swapchain_state) {
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
         auto swapchain_state = unique_ptr<SWAPCHAIN_NODE>(new SWAPCHAIN_NODE(pCreateInfo, *pSwapchain));
@@ -12082,12 +12073,27 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device, const VkSwapc
     } else {
         surface_state->swapchain = nullptr;
     }
-
     // Spec requires that even if CreateSwapchainKHR fails, oldSwapchain behaves as replaced.
     if (old_swapchain_state) {
         old_swapchain_state->replaced = true;
     }
     surface_state->old_swapchain = old_swapchain_state;
+    return;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device, const VkSwapchainCreateInfoKHR *pCreateInfo,
+                                                  const VkAllocationCallbacks *pAllocator, VkSwapchainKHR *pSwapchain) {
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    auto surface_state = getSurfaceState(dev_data->instance_data, pCreateInfo->surface);
+    auto old_swapchain_state = getSwapchainNode(dev_data, pCreateInfo->oldSwapchain);
+
+    if (PreCallValidateCreateSwapchainKHR(dev_data, pCreateInfo, surface_state, old_swapchain_state)) {
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+    }
+
+    VkResult result = dev_data->dispatch_table.CreateSwapchainKHR(device, pCreateInfo, pAllocator, pSwapchain);
+
+    PostCallRecordCreateSwapchainKHR(dev_data, result, pCreateInfo, pSwapchain, surface_state, old_swapchain_state);
 
     return result;
 }
