@@ -61,6 +61,7 @@
 #pragma GCC diagnostic warning "-Wwrite-strings"
 #endif
 #include "core_validation.h"
+#include "buffer_validation.h"
 #include "vk_layer_table.h"
 #include "vk_layer_data.h"
 #include "vk_layer_extension_utils.h"
@@ -6482,13 +6483,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateI
 
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
-        IMAGE_LAYOUT_NODE image_state;
-        image_state.layout = pCreateInfo->initialLayout;
-        image_state.format = pCreateInfo->format;
-        dev_data->imageMap.insert(std::make_pair(*pImage, unique_ptr<IMAGE_STATE>(new IMAGE_STATE(*pImage, pCreateInfo))));
-        ImageSubresourcePair subpair = {*pImage, false, VkImageSubresource()};
-        dev_data->imageSubresourceMap[*pImage].push_back(subpair);
-        dev_data->imageLayoutMap[subpair] = image_state;
+        PostCallRecordCreateImage(dev_data->imageMap, dev_data->imageSubresourceMap, dev_data->imageLayoutMap, pCreateInfo, pImage);
     }
     return result;
 }

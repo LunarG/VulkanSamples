@@ -22,3 +22,16 @@
 #define NOMINMAX
 
 #include "buffer_validation.h"
+
+VK_LAYER_EXPORT void PostCallRecordCreateImage(std::unordered_map<VkImage, std::unique_ptr<IMAGE_STATE>> &imageMap,
+                                               std::unordered_map<VkImage, std::vector<ImageSubresourcePair>> &imageSubresourceMap,
+                                               std::unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> &imageLayoutMap,
+                                               const VkImageCreateInfo *pCreateInfo, VkImage *pImage) {
+    IMAGE_LAYOUT_NODE image_state;
+    image_state.layout = pCreateInfo->initialLayout;
+    image_state.format = pCreateInfo->format;
+    imageMap.insert(std::make_pair(*pImage, std::unique_ptr<IMAGE_STATE>(new IMAGE_STATE(*pImage, pCreateInfo))));
+    ImageSubresourcePair subpair{*pImage, false, VkImageSubresource()};
+    imageSubresourceMap[*pImage].push_back(subpair);
+    imageLayoutMap[subpair] = image_state;
+}
