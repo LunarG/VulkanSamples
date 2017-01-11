@@ -174,6 +174,7 @@ struct layer_data {
     // Device specific data
     PHYS_DEV_PROPERTIES_NODE phys_dev_properties = {};
     VkPhysicalDeviceMemoryProperties phys_dev_mem_props = {};
+    VkPhysicalDeviceProperties phys_dev_props = {};
 };
 
 // TODO : Do we need to guard access to layer_data_map w/ lock?
@@ -4280,8 +4281,9 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu, const VkDevice
     } else {
         memset(&my_device_data->enabled_features, 0, sizeof(VkPhysicalDeviceFeatures));
     }
-    // Store physical device mem limits into device layer_data struct
+    // Store physical device properties and physical device mem limits into device layer_data structs
     my_instance_data->dispatch_table.GetPhysicalDeviceMemoryProperties(gpu, &my_device_data->phys_dev_mem_props);
+    my_instance_data->dispatch_table.GetPhysicalDeviceProperties(gpu, &my_device_data->phys_dev_props);
     lock.unlock();
 
     ValidateLayerOrdering(*pCreateInfo);
