@@ -11826,40 +11826,39 @@ CreateEvent(VkDevice device, const VkEventCreateInfo *pCreateInfo, const VkAlloc
     return result;
 }
 
-static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, VkSwapchainCreateInfoKHR const *pCreateInfo,
-                                              SURFACE_STATE *surface_state, SWAPCHAIN_NODE *old_swapchain_state) {
+static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, const char *func_name,
+                                              VkSwapchainCreateInfoKHR const *pCreateInfo, SURFACE_STATE *surface_state,
+                                              SWAPCHAIN_NODE *old_swapchain_state) {
     auto most_recent_swapchain = surface_state->swapchain ? surface_state->swapchain : surface_state->old_swapchain;
 
     // TODO: revisit this. some of these rules are being relaxed.
     if (most_recent_swapchain != old_swapchain_state || (surface_state->old_swapchain && surface_state->swapchain)) {
         if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                     reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_ALREADY_EXISTS, "DS",
-                    "vkCreateSwapchainKHR(): surface has an existing swapchain other than oldSwapchain"))
+                    "%s: surface has an existing swapchain other than oldSwapchain", func_name))
             return true;
     }
     if (old_swapchain_state && old_swapchain_state->createInfo.surface != pCreateInfo->surface) {
         if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
                     reinterpret_cast<uint64_t const &>(pCreateInfo->oldSwapchain), __LINE__, DRAWSTATE_SWAPCHAIN_WRONG_SURFACE,
-                    "DS", "vkCreateSwapchainKHR(): pCreateInfo->oldSwapchain's surface is not pCreateInfo->surface"))
+                    "DS", "%s: pCreateInfo->oldSwapchain's surface is not pCreateInfo->surface", func_name))
             return true;
     }
     auto physical_device_state = getPhysicalDeviceState(dev_data->instance_data, dev_data->physical_device);
     if (physical_device_state->vkGetPhysicalDeviceSurfaceCapabilitiesKHRState == UNCALLED) {
         if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
                     reinterpret_cast<uint64_t>(dev_data->physical_device), __LINE__, DRAWSTATE_SWAPCHAIN_CREATE_BEFORE_QUERY, "DS",
-                    "vkCreateSwapchainKHR(): surface capabilities not retrieved for this physical device"))
+                    "%s: surface capabilities not retrieved for this physical device", func_name))
             return true;
     } else { // have valid capabilities
         auto &capabilities = physical_device_state->surfaceCapabilities;
-        // Validate pCreateInfo->minImageCount against
-        // VkSurfaceCapabilitiesKHR::{min|max}ImageCount:
-
+        // Validate pCreateInfo->minImageCount against VkSurfaceCapabilitiesKHR::{min|max}ImageCount:
         if (pCreateInfo->minImageCount < capabilities.minImageCount) {
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                         reinterpret_cast<uint64_t>(dev_data->device), __LINE__, VALIDATION_ERROR_02331, "DS",
-                        "vkCreateSwapchainKHR() called with pCreateInfo->minImageCount = %d, which is outside the bounds returned "
+                        "%s called with minImageCount = %d, which is outside the bounds returned "
                         "by vkGetPhysicalDeviceSurfaceCapabilitiesKHR() (i.e. minImageCount = %d, maxImageCount = %d). %s",
-                        pCreateInfo->minImageCount, capabilities.minImageCount, capabilities.maxImageCount,
+                        func_name, pCreateInfo->minImageCount, capabilities.minImageCount, capabilities.maxImageCount,
                         validation_error_map[VALIDATION_ERROR_02331]))
                 return true;
         }
@@ -11867,15 +11866,14 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, VkSwapchainC
         if ((capabilities.maxImageCount > 0) && (pCreateInfo->minImageCount > capabilities.maxImageCount)) {
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                         reinterpret_cast<uint64_t>(dev_data->device), __LINE__, VALIDATION_ERROR_02332, "DS",
-                        "vkCreateSwapchainKHR() called with pCreateInfo->minImageCount = %d, which is outside the bounds returned "
+                        "%s called with minImageCount = %d, which is outside the bounds returned "
                         "by vkGetPhysicalDeviceSurfaceCapabilitiesKHR() (i.e. minImageCount = %d, maxImageCount = %d). %s",
-                        pCreateInfo->minImageCount, capabilities.minImageCount, capabilities.maxImageCount,
+                        func_name, pCreateInfo->minImageCount, capabilities.minImageCount, capabilities.maxImageCount,
                         validation_error_map[VALIDATION_ERROR_02332]))
                 return true;
         }
 
-        // Validate pCreateInfo->imageExtent against
-        // VkSurfaceCapabilitiesKHR::{current|min|max}ImageExtent:
+        // Validate pCreateInfo->imageExtent against VkSurfaceCapabilitiesKHR::{current|min|max}ImageExtent:
         if ((capabilities.currentExtent.width == kSurfaceSizeFromSwapchain) &&
             ((pCreateInfo->imageExtent.width < capabilities.minImageExtent.width) ||
              (pCreateInfo->imageExtent.width > capabilities.maxImageExtent.width) ||
@@ -11883,12 +11881,12 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, VkSwapchainC
              (pCreateInfo->imageExtent.height > capabilities.maxImageExtent.height))) {
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                         reinterpret_cast<uint64_t>(dev_data->device), __LINE__, VALIDATION_ERROR_02334, "DS",
-                        "vkCreateSwapchainKHR() called with pCreateInfo->imageExtent = (%d,%d), which is outside the "
-                        "bounds returned by vkGetPhysicalDeviceSurfaceCapabilitiesKHR(): currentExtent = (%d,%d), "
-                        "minImageExtent = (%d,%d), maxImageExtent = (%d,%d). %s",
-                        pCreateInfo->imageExtent.width, pCreateInfo->imageExtent.height, capabilities.currentExtent.width,
-                        capabilities.currentExtent.height, capabilities.minImageExtent.width, capabilities.minImageExtent.height,
-                        capabilities.maxImageExtent.width, capabilities.maxImageExtent.height,
+                        "%s called with imageExtent = (%d,%d), which is outside the bounds returned by "
+                        "vkGetPhysicalDeviceSurfaceCapabilitiesKHR(): currentExtent = (%d,%d), minImageExtent = (%d,%d), "
+                        "maxImageExtent = (%d,%d). %s",
+                        func_name, pCreateInfo->imageExtent.width, pCreateInfo->imageExtent.height,
+                        capabilities.currentExtent.width, capabilities.currentExtent.height, capabilities.minImageExtent.width,
+                        capabilities.minImageExtent.height, capabilities.maxImageExtent.width, capabilities.maxImageExtent.height,
                         validation_error_map[VALIDATION_ERROR_02334]))
                 return true;
         }
@@ -11897,26 +11895,23 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, VkSwapchainC
              (pCreateInfo->imageExtent.height != capabilities.currentExtent.height))) {
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                         reinterpret_cast<uint64_t>(dev_data->device), __LINE__, VALIDATION_ERROR_02334, "DS",
-                        "vkCreateSwapchainKHR() called with pCreateInfo->imageExtent = (%d,%d), which is not equal to the "
-                        "currentExtent = (%d,%d) returned by vkGetPhysicalDeviceSurfaceCapabilitiesKHR(). %s",
-                        pCreateInfo->imageExtent.width, pCreateInfo->imageExtent.height, capabilities.currentExtent.width,
-                        capabilities.currentExtent.height,
+                        "%s called with imageExtent = (%d,%d), which is not equal to the currentExtent = (%d,%d) returned by "
+                        "vkGetPhysicalDeviceSurfaceCapabilitiesKHR(). %s",
+                        func_name, pCreateInfo->imageExtent.width, pCreateInfo->imageExtent.height,
+                        capabilities.currentExtent.width, capabilities.currentExtent.height,
                         validation_error_map[VALIDATION_ERROR_02334]))
                 return true;
         }
-        // pCreateInfo->preTransform should have exactly one bit set, and that
-        // bit must also be set in VkSurfaceCapabilitiesKHR::supportedTransforms.
+        // pCreateInfo->preTransform should have exactly one bit set, and that bit must also be set in
+        // VkSurfaceCapabilitiesKHR::supportedTransforms.
         if (!pCreateInfo->preTransform || (pCreateInfo->preTransform & (pCreateInfo->preTransform - 1)) ||
             !(pCreateInfo->preTransform & capabilities.supportedTransforms)) {
-            // This is an error situation; one for which we'd like to give
-            // the developer a helpful, multi-line error message.  Build it
-            // up a little at a time, and then log it:
+            // This is an error situation; one for which we'd like to give the developer a helpful, multi-line error message.  Build
+            // it up a little at a time, and then log it:
             std::string errorString = "";
             char str[1024];
             // Here's the first part of the message:
-            sprintf(str, "vkCreateSwapchainKHR() called with a non-supported "
-                         "pCreateInfo->preTransform (i.e. %s).  "
-                         "Supported values are:\n",
+            sprintf(str, "%s called with a non-supported pCreateInfo->preTransform (i.e. %s).  Supported values are:\n", func_name,
                     string_VkSurfaceTransformFlagBitsKHR(pCreateInfo->preTransform));
             errorString += str;
             for (int i = 0; i < 32; i++) {
@@ -11934,20 +11929,17 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, VkSwapchainC
                 return true;
         }
 
-        // pCreateInfo->compositeAlpha should have exactly one bit set, and that
-        // bit must also be set in VkSurfaceCapabilitiesKHR::supportedCompositeAlpha
+        // pCreateInfo->compositeAlpha should have exactly one bit set, and that bit must also be set in
+        // VkSurfaceCapabilitiesKHR::supportedCompositeAlpha
         if (!pCreateInfo->compositeAlpha || (pCreateInfo->compositeAlpha & (pCreateInfo->compositeAlpha - 1)) ||
             !((pCreateInfo->compositeAlpha) & capabilities.supportedCompositeAlpha)) {
-            // This is an error situation; one for which we'd like to give
-            // the developer a helpful, multi-line error message.  Build it
-            // up a little at a time, and then log it:
+            // This is an error situation; one for which we'd like to give the developer a helpful, multi-line error message.  Build
+            // it up a little at a time, and then log it:
             std::string errorString = "";
             char str[1024];
             // Here's the first part of the message:
-            sprintf(str, "vkCreateSwapchainKHR() called with a non-supported "
-                         "pCreateInfo->compositeAlpha (i.e. %s).  "
-                         "Supported values are:\n",
-                    string_VkCompositeAlphaFlagBitsKHR(pCreateInfo->compositeAlpha));
+            sprintf(str, "%s called with a non-supported pCreateInfo->compositeAlpha (i.e. %s).  Supported values are:\n",
+                    func_name, string_VkCompositeAlphaFlagBitsKHR(pCreateInfo->compositeAlpha));
             errorString += str;
             for (int i = 0; i < 32; i++) {
                 // Build up the rest of the message:
@@ -11963,46 +11955,40 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, VkSwapchainC
                         errorString.c_str(), validation_error_map[VALIDATION_ERROR_02340]))
                 return true;
         }
-        // Validate pCreateInfo->imageArrayLayers against
-        // VkSurfaceCapabilitiesKHR::maxImageArrayLayers:
+        // Validate pCreateInfo->imageArrayLayers against VkSurfaceCapabilitiesKHR::maxImageArrayLayers:
         if ((pCreateInfo->imageArrayLayers < 1) || (pCreateInfo->imageArrayLayers > capabilities.maxImageArrayLayers)) {
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                         reinterpret_cast<uint64_t>(dev_data->device), __LINE__, VALIDATION_ERROR_02335, "DS",
-                        "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->imageArrayLayers (i.e. %d).  "
-                        "Minimum value is 1, maximum value is %d. %s",
-                        pCreateInfo->imageArrayLayers, capabilities.maxImageArrayLayers,
+                        "%s called with a non-supported imageArrayLayers (i.e. %d).  Minimum value is 1, maximum value is %d. %s",
+                        func_name, pCreateInfo->imageArrayLayers, capabilities.maxImageArrayLayers,
                         validation_error_map[VALIDATION_ERROR_02335]))
                 return true;
         }
-        // Validate pCreateInfo->imageUsage against
-        // VkSurfaceCapabilitiesKHR::supportedUsageFlags:
+        // Validate pCreateInfo->imageUsage against VkSurfaceCapabilitiesKHR::supportedUsageFlags:
         if (pCreateInfo->imageUsage != (pCreateInfo->imageUsage & capabilities.supportedUsageFlags)) {
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                         reinterpret_cast<uint64_t>(dev_data->device), __LINE__, VALIDATION_ERROR_02336, "DS",
-                        "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->imageUsage (i.e. 0x%08x).  "
-                        "Supported flag bits are 0x%08x. %s",
-                        pCreateInfo->imageUsage, capabilities.supportedUsageFlags, validation_error_map[VALIDATION_ERROR_02336]))
+                        "%s called with a non-supported pCreateInfo->imageUsage (i.e. 0x%08x).  Supported flag bits are 0x%08x. %s",
+                        func_name, pCreateInfo->imageUsage, capabilities.supportedUsageFlags,
+                        validation_error_map[VALIDATION_ERROR_02336]))
                 return true;
         }
     }
 
-    // Validate pCreateInfo values with the results of
-    // vkGetPhysicalDeviceSurfaceFormatsKHR():
+    // Validate pCreateInfo values with the results of vkGetPhysicalDeviceSurfaceFormatsKHR():
     if (physical_device_state->vkGetPhysicalDeviceSurfaceFormatsKHRState != QUERY_DETAILS) {
         if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                     reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_CREATE_BEFORE_QUERY, "DS",
-                    "vkCreateSwapchainKHR() called before calling vkGetPhysicalDeviceSurfaceFormatsKHR()."))
+                    "%s called before calling vkGetPhysicalDeviceSurfaceFormatsKHR().", func_name))
             return true;
     } else {
-        // Validate pCreateInfo->imageFormat against
-        // VkSurfaceFormatKHR::format:
+        // Validate pCreateInfo->imageFormat against VkSurfaceFormatKHR::format:
         bool foundFormat = false;
         bool foundColorSpace = false;
         bool foundMatch = false;
         for (auto const &format : physical_device_state->surface_formats) {
             if (pCreateInfo->imageFormat == format.format) {
-                // Validate pCreateInfo->imageColorSpace against
-                // VkSurfaceFormatKHR::colorSpace:
+                // Validate pCreateInfo->imageColorSpace against VkSurfaceFormatKHR::colorSpace:
                 foundFormat = true;
                 if (pCreateInfo->imageColorSpace == format.colorSpace) {
                     foundMatch = true;
@@ -12018,46 +12004,42 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, VkSwapchainC
             if (!foundFormat) {
                 if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                             reinterpret_cast<uint64_t>(dev_data->device), __LINE__, VALIDATION_ERROR_02333, "DS",
-                            "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->imageFormat (i.e. %d). %s",
-                            pCreateInfo->imageFormat, validation_error_map[VALIDATION_ERROR_02333]))
+                            "%s called with a non-supported pCreateInfo->imageFormat (i.e. %d). %s",
+                            func_name, pCreateInfo->imageFormat, validation_error_map[VALIDATION_ERROR_02333]))
                     return true;
             }
             if (!foundColorSpace) {
                 if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                             reinterpret_cast<uint64_t>(dev_data->device), __LINE__, VALIDATION_ERROR_02333, "DS",
-                            "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->imageColorSpace (i.e. %d). %s",
-                            pCreateInfo->imageColorSpace, validation_error_map[VALIDATION_ERROR_02333]))
+                            "%s called with a non-supported pCreateInfo->imageColorSpace (i.e. %d). %s",
+                            func_name, pCreateInfo->imageColorSpace, validation_error_map[VALIDATION_ERROR_02333]))
                     return true;
             }
         }
     }
 
-    // Validate pCreateInfo values with the results of
-    // vkGetPhysicalDeviceSurfacePresentModesKHR():
+    // Validate pCreateInfo values with the results of vkGetPhysicalDeviceSurfacePresentModesKHR():
     if (physical_device_state->vkGetPhysicalDeviceSurfacePresentModesKHRState != QUERY_DETAILS) {
         // FIFO is required to always be supported
         if (pCreateInfo->presentMode != VK_PRESENT_MODE_FIFO_KHR) {
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                                 reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_CREATE_BEFORE_QUERY,
-                                 "DS", "vkCreateSwapchainKHR() called before calling "
-                                 "vkGetPhysicalDeviceSurfacePresentModesKHR()."))
+                        reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_CREATE_BEFORE_QUERY, "DS",
+                        "%s called before calling vkGetPhysicalDeviceSurfacePresentModesKHR().", func_name))
                 return true;
         }
     } else {
-        // Validate pCreateInfo->presentMode against
-        // vkGetPhysicalDeviceSurfacePresentModesKHR():
+        // Validate pCreateInfo->presentMode against vkGetPhysicalDeviceSurfacePresentModesKHR():
         bool foundMatch = std::find(physical_device_state->present_modes.begin(),
                                     physical_device_state->present_modes.end(),
                                     pCreateInfo->presentMode) != physical_device_state->present_modes.end();
         if (!foundMatch) {
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                         reinterpret_cast<uint64_t>(dev_data->device), __LINE__, VALIDATION_ERROR_02341, "DS",
-                        "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->presentMode (i.e. %s). %s",
+                        "%s called with a non-supported presentMode (i.e. %s). %s", func_name,
                         string_VkPresentModeKHR(pCreateInfo->presentMode), validation_error_map[VALIDATION_ERROR_02341]))
                 return true;
         }
     }
-
 
     return false;
 }
@@ -12087,7 +12069,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device, const VkSwapc
     auto surface_state = getSurfaceState(dev_data->instance_data, pCreateInfo->surface);
     auto old_swapchain_state = getSwapchainNode(dev_data, pCreateInfo->oldSwapchain);
 
-    if (PreCallValidateCreateSwapchainKHR(dev_data, pCreateInfo, surface_state, old_swapchain_state)) {
+    if (PreCallValidateCreateSwapchainKHR(dev_data, "vkCreateSwapChainKHR()", pCreateInfo, surface_state, old_swapchain_state)) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
 
@@ -12320,7 +12302,9 @@ static bool PreCallValidateCreateSharedSwapchainsKHR(layer_data *dev_data, uint3
         for (uint32_t i = 0; i < swapchainCount; i++) {
             surface_state.push_back(getSurfaceState(dev_data->instance_data, pCreateInfos[i].surface));
             old_swapchain_state.push_back(getSwapchainNode(dev_data, pCreateInfos[i].oldSwapchain));
-            if (PreCallValidateCreateSwapchainKHR(dev_data, &pCreateInfos[i], surface_state[i], old_swapchain_state[i])) {
+            std::stringstream func_name;
+            func_name << "vkCreateSharedSwapchainsKHR[" << swapchainCount << "]";
+                if (PreCallValidateCreateSwapchainKHR(dev_data, func_name.str().c_str(), &pCreateInfos[i], surface_state[i], old_swapchain_state[i])) {
                 return true;
             }
         }
