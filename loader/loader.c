@@ -4685,10 +4685,11 @@ VkResult setupLoaderTrampPhysDevs(VkInstance instance) {
             total_count * sizeof(struct loader_physical_device_tramp *),
             VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (NULL == new_phys_devs) {
-        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "setupLoaderTrampPhysDevs:  Failed to new physical device "
-                   "array of size %d",
-                   total_count);
+        loader_log(
+            inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+            "setupLoaderTrampPhysDevs:  Failed to allocate new physical device "
+            "array of size %d",
+            total_count);
         res = VK_ERROR_OUT_OF_HOST_MEMORY;
         goto out;
     }
