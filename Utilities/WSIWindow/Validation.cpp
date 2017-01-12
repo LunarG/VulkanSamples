@@ -31,9 +31,9 @@
 #endif
 struct INITVULKAN {
     INITVULKAN() {
-        bool success = InitVulkan() == 1;
-        // LOG("Vulkan Dispatch-table: %s\n" cRESET, success?cGREEN"ENABLED":cRED"FAILED");
-        LOG("Vulkan Dispatch-table: %s\n", success ? "ENABLED" : "FAILED");
+        bool success = (InitVulkan() == 1); // Returns true if this device supports Vulkan.
+        LOG("Initialize Vulkan: ");
+        print(success ? eGREEN : eRED, success ? "SUCCESS\n" : "FAILED (Vulkan driver not found.)\n");
     }
 } INITVULKAN; // Run this function BEFORE main.
 #endif
@@ -43,7 +43,7 @@ struct INITVULKAN {
 //-------------------------Text Color--------------------------
 void color(eColor color) { // Sets Terminal text color (Win32/Linux)
 #ifdef _WIN32
-    const char bgr[] = {7, 4, 2, 6, 1, 5, 3, 0, 8, 12, 10, 14, 9, 13, 11, 15}; // RGB-to-BGR
+    const char bgr[] = {7, 4, 2, 6, 1, 5, 3, 7, 8, 12, 10, 14, 9, 13, 11, 15}; // RGB-to-BGR
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     SetConsoleTextAttribute(hConsole, bgr[color]);
 #elif __LINUX__

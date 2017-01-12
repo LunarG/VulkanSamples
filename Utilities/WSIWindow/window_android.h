@@ -61,7 +61,8 @@ class Window_android : public WindowImpl {
     CMTouch MTouch;
 
     void SetTitle(const char *title){}; // TODO : Set window title?
-    void SetWinPos(uint x, uint y, uint w, uint h){};
+    void SetWinPos(uint x, uint y){};
+    void SetWinSize(uint w, uint h){};
     bool CanPresent(VkPhysicalDevice gpu, uint32_t queue_family) { return true; }
 
     void CreateSurface(VkInstance instance) {

@@ -84,13 +84,13 @@ class WSIWindow {
     //--Control functions--
     void SetTitle(const char *title);        // Set window title
     void SetWinPos(uint16_t x, uint16_t y);  // Set window position
-    void SetWinSize(uint16_t w, uint16_t h); // Set window size
+    void SetWinSize(uint16_t w, uint16_t h); // Set window client-area size (Excludes title bar and borders.)
     void ShowKeyboard(bool enabled);         // on Android, show the soft-keyboard.
     void Close();                            // Close the window
 
     //--Event loop--
-    EventType GetEvent(bool wait_for_event = false); // Return a single event from the queue
-    bool ProcessEvents(bool wait_for_event = false); // Poll for events
+    EventType GetEvent(bool wait_for_event = false); // Return a single event from the queue (Alternative to using ProcessEvents.)
+    bool ProcessEvents(bool wait_for_event = false); // Poll events, and call event handlers. Returns false if window is closing.
     // void Run(){ while(ProcessEvents()){} }        // Run message loop until window is closed.  TODO: OnFrameEvent?
 
     //-- Virtual Functions as event handlers --

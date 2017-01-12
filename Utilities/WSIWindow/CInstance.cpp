@@ -47,13 +47,13 @@ void CPickList::Pick(initializer_list<const char *> list) {
 bool CPickList::Pick(const char *name) {
     int inx = IndexOf(name);
     if (inx == -1) {
-        LOGW("%s not found.\n", name); //     Warn if picked item was not found.
+        LOGW("%s not found.\n", name); // Warn if picked item was not found.
         return false;
     }
     return Pick(inx);
 }
 
-bool CPickList::Pick(const uint32_t inx) { // Add indexed item to picklist. Returns false if item is out of range
+bool CPickList::Pick(const uint32_t inx) { // Add indexed item to picklist. Returns false if index is out of range.
     if (inx >= Count())
         return false;
     for (const char *pickItem : pick_list)
@@ -120,7 +120,7 @@ CExtensions::CExtensions(const char *layer_name) {
         if (result == VK_SUCCESS && count > 0) {                                                   //
             item_list.resize(count);                                                               // Resize buffer
             result = vkEnumerateInstanceExtensionProperties(layer_name, &count, item_list.data()); // Fetch list
-        }                                                                                          //
+        }
     } while (result == VK_INCOMPLETE); // If list is incomplete, try again.
     VKERRCHECK(result);                // report errors
 }
@@ -130,12 +130,17 @@ CExtensions::CExtensions(const char *layer_name) {
 CInstance::CInstance(const bool enable_validation, const char *app_name, const char *engine_name) {
     CLayers layers;
 #ifdef ENABLE_VALIDATION
-    if (enable_validation) {
-        layers.Pick({"VK_LAYER_GOOGLE_threading",            // This list of layers is equivalent to:
-                     "VK_LAYER_LUNARG_parameter_validation", // VK_LAYER_LUNARG_standard_validation
-                     "VK_LAYER_LUNARG_object_tracker", "VK_LAYER_LUNARG_image", "VK_LAYER_LUNARG_core_validation",
-                     "VK_LAYER_LUNARG_swapchain", "VK_LAYER_GOOGLE_unique_objects"});
+    // clang-format off
+    if(enable_validation){
+        layers.Pick({"VK_LAYER_GOOGLE_threading",
+                     "VK_LAYER_LUNARG_parameter_validation",
+                     "VK_LAYER_LUNARG_object_tracker",
+                     "VK_LAYER_LUNARG_image",
+                     "VK_LAYER_LUNARG_core_validation",
+                     "VK_LAYER_LUNARG_swapchain",
+                     "VK_LAYER_GOOGLE_unique_objects"});
     }
+    // clang-format on
     layers.Print();
 #endif
     CExtensions extensions;

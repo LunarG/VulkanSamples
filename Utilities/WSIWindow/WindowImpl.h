@@ -37,7 +37,7 @@ enum eAction { eUP, eDOWN, eMOVE }; // keyboard / mouse / touchscreen actions
 
 //========================Event Message=========================
 struct EventType {
-    enum { NONE, MOUSE, KEY, TEXT, MOVE, RESIZE, FOCUS, TOUCH, CLOSE } tag; // event type
+    enum { NONE, MOUSE, KEY, TEXT, MOVE, RESIZE, FOCUS, TOUCH, CLOSE, UNKNOWN } tag; // event type
     union {
         struct {
             eAction action;
@@ -183,9 +183,11 @@ class WindowImpl : public CSurface {
 
     virtual void TextInput(bool enabled);                        // Shows the Android soft-keyboard. //TODO: Enable TextEvent?
     virtual bool TextInput() { return textinput; }               // Returns true if text input is enabled TODO: Fix this
-    virtual EventType GetEvent(bool wait_for_event = false) = 0; // fetch one event from the queue.
+    virtual EventType GetEvent(bool wait_for_event = false) = 0; // Fetch one event from the queue.
+
     virtual void SetTitle(const char *title) = 0;
-    virtual void SetWinPos(uint x, uint y, uint w, uint h) = 0;
+    virtual void SetWinPos(uint x, uint y) = 0;
+    virtual void SetWinSize(uint w, uint h) = 0;
 };
 //==============================================================
 

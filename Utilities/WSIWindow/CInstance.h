@@ -55,9 +55,8 @@ class CPickList {
     vector<char *> pick_list;
 
   public:
-    virtual char *Name(uint32_t inx) = 0; // Return name of indexed item
-    virtual uint32_t Count() = 0;         // Return number of enumerated items
-
+    virtual char *Name(uint32_t inx) = 0;           // Return name of indexed item
+    virtual uint32_t Count() = 0;                   // Return number of enumerated items
     int IndexOf(const char *name);                  // Returns index of named item
     void Pick(initializer_list<const char *> list); // Add multiple items to picklist. eg. Pick({"item1","item2"})
     bool Pick(const char *name);                    // Add named item to picklist.  Returns false if not found.

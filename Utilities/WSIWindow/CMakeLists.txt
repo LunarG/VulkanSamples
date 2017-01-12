@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 2.8)
+
 set(LIBRARY_NAME WSIWindow)
 
 file(GLOB SRC_LIST "*.h" "*.cpp")                   # List all source files from current directory
@@ -87,10 +89,6 @@ if(WIN32)
     #set(VULKAN_SDK $ENV{VULKAN_SDK} CACHE PATH "Path to the Vulkan SDK.")
     #target_link_libraries(${LIBRARY_NAME} "${VULKAN_SDK}/bin/vulkan-1.lib")
     #target_include_directories(${LIBRARY_NAME} PUBLIC "${VULKAN_SDK}/include")
-    
-    if(NOT ${CMAKE_SYSTEM_VERSION} VERSION_LESS 10)                          # Check for Windows 10+
-        target_compile_definitions(${LIBRARY_NAME} PUBLIC -DWIN10PLUS)       # define WIN10PLUS
-    endif()
 
     set (VULKAN_LOADER_NAME "vulkan-${MAJOR}")
 endif()

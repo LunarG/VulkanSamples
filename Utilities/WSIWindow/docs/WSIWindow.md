@@ -54,6 +54,14 @@ Compile and run the sample project.
 
 ### Linux
 Install the Vulkan SDK and Qt-Creator. (CMake is optional.)  
+Also install the XCB (for Windowing) and XKB (for Keyboard) headers:
+
+    sudo apt-get install libx11-xcb-dev libxkbcommon-dev
+
+To compile with Multi-touch support, you also need the XInput2.h header:
+
+    sudo apt-get install libxi-dev
+
 Use Qt-Creator to load the CMakeLists.txt project file, and tweak CMake settings under "Projects" if needed.  
 Compile and run the sample project.  
 
@@ -66,7 +74,8 @@ On Ubuntu, this may be done globally by adding the following line (or similar) t
 
 ### Android (using Ubuntu as host)
 
-Install Android Studio 2.2 or later, including the NDK.
+Install Android Studio 2.2 or later.
+Use the Android SDK Manager to add the NDK and CMake modules. (under SDK Tools)
 Use Android Studio -> File -> New -> Import Project... to import the included Android Studio project.
 If you see Gradle errors, run the clear.sh script, to delete auto-generated files, and try again.
 Connect your device via USB, compile and run the sample project.  
@@ -238,16 +247,16 @@ Alternatively, WSIWindow also contains a similar CanPresent() member function, w
 
         #include "WSIWindow.h"
 
+        const char* type[]={"up  ","down","move"};
+
         class MyWindow : public WSIWindow{
             //--Mouse event handler--
             void OnMouseEvent(eAction action, int16_t x, int16_t y, uint8_t btn){
-                const char* type[]={"up  ","down","move"};
                 printf("Mouse: %s %d x %d Btn:%d\n",type[action],x,y,btn);
             }
 
             //--Keyboard event handler--
             void OnKeyEvent(eAction action,uint8_t keycode){
-                const char* type[]={"up  ","down"};
                 printf("Key: %s keycode:%d\n",type[action],keycode);
             }
 

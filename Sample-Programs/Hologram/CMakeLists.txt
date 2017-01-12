@@ -18,6 +18,7 @@ endif()
 if(NOT EXISTS ${GLSLANG_VALIDATOR})
     message("WARNING : GLSLANG_VALIDATOR not found. Shaders will not be rebuilt.")
 else()
+    Message("GLSLANG_VALIDATOR=${GLSLANG_VALIDATOR}")
     find_package(PythonInterp 3 REQUIRED)
     macro(glsl_to_spirv src)
         add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/generated/${src}.h
