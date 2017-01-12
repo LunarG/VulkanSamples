@@ -28,8 +28,8 @@
 
 //-------------------------------------------------
 #include "WindowImpl.h"
-//#include <xcb/xcb.h>             // XCB only
-//#include <X11/Xlib.h>            // XLib only
+//#include <xcb/xcb.h>           // XCB only
+//#include <X11/Xlib.h>          // XLib only
 #include <X11/Xlib-xcb.h>        // Xlib + XCB
 #include <xkbcommon/xkbcommon.h> // Keyboard
 //-------------------------------------------------
@@ -120,13 +120,12 @@ class Window_xcb : public WindowImpl {
 
 //=======================XCB IMPLEMENTATION=====================
 Window_xcb::Window_xcb(const char *title, uint width, uint height) {
-    // instance=inst;
     shape.width = width;
     shape.height = height;
     running = true;
 
     LOGI("Creating XCB-Window...\n");
-    
+
     // --Init Connection-- XCB only
     // int scr;
     // xcb_connection = xcb_connect(NULL, &scr);
@@ -136,7 +135,7 @@ Window_xcb::Window_xcb(const char *title, uint width, uint height) {
     // while(scr-- > 0) xcb_screen_next(&iter);
     // xcb_screen = iter.data;
     //-------------------
-    
+
     //----XLib + XCB----
     display = XOpenDisplay(NULL);
     assert(display && "Failed to open Display"); // for XLIB functions
@@ -151,7 +150,7 @@ Window_xcb::Window_xcb(const char *title, uint width, uint height) {
     uint32_t value_mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
     uint32_t value_list[2];
     value_list[0] = xcb_screen->black_pixel;
-// clang-format off
+    // clang-format off
     value_list[1] = XCB_EVENT_MASK_KEY_PRESS |          // 1
                     XCB_EVENT_MASK_KEY_RELEASE |        // 2
                     XCB_EVENT_MASK_BUTTON_PRESS |       // 4
@@ -164,7 +163,7 @@ Window_xcb::Window_xcb(const char *title, uint width, uint height) {
                     XCB_EVENT_MASK_STRUCTURE_NOTIFY |   // 131072   Window move/resize events
                   //XCB_EVENT_MASK_RESIZE_REDIRECT |    // 262144
                     XCB_EVENT_MASK_FOCUS_CHANGE;        // 2097152  Window focus
-// clang-format on
+    // clang-format on
 
     xcb_window = xcb_generate_id(xcb_connection);
     xcb_create_window(xcb_connection, XCB_COPY_FROM_PARENT, xcb_window, xcb_screen->root, 0, 0, width, height, 0,

@@ -216,9 +216,9 @@ EventType Window_win32::GetEvent(bool wait_for_event) {
             MSG discard;
             GetMessage(&discard, NULL, 0, 0); // Alt-key triggers a WM_MOUSEMOVE message... Discard it.
             return KeyEvent(eDOWN, WIN32_TO_HID[msg.wParam]);
-        } //+alt key
+        } // +alt key
         case WM_SYSKEYUP:
-            return KeyEvent(eUP, WIN32_TO_HID[msg.wParam]); //+alt key
+            return KeyEvent(eUP, WIN32_TO_HID[msg.wParam]); // +alt key
 
         //--Char event--
         case WM_CHAR: {
@@ -310,7 +310,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
         // printf("WM_PAINT\n");
         return 0;
     case WM_GETMINMAXINFO: // set window's minimum size
-        //((MINMAXINFO*)lParam)->ptMinTrackSize = demo.minsize;
+        // ((MINMAXINFO*)lParam)->ptMinTrackSize = demo.minsize;
         return 0;
     case WM_EXITSIZEMOVE: {
         PostMessage(hWnd, WM_RESHAPE, 0, 0);
