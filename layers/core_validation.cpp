@@ -8837,6 +8837,16 @@ CmdFillBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize ds
         dev_data->dispatch_table.CmdFillBuffer(commandBuffer, dstBuffer, dstOffset, size, data);
 }
 
+// Returns true if sub_rect is entirely contained within rect
+static inline bool ContainsRect(VkRect2D rect, VkRect2D sub_rect) {
+    if ((sub_rect.offset.x < rect.offset.x) ||
+        (sub_rect.offset.x + sub_rect.extent.width > rect.offset.x + rect.extent.width) ||
+        (sub_rect.offset.y < rect.offset.y) ||
+        (sub_rect.offset.y + sub_rect.extent.height > rect.offset.y + rect.extent.height))
+        return false;
+    return true;
+}
+
 VKAPI_ATTR void VKAPI_CALL CmdClearAttachments(VkCommandBuffer commandBuffer, uint32_t attachmentCount,
                                                const VkClearAttachment *pAttachments, uint32_t rectCount,
                                                const VkClearRect *pRects) {
@@ -8881,28 +8891,27 @@ VKAPI_ATTR void VKAPI_CALL CmdClearAttachments(VkCommandBuffer commandBuffer, ui
                         (uint64_t)commandBuffer, __LINE__, VALIDATION_ERROR_01114, "DS",
                         "vkCmdClearAttachments() color attachment index %d out of range for active subpass %d. %s",
                         clear_desc->colorAttachment, pCB->activeSubpass, validation_error_map[VALIDATION_ERROR_01114]);
-                }
-                else if (pSD->pColorAttachments[clear_desc->colorAttachment].attachment == VK_ATTACHMENT_UNUSED) {
-                    skip_call |= log_msg(
-                        dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                        (uint64_t)commandBuffer, __LINE__, DRAWSTATE_MISSING_ATTACHMENT_REFERENCE, "DS",
-                        "vkCmdClearAttachments() color attachment index %d is VK_ATTACHMENT_UNUSED; ignored.",
-                        clear_desc->colorAttachment);
-                }
-                else {
-                    image_view = framebuffer->createInfo.pAttachments[pSD->pColorAttachments[clear_desc->colorAttachment].attachment];
+                } else if (pSD->pColorAttachments[clear_desc->colorAttachment].attachment == VK_ATTACHMENT_UNUSED) {
+                    skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
+                                         VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)commandBuffer, __LINE__,
+                                         DRAWSTATE_MISSING_ATTACHMENT_REFERENCE, "DS",
+                                         "vkCmdClearAttachments() color attachment index %d is VK_ATTACHMENT_UNUSED; ignored.",
+                                         clear_desc->colorAttachment);
+                } else {
+                    image_view =
+                        framebuffer->createInfo.pAttachments[pSD->pColorAttachments[clear_desc->colorAttachment].attachment];
                 }
             } else if (clear_desc->aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) {
                 if (!pSD->pDepthStencilAttachment || // Says no DS will be used in active subpass
                     (pSD->pDepthStencilAttachment->attachment ==
                      VK_ATTACHMENT_UNUSED)) { // Says no DS will be used in active subpass
 
-                    skip_call |= log_msg(
-                        dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                        (uint64_t)commandBuffer, __LINE__, DRAWSTATE_MISSING_ATTACHMENT_REFERENCE, "DS",
-                        "vkCmdClearAttachments() depth/stencil clear with no depth/stencil attachment in subpass; ignored");
-                }
-                else {
+                    skip_call |=
+                        log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
+                                VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)commandBuffer, __LINE__,
+                                DRAWSTATE_MISSING_ATTACHMENT_REFERENCE, "DS",
+                                "vkCmdClearAttachments() depth/stencil clear with no depth/stencil attachment in subpass; ignored");
+                } else {
                     image_view = framebuffer->createInfo.pAttachments[pSD->pDepthStencilAttachment->attachment];
                 }
             }
@@ -8913,12 +8922,36 @@ VKAPI_ATTR void VKAPI_CALL CmdClearAttachments(VkCommandBuffer commandBuffer, ui
                 auto extra_aspects = clear_desc->aspectMask & ~aspects_present;
                 // TODO: This is a different check than 01125. Need a new valid usage statement for this case, or should kill check.
                 if (extra_aspects) {
-                    skip_call |= log_msg(
-                            dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT,
-                            reinterpret_cast<uint64_t &>(image_view), __LINE__, VALIDATION_ERROR_01125, "DS",
-                            "vkCmdClearAttachments() with aspects not present in image view: %s. %s",
-                            string_VkImageAspectFlagBits((VkImageAspectFlagBits)extra_aspects),
-                            validation_error_map[VALIDATION_ERROR_01125]);
+                    skip_call |=
+                        log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT,
+                                reinterpret_cast<uint64_t &>(image_view), __LINE__, VALIDATION_ERROR_01125, "DS",
+                                "vkCmdClearAttachments() with aspects not present in image view: %s. %s",
+                                string_VkImageAspectFlagBits((VkImageAspectFlagBits)extra_aspects),
+                                validation_error_map[VALIDATION_ERROR_01125]);
+                }
+                for (uint32_t j = 0; j < rectCount; j++) {
+                    // The rectangular region specified by a given element of pRects must be contained within the render area of the
+                    // current render pass instance
+                    if (false == ContainsRect(pCB->activeRenderPassBeginInfo.renderArea, pRects[j].rect)) {
+                        skip_call |=
+                            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT,
+                                    0, __LINE__, VALIDATION_ERROR_01115, "DS",
+                                    "vkCmdClearAttachments(): The area defined by pRects[%d] is not contained in the area of "
+                                    "the current render pass instance. %s",
+                                    j, validation_error_map[VALIDATION_ERROR_01115]);
+                    }
+                    // The layers specified by a given element of pRects must be contained within every attachment that
+                    // pAttachments refers to
+                    auto attachment_base_array_layer = image_view_state->create_info.subresourceRange.baseArrayLayer;
+                    auto attachment_layer_count = image_view_state->create_info.subresourceRange.layerCount;
+                    if ((pRects[j].baseArrayLayer < attachment_base_array_layer) || pRects[j].layerCount > attachment_layer_count) {
+                        skip_call |=
+                            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT,
+                                    0, __LINE__, VALIDATION_ERROR_01116, "DS",
+                                    "vkCmdClearAttachments(): The layers defined in pRects[%d] are not contained in the layers of "
+                                    "pAttachment[%d]. %s",
+                                    j, i, validation_error_map[VALIDATION_ERROR_01116]);
+                    }
                 }
             }
         }
