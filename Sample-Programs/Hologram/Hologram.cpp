@@ -714,18 +714,6 @@ void Hologram::draw_objects(Worker &worker) {
     }
 
     vk::EndCommandBuffer(cmd);
-
-    if (!use_push_constants_) {
-        // This flush is not technically required, but it helps API tracing tools track changes in
-        // mapped memory blocks like this one.
-        VkMappedMemoryRange range = {};
-        range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-        range.pNext = nullptr;
-        range.memory = frame_data_mem_;
-        range.offset = (data.base - frame_data_[0].base) + sim_.objects()[worker.object_begin_].frame_data_offset;
-        range.size = aligned_object_data_size * (worker.object_end_ - worker.object_begin_);
-        vk::FlushMappedMemoryRanges(dev_, 1, &range);
-    }
 }
 
 void Hologram::on_key(Key key) {
