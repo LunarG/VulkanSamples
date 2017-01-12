@@ -237,11 +237,11 @@ class TestParser:
                         self.test_to_errors[testname] = []
                     if ' VALIDATION_ERROR_' in line:
                         line_list = line.split()
-                        for str in line_list:
-                            if 'VALIDATION_ERROR_' in str and True not in [ignore_str in str for ignore_str in ['VALIDATION_ERROR_UNDEFINED', 'UNIQUE_VALIDATION_ERROR_CODE', 'VALIDATION_ERROR_MAX_ENUM']]:
-                                print("Trying to add enums for line: %s")
-                                print("Adding enum %s to test %s" % (str.strip(',);'), testname))
-                                self.test_to_errors[testname].append(str.strip(',);'))
+                        for sub_str in line_list:
+                            if 'VALIDATION_ERROR_' in sub_str and True not in [ignore_str in sub_str for ignore_str in ['VALIDATION_ERROR_UNDEFINED', 'UNIQUE_VALIDATION_ERROR_CODE', 'VALIDATION_ERROR_MAX_ENUM']]:
+                                #print("Trying to add enums for line: %s" % ())
+                                #print("Adding enum %s to test %s" % (sub_str.strip(',);'), testname))
+                                self.test_to_errors[testname].append(sub_str.strip(',);'))
 
 # Little helper class for coloring cmd line output
 class bcolors:
