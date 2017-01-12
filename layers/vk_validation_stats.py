@@ -86,6 +86,7 @@ class ValidationDatabase:
         self.db_dict = {} # complete dict of all db values per error enum
         # specialized data structs with slices of complete dict
         self.db_implemented_enums = [] # list of all error enums claiming to be implemented in database file
+        self.db_unimplemented_implicit = [] # list of all implicit checks that aren't marked implemented
         self.db_enum_to_tests = {} # dict where enum is key to lookup list of tests implementing the enum
         #self.src_implemented_enums
     def read(self):
@@ -116,6 +117,8 @@ class ValidationDatabase:
                 # Now build custom data structs
                 if 'Y' == implemented:
                     self.db_implemented_enums.append(error_enum)
+                elif 'implicit' in note: # only make note of non-implemented implicit checks
+                    self.db_unimplemented_implicit.append(error_enum)
                 if testname.lower() not in ['unknown', 'none']:
                     self.db_enum_to_tests[error_enum] = testname.split(',')
                     #if len(self.db_enum_to_tests[error_enum]) > 1:
@@ -321,6 +324,10 @@ def main(argv=None):
         if src_enum not in val_db.db_implemented_enums:
             imp_not_claimed.append(src_enum)
     print(" Database file claims that %d checks (%s) are implemented in source." % (len(val_db.db_implemented_enums), "{0:.0f}%".format(float(len(val_db.db_implemented_enums))/db_enums * 100)))
+    if len(val_db.db_unimplemented_implicit) > 0:
+        print(" Database file claims %d implicit checks (%s) that are not implemented." % (len(val_db.db_unimplemented_implicit), "{0:.0f}%".format(float(len(val_db.db_unimplemented_implicit))/db_enums * 100)))
+        total_checks = len(val_db.db_implemented_enums) + len(val_db.db_unimplemented_implicit)
+        print(" If all implicit checks are handled by parameter validation this is a total of %d (%s) checks covered." % (total_checks, "{0:.0f}%".format(float(total_checks)/db_enums * 100)))
     if len(imp_not_found) == 0 and len(imp_not_claimed) == 0:
         print(txt_color.green() + "  All claimed Database implemented checks have been found in source, and no source checks aren't claimed in Database, GREAT!" + txt_color.endc())
     else:
