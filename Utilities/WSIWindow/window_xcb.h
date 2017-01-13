@@ -347,24 +347,27 @@ EventType Window_xcb::TranslateEvent(xcb_generic_event_t *x_event) {
             float y = te.event_y / 65536.f;
             switch (te.event_type) {
             case XI_TouchBegin: {
-                forCount(CMTouch::MAX_POINTERS) if (touchID[i] == 0) { // Find first empty slot
-                    touchID[i] = te.detail;                            // Claim slot
-                    return MTouch.Event(eDOWN, x, y, i);               // touch down event
+                for (uint32_t i = 0; i < CMTouch::MAX_POINTERS; ++i){
+                    if (touchID[i] == 0) {                   // Find first empty slot
+                        touchID[i] = te.detail;              // Claim slot
+                        return MTouch.Event(eDOWN, x, y, i); // touch down event
+                    }
                 }
-                break;
             }
             case XI_TouchUpdate: {
-                forCount(CMTouch::MAX_POINTERS) if (touchID[i] == te.detail) { // Find finger id
-                    return MTouch.Event(eMOVE, x, y, i);                       // Touch move event
+                for (uint32_t i = 0; i < CMTouch::MAX_POINTERS; ++i){
+                    if (touchID[i] == te.detail) {           // Find finger id
+                        return MTouch.Event(eMOVE, x, y, i); // Touch move event
+                    }
                 }
-                break;
             }
             case XI_TouchEnd: {
-                forCount(CMTouch::MAX_POINTERS) if (touchID[i] == te.detail) { // Find finger id
-                    touchID[i] = 0;                                            // Clear the slot
-                    return MTouch.Event(eUP, x, y, i);                         // Touch up event
+                for (uint32_t i = 0; i < CMTouch::MAX_POINTERS; ++i){
+                    if (touchID[i] == te.detail) {         // Find finger id
+                        touchID[i] = 0;                    // Clear the slot
+                        return MTouch.Event(eUP, x, y, i); // Touch up event
+                    }
                 }
-                break;
             }
             default:
                 break;
