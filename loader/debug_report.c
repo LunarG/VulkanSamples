@@ -336,8 +336,10 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDebugReportCallback(
             pAllocator->pUserData,
             inst->total_icd_count * sizeof(VkDebugReportCallbackEXT),
             sizeof(void *), VK_SYSTEM_ALLOCATION_SCOPE_OBJECT));
-        memset(icd_info, 0,
-               inst->total_icd_count * sizeof(VkDebugReportCallbackEXT));
+        if (icd_info) {
+            memset(icd_info, 0,
+                   inst->total_icd_count * sizeof(VkDebugReportCallbackEXT));
+        }
     } else {
 #endif
         icd_info =
@@ -407,7 +409,7 @@ out:
                 continue;
             }
 
-            if (icd_info[storage_idx]) {
+            if (icd_info && icd_info[storage_idx]) {
                 icd_term->DestroyDebugReportCallbackEXT(
                     icd_term->instance, icd_info[storage_idx], pAllocator);
             }

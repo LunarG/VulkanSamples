@@ -305,9 +305,10 @@ terminator_GetPhysicalDeviceGeneratedCommandsPropertiesNVX(
         loader_log(icd_term->this_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                    "ICD associated with VkPhysicalDevice does not support "
                    "vkGetPhysicalDeviceGeneratedCommandsPropertiesNVX");
+    } else {
+        icd_term->GetPhysicalDeviceGeneratedCommandsPropertiesNVX(
+            phys_dev_term->phys_dev, pFeatures, pLimits);
     }
-    icd_term->GetPhysicalDeviceGeneratedCommandsPropertiesNVX(
-        phys_dev_term->phys_dev, pFeatures, pLimits);
 }
 
 // GPA helpers for non-KHR extensions

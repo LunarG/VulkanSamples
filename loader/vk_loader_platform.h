@@ -321,7 +321,8 @@ loader_platform_open_library(const char *libPath) {
 }
 static char *loader_platform_open_library_error(const char *libPath) {
     static char errorMsg[164];
-    snprintf(errorMsg, 163, "Failed to open dynamic library \"%s\"", libPath);
+    (void)snprintf(errorMsg, 163, "Failed to open dynamic library \"%s\"",
+                   libPath);
     return errorMsg;
 }
 static void loader_platform_close_library(loader_platform_dl_handle library) {
@@ -335,8 +336,8 @@ static void *loader_platform_get_proc_address(loader_platform_dl_handle library,
 }
 static char *loader_platform_get_proc_address_error(const char *name) {
     static char errorMsg[120];
-    snprintf(errorMsg, 119, "Failed to find function \"%s\" in dynamic library",
-             name);
+    (void)snprintf(errorMsg, 119,
+                   "Failed to find function \"%s\" in dynamic library", name);
     return errorMsg;
 }
 

@@ -584,10 +584,10 @@ VkResult loaderGetRegistryFiles(const struct loader_instance *inst,
                     total_size *= 2;
                 }
                 if (strlen(*reg_data) == 0) {
-                    snprintf(*reg_data, name_size + 1, "%s", name);
+                    (void)snprintf(*reg_data, name_size + 1, "%s", name);
                 } else {
-                    snprintf(*reg_data + strlen(*reg_data), name_size + 2,
-                        "%c%s", PATH_SEPARATOR, name);
+                    (void)snprintf(*reg_data + strlen(*reg_data), name_size + 2,
+                                   "%c%s", PATH_SEPARATOR, name);
                 }
                 found = true;
             }
@@ -633,8 +633,8 @@ static size_t loader_platform_combine_path(char *dest, size_t len, ...) {
             // This path element is not the first non-empty element; prepend
             // a directory separator if space allows
             if (dest && required_len + 1 < len) {
-                snprintf(dest + required_len, len - required_len, "%c",
-                         DIRECTORY_SYMBOL);
+                (void)snprintf(dest + required_len, len - required_len, "%c",
+                               DIRECTORY_SYMBOL);
             }
             required_len++;
         }
@@ -860,10 +860,10 @@ static VkResult loader_add_instance_extensions(
         bool ext_unsupported =
             wsi_unsupported_instance_extension(&ext_props[i]);
         if (!ext_unsupported) {
-            snprintf(spec_version, sizeof(spec_version), "%d.%d.%d",
-                     VK_MAJOR(ext_props[i].specVersion),
-                     VK_MINOR(ext_props[i].specVersion),
-                     VK_PATCH(ext_props[i].specVersion));
+            (void)snprintf(spec_version, sizeof(spec_version), "%d.%d.%d",
+                           VK_MAJOR(ext_props[i].specVersion),
+                           VK_MINOR(ext_props[i].specVersion),
+                           VK_PATCH(ext_props[i].specVersion));
             loader_log(inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0,
                        "Instance Extension: %s (%s) version %s",
                        ext_props[i].extensionName, lib_name, spec_version);
@@ -904,10 +904,10 @@ loader_init_device_extensions(const struct loader_instance *inst,
     for (i = 0; i < count; i++) {
         char spec_version[64];
 
-        snprintf(spec_version, sizeof(spec_version), "%d.%d.%d",
-                 VK_MAJOR(ext_props[i].specVersion),
-                 VK_MINOR(ext_props[i].specVersion),
-                 VK_PATCH(ext_props[i].specVersion));
+        (void)snprintf(spec_version, sizeof(spec_version), "%d.%d.%d",
+                       VK_MAJOR(ext_props[i].specVersion),
+                       VK_MINOR(ext_props[i].specVersion),
+                       VK_PATCH(ext_props[i].specVersion));
         loader_log(
             inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0,
             "Device Extension: %s (%s) version %s", ext_props[i].extensionName,
@@ -948,10 +948,10 @@ VkResult loader_add_device_extensions(const struct loader_instance *inst,
         for (i = 0; i < count; i++) {
             char spec_version[64];
 
-            snprintf(spec_version, sizeof(spec_version), "%d.%d.%d",
-                     VK_MAJOR(ext_props[i].specVersion),
-                     VK_MINOR(ext_props[i].specVersion),
-                     VK_PATCH(ext_props[i].specVersion));
+            (void)snprintf(spec_version, sizeof(spec_version), "%d.%d.%d",
+                           VK_MAJOR(ext_props[i].specVersion),
+                           VK_MINOR(ext_props[i].specVersion),
+                           VK_PATCH(ext_props[i].specVersion));
             loader_log(inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0,
                        "Device Extension: %s (%s) version %s",
                        ext_props[i].extensionName, lib_name, spec_version);
@@ -2004,7 +2004,7 @@ static void loader_get_fullpath(const char *file, const char *dirs,
         }
     }
 
-    snprintf(out_fullpath, out_size, "%s", file);
+    (void)snprintf(out_fullpath, out_size, "%s", file);
 }
 
 /**
@@ -3740,7 +3740,8 @@ static bool loader_name_in_dev_ext_table(struct loader_instance *inst,
     // search the list of secondary locations (shallow search, not deep search)
     for (uint32_t i = 0; i < inst->disp_hash[*idx].list.count; i++) {
         alt_idx = inst->disp_hash[*idx].list.index[i];
-        if (!strcmp(inst->disp_hash[*idx].func_name, funcName)) {
+        if (inst->disp_hash[*idx].func_name &&
+            !strcmp(inst->disp_hash[*idx].func_name, funcName)) {
             *idx = alt_idx;
             return true;
         }
@@ -4578,6 +4579,9 @@ out:
 VKAPI_ATTR void VKAPI_CALL terminator_DestroyInstance(
     VkInstance instance, const VkAllocationCallbacks *pAllocator) {
     struct loader_instance *ptr_instance = loader_instance(instance);
+    if (NULL == ptr_instance) {
+        return;
+    }
     struct loader_icd_term *icd_terms = ptr_instance->icd_terms;
     struct loader_icd_term *next_icd_term;
 
