@@ -62,7 +62,8 @@ class Window_win32 : public WindowImpl {
     //------------------
 
     void SetTitle(const char *title);
-    void SetWinPos(uint x, uint y, uint w, uint h);
+    void SetWinPos(uint x, uint y);
+    void SetWinSize(uint w, uint h);
     void CreateSurface(VkInstance instance);
 
   public:
@@ -127,8 +128,20 @@ Window_win32::~Window_win32() { DestroyWindow(hWnd); }
 
 void Window_win32::SetTitle(const char *title) { SetWindowText(hWnd, title); }
 
-void Window_win32::SetWinPos(uint x, uint y, uint w, uint h) {
-    SetWindowPos(hWnd, NULL, x, y, x + w, y + h, SWP_NOZORDER | SWP_NOACTIVATE);
+void Window_win32::SetWinPos(uint x, uint y) {
+    SetWindowPos(hWnd, NULL, x, y, 0, 0, SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOSIZE);
+    if (x != shape.x || y != shape.y)
+        eventFIFO.push(MoveEvent(x, y)); // Trigger window moved event
+}
+
+void Window_win32::SetWinSize(uint w, uint h) {
+    RECT wr = {0, 0, (LONG)w, (LONG)h};
+    AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE); // Add border size to create desired client area size
+    int total_width = wr.right - wr.left;
+    int total_height = wr.bottom - wr.top;
+    SetWindowPos(hWnd, NULL, 0, 0, total_width, total_height, SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOMOVE);
+    if ((w != shape.width) | (h != shape.height))
+        eventFIFO.push(ResizeEvent(w, h)); // Trigger resize event
 }
 
 void Window_win32::CreateSurface(VkInstance instance) {

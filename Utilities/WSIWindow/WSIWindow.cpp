@@ -64,8 +64,8 @@ bool WSIWindow::GetBtnState(uint8_t btn) { return pimpl->BtnState(btn); }
 void WSIWindow::GetMousePos(int16_t &x, int16_t &y) { pimpl->MousePos(x, y); }
 
 void WSIWindow::SetTitle(const char *title) { pimpl->SetTitle(title); }
-void WSIWindow::SetWinPos(uint16_t x, uint16_t y) { pimpl->SetWinPos(x, y, pimpl->shape.width, pimpl->shape.height); }
-void WSIWindow::SetWinSize(uint16_t w, uint16_t h) { pimpl->SetWinPos(pimpl->shape.x, pimpl->shape.y, w, h); }
+void WSIWindow::SetWinPos(uint16_t x, uint16_t y) { pimpl->SetWinPos(x, y); }
+void WSIWindow::SetWinSize(uint16_t w, uint16_t h) { pimpl->SetWinSize(w, h); }
 
 void WSIWindow::ShowKeyboard(bool enabled) { pimpl->TextInput(enabled); } // On Android, show the soft-keyboard.
 void WSIWindow::Close() { pimpl->Close(); }

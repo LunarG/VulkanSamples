@@ -106,9 +106,11 @@ class Window_xcb : public WindowImpl {
     //------------------
 
     void SetTitle(const char *title);
-    void SetWinPos(uint x, uint y, uint w, uint h);
+    void SetWinPos(uint x, uint y);
+    void SetWinSize(uint w, uint h);
     void CreateSurface(VkInstance instance);
-    bool InitTouch(); // Returns false if no touch-device was found.
+    bool InitTouch();                                       // Returns false if no touch-device was found.
+    EventType TranslateEvent(xcb_generic_event_t *x_event); // Convert x_event to WSIWindow event
   public:
     Window_xcb(const char *title, uint width, uint height);
     virtual ~Window_xcb();
@@ -209,10 +211,15 @@ void Window_xcb::SetTitle(const char *title) {
     xcb_flush(xcb_connection);
 }
 
-void Window_xcb::SetWinPos(uint x, uint y, uint w, uint h) {
-    uint values[] = {x, y, w, h};
-    xcb_configure_window(xcb_connection, xcb_window,
-                         XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y | XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT, values);
+void Window_xcb::SetWinPos(uint x, uint y) {
+    uint values[] = {x, y};
+    xcb_configure_window(xcb_connection, xcb_window, XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y, values);
+    xcb_flush(xcb_connection);
+}
+
+void Window_xcb::SetWinSize(uint w, uint h) {
+    uint values[] = {w, h};
+    xcb_configure_window(xcb_connection, xcb_window, XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT, values);
     xcb_flush(xcb_connection);
 }
 
@@ -282,9 +289,101 @@ bool Window_xcb::InitTouch() {
 }
 //---------------------------------------------------------------------------
 
+EventType Window_xcb::TranslateEvent(xcb_generic_event_t *x_event) {
+    static char buf[4] = {};                                            // store char for text event
+    xcb_button_press_event_t &e = *(xcb_button_press_event_t *)x_event; // xcb_motion_notify_event_t
+    int16_t mx = e.event_x;
+    int16_t my = e.event_y;
+    uint8_t btn = e.detail;
+    uint8_t bestBtn = BtnState(1) ? 1 : BtnState(2) ? 2 : BtnState(3) ? 3 : 0; // If multiple buttons pressed, pick left one.
+    switch (x_event->response_type & ~0x80) {
+    case XCB_MOTION_NOTIFY:
+        return MouseEvent(eMOVE, mx, my, bestBtn); // mouse move
+    case XCB_BUTTON_PRESS:
+        return MouseEvent(eDOWN, mx, my, btn); // mouse btn press
+    case XCB_BUTTON_RELEASE:
+        return MouseEvent(eUP, mx, my, btn); // mouse btn release
+    case XCB_KEY_PRESS: {
+        uint8_t keycode = EVDEV_TO_HID[btn];
+        xkb_state_key_get_utf8(k_state, btn, buf, sizeof(buf));
+        xkb_state_update_key(k_state, btn, XKB_KEY_DOWN);
+        if (buf[0])
+            eventFIFO.push(TextEvent(buf)); // text typed event (store in FIFO for next run)
+        return KeyEvent(eDOWN, keycode);    // key pressed event
+    }
+    case XCB_KEY_RELEASE: {
+        xkb_state_update_key(k_state, btn, XKB_KEY_UP);
+        uint8_t keycode = EVDEV_TO_HID[btn];
+        return KeyEvent(eUP, keycode); // key released event
+    }
+    case XCB_CLIENT_MESSAGE: { // window close event
+        if ((*(xcb_client_message_event_t *)x_event).data.data32[0] == (*atom_wm_delete_window).atom) {
+            LOGI("Closing Window\n");
+            return CloseEvent();
+        }
+        break;
+    }
+    case XCB_CONFIGURE_NOTIFY: { // Window Reshape (move or resize)
+        auto &e = *(xcb_configure_notify_event_t *)x_event;
+        // bool se = (e.response_type & 128);                 // True if message was sent with "SendEvent"
+        if (e.width != shape.width || e.height != shape.height)
+            return ResizeEvent(e.width, e.height); // window resized
+        else if (e.x != shape.x || e.y != shape.y)
+            return MoveEvent(e.x, e.y); // window moved
+        break;
+    }
+    case XCB_FOCUS_IN:
+        if (!has_focus)
+            return FocusEvent(true); // window gained focus
+    case XCB_FOCUS_OUT:
+        if (has_focus)
+            return FocusEvent(false); // window lost focus
+
+    case XCB_GE_GENERIC: { // Multi touch screen events
+#ifdef ENABLE_MULTITOUCH
+        xcb_input_touch_begin_event_t &te = *(xcb_input_touch_begin_event_t *)x_event;
+        if (te.extension == xi_opcode) { // check if this event is from the touch device
+            float x = te.event_x / 65536.f;
+            float y = te.event_y / 65536.f;
+            switch (te.event_type) {
+            case XI_TouchBegin: {
+                for (uint32_t i = 0; i < CMTouch::MAX_POINTERS; ++i){
+                    if (touchID[i] == 0) {                   // Find first empty slot
+                        touchID[i] = te.detail;              // Claim slot
+                        return MTouch.Event(eDOWN, x, y, i); // touch down event
+                    }
+                }
+            }
+            case XI_TouchUpdate: {
+                for (uint32_t i = 0; i < CMTouch::MAX_POINTERS; ++i){
+                    if (touchID[i] == te.detail) {           // Find finger id
+                        return MTouch.Event(eMOVE, x, y, i); // Touch move event
+                    }
+                }
+            }
+            case XI_TouchEnd: {
+                for (uint32_t i = 0; i < CMTouch::MAX_POINTERS; ++i){
+                    if (touchID[i] == te.detail) {         // Find finger id
+                        touchID[i] = 0;                    // Clear the slot
+                        return MTouch.Event(eUP, x, y, i); // Touch up event
+                    }
+                }
+            }
+            default:
+                break;
+            } // switch te
+        }
+#endif
+        return {EventType::UNKNOWN};
+    } // XCB_GE_GENERIC
+    default:
+        // printf("EVENT: %d\n",(x_event->response_type & ~0x80));  //get event numerical value
+        break;
+    } // switch
+    return {EventType::NONE};
+}
+
 EventType Window_xcb::GetEvent(bool wait_for_event) {
-    EventType event = {};
-    static char buf[4] = {}; // store char for text event
     if (!eventFIFO.isEmpty())
         return *eventFIFO.pop(); // pop message from message queue buffer
 
@@ -293,110 +392,13 @@ EventType Window_xcb::GetEvent(bool wait_for_event) {
         x_event = xcb_wait_for_event(xcb_connection); // Blocking mode
     else
         x_event = xcb_poll_for_event(xcb_connection); // Non-blocking mode
-    if (x_event) {
-        xcb_button_press_event_t &e = *(xcb_button_press_event_t *)x_event; // xcb_motion_notify_event_t
-        int16_t mx = e.event_x;
-        int16_t my = e.event_y;
-        uint8_t btn = e.detail;
-        uint8_t bestBtn = BtnState(1) ? 1 : BtnState(2) ? 2 : BtnState(3) ? 3 : 0; // If multiple buttons pressed, pick left one.
-        switch (x_event->response_type & ~0x80) {
-        case XCB_MOTION_NOTIFY:
-            event = MouseEvent(eMOVE, mx, my, bestBtn);
-            break; // mouse move
-        case XCB_BUTTON_PRESS:
-            event = MouseEvent(eDOWN, mx, my, btn);
-            break; // mouse btn press
-        case XCB_BUTTON_RELEASE:
-            event = MouseEvent(eUP, mx, my, btn);
-            break; // mouse btn release
-        case XCB_KEY_PRESS: {
-            uint8_t keycode = EVDEV_TO_HID[btn];
-            event = KeyEvent(eDOWN, keycode); // key pressed event
-            xkb_state_key_get_utf8(k_state, btn, buf, sizeof(buf));
-            xkb_state_update_key(k_state, btn, XKB_KEY_DOWN);
-            if (buf[0])
-                eventFIFO.push(TextEvent(buf)); // text typed event (store in FIFO for next run)
-            break;
-        }
-        case XCB_KEY_RELEASE: {
-            uint8_t keycode = EVDEV_TO_HID[btn];
-            event = KeyEvent(eUP, keycode); // key released event
-            xkb_state_update_key(k_state, btn, XKB_KEY_UP);
-            break;
-        }
-        case XCB_CLIENT_MESSAGE: { // window close event
-            if ((*(xcb_client_message_event_t *)x_event).data.data32[0] == (*atom_wm_delete_window).atom) {
-                LOGI("Closing Window\n");
-                event = CloseEvent();
-            }
-            break;
-        }
-        case XCB_CONFIGURE_NOTIFY: { // Window Reshape (move or resize)
-            if (!(e.response_type & 128))
-                break; // only respond if message was sent with "SendEvent", (or x,y will be 0,0)
-            auto &e = *(xcb_configure_notify_event_t *)x_event;
-            if (has_focus) {
-                if (e.width != shape.width || e.height != shape.height)
-                    event = ResizeEvent(e.width, e.height); // window resized
-                else if (e.x != shape.x || e.y != shape.y)
-                    event = MoveEvent(e.x, e.y); // window moved
-            }
-            break;
-        }
-        case XCB_FOCUS_IN:
-            if (!has_focus)
-                event = FocusEvent(true);
-            break; // window gained focus
-        case XCB_FOCUS_OUT:
-            if (has_focus)
-                event = FocusEvent(false);
-            break; // window lost focus
-#ifdef ENABLE_MULTITOUCH
-        case XCB_GE_GENERIC: { // Multi touch screen events
-            xcb_input_touch_begin_event_t &te = *(xcb_input_touch_begin_event_t *)x_event;
-            if (te.extension == xi_opcode) { // make sure this event is from the touch device
-                float x = te.event_x / 65536.f;
-                float y = te.event_y / 65536.f;
-                switch (te.event_type) {
-                case XI_TouchBegin: {
-                    for (uint32_t i = 0; i < CMTouch::MAX_POINTERS; ++i)
-                        if (touchID[i] == 0) {                    // Find first empty slot
-                            touchID[i] = te.detail;               // Claim slot
-                            event = MTouch.Event(eDOWN, x, y, i); // touch down event
-                            break;
-                        }
-                    break;
-                }
-                case XI_TouchUpdate: {
-                    for (uint32_t i = 0; i < CMTouch::MAX_POINTERS; ++i)
-                        if (touchID[i] == te.detail) {            // Find finger id
-                            event = MTouch.Event(eMOVE, x, y, i); // Touch move event
-                            break;
-                        }
-                    break;
-                }
-                case XI_TouchEnd: {
-                    for (uint32_t i = 0; i < CMTouch::MAX_POINTERS; ++i)
-                        if (touchID[i] == te.detail) {          // Find finger id
-                            touchID[i] = 0;                     // Clear the slot
-                            event = MTouch.Event(eUP, x, y, i); // Touch up event
-                            break;
-                        }
-                    break;
-                }
-                default:
-                    break;
-                } // switch
-            }     // if
-            break;
-        } // XCB_GE_GENERIC
-#endif
-        default:
-            // printf("EVENT: %d",(x_event->response_type & ~0x80));  //get event numerical value
-            break;
-        } // switch
+    while (x_event) {
+        EventType event = TranslateEvent(x_event);
         free(x_event);
-        return event;
+        if (event.tag == EventType::UNKNOWN) {
+            x_event = xcb_poll_for_event(xcb_connection); // Discard unknown events (Intel Mesa drivers spams event 35)
+        } else
+            return event;
     }
     return {EventType::NONE};
 }
