@@ -98,6 +98,7 @@ struct layer_data {
             bool nv_external_memory : 1;
             bool nv_external_memory_win32 : 1;
             bool nvx_device_generated_commands : 1;
+            bool incremental_present : 1;
         };
         uint64_t padding[4];
     } enables;
@@ -1675,6 +1676,8 @@ static void CheckDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo,
 #endif
         } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_NVX_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME) == 0) {
             device_data->enables.nvx_device_generated_commands = true;
+        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME) == 0) {
+            device_data->enables.incremental_present = true;
         }
     }
 }
@@ -5180,6 +5183,42 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
                                      VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
     skip |= parameter_validation_vkQueuePresentKHR(my_data->report_data, pPresentInfo);
+
+    if (pPresentInfo && pPresentInfo->pNext) {
+        // Verify ext struct
+        struct std_header {
+            VkStructureType sType;
+            const void *pNext;
+        };
+        std_header *pnext = (std_header *)pPresentInfo->pNext;
+        while (pnext) {
+            if (VK_STRUCTURE_TYPE_PRESENT_REGIONS_KHR == pnext->sType) {
+                skip |= require_device_extension(my_data, my_data->enables.incremental_present, "vkQueuePresentKHR",
+                                                 VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME);
+                VkPresentRegionsKHR *present_regions = (VkPresentRegionsKHR *)pnext;
+                if (present_regions->swapchainCount != pPresentInfo->swapchainCount) {
+                    skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                    __LINE__, INVALID_USAGE, LayerName,
+                                    "QueuePresentKHR(): pPresentInfo->swapchainCount has a value of %i"
+                                    " but VkPresentRegionsKHR extension swapchainCount is %i. These values must be equal.",
+                                    pPresentInfo->swapchainCount, present_regions->swapchainCount);
+                }
+                skip |= validate_struct_pnext(my_data->report_data, "QueuePresentKHR", "pCreateInfo->pNext->pNext", NULL,
+                                              present_regions->pNext, 0, NULL, GeneratedHeaderVersion);
+                skip |= validate_array(my_data->report_data, "QueuePresentKHR", "pCreateInfo->pNext->swapchainCount",
+                                       "pCreateInfo->pNext->pRegions", present_regions->swapchainCount, present_regions->pRegions,
+                                       true, false);
+                for (uint32_t i = 0; i < present_regions->swapchainCount; ++i) {
+                    skip |=
+                        validate_array(my_data->report_data, "QueuePresentKHR", "pCreateInfo->pNext->pRegions[].rectangleCount",
+                                       "pCreateInfo->pNext->pRegions[].pRectangles", present_regions->pRegions[i].rectangleCount,
+                                       present_regions->pRegions[i].pRectangles, true, false);
+                }
+            }
+            pnext = (std_header *)pnext->pNext;
+        }
+    }
+
     if (!skip) {
         result = my_data->dispatch_table.QueuePresentKHR(queue, pPresentInfo);
 
