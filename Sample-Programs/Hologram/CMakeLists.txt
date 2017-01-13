@@ -14,11 +14,16 @@ if(ANDROID)
     add_definitions(-DVK_USE_PLATFORM_ANDROID_KHR)
 endif()
 #-------------------------------------------------------------------------------------------------
+#---------------------------------------Find glslangValidator-------------------------------------
+if(NOT EXISTS ${GLSLANG_VALIDATOR})
+    find_file(GLSLANG_VALIDATOR glslangValidator     PATH "$ENV{VULKAN_SDK}/bin") # on Linux
+    find_file(GLSLANG_VALIDATOR glslangValidator.exe PATH "$ENV{VULKAN_SDK}/Bin") # on Windows
+endif()
 #------------------------------------------GLSL to SPIRV------------------------------------------
 if(NOT EXISTS ${GLSLANG_VALIDATOR})
     message("WARNING : GLSLANG_VALIDATOR not found. Shaders will not be rebuilt.")
 else()
-    Message("GLSLANG_VALIDATOR=${GLSLANG_VALIDATOR}")
+    message("GLSLANG_VALIDATOR file: ${GLSLANG_VALIDATOR}")
     find_package(PythonInterp 3 REQUIRED)
     macro(glsl_to_spirv src)
         add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/generated/${src}.h

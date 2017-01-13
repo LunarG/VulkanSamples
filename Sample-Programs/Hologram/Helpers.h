@@ -47,7 +47,7 @@ inline VkResult enumerate(VkPhysicalDevice phy, const char *layer, std::vector<V
 {
     uint32_t count = 0;
     vkEnumerateDeviceExtensionProperties(phy, layer, &count, nullptr);
-    if(!count) LOGW("No devices found by: 'vkEnumeratePhysicalDevices'.\n");  //Probably the Intel driver?
+
     exts.resize(count);
     return vkEnumerateDeviceExtensionProperties(phy, layer, &count, exts.data());
 }
@@ -56,7 +56,7 @@ inline VkResult enumerate(VkInstance instance, std::vector<VkPhysicalDevice> &ph
 {
     uint32_t count = 0;
     vkEnumeratePhysicalDevices(instance, &count, nullptr);
-
+    if(!count) LOGW("No devices found by: 'vkEnumeratePhysicalDevices'.\n");  //Probably the Intel driver?
     phys.resize(count);
     return vkEnumeratePhysicalDevices(instance, &count, phys.data());
 }
