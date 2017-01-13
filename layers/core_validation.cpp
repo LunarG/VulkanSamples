@@ -10904,6 +10904,58 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
             }
         }
     }
+    if (pPresentInfo && pPresentInfo->pNext) {
+        // Verify ext struct
+        struct std_header {
+            VkStructureType sType;
+            const void *pNext;
+        };
+        std_header *pnext = (std_header *)pPresentInfo->pNext;
+        while (pnext) {
+            if (VK_STRUCTURE_TYPE_PRESENT_REGIONS_KHR == pnext->sType) {
+                VkPresentRegionsKHR *present_regions = (VkPresentRegionsKHR *)pnext;
+                for (uint32_t i = 0; i < present_regions->swapchainCount; ++i) {
+                    auto swapchain_data = GetSwapchainNode(dev_data, pPresentInfo->pSwapchains[i]);
+                    assert(swapchain_data);
+                    VkPresentRegionKHR region = present_regions->pRegions[i];
+                    for (uint32_t j = 0; j < region.rectangleCount; ++j) {
+                        VkRectLayerKHR rect = region.pRectangles[j];
+                        // TODO: Need to update these errors to their unique error ids when available
+                        if ((rect.offset.x + rect.extent.width) > swapchain_data->createInfo.imageExtent.width) {
+                            skip_call |= log_msg(
+                                dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
+                                reinterpret_cast<uint64_t const &>(pPresentInfo->pSwapchains[i]), __LINE__,
+                                DRAWSTATE_SWAPCHAIN_INVALID_IMAGE, "DS", "vkQueuePresentKHR(): For VkPresentRegionKHR down pNext "
+                                                                         "chain, pRegion[%i].pRectangles[%i], the sum of offset.x "
+                                                                         "(%i) and extent.width (%i) is greater than the "
+                                                                         "corresponding swapchain's imageExtent.width (%i).",
+                                i, j, rect.offset.x, rect.extent.width, swapchain_data->createInfo.imageExtent.width);
+                        }
+                        if ((rect.offset.y + rect.extent.height) > swapchain_data->createInfo.imageExtent.height) {
+                            skip_call |= log_msg(
+                                dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
+                                reinterpret_cast<uint64_t const &>(pPresentInfo->pSwapchains[i]), __LINE__,
+                                DRAWSTATE_SWAPCHAIN_INVALID_IMAGE, "DS", "vkQueuePresentKHR(): For VkPresentRegionKHR down pNext "
+                                                                         "chain, pRegion[%i].pRectangles[%i], the sum of offset.y "
+                                                                         "(%i) and extent.height (%i) is greater than the "
+                                                                         "corresponding swapchain's imageExtent.height (%i).",
+                                i, j, rect.offset.y, rect.extent.height, swapchain_data->createInfo.imageExtent.height);
+                        }
+                        if (rect.layer > swapchain_data->createInfo.imageArrayLayers) {
+                            skip_call |= log_msg(
+                                dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
+                                reinterpret_cast<uint64_t const &>(pPresentInfo->pSwapchains[i]), __LINE__,
+                                DRAWSTATE_SWAPCHAIN_INVALID_IMAGE, "DS",
+                                "vkQueuePresentKHR(): For VkPresentRegionKHR down pNext chain, pRegion[%i].pRectangles[%i], the "
+                                "layer (%i) is greater than the corresponding swapchain's imageArrayLayers (%i).",
+                                i, j, rect.layer, swapchain_data->createInfo.imageArrayLayers);
+                        }
+                    }
+                }
+            }
+            pnext = (std_header *)pnext->pNext;
+        }
+    }
 
     if (skip_call) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
