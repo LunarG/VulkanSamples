@@ -598,18 +598,27 @@ int update_registry_layers(FILE* log, enum Platform platform, const struct SDKVe
         return 0;
     }
 
+    size_t preferred_sdk = count;
     for(size_t i = 0; i < count; ++i) {
-        if(compare_versions(install_versions + i, version) == 0) {
-            if(platform == PLATFORM_X64) {
-                CHECK_ERROR_HANDLED(add_explicit_layers(log, install_paths[i], PLATFORM_X64, api_name),
-                    { free_installations(install_paths, install_versions, count); });
-                fprintf(log, "\n");
+        int cmp = compare_versions(install_versions + i, version);
+        if(cmp <= 0 && cmp >= -2) {
+            if(preferred_sdk == count ||
+                (compare_versions(install_versions + i, install_versions + preferred_sdk) > 0)) {
+                preferred_sdk = i;
             }
-            CHECK_ERROR_HANDLED(add_explicit_layers(log, install_paths[i], PLATFORM_X86, api_name),
-                { free_installations(install_paths, install_versions, count); });
-            break;
         }
     }
+    
+    if(preferred_sdk < count) {
+        if(platform == PLATFORM_X64) {
+            CHECK_ERROR_HANDLED(add_explicit_layers(log, install_paths[preferred_sdk], PLATFORM_X64, api_name),
+                { free_installations(install_paths, install_versions, count); });
+            fprintf(log, "\n");
+        }
+        CHECK_ERROR_HANDLED(add_explicit_layers(log, install_paths[preferred_sdk], PLATFORM_X86, api_name),
+            { free_installations(install_paths, install_versions, count); });
+    }
+    
     free_installations(install_paths, install_versions, count);
     return 0;
 }
