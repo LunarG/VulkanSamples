@@ -11872,6 +11872,12 @@ TEST_F(VkLayerTest, SamplerInUseDestroyedSignaled) {
     vkCmdBindPipeline(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
     vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1,
                             &descriptor_set, 0, nullptr);
+
+    VkViewport viewport = {0, 0, 16, 16, 0, 1};
+    VkRect2D scissor = {{0, 0}, {16, 16}};
+    vkCmdSetViewport(m_commandBuffer->handle(), 0, 1, &viewport);
+    vkCmdSetScissor(m_commandBuffer->handle(), 0, 1, &scissor);
+
     Draw(1, 0, 0, 0);
     m_commandBuffer->EndRenderPass();
     m_commandBuffer->EndCommandBuffer();
@@ -11883,11 +11889,12 @@ TEST_F(VkLayerTest, SamplerInUseDestroyedSignaled) {
     // Submit cmd buffer and then destroy sampler while in-flight
     vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
 
-    vkDestroySampler(m_device->device(), sampler, nullptr);
+    vkDestroySampler(m_device->device(), sampler, nullptr); // Destroyed too soon
     m_errorMonitor->VerifyFound();
     vkQueueWaitIdle(m_device->m_queue);
+
     // Now we can actually destroy sampler
-    vkDestroySampler(m_device->device(), sampler, nullptr);
+    vkDestroySampler(m_device->device(), sampler, NULL); // Destroyed for real
     vkDestroyImageView(m_device->device(), view, NULL);
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
