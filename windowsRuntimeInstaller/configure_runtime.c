@@ -205,7 +205,8 @@ int main(int argc, char** argv)
     fprintf(log, "API Name: %s\n", api_name);
     
     // This makes System32 and SysWOW64 not do any redirection (well, until 128-bit is a thing)
-    Wow64DisableWow64FsRedirection(NULL);
+    PVOID useless;
+    Wow64DisableWow64FsRedirection(&useless);
     
     // Update System32 (on all systems) and SysWOW64 on 64-bit system
     struct SDKVersion latest_runtime_version;
@@ -357,14 +358,14 @@ int find_installations(const char* api_name, char*** install_paths, struct SDKVe
         for(int j = 0; j < valueCount; ++j) {
 
             TCHAR name[COPY_BUFFER_SIZE], value[COPY_BUFFER_SIZE];
-            DWORD type, buffSize = COPY_BUFFER_SIZE;
-            RegEnumValue(subKey, j, name, &buffSize, NULL, &type, value, &buffSize);
+            DWORD type, nameSize = COPY_BUFFER_SIZE, valSize = COPY_BUFFER_SIZE;
+            LSTATUS ret = RegEnumValue(subKey, j, name, &nameSize, NULL, &type, value, &valSize);
             if(type == REG_SZ && !strcmp("InstallDir", name)) {
                 *install_paths = realloc(*install_paths, sizeof(char*) * ((*count) + 1));
                 (*install_paths)[*count] = malloc(sizeof(char) * COPY_BUFFER_SIZE);
                 strcpy((*install_paths)[*count], value);
                 found_installation = true;
-            } else if(type == REG_SZ && !strncmp("DisplayVersion", name, 8)) {
+            } else if(type == REG_SZ && !strcmp("DisplayVersion", name)) {
                 *install_versions = realloc(*install_versions, sizeof(struct SDKVersion) * ((*count) + 1));
                 CHECK_ERROR(read_version(value, (*install_versions) + *count));
                 found_version = true;
