@@ -5534,6 +5534,12 @@ TEST_F(VkLayerTest, DescriptorPoolInUseDestroyedSignaled) {
     vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
     vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1,
                             &descriptor_set, 0, NULL);
+
+    VkViewport viewport = {0, 0, 16, 16, 0, 1};
+    VkRect2D scissor = {{0, 0}, {16, 16}};
+    vkCmdSetViewport(m_commandBuffer->handle(), 0, 1, &viewport);
+    vkCmdSetScissor(m_commandBuffer->handle(), 0, 1, &scissor);
+
     Draw(1, 0, 0, 0);
     m_commandBuffer->EndRenderPass();
     m_commandBuffer->EndCommandBuffer();
@@ -5553,6 +5559,7 @@ TEST_F(VkLayerTest, DescriptorPoolInUseDestroyedSignaled) {
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
+    // TODO : It seems Validation layers think ds_pool was already destroyed, even though it wasn't?
 }
 
 TEST_F(VkLayerTest, DescriptorImageUpdateNoMemoryBound) {
