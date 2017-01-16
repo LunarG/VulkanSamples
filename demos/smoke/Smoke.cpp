@@ -40,7 +40,7 @@ struct ShaderParamBlock {
 Smoke::Smoke(const std::vector<std::string> &args)
     : Game("Smoke", args), multithread_(true), use_push_constants_(false),
       sim_paused_(false), sim_(5000), camera_(2.5f), frame_data_(),
-      render_pass_clear_value_({{ 0.0f, 0.1f, 0.2f, 1.0f }}),
+      render_pass_clear_value_({{{ 0.0f, 0.1f, 0.2f, 1.0f }}}),
       render_pass_begin_info_(),
       primary_cmd_begin_info_(), primary_cmd_submit_info_()
 {
@@ -335,8 +335,8 @@ void Smoke::create_pipeline()
     blend_info.pAttachments = &blend_attachment;
 
     std::array<VkDynamicState, 2> dynamic_states = {
-        VK_DYNAMIC_STATE_VIEWPORT,
-        VK_DYNAMIC_STATE_SCISSOR
+        {VK_DYNAMIC_STATE_VIEWPORT,
+         VK_DYNAMIC_STATE_SCISSOR}
     };
     struct VkPipelineDynamicStateCreateInfo dynamic_info = {};
     dynamic_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
@@ -483,14 +483,15 @@ void Smoke::create_buffer_memory()
     VkMemoryRequirements mem_reqs;
     vk::GetBufferMemoryRequirements(dev_, frame_data_[0].buf, &mem_reqs);
 
-    VkDeviceSize aligned_size = mem_reqs.size;
-    if (aligned_size % mem_reqs.alignment)
-        aligned_size += mem_reqs.alignment - (aligned_size % mem_reqs.alignment);
+    frame_data_aligned_size_ = mem_reqs.size;
+    if (frame_data_aligned_size_ % mem_reqs.alignment)
+        frame_data_aligned_size_ += mem_reqs.alignment - 
+        (frame_data_aligned_size_ % mem_reqs.alignment);
 
     // allocate memory
     VkMemoryAllocateInfo mem_info = {};
     mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    mem_info.allocationSize = aligned_size * (frame_data_.size() - 1) +
+    mem_info.allocationSize = frame_data_aligned_size_ * (frame_data_.size() - 1) +
         mem_reqs.size;
 
     for (uint32_t idx = 0; idx < mem_flags_.size(); idx++) {
@@ -512,7 +513,7 @@ void Smoke::create_buffer_memory()
     for (auto &data : frame_data_) {
         vk::BindBufferMemory(dev_, data.buf, frame_data_mem_, offset);
         data.base = reinterpret_cast<uint8_t *>(ptr) + offset;
-        offset += aligned_size;
+        offset += frame_data_aligned_size_;
     }
 }
 
@@ -810,6 +811,19 @@ void Smoke::on_frame(float frame_pred)
     // record render pass commands
     for (auto &worker : workers_)
         worker->wait_idle();
+
+    // Flush buffers if enabled
+    if (settings_.flush_buffers) {
+        VkMappedMemoryRange range = {};
+        range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+        range.pNext = nullptr;
+        range.memory = frame_data_mem_;
+        range.offset = frame_data_index_ * frame_data_aligned_size_;
+        range.size = frame_data_aligned_size_;
+
+        vk::FlushMappedMemoryRanges(dev_, 1, &range);
+    }
+
     vk::CmdExecuteCommands(data.primary_cmd,
             static_cast<uint32_t>(data.worker_cmds.size()),
             data.worker_cmds.data());

@@ -1,7 +1,7 @@
-/* Copyright (c) 2015-2016 The Khronos Group Inc.
- * Copyright (c) 2015-2016 Valve Corporation
- * Copyright (c) 2015-2016 LunarG, Inc.
- * Copyright (C) 2015-2016 Google Inc.
+/* Copyright (c) 2015-2017 The Khronos Group Inc.
+ * Copyright (c) 2015-2017 Valve Corporation
+ * Copyright (c) 2015-2017 LunarG, Inc.
+ * Copyright (C) 2015-2017 Google Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,15 @@
  * Author: Chris Forbes <chrisf@ijw.co.nz>
  * Author: Mark Lobodzinski <mark@lunarg.com>
  * Author: Ian Elliott <ianelliott@google.com>
+ * Author: Dave Houlton <daveh@lunarg.com>
+ * Author: Dustin Graves <dustin@lunarg.com>
+ * Author: Jeremy Hayes <jeremy@lunarg.com>
+ * Author: Jon Ashburn <jon@lunarg.com>
+ * Author: Karl Schultz <karl@lunarg.com>
+ * Author: Mark Young <marky@lunarg.com>
+ * Author: Mike Schuchardt <mikes@lunarg.com>
+ * Author: Mike Weiblen <mikew@lunarg.com>
+ * Author: Tony Barbour <tony@LunarG.com>
  */
 
 // Allow use of STL min and max functions in Windows
@@ -51,7 +60,6 @@
 #if defined(__GNUC__)
 #pragma GCC diagnostic warning "-Wwrite-strings"
 #endif
-#include "vk_struct_size_helper.h"
 #include "core_validation.h"
 #include "vk_layer_table.h"
 #include "vk_layer_data.h"
@@ -763,14 +771,12 @@ bool ValidateMemoryIsBoundToBuffer(const layer_data *dev_data, const BUFFER_STAT
 //  IF a previous binding existed, output validation error
 //  Otherwise, add reference from objectInfo to memoryInfo
 //  Add reference off of objInfo
+// TODO: We may need to refactor or pass in multiple valid usage statements to handle multiple valid usage conditions.
 static bool SetMemBinding(layer_data *dev_data, VkDeviceMemory mem, uint64_t handle, VkDebugReportObjectTypeEXT type,
                           const char *apiName) {
     bool skip_call = false;
     // It's an error to bind an object to NULL memory
-    if (mem == VK_NULL_HANDLE) {
-        skip_call = log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, type, handle, __LINE__, MEMTRACK_INVALID_MEM_OBJ,
-                            "MEM", "In %s, attempting to Bind Obj(0x%" PRIxLEAST64 ") to NULL", apiName, handle);
-    } else {
+    if (mem != VK_NULL_HANDLE) {
         BINDABLE *mem_binding = GetObjectMemBinding(dev_data, handle, type);
         assert(mem_binding);
         // TODO : Add check here to make sure object isn't sparse
@@ -781,6 +787,7 @@ static bool SetMemBinding(layer_data *dev_data, VkDeviceMemory mem, uint64_t han
         if (mem_info) {
             DEVICE_MEM_INFO *prev_binding = getMemObjInfo(dev_data, mem_binding->binding.mem);
             if (prev_binding) {
+                // TODO: VALIDATION_ERROR_00791 and VALIDATION_ERROR_00803
                 skip_call |=
                     log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
                             reinterpret_cast<uint64_t &>(mem), __LINE__, MEMTRACK_REBIND_OBJECT, "MEM",
@@ -1735,6 +1742,7 @@ static bool validate_vi_consistency(debug_report_data *report_data, VkPipelineVe
         auto desc = &vi->pVertexBindingDescriptions[i];
         auto &binding = bindings[desc->binding];
         if (binding) {
+            // TODO: VALIDATION_ERROR_02105 perhaps?
             if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                         __LINE__, SHADER_CHECKER_INCONSISTENT_VI, "SC",
                         "Duplicate vertex input binding descriptions for binding %d", desc->binding)) {
@@ -2098,11 +2106,12 @@ static bool hasDrawCmd(GLOBAL_CB_NODE *pCB) {
 
 // Check object status for selected flag state
 static bool validate_status(layer_data *my_data, GLOBAL_CB_NODE *pNode, CBStatusFlags status_mask, VkFlags msg_flags,
-                            DRAW_STATE_ERROR error_code, const char *fail_msg) {
+                            const char *fail_msg, UNIQUE_VALIDATION_ERROR_CODE const msg_code) {
     if (!(pNode->status & status_mask)) {
+        char const *const message = validation_error_map[msg_code];
         return log_msg(my_data->report_data, msg_flags, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                       reinterpret_cast<const uint64_t &>(pNode->commandBuffer), __LINE__, error_code, "DS",
-                       "command buffer object 0x%p: %s", pNode->commandBuffer, fail_msg);
+                       reinterpret_cast<const uint64_t &>(pNode->commandBuffer), __LINE__, msg_code, "DS",
+                       "command buffer object 0x%p: %s. %s.", pNode->commandBuffer, fail_msg, message);
     }
     return false;
 }
@@ -2160,42 +2169,43 @@ static bool isDynamic(const PIPELINE_STATE *pPipeline, const VkDynamicState stat
 }
 
 // Validate state stored as flags at time of draw call
-static bool validate_draw_state_flags(layer_data *dev_data, GLOBAL_CB_NODE *pCB, const PIPELINE_STATE *pPipe, bool indexed) {
+static bool validate_draw_state_flags(layer_data *dev_data, GLOBAL_CB_NODE *pCB, const PIPELINE_STATE *pPipe, bool indexed,
+                                      UNIQUE_VALIDATION_ERROR_CODE const msg_code) {
     bool result = false;
     if (pPipe->graphicsPipelineCI.pInputAssemblyState &&
         ((pPipe->graphicsPipelineCI.pInputAssemblyState->topology == VK_PRIMITIVE_TOPOLOGY_LINE_LIST) ||
          (pPipe->graphicsPipelineCI.pInputAssemblyState->topology == VK_PRIMITIVE_TOPOLOGY_LINE_STRIP))) {
         result |= validate_status(dev_data, pCB, CBSTATUS_LINE_WIDTH_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                  DRAWSTATE_LINE_WIDTH_NOT_BOUND, "Dynamic line width state not set for this command buffer");
+                                  "Dynamic line width state not set for this command buffer", msg_code);
     }
     if (pPipe->graphicsPipelineCI.pRasterizationState &&
         (pPipe->graphicsPipelineCI.pRasterizationState->depthBiasEnable == VK_TRUE)) {
         result |= validate_status(dev_data, pCB, CBSTATUS_DEPTH_BIAS_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                  DRAWSTATE_DEPTH_BIAS_NOT_BOUND, "Dynamic depth bias state not set for this command buffer");
+                                  "Dynamic depth bias state not set for this command buffer", msg_code);
     }
     if (pPipe->blendConstantsEnabled) {
         result |= validate_status(dev_data, pCB, CBSTATUS_BLEND_CONSTANTS_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                  DRAWSTATE_BLEND_NOT_BOUND, "Dynamic blend constants state not set for this command buffer");
+                                  "Dynamic blend constants state not set for this command buffer", msg_code);
     }
     if (pPipe->graphicsPipelineCI.pDepthStencilState &&
         (pPipe->graphicsPipelineCI.pDepthStencilState->depthBoundsTestEnable == VK_TRUE)) {
         result |= validate_status(dev_data, pCB, CBSTATUS_DEPTH_BOUNDS_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                  DRAWSTATE_DEPTH_BOUNDS_NOT_BOUND, "Dynamic depth bounds state not set for this command buffer");
+                                  "Dynamic depth bounds state not set for this command buffer", msg_code);
     }
     if (pPipe->graphicsPipelineCI.pDepthStencilState &&
         (pPipe->graphicsPipelineCI.pDepthStencilState->stencilTestEnable == VK_TRUE)) {
         result |= validate_status(dev_data, pCB, CBSTATUS_STENCIL_READ_MASK_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                  DRAWSTATE_STENCIL_NOT_BOUND, "Dynamic stencil read mask state not set for this command buffer");
+                                  "Dynamic stencil read mask state not set for this command buffer", msg_code);
         result |= validate_status(dev_data, pCB, CBSTATUS_STENCIL_WRITE_MASK_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                  DRAWSTATE_STENCIL_NOT_BOUND, "Dynamic stencil write mask state not set for this command buffer");
+                                  "Dynamic stencil write mask state not set for this command buffer", msg_code);
         result |= validate_status(dev_data, pCB, CBSTATUS_STENCIL_REFERENCE_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                  DRAWSTATE_STENCIL_NOT_BOUND, "Dynamic stencil reference state not set for this command buffer");
+                                  "Dynamic stencil reference state not set for this command buffer", msg_code);
     }
     if (indexed) {
         result |= validate_status(dev_data, pCB, CBSTATUS_INDEX_BUFFER_BOUND, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                  DRAWSTATE_INDEX_BUFFER_NOT_BOUND,
-                                  "Index buffer object not bound to this command buffer when Indexed Draw attempted");
+                                  "Index buffer object not bound to this command buffer when Indexed Draw attempted", msg_code);
     }
+
     return result;
 }
 
@@ -2327,14 +2337,16 @@ static bool validate_specialization_offsets(debug_report_data *report_data, VkPi
 
     if (spec) {
         for (auto i = 0u; i < spec->mapEntryCount; i++) {
+            // TODO: This is a good place for VALIDATION_ERROR_00589.
             if (spec->pMapEntries[i].offset + spec->pMapEntries[i].size > spec->dataSize) {
-                if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                            0, __LINE__, SHADER_CHECKER_BAD_SPECIALIZATION, "SC",
+                if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, 0, __LINE__,
+                            VALIDATION_ERROR_00590, "SC",
                             "Specialization entry %u (for constant id %u) references memory outside provided "
                             "specialization data (bytes %u.." PRINTF_SIZE_T_SPECIFIER "; " PRINTF_SIZE_T_SPECIFIER
-                            " bytes provided)",
+                            " bytes provided). %s.",
                             i, spec->pMapEntries[i].constantID, spec->pMapEntries[i].offset,
-                            spec->pMapEntries[i].offset + spec->pMapEntries[i].size - 1, spec->dataSize)) {
+                            spec->pMapEntries[i].offset + spec->pMapEntries[i].size - 1, spec->dataSize,
+                            validation_error_map[VALIDATION_ERROR_00590])) {
 
                     pass = false;
                 }
@@ -2628,10 +2640,9 @@ validate_pipeline_shader_stage(debug_report_data *report_data, VkPipelineShaderS
     // Find the entrypoint
     auto entrypoint = *out_entrypoint = find_entrypoint(module, pStage->pName, pStage->stage);
     if (entrypoint == module->end()) {
-        if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
-                    __LINE__, SHADER_CHECKER_MISSING_ENTRYPOINT, "SC",
-                    "No entrypoint found named `%s` for stage %s", pStage->pName,
-                    string_VkShaderStageFlagBits(pStage->stage))) {
+        if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__, VALIDATION_ERROR_00510,
+                    "SC", "No entrypoint found named `%s` for stage %s. %s.", pStage->pName,
+                    string_VkShaderStageFlagBits(pStage->stage), validation_error_map[VALIDATION_ERROR_00510])) {
             return false;   // no point continuing beyond here, any analysis is just going to be garbage.
         }
     }
@@ -2993,7 +3004,8 @@ static bool ValidatePipelineDrawtimeState(layer_data const *my_data, LAST_BOUND_
 
 // Validate overall state at the time of a draw call
 static bool ValidateDrawState(layer_data *my_data, GLOBAL_CB_NODE *cb_node, const bool indexed,
-                              const VkPipelineBindPoint bind_point, const char *function) {
+                              const VkPipelineBindPoint bind_point, const char *function,
+                              UNIQUE_VALIDATION_ERROR_CODE const msg_code) {
     bool result = false;
     auto const &state = cb_node->lastBound[bind_point];
     PIPELINE_STATE *pPipe = state.pipeline_state;
@@ -3008,7 +3020,7 @@ static bool ValidateDrawState(layer_data *my_data, GLOBAL_CB_NODE *cb_node, cons
     }
     // First check flag states
     if (VK_PIPELINE_BIND_POINT_GRAPHICS == bind_point)
-        result = validate_draw_state_flags(my_data, cb_node, pPipe, indexed);
+        result = validate_draw_state_flags(my_data, cb_node, pPipe, indexed, msg_code);
 
     // Now complete other state checks
     if (VK_NULL_HANDLE != state.pipeline_layout.layout) {
@@ -3134,6 +3146,7 @@ static bool verifyPipelineCreateState(layer_data *my_data, std::vector<PIPELINE_
         PIPELINE_STATE *pBasePipeline = nullptr;
         if (!((pPipeline->graphicsPipelineCI.basePipelineHandle != VK_NULL_HANDLE) ^
               (pPipeline->graphicsPipelineCI.basePipelineIndex != -1))) {
+            // This check is a superset of VALIDATION_ERROR_00526 and VALIDATION_ERROR_00528
             skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                  DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
                                  "Invalid Pipeline CreateInfo: exactly one of base pipeline index and handle must be specified");
@@ -3141,8 +3154,9 @@ static bool verifyPipelineCreateState(layer_data *my_data, std::vector<PIPELINE_
             if (pPipeline->graphicsPipelineCI.basePipelineIndex >= pipelineIndex) {
                 skip_call |=
                     log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                            DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
-                            "Invalid Pipeline CreateInfo: base pipeline must occur earlier in array than derivative pipeline.");
+                            VALIDATION_ERROR_00518, "DS",
+                            "Invalid Pipeline CreateInfo: base pipeline must occur earlier in array than derivative pipeline. %s",
+                            validation_error_map[VALIDATION_ERROR_00518]);
             } else {
                 pBasePipeline = pPipelines[pPipeline->graphicsPipelineCI.basePipelineIndex];
             }
@@ -3167,10 +3181,11 @@ static bool verifyPipelineCreateState(layer_data *my_data, std::vector<PIPELINE_
                     // only attachment state, so memcmp is best suited for the comparison
                     if (memcmp(static_cast<const void *>(pAttachments), static_cast<const void *>(&pAttachments[i]),
                                sizeof(pAttachments[0]))) {
-                        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
-                                             __LINE__, DRAWSTATE_INDEPENDENT_BLEND, "DS",
-                                             "Invalid Pipeline CreateInfo: If independent blend feature not "
-                                             "enabled, all elements of pAttachments must be identical");
+                        skip_call |=
+                            log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                                    VALIDATION_ERROR_01532, "DS", "Invalid Pipeline CreateInfo: If independent blend feature not "
+                                                                  "enabled, all elements of pAttachments must be identical. %s",
+                                    validation_error_map[VALIDATION_ERROR_01532]);
                         break;
                     }
                 }
@@ -3180,8 +3195,9 @@ static bool verifyPipelineCreateState(layer_data *my_data, std::vector<PIPELINE_
             (pPipeline->graphicsPipelineCI.pColorBlendState->logicOpEnable != VK_FALSE)) {
             skip_call |=
                 log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                        DRAWSTATE_DISABLED_LOGIC_OP, "DS",
-                        "Invalid Pipeline CreateInfo: If logic operations feature not enabled, logicOpEnable must be VK_FALSE");
+                        VALIDATION_ERROR_01533, "DS",
+                        "Invalid Pipeline CreateInfo: If logic operations feature not enabled, logicOpEnable must be VK_FALSE. %s",
+                        validation_error_map[VALIDATION_ERROR_01533]);
         }
     }
 
@@ -3191,9 +3207,10 @@ static bool verifyPipelineCreateState(layer_data *my_data, std::vector<PIPELINE_
     auto renderPass = getRenderPassState(my_data, pPipeline->graphicsPipelineCI.renderPass);
     if (renderPass && pPipeline->graphicsPipelineCI.subpass >= renderPass->createInfo.subpassCount) {
         skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                             DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS", "Invalid Pipeline CreateInfo State: Subpass index %u "
-                                                                            "is out of range for this renderpass (0..%u)",
-                             pPipeline->graphicsPipelineCI.subpass, renderPass->createInfo.subpassCount - 1);
+                             VALIDATION_ERROR_02122, "DS", "Invalid Pipeline CreateInfo State: Subpass index %u "
+                                                           "is out of range for this renderpass (0..%u). %s",
+                             pPipeline->graphicsPipelineCI.subpass, renderPass->createInfo.subpassCount - 1,
+                             validation_error_map[VALIDATION_ERROR_02122]);
     }
 
     if (!validate_and_capture_pipeline_shader_state(my_data->report_data, pPipeline, &my_data->enabled_features,
@@ -3213,25 +3230,31 @@ static bool verifyPipelineCreateState(layer_data *my_data, std::vector<PIPELINE_
     }
     // VS is required
     if (!(pPipeline->active_shaders & VK_SHADER_STAGE_VERTEX_BIT)) {
-        skip_call |=
-            log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                    DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS", "Invalid Pipeline CreateInfo State: Vertex Shader required");
+        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                             VALIDATION_ERROR_00532, "DS", "Invalid Pipeline CreateInfo State: Vertex Shader required. %s",
+                             validation_error_map[VALIDATION_ERROR_00532]);
     }
     // Either both or neither TC/TE shaders should be defined
-    if (((pPipeline->active_shaders & VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT) == 0) !=
-        ((pPipeline->active_shaders & VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT) == 0)) {
+    if ((pPipeline->active_shaders & VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT) &&
+        !(pPipeline->active_shaders & VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT)) {
         skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                             DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
-                             "Invalid Pipeline CreateInfo State: TE and TC shaders must be included or excluded as a pair");
+                             VALIDATION_ERROR_00534, "DS",
+                             "Invalid Pipeline CreateInfo State: TE and TC shaders must be included or excluded as a pair. %s",
+                             validation_error_map[VALIDATION_ERROR_00534]);
+    }
+    if (!(pPipeline->active_shaders & VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT) &&
+        (pPipeline->active_shaders & VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT)) {
+        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                             VALIDATION_ERROR_00535, "DS",
+                             "Invalid Pipeline CreateInfo State: TE and TC shaders must be included or excluded as a pair. %s",
+                             validation_error_map[VALIDATION_ERROR_00535]);
     }
     // Compute shaders should be specified independent of Gfx shaders
-    if ((pPipeline->active_shaders & VK_SHADER_STAGE_COMPUTE_BIT) &&
-        (pPipeline->active_shaders &
-         (VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT |
-          VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT))) {
+    if (pPipeline->active_shaders & VK_SHADER_STAGE_COMPUTE_BIT) {
         skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                             DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
-                             "Invalid Pipeline CreateInfo State: Do not specify Compute Shader for Gfx Pipeline");
+                             VALIDATION_ERROR_00533, "DS",
+                             "Invalid Pipeline CreateInfo State: Do not specify Compute Shader for Gfx Pipeline. %s",
+                             validation_error_map[VALIDATION_ERROR_00533]);
     }
     // VK_PRIMITIVE_TOPOLOGY_PATCH_LIST primitive topology is only valid for tessellation pipelines.
     // Mismatching primitive topology and tessellation fails graphics pipeline creation.
@@ -3239,35 +3262,36 @@ static bool verifyPipelineCreateState(layer_data *my_data, std::vector<PIPELINE_
         (!pPipeline->graphicsPipelineCI.pInputAssemblyState ||
          pPipeline->graphicsPipelineCI.pInputAssemblyState->topology != VK_PRIMITIVE_TOPOLOGY_PATCH_LIST)) {
         skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                             DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS", "Invalid Pipeline CreateInfo State: "
-                                                                            "VK_PRIMITIVE_TOPOLOGY_PATCH_LIST must be set as IA "
-                                                                            "topology for tessellation pipelines");
+                             VALIDATION_ERROR_02099, "DS", "Invalid Pipeline CreateInfo State: "
+                                                           "VK_PRIMITIVE_TOPOLOGY_PATCH_LIST must be set as IA "
+                                                           "topology for tessellation pipelines. %s",
+                             validation_error_map[VALIDATION_ERROR_02099]);
     }
     if (pPipeline->graphicsPipelineCI.pInputAssemblyState &&
         pPipeline->graphicsPipelineCI.pInputAssemblyState->topology == VK_PRIMITIVE_TOPOLOGY_PATCH_LIST) {
         if (~pPipeline->active_shaders & VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT) {
-            skip_call |=
-                log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                        DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS", "Invalid Pipeline CreateInfo State: "
-                                                                       "VK_PRIMITIVE_TOPOLOGY_PATCH_LIST primitive "
-                                                                       "topology is only valid for tessellation pipelines");
-        }
-        if (!pPipeline->graphicsPipelineCI.pTessellationState) {
             skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                                 DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
-                                 "Invalid Pipeline CreateInfo State: "
-                                 "pTessellationState is NULL when VK_PRIMITIVE_TOPOLOGY_PATCH_LIST primitive "
-                                 "topology used. pTessellationState must not be NULL in this case.");
-        } else if (!pPipeline->graphicsPipelineCI.pTessellationState->patchControlPoints ||
-                   (pPipeline->graphicsPipelineCI.pTessellationState->patchControlPoints > 32)) {
-            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                                 DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS", "Invalid Pipeline CreateInfo State: "
-                                                                                "VK_PRIMITIVE_TOPOLOGY_PATCH_LIST primitive "
-                                                                                "topology used with patchControlPoints value %u."
-                                                                                " patchControlPoints should be >0 and <=32.",
-                                 pPipeline->graphicsPipelineCI.pTessellationState->patchControlPoints);
+                                 VALIDATION_ERROR_02100, "DS", "Invalid Pipeline CreateInfo State: "
+                                                               "VK_PRIMITIVE_TOPOLOGY_PATCH_LIST primitive "
+                                                               "topology is only valid for tessellation pipelines. %s",
+                                 validation_error_map[VALIDATION_ERROR_02100]);
         }
     }
+
+    if (pPipeline->graphicsPipelineCI.pTessellationState &&
+        ((pPipeline->graphicsPipelineCI.pTessellationState->patchControlPoints == 0) ||
+         (pPipeline->graphicsPipelineCI.pTessellationState->patchControlPoints >
+          my_data->phys_dev_properties.properties.limits.maxTessellationPatchSize))) {
+        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                             VALIDATION_ERROR_01426, "DS", "Invalid Pipeline CreateInfo State: "
+                                                           "VK_PRIMITIVE_TOPOLOGY_PATCH_LIST primitive "
+                                                           "topology used with patchControlPoints value %u."
+                                                           " patchControlPoints should be >0 and <=%u. %s",
+                             pPipeline->graphicsPipelineCI.pTessellationState->patchControlPoints,
+                             my_data->phys_dev_properties.properties.limits.maxTessellationPatchSize,
+                             validation_error_map[VALIDATION_ERROR_01426]);
+    }
+
     // If a rasterization state is provided, make sure that the line width conforms to the HW.
     if (pPipeline->graphicsPipelineCI.pRasterizationState) {
         if (!isDynamic(pPipeline, VK_DYNAMIC_STATE_LINE_WIDTH)) {
@@ -3285,11 +3309,12 @@ static bool verifyPipelineCreateState(layer_data *my_data, std::vector<PIPELINE_
         if (subpass_desc && subpass_desc->pDepthStencilAttachment &&
             subpass_desc->pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
             if (!pPipeline->graphicsPipelineCI.pDepthStencilState) {
-                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                     __LINE__, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
+                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT,
+                                     0, __LINE__, VALIDATION_ERROR_02115, "DS",
                                      "Invalid Pipeline CreateInfo State: "
                                      "pDepthStencilState is NULL when rasterization is enabled and subpass uses a "
-                                     "depth/stencil attachment");
+                                     "depth/stencil attachment. %s",
+                                     validation_error_map[VALIDATION_ERROR_02115]);
             }
         }
     }
@@ -6512,8 +6537,7 @@ static bool ValidateImageAspectMask(layer_data *dev_data, VkImage image, VkForma
                             (uint64_t)image, __LINE__, VALIDATION_ERROR_00741, "IMAGE",
                             "%s: Color image formats must have the VK_IMAGE_ASPECT_COLOR_BIT set. %s", func_name,
                             validation_error_map[VALIDATION_ERROR_00741]);
-        }
-        if ((aspect_mask & VK_IMAGE_ASPECT_COLOR_BIT) != aspect_mask) {
+        } else if ((aspect_mask & VK_IMAGE_ASPECT_COLOR_BIT) != aspect_mask) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                             (uint64_t)image, __LINE__, VALIDATION_ERROR_00741, "IMAGE",
                             "%s: Color image formats must have ONLY the VK_IMAGE_ASPECT_COLOR_BIT set. %s", func_name,
@@ -6526,8 +6550,7 @@ static bool ValidateImageAspectMask(layer_data *dev_data, VkImage image, VkForma
                                                                                         "at least one of VK_IMAGE_ASPECT_DEPTH_BIT "
                                                                                         "and VK_IMAGE_ASPECT_STENCIL_BIT set. %s",
                             func_name, validation_error_map[VALIDATION_ERROR_00741]);
-        }
-        if ((aspect_mask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) != aspect_mask) {
+        } else if ((aspect_mask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) != aspect_mask) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                             (uint64_t)image, __LINE__, VALIDATION_ERROR_00741, "IMAGE",
                             "%s: Combination depth/stencil image formats can have only the VK_IMAGE_ASPECT_DEPTH_BIT and "
@@ -6540,8 +6563,7 @@ static bool ValidateImageAspectMask(layer_data *dev_data, VkImage image, VkForma
                             (uint64_t)image, __LINE__, VALIDATION_ERROR_00741, "IMAGE",
                             "%s: Depth-only image formats must have the VK_IMAGE_ASPECT_DEPTH_BIT set. %s", func_name,
                             validation_error_map[VALIDATION_ERROR_00741]);
-        }
-        if ((aspect_mask & VK_IMAGE_ASPECT_DEPTH_BIT) != aspect_mask) {
+        } else if ((aspect_mask & VK_IMAGE_ASPECT_DEPTH_BIT) != aspect_mask) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                             (uint64_t)image, __LINE__, VALIDATION_ERROR_00741, "IMAGE",
                             "%s: Depth-only image formats can have only the VK_IMAGE_ASPECT_DEPTH_BIT set. %s", func_name,
@@ -6553,8 +6575,7 @@ static bool ValidateImageAspectMask(layer_data *dev_data, VkImage image, VkForma
                             (uint64_t)image, __LINE__, VALIDATION_ERROR_00741, "IMAGE",
                             "%s: Stencil-only image formats must have the VK_IMAGE_ASPECT_STENCIL_BIT set. %s", func_name,
                             validation_error_map[VALIDATION_ERROR_00741]);
-        }
-        if ((aspect_mask & VK_IMAGE_ASPECT_STENCIL_BIT) != aspect_mask) {
+        } else if ((aspect_mask & VK_IMAGE_ASPECT_STENCIL_BIT) != aspect_mask) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                             (uint64_t)image, __LINE__, VALIDATION_ERROR_00741, "IMAGE",
                             "%s: Stencil-only image formats can have only the VK_IMAGE_ASPECT_STENCIL_BIT set. %s", func_name,
@@ -6641,18 +6662,6 @@ static bool PreCallValidateCreateImageView(layer_data *dev_data, const VkImageVi
 
         // Validate correct image aspect bits for desired formats and format consistency
         skip |= ValidateImageAspectMask(dev_data, image_state->image, image_format, aspect_mask, "vkCreateImageView()");
-        if (vk_format_is_color(image_format) && !vk_format_is_color(view_format)) {
-            std::stringstream ss;
-            ss << "vkCreateImageView: The image view's format can differ from the parent image's format, but both must be "
-               << "color formats.  ImageFormat is " << string_VkFormat(image_format) << " ImageViewFormat is "
-               << string_VkFormat(view_format);
-            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                            (uint64_t)create_info->image, __LINE__, VALIDATION_ERROR_02171, "IMAGE", "%s %s", ss.str().c_str(),
-                            validation_error_map[VALIDATION_ERROR_02171]);
-            // TODO:  Uncompressed formats are compatible if they occupy they same number of bits per pixel.
-            //        Compressed formats are compatible if the only difference between them is the numerical type of
-            //        the uncompressed pixels (e.g. signed vs. unsigned, or sRGB vs. UNORM encoding).
-        }
     }
     return skip;
 }
@@ -7321,45 +7330,30 @@ BeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo
                             commandBuffer, validation_error_map[VALIDATION_ERROR_00106]);
             } else {
                 if (pBeginInfo->flags & VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT) {
-                    if (!pInfo->renderPass) { // renderpass should NOT be null for a Secondary CB
-                        skip_call |=
-                            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                    VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t>(commandBuffer),
-                                    __LINE__, VALIDATION_ERROR_00110, "DS", "vkBeginCommandBuffer(): Secondary Command Buffers "
-                                                                            "(0x%p) must specify a valid renderpass parameter. %s",
-                                    commandBuffer, validation_error_map[VALIDATION_ERROR_00110]);
-                    } 
-                    if (!pInfo->framebuffer) { // framebuffer may be null for a Secondary CB, but this affects perf
-                        skip_call |= log_msg(
-                            dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            reinterpret_cast<uint64_t>(commandBuffer), __LINE__, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",
-                            "vkBeginCommandBuffer(): Secondary Command Buffers (0x%p) may perform better if a "
-                            "valid framebuffer parameter is specified.",
-                            commandBuffer);
-                    } else {
-                        string errorString = "";
-                        auto framebuffer = getFramebufferState(dev_data, pInfo->framebuffer);
-                        if (framebuffer) {
-                            if ((framebuffer->createInfo.renderPass != pInfo->renderPass) &&
-                                !verify_renderpass_compatibility(dev_data, framebuffer->renderPassCreateInfo.ptr(),
-                                                                 getRenderPassState(dev_data, pInfo->renderPass)->createInfo.ptr(),
-                                                                 errorString)) {
-                                // renderPass that framebuffer was created with must be compatible with local renderPass
-                                skip_call |= log_msg(
-                                    dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                    VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t>(commandBuffer),
-                                    __LINE__, VALIDATION_ERROR_00112, "DS",
-                                    "vkBeginCommandBuffer(): Secondary Command "
-                                    "Buffer (0x%p) renderPass (0x%" PRIxLEAST64 ") is incompatible w/ framebuffer "
-                                    "(0x%" PRIxLEAST64 ") w/ render pass (0x%" PRIxLEAST64 ") due to: %s. %s",
-                                    commandBuffer, reinterpret_cast<const uint64_t &>(pInfo->renderPass),
-                                    reinterpret_cast<const uint64_t &>(pInfo->framebuffer),
-                                    reinterpret_cast<uint64_t &>(framebuffer->createInfo.renderPass), errorString.c_str(),
-                                    validation_error_map[VALIDATION_ERROR_00112]);
-                            }
-                            // Connect this framebuffer and its children to this cmdBuffer
-                            AddFramebufferBinding(dev_data, cb_node, framebuffer);
+                    // Object_tracker makes sure these objects are valid
+                    assert(pInfo->renderPass);
+                    assert(pInfo->framebuffer);
+                    string errorString = "";
+                    auto framebuffer = getFramebufferState(dev_data, pInfo->framebuffer);
+                    if (framebuffer) {
+                        if ((framebuffer->createInfo.renderPass != pInfo->renderPass) &&
+                            !verify_renderpass_compatibility(dev_data, framebuffer->renderPassCreateInfo.ptr(),
+                                                             getRenderPassState(dev_data, pInfo->renderPass)->createInfo.ptr(),
+                                                             errorString)) {
+                            // renderPass that framebuffer was created with must be compatible with local renderPass
+                            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                                 VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                                 reinterpret_cast<uint64_t>(commandBuffer), __LINE__, VALIDATION_ERROR_00112, "DS",
+                                                 "vkBeginCommandBuffer(): Secondary Command "
+                                                 "Buffer (0x%p) renderPass (0x%" PRIxLEAST64 ") is incompatible w/ framebuffer "
+                                                 "(0x%" PRIxLEAST64 ") w/ render pass (0x%" PRIxLEAST64 ") due to: %s. %s",
+                                                 commandBuffer, reinterpret_cast<const uint64_t &>(pInfo->renderPass),
+                                                 reinterpret_cast<const uint64_t &>(pInfo->framebuffer),
+                                                 reinterpret_cast<uint64_t &>(framebuffer->createInfo.renderPass),
+                                                 errorString.c_str(), validation_error_map[VALIDATION_ERROR_00112]);
                         }
+                        // Connect this framebuffer and its children to this cmdBuffer
+                        AddFramebufferBinding(dev_data, cb_node, framebuffer);
                     }
                 }
                 if ((pInfo->occlusionQueryEnable == VK_FALSE || dev_data->enabled_features.occlusionQueryPrecise == VK_FALSE) &&
@@ -7593,9 +7587,10 @@ VKAPI_ATTR void VKAPI_CALL CmdSetLineWidth(VkCommandBuffer commandBuffer, float 
         PIPELINE_STATE *pPipeTrav = pCB->lastBound[VK_PIPELINE_BIND_POINT_GRAPHICS].pipeline_state;
         if (pPipeTrav != NULL && !isDynamic(pPipeTrav, VK_DYNAMIC_STATE_LINE_WIDTH)) {
             skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0,
-                                 reinterpret_cast<uint64_t &>(commandBuffer), __LINE__, DRAWSTATE_INVALID_SET, "DS",
+                                 reinterpret_cast<uint64_t &>(commandBuffer), __LINE__, VALIDATION_ERROR_01476, "DS",
                                  "vkCmdSetLineWidth called but pipeline was created without VK_DYNAMIC_STATE_LINE_WIDTH "
-                                 "flag.  This is undefined behavior and could be ignored.");
+                                 "flag.  This is undefined behavior and could be ignored. %s",
+                                 validation_error_map[VALIDATION_ERROR_01476]);
         } else {
             skip_call |= verifyLineWidth(dev_data, DRAWSTATE_INVALID_SET, reinterpret_cast<uint64_t &>(commandBuffer), lineWidth);
         }
@@ -7741,10 +7736,11 @@ CmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelin
                     if (!verify_set_layout_compatibility(dev_data, descriptor_set, pipeline_layout, i + firstSet, errorString)) {
                         skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                              VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)pDescriptorSets[i], __LINE__,
-                                             DRAWSTATE_PIPELINE_LAYOUTS_INCOMPATIBLE, "DS",
+                                             VALIDATION_ERROR_00974, "DS",
                                              "descriptorSet #%u being bound is not compatible with overlapping descriptorSetLayout "
-                                             "at index %u of pipelineLayout 0x%" PRIxLEAST64 " due to: %s",
-                                             i, i + firstSet, reinterpret_cast<uint64_t &>(layout), errorString.c_str());
+                                             "at index %u of pipelineLayout 0x%" PRIxLEAST64 " due to: %s. %s",
+                                             i, i + firstSet, reinterpret_cast<uint64_t &>(layout), errorString.c_str(),
+                                             validation_error_map[VALIDATION_ERROR_00974]);
                     }
 
                     auto setDynamicDescriptorCount = descriptor_set->GetDynamicDescriptorCount();
@@ -7773,12 +7769,12 @@ CmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelin
                                             dev_data->phys_dev_properties.properties.limits.minUniformBufferOffsetAlignment) != 0) {
                                         skip_call |= log_msg(
                                             dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                            VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__,
-                                            DRAWSTATE_INVALID_UNIFORM_BUFFER_OFFSET, "DS",
-                                            "vkCmdBindDescriptorSets(): pDynamicOffsets[%d] is %d but must be a multiple of "
-                                            "device limit minUniformBufferOffsetAlignment 0x%" PRIxLEAST64,
+                                            VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, VALIDATION_ERROR_00978,
+                                            "DS", "vkCmdBindDescriptorSets(): pDynamicOffsets[%d] is %d but must be a multiple of "
+                                                  "device limit minUniformBufferOffsetAlignment 0x%" PRIxLEAST64 ". %s",
                                             cur_dyn_offset, pDynamicOffsets[cur_dyn_offset],
-                                            dev_data->phys_dev_properties.properties.limits.minUniformBufferOffsetAlignment);
+                                            dev_data->phys_dev_properties.properties.limits.minUniformBufferOffsetAlignment,
+                                            validation_error_map[VALIDATION_ERROR_00978]);
                                     }
                                     cur_dyn_offset++;
                                 } else if (descriptor_set->GetTypeFromGlobalIndex(d) == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
@@ -7787,12 +7783,12 @@ CmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelin
                                             dev_data->phys_dev_properties.properties.limits.minStorageBufferOffsetAlignment) != 0) {
                                         skip_call |= log_msg(
                                             dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                            VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__,
-                                            DRAWSTATE_INVALID_STORAGE_BUFFER_OFFSET, "DS",
-                                            "vkCmdBindDescriptorSets(): pDynamicOffsets[%d] is %d but must be a multiple of "
-                                            "device limit minStorageBufferOffsetAlignment 0x%" PRIxLEAST64,
+                                            VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, VALIDATION_ERROR_00978,
+                                            "DS", "vkCmdBindDescriptorSets(): pDynamicOffsets[%d] is %d but must be a multiple of "
+                                                  "device limit minStorageBufferOffsetAlignment 0x%" PRIxLEAST64 ". %s",
                                             cur_dyn_offset, pDynamicOffsets[cur_dyn_offset],
-                                            dev_data->phys_dev_properties.properties.limits.minStorageBufferOffsetAlignment);
+                                            dev_data->phys_dev_properties.properties.limits.minStorageBufferOffsetAlignment,
+                                            validation_error_map[VALIDATION_ERROR_00978]);
                                     }
                                     cur_dyn_offset++;
                                 }
@@ -7855,10 +7851,10 @@ CmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelin
             if (totalDynamicDescriptors != dynamicOffsetCount) {
                 skip_call |=
                     log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            (uint64_t)commandBuffer, __LINE__, DRAWSTATE_INVALID_DYNAMIC_OFFSET_COUNT, "DS",
+                            (uint64_t)commandBuffer, __LINE__, VALIDATION_ERROR_00975, "DS",
                             "Attempting to bind %u descriptorSets with %u dynamic descriptors, but dynamicOffsetCount "
-                            "is %u. It should exactly match the number of dynamic descriptors.",
-                            setCount, totalDynamicDescriptors, dynamicOffsetCount);
+                            "is %u. It should exactly match the number of dynamic descriptors. %s",
+                            setCount, totalDynamicDescriptors, dynamicOffsetCount, validation_error_map[VALIDATION_ERROR_00975]);
             }
         } else {
             skip_call |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdBindDescriptorSets()");
@@ -7985,12 +7981,12 @@ static void MarkStoreImagesAndBuffersAsWritten(layer_data *dev_data, GLOBAL_CB_N
 // Generic function to handle validation for all CmdDraw* type functions
 static bool ValidateCmdDrawType(layer_data *dev_data, VkCommandBuffer cmd_buffer, bool indexed, VkPipelineBindPoint bind_point,
                                 CMD_TYPE cmd_type, GLOBAL_CB_NODE **cb_state, const char *caller,
-                                UNIQUE_VALIDATION_ERROR_CODE msg_code) {
+                                UNIQUE_VALIDATION_ERROR_CODE msg_code, UNIQUE_VALIDATION_ERROR_CODE const dynamic_state_msg_code) {
     bool skip = false;
     *cb_state = getCBNode(dev_data, cmd_buffer);
     if (*cb_state) {
         skip |= ValidateCmd(dev_data, *cb_state, cmd_type, caller);
-        skip |= ValidateDrawState(dev_data, *cb_state, indexed, bind_point, caller);
+        skip |= ValidateDrawState(dev_data, *cb_state, indexed, bind_point, caller, dynamic_state_msg_code);
         skip |= (VK_PIPELINE_BIND_POINT_GRAPHICS == bind_point) ? outsideRenderPass(dev_data, *cb_state, caller, msg_code)
                                                                 : insideRenderPass(dev_data, *cb_state, caller, msg_code);
     }
@@ -8015,7 +8011,8 @@ static void UpdateStateCmdDrawType(layer_data *dev_data, GLOBAL_CB_NODE *cb_stat
 
 static bool PreCallValidateCmdDraw(layer_data *dev_data, VkCommandBuffer cmd_buffer, bool indexed, VkPipelineBindPoint bind_point,
                                    GLOBAL_CB_NODE **cb_state, const char *caller) {
-    return ValidateCmdDrawType(dev_data, cmd_buffer, indexed, bind_point, CMD_DRAW, cb_state, caller, VALIDATION_ERROR_01365);
+    return ValidateCmdDrawType(dev_data, cmd_buffer, indexed, bind_point, CMD_DRAW, cb_state, caller, VALIDATION_ERROR_01365,
+                               VALIDATION_ERROR_02203);
 }
 
 static void PostCallRecordCmdDraw(layer_data *dev_data, GLOBAL_CB_NODE *cb_state, VkPipelineBindPoint bind_point) {
@@ -8039,8 +8036,8 @@ VKAPI_ATTR void VKAPI_CALL CmdDraw(VkCommandBuffer commandBuffer, uint32_t verte
 
 static bool PreCallValidateCmdDrawIndexed(layer_data *dev_data, VkCommandBuffer cmd_buffer, bool indexed,
                                           VkPipelineBindPoint bind_point, GLOBAL_CB_NODE **cb_state, const char *caller) {
-    return ValidateCmdDrawType(dev_data, cmd_buffer, indexed, bind_point, CMD_DRAWINDEXED, cb_state, caller,
-                               VALIDATION_ERROR_01372);
+    return ValidateCmdDrawType(dev_data, cmd_buffer, indexed, bind_point, CMD_DRAWINDEXED, cb_state, caller, VALIDATION_ERROR_01372,
+                               VALIDATION_ERROR_02216);
 }
 
 static void PostCallRecordCmdDrawIndexed(layer_data *dev_data, GLOBAL_CB_NODE *cb_state, VkPipelineBindPoint bind_point) {
@@ -8067,8 +8064,8 @@ VKAPI_ATTR void VKAPI_CALL CmdDrawIndexed(VkCommandBuffer commandBuffer, uint32_
 static bool PreCallValidateCmdDrawIndirect(layer_data *dev_data, VkCommandBuffer cmd_buffer, VkBuffer buffer, bool indexed,
                                            VkPipelineBindPoint bind_point, GLOBAL_CB_NODE **cb_state, BUFFER_STATE **buffer_state,
                                            const char *caller) {
-    bool skip =
-        ValidateCmdDrawType(dev_data, cmd_buffer, indexed, bind_point, CMD_DRAWINDIRECT, cb_state, caller, VALIDATION_ERROR_01381);
+    bool skip = ValidateCmdDrawType(dev_data, cmd_buffer, indexed, bind_point, CMD_DRAWINDIRECT, cb_state, caller,
+                                    VALIDATION_ERROR_01381, VALIDATION_ERROR_02234);
     *buffer_state = getBufferState(dev_data, buffer);
     skip |= ValidateMemoryIsBoundToBuffer(dev_data, *buffer_state, caller, VALIDATION_ERROR_02544);
     return skip;
@@ -8086,7 +8083,7 @@ CmdDrawIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize off
     GLOBAL_CB_NODE *cb_state = nullptr;
     BUFFER_STATE *buffer_state = nullptr;
     std::unique_lock<std::mutex> lock(global_lock);
-    bool skip = PreCallValidateCmdDrawIndirect(dev_data, commandBuffer, buffer, true, VK_PIPELINE_BIND_POINT_GRAPHICS, &cb_state,
+    bool skip = PreCallValidateCmdDrawIndirect(dev_data, commandBuffer, buffer, false, VK_PIPELINE_BIND_POINT_GRAPHICS, &cb_state,
                                                &buffer_state, "vkCmdDrawIndirect()");
     lock.unlock();
     if (!skip) {
@@ -8101,7 +8098,7 @@ static bool PreCallValidateCmdDrawIndexedIndirect(layer_data *dev_data, VkComman
                                                   VkPipelineBindPoint bind_point, GLOBAL_CB_NODE **cb_state,
                                                   BUFFER_STATE **buffer_state, const char *caller) {
     bool skip = ValidateCmdDrawType(dev_data, cmd_buffer, indexed, bind_point, CMD_DRAWINDEXEDINDIRECT, cb_state, caller,
-                                    VALIDATION_ERROR_01393);
+                                    VALIDATION_ERROR_01393, VALIDATION_ERROR_02272);
     *buffer_state = getBufferState(dev_data, buffer);
     skip |= ValidateMemoryIsBoundToBuffer(dev_data, *buffer_state, caller, VALIDATION_ERROR_02545);
     return skip;
@@ -8132,7 +8129,8 @@ CmdDrawIndexedIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceS
 
 static bool PreCallValidateCmdDispatch(layer_data *dev_data, VkCommandBuffer cmd_buffer, bool indexed,
                                        VkPipelineBindPoint bind_point, GLOBAL_CB_NODE **cb_state, const char *caller) {
-    return ValidateCmdDrawType(dev_data, cmd_buffer, indexed, bind_point, CMD_DISPATCH, cb_state, caller, VALIDATION_ERROR_01562);
+    return ValidateCmdDrawType(dev_data, cmd_buffer, indexed, bind_point, CMD_DISPATCH, cb_state, caller, VALIDATION_ERROR_01562,
+                               VALIDATION_ERROR_UNDEFINED);
 }
 
 static void PostCallRecordCmdDispatch(layer_data *dev_data, GLOBAL_CB_NODE *cb_state, VkPipelineBindPoint bind_point) {
@@ -8158,7 +8156,7 @@ static bool PreCallValidateCmdDispatchIndirect(layer_data *dev_data, VkCommandBu
                                                VkPipelineBindPoint bind_point, GLOBAL_CB_NODE **cb_state,
                                                BUFFER_STATE **buffer_state, const char *caller) {
     bool skip = ValidateCmdDrawType(dev_data, cmd_buffer, indexed, bind_point, CMD_DISPATCHINDIRECT, cb_state, caller,
-                                    VALIDATION_ERROR_01569);
+                                    VALIDATION_ERROR_01569, VALIDATION_ERROR_UNDEFINED);
     *buffer_state = getBufferState(dev_data, buffer);
     skip |= ValidateMemoryIsBoundToBuffer(dev_data, *buffer_state, caller, VALIDATION_ERROR_02547);
     return skip;
@@ -8231,7 +8229,8 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer
 }
 
 static bool VerifySourceImageLayout(layer_data *dev_data, GLOBAL_CB_NODE *cb_node, VkImage srcImage,
-                                    VkImageSubresourceLayers subLayers, VkImageLayout srcImageLayout) {
+                                    VkImageSubresourceLayers subLayers, VkImageLayout srcImageLayout,
+                                    UNIQUE_VALIDATION_ERROR_CODE msgCode) {
     bool skip_call = false;
 
     for (uint32_t i = 0; i < subLayers.layerCount; ++i) {
@@ -8263,16 +8262,16 @@ static bool VerifySourceImageLayout(layer_data *dev_data, GLOBAL_CB_NODE *cb_nod
             }
         } else {
             skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                                 DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS", "Layout for input image is %s but can only be "
-                                                                       "TRANSFER_SRC_OPTIMAL or GENERAL.",
-                                 string_VkImageLayout(srcImageLayout));
+                                 msgCode, "DS", "Layout for input image is %s but can only be TRANSFER_SRC_OPTIMAL or GENERAL. %s",
+                                 string_VkImageLayout(srcImageLayout), validation_error_map[msgCode]);
         }
     }
     return skip_call;
 }
 
 static bool VerifyDestImageLayout(layer_data *dev_data, GLOBAL_CB_NODE *cb_node, VkImage destImage,
-                                  VkImageSubresourceLayers subLayers, VkImageLayout destImageLayout) {
+                                  VkImageSubresourceLayers subLayers, VkImageLayout destImageLayout,
+                                  UNIQUE_VALIDATION_ERROR_CODE msgCode) {
     bool skip_call = false;
 
     for (uint32_t i = 0; i < subLayers.layerCount; ++i) {
@@ -8302,9 +8301,8 @@ static bool VerifyDestImageLayout(layer_data *dev_data, GLOBAL_CB_NODE *cb_node,
             }
         } else {
             skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                                 DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS", "Layout for output image is %s but can only be "
-                                                                       "TRANSFER_DST_OPTIMAL or GENERAL.",
-                                 string_VkImageLayout(destImageLayout));
+                                 msgCode, "DS", "Layout for output image is %s but can only be TRANSFER_DST_OPTIMAL or GENERAL. %s",
+                                 string_VkImageLayout(destImageLayout), validation_error_map[msgCode]);
         }
     }
     return skip_call;
@@ -8601,8 +8599,10 @@ CmdCopyImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcI
         UpdateCmdBufferLastCmd(dev_data, cb_node, CMD_COPYIMAGE);
         skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyImage()", VALIDATION_ERROR_01194);
         for (uint32_t i = 0; i < regionCount; ++i) {
-            skip_call |= VerifySourceImageLayout(dev_data, cb_node, srcImage, pRegions[i].srcSubresource, srcImageLayout);
-            skip_call |= VerifyDestImageLayout(dev_data, cb_node, dstImage, pRegions[i].dstSubresource, dstImageLayout);
+            skip_call |= VerifySourceImageLayout(dev_data, cb_node, srcImage, pRegions[i].srcSubresource, srcImageLayout,
+                                                 VALIDATION_ERROR_01180);
+            skip_call |= VerifyDestImageLayout(dev_data, cb_node, dstImage, pRegions[i].dstSubresource, dstImageLayout,
+                                               VALIDATION_ERROR_01183);
             skip_call |= ValidateCopyImageTransferGranularityRequirements(dev_data, cb_node, dst_image_state, &pRegions[i], i,
                                                                           "vkCmdCopyImage()");
         }
@@ -8617,14 +8617,15 @@ CmdCopyImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcI
 
 // Validate that an image's sampleCount matches the requirement for a specific API call
 static inline bool ValidateImageSampleCount(layer_data *dev_data, IMAGE_STATE *image_state, VkSampleCountFlagBits sample_count,
-                                            const char *location) {
+                                            const char *location, UNIQUE_VALIDATION_ERROR_CODE msgCode) {
     bool skip = false;
     if (image_state->createInfo.samples != sample_count) {
-        skip = log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                       reinterpret_cast<uint64_t &>(image_state->image), 0, DRAWSTATE_NUM_SAMPLES_MISMATCH, "DS",
-                       "%s for image 0x%" PRIxLEAST64 " was created with a sample count of %s but must be %s.", location,
-                       reinterpret_cast<uint64_t &>(image_state->image),
-                       string_VkSampleCountFlagBits(image_state->createInfo.samples), string_VkSampleCountFlagBits(sample_count));
+        skip =
+            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                    reinterpret_cast<uint64_t &>(image_state->image), 0, msgCode, "DS",
+                    "%s for image 0x%" PRIxLEAST64 " was created with a sample count of %s but must be %s. %s", location,
+                    reinterpret_cast<uint64_t &>(image_state->image), string_VkSampleCountFlagBits(image_state->createInfo.samples),
+                    string_VkSampleCountFlagBits(sample_count), validation_error_map[msgCode]);
     }
     return skip;
 }
@@ -8640,8 +8641,10 @@ CmdBlitImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcI
     auto src_image_state = getImageState(dev_data, srcImage);
     auto dst_image_state = getImageState(dev_data, dstImage);
     if (cb_node && src_image_state && dst_image_state) {
-        skip_call |= ValidateImageSampleCount(dev_data, src_image_state, VK_SAMPLE_COUNT_1_BIT, "vkCmdBlitImage(): srcImage");
-        skip_call |= ValidateImageSampleCount(dev_data, dst_image_state, VK_SAMPLE_COUNT_1_BIT, "vkCmdBlitImage(): dstImage");
+        skip_call |= ValidateImageSampleCount(dev_data, src_image_state, VK_SAMPLE_COUNT_1_BIT, "vkCmdBlitImage(): srcImage",
+                                              VALIDATION_ERROR_02194);
+        skip_call |= ValidateImageSampleCount(dev_data, dst_image_state, VK_SAMPLE_COUNT_1_BIT, "vkCmdBlitImage(): dstImage",
+                                              VALIDATION_ERROR_02195);
         skip_call |= ValidateMemoryIsBoundToImage(dev_data, src_image_state, "vkCmdBlitImage()", VALIDATION_ERROR_02539);
         skip_call |= ValidateMemoryIsBoundToImage(dev_data, dst_image_state, "vkCmdBlitImage()", VALIDATION_ERROR_02540);
         // Update bindings between images and cmd buffer
@@ -8685,8 +8688,8 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBufferToImage(VkCommandBuffer commandBuffer, V
     auto src_buff_state = getBufferState(dev_data, srcBuffer);
     auto dst_image_state = getImageState(dev_data, dstImage);
     if (cb_node && src_buff_state && dst_image_state) {
-        skip_call |=
-            ValidateImageSampleCount(dev_data, dst_image_state, VK_SAMPLE_COUNT_1_BIT, "vkCmdCopyBufferToImage(): dstImage");
+        skip_call |= ValidateImageSampleCount(dev_data, dst_image_state, VK_SAMPLE_COUNT_1_BIT,
+                                              "vkCmdCopyBufferToImage(): dstImage", VALIDATION_ERROR_01232);
         skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, src_buff_state, "vkCmdCopyBufferToImage()", VALIDATION_ERROR_02535);
         skip_call |= ValidateMemoryIsBoundToImage(dev_data, dst_image_state, "vkCmdCopyBufferToImage()", VALIDATION_ERROR_02536);
         AddCommandBufferBindingBuffer(dev_data, cb_node, src_buff_state);
@@ -8708,7 +8711,8 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBufferToImage(VkCommandBuffer commandBuffer, V
         UpdateCmdBufferLastCmd(dev_data, cb_node, CMD_COPYBUFFERTOIMAGE);
         skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyBufferToImage()", VALIDATION_ERROR_01242);
         for (uint32_t i = 0; i < regionCount; ++i) {
-            skip_call |= VerifyDestImageLayout(dev_data, cb_node, dstImage, pRegions[i].imageSubresource, dstImageLayout);
+            skip_call |= VerifyDestImageLayout(dev_data, cb_node, dstImage, pRegions[i].imageSubresource, dstImageLayout,
+                                               VALIDATION_ERROR_01234);
             skip_call |= ValidateCopyBufferImageTransferGranularityRequirements(dev_data, cb_node, dst_image_state, &pRegions[i], i,
                                                                                 "vkCmdCopyBufferToImage()");
         }
@@ -8731,8 +8735,8 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyImageToBuffer(VkCommandBuffer commandBuffer, V
     auto src_image_state = getImageState(dev_data, srcImage);
     auto dst_buff_state = getBufferState(dev_data, dstBuffer);
     if (cb_node && src_image_state && dst_buff_state) {
-        skip_call |=
-            ValidateImageSampleCount(dev_data, src_image_state, VK_SAMPLE_COUNT_1_BIT, "vkCmdCopyImageToBuffer(): srcImage");
+        skip_call |= ValidateImageSampleCount(dev_data, src_image_state, VK_SAMPLE_COUNT_1_BIT,
+                                              "vkCmdCopyImageToBuffer(): srcImage", VALIDATION_ERROR_01249);
         skip_call |= ValidateMemoryIsBoundToImage(dev_data, src_image_state, "vkCmdCopyImageToBuffer()", VALIDATION_ERROR_02537);
         skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, dst_buff_state, "vkCmdCopyImageToBuffer()", VALIDATION_ERROR_02538);
         // Update bindings between buffer/image and cmd buffer
@@ -8758,7 +8762,8 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyImageToBuffer(VkCommandBuffer commandBuffer, V
         UpdateCmdBufferLastCmd(dev_data, cb_node, CMD_COPYIMAGETOBUFFER);
         skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyImageToBuffer()", VALIDATION_ERROR_01260);
         for (uint32_t i = 0; i < regionCount; ++i) {
-            skip_call |= VerifySourceImageLayout(dev_data, cb_node, srcImage, pRegions[i].imageSubresource, srcImageLayout);
+            skip_call |= VerifySourceImageLayout(dev_data, cb_node, srcImage, pRegions[i].imageSubresource, srcImageLayout,
+                                                 VALIDATION_ERROR_01251);
             skip_call |= ValidateCopyBufferImageTransferGranularityRequirements(dev_data, cb_node, src_image_state, &pRegions[i], i,
                                                                                 "CmdCopyImageToBuffer");
         }
@@ -8908,7 +8913,7 @@ VKAPI_ATTR void VKAPI_CALL CmdClearAttachments(VkCommandBuffer commandBuffer, ui
                 auto image_view_state = getImageViewState(dev_data, image_view);
                 auto aspects_present = image_view_state->create_info.subresourceRange.aspectMask;
                 auto extra_aspects = clear_desc->aspectMask & ~aspects_present;
-
+                // TODO: This is a different check than 01125. Need a new valid usage statement for this case, or should kill check.
                 if (extra_aspects) {
                     skip_call |= log_msg(
                             dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT,
@@ -9101,6 +9106,32 @@ CmdResetEvent(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags
         dev_data->dispatch_table.CmdResetEvent(commandBuffer, event, stageMask);
 }
 
+static bool TransitionImageAspectLayout(layer_data *dev_data, GLOBAL_CB_NODE *pCB, const VkImageMemoryBarrier *mem_barrier,
+                                        uint32_t level, uint32_t layer, VkImageAspectFlags aspect)
+{
+    if (!(mem_barrier->subresourceRange.aspectMask & aspect)) {
+        return false;
+    }
+    VkImageSubresource sub = {aspect, level, layer};
+    IMAGE_CMD_BUF_LAYOUT_NODE node;
+    if (!FindLayout(pCB, mem_barrier->image, sub, node)) {
+        SetLayout(pCB, mem_barrier->image, sub,
+                  IMAGE_CMD_BUF_LAYOUT_NODE(mem_barrier->oldLayout, mem_barrier->newLayout));
+        return false;
+    }
+    bool skip = false;
+    if (mem_barrier->oldLayout == VK_IMAGE_LAYOUT_UNDEFINED) {
+        // TODO: Set memory invalid which is in mem_tracker currently
+    } else if (node.layout != mem_barrier->oldLayout) {
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
+                        __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                        "You cannot transition the layout of aspect %d from %s when current layout is %s.",
+                        aspect, string_VkImageLayout(mem_barrier->oldLayout), string_VkImageLayout(node.layout));
+    }
+    SetLayout(pCB, mem_barrier->image, sub, mem_barrier->newLayout);
+    return skip;
+}
+
 // TODO: Separate validation and layout state updates
 static bool TransitionImageLayouts(VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
                                    const VkImageMemoryBarrier *pImgMemBarriers) {
@@ -9122,22 +9153,10 @@ static bool TransitionImageLayouts(VkCommandBuffer cmdBuffer, uint32_t memBarrie
             uint32_t level = mem_barrier->subresourceRange.baseMipLevel + j;
             for (uint32_t k = 0; k < layerCount; k++) {
                 uint32_t layer = mem_barrier->subresourceRange.baseArrayLayer + k;
-                VkImageSubresource sub = {mem_barrier->subresourceRange.aspectMask, level, layer};
-                IMAGE_CMD_BUF_LAYOUT_NODE node;
-                if (!FindLayout(pCB, mem_barrier->image, sub, node)) {
-                    SetLayout(pCB, mem_barrier->image, sub,
-                              IMAGE_CMD_BUF_LAYOUT_NODE(mem_barrier->oldLayout, mem_barrier->newLayout));
-                    continue;
-                }
-                if (mem_barrier->oldLayout == VK_IMAGE_LAYOUT_UNDEFINED) {
-                    // TODO: Set memory invalid which is in mem_tracker currently
-                } else if (node.layout != mem_barrier->oldLayout) {
-                    skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
-                                    __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS", "You cannot transition the layout from %s "
-                                                                                    "when current layout is %s.",
-                                    string_VkImageLayout(mem_barrier->oldLayout), string_VkImageLayout(node.layout));
-                }
-                SetLayout(pCB, mem_barrier->image, sub, mem_barrier->newLayout);
+                skip |= TransitionImageAspectLayout(dev_data, pCB, mem_barrier, level, layer, VK_IMAGE_ASPECT_COLOR_BIT);
+                skip |= TransitionImageAspectLayout(dev_data, pCB, mem_barrier, level, layer, VK_IMAGE_ASPECT_DEPTH_BIT);
+                skip |= TransitionImageAspectLayout(dev_data, pCB, mem_barrier, level, layer, VK_IMAGE_ASPECT_STENCIL_BIT);
+                skip |= TransitionImageAspectLayout(dev_data, pCB, mem_barrier, level, layer, VK_IMAGE_ASPECT_METADATA_BIT);
             }
         }
     }
@@ -11256,13 +11275,8 @@ CmdExecuteCommands(VkCommandBuffer commandBuffer, uint32_t commandBuffersCount, 
         GLOBAL_CB_NODE *pSubCB = NULL;
         for (uint32_t i = 0; i < commandBuffersCount; i++) {
             pSubCB = getCBNode(dev_data, pCommandBuffers[i]);
-            if (!pSubCB) {
-                skip_call |=
-                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                            VALIDATION_ERROR_00160, "DS",
-                            "vkCmdExecuteCommands() called w/ invalid Cmd Buffer 0x%p in element %u of pCommandBuffers array. %s",
-                            pCommandBuffers[i], i, validation_error_map[VALIDATION_ERROR_00160]);
-            } else if (VK_COMMAND_BUFFER_LEVEL_PRIMARY == pSubCB->createInfo.level) {
+            assert(pSubCB);
+            if (VK_COMMAND_BUFFER_LEVEL_PRIMARY == pSubCB->createInfo.level) {
                 skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
                                      __LINE__, VALIDATION_ERROR_00153, "DS",
                                      "vkCmdExecuteCommands() called w/ Primary Cmd Buffer 0x%p in element %u of pCommandBuffers "
@@ -11821,40 +11835,39 @@ CreateEvent(VkDevice device, const VkEventCreateInfo *pCreateInfo, const VkAlloc
     return result;
 }
 
-static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, VkSwapchainCreateInfoKHR const *pCreateInfo,
-                                              SURFACE_STATE *surface_state, SWAPCHAIN_NODE *old_swapchain_state) {
+static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, const char *func_name,
+                                              VkSwapchainCreateInfoKHR const *pCreateInfo, SURFACE_STATE *surface_state,
+                                              SWAPCHAIN_NODE *old_swapchain_state) {
     auto most_recent_swapchain = surface_state->swapchain ? surface_state->swapchain : surface_state->old_swapchain;
 
     // TODO: revisit this. some of these rules are being relaxed.
     if (most_recent_swapchain != old_swapchain_state || (surface_state->old_swapchain && surface_state->swapchain)) {
         if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                     reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_ALREADY_EXISTS, "DS",
-                    "vkCreateSwapchainKHR(): surface has an existing swapchain other than oldSwapchain"))
+                    "%s: surface has an existing swapchain other than oldSwapchain", func_name))
             return true;
     }
     if (old_swapchain_state && old_swapchain_state->createInfo.surface != pCreateInfo->surface) {
         if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
                     reinterpret_cast<uint64_t const &>(pCreateInfo->oldSwapchain), __LINE__, DRAWSTATE_SWAPCHAIN_WRONG_SURFACE,
-                    "DS", "vkCreateSwapchainKHR(): pCreateInfo->oldSwapchain's surface is not pCreateInfo->surface"))
+                    "DS", "%s: pCreateInfo->oldSwapchain's surface is not pCreateInfo->surface", func_name))
             return true;
     }
     auto physical_device_state = getPhysicalDeviceState(dev_data->instance_data, dev_data->physical_device);
     if (physical_device_state->vkGetPhysicalDeviceSurfaceCapabilitiesKHRState == UNCALLED) {
         if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
                     reinterpret_cast<uint64_t>(dev_data->physical_device), __LINE__, DRAWSTATE_SWAPCHAIN_CREATE_BEFORE_QUERY, "DS",
-                    "vkCreateSwapchainKHR(): surface capabilities not retrieved for this physical device"))
+                    "%s: surface capabilities not retrieved for this physical device", func_name))
             return true;
     } else { // have valid capabilities
         auto &capabilities = physical_device_state->surfaceCapabilities;
-        // Validate pCreateInfo->minImageCount against
-        // VkSurfaceCapabilitiesKHR::{min|max}ImageCount:
-
+        // Validate pCreateInfo->minImageCount against VkSurfaceCapabilitiesKHR::{min|max}ImageCount:
         if (pCreateInfo->minImageCount < capabilities.minImageCount) {
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                         reinterpret_cast<uint64_t>(dev_data->device), __LINE__, VALIDATION_ERROR_02331, "DS",
-                        "vkCreateSwapchainKHR() called with pCreateInfo->minImageCount = %d, which is outside the bounds returned "
+                        "%s called with minImageCount = %d, which is outside the bounds returned "
                         "by vkGetPhysicalDeviceSurfaceCapabilitiesKHR() (i.e. minImageCount = %d, maxImageCount = %d). %s",
-                        pCreateInfo->minImageCount, capabilities.minImageCount, capabilities.maxImageCount,
+                        func_name, pCreateInfo->minImageCount, capabilities.minImageCount, capabilities.maxImageCount,
                         validation_error_map[VALIDATION_ERROR_02331]))
                 return true;
         }
@@ -11862,15 +11875,14 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, VkSwapchainC
         if ((capabilities.maxImageCount > 0) && (pCreateInfo->minImageCount > capabilities.maxImageCount)) {
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                         reinterpret_cast<uint64_t>(dev_data->device), __LINE__, VALIDATION_ERROR_02332, "DS",
-                        "vkCreateSwapchainKHR() called with pCreateInfo->minImageCount = %d, which is outside the bounds returned "
+                        "%s called with minImageCount = %d, which is outside the bounds returned "
                         "by vkGetPhysicalDeviceSurfaceCapabilitiesKHR() (i.e. minImageCount = %d, maxImageCount = %d). %s",
-                        pCreateInfo->minImageCount, capabilities.minImageCount, capabilities.maxImageCount,
+                        func_name, pCreateInfo->minImageCount, capabilities.minImageCount, capabilities.maxImageCount,
                         validation_error_map[VALIDATION_ERROR_02332]))
                 return true;
         }
 
-        // Validate pCreateInfo->imageExtent against
-        // VkSurfaceCapabilitiesKHR::{current|min|max}ImageExtent:
+        // Validate pCreateInfo->imageExtent against VkSurfaceCapabilitiesKHR::{current|min|max}ImageExtent:
         if ((capabilities.currentExtent.width == kSurfaceSizeFromSwapchain) &&
             ((pCreateInfo->imageExtent.width < capabilities.minImageExtent.width) ||
              (pCreateInfo->imageExtent.width > capabilities.maxImageExtent.width) ||
@@ -11878,12 +11890,12 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, VkSwapchainC
              (pCreateInfo->imageExtent.height > capabilities.maxImageExtent.height))) {
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                         reinterpret_cast<uint64_t>(dev_data->device), __LINE__, VALIDATION_ERROR_02334, "DS",
-                        "vkCreateSwapchainKHR() called with pCreateInfo->imageExtent = (%d,%d), which is outside the "
-                        "bounds returned by vkGetPhysicalDeviceSurfaceCapabilitiesKHR(): currentExtent = (%d,%d), "
-                        "minImageExtent = (%d,%d), maxImageExtent = (%d,%d). %s",
-                        pCreateInfo->imageExtent.width, pCreateInfo->imageExtent.height, capabilities.currentExtent.width,
-                        capabilities.currentExtent.height, capabilities.minImageExtent.width, capabilities.minImageExtent.height,
-                        capabilities.maxImageExtent.width, capabilities.maxImageExtent.height,
+                        "%s called with imageExtent = (%d,%d), which is outside the bounds returned by "
+                        "vkGetPhysicalDeviceSurfaceCapabilitiesKHR(): currentExtent = (%d,%d), minImageExtent = (%d,%d), "
+                        "maxImageExtent = (%d,%d). %s",
+                        func_name, pCreateInfo->imageExtent.width, pCreateInfo->imageExtent.height,
+                        capabilities.currentExtent.width, capabilities.currentExtent.height, capabilities.minImageExtent.width,
+                        capabilities.minImageExtent.height, capabilities.maxImageExtent.width, capabilities.maxImageExtent.height,
                         validation_error_map[VALIDATION_ERROR_02334]))
                 return true;
         }
@@ -11892,26 +11904,23 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, VkSwapchainC
              (pCreateInfo->imageExtent.height != capabilities.currentExtent.height))) {
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                         reinterpret_cast<uint64_t>(dev_data->device), __LINE__, VALIDATION_ERROR_02334, "DS",
-                        "vkCreateSwapchainKHR() called with pCreateInfo->imageExtent = (%d,%d), which is not equal to the "
-                        "currentExtent = (%d,%d) returned by vkGetPhysicalDeviceSurfaceCapabilitiesKHR(). %s",
-                        pCreateInfo->imageExtent.width, pCreateInfo->imageExtent.height, capabilities.currentExtent.width,
-                        capabilities.currentExtent.height,
+                        "%s called with imageExtent = (%d,%d), which is not equal to the currentExtent = (%d,%d) returned by "
+                        "vkGetPhysicalDeviceSurfaceCapabilitiesKHR(). %s",
+                        func_name, pCreateInfo->imageExtent.width, pCreateInfo->imageExtent.height,
+                        capabilities.currentExtent.width, capabilities.currentExtent.height,
                         validation_error_map[VALIDATION_ERROR_02334]))
                 return true;
         }
-        // pCreateInfo->preTransform should have exactly one bit set, and that
-        // bit must also be set in VkSurfaceCapabilitiesKHR::supportedTransforms.
+        // pCreateInfo->preTransform should have exactly one bit set, and that bit must also be set in
+        // VkSurfaceCapabilitiesKHR::supportedTransforms.
         if (!pCreateInfo->preTransform || (pCreateInfo->preTransform & (pCreateInfo->preTransform - 1)) ||
             !(pCreateInfo->preTransform & capabilities.supportedTransforms)) {
-            // This is an error situation; one for which we'd like to give
-            // the developer a helpful, multi-line error message.  Build it
-            // up a little at a time, and then log it:
+            // This is an error situation; one for which we'd like to give the developer a helpful, multi-line error message.  Build
+            // it up a little at a time, and then log it:
             std::string errorString = "";
             char str[1024];
             // Here's the first part of the message:
-            sprintf(str, "vkCreateSwapchainKHR() called with a non-supported "
-                         "pCreateInfo->preTransform (i.e. %s).  "
-                         "Supported values are:\n",
+            sprintf(str, "%s called with a non-supported pCreateInfo->preTransform (i.e. %s).  Supported values are:\n", func_name,
                     string_VkSurfaceTransformFlagBitsKHR(pCreateInfo->preTransform));
             errorString += str;
             for (int i = 0; i < 32; i++) {
@@ -11929,20 +11938,17 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, VkSwapchainC
                 return true;
         }
 
-        // pCreateInfo->compositeAlpha should have exactly one bit set, and that
-        // bit must also be set in VkSurfaceCapabilitiesKHR::supportedCompositeAlpha
+        // pCreateInfo->compositeAlpha should have exactly one bit set, and that bit must also be set in
+        // VkSurfaceCapabilitiesKHR::supportedCompositeAlpha
         if (!pCreateInfo->compositeAlpha || (pCreateInfo->compositeAlpha & (pCreateInfo->compositeAlpha - 1)) ||
             !((pCreateInfo->compositeAlpha) & capabilities.supportedCompositeAlpha)) {
-            // This is an error situation; one for which we'd like to give
-            // the developer a helpful, multi-line error message.  Build it
-            // up a little at a time, and then log it:
+            // This is an error situation; one for which we'd like to give the developer a helpful, multi-line error message.  Build
+            // it up a little at a time, and then log it:
             std::string errorString = "";
             char str[1024];
             // Here's the first part of the message:
-            sprintf(str, "vkCreateSwapchainKHR() called with a non-supported "
-                         "pCreateInfo->compositeAlpha (i.e. %s).  "
-                         "Supported values are:\n",
-                    string_VkCompositeAlphaFlagBitsKHR(pCreateInfo->compositeAlpha));
+            sprintf(str, "%s called with a non-supported pCreateInfo->compositeAlpha (i.e. %s).  Supported values are:\n",
+                    func_name, string_VkCompositeAlphaFlagBitsKHR(pCreateInfo->compositeAlpha));
             errorString += str;
             for (int i = 0; i < 32; i++) {
                 // Build up the rest of the message:
@@ -11958,46 +11964,40 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, VkSwapchainC
                         errorString.c_str(), validation_error_map[VALIDATION_ERROR_02340]))
                 return true;
         }
-        // Validate pCreateInfo->imageArrayLayers against
-        // VkSurfaceCapabilitiesKHR::maxImageArrayLayers:
+        // Validate pCreateInfo->imageArrayLayers against VkSurfaceCapabilitiesKHR::maxImageArrayLayers:
         if ((pCreateInfo->imageArrayLayers < 1) || (pCreateInfo->imageArrayLayers > capabilities.maxImageArrayLayers)) {
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                         reinterpret_cast<uint64_t>(dev_data->device), __LINE__, VALIDATION_ERROR_02335, "DS",
-                        "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->imageArrayLayers (i.e. %d).  "
-                        "Minimum value is 1, maximum value is %d. %s",
-                        pCreateInfo->imageArrayLayers, capabilities.maxImageArrayLayers,
+                        "%s called with a non-supported imageArrayLayers (i.e. %d).  Minimum value is 1, maximum value is %d. %s",
+                        func_name, pCreateInfo->imageArrayLayers, capabilities.maxImageArrayLayers,
                         validation_error_map[VALIDATION_ERROR_02335]))
                 return true;
         }
-        // Validate pCreateInfo->imageUsage against
-        // VkSurfaceCapabilitiesKHR::supportedUsageFlags:
+        // Validate pCreateInfo->imageUsage against VkSurfaceCapabilitiesKHR::supportedUsageFlags:
         if (pCreateInfo->imageUsage != (pCreateInfo->imageUsage & capabilities.supportedUsageFlags)) {
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                         reinterpret_cast<uint64_t>(dev_data->device), __LINE__, VALIDATION_ERROR_02336, "DS",
-                        "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->imageUsage (i.e. 0x%08x).  "
-                        "Supported flag bits are 0x%08x. %s",
-                        pCreateInfo->imageUsage, capabilities.supportedUsageFlags, validation_error_map[VALIDATION_ERROR_02336]))
+                        "%s called with a non-supported pCreateInfo->imageUsage (i.e. 0x%08x).  Supported flag bits are 0x%08x. %s",
+                        func_name, pCreateInfo->imageUsage, capabilities.supportedUsageFlags,
+                        validation_error_map[VALIDATION_ERROR_02336]))
                 return true;
         }
     }
 
-    // Validate pCreateInfo values with the results of
-    // vkGetPhysicalDeviceSurfaceFormatsKHR():
+    // Validate pCreateInfo values with the results of vkGetPhysicalDeviceSurfaceFormatsKHR():
     if (physical_device_state->vkGetPhysicalDeviceSurfaceFormatsKHRState != QUERY_DETAILS) {
         if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                     reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_CREATE_BEFORE_QUERY, "DS",
-                    "vkCreateSwapchainKHR() called before calling vkGetPhysicalDeviceSurfaceFormatsKHR()."))
+                    "%s called before calling vkGetPhysicalDeviceSurfaceFormatsKHR().", func_name))
             return true;
     } else {
-        // Validate pCreateInfo->imageFormat against
-        // VkSurfaceFormatKHR::format:
+        // Validate pCreateInfo->imageFormat against VkSurfaceFormatKHR::format:
         bool foundFormat = false;
         bool foundColorSpace = false;
         bool foundMatch = false;
         for (auto const &format : physical_device_state->surface_formats) {
             if (pCreateInfo->imageFormat == format.format) {
-                // Validate pCreateInfo->imageColorSpace against
-                // VkSurfaceFormatKHR::colorSpace:
+                // Validate pCreateInfo->imageColorSpace against VkSurfaceFormatKHR::colorSpace:
                 foundFormat = true;
                 if (pCreateInfo->imageColorSpace == format.colorSpace) {
                     foundMatch = true;
@@ -12013,62 +12013,49 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, VkSwapchainC
             if (!foundFormat) {
                 if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                             reinterpret_cast<uint64_t>(dev_data->device), __LINE__, VALIDATION_ERROR_02333, "DS",
-                            "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->imageFormat (i.e. %d). %s",
-                            pCreateInfo->imageFormat, validation_error_map[VALIDATION_ERROR_02333]))
+                            "%s called with a non-supported pCreateInfo->imageFormat (i.e. %d). %s",
+                            func_name, pCreateInfo->imageFormat, validation_error_map[VALIDATION_ERROR_02333]))
                     return true;
             }
             if (!foundColorSpace) {
                 if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                             reinterpret_cast<uint64_t>(dev_data->device), __LINE__, VALIDATION_ERROR_02333, "DS",
-                            "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->imageColorSpace (i.e. %d). %s",
-                            pCreateInfo->imageColorSpace, validation_error_map[VALIDATION_ERROR_02333]))
+                            "%s called with a non-supported pCreateInfo->imageColorSpace (i.e. %d). %s",
+                            func_name, pCreateInfo->imageColorSpace, validation_error_map[VALIDATION_ERROR_02333]))
                     return true;
             }
         }
     }
 
-    // Validate pCreateInfo values with the results of
-    // vkGetPhysicalDeviceSurfacePresentModesKHR():
+    // Validate pCreateInfo values with the results of vkGetPhysicalDeviceSurfacePresentModesKHR():
     if (physical_device_state->vkGetPhysicalDeviceSurfacePresentModesKHRState != QUERY_DETAILS) {
         // FIFO is required to always be supported
         if (pCreateInfo->presentMode != VK_PRESENT_MODE_FIFO_KHR) {
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                                 reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_CREATE_BEFORE_QUERY,
-                                 "DS", "vkCreateSwapchainKHR() called before calling "
-                                 "vkGetPhysicalDeviceSurfacePresentModesKHR()."))
+                        reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_CREATE_BEFORE_QUERY, "DS",
+                        "%s called before calling vkGetPhysicalDeviceSurfacePresentModesKHR().", func_name))
                 return true;
         }
     } else {
-        // Validate pCreateInfo->presentMode against
-        // vkGetPhysicalDeviceSurfacePresentModesKHR():
+        // Validate pCreateInfo->presentMode against vkGetPhysicalDeviceSurfacePresentModesKHR():
         bool foundMatch = std::find(physical_device_state->present_modes.begin(),
                                     physical_device_state->present_modes.end(),
                                     pCreateInfo->presentMode) != physical_device_state->present_modes.end();
         if (!foundMatch) {
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                         reinterpret_cast<uint64_t>(dev_data->device), __LINE__, VALIDATION_ERROR_02341, "DS",
-                        "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->presentMode (i.e. %s). %s",
+                        "%s called with a non-supported presentMode (i.e. %s). %s", func_name,
                         string_VkPresentModeKHR(pCreateInfo->presentMode), validation_error_map[VALIDATION_ERROR_02341]))
                 return true;
         }
     }
 
-
     return false;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device, const VkSwapchainCreateInfoKHR *pCreateInfo,
-                                                  const VkAllocationCallbacks *pAllocator,
-                                                  VkSwapchainKHR *pSwapchain) {
-    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    auto surface_state = getSurfaceState(dev_data->instance_data, pCreateInfo->surface);
-    auto old_swapchain_state = getSwapchainNode(dev_data, pCreateInfo->oldSwapchain);
-
-    if (PreCallValidateCreateSwapchainKHR(dev_data, pCreateInfo, surface_state, old_swapchain_state))
-        return VK_ERROR_VALIDATION_FAILED_EXT;
-
-    VkResult result = dev_data->dispatch_table.CreateSwapchainKHR(device, pCreateInfo, pAllocator, pSwapchain);
-
+static void PostCallRecordCreateSwapchainKHR(layer_data *dev_data, VkResult result, const VkSwapchainCreateInfoKHR *pCreateInfo,
+                                             VkSwapchainKHR *pSwapchain, SURFACE_STATE *surface_state,
+                                             SWAPCHAIN_NODE *old_swapchain_state) {
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
         auto swapchain_state = unique_ptr<SWAPCHAIN_NODE>(new SWAPCHAIN_NODE(pCreateInfo, *pSwapchain));
@@ -12077,12 +12064,27 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device, const VkSwapc
     } else {
         surface_state->swapchain = nullptr;
     }
-
     // Spec requires that even if CreateSwapchainKHR fails, oldSwapchain behaves as replaced.
     if (old_swapchain_state) {
         old_swapchain_state->replaced = true;
     }
     surface_state->old_swapchain = old_swapchain_state;
+    return;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device, const VkSwapchainCreateInfoKHR *pCreateInfo,
+                                                  const VkAllocationCallbacks *pAllocator, VkSwapchainKHR *pSwapchain) {
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    auto surface_state = getSurfaceState(dev_data->instance_data, pCreateInfo->surface);
+    auto old_swapchain_state = getSwapchainNode(dev_data, pCreateInfo->oldSwapchain);
+
+    if (PreCallValidateCreateSwapchainKHR(dev_data, "vkCreateSwapChainKHR()", pCreateInfo, surface_state, old_swapchain_state)) {
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+    }
+
+    VkResult result = dev_data->dispatch_table.CreateSwapchainKHR(device, pCreateInfo, pAllocator, pSwapchain);
+
+    PostCallRecordCreateSwapchainKHR(dev_data, result, pCreateInfo, pSwapchain, surface_state, old_swapchain_state);
 
     return result;
 }
@@ -12300,13 +12302,68 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
     return result;
 }
 
+static bool PreCallValidateCreateSharedSwapchainsKHR(layer_data *dev_data, uint32_t swapchainCount,
+                                                     const VkSwapchainCreateInfoKHR *pCreateInfos, VkSwapchainKHR *pSwapchains,
+                                                     std::vector<SURFACE_STATE *> &surface_state,
+                                                     std::vector<SWAPCHAIN_NODE *> &old_swapchain_state) {
+    if (pCreateInfos) {
+        std::lock_guard<std::mutex> lock(global_lock);
+        for (uint32_t i = 0; i < swapchainCount; i++) {
+            surface_state.push_back(getSurfaceState(dev_data->instance_data, pCreateInfos[i].surface));
+            old_swapchain_state.push_back(getSwapchainNode(dev_data, pCreateInfos[i].oldSwapchain));
+            std::stringstream func_name;
+            func_name << "vkCreateSharedSwapchainsKHR[" << swapchainCount << "]";
+                if (PreCallValidateCreateSwapchainKHR(dev_data, func_name.str().c_str(), &pCreateInfos[i], surface_state[i], old_swapchain_state[i])) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+static void PostCallRecordCreateSharedSwapchainsKHR(layer_data *dev_data, VkResult result, uint32_t swapchainCount,
+                                                    const VkSwapchainCreateInfoKHR *pCreateInfos, VkSwapchainKHR *pSwapchains,
+                                                    std::vector<SURFACE_STATE *> &surface_state,
+                                                    std::vector<SWAPCHAIN_NODE *> &old_swapchain_state) {
+    if (VK_SUCCESS == result) {
+        for (uint32_t i = 0; i < swapchainCount; i++) {
+            auto swapchain_state = unique_ptr<SWAPCHAIN_NODE>(new SWAPCHAIN_NODE(&pCreateInfos[i], pSwapchains[i]));
+            surface_state[i]->swapchain = swapchain_state.get();
+            dev_data->device_extensions.swapchainMap[pSwapchains[i]] = std::move(swapchain_state);
+        }
+    } else {
+        for (uint32_t i = 0; i < swapchainCount; i++) {
+            surface_state[i]->swapchain = nullptr;
+        }
+    }
+    // Spec requires that even if CreateSharedSwapchainKHR fails, oldSwapchain behaves as replaced.
+    for (uint32_t i = 0; i < swapchainCount; i++) {
+        if (old_swapchain_state[i]) {
+            old_swapchain_state[i]->replaced = true;
+        }
+        surface_state[i]->old_swapchain = old_swapchain_state[i];
+    }
+    return;
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL CreateSharedSwapchainsKHR(VkDevice device, uint32_t swapchainCount,
                                                          const VkSwapchainCreateInfoKHR *pCreateInfos,
                                                          const VkAllocationCallbacks *pAllocator, VkSwapchainKHR *pSwapchains) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    std::unique_lock<std::mutex> lock(global_lock);
+    std::vector<SURFACE_STATE *> surface_state;
+    std::vector<SWAPCHAIN_NODE *> old_swapchain_state;
+
+    if (PreCallValidateCreateSharedSwapchainsKHR(dev_data, swapchainCount, pCreateInfos, pSwapchains, surface_state,
+                                                 old_swapchain_state)) {
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+    }
+
     VkResult result =
         dev_data->dispatch_table.CreateSharedSwapchainsKHR(device, swapchainCount, pCreateInfos, pAllocator, pSwapchains);
+
+    PostCallRecordCreateSharedSwapchainsKHR(dev_data, result, swapchainCount, pCreateInfos, pSwapchains, surface_state,
+                                            old_swapchain_state);
+
     return result;
 }
 
@@ -12392,52 +12449,45 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumeratePhysicalDevices(VkInstance instance, uin
                                                         VkPhysicalDevice *pPhysicalDevices) {
     bool skip_call = false;
     instance_layer_data *instance_data = get_my_data_ptr(get_dispatch_key(instance), instance_layer_data_map);
+    assert(instance_data);
 
-    if (instance_data) {
-        // For this instance, flag when vkEnumeratePhysicalDevices goes to QUERY_COUNT and then QUERY_DETAILS
-        if (NULL == pPhysicalDevices) {
-            instance_data->vkEnumeratePhysicalDevicesState = QUERY_COUNT;
-        } else {
-            if (UNCALLED == instance_data->vkEnumeratePhysicalDevicesState) {
-                // Flag warning here. You can call this without having queried the count, but it may not be
-                // robust on platforms with multiple physical devices.
-                skip_call |= log_msg(instance_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-                                     0, __LINE__, DEVLIMITS_MISSING_QUERY_COUNT, "DL",
-                                     "Call sequence has vkEnumeratePhysicalDevices() w/ non-NULL pPhysicalDevices. You should first "
-                                     "call vkEnumeratePhysicalDevices() w/ NULL pPhysicalDevices to query pPhysicalDeviceCount.");
-            } // TODO : Could also flag a warning if re-calling this function in QUERY_DETAILS state
-            else if (instance_data->physical_devices_count != *pPhysicalDeviceCount) {
-                // Having actual count match count from app is not a requirement, so this can be a warning
-                skip_call |= log_msg(instance_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT,
-                                     VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVLIMITS_COUNT_MISMATCH, "DL",
-                                     "Call to vkEnumeratePhysicalDevices() w/ pPhysicalDeviceCount value %u, but actual count "
-                                     "supported by this instance is %u.",
-                                     *pPhysicalDeviceCount, instance_data->physical_devices_count);
-            }
-            instance_data->vkEnumeratePhysicalDevicesState = QUERY_DETAILS;
-        }
-        if (skip_call) {
-            return VK_ERROR_VALIDATION_FAILED_EXT;
-        }
-        VkResult result = instance_data->dispatch_table.EnumeratePhysicalDevices(instance, pPhysicalDeviceCount, pPhysicalDevices);
-        if (NULL == pPhysicalDevices) {
-            instance_data->physical_devices_count = *pPhysicalDeviceCount;
-        } else if (result == VK_SUCCESS){ // Save physical devices
-            for (uint32_t i = 0; i < *pPhysicalDeviceCount; i++) {
-                auto & phys_device_state = instance_data->physical_device_map[pPhysicalDevices[i]];
-                phys_device_state.phys_device = pPhysicalDevices[i];
-                // Init actual features for each physical device
-                instance_data->dispatch_table.GetPhysicalDeviceFeatures(pPhysicalDevices[i], &phys_device_state.features);
-            }
-        }
-        return result;
+    // For this instance, flag when vkEnumeratePhysicalDevices goes to QUERY_COUNT and then QUERY_DETAILS
+    if (NULL == pPhysicalDevices) {
+        instance_data->vkEnumeratePhysicalDevicesState = QUERY_COUNT;
     } else {
-        // This seems redundant with object_tracker
-        log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, 0, __LINE__,
-                VALIDATION_ERROR_00023, "DL", "Invalid instance (0x%p) passed into vkEnumeratePhysicalDevices(). %s", instance,
-                validation_error_map[VALIDATION_ERROR_00023]);
+        if (UNCALLED == instance_data->vkEnumeratePhysicalDevicesState) {
+            // Flag warning here. You can call this without having queried the count, but it may not be
+            // robust on platforms with multiple physical devices.
+            skip_call |= log_msg(instance_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT,
+                                 VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, 0, __LINE__, DEVLIMITS_MISSING_QUERY_COUNT, "DL",
+                                 "Call sequence has vkEnumeratePhysicalDevices() w/ non-NULL pPhysicalDevices. You should first "
+                                 "call vkEnumeratePhysicalDevices() w/ NULL pPhysicalDevices to query pPhysicalDeviceCount.");
+        } // TODO : Could also flag a warning if re-calling this function in QUERY_DETAILS state
+        else if (instance_data->physical_devices_count != *pPhysicalDeviceCount) {
+            // Having actual count match count from app is not a requirement, so this can be a warning
+            skip_call |= log_msg(instance_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT,
+                                 VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVLIMITS_COUNT_MISMATCH, "DL",
+                                 "Call to vkEnumeratePhysicalDevices() w/ pPhysicalDeviceCount value %u, but actual count "
+                                 "supported by this instance is %u.",
+                                 *pPhysicalDeviceCount, instance_data->physical_devices_count);
+        }
+        instance_data->vkEnumeratePhysicalDevicesState = QUERY_DETAILS;
     }
-    return VK_ERROR_VALIDATION_FAILED_EXT;
+    if (skip_call) {
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+    }
+    VkResult result = instance_data->dispatch_table.EnumeratePhysicalDevices(instance, pPhysicalDeviceCount, pPhysicalDevices);
+    if (NULL == pPhysicalDevices) {
+        instance_data->physical_devices_count = *pPhysicalDeviceCount;
+    } else if (result == VK_SUCCESS) { // Save physical devices
+        for (uint32_t i = 0; i < *pPhysicalDeviceCount; i++) {
+            auto &phys_device_state = instance_data->physical_device_map[pPhysicalDevices[i]];
+            phys_device_state.phys_device = pPhysicalDevices[i];
+            // Init actual features for each physical device
+            instance_data->dispatch_table.GetPhysicalDeviceFeatures(pPhysicalDevices[i], &phys_device_state.features);
+        }
+    }
+    return result;
 }
 
 VKAPI_ATTR void VKAPI_CALL

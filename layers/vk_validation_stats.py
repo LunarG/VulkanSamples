@@ -59,11 +59,23 @@ test_file = '../tests/layer_validation_tests.cpp'
 duplicate_exceptions = [
 'VALIDATION_ERROR_00018', # This covers the broad case that all child objects must be destroyed at DestroyInstance time
 'VALIDATION_ERROR_00049', # This covers the broad case that all child objects must be destroyed at DestroyDevice time
+'VALIDATION_ERROR_00112', # Obj tracker check makes sure non-null framebuffer is valid & CV check makes sure it's compatible w/ renderpass framebuffer
+'VALIDATION_ERROR_00324', # This is an aliasing error that we report twice, for each of the two allocations that are aliasing
+'VALIDATION_ERROR_00515', # Covers valid shader module handle for both Compute & Graphics pipelines
 'VALIDATION_ERROR_00648', # This is a case for VkMappedMemoryRange struct that is used by both Flush & Invalidate MappedMemoryRange
 'VALIDATION_ERROR_00741', # This is a blanket case for all invalid image aspect bit errors. The spec link has appropriate details for all separate cases.
 'VALIDATION_ERROR_00768', # This case covers two separate checks which are done independently
 'VALIDATION_ERROR_00769', # This case covers two separate checks which are done independently
 'VALIDATION_ERROR_00942', # This is a descriptor set write update error that we use for a couple copy cases as well
+'VALIDATION_ERROR_00988', # Single error for mis-matched stageFlags of vkCmdPushConstants() that is flagged for no stage flags & mis-matched flags
+'VALIDATION_ERROR_01088', # Handles both depth/stencil & compressed image errors for vkCmdClearColorImage()
+'VALIDATION_ERROR_01223', # Used for the mipLevel check of both dst & src images on vkCmdCopyImage call
+'VALIDATION_ERROR_01224', # Used for the arraySize check of both dst & src images on vkCmdCopyImage call
+'VALIDATION_ERROR_01450', # Used for both x & y bounds of viewport
+'VALIDATION_ERROR_01489', # Used for both x & y value of scissors to make sure they're not negative
+'VALIDATION_ERROR_01926', # Surface of VkSwapchainCreateInfoKHR must be valid when creating both single or shared swapchains
+'VALIDATION_ERROR_01935', # oldSwapchain of VkSwapchainCreateInfoKHR must be valid when creating both single or shared swapchains
+'VALIDATION_ERROR_02333', # Single error for both imageFormat & imageColorSpace requirements when creating swapchain
 'VALIDATION_ERROR_02525', # Used twice for the same error codepath as both a param & to set a variable, so not really a duplicate
 ]
 
@@ -74,6 +86,7 @@ class ValidationDatabase:
         self.db_dict = {} # complete dict of all db values per error enum
         # specialized data structs with slices of complete dict
         self.db_implemented_enums = [] # list of all error enums claiming to be implemented in database file
+        self.db_unimplemented_implicit = [] # list of all implicit checks that aren't marked implemented
         self.db_enum_to_tests = {} # dict where enum is key to lookup list of tests implementing the enum
         #self.src_implemented_enums
     def read(self):
@@ -104,6 +117,8 @@ class ValidationDatabase:
                 # Now build custom data structs
                 if 'Y' == implemented:
                     self.db_implemented_enums.append(error_enum)
+                elif 'implicit' in note: # only make note of non-implemented implicit checks
+                    self.db_unimplemented_implicit.append(error_enum)
                 if testname.lower() not in ['unknown', 'none']:
                     self.db_enum_to_tests[error_enum] = testname.split(',')
                     #if len(self.db_enum_to_tests[error_enum]) > 1:
@@ -222,11 +237,11 @@ class TestParser:
                         self.test_to_errors[testname] = []
                     if ' VALIDATION_ERROR_' in line:
                         line_list = line.split()
-                        for str in line_list:
-                            if 'VALIDATION_ERROR_' in str and True not in [ignore_str in str for ignore_str in ['VALIDATION_ERROR_UNDEFINED', 'UNIQUE_VALIDATION_ERROR_CODE', 'VALIDATION_ERROR_MAX_ENUM']]:
-                                print("Trying to add enums for line: %s")
-                                print("Adding enum %s to test %s" % (str.strip(',);'), testname))
-                                self.test_to_errors[testname].append(str.strip(',);'))
+                        for sub_str in line_list:
+                            if 'VALIDATION_ERROR_' in sub_str and True not in [ignore_str in sub_str for ignore_str in ['VALIDATION_ERROR_UNDEFINED', 'UNIQUE_VALIDATION_ERROR_CODE', 'VALIDATION_ERROR_MAX_ENUM']]:
+                                #print("Trying to add enums for line: %s" % ())
+                                #print("Adding enum %s to test %s" % (sub_str.strip(',);'), testname))
+                                self.test_to_errors[testname].append(sub_str.strip(',);'))
 
 # Little helper class for coloring cmd line output
 class bcolors:
@@ -309,6 +324,10 @@ def main(argv=None):
         if src_enum not in val_db.db_implemented_enums:
             imp_not_claimed.append(src_enum)
     print(" Database file claims that %d checks (%s) are implemented in source." % (len(val_db.db_implemented_enums), "{0:.0f}%".format(float(len(val_db.db_implemented_enums))/db_enums * 100)))
+    if len(val_db.db_unimplemented_implicit) > 0:
+        print(" Database file claims %d implicit checks (%s) that are not implemented." % (len(val_db.db_unimplemented_implicit), "{0:.0f}%".format(float(len(val_db.db_unimplemented_implicit))/db_enums * 100)))
+        total_checks = len(val_db.db_implemented_enums) + len(val_db.db_unimplemented_implicit)
+        print(" If all implicit checks are handled by parameter validation this is a total of %d (%s) checks covered." % (total_checks, "{0:.0f}%".format(float(total_checks)/db_enums * 100)))
     if len(imp_not_found) == 0 and len(imp_not_claimed) == 0:
         print(txt_color.green() + "  All claimed Database implemented checks have been found in source, and no source checks aren't claimed in Database, GREAT!" + txt_color.endc())
     else:

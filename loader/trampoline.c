@@ -221,6 +221,7 @@ vkEnumerateInstanceExtensionProperties(const char *pLayerName,
     }
 
 out:
+
     loader_destroy_generic_list(NULL,
                                 (struct loader_generic_list *)&local_ext_list);
     loader_delete_layer_properties(NULL, &instance_layers);
@@ -386,6 +387,9 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
         ptr_instance, sizeof(VkLayerInstanceDispatchTable),
         VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (ptr_instance->disp == NULL) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "vkCreateInstance:  Failed to allocate Instance dispatch"
+                   " table.");
         res = VK_ERROR_OUT_OF_HOST_MEMORY;
         goto out;
     }
@@ -529,140 +533,57 @@ vkEnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysicalDeviceCount,
                            VkPhysicalDevice *pPhysicalDevices) {
     const VkLayerInstanceDispatchTable *disp;
     VkResult res = VK_SUCCESS;
-    loader_platform_thread_lock_mutex(&loader_lock);
-    uint32_t copy_count = 0;
-    struct loader_physical_device_tramp **new_phys_devs = NULL;
-    struct loader_instance *inst = loader_get_instance(instance);
-    VkPhysicalDevice *temp_pd_array = NULL;
-    uint32_t new_pd_count = 0;
+    uint32_t count, i;
+    struct loader_instance *inst;
+    disp = loader_get_instance_dispatch(instance);
 
+    loader_platform_thread_lock_mutex(&loader_lock);
+
+    inst = loader_get_instance(instance);
     if (NULL == inst) {
         res = VK_ERROR_INITIALIZATION_FAILED;
         goto out;
     }
 
-    disp = loader_get_instance_dispatch(instance);
-
-    // If they only want the count, just pass it in and return
-    res = disp->EnumeratePhysicalDevices(instance, &copy_count,
-                                            NULL);
-    if (NULL == pPhysicalDevices) {
-        goto out;
-    }
-
-    // Reset the copy count until we complete.
-    copy_count = 0;
-
-    // If we're querying actual information, then we want to internally
-    // keep track of all GPUs.  So, query them all, and we can trim the
-    // list down later.
-    new_pd_count = inst->total_gpu_count;
-    temp_pd_array = (VkPhysicalDevice *)loader_stack_alloc(
-        sizeof(VkPhysicalDevice) * new_pd_count);
-    if (NULL == temp_pd_array) {
-        res = VK_ERROR_OUT_OF_HOST_MEMORY;
-        goto out;
-    }
-    res = disp->EnumeratePhysicalDevices(instance, &new_pd_count,
-                                         temp_pd_array);
-    if (res != VK_SUCCESS && res != VK_INCOMPLETE) {
-        goto out;
-    }
-
-    // Determine how many items we need to create and return (via copying into
-    // the provided array).
-    copy_count = (new_pd_count < *pPhysicalDeviceCount) ? new_pd_count :
-        *pPhysicalDeviceCount;
-
-    // Create a new array for the physical devices
-    new_phys_devs = (struct loader_physical_device_tramp **)
-        loader_instance_heap_alloc(
-            inst, new_pd_count * sizeof(struct loader_physical_device_tramp *),
-            VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-    if (NULL == new_phys_devs) {
-        res = VK_ERROR_OUT_OF_HOST_MEMORY;
-        goto out;
-    }
-    memset(new_phys_devs, 0,
-           new_pd_count * sizeof(struct loader_physical_device_tramp *));
-
-    // Copy or create everything to fill the new array of physical devices
-    for (uint32_t new_idx = 0; new_idx < new_pd_count; new_idx++) {
-
-        // Check if this physical device is already in the old buffer
-        for (uint32_t old_idx = 0;
-             old_idx < inst->phys_dev_count_tramp;
-             old_idx++) {
-            if (temp_pd_array[new_idx] ==
-                inst->phys_devs_tramp[old_idx]->phys_dev) {
-                new_phys_devs[new_idx] = inst->phys_devs_tramp[old_idx];
-                break;
-            }
-        }
-        // If this physical device isn't in the old buffer, create it
-        if (NULL == new_phys_devs[new_idx]) {
-            new_phys_devs[new_idx] = (struct loader_physical_device_tramp *)
-                loader_instance_heap_alloc(
-                    inst, sizeof(struct loader_physical_device_tramp),
-                    VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-            if (NULL == new_phys_devs[new_idx]) {
-                new_pd_count = new_idx;
-                res = VK_ERROR_OUT_OF_HOST_MEMORY;
-                goto out;
-            }
-
-            // Initialize the new physicalDevice object
-            loader_set_dispatch((void *)new_phys_devs[new_idx], inst->disp);
-            new_phys_devs[new_idx]->this_instance = inst;
-            new_phys_devs[new_idx]->phys_dev = temp_pd_array[new_idx];
+    if (pPhysicalDevices == NULL) {
+        // Call down.  At the lower levels, this will setup the terminator
+        // structures in the loader.
+        res = disp->EnumeratePhysicalDevices(instance, pPhysicalDeviceCount,
+                                             pPhysicalDevices);
+        if (VK_SUCCESS != res) {
+             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                        "vkEnumeratePhysicalDevices: Failed in dispatch call"
+                        " used to determine number of available GPUs");
         }
 
-        if (new_idx < copy_count) {
-            // Copy wrapped object into Application provided array
-            pPhysicalDevices[new_idx] =
-                (VkPhysicalDevice)new_phys_devs[new_idx];
-        }
+        // Goto out, even on success since we don't need to fill in the rest.
+        goto out;
+    }
+
+    VkResult setup_res = setupLoaderTrampPhysDevs(instance);
+    if (setup_res != VK_SUCCESS && setup_res != VK_INCOMPLETE) {
+        res = setup_res;
+        goto out;
+    }
+
+    // Wrap the PhysDev object for loader usage, return wrapped objects
+    if (inst->total_gpu_count > *pPhysicalDeviceCount) {
+        loader_log(inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
+                   "vkEnumeratePhysicalDevices: Trimming device count down"
+                   " by application request from %d to %d physical devices",
+                   inst->total_gpu_count, *pPhysicalDeviceCount);
+        count = *pPhysicalDeviceCount;
+        res = VK_INCOMPLETE;
+    } else {
+        count = inst->total_gpu_count;
+        *pPhysicalDeviceCount = count;
+    }
+
+    for (i = 0; i < count; i++) {
+        pPhysicalDevices[i] = (VkPhysicalDevice)inst->phys_devs_tramp[i];
     }
 
 out:
-
-    if (NULL != pPhysicalDevices) {
-        // If there was no error, free the old buffer and assign the new one
-        if (res == VK_SUCCESS || res == VK_INCOMPLETE) {
-            // Free everything that didn't carry over to the new array of
-            // physical devices
-            if (NULL != inst->phys_devs_tramp) {
-                for (uint32_t i = 0; i < inst->phys_dev_count_tramp; i++) {
-                    bool found = false;
-                    for (uint32_t j = 0; j < new_pd_count; j++) {
-                        if (inst->phys_devs_tramp[i] == new_phys_devs[j]) {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found) {
-                        loader_instance_heap_free(inst,
-                                                  inst->phys_devs_tramp[i]);
-                    }
-                }
-                loader_instance_heap_free(inst, inst->phys_devs_tramp);
-            }
-
-            // Swap in the new physical device list
-            inst->phys_dev_count_tramp = new_pd_count;
-            inst->phys_devs_tramp = new_phys_devs;
-        } else {
-            for (uint32_t i = 0; i < new_pd_count; i++) {
-                loader_instance_heap_free(inst, new_phys_devs[i]);
-            }
-            loader_instance_heap_free(inst, new_phys_devs);
-
-            // Set the copy count to 0 since something bad happened.
-            copy_count = 0;
-        }
-    }
-
-    *pPhysicalDeviceCount = copy_count;
 
     loader_platform_thread_unlock_mutex(&loader_lock);
     return res;
@@ -755,6 +676,8 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(
         loader_init_generic_list(inst, (struct loader_generic_list *)&icd_exts,
                                  sizeof(VkExtensionProperties));
     if (VK_SUCCESS != res) {
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "vkCreateDevice:  Failed to create ICD extension list");
         goto out;
     }
 
@@ -762,6 +685,8 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(
         inst, inst->disp->EnumerateDeviceExtensionProperties,
         phys_dev->phys_dev, "Unknown", &icd_exts);
     if (res != VK_SUCCESS) {
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "vkCreateDevice:  Failed to add extensions to list");
         goto out;
     }
 
@@ -769,6 +694,8 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(
     res = loader_validate_device_extensions(
         phys_dev, &inst->activated_layer_list, &icd_exts, pCreateInfo);
     if (res != VK_SUCCESS) {
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "vkCreateDevice:  Failed to validate extensions in list");
         goto out;
     }
 
@@ -785,6 +712,10 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(
         loader_device_heap_alloc(dev, inst->activated_layer_list.capacity,
                                  VK_SYSTEM_ALLOCATION_SCOPE_DEVICE);
     if (dev->activated_layer_list.list == NULL) {
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "vkCreateDevice:  Failed to allocate activated layer"
+                   "list of size %d.",
+                   inst->activated_layer_list.capacity);
         res = VK_ERROR_OUT_OF_HOST_MEMORY;
         goto out;
     }
@@ -795,6 +726,8 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(
     res = loader_create_device_chain(phys_dev, pCreateInfo, pAllocator, inst,
                                      dev);
     if (res != VK_SUCCESS) {
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "vkCreateDevice:  Failed to create device chain.");
         goto out;
     }
 
@@ -985,8 +918,14 @@ vkEnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice,
                                  sizeof(struct loader_layer_properties);
         enabled_layers->list = loader_instance_heap_alloc(inst, enabled_layers->capacity,
                                 VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-        if (!enabled_layers->list)
+        if (!enabled_layers->list) {
+            loader_log(
+                inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                "vkEnumerateDeviceLayerProperties:  Failed to allocate enabled"
+                "layer list of size %d",
+                enabled_layers->capacity);
             return VK_ERROR_OUT_OF_HOST_MEMORY;
+        }
 
         uint32_t j = 0;
         for (uint32_t i = 0; i < inst->activated_layer_list.count; j++) {
