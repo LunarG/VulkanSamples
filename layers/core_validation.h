@@ -139,11 +139,6 @@ struct GENERIC_HEADER {
     const void *pNext;
 };
 
-struct IMAGE_LAYOUT_NODE {
-    VkImageLayout layout;
-    VkFormat format;
-};
-
 class PHYS_DEV_PROPERTIES_NODE {
   public:
     VkPhysicalDeviceProperties properties;

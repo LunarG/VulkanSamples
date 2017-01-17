@@ -640,6 +640,11 @@ struct CB_SUBMISSION {
     VkFence fence;
 };
 
+struct IMAGE_LAYOUT_NODE {
+    VkImageLayout layout;
+    VkFormat format;
+};
+
 // Fwd declarations of layer_data and helpers to look-up/validate state from layer_data maps
 namespace core_validation {
 struct layer_data;
