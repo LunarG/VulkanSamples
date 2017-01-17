@@ -48,6 +48,7 @@
 
 #include "vk_safe_struct.h"
 #include "vulkan/vulkan.h"
+#include "vk_validation_error_messages.h"
 #include <atomic>
 #include <functional>
 #include <map>
