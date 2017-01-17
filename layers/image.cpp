@@ -526,11 +526,11 @@ static bool RangesIntersect(int32_t start, uint32_t start_offset, int32_t end, u
 
 // Returns true if two VkImageCopy structures overlap
 static bool RegionIntersects(const VkImageCopy *src, const VkImageCopy *dst, VkImageType type) {
-    bool result = true;
+    bool result = false;
     if ((src->srcSubresource.mipLevel == dst->dstSubresource.mipLevel) &&
         (RangesIntersect(src->srcSubresource.baseArrayLayer, src->srcSubresource.layerCount, dst->dstSubresource.baseArrayLayer,
                          dst->dstSubresource.layerCount))) {
-
+        result = true;
         switch (type) {
         case VK_IMAGE_TYPE_3D:
             result &= RangesIntersect(src->srcOffset.z, src->extent.depth, dst->dstOffset.z, dst->extent.depth);
