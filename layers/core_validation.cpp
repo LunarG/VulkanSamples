@@ -8918,17 +8918,6 @@ VKAPI_ATTR void VKAPI_CALL CmdClearAttachments(VkCommandBuffer commandBuffer, ui
 
             if (image_view) {
                 auto image_view_state = getImageViewState(dev_data, image_view);
-                auto aspects_present = image_view_state->create_info.subresourceRange.aspectMask;
-                auto extra_aspects = clear_desc->aspectMask & ~aspects_present;
-                // TODO: This is a different check than 01125. Need a new valid usage statement for this case, or should kill check.
-                if (extra_aspects) {
-                    skip_call |=
-                        log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT,
-                                reinterpret_cast<uint64_t &>(image_view), __LINE__, VALIDATION_ERROR_01125, "DS",
-                                "vkCmdClearAttachments() with aspects not present in image view: %s. %s",
-                                string_VkImageAspectFlagBits((VkImageAspectFlagBits)extra_aspects),
-                                validation_error_map[VALIDATION_ERROR_01125]);
-                }
                 for (uint32_t j = 0; j < rectCount; j++) {
                     // The rectangular region specified by a given element of pRects must be contained within the render area of the
                     // current render pass instance
