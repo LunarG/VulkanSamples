@@ -2512,16 +2512,9 @@ TEST_F(VkLayerTest, BindInvalidMemory) {
     VkResult err;
     bool pass;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00809);
-
     ASSERT_NO_FATAL_FAILURE(InitState());
 
-    // Create an image, allocate memory, free it, and then try to bind it
-    VkImage image;
-    VkDeviceMemory mem;
-    VkMemoryRequirements mem_reqs;
-
-    const VkFormat tex_format = VK_FORMAT_B8G8R8A8_UNORM;
+    const VkFormat tex_format = VK_FORMAT_R8G8B8A8_UNORM;
     const int32_t tex_width = 32;
     const int32_t tex_height = 32;
 
@@ -2540,37 +2533,58 @@ TEST_F(VkLayerTest, BindInvalidMemory) {
     image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
     image_create_info.flags = 0;
 
-    VkMemoryAllocateInfo mem_alloc = {};
-    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    mem_alloc.pNext = NULL;
-    mem_alloc.allocationSize = 0;
-    mem_alloc.memoryTypeIndex = 0;
+    VkBufferCreateInfo buffer_create_info = {};
+    buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buffer_create_info.pNext = NULL;
+    buffer_create_info.flags = 0;
+    buffer_create_info.size = tex_width;
+    buffer_create_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    err = vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
-    ASSERT_VK_SUCCESS(err);
+    // Create an image/buffer, allocate memory, free it, and then try to bind it
+    {
+        VkImage image = VK_NULL_HANDLE;
+        VkBuffer buffer = VK_NULL_HANDLE;
+        err = vkCreateImage(device(), &image_create_info, NULL, &image);
+        ASSERT_VK_SUCCESS(err);
+        err = vkCreateBuffer(device(), &buffer_create_info, NULL, &buffer);
+        ASSERT_VK_SUCCESS(err);
+        VkMemoryRequirements image_mem_reqs = {}, buffer_mem_reqs = {};
+        vkGetImageMemoryRequirements(device(), image, &image_mem_reqs);
+        vkGetBufferMemoryRequirements(device(), buffer, &buffer_mem_reqs);
 
-    vkGetImageMemoryRequirements(m_device->device(), image, &mem_reqs);
+        VkMemoryAllocateInfo image_mem_alloc = {}, buffer_mem_alloc = {};
+        image_mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        image_mem_alloc.allocationSize = image_mem_reqs.size;
+        pass = m_device->phy().set_memory_type(image_mem_reqs.memoryTypeBits, &image_mem_alloc, 0);
+        ASSERT_TRUE(pass);
+        buffer_mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        buffer_mem_alloc.allocationSize = buffer_mem_reqs.size;
+        pass = m_device->phy().set_memory_type(buffer_mem_reqs.memoryTypeBits, &buffer_mem_alloc, 0);
+        ASSERT_TRUE(pass);
 
-    mem_alloc.allocationSize = mem_reqs.size;
+        VkDeviceMemory image_mem = VK_NULL_HANDLE, buffer_mem = VK_NULL_HANDLE;
+        err = vkAllocateMemory(device(), &image_mem_alloc, NULL, &image_mem);
+        ASSERT_VK_SUCCESS(err);
+        err = vkAllocateMemory(device(), &buffer_mem_alloc, NULL, &buffer_mem);
+        ASSERT_VK_SUCCESS(err);
 
-    pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
-    ASSERT_TRUE(pass);
+        vkFreeMemory(device(), image_mem, NULL);
+        vkFreeMemory(device(), buffer_mem, NULL);
 
-    // allocate memory
-    err = vkAllocateMemory(m_device->device(), &mem_alloc, NULL, &mem);
-    ASSERT_VK_SUCCESS(err);
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00809);
+        err = vkBindImageMemory(device(), image, image_mem, 0);
+        (void)err;  // This may very well return an error.
+        m_errorMonitor->VerifyFound();
 
-    // Introduce validation failure, free memory before binding
-    vkFreeMemory(m_device->device(), mem, NULL);
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00800);
+        err = vkBindBufferMemory(device(), buffer, buffer_mem, 0);
+        (void)err;  // This may very well return an error.
+        m_errorMonitor->VerifyFound();
 
-    // Try to bind free memory that has been freed
-    err = vkBindImageMemory(m_device->device(), image, mem, 0);
-    // This may very well return an error.
-    (void)err;
-
-    m_errorMonitor->VerifyFound();
-
-    vkDestroyImage(m_device->device(), image, NULL);
+        vkDestroyImage(m_device->device(), image, NULL);
+        vkDestroyBuffer(m_device->device(), buffer, NULL);
+    }
 }
 
 TEST_F(VkLayerTest, BindMemoryToDestroyedObject) {
