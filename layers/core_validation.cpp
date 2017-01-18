@@ -739,10 +739,22 @@ static bool SetMemBinding(layer_data *dev_data, VkDeviceMemory mem, uint64_t han
     if (mem != VK_NULL_HANDLE) {
         BINDABLE *mem_binding = GetObjectMemBinding(dev_data, handle, type);
         assert(mem_binding);
-        // TODO : Add check here to make sure object isn't sparse
-        //  VALIDATION_ERROR_00792 for buffers
-        //  VALIDATION_ERROR_00804 for images
-        assert(!mem_binding->sparse);
+        if (mem_binding->sparse) {
+            UNIQUE_VALIDATION_ERROR_CODE error_code = VALIDATION_ERROR_00804;
+            const char *handle_type = "IMAGE";
+            if (strcmp(apiName, "vkBindBufferMemory") == 0) {
+                error_code = VALIDATION_ERROR_00792;
+                handle_type = "BUFFER";
+            } else {
+                assert(strcmp(apiName, "vkBindImageMemory") == 0);
+            }
+            skip_call |=
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
+                        reinterpret_cast<uint64_t &>(mem), __LINE__, error_code, "MEM",
+                        "In %s, attempting to bind memory (0x%" PRIxLEAST64 ") to object (0x%" PRIxLEAST64
+                        ") which was created with sparse memory flags (VK_%s_CREATE_SPARSE_*_BIT). %s",
+                        apiName, reinterpret_cast<uint64_t &>(mem), handle, handle_type, validation_error_map[error_code]);
+        }
         DEVICE_MEM_INFO *mem_info = GetMemObjInfo(dev_data, mem);
         if (mem_info) {
             DEVICE_MEM_INFO *prev_binding = GetMemObjInfo(dev_data, mem_binding->binding.mem);
