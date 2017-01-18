@@ -10223,13 +10223,10 @@ TEST_F(VkLayerTest, MissingClearAttachment) {
     m_errorMonitor->VerifyFound();
 }
 
-TEST_F(VkLayerTest, ClearCmdNoDraw) {
-    // Create CommandBuffer where we add ClearCmd for FB Color attachment prior
-    // to issuing a Draw
-    VkResult err;
+TEST_F(VkLayerTest, CmdClearAttachmentTests) {
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
-                                         "vkCmdClearAttachments() issued on command buffer object ");
+    TEST_DESCRIPTION("Various tests for validating usage of vkCmdClearAttachments");
+    VkResult err;
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -10319,8 +10316,23 @@ TEST_F(VkLayerTest, ClearCmdNoDraw) {
     color_attachment.colorAttachment = 0;
     VkClearRect clear_rect = {{{0, 0}, {(uint32_t)m_width, (uint32_t)m_height}}};
 
+    // Call for full-sized FB Color attachment prior to issuing a Draw
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
+        "vkCmdClearAttachments() issued on command buffer object ");
     vkCmdClearAttachments(m_commandBuffer->GetBufferHandle(), 1, &color_attachment, 1, &clear_rect);
+    m_errorMonitor->VerifyFound();
 
+
+    clear_rect.rect.extent.width = renderPassBeginInfo().renderArea.extent.width + 4;
+    clear_rect.rect.extent.height = clear_rect.rect.extent.height / 2;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01115);
+    vkCmdClearAttachments(m_commandBuffer->GetBufferHandle(), 1, &color_attachment, 1, &clear_rect);
+    m_errorMonitor->VerifyFound();
+
+    clear_rect.rect.extent.width = (uint32_t)m_width / 2;
+    clear_rect.layerCount = 2;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01116);
+    vkCmdClearAttachments(m_commandBuffer->GetBufferHandle(), 1, &color_attachment, 1, &clear_rect);
     m_errorMonitor->VerifyFound();
 
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
