@@ -759,13 +759,19 @@ static bool SetMemBinding(layer_data *dev_data, VkDeviceMemory mem, uint64_t han
         if (mem_info) {
             DEVICE_MEM_INFO *prev_binding = GetMemObjInfo(dev_data, mem_binding->binding.mem);
             if (prev_binding) {
-                // TODO: VALIDATION_ERROR_00791 and VALIDATION_ERROR_00803
+                UNIQUE_VALIDATION_ERROR_CODE error_code = VALIDATION_ERROR_00803;
+                if (strcmp(apiName, "vkBindBufferMemory") == 0) {
+                    error_code = VALIDATION_ERROR_00791;
+                } else {
+                    assert(strcmp(apiName, "vkBindImageMemory") == 0);
+                }
                 skip_call |=
                     log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
-                            reinterpret_cast<uint64_t &>(mem), __LINE__, MEMTRACK_REBIND_OBJECT, "MEM",
+                            reinterpret_cast<uint64_t &>(mem), __LINE__, error_code, "MEM",
                             "In %s, attempting to bind memory (0x%" PRIxLEAST64 ") to object (0x%" PRIxLEAST64
-                            ") which has already been bound to mem object 0x%" PRIxLEAST64,
-                            apiName, reinterpret_cast<uint64_t &>(mem), handle, reinterpret_cast<uint64_t &>(prev_binding->mem));
+                            ") which has already been bound to mem object 0x%" PRIxLEAST64 ". %s",
+                            apiName, reinterpret_cast<uint64_t &>(mem), handle, reinterpret_cast<uint64_t &>(prev_binding->mem),
+                            validation_error_map[error_code]);
             } else if (mem_binding->binding.mem == MEMORY_UNBOUND) {
                 skip_call |=
                     log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
