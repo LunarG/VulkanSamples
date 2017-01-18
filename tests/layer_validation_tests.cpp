@@ -8262,7 +8262,7 @@ TEST_F(VkLayerTest, ClearDepthStencilImageWithinRenderPass) {
     const VkImageSubresourceRange range = vk_testing::Image::subresource_range(image_create_info, VK_IMAGE_ASPECT_DEPTH_BIT);
 
     vkCmdClearDepthStencilImage(m_commandBuffer->GetBufferHandle(), dstImage.handle(),
-                                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, &clear_value, 1, &range);
+                                VK_IMAGE_LAYOUT_GENERAL, &clear_value, 1, &range);
 
     m_errorMonitor->VerifyFound();
 }
