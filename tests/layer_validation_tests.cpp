@@ -7924,6 +7924,7 @@ TEST_F(VkLayerTest, PSOLineWidthInvalid) {
     VkPipelineRasterizationStateCreateInfo rs_ci = {};
     rs_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rs_ci.pNext = nullptr;
+    rs_ci.rasterizerDiscardEnable = VK_TRUE;
 
     // Check too low (line width of -1.0f).
     rs_ci.lineWidth = -1.0f;
