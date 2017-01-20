@@ -375,7 +375,7 @@ void init_connection(struct sample_info &info) {
 
     info.connection = xcb_connect(NULL, &scr);
     if (info.connection == NULL || xcb_connection_has_error(info.connection)) {
-        std::cout << "Cannot find a compatible Vulkan ICD.\n";
+        std::cout << "Unable to make an XCB connection\n";
         exit(-1);
     }
 
