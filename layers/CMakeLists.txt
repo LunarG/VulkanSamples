@@ -11,7 +11,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     endif()
 
     if (BUILD_WSI_XLIB_SUPPORT)
-       add_definitions(-DVK_USE_PLATFORM_XLIB_KHR)
+       add_definitions(-DVK_USE_PLATFORM_XLIB_KHR -DVK_USE_PLATFORM_XLIB_XRANDR_EXT)
     endif()
 
     if (BUILD_WSI_WAYLAND_SUPPORT)
