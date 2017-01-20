@@ -103,7 +103,6 @@ static void checkInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateI
 #endif
 
         // Check for recognized instance extensions
-        layer_data *instance_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
         if (!white_list(pCreateInfo->ppEnabledExtensionNames[i], kUniqueObjectsSupportedInstanceExtensions)) {
             log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                     VALIDATION_ERROR_UNDEFINED, "UniqueObjects",

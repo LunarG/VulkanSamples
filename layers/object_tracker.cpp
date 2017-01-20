@@ -4338,7 +4338,7 @@ VKAPI_ATTR VkResult VKAPI_CALL RegisterDeviceEventEXT(VkDevice device, const VkD
     if (dev_data->dispatch_table.RegisterDeviceEventEXT) {
         result = dev_data->dispatch_table.RegisterDeviceEventEXT(device, pDeviceEventInfo, pAllocator, pFence);
         if (result == VK_SUCCESS && pFence != NULL) {
-            std::lock_guard<std::mutex> lock(global_lock);
+            std::lock_guard<std::mutex> create_lock(global_lock);
             CreateObject(device, *pFence, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, pAllocator);
         }
     }
@@ -4360,7 +4360,7 @@ VKAPI_ATTR VkResult VKAPI_CALL RegisterDisplayEventEXT(VkDevice device, VkDispla
     if (dev_data->dispatch_table.RegisterDisplayEventEXT) {
         result = dev_data->dispatch_table.RegisterDisplayEventEXT(device, display, pDisplayEventInfo, pAllocator, pFence);
         if (result == VK_SUCCESS && pFence != NULL) {
-            std::lock_guard<std::mutex> lock(global_lock);
+            std::lock_guard<std::mutex> create_lock(global_lock);
             CreateObject(device, *pFence, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, pAllocator);
         }
     }

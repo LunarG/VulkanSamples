@@ -57,9 +57,12 @@ if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
 endif()
 
 if(WIN32)
-    # Disable RTTI, Treat warnings as errors
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /WX")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR- /WX")
+    # Treat warnings as errors
+    add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/WX>")
+    # Disable RTTI
+    add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/GR->")
+    # Warn about nested declarations
+    add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/w34456>")
 endif()
 
 if(NOT WIN32)

@@ -2641,7 +2641,6 @@ TEST_F(VkLayerTest, ImageSampleCounts) {
     // buffer to image
     {
         vk_testing::Buffer src_buffer;
-        VkMemoryPropertyFlags reqs = 0;
         src_buffer.init_as_src(*m_device, 128 * 128 * 4, reqs);
         image_create_info.samples = VK_SAMPLE_COUNT_8_BIT;
         image_create_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
@@ -20503,7 +20502,7 @@ TEST_F(VkPositiveLayerTest, ValidStructPNext) {
         buffer_create_info.pQueueFamilyIndices = &queue_family_index;
 
         VkBuffer buffer;
-        VkResult err = vkCreateBuffer(m_device->device(), &buffer_create_info, NULL, &buffer);
+        err = vkCreateBuffer(m_device->device(), &buffer_create_info, NULL, &buffer);
         ASSERT_VK_SUCCESS(err);
 
         VkMemoryRequirements memory_reqs;

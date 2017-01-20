@@ -1420,7 +1420,6 @@ void demo_prepare_cube_data_buffers(struct demo *demo) {
     VkMemoryRequirements mem_reqs;
     VkMemoryAllocateInfo mem_alloc;
     uint8_t *pData;
-    int i;
     mat4x4 MVP, VP;
     VkResult U_ASSERT_ONLY err;
     bool U_ASSERT_ONLY pass;
@@ -1431,7 +1430,7 @@ void demo_prepare_cube_data_buffers(struct demo *demo) {
     memcpy(data.mvp, MVP, sizeof(MVP));
     //    dumpMatrix("MVP", MVP);
 
-    for (i = 0; i < 12 * 3; i++) {
+    for (unsigned int i = 0; i < 12 * 3; i++) {
         data.position[i][0] = g_vertex_buffer_data[i * 3];
         data.position[i][1] = g_vertex_buffer_data[i * 3 + 1];
         data.position[i][2] = g_vertex_buffer_data[i * 3 + 2];
@@ -1846,7 +1845,6 @@ static void demo_prepare_descriptor_set(struct demo *demo) {
     VkDescriptorImageInfo tex_descs[DEMO_TEXTURE_COUNT];
     VkWriteDescriptorSet writes[2];
     VkResult U_ASSERT_ONLY err;
-    uint32_t i;
 
     VkDescriptorSetAllocateInfo alloc_info = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
@@ -1860,7 +1858,7 @@ static void demo_prepare_descriptor_set(struct demo *demo) {
     buffer_info.range = sizeof(struct vktexcube_vs_uniform);
 
     memset(&tex_descs, 0, sizeof(tex_descs));
-    for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
+    for (unsigned int i = 0; i < DEMO_TEXTURE_COUNT; i++) {
         tex_descs[i].sampler = demo->textures[i].sampler;
         tex_descs[i].imageView = demo->textures[i].view;
         tex_descs[i].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -1961,16 +1959,16 @@ static void demo_prepare(struct demo *demo) {
     }
 
     if (demo->separate_present_queue) {
-        const VkCommandPoolCreateInfo cmd_pool_info = {
+        const VkCommandPoolCreateInfo present_cmd_pool_info = {
             .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
             .pNext = NULL,
             .queueFamilyIndex = demo->present_queue_family_index,
             .flags = 0,
         };
-        err = vkCreateCommandPool(demo->device, &cmd_pool_info, NULL,
+        err = vkCreateCommandPool(demo->device, &present_cmd_pool_info, NULL,
                                   &demo->present_cmd_pool);
         assert(!err);
-        const VkCommandBufferAllocateInfo cmd = {
+        const VkCommandBufferAllocateInfo present_cmd_info = {
             .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
             .pNext = NULL,
             .commandPool = demo->present_cmd_pool,
@@ -1979,7 +1977,7 @@ static void demo_prepare(struct demo *demo) {
         };
         for (uint32_t i = 0; i < demo->swapchainImageCount; i++) {
             err = vkAllocateCommandBuffers(
-                demo->device, &cmd, &demo->swapchain_image_resources[i].graphics_to_present_cmd);
+                demo->device, &present_cmd_info, &demo->swapchain_image_resources[i].graphics_to_present_cmd);
             assert(!err);
             demo_build_image_ownership_cmd(demo, i);
         }
@@ -2741,15 +2739,15 @@ static void demo_init_vk(struct demo *demo) {
      * After the instance is created, we use the instance-based
      * function to register the final callback.
      */
-    VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
+    VkDebugReportCallbackCreateInfoEXT dbgCreateInfoTemp;
     if (demo->validate) {
-        dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
-        dbgCreateInfo.pNext = NULL;
-        dbgCreateInfo.pfnCallback = demo->use_break ? BreakCallback : dbgFunc;
-        dbgCreateInfo.pUserData = demo;
-        dbgCreateInfo.flags =
+        dbgCreateInfoTemp.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
+        dbgCreateInfoTemp.pNext = NULL;
+        dbgCreateInfoTemp.pfnCallback = demo->use_break ? BreakCallback : dbgFunc;
+        dbgCreateInfoTemp.pUserData = demo;
+        dbgCreateInfoTemp.flags =
             VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
-        inst_info.pNext = &dbgCreateInfo;
+        inst_info.pNext = &dbgCreateInfoTemp;
     }
 
     uint32_t gpu_count;
@@ -2942,7 +2940,6 @@ static void demo_create_device(struct demo *demo) {
 
 static void demo_init_vk_swapchain(struct demo *demo) {
     VkResult U_ASSERT_ONLY err;
-    uint32_t i;
 
 // Create a WSI surface for the window:
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
@@ -2999,7 +2996,7 @@ static void demo_init_vk_swapchain(struct demo *demo) {
     // Iterate over each queue to learn whether it supports presenting:
     VkBool32 *supportsPresent =
         (VkBool32 *)malloc(demo->queue_family_count * sizeof(VkBool32));
-    for (i = 0; i < demo->queue_family_count; i++) {
+    for (uint32_t i = 0; i < demo->queue_family_count; i++) {
         demo->fpGetPhysicalDeviceSurfaceSupportKHR(demo->gpu, i, demo->surface,
                                                    &supportsPresent[i]);
     }
@@ -3008,7 +3005,7 @@ static void demo_init_vk_swapchain(struct demo *demo) {
     // families, try to find one that supports both
     uint32_t graphicsQueueFamilyIndex = UINT32_MAX;
     uint32_t presentQueueFamilyIndex = UINT32_MAX;
-    for (i = 0; i < demo->queue_family_count; i++) {
+    for (uint32_t i = 0; i < demo->queue_family_count; i++) {
         if ((demo->queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0) {
             if (graphicsQueueFamilyIndex == UINT32_MAX) {
                 graphicsQueueFamilyIndex = i;
@@ -3025,7 +3022,7 @@ static void demo_init_vk_swapchain(struct demo *demo) {
     if (presentQueueFamilyIndex == UINT32_MAX) {
         // If didn't find a queue that supports both graphics and present, then
         // find a separate present queue.
-        for (i = 0; i < demo->queue_family_count; ++i) {
+        for (uint32_t i = 0; i < demo->queue_family_count; ++i) {
             if (supportsPresent[i] == VK_TRUE) {
                 presentQueueFamilyIndex = i;
                 break;

@@ -101,10 +101,10 @@ class counter {
                             counter_condition.wait(lock);
                         }
                         // There is now no current use of the object.  Record writer thread.
-                        struct object_use_data *use_data = &uses[object];
-                        use_data->thread = tid;
-                        use_data->reader_count = 0;
-                        use_data->writer_count = 1;
+                        struct object_use_data *new_use_data = &uses[object];
+                        new_use_data->thread = tid;
+                        new_use_data->reader_count = 0;
+                        new_use_data->writer_count = 1;
                     } else {
                         // Continue with an unsafe use of the object.
                         use_data->thread = tid;
@@ -128,10 +128,10 @@ class counter {
                             counter_condition.wait(lock);
                         }
                         // There is now no current use of the object.  Record writer thread.
-                        struct object_use_data *use_data = &uses[object];
-                        use_data->thread = tid;
-                        use_data->reader_count = 0;
-                        use_data->writer_count = 1;
+                        struct object_use_data *new_use_data = &uses[object];
+                        new_use_data->thread = tid;
+                        new_use_data->reader_count = 0;
+                        new_use_data->writer_count = 1;
                     } else {
                         // Continue with an unsafe use of the object.
                         use_data->thread = tid;

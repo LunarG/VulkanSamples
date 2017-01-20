@@ -1395,10 +1395,10 @@ static void ConsoleEnlarge() {
 #endif
 
 int main(int argc, char **argv) {
-    unsigned int major, minor, patch;
+    uint32_t vulkan_major, vulkan_minor, vulkan_patch;
     struct AppGpu *gpus;
     VkPhysicalDevice *objs;
-    uint32_t gpu_count, i;
+    uint32_t gpu_count;
     VkResult err;
     struct AppInstance inst;
 
@@ -1406,14 +1406,14 @@ int main(int argc, char **argv) {
     if (ConsoleIsExclusive()) ConsoleEnlarge();
 #endif
 
-    major = VK_VERSION_MAJOR(VK_API_VERSION_1_0);
-    minor = VK_VERSION_MINOR(VK_API_VERSION_1_0);
-    patch = VK_VERSION_PATCH(VK_HEADER_VERSION);
+    vulkan_major = VK_VERSION_MAJOR(VK_API_VERSION_1_0);
+    vulkan_minor = VK_VERSION_MINOR(VK_API_VERSION_1_0);
+    vulkan_patch = VK_VERSION_PATCH(VK_HEADER_VERSION);
 
     printf("===========\n");
     printf("VULKAN INFO\n");
     printf("===========\n\n");
-    printf("Vulkan API Version: %d.%d.%d\n\n", major, minor, patch);
+    printf("Vulkan API Version: %d.%d.%d\n\n", vulkan_major, vulkan_minor, vulkan_patch);
 
     AppCreateInstance(&inst);
 
@@ -1430,7 +1430,7 @@ int main(int argc, char **argv) {
 
     gpus = malloc(sizeof(gpus[0]) * gpu_count);
     if (!gpus) ERR_EXIT(VK_ERROR_OUT_OF_HOST_MEMORY);
-    for (i = 0; i < gpu_count; i++) {
+    for (uint32_t i = 0; i < gpu_count; i++) {
         AppGpuInit(&gpus[i], i, objs[i]);
         printf("\n\n");
     }
@@ -1439,12 +1439,12 @@ int main(int argc, char **argv) {
     printf("Layers: count = %d\n", inst.global_layer_count);
     printf("=======\n");
     for (uint32_t i = 0; i < inst.global_layer_count; i++) {
-        uint32_t major, minor, patch;
+        uint32_t layer_major, layer_minor, layer_patch;
         char spec_version[64], layer_version[64];
         VkLayerProperties const *layer_prop = &inst.global_layers[i].layer_properties;
 
-        ExtractVersion(layer_prop->specVersion, &major, &minor, &patch);
-        snprintf(spec_version, sizeof(spec_version), "%d.%d.%d", major, minor, patch);
+        ExtractVersion(layer_prop->specVersion, &layer_major, &layer_minor, &layer_patch);
+        snprintf(spec_version, sizeof(spec_version), "%d.%d.%d", layer_major, layer_minor, layer_patch);
         snprintf(layer_version, sizeof(layer_version), "%d", layer_prop->implementationVersion);
         printf("%s (%s) Vulkan version %s, layer version %s\n", layer_prop->layerName, (char *)layer_prop->description,
                spec_version, layer_version);
@@ -1484,7 +1484,7 @@ int main(int argc, char **argv) {
 #ifdef VK_USE_PLATFORM_WIN32_KHR
     if (HasExtension(VK_KHR_WIN32_SURFACE_EXTENSION_NAME, inst.global_extension_count, inst.global_extensions)) {
         AppCreateWin32Window(&inst);
-        for (i = 0; i < gpu_count; i++) {
+        for (uint32_t i = 0; i < gpu_count; i++) {
             AppCreateWin32Surface(&inst);
             printf("GPU id       : %u (%s)\n", i, gpus[i].props.deviceName);
             printf("Surface type : %s\n", VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
@@ -1498,7 +1498,7 @@ int main(int argc, char **argv) {
 #elif VK_USE_PLATFORM_XCB_KHR
     if (HasExtension(VK_KHR_XCB_SURFACE_EXTENSION_NAME, inst.global_extension_count, inst.global_extensions)) {
         AppCreateXcbWindow(&inst);
-        for (i = 0; i < gpu_count; i++) {
+        for (uint32_t i = 0; i < gpu_count; i++) {
             AppCreateXcbSurface(&inst);
             printf("GPU id       : %u (%s)\n", i, gpus[i].props.deviceName);
             printf("Surface type : %s\n", VK_KHR_XCB_SURFACE_EXTENSION_NAME);
@@ -1512,7 +1512,7 @@ int main(int argc, char **argv) {
 #elif VK_USE_PLATFORM_XLIB_KHR
     if (HasExtension(VK_KHR_XLIB_SURFACE_EXTENSION_NAME, inst.global_extension_count, inst.global_extensions)) {
         AppCreateXlibWindow(&inst);
-        for (i = 0; i < gpu_count; i++) {
+        for (uint32_t i = 0; i < gpu_count; i++) {
             AppCreateXlibSurface(&inst);
             printf("GPU id       : %u (%s)\n", i, gpus[i].props.deviceName);
             printf("Surface type : %s\n", VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
@@ -1527,12 +1527,12 @@ int main(int argc, char **argv) {
     if (!format_count && !present_mode_count) printf("None found\n");
     //---------
 
-    for (i = 0; i < gpu_count; i++) {
+    for (uint32_t i = 0; i < gpu_count; i++) {
         AppGpuDump(&gpus[i]);
         printf("\n\n");
     }
 
-    for (i = 0; i < gpu_count; i++) AppGpuDestroy(&gpus[i]);
+    for (uint32_t i = 0; i < gpu_count; i++) AppGpuDestroy(&gpus[i]);
     free(gpus);
     free(objs);
 

@@ -4858,7 +4858,6 @@ VkResult setupLoaderTermPhysDevs(struct loader_instance *inst) {
     struct loader_icd_term *icd_term;
     struct loader_phys_dev_per_icd *icd_phys_dev_array = NULL;
     struct loader_physical_device_term **new_phys_devs = NULL;
-    uint32_t i = 0;
 
     inst->total_gpu_count = 0;
 
@@ -4879,38 +4878,35 @@ VkResult setupLoaderTermPhysDevs(struct loader_instance *inst) {
 
     // For each ICD, query the number of physical devices, and then get an
     // internal value for those physical devices.
-    while (NULL != icd_term) {
-        res = icd_term->EnumeratePhysicalDevices(icd_term->instance, &icd_phys_dev_array[i].count, NULL);
+    for (uint32_t icd_idx = 0; NULL != icd_term; icd_term = icd_term->next, icd_idx++) {
+        res = icd_term->EnumeratePhysicalDevices(icd_term->instance, &icd_phys_dev_array[icd_idx].count, NULL);
         if (VK_SUCCESS != res) {
             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                        "setupLoaderTermPhysDevs:  Call to "
                        "ICD %d's \'vkEnumeratePhysicalDevices\' failed with"
                        " error 0x%08x",
-                       i, res);
+                       icd_idx, res);
             goto out;
         }
 
-        icd_phys_dev_array[i].phys_devs =
-            (VkPhysicalDevice *)loader_stack_alloc(icd_phys_dev_array[i].count * sizeof(VkPhysicalDevice));
-        if (NULL == icd_phys_dev_array[i].phys_devs) {
+        icd_phys_dev_array[icd_idx].phys_devs =
+            (VkPhysicalDevice *)loader_stack_alloc(icd_phys_dev_array[icd_idx].count * sizeof(VkPhysicalDevice));
+        if (NULL == icd_phys_dev_array[icd_idx].phys_devs) {
             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                        "setupLoaderTermPhysDevs:  Failed to allocate temporary "
                        "ICD Physical device array for ICD %d of size %d",
-                       i, inst->total_gpu_count);
+                       icd_idx, inst->total_gpu_count);
             res = VK_ERROR_OUT_OF_HOST_MEMORY;
             goto out;
         }
 
-        res =
-            icd_term->EnumeratePhysicalDevices(icd_term->instance, &(icd_phys_dev_array[i].count), icd_phys_dev_array[i].phys_devs);
+        res = icd_term->EnumeratePhysicalDevices(icd_term->instance, &(icd_phys_dev_array[icd_idx].count),
+                                                 icd_phys_dev_array[icd_idx].phys_devs);
         if (VK_SUCCESS != res) {
             goto out;
         }
-        inst->total_gpu_count += icd_phys_dev_array[i].count;
-        icd_phys_dev_array[i].this_icd_term = icd_term;
-
-        icd_term = icd_term->next;
-        i++;
+        inst->total_gpu_count += icd_phys_dev_array[icd_idx].count;
+        icd_phys_dev_array[icd_idx].this_icd_term = icd_term;
     }
 
     if (0 == inst->total_gpu_count) {

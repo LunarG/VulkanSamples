@@ -479,16 +479,16 @@ struct Demo {
             // present queue before presenting, waiting for the draw complete
             // semaphore and signalling the ownership released semaphore when
             // finished
-            auto const submit_info = vk::SubmitInfo()
-                                         .setPWaitDstStageMask(&pipe_stage_flags)
-                                         .setWaitSemaphoreCount(1)
-                                         .setPWaitSemaphores(&draw_complete_semaphores[frame_index])
-                                         .setCommandBufferCount(1)
-                                         .setPCommandBuffers(&buffers[current_buffer].graphics_to_present_cmd)
-                                         .setSignalSemaphoreCount(1)
-                                         .setPSignalSemaphores(&image_ownership_semaphores[frame_index]);
+            auto const present_submit_info = vk::SubmitInfo()
+                                                 .setPWaitDstStageMask(&pipe_stage_flags)
+                                                 .setWaitSemaphoreCount(1)
+                                                 .setPWaitSemaphores(&draw_complete_semaphores[frame_index])
+                                                 .setCommandBufferCount(1)
+                                                 .setPCommandBuffers(&buffers[current_buffer].graphics_to_present_cmd)
+                                                 .setSignalSemaphoreCount(1)
+                                                 .setPSignalSemaphores(&image_ownership_semaphores[frame_index]);
 
-            result = present_queue.submit(1, &submit_info, vk::Fence());
+            result = present_queue.submit(1, &present_submit_info, vk::Fence());
             VERIFY(result == vk::Result::eSuccess);
         }
 
@@ -1153,18 +1153,18 @@ struct Demo {
         }
 
         if (separate_present_queue) {
-            auto const cmd_pool_info = vk::CommandPoolCreateInfo().setQueueFamilyIndex(present_queue_family_index);
+            auto const present_cmd_pool_info = vk::CommandPoolCreateInfo().setQueueFamilyIndex(present_queue_family_index);
 
-            result = device.createCommandPool(&cmd_pool_info, nullptr, &present_cmd_pool);
+            result = device.createCommandPool(&present_cmd_pool_info, nullptr, &present_cmd_pool);
             VERIFY(result == vk::Result::eSuccess);
 
-            auto const cmd = vk::CommandBufferAllocateInfo()
-                                 .setCommandPool(present_cmd_pool)
-                                 .setLevel(vk::CommandBufferLevel::ePrimary)
-                                 .setCommandBufferCount(1);
+            auto const present_cmd = vk::CommandBufferAllocateInfo()
+                                         .setCommandPool(present_cmd_pool)
+                                         .setLevel(vk::CommandBufferLevel::ePrimary)
+                                         .setCommandBufferCount(1);
 
             for (uint32_t i = 0; i < swapchainImageCount; i++) {
-                result = device.allocateCommandBuffers(&cmd, &buffers[i].graphics_to_present_cmd);
+                result = device.allocateCommandBuffers(&present_cmd, &buffers[i].graphics_to_present_cmd);
                 VERIFY(result == vk::Result::eSuccess);
 
                 build_image_ownership_cmd(i);
