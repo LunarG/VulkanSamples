@@ -6931,8 +6931,29 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState) {
     rs_state_ci.cullMode = VK_CULL_MODE_BACK_BIT;
     rs_state_ci.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rs_state_ci.depthClampEnable = VK_FALSE;
-    rs_state_ci.rasterizerDiscardEnable = VK_FALSE;
+    rs_state_ci.rasterizerDiscardEnable = VK_TRUE;
     rs_state_ci.depthBiasEnable = VK_FALSE;
+    rs_state_ci.lineWidth = 1.0f;
+
+    VkPipelineVertexInputStateCreateInfo vi_ci = {};
+    vi_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vi_ci.pNext = nullptr;
+    vi_ci.vertexBindingDescriptionCount = 0;
+    vi_ci.pVertexBindingDescriptions = nullptr;
+    vi_ci.vertexAttributeDescriptionCount = 0;
+    vi_ci.pVertexAttributeDescriptions = nullptr;
+
+    VkPipelineInputAssemblyStateCreateInfo ia_ci = {};
+    ia_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    ia_ci.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+
+    VkPipelineShaderStageCreateInfo shaderStages[2];
+    memset(&shaderStages, 0, 2 * sizeof(VkPipelineShaderStageCreateInfo));
+
+    VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+    shaderStages[0] = fs.GetStageCreateInfo(); // should be: vs.GetStageCreateInfo();
+    shaderStages[1] = fs.GetStageCreateInfo();
 
     VkGraphicsPipelineCreateInfo gp_ci = {};
     gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -6941,6 +6962,11 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState) {
     gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
     gp_ci.layout = pipeline_layout;
     gp_ci.renderPass = renderPass();
+    gp_ci.pVertexInputState = &vi_ci;
+    gp_ci.pInputAssemblyState = &ia_ci;
+
+    gp_ci.stageCount = 1;
+    gp_ci.pStages = shaderStages;
 
     VkPipelineCacheCreateInfo pc_ci = {};
     pc_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
@@ -6953,7 +6979,6 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState) {
     err = vkCreatePipelineCache(m_device->device(), &pc_ci, NULL, &pipelineCache);
     ASSERT_VK_SUCCESS(err);
     err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, NULL, &pipeline);
-
     m_errorMonitor->VerifyFound();
 
     vkDestroyPipelineCache(m_device->device(), pipelineCache, NULL);
@@ -6961,6 +6986,7 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState) {
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
+
 /*// TODO : This test should be good, but needs Tess support in compiler to run
 TEST_F(VkLayerTest, InvalidPatchControlPoints)
 {
