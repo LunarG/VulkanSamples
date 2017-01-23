@@ -2551,6 +2551,83 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateI
                             "VK_IMAGE_CREATE_SPARSE_ALIASED_BIT, it must also contain VK_IMAGE_CREATE_SPARSE_BINDING_BIT. %s",
                             validation_error_map[VALIDATION_ERROR_02160]);
         }
+
+        // Check for combinations of attributes that are incompatible with having VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT set
+        if ((pCreateInfo->flags & VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT) != 0) {
+            // Linear tiling is unsupported
+            if (VK_IMAGE_TILING_LINEAR == pCreateInfo->tiling) {
+                skip |=
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, INVALID_USAGE,
+                            LayerName, "vkCreateImage: if pCreateInfo->flags contains VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT "
+                                       "then image tiling of VK_IMAGE_TILING_LINEAR is not supported");
+            }
+
+            // Sparse 1D image isn't valid
+            if (VK_IMAGE_TYPE_1D == pCreateInfo->imageType) {
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                    VALIDATION_ERROR_02352, LayerName,
+                    "vkCreateImage: cannot specify VK_IMAGE_CREATE_SPARSE_BINDING_BIT for 1D image. %s",
+                    validation_error_map[VALIDATION_ERROR_02352]);
+            }
+
+
+            // Sparse 2D image when device doesn't support it
+            if ((VK_FALSE == device_data->physical_device_features.sparseResidencyImage2D) &&
+                (VK_IMAGE_TYPE_2D == pCreateInfo->imageType)) {
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                                VALIDATION_ERROR_02144, LayerName,
+                                "vkCreateImage: cannot specify VK_IMAGE_CREATE_SPARSE_BINDING_BIT for 2D image if corresponding "
+                                "feature is not enabled on the device. %s",
+                                validation_error_map[VALIDATION_ERROR_02144]);
+            }
+
+            // Sparse 3D image when device doesn't support it
+            if ((VK_FALSE == device_data->physical_device_features.sparseResidencyImage3D) &&
+                (VK_IMAGE_TYPE_3D == pCreateInfo->imageType)) {
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                                VALIDATION_ERROR_02145, LayerName,
+                                "vkCreateImage: cannot specify VK_IMAGE_CREATE_SPARSE_BINDING_BIT for 3D image if corresponding "
+                                "feature is not enabled on the device. %s",
+                                validation_error_map[VALIDATION_ERROR_02145]);
+            }
+
+            // Multi-sample 2D image when device doesn't support it
+            if (VK_IMAGE_TYPE_2D == pCreateInfo->imageType) {
+                if ((VK_FALSE == device_data->physical_device_features.sparseResidency2Samples) &&
+                    (VK_SAMPLE_COUNT_2_BIT == pCreateInfo->samples)) {
+                    skip |= log_msg(
+                        report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                        VALIDATION_ERROR_02146, LayerName,
+                        "vkCreateImage: cannot specify VK_IMAGE_CREATE_SPARSE_BINDING_BIT for 2-sample image if corresponding "
+                        "feature is not enabled on the device. %s",
+                        validation_error_map[VALIDATION_ERROR_02146]);
+                } else if ((VK_FALSE == device_data->physical_device_features.sparseResidency4Samples) &&
+                           (VK_SAMPLE_COUNT_4_BIT == pCreateInfo->samples)) {
+                    skip |= log_msg(
+                        report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                        VALIDATION_ERROR_02147, LayerName,
+                        "vkCreateImage: cannot specify VK_IMAGE_CREATE_SPARSE_BINDING_BIT for 4-sample image if corresponding "
+                        "feature is not enabled on the device. %s",
+                        validation_error_map[VALIDATION_ERROR_02147]);
+                } else if ((VK_FALSE == device_data->physical_device_features.sparseResidency8Samples) &&
+                           (VK_SAMPLE_COUNT_8_BIT == pCreateInfo->samples)) {
+                    skip |= log_msg(
+                        report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                        VALIDATION_ERROR_02148, LayerName,
+                        "vkCreateImage: cannot specify VK_IMAGE_CREATE_SPARSE_BINDING_BIT for 8-sample image if corresponding "
+                        "feature is not enabled on the device. %s",
+                        validation_error_map[VALIDATION_ERROR_02148]);
+                } else if ((VK_FALSE == device_data->physical_device_features.sparseResidency16Samples) &&
+                           (VK_SAMPLE_COUNT_16_BIT == pCreateInfo->samples)) {
+                    skip |= log_msg(
+                        report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                        VALIDATION_ERROR_02149, LayerName,
+                        "vkCreateImage: cannot specify VK_IMAGE_CREATE_SPARSE_BINDING_BIT for 16-sample image if corresponding "
+                        "feature is not enabled on the device. %s",
+                        validation_error_map[VALIDATION_ERROR_02149]);
+                }
+            }
+        }
     }
 
     if (!skip) {
