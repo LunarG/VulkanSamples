@@ -97,13 +97,13 @@ if (WIN32)
     )
     add_library(VkLayer_${target} SHARED ${ARGN} VkLayer_${target}.def)
     target_link_Libraries(VkLayer_${target} VkLayer_utils)
-    add_dependencies(VkLayer_${target} generate_dispatch_table_helper generate_vk_helper_files VkLayer_utils)
+    add_dependencies(VkLayer_${target} generate_helper_files VkLayer_utils)
     endmacro()
 else()
     macro(add_vk_layer target)
     add_library(VkLayer_${target} SHARED ${ARGN})
     target_link_Libraries(VkLayer_${target} VkLayer_utils)
-    add_dependencies(VkLayer_${target} generate_dispatch_table_helper generate_vk_helper_files VkLayer_utils)
+    add_dependencies(VkLayer_${target} generate_helper_files VkLayer_utils)
     set_target_properties(VkLayer_${target} PROPERTIES LINK_FLAGS "-Wl,-Bsymbolic,--exclude-libs,ALL")
     install(TARGETS VkLayer_${target} DESTINATION ${CMAKE_INSTALL_LIBDIR})
     endmacro()
@@ -114,6 +114,7 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/../loader
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/vulkan
     ${CMAKE_CURRENT_BINARY_DIR}
+    ${CMAKE_BINARY_DIR}
 )
 
 if (WIN32)
@@ -126,27 +127,9 @@ else()
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wpointer-arith -Wno-unused-function -Wno-sign-compare")
 endif()
 
-add_custom_target(generate_vk_helper_files DEPENDS
-    vk_enum_string_helper.h
-    vk_struct_size_helper.h
-    vk_struct_size_helper.c
-    vk_safe_struct.h
-    vk_safe_struct.cpp
-)
-
-add_custom_target(generate_dispatch_table_helper DEPENDS
-    vk_dispatch_table_helper.h
-)
-
-run_vk_xml_generate(helper_file_generator.py vk_safe_struct.h)
-run_vk_xml_generate(helper_file_generator.py vk_safe_struct.cpp)
-run_vk_xml_generate(helper_file_generator.py vk_struct_size_helper.h)
-run_vk_xml_generate(helper_file_generator.py vk_struct_size_helper.c)
-run_vk_xml_generate(helper_file_generator.py vk_enum_string_helper.h)
 run_vk_xml_generate(threading_generator.py thread_check.h)
 run_vk_xml_generate(parameter_validation_generator.py parameter_validation.h)
 run_vk_xml_generate(unique_objects_generator.py unique_objects_wrappers.h)
-run_vk_xml_generate(dispatch_table_generator.py vk_dispatch_table_helper.h)
 
 # Layer Utils Library
 # For Windows, we use a static lib because the Windows loader has a fairly restrictive loader search
