@@ -6459,20 +6459,6 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility) {
     ASSERT_NO_FATAL_FAILURE(InitViewport());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
-    const VkFormat tex_format = VK_FORMAT_R8G8B8A8_UNORM;
-    VkImageTiling tiling;
-    VkFormatProperties format_properties;
-    vkGetPhysicalDeviceFormatProperties(gpu(), tex_format, &format_properties);
-    if (format_properties.linearTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT) {
-        tiling = VK_IMAGE_TILING_LINEAR;
-    } else if (format_properties.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT) {
-        tiling = VK_IMAGE_TILING_OPTIMAL;
-    } else {
-        printf("Device does not support VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT; "
-               "skipped.\n");
-        return;
-    }
-
     static const uint32_t NUM_DESCRIPTOR_TYPES = 5;
     VkDescriptorPoolSize ds_type_count[NUM_DESCRIPTOR_TYPES] = {};
     ds_type_count[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -6608,109 +6594,6 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility) {
     err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipe_layout_bad_set0);
     ASSERT_VK_SUCCESS(err);
 
-    // Create a buffer to update the descriptor with
-    uint32_t qfi = 0;
-    VkBufferCreateInfo buffCI = {};
-    buffCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    buffCI.size = 1024;
-    buffCI.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-    buffCI.queueFamilyIndexCount = 1;
-    buffCI.pQueueFamilyIndices = &qfi;
-
-    VkBuffer dyub;
-    err = vkCreateBuffer(m_device->device(), &buffCI, NULL, &dyub);
-    ASSERT_VK_SUCCESS(err);
-    // Correctly update descriptor to avoid "NOT_UPDATED" error
-    static const uint32_t NUM_BUFFS = 5;
-    VkDescriptorBufferInfo buffInfo[NUM_BUFFS] = {};
-    for (uint32_t i = 0; i < NUM_BUFFS; ++i) {
-        buffInfo[i].buffer = dyub;
-        buffInfo[i].offset = 0;
-        buffInfo[i].range = 1024;
-    }
-    VkImage image;
-    const int32_t tex_width = 32;
-    const int32_t tex_height = 32;
-    VkImageCreateInfo image_create_info = {};
-    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    image_create_info.pNext = NULL;
-    image_create_info.imageType = VK_IMAGE_TYPE_2D;
-    image_create_info.format = tex_format;
-    image_create_info.extent.width = tex_width;
-    image_create_info.extent.height = tex_height;
-    image_create_info.extent.depth = 1;
-    image_create_info.mipLevels = 1;
-    image_create_info.arrayLayers = 1;
-    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
-    image_create_info.tiling = tiling;
-    image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
-    image_create_info.flags = 0;
-    err = vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
-    ASSERT_VK_SUCCESS(err);
-
-    VkMemoryRequirements memReqs;
-    VkDeviceMemory imageMem;
-    bool pass;
-    VkMemoryAllocateInfo memAlloc = {};
-    memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    memAlloc.pNext = NULL;
-    memAlloc.allocationSize = 0;
-    memAlloc.memoryTypeIndex = 0;
-    vkGetImageMemoryRequirements(m_device->device(), image, &memReqs);
-    memAlloc.allocationSize = memReqs.size;
-    pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
-    ASSERT_TRUE(pass);
-    err = vkAllocateMemory(m_device->device(), &memAlloc, NULL, &imageMem);
-    ASSERT_VK_SUCCESS(err);
-    err = vkBindImageMemory(m_device->device(), image, imageMem, 0);
-    ASSERT_VK_SUCCESS(err);
-
-    VkImageViewCreateInfo image_view_create_info = {};
-    image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    image_view_create_info.image = image;
-    image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    image_view_create_info.format = tex_format;
-    image_view_create_info.subresourceRange.layerCount = 1;
-    image_view_create_info.subresourceRange.baseMipLevel = 0;
-    image_view_create_info.subresourceRange.levelCount = 1;
-    image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-
-    VkImageView view;
-    err = vkCreateImageView(m_device->device(), &image_view_create_info, NULL, &view);
-    ASSERT_VK_SUCCESS(err);
-    VkDescriptorImageInfo imageInfo[4] = {};
-    imageInfo[0].imageView = view;
-    imageInfo[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    imageInfo[1].imageView = view;
-    imageInfo[1].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    imageInfo[2].imageView = view;
-    imageInfo[2].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-    imageInfo[3].imageView = view;
-    imageInfo[3].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-
-    static const uint32_t NUM_SET_UPDATES = 3;
-    VkWriteDescriptorSet descriptor_write[NUM_SET_UPDATES] = {};
-    descriptor_write[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptor_write[0].dstSet = descriptorSet[0];
-    descriptor_write[0].dstBinding = 0;
-    descriptor_write[0].descriptorCount = 5;
-    descriptor_write[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    descriptor_write[0].pBufferInfo = buffInfo;
-    descriptor_write[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptor_write[1].dstSet = descriptorSet[1];
-    descriptor_write[1].dstBinding = 0;
-    descriptor_write[1].descriptorCount = 2;
-    descriptor_write[1].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-    descriptor_write[1].pImageInfo = imageInfo;
-    descriptor_write[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptor_write[2].dstSet = descriptorSet[1];
-    descriptor_write[2].dstBinding = 1;
-    descriptor_write[2].descriptorCount = 2;
-    descriptor_write[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    descriptor_write[2].pImageInfo = &imageInfo[2];
-
-    vkUpdateDescriptorSets(m_device->device(), 3, descriptor_write, 0, NULL);
-
     // Create PSO to be used for draw-time errors below
     char const *vsSource = "#version 450\n"
                            "\n"
@@ -6840,12 +6723,8 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility) {
         vkDestroyDescriptorSetLayout(m_device->device(), ds_layout[i], NULL);
     }
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout_fs_only, NULL);
-    vkDestroyBuffer(m_device->device(), dyub, NULL);
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
-    vkFreeMemory(m_device->device(), imageMem, NULL);
-    vkDestroyImage(m_device->device(), image, NULL);
-    vkDestroyImageView(m_device->device(), view, NULL);
 }
 
 TEST_F(VkLayerTest, NoBeginCommandBuffer) {
