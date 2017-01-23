@@ -26,13 +26,6 @@ else()
     message(FATAL_ERROR "Unsupported Platform!")
 endif()
 
-macro(run_vk_xml_generate dependency output)
-    add_custom_command(OUTPUT ${output}
-        COMMAND ${PYTHON_CMD} ${SCRIPTS_DIR}/lvl_genvk.py -registry ${SCRIPTS_DIR}/vk.xml ${output}
-        DEPENDS ${SCRIPTS_DIR}/vk.xml ${SCRIPTS_DIR}/generator.py ${SCRIPTS_DIR}/${dependency} ${SCRIPTS_DIR}/lvl_genvk.py ${SCRIPTS_DIR}/reg.py
-    )
-endmacro()
-
 set(LAYER_JSON_FILES
     VkLayer_core_validation
     VkLayer_image

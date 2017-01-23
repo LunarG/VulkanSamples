@@ -252,6 +252,14 @@ endif()
 
 set (PYTHON_CMD ${PYTHON_EXECUTABLE})
 
+# Define macros used across all subdirectories
+macro(run_vk_xml_generate dependency output)
+    add_custom_command(OUTPUT ${output}
+    COMMAND ${PYTHON_CMD} ${SCRIPTS_DIR}/lvl_genvk.py -registry ${SCRIPTS_DIR}/vk.xml ${output}
+    DEPENDS ${SCRIPTS_DIR}/vk.xml ${SCRIPTS_DIR}/generator.py ${SCRIPTS_DIR}/${dependency} ${SCRIPTS_DIR}/lvl_genvk.py ${SCRIPTS_DIR}/reg.py
+    )
+endmacro()
+
 if(NOT WIN32)
     include(GNUInstallDirs)
 
