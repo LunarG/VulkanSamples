@@ -252,13 +252,31 @@ endif()
 
 set (PYTHON_CMD ${PYTHON_EXECUTABLE})
 
-# Define macros used across all subdirectories
+# Define macro used for building vkxml generated files
 macro(run_vk_xml_generate dependency output)
     add_custom_command(OUTPUT ${output}
     COMMAND ${PYTHON_CMD} ${SCRIPTS_DIR}/lvl_genvk.py -registry ${SCRIPTS_DIR}/vk.xml ${output}
     DEPENDS ${SCRIPTS_DIR}/vk.xml ${SCRIPTS_DIR}/generator.py ${SCRIPTS_DIR}/${dependency} ${SCRIPTS_DIR}/lvl_genvk.py ${SCRIPTS_DIR}/reg.py
     )
 endmacro()
+
+# Custom target for generated vulkan helper file dependencies
+add_custom_target(generate_helper_files DEPENDS
+    vk_dispatch_table_helper.h
+    vk_enum_string_helper.h
+    vk_struct_size_helper.h
+    vk_struct_size_helper.c
+    vk_safe_struct.h
+    vk_safe_struct.cpp
+    )
+
+# Rules to build generated helper files
+run_vk_xml_generate(helper_file_generator.py vk_safe_struct.h)
+run_vk_xml_generate(helper_file_generator.py vk_safe_struct.cpp)
+run_vk_xml_generate(helper_file_generator.py vk_struct_size_helper.h)
+run_vk_xml_generate(helper_file_generator.py vk_struct_size_helper.c)
+run_vk_xml_generate(helper_file_generator.py vk_enum_string_helper.h)
+run_vk_xml_generate(dispatch_table_generator.py vk_dispatch_table_helper.h)
 
 if(NOT WIN32)
     include(GNUInstallDirs)
