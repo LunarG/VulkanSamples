@@ -194,6 +194,16 @@ void VkRenderFramework::ShutdownFramework() {
     if (this->inst) vkDestroyInstance(this->inst, NULL);
 }
 
+void VkRenderFramework::GetPhysicalDeviceFeatures(VkPhysicalDeviceFeatures *features) {
+    if (NULL == m_device) {
+        VkDeviceObj *temp_device = new VkDeviceObj(0, objs[0], device_extension_names);
+        *features = temp_device->phy().features();
+        delete (temp_device);
+    } else {
+        *features = m_device->phy().features();
+    }
+}
+
 void VkRenderFramework::InitState(VkPhysicalDeviceFeatures *features) {
     VkResult U_ASSERT_ONLY err;
 
