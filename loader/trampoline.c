@@ -549,7 +549,7 @@ vkEnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysicalDeviceCount,
         goto out;
     }
 
-    if (pPhysicalDevices == NULL) {
+    if (NULL == pPhysicalDevices || 0 == inst->total_gpu_count) {
         // Call down.  At the lower levels, this will setup the terminator
         // structures in the loader.
         res = disp->EnumeratePhysicalDevices(instance, pPhysicalDeviceCount,
@@ -559,7 +559,9 @@ vkEnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysicalDeviceCount,
                         "vkEnumeratePhysicalDevices: Failed in dispatch call"
                         " used to determine number of available GPUs");
         }
+    }
 
+    if (NULL == pPhysicalDevices) {
         // Goto out, even on success since we don't need to fill in the rest.
         goto out;
     }
