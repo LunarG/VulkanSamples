@@ -155,6 +155,10 @@ VkLayerInstanceDispatchTable *initInstanceTable(VkInstance instance, const PFN_v
 
     layer_init_instance_dispatch_table(instance, pTable, gpa);
 
+    // Setup func pointers that are required but not externally exposed.  These won't be added to the instance dispatch table by
+    // default.
+    pTable->GetPhysicalDeviceProcAddr = (PFN_GetPhysicalDeviceProcAddr)gpa(instance, "vk_layerGetPhysicalDeviceProcAddr");
+
     return pTable;
 }
 

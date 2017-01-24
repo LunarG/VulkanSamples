@@ -408,30 +408,29 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
     # Generate source for creating a non-dispatchable object
     def generate_create_ndo_code(self, indent, proto, params, cmd_info):
         create_ndo_code = ''
-        if True in [create_txt in proto.text for create_txt in ['Create', 'Allocate']]:
-            handle_type = params[-1].find('type')
-            if self.isHandleTypeNonDispatchable(handle_type.text):
-                # Check for special case where multiple handles are returned
-                ndo_array = False
-                if cmd_info[-1].len is not None:
-                    ndo_array = True;
-                handle_name = params[-1].find('name')
-                create_ndo_code += '%sif (VK_SUCCESS == result) {\n' % (indent)
+        handle_type = params[-1].find('type')
+        if self.isHandleTypeNonDispatchable(handle_type.text):
+            # Check for special case where multiple handles are returned
+            ndo_array = False
+            if cmd_info[-1].len is not None:
+                ndo_array = True;
+            handle_name = params[-1].find('name')
+            create_ndo_code += '%sif (VK_SUCCESS == result) {\n' % (indent)
+            indent = self.incIndent(indent)
+            create_ndo_code += '%sstd::lock_guard<std::mutex> lock(global_lock);\n' % (indent)
+            ndo_dest = '*%s' % handle_name.text
+            if ndo_array == True:
+                create_ndo_code += '%sfor (uint32_t index0 = 0; index0 < %s; index0++) {\n' % (indent, cmd_info[-1].len)
                 indent = self.incIndent(indent)
-                create_ndo_code += '%sstd::lock_guard<std::mutex> lock(global_lock);\n' % (indent)
-                ndo_dest = '*%s' % handle_name.text
-                if ndo_array == True:
-                    create_ndo_code += '%sfor (uint32_t index0 = 0; index0 < %s; index0++) {\n' % (indent, cmd_info[-1].len)
-                    indent = self.incIndent(indent)
-                    ndo_dest = '%s[index0]' % cmd_info[-1].name
-                create_ndo_code += '%suint64_t unique_id = global_unique_id++;\n' % (indent)
-                create_ndo_code += '%sdev_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t &>(%s);\n' % (indent, ndo_dest)
-                create_ndo_code += '%s%s = reinterpret_cast<%s&>(unique_id);\n' % (indent, ndo_dest, handle_type.text)
-                if ndo_array == True:
-                    indent = self.decIndent(indent)
-                    create_ndo_code += '%s}\n' % indent
+                ndo_dest = '%s[index0]' % cmd_info[-1].name
+            create_ndo_code += '%suint64_t unique_id = global_unique_id++;\n' % (indent)
+            create_ndo_code += '%sdev_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t &>(%s);\n' % (indent, ndo_dest)
+            create_ndo_code += '%s%s = reinterpret_cast<%s&>(unique_id);\n' % (indent, ndo_dest, handle_type.text)
+            if ndo_array == True:
                 indent = self.decIndent(indent)
-                create_ndo_code += '%s}\n' % (indent)
+                create_ndo_code += '%s}\n' % indent
+            indent = self.decIndent(indent)
+            create_ndo_code += '%s}\n' % (indent)
         return create_ndo_code
     #
     # Generate source for destroying a non-dispatchable object
@@ -685,7 +684,7 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
                     islocal = True
 
             isdestroy = True if True in [destroy_txt in cmdname for destroy_txt in ['Destroy', 'Free']] else False
-            iscreate = True if True in [create_txt in cmdname for create_txt in ['Create', 'Allocate']] else False
+            iscreate = True if True in [create_txt in cmdname for create_txt in ['Create', 'Allocate', 'GetRandROutputDisplayEXT', 'RegisterDeviceEvent', 'RegisterDisplayEvent']] else False
 
             membersInfo.append(self.CommandParam(type=type,
                                                  name=name,

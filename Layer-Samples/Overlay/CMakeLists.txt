@@ -82,12 +82,13 @@ else()
 endif()
 
 target_link_libraries(VKLayer_overlay ${LAYER_UTILS_LIB})
-add_dependencies(VKLayer_overlay generate_dispatch_table_helper generate_vk_layer_helpers VkLayer_utils)
+add_dependencies(VKLayer_overlay generate_helper_files VkLayer_utils)
 set_target_properties(VKLayer_overlay PROPERTIES CXX_FLAGS "-Wno-unused-function")
 
 if(SDK_INCLUDE_PATH)
     include_directories(
             "${CMAKE_BINARY_DIR}/layers"
+            "${CMAKE_BINARY_DIR}"
             "${LAYERS_LOC}/layers"
             "${LAYERS_LOC}/loader"
             "${UTILDIR}/stb"
@@ -96,6 +97,7 @@ if(SDK_INCLUDE_PATH)
 else()
     include_directories(
             "${CMAKE_BINARY_DIR}/layers"
+            "${CMAKE_BINARY_DIR}"
             "${LAYERS_LOC}/layers"
             "${LAYERS_LOC}/loader"
             "${UTILDIR}/stb"

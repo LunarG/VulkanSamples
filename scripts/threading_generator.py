@@ -400,8 +400,11 @@ class ThreadOutputGenerator(OutputGenerator):
             self.appendSection('command', decls[0])
             self.intercepts += [ '    {"%s", reinterpret_cast<PFN_vkVoidFunction>(%s)},' % (name,name[2:]) ]
             return
-        if "KHR" in name:
+        if ("KHR" in name) or ("KHX" in name):
             self.appendSection('command', '// TODO - not wrapping KHR function ' + name)
+            return
+        if ("NN" in name):
+            self.appendSection('command', '// TODO - not wrapping NN function ' + name)
             return
         if ("DebugMarker" in name) and ("EXT" in name):
             self.appendSection('command', '// TODO - not wrapping EXT function ' + name)

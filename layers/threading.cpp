@@ -39,6 +39,8 @@
 
 namespace threading {
 
+static uint32_t loader_layer_if_version = CURRENT_LOADER_LAYER_INTERFACE_VERSION;
+
 static void initThreading(layer_data *my_data, const VkAllocationCallbacks *pAllocator) {
 
     layer_debug_actions(my_data->report_data, my_data->logging_callback, pAllocator, "google_threading");
@@ -220,6 +222,9 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumerateDeviceExtensionProperties(VkPhysicalDevi
     return my_data->instance_dispatch_table->EnumerateDeviceExtensionProperties(physicalDevice, NULL, pCount, pProperties);
 }
 
+// Need to prototype this call because it's internal and does not show up in vk.xml
+VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance instance, const char *funcName);
+
 static inline PFN_vkVoidFunction layer_intercept_instance_proc(const char *name) {
     if (!name || name[0] != 'v' || name[1] != 'k')
         return NULL;
@@ -241,6 +246,8 @@ static inline PFN_vkVoidFunction layer_intercept_instance_proc(const char *name)
         return (PFN_vkVoidFunction)CreateDevice;
     if (!strcmp(name, "GetInstanceProcAddr"))
         return (PFN_vkVoidFunction)GetInstanceProcAddr;
+    if (!strcmp(name, "GetPhysicalDeviceProcAddr"))
+        return (PFN_vkVoidFunction)GetPhysicalDeviceProcAddr;
 
     return NULL;
 }
@@ -287,6 +294,18 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance
         return NULL;
     }
     return pTable->GetInstanceProcAddr(instance, funcName);
+}
+
+VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance instance, const char *funcName) {
+    assert(instance);
+
+    layer_data *my_data;
+    my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
+
+    if (pTable->GetPhysicalDeviceProcAddr == NULL)
+        return NULL;
+    return pTable->GetPhysicalDeviceProcAddr(instance, funcName);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL
@@ -445,4 +464,28 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
 
 VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char *funcName) {
     return threading::GetInstanceProcAddr(instance, funcName);
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vk_layerGetPhysicalDeviceProcAddr(VkInstance instance, const char *funcName) {
+    return threading::GetPhysicalDeviceProcAddr(instance, funcName);
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkNegotiateLoaderLayerInterfaceVersion(VkNegotiateLayerInterface *pVersionStruct) {
+    assert(pVersionStruct != NULL);
+    assert(pVersionStruct->sType == LAYER_NEGOTIATE_INTERFACE_STRUCT);
+
+    // Fill in the function pointers if our version is at least capable of having the structure contain them.
+    if (pVersionStruct->loaderLayerInterfaceVersion >= 2) {
+        pVersionStruct->pfnGetInstanceProcAddr = vkGetInstanceProcAddr;
+        pVersionStruct->pfnGetDeviceProcAddr = vkGetDeviceProcAddr;
+        pVersionStruct->pfnGetPhysicalDeviceProcAddr = vk_layerGetPhysicalDeviceProcAddr;
+    }
+
+    if (pVersionStruct->loaderLayerInterfaceVersion < CURRENT_LOADER_LAYER_INTERFACE_VERSION) {
+        threading::loader_layer_if_version = pVersionStruct->loaderLayerInterfaceVersion;
+    } else if (pVersionStruct->loaderLayerInterfaceVersion > CURRENT_LOADER_LAYER_INTERFACE_VERSION) {
+        pVersionStruct->loaderLayerInterfaceVersion = CURRENT_LOADER_LAYER_INTERFACE_VERSION;
+    }
+
+    return VK_SUCCESS;
 }

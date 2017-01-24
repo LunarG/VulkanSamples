@@ -1,8 +1,8 @@
 /*
  *
- * Copyright (c) 2014-2016 The Khronos Group Inc.
- * Copyright (c) 2014-2016 Valve Corporation
- * Copyright (c) 2014-2016 LunarG, Inc.
+ * Copyright (c) 2014-2017 The Khronos Group Inc.
+ * Copyright (c) 2014-2017 Valve Corporation
+ * Copyright (c) 2014-2017 LunarG, Inc.
  * Copyright (C) 2015 Google Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +20,7 @@
  *
  * Author: Jon Ashburn <jon@lunarg.com>
  * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
+ * Author: Mark Young <marky@lunarg.com>
  *
  */
 
@@ -115,11 +116,6 @@ const VkLayerInstanceDispatchTable instance_disp = {
         terminator_GetPhysicalDeviceSurfaceFormatsKHR,
     .GetPhysicalDeviceSurfacePresentModesKHR =
         terminator_GetPhysicalDeviceSurfacePresentModesKHR,
-    .CreateDebugReportCallbackEXT = terminator_CreateDebugReportCallback,
-    .DestroyDebugReportCallbackEXT = terminator_DestroyDebugReportCallback,
-    .DebugReportMessageEXT = terminator_DebugReportMessage,
-    .GetPhysicalDeviceExternalImageFormatPropertiesNV =
-        terminator_GetPhysicalDeviceExternalImageFormatPropertiesNV,
 #ifdef VK_USE_PLATFORM_MIR_KHR
     .CreateMirSurfaceKHR = terminator_CreateMirSurfaceKHR,
     .GetPhysicalDeviceMirPresentationSupportKHR =
@@ -159,6 +155,43 @@ const VkLayerInstanceDispatchTable instance_disp = {
     .GetDisplayPlaneCapabilitiesKHR = terminator_GetDisplayPlaneCapabilitiesKHR,
     .CreateDisplayPlaneSurfaceKHR = terminator_CreateDisplayPlaneSurfaceKHR,
 
+    // KHR_get_physical_device_properties2
+    .GetPhysicalDeviceFeatures2KHR = terminator_GetPhysicalDeviceFeatures2KHR,
+    .GetPhysicalDeviceProperties2KHR =
+        terminator_GetPhysicalDeviceProperties2KHR,
+    .GetPhysicalDeviceFormatProperties2KHR =
+        terminator_GetPhysicalDeviceFormatProperties2KHR,
+    .GetPhysicalDeviceImageFormatProperties2KHR =
+        terminator_GetPhysicalDeviceImageFormatProperties2KHR,
+    .GetPhysicalDeviceQueueFamilyProperties2KHR =
+        terminator_GetPhysicalDeviceQueueFamilyProperties2KHR,
+    .GetPhysicalDeviceMemoryProperties2KHR =
+        terminator_GetPhysicalDeviceMemoryProperties2KHR,
+    .GetPhysicalDeviceSparseImageFormatProperties2KHR =
+        terminator_GetPhysicalDeviceSparseImageFormatProperties2KHR,
+
+#ifdef VK_USE_PLATFORM_XLIB_XRANDR_EXT
+    // EXT_acquire_xlib_display
+    .AcquireXlibDisplayEXT = terminator_AcquireXlibDisplayEXT,
+    .GetRandROutputDisplayEXT = terminator_GetRandROutputDisplayEXT,
+#endif
+
+    // EXT_debug_report
+    .CreateDebugReportCallbackEXT = terminator_CreateDebugReportCallback,
+    .DestroyDebugReportCallbackEXT = terminator_DestroyDebugReportCallback,
+    .DebugReportMessageEXT = terminator_DebugReportMessage,
+
+    // EXT_direct_mode_display
+    .ReleaseDisplayEXT = terminator_ReleaseDisplayEXT,
+
+    // EXT_display_surface_counter
+    .GetPhysicalDeviceSurfaceCapabilities2EXT =
+        terminator_GetPhysicalDeviceSurfaceCapabilities2EXT,
+
+    // NV_external_memory_capabilities
+    .GetPhysicalDeviceExternalImageFormatPropertiesNV =
+        terminator_GetPhysicalDeviceExternalImageFormatPropertiesNV,
+
     // NVX_device_generated_commands
     .GetPhysicalDeviceGeneratedCommandsPropertiesNVX =
         terminator_GetPhysicalDeviceGeneratedCommandsPropertiesNVX,
@@ -187,9 +220,18 @@ static const char *const LOADER_INSTANCE_EXTENSIONS[] = {
 #ifdef VK_USE_PLATFORM_WIN32_KHR
     VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
 #endif
+    VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
+#ifdef VK_USE_PLATFORM_XLIB_XRANDR_EXT
+    VK_EXT_ACQUIRE_XLIB_DISPLAY_EXTENSION_NAME,
+#endif
     VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
-    VK_NV_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME,
+    VK_EXT_DIRECT_MODE_DISPLAY_EXTENSION_NAME,
+    VK_EXT_DISPLAY_SURFACE_COUNTER_EXTENSION_NAME,
     VK_EXT_VALIDATION_FLAGS_EXTENSION_NAME,
+#ifdef VK_USE_PLATFORM_VI_NN
+    VK_NN_VI_SURFACE_EXTENSION_NAME,
+#endif
+    VK_NV_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME,
     NULL};
 
 LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_init);
@@ -844,6 +886,10 @@ static VkResult loader_add_instance_extensions(
     }
 
     ext_props = loader_stack_alloc(count * sizeof(VkExtensionProperties));
+    if (NULL == ext_props) {
+        res = VK_ERROR_OUT_OF_HOST_MEMORY;
+        goto out;
+    }
 
     res = fp_get_props(NULL, &count, ext_props);
     if (res != VK_SUCCESS) {
@@ -1424,9 +1470,9 @@ loader_get_icd_and_device(const VkDevice device,
                  dev = dev->next)
                 // Value comparison of device prevents object wrapping by layers
                 if (loader_get_dispatch(dev->icd_device) ==
-                    loader_get_dispatch(device) ||
+                        loader_get_dispatch(device) ||
                     loader_get_dispatch(dev->chain_device) ==
-                    loader_get_dispatch(device)) {
+                        loader_get_dispatch(device)) {
                     *found_dev = dev;
                     if (NULL != icd_index) {
                         *icd_index = index;
@@ -1568,10 +1614,6 @@ loader_icd_add(struct loader_instance *ptr_inst,
  * the negotiation API is not supported by the ICD
  * @return  bool indicating true if the selected interface version is supported
  *          by the loader, false indicates the version is not supported
- * version 0   doesn't support vk_icdGetInstanceProcAddr nor
- *             vk_icdNegotiateLoaderICDInterfaceVersion
- * version 1   supports vk_icdGetInstanceProcAddr
- * version 2   supports vk_icdNegotiateLoaderICDInterfaceVersion
  */
 bool loader_get_icd_interface_version(
     PFN_vkNegotiateLoaderICDInterfaceVersion fp_negotiate_icd_version,
@@ -1645,6 +1687,7 @@ loader_scanned_icd_add(const struct loader_instance *inst,
     PFN_vkCreateInstance fp_create_inst;
     PFN_vkEnumerateInstanceExtensionProperties fp_get_inst_ext_props;
     PFN_vkGetInstanceProcAddr fp_get_proc_addr;
+    PFN_GetPhysicalDeviceProcAddr fp_get_phys_dev_proc_addr = NULL;
     PFN_vkNegotiateLoaderICDInterfaceVersion fp_negotiate_icd_version;
     struct loader_scanned_icd *new_scanned_icd;
     uint32_t interface_vers;
@@ -1715,8 +1758,9 @@ loader_scanned_icd_add(const struct loader_instance *inst,
         }
     } else {
         // Use newer interface version 1 or later
-        if (interface_vers == 0)
+        if (interface_vers == 0) {
             interface_vers = 1;
+        }
 
         fp_create_inst =
             (PFN_vkCreateInstance)fp_get_proc_addr(NULL, "vkCreateInstance");
@@ -1739,6 +1783,8 @@ loader_scanned_icd_add(const struct loader_instance *inst,
                        filename);
             goto out;
         }
+        fp_get_phys_dev_proc_addr =
+            loader_platform_get_proc_address(handle, "vk_icdGetPhysicalDeviceProcAddr");
     }
 
     // check for enough capacity
@@ -1759,11 +1805,12 @@ loader_scanned_icd_add(const struct loader_instance *inst,
         // double capacity
         icd_tramp_list->capacity *= 2;
     }
-    new_scanned_icd = &(icd_tramp_list->scanned_list[icd_tramp_list->count]);
 
+    new_scanned_icd = &(icd_tramp_list->scanned_list[icd_tramp_list->count]);
     new_scanned_icd->handle = handle;
     new_scanned_icd->api_version = api_version;
     new_scanned_icd->GetInstanceProcAddr = fp_get_proc_addr;
+    new_scanned_icd->GetPhysicalDeviceProcAddr = fp_get_phys_dev_proc_addr;
     new_scanned_icd->EnumerateInstanceExtensionProperties =
         fp_get_inst_ext_props;
     new_scanned_icd->CreateInstance = fp_create_inst;
@@ -1814,10 +1861,6 @@ static bool loader_icd_init_entrys(struct loader_icd_term *icd_term,
     LOOKUP_GIPA(GetPhysicalDeviceQueueFamilyProperties, true);
     LOOKUP_GIPA(EnumerateDeviceExtensionProperties, true);
     LOOKUP_GIPA(GetPhysicalDeviceSparseImageFormatProperties, true);
-    LOOKUP_GIPA(CreateDebugReportCallbackEXT, false);
-    LOOKUP_GIPA(DestroyDebugReportCallbackEXT, false);
-    LOOKUP_GIPA(DebugMarkerSetObjectTagEXT, false);
-    LOOKUP_GIPA(DebugMarkerSetObjectNameEXT, false);
     LOOKUP_GIPA(GetPhysicalDeviceSurfaceSupportKHR, false);
     LOOKUP_GIPA(GetPhysicalDeviceSurfaceCapabilitiesKHR, false);
     LOOKUP_GIPA(GetPhysicalDeviceSurfaceFormatsKHR, false);
@@ -1851,6 +1894,37 @@ static bool loader_icd_init_entrys(struct loader_icd_term *icd_term,
     LOOKUP_GIPA(CreateWaylandSurfaceKHR, false);
     LOOKUP_GIPA(GetPhysicalDeviceWaylandPresentationSupportKHR, false);
 #endif
+    LOOKUP_GIPA(CreateSharedSwapchainsKHR, false);
+
+    // KHR_get_physical_device_properties2
+    LOOKUP_GIPA(GetPhysicalDeviceFeatures2KHR, false);
+    LOOKUP_GIPA(GetPhysicalDeviceProperties2KHR, false);
+    LOOKUP_GIPA(GetPhysicalDeviceFormatProperties2KHR, false);
+    LOOKUP_GIPA(GetPhysicalDeviceImageFormatProperties2KHR, false);
+    LOOKUP_GIPA(GetPhysicalDeviceQueueFamilyProperties2KHR, false);
+    LOOKUP_GIPA(GetPhysicalDeviceMemoryProperties2KHR, false);
+    LOOKUP_GIPA(GetPhysicalDeviceSparseImageFormatProperties2KHR, false);
+    // EXT_debug_marker (items needing a trampoline/terminator)
+    LOOKUP_GIPA(DebugMarkerSetObjectTagEXT, false);
+    LOOKUP_GIPA(DebugMarkerSetObjectNameEXT, false);
+
+#ifdef VK_USE_PLATFORM_XLIB_XRANDR_EXT
+    // EXT_acquire_xlib_display
+    LOOKUP_GIPA(AcquireXlibDisplayEXT, false);
+    LOOKUP_GIPA(GetRandROutputDisplayEXT, false);
+#endif
+
+    // EXT_debug_report
+    LOOKUP_GIPA(CreateDebugReportCallbackEXT, false);
+    LOOKUP_GIPA(DestroyDebugReportCallbackEXT, false);
+    LOOKUP_GIPA(DebugReportMessageEXT, false);
+
+    // EXT_direct_mode_display
+    LOOKUP_GIPA(ReleaseDisplayEXT, false);
+
+    // EXT_display_surface_counter
+    LOOKUP_GIPA(GetPhysicalDeviceSurfaceCapabilities2EXT, false);
+
     // NV_external_memory_capabilities
     LOOKUP_GIPA(GetPhysicalDeviceExternalImageFormatPropertiesNV, false);
     // NVX_device_generated_commands
@@ -2324,10 +2398,20 @@ static void loader_add_layer_property_meta(
     }
 }
 
-static void loader_read_json_layer(
-    const struct loader_instance *inst,
-    struct loader_layer_list *layer_instance_list, cJSON *layer_node,
-    cJSON *item, cJSON *disable_environment, bool is_implicit, char *filename) {
+// This structure is used to store the json file version
+// in a more managable way.
+typedef struct {
+    uint16_t major;
+    uint16_t minor;
+    uint16_t patch;
+} layer_json_version;
+
+static void
+loader_read_json_layer(const struct loader_instance *inst,
+                       struct loader_layer_list *layer_instance_list,
+                       cJSON *layer_node, layer_json_version version,
+                       cJSON *item, cJSON *disable_environment,
+                       bool is_implicit, char *filename) {
     char *temp;
     char *name, *type, *library_path, *api_version;
     char *implementation_version, *description;
@@ -2394,7 +2478,7 @@ static void loader_read_json_layer(
 #undef GET_JSON_ITEM
 #undef GET_JSON_OBJECT
 
-    // add list entry
+    // Add list entry
     struct loader_layer_properties *props = NULL;
     if (!strcmp(type, "DEVICE")) {
         loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
@@ -2429,13 +2513,13 @@ static void loader_read_json_layer(
     char *fullpath = props->lib_name;
     char *rel_base;
     if (loader_platform_is_path(library_path)) {
-        // a relative or absolute path
+        // A relative or absolute path
         char *name_copy = loader_stack_alloc(strlen(filename) + 1);
         strcpy(name_copy, filename);
         rel_base = loader_platform_dirname(name_copy);
         loader_expand_path(library_path, rel_base, MAX_STRING_SIZE, fullpath);
     } else {
-        // a filename which is assumed in a system directory
+        // A filename which is assumed in a system directory
         loader_get_fullpath(library_path, DEFAULT_VK_LAYERS_PATH,
                             MAX_STRING_SIZE, fullpath);
     }
@@ -2489,40 +2573,69 @@ static void loader_read_json_layer(
 
     cJSON *instance_extensions, *device_extensions, *functions,
         *enable_environment;
-    cJSON *entrypoints;
-    char *vkGetInstanceProcAddr, *vkGetDeviceProcAddr, *spec_version;
-    char **entry_array;
-    vkGetInstanceProcAddr = NULL;
-    vkGetDeviceProcAddr = NULL;
-    spec_version = NULL;
+    cJSON *entrypoints = NULL;
+    char *vkGetInstanceProcAddr = NULL;
+    char *vkGetDeviceProcAddr = NULL;
+    char *vkNegotiateLoaderLayerInterfaceVersion = NULL;
+    char *spec_version = NULL;
+    char **entry_array = NULL;
     entrypoints = NULL;
-    entry_array = NULL;
     int i, j;
 
-    /**
-    * functions
-    *     vkGetInstanceProcAddr
-    *     vkGetDeviceProcAddr
-    */
+    // Layer interface functions
+    //    vkGetInstanceProcAddr
+    //    vkGetDeviceProcAddr
+    //    vkNegotiateLoaderLayerInterfaceVersion (starting with JSON file 1.1.0)
     GET_JSON_OBJECT(layer_node, functions)
     if (functions != NULL) {
+        if (version.major > 1 || version.minor >= 1) {
+            GET_JSON_ITEM(functions, vkNegotiateLoaderLayerInterfaceVersion)
+            if (vkNegotiateLoaderLayerInterfaceVersion != NULL)
+                strncpy(props->functions.str_negotiate_interface,
+                        vkNegotiateLoaderLayerInterfaceVersion,
+                        sizeof(props->functions.str_negotiate_interface));
+            props->functions.str_negotiate_interface
+                [sizeof(props->functions.str_negotiate_interface) - 1] = '\0';
+        } else {
+            props->functions.str_negotiate_interface[0] = '\0';
+        }
         GET_JSON_ITEM(functions, vkGetInstanceProcAddr)
         GET_JSON_ITEM(functions, vkGetDeviceProcAddr)
-        if (vkGetInstanceProcAddr != NULL)
+        if (vkGetInstanceProcAddr != NULL) {
             strncpy(props->functions.str_gipa, vkGetInstanceProcAddr,
                     sizeof(props->functions.str_gipa));
+            if (version.major > 1 || version.minor >= 1) {
+                loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                           "Indicating layer-specific vkGetInstanceProcAddr "
+                           "function is deprecated starting with JSON file "
+                           "version 1.1.0.  Instead, use the new "
+                           "vkNegotiateLayerInterfaceVersion function to "
+                           "return the GetInstanceProcAddr function for this"
+                           "layer");
+            }
+        }
         props->functions.str_gipa[sizeof(props->functions.str_gipa) - 1] = '\0';
-        if (vkGetDeviceProcAddr != NULL)
+        if (vkGetDeviceProcAddr != NULL) {
             strncpy(props->functions.str_gdpa, vkGetDeviceProcAddr,
                     sizeof(props->functions.str_gdpa));
+            if (version.major > 1 || version.minor >= 1) {
+                loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                           "Indicating layer-specific vkGetDeviceProcAddr "
+                           "function is deprecated starting with JSON file "
+                           "version 1.1.0.  Instead, use the new "
+                           "vkNegotiateLayerInterfaceVersion function to "
+                           "return the GetDeviceProcAddr function for this"
+                           "layer");
+            }
+        }
         props->functions.str_gdpa[sizeof(props->functions.str_gdpa) - 1] = '\0';
     }
-    /**
-    * instance_extensions
-    * array of
-    *     name
-    *     spec_version
-    */
+
+    // instance_extensions
+    //   array of {
+    //     name
+    //     spec_version
+    //   }
     GET_JSON_OBJECT(layer_node, instance_extensions)
     if (instance_extensions != NULL) {
         int count = cJSON_GetArraySize(instance_extensions);
@@ -2549,13 +2662,13 @@ static void loader_read_json_layer(
             }
         }
     }
-    /**
-    * device_extensions
-    * array of
-    *     name
-    *     spec_version
-    *     entrypoints
-    */
+
+    // device_extensions
+    //   array of {
+    //     name
+    //     spec_version
+    //     entrypoints
+    //   }
     GET_JSON_OBJECT(layer_node, device_extensions)
     if (device_extensions != NULL) {
         int count = cJSON_GetArraySize(device_extensions);
@@ -2626,6 +2739,23 @@ static void loader_read_json_layer(
 #undef GET_JSON_OBJECT
 }
 
+static inline bool is_valid_layer_json_version(const layer_json_version *layer_json) {
+    // Supported versions are: 1.0.0, 1.0.1, and 1.1.0.
+    if ((layer_json->major == 1 && layer_json->minor == 1 && layer_json->patch == 0) ||
+        (layer_json->major == 1 && layer_json->minor == 0 && layer_json->patch < 2)) {
+        return true;
+    }
+    return false;
+}
+
+static inline bool layer_json_supports_layers_tag(const layer_json_version *layer_json) {
+    // Supported versions started in 1.0.1, so anything newer
+    if ((layer_json->major > 1 || layer_json->minor > 0 || layer_json->patch > 1)) {
+        return true;
+    }
+    return false;
+}
+
 /**
  * Given a cJSON struct (json) of the top level JSON object from layer manifest
  * file, add entry to the layer_list. Fill out the layer_properties in this list
@@ -2641,19 +2771,13 @@ static void
 loader_add_layer_properties(const struct loader_instance *inst,
                             struct loader_layer_list *layer_instance_list,
                             cJSON *json, bool is_implicit, char *filename) {
-    /* Fields in layer manifest file that are required:
-     * (required) “file_format_version”
-     *
-     * If more than one "layer" object are to be used, use the "layers" array
-     * instead.
-     *
-     * First get all required items and if any missing abort
-     */
+    // The following Fields in layer manifest file that are required:
+    //   - “file_format_version”
+    //   - If more than one "layer" object are used, then the "layers" array is
+    //     requred
 
     cJSON *item, *layers_node, *layer_node;
-    uint16_t file_major_vers = 0;
-    uint16_t file_minor_vers = 0;
-    uint16_t file_patch_vers = 0;
+    layer_json_version json_version;
     char *vers_tok;
     cJSON *disable_environment = NULL;
     item = cJSON_GetObjectItem(json, "file_format_version");
@@ -2669,30 +2793,31 @@ loader_add_layer_properties(const struct loader_instance *inst,
     // Get the major/minor/and patch as integers for easier comparison
     vers_tok = strtok(file_vers, ".\"\n\r");
     if (NULL != vers_tok) {
-        file_major_vers = (uint16_t)atoi(vers_tok);
+        json_version.major = (uint16_t)atoi(vers_tok);
         vers_tok = strtok(NULL, ".\"\n\r");
         if (NULL != vers_tok) {
-            file_minor_vers = (uint16_t)atoi(vers_tok);
+            json_version.minor = (uint16_t)atoi(vers_tok);
             vers_tok = strtok(NULL, ".\"\n\r");
             if (NULL != vers_tok) {
-                file_patch_vers = (uint16_t)atoi(vers_tok);
+                json_version.patch = (uint16_t)atoi(vers_tok);
             }
         }
     }
-    if (file_major_vers != 1 || file_minor_vers != 0 || file_patch_vers > 1) {
+
+    if (!is_valid_layer_json_version(&json_version)) {
         loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
-                   "loader_add_layer_properties: Unexpected manifest file "
-                   "version (expected 1.0.0 or 1.0.1) in %s, may cause "
-                   "errors",
-                   filename);
+                   "loader_add_layer_properties: %s invalid layer "
+                   " manifest file version %d.%d.%d.  May cause errors.",
+                   filename, json_version.major, json_version.minor,
+                   json_version.patch);
     }
     cJSON_Free(file_vers);
+
     // If "layers" is present, read in the array of layer objects
     layers_node = cJSON_GetObjectItem(json, "layers");
     if (layers_node != NULL) {
         int numItems = cJSON_GetArraySize(layers_node);
-        if (file_major_vers == 1 && file_minor_vers == 0 &&
-            file_patch_vers == 0) {
+        if (!layer_json_supports_layers_tag(&json_version)) {
             loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                        "loader_add_layer_properties: \'layers\' tag not "
                        "supported until file version 1.0.1, but %s is "
@@ -2709,8 +2834,9 @@ loader_add_layer_properties(const struct loader_instance *inst,
                            curLayer, filename);
                 return;
             }
-            loader_read_json_layer(inst, layer_instance_list, layer_node, item,
-                                   disable_environment, is_implicit, filename);
+            loader_read_json_layer(inst, layer_instance_list, layer_node,
+                                   json_version, item, disable_environment,
+                                   is_implicit, filename);
         }
     } else {
         // Otherwise, try to read in individual layers
@@ -2730,14 +2856,11 @@ loader_add_layer_properties(const struct loader_instance *inst,
             tempNode = tempNode->next;
             layer_count++;
         } while (tempNode != NULL);
-        /*
-         * Throw a warning if we encounter multiple "layer" objects in file
-         * versions newer than 1.0.0.  Having multiple objects with the same
-         * name at the same level is actually a JSON standard violation.
-         */
-        if (layer_count > 1 &&
-            (file_major_vers > 1 ||
-             !(file_minor_vers == 0 && file_patch_vers == 0))) {
+
+        // Throw a warning if we encounter multiple "layer" objects in file
+        // versions newer than 1.0.0.  Having multiple objects with the same
+        // name at the same level is actually a JSON standard violation.
+        if (layer_count > 1 && layer_json_supports_layers_tag(&json_version)) {
             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                        "loader_add_layer_properties: Multiple \'layer\' nodes"
                        " are deprecated starting in file version \"1.0.1\".  "
@@ -2746,8 +2869,8 @@ loader_add_layer_properties(const struct loader_instance *inst,
         } else {
             do {
                 loader_read_json_layer(inst, layer_instance_list, layer_node,
-                                       item, disable_environment, is_implicit,
-                                       filename);
+                                       json_version, item, disable_environment,
+                                       is_implicit, filename);
                 layer_node = layer_node->next;
             } while (layer_node != NULL);
         }
@@ -2788,7 +2911,7 @@ loader_get_manifest_files(const struct loader_instance *inst,
                           bool is_layer, bool warn_if_not_present,
                           const char *location, const char *home_location,
                           struct loader_manifest_files *out_files) {
-    const char *override = NULL;
+    const char * override = NULL;
     char *override_getenv = NULL;
     char *loc, *orig_loc = NULL;
     char *reg = NULL;
@@ -3138,8 +3261,8 @@ VkResult loader_icd_scan(const struct loader_instance *inst,
     }
 
     // Get a list of manifest files for ICDs
-    res = loader_get_manifest_files(inst, "VK_ICD_FILENAMES", NULL, false,
-                                    true, DEFAULT_VK_DRIVERS_INFO,
+    res = loader_get_manifest_files(inst, "VK_ICD_FILENAMES", NULL, false, true,
+                                    DEFAULT_VK_DRIVERS_INFO,
                                     HOME_VK_DRIVERS_INFO, &manifest_files);
     if (VK_SUCCESS != res || manifest_files.count == 0) {
         goto out;
@@ -3487,13 +3610,82 @@ void loader_implicit_layer_scan(const struct loader_instance *inst,
 }
 
 static VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
+loader_gpdpa_instance_internal(VkInstance inst, const char *pName) {
+    // inst is not wrapped
+    if (inst == VK_NULL_HANDLE) {
+        return NULL;
+    }
+    VkLayerInstanceDispatchTable *disp_table =
+        *(VkLayerInstanceDispatchTable **)inst;
+    void *addr;
+
+    if (disp_table == NULL)
+        return NULL;
+
+    bool found_name;
+    addr =
+        loader_lookup_instance_dispatch_table(disp_table, pName, &found_name);
+    if (found_name) {
+        return addr;
+    }
+
+    if (loader_phys_dev_ext_gpa(loader_get_instance(inst), pName, true, NULL, &addr))
+        return addr;
+
+    // Don't call down the chain, this would be an infinite loop
+    loader_log(NULL, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+               "loader_gpdpa_instance_internal() unrecognized name %s", pName);
+    return NULL;
+}
+
+static VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
+loader_gpdpa_instance_terminator(VkInstance inst, const char *pName) {
+    // inst is not wrapped
+    if (inst == VK_NULL_HANDLE) {
+        return NULL;
+    }
+    VkLayerInstanceDispatchTable *disp_table =
+        *(VkLayerInstanceDispatchTable **)inst;
+    void *addr;
+
+    if (disp_table == NULL)
+        return NULL;
+
+    bool found_name;
+    addr =
+        loader_lookup_instance_dispatch_table(disp_table, pName, &found_name);
+    if (found_name) {
+        return addr;
+    }
+
+    // Get the terminator, but don't perform checking since it should already
+    // have been setup if we get here.
+    if (loader_phys_dev_ext_gpa(loader_get_instance(inst), pName, false, NULL,
+                                &addr)) {
+        return addr;
+    }
+
+    // Don't call down the chain, this would be an infinite loop
+    loader_log(NULL, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+               "loader_gpdpa_instance_terminator() unrecognized name %s",
+               pName);
+    return NULL;
+}
+
+static VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
 loader_gpa_instance_internal(VkInstance inst, const char *pName) {
-    if (!strcmp(pName, "vkGetInstanceProcAddr"))
-        return (void *)loader_gpa_instance_internal;
-    if (!strcmp(pName, "vkCreateInstance"))
-        return (void *)terminator_CreateInstance;
-    if (!strcmp(pName, "vkCreateDevice"))
-        return (void *)terminator_CreateDevice;
+    if (!strcmp(pName, "vkGetInstanceProcAddr")) {
+        return (PFN_vkVoidFunction)loader_gpa_instance_internal;
+    }
+    if (!strcmp(pName, "vk_layerGetPhysicalDeviceProcAddr")) {
+        return (PFN_vkVoidFunction)loader_gpdpa_instance_terminator;
+    }
+    if (!strcmp(pName, "vkCreateInstance")) {
+        return (PFN_vkVoidFunction)terminator_CreateInstance;
+    }
+    if (!strcmp(pName, "vkCreateDevice")) {
+        return (PFN_vkVoidFunction)terminator_CreateDevice;
+    }
 
     // inst is not wrapped
     if (inst == VK_NULL_HANDLE) {
@@ -3537,6 +3729,8 @@ loader_gpa_device_internal(VkDevice device, const char *pName) {
         return (PFN_vkVoidFunction)loader_gpa_device_internal;
     } else if (!strcmp(pName, "vkCreateSwapchainKHR")) {
         return (PFN_vkVoidFunction)terminator_vkCreateSwapchainKHR;
+    } else if (!strcmp(pName, "vkCreateSharedSwapchainsKHR")) {
+        return (PFN_vkVoidFunction)terminator_vkCreateSharedSwapchainsKHR;
     } else if (!strcmp(pName, "vkDebugMarkerSetObjectTagEXT")) {
         return (PFN_vkVoidFunction)terminator_DebugMarkerSetObjectTagEXT;
     } else if (!strcmp(pName, "vkDebugMarkerSetObjectNameEXT")) {
@@ -3592,15 +3786,15 @@ static void loader_init_dispatch_dev_ext_entry(struct loader_instance *inst,
  */
 void loader_init_dispatch_dev_ext(struct loader_instance *inst,
                                   struct loader_device *dev) {
-    for (uint32_t i = 0; i < MAX_NUM_DEV_EXTS; i++) {
-        if (inst->disp_hash[i].func_name != NULL)
+    for (uint32_t i = 0; i < MAX_NUM_UNKNOWN_EXTS; i++) {
+        if (inst->dev_ext_disp_hash[i].func_name != NULL)
             loader_init_dispatch_dev_ext_entry(inst, dev, i,
-                                               inst->disp_hash[i].func_name);
+                                               inst->dev_ext_disp_hash[i].func_name);
     }
 }
 
-static bool loader_check_icds_for_address(struct loader_instance *inst,
-                                          const char *funcName) {
+static bool loader_check_icds_for_dev_ext_address(struct loader_instance *inst,
+                                                  const char *funcName) {
     struct loader_icd_term *icd_term;
     icd_term = inst->icd_terms;
     while (NULL != icd_term) {
@@ -3614,7 +3808,7 @@ static bool loader_check_icds_for_address(struct loader_instance *inst,
     return false;
 }
 
-static bool loader_check_layer_list_for_address(
+static bool loader_check_layer_list_for_dev_ext_address(
     const struct loader_layer_list *const layers, const char *funcName) {
     // Iterate over the layers.
     for (uint32_t layer = 0; layer < layers->count; ++layer) {
@@ -3639,32 +3833,35 @@ static bool loader_check_layer_list_for_address(
 }
 
 static void loader_free_dev_ext_table(struct loader_instance *inst) {
-    for (uint32_t i = 0; i < MAX_NUM_DEV_EXTS; i++) {
-        loader_instance_heap_free(inst, inst->disp_hash[i].func_name);
-        loader_instance_heap_free(inst, inst->disp_hash[i].list.index);
+    for (uint32_t i = 0; i < MAX_NUM_UNKNOWN_EXTS; i++) {
+        loader_instance_heap_free(inst, inst->dev_ext_disp_hash[i].func_name);
+        loader_instance_heap_free(inst, inst->dev_ext_disp_hash[i].list.index);
     }
-    memset(inst->disp_hash, 0, sizeof(inst->disp_hash));
+    memset(inst->dev_ext_disp_hash, 0, sizeof(inst->dev_ext_disp_hash));
 }
 
 static bool loader_add_dev_ext_table(struct loader_instance *inst,
                                      uint32_t *ptr_idx, const char *funcName) {
     uint32_t i;
     uint32_t idx = *ptr_idx;
-    struct loader_dispatch_hash_list *list = &inst->disp_hash[idx].list;
+    struct loader_dispatch_hash_list *list = &inst->dev_ext_disp_hash[idx].list;
 
-    if (!inst->disp_hash[idx].func_name) {
+    if (!inst->dev_ext_disp_hash[idx].func_name) {
         // no entry here at this idx, so use it
         assert(list->capacity == 0);
-        inst->disp_hash[idx].func_name = (char *)loader_instance_heap_alloc(
-            inst, strlen(funcName) + 1, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-        if (inst->disp_hash[idx].func_name == NULL) {
+        inst->dev_ext_disp_hash[idx].func_name =
+            (char *)loader_instance_heap_alloc(
+                inst, strlen(funcName) + 1,
+                VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+        if (inst->dev_ext_disp_hash[idx].func_name == NULL) {
             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                        "loader_add_dev_ext_table: Failed to allocate memory "
                        "for func_name %s",
                        funcName);
             return false;
         }
-        strncpy(inst->disp_hash[idx].func_name, funcName, strlen(funcName) + 1);
+        strncpy(inst->dev_ext_disp_hash[idx].func_name, funcName,
+                strlen(funcName) + 1);
         return true;
     }
 
@@ -3696,14 +3893,15 @@ static bool loader_add_dev_ext_table(struct loader_instance *inst,
     }
 
     // find an unused index in the hash table and use it
-    i = (idx + 1) % MAX_NUM_DEV_EXTS;
+    i = (idx + 1) % MAX_NUM_UNKNOWN_EXTS;
     do {
-        if (!inst->disp_hash[i].func_name) {
-            assert(inst->disp_hash[i].list.capacity == 0);
-            inst->disp_hash[i].func_name = (char *)loader_instance_heap_alloc(
-                inst, strlen(funcName) + 1,
-                VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-            if (inst->disp_hash[i].func_name == NULL) {
+        if (!inst->dev_ext_disp_hash[i].func_name) {
+            assert(inst->dev_ext_disp_hash[i].list.capacity == 0);
+            inst->dev_ext_disp_hash[i].func_name =
+                (char *)loader_instance_heap_alloc(
+                    inst, strlen(funcName) + 1,
+                    VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+            if (inst->dev_ext_disp_hash[i].func_name == NULL) {
                 loader_log(
                     inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                     "loader_add_dev_ext_table: Failed to allocate memory "
@@ -3711,14 +3909,14 @@ static bool loader_add_dev_ext_table(struct loader_instance *inst,
                     funcName);
                 return false;
             }
-            strncpy(inst->disp_hash[i].func_name, funcName,
+            strncpy(inst->dev_ext_disp_hash[i].func_name, funcName,
                     strlen(funcName) + 1);
             list->index[list->count] = i;
             list->count++;
             *ptr_idx = i;
             return true;
         }
-        i = (i + 1) % MAX_NUM_DEV_EXTS;
+        i = (i + 1) % MAX_NUM_UNKNOWN_EXTS;
     } while (i != idx);
 
     loader_log(
@@ -3732,16 +3930,15 @@ static bool loader_add_dev_ext_table(struct loader_instance *inst,
 static bool loader_name_in_dev_ext_table(struct loader_instance *inst,
                                          uint32_t *idx, const char *funcName) {
     uint32_t alt_idx;
-    if (inst->disp_hash[*idx].func_name &&
-        !strcmp(inst->disp_hash[*idx].func_name, funcName))
+    if (inst->dev_ext_disp_hash[*idx].func_name &&
+        !strcmp(inst->dev_ext_disp_hash[*idx].func_name, funcName))
         return true;
 
     // funcName wasn't at the primary spot in the hash table
     // search the list of secondary locations (shallow search, not deep search)
-    for (uint32_t i = 0; i < inst->disp_hash[*idx].list.count; i++) {
-        alt_idx = inst->disp_hash[*idx].list.index[i];
-        if (inst->disp_hash[*idx].func_name &&
-            !strcmp(inst->disp_hash[*idx].func_name, funcName)) {
+    for (uint32_t i = 0; i < inst->dev_ext_disp_hash[*idx].list.count; i++) {
+        alt_idx = inst->dev_ext_disp_hash[*idx].list.index[i];
+        if (!strcmp(inst->dev_ext_disp_hash[*idx].func_name, funcName)) {
             *idx = alt_idx;
             return true;
         }
@@ -3772,16 +3969,15 @@ void *loader_dev_ext_gpa(struct loader_instance *inst, const char *funcName) {
     uint32_t idx;
     uint32_t seed = 0;
 
-    idx = murmurhash(funcName, strlen(funcName), seed) % MAX_NUM_DEV_EXTS;
+    idx = murmurhash(funcName, strlen(funcName), seed) % MAX_NUM_UNKNOWN_EXTS;
 
     if (loader_name_in_dev_ext_table(inst, &idx, funcName))
         // found funcName already in hash
         return loader_get_dev_ext_trampoline(idx);
 
     // Check if funcName is supported in either ICDs or a layer library
-    if (!loader_check_icds_for_address(inst, funcName) &&
-        !loader_check_layer_list_for_address(&inst->instance_layer_list,
-                                             funcName)) {
+    if (!loader_check_icds_for_dev_ext_address(inst, funcName) &&
+        !loader_check_layer_list_for_dev_ext_address(&inst->instance_layer_list, funcName)) {
         // if support found in layers continue on
         return NULL;
     }
@@ -3796,6 +3992,275 @@ void *loader_dev_ext_gpa(struct loader_instance *inst, const char *funcName) {
     return NULL;
 }
 
+static bool
+loader_check_icds_for_phys_dev_ext_address(struct loader_instance *inst,
+                                           const char *funcName) {
+    struct loader_icd_term *icd_term;
+    icd_term = inst->icd_terms;
+    while (NULL != icd_term) {
+        if (icd_term->scanned_icd->interface_version >=
+            MIN_PHYS_DEV_EXTENSION_ICD_INTERFACE_VERSION &&
+            icd_term->scanned_icd->GetPhysicalDeviceProcAddr(icd_term->instance,
+                                                             funcName))
+            // this icd supports funcName
+            return true;
+        icd_term = icd_term->next;
+    }
+
+    return false;
+}
+
+static bool
+loader_check_layer_list_for_phys_dev_ext_address(struct loader_instance *inst,
+                                                 const char *funcName) {
+    struct loader_layer_properties *layer_prop_list =
+        inst->activated_layer_list.list;
+    for (uint32_t layer = 0; layer < inst->activated_layer_list.count; ++layer) {
+        // If this layer supports the vk_layerGetPhysicalDeviceProcAddr, then call
+        // it and see if it returns a valid pointer for this function name.
+        if (layer_prop_list[layer].interface_version > 1) {
+            const struct loader_layer_functions *const functions =
+                &(layer_prop_list[layer].functions);
+            if (NULL != functions->get_physical_device_proc_addr &&
+                NULL !=
+                    functions->get_physical_device_proc_addr((VkInstance)inst,
+                                                             funcName)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+
+static void loader_free_phys_dev_ext_table(struct loader_instance *inst) {
+    for (uint32_t i = 0; i < MAX_NUM_UNKNOWN_EXTS; i++) {
+        loader_instance_heap_free(inst,
+                                  inst->phys_dev_ext_disp_hash[i].func_name);
+        loader_instance_heap_free(inst,
+                                  inst->phys_dev_ext_disp_hash[i].list.index);
+    }
+    memset(inst->phys_dev_ext_disp_hash, 0,
+           sizeof(inst->phys_dev_ext_disp_hash));
+}
+
+static bool loader_add_phys_dev_ext_table(struct loader_instance *inst,
+                                          uint32_t *ptr_idx,
+                                          const char *funcName) {
+    uint32_t i;
+    uint32_t idx = *ptr_idx;
+    struct loader_dispatch_hash_list *list =
+        &inst->phys_dev_ext_disp_hash[idx].list;
+
+    if (!inst->phys_dev_ext_disp_hash[idx].func_name) {
+        // no entry here at this idx, so use it
+        assert(list->capacity == 0);
+        inst->phys_dev_ext_disp_hash[idx].func_name =
+            (char *)loader_instance_heap_alloc(
+                inst, strlen(funcName) + 1,
+                VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+        if (inst->phys_dev_ext_disp_hash[idx].func_name == NULL) {
+            loader_log(
+                inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                "loader_add_phys_dev_ext_table() can't allocate memory for "
+                "func_name");
+            return false;
+        }
+        strncpy(inst->phys_dev_ext_disp_hash[idx].func_name, funcName,
+                strlen(funcName) + 1);
+        return true;
+    }
+
+    // check for enough capacity
+    if (list->capacity == 0) {
+        list->index =
+            loader_instance_heap_alloc(inst, 8 * sizeof(*(list->index)),
+                                       VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+        if (list->index == NULL) {
+            loader_log(
+                inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                "loader_add_phys_dev_ext_table() can't allocate list memory");
+            return false;
+        }
+        list->capacity = 8 * sizeof(*(list->index));
+    } else if (list->capacity < (list->count + 1) * sizeof(*(list->index))) {
+        list->index = loader_instance_heap_realloc(
+            inst, list->index, list->capacity, list->capacity * 2,
+            VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+        if (list->index == NULL) {
+            loader_log(
+                inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                "loader_add_phys_dev_ext_table() can't reallocate list memory");
+            return false;
+        }
+        list->capacity *= 2;
+    }
+
+    // find an unused index in the hash table and use it
+    i = (idx + 1) % MAX_NUM_UNKNOWN_EXTS;
+    do {
+        if (!inst->phys_dev_ext_disp_hash[i].func_name) {
+            assert(inst->phys_dev_ext_disp_hash[i].list.capacity == 0);
+            inst->phys_dev_ext_disp_hash[i].func_name =
+                (char *)loader_instance_heap_alloc(
+                    inst, strlen(funcName) + 1,
+                    VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+            if (inst->phys_dev_ext_disp_hash[i].func_name == NULL) {
+                loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                           "loader_add_dev_ext_table() can't rallocate "
+                           "func_name memory");
+                return false;
+            }
+            strncpy(inst->phys_dev_ext_disp_hash[i].func_name, funcName,
+                    strlen(funcName) + 1);
+            list->index[list->count] = i;
+            list->count++;
+            *ptr_idx = i;
+            return true;
+        }
+        i = (i + 1) % MAX_NUM_UNKNOWN_EXTS;
+    } while (i != idx);
+
+    loader_log(
+        inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+        "loader_add_phys_dev_ext_table() couldn't insert into hash table; is "
+        "it full?");
+    return false;
+}
+
+static bool loader_name_in_phys_dev_ext_table(struct loader_instance* inst,
+    uint32_t *idx, const char *funcName) {
+    uint32_t alt_idx;
+    if (inst->phys_dev_ext_disp_hash[*idx].func_name &&
+        !strcmp(inst->phys_dev_ext_disp_hash[*idx].func_name, funcName))
+        return true;
+
+    // funcName wasn't at the primary spot in the hash table
+    // search the list of secondary locations (shallow search, not deep search)
+    for (uint32_t i = 0; i < inst->phys_dev_ext_disp_hash[*idx].list.count;
+         i++) {
+        alt_idx = inst->phys_dev_ext_disp_hash[*idx].list.index[i];
+        if (!strcmp(inst->phys_dev_ext_disp_hash[*idx].func_name, funcName)) {
+            *idx = alt_idx;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+// This function returns a generic trampoline and/or terminator function
+// address for any unknown physical device extension commands.  A hash
+// table is used to keep a list of unknown entry points and their
+// mapping to the physical device extension dispatch table (struct
+// loader_phys_dev_ext_dispatch_table).
+// For a given entry point string (funcName), if an existing mapping is
+// found, then the trampoline address for that mapping is returned in
+// tramp_addr (if it is not NULL) and the terminator address for that
+// mapping is returned in term_addr (if it is not NULL). Otherwise,
+// this unknown entry point has not been seen yet.
+// If it has not been seen before, and perform_checking is 'true',
+// check if a layer or and ICD supports it.  If so then a new entry in
+// the hash table is initialized and the trampoline and/or terminator
+// addresses are returned.
+// Null is returned if the hash table is full or if no discovered layer or
+// ICD returns a non-NULL GetProcAddr for it.
+bool loader_phys_dev_ext_gpa(struct loader_instance *inst, const char *funcName,
+                             bool perform_checking, void **tramp_addr,
+                             void **term_addr) {
+    uint32_t idx;
+    uint32_t seed = 0;
+    bool success = false;
+
+    if (inst == NULL) {
+        goto out;
+    }
+
+    if (NULL != tramp_addr) {
+        *tramp_addr = NULL;
+    }
+    if (NULL != term_addr) {
+        *term_addr = NULL;
+    }
+
+    // We should always check to see if any ICD supports it.
+    if (!loader_check_icds_for_phys_dev_ext_address(inst, funcName)) {
+        // If we're not checking layers, or we are and it's not in a layer, just
+        // return
+        if (!perform_checking ||
+            !loader_check_layer_list_for_phys_dev_ext_address(inst, funcName)) {
+            goto out;
+        }
+    }
+
+    idx = murmurhash(funcName, strlen(funcName), seed) % MAX_NUM_UNKNOWN_EXTS;
+    if (perform_checking &&
+        !loader_name_in_phys_dev_ext_table(inst, &idx, funcName)) {
+        uint32_t i;
+        bool added = false;
+
+        // Only need to add first one to get index in Instance.  Others will use
+        // the same index.
+        if (!added && loader_add_phys_dev_ext_table(inst, &idx, funcName)) {
+            added = true;
+        }
+
+        // Setup the ICD function pointers
+        struct loader_icd_term *icd_term = inst->icd_terms;
+        while (NULL != icd_term) {
+            if (MIN_PHYS_DEV_EXTENSION_ICD_INTERFACE_VERSION <=
+                    icd_term->scanned_icd->interface_version &&
+                NULL != icd_term->scanned_icd->GetPhysicalDeviceProcAddr) {
+                icd_term->phys_dev_ext[idx] =
+                    (PFN_PhysDevExt)
+                        icd_term->scanned_icd->GetPhysicalDeviceProcAddr(
+                            icd_term->instance, funcName);
+
+                // Make sure we set the instance dispatch to point to the
+                // loader's terminator now since we can at least handle it
+                // in one ICD.
+                inst->disp->phys_dev_ext[idx] =
+                    loader_get_phys_dev_ext_termin(idx);
+            } else {
+                icd_term->phys_dev_ext[idx] = NULL;
+            }
+
+            icd_term = icd_term->next;
+        }
+
+        // Now, search for the first layer attached and query using it to get
+        // the first entry point.
+        for (i = 0; i < inst->activated_layer_list.count; i++) {
+            struct loader_layer_properties *layer_prop =
+                &inst->activated_layer_list.list[i];
+            if (layer_prop->interface_version > 1 &&
+                NULL != layer_prop->functions.get_physical_device_proc_addr) {
+                inst->disp->phys_dev_ext[idx] =
+                    (PFN_PhysDevExt)
+                        layer_prop->functions.get_physical_device_proc_addr(
+                            (VkInstance)inst, funcName);
+                if (NULL != inst->disp->phys_dev_ext[idx]) {
+                    break;
+                }
+            }
+        }
+    }
+
+    if (NULL != tramp_addr) {
+        *tramp_addr = loader_get_phys_dev_ext_tramp(idx);
+    }
+
+    if (NULL != term_addr) {
+        *term_addr = loader_get_phys_dev_ext_termin(idx);
+    }
+
+    success = true;
+
+out:
+    return success;
+}
+
 struct loader_instance *loader_get_instance(const VkInstance instance) {
     /* look up the loader_instance in our list by comparing dispatch tables, as
      * there is no guarantee the instance is still a loader_instance* after any
@@ -3803,10 +4268,10 @@ struct loader_instance *loader_get_instance(const VkInstance instance) {
      */
     const VkLayerInstanceDispatchTable *disp;
     struct loader_instance *ptr_instance = NULL;
-    disp = loader_get_instance_dispatch(instance);
+    disp = loader_get_instance_layer_dispatch(instance);
     for (struct loader_instance *inst = loader.instances; inst;
          inst = inst->next) {
-        if (inst->disp == disp) {
+        if (&inst->disp->layer_inst_disp == disp) {
             ptr_instance = inst;
             break;
         }
@@ -3987,6 +4452,40 @@ loader_enable_instance_layers(struct loader_instance *inst,
     return err;
 }
 
+// Determine the layer interface version to use.
+bool loader_get_layer_interface_version(
+    PFN_vkNegotiateLoaderLayerInterfaceVersion fp_negotiate_layer_version,
+    VkNegotiateLayerInterface *interface_struct) {
+
+    memset(interface_struct, 0, sizeof(VkNegotiateLayerInterface));
+
+    // Base assumption is that all layers are version 1 at least.
+    interface_struct->loaderLayerInterfaceVersion = 1;
+
+    if (fp_negotiate_layer_version != NULL) {
+        // Layer supports the negotiation API, so call it with the loader's
+        // latest version supported
+        interface_struct->loaderLayerInterfaceVersion =
+            CURRENT_LOADER_LAYER_INTERFACE_VERSION;
+        VkResult result = fp_negotiate_layer_version(interface_struct);
+
+        if (result != VK_SUCCESS) {
+            // Layer no longer supports the loader's latest interface version so
+            // fail loading the Layer
+            return false;
+        }
+    }
+
+    if (interface_struct->loaderLayerInterfaceVersion <
+        MIN_SUPPORTED_LOADER_LAYER_INTERFACE_VERSION) {
+        // Loader no longer supports the layer's latest interface version so
+        // fail loading the layer
+        return false;
+    }
+
+    return true;
+}
+
 /*
  * Given the list of layers to activate in the loader_instance
  * structure. This function will add a VkLayerInstanceCreateInfo
@@ -4015,8 +4514,10 @@ VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo,
     VkInstanceCreateInfo loader_create_info;
     VkResult res;
 
-    PFN_vkGetInstanceProcAddr nextGIPA = loader_gpa_instance_internal;
-    PFN_vkGetInstanceProcAddr fpGIPA = loader_gpa_instance_internal;
+    PFN_vkGetInstanceProcAddr next_gipa = loader_gpa_instance_internal;
+    PFN_vkGetInstanceProcAddr cur_gipa = loader_gpa_instance_internal;
+    PFN_GetPhysicalDeviceProcAddr next_gpdpa = loader_gpdpa_instance_internal;
+    PFN_GetPhysicalDeviceProcAddr cur_gpdpa = loader_gpdpa_instance_internal;
 
     memcpy(&loader_create_info, pCreateInfo, sizeof(VkInstanceCreateInfo));
 
@@ -4037,42 +4538,113 @@ VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo,
             return VK_ERROR_OUT_OF_HOST_MEMORY;
         }
 
-        /* Create instance chain of enabled layers */
+        // Create instance chain of enabled layers
         for (int32_t i = inst->activated_layer_list.count - 1; i >= 0; i--) {
             struct loader_layer_properties *layer_prop =
                 &inst->activated_layer_list.list[i];
             loader_platform_dl_handle lib_handle;
 
             lib_handle = loader_open_layer_lib(inst, "instance", layer_prop);
-            if (!lib_handle)
+            if (!lib_handle) {
                 continue;
-            if ((fpGIPA = layer_prop->functions.get_instance_proc_addr) ==
-                NULL) {
-                if (strlen(layer_prop->functions.str_gipa) == 0) {
-                    fpGIPA = (PFN_vkGetInstanceProcAddr)
-                        loader_platform_get_proc_address(
-                            lib_handle, "vkGetInstanceProcAddr");
-                    layer_prop->functions.get_instance_proc_addr = fpGIPA;
-                } else
-                    fpGIPA = (PFN_vkGetInstanceProcAddr)
-                        loader_platform_get_proc_address(
-                            lib_handle, layer_prop->functions.str_gipa);
-                if (!fpGIPA) {
-                    loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                               "loader_create_instance_chain: Failed to find "
-                               "\'vkGetInstanceProcAddr\' in layer %s",
-                               layer_prop->lib_name);
-                    continue;
+            }
+
+            if (NULL == layer_prop->functions.negotiate_layer_interface) {
+                PFN_vkNegotiateLoaderLayerInterfaceVersion negotiate_interface =
+                    NULL;
+                bool functions_in_interface = false;
+                if (strlen(layer_prop->functions.str_negotiate_interface) ==
+                        0) {
+                    negotiate_interface =
+                        (PFN_vkNegotiateLoaderLayerInterfaceVersion)
+                            loader_platform_get_proc_address(
+                                lib_handle,
+                                "vkNegotiateLoaderLayerInterfaceVersion");
+                } else {
+                    negotiate_interface =
+                        (PFN_vkNegotiateLoaderLayerInterfaceVersion)
+                            loader_platform_get_proc_address(
+                                lib_handle,
+                                layer_prop->functions.str_negotiate_interface);
+                }
+
+                // If we can negotiate an interface version, then we can also
+                // get everything we need from the one function call, so try
+                // that first, and see if we can get all the function pointers
+                // necessary from that one call.
+                if (NULL != negotiate_interface) {
+                    layer_prop->functions.negotiate_layer_interface =
+                        negotiate_interface;
+
+                    VkNegotiateLayerInterface interface_struct;
+
+                    if (loader_get_layer_interface_version(negotiate_interface,
+                                                           &interface_struct)) {
+
+                        // Go ahead and set the properites version to the
+                        // correct value.
+                        layer_prop->interface_version =
+                            interface_struct.loaderLayerInterfaceVersion;
+
+                        // If the interface is 2 or newer, we have access to the
+                        // new GetPhysicalDeviceProcAddr function, so grab it,
+                        // and the other necessary functions, from the
+                        // structure.
+                        if (interface_struct.loaderLayerInterfaceVersion > 1) {
+                            cur_gipa = interface_struct.pfnGetInstanceProcAddr;
+                            cur_gpdpa =
+                                interface_struct.pfnGetPhysicalDeviceProcAddr;
+                            if (cur_gipa != NULL) {
+                                // We've set the functions, so make sure we
+                                // don't do the unnecessary calls later.
+                                functions_in_interface = true;
+                            }
+                        }
+                    }
+                }
+
+                if (!functions_in_interface) {
+                    if ((cur_gipa =
+                             layer_prop->functions.get_instance_proc_addr) ==
+                        NULL) {
+                        if (strlen(layer_prop->functions.str_gipa) == 0) {
+                            cur_gipa = (PFN_vkGetInstanceProcAddr)
+                                loader_platform_get_proc_address(
+                                    lib_handle, "vkGetInstanceProcAddr");
+                            layer_prop->functions.get_instance_proc_addr =
+                                cur_gipa;
+                        } else {
+                            cur_gipa = (PFN_vkGetInstanceProcAddr)
+                                loader_platform_get_proc_address(
+                                    lib_handle, layer_prop->functions.str_gipa);
+                        }
+
+                        if (NULL == cur_gipa) {
+                            loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                                       "loader_create_instance_chain: Failed to"
+                                       " find \'vkGetInstanceProcAddr\' in "
+                                       "layer %s",
+                                       layer_prop->lib_name);
+                            continue;
+                        }
+                    }
                 }
             }
 
             layer_instance_link_info[activated_layers].pNext =
                 chain_info.u.pLayerInfo;
             layer_instance_link_info[activated_layers]
-                .pfnNextGetInstanceProcAddr = nextGIPA;
+                .pfnNextGetInstanceProcAddr = next_gipa;
+            layer_instance_link_info[activated_layers]
+                .pfnNextGetPhysicalDeviceProcAddr = next_gpdpa;
+            next_gipa = cur_gipa;
+            if (layer_prop->interface_version > 1 && cur_gpdpa != NULL) {
+                layer_prop->functions.get_physical_device_proc_addr = cur_gpdpa;
+                next_gpdpa = cur_gpdpa;
+            }
+
             chain_info.u.pLayerInfo =
                 &layer_instance_link_info[activated_layers];
-            nextGIPA = fpGIPA;
 
             loader_log(inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
                        "Insert instance layer %s (%s)",
@@ -4083,7 +4655,7 @@ VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo,
     }
 
     PFN_vkCreateInstance fpCreateInstance =
-        (PFN_vkCreateInstance)nextGIPA(*created_instance, "vkCreateInstance");
+        (PFN_vkCreateInstance)next_gipa(*created_instance, "vkCreateInstance");
     if (fpCreateInstance) {
         VkLayerInstanceCreateInfo create_info_disp;
 
@@ -4104,11 +4676,9 @@ VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo,
         res = VK_ERROR_INITIALIZATION_FAILED;
     }
 
-    if (res != VK_SUCCESS) {
-        // TODO: Need to clean up here
-    } else {
-        loader_init_instance_core_dispatch_table(inst->disp, nextGIPA,
-                                                 *created_instance);
+    if (res == VK_SUCCESS) {
+        loader_init_instance_core_dispatch_table(&inst->disp->layer_inst_disp,
+                                                 next_gipa, *created_instance);
         inst->instance = *created_instance;
     }
 
@@ -4119,7 +4689,8 @@ void loader_activate_instance_layer_extensions(struct loader_instance *inst,
                                                VkInstance created_inst) {
 
     loader_init_instance_extension_dispatch_table(
-        inst->disp, inst->disp->GetInstanceProcAddr, created_inst);
+        &inst->disp->layer_inst_disp,
+        inst->disp->layer_inst_disp.GetInstanceProcAddr, created_inst);
 }
 
 VkResult
@@ -4152,57 +4723,113 @@ loader_create_device_chain(const struct loader_physical_device_tramp *pd,
         chain_info.sType = VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO;
         chain_info.function = VK_LAYER_LINK_INFO;
         chain_info.u.pLayerInfo = NULL;
-        chain_info.pNext = pCreateInfo->pNext;
+        chain_info.pNext = loader_create_info.pNext;
         loader_create_info.pNext = &chain_info;
 
-        /* Create instance chain of enabled layers */
+        // Create instance chain of enabled layers
         for (int32_t i = dev->activated_layer_list.count - 1; i >= 0; i--) {
             struct loader_layer_properties *layer_prop =
                 &dev->activated_layer_list.list[i];
             loader_platform_dl_handle lib_handle;
+            bool functions_in_interface = false;
 
             lib_handle = loader_open_layer_lib(inst, "device", layer_prop);
-            if (!lib_handle)
+            if (!lib_handle) {
                 continue;
-            if ((fpGIPA = layer_prop->functions.get_instance_proc_addr) ==
-                NULL) {
-                if (strlen(layer_prop->functions.str_gipa) == 0) {
-                    fpGIPA = (PFN_vkGetInstanceProcAddr)
-                        loader_platform_get_proc_address(
-                            lib_handle, "vkGetInstanceProcAddr");
-                    layer_prop->functions.get_instance_proc_addr = fpGIPA;
-                } else
-                    fpGIPA = (PFN_vkGetInstanceProcAddr)
-                        loader_platform_get_proc_address(
-                            lib_handle, layer_prop->functions.str_gipa);
-                if (!fpGIPA) {
-                    loader_log(
-                        inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                        "loader_create_device_chain: Failed to find "
-                        "\'vkGetInstanceProcAddr\' in layer %s.  Skipping"
-                        " layer.",
-                        layer_prop->lib_name);
-                    continue;
-                }
             }
-            if ((fpGDPA = layer_prop->functions.get_device_proc_addr) == NULL) {
-                if (strlen(layer_prop->functions.str_gdpa) == 0) {
-                    fpGDPA = (PFN_vkGetDeviceProcAddr)
-                        loader_platform_get_proc_address(lib_handle,
-                                                         "vkGetDeviceProcAddr");
-                    layer_prop->functions.get_device_proc_addr = fpGDPA;
-                } else
-                    fpGDPA = (PFN_vkGetDeviceProcAddr)
-                        loader_platform_get_proc_address(
-                            lib_handle, layer_prop->functions.str_gdpa);
-                if (!fpGDPA) {
-                    loader_log(inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
-                               "Failed to find vkGetDeviceProcAddr in layer %s",
-                               layer_prop->lib_name);
-                    continue;
+
+            // If we can negotiate an interface version, then we can also
+            // get everything we need from the one function call, so try
+            // that first, and see if we can get all the function pointers
+            // necessary from that one call.
+            if (NULL == layer_prop->functions.negotiate_layer_interface) {
+                PFN_vkNegotiateLoaderLayerInterfaceVersion negotiate_interface =
+                    NULL;
+                if (strlen(layer_prop->functions.str_negotiate_interface) ==
+                        0) {
+                    negotiate_interface =
+                        (PFN_vkNegotiateLoaderLayerInterfaceVersion)
+                            loader_platform_get_proc_address(
+                                lib_handle,
+                                "vkNegotiateLoaderLayerInterfaceVersion");
+                } else {
+                    negotiate_interface =
+                        (PFN_vkNegotiateLoaderLayerInterfaceVersion)
+                            loader_platform_get_proc_address(
+                                lib_handle,
+                                layer_prop->functions.str_negotiate_interface);
+                }
+
+                if (NULL != negotiate_interface) {
+                    layer_prop->functions.negotiate_layer_interface =
+                        negotiate_interface;
+
+                    VkNegotiateLayerInterface interface_struct;
+
+                    if (loader_get_layer_interface_version(negotiate_interface,
+                        &interface_struct)) {
+
+                        // Go ahead and set the properites version to the
+                        // correct value.
+                        layer_prop->interface_version =
+                            interface_struct.loaderLayerInterfaceVersion;
+
+                        // If the interface is 2 or newer, we have access to the
+                        // new GetPhysicalDeviceProcAddr function, so grab it,
+                        // and the other necessary functions, from the structure.
+                        if (interface_struct.loaderLayerInterfaceVersion > 1) {
+                            fpGIPA = interface_struct.pfnGetInstanceProcAddr;
+                            fpGDPA = interface_struct.pfnGetDeviceProcAddr;
+                            if (fpGIPA != NULL && fpGDPA) {
+                                // We've set the functions, so make sure we
+                                // don't do the unnecessary calls later.
+                                functions_in_interface = true;
+                            }
+                        }
+                    }
                 }
             }
 
+            if (!functions_in_interface) {
+                if ((fpGIPA = layer_prop->functions.get_instance_proc_addr) ==
+                    NULL) {
+                    if (strlen(layer_prop->functions.str_gipa) == 0) {
+                        fpGIPA = (PFN_vkGetInstanceProcAddr)
+                            loader_platform_get_proc_address(
+                                lib_handle, "vkGetInstanceProcAddr");
+                        layer_prop->functions.get_instance_proc_addr = fpGIPA;
+                    } else
+                        fpGIPA = (PFN_vkGetInstanceProcAddr)
+                        loader_platform_get_proc_address(
+                            lib_handle, layer_prop->functions.str_gipa);
+                    if (!fpGIPA) {
+                        loader_log(
+                            inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                            "loader_create_device_chain: Failed to find "
+                            "\'vkGetInstanceProcAddr\' in layer %s.  Skipping"
+                            " layer.",
+                            layer_prop->lib_name);
+                        continue;
+                    }
+                }
+                if ((fpGDPA = layer_prop->functions.get_device_proc_addr) == NULL) {
+                    if (strlen(layer_prop->functions.str_gdpa) == 0) {
+                        fpGDPA = (PFN_vkGetDeviceProcAddr)
+                            loader_platform_get_proc_address(lib_handle,
+                                "vkGetDeviceProcAddr");
+                        layer_prop->functions.get_device_proc_addr = fpGDPA;
+                    } else
+                        fpGDPA = (PFN_vkGetDeviceProcAddr)
+                        loader_platform_get_proc_address(
+                            lib_handle, layer_prop->functions.str_gdpa);
+                    if (!fpGDPA) {
+                        loader_log(inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
+                            "Failed to find vkGetDeviceProcAddr in layer %s",
+                            layer_prop->lib_name);
+                        continue;
+                    }
+                }
+            }
             layer_device_link_info[activated_layers].pNext =
                 chain_info.u.pLayerInfo;
             layer_device_link_info[activated_layers]
@@ -4617,7 +5244,7 @@ VKAPI_ATTR void VKAPI_CALL terminator_DestroyInstance(
     loader_scanned_icd_clear(ptr_instance, &ptr_instance->icd_tramp_list);
     loader_destroy_generic_list(
         ptr_instance, (struct loader_generic_list *)&ptr_instance->ext_list);
-    if (ptr_instance->phys_devs_term) {
+    if (NULL != ptr_instance->phys_devs_term) {
         for (uint32_t i = 0; i < ptr_instance->phys_dev_count_term; i++) {
             loader_instance_heap_free(ptr_instance,
                                       ptr_instance->phys_devs_term[i]);
@@ -4625,6 +5252,7 @@ VKAPI_ATTR void VKAPI_CALL terminator_DestroyInstance(
         loader_instance_heap_free(ptr_instance, ptr_instance->phys_devs_term);
     }
     loader_free_dev_ext_table(ptr_instance);
+    loader_free_phys_dev_ext_table(ptr_instance);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDevice(
@@ -4780,8 +5408,8 @@ VkResult setupLoaderTrampPhysDevs(VkInstance instance) {
     }
     memset(local_phys_devs, 0, sizeof(VkPhysicalDevice) * total_count);
 
-    res = inst->disp->EnumeratePhysicalDevices(instance, &total_count,
-                                               local_phys_devs);
+    res = inst->disp->layer_inst_disp.EnumeratePhysicalDevices(
+        instance, &total_count, local_phys_devs);
     if (VK_SUCCESS != res) {
         loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                    "setupLoaderTrampPhysDevs:  Failed during dispatch call "

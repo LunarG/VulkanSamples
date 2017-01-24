@@ -51,6 +51,8 @@
 
 namespace unique_objects {
 
+static uint32_t loader_layer_if_version = CURRENT_LOADER_LAYER_INTERFACE_VERSION;
+
 static void initUniqueObjects(layer_data *instance_data, const VkAllocationCallbacks *pAllocator) {
     layer_debug_actions(instance_data->report_data, instance_data->logging_callback, pAllocator, "google_unique_objects");
 }
@@ -262,10 +264,16 @@ static const VkLayerProperties globalLayerProps = {"VK_LAYER_GOOGLE_unique_objec
                                                    1,                    // implementationVersion
                                                    "Google Validation Layer"};
 
+/// Declare prototype for these functions
+VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance instance, const char *funcName);
+
 static inline PFN_vkVoidFunction layer_intercept_proc(const char *name) {
     for (unsigned int i = 0; i < sizeof(procmap) / sizeof(procmap[0]); i++) {
         if (!strcmp(name, procmap[i].name))
             return procmap[i].pFunc;
+    }
+    if (0 == strcmp(name, "vk_layerGetPhysicalDeviceProcAddr")) {
+        return (PFN_vkVoidFunction)GetPhysicalDeviceProcAddr;
     }
     return NULL;
 }
@@ -335,6 +343,17 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance
         return NULL;
     }
     return disp_table->GetInstanceProcAddr(instance, funcName);
+}
+
+VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance instance, const char *funcName) {
+    assert(instance);
+
+    layer_data *instance_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    VkLayerInstanceDispatchTable *disp_table = instance_data->instance_dispatch_table;
+    if (disp_table->GetPhysicalDeviceProcAddr == NULL) {
+        return NULL;
+    }
+    return disp_table->GetPhysicalDeviceProcAddr(instance, funcName);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL AllocateMemory(VkDevice device, const VkMemoryAllocateInfo *pAllocateInfo,
@@ -748,4 +767,28 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionPropert
                                                                                     VkExtensionProperties *pProperties) {
     assert(physicalDevice == VK_NULL_HANDLE);
     return unique_objects::EnumerateDeviceExtensionProperties(VK_NULL_HANDLE, pLayerName, pCount, pProperties);
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vk_layerGetPhysicalDeviceProcAddr(VkInstance instance, const char *funcName) {
+    return unique_objects::GetPhysicalDeviceProcAddr(instance, funcName);
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkNegotiateLoaderLayerInterfaceVersion(VkNegotiateLayerInterface *pVersionStruct) {
+    assert(pVersionStruct != NULL);
+    assert(pVersionStruct->sType == LAYER_NEGOTIATE_INTERFACE_STRUCT);
+
+    // Fill in the function pointers if our version is at least capable of having the structure contain them.
+    if (pVersionStruct->loaderLayerInterfaceVersion >= 2) {
+        pVersionStruct->pfnGetInstanceProcAddr = vkGetInstanceProcAddr;
+        pVersionStruct->pfnGetDeviceProcAddr = vkGetDeviceProcAddr;
+        pVersionStruct->pfnGetPhysicalDeviceProcAddr = vk_layerGetPhysicalDeviceProcAddr;
+    }
+
+    if (pVersionStruct->loaderLayerInterfaceVersion < CURRENT_LOADER_LAYER_INTERFACE_VERSION) {
+        unique_objects::loader_layer_if_version = pVersionStruct->loaderLayerInterfaceVersion;
+    } else if (pVersionStruct->loaderLayerInterfaceVersion > CURRENT_LOADER_LAYER_INTERFACE_VERSION) {
+        pVersionStruct->loaderLayerInterfaceVersion = CURRENT_LOADER_LAYER_INTERFACE_VERSION;
+    }
+
+    return VK_SUCCESS;
 }

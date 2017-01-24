@@ -48,6 +48,7 @@
 
 #include "vk_safe_struct.h"
 #include "vulkan/vulkan.h"
+#include "vk_validation_error_messages.h"
 #include <atomic>
 #include <functional>
 #include <map>
@@ -637,6 +638,11 @@ struct CB_SUBMISSION {
     std::vector<SEMAPHORE_WAIT> waitSemaphores;
     std::vector<VkSemaphore> signalSemaphores;
     VkFence fence;
+};
+
+struct IMAGE_LAYOUT_NODE {
+    VkImageLayout layout;
+    VkFormat format;
 };
 
 // Fwd declarations of layer_data and helpers to look-up/validate state from layer_data maps

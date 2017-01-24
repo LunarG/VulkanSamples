@@ -61,6 +61,7 @@
 #pragma GCC diagnostic warning "-Wwrite-strings"
 #endif
 #include "core_validation.h"
+#include "buffer_validation.h"
 #include "vk_layer_table.h"
 #include "vk_layer_data.h"
 #include "vk_layer_extension_utils.h"
@@ -116,6 +117,8 @@ struct instance_layer_data {
 
     CALL_STATE vkEnumeratePhysicalDevicesState = UNCALLED;
     uint32_t physical_devices_count = 0;
+    CALL_STATE vkEnumeratePhysicalDeviceGroupsState = UNCALLED;
+    uint32_t physical_device_groups_count = 0;
     CHECK_DISABLED disabled = {};
 
     unordered_map<VkPhysicalDevice, PHYSICAL_DEVICE_STATE> physical_device_map;
@@ -174,11 +177,14 @@ struct layer_data {
     // Device specific data
     PHYS_DEV_PROPERTIES_NODE phys_dev_properties = {};
     VkPhysicalDeviceMemoryProperties phys_dev_mem_props = {};
+    VkPhysicalDeviceProperties phys_dev_props = {};
 };
 
 // TODO : Do we need to guard access to layer_data_map w/ lock?
 static unordered_map<void *, layer_data *> layer_data_map;
 static unordered_map<void *, instance_layer_data *> instance_layer_data_map;
+
+static uint32_t loader_layer_if_version = CURRENT_LOADER_LAYER_INTERFACE_VERSION;
 
 static const VkLayerProperties global_layer = {
     "VK_LAYER_LUNARG_core_validation", VK_LAYER_API_VERSION, 1, "LunarG Validation Layer",
@@ -4101,7 +4107,6 @@ CreateInstance(const VkInstanceCreateInfo *pCreateInfo, const VkAllocationCallba
     instance_layer_data *instance_data = get_my_data_ptr(get_dispatch_key(*pInstance), instance_layer_data_map);
     instance_data->instance = *pInstance;
     layer_init_instance_dispatch_table(*pInstance, &instance_data->dispatch_table, fpGetInstanceProcAddr);
-
     instance_data->report_data = debug_report_create_instance(
         &instance_data->dispatch_table, *pInstance, pCreateInfo->enabledExtensionCount, pCreateInfo->ppEnabledExtensionNames);
     checkInstanceRegisterExtensions(pCreateInfo, instance_data);
@@ -4280,8 +4285,9 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu, const VkDevice
     } else {
         memset(&my_device_data->enabled_features, 0, sizeof(VkPhysicalDeviceFeatures));
     }
-    // Store physical device mem limits into device layer_data struct
+    // Store physical device properties and physical device mem limits into device layer_data structs
     my_instance_data->dispatch_table.GetPhysicalDeviceMemoryProperties(gpu, &my_device_data->phys_dev_mem_props);
+    my_instance_data->dispatch_table.GetPhysicalDeviceProperties(gpu, &my_device_data->phys_dev_props);
     lock.unlock();
 
     ValidateLayerOrdering(*pCreateInfo);
@@ -4330,6 +4336,28 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
 }
 
 static const VkExtensionProperties instance_extensions[] = {{VK_EXT_DEBUG_REPORT_EXTENSION_NAME, VK_EXT_DEBUG_REPORT_SPEC_VERSION}};
+
+// For given stage mask, if Geometry shader stage is on w/o GS being enabled, report geo_error_id
+//   and if Tessellation Control or Evaluation shader stages are on w/o TS being enabled, report tess_error_id
+static bool ValidateStageMaskGsTsEnables(layer_data *dev_data, VkPipelineStageFlags stageMask, const char *caller,
+                                         UNIQUE_VALIDATION_ERROR_CODE geo_error_id, UNIQUE_VALIDATION_ERROR_CODE tess_error_id) {
+    bool skip = false;
+    if (!dev_data->enabled_features.geometryShader && (stageMask & VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT)) {
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        geo_error_id, "DL", "%s call includes a stageMask with VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT bit set when "
+                                            "device does not have geometryShader feature enabled. %s",
+                        caller, validation_error_map[geo_error_id]);
+    }
+    if (!dev_data->enabled_features.tessellationShader &&
+        (stageMask & (VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT | VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT))) {
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        tess_error_id, "DL", "%s call includes a stageMask with VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT "
+                                             "and/or VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT bit(s) set when device "
+                                             "does not have tessellationShader feature enabled. %s",
+                        caller, validation_error_map[tess_error_id]);
+    }
+    return skip;
+}
 
 // This validates that the initial layout specified in the command buffer for
 // the IMAGE is the same
@@ -4800,6 +4828,8 @@ QueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits, V
         vector<SEMAPHORE_WAIT> semaphore_waits;
         vector<VkSemaphore> semaphore_signals;
         for (uint32_t i = 0; i < submit->waitSemaphoreCount; ++i) {
+            skip_call |= ValidateStageMaskGsTsEnables(dev_data, submit->pWaitDstStageMask[i], "vkQueueSubmit()",
+                                                      VALIDATION_ERROR_00142, VALIDATION_ERROR_00143);
             VkSemaphore semaphore = submit->pWaitSemaphores[i];
             auto pSemaphore = getSemaphoreNode(dev_data, semaphore);
             if (pSemaphore) {
@@ -5296,8 +5326,8 @@ static bool PreCallValidateDestroyFence(layer_data *dev_data, VkFence fence, FEN
     if (*fence_node) {
         if ((*fence_node)->state == FENCE_INFLIGHT) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
-                            (uint64_t)(fence), __LINE__, DRAWSTATE_INVALID_FENCE, "DS", "Fence 0x%" PRIx64 " is in use.",
-                            (uint64_t)(fence));
+                            (uint64_t)(fence), __LINE__, VALIDATION_ERROR_00173, "DS", "Fence 0x%" PRIx64 " is in use. %s",
+                            (uint64_t)(fence), validation_error_map[VALIDATION_ERROR_00173]);
         }
     }
     return skip;
@@ -6480,13 +6510,8 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateI
 
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
-        IMAGE_LAYOUT_NODE image_state;
-        image_state.layout = pCreateInfo->initialLayout;
-        image_state.format = pCreateInfo->format;
-        dev_data->imageMap.insert(std::make_pair(*pImage, unique_ptr<IMAGE_STATE>(new IMAGE_STATE(*pImage, pCreateInfo))));
-        ImageSubresourcePair subpair = {*pImage, false, VkImageSubresource()};
-        dev_data->imageSubresourceMap[*pImage].push_back(subpair);
-        dev_data->imageLayoutMap[subpair] = image_state;
+        PostCallRecordCreateImage(&dev_data->imageMap, &dev_data->imageSubresourceMap, &dev_data->imageLayoutMap, pCreateInfo,
+                                  pImage);
     }
     return result;
 }
@@ -8839,94 +8864,122 @@ CmdFillBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize ds
         dev_data->dispatch_table.CmdFillBuffer(commandBuffer, dstBuffer, dstOffset, size, data);
 }
 
-VKAPI_ATTR void VKAPI_CALL CmdClearAttachments(VkCommandBuffer commandBuffer, uint32_t attachmentCount,
-                                               const VkClearAttachment *pAttachments, uint32_t rectCount,
-                                               const VkClearRect *pRects) {
-    bool skip_call = false;
-    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-    std::unique_lock<std::mutex> lock(global_lock);
-    GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
-    if (pCB) {
-        skip_call |= ValidateCmd(dev_data, pCB, CMD_CLEARATTACHMENTS, "vkCmdClearAttachments()");
-        UpdateCmdBufferLastCmd(dev_data, pCB, CMD_CLEARATTACHMENTS);
+// Returns true if sub_rect is entirely contained within rect
+static inline bool ContainsRect(VkRect2D rect, VkRect2D sub_rect) {
+    if ((sub_rect.offset.x < rect.offset.x) ||
+        (sub_rect.offset.x + sub_rect.extent.width > rect.offset.x + rect.extent.width) ||
+        (sub_rect.offset.y < rect.offset.y) ||
+        (sub_rect.offset.y + sub_rect.extent.height > rect.offset.y + rect.extent.height))
+        return false;
+    return true;
+}
+
+bool PreCallValidateCmdClearAttachments(layer_data *dev_data, VkCommandBuffer commandBuffer, uint32_t attachmentCount,
+                                        const VkClearAttachment *pAttachments, uint32_t rectCount, const VkClearRect *pRects) {
+    GLOBAL_CB_NODE *cb_node = getCBNode(dev_data, commandBuffer);
+    bool skip = false;
+    if (cb_node) {
+        skip |= ValidateCmd(dev_data, cb_node, CMD_CLEARATTACHMENTS, "vkCmdClearAttachments()");
+        UpdateCmdBufferLastCmd(dev_data, cb_node, CMD_CLEARATTACHMENTS);
         // Warn if this is issued prior to Draw Cmd and clearing the entire attachment
-        if (!hasDrawCmd(pCB) && (pCB->activeRenderPassBeginInfo.renderArea.extent.width == pRects[0].rect.extent.width) &&
-            (pCB->activeRenderPassBeginInfo.renderArea.extent.height == pRects[0].rect.extent.height)) {
+        if (!hasDrawCmd(cb_node) && (cb_node->activeRenderPassBeginInfo.renderArea.extent.width == pRects[0].rect.extent.width) &&
+            (cb_node->activeRenderPassBeginInfo.renderArea.extent.height == pRects[0].rect.extent.height)) {
             // There are times where app needs to use ClearAttachments (generally when reusing a buffer inside of a render pass)
             // Can we make this warning more specific? I'd like to avoid triggering this test if we can tell it's a use that must
-            // call CmdClearAttachments
-            // Otherwise this seems more like a performance warning.
-            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
-                                 VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t &>(commandBuffer), 0,
-                                 DRAWSTATE_CLEAR_CMD_BEFORE_DRAW, "DS",
-                                 "vkCmdClearAttachments() issued on command buffer object 0x%p prior to any Draw Cmds."
-                                 " It is recommended you use RenderPass LOAD_OP_CLEAR on Attachments prior to any Draw.",
-                                 commandBuffer);
+            // call CmdClearAttachments. Otherwise this seems more like a performance warning.
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
+                            VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t &>(commandBuffer), 0,
+                            DRAWSTATE_CLEAR_CMD_BEFORE_DRAW, "DS",
+                            "vkCmdClearAttachments() issued on command buffer object 0x%p prior to any Draw Cmds."
+                            " It is recommended you use RenderPass LOAD_OP_CLEAR on Attachments prior to any Draw.",
+                            commandBuffer);
         }
-        skip_call |= outsideRenderPass(dev_data, pCB, "vkCmdClearAttachments()", VALIDATION_ERROR_01122);
+        skip |= outsideRenderPass(dev_data, cb_node, "vkCmdClearAttachments()", VALIDATION_ERROR_01122);
     }
 
     // Validate that attachment is in reference list of active subpass
-    if (pCB->activeRenderPass) {
-        const VkRenderPassCreateInfo *pRPCI = pCB->activeRenderPass->createInfo.ptr();
-        const VkSubpassDescription *pSD = &pRPCI->pSubpasses[pCB->activeSubpass];
-        auto framebuffer = getFramebufferState(dev_data, pCB->activeFramebuffer);
+    if (cb_node->activeRenderPass) {
+        const VkRenderPassCreateInfo *renderpass_create_info = cb_node->activeRenderPass->createInfo.ptr();
+        const VkSubpassDescription *subpass_desc = &renderpass_create_info->pSubpasses[cb_node->activeSubpass];
+        auto framebuffer = getFramebufferState(dev_data, cb_node->activeFramebuffer);
 
         for (uint32_t i = 0; i < attachmentCount; i++) {
             auto clear_desc = &pAttachments[i];
             VkImageView image_view = VK_NULL_HANDLE;
 
             if (clear_desc->aspectMask & VK_IMAGE_ASPECT_COLOR_BIT) {
-                if (clear_desc->colorAttachment >= pSD->colorAttachmentCount) {
-                    skip_call |= log_msg(
+                if (clear_desc->colorAttachment >= subpass_desc->colorAttachmentCount) {
+                    skip |= log_msg(
                         dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                         (uint64_t)commandBuffer, __LINE__, VALIDATION_ERROR_01114, "DS",
                         "vkCmdClearAttachments() color attachment index %d out of range for active subpass %d. %s",
-                        clear_desc->colorAttachment, pCB->activeSubpass, validation_error_map[VALIDATION_ERROR_01114]);
-                }
-                else if (pSD->pColorAttachments[clear_desc->colorAttachment].attachment == VK_ATTACHMENT_UNUSED) {
-                    skip_call |= log_msg(
-                        dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                        (uint64_t)commandBuffer, __LINE__, DRAWSTATE_MISSING_ATTACHMENT_REFERENCE, "DS",
-                        "vkCmdClearAttachments() color attachment index %d is VK_ATTACHMENT_UNUSED; ignored.",
-                        clear_desc->colorAttachment);
-                }
-                else {
-                    image_view = framebuffer->createInfo.pAttachments[pSD->pColorAttachments[clear_desc->colorAttachment].attachment];
+                        clear_desc->colorAttachment, cb_node->activeSubpass, validation_error_map[VALIDATION_ERROR_01114]);
+                } else if (subpass_desc->pColorAttachments[clear_desc->colorAttachment].attachment == VK_ATTACHMENT_UNUSED) {
+                    skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
+                                    VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)commandBuffer, __LINE__,
+                                    DRAWSTATE_MISSING_ATTACHMENT_REFERENCE, "DS",
+                                    "vkCmdClearAttachments() color attachment index %d is VK_ATTACHMENT_UNUSED; ignored.",
+                                    clear_desc->colorAttachment);
+                } else {
+                    image_view = framebuffer->createInfo
+                                     .pAttachments[subpass_desc->pColorAttachments[clear_desc->colorAttachment].attachment];
                 }
             } else if (clear_desc->aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) {
-                if (!pSD->pDepthStencilAttachment || // Says no DS will be used in active subpass
-                    (pSD->pDepthStencilAttachment->attachment ==
+                if (!subpass_desc->pDepthStencilAttachment || // Says no DS will be used in active subpass
+                    (subpass_desc->pDepthStencilAttachment->attachment ==
                      VK_ATTACHMENT_UNUSED)) { // Says no DS will be used in active subpass
 
-                    skip_call |= log_msg(
-                        dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                        (uint64_t)commandBuffer, __LINE__, DRAWSTATE_MISSING_ATTACHMENT_REFERENCE, "DS",
-                        "vkCmdClearAttachments() depth/stencil clear with no depth/stencil attachment in subpass; ignored");
-                }
-                else {
-                    image_view = framebuffer->createInfo.pAttachments[pSD->pDepthStencilAttachment->attachment];
+                    skip |=
+                        log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
+                                VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)commandBuffer, __LINE__,
+                                DRAWSTATE_MISSING_ATTACHMENT_REFERENCE, "DS",
+                                "vkCmdClearAttachments() depth/stencil clear with no depth/stencil attachment in subpass; ignored");
+                } else {
+                    image_view = framebuffer->createInfo.pAttachments[subpass_desc->pDepthStencilAttachment->attachment];
                 }
             }
 
             if (image_view) {
                 auto image_view_state = getImageViewState(dev_data, image_view);
-                auto aspects_present = image_view_state->create_info.subresourceRange.aspectMask;
-                auto extra_aspects = clear_desc->aspectMask & ~aspects_present;
-                // TODO: This is a different check than 01125. Need a new valid usage statement for this case, or should kill check.
-                if (extra_aspects) {
-                    skip_call |= log_msg(
-                            dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT,
-                            reinterpret_cast<uint64_t &>(image_view), __LINE__, VALIDATION_ERROR_01125, "DS",
-                            "vkCmdClearAttachments() with aspects not present in image view: %s. %s",
-                            string_VkImageAspectFlagBits((VkImageAspectFlagBits)extra_aspects),
-                            validation_error_map[VALIDATION_ERROR_01125]);
+                for (uint32_t j = 0; j < rectCount; j++) {
+                    // The rectangular region specified by a given element of pRects must be contained within the render area of the
+                    // current render pass instance
+                    if (false == ContainsRect(cb_node->activeRenderPassBeginInfo.renderArea, pRects[j].rect)) {
+                        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                        VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, VALIDATION_ERROR_01115, "DS",
+                                        "vkCmdClearAttachments(): The area defined by pRects[%d] is not contained in the area of "
+                                        "the current render pass instance. %s",
+                                        j, validation_error_map[VALIDATION_ERROR_01115]);
+                    }
+                    // The layers specified by a given element of pRects must be contained within every attachment that
+                    // pAttachments refers to
+                    auto attachment_base_array_layer = image_view_state->create_info.subresourceRange.baseArrayLayer;
+                    auto attachment_layer_count = image_view_state->create_info.subresourceRange.layerCount;
+                    if ((pRects[j].baseArrayLayer < attachment_base_array_layer) || pRects[j].layerCount > attachment_layer_count) {
+                        skip |=
+                            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT,
+                                    0, __LINE__, VALIDATION_ERROR_01116, "DS",
+                                    "vkCmdClearAttachments(): The layers defined in pRects[%d] are not contained in the layers of "
+                                    "pAttachment[%d]. %s",
+                                    j, i, validation_error_map[VALIDATION_ERROR_01116]);
+                    }
                 }
             }
         }
     }
-    lock.unlock();
-    if (!skip_call)
+    return skip;
+}
+
+VKAPI_ATTR void VKAPI_CALL CmdClearAttachments(VkCommandBuffer commandBuffer, uint32_t attachmentCount,
+                                               const VkClearAttachment *pAttachments, uint32_t rectCount,
+                                               const VkClearRect *pRects) {
+    bool skip = false;
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+    {
+        std::lock_guard<std::mutex> lock(global_lock);
+        skip = PreCallValidateCmdClearAttachments(dev_data, commandBuffer, attachmentCount, pAttachments, rectCount, pRects);
+    }
+    if (!skip)
         dev_data->dispatch_table.CmdClearAttachments(commandBuffer, attachmentCount, pAttachments, rectCount, pRects);
 }
 
@@ -9058,6 +9111,8 @@ CmdSetEvent(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags s
         skip_call |= ValidateCmd(dev_data, pCB, CMD_SETEVENT, "vkCmdSetEvent()");
         UpdateCmdBufferLastCmd(dev_data, pCB, CMD_SETEVENT);
         skip_call |= insideRenderPass(dev_data, pCB, "vkCmdSetEvent()", VALIDATION_ERROR_00238);
+        skip_call |=
+            ValidateStageMaskGsTsEnables(dev_data, stageMask, "vkCmdSetEvent()", VALIDATION_ERROR_00230, VALIDATION_ERROR_00231);
         auto event_state = getEventNode(dev_data, event);
         if (event_state) {
             addCommandBufferBinding(&event_state->cb_bindings,
@@ -9087,6 +9142,8 @@ CmdResetEvent(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags
         skip_call |= ValidateCmd(dev_data, pCB, CMD_RESETEVENT, "vkCmdResetEvent()");
         UpdateCmdBufferLastCmd(dev_data, pCB, CMD_RESETEVENT);
         skip_call |= insideRenderPass(dev_data, pCB, "vkCmdResetEvent()", VALIDATION_ERROR_00249);
+        skip_call |=
+            ValidateStageMaskGsTsEnables(dev_data, stageMask, "vkCmdResetEvent()", VALIDATION_ERROR_00240, VALIDATION_ERROR_00241);
         auto event_state = getEventNode(dev_data, event);
         if (event_state) {
             addCommandBufferBinding(&event_state->cb_bindings,
@@ -9097,6 +9154,7 @@ CmdResetEvent(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags
         if (!pCB->waitedEvents.count(event)) {
             pCB->writeEventsBeforeWait.push_back(event);
         }
+        // TODO : Add check for VALIDATION_ERROR_00226
         std::function<bool(VkQueue)> eventUpdate =
             std::bind(setEventStageMask, std::placeholders::_1, commandBuffer, event, VkPipelineStageFlags(0));
         pCB->eventUpdates.push_back(eventUpdate);
@@ -9576,6 +9634,10 @@ VKAPI_ATTR void VKAPI_CALL CmdWaitEvents(VkCommandBuffer commandBuffer, uint32_t
     if (cb_state) {
         skip |= ValidateStageMasksAgainstQueueCapabilities(dev_data, cb_state, sourceStageMask, dstStageMask, "vkCmdWaitEvents",
                                                            VALIDATION_ERROR_02510);
+        skip |= ValidateStageMaskGsTsEnables(dev_data, sourceStageMask, "vkCmdWaitEvents()", VALIDATION_ERROR_02067,
+                                             VALIDATION_ERROR_02069);
+        skip |= ValidateStageMaskGsTsEnables(dev_data, dstStageMask, "vkCmdWaitEvents()", VALIDATION_ERROR_02068,
+                                             VALIDATION_ERROR_02070);
         auto first_event_index = cb_state->events.size();
         for (uint32_t i = 0; i < eventCount; ++i) {
             auto event_state = getEventNode(dev_data, pEvents[i]);
@@ -9621,6 +9683,10 @@ VKAPI_ATTR void VKAPI_CALL CmdPipelineBarrier(VkCommandBuffer commandBuffer, VkP
         skip |= ValidateStageMasksAgainstQueueCapabilities(dev_data, cb_state, srcStageMask, dstStageMask, "vkCmdPipelineBarrier",
                                                            VALIDATION_ERROR_02513);
         skip |= ValidateCmd(dev_data, cb_state, CMD_PIPELINEBARRIER, "vkCmdPipelineBarrier()");
+        skip |= ValidateStageMaskGsTsEnables(dev_data, srcStageMask, "vkCmdPipelineBarrier()", VALIDATION_ERROR_00265,
+                                             VALIDATION_ERROR_00267);
+        skip |= ValidateStageMaskGsTsEnables(dev_data, dstStageMask, "vkCmdPipelineBarrier()", VALIDATION_ERROR_00266,
+                                             VALIDATION_ERROR_00268);
         UpdateCmdBufferLastCmd(dev_data, cb_state, CMD_PIPELINEBARRIER);
         skip |= TransitionImageLayouts(commandBuffer, imageMemoryBarrierCount, pImageMemoryBarriers);
         skip |= ValidateBarriers("vkCmdPipelineBarrier", commandBuffer, memoryBarrierCount, pMemoryBarriers,
@@ -10672,6 +10738,12 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
     // TODO: As part of wrapping up the mem_tracker/core_validation merge the following routine should be consolidated with
     //       ValidateLayouts.
     skip_call |= ValidateRenderpassAttachmentUsage(dev_data, pCreateInfo);
+    for (uint32_t i = 0; i < pCreateInfo->dependencyCount; ++i) {
+        skip_call |= ValidateStageMaskGsTsEnables(dev_data, pCreateInfo->pDependencies[i].srcStageMask, "vkCreateRenderPass()",
+                                                  VALIDATION_ERROR_00368, VALIDATION_ERROR_00370);
+        skip_call |= ValidateStageMaskGsTsEnables(dev_data, pCreateInfo->pDependencies[i].dstStageMask, "vkCreateRenderPass()",
+                                                  VALIDATION_ERROR_00369, VALIDATION_ERROR_00371);
+    }
     if (!skip_call) {
         skip_call |= ValidateLayouts(dev_data, device, pCreateInfo);
     }
@@ -12415,6 +12487,14 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
                         acquired_images);
         }
     }
+
+    if (swapchain_data->images.size() == 0) {
+        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
+                             reinterpret_cast<uint64_t const &>(swapchain), __LINE__, DRAWSTATE_SWAPCHAIN_IMAGES_NOT_FOUND, "DS",
+                             "vkAcquireNextImageKHR: No images found to acquire from. Application probably did not call "
+                             "vkGetSwapchainImagesKHR after swapchain creation.");
+    }
+
     lock.unlock();
 
     if (skip_call)
@@ -12864,6 +12944,9 @@ intercept_khr_swapchain_command(const char *name, VkDevice dev);
 static PFN_vkVoidFunction
 intercept_khr_surface_command(const char *name, VkInstance instance);
 
+static PFN_vkVoidFunction
+intercept_extension_instance_commands(const char *name, VkInstance instance);
+
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice dev, const char *funcName) {
     PFN_vkVoidFunction proc = intercept_core_device_command(funcName);
     if (proc)
@@ -12901,10 +12984,25 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance
     if (proc)
         return proc;
 
+    proc = intercept_extension_instance_commands(funcName, instance);
+    if (proc)
+        return proc;
+
     auto &table = instance_data->dispatch_table;
     if (!table.GetInstanceProcAddr)
         return nullptr;
     return table.GetInstanceProcAddr(instance, funcName);
+}
+
+VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance instance, const char *funcName) {
+    assert(instance);
+
+    instance_layer_data *instance_data = get_my_data_ptr(get_dispatch_key(instance), instance_layer_data_map);
+
+    auto &table = instance_data->dispatch_table;
+    if (!table.GetPhysicalDeviceProcAddr)
+        return nullptr;
+    return table.GetPhysicalDeviceProcAddr(instance, funcName);
 }
 
 static PFN_vkVoidFunction
@@ -12914,6 +13012,7 @@ intercept_core_instance_command(const char *name) {
         PFN_vkVoidFunction proc;
     } core_instance_commands[] = {
         { "vkGetInstanceProcAddr", reinterpret_cast<PFN_vkVoidFunction>(GetInstanceProcAddr) },
+        { "vk_layerGetPhysicalDeviceProcAddr", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceProcAddr) },
         { "vkGetDeviceProcAddr", reinterpret_cast<PFN_vkVoidFunction>(GetDeviceProcAddr) },
         { "vkCreateInstance", reinterpret_cast<PFN_vkVoidFunction>(CreateInstance) },
         { "vkCreateDevice", reinterpret_cast<PFN_vkVoidFunction>(CreateDevice) },
@@ -13163,6 +13262,11 @@ intercept_khr_surface_command(const char *name, VkInstance instance) {
     return nullptr;
 }
 
+static PFN_vkVoidFunction
+intercept_extension_instance_commands(const char *name, VkInstance instance) {
+    return NULL;
+}
+
 } // namespace core_validation
 
 // vk_layer_logging.h expects these to be defined
@@ -13220,3 +13324,28 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
 VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char *funcName) {
     return core_validation::GetInstanceProcAddr(instance, funcName);
 }
+
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vk_layerGetPhysicalDeviceProcAddr(VkInstance instance, const char *funcName) {
+    return core_validation::GetPhysicalDeviceProcAddr(instance, funcName);
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkNegotiateLoaderLayerInterfaceVersion(VkNegotiateLayerInterface *pVersionStruct) {
+    assert(pVersionStruct != NULL);
+    assert(pVersionStruct->sType == LAYER_NEGOTIATE_INTERFACE_STRUCT);
+
+    // Fill in the function pointers if our version is at least capable of having the structure contain them.
+    if (pVersionStruct->loaderLayerInterfaceVersion >= 2) {
+        pVersionStruct->pfnGetInstanceProcAddr = vkGetInstanceProcAddr;
+        pVersionStruct->pfnGetDeviceProcAddr = vkGetDeviceProcAddr;
+        pVersionStruct->pfnGetPhysicalDeviceProcAddr = vk_layerGetPhysicalDeviceProcAddr;
+    }
+
+    if (pVersionStruct->loaderLayerInterfaceVersion < CURRENT_LOADER_LAYER_INTERFACE_VERSION) {
+        core_validation::loader_layer_if_version = pVersionStruct->loaderLayerInterfaceVersion;
+    } else if (pVersionStruct->loaderLayerInterfaceVersion > CURRENT_LOADER_LAYER_INTERFACE_VERSION) {
+        pVersionStruct->loaderLayerInterfaceVersion = CURRENT_LOADER_LAYER_INTERFACE_VERSION;
+    }
+
+    return VK_SUCCESS;
+}
+

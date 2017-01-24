@@ -44,7 +44,10 @@ later on this page.
 
 
 #### **Coding Conventions and Formatting**
-* Try to follow any existing style in the file.  "When in Rome..."
+* Use the [Google style guide](https://google.github.io/styleguide/cppguide.html) for source code with the following two exceptions.
+    * The column limit is 132 (as opposed to the default value 80). The clang-format tool will handle this. See below.
+    * If you can justify a reason for violating a rule in the guidelines, then you are free to do so. Be prepared to defend your decision during code review. This should be used responsibly. An example of a bad reason is “I don’t like that rule.” An example of a good reason is “This violates the style guide, but it improves type safety.”
+
 * Run clang-format on your changes to maintain formatting.
     * There are `.clang-format files` throughout the repository to define clang-format settings
       which are found and used automatically by clang-format.
@@ -56,6 +59,15 @@ later on this page.
 >        # Check to see if clang-format made any changes and if they are OK.
 >        $ git add -u .
 >        $ git commit
+
+* Follow these seven rules for git commit messages.
+    * Limit the subject line to 50 characters. Begin with a one-word component description followed by a colon (e.g. loader, layers, tests, etc.).
+    * Separate subject from body with a blank line.
+    * Wrap the body at 72 characters.
+    * Capitalize the subject line.
+    * Do not end the subject line with a period.
+    * Use the body to explain what and why vs. how.
+    * Use the imperative mood in the subject line. This just means to write it as a command (e.g. Fix the sprocket).
 
 #### **Testing**
 * Run the existing tests in the repository before and after your changes to check for any regressions.  

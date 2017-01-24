@@ -81,6 +81,11 @@ struct instance_extension_enables {
     bool android_enabled;
     bool win32_enabled;
     bool display_enabled;
+    bool khr_get_phys_dev_properties2_enabled;
+    bool ext_acquire_xlib_display_enabled;
+    bool ext_direct_mode_display_enabled;
+    bool ext_display_surface_counter_enabled;
+    bool nv_external_memory_capabilities_enabled;
 };
 
 // String returned by string_VkStructureType for an unrecognized type.
@@ -272,47 +277,6 @@ bool validate_struct_type(debug_report_data *report_data, const char *apiName, c
 }
 
 /**
- * Validate an array of Vulkan structures.
- *
- * Verify that required count and array parameters are not NULL.  If count
- * is not NULL and its value is not optional, verify that it is not 0.
- * If the array contains 1 or more structures, verify that each structure's
- * sType field is set to the correct VkStructureType value.
- *
- * @param report_data debug_report_data object for routing validation messages.
- * @param apiName Name of API call being validated.
- * @param countName Name of count parameter.
- * @param arrayName Name of array parameter.
- * @param sTypeName Name of expected VkStructureType value.
- * @param count Pointer to the number of elements in the array.
- * @param array Array to validate.
- * @param sType VkStructureType for structure validation.
- * @param countPtrRequired The 'count' parameter may not be NULL when true.
- * @param countValueRequired The '*count' value may not be 0 when true.
- * @param arrayRequired The 'array' parameter may not be NULL when true.
- * @return Boolean value indicating that the call should be skipped.
- */
-template <typename T>
-bool validate_struct_type_array(debug_report_data *report_data, const char *apiName, const ParameterName &countName,
-                                const ParameterName &arrayName, const char *sTypeName, const uint32_t *count, const T *array,
-                                VkStructureType sType, bool countPtrRequired, bool countValueRequired, bool arrayRequired) {
-    bool skip_call = false;
-
-    if (count == NULL) {
-        if (countPtrRequired) {
-            skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                                 REQUIRED_PARAMETER, LayerName, "%s: required parameter %s specified as NULL", apiName,
-                                 countName.get_name().c_str());
-        }
-    } else {
-        skip_call |= validate_struct_type_array(report_data, apiName, countName, arrayName, sTypeName, (*count), array, sType,
-                                                countValueRequired, arrayRequired);
-    }
-
-    return skip_call;
-}
-
-/**
  * Validate an array of Vulkan structures
  *
  * Verify that required count and array parameters are not 0 or NULL.  If
@@ -348,6 +312,47 @@ bool validate_struct_type_array(debug_report_data *report_data, const char *apiN
                                      arrayName.get_name().c_str(), i, sTypeName);
             }
         }
+    }
+
+    return skip_call;
+}
+
+/**
+ * Validate an array of Vulkan structures.
+ *
+ * Verify that required count and array parameters are not NULL.  If count
+ * is not NULL and its value is not optional, verify that it is not 0.
+ * If the array contains 1 or more structures, verify that each structure's
+ * sType field is set to the correct VkStructureType value.
+ *
+ * @param report_data debug_report_data object for routing validation messages.
+ * @param apiName Name of API call being validated.
+ * @param countName Name of count parameter.
+ * @param arrayName Name of array parameter.
+ * @param sTypeName Name of expected VkStructureType value.
+ * @param count Pointer to the number of elements in the array.
+ * @param array Array to validate.
+ * @param sType VkStructureType for structure validation.
+ * @param countPtrRequired The 'count' parameter may not be NULL when true.
+ * @param countValueRequired The '*count' value may not be 0 when true.
+ * @param arrayRequired The 'array' parameter may not be NULL when true.
+ * @return Boolean value indicating that the call should be skipped.
+ */
+template <typename T>
+bool validate_struct_type_array(debug_report_data *report_data, const char *apiName, const ParameterName &countName,
+                                const ParameterName &arrayName, const char *sTypeName, uint32_t *count, const T *array,
+                                VkStructureType sType, bool countPtrRequired, bool countValueRequired, bool arrayRequired) {
+    bool skip_call = false;
+
+    if (count == NULL) {
+        if (countPtrRequired) {
+            skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                                 REQUIRED_PARAMETER, LayerName, "%s: required parameter %s specified as NULL", apiName,
+                                 countName.get_name().c_str());
+        }
+    } else {
+        skip_call |= validate_struct_type_array(report_data, apiName, countName, arrayName, sTypeName, (*count), array, sType,
+                                                countValueRequired, arrayRequired);
     }
 
     return skip_call;
