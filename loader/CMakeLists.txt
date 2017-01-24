@@ -90,6 +90,8 @@ if (WIN32)
     target_compile_options(loader-opt PUBLIC "$<$<CONFIG:DEBUG>:${LOCAL_C_FLAGS_REL}>")
     add_library(${API_LOWERCASE}-${MAJOR} SHARED $<TARGET_OBJECTS:loader-opt> $<TARGET_OBJECTS:loader-norm> ${CMAKE_CURRENT_BINARY_DIR}/${API_LOWERCASE}-${MAJOR}.def ${CMAKE_CURRENT_SOURCE_DIR}/loader.rc)
     add_library(VKstatic.${MAJOR} STATIC $<TARGET_OBJECTS:loader-opt> $<TARGET_OBJECTS:loader-norm>)
+    # Suppress conflicting libs warning for debug builds.
+    set_target_properties(${API_LOWERCASE}-${MAJOR} PROPERTIES LINK_FLAGS_DEBUG /ignore:4098)
     set_target_properties(VKstatic.${MAJOR} PROPERTIES OUTPUT_NAME VKstatic.${MAJOR})
     target_link_libraries(${API_LOWERCASE}-${MAJOR} shlwapi)
     target_link_libraries(VKstatic.${MAJOR} shlwapi)
