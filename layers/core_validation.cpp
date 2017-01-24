@@ -10220,7 +10220,7 @@ static bool FindDependency(const int index, const int dependent, const std::vect
     processed_nodes.insert(index);
     const DAGNode &node = subpass_to_node[index];
     // Look for a dependency path. If one exists return true else recurse on the previous nodes.
-    if (std::find(node.prev.begin(), node.prev.end(), dependent) == node.prev.end()) {
+    if (std::find(node.prev.begin(), node.prev.end(), static_cast<uint32_t>(dependent)) == node.prev.end()) {
         for (auto elem : node.prev) {
             if (FindDependency(elem, dependent, subpass_to_node, processed_nodes))
                 return true;
