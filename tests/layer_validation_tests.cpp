@@ -8765,20 +8765,36 @@ TEST_F(VkLayerTest, DSUsageBitsErrors) {
     ASSERT_VK_SUCCESS(err);
 
     // Create an image to be used for invalid updates
+    // Find a format / tiling for COLOR_ATTACHMENT
     VkImageCreateInfo image_ci = {};
+    image_ci.format = VK_FORMAT_UNDEFINED;
+    for (int f = VK_FORMAT_BEGIN_RANGE; f <= VK_FORMAT_END_RANGE; f++) {
+        VkFormat format = static_cast<VkFormat>(f);
+        VkFormatProperties fProps = m_device->format_properties(format);
+        if (fProps.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) {
+            image_ci.format = format;
+            image_ci.tiling = VK_IMAGE_TILING_LINEAR;
+            break;
+        } else if (fProps.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) {
+            image_ci.format = format;
+            image_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
+            break;
+        }
+    }
+    if (image_ci.format == VK_FORMAT_UNDEFINED) {
+        return;
+    }
+
     image_ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     image_ci.imageType = VK_IMAGE_TYPE_2D;
-    image_ci.format = VK_FORMAT_R8G8B8A8_UNORM;
     image_ci.extent.width = 64;
     image_ci.extent.height = 64;
     image_ci.extent.depth = 1;
     image_ci.mipLevels = 1;
     image_ci.arrayLayers = 1;
     image_ci.samples = VK_SAMPLE_COUNT_1_BIT;
-    image_ci.tiling = VK_IMAGE_TILING_LINEAR;
     image_ci.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
-    // This usage is not valid for any descriptor type
-    image_ci.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    image_ci.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     image_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     VkImage image;
     err = vkCreateImage(m_device->device(), &image_ci, NULL, &image);
@@ -8803,7 +8819,7 @@ TEST_F(VkLayerTest, DSUsageBitsErrors) {
     VkImageViewCreateInfo image_view_ci = {};
     image_view_ci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     image_view_ci.image = image;
-    image_view_ci.format = VK_FORMAT_R8G8B8A8_UNORM;
+    image_view_ci.format = image_ci.format;
     image_view_ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
     image_view_ci.subresourceRange.layerCount = 1;
     image_view_ci.subresourceRange.baseArrayLayer = 0;
