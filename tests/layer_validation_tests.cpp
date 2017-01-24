@@ -8703,13 +8703,18 @@ TEST_F(VkLayerTest, DSUsageBitsErrors) {
     // Create a buffer & bufferView to be used for invalid updates
     VkBufferCreateInfo buff_ci = {};
     buff_ci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    // This usage is not valid for any descriptor type
-    buff_ci.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    buff_ci.usage = VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT;
     buff_ci.size = 256;
     buff_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    VkBuffer buffer;
+    VkBuffer buffer, storage_texel_buffer;
     err = vkCreateBuffer(m_device->device(), &buff_ci, NULL, &buffer);
     ASSERT_VK_SUCCESS(err);
+
+    // Create another buffer to use in testing the UNIFORM_TEXEL_BUFFER case
+    buff_ci.usage = VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
+    err = vkCreateBuffer(m_device->device(), &buff_ci, NULL, &storage_texel_buffer);
+    ASSERT_VK_SUCCESS(err);
+
     VkMemoryRequirements mem_reqs;
     vkGetBufferMemoryRequirements(m_device->device(), buffer, &mem_reqs);
     VkMemoryAllocateInfo mem_alloc_info = {};
@@ -8735,8 +8740,28 @@ TEST_F(VkLayerTest, DSUsageBitsErrors) {
     buff_view_ci.format = VK_FORMAT_R8_UNORM;
     buff_view_ci.range = VK_WHOLE_SIZE;
     VkBufferView buff_view;
-    // Note that this hits VALIDATION_ERROR_00694 due to no usage bit set, but we want call to go through
     err = vkCreateBufferView(m_device->device(), &buff_view_ci, NULL, &buff_view);
+    ASSERT_VK_SUCCESS(err);
+
+    // Now get resources / view for storage_texel_buffer
+    vkGetBufferMemoryRequirements(m_device->device(), storage_texel_buffer, &mem_reqs);
+    pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc_info, 0);
+    if (!pass) {
+        vkDestroyBuffer(m_device->device(), buffer, NULL);
+        vkDestroyBufferView(m_device->device(), buff_view, NULL);
+        vkFreeMemory(m_device->device(), mem, NULL);
+        vkDestroyBuffer(m_device->device(), storage_texel_buffer, NULL);
+        vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
+        return;
+    }
+    VkDeviceMemory storage_texel_buffer_mem;
+    VkBufferView storage_texel_buffer_view;
+    err = vkAllocateMemory(m_device->device(), &mem_alloc_info, NULL, &storage_texel_buffer_mem);
+    ASSERT_VK_SUCCESS(err);
+    err = vkBindBufferMemory(m_device->device(), storage_texel_buffer, storage_texel_buffer_mem, 0);
+    ASSERT_VK_SUCCESS(err);
+    buff_view_ci.buffer = storage_texel_buffer;
+    err = vkCreateBufferView(m_device->device(), &buff_view_ci, NULL, &storage_texel_buffer_view);
     ASSERT_VK_SUCCESS(err);
 
     // Create an image to be used for invalid updates
@@ -8816,6 +8841,10 @@ TEST_F(VkLayerTest, DSUsageBitsErrors) {
     };
     // Start loop at 1 as SAMPLER desc type has no usage bit error
     for (uint32_t i = 1; i < VK_DESCRIPTOR_TYPE_RANGE_SIZE; ++i) {
+        if (VkDescriptorType(i) == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) {
+            // Now check for UNIFORM_TEXEL_BUFFER using storage_texel_buffer_view
+            descriptor_write.pTexelBufferView = &storage_texel_buffer_view;
+        }
         descriptor_write.descriptorType = VkDescriptorType(i);
         descriptor_write.dstSet = descriptor_sets[i];
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, error_codes[i]);
@@ -8824,14 +8853,21 @@ TEST_F(VkLayerTest, DSUsageBitsErrors) {
 
         m_errorMonitor->VerifyFound();
         vkDestroyDescriptorSetLayout(m_device->device(), ds_layouts[i], NULL);
+        if (VkDescriptorType(i) == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) {
+            descriptor_write.pTexelBufferView = &buff_view;
+        }
     }
+
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layouts[0], NULL);
     vkDestroyImage(m_device->device(), image, NULL);
     vkFreeMemory(m_device->device(), image_mem, NULL);
     vkDestroyImageView(m_device->device(), image_view, NULL);
     vkDestroyBuffer(m_device->device(), buffer, NULL);
+    vkDestroyBuffer(m_device->device(), storage_texel_buffer, NULL);
     vkDestroyBufferView(m_device->device(), buff_view, NULL);
+    vkDestroyBufferView(m_device->device(), storage_texel_buffer_view, NULL);
     vkFreeMemory(m_device->device(), mem, NULL);
+    vkFreeMemory(m_device->device(), storage_texel_buffer_mem, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
 
