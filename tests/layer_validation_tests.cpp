@@ -253,10 +253,10 @@ class ErrorMonitor {
         if (!AllDesiredMsgsFound()) {
             DumpFailureMsgs();
             for (auto desired_msg : desired_message_strings_) {
-                FAIL() << "Did not receive expected error '" << desired_msg << "'";
+                ADD_FAILURE() << "Did not receive expected error '" << desired_msg << "'";
             }
             for (auto desired_id : desired_message_ids_) {
-                FAIL() << "Did not receive expected error '" << desired_id << "'";
+                ADD_FAILURE() << "Did not receive expected error ENUM '" << desired_id << "'";
             }
         }
         Reset();
@@ -267,7 +267,7 @@ class ErrorMonitor {
         if (AnyDesiredMsgFound()) {
             DumpFailureMsgs();
             for (auto msg : failure_message_strings_) {
-                FAIL() << "Expected to succeed but got error: " << msg;
+                ADD_FAILURE() << "Expected to succeed but got error: " << msg;
             }
         }
         Reset();
@@ -5397,7 +5397,7 @@ TEST_F(VkLayerTest, InvalidCmdBufferDescriptorSetImageSamplerDestroyed) {
     m_errorMonitor->VerifyFound();
 
     // Try again once the queue is idle - should succeed w/o error
-    // TODO - thought the particular error above doesn't re-occur, there are other 'unexpecteds' still to clean up
+    // TODO - though the particular error above doesn't re-occur, there are other 'unexpecteds' still to clean up
     vkQueueWaitIdle(m_device->m_queue);
     vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
 
