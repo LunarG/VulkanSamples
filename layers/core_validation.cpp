@@ -6503,6 +6503,23 @@ static bool ValidateImageAspectMask(layer_data *dev_data, VkImage image, VkForma
     return skip;
 }
 
+static bool ValidateImageSubrangeLevelLayerCounts(layer_data *dev_data, const VkImageSubresourceRange &subresourceRange,
+                                                  const char *func_name, UNIQUE_VALIDATION_ERROR_CODE layer_msg_code,
+                                                  UNIQUE_VALIDATION_ERROR_CODE level_msg_code) {
+    bool skip = false;
+    if (subresourceRange.levelCount == 0) {
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                        VALIDATION_ERROR_00768, "IMAGE", "%s called with 0 in subresourceRange.levelCount. %s", func_name,
+                        validation_error_map[VALIDATION_ERROR_00768]);
+    }
+    if (subresourceRange.layerCount == 0) {
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                        VALIDATION_ERROR_00769, "IMAGE", "%s called with 0 in subresourceRange.layerCount. %s", func_name,
+                        validation_error_map[VALIDATION_ERROR_00769]);
+    }
+    return skip;
+}
+
 static bool PreCallValidateCreateImageView(layer_data *dev_data, const VkImageViewCreateInfo *create_info) {
     bool skip = false;
     IMAGE_STATE *image_state = getImageState(dev_data, create_info->image);
@@ -6532,20 +6549,8 @@ static bool PreCallValidateCreateImageView(layer_data *dev_data, const VkImageVi
                         VALIDATION_ERROR_00769, "IMAGE", "%s %s", ss.str().c_str(), validation_error_map[VALIDATION_ERROR_00769]);
         }
         // TODO: Need new valid usage language for levelCount == 0 & layerCount == 0
-        if (!create_info->subresourceRange.levelCount) {
-            std::stringstream ss;
-            ss << "vkCreateImageView called with 0 in pCreateInfo->subresourceRange.levelCount.";
-            skip |=
-                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                        VALIDATION_ERROR_00768, "IMAGE", "%s %s", ss.str().c_str(), validation_error_map[VALIDATION_ERROR_00768]);
-        }
-        if (!create_info->subresourceRange.layerCount) {
-            std::stringstream ss;
-            ss << "vkCreateImageView called with 0 in pCreateInfo->subresourceRange.layerCount.";
-            skip |=
-                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                        VALIDATION_ERROR_00769, "IMAGE", "%s %s", ss.str().c_str(), validation_error_map[VALIDATION_ERROR_00769]);
-        }
+        skip |= ValidateImageSubrangeLevelLayerCounts(dev_data, create_info->subresourceRange, "vkCreateImageView()",
+                                                      VALIDATION_ERROR_00768, VALIDATION_ERROR_00769);
 
         VkImageCreateFlags image_flags = image_state->createInfo.flags;
         VkFormat image_format = image_state->createInfo.format;
@@ -9294,6 +9299,8 @@ static bool ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, ui
                 }
             }
             if (imageFound) {
+                skip |= ValidateImageSubrangeLevelLayerCounts(dev_data, mem_barrier->subresourceRange, funcName,
+                                                              VALIDATION_ERROR_00768, VALIDATION_ERROR_00769);
                 auto aspect_mask = mem_barrier->subresourceRange.aspectMask;
                 skip |= ValidateImageAspectMask(dev_data, image_data->image, format, aspect_mask, funcName);
                 int layerCount = (mem_barrier->subresourceRange.layerCount == VK_REMAINING_ARRAY_LAYERS)
@@ -9526,7 +9533,7 @@ VKAPI_ATTR void VKAPI_CALL CmdWaitEvents(VkCommandBuffer commandBuffer, uint32_t
             skip |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdWaitEvents()");
         }
         skip |= TransitionImageLayouts(commandBuffer, imageMemoryBarrierCount, pImageMemoryBarriers);
-        skip |= ValidateBarriers("vkCmdWaitEvents", commandBuffer, memoryBarrierCount, pMemoryBarriers, bufferMemoryBarrierCount,
+        skip |= ValidateBarriers("vkCmdWaitEvents()", commandBuffer, memoryBarrierCount, pMemoryBarriers, bufferMemoryBarrierCount,
                                  pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
     }
     lock.unlock();
@@ -9555,7 +9562,7 @@ VKAPI_ATTR void VKAPI_CALL CmdPipelineBarrier(VkCommandBuffer commandBuffer, VkP
                                              VALIDATION_ERROR_00268);
         UpdateCmdBufferLastCmd(dev_data, cb_state, CMD_PIPELINEBARRIER);
         skip |= TransitionImageLayouts(commandBuffer, imageMemoryBarrierCount, pImageMemoryBarriers);
-        skip |= ValidateBarriers("vkCmdPipelineBarrier", commandBuffer, memoryBarrierCount, pMemoryBarriers,
+        skip |= ValidateBarriers("vkCmdPipelineBarrier()", commandBuffer, memoryBarrierCount, pMemoryBarriers,
                                  bufferMemoryBarrierCount, pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
     }
     lock.unlock();
