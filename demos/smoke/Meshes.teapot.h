@@ -32,6 +32,9 @@
 //
 //   https://raw.githubusercontent.com/KhronosGroup/WebGL/master/sdk/demos/google/shiny-teapot/teapot-streams.js
 
+// Disable auto-formatting to get multiple values per line
+// clang-format off
+
 static const float teapot_positions[] = {
     17.83489990234375f, 0.0f, 30.573999404907227f,
     16.452699661254883f, -7.000179767608643f, 30.573999404907227f,
@@ -1637,6 +1640,8 @@ static const float teapot_normals[] = {
     0.37970298528671265, 0, 0.925108015537262,
     0.5266720056533813, 0, 0.8500679731369019,
 };
+
+// clang-format on
 
 static const int teapot_indices[] = {
     0, 1, 2,
