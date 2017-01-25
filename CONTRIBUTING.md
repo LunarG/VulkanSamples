@@ -46,6 +46,7 @@ later on this page.
 #### **Coding Conventions and Formatting**
 * Use the [Google style guide](https://google.github.io/styleguide/cppguide.html) for source code with the following two exceptions.
     * The column limit is 132 (as opposed to the default value 80). The clang-format tool will handle this. See below.
+    * The indent is 4 spaces instead of the default 2 spaces. Again, the clang-format tool will handle this.
     * If you can justify a reason for violating a rule in the guidelines, then you are free to do so. Be prepared to defend your decision during code review. This should be used responsibly. An example of a bad reason is “I don’t like that rule.” An example of a good reason is “This violates the style guide, but it improves type safety.”
 
 * Run clang-format on your changes to maintain formatting.
