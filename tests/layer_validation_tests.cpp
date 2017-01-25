@@ -14927,10 +14927,7 @@ TEST_F(VkLayerTest, ImageLayerViewTests) {
     m_errorMonitor->VerifyFound();
     imgViewInfo.subresourceRange.baseArrayLayer = 0;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "vkCreateImageView called with 0 in "
-                                         "pCreateInfo->subresourceRange."
-                                         "levelCount");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00768);
     // View's levelCount can't be 0 - Expect VIEW_CREATE_ERROR
     imgViewInfo.subresourceRange.levelCount = 0;
     vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
