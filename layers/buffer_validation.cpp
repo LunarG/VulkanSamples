@@ -62,6 +62,11 @@ void SetLayout(layer_data *device_data, OBJECT *pObject, ImageSubresourcePair im
     }
 }
 
+// Set the layout in supplied map
+void SetLayout(std::unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> &imageLayoutMap, ImageSubresourcePair imgpair, VkImageLayout layout) {
+    imageLayoutMap[imgpair].layout = layout;
+}
+
 bool FindLayoutVerifyNode(layer_data *device_data, GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair,
                           IMAGE_CMD_BUF_LAYOUT_NODE &node, const VkImageAspectFlags aspectMask) {
     const debug_report_data *report_data = core_validation::GetReportData(device_data);
@@ -168,6 +173,35 @@ bool FindLayouts(layer_data *device_data, VkImage image, std::vector<VkImageLayo
         if (img_data != (*core_validation::GetImageLayoutMap(device_data)).end()) {
             layouts.push_back(img_data->second.layout);
         }
+    }
+    return true;
+}
+bool FindLayout(const std::unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> &imageLayoutMap, ImageSubresourcePair imgpair, VkImageLayout &layout,
+                const VkImageAspectFlags aspectMask) {
+    if (!(imgpair.subresource.aspectMask & aspectMask)) {
+        return false;
+    }
+    imgpair.subresource.aspectMask = aspectMask;
+    auto imgsubIt = imageLayoutMap.find(imgpair);
+    if (imgsubIt == imageLayoutMap.end()) {
+        return false;
+    }
+    layout = imgsubIt->second.layout;
+    return true;
+ }
+
+// find layout in supplied map
+bool FindLayout(const std::unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> &imageLayoutMap, ImageSubresourcePair imgpair, VkImageLayout &layout) {
+    layout = VK_IMAGE_LAYOUT_MAX_ENUM;
+    FindLayout(imageLayoutMap, imgpair, layout, VK_IMAGE_ASPECT_COLOR_BIT);
+    FindLayout(imageLayoutMap, imgpair, layout, VK_IMAGE_ASPECT_DEPTH_BIT);
+    FindLayout(imageLayoutMap, imgpair, layout, VK_IMAGE_ASPECT_STENCIL_BIT);
+    FindLayout(imageLayoutMap, imgpair, layout, VK_IMAGE_ASPECT_METADATA_BIT);
+    if (layout == VK_IMAGE_LAYOUT_MAX_ENUM) {
+        imgpair = {imgpair.image, false, VkImageSubresource()};
+        auto imgsubIt = imageLayoutMap.find(imgpair);
+        if (imgsubIt == imageLayoutMap.end()) return false;
+        layout = imgsubIt->second.layout;
     }
     return true;
 }
@@ -1718,44 +1752,57 @@ void PreCallRecordCmdBlitImage(layer_data *device_data, GLOBAL_CB_NODE *cb_node,
     core_validation::UpdateCmdBufferLastCmd(cb_node, CMD_BLITIMAGE);
 }
 
-// This validates that the initial layout specified in the command buffer for the IMAGE is the same as the global IMAGE layout
-bool ValidateCmdBufImageLayouts(core_validation::layer_data *device_data, GLOBAL_CB_NODE *pCB) {
-    const debug_report_data *report_data = core_validation::GetReportData(device_data);
+// This validates that the initial layout specified in the command buffer for
+// the IMAGE is the same
+// as the global IMAGE layout
+bool ValidateCmdBufImageLayouts(layer_data *device_data, GLOBAL_CB_NODE *pCB, std::unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> &imageLayoutMap) {
     bool skip = false;
+    const debug_report_data *report_data = core_validation::GetReportData(device_data);
     for (auto cb_image_data : pCB->imageLayoutMap) {
         VkImageLayout imageLayout;
-        if (!FindGlobalLayout(device_data, cb_image_data.first, imageLayout)) {
-            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__,
-                            DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS", "Cannot submit cmd buffer using deleted image 0x%" PRIx64 ".",
-                            reinterpret_cast<const uint64_t &>(cb_image_data.first));
+
+        if (!FindLayout(imageLayoutMap, cb_image_data.first, imageLayout)) {
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                 VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                                 "Cannot submit cmd buffer using deleted image 0x%" PRIx64 ".",
+                                 reinterpret_cast<const uint64_t &>(cb_image_data.first));
         } else {
             if (cb_image_data.second.initialLayout == VK_IMAGE_LAYOUT_UNDEFINED) {
                 // TODO: Set memory invalid which is in mem_tracker currently
             } else if (imageLayout != cb_image_data.second.initialLayout) {
                 if (cb_image_data.first.hasSubresource) {
-                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                                    reinterpret_cast<uint64_t &>(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT,
-                                    "DS", "Cannot submit cmd buffer using image (0x%" PRIx64
-                                          ") [sub-resource: aspectMask 0x%X array layer %u, mip level %u], "
-                                          "with layout %s when first use is %s.",
-                                    reinterpret_cast<const uint64_t &>(cb_image_data.first.image),
-                                    cb_image_data.first.subresource.aspectMask, cb_image_data.first.subresource.arrayLayer,
-                                    cb_image_data.first.subresource.mipLevel, string_VkImageLayout(imageLayout),
-                                    string_VkImageLayout(cb_image_data.second.initialLayout));
+                    skip |= log_msg(
+                        report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                        reinterpret_cast<uint64_t &>(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                        "Cannot submit cmd buffer using image (0x%" PRIx64
+                        ") [sub-resource: aspectMask 0x%X array layer %u, mip level %u], "
+                        "with layout %s when first use is %s.",
+                        reinterpret_cast<const uint64_t &>(cb_image_data.first.image), cb_image_data.first.subresource.aspectMask,
+                        cb_image_data.first.subresource.arrayLayer, cb_image_data.first.subresource.mipLevel,
+                        string_VkImageLayout(imageLayout), string_VkImageLayout(cb_image_data.second.initialLayout));
                 } else {
-                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                                    reinterpret_cast<uint64_t &>(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT,
-                                    "DS", "Cannot submit cmd buffer using image (0x%" PRIx64
-                                          ") with layout %s when "
-                                          "first use is %s.",
-                                    reinterpret_cast<const uint64_t &>(cb_image_data.first.image),
-                                    string_VkImageLayout(imageLayout), string_VkImageLayout(cb_image_data.second.initialLayout));
+                    skip |=
+                        log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t &>(pCB->commandBuffer),
+                                __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS", "Cannot submit cmd buffer using image (0x%" PRIx64
+                                                                                ") with layout %s when "
+                                                                                "first use is %s.",
+                                reinterpret_cast<const uint64_t &>(cb_image_data.first.image), string_VkImageLayout(imageLayout),
+                                string_VkImageLayout(cb_image_data.second.initialLayout));
                 }
             }
-            SetGlobalLayout(device_data, cb_image_data.first, cb_image_data.second.layout);
+            SetLayout(imageLayoutMap, cb_image_data.first, cb_image_data.second.layout);
         }
     }
     return skip;
+}
+
+void UpdateCmdBufImageLayouts(layer_data *device_data, GLOBAL_CB_NODE *pCB) {
+    for (auto cb_image_data : pCB->imageLayoutMap) {
+        VkImageLayout imageLayout;
+        FindGlobalLayout(device_data, cb_image_data.first, imageLayout);
+        SetGlobalLayout(device_data, cb_image_data.first, cb_image_data.second.layout);
+    }
 }
 
 // Print readable FlagBits in FlagMask
