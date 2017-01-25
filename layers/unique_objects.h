@@ -30,6 +30,9 @@
 
 namespace unique_objects {
 
+// The clang-format utility does not handle non-delimited strings well at all
+// clang-format off
+
 // The display-server-specific WSI extensions are handled explicitly
 static const char *kUniqueObjectsSupportedInstanceExtensions =
 #ifdef VK_USE_PLATFORM_XLIB_KHR
@@ -79,6 +82,8 @@ static const char *kUniqueObjectsSupportedDeviceExtensions =
     VK_NV_WIN32_KEYED_MUTEX_EXTENSION_NAME
 #endif
     VK_NV_EXTERNAL_MEMORY_EXTENSION_NAME;
+
+// clang-format on
 
 // All increments must be guarded by global_lock
 static uint64_t global_unique_id = 1;
