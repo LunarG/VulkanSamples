@@ -124,39 +124,40 @@ class Specification:
         implicit_count = 0
         for tag in self.root.iter(): # iterate down tree
             # Grab most recent section heading and link
-            if tag.tag in ['{http://www.w3.org/1999/xhtml}h2', '{http://www.w3.org/1999/xhtml}h3']:
-                if tag.get('class') != 'title':
-                    continue
-                #print "Found heading %s" % (tag.tag)
+            if tag.tag in ['h2', 'h3', 'h4']:
+                #if tag.get('class') != 'title':
+                #    continue
+                print "Found heading %s" % (tag.tag)
                 prev_heading = "".join(tag.itertext())
                 # Insert a space between heading number & title
                 sh_list = prev_heading.rsplit('.', 1)
                 prev_heading = '. '.join(sh_list)
-                prev_link = tag[0].get('id')
-                #print "Set prev_heading %s to have link of %s" % (prev_heading.encode("ascii", "ignore"), prev_link.encode("ascii", "ignore"))
-            elif tag.tag == '{http://www.w3.org/1999/xhtml}a': # grab any intermediate links
+                prev_link = tag.get('id')
+                print "Set prev_heading %s to have link of %s" % (prev_heading.encode("ascii", "ignore"), prev_link.encode("ascii", "ignore"))
+            elif tag.tag == 'a': # grab any intermediate links
                 if tag.get('id') != None:
                     prev_link = tag.get('id')
                     #print "Updated prev link to %s" % (prev_link)
-            elif tag.tag == '{http://www.w3.org/1999/xhtml}pre' and tag.get('class') == 'programlisting':
+            elif tag.tag == 'div' and tag.get('class') == 'listingblock':
                 # Check and see if this is API function
                 code_text = "".join(tag.itertext()).replace('\n', '')
                 code_text_list = code_text.split()
                 if len(code_text_list) > 1 and code_text_list[1].startswith('vk'):
                     api_function = code_text_list[1].strip('(')
-                    #print "Found API function: %s" % (api_function)
-            elif tag.tag == '{http://www.w3.org/1999/xhtml}div' and tag.get('class') == 'sidebar':
+                    print "Found API function: %s" % (api_function)
+            #elif tag.tag == '{http://www.w3.org/1999/xhtml}div' and tag.get('class') == 'sidebar':
+            elif tag.tag == 'div' and tag.get('class') == 'content':
                 # parse down sidebar to check for valid usage cases
                 valid_usage = False
                 implicit = False
                 for elem in tag.iter():
-                    if elem.tag == '{http://www.w3.org/1999/xhtml}strong' and None != elem.text and 'Valid Usage' in elem.text:
+                    if elem.tag == 'div' and None != elem.text and 'Valid Usage' in elem.text:
                         valid_usage = True
                         if '(Implicit)' in elem.text:
                             implicit = True
                         else:
                             implicit = False
-                    elif valid_usage and elem.tag == '{http://www.w3.org/1999/xhtml}li': # grab actual valid usage requirements
+                    elif valid_usage and elem.tag == 'li': # grab actual valid usage requirements
                         error_msg_str = "%s '%s' which states '%s' (%s#%s)" % (error_msg_prefix, prev_heading, "".join(elem.itertext()).replace('\n', ''), spec_url, prev_link)
                         # Some txt has multiple spaces so split on whitespace and join w/ single space
                         error_msg_str = " ".join(error_msg_str.split())
@@ -188,11 +189,13 @@ class Specification:
         file_contents.append('//  parameter to the PFN_vkDebugReportCallbackEXT function')
         enum_decl = ['enum UNIQUE_VALIDATION_ERROR_CODE {\n    VALIDATION_ERROR_UNDEFINED = -1,']
         error_string_map = ['static std::unordered_map<int, char const *const> validation_error_map{']
+        enum_value = 0
         for enum in sorted(self.val_error_dict):
             #print "Header enum is %s" % (enum)
-            enum_decl.append('    %s = %d,' % (enum, int(enum.split('_')[-1])))
+            enum_value = int(enum.split('_')[-1])
+            enum_decl.append('    %s = %d,' % (enum, enum_value))
             error_string_map.append('    {%s, "%s"},' % (enum, self.val_error_dict[enum]['error_msg']))
-        enum_decl.append('    %sMAX_ENUM = %d,' % (validation_error_enum_name, int(enum.split('_')[-1]) + 1))
+        enum_decl.append('    %sMAX_ENUM = %d,' % (validation_error_enum_name, enum_value + 1))
         enum_decl.append('};')
         error_string_map.append('};\n')
         file_contents.extend(enum_decl)
