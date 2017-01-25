@@ -182,7 +182,9 @@ class Specification:
         file_contents = []
         file_contents.append(self.copyright)
         file_contents.append('\n#pragma once')
-        file_contents.append('#include <unordered_map>')
+        file_contents.append('\n// Disable auto-formatting for generated file')
+        file_contents.append('// clang-format off')
+        file_contents.append('\n#include <unordered_map>')
         file_contents.append('\n// enum values for unique validation error codes')
         file_contents.append('//  Corresponding validation error message for each enum is given in the mapping table below')
         file_contents.append('//  When a given error occurs, these enum values should be passed to the as the messageCode')
