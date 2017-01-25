@@ -1,6 +1,7 @@
 ---
-# We'll use defaults from the LLVM style, but with 4 columns indentation.
+# Use defaults from LLVM style with the following exceptions:
 BasedOnStyle: LLVM
 IndentWidth: 4
+ColumnLimit: 132
 SortIncludes: false
 ...
