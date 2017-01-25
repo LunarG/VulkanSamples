@@ -32,6 +32,9 @@ struct VULKAN_FORMAT_INFO {
     VkFormatCompatibilityClass format_class;
 };
 
+// Disable auto-formatting for this large table
+// clang-format off
+
 // Set up data structure with number of bytes and number of channels for each Vulkan format
 const std::map<VkFormat, VULKAN_FORMAT_INFO> vk_format_table = {
     {VK_FORMAT_UNDEFINED,                   {0, 0, VK_FORMAT_COMPATIBILITY_CLASS_NONE_BIT }},
@@ -228,6 +231,9 @@ const std::map<VkFormat, VULKAN_FORMAT_INFO> vk_format_table = {
     {VK_FORMAT_PVRTC2_2BPP_SRGB_BLOCK_IMG,  {8, 4, VK_FORMAT_COMPATIBILITY_CLASS_ASTC_12X10_BIT}},
     {VK_FORMAT_PVRTC2_4BPP_SRGB_BLOCK_IMG,  {8, 4, VK_FORMAT_COMPATIBILITY_CLASS_ASTC_12X10_BIT}},
 };
+
+// Renable formatting
+// clang-format on
 
 // Return true if format is a depth or stencil format
 VK_LAYER_EXPORT bool vk_format_is_depth_or_stencil(VkFormat format) {
