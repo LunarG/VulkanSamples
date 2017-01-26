@@ -24,6 +24,9 @@
 #pragma GCC optimize(3) // force gcc to use tail-calls
 #endif
 
+// Clang-format does not understand macros.
+// clang-format off
+
  // Trampoline function macro for unknown physical device extension command.
 #define DevExtTramp(num)                                                       \
 VKAPI_ATTR void VKAPI_CALL vkdev_ext##num(VkDevice device) {                   \

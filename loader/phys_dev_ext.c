@@ -60,6 +60,9 @@ VKAPI_ATTR void VKAPI_CALL vkPhysDevExtTermin##num(                            \
         icd_term->phys_dev_ext[num](phys_dev_term->phys_dev);                  \
     }
 
+// Disable clang-format for lists of macros
+// clang-format off
+
 // Instantiations of the trampoline and terminator
 PhysDevExtTramp(0)   PhysDevExtTermin(0)
 PhysDevExtTramp(1)   PhysDevExtTermin(1)
