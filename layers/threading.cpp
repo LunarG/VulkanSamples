@@ -42,7 +42,6 @@ namespace threading {
 static uint32_t loader_layer_if_version = CURRENT_LOADER_LAYER_INTERFACE_VERSION;
 
 static void initThreading(layer_data *my_data, const VkAllocationCallbacks *pAllocator) {
-
     layer_debug_actions(my_data->report_data, my_data->logging_callback, pAllocator, "google_threading");
 }
 
@@ -61,8 +60,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateInstance(const VkInstanceCreateInfo *pCreat
     chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
 
     VkResult result = fpCreateInstance(pCreateInfo, pAllocator, pInstance);
-    if (result != VK_SUCCESS)
-        return result;
+    if (result != VK_SUCCESS) return result;
 
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
     my_data->instance = *pInstance;
@@ -178,14 +176,13 @@ static const VkExtensionProperties threading_extensions[] = {
 
 static const VkLayerProperties layerProps = {
     "VK_LAYER_GOOGLE_threading",
-    VK_LAYER_API_VERSION, // specVersion
+    VK_LAYER_API_VERSION,  // specVersion
     1, "Google Validation Layer",
 };
 
 static inline PFN_vkVoidFunction layer_intercept_proc(const char *name) {
     for (unsigned int i = 0; i < sizeof(procmap) / sizeof(procmap[0]); i++) {
-        if (!strcmp(name, procmap[i].name))
-            return procmap[i].pFunc;
+        if (!strcmp(name, procmap[i].name)) return procmap[i].pFunc;
     }
     return NULL;
 }
@@ -224,28 +221,18 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumerateDeviceExtensionProperties(VkPhysicalDevi
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance instance, const char *funcName);
 
 static inline PFN_vkVoidFunction layer_intercept_instance_proc(const char *name) {
-    if (!name || name[0] != 'v' || name[1] != 'k')
-        return NULL;
+    if (!name || name[0] != 'v' || name[1] != 'k') return NULL;
 
     name += 2;
-    if (!strcmp(name, "CreateInstance"))
-        return (PFN_vkVoidFunction)CreateInstance;
-    if (!strcmp(name, "DestroyInstance"))
-        return (PFN_vkVoidFunction)DestroyInstance;
-    if (!strcmp(name, "EnumerateInstanceLayerProperties"))
-        return (PFN_vkVoidFunction)EnumerateInstanceLayerProperties;
-    if (!strcmp(name, "EnumerateInstanceExtensionProperties"))
-        return (PFN_vkVoidFunction)EnumerateInstanceExtensionProperties;
-    if (!strcmp(name, "EnumerateDeviceLayerProperties"))
-        return (PFN_vkVoidFunction)EnumerateDeviceLayerProperties;
-    if (!strcmp(name, "EnumerateDeviceExtensionProperties"))
-        return (PFN_vkVoidFunction)EnumerateDeviceExtensionProperties;
-    if (!strcmp(name, "CreateDevice"))
-        return (PFN_vkVoidFunction)CreateDevice;
-    if (!strcmp(name, "GetInstanceProcAddr"))
-        return (PFN_vkVoidFunction)GetInstanceProcAddr;
-    if (!strcmp(name, "GetPhysicalDeviceProcAddr"))
-        return (PFN_vkVoidFunction)GetPhysicalDeviceProcAddr;
+    if (!strcmp(name, "CreateInstance")) return (PFN_vkVoidFunction)CreateInstance;
+    if (!strcmp(name, "DestroyInstance")) return (PFN_vkVoidFunction)DestroyInstance;
+    if (!strcmp(name, "EnumerateInstanceLayerProperties")) return (PFN_vkVoidFunction)EnumerateInstanceLayerProperties;
+    if (!strcmp(name, "EnumerateInstanceExtensionProperties")) return (PFN_vkVoidFunction)EnumerateInstanceExtensionProperties;
+    if (!strcmp(name, "EnumerateDeviceLayerProperties")) return (PFN_vkVoidFunction)EnumerateDeviceLayerProperties;
+    if (!strcmp(name, "EnumerateDeviceExtensionProperties")) return (PFN_vkVoidFunction)EnumerateDeviceExtensionProperties;
+    if (!strcmp(name, "CreateDevice")) return (PFN_vkVoidFunction)CreateDevice;
+    if (!strcmp(name, "GetInstanceProcAddr")) return (PFN_vkVoidFunction)GetInstanceProcAddr;
+    if (!strcmp(name, "GetPhysicalDeviceProcAddr")) return (PFN_vkVoidFunction)GetPhysicalDeviceProcAddr;
 
     return NULL;
 }
@@ -257,14 +244,12 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, cons
     assert(device);
 
     addr = layer_intercept_proc(funcName);
-    if (addr)
-        return addr;
+    if (addr) return addr;
 
     dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkLayerDispatchTable *pTable = dev_data->device_dispatch_table;
 
-    if (pTable->GetDeviceProcAddr == NULL)
-        return NULL;
+    if (pTable->GetDeviceProcAddr == NULL) return NULL;
     return pTable->GetDeviceProcAddr(device, funcName);
 }
 
@@ -273,8 +258,7 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance
     layer_data *my_data;
 
     addr = layer_intercept_instance_proc(funcName);
-    if (!addr)
-        addr = layer_intercept_proc(funcName);
+    if (!addr) addr = layer_intercept_proc(funcName);
     if (addr) {
         return addr;
     }
@@ -301,8 +285,7 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance in
     my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
 
-    if (pTable->GetPhysicalDeviceProcAddr == NULL)
-        return NULL;
+    if (pTable->GetPhysicalDeviceProcAddr == NULL) return NULL;
     return pTable->GetPhysicalDeviceProcAddr(instance, funcName);
 }
 
@@ -382,7 +365,7 @@ VKAPI_ATTR void VKAPI_CALL FreeCommandBuffers(VkDevice device, VkCommandPool com
     dispatch_key key = get_dispatch_key(device);
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
     VkLayerDispatchTable *pTable = my_data->device_dispatch_table;
-    const bool lockCommandPool = false; // pool is already directly locked
+    const bool lockCommandPool = false;  // pool is already directly locked
     bool threadChecks = startMultiThread();
     if (threadChecks) {
         startReadObject(my_data, device);
@@ -408,7 +391,7 @@ VKAPI_ATTR void VKAPI_CALL FreeCommandBuffers(VkDevice device, VkCommandPool com
     }
 }
 
-} // namespace threading
+}  // namespace threading
 
 // vk_layer_logging.h expects these to be defined
 

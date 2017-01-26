@@ -35,7 +35,7 @@ class VkImageObj;
 using namespace std;
 
 class VkDeviceObj : public vk_testing::Device {
-  public:
+   public:
     VkDeviceObj(uint32_t id, VkPhysicalDevice obj);
     VkDeviceObj(uint32_t id, VkPhysicalDevice obj, std::vector<const char *> &extension_names,
                 VkPhysicalDeviceFeatures *features = nullptr);
@@ -54,7 +54,7 @@ class VkCommandBufferObj;
 class VkDepthStencilObj;
 
 class VkRenderFramework : public VkTestFramework {
-  public:
+   public:
     VkRenderFramework();
     ~VkRenderFramework();
 
@@ -79,7 +79,7 @@ class VkRenderFramework : public VkTestFramework {
 
     const VkRenderPassBeginInfo &renderPassBeginInfo() const { return m_renderPassBeginInfo; }
 
-  protected:
+   protected:
     VkApplicationInfo app_info;
     VkInstance inst;
     VkPhysicalDevice objs[16];
@@ -145,7 +145,7 @@ class VkPipelineObj;
 class VkDescriptorSetObj;
 
 class VkCommandBufferObj : public vk_testing::CommandBuffer {
-  public:
+   public:
     VkCommandBufferObj(VkDeviceObj *device, VkCommandPool pool);
     VkCommandBuffer GetBufferHandle();
     VkResult BeginCommandBuffer();
@@ -191,13 +191,13 @@ class VkCommandBufferObj : public vk_testing::CommandBuffer {
     void ClearDepthStencilImage(VkImage image, VkImageLayout imageLayout, const VkClearDepthStencilValue *pColor,
                                 uint32_t rangeCount, const VkImageSubresourceRange *pRanges);
 
-  protected:
+   protected:
     VkDeviceObj *m_device;
     vector<VkImageObj *> m_renderTargets;
 };
 
 class VkConstantBufferObj : public vk_testing::Buffer {
-  public:
+   public:
     VkConstantBufferObj(VkDeviceObj *device,
                         VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
     VkConstantBufferObj(VkDeviceObj *device, int constantCount, int constantSize, const void *data,
@@ -216,7 +216,7 @@ class VkConstantBufferObj : public vk_testing::Buffer {
 
     VkDescriptorBufferInfo m_descriptorBufferInfo;
 
-  protected:
+   protected:
     VkDeviceObj *m_device;
     vk_testing::BufferView m_bufferView;
     int m_numVertices;
@@ -227,33 +227,33 @@ class VkConstantBufferObj : public vk_testing::Buffer {
 };
 
 class VkIndexBufferObj : public VkConstantBufferObj {
-  public:
+   public:
     VkIndexBufferObj(VkDeviceObj *device);
     void CreateAndInitBuffer(int numIndexes, VkIndexType dataFormat, const void *data);
     void Bind(VkCommandBuffer commandBuffer, VkDeviceSize offset);
     VkIndexType GetIndexType();
 
-  protected:
+   protected:
     VkIndexType m_indexType;
 };
 
 class VkRenderpassObj {
-  public:
+   public:
     VkRenderpassObj(VkDeviceObj *device);
     ~VkRenderpassObj();
     VkRenderPass handle() { return m_renderpass; }
 
-  protected:
+   protected:
     VkRenderPass m_renderpass;
     VkDevice device;
 };
 
 class VkImageObj : public vk_testing::Image {
-  public:
+   public:
     VkImageObj(VkDeviceObj *dev);
     bool IsCompatible(VkFlags usage, VkFlags features);
 
-  public:
+   public:
     void init(uint32_t w, uint32_t h, VkFormat fmt, VkFlags usage, VkImageTiling tiling = VK_IMAGE_TILING_LINEAR,
               VkMemoryPropertyFlags reqs = 0);
 
@@ -303,7 +303,7 @@ class VkImageObj : public vk_testing::Image {
     uint32_t height() const { return extent().height; }
     VkDeviceObj *device() const { return m_device; }
 
-  protected:
+   protected:
     VkDeviceObj *m_device;
 
     vk_testing::ImageView m_targetView;
@@ -311,26 +311,26 @@ class VkImageObj : public vk_testing::Image {
 };
 
 class VkTextureObj : public VkImageObj {
-  public:
+   public:
     VkTextureObj(VkDeviceObj *device, uint32_t *colors = NULL);
 
     VkDescriptorImageInfo m_imageInfo;
 
-  protected:
+   protected:
     VkDeviceObj *m_device;
     vk_testing::ImageView m_textureView;
     VkDeviceSize m_rowPitch;
 };
 
 class VkDepthStencilObj : public VkImageObj {
-  public:
+   public:
     VkDepthStencilObj(VkDeviceObj *device);
     void Init(VkDeviceObj *device, int32_t width, int32_t height, VkFormat format,
               VkImageUsageFlags usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
     bool Initialized();
     VkImageView *BindInfo();
 
-  protected:
+   protected:
     VkDeviceObj *m_device;
     bool m_initialized;
     vk_testing::ImageView m_imageView;
@@ -339,15 +339,15 @@ class VkDepthStencilObj : public VkImageObj {
 };
 
 class VkSamplerObj : public vk_testing::Sampler {
-  public:
+   public:
     VkSamplerObj(VkDeviceObj *device);
 
-  protected:
+   protected:
     VkDeviceObj *m_device;
 };
 
 class VkDescriptorSetObj : public vk_testing::DescriptorPool {
-  public:
+   public:
     VkDescriptorSetObj(VkDeviceObj *device);
     ~VkDescriptorSetObj();
 
@@ -360,7 +360,7 @@ class VkDescriptorSetObj : public vk_testing::DescriptorPool {
     VkPipelineLayout GetPipelineLayout() const;
     int GetTypeCounts() { return m_type_counts.size(); }
 
-  protected:
+   protected:
     VkDeviceObj *m_device;
     std::vector<VkDescriptorSetLayoutBinding> m_layout_bindings;
     std::map<VkDescriptorType, int> m_type_counts;
@@ -375,12 +375,12 @@ class VkDescriptorSetObj : public vk_testing::DescriptorPool {
 };
 
 class VkShaderObj : public vk_testing::ShaderModule {
-  public:
+   public:
     VkShaderObj(VkDeviceObj *device, const char *shaderText, VkShaderStageFlagBits stage, VkRenderFramework *framework,
                 char const *name = "main");
     VkPipelineShaderStageCreateInfo GetStageCreateInfo() const;
 
-  protected:
+   protected:
     VkPipelineShaderStageCreateInfo stage_info;
     VkShaderStageFlagBits m_stage;
     char const *m_name;
@@ -388,7 +388,7 @@ class VkShaderObj : public vk_testing::ShaderModule {
 };
 
 class VkPipelineObj : public vk_testing::Pipeline {
-  public:
+   public:
     VkPipelineObj(VkDeviceObj *device);
     void AddShader(VkShaderObj *shaderObj);
     void AddVertexInputAttribs(VkVertexInputAttributeDescription *vi_attrib, uint32_t count);
@@ -412,7 +412,7 @@ class VkPipelineObj : public vk_testing::Pipeline {
     void SetScissor(const vector<VkRect2D> scissors);
     VkResult CreateVKPipeline(VkPipelineLayout layout, VkRenderPass render_pass);
 
-  protected:
+   protected:
     VkPipelineVertexInputStateCreateInfo m_vi_state;
     VkPipelineInputAssemblyStateCreateInfo m_ia_state;
     VkPipelineRasterizationStateCreateInfo m_rs_state;
@@ -430,4 +430,4 @@ class VkPipelineObj : public vk_testing::Pipeline {
     vector<VkPipelineColorBlendAttachmentState> m_colorAttachments;
     int m_vertexBufferCount;
 };
-#endif // VKRENDERFRAMEWORK_H
+#endif  // VKRENDERFRAMEWORK_H

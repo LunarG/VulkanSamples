@@ -25,7 +25,7 @@
 class Shell;
 
 class Game {
-  public:
+   public:
     Game(const Game &game) = delete;
     Game &operator=(const Game &game) = delete;
     virtual ~Game() {}
@@ -78,7 +78,7 @@ class Game {
     void print_stats();
     void quit();
 
-  protected:
+   protected:
     int frame_count;
     std::chrono::time_point<std::chrono::system_clock> start_time;
 
@@ -113,7 +113,7 @@ class Game {
     Settings settings_;
     Shell *shell_;
 
-  private:
+   private:
     void parse_args(const std::vector<std::string> &args) {
         for (auto it = args.begin(); it != args.end(); ++it) {
             if (*it == "--b") {
@@ -147,4 +147,4 @@ class Game {
     }
 };
 
-#endif // GAME_H
+#endif  // GAME_H

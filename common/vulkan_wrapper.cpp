@@ -23,8 +23,7 @@ extern "C" {
 
 int InitVulkan(void) {
     void *libvulkan = dlopen("libvulkan.so", RTLD_NOW | RTLD_LOCAL);
-    if (!libvulkan)
-        return 0;
+    if (!libvulkan) return 0;
 
     // Vulkan supported, set function addresses
     vkCreateInstance = reinterpret_cast<PFN_vkCreateInstance>(dlsym(libvulkan, "vkCreateInstance"));

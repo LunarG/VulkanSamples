@@ -26,7 +26,7 @@
 namespace {
 
 class Mesh {
-  public:
+   public:
     struct Position {
         float x;
         float y;
@@ -96,8 +96,7 @@ class Mesh {
         }
 
         faces_.reserve(faces.size());
-        for (const auto &f : faces)
-            faces_.emplace_back(Face{f[0], f[1], f[2]});
+        for (const auto &f : faces) faces_.emplace_back(Face{f[0], f[1], f[2]});
     }
 
     uint32_t vertex_count() const { return static_cast<uint32_t>(positions_.size()); }
@@ -139,7 +138,7 @@ class Mesh {
 };
 
 class BuildPyramid {
-  public:
+   public:
     BuildPyramid(Mesh &mesh) {
         const std::vector<std::array<float, 6>> vertices = {
             //      position                normal
@@ -157,16 +156,15 @@ class BuildPyramid {
 };
 
 class BuildIcosphere {
-  public:
+   public:
     BuildIcosphere(Mesh &mesh) : mesh_(mesh), radius_(1.0f) {
         const int tessellate_level = 2;
 
         build_icosahedron();
-        for (int i = 0; i < tessellate_level; i++)
-            tessellate();
+        for (int i = 0; i < tessellate_level; i++) tessellate();
     }
 
-  private:
+   private:
     void build_icosahedron() {
         // https://en.wikipedia.org/wiki/Regular_icosahedron
         const float l1 = std::sqrt(2.0f / (5.0f + std::sqrt(5.0f))) * radius_;
@@ -277,8 +275,7 @@ class BuildIcosphere {
     int add_middle_point(int a, int b) {
         uint64_t key = (a < b) ? ((uint64_t)a << 32 | b) : ((uint64_t)b << 32 | a);
         auto it = middle_points_.find(key);
-        if (it != middle_points_.end())
-            return it->second;
+        if (it != middle_points_.end()) return it->second;
 
         const Mesh::Position &pos_a = mesh_.positions_[a];
         const Mesh::Position &pos_b = mesh_.positions_[b];
@@ -310,7 +307,7 @@ class BuildIcosphere {
 };
 
 class BuildTeapot {
-  public:
+   public:
     BuildTeapot(Mesh &mesh) {
 #include "Meshes.teapot.h"
         const int position_count = sizeof(teapot_positions) / sizeof(teapot_positions[0]);
@@ -346,10 +343,8 @@ class BuildTeapot {
         };
         for (int i = 3; i < position_count; i += 3) {
             for (int j = 0; j < 3; j++) {
-                if (min[j] > positions[i + j])
-                    min[j] = positions[i + j];
-                if (max[j] < positions[i + j])
-                    max[j] = positions[i + j];
+                if (min[j] > positions[i + j]) min[j] = positions[i + j];
+                if (max[j] < positions[i + j]) max[j] = positions[i + j];
             }
         }
 
@@ -362,10 +357,8 @@ class BuildTeapot {
         };
 
         float max_extent = extents[0];
-        if (max_extent < extents[1])
-            max_extent = extents[1];
-        if (max_extent < extents[2])
-            max_extent = extents[2];
+        if (max_extent < extents[1]) max_extent = extents[1];
+        if (max_extent < extents[2]) max_extent = extents[2];
 
         scale = 1.0f / max_extent;
     }
@@ -377,11 +370,15 @@ void build_meshes(std::array<Mesh, Meshes::MESH_COUNT> &meshes) {
     BuildTeapot build_teapot(meshes[Meshes::MESH_TEAPOT]);
 }
 
-} // namespace
+}  // namespace
 
 Meshes::Meshes(VkDevice dev, const std::vector<VkMemoryPropertyFlags> &mem_flags)
-    : dev_(dev), vertex_input_binding_(Mesh::vertex_input_binding()), vertex_input_attrs_(Mesh::vertex_input_attributes()),
-      vertex_input_state_(), input_assembly_state_(Mesh::input_assembly_state()), index_type_(Mesh::index_type()) {
+    : dev_(dev),
+      vertex_input_binding_(Mesh::vertex_input_binding()),
+      vertex_input_attrs_(Mesh::vertex_input_attributes()),
+      vertex_input_state_(),
+      input_assembly_state_(Mesh::input_assembly_state()),
+      index_type_(Mesh::index_type()) {
     vertex_input_state_.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertex_input_state_.vertexBindingDescriptionCount = 1;
     vertex_input_state_.pVertexBindingDescriptions = &vertex_input_binding_;

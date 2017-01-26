@@ -42,7 +42,7 @@
  *         validate_stype(ParameterName("pCreateInfo[%i].sType", IndexVector{ i }), pCreateInfo[i].sType);
  */
 class ParameterName {
-  public:
+   public:
     /// Container for index values to be used with parameter name string formatting.
     typedef std::vector<size_t> IndexVector;
 
@@ -50,7 +50,7 @@ class ParameterName {
     /// one format specifier for each index value specified.
     const std::string IndexFormatSpecifier = "%i";
 
-  public:
+   public:
     /**
      * Construct a ParameterName object from a string literal, without formatting.
      *
@@ -105,7 +105,7 @@ class ParameterName {
     /// Retrive the formatted name string.
     std::string get_name() const { return (args_.empty()) ? source_ : Format(); }
 
-  private:
+   private:
     /// Replace the %i format specifiers in the source string with the values from the index vector.
     std::string Format() const {
         std::string::size_type current = 0;
@@ -140,9 +140,9 @@ class ParameterName {
         return (count == args_.size());
     }
 
-  private:
-    std::string source_; ///< Format string.
-    IndexVector args_;   ///< Array index values for formatting.
+   private:
+    std::string source_;  ///< Format string.
+    IndexVector args_;    ///< Array index values for formatting.
 };
 
-#endif // PARAMETER_NAME_H
+#endif  // PARAMETER_NAME_H

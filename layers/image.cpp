@@ -68,7 +68,10 @@ struct layer_data {
     unordered_map<VkImage, IMAGE_STATE> imageMap;
 
     layer_data()
-        : report_data(nullptr), device_dispatch_table(nullptr), instance_dispatch_table(nullptr), physicalDevice(0),
+        : report_data(nullptr),
+          device_dispatch_table(nullptr),
+          instance_dispatch_table(nullptr),
+          physicalDevice(0),
           physicalDeviceProperties(){};
 };
 
@@ -131,8 +134,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateInstance(const VkInstanceCreateInfo *pCreat
     chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
 
     VkResult result = fpCreateInstance(pCreateInfo, pAllocator, pInstance);
-    if (result != VK_SUCCESS)
-        return result;
+    if (result != VK_SUCCESS) return result;
 
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
     my_data->instance = *pInstance;
@@ -307,23 +309,23 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateI
     // Make sure all required dimension are non-zero at least.
     bool failedMinSize = false;
     switch (pCreateInfo->imageType) {
-    case VK_IMAGE_TYPE_3D:
-        if (pCreateInfo->extent.depth == 0) {
-            failedMinSize = true;
-        }
-    // Intentional fall-through
-    case VK_IMAGE_TYPE_2D:
-        if (pCreateInfo->extent.height == 0) {
-            failedMinSize = true;
-        }
-    // Intentional fall-through
-    case VK_IMAGE_TYPE_1D:
-        if (pCreateInfo->extent.width == 0) {
-            failedMinSize = true;
-        }
-        break;
-    default:
-        break;
+        case VK_IMAGE_TYPE_3D:
+            if (pCreateInfo->extent.depth == 0) {
+                failedMinSize = true;
+            }
+        // Intentional fall-through
+        case VK_IMAGE_TYPE_2D:
+            if (pCreateInfo->extent.height == 0) {
+                failedMinSize = true;
+            }
+        // Intentional fall-through
+        case VK_IMAGE_TYPE_1D:
+            if (pCreateInfo->extent.width == 0) {
+                failedMinSize = true;
+            }
+            break;
+        default:
+            break;
     }
     // TODO: VALIDATION_ERROR_00716
     // this is *almost* VU 00716, except should not be condidtional on image type - all extents must be non-zero for all types
@@ -490,8 +492,9 @@ VKAPI_ATTR void VKAPI_CALL CmdClearDepthStencilImage(VkCommandBuffer commandBuff
     for (uint32_t i = 0; i < rangeCount; i++) {
         if (((pRanges[i].aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT) != VK_IMAGE_ASPECT_DEPTH_BIT) &&
             ((pRanges[i].aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) != VK_IMAGE_ASPECT_STENCIL_BIT)) {
-            char const str[] = "vkCmdClearDepthStencilImage aspectMasks for all subresource ranges must be "
-                               "set to VK_IMAGE_ASPECT_DEPTH_BIT and/or VK_IMAGE_ASPECT_STENCIL_BIT";
+            char const str[] =
+                "vkCmdClearDepthStencilImage aspectMasks for all subresource ranges must be "
+                "set to VK_IMAGE_ASPECT_DEPTH_BIT and/or VK_IMAGE_ASPECT_STENCIL_BIT";
             skipCall |=
                 log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                         (uint64_t)commandBuffer, __LINE__, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", str);
@@ -532,18 +535,18 @@ static bool RegionIntersects(const VkImageCopy *src, const VkImageCopy *dst, VkI
                          dst->dstSubresource.layerCount))) {
         result = true;
         switch (type) {
-        case VK_IMAGE_TYPE_3D:
-            result &= RangesIntersect(src->srcOffset.z, src->extent.depth, dst->dstOffset.z, dst->extent.depth);
-        // Intentionally fall through to 2D case
-        case VK_IMAGE_TYPE_2D:
-            result &= RangesIntersect(src->srcOffset.y, src->extent.height, dst->dstOffset.y, dst->extent.height);
-        // Intentionally fall through to 1D case
-        case VK_IMAGE_TYPE_1D:
-            result &= RangesIntersect(src->srcOffset.x, src->extent.width, dst->dstOffset.x, dst->extent.width);
-            break;
-        default:
-            // Unrecognized or new IMAGE_TYPE enums will be caught in parameter_validation
-            assert(false);
+            case VK_IMAGE_TYPE_3D:
+                result &= RangesIntersect(src->srcOffset.z, src->extent.depth, dst->dstOffset.z, dst->extent.depth);
+            // Intentionally fall through to 2D case
+            case VK_IMAGE_TYPE_2D:
+                result &= RangesIntersect(src->srcOffset.y, src->extent.height, dst->dstOffset.y, dst->extent.height);
+            // Intentionally fall through to 1D case
+            case VK_IMAGE_TYPE_1D:
+                result &= RangesIntersect(src->srcOffset.x, src->extent.width, dst->dstOffset.x, dst->extent.width);
+                break;
+            default:
+                // Unrecognized or new IMAGE_TYPE enums will be caught in parameter_validation
+                assert(false);
         }
     }
     return result;
@@ -554,26 +557,26 @@ static bool ExceedsBounds(const VkOffset3D *offset, const VkExtent3D *extent, co
     bool result = false;
     // Extents/depths cannot be negative but checks left in for clarity
     switch (image->imageType) {
-    case VK_IMAGE_TYPE_3D: // Validate z and depth
-        if ((offset->z + extent->depth > image->extent.depth) || (offset->z < 0) ||
-            ((offset->z + static_cast<int32_t>(extent->depth)) < 0)) {
-            result = true;
-        }
-    // Intentionally fall through to 2D case to check height
-    case VK_IMAGE_TYPE_2D: // Validate y and height
-        if ((offset->y + extent->height > image->extent.height) || (offset->y < 0) ||
-            ((offset->y + static_cast<int32_t>(extent->height)) < 0)) {
-            result = true;
-        }
-    // Intentionally fall through to 1D case to check width
-    case VK_IMAGE_TYPE_1D: // Validate x and width
-        if ((offset->x + extent->width > image->extent.width) || (offset->x < 0) ||
-            ((offset->x + static_cast<int32_t>(extent->width)) < 0)) {
-            result = true;
-        }
-        break;
-    default:
-        assert(false);
+        case VK_IMAGE_TYPE_3D:  // Validate z and depth
+            if ((offset->z + extent->depth > image->extent.depth) || (offset->z < 0) ||
+                ((offset->z + static_cast<int32_t>(extent->depth)) < 0)) {
+                result = true;
+            }
+        // Intentionally fall through to 2D case to check height
+        case VK_IMAGE_TYPE_2D:  // Validate y and height
+            if ((offset->y + extent->height > image->extent.height) || (offset->y < 0) ||
+                ((offset->y + static_cast<int32_t>(extent->height)) < 0)) {
+                result = true;
+            }
+        // Intentionally fall through to 1D case to check width
+        case VK_IMAGE_TYPE_1D:  // Validate x and width
+            if ((offset->x + extent->width > image->extent.width) || (offset->x < 0) ||
+                ((offset->x + static_cast<int32_t>(extent->width)) < 0)) {
+                result = true;
+            }
+            break;
+        default:
+            assert(false);
     }
     return result;
 }
@@ -588,9 +591,7 @@ bool PreCallValidateCmdCopyImage(VkCommandBuffer command_buffer, VkImage src_ima
     // TODO: This does not cover swapchain-created images. This should fall out when this layer is moved
     // into the core_validation layer
     if (src_image_entry && dst_image_entry) {
-
         for (uint32_t i = 0; i < region_count; i++) {
-
             if (regions[i].srcSubresource.layerCount == 0) {
                 std::stringstream ss;
                 ss << "vkCmdCopyImage: number of layers in pRegions[" << i << "] srcSubresource is zero";
@@ -770,7 +771,6 @@ bool PreCallValidateCmdCopyImage(VkCommandBuffer command_buffer, VkImage src_ima
 VKAPI_ATTR void VKAPI_CALL CmdCopyImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout,
                                         VkImage dstImage, VkImageLayout dstImageLayout, uint32_t regionCount,
                                         const VkImageCopy *pRegions) {
-
     bool skip = false;
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
 
@@ -810,8 +810,9 @@ VKAPI_ATTR void VKAPI_CALL CmdClearAttachments(VkCommandBuffer commandBuffer, ui
             // Having eliminated all other possibilities, image aspect must be depth or stencil or both
             if (((aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT) != VK_IMAGE_ASPECT_DEPTH_BIT) &&
                 ((aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) != VK_IMAGE_ASPECT_STENCIL_BIT)) {
-                char const str[] = "vkCmdClearAttachments aspectMask [%d] must be set to VK_IMAGE_ASPECT_DEPTH_BIT and/or "
-                                   "VK_IMAGE_ASPECT_STENCIL_BIT. %s";
+                char const str[] =
+                    "vkCmdClearAttachments aspectMask [%d] must be set to VK_IMAGE_ASPECT_DEPTH_BIT and/or "
+                    "VK_IMAGE_ASPECT_STENCIL_BIT. %s";
                 skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                     VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)commandBuffer, __LINE__,
                                     VALIDATION_ERROR_01127, "IMAGE", str, i, validation_error_map[VALIDATION_ERROR_01127]);
@@ -829,10 +830,8 @@ static bool ValidateBufferImageCopyData(layer_data *dev_data, uint32_t regionCou
     bool skip = false;
 
     for (uint32_t i = 0; i < regionCount; i++) {
-
         auto image_info = getImageState(dev_data, image);
         if (image_info) {
-
             if ((image_info->imageType == VK_IMAGE_TYPE_1D) || (image_info->imageType == VK_IMAGE_TYPE_2D)) {
                 if ((pRegions[i].imageOffset.z != 0) || (pRegions[i].imageExtent.depth != 1)) {
                     skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
@@ -960,7 +959,6 @@ VKAPI_ATTR void VKAPI_CALL CmdBlitImage(VkCommandBuffer commandBuffer, VkImage s
     auto dstImageEntry = getImageState(device_data, dstImage);
 
     if (srcImageEntry && dstImageEntry) {
-
         VkFormat srcFormat = srcImageEntry->format;
         VkFormat dstFormat = dstImageEntry->format;
 
@@ -1262,8 +1260,7 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumerateInstanceExtensionProperties(const char *
 VKAPI_ATTR VkResult VKAPI_CALL EnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice, const char *pLayerName,
                                                                   uint32_t *pCount, VkExtensionProperties *pProperties) {
     // Image does not have any physical device extensions
-    if (pLayerName && !strcmp(pLayerName, global_layer.layerName))
-        return util_GetExtensionProperties(0, NULL, pCount, pProperties);
+    if (pLayerName && !strcmp(pLayerName, global_layer.layerName)) return util_GetExtensionProperties(0, NULL, pCount, pProperties);
 
     assert(physicalDevice);
 
@@ -1278,8 +1275,7 @@ static PFN_vkVoidFunction intercept_core_device_command(const char *name);
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, const char *funcName) {
     PFN_vkVoidFunction proc = intercept_core_device_command(funcName);
-    if (proc)
-        return proc;
+    if (proc) return proc;
 
     assert(device);
 
@@ -1287,29 +1283,24 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, cons
 
     VkLayerDispatchTable *pTable = my_data->device_dispatch_table;
     {
-        if (pTable->GetDeviceProcAddr == NULL)
-            return NULL;
+        if (pTable->GetDeviceProcAddr == NULL) return NULL;
         return pTable->GetDeviceProcAddr(device, funcName);
     }
 }
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance, const char *funcName) {
     PFN_vkVoidFunction proc = intercept_core_instance_command(funcName);
-    if (!proc)
-        proc = intercept_core_device_command(funcName);
-    if (proc)
-        return proc;
+    if (!proc) proc = intercept_core_device_command(funcName);
+    if (proc) return proc;
 
     assert(instance);
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
 
     proc = debug_report_get_instance_proc_addr(my_data->report_data, funcName);
-    if (proc)
-        return proc;
+    if (proc) return proc;
 
     VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
-    if (pTable->GetInstanceProcAddr == NULL)
-        return NULL;
+    if (pTable->GetInstanceProcAddr == NULL) return NULL;
     return pTable->GetInstanceProcAddr(instance, funcName);
 }
 
@@ -1319,8 +1310,7 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance in
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
 
     VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
-    if (pTable->GetPhysicalDeviceProcAddr == NULL)
-        return NULL;
+    if (pTable->GetPhysicalDeviceProcAddr == NULL) return NULL;
     return pTable->GetPhysicalDeviceProcAddr(instance, funcName);
 }
 
@@ -1342,8 +1332,7 @@ static PFN_vkVoidFunction intercept_core_instance_command(const char *name) {
     };
 
     for (size_t i = 0; i < ARRAY_SIZE(core_instance_commands); i++) {
-        if (!strcmp(core_instance_commands[i].name, name))
-            return core_instance_commands[i].proc;
+        if (!strcmp(core_instance_commands[i].name, name)) return core_instance_commands[i].proc;
     }
 
     return nullptr;
@@ -1372,14 +1361,13 @@ static PFN_vkVoidFunction intercept_core_device_command(const char *name) {
     };
 
     for (size_t i = 0; i < ARRAY_SIZE(core_device_commands); i++) {
-        if (!strcmp(core_device_commands[i].name, name))
-            return core_device_commands[i].proc;
+        if (!strcmp(core_device_commands[i].name, name)) return core_device_commands[i].proc;
     }
 
     return nullptr;
 }
 
-} // namespace image
+}  // namespace image
 
 // vk_layer_logging.h expects these to be defined
 

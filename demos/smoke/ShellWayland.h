@@ -20,14 +20,14 @@
 #include "Shell.h"
 
 class ShellWayland : public Shell {
-  public:
+   public:
     ShellWayland(Game &game);
     ~ShellWayland();
 
     void run();
     void quit() { quit_ = true; }
 
-  private:
+   private:
     void init_connection();
 
     PFN_vkGetInstanceProcAddr load_vk();
@@ -59,4 +59,4 @@ class ShellWayland : public Shell {
     static const struct wl_shell_surface_listener shell_surface_listener_;
 };
 
-#endif // SHELL_WAYLAND_H
+#endif  // SHELL_WAYLAND_H

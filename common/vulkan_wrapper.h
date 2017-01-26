@@ -235,4 +235,4 @@ extern PFN_vkGetPhysicalDeviceWin32PresentationSupportKHR vkGetPhysicalDeviceWin
 }
 #endif
 
-#endif // VULKAN_WRAPPER_H
+#endif  // VULKAN_WRAPPER_H

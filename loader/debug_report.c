@@ -120,8 +120,7 @@ void util_DestroyDebugReportCallback(struct loader_instance *inst, VkDebugReport
     while (pTrav) {
         if (pTrav->msgCallback == callback) {
             pPrev->pNext = pTrav->pNext;
-            if (inst->DbgFunctionHead == pTrav)
-                inst->DbgFunctionHead = pTrav->pNext;
+            if (inst->DbgFunctionHead == pTrav) inst->DbgFunctionHead = pTrav->pNext;
 #if (DEBUG_DISABLE_APP_ALLOCATORS == 1)
             {
 #else

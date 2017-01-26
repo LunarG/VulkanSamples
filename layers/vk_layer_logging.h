@@ -53,7 +53,6 @@ static inline bool debug_report_log_msg(const debug_report_data *debug_data, VkF
 // Add a debug message callback node structure to the specified callback linked list
 static inline void AddDebugMessageCallback(debug_report_data *debug_data, VkLayerDbgFunctionNode **list_head,
                                            VkLayerDbgFunctionNode *new_node) {
-
     new_node->pNext = *list_head;
     *list_head = new_node;
 }
@@ -130,13 +129,12 @@ static inline bool debug_report_log_msg(const debug_report_data *debug_data, VkF
     return bail;
 }
 
-static inline debug_report_data *
-debug_report_create_instance(VkLayerInstanceDispatchTable *table, VkInstance inst, uint32_t extension_count,
-                             const char *const *ppEnabledExtensions) // layer or extension name to be enabled
+static inline debug_report_data *debug_report_create_instance(
+    VkLayerInstanceDispatchTable *table, VkInstance inst, uint32_t extension_count,
+    const char *const *ppEnabledExtensions)  // layer or extension name to be enabled
 {
     debug_report_data *debug_data = (debug_report_data *)malloc(sizeof(debug_report_data));
-    if (!debug_data)
-        return NULL;
+    if (!debug_data) return NULL;
 
     memset(debug_data, 0, sizeof(debug_report_data));
     for (uint32_t i = 0; i < extension_count; i++) {
@@ -176,12 +174,10 @@ static inline VkResult layer_create_msg_callback(debug_report_data *debug_data, 
                                                  const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
                                                  const VkAllocationCallbacks *pAllocator, VkDebugReportCallbackEXT *pCallback) {
     VkLayerDbgFunctionNode *pNewDbgFuncNode = (VkLayerDbgFunctionNode *)malloc(sizeof(VkLayerDbgFunctionNode));
-    if (!pNewDbgFuncNode)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
+    if (!pNewDbgFuncNode) return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     // Handle of 0 is logging_callback so use allocated Node address as unique handle
-    if (!(*pCallback))
-        *pCallback = (VkDebugReportCallbackEXT)pNewDbgFuncNode;
+    if (!(*pCallback)) *pCallback = (VkDebugReportCallbackEXT)pNewDbgFuncNode;
     pNewDbgFuncNode->msgCallback = *pCallback;
     pNewDbgFuncNode->pfnMsgCallback = pCreateInfo->pfnCallback;
     pNewDbgFuncNode->msgFlags = pCreateInfo->flags;
@@ -387,4 +383,4 @@ static inline VKAPI_ATTR VkBool32 VKAPI_CALL win32_debug_output_msg(VkFlags msgF
     return false;
 }
 
-#endif // LAYER_LOGGING_H
+#endif  // LAYER_LOGGING_H

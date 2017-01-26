@@ -23,7 +23,7 @@
 struct icd_spv_header {
     uint32_t magic;
     uint32_t version;
-    uint32_t gen_magic; // Generator's magic number
+    uint32_t gen_magic;  // Generator's magic number
 };
 
 #endif /* ICD_SPV_H */

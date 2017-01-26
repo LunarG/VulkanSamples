@@ -35,11 +35,19 @@ struct ShaderParamBlock {
     float view_projection[4 * 4];
 };
 
-} // namespace
+}  // namespace
 
 Smoke::Smoke(const std::vector<std::string> &args)
-    : Game("Smoke", args), multithread_(true), use_push_constants_(false), sim_paused_(false), sim_(5000), camera_(2.5f),
-      frame_data_(), render_pass_clear_value_({{{0.0f, 0.1f, 0.2f, 1.0f}}}), render_pass_begin_info_(), primary_cmd_begin_info_(),
+    : Game("Smoke", args),
+      multithread_(true),
+      use_push_constants_(false),
+      sim_paused_(false),
+      sim_(5000),
+      camera_(2.5f),
+      frame_data_(),
+      render_pass_clear_value_({{{0.0f, 0.1f, 0.2f, 1.0f}}}),
+      render_pass_begin_info_(),
+      primary_cmd_begin_info_(),
       primary_cmd_submit_info_() {
     for (auto it = args.begin(); it != args.end(); ++it) {
         if (*it == "-s")
@@ -98,8 +106,7 @@ void Smoke::attach_shell(Shell &sh) {
     VkPhysicalDeviceMemoryProperties mem_props;
     vk::GetPhysicalDeviceMemoryProperties(physical_dev_, &mem_props);
     mem_flags_.reserve(mem_props.memoryTypeCount);
-    for (uint32_t i = 0; i < mem_props.memoryTypeCount; i++)
-        mem_flags_.push_back(mem_props.memoryTypes[i].propertyFlags);
+    for (uint32_t i = 0; i < mem_props.memoryTypeCount; i++) mem_flags_.push_back(mem_props.memoryTypes[i].propertyFlags);
 
     meshes_ = new Meshes(dev_, mem_flags_);
 
@@ -129,23 +136,20 @@ void Smoke::attach_shell(Shell &sh) {
     primary_cmd_submit_info_.signalSemaphoreCount = 1;
 
     if (multithread_) {
-        for (auto &worker : workers_)
-            worker->start();
+        for (auto &worker : workers_) worker->start();
     }
 }
 
 void Smoke::detach_shell() {
     if (multithread_) {
-        for (auto &worker : workers_)
-            worker->stop();
+        for (auto &worker : workers_) worker->stop();
     }
 
     destroy_frame_data();
 
     vk::DestroyPipeline(dev_, pipeline_, nullptr);
     vk::DestroyPipelineLayout(dev_, pipeline_layout_, nullptr);
-    if (!use_push_constants_)
-        vk::DestroyDescriptorSetLayout(dev_, desc_set_layout_, nullptr);
+    if (!use_push_constants_) vk::DestroyDescriptorSetLayout(dev_, desc_set_layout_, nullptr);
     vk::DestroyShaderModule(dev_, fs_, nullptr);
     vk::DestroyShaderModule(dev_, vs_, nullptr);
     vk::DestroyRenderPass(dev_, render_pass_, nullptr);
@@ -223,8 +227,7 @@ void Smoke::create_shader_modules() {
 }
 
 void Smoke::create_descriptor_set_layout() {
-    if (use_push_constants_)
-        return;
+    if (use_push_constants_) return;
 
     VkDescriptorSetLayoutBinding layout_binding = {};
     layout_binding.binding = 0;
@@ -360,17 +363,14 @@ void Smoke::destroy_frame_data() {
         vk::UnmapMemory(dev_, frame_data_mem_);
         vk::FreeMemory(dev_, frame_data_mem_, nullptr);
 
-        for (auto &data : frame_data_)
-            vk::DestroyBuffer(dev_, data.buf, nullptr);
+        for (auto &data : frame_data_) vk::DestroyBuffer(dev_, data.buf, nullptr);
     }
 
-    for (auto cmd_pool : worker_cmd_pools_)
-        vk::DestroyCommandPool(dev_, cmd_pool, nullptr);
+    for (auto cmd_pool : worker_cmd_pools_) vk::DestroyCommandPool(dev_, cmd_pool, nullptr);
     worker_cmd_pools_.clear();
     vk::DestroyCommandPool(dev_, primary_cmd_pool_, nullptr);
 
-    for (auto &data : frame_data_)
-        vk::DestroyFence(dev_, data.fence, nullptr);
+    for (auto &data : frame_data_) vk::DestroyFence(dev_, data.fence, nullptr);
 
     frame_data_.clear();
 }
@@ -380,8 +380,7 @@ void Smoke::create_fences() {
     fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    for (auto &data : frame_data_)
-        vk::assert_success(vk::CreateFence(dev_, &fence_info, nullptr, &data.fence));
+    for (auto &data : frame_data_) vk::assert_success(vk::CreateFence(dev_, &fence_info, nullptr, &data.fence));
 }
 
 void Smoke::create_command_buffers() {
@@ -430,8 +429,7 @@ void Smoke::create_buffers() {
     VkDeviceSize object_data_size = sizeof(ShaderParamBlock);
     // align object data to device limit
     const VkDeviceSize &alignment = physical_dev_props_.limits.minStorageBufferOffsetAlignment;
-    if (object_data_size % alignment)
-        object_data_size += alignment - (object_data_size % alignment);
+    if (object_data_size % alignment) object_data_size += alignment - (object_data_size % alignment);
 
     // update simulation
     sim_.set_frame_data_size(static_cast<uint32_t>(object_data_size));
@@ -442,8 +440,7 @@ void Smoke::create_buffers() {
     buf_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
     buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    for (auto &data : frame_data_)
-        vk::assert_success(vk::CreateBuffer(dev_, &buf_info, nullptr, &data.buf));
+    for (auto &data : frame_data_) vk::assert_success(vk::CreateBuffer(dev_, &buf_info, nullptr, &data.buf));
 }
 
 void Smoke::create_buffer_memory() {
@@ -544,10 +541,8 @@ void Smoke::attach_swapchain() {
 }
 
 void Smoke::detach_swapchain() {
-    for (auto fb : framebuffers_)
-        vk::DestroyFramebuffer(dev_, fb, nullptr);
-    for (auto view : image_views_)
-        vk::DestroyImageView(dev_, view, nullptr);
+    for (auto fb : framebuffers_) vk::DestroyFramebuffer(dev_, fb, nullptr);
+    for (auto view : image_views_) vk::DestroyImageView(dev_, view, nullptr);
 
     framebuffers_.clear();
     image_views_.clear();
@@ -679,32 +674,30 @@ void Smoke::draw_objects(Worker &worker) {
 
 void Smoke::on_key(Key key) {
     switch (key) {
-    case KEY_SHUTDOWN:
-    case KEY_ESC:
-        quit();
-        break;
-    case KEY_UP:
-        camera_.eye_pos -= glm::vec3(0.05f);
-        update_camera();
-        break;
-    case KEY_DOWN:
-        camera_.eye_pos += glm::vec3(0.05f);
-        update_camera();
-        break;
-    case KEY_SPACE:
-        sim_paused_ = !sim_paused_;
-        break;
-    default:
-        break;
+        case KEY_SHUTDOWN:
+        case KEY_ESC:
+            quit();
+            break;
+        case KEY_UP:
+            camera_.eye_pos -= glm::vec3(0.05f);
+            update_camera();
+            break;
+        case KEY_DOWN:
+            camera_.eye_pos += glm::vec3(0.05f);
+            update_camera();
+            break;
+        case KEY_SPACE:
+            sim_paused_ = !sim_paused_;
+            break;
+        default:
+            break;
     }
 }
 
 void Smoke::on_tick() {
-    if (sim_paused_)
-        return;
+    if (sim_paused_) return;
 
-    for (auto &worker : workers_)
-        worker->update_simulation();
+    for (auto &worker : workers_) worker->update_simulation();
 }
 
 void Smoke::on_frame(float frame_pred) {
@@ -725,8 +718,7 @@ void Smoke::on_frame(float frame_pred) {
     const Shell::BackBuffer &back = shell_->context().acquired_back_buffer;
 
     // ignore frame_pred
-    for (auto &worker : workers_)
-        worker->draw_objects(framebuffers_[back.image_index]);
+    for (auto &worker : workers_) worker->draw_objects(framebuffers_[back.image_index]);
 
     VkResult res = vk::BeginCommandBuffer(data.primary_cmd, &primary_cmd_begin_info_);
 
@@ -749,8 +741,7 @@ void Smoke::on_frame(float frame_pred) {
     vk::CmdBeginRenderPass(data.primary_cmd, &render_pass_begin_info_, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
     // record render pass commands
-    for (auto &worker : workers_)
-        worker->wait_idle();
+    for (auto &worker : workers_) worker->wait_idle();
 
     // Flush buffers if enabled
     if (settings_.flush_buffers) {
@@ -782,8 +773,12 @@ void Smoke::on_frame(float frame_pred) {
 }
 
 Smoke::Worker::Worker(Smoke &smoke, int index, int object_begin, int object_end)
-    : smoke_(smoke), index_(index), object_begin_(object_begin), object_end_(object_end),
-      tick_interval_(1.0f / smoke.settings_.ticks_per_second), state_(INIT) {}
+    : smoke_(smoke),
+      index_(index),
+      object_begin_(object_begin),
+      object_end_(object_end),
+      tick_interval_(1.0f / smoke.settings_.ticks_per_second),
+      state_(INIT) {}
 
 void Smoke::Worker::start() {
     state_ = IDLE;
@@ -840,8 +835,7 @@ void Smoke::Worker::wait_idle() {
     std::unique_lock<std::mutex> lock(mutex_);
     bool started = (state_ != INIT);
 
-    if (started)
-        state_cv_.wait(lock, [this] { return (state_ == IDLE); });
+    if (started) state_cv_.wait(lock, [this] { return (state_ == IDLE); });
 }
 
 void Smoke::Worker::update_loop() {
@@ -849,8 +843,7 @@ void Smoke::Worker::update_loop() {
         std::unique_lock<std::mutex> lock(mutex_);
 
         state_cv_.wait(lock, [this] { return (state_ != IDLE); });
-        if (state_ == INIT)
-            break;
+        if (state_ == INIT) break;
 
         assert(state_ == STEP || state_ == DRAW);
         if (state_ == STEP)

@@ -30,7 +30,7 @@ Game *create_game(int argc, char **argv) {
     return new Smoke(args);
 }
 
-} // namespace
+}  // namespace
 
 #if defined(VK_USE_PLATFORM_XCB_KHR)
 
@@ -95,4 +95,4 @@ int main(int argc, char **argv) {
     return 0;
 }
 
-#endif // VK_USE_PLATFORM_XCB_KHR
+#endif  // VK_USE_PLATFORM_XCB_KHR

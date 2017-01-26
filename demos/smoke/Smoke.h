@@ -33,7 +33,7 @@
 class Meshes;
 
 class Smoke : public Game {
-  public:
+   public:
     Smoke(const std::vector<std::string> &args);
     ~Smoke();
 
@@ -48,9 +48,9 @@ class Smoke : public Game {
 
     void on_frame(float frame_pred);
 
-  private:
+   private:
     class Worker {
-      public:
+       public:
         Worker(Smoke &smoke, int index, int object_begin, int object_end);
 
         void start();
@@ -69,7 +69,7 @@ class Smoke : public Game {
 
         VkFramebuffer fb_;
 
-      private:
+       private:
         enum State {
             INIT,
             IDLE,
@@ -187,4 +187,4 @@ class Smoke : public Game {
     void draw_objects(Worker &worker);
 };
 
-#endif // HOLOGRAM_H
+#endif  // HOLOGRAM_H

@@ -88,7 +88,6 @@ static void checkInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateI
     // vkEnumerateInstanceExtensionProperties(), since the loader handles that.
     for (i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DISPLAY_EXTENSION_NAME) == 0) {
-
             my_data->instanceMap[instance].displayExtensionEnabled = true;
         }
     }
@@ -96,7 +95,6 @@ static void checkInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateI
 
 #include "vk_dispatch_table_helper.h"
 static void init_swapchain(layer_data *my_data, const VkAllocationCallbacks *pAllocator) {
-
     layer_debug_actions(my_data->report_data, my_data->logging_callback, pAllocator, "lunarg_swapchain");
 }
 
@@ -201,7 +199,6 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
         // Delete all of the SwpPhysicalDevice's, SwpSurface's, and the
         // SwpInstance associated with this instance:
         for (auto it = pInstance->physicalDevices.begin(); it != pInstance->physicalDevices.end(); it++) {
-
             // Free memory that was allocated for/by this SwpPhysicalDevice:
             SwpPhysicalDevice *pPhysicalDevice = it->second;
             if (pPhysicalDevice) {
@@ -219,7 +216,6 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
             my_data->physicalDeviceMap.erase(it->second->physicalDevice);
         }
         for (auto it = pInstance->surfaces.begin(); it != pInstance->surfaces.end(); it++) {
-
             // Free memory that was allocated for/by this SwpPhysicalDevice:
             SwpSurface *pSurface = it->second;
             if (pSurface) {
@@ -320,7 +316,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateAndroidSurfaceKHR(VkInstance instance, cons
     }
     return VK_ERROR_VALIDATION_FAILED_EXT;
 }
-#endif // VK_USE_PLATFORM_ANDROID_KHR
+#endif  // VK_USE_PLATFORM_ANDROID_KHR
 
 #ifdef VK_USE_PLATFORM_MIR_KHR
 VKAPI_ATTR VkResult VKAPI_CALL CreateMirSurfaceKHR(VkInstance instance, const VkMirSurfaceCreateInfoKHR *pCreateInfo,
@@ -389,7 +385,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceMirPresentationSupportKHR(VkPhys
     }
     return result;
 }
-#endif // VK_USE_PLATFORM_MIR_KHR
+#endif  // VK_USE_PLATFORM_MIR_KHR
 
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
 VKAPI_ATTR VkResult VKAPI_CALL CreateWaylandSurfaceKHR(VkInstance instance, const VkWaylandSurfaceCreateInfoKHR *pCreateInfo,
@@ -459,7 +455,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceWaylandPresentationSupportKHR(Vk
     }
     return result;
 }
-#endif // VK_USE_PLATFORM_WAYLAND_KHR
+#endif  // VK_USE_PLATFORM_WAYLAND_KHR
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
 VKAPI_ATTR VkResult VKAPI_CALL CreateWin32SurfaceKHR(VkInstance instance, const VkWin32SurfaceCreateInfoKHR *pCreateInfo,
@@ -527,7 +523,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceWin32PresentationSupportKHR(VkPh
     }
     return result;
 }
-#endif // VK_USE_PLATFORM_WIN32_KHR
+#endif  // VK_USE_PLATFORM_WIN32_KHR
 
 #ifdef VK_USE_PLATFORM_XCB_KHR
 VKAPI_ATTR VkResult VKAPI_CALL CreateXcbSurfaceKHR(VkInstance instance, const VkXcbSurfaceCreateInfoKHR *pCreateInfo,
@@ -597,7 +593,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceXcbPresentationSupportKHR(VkPhys
     }
     return result;
 }
-#endif // VK_USE_PLATFORM_XCB_KHR
+#endif  // VK_USE_PLATFORM_XCB_KHR
 
 #ifdef VK_USE_PLATFORM_XLIB_KHR
 VKAPI_ATTR VkResult VKAPI_CALL CreateXlibSurfaceKHR(VkInstance instance, const VkXlibSurfaceCreateInfoKHR *pCreateInfo,
@@ -667,7 +663,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceXlibPresentationSupportKHR(VkPhy
     }
     return result;
 }
-#endif // VK_USE_PLATFORM_XLIB_KHR
+#endif  // VK_USE_PLATFORM_XLIB_KHR
 
 VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceDisplayPlanePropertiesKHR(VkPhysicalDevice physicalDevice, uint32_t *pPropertyCount,
                                                                           VkDisplayPlanePropertiesKHR *pProperties) {
@@ -1320,8 +1316,7 @@ static PFN_vkVoidFunction intercept_khr_swapchain_command(const char *name, VkDe
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, const char *funcName) {
     PFN_vkVoidFunction proc = intercept_core_device_command(funcName);
-    if (proc)
-        return proc;
+    if (proc) return proc;
 
     assert(device);
 
@@ -1331,22 +1326,17 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, cons
     VkLayerDispatchTable *pDisp = my_data->device_dispatch_table;
 
     proc = intercept_khr_swapchain_command(funcName, device);
-    if (proc)
-        return proc;
+    if (proc) return proc;
 
-    if (pDisp->GetDeviceProcAddr == NULL)
-        return NULL;
+    if (pDisp->GetDeviceProcAddr == NULL) return NULL;
     return pDisp->GetDeviceProcAddr(device, funcName);
 }
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance, const char *funcName) {
     PFN_vkVoidFunction proc = intercept_core_instance_command(funcName);
-    if (!proc)
-        proc = intercept_core_device_command(funcName);
-    if (!proc)
-        proc = intercept_khr_swapchain_command(funcName, VK_NULL_HANDLE);
-    if (proc)
-        return proc;
+    if (!proc) proc = intercept_core_device_command(funcName);
+    if (!proc) proc = intercept_khr_swapchain_command(funcName, VK_NULL_HANDLE);
+    if (proc) return proc;
 
     assert(instance);
 
@@ -1355,13 +1345,10 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance
     VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
 
     proc = debug_report_get_instance_proc_addr(my_data->report_data, funcName);
-    if (!proc)
-        proc = intercept_khr_surface_command(funcName, instance);
-    if (proc)
-        return proc;
+    if (!proc) proc = intercept_khr_surface_command(funcName, instance);
+    if (proc) return proc;
 
-    if (pTable->GetInstanceProcAddr == NULL)
-        return NULL;
+    if (pTable->GetInstanceProcAddr == NULL) return NULL;
     return pTable->GetInstanceProcAddr(instance, funcName);
 }
 
@@ -1372,8 +1359,7 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance in
     my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
 
-    if (pTable->GetPhysicalDeviceProcAddr == NULL)
-        return NULL;
+    if (pTable->GetPhysicalDeviceProcAddr == NULL) return NULL;
     return pTable->GetPhysicalDeviceProcAddr(instance, funcName);
 }
 
@@ -1396,8 +1382,7 @@ static PFN_vkVoidFunction intercept_core_instance_command(const char *name) {
     };
 
     for (size_t i = 0; i < ARRAY_SIZE(core_instance_commands); i++) {
-        if (!strcmp(core_instance_commands[i].name, name))
-            return core_instance_commands[i].proc;
+        if (!strcmp(core_instance_commands[i].name, name)) return core_instance_commands[i].proc;
     }
 
     return nullptr;
@@ -1410,32 +1395,32 @@ static PFN_vkVoidFunction intercept_khr_surface_command(const char *name, VkInst
     } khr_surface_commands[] = {
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
         {"vkCreateAndroidSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateAndroidSurfaceKHR)},
-#endif // VK_USE_PLATFORM_ANDROID_KHR
+#endif  // VK_USE_PLATFORM_ANDROID_KHR
 #ifdef VK_USE_PLATFORM_MIR_KHR
         {"vkCreateMirSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateMirSurfaceKHR)},
         {"vkGetPhysicalDeviceMirPresentationSupportKHR",
          reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceMirPresentationSupportKHR)},
-#endif // VK_USE_PLATFORM_MIR_KHR
+#endif  // VK_USE_PLATFORM_MIR_KHR
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
         {"vkCreateWaylandSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateWaylandSurfaceKHR)},
         {"vkGetPhysicalDeviceWaylandPresentationSupportKHR",
          reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceWaylandPresentationSupportKHR)},
-#endif // VK_USE_PLATFORM_WAYLAND_KHR
+#endif  // VK_USE_PLATFORM_WAYLAND_KHR
 #ifdef VK_USE_PLATFORM_WIN32_KHR
         {"vkCreateWin32SurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateWin32SurfaceKHR)},
         {"vkGetPhysicalDeviceWin32PresentationSupportKHR",
          reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceWin32PresentationSupportKHR)},
-#endif // VK_USE_PLATFORM_WIN32_KHR
+#endif  // VK_USE_PLATFORM_WIN32_KHR
 #ifdef VK_USE_PLATFORM_XCB_KHR
         {"vkCreateXcbSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateXcbSurfaceKHR)},
         {"vkGetPhysicalDeviceXcbPresentationSupportKHR",
          reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceXcbPresentationSupportKHR)},
-#endif // VK_USE_PLATFORM_XCB_KHR
+#endif  // VK_USE_PLATFORM_XCB_KHR
 #ifdef VK_USE_PLATFORM_XLIB_KHR
         {"vkCreateXlibSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateXlibSurfaceKHR)},
         {"vkGetPhysicalDeviceXlibPresentationSupportKHR",
          reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceXlibPresentationSupportKHR)},
-#endif // VK_USE_PLATFORM_XLIB_KHR
+#endif  // VK_USE_PLATFORM_XLIB_KHR
         {"vkDestroySurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(DestroySurfaceKHR)},
         {"vkGetPhysicalDeviceSurfaceSupportKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceSupportKHR)},
         {"vkGetPhysicalDeviceDisplayPlanePropertiesKHR",
@@ -1448,8 +1433,7 @@ static PFN_vkVoidFunction intercept_khr_surface_command(const char *name, VkInst
     // do not check if VK_KHR_*_surface is enabled (why?)
 
     for (size_t i = 0; i < ARRAY_SIZE(khr_surface_commands); i++) {
-        if (!strcmp(khr_surface_commands[i].name, name))
-            return khr_surface_commands[i].proc;
+        if (!strcmp(khr_surface_commands[i].name, name)) return khr_surface_commands[i].proc;
     }
 
     return nullptr;
@@ -1466,8 +1450,7 @@ static PFN_vkVoidFunction intercept_core_device_command(const char *name) {
     };
 
     for (size_t i = 0; i < ARRAY_SIZE(core_device_commands); i++) {
-        if (!strcmp(core_device_commands[i].name, name))
-            return core_device_commands[i].proc;
+        if (!strcmp(core_device_commands[i].name, name)) return core_device_commands[i].proc;
     }
 
     return nullptr;
@@ -1486,14 +1469,13 @@ static PFN_vkVoidFunction intercept_khr_swapchain_command(const char *name, VkDe
     // do not check if VK_KHR_swapchain is enabled (why?)
 
     for (size_t i = 0; i < ARRAY_SIZE(khr_swapchain_commands); i++) {
-        if (!strcmp(khr_swapchain_commands[i].name, name))
-            return khr_swapchain_commands[i].proc;
+        if (!strcmp(khr_swapchain_commands[i].name, name)) return khr_swapchain_commands[i].proc;
     }
 
     return nullptr;
 }
 
-} // namespace swapchain
+}  // namespace swapchain
 
 // vk_layer_logging.h expects these to be defined
 

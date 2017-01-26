@@ -44,8 +44,7 @@ static VkResult VKAPI_CALL vkDevExtError(VkDevice dev) {
 static inline void loader_init_device_dispatch_table(struct loader_dev_dispatch_table *dev_table, PFN_vkGetDeviceProcAddr gpa,
                                                      VkDevice dev) {
     VkLayerDispatchTable *table = &dev_table->core_dispatch;
-    for (uint32_t i = 0; i < MAX_NUM_UNKNOWN_EXTS; i++)
-        dev_table->ext_dispatch.dev_ext[i] = (PFN_vkDevExt)vkDevExtError;
+    for (uint32_t i = 0; i < MAX_NUM_UNKNOWN_EXTS; i++) dev_table->ext_dispatch.dev_ext[i] = (PFN_vkDevExt)vkDevExtError;
 
     table->GetDeviceProcAddr = (PFN_vkGetDeviceProcAddr)gpa(dev, "vkGetDeviceProcAddr");
     table->DestroyDevice = (PFN_vkDestroyDevice)gpa(dev, "vkDestroyDevice");
@@ -221,260 +220,134 @@ static inline void loader_init_device_extension_dispatch_table(struct loader_dev
 }
 
 static inline void *loader_lookup_device_dispatch_table(const VkLayerDispatchTable *table, const char *name) {
-    if (!name || name[0] != 'v' || name[1] != 'k')
-        return NULL;
+    if (!name || name[0] != 'v' || name[1] != 'k') return NULL;
 
     name += 2;
-    if (!strcmp(name, "GetDeviceProcAddr"))
-        return (void *)table->GetDeviceProcAddr;
-    if (!strcmp(name, "DestroyDevice"))
-        return (void *)table->DestroyDevice;
-    if (!strcmp(name, "GetDeviceQueue"))
-        return (void *)table->GetDeviceQueue;
-    if (!strcmp(name, "QueueSubmit"))
-        return (void *)table->QueueSubmit;
-    if (!strcmp(name, "QueueWaitIdle"))
-        return (void *)table->QueueWaitIdle;
-    if (!strcmp(name, "DeviceWaitIdle"))
-        return (void *)table->DeviceWaitIdle;
-    if (!strcmp(name, "AllocateMemory"))
-        return (void *)table->AllocateMemory;
-    if (!strcmp(name, "FreeMemory"))
-        return (void *)table->FreeMemory;
-    if (!strcmp(name, "MapMemory"))
-        return (void *)table->MapMemory;
-    if (!strcmp(name, "UnmapMemory"))
-        return (void *)table->UnmapMemory;
-    if (!strcmp(name, "FlushMappedMemoryRanges"))
-        return (void *)table->FlushMappedMemoryRanges;
-    if (!strcmp(name, "InvalidateMappedMemoryRanges"))
-        return (void *)table->InvalidateMappedMemoryRanges;
-    if (!strcmp(name, "GetDeviceMemoryCommitment"))
-        return (void *)table->GetDeviceMemoryCommitment;
-    if (!strcmp(name, "GetImageSparseMemoryRequirements"))
-        return (void *)table->GetImageSparseMemoryRequirements;
-    if (!strcmp(name, "GetBufferMemoryRequirements"))
-        return (void *)table->GetBufferMemoryRequirements;
-    if (!strcmp(name, "GetImageMemoryRequirements"))
-        return (void *)table->GetImageMemoryRequirements;
-    if (!strcmp(name, "BindBufferMemory"))
-        return (void *)table->BindBufferMemory;
-    if (!strcmp(name, "BindImageMemory"))
-        return (void *)table->BindImageMemory;
-    if (!strcmp(name, "QueueBindSparse"))
-        return (void *)table->QueueBindSparse;
-    if (!strcmp(name, "CreateFence"))
-        return (void *)table->CreateFence;
-    if (!strcmp(name, "DestroyFence"))
-        return (void *)table->DestroyFence;
-    if (!strcmp(name, "ResetFences"))
-        return (void *)table->ResetFences;
-    if (!strcmp(name, "GetFenceStatus"))
-        return (void *)table->GetFenceStatus;
-    if (!strcmp(name, "WaitForFences"))
-        return (void *)table->WaitForFences;
-    if (!strcmp(name, "CreateSemaphore"))
-        return (void *)table->CreateSemaphore;
-    if (!strcmp(name, "DestroySemaphore"))
-        return (void *)table->DestroySemaphore;
-    if (!strcmp(name, "CreateEvent"))
-        return (void *)table->CreateEvent;
-    if (!strcmp(name, "DestroyEvent"))
-        return (void *)table->DestroyEvent;
-    if (!strcmp(name, "GetEventStatus"))
-        return (void *)table->GetEventStatus;
-    if (!strcmp(name, "SetEvent"))
-        return (void *)table->SetEvent;
-    if (!strcmp(name, "ResetEvent"))
-        return (void *)table->ResetEvent;
-    if (!strcmp(name, "CreateQueryPool"))
-        return (void *)table->CreateQueryPool;
-    if (!strcmp(name, "DestroyQueryPool"))
-        return (void *)table->DestroyQueryPool;
-    if (!strcmp(name, "GetQueryPoolResults"))
-        return (void *)table->GetQueryPoolResults;
-    if (!strcmp(name, "CreateBuffer"))
-        return (void *)table->CreateBuffer;
-    if (!strcmp(name, "DestroyBuffer"))
-        return (void *)table->DestroyBuffer;
-    if (!strcmp(name, "CreateBufferView"))
-        return (void *)table->CreateBufferView;
-    if (!strcmp(name, "DestroyBufferView"))
-        return (void *)table->DestroyBufferView;
-    if (!strcmp(name, "CreateImage"))
-        return (void *)table->CreateImage;
-    if (!strcmp(name, "DestroyImage"))
-        return (void *)table->DestroyImage;
-    if (!strcmp(name, "GetImageSubresourceLayout"))
-        return (void *)table->GetImageSubresourceLayout;
-    if (!strcmp(name, "CreateImageView"))
-        return (void *)table->CreateImageView;
-    if (!strcmp(name, "DestroyImageView"))
-        return (void *)table->DestroyImageView;
-    if (!strcmp(name, "CreateShaderModule"))
-        return (void *)table->CreateShaderModule;
-    if (!strcmp(name, "DestroyShaderModule"))
-        return (void *)table->DestroyShaderModule;
-    if (!strcmp(name, "CreatePipelineCache"))
-        return (void *)vkCreatePipelineCache;
-    if (!strcmp(name, "DestroyPipelineCache"))
-        return (void *)vkDestroyPipelineCache;
-    if (!strcmp(name, "GetPipelineCacheData"))
-        return (void *)vkGetPipelineCacheData;
-    if (!strcmp(name, "MergePipelineCaches"))
-        return (void *)vkMergePipelineCaches;
-    if (!strcmp(name, "CreateGraphicsPipelines"))
-        return (void *)vkCreateGraphicsPipelines;
-    if (!strcmp(name, "CreateComputePipelines"))
-        return (void *)vkCreateComputePipelines;
-    if (!strcmp(name, "DestroyPipeline"))
-        return (void *)table->DestroyPipeline;
-    if (!strcmp(name, "CreatePipelineLayout"))
-        return (void *)table->CreatePipelineLayout;
-    if (!strcmp(name, "DestroyPipelineLayout"))
-        return (void *)table->DestroyPipelineLayout;
-    if (!strcmp(name, "CreateSampler"))
-        return (void *)table->CreateSampler;
-    if (!strcmp(name, "DestroySampler"))
-        return (void *)table->DestroySampler;
-    if (!strcmp(name, "CreateDescriptorSetLayout"))
-        return (void *)table->CreateDescriptorSetLayout;
-    if (!strcmp(name, "DestroyDescriptorSetLayout"))
-        return (void *)table->DestroyDescriptorSetLayout;
-    if (!strcmp(name, "CreateDescriptorPool"))
-        return (void *)table->CreateDescriptorPool;
-    if (!strcmp(name, "DestroyDescriptorPool"))
-        return (void *)table->DestroyDescriptorPool;
-    if (!strcmp(name, "ResetDescriptorPool"))
-        return (void *)table->ResetDescriptorPool;
-    if (!strcmp(name, "AllocateDescriptorSets"))
-        return (void *)table->AllocateDescriptorSets;
-    if (!strcmp(name, "FreeDescriptorSets"))
-        return (void *)table->FreeDescriptorSets;
-    if (!strcmp(name, "UpdateDescriptorSets"))
-        return (void *)table->UpdateDescriptorSets;
-    if (!strcmp(name, "CreateFramebuffer"))
-        return (void *)table->CreateFramebuffer;
-    if (!strcmp(name, "DestroyFramebuffer"))
-        return (void *)table->DestroyFramebuffer;
-    if (!strcmp(name, "CreateRenderPass"))
-        return (void *)table->CreateRenderPass;
-    if (!strcmp(name, "DestroyRenderPass"))
-        return (void *)table->DestroyRenderPass;
-    if (!strcmp(name, "GetRenderAreaGranularity"))
-        return (void *)table->GetRenderAreaGranularity;
-    if (!strcmp(name, "CreateCommandPool"))
-        return (void *)table->CreateCommandPool;
-    if (!strcmp(name, "DestroyCommandPool"))
-        return (void *)table->DestroyCommandPool;
-    if (!strcmp(name, "ResetCommandPool"))
-        return (void *)table->ResetCommandPool;
-    if (!strcmp(name, "AllocateCommandBuffers"))
-        return (void *)table->AllocateCommandBuffers;
-    if (!strcmp(name, "FreeCommandBuffers"))
-        return (void *)table->FreeCommandBuffers;
-    if (!strcmp(name, "BeginCommandBuffer"))
-        return (void *)table->BeginCommandBuffer;
-    if (!strcmp(name, "EndCommandBuffer"))
-        return (void *)table->EndCommandBuffer;
-    if (!strcmp(name, "ResetCommandBuffer"))
-        return (void *)table->ResetCommandBuffer;
-    if (!strcmp(name, "CmdBindPipeline"))
-        return (void *)table->CmdBindPipeline;
-    if (!strcmp(name, "CmdSetViewport"))
-        return (void *)table->CmdSetViewport;
-    if (!strcmp(name, "CmdSetScissor"))
-        return (void *)table->CmdSetScissor;
-    if (!strcmp(name, "CmdSetLineWidth"))
-        return (void *)table->CmdSetLineWidth;
-    if (!strcmp(name, "CmdSetDepthBias"))
-        return (void *)table->CmdSetDepthBias;
-    if (!strcmp(name, "CmdSetBlendConstants"))
-        return (void *)table->CmdSetBlendConstants;
-    if (!strcmp(name, "CmdSetDepthBounds"))
-        return (void *)table->CmdSetDepthBounds;
-    if (!strcmp(name, "CmdSetStencilCompareMask"))
-        return (void *)table->CmdSetStencilCompareMask;
-    if (!strcmp(name, "CmdSetStencilwriteMask"))
-        return (void *)table->CmdSetStencilWriteMask;
-    if (!strcmp(name, "CmdSetStencilReference"))
-        return (void *)table->CmdSetStencilReference;
-    if (!strcmp(name, "CmdBindDescriptorSets"))
-        return (void *)table->CmdBindDescriptorSets;
-    if (!strcmp(name, "CmdBindVertexBuffers"))
-        return (void *)table->CmdBindVertexBuffers;
-    if (!strcmp(name, "CmdBindIndexBuffer"))
-        return (void *)table->CmdBindIndexBuffer;
-    if (!strcmp(name, "CmdDraw"))
-        return (void *)table->CmdDraw;
-    if (!strcmp(name, "CmdDrawIndexed"))
-        return (void *)table->CmdDrawIndexed;
-    if (!strcmp(name, "CmdDrawIndirect"))
-        return (void *)table->CmdDrawIndirect;
-    if (!strcmp(name, "CmdDrawIndexedIndirect"))
-        return (void *)table->CmdDrawIndexedIndirect;
-    if (!strcmp(name, "CmdDispatch"))
-        return (void *)table->CmdDispatch;
-    if (!strcmp(name, "CmdDispatchIndirect"))
-        return (void *)table->CmdDispatchIndirect;
-    if (!strcmp(name, "CmdCopyBuffer"))
-        return (void *)table->CmdCopyBuffer;
-    if (!strcmp(name, "CmdCopyImage"))
-        return (void *)table->CmdCopyImage;
-    if (!strcmp(name, "CmdBlitImage"))
-        return (void *)table->CmdBlitImage;
-    if (!strcmp(name, "CmdCopyBufferToImage"))
-        return (void *)table->CmdCopyBufferToImage;
-    if (!strcmp(name, "CmdCopyImageToBuffer"))
-        return (void *)table->CmdCopyImageToBuffer;
-    if (!strcmp(name, "CmdUpdateBuffer"))
-        return (void *)table->CmdUpdateBuffer;
-    if (!strcmp(name, "CmdFillBuffer"))
-        return (void *)table->CmdFillBuffer;
-    if (!strcmp(name, "CmdClearColorImage"))
-        return (void *)table->CmdClearColorImage;
-    if (!strcmp(name, "CmdClearDepthStencilImage"))
-        return (void *)table->CmdClearDepthStencilImage;
-    if (!strcmp(name, "CmdClearAttachments"))
-        return (void *)table->CmdClearAttachments;
-    if (!strcmp(name, "CmdResolveImage"))
-        return (void *)table->CmdResolveImage;
-    if (!strcmp(name, "CmdSetEvent"))
-        return (void *)table->CmdSetEvent;
-    if (!strcmp(name, "CmdResetEvent"))
-        return (void *)table->CmdResetEvent;
-    if (!strcmp(name, "CmdWaitEvents"))
-        return (void *)table->CmdWaitEvents;
-    if (!strcmp(name, "CmdPipelineBarrier"))
-        return (void *)table->CmdPipelineBarrier;
-    if (!strcmp(name, "CmdBeginQuery"))
-        return (void *)table->CmdBeginQuery;
-    if (!strcmp(name, "CmdEndQuery"))
-        return (void *)table->CmdEndQuery;
-    if (!strcmp(name, "CmdResetQueryPool"))
-        return (void *)table->CmdResetQueryPool;
-    if (!strcmp(name, "CmdWriteTimestamp"))
-        return (void *)table->CmdWriteTimestamp;
-    if (!strcmp(name, "CmdCopyQueryPoolResults"))
-        return (void *)table->CmdCopyQueryPoolResults;
-    if (!strcmp(name, "CmdPushConstants"))
-        return (void *)table->CmdPushConstants;
-    if (!strcmp(name, "CmdBeginRenderPass"))
-        return (void *)table->CmdBeginRenderPass;
-    if (!strcmp(name, "CmdNextSubpass"))
-        return (void *)table->CmdNextSubpass;
-    if (!strcmp(name, "CmdEndRenderPass"))
-        return (void *)table->CmdEndRenderPass;
-    if (!strcmp(name, "CmdExecuteCommands"))
-        return (void *)table->CmdExecuteCommands;
-    if (!strcmp(name, "DestroySwapchainKHR"))
-        return (void *)table->DestroySwapchainKHR;
-    if (!strcmp(name, "GetSwapchainImagesKHR"))
-        return (void *)table->GetSwapchainImagesKHR;
-    if (!strcmp(name, "AcquireNextImageKHR"))
-        return (void *)table->AcquireNextImageKHR;
-    if (!strcmp(name, "QueuePresentKHR"))
-        return (void *)table->QueuePresentKHR;
+    if (!strcmp(name, "GetDeviceProcAddr")) return (void *)table->GetDeviceProcAddr;
+    if (!strcmp(name, "DestroyDevice")) return (void *)table->DestroyDevice;
+    if (!strcmp(name, "GetDeviceQueue")) return (void *)table->GetDeviceQueue;
+    if (!strcmp(name, "QueueSubmit")) return (void *)table->QueueSubmit;
+    if (!strcmp(name, "QueueWaitIdle")) return (void *)table->QueueWaitIdle;
+    if (!strcmp(name, "DeviceWaitIdle")) return (void *)table->DeviceWaitIdle;
+    if (!strcmp(name, "AllocateMemory")) return (void *)table->AllocateMemory;
+    if (!strcmp(name, "FreeMemory")) return (void *)table->FreeMemory;
+    if (!strcmp(name, "MapMemory")) return (void *)table->MapMemory;
+    if (!strcmp(name, "UnmapMemory")) return (void *)table->UnmapMemory;
+    if (!strcmp(name, "FlushMappedMemoryRanges")) return (void *)table->FlushMappedMemoryRanges;
+    if (!strcmp(name, "InvalidateMappedMemoryRanges")) return (void *)table->InvalidateMappedMemoryRanges;
+    if (!strcmp(name, "GetDeviceMemoryCommitment")) return (void *)table->GetDeviceMemoryCommitment;
+    if (!strcmp(name, "GetImageSparseMemoryRequirements")) return (void *)table->GetImageSparseMemoryRequirements;
+    if (!strcmp(name, "GetBufferMemoryRequirements")) return (void *)table->GetBufferMemoryRequirements;
+    if (!strcmp(name, "GetImageMemoryRequirements")) return (void *)table->GetImageMemoryRequirements;
+    if (!strcmp(name, "BindBufferMemory")) return (void *)table->BindBufferMemory;
+    if (!strcmp(name, "BindImageMemory")) return (void *)table->BindImageMemory;
+    if (!strcmp(name, "QueueBindSparse")) return (void *)table->QueueBindSparse;
+    if (!strcmp(name, "CreateFence")) return (void *)table->CreateFence;
+    if (!strcmp(name, "DestroyFence")) return (void *)table->DestroyFence;
+    if (!strcmp(name, "ResetFences")) return (void *)table->ResetFences;
+    if (!strcmp(name, "GetFenceStatus")) return (void *)table->GetFenceStatus;
+    if (!strcmp(name, "WaitForFences")) return (void *)table->WaitForFences;
+    if (!strcmp(name, "CreateSemaphore")) return (void *)table->CreateSemaphore;
+    if (!strcmp(name, "DestroySemaphore")) return (void *)table->DestroySemaphore;
+    if (!strcmp(name, "CreateEvent")) return (void *)table->CreateEvent;
+    if (!strcmp(name, "DestroyEvent")) return (void *)table->DestroyEvent;
+    if (!strcmp(name, "GetEventStatus")) return (void *)table->GetEventStatus;
+    if (!strcmp(name, "SetEvent")) return (void *)table->SetEvent;
+    if (!strcmp(name, "ResetEvent")) return (void *)table->ResetEvent;
+    if (!strcmp(name, "CreateQueryPool")) return (void *)table->CreateQueryPool;
+    if (!strcmp(name, "DestroyQueryPool")) return (void *)table->DestroyQueryPool;
+    if (!strcmp(name, "GetQueryPoolResults")) return (void *)table->GetQueryPoolResults;
+    if (!strcmp(name, "CreateBuffer")) return (void *)table->CreateBuffer;
+    if (!strcmp(name, "DestroyBuffer")) return (void *)table->DestroyBuffer;
+    if (!strcmp(name, "CreateBufferView")) return (void *)table->CreateBufferView;
+    if (!strcmp(name, "DestroyBufferView")) return (void *)table->DestroyBufferView;
+    if (!strcmp(name, "CreateImage")) return (void *)table->CreateImage;
+    if (!strcmp(name, "DestroyImage")) return (void *)table->DestroyImage;
+    if (!strcmp(name, "GetImageSubresourceLayout")) return (void *)table->GetImageSubresourceLayout;
+    if (!strcmp(name, "CreateImageView")) return (void *)table->CreateImageView;
+    if (!strcmp(name, "DestroyImageView")) return (void *)table->DestroyImageView;
+    if (!strcmp(name, "CreateShaderModule")) return (void *)table->CreateShaderModule;
+    if (!strcmp(name, "DestroyShaderModule")) return (void *)table->DestroyShaderModule;
+    if (!strcmp(name, "CreatePipelineCache")) return (void *)vkCreatePipelineCache;
+    if (!strcmp(name, "DestroyPipelineCache")) return (void *)vkDestroyPipelineCache;
+    if (!strcmp(name, "GetPipelineCacheData")) return (void *)vkGetPipelineCacheData;
+    if (!strcmp(name, "MergePipelineCaches")) return (void *)vkMergePipelineCaches;
+    if (!strcmp(name, "CreateGraphicsPipelines")) return (void *)vkCreateGraphicsPipelines;
+    if (!strcmp(name, "CreateComputePipelines")) return (void *)vkCreateComputePipelines;
+    if (!strcmp(name, "DestroyPipeline")) return (void *)table->DestroyPipeline;
+    if (!strcmp(name, "CreatePipelineLayout")) return (void *)table->CreatePipelineLayout;
+    if (!strcmp(name, "DestroyPipelineLayout")) return (void *)table->DestroyPipelineLayout;
+    if (!strcmp(name, "CreateSampler")) return (void *)table->CreateSampler;
+    if (!strcmp(name, "DestroySampler")) return (void *)table->DestroySampler;
+    if (!strcmp(name, "CreateDescriptorSetLayout")) return (void *)table->CreateDescriptorSetLayout;
+    if (!strcmp(name, "DestroyDescriptorSetLayout")) return (void *)table->DestroyDescriptorSetLayout;
+    if (!strcmp(name, "CreateDescriptorPool")) return (void *)table->CreateDescriptorPool;
+    if (!strcmp(name, "DestroyDescriptorPool")) return (void *)table->DestroyDescriptorPool;
+    if (!strcmp(name, "ResetDescriptorPool")) return (void *)table->ResetDescriptorPool;
+    if (!strcmp(name, "AllocateDescriptorSets")) return (void *)table->AllocateDescriptorSets;
+    if (!strcmp(name, "FreeDescriptorSets")) return (void *)table->FreeDescriptorSets;
+    if (!strcmp(name, "UpdateDescriptorSets")) return (void *)table->UpdateDescriptorSets;
+    if (!strcmp(name, "CreateFramebuffer")) return (void *)table->CreateFramebuffer;
+    if (!strcmp(name, "DestroyFramebuffer")) return (void *)table->DestroyFramebuffer;
+    if (!strcmp(name, "CreateRenderPass")) return (void *)table->CreateRenderPass;
+    if (!strcmp(name, "DestroyRenderPass")) return (void *)table->DestroyRenderPass;
+    if (!strcmp(name, "GetRenderAreaGranularity")) return (void *)table->GetRenderAreaGranularity;
+    if (!strcmp(name, "CreateCommandPool")) return (void *)table->CreateCommandPool;
+    if (!strcmp(name, "DestroyCommandPool")) return (void *)table->DestroyCommandPool;
+    if (!strcmp(name, "ResetCommandPool")) return (void *)table->ResetCommandPool;
+    if (!strcmp(name, "AllocateCommandBuffers")) return (void *)table->AllocateCommandBuffers;
+    if (!strcmp(name, "FreeCommandBuffers")) return (void *)table->FreeCommandBuffers;
+    if (!strcmp(name, "BeginCommandBuffer")) return (void *)table->BeginCommandBuffer;
+    if (!strcmp(name, "EndCommandBuffer")) return (void *)table->EndCommandBuffer;
+    if (!strcmp(name, "ResetCommandBuffer")) return (void *)table->ResetCommandBuffer;
+    if (!strcmp(name, "CmdBindPipeline")) return (void *)table->CmdBindPipeline;
+    if (!strcmp(name, "CmdSetViewport")) return (void *)table->CmdSetViewport;
+    if (!strcmp(name, "CmdSetScissor")) return (void *)table->CmdSetScissor;
+    if (!strcmp(name, "CmdSetLineWidth")) return (void *)table->CmdSetLineWidth;
+    if (!strcmp(name, "CmdSetDepthBias")) return (void *)table->CmdSetDepthBias;
+    if (!strcmp(name, "CmdSetBlendConstants")) return (void *)table->CmdSetBlendConstants;
+    if (!strcmp(name, "CmdSetDepthBounds")) return (void *)table->CmdSetDepthBounds;
+    if (!strcmp(name, "CmdSetStencilCompareMask")) return (void *)table->CmdSetStencilCompareMask;
+    if (!strcmp(name, "CmdSetStencilwriteMask")) return (void *)table->CmdSetStencilWriteMask;
+    if (!strcmp(name, "CmdSetStencilReference")) return (void *)table->CmdSetStencilReference;
+    if (!strcmp(name, "CmdBindDescriptorSets")) return (void *)table->CmdBindDescriptorSets;
+    if (!strcmp(name, "CmdBindVertexBuffers")) return (void *)table->CmdBindVertexBuffers;
+    if (!strcmp(name, "CmdBindIndexBuffer")) return (void *)table->CmdBindIndexBuffer;
+    if (!strcmp(name, "CmdDraw")) return (void *)table->CmdDraw;
+    if (!strcmp(name, "CmdDrawIndexed")) return (void *)table->CmdDrawIndexed;
+    if (!strcmp(name, "CmdDrawIndirect")) return (void *)table->CmdDrawIndirect;
+    if (!strcmp(name, "CmdDrawIndexedIndirect")) return (void *)table->CmdDrawIndexedIndirect;
+    if (!strcmp(name, "CmdDispatch")) return (void *)table->CmdDispatch;
+    if (!strcmp(name, "CmdDispatchIndirect")) return (void *)table->CmdDispatchIndirect;
+    if (!strcmp(name, "CmdCopyBuffer")) return (void *)table->CmdCopyBuffer;
+    if (!strcmp(name, "CmdCopyImage")) return (void *)table->CmdCopyImage;
+    if (!strcmp(name, "CmdBlitImage")) return (void *)table->CmdBlitImage;
+    if (!strcmp(name, "CmdCopyBufferToImage")) return (void *)table->CmdCopyBufferToImage;
+    if (!strcmp(name, "CmdCopyImageToBuffer")) return (void *)table->CmdCopyImageToBuffer;
+    if (!strcmp(name, "CmdUpdateBuffer")) return (void *)table->CmdUpdateBuffer;
+    if (!strcmp(name, "CmdFillBuffer")) return (void *)table->CmdFillBuffer;
+    if (!strcmp(name, "CmdClearColorImage")) return (void *)table->CmdClearColorImage;
+    if (!strcmp(name, "CmdClearDepthStencilImage")) return (void *)table->CmdClearDepthStencilImage;
+    if (!strcmp(name, "CmdClearAttachments")) return (void *)table->CmdClearAttachments;
+    if (!strcmp(name, "CmdResolveImage")) return (void *)table->CmdResolveImage;
+    if (!strcmp(name, "CmdSetEvent")) return (void *)table->CmdSetEvent;
+    if (!strcmp(name, "CmdResetEvent")) return (void *)table->CmdResetEvent;
+    if (!strcmp(name, "CmdWaitEvents")) return (void *)table->CmdWaitEvents;
+    if (!strcmp(name, "CmdPipelineBarrier")) return (void *)table->CmdPipelineBarrier;
+    if (!strcmp(name, "CmdBeginQuery")) return (void *)table->CmdBeginQuery;
+    if (!strcmp(name, "CmdEndQuery")) return (void *)table->CmdEndQuery;
+    if (!strcmp(name, "CmdResetQueryPool")) return (void *)table->CmdResetQueryPool;
+    if (!strcmp(name, "CmdWriteTimestamp")) return (void *)table->CmdWriteTimestamp;
+    if (!strcmp(name, "CmdCopyQueryPoolResults")) return (void *)table->CmdCopyQueryPoolResults;
+    if (!strcmp(name, "CmdPushConstants")) return (void *)table->CmdPushConstants;
+    if (!strcmp(name, "CmdBeginRenderPass")) return (void *)table->CmdBeginRenderPass;
+    if (!strcmp(name, "CmdNextSubpass")) return (void *)table->CmdNextSubpass;
+    if (!strcmp(name, "CmdEndRenderPass")) return (void *)table->CmdEndRenderPass;
+    if (!strcmp(name, "CmdExecuteCommands")) return (void *)table->CmdExecuteCommands;
+    if (!strcmp(name, "DestroySwapchainKHR")) return (void *)table->DestroySwapchainKHR;
+    if (!strcmp(name, "GetSwapchainImagesKHR")) return (void *)table->GetSwapchainImagesKHR;
+    if (!strcmp(name, "AcquireNextImageKHR")) return (void *)table->AcquireNextImageKHR;
+    if (!strcmp(name, "QueuePresentKHR")) return (void *)table->QueuePresentKHR;
 
     // NOTE: Device Funcs needing Trampoline/Terminator.
     // Overrides for device functions needing a trampoline and
@@ -608,48 +481,36 @@ static inline void loader_init_instance_extension_dispatch_table(VkLayerInstance
 
 static inline void *loader_lookup_instance_extension_dispatch_table(const VkLayerInstanceDispatchTable *table, const char *name,
                                                                     bool *found_name) {
-
     *found_name = true;
 
     // KHR_get_physical_device_properties2
-    if (!strcmp(name, "GetPhysicalDeviceFeatures2KHR"))
-        return (void *)table->GetPhysicalDeviceFeatures2KHR;
-    if (!strcmp(name, "GetPhysicalDeviceProperties2KHR"))
-        return (void *)table->GetPhysicalDeviceProperties2KHR;
-    if (!strcmp(name, "GetPhysicalDeviceFormatProperties2KHR"))
-        return (void *)table->GetPhysicalDeviceFormatProperties2KHR;
+    if (!strcmp(name, "GetPhysicalDeviceFeatures2KHR")) return (void *)table->GetPhysicalDeviceFeatures2KHR;
+    if (!strcmp(name, "GetPhysicalDeviceProperties2KHR")) return (void *)table->GetPhysicalDeviceProperties2KHR;
+    if (!strcmp(name, "GetPhysicalDeviceFormatProperties2KHR")) return (void *)table->GetPhysicalDeviceFormatProperties2KHR;
     if (!strcmp(name, "GetPhysicalDeviceImageFormatProperties2KHR"))
         return (void *)table->GetPhysicalDeviceImageFormatProperties2KHR;
     if (!strcmp(name, "GetPhysicalDeviceQueueFamilyProperties2KHR"))
         return (void *)table->GetPhysicalDeviceQueueFamilyProperties2KHR;
-    if (!strcmp(name, "GetPhysicalDeviceMemoryProperties2KHR"))
-        return (void *)table->GetPhysicalDeviceMemoryProperties2KHR;
+    if (!strcmp(name, "GetPhysicalDeviceMemoryProperties2KHR")) return (void *)table->GetPhysicalDeviceMemoryProperties2KHR;
     if (!strcmp(name, "GetPhysicalDeviceSparseImageFormatProperties2KHR"))
         return (void *)table->GetPhysicalDeviceSparseImageFormatProperties2KHR;
 
 // EXT_acquire_xlib_display
 #ifdef VK_USE_PLATFORM_XLIB_XRANDR_EXT
-    if (!strcmp(name, "AcquireXlibDisplayEXT"))
-        return (void *)table->AcquireXlibDisplayEXT;
-    if (!strcmp(name, "GetRandROutputDisplayEXT"))
-        return (void *)table->GetRandROutputDisplayEXT;
+    if (!strcmp(name, "AcquireXlibDisplayEXT")) return (void *)table->AcquireXlibDisplayEXT;
+    if (!strcmp(name, "GetRandROutputDisplayEXT")) return (void *)table->GetRandROutputDisplayEXT;
 #endif
 
     // EXT_debug_report
-    if (!strcmp(name, "CreateDebugReportCallbackEXT"))
-        return (void *)table->CreateDebugReportCallbackEXT;
-    if (!strcmp(name, "DestroyDebugReportCallbackEXT"))
-        return (void *)table->DestroyDebugReportCallbackEXT;
-    if (!strcmp(name, "DebugReportMessageEXT"))
-        return (void *)table->DebugReportMessageEXT;
+    if (!strcmp(name, "CreateDebugReportCallbackEXT")) return (void *)table->CreateDebugReportCallbackEXT;
+    if (!strcmp(name, "DestroyDebugReportCallbackEXT")) return (void *)table->DestroyDebugReportCallbackEXT;
+    if (!strcmp(name, "DebugReportMessageEXT")) return (void *)table->DebugReportMessageEXT;
 
     // EXT_direct_mode_display
-    if (!strcmp(name, "ReleaseDisplayEXT"))
-        return (void *)table->ReleaseDisplayEXT;
+    if (!strcmp(name, "ReleaseDisplayEXT")) return (void *)table->ReleaseDisplayEXT;
 
     // EXT_display_surface_counter
-    if (!strcmp(name, "GetPhysicalDeviceSurfaceCapabilities2EXT"))
-        return (void *)table->GetPhysicalDeviceSurfaceCapabilities2EXT;
+    if (!strcmp(name, "GetPhysicalDeviceSurfaceCapabilities2EXT")) return (void *)table->GetPhysicalDeviceSurfaceCapabilities2EXT;
 
     // NV_external_memory_capabilities
     if (!strcmp(name, "GetPhysicalDeviceExternalImageFormatPropertiesNV"))
@@ -672,84 +533,57 @@ static inline void *loader_lookup_instance_dispatch_table(const VkLayerInstanceD
 
     *found_name = true;
     name += 2;
-    if (!strcmp(name, "DestroyInstance"))
-        return (void *)table->DestroyInstance;
-    if (!strcmp(name, "EnumeratePhysicalDevices"))
-        return (void *)table->EnumeratePhysicalDevices;
-    if (!strcmp(name, "GetPhysicalDeviceFeatures"))
-        return (void *)table->GetPhysicalDeviceFeatures;
-    if (!strcmp(name, "GetPhysicalDeviceImageFormatProperties"))
-        return (void *)table->GetPhysicalDeviceImageFormatProperties;
-    if (!strcmp(name, "GetPhysicalDeviceFormatProperties"))
-        return (void *)table->GetPhysicalDeviceFormatProperties;
+    if (!strcmp(name, "DestroyInstance")) return (void *)table->DestroyInstance;
+    if (!strcmp(name, "EnumeratePhysicalDevices")) return (void *)table->EnumeratePhysicalDevices;
+    if (!strcmp(name, "GetPhysicalDeviceFeatures")) return (void *)table->GetPhysicalDeviceFeatures;
+    if (!strcmp(name, "GetPhysicalDeviceImageFormatProperties")) return (void *)table->GetPhysicalDeviceImageFormatProperties;
+    if (!strcmp(name, "GetPhysicalDeviceFormatProperties")) return (void *)table->GetPhysicalDeviceFormatProperties;
     if (!strcmp(name, "GetPhysicalDeviceSparseImageFormatProperties"))
         return (void *)table->GetPhysicalDeviceSparseImageFormatProperties;
-    if (!strcmp(name, "GetPhysicalDeviceProperties"))
-        return (void *)table->GetPhysicalDeviceProperties;
-    if (!strcmp(name, "GetPhysicalDeviceQueueFamilyProperties"))
-        return (void *)table->GetPhysicalDeviceQueueFamilyProperties;
-    if (!strcmp(name, "GetPhysicalDeviceMemoryProperties"))
-        return (void *)table->GetPhysicalDeviceMemoryProperties;
-    if (!strcmp(name, "GetInstanceProcAddr"))
-        return (void *)table->GetInstanceProcAddr;
-    if (!strcmp(name, "EnumerateDeviceExtensionProperties"))
-        return (void *)table->EnumerateDeviceExtensionProperties;
-    if (!strcmp(name, "EnumerateDeviceLayerProperties"))
-        return (void *)table->EnumerateDeviceLayerProperties;
-    if (!strcmp(name, "DestroySurfaceKHR"))
-        return (void *)table->DestroySurfaceKHR;
-    if (!strcmp(name, "GetPhysicalDeviceSurfaceSupportKHR"))
-        return (void *)table->GetPhysicalDeviceSurfaceSupportKHR;
-    if (!strcmp(name, "GetPhysicalDeviceSurfaceCapabilitiesKHR"))
-        return (void *)table->GetPhysicalDeviceSurfaceCapabilitiesKHR;
-    if (!strcmp(name, "GetPhysicalDeviceSurfaceFormatsKHR"))
-        return (void *)table->GetPhysicalDeviceSurfaceFormatsKHR;
-    if (!strcmp(name, "GetPhysicalDeviceSurfacePresentModesKHR"))
-        return (void *)table->GetPhysicalDeviceSurfacePresentModesKHR;
+    if (!strcmp(name, "GetPhysicalDeviceProperties")) return (void *)table->GetPhysicalDeviceProperties;
+    if (!strcmp(name, "GetPhysicalDeviceQueueFamilyProperties")) return (void *)table->GetPhysicalDeviceQueueFamilyProperties;
+    if (!strcmp(name, "GetPhysicalDeviceMemoryProperties")) return (void *)table->GetPhysicalDeviceMemoryProperties;
+    if (!strcmp(name, "GetInstanceProcAddr")) return (void *)table->GetInstanceProcAddr;
+    if (!strcmp(name, "EnumerateDeviceExtensionProperties")) return (void *)table->EnumerateDeviceExtensionProperties;
+    if (!strcmp(name, "EnumerateDeviceLayerProperties")) return (void *)table->EnumerateDeviceLayerProperties;
+    if (!strcmp(name, "DestroySurfaceKHR")) return (void *)table->DestroySurfaceKHR;
+    if (!strcmp(name, "GetPhysicalDeviceSurfaceSupportKHR")) return (void *)table->GetPhysicalDeviceSurfaceSupportKHR;
+    if (!strcmp(name, "GetPhysicalDeviceSurfaceCapabilitiesKHR")) return (void *)table->GetPhysicalDeviceSurfaceCapabilitiesKHR;
+    if (!strcmp(name, "GetPhysicalDeviceSurfaceFormatsKHR")) return (void *)table->GetPhysicalDeviceSurfaceFormatsKHR;
+    if (!strcmp(name, "GetPhysicalDeviceSurfacePresentModesKHR")) return (void *)table->GetPhysicalDeviceSurfacePresentModesKHR;
 #ifdef VK_USE_PLATFORM_MIR_KHR
-    if (!strcmp(name, "CreateMirSurfaceKHR"))
-        return (void *)table->CreateMirSurfaceKHR;
+    if (!strcmp(name, "CreateMirSurfaceKHR")) return (void *)table->CreateMirSurfaceKHR;
     if (!strcmp(name, "GetPhysicalDeviceMirPresentationSupportKHR"))
         return (void *)table->GetPhysicalDeviceMirPresentationSupportKHR;
 #endif
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
-    if (!strcmp(name, "CreateWaylandSurfaceKHR"))
-        return (void *)table->CreateWaylandSurfaceKHR;
+    if (!strcmp(name, "CreateWaylandSurfaceKHR")) return (void *)table->CreateWaylandSurfaceKHR;
     if (!strcmp(name, "GetPhysicalDeviceWaylandPresentationSupportKHR"))
         return (void *)table->GetPhysicalDeviceWaylandPresentationSupportKHR;
 #endif
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-    if (!strcmp(name, "CreateWin32SurfaceKHR"))
-        return (void *)table->CreateWin32SurfaceKHR;
+    if (!strcmp(name, "CreateWin32SurfaceKHR")) return (void *)table->CreateWin32SurfaceKHR;
     if (!strcmp(name, "GetPhysicalDeviceWin32PresentationSupportKHR"))
         return (void *)table->GetPhysicalDeviceWin32PresentationSupportKHR;
 #endif
 #ifdef VK_USE_PLATFORM_XCB_KHR
-    if (!strcmp(name, "CreateXcbSurfaceKHR"))
-        return (void *)table->CreateXcbSurfaceKHR;
+    if (!strcmp(name, "CreateXcbSurfaceKHR")) return (void *)table->CreateXcbSurfaceKHR;
     if (!strcmp(name, "GetPhysicalDeviceXcbPresentationSupportKHR"))
         return (void *)table->GetPhysicalDeviceXcbPresentationSupportKHR;
 #endif
 #ifdef VK_USE_PLATFORM_XLIB_KHR
-    if (!strcmp(name, "CreateXlibSurfaceKHR"))
-        return (void *)table->CreateXlibSurfaceKHR;
+    if (!strcmp(name, "CreateXlibSurfaceKHR")) return (void *)table->CreateXlibSurfaceKHR;
     if (!strcmp(name, "GetPhysicalDeviceXlibPresentationSupportKHR"))
         return (void *)table->GetPhysicalDeviceXlibPresentationSupportKHR;
 #endif
-    if (!strcmp(name, "GetPhysicalDeviceDisplayPropertiesKHR"))
-        return (void *)table->GetPhysicalDeviceDisplayPropertiesKHR;
+    if (!strcmp(name, "GetPhysicalDeviceDisplayPropertiesKHR")) return (void *)table->GetPhysicalDeviceDisplayPropertiesKHR;
     if (!strcmp(name, "GetPhysicalDeviceDisplayPlanePropertiesKHR"))
         return (void *)table->GetPhysicalDeviceDisplayPlanePropertiesKHR;
-    if (!strcmp(name, "GetDisplayPlaneSupportedDisplaysKHR"))
-        return (void *)table->GetDisplayPlaneSupportedDisplaysKHR;
-    if (!strcmp(name, "GetDisplayModePropertiesKHR"))
-        return (void *)table->GetDisplayModePropertiesKHR;
-    if (!strcmp(name, "CreateDisplayModeKHR"))
-        return (void *)table->CreateDisplayModeKHR;
-    if (!strcmp(name, "GetDisplayPlaneCapabilitiesKHR"))
-        return (void *)table->GetDisplayPlaneCapabilitiesKHR;
-    if (!strcmp(name, "CreateDisplayPlaneSurfaceKHR"))
-        return (void *)table->CreateDisplayPlaneSurfaceKHR;
+    if (!strcmp(name, "GetDisplayPlaneSupportedDisplaysKHR")) return (void *)table->GetDisplayPlaneSupportedDisplaysKHR;
+    if (!strcmp(name, "GetDisplayModePropertiesKHR")) return (void *)table->GetDisplayModePropertiesKHR;
+    if (!strcmp(name, "CreateDisplayModeKHR")) return (void *)table->CreateDisplayModeKHR;
+    if (!strcmp(name, "GetDisplayPlaneCapabilitiesKHR")) return (void *)table->GetDisplayPlaneCapabilitiesKHR;
+    if (!strcmp(name, "CreateDisplayPlaneSurfaceKHR")) return (void *)table->CreateDisplayPlaneSurfaceKHR;
 
     return loader_lookup_instance_extension_dispatch_table(table, name, found_name);
 }

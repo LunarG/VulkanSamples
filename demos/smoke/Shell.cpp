@@ -51,8 +51,7 @@ void Shell::init_vk() {
 }
 
 void Shell::cleanup_vk() {
-    if (settings_.validate)
-        vk::DestroyDebugReportCallbackEXT(ctx_.instance, ctx_.debug_report, nullptr);
+    if (settings_.validate) vk::DestroyDebugReportCallbackEXT(ctx_.instance, ctx_.debug_report, nullptr);
 
     vk::DestroyInstance(ctx_.instance, nullptr);
 }
@@ -83,8 +82,7 @@ void Shell::assert_all_instance_layers() const {
     vk::enumerate(layers);
 
     std::set<std::string> layer_names;
-    for (const auto &layer : layers)
-        layer_names.insert(layer.layerName);
+    for (const auto &layer : layers) layer_names.insert(layer.layerName);
 
     // all listed instance layers are required
     for (const auto &name : instance_layers_) {
@@ -102,8 +100,7 @@ void Shell::assert_all_instance_extensions() const {
     vk::enumerate(nullptr, exts);
 
     std::set<std::string> ext_names;
-    for (const auto &ext : exts)
-        ext_names.insert(ext.extensionName);
+    for (const auto &ext : exts) ext_names.insert(ext.extensionName);
 
     // all listed instance extensions are required
     for (const auto &name : instance_extensions_) {
@@ -121,13 +118,11 @@ bool Shell::has_all_device_extensions(VkPhysicalDevice phy) const {
     vk::enumerate(phy, nullptr, exts);
 
     std::set<std::string> ext_names;
-    for (const auto &ext : exts)
-        ext_names.insert(ext.extensionName);
+    for (const auto &ext : exts) ext_names.insert(ext.extensionName);
 
     // all listed device extensions are required
     for (const auto &name : device_extensions_) {
-        if (ext_names.find(name) == ext_names.end())
-            return false;
+        if (ext_names.find(name) == ext_names.end()) return false;
     }
 
     return true;
@@ -155,8 +150,7 @@ void Shell::init_instance() {
 }
 
 void Shell::init_debug_report() {
-    if (!settings_.validate)
-        return;
+    if (!settings_.validate) return;
 
     VkDebugReportCallbackCreateInfoEXT debug_report_info = {};
     debug_report_info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
@@ -180,8 +174,7 @@ void Shell::init_physical_dev() {
 
     ctx_.physical_dev = VK_NULL_HANDLE;
     for (auto phy : phys) {
-        if (!has_all_device_extensions(phy))
-            continue;
+        if (!has_all_device_extensions(phy)) continue;
 
         // get queue properties
         std::vector<VkQueueFamilyProperties> queues;
@@ -193,15 +186,12 @@ void Shell::init_physical_dev() {
 
             // requires only GRAPHICS for game queues
             const VkFlags game_queue_flags = VK_QUEUE_GRAPHICS_BIT;
-            if (game_queue_family < 0 && (q.queueFlags & game_queue_flags) == game_queue_flags)
-                game_queue_family = i;
+            if (game_queue_family < 0 && (q.queueFlags & game_queue_flags) == game_queue_flags) game_queue_family = i;
 
             // present queue must support the surface
-            if (present_queue_family < 0 && can_present(phy, i))
-                present_queue_family = i;
+            if (present_queue_family < 0 && can_present(phy, i)) present_queue_family = i;
 
-            if (game_queue_family >= 0 && present_queue_family >= 0)
-                break;
+            if (game_queue_family >= 0 && present_queue_family >= 0) break;
         }
 
         if (game_queue_family >= 0 && present_queue_family >= 0) {
@@ -212,8 +202,7 @@ void Shell::init_physical_dev() {
         }
     }
 
-    if (ctx_.physical_dev == VK_NULL_HANDLE)
-        throw std::runtime_error("failed to find any capable Vulkan physical device");
+    if (ctx_.physical_dev == VK_NULL_HANDLE) throw std::runtime_error("failed to find any capable Vulkan physical device");
 }
 
 void Shell::create_context() {
@@ -232,8 +221,7 @@ void Shell::create_context() {
 }
 
 void Shell::destroy_context() {
-    if (ctx_.dev == VK_NULL_HANDLE)
-        return;
+    if (ctx_.dev == VK_NULL_HANDLE) return;
 
     vk::DeviceWaitIdle(ctx_.dev);
 
@@ -371,8 +359,7 @@ void Shell::resize_swapchain(uint32_t width_hint, uint32_t height_hint) {
     else if (extent.height > caps.maxImageExtent.height)
         extent.height = caps.maxImageExtent.height;
 
-    if (ctx_.extent.width == extent.width && ctx_.extent.height == extent.height)
-        return;
+    if (ctx_.extent.width == extent.width && ctx_.extent.height == extent.height) return;
 
     uint32_t image_count = settings_.back_buffer_count;
     if (image_count < caps.minImageCount)
@@ -444,8 +431,7 @@ void Shell::resize_swapchain(uint32_t width_hint, uint32_t height_hint) {
 void Shell::add_game_time(float time) {
     int max_ticks = 3;
 
-    if (!settings_.no_tick)
-        game_time_ += time;
+    if (!settings_.no_tick) game_time_ += time;
 
     while (game_time_ >= game_tick_ && max_ticks--) {
         game_.on_tick();
@@ -455,8 +441,7 @@ void Shell::add_game_time(float time) {
 
 void Shell::acquire_back_buffer() {
     // acquire just once when not presenting
-    if (settings_.no_present && ctx_.acquired_back_buffer.acquire_semaphore != VK_NULL_HANDLE)
-        return;
+    if (settings_.no_present && ctx_.acquired_back_buffer.acquire_semaphore != VK_NULL_HANDLE) return;
 
     auto &buf = ctx_.back_buffers.front();
 
@@ -475,8 +460,7 @@ void Shell::acquire_back_buffer() {
 void Shell::present_back_buffer() {
     const auto &buf = ctx_.acquired_back_buffer;
 
-    if (!settings_.no_render)
-        game_.on_frame(game_time_ / game_tick_);
+    if (!settings_.no_render) game_.on_frame(game_time_ / game_tick_);
 
     if (settings_.no_present) {
         fake_present();
@@ -516,6 +500,5 @@ void Shell::fake_present() {
     }
 
     // push the buffer back just once for Shell::cleanup_vk
-    if (buf.acquire_semaphore != ctx_.back_buffers.back().acquire_semaphore)
-        ctx_.back_buffers.push(buf);
+    if (buf.acquire_semaphore != ctx_.back_buffers.back().acquire_semaphore) ctx_.back_buffers.push(buf);
 }

@@ -27,7 +27,7 @@ namespace {
 
 // copied from ShellXCB.cpp
 class PosixTimer {
-  public:
+   public:
     PosixTimer() { reset(); }
 
     void reset() { clock_gettime(CLOCK_MONOTONIC, &start_); }
@@ -52,11 +52,11 @@ class PosixTimer {
         return static_cast<double>(s) + static_cast<double>(ns) / one_s_in_ns_d;
     }
 
-  private:
+   private:
     struct timespec start_;
 };
 
-} // namespace
+}  // namespace
 
 std::vector<std::string> ShellAndroid::get_args(android_app &app) {
     const char intent_extra_data_key[] = "args";
@@ -64,8 +64,7 @@ std::vector<std::string> ShellAndroid::get_args(android_app &app) {
 
     JavaVM &vm = *app.activity->vm;
     JNIEnv *p_env;
-    if (vm.AttachCurrentThread(&p_env, nullptr) != JNI_OK)
-        return args;
+    if (vm.AttachCurrentThread(&p_env, nullptr) != JNI_OK) return args;
 
     JNIEnv &env = *p_env;
     jobject activity = app.activity->clazz;
@@ -96,8 +95,7 @@ std::vector<std::string> ShellAndroid::get_args(android_app &app) {
     std::stringstream ss(args_str);
     std::string arg;
     while (std::getline(ss, arg, ' ')) {
-        if (!arg.empty())
-            args.push_back(arg);
+        if (!arg.empty()) args.push_back(arg);
     }
 
     return args;
@@ -133,21 +131,21 @@ void ShellAndroid::log(LogPriority priority, const char *msg) {
     int prio;
 
     switch (priority) {
-    case LOG_DEBUG:
-        prio = ANDROID_LOG_DEBUG;
-        break;
-    case LOG_INFO:
-        prio = ANDROID_LOG_INFO;
-        break;
-    case LOG_WARN:
-        prio = ANDROID_LOG_WARN;
-        break;
-    case LOG_ERR:
-        prio = ANDROID_LOG_ERROR;
-        break;
-    default:
-        prio = ANDROID_LOG_UNKNOWN;
-        break;
+        case LOG_DEBUG:
+            prio = ANDROID_LOG_DEBUG;
+            break;
+        case LOG_INFO:
+            prio = ANDROID_LOG_INFO;
+            break;
+        case LOG_WARN:
+            prio = ANDROID_LOG_WARN;
+            break;
+        case LOG_ERR:
+            prio = ANDROID_LOG_ERROR;
+            break;
+        default:
+            prio = ANDROID_LOG_UNKNOWN;
+            break;
     }
 
     __android_log_write(prio, settings_.name.c_str(), msg);
@@ -158,11 +156,9 @@ PFN_vkGetInstanceProcAddr ShellAndroid::load_vk() {
     void *handle = nullptr, *symbol = nullptr;
 
     handle = dlopen(filename, RTLD_LAZY);
-    if (handle)
-        symbol = dlsym(handle, "vkGetInstanceProcAddr");
+    if (handle) symbol = dlsym(handle, "vkGetInstanceProcAddr");
     if (!symbol) {
-        if (handle)
-            dlclose(handle);
+        if (handle) dlclose(handle);
 
         throw std::runtime_error(dlerror());
     }
@@ -185,37 +181,36 @@ VkSurfaceKHR ShellAndroid::create_surface(VkInstance instance) {
 
 void ShellAndroid::on_app_cmd(int32_t cmd) {
     switch (cmd) {
-    case APP_CMD_INIT_WINDOW:
-        create_context();
-        resize_swapchain(0, 0);
-        break;
-    case APP_CMD_TERM_WINDOW:
-        destroy_context();
-        break;
-    case APP_CMD_WINDOW_RESIZED:
-        resize_swapchain(0, 0);
-        break;
-    case APP_CMD_STOP:
-        ANativeActivity_finish(app_.activity);
-        break;
-    default:
-        break;
+        case APP_CMD_INIT_WINDOW:
+            create_context();
+            resize_swapchain(0, 0);
+            break;
+        case APP_CMD_TERM_WINDOW:
+            destroy_context();
+            break;
+        case APP_CMD_WINDOW_RESIZED:
+            resize_swapchain(0, 0);
+            break;
+        case APP_CMD_STOP:
+            ANativeActivity_finish(app_.activity);
+            break;
+        default:
+            break;
     }
 }
 
 int32_t ShellAndroid::on_input_event(const AInputEvent *event) {
-    if (AInputEvent_getType(event) != AINPUT_EVENT_TYPE_MOTION)
-        return false;
+    if (AInputEvent_getType(event) != AINPUT_EVENT_TYPE_MOTION) return false;
 
     bool handled = false;
 
     switch (AMotionEvent_getAction(event) & AMOTION_EVENT_ACTION_MASK) {
-    case AMOTION_EVENT_ACTION_UP:
-        game_.on_key(Game::KEY_SPACE);
-        handled = true;
-        break;
-    default:
-        break;
+        case AMOTION_EVENT_ACTION_UP:
+            game_.on_key(Game::KEY_SPACE);
+            handled = true;
+            break;
+        default:
+            break;
     }
 
     return handled;
@@ -232,18 +227,14 @@ void ShellAndroid::run() {
         struct android_poll_source *source;
         while (true) {
             int timeout = (settings_.animate && app_.window) ? 0 : -1;
-            if (ALooper_pollAll(timeout, nullptr, nullptr, reinterpret_cast<void **>(&source)) < 0)
-                break;
+            if (ALooper_pollAll(timeout, nullptr, nullptr, reinterpret_cast<void **>(&source)) < 0) break;
 
-            if (source)
-                source->process(&app_, source);
+            if (source) source->process(&app_, source);
         }
 
-        if (app_.destroyRequested)
-            break;
+        if (app_.destroyRequested) break;
 
-        if (!app_.window)
-            continue;
+        if (!app_.window) continue;
 
         acquire_back_buffer();
 

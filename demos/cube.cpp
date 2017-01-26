@@ -56,18 +56,17 @@
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
 #ifdef _WIN32
-#define ERR_EXIT(err_msg, err_class)                                                                                               \
-    do {                                                                                                                           \
-        if (!suppress_popups)                                                                                                      \
-            MessageBox(nullptr, err_msg, err_class, MB_OK);                                                                        \
-        exit(1);                                                                                                                   \
+#define ERR_EXIT(err_msg, err_class)                                          \
+    do {                                                                      \
+        if (!suppress_popups) MessageBox(nullptr, err_msg, err_class, MB_OK); \
+        exit(1);                                                              \
     } while (0)
 #else
-#define ERR_EXIT(err_msg, err_class)                                                                                               \
-    do {                                                                                                                           \
-        printf(err_msg);                                                                                                           \
-        fflush(stdout);                                                                                                            \
-        exit(1);                                                                                                                   \
+#define ERR_EXIT(err_msg, err_class) \
+    do {                             \
+        printf(err_msg);             \
+        fflush(stdout);              \
+        exit(1);                     \
     } while (0)
 #endif
 
@@ -233,23 +232,49 @@ struct Demo {
         :
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
           connection{nullptr},
-          window{nullptr}, minsize(POINT{0, 0}), // Use explicit construction to avoid MSVC error C2797.
+          window{nullptr},
+          minsize(POINT{0, 0}),  // Use explicit construction to avoid MSVC error C2797.
 #endif
 
 #if defined(VK_USE_PLATFORM_XLIB_KHR)
-          xlib_window{0}, xlib_wm_delete_window{0}, display{nullptr},
+          xlib_window{0},
+          xlib_wm_delete_window{0},
+          display{nullptr},
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
           xcb_window{0},
-          screen{nullptr}, connection{nullptr},
+          screen{nullptr},
+          connection{nullptr},
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
           display{nullptr},
-          registry{nullptr}, compositor{nullptr}, window{nullptr}, shell{nullptr}, shell_surface{nullptr},
+          registry{nullptr},
+          compositor{nullptr},
+          window{nullptr},
+          shell{nullptr},
+          shell_surface{nullptr},
 #elif defined(VK_USE_PLATFORM_MIR_KHR)
 #endif
-          prepared{false}, use_staging_buffer{false}, use_xlib{false}, graphics_queue_family_index{0},
-          present_queue_family_index{0}, enabled_extension_count{0}, enabled_layer_count{0}, width{0}, height{0},
-          swapchainImageCount{0}, frame_index{0}, spin_angle{0.0f}, spin_increment{0.0f}, pause{false}, quit{false}, curFrame{0},
-          frameCount{0}, validate{false}, use_break{false}, suppress_popups{false}, current_buffer{0}, queue_family_count{0} {
+          prepared{false},
+          use_staging_buffer{false},
+          use_xlib{false},
+          graphics_queue_family_index{0},
+          present_queue_family_index{0},
+          enabled_extension_count{0},
+          enabled_layer_count{0},
+          width{0},
+          height{0},
+          swapchainImageCount{0},
+          frame_index{0},
+          spin_angle{0.0f},
+          spin_increment{0.0f},
+          pause{false},
+          quit{false},
+          curFrame{0},
+          frameCount{0},
+          validate{false},
+          use_break{false},
+          suppress_popups{false},
+          current_buffer{0},
+          queue_family_count{0} {
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
         memset(name, '\0', APP_NAME_STR_LEN);
 #endif
@@ -625,12 +650,13 @@ struct Demo {
                 continue;
             }
 
-            fprintf(stderr, "Usage:\n  %s [--use_staging] [--validate] [--break] "
-                            "[--c <framecount>] [--suppress_popups] [--present_mode <present mode enum>]\n"
-                            "VK_PRESENT_MODE_IMMEDIATE_KHR = %d\n"
-                            "VK_PRESENT_MODE_MAILBOX_KHR = %d\n"
-                            "VK_PRESENT_MODE_FIFO_KHR = %d\n"
-                            "VK_PRESENT_MODE_FIFO_RELAXED_KHR = %d\n",
+            fprintf(stderr,
+                    "Usage:\n  %s [--use_staging] [--validate] [--break] "
+                    "[--c <framecount>] [--suppress_popups] [--present_mode <present mode enum>]\n"
+                    "VK_PRESENT_MODE_IMMEDIATE_KHR = %d\n"
+                    "VK_PRESENT_MODE_MAILBOX_KHR = %d\n"
+                    "VK_PRESENT_MODE_FIFO_KHR = %d\n"
+                    "VK_PRESENT_MODE_FIFO_RELAXED_KHR = %d\n",
                     APP_SHORT_NAME, VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_FIFO_KHR,
                     VK_PRESENT_MODE_FIFO_RELAXED_KHR);
             fflush(stderr);
@@ -654,7 +680,7 @@ struct Demo {
         mat4x4_look_at(view_matrix, eye, origin, up);
         mat4x4_identity(model_matrix);
 
-        projection_matrix[1][1] *= -1; // Flip projection matrix from GL to Vulkan orientation.
+        projection_matrix[1][1] *= -1;  // Flip projection matrix from GL to Vulkan orientation.
     }
 
     void init_connection() {
@@ -665,24 +691,25 @@ struct Demo {
 
         connection = xcb_connect(nullptr, &scr);
         if (xcb_connection_has_error(connection) > 0) {
-            printf("Cannot find a compatible Vulkan installable client driver "
-                   "(ICD).\nExiting ...\n");
+            printf(
+                "Cannot find a compatible Vulkan installable client driver "
+                "(ICD).\nExiting ...\n");
             fflush(stdout);
             exit(1);
         }
 
         setup = xcb_get_setup(connection);
         iter = xcb_setup_roots_iterator(setup);
-        while (scr-- > 0)
-            xcb_screen_next(&iter);
+        while (scr-- > 0) xcb_screen_next(&iter);
 
         screen = iter.data;
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
         display = wl_display_connect(nullptr);
 
         if (display == nullptr) {
-            printf("Cannot find a compatible Vulkan installable client driver "
-                   "(ICD).\nExiting ...\n");
+            printf(
+                "Cannot find a compatible Vulkan installable client driver "
+                "(ICD).\nExiting ...\n");
             fflush(stdout);
             exit(1);
         }
@@ -741,11 +768,12 @@ struct Demo {
             }
 
             if (!validation_found) {
-                ERR_EXIT("vkEnumerateInstanceLayerProperties failed to find "
-                         "required validation layer.\n\n"
-                         "Please look at the Getting Started guide for "
-                         "additional information.\n",
-                         "vkCreateInstance Failure");
+                ERR_EXIT(
+                    "vkEnumerateInstanceLayerProperties failed to find "
+                    "required validation layer.\n\n"
+                    "Please look at the Getting Started guide for "
+                    "additional information.\n",
+                    "vkCreateInstance Failure");
             }
         }
 
@@ -794,49 +822,59 @@ struct Demo {
         }
 
         if (!surfaceExtFound) {
-            ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
-                     "the " VK_KHR_SURFACE_EXTENSION_NAME " extension.\n\n"
-                     "Do you have a compatible Vulkan installable client "
-                     "driver (ICD) installed?\n"
-                     "Please look at the Getting Started guide for additional "
-                     "information.\n",
-                     "vkCreateInstance Failure");
+            ERR_EXIT(
+                "vkEnumerateInstanceExtensionProperties failed to find "
+                "the " VK_KHR_SURFACE_EXTENSION_NAME
+                " extension.\n\n"
+                "Do you have a compatible Vulkan installable client "
+                "driver (ICD) installed?\n"
+                "Please look at the Getting Started guide for additional "
+                "information.\n",
+                "vkCreateInstance Failure");
         }
 
         if (!platformSurfaceExtFound) {
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
-            ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
-                     "the " VK_KHR_WIN32_SURFACE_EXTENSION_NAME " extension.\n\n"
-                     "Do you have a compatible Vulkan installable client "
-                     "driver (ICD) installed?\n"
-                     "Please look at the Getting Started guide for additional "
-                     "information.\n",
-                     "vkCreateInstance Failure");
+            ERR_EXIT(
+                "vkEnumerateInstanceExtensionProperties failed to find "
+                "the " VK_KHR_WIN32_SURFACE_EXTENSION_NAME
+                " extension.\n\n"
+                "Do you have a compatible Vulkan installable client "
+                "driver (ICD) installed?\n"
+                "Please look at the Getting Started guide for additional "
+                "information.\n",
+                "vkCreateInstance Failure");
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
-            ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
-                     "the " VK_KHR_XCB_SURFACE_EXTENSION_NAME " extension.\n\n"
-                     "Do you have a compatible Vulkan installable client "
-                     "driver (ICD) installed?\n"
-                     "Please look at the Getting Started guide for additional "
-                     "information.\n",
-                     "vkCreateInstance Failure");
+            ERR_EXIT(
+                "vkEnumerateInstanceExtensionProperties failed to find "
+                "the " VK_KHR_XCB_SURFACE_EXTENSION_NAME
+                " extension.\n\n"
+                "Do you have a compatible Vulkan installable client "
+                "driver (ICD) installed?\n"
+                "Please look at the Getting Started guide for additional "
+                "information.\n",
+                "vkCreateInstance Failure");
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-            ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
-                     "the " VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME " extension.\n\n"
-                     "Do you have a compatible Vulkan installable client "
-                     "driver (ICD) installed?\n"
-                     "Please look at the Getting Started guide for additional "
-                     "information.\n",
-                     "vkCreateInstance Failure");
+            ERR_EXIT(
+                "vkEnumerateInstanceExtensionProperties failed to find "
+                "the " VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME
+                " extension.\n\n"
+                "Do you have a compatible Vulkan installable client "
+                "driver (ICD) installed?\n"
+                "Please look at the Getting Started guide for additional "
+                "information.\n",
+                "vkCreateInstance Failure");
 #elif defined(VK_USE_PLATFORM_MIR_KHR)
 #elif defined(VK_USE_PLATFORM_XLIB_KHR)
-            ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
-                     "the " VK_KHR_XLIB_SURFACE_EXTENSION_NAME " extension.\n\n"
-                     "Do you have a compatible Vulkan installable client "
-                     "driver (ICD) installed?\n"
-                     "Please look at the Getting Started guide for additional "
-                     "information.\n",
-                     "vkCreateInstance Failure");
+            ERR_EXIT(
+                "vkEnumerateInstanceExtensionProperties failed to find "
+                "the " VK_KHR_XLIB_SURFACE_EXTENSION_NAME
+                " extension.\n\n"
+                "Do you have a compatible Vulkan installable client "
+                "driver (ICD) installed?\n"
+                "Please look at the Getting Started guide for additional "
+                "information.\n",
+                "vkCreateInstance Failure");
 #endif
         }
         auto const app = vk::ApplicationInfo()
@@ -854,22 +892,25 @@ struct Demo {
 
         result = vk::createInstance(&inst_info, nullptr, &inst);
         if (result == vk::Result::eErrorIncompatibleDriver) {
-            ERR_EXIT("Cannot find a compatible Vulkan installable client "
-                     "driver (ICD).\n\n"
-                     "Please look at the Getting Started guide for additional "
-                     "information.\n",
-                     "vkCreateInstance Failure");
+            ERR_EXIT(
+                "Cannot find a compatible Vulkan installable client "
+                "driver (ICD).\n\n"
+                "Please look at the Getting Started guide for additional "
+                "information.\n",
+                "vkCreateInstance Failure");
         } else if (result == vk::Result::eErrorExtensionNotPresent) {
-            ERR_EXIT("Cannot find a specified extension library.\n"
-                     "Make sure your layers path is set appropriately.\n",
-                     "vkCreateInstance Failure");
+            ERR_EXIT(
+                "Cannot find a specified extension library.\n"
+                "Make sure your layers path is set appropriately.\n",
+                "vkCreateInstance Failure");
         } else if (result != vk::Result::eSuccess) {
-            ERR_EXIT("vkCreateInstance failed.\n\n"
-                     "Do you have a compatible Vulkan installable client "
-                     "driver (ICD) installed?\n"
-                     "Please look at the Getting Started guide for additional "
-                     "information.\n",
-                     "vkCreateInstance Failure");
+            ERR_EXIT(
+                "vkCreateInstance failed.\n\n"
+                "Do you have a compatible Vulkan installable client "
+                "driver (ICD) installed?\n"
+                "Please look at the Getting Started guide for additional "
+                "information.\n",
+                "vkCreateInstance Failure");
         }
 
         /* Make initial call to query gpu_count, then second call for gpu info*/
@@ -885,13 +926,14 @@ struct Demo {
             /* For cube demo we just grab the first physical device */
             gpu = physical_devices[0];
         } else {
-            ERR_EXIT("vkEnumeratePhysicalDevices reported zero accessible "
-                     "devices.\n\n"
-                     "Do you have a compatible Vulkan installable client "
-                     "driver (ICD) installed?\n"
-                     "Please look at the Getting Started guide for additional "
-                     "information.\n",
-                     "vkEnumeratePhysicalDevices Failure");
+            ERR_EXIT(
+                "vkEnumeratePhysicalDevices reported zero accessible "
+                "devices.\n\n"
+                "Do you have a compatible Vulkan installable client "
+                "driver (ICD) installed?\n"
+                "Please look at the Getting Started guide for additional "
+                "information.\n",
+                "vkEnumeratePhysicalDevices Failure");
         }
 
         /* Look for device extensions */
@@ -918,13 +960,15 @@ struct Demo {
         }
 
         if (!swapchainExtFound) {
-            ERR_EXIT("vkEnumerateDeviceExtensionProperties failed to find "
-                     "the " VK_KHR_SWAPCHAIN_EXTENSION_NAME " extension.\n\n"
-                     "Do you have a compatible Vulkan installable client "
-                     "driver (ICD) installed?\n"
-                     "Please look at the Getting Started guide for additional "
-                     "information.\n",
-                     "vkCreateInstance Failure");
+            ERR_EXIT(
+                "vkEnumerateDeviceExtensionProperties failed to find "
+                "the " VK_KHR_SWAPCHAIN_EXTENSION_NAME
+                " extension.\n\n"
+                "Do you have a compatible Vulkan installable client "
+                "driver (ICD) installed?\n"
+                "Please look at the Getting Started guide for additional "
+                "information.\n",
+                "vkCreateInstance Failure");
         }
 
         gpu.getProperties(&gpu_props);
@@ -1333,9 +1377,9 @@ struct Demo {
         uniform_data.mem_alloc.setAllocationSize(mem_reqs.size);
         uniform_data.mem_alloc.setMemoryTypeIndex(0);
 
-        bool const pass = memory_type_from_properties(mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible |
-                                                                                   vk::MemoryPropertyFlagBits::eHostCoherent,
-                                                      &uniform_data.mem_alloc.memoryTypeIndex);
+        bool const pass = memory_type_from_properties(
+            mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+            &uniform_data.mem_alloc.memoryTypeIndex);
         VERIFY(pass);
 
         result = device.allocateMemory(&uniform_data.mem_alloc, nullptr, &(uniform_data.mem));
@@ -1892,29 +1936,29 @@ struct Demo {
             vk::AccessFlags flags;
 
             switch (layout) {
-            case vk::ImageLayout::eTransferDstOptimal:
-                // Make sure anything that was copying from this image has
-                // completed
-                flags = vk::AccessFlagBits::eTransferWrite;
-                break;
-            case vk::ImageLayout::eColorAttachmentOptimal:
-                flags = vk::AccessFlagBits::eColorAttachmentWrite;
-                break;
-            case vk::ImageLayout::eDepthStencilAttachmentOptimal:
-                flags = vk::AccessFlagBits::eDepthStencilAttachmentWrite;
-                break;
-            case vk::ImageLayout::eShaderReadOnlyOptimal:
-                // Make sure any Copy or CPU writes to image are flushed
-                flags = vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eInputAttachmentRead;
-                break;
-            case vk::ImageLayout::eTransferSrcOptimal:
-                flags = vk::AccessFlagBits::eTransferRead;
-                break;
-            case vk::ImageLayout::ePresentSrcKHR:
-                flags = vk::AccessFlagBits::eMemoryRead;
-                break;
-            default:
-                break;
+                case vk::ImageLayout::eTransferDstOptimal:
+                    // Make sure anything that was copying from this image has
+                    // completed
+                    flags = vk::AccessFlagBits::eTransferWrite;
+                    break;
+                case vk::ImageLayout::eColorAttachmentOptimal:
+                    flags = vk::AccessFlagBits::eColorAttachmentWrite;
+                    break;
+                case vk::ImageLayout::eDepthStencilAttachmentOptimal:
+                    flags = vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+                    break;
+                case vk::ImageLayout::eShaderReadOnlyOptimal:
+                    // Make sure any Copy or CPU writes to image are flushed
+                    flags = vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eInputAttachmentRead;
+                    break;
+                case vk::ImageLayout::eTransferSrcOptimal:
+                    flags = vk::AccessFlagBits::eTransferRead;
+                    break;
+                case vk::ImageLayout::ePresentSrcKHR:
+                    flags = vk::AccessFlagBits::eMemoryRead;
+                    break;
+                default:
+                    break;
             }
 
             return flags;
@@ -1960,7 +2004,7 @@ struct Demo {
         }
 
         char header[256];
-        char *cPtr = fgets(header, 256, fPtr); // P6
+        char *cPtr = fgets(header, 256, fPtr);  // P6
         if (cPtr == nullptr || strncmp(header, "P6\n", 3)) {
             fclose(fPtr);
             return false;
@@ -1980,7 +2024,7 @@ struct Demo {
             return true;
         }
 
-        char *result = fgets(header, 256, fPtr); // Format
+        char *result = fgets(header, 256, fPtr);  // Format
         VERIFY(result != nullptr);
         if (cPtr == nullptr || strncmp(header, "255\n", 3)) {
             fclose(fPtr);
@@ -2045,7 +2089,7 @@ struct Demo {
         win_class.lpfnWndProc = WndProc;
         win_class.cbClsExtra = 0;
         win_class.cbWndExtra = 0;
-        win_class.hInstance = connection; // hInstance
+        win_class.hInstance = connection;  // hInstance
         win_class.hIcon = LoadIcon(nullptr, IDI_APPLICATION);
         win_class.hCursor = LoadCursor(nullptr, IDC_ARROW);
         win_class.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
@@ -2065,17 +2109,17 @@ struct Demo {
         RECT wr = {0, 0, static_cast<LONG>(width), static_cast<LONG>(height)};
         AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
         window = CreateWindowEx(0,
-                                name,                 // class name
-                                name,                 // app name
-                                WS_OVERLAPPEDWINDOW | // window style
+                                name,                  // class name
+                                name,                  // app name
+                                WS_OVERLAPPEDWINDOW |  // window style
                                     WS_VISIBLE | WS_SYSMENU,
-                                100, 100,           // x/y coords
-                                wr.right - wr.left, // width
-                                wr.bottom - wr.top, // height
-                                nullptr,            // handle to parent
-                                nullptr,            // handle to menu
-                                connection,         // hInstance
-                                nullptr);           // no extra parameters
+                                100, 100,            // x/y coords
+                                wr.right - wr.left,  // width
+                                wr.bottom - wr.top,  // height
+                                nullptr,             // handle to parent
+                                nullptr,             // handle to menu
+                                connection,          // hInstance
+                                nullptr);            // no extra parameters
 
         if (!window) {
             // It didn't work, so try to give a useful error:
@@ -2119,36 +2163,36 @@ struct Demo {
 
     void handle_xlib_event(const XEvent *event) {
         switch (event->type) {
-        case ClientMessage:
-            if ((Atom)event->xclient.data.l[0] == xlib_wm_delete_window) {
-                quit = true;
-            }
-            break;
-        case KeyPress:
-            switch (event->xkey.keycode) {
-            case 0x9: // Escape
-                quit = true;
+            case ClientMessage:
+                if ((Atom)event->xclient.data.l[0] == xlib_wm_delete_window) {
+                    quit = true;
+                }
                 break;
-            case 0x71: // left arrow key
-                spin_angle -= spin_increment;
+            case KeyPress:
+                switch (event->xkey.keycode) {
+                    case 0x9:  // Escape
+                        quit = true;
+                        break;
+                    case 0x71:  // left arrow key
+                        spin_angle -= spin_increment;
+                        break;
+                    case 0x72:  // right arrow key
+                        spin_angle += spin_increment;
+                        break;
+                    case 0x41:  // space bar
+                        pause = !pause;
+                        break;
+                }
                 break;
-            case 0x72: // right arrow key
-                spin_angle += spin_increment;
+            case ConfigureNotify:
+                if (((int32_t)width != event->xconfigure.width) || ((int32_t)height != event->xconfigure.height)) {
+                    width = event->xconfigure.width;
+                    height = event->xconfigure.height;
+                    resize();
+                }
                 break;
-            case 0x41: // space bar
-                pause = !pause;
+            default:
                 break;
-            }
-            break;
-        case ConfigureNotify:
-            if (((int32_t)width != event->xconfigure.width) || ((int32_t)height != event->xconfigure.height)) {
-                width = event->xconfigure.width;
-                height = event->xconfigure.height;
-                resize();
-            }
-            break;
-        default:
-            break;
         }
     }
 
@@ -2179,42 +2223,42 @@ struct Demo {
     void handle_xcb_event(const xcb_generic_event_t *event) {
         uint8_t event_code = event->response_type & 0x7f;
         switch (event_code) {
-        case XCB_EXPOSE:
-            // TODO: Resize window
-            break;
-        case XCB_CLIENT_MESSAGE:
-            if ((*(xcb_client_message_event_t *)event).data.data32[0] == (*atom_wm_delete_window).atom) {
-                quit = true;
-            }
-            break;
-        case XCB_KEY_RELEASE: {
-            const xcb_key_release_event_t *key = (const xcb_key_release_event_t *)event;
+            case XCB_EXPOSE:
+                // TODO: Resize window
+                break;
+            case XCB_CLIENT_MESSAGE:
+                if ((*(xcb_client_message_event_t *)event).data.data32[0] == (*atom_wm_delete_window).atom) {
+                    quit = true;
+                }
+                break;
+            case XCB_KEY_RELEASE: {
+                const xcb_key_release_event_t *key = (const xcb_key_release_event_t *)event;
 
-            switch (key->detail) {
-            case 0x9: // Escape
-                quit = true;
+                switch (key->detail) {
+                    case 0x9:  // Escape
+                        quit = true;
+                        break;
+                    case 0x71:  // left arrow key
+                        spin_angle -= spin_increment;
+                        break;
+                    case 0x72:  // right arrow key
+                        spin_angle += spin_increment;
+                        break;
+                    case 0x41:  // space bar
+                        pause = !pause;
+                        break;
+                }
+            } break;
+            case XCB_CONFIGURE_NOTIFY: {
+                const xcb_configure_notify_event_t *cfg = (const xcb_configure_notify_event_t *)event;
+                if ((width != cfg->width) || (height != cfg->height)) {
+                    width = cfg->width;
+                    height = cfg->height;
+                    resize();
+                }
+            } break;
+            default:
                 break;
-            case 0x71: // left arrow key
-                spin_angle -= spin_increment;
-                break;
-            case 0x72: // right arrow key
-                spin_angle += spin_increment;
-                break;
-            case 0x41: // space bar
-                pause = !pause;
-                break;
-            }
-        } break;
-        case XCB_CONFIGURE_NOTIFY: {
-            const xcb_configure_notify_event_t *cfg = (const xcb_configure_notify_event_t *)event;
-            if ((width != cfg->width) || (height != cfg->height)) {
-                width = cfg->width;
-                height = cfg->height;
-                resize();
-            }
-        } break;
-        default:
-            break;
         }
     }
 
@@ -2311,10 +2355,10 @@ struct Demo {
 #endif
 
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
-    HINSTANCE connection;        // hInstance - Windows Instance
-    HWND window;                 // hWnd - window handle
-    POINT minsize;               // minimum window size
-    char name[APP_NAME_STR_LEN]; // Name to put on the window/icon
+    HINSTANCE connection;         // hInstance - Windows Instance
+    HWND window;                  // hWnd - window handle
+    POINT minsize;                // minimum window size
+    char name[APP_NAME_STR_LEN];  // Name to put on the window/icon
 #elif defined(VK_USE_PLATFORM_XLIB_KHR)
     Window xlib_window;
     Atom xlib_wm_delete_window;
@@ -2393,7 +2437,7 @@ struct Demo {
         vk::DescriptorBufferInfo buffer_info;
     } uniform_data;
 
-    vk::CommandBuffer cmd; // Buffer for initialization commands
+    vk::CommandBuffer cmd;  // Buffer for initialization commands
     vk::PipelineLayout pipeline_layout;
     vk::DescriptorSetLayout desc_layout;
     vk::PipelineCache pipelineCache;
@@ -2436,27 +2480,27 @@ Demo demo;
 // MS-Windows event handling function:
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
-    case WM_CLOSE:
-        PostQuitMessage(validation_error);
-        break;
-    case WM_PAINT:
-        demo.run();
-        break;
-    case WM_GETMINMAXINFO: // set window's minimum size
-        ((MINMAXINFO *)lParam)->ptMinTrackSize = demo.minsize;
-        return 0;
-    case WM_SIZE:
-        // Resize the application to the new window size, except when
-        // it was minimized. Vulkan doesn't support images or swapchains
-        // with width=0 and height=0.
-        if (wParam != SIZE_MINIMIZED) {
-            demo.width = lParam & 0xffff;
-            demo.height = (lParam & 0xffff0000) >> 16;
-            demo.resize();
-        }
-        break;
-    default:
-        break;
+        case WM_CLOSE:
+            PostQuitMessage(validation_error);
+            break;
+        case WM_PAINT:
+            demo.run();
+            break;
+        case WM_GETMINMAXINFO:  // set window's minimum size
+            ((MINMAXINFO *)lParam)->ptMinTrackSize = demo.minsize;
+            return 0;
+        case WM_SIZE:
+            // Resize the application to the new window size, except when
+            // it was minimized. Vulkan doesn't support images or swapchains
+            // with width=0 and height=0.
+            if (wParam != SIZE_MINIMIZED) {
+                demo.width = lParam & 0xffff;
+                demo.height = (lParam & 0xffff0000) >> 16;
+                demo.resize();
+            }
+            break;
+        default:
+            break;
     }
 
     return (DefWindowProc(hWnd, uMsg, wParam, lParam));
@@ -2464,8 +2508,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow) {
     // TODO: Gah.. refactor. This isn't 1989.
-    MSG msg;   // message
-    bool done; // flag saying when app is complete
+    MSG msg;    // message
+    bool done;  // flag saying when app is complete
     int argc;
     char **argv;
 
@@ -2518,14 +2562,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 
     demo.prepare();
 
-    done = false; // initialize loop condition variable
+    done = false;  // initialize loop condition variable
 
     // main message loop
     while (!done) {
         PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE);
-        if (msg.message == WM_QUIT) // check for a quit message
+        if (msg.message == WM_QUIT)  // check for a quit message
         {
-            done = true; // if found, quit app
+            done = true;  // if found, quit app
         } else {
             /* Translate and dispatch to event queue*/
             TranslateMessage(&msg);

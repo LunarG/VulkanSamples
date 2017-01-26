@@ -31,4 +31,4 @@ void PostCallRecordCreateImage(std::unordered_map<VkImage, std::unique_ptr<IMAGE
                                std::unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> *imageLayoutMap,
                                const VkImageCreateInfo *pCreateInfo, VkImage *pImage);
 
-#endif // CORE_VALIDATION_BUFFER_VALIDATION_H_
+#endif  // CORE_VALIDATION_BUFFER_VALIDATION_H_

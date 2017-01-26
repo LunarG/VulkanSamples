@@ -102,6 +102,6 @@ inline VkResult get(VkDevice dev, VkSwapchainKHR swapchain, std::vector<VkImage>
     return vk::GetSwapchainImagesKHR(dev, swapchain, &count, images.data());
 }
 
-} // namespace vk
+}  // namespace vk
 
-#endif // HELPERS_H
+#endif  // HELPERS_H

@@ -31,8 +31,7 @@ char **get_args(struct android_app *app, const char *intent_extra_data_key, cons
     std::vector<std::string> args;
     JavaVM &vm = *app->activity->vm;
     JNIEnv *p_env;
-    if (vm.AttachCurrentThread(&p_env, nullptr) != JNI_OK)
-        return nullptr;
+    if (vm.AttachCurrentThread(&p_env, nullptr) != JNI_OK) return nullptr;
 
     JNIEnv &env = *p_env;
     jobject activity = app->activity->clazz;
@@ -60,8 +59,7 @@ char **get_args(struct android_app *app, const char *intent_extra_data_key, cons
     std::stringstream ss(args_str);
     std::string arg;
     while (std::getline(ss, arg, ' ')) {
-        if (!arg.empty())
-            args.push_back(arg);
+        if (!arg.empty()) args.push_back(arg);
     }
 
     // Convert our STL results to C friendly constructs
@@ -81,4 +79,4 @@ char **get_args(struct android_app *app, const char *intent_extra_data_key, cons
     return vector;
 }
 
-} // extern "C"
+}  // extern "C"

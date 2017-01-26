@@ -425,7 +425,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkGetMemoryWin32HandleNV(VkDevice device, VkDevic
     return disp->GetMemoryWin32HandleNV(device, memory, handleType, pHandle);
 }
 
-#endif // VK_USE_PLATFORM_WIN32_KHR
+#endif  // VK_USE_PLATFORM_WIN32_KHR
 
 // Definitions for the VK_NVX_device_generated_commands
 
@@ -573,7 +573,7 @@ bool extension_instance_gpa(struct loader_instance *ptr_instance, const char *na
         return true;
     }
 
-#endif // VK_USE_PLATFORM_XLIB_XRANDR_EXT
+#endif  // VK_USE_PLATFORM_XLIB_XRANDR_EXT
 
     // Definitions for the VK_EXT_debug_marker extension commands which
     // need to have a terminator function.  Since these are device
@@ -631,7 +631,7 @@ bool extension_instance_gpa(struct loader_instance *ptr_instance, const char *na
         return true;
     }
 
-#endif // VK_USE_PLATFORM_WIN32_KHR
+#endif  // VK_USE_PLATFORM_WIN32_KHR
 
     // Functions for the VK_NVX_device_generated_commands extension
 

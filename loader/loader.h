@@ -135,7 +135,7 @@ struct loader_layer_functions {
 struct loader_layer_properties {
     VkLayerProperties info;
     enum layer_type type;
-    uint32_t interface_version; // PFN_vkNegotiateLoaderLayerInterfaceVersion
+    uint32_t interface_version;  // PFN_vkNegotiateLoaderLayerInterfaceVersion
     char lib_name[MAX_STRING_SIZE];
     loader_platform_dl_handle lib_handle;
     struct loader_layer_functions functions;
@@ -154,7 +154,7 @@ struct loader_layer_list {
 struct loader_dispatch_hash_list {
     size_t capacity;
     uint32_t count;
-    uint32_t *index; // index into the dev_ext dispatch table
+    uint32_t *index;  // index into the dev_ext dispatch table
 };
 
 // loader_dispatch_hash_entry and loader_dev_ext_dispatch_table.dev_ext have
@@ -163,7 +163,7 @@ struct loader_dispatch_hash_list {
 // Also have a one to one correspondence with functions in dev_ext_trampoline.c
 struct loader_dispatch_hash_entry {
     char *func_name;
-    struct loader_dispatch_hash_list list; // to handle hashing collisions
+    struct loader_dispatch_hash_list list;  // to handle hashing collisions
 };
 
 typedef void(VKAPI_PTR *PFN_vkDevExt)(VkDevice device);
@@ -179,8 +179,8 @@ struct loader_dev_dispatch_table {
 // per CreateDevice structure
 struct loader_device {
     struct loader_dev_dispatch_table loader_dispatch;
-    VkDevice chain_device; // device object from the dispatch chain
-    VkDevice icd_device;   // device object from the icd
+    VkDevice chain_device;  // device object from the dispatch chain
+    VkDevice icd_device;    // device object from the icd
     struct loader_physical_device_term *phys_dev_term;
 
     struct loader_layer_list activated_layer_list;
@@ -196,7 +196,7 @@ struct loader_icd_term {
     const struct loader_scanned_icd *scanned_icd;
     const struct loader_instance *this_instance;
     struct loader_device *logical_device_list;
-    VkInstance instance; // instance object from the icd
+    VkInstance instance;  // instance object from the icd
     PFN_vkGetDeviceProcAddr GetDeviceProcAddr;
     PFN_vkDestroyInstance DestroyInstance;
     PFN_vkEnumeratePhysicalDevices EnumeratePhysicalDevices;
@@ -306,7 +306,7 @@ union loader_instance_extension_enables {
 };
 
 struct loader_instance_dispatch_table {
-    VkLayerInstanceDispatchTable layer_inst_disp; // must be first entry in structure
+    VkLayerInstanceDispatchTable layer_inst_disp;  // must be first entry in structure
 
     // Physical device functions unknown to the loader
     PFN_PhysDevExt phys_dev_ext[MAX_NUM_UNKNOWN_EXTS];
@@ -314,7 +314,7 @@ struct loader_instance_dispatch_table {
 
 // per instance structure
 struct loader_instance {
-    struct loader_instance_dispatch_table *disp; // must be first entry in structure
+    struct loader_instance_dispatch_table *disp;  // must be first entry in structure
 
     uint32_t total_gpu_count;
     uint32_t phys_dev_count_term;
@@ -336,9 +336,9 @@ struct loader_instance {
     struct loader_layer_list instance_layer_list;
     struct loader_layer_list activated_layer_list;
     bool activated_layers_are_std_val;
-    VkInstance instance; // layers/ICD instance returned to trampoline
+    VkInstance instance;  // layers/ICD instance returned to trampoline
 
-    struct loader_extension_list ext_list; // icds and loaders extensions
+    struct loader_extension_list ext_list;  // icds and loaders extensions
     union loader_instance_extension_enables enabled_known_extensions;
 
     VkLayerDbgFunctionNode *DbgFunctionHead;
@@ -385,17 +385,17 @@ struct loader_instance {
 /* per enumerated PhysicalDevice structure, used to wrap in trampoline code and
    also same structure used to wrap in terminator code */
 struct loader_physical_device_tramp {
-    struct loader_instance_dispatch_table *disp; // must be first entry in structure
+    struct loader_instance_dispatch_table *disp;  // must be first entry in structure
     struct loader_instance *this_instance;
-    VkPhysicalDevice phys_dev; // object from layers/loader terminator
+    VkPhysicalDevice phys_dev;  // object from layers/loader terminator
 };
 
 /* per enumerated PhysicalDevice structure, used to wrap in terminator code */
 struct loader_physical_device_term {
-    struct loader_instance_dispatch_table *disp; // must be first entry in structure
+    struct loader_instance_dispatch_table *disp;  // must be first entry in structure
     struct loader_icd_term *this_icd_term;
     uint8_t icd_index;
-    VkPhysicalDevice phys_dev; // object from ICD
+    VkPhysicalDevice phys_dev;  // object from ICD
 };
 
 struct loader_struct {
@@ -438,8 +438,9 @@ static inline struct loader_instance_dispatch_table *loader_get_instance_dispatc
 
 static inline void loader_init_dispatch(void *obj, const void *data) {
 #ifdef DEBUG
-    assert(valid_loader_magic_value(obj) && "Incompatible ICD, first dword must be initialized to "
-                                            "ICD_LOADER_MAGIC. See loader/README.md for details.");
+    assert(valid_loader_magic_value(obj) &&
+           "Incompatible ICD, first dword must be initialized to "
+           "ICD_LOADER_MAGIC. See loader/README.md for details.");
 #endif
 
     loader_set_dispatch(obj, data);

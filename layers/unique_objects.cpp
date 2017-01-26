@@ -260,8 +260,8 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
 }
 
 static const VkLayerProperties globalLayerProps = {"VK_LAYER_GOOGLE_unique_objects",
-                                                   VK_LAYER_API_VERSION, // specVersion
-                                                   1,                    // implementationVersion
+                                                   VK_LAYER_API_VERSION,  // specVersion
+                                                   1,                     // implementationVersion
                                                    "Google Validation Layer"};
 
 /// Declare prototype for these functions
@@ -269,8 +269,7 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance in
 
 static inline PFN_vkVoidFunction layer_intercept_proc(const char *name) {
     for (unsigned int i = 0; i < sizeof(procmap) / sizeof(procmap[0]); i++) {
-        if (!strcmp(name, procmap[i].name))
-            return procmap[i].pFunc;
+        if (!strcmp(name, procmap[i].name)) return procmap[i].pFunc;
     }
     if (0 == strcmp(name, "vk_layerGetPhysicalDeviceProcAddr")) {
         return (PFN_vkVoidFunction)GetPhysicalDeviceProcAddr;
@@ -717,7 +716,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneCapabilitiesKHR(VkPhysicalDevice p
 }
 #endif
 
-} // namespace unique_objects
+}  // namespace unique_objects
 
 // vk_layer_logging.h expects these to be defined
 VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackEXT(VkInstance instance,

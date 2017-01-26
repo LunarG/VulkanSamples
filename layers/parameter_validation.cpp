@@ -101,7 +101,6 @@ static std::unordered_map<void *, layer_data *> layer_data_map;
 static std::unordered_map<void *, instance_layer_data *> instance_layer_data_map;
 
 static void init_parameter_validation(instance_layer_data *my_data, const VkAllocationCallbacks *pAllocator) {
-
     layer_debug_actions(my_data->report_data, my_data->logging_callback, pAllocator, "lunarg_parameter_validation");
 }
 
@@ -1228,7 +1227,6 @@ static bool validate_string(debug_report_data *report_data, const char *apiName,
     if (result == VK_STRING_ERROR_NONE) {
         return skip;
     } else if (result & VK_STRING_ERROR_LENGTH) {
-
         skip = log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                        INVALID_USAGE, LayerName, "%s: string %s exceeds max length %d", apiName, stringName.get_name().c_str(),
                        MaxParamCheckerStringLength);
@@ -1278,8 +1276,9 @@ static bool validate_queue_family_indices(layer_data *device_data, const char *f
                 const auto &queue_data = device_data->queueFamilyIndexMap.find(indices[i]);
                 if (queue_data == device_data->queueFamilyIndexMap.end()) {
                     skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                                    LayerName, "%s: %s[%d] (%d) must be one of the indices specified when the device was "
-                                               "created, via the VkDeviceQueueCreateInfo structure.",
+                                    LayerName,
+                                    "%s: %s[%d] (%d) must be one of the indices specified when the device was "
+                                    "created, via the VkDeviceQueueCreateInfo structure.",
                                     function_name, parameter_name, i, indices[i]);
                     return false;
                 }
@@ -1565,7 +1564,6 @@ static void validateDeviceCreateInfo(VkPhysicalDevice physicalDevice, const VkDe
 }
 
 static void CheckInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateInfo, instance_layer_data *instance_data) {
-
     for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         auto name = pCreateInfo->ppEnabledExtensionNames[i];
 
@@ -2503,11 +2501,11 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateI
 
         // If imageType is VK_IMAGE_TYPE_1D, both extent.height and extent.depth must be 1
         if ((pCreateInfo->imageType == VK_IMAGE_TYPE_1D) && (pCreateInfo->extent.height != 1) && (pCreateInfo->extent.depth != 1)) {
-            skip |=
-                log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                        VALIDATION_ERROR_02129, LayerName, "vkCreateImage(): if pCreateInfo->imageType is VK_IMAGE_TYPE_1D, both "
-                                                           "pCreateInfo->extent.height and pCreateInfo->extent.depth must be 1. %s",
-                        validation_error_map[VALIDATION_ERROR_02129]);
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                            VALIDATION_ERROR_02129, LayerName,
+                            "vkCreateImage(): if pCreateInfo->imageType is VK_IMAGE_TYPE_1D, both "
+                            "pCreateInfo->extent.height and pCreateInfo->extent.depth must be 1. %s",
+                            validation_error_map[VALIDATION_ERROR_02129]);
         }
 
         if (pCreateInfo->imageType == VK_IMAGE_TYPE_2D) {
@@ -2620,46 +2618,52 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImageView(VkDevice device, const VkImageVie
         if ((pCreateInfo->viewType == VK_IMAGE_VIEW_TYPE_1D) || (pCreateInfo->viewType == VK_IMAGE_VIEW_TYPE_2D)) {
             if ((pCreateInfo->subresourceRange.layerCount != 1) &&
                 (pCreateInfo->subresourceRange.layerCount != VK_REMAINING_ARRAY_LAYERS)) {
-                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                                LayerName, "vkCreateImageView: if pCreateInfo->viewType is VK_IMAGE_TYPE_%dD, "
-                                           "pCreateInfo->subresourceRange.layerCount must be 1",
-                                ((pCreateInfo->viewType == VK_IMAGE_VIEW_TYPE_1D) ? 1 : 2));
+                skip |=
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, LayerName,
+                            "vkCreateImageView: if pCreateInfo->viewType is VK_IMAGE_TYPE_%dD, "
+                            "pCreateInfo->subresourceRange.layerCount must be 1",
+                            ((pCreateInfo->viewType == VK_IMAGE_VIEW_TYPE_1D) ? 1 : 2));
             }
         } else if ((pCreateInfo->viewType == VK_IMAGE_VIEW_TYPE_1D_ARRAY) ||
                    (pCreateInfo->viewType == VK_IMAGE_VIEW_TYPE_2D_ARRAY)) {
             if ((pCreateInfo->subresourceRange.layerCount < 1) &&
                 (pCreateInfo->subresourceRange.layerCount != VK_REMAINING_ARRAY_LAYERS)) {
-                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                                LayerName, "vkCreateImageView: if pCreateInfo->viewType is VK_IMAGE_TYPE_%dD_ARRAY, "
-                                           "pCreateInfo->subresourceRange.layerCount must be >= 1",
-                                ((pCreateInfo->viewType == VK_IMAGE_VIEW_TYPE_1D_ARRAY) ? 1 : 2));
+                skip |=
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, LayerName,
+                            "vkCreateImageView: if pCreateInfo->viewType is VK_IMAGE_TYPE_%dD_ARRAY, "
+                            "pCreateInfo->subresourceRange.layerCount must be >= 1",
+                            ((pCreateInfo->viewType == VK_IMAGE_VIEW_TYPE_1D_ARRAY) ? 1 : 2));
             }
         } else if (pCreateInfo->viewType == VK_IMAGE_VIEW_TYPE_CUBE) {
             if ((pCreateInfo->subresourceRange.layerCount != 6) &&
                 (pCreateInfo->subresourceRange.layerCount != VK_REMAINING_ARRAY_LAYERS)) {
-                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                                LayerName, "vkCreateImageView: if pCreateInfo->viewType is VK_IMAGE_TYPE_CUBE, "
-                                           "pCreateInfo->subresourceRange.layerCount must be 6");
+                skip |=
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, LayerName,
+                            "vkCreateImageView: if pCreateInfo->viewType is VK_IMAGE_TYPE_CUBE, "
+                            "pCreateInfo->subresourceRange.layerCount must be 6");
             }
         } else if (pCreateInfo->viewType == VK_IMAGE_VIEW_TYPE_CUBE_ARRAY) {
             if (((pCreateInfo->subresourceRange.layerCount == 0) || ((pCreateInfo->subresourceRange.layerCount % 6) != 0)) &&
                 (pCreateInfo->subresourceRange.layerCount != VK_REMAINING_ARRAY_LAYERS)) {
-                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                                LayerName, "vkCreateImageView: if pCreateInfo->viewType is VK_IMAGE_TYPE_CUBE_ARRAY, "
-                                           "pCreateInfo->subresourceRange.layerCount must be a multiple of 6");
+                skip |=
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, LayerName,
+                            "vkCreateImageView: if pCreateInfo->viewType is VK_IMAGE_TYPE_CUBE_ARRAY, "
+                            "pCreateInfo->subresourceRange.layerCount must be a multiple of 6");
             }
         } else if (pCreateInfo->viewType == VK_IMAGE_VIEW_TYPE_3D) {
             if (pCreateInfo->subresourceRange.baseArrayLayer != 0) {
-                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                                LayerName, "vkCreateImageView: if pCreateInfo->viewType is VK_IMAGE_TYPE_3D, "
-                                           "pCreateInfo->subresourceRange.baseArrayLayer must be 0");
+                skip |=
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, LayerName,
+                            "vkCreateImageView: if pCreateInfo->viewType is VK_IMAGE_TYPE_3D, "
+                            "pCreateInfo->subresourceRange.baseArrayLayer must be 0");
             }
 
             if ((pCreateInfo->subresourceRange.layerCount != 1) &&
                 (pCreateInfo->subresourceRange.layerCount != VK_REMAINING_ARRAY_LAYERS)) {
-                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                                LayerName, "vkCreateImageView: if pCreateInfo->viewType is VK_IMAGE_TYPE_3D, "
-                                           "pCreateInfo->subresourceRange.layerCount must be 1");
+                skip |=
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, LayerName,
+                            "vkCreateImageView: if pCreateInfo->viewType is VK_IMAGE_TYPE_3D, "
+                            "pCreateInfo->subresourceRange.layerCount must be 1");
             }
         }
     }
@@ -3433,12 +3437,12 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorSetLayout(VkDevice device, const 
                     for (uint32_t descriptor_index = 0; descriptor_index < pCreateInfo->pBindings[i].descriptorCount;
                          ++descriptor_index) {
                         if (pCreateInfo->pBindings[i].pImmutableSamplers[descriptor_index] == VK_NULL_HANDLE) {
-                            skip |=
-                                log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                        __LINE__, REQUIRED_PARAMETER, LayerName, "vkCreateDescriptorSetLayout: required parameter "
-                                                                                 "pCreateInfo->pBindings[%d].pImmutableSamplers[%d]"
-                                                                                 " specified as VK_NULL_HANDLE",
-                                        i, descriptor_index);
+                            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                            __LINE__, REQUIRED_PARAMETER, LayerName,
+                                            "vkCreateDescriptorSetLayout: required parameter "
+                                            "pCreateInfo->pBindings[%d].pImmutableSamplers[%d]"
+                                            " specified as VK_NULL_HANDLE",
+                                            i, descriptor_index);
                         }
                     }
                 }
@@ -4721,7 +4725,6 @@ VKAPI_ATTR void VKAPI_CALL CmdResetQueryPool(VkCommandBuffer commandBuffer, VkQu
 
 bool PostCmdWriteTimestamp(VkCommandBuffer commandBuffer, VkPipelineStageFlagBits pipelineStage, VkQueryPool queryPool,
                            uint32_t slot) {
-
     ValidateEnumerator(pipelineStage);
 
     return true;
@@ -4834,8 +4837,7 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumerateInstanceExtensionProperties(const char *
 VKAPI_ATTR VkResult VKAPI_CALL EnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice, const char *pLayerName,
                                                                   uint32_t *pCount, VkExtensionProperties *pProperties) {
     /* parameter_validation does not have any physical device extensions */
-    if (pLayerName && !strcmp(pLayerName, global_layer.layerName))
-        return util_GetExtensionProperties(0, NULL, pCount, pProperties);
+    if (pLayerName && !strcmp(pLayerName, global_layer.layerName)) return util_GetExtensionProperties(0, NULL, pCount, pProperties);
 
     assert(physicalDevice);
 
@@ -5112,7 +5114,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceWin32PresentationSupportKHR(VkPh
 
     return result;
 }
-#endif // VK_USE_PLATFORM_WIN32_KHR
+#endif  // VK_USE_PLATFORM_WIN32_KHR
 
 #ifdef VK_USE_PLATFORM_XCB_KHR
 VKAPI_ATTR VkResult VKAPI_CALL CreateXcbSurfaceKHR(VkInstance instance, const VkXcbSurfaceCreateInfoKHR *pCreateInfo,
@@ -5159,7 +5161,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceXcbPresentationSupportKHR(VkPhys
 
     return result;
 }
-#endif // VK_USE_PLATFORM_XCB_KHR
+#endif  // VK_USE_PLATFORM_XCB_KHR
 
 #ifdef VK_USE_PLATFORM_XLIB_KHR
 VKAPI_ATTR VkResult VKAPI_CALL CreateXlibSurfaceKHR(VkInstance instance, const VkXlibSurfaceCreateInfoKHR *pCreateInfo,
@@ -5205,7 +5207,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceXlibPresentationSupportKHR(VkPhy
     }
     return result;
 }
-#endif // VK_USE_PLATFORM_XLIB_KHR
+#endif  // VK_USE_PLATFORM_XLIB_KHR
 
 #ifdef VK_USE_PLATFORM_MIR_KHR
 VKAPI_ATTR VkResult VKAPI_CALL CreateMirSurfaceKHR(VkInstance instance, const VkMirSurfaceCreateInfoKHR *pCreateInfo,
@@ -5249,7 +5251,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceMirPresentationSupportKHR(VkPhys
     }
     return result;
 }
-#endif // VK_USE_PLATFORM_MIR_KHR
+#endif  // VK_USE_PLATFORM_MIR_KHR
 
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
 VKAPI_ATTR VkResult VKAPI_CALL CreateWaylandSurfaceKHR(VkInstance instance, const VkWaylandSurfaceCreateInfoKHR *pCreateInfo,
@@ -5294,7 +5296,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceWaylandPresentationSupportKHR(Vk
 
     return result;
 }
-#endif // VK_USE_PLATFORM_WAYLAND_KHR
+#endif  // VK_USE_PLATFORM_WAYLAND_KHR
 
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
 VKAPI_ATTR VkResult VKAPI_CALL CreateAndroidSurfaceKHR(VkInstance instance, const VkAndroidSurfaceCreateInfoKHR *pCreateInfo,
@@ -5318,7 +5320,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateAndroidSurfaceKHR(VkInstance instance, cons
 
     return result;
 }
-#endif // VK_USE_PLATFORM_ANDROID_KHR
+#endif  // VK_USE_PLATFORM_ANDROID_KHR
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateSharedSwapchainsKHR(VkDevice device, uint32_t swapchainCount,
                                                          const VkSwapchainCreateInfoKHR *pCreateInfos,
@@ -5645,7 +5647,6 @@ VKAPI_ATTR void VKAPI_CALL TrimCommandPoolKHR(VkDevice device, VkCommandPool com
 
 #ifdef VK_USE_PLATFORM_XLIB_XRANDR_EXT
 VKAPI_ATTR VkResult VKAPI_CALL AcquireXlibDisplayEXT(VkPhysicalDevice physicalDevice, Display *dpy, VkDisplayKHR display) {
-
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     auto my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
@@ -5662,7 +5663,6 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireXlibDisplayEXT(VkPhysicalDevice physicalDe
 
 VKAPI_ATTR VkResult VKAPI_CALL GetRandROutputDisplayEXT(VkPhysicalDevice physicalDevice, Display *dpy, RROutput rrOutput,
                                                         VkDisplayKHR *pDisplay) {
-
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     auto my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
@@ -5676,7 +5676,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetRandROutputDisplayEXT(VkPhysicalDevice physica
     }
     return result;
 }
-#endif // VK_USE_PLATFORM_XLIB_XRANDR_EXT
+#endif  // VK_USE_PLATFORM_XLIB_XRANDR_EXT
 
 // Definitions for the VK_EXT_debug_marker Extension
 
@@ -5759,14 +5759,13 @@ VKAPI_ATTR void VKAPI_CALL CmdDebugMarkerInsertEXT(VkCommandBuffer commandBuffer
 // Definitions for the VK_EXT_direct_mode_display extension
 
 VKAPI_ATTR VkResult VKAPI_CALL ReleaseDisplayEXT(VkPhysicalDevice physicalDevice, VkDisplayKHR display) {
-
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     auto my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
     bool skip = false;
     skip |= require_instance_extension(physicalDevice, &instance_extension_enables::ext_direct_mode_display_enabled,
                                        "vkReleaseDisplayEXT", VK_EXT_DIRECT_MODE_DISPLAY_EXTENSION_NAME);
-#if 0 // Validation not automatically generated
+#if 0  // Validation not automatically generated
     skip |= parameter_validation_vkReleaseDisplayEXT(my_data->report_data, display);
 #endif
     if (!skip) {
@@ -5780,7 +5779,6 @@ VKAPI_ATTR VkResult VKAPI_CALL ReleaseDisplayEXT(VkPhysicalDevice physicalDevice
 
 VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilities2EXT(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
                                                                         VkSurfaceCapabilities2EXT *pSurfaceCapabilities) {
-
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     auto my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
@@ -5801,7 +5799,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceExternalImageFormatPropertiesNV(
     VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type, VkImageTiling tiling, VkImageUsageFlags usage,
     VkImageCreateFlags flags, VkExternalMemoryHandleTypeFlagsNV externalHandleType,
     VkExternalImageFormatPropertiesNV *pExternalImageFormatProperties) {
-
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip = false;
     auto my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
@@ -5829,7 +5826,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceExternalImageFormatPropertiesNV(
 #ifdef VK_USE_PLATFORM_WIN32_KHR
 VKAPI_ATTR VkResult VKAPI_CALL GetMemoryWin32HandleNV(VkDevice device, VkDeviceMemory memory,
                                                       VkExternalMemoryHandleTypeFlagsNV handleType, HANDLE *pHandle) {
-
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -5846,7 +5842,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetMemoryWin32HandleNV(VkDevice device, VkDeviceM
 
     return result;
 }
-#endif // VK_USE_PLATFORM_WIN32_KHR
+#endif  // VK_USE_PLATFORM_WIN32_KHR
 
 // VK_NVX_device_generated_commands Extension
 
@@ -5902,7 +5898,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyIndirectCommandsLayoutNVX(VkDevice device, VkI
     assert(my_data != NULL);
     skip |= require_device_extension(my_data, my_data->enables.nvx_device_generated_commands, "vkDestroyIndirectCommandsLayoutNVX",
                                      VK_NVX_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME);
-#if 0 // Validation not automatically generated
+#if 0  // Validation not automatically generated
     skip |= parameter_validation_vkDestroyIndirectCommandsLayoutNVX(my_data->report_data, indirectCommandsLayout, pAllocator);
 #endif
     if (!skip) {
@@ -5933,7 +5929,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyObjectTableNVX(VkDevice device, VkObjectTableN
     assert(my_data != NULL);
     skip |= require_device_extension(my_data, my_data->enables.nvx_device_generated_commands, "vkDestroyObjectTableNVX",
                                      VK_NVX_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME);
-#if 0 // Validation not automatically generated
+#if 0  // Validation not automatically generated
     skip |= parameter_validation_vkDestroyObjectTableNVX(my_data->report_data, objectTable, pAllocator);
 #endif
     if (!skip) {
@@ -6010,49 +6006,38 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, cons
     }
 
     PFN_vkVoidFunction proc = intercept_core_device_command(funcName);
-    if (proc)
-        return proc;
+    if (proc) return proc;
 
     proc = InterceptWsiEnabledCommand(funcName, device);
-    if (proc)
-        return proc;
+    if (proc) return proc;
 
     proc = intercept_extension_device_command(funcName, device);
-    if (proc)
-        return proc;
+    if (proc) return proc;
 
-    if (!data->dispatch_table.GetDeviceProcAddr)
-        return nullptr;
+    if (!data->dispatch_table.GetDeviceProcAddr) return nullptr;
     return data->dispatch_table.GetDeviceProcAddr(device, funcName);
 }
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance, const char *funcName) {
     PFN_vkVoidFunction proc = intercept_core_instance_command(funcName);
-    if (!proc)
-        proc = intercept_core_device_command(funcName);
+    if (!proc) proc = intercept_core_device_command(funcName);
 
-    if (!proc)
-        proc = InterceptWsiEnabledCommand(funcName, VkDevice(VK_NULL_HANDLE));
+    if (!proc) proc = InterceptWsiEnabledCommand(funcName, VkDevice(VK_NULL_HANDLE));
 
-    if (proc)
-        return proc;
+    if (proc) return proc;
 
     assert(instance);
 
     auto data = get_my_data_ptr(get_dispatch_key(instance), instance_layer_data_map);
 
     proc = debug_report_get_instance_proc_addr(data->report_data, funcName);
-    if (!proc)
-        proc = InterceptWsiEnabledCommand(funcName, instance);
+    if (!proc) proc = InterceptWsiEnabledCommand(funcName, instance);
 
-    if (!proc)
-        proc = intercept_extension_instance_command(funcName, instance);
+    if (!proc) proc = intercept_extension_instance_command(funcName, instance);
 
-    if (proc)
-        return proc;
+    if (proc) return proc;
 
-    if (!data->dispatch_table.GetInstanceProcAddr)
-        return nullptr;
+    if (!data->dispatch_table.GetInstanceProcAddr) return nullptr;
     return data->dispatch_table.GetInstanceProcAddr(instance, funcName);
 }
 
@@ -6060,8 +6045,7 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance in
     assert(instance);
     auto data = get_my_data_ptr(get_dispatch_key(instance), instance_layer_data_map);
 
-    if (!data->dispatch_table.GetPhysicalDeviceProcAddr)
-        return nullptr;
+    if (!data->dispatch_table.GetPhysicalDeviceProcAddr) return nullptr;
     return data->dispatch_table.GetPhysicalDeviceProcAddr(instance, funcName);
 }
 
@@ -6096,8 +6080,7 @@ static PFN_vkVoidFunction intercept_core_instance_command(const char *name) {
     };
 
     for (size_t i = 0; i < ARRAY_SIZE(core_instance_commands); i++) {
-        if (!strcmp(core_instance_commands[i].name, name))
-            return core_instance_commands[i].proc;
+        if (!strcmp(core_instance_commands[i].name, name)) return core_instance_commands[i].proc;
     }
 
     return nullptr;
@@ -6231,7 +6214,7 @@ static PFN_vkVoidFunction intercept_core_device_command(const char *name) {
         {"vkCmdDebugMarkerInsertEXT", reinterpret_cast<PFN_vkVoidFunction>(CmdDebugMarkerInsertEXT)},
 #ifdef VK_USE_PLATFORM_WIN32_KHR
         {"vkGetMemoryWin32HandleNV", reinterpret_cast<PFN_vkVoidFunction>(GetMemoryWin32HandleNV)},
-#endif // VK_USE_PLATFORM_WIN32_KHR
+#endif  // VK_USE_PLATFORM_WIN32_KHR
         // NVX_device_generated_commands
         {"vkCmdProcessCommandsNVX", reinterpret_cast<PFN_vkVoidFunction>(CmdProcessCommandsNVX)},
         {"vkCmdReserveSpaceForCommandsNVX", reinterpret_cast<PFN_vkVoidFunction>(CmdReserveSpaceForCommandsNVX)},
@@ -6244,8 +6227,7 @@ static PFN_vkVoidFunction intercept_core_device_command(const char *name) {
     };
 
     for (size_t i = 0; i < ARRAY_SIZE(core_device_commands); i++) {
-        if (!strcmp(core_device_commands[i].name, name))
-            return core_device_commands[i].proc;
+        if (!strcmp(core_device_commands[i].name, name)) return core_device_commands[i].proc;
     }
 
     return nullptr;
@@ -6266,8 +6248,7 @@ static PFN_vkVoidFunction InterceptWsiEnabledCommand(const char *name, VkDevice 
 
     if (device) {
         for (size_t i = 0; i < ARRAY_SIZE(wsi_device_commands); i++) {
-            if (!strcmp(wsi_device_commands[i].name, name))
-                return wsi_device_commands[i].proc;
+            if (!strcmp(wsi_device_commands[i].name, name)) return wsi_device_commands[i].proc;
         }
 
         if (!strcmp("vkCreateSharedSwapchainsKHR", name)) {
@@ -6329,8 +6310,7 @@ static PFN_vkVoidFunction InterceptWsiEnabledCommand(const char *name, VkInstanc
     };
 
     for (size_t i = 0; i < ARRAY_SIZE(wsi_instance_commands); i++) {
-        if (!strcmp(wsi_instance_commands[i].name, name))
-            return wsi_instance_commands[i].proc;
+        if (!strcmp(wsi_instance_commands[i].name, name)) return wsi_instance_commands[i].proc;
     }
 
     return nullptr;
@@ -6360,8 +6340,7 @@ static PFN_vkVoidFunction intercept_extension_instance_command(const char *name,
     };
 
     for (size_t i = 0; i < ARRAY_SIZE(extension_instance_commands); i++) {
-        if (!strcmp(extension_instance_commands[i].name, name))
-            return extension_instance_commands[i].proc;
+        if (!strcmp(extension_instance_commands[i].name, name)) return extension_instance_commands[i].proc;
     }
 
     return nullptr;
@@ -6377,7 +6356,7 @@ static PFN_vkVoidFunction intercept_extension_device_command(const char *name, V
 #ifdef VK_USE_PLATFORM_WIN32_KHR
         // NV_external_memory_win32
         {"vkGetMemoryWin32HandleNV", reinterpret_cast<PFN_vkVoidFunction>(GetMemoryWin32HandleNV)},
-#endif // VK_USE_PLATFORM_WIN32_KHR
+#endif  // VK_USE_PLATFORM_WIN32_KHR
         // EXT_debug_marker
         {"vkDebugMarkerSetObjectTagEXT", reinterpret_cast<PFN_vkVoidFunction>(DebugMarkerSetObjectTagEXT)},
         {"vkDebugMarkerSetObjectNameEXT", reinterpret_cast<PFN_vkVoidFunction>(DebugMarkerSetObjectNameEXT)},
@@ -6396,15 +6375,14 @@ static PFN_vkVoidFunction intercept_extension_device_command(const char *name, V
 
     if (device) {
         for (size_t i = 0; i < ARRAY_SIZE(extension_device_commands); i++) {
-            if (!strcmp(extension_device_commands[i].name, name))
-                return extension_device_commands[i].proc;
+            if (!strcmp(extension_device_commands[i].name, name)) return extension_device_commands[i].proc;
         }
     }
 
     return nullptr;
 }
 
-} // namespace parameter_validation
+}  // namespace parameter_validation
 
 // vk_layer_logging.h expects these to be defined
 

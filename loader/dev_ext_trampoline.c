@@ -21,7 +21,7 @@
 #include "vk_loader_platform.h"
 #include "loader.h"
 #if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize(3) // force gcc to use tail-calls
+#pragma GCC optimize(3)  // force gcc to use tail-calls
 #endif
 
 // Clang-format does not understand macros.

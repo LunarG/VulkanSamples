@@ -26,7 +26,7 @@
 namespace {
 
 class PosixTimer {
-  public:
+   public:
     PosixTimer() { reset(); }
 
     void reset() { clock_gettime(CLOCK_MONOTONIC, &start_); }
@@ -51,7 +51,7 @@ class PosixTimer {
         return static_cast<double>(s) + static_cast<double>(ns) / one_s_in_ns_d;
     }
 
-  private:
+   private:
     struct timespec start_;
 };
 
@@ -70,11 +70,10 @@ xcb_atom_t intern_atom(xcb_connection_t *c, xcb_intern_atom_cookie_t cookie) {
     return atom;
 }
 
-} // namespace
+}  // namespace
 
 ShellXcb::ShellXcb(Game &game) : Shell(game) {
-    if (game.settings().validate)
-        instance_layers_.push_back("VK_LAYER_LUNARG_standard_validation");
+    if (game.settings().validate) instance_layers_.push_back("VK_LAYER_LUNARG_standard_validation");
     instance_extensions_.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
 
     init_connection();
@@ -99,8 +98,7 @@ void ShellXcb::init_connection() {
 
     const xcb_setup_t *setup = xcb_get_setup(c_);
     xcb_screen_iterator_t iter = xcb_setup_roots_iterator(setup);
-    while (scr-- > 0)
-        xcb_screen_next(&iter);
+    while (scr-- > 0) xcb_screen_next(&iter);
 
     scr_ = iter.data;
 }
@@ -139,21 +137,18 @@ PFN_vkGetInstanceProcAddr ShellXcb::load_vk() {
 
 #ifdef UNINSTALLED_LOADER
     handle = dlopen(UNINSTALLED_LOADER, RTLD_LAZY);
-    if (!handle)
-        handle = dlopen(filename, RTLD_LAZY);
+    if (!handle) handle = dlopen(filename, RTLD_LAZY);
 #else
     handle = dlopen(filename, RTLD_LAZY);
 #endif
 
-    if (handle)
-        symbol = dlsym(handle, "vkGetInstanceProcAddr");
+    if (handle) symbol = dlsym(handle, "vkGetInstanceProcAddr");
 
     if (!handle || !symbol) {
         std::stringstream ss;
         ss << "failed to load " << dlerror();
 
-        if (handle)
-            dlclose(handle);
+        if (handle) dlclose(handle);
 
         throw std::runtime_error(ss.str());
     }
@@ -181,56 +176,53 @@ VkSurfaceKHR ShellXcb::create_surface(VkInstance instance) {
 
 void ShellXcb::handle_event(const xcb_generic_event_t *ev) {
     switch (ev->response_type & 0x7f) {
-    case XCB_CONFIGURE_NOTIFY: {
-        const xcb_configure_notify_event_t *notify = reinterpret_cast<const xcb_configure_notify_event_t *>(ev);
-        resize_swapchain(notify->width, notify->height);
-    } break;
-    case XCB_KEY_PRESS: {
-        const xcb_key_press_event_t *press = reinterpret_cast<const xcb_key_press_event_t *>(ev);
-        Game::Key key;
+        case XCB_CONFIGURE_NOTIFY: {
+            const xcb_configure_notify_event_t *notify = reinterpret_cast<const xcb_configure_notify_event_t *>(ev);
+            resize_swapchain(notify->width, notify->height);
+        } break;
+        case XCB_KEY_PRESS: {
+            const xcb_key_press_event_t *press = reinterpret_cast<const xcb_key_press_event_t *>(ev);
+            Game::Key key;
 
-        // TODO translate xcb_keycode_t
-        switch (press->detail) {
-        case 9:
-            key = Game::KEY_ESC;
-            break;
-        case 111:
-            key = Game::KEY_UP;
-            break;
-        case 116:
-            key = Game::KEY_DOWN;
-            break;
-        case 65:
-            key = Game::KEY_SPACE;
-            break;
+            // TODO translate xcb_keycode_t
+            switch (press->detail) {
+                case 9:
+                    key = Game::KEY_ESC;
+                    break;
+                case 111:
+                    key = Game::KEY_UP;
+                    break;
+                case 116:
+                    key = Game::KEY_DOWN;
+                    break;
+                case 65:
+                    key = Game::KEY_SPACE;
+                    break;
+                default:
+                    key = Game::KEY_UNKNOWN;
+                    break;
+            }
+
+            game_.on_key(key);
+        } break;
+        case XCB_CLIENT_MESSAGE: {
+            const xcb_client_message_event_t *msg = reinterpret_cast<const xcb_client_message_event_t *>(ev);
+            if (msg->type == wm_protocols_ && msg->data.data32[0] == wm_delete_window_) game_.on_key(Game::KEY_SHUTDOWN);
+        } break;
         default:
-            key = Game::KEY_UNKNOWN;
             break;
-        }
-
-        game_.on_key(key);
-    } break;
-    case XCB_CLIENT_MESSAGE: {
-        const xcb_client_message_event_t *msg = reinterpret_cast<const xcb_client_message_event_t *>(ev);
-        if (msg->type == wm_protocols_ && msg->data.data32[0] == wm_delete_window_)
-            game_.on_key(Game::KEY_SHUTDOWN);
-    } break;
-    default:
-        break;
     }
 }
 
 void ShellXcb::loop_wait() {
     while (true) {
         xcb_generic_event_t *ev = xcb_wait_for_event(c_);
-        if (!ev)
-            continue;
+        if (!ev) continue;
 
         handle_event(ev);
         free(ev);
 
-        if (quit_)
-            break;
+        if (quit_) break;
 
         acquire_back_buffer();
         present_back_buffer();
@@ -248,15 +240,13 @@ void ShellXcb::loop_poll() {
         // handle pending events
         while (true) {
             xcb_generic_event_t *ev = xcb_poll_for_event(c_);
-            if (!ev)
-                break;
+            if (!ev) break;
 
             handle_event(ev);
             free(ev);
         }
 
-        if (quit_)
-            break;
+        if (quit_) break;
 
         acquire_back_buffer();
 

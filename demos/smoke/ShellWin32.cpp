@@ -25,7 +25,7 @@
 namespace {
 
 class Win32Timer {
-  public:
+   public:
     Win32Timer() {
         LARGE_INTEGER freq;
         QueryPerformanceFrequency(&freq);
@@ -43,16 +43,15 @@ class Win32Timer {
         return static_cast<double>(now.QuadPart - start_.QuadPart) / freq_;
     }
 
-  private:
+   private:
     double freq_;
     LARGE_INTEGER start_;
 };
 
-} // namespace
+}  // namespace
 
 ShellWin32::ShellWin32(Game &game) : Shell(game), hwnd_(nullptr) {
-    if (game.settings().validate)
-        instance_layers_.push_back("VK_LAYER_LUNARG_standard_validation");
+    if (game.settings().validate) instance_layers_.push_back("VK_LAYER_LUNARG_standard_validation");
     instance_extensions_.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
     init_vk();
 }
@@ -102,8 +101,7 @@ PFN_vkGetInstanceProcAddr ShellWin32::load_vk() {
         std::stringstream ss;
         ss << "failed to load " << filename;
 
-        if (mod)
-            FreeLibrary(mod);
+        if (mod) FreeLibrary(mod);
 
         throw std::runtime_error(ss.str());
     }
@@ -131,43 +129,43 @@ VkSurfaceKHR ShellWin32::create_surface(VkInstance instance) {
 
 LRESULT ShellWin32::handle_message(UINT msg, WPARAM wparam, LPARAM lparam) {
     switch (msg) {
-    case WM_SIZE: {
-        UINT w = LOWORD(lparam);
-        UINT h = HIWORD(lparam);
-        resize_swapchain(w, h);
-    } break;
-    case WM_KEYDOWN: {
-        Game::Key key;
+        case WM_SIZE: {
+            UINT w = LOWORD(lparam);
+            UINT h = HIWORD(lparam);
+            resize_swapchain(w, h);
+        } break;
+        case WM_KEYDOWN: {
+            Game::Key key;
 
-        switch (wparam) {
-        case VK_ESCAPE:
-            key = Game::KEY_ESC;
+            switch (wparam) {
+                case VK_ESCAPE:
+                    key = Game::KEY_ESC;
+                    break;
+                case VK_UP:
+                    key = Game::KEY_UP;
+                    break;
+                case VK_DOWN:
+                    key = Game::KEY_DOWN;
+                    break;
+                case VK_SPACE:
+                    key = Game::KEY_SPACE;
+                    break;
+                default:
+                    key = Game::KEY_UNKNOWN;
+                    break;
+            }
+
+            game_.on_key(key);
+        } break;
+        case WM_CLOSE:
+            game_.on_key(Game::KEY_SHUTDOWN);
             break;
-        case VK_UP:
-            key = Game::KEY_UP;
-            break;
-        case VK_DOWN:
-            key = Game::KEY_DOWN;
-            break;
-        case VK_SPACE:
-            key = Game::KEY_SPACE;
+        case WM_DESTROY:
+            quit();
             break;
         default:
-            key = Game::KEY_UNKNOWN;
+            return DefWindowProc(hwnd_, msg, wparam, lparam);
             break;
-        }
-
-        game_.on_key(key);
-    } break;
-    case WM_CLOSE:
-        game_.on_key(Game::KEY_SHUTDOWN);
-        break;
-    case WM_DESTROY:
-        quit();
-        break;
-    default:
-        return DefWindowProc(hwnd_, msg, wparam, lparam);
-        break;
     }
 
     return 0;
@@ -201,8 +199,7 @@ void ShellWin32::run() {
             DispatchMessage(&msg);
         }
 
-        if (quit)
-            break;
+        if (quit) break;
 
         acquire_back_buffer();
 

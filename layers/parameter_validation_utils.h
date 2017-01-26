@@ -35,32 +35,32 @@
 namespace parameter_validation {
 
 enum ErrorCode {
-    NONE,                  // Used for INFO & other non-error messages
-    INVALID_USAGE,         // The value of a parameter is not consistent
-                           // with the valid usage criteria defined in
-                           // the Vulkan specification.
-    INVALID_STRUCT_STYPE,  // The sType field of a Vulkan structure does
-                           // not contain the value expected for a structure
-                           // of that type.
-    INVALID_STRUCT_PNEXT,  // The pNext field of a Vulkan structure references
-                           // a value that is not compatible with a structure of
-                           // that type or is not NULL when a structure of that
-                           // type has no compatible pNext values.
-    REQUIRED_PARAMETER,    // A required parameter was specified as 0 or NULL.
-    RESERVED_PARAMETER,    // A parameter reserved for future use was not
-                           // specified as 0 or NULL.
-    UNRECOGNIZED_VALUE,    // A Vulkan enumeration, VkFlags, or VkBool32 parameter
-                           // contains a value that is not recognized as valid for
-                           // that type.
-    DEVICE_LIMIT,          // A specified parameter exceeds the limits returned
-                           // by the physical device
-    DEVICE_FEATURE,        // Use of a requested feature is not supported by
-                           // the device
-    FAILURE_RETURN_CODE,   // A Vulkan return code indicating a failure condition
-                           // was encountered.
-    EXTENSION_NOT_ENABLED, // An extension entrypoint was called, but the required
-                           // extension was not enabled at CreateInstance or
-                           // CreateDevice time.
+    NONE,                   // Used for INFO & other non-error messages
+    INVALID_USAGE,          // The value of a parameter is not consistent
+                            // with the valid usage criteria defined in
+                            // the Vulkan specification.
+    INVALID_STRUCT_STYPE,   // The sType field of a Vulkan structure does
+                            // not contain the value expected for a structure
+                            // of that type.
+    INVALID_STRUCT_PNEXT,   // The pNext field of a Vulkan structure references
+                            // a value that is not compatible with a structure of
+                            // that type or is not NULL when a structure of that
+                            // type has no compatible pNext values.
+    REQUIRED_PARAMETER,     // A required parameter was specified as 0 or NULL.
+    RESERVED_PARAMETER,     // A parameter reserved for future use was not
+                            // specified as 0 or NULL.
+    UNRECOGNIZED_VALUE,     // A Vulkan enumeration, VkFlags, or VkBool32 parameter
+                            // contains a value that is not recognized as valid for
+                            // that type.
+    DEVICE_LIMIT,           // A specified parameter exceeds the limits returned
+                            // by the physical device
+    DEVICE_FEATURE,         // Use of a requested feature is not supported by
+                            // the device
+    FAILURE_RETURN_CODE,    // A Vulkan return code indicating a failure condition
+                            // was encountered.
+    EXTENSION_NOT_ENABLED,  // An extension entrypoint was called, but the required
+                            // extension was not enabled at CreateInstance or
+                            // CreateDevice time.
 };
 
 struct GenericHeader {
@@ -99,14 +99,16 @@ const std::string UnsupportedResultString = "Unhandled VkResult";
 // See Appendix C.10 "Assigning Extension Token Values" from the Vulkan specification
 const uint32_t ExtEnumBaseValue = 1000000000;
 
-template <typename T> bool is_extension_added_token(T value) {
+template <typename T>
+bool is_extension_added_token(T value) {
     return (static_cast<uint32_t>(std::abs(static_cast<int32_t>(value))) >= ExtEnumBaseValue);
 }
 
 // VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE token is a special case that was converted from a core token to an
 // extension added token.  Its original value was intentionally preserved after the conversion, so it does not use
 // the base value that other extension added tokens use, and it does not fall within the enum's begin/end range.
-template <> bool is_extension_added_token(VkSamplerAddressMode value) {
+template <>
+bool is_extension_added_token(VkSamplerAddressMode value) {
     bool result = (static_cast<uint32_t>(std::abs(static_cast<int32_t>(value))) >= ExtEnumBaseValue);
     return (result || (value == VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE));
 }
@@ -152,7 +154,6 @@ static bool validate_required_pointer(debug_report_data *report_data, const char
     bool skip_call = false;
 
     if (value == NULL) {
-
         skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                              REQUIRED_PARAMETER, LayerName, "%s: required parameter %s specified as NULL", apiName,
                              parameterName.get_name().c_str());
@@ -486,10 +487,11 @@ static bool validate_struct_pnext(debug_report_data *report_data, const char *ap
                                   const char *allowed_struct_names, const void *next, size_t allowed_type_count,
                                   const VkStructureType *allowed_types, uint32_t header_version) {
     bool skip_call = false;
-    const char disclaimer[] = "This warning is based on the Valid Usage documentation for version %d of the Vulkan header.  It "
-                              "is possible that you are using a struct from a private extension or an extension that was added "
-                              "to a later version of the Vulkan header, in which case your use of %s is perfectly valid but "
-                              "is not guaranteed to work correctly with validation enabled";
+    const char disclaimer[] =
+        "This warning is based on the Valid Usage documentation for version %d of the Vulkan header.  It "
+        "is possible that you are using a struct from a private extension or an extension that was added "
+        "to a later version of the Vulkan header, in which case your use of %s is perfectly valid but "
+        "is not guaranteed to work correctly with validation enabled";
 
     if (next != NULL) {
         if (allowed_type_count == 0) {
@@ -508,8 +510,9 @@ static bool validate_struct_pnext(debug_report_data *report_data, const char *ap
                     std::string type_name = string_VkStructureType(current->sType);
 
                     if (type_name == UnsupportedStructureTypeString) {
-                        std::string message = "%s: %s chain includes a structure with unexpected VkStructureType (%d); Allowed "
-                                              "structures are [%s].  ";
+                        std::string message =
+                            "%s: %s chain includes a structure with unexpected VkStructureType (%d); Allowed "
+                            "structures are [%s].  ";
                         message += disclaimer;
                         skip_call |= log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT,
                                              0, __LINE__, INVALID_STRUCT_PNEXT, LayerName, message.c_str(), api_name,
@@ -583,11 +586,11 @@ bool validate_ranged_enum(debug_report_data *report_data, const char *apiName, c
     bool skip_call = false;
 
     if (((value < begin) || (value > end)) && !is_extension_added_token(value)) {
-        skip_call |=
-            log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                    UNRECOGNIZED_VALUE, LayerName, "%s: value of %s (%d) does not fall within the begin..end range of the core %s "
-                                                   "enumeration tokens and is not an extension added token",
-                    apiName, parameterName.get_name().c_str(), value, enumName);
+        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                             UNRECOGNIZED_VALUE, LayerName,
+                             "%s: value of %s (%d) does not fall within the begin..end range of the core %s "
+                             "enumeration tokens and is not an extension added token",
+                             apiName, parameterName.get_name().c_str(), value, enumName);
     }
 
     return skip_call;
@@ -820,6 +823,6 @@ static void validate_result(debug_report_data *report_data, const char *apiName,
     }
 }
 
-} // namespace parameter_validation
+}  // namespace parameter_validation
 
-#endif // PARAMETER_VALIDATION_UTILS_H
+#endif  // PARAMETER_VALIDATION_UTILS_H

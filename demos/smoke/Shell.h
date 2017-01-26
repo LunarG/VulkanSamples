@@ -27,7 +27,7 @@
 class Game;
 
 class Shell {
-  public:
+   public:
     Shell(const Shell &sh) = delete;
     Shell &operator=(const Shell &sh) = delete;
     virtual ~Shell() {}
@@ -77,7 +77,7 @@ class Shell {
     virtual void run() = 0;
     virtual void quit() = 0;
 
-  protected:
+   protected:
     Shell(Game &game);
 
     void init_vk();
@@ -101,7 +101,7 @@ class Shell {
 
     std::vector<const char *> device_extensions_;
 
-  private:
+   private:
     bool debug_report_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT obj_type, uint64_t object, size_t location,
                                int32_t msg_code, const char *layer_prefix, const char *msg);
     static VKAPI_ATTR VkBool32 VKAPI_CALL debug_report_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT obj_type,
@@ -140,4 +140,4 @@ class Shell {
     float game_time_;
 };
 
-#endif // SHELL_H
+#endif  // SHELL_H

@@ -38,7 +38,7 @@
 namespace {
 
 class PosixTimer {
-  public:
+   public:
     PosixTimer() { reset(); }
 
     void reset() { clock_gettime(CLOCK_MONOTONIC, &start_); }
@@ -63,11 +63,11 @@ class PosixTimer {
         return static_cast<double>(s) + static_cast<double>(ns) / one_s_in_ns_d;
     }
 
-  private:
+   private:
     struct timespec start_;
 };
 
-} // namespace
+}  // namespace
 
 const struct wl_registry_listener ShellWayland::registry_listener_ = {ShellWayland::handle_global,
                                                                       ShellWayland::handle_global_remove};
@@ -99,8 +99,7 @@ void ShellWayland::handle_configure(void *data UNUSED, struct wl_shell_surface *
 void ShellWayland::handle_popup_done(void *data UNUSED, struct wl_shell_surface *shell_surface UNUSED) {}
 
 ShellWayland::ShellWayland(Game &game) : Shell(game) {
-    if (game.settings().validate)
-        instance_layers_.push_back("VK_LAYER_LUNARG_standard_validation");
+    if (game.settings().validate) instance_layers_.push_back("VK_LAYER_LUNARG_standard_validation");
     instance_extensions_.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
 
     init_connection();
@@ -111,47 +110,33 @@ ShellWayland::~ShellWayland() {
     cleanup_vk();
     dlclose(lib_handle_);
 
-    if (shell_surface_)
-        wl_shell_surface_destroy(shell_surface_);
-    if (surface_)
-        wl_surface_destroy(surface_);
-    if (shell_)
-        wl_shell_destroy(shell_);
-    if (compositor_)
-        wl_compositor_destroy(compositor_);
-    if (registry_)
-        wl_registry_destroy(registry_);
-    if (display_)
-        wl_display_disconnect(display_);
+    if (shell_surface_) wl_shell_surface_destroy(shell_surface_);
+    if (surface_) wl_surface_destroy(surface_);
+    if (shell_) wl_shell_destroy(shell_);
+    if (compositor_) wl_compositor_destroy(compositor_);
+    if (registry_) wl_registry_destroy(registry_);
+    if (display_) wl_display_disconnect(display_);
 }
 
 void ShellWayland::init_connection() {
     try {
         display_ = wl_display_connect(NULL);
-        if (!display_)
-            throw std::runtime_error("failed to connect to the display server");
+        if (!display_) throw std::runtime_error("failed to connect to the display server");
 
         registry_ = wl_display_get_registry(display_);
-        if (!registry_)
-            throw std::runtime_error("failed to get registry");
+        if (!registry_) throw std::runtime_error("failed to get registry");
 
         wl_registry_add_listener(registry_, &registry_listener_, this);
         wl_display_roundtrip(display_);
 
-        if (!compositor_)
-            throw std::runtime_error("failed to bind compositor");
+        if (!compositor_) throw std::runtime_error("failed to bind compositor");
 
-        if (!shell_)
-            throw std::runtime_error("failed to bind shell");
+        if (!shell_) throw std::runtime_error("failed to bind shell");
     } catch (...) {
-        if (shell_)
-            wl_shell_destroy(shell_);
-        if (compositor_)
-            wl_compositor_destroy(compositor_);
-        if (registry_)
-            wl_registry_destroy(registry_);
-        if (display_)
-            wl_display_disconnect(display_);
+        if (shell_) wl_shell_destroy(shell_);
+        if (compositor_) wl_compositor_destroy(compositor_);
+        if (registry_) wl_registry_destroy(registry_);
+        if (display_) wl_display_disconnect(display_);
 
         throw;
     }
@@ -159,12 +144,10 @@ void ShellWayland::init_connection() {
 
 void ShellWayland::create_window() {
     surface_ = wl_compositor_create_surface(compositor_);
-    if (!surface_)
-        throw std::runtime_error("failed to create surface");
+    if (!surface_) throw std::runtime_error("failed to create surface");
 
     shell_surface_ = wl_shell_get_shell_surface(shell_, surface_);
-    if (!shell_surface_)
-        throw std::runtime_error("failed to shell_surface");
+    if (!shell_surface_) throw std::runtime_error("failed to shell_surface");
 
     wl_shell_surface_add_listener(shell_surface_, &shell_surface_listener_, this);
     // set title
@@ -178,21 +161,18 @@ PFN_vkGetInstanceProcAddr ShellWayland::load_vk() {
 
 #ifdef UNINSTALLED_LOADER
     handle = dlopen(UNINSTALLED_LOADER, RTLD_LAZY);
-    if (!handle)
-        handle = dlopen(filename, RTLD_LAZY);
+    if (!handle) handle = dlopen(filename, RTLD_LAZY);
 #else
     handle = dlopen(filename, RTLD_LAZY);
 #endif
 
-    if (handle)
-        symbol = dlsym(handle, "vkGetInstanceProcAddr");
+    if (handle) symbol = dlsym(handle, "vkGetInstanceProcAddr");
 
     if (!handle || !symbol) {
         std::stringstream ss;
         ss << "failed to load " << dlerror();
 
-        if (handle)
-            dlclose(handle);
+        if (handle) dlclose(handle);
 
         throw std::runtime_error(ss.str());
     }
@@ -220,8 +200,7 @@ VkSurfaceKHR ShellWayland::create_surface(VkInstance instance) {
 
 void ShellWayland::loop_wait() {
     while (true) {
-        if (quit_)
-            break;
+        if (quit_) break;
 
         acquire_back_buffer();
         present_back_buffer();
@@ -236,8 +215,7 @@ void ShellWayland::loop_poll() {
     int profile_present_count = 0;
 
     while (true) {
-        if (quit_)
-            break;
+        if (quit_) break;
 
         acquire_back_buffer();
 

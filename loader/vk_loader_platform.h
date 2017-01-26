@@ -25,7 +25,7 @@
 #if defined(_WIN32)
 // WinSock2.h must be included *BEFORE* windows.h
 #include <WinSock2.h>
-#endif // _WIN32
+#endif  // _WIN32
 
 #include "vulkan/vk_platform.h"
 #include "vulkan/vk_sdk_platform.h"
@@ -77,14 +77,14 @@
 #define EXTRA_ILAYERS_DATADIR_INFO
 #endif
 
-#define DEFAULT_VK_DRIVERS_INFO                                                                                                    \
-    SYSCONFDIR VULKAN_DIR VULKAN_ICDCONF_DIR                                                                                       \
+#define DEFAULT_VK_DRIVERS_INFO              \
+    SYSCONFDIR VULKAN_DIR VULKAN_ICDCONF_DIR \
         ":" DATADIR VULKAN_DIR VULKAN_ICDCONF_DIR EXTRA_DRIVERS_SYSCONFDIR_INFO EXTRA_DRIVERS_DATADIR_INFO
-#define DEFAULT_VK_ELAYERS_INFO                                                                                                    \
-    SYSCONFDIR VULKAN_DIR VULKAN_ELAYERCONF_DIR                                                                                    \
+#define DEFAULT_VK_ELAYERS_INFO                 \
+    SYSCONFDIR VULKAN_DIR VULKAN_ELAYERCONF_DIR \
         ":" DATADIR VULKAN_DIR VULKAN_ELAYERCONF_DIR EXTRA_ELAYERS_SYSCONFDIR_INFO EXTRA_ELAYERS_DATADIR_INFO
-#define DEFAULT_VK_ILAYERS_INFO                                                                                                    \
-    SYSCONFDIR VULKAN_DIR VULKAN_ILAYERCONF_DIR                                                                                    \
+#define DEFAULT_VK_ILAYERS_INFO                 \
+    SYSCONFDIR VULKAN_DIR VULKAN_ILAYERCONF_DIR \
         ":" DATADIR VULKAN_DIR VULKAN_ILAYERCONF_DIR EXTRA_ILAYERS_SYSCONFDIR_INFO EXTRA_ILAYERS_DATADIR_INFO
 
 #define DEFAULT_VK_DRIVERS_PATH ""
@@ -165,7 +165,7 @@ static inline void loader_platform_thread_cond_broadcast(loader_platform_thread_
 
 #define loader_stack_alloc(size) alloca(size)
 
-#elif defined(_WIN32) // defined(__linux__)
+#elif defined(_WIN32)  // defined(__linux__)
 /* Windows-specific common code: */
 // WinBase.h defines CreateSemaphore and synchapi.h defines CreateEvent
 //  undefine them to avoid conflicts with VkLayerDispatchTable struct members.
@@ -184,7 +184,7 @@ static inline void loader_platform_thread_cond_broadcast(loader_platform_thread_
 #ifdef __cplusplus
 #include <iostream>
 #include <string>
-#endif // __cplusplus
+#endif  // __cplusplus
 
 // VK Library Filenames, Paths, etc.:
 #define PATH_SEPARATOR ';'
@@ -225,8 +225,7 @@ static inline char *loader_platform_dirname(char *path) {
     for (current = path; *current != '\0'; current = next) {
         next = strchr(current, DIRECTORY_SYMBOL);
         if (next == NULL) {
-            if (current != path)
-                *(current - 1) = '\0';
+            if (current != path) *(current - 1) = '\0';
             return path;
         } else {
             // Point one character past the DIRECTORY_SYMBOL:
@@ -319,7 +318,7 @@ static void loader_platform_thread_cond_broadcast(loader_platform_thread_cond *p
 char *loader_get_registry_string(const HKEY hive, const LPCTSTR sub_key, const char *value);
 
 #define loader_stack_alloc(size) _alloca(size)
-#else // defined(_WIN32)
+#else  // defined(_WIN32)
 
 #error The "loader_platform.h" file must be modified for this OS.
 
@@ -330,7 +329,7 @@ char *loader_get_registry_string(const HKEY hive, const LPCTSTR sub_key, const c
 // NOTE: Other OS-specific changes are also needed for this OS.  Search for
 // files with "WIN32" in it, as a quick way to find files that must be changed.
 
-#endif // defined(_WIN32)
+#endif  // defined(_WIN32)
 
 // returns true if the given string appears to be a relative or absolute
 // path, as opposed to a bare filename.

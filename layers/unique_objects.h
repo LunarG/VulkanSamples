@@ -108,7 +108,7 @@ struct layer_data {
     VkDebugReportCallbackEXT *tmp_callbacks;
 
     bool wsi_enabled;
-    std::unordered_map<uint64_t, uint64_t> unique_id_mapping; // Map uniqueID to actual object handle
+    std::unordered_map<uint64_t, uint64_t> unique_id_mapping;  // Map uniqueID to actual object handle
     VkPhysicalDevice gpu;
 
     layer_data() : wsi_enabled(false), gpu(VK_NULL_HANDLE){};
@@ -128,14 +128,15 @@ struct instance_extension_enables {
 static std::unordered_map<void *, struct instance_extension_enables> instance_ext_map;
 static std::unordered_map<void *, layer_data *> layer_data_map;
 
-static std::mutex global_lock; // Protect map accesses and unique_id increments
+static std::mutex global_lock;  // Protect map accesses and unique_id increments
 
 struct GenericHeader {
     VkStructureType sType;
     void *pNext;
 };
 
-template <typename T> bool ContainsExtStruct(const T *target, VkStructureType ext_type) {
+template <typename T>
+bool ContainsExtStruct(const T *target, VkStructureType ext_type) {
     assert(target != nullptr);
 
     const GenericHeader *ext_struct = reinterpret_cast<const GenericHeader *>(target->pNext);
@@ -151,4 +152,4 @@ template <typename T> bool ContainsExtStruct(const T *target, VkStructureType ex
     return false;
 }
 
-} // namespace unique_objects
+}  // namespace unique_objects
