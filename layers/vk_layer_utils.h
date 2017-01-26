@@ -26,7 +26,7 @@
 #ifndef WIN32
 #include <strings.h> // For ffs()
 #else
-#include <intrin.h>  // For __lzcnt()
+#include <intrin.h> // For __lzcnt()
 #endif
 
 #ifdef __cplusplus

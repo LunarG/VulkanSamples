@@ -69,21 +69,21 @@
 struct CHECK_DISABLED {
     bool command_buffer_state;
     bool create_descriptor_set_layout;
-    bool destroy_buffer_view; // Skip validation at DestroyBufferView time
-    bool destroy_image_view;  // Skip validation at DestroyImageView time
-    bool destroy_pipeline;    // Skip validation at DestroyPipeline time
-    bool destroy_descriptor_pool; // Skip validation at DestroyDescriptorPool time
-    bool destroy_framebuffer;     // Skip validation at DestroyFramebuffer time
-    bool destroy_renderpass;      // Skip validation at DestroyRenderpass time
-    bool destroy_image;           // Skip validation at DestroyImage time
-    bool destroy_sampler;         // Skip validation at DestroySampler time
-    bool destroy_command_pool;    // Skip validation at DestroyCommandPool time
-    bool destroy_event;           // Skip validation at DestroyEvent time
-    bool free_memory;             // Skip validation at FreeMemory time
-    bool object_in_use;       // Skip all object in_use checking
-    bool idle_descriptor_set; // Skip check to verify that descriptor set is no in-use
-    bool push_constant_range; // Skip push constant range checks
-    bool free_descriptor_sets; // Skip validation prior to vkFreeDescriptorSets()
+    bool destroy_buffer_view;      // Skip validation at DestroyBufferView time
+    bool destroy_image_view;       // Skip validation at DestroyImageView time
+    bool destroy_pipeline;         // Skip validation at DestroyPipeline time
+    bool destroy_descriptor_pool;  // Skip validation at DestroyDescriptorPool time
+    bool destroy_framebuffer;      // Skip validation at DestroyFramebuffer time
+    bool destroy_renderpass;       // Skip validation at DestroyRenderpass time
+    bool destroy_image;            // Skip validation at DestroyImage time
+    bool destroy_sampler;          // Skip validation at DestroySampler time
+    bool destroy_command_pool;     // Skip validation at DestroyCommandPool time
+    bool destroy_event;            // Skip validation at DestroyEvent time
+    bool free_memory;              // Skip validation at FreeMemory time
+    bool object_in_use;            // Skip all object in_use checking
+    bool idle_descriptor_set;      // Skip check to verify that descriptor set is no in-use
+    bool push_constant_range;      // Skip push constant range checks
+    bool free_descriptor_sets;     // Skip validation prior to vkFreeDescriptorSets()
     bool allocate_descriptor_sets; // Skip validation prior to vkAllocateDescriptorSets()
     bool update_descriptor_sets;   // Skip validation prior to vkUpdateDescriptorSets()
     bool wait_for_fences;
@@ -236,7 +236,7 @@ struct GpuQueue {
     uint32_t queue_family_index;
 };
 
-inline bool operator==(GpuQueue const & lhs, GpuQueue const & rhs) {
+inline bool operator==(GpuQueue const &lhs, GpuQueue const &rhs) {
     return (lhs.gpu == rhs.gpu && lhs.queue_family_index == rhs.queue_family_index);
 }
 
@@ -255,6 +255,5 @@ struct SURFACE_STATE {
     std::unordered_map<GpuQueue, bool> gpu_queue_support;
 
     SURFACE_STATE() {}
-    SURFACE_STATE(VkSurfaceKHR surface)
-        : surface(surface) {}
+    SURFACE_STATE(VkSurfaceKHR surface) : surface(surface) {}
 };

@@ -27,8 +27,7 @@ extern "C" {
 
 // Convert Intents to arg list, returning argc and argv
 // Note that this C routine mallocs memory that the caller must free
-char** get_args(struct android_app* app, const char* intent_extra_data_key, const char* appTag, int* count)
-{
+char **get_args(struct android_app *app, const char *intent_extra_data_key, const char *appTag, int *count) {
     std::vector<std::string> args;
     JavaVM &vm = *app->activity->vm;
     JNIEnv *p_env;
@@ -37,15 +36,13 @@ char** get_args(struct android_app* app, const char* intent_extra_data_key, cons
 
     JNIEnv &env = *p_env;
     jobject activity = app->activity->clazz;
-    jmethodID get_intent_method = env.GetMethodID(env.GetObjectClass(activity),
-            "getIntent", "()Landroid/content/Intent;");
+    jmethodID get_intent_method = env.GetMethodID(env.GetObjectClass(activity), "getIntent", "()Landroid/content/Intent;");
     jobject intent = env.CallObjectMethod(activity, get_intent_method);
-    jmethodID get_string_extra_method = env.GetMethodID(env.GetObjectClass(intent),
-            "getStringExtra", "(Ljava/lang/String;)Ljava/lang/String;");
+    jmethodID get_string_extra_method =
+        env.GetMethodID(env.GetObjectClass(intent), "getStringExtra", "(Ljava/lang/String;)Ljava/lang/String;");
     jvalue get_string_extra_args;
     get_string_extra_args.l = env.NewStringUTF(intent_extra_data_key);
-    jstring extra_str = static_cast<jstring>(env.CallObjectMethodA(intent,
-            get_string_extra_method, &get_string_extra_args));
+    jstring extra_str = static_cast<jstring>(env.CallObjectMethodA(intent, get_string_extra_method, &get_string_extra_args));
 
     std::string args_str;
     if (extra_str) {
@@ -70,14 +67,14 @@ char** get_args(struct android_app* app, const char* intent_extra_data_key, cons
     // Convert our STL results to C friendly constructs
     assert(count != nullptr);
     *count = args.size() + 1;
-    char** vector = (char**) malloc(*count * sizeof(char*));
-    const char* appName = appTag ? appTag : (const char*) "appTag";
+    char **vector = (char **)malloc(*count * sizeof(char *));
+    const char *appName = appTag ? appTag : (const char *)"appTag";
 
-   vector[0] = (char*) malloc(strlen(appName) * sizeof(char));
-   strcpy(vector[0], appName);
+    vector[0] = (char *)malloc(strlen(appName) * sizeof(char));
+    strcpy(vector[0], appName);
 
     for (uint32_t i = 0; i < args.size(); i++) {
-        vector[i + 1] = (char*) malloc(strlen(args[i].c_str()) * sizeof(char));
+        vector[i + 1] = (char *)malloc(strlen(args[i].c_str()) * sizeof(char));
         strcpy(vector[i + 1], args[i].c_str());
     }
 

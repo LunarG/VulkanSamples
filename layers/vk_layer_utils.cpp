@@ -561,7 +561,7 @@ VK_LAYER_EXPORT bool vk_format_is_compressed(VkFormat format) {
 
 // Return compressed block sizes for block compressed formats
 VK_LAYER_EXPORT VkExtent2D vk_format_compressed_block_size(VkFormat format) {
-    VkExtent2D block_size = { 1, 1 };
+    VkExtent2D block_size = {1, 1};
     switch (format) {
     case VK_FORMAT_BC1_RGB_UNORM_BLOCK:
     case VK_FORMAT_BC1_RGB_SRGB_BLOCK:
@@ -591,59 +591,59 @@ VK_LAYER_EXPORT VkExtent2D vk_format_compressed_block_size(VkFormat format) {
     case VK_FORMAT_EAC_R11G11_SNORM_BLOCK:
     case VK_FORMAT_ASTC_4x4_UNORM_BLOCK:
     case VK_FORMAT_ASTC_4x4_SRGB_BLOCK:
-        block_size = { 4, 4 };
+        block_size = {4, 4};
         break;
     case VK_FORMAT_ASTC_5x4_UNORM_BLOCK:
     case VK_FORMAT_ASTC_5x4_SRGB_BLOCK:
-        block_size = { 5, 4 };
+        block_size = {5, 4};
         break;
     case VK_FORMAT_ASTC_5x5_UNORM_BLOCK:
     case VK_FORMAT_ASTC_5x5_SRGB_BLOCK:
-        block_size = { 5, 5 };
+        block_size = {5, 5};
         break;
     case VK_FORMAT_ASTC_6x5_UNORM_BLOCK:
     case VK_FORMAT_ASTC_6x5_SRGB_BLOCK:
-        block_size = { 6, 5 };
+        block_size = {6, 5};
         break;
     case VK_FORMAT_ASTC_6x6_UNORM_BLOCK:
     case VK_FORMAT_ASTC_6x6_SRGB_BLOCK:
-        block_size = { 6, 6 };
+        block_size = {6, 6};
         break;
     case VK_FORMAT_ASTC_8x5_UNORM_BLOCK:
     case VK_FORMAT_ASTC_8x5_SRGB_BLOCK:
-        block_size = { 8, 5 };
+        block_size = {8, 5};
         break;
     case VK_FORMAT_ASTC_8x6_UNORM_BLOCK:
     case VK_FORMAT_ASTC_8x6_SRGB_BLOCK:
-        block_size = { 8, 6 };
+        block_size = {8, 6};
         break;
     case VK_FORMAT_ASTC_8x8_UNORM_BLOCK:
     case VK_FORMAT_ASTC_8x8_SRGB_BLOCK:
-        block_size = { 8, 8 };
+        block_size = {8, 8};
         break;
     case VK_FORMAT_ASTC_10x5_UNORM_BLOCK:
     case VK_FORMAT_ASTC_10x5_SRGB_BLOCK:
-        block_size = { 10, 5 };
+        block_size = {10, 5};
         break;
     case VK_FORMAT_ASTC_10x6_UNORM_BLOCK:
     case VK_FORMAT_ASTC_10x6_SRGB_BLOCK:
-        block_size = { 10, 6 };
+        block_size = {10, 6};
         break;
     case VK_FORMAT_ASTC_10x8_UNORM_BLOCK:
     case VK_FORMAT_ASTC_10x8_SRGB_BLOCK:
-        block_size = { 10, 8 };
+        block_size = {10, 8};
         break;
     case VK_FORMAT_ASTC_10x10_UNORM_BLOCK:
     case VK_FORMAT_ASTC_10x10_SRGB_BLOCK:
-        block_size = { 10, 10 };
+        block_size = {10, 10};
         break;
     case VK_FORMAT_ASTC_12x10_UNORM_BLOCK:
     case VK_FORMAT_ASTC_12x10_SRGB_BLOCK:
-        block_size = { 12, 10 };
+        block_size = {12, 10};
         break;
     case VK_FORMAT_ASTC_12x12_UNORM_BLOCK:
     case VK_FORMAT_ASTC_12x12_SRGB_BLOCK:
-        block_size = { 12, 12 };
+        block_size = {12, 12};
         break;
     default:
         break;
@@ -705,8 +705,8 @@ VK_LAYER_EXPORT VkStringErrorFlags vk_string_validate(const int max_length, cons
         if (utf8[i] == 0) {
             break;
         } else if (i == max_length) {
-          result = VK_STRING_ERROR_LENGTH;
-          break;
+            result = VK_STRING_ERROR_LENGTH;
+            break;
         } else if ((utf8[i] >= 0xa) && (utf8[i] < 0x7f)) {
             num_char_bytes = 0;
         } else if ((utf8[i] & UTF8_ONE_BYTE_MASK) == UTF8_ONE_BYTE_CODE) {

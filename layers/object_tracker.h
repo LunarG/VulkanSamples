@@ -164,7 +164,7 @@ static const char *object_name[VK_DEBUG_REPORT_OBJECT_TYPE_RANGE_SIZE_EXT] = {
     "Command Pool",          // VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT
     "SurfaceKHR",            // VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT
     "SwapchainKHR",          // VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT
-    "Debug Report" };        // VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT
+    "Debug Report"};         // VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT
 
 #include "vk_dispatch_table_helper.h"
 

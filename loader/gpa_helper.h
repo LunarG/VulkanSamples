@@ -24,8 +24,7 @@
 #include "wsi.h"
 #include "extensions.h"
 
-static inline void *trampolineGetProcAddr(struct loader_instance *inst,
-                                          const char *funcName) {
+static inline void *trampolineGetProcAddr(struct loader_instance *inst, const char *funcName) {
     // Don't include or check global functions
     if (!strcmp(funcName, "vkGetInstanceProcAddr"))
         return (PFN_vkVoidFunction)vkGetInstanceProcAddr;
@@ -40,8 +39,7 @@ static inline void *trampolineGetProcAddr(struct loader_instance *inst,
     if (!strcmp(funcName, "vkGetPhysicalDeviceImageFormatProperties"))
         return (PFN_vkVoidFunction)vkGetPhysicalDeviceImageFormatProperties;
     if (!strcmp(funcName, "vkGetPhysicalDeviceSparseImageFormatProperties"))
-        return (
-            PFN_vkVoidFunction)vkGetPhysicalDeviceSparseImageFormatProperties;
+        return (PFN_vkVoidFunction)vkGetPhysicalDeviceSparseImageFormatProperties;
     if (!strcmp(funcName, "vkGetPhysicalDeviceProperties"))
         return (PFN_vkVoidFunction)vkGetPhysicalDeviceProperties;
     if (!strcmp(funcName, "vkGetPhysicalDeviceQueueFamilyProperties"))

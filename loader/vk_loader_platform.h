@@ -50,20 +50,17 @@
 #define PATH_SEPARATOR ':'
 #define DIRECTORY_SYMBOL '/'
 
-#define VULKAN_DIR            "/vulkan/"
-#define VULKAN_ICDCONF_DIR    "icd.d"
-#define VULKAN_ICD_DIR        "icd"
+#define VULKAN_DIR "/vulkan/"
+#define VULKAN_ICDCONF_DIR "icd.d"
+#define VULKAN_ICD_DIR "icd"
 #define VULKAN_ELAYERCONF_DIR "explicit_layer.d"
 #define VULKAN_ILAYERCONF_DIR "implicit_layer.d"
-#define VULKAN_LAYER_DIR      "layer"
+#define VULKAN_LAYER_DIR "layer"
 
 #if defined(EXTRASYSCONFDIR)
-#define EXTRA_DRIVERS_SYSCONFDIR_INFO ":"                                      \
-    EXTRASYSCONFDIR VULKAN_DIR VULKAN_ICDCONF_DIR
-#define EXTRA_ELAYERS_SYSCONFDIR_INFO ":"                                      \
-    EXTRASYSCONFDIR VULKAN_DIR VULKAN_ELAYERCONF_DIR
-#define EXTRA_ILAYERS_SYSCONFDIR_INFO ":"                                      \
-    EXTRASYSCONFDIR VULKAN_DIR VULKAN_ILAYERCONF_DIR
+#define EXTRA_DRIVERS_SYSCONFDIR_INFO ":" EXTRASYSCONFDIR VULKAN_DIR VULKAN_ICDCONF_DIR
+#define EXTRA_ELAYERS_SYSCONFDIR_INFO ":" EXTRASYSCONFDIR VULKAN_DIR VULKAN_ELAYERCONF_DIR
+#define EXTRA_ILAYERS_SYSCONFDIR_INFO ":" EXTRASYSCONFDIR VULKAN_DIR VULKAN_ILAYERCONF_DIR
 #else
 #define EXTRA_DRIVERS_SYSCONFDIR_INFO
 #define EXTRA_ELAYERS_SYSCONFDIR_INFO
@@ -71,33 +68,24 @@
 #endif
 
 #if defined(EXTRADATADIR)
-#define EXTRA_DRIVERS_DATADIR_INFO ":"                                         \
-    EXTRADATADIR VULKAN_DIR VULKAN_ICDCONF_DIR
-#define EXTRA_ELAYERS_DATADIR_INFO ":"                                         \
-    EXTRADATADIR VULKAN_DIR VULKAN_ELAYERCONF_DIR
-#define EXTRA_ILAYERS_DATADIR_INFO ":"                                         \
-    EXTRADATADIR VULKAN_DIR VULKAN_ILAYERCONF_DIR
+#define EXTRA_DRIVERS_DATADIR_INFO ":" EXTRADATADIR VULKAN_DIR VULKAN_ICDCONF_DIR
+#define EXTRA_ELAYERS_DATADIR_INFO ":" EXTRADATADIR VULKAN_DIR VULKAN_ELAYERCONF_DIR
+#define EXTRA_ILAYERS_DATADIR_INFO ":" EXTRADATADIR VULKAN_DIR VULKAN_ILAYERCONF_DIR
 #else
 #define EXTRA_DRIVERS_DATADIR_INFO
 #define EXTRA_ELAYERS_DATADIR_INFO
 #define EXTRA_ILAYERS_DATADIR_INFO
 #endif
 
-#define DEFAULT_VK_DRIVERS_INFO                                                \
-    SYSCONFDIR   VULKAN_DIR VULKAN_ICDCONF_DIR ":"                             \
-    DATADIR      VULKAN_DIR VULKAN_ICDCONF_DIR                                 \
-    EXTRA_DRIVERS_SYSCONFDIR_INFO                                              \
-    EXTRA_DRIVERS_DATADIR_INFO
-#define DEFAULT_VK_ELAYERS_INFO                                                \
-    SYSCONFDIR   VULKAN_DIR VULKAN_ELAYERCONF_DIR ":"                          \
-    DATADIR      VULKAN_DIR VULKAN_ELAYERCONF_DIR                              \
-    EXTRA_ELAYERS_SYSCONFDIR_INFO                                              \
-    EXTRA_ELAYERS_DATADIR_INFO
-#define DEFAULT_VK_ILAYERS_INFO                                                \
-    SYSCONFDIR   VULKAN_DIR VULKAN_ILAYERCONF_DIR ":"                          \
-    DATADIR      VULKAN_DIR VULKAN_ILAYERCONF_DIR                              \
-    EXTRA_ILAYERS_SYSCONFDIR_INFO                                              \
-    EXTRA_ILAYERS_DATADIR_INFO
+#define DEFAULT_VK_DRIVERS_INFO                                                                                                    \
+    SYSCONFDIR VULKAN_DIR VULKAN_ICDCONF_DIR                                                                                       \
+        ":" DATADIR VULKAN_DIR VULKAN_ICDCONF_DIR EXTRA_DRIVERS_SYSCONFDIR_INFO EXTRA_DRIVERS_DATADIR_INFO
+#define DEFAULT_VK_ELAYERS_INFO                                                                                                    \
+    SYSCONFDIR VULKAN_DIR VULKAN_ELAYERCONF_DIR                                                                                    \
+        ":" DATADIR VULKAN_DIR VULKAN_ELAYERCONF_DIR EXTRA_ELAYERS_SYSCONFDIR_INFO EXTRA_ELAYERS_DATADIR_INFO
+#define DEFAULT_VK_ILAYERS_INFO                                                                                                    \
+    SYSCONFDIR VULKAN_DIR VULKAN_ILAYERCONF_DIR                                                                                    \
+        ":" DATADIR VULKAN_DIR VULKAN_ILAYERCONF_DIR EXTRA_ILAYERS_SYSCONFDIR_INFO EXTRA_ILAYERS_DATADIR_INFO
 
 #define DEFAULT_VK_DRIVERS_PATH ""
 #if !defined(DEFAULT_VK_LAYERS_PATH)
@@ -131,44 +119,28 @@ static inline bool loader_platform_is_path_absolute(const char *path) {
         return false;
 }
 
-static inline char *loader_platform_dirname(char *path) {
-    return dirname(path);
-}
+static inline char *loader_platform_dirname(char *path) { return dirname(path); }
 
 // Dynamic Loading of libraries:
 typedef void *loader_platform_dl_handle;
-static inline loader_platform_dl_handle
-loader_platform_open_library(const char *libPath) {
+static inline loader_platform_dl_handle loader_platform_open_library(const char *libPath) {
     return dlopen(libPath, RTLD_LAZY | RTLD_LOCAL);
 }
-static inline const char *
-loader_platform_open_library_error(const char *libPath) {
-    return dlerror();
-}
-static inline void
-loader_platform_close_library(loader_platform_dl_handle library) {
-    dlclose(library);
-}
-static inline void *
-loader_platform_get_proc_address(loader_platform_dl_handle library,
-                                 const char *name) {
+static inline const char *loader_platform_open_library_error(const char *libPath) { return dlerror(); }
+static inline void loader_platform_close_library(loader_platform_dl_handle library) { dlclose(library); }
+static inline void *loader_platform_get_proc_address(loader_platform_dl_handle library, const char *name) {
     assert(library);
     assert(name);
     return dlsym(library, name);
 }
-static inline const char *
-loader_platform_get_proc_address_error(const char *name) {
-    return dlerror();
-}
+static inline const char *loader_platform_get_proc_address_error(const char *name) { return dlerror(); }
 
 // Threads:
 typedef pthread_t loader_platform_thread;
 #define THREAD_LOCAL_DECL __thread
-#define LOADER_PLATFORM_THREAD_ONCE_DECLARATION(var)                           \
-    pthread_once_t var = PTHREAD_ONCE_INIT;
+#define LOADER_PLATFORM_THREAD_ONCE_DECLARATION(var) pthread_once_t var = PTHREAD_ONCE_INIT;
 #define LOADER_PLATFORM_THREAD_ONCE_DEFINITION(var) pthread_once_t var;
-static inline void loader_platform_thread_once(pthread_once_t *ctl,
-                                               void (*func)(void)) {
+static inline void loader_platform_thread_once(pthread_once_t *ctl, void (*func)(void)) {
     assert(func != NULL);
     assert(ctl != NULL);
     pthread_once(ctl, func);
@@ -176,42 +148,20 @@ static inline void loader_platform_thread_once(pthread_once_t *ctl,
 
 // Thread IDs:
 typedef pthread_t loader_platform_thread_id;
-static inline loader_platform_thread_id loader_platform_get_thread_id() {
-    return pthread_self();
-}
+static inline loader_platform_thread_id loader_platform_get_thread_id() { return pthread_self(); }
 
 // Thread mutex:
 typedef pthread_mutex_t loader_platform_thread_mutex;
-static inline void
-loader_platform_thread_create_mutex(loader_platform_thread_mutex *pMutex) {
-    pthread_mutex_init(pMutex, NULL);
-}
-static inline void
-loader_platform_thread_lock_mutex(loader_platform_thread_mutex *pMutex) {
-    pthread_mutex_lock(pMutex);
-}
-static inline void
-loader_platform_thread_unlock_mutex(loader_platform_thread_mutex *pMutex) {
-    pthread_mutex_unlock(pMutex);
-}
-static inline void
-loader_platform_thread_delete_mutex(loader_platform_thread_mutex *pMutex) {
-    pthread_mutex_destroy(pMutex);
-}
+static inline void loader_platform_thread_create_mutex(loader_platform_thread_mutex *pMutex) { pthread_mutex_init(pMutex, NULL); }
+static inline void loader_platform_thread_lock_mutex(loader_platform_thread_mutex *pMutex) { pthread_mutex_lock(pMutex); }
+static inline void loader_platform_thread_unlock_mutex(loader_platform_thread_mutex *pMutex) { pthread_mutex_unlock(pMutex); }
+static inline void loader_platform_thread_delete_mutex(loader_platform_thread_mutex *pMutex) { pthread_mutex_destroy(pMutex); }
 typedef pthread_cond_t loader_platform_thread_cond;
-static inline void
-loader_platform_thread_init_cond(loader_platform_thread_cond *pCond) {
-    pthread_cond_init(pCond, NULL);
-}
-static inline void
-loader_platform_thread_cond_wait(loader_platform_thread_cond *pCond,
-                                 loader_platform_thread_mutex *pMutex) {
+static inline void loader_platform_thread_init_cond(loader_platform_thread_cond *pCond) { pthread_cond_init(pCond, NULL); }
+static inline void loader_platform_thread_cond_wait(loader_platform_thread_cond *pCond, loader_platform_thread_mutex *pMutex) {
     pthread_cond_wait(pCond, pMutex);
 }
-static inline void
-loader_platform_thread_cond_broadcast(loader_platform_thread_cond *pCond) {
-    pthread_cond_broadcast(pCond);
-}
+static inline void loader_platform_thread_cond_broadcast(loader_platform_thread_cond *pCond) { pthread_cond_broadcast(pCond); }
 
 #define loader_stack_alloc(size) alloca(size)
 
@@ -264,9 +214,7 @@ static bool loader_platform_file_exists(const char *path) {
         return true;
 }
 
-static bool loader_platform_is_path_absolute(const char *path) {
-    return !PathIsRelative(path);
-}
+static bool loader_platform_is_path_absolute(const char *path) { return !PathIsRelative(path); }
 
 // WIN32 runtime doesn't have dirname().
 static inline char *loader_platform_dirname(char *path) {
@@ -315,40 +263,30 @@ static char *loader_platform_basename(char *pathname) {
 
 // Dynamic Loading:
 typedef HMODULE loader_platform_dl_handle;
-static loader_platform_dl_handle
-loader_platform_open_library(const char *libPath) {
-    return LoadLibrary(libPath);
-}
+static loader_platform_dl_handle loader_platform_open_library(const char *libPath) { return LoadLibrary(libPath); }
 static char *loader_platform_open_library_error(const char *libPath) {
     static char errorMsg[164];
-    (void)snprintf(errorMsg, 163, "Failed to open dynamic library \"%s\"",
-                   libPath);
+    (void)snprintf(errorMsg, 163, "Failed to open dynamic library \"%s\"", libPath);
     return errorMsg;
 }
-static void loader_platform_close_library(loader_platform_dl_handle library) {
-    FreeLibrary(library);
-}
-static void *loader_platform_get_proc_address(loader_platform_dl_handle library,
-                                              const char *name) {
+static void loader_platform_close_library(loader_platform_dl_handle library) { FreeLibrary(library); }
+static void *loader_platform_get_proc_address(loader_platform_dl_handle library, const char *name) {
     assert(library);
     assert(name);
     return GetProcAddress(library, name);
 }
 static char *loader_platform_get_proc_address_error(const char *name) {
     static char errorMsg[120];
-    (void)snprintf(errorMsg, 119,
-                   "Failed to find function \"%s\" in dynamic library", name);
+    (void)snprintf(errorMsg, 119, "Failed to find function \"%s\" in dynamic library", name);
     return errorMsg;
 }
 
 // Threads:
 typedef HANDLE loader_platform_thread;
 #define THREAD_LOCAL_DECL __declspec(thread)
-#define LOADER_PLATFORM_THREAD_ONCE_DECLARATION(var)                           \
-    INIT_ONCE var = INIT_ONCE_STATIC_INIT;
+#define LOADER_PLATFORM_THREAD_ONCE_DECLARATION(var) INIT_ONCE var = INIT_ONCE_STATIC_INIT;
 #define LOADER_PLATFORM_THREAD_ONCE_DEFINITION(var) INIT_ONCE var;
-static BOOL CALLBACK
-InitFuncWrapper(PINIT_ONCE InitOnce, PVOID Parameter, PVOID *Context) {
+static BOOL CALLBACK InitFuncWrapper(PINIT_ONCE InitOnce, PVOID Parameter, PVOID *Context) {
     void (*func)(void) = (void (*)(void))Parameter;
     func();
     return TRUE;
@@ -362,46 +300,23 @@ static void loader_platform_thread_once(void *ctl, void (*func)(void)) {
 
 // Thread IDs:
 typedef DWORD loader_platform_thread_id;
-static loader_platform_thread_id loader_platform_get_thread_id() {
-    return GetCurrentThreadId();
-}
+static loader_platform_thread_id loader_platform_get_thread_id() { return GetCurrentThreadId(); }
 
 // Thread mutex:
 typedef CRITICAL_SECTION loader_platform_thread_mutex;
-static void
-loader_platform_thread_create_mutex(loader_platform_thread_mutex *pMutex) {
-    InitializeCriticalSection(pMutex);
-}
-static void
-loader_platform_thread_lock_mutex(loader_platform_thread_mutex *pMutex) {
-    EnterCriticalSection(pMutex);
-}
-static void
-loader_platform_thread_unlock_mutex(loader_platform_thread_mutex *pMutex) {
-    LeaveCriticalSection(pMutex);
-}
-static void
-loader_platform_thread_delete_mutex(loader_platform_thread_mutex *pMutex) {
-    DeleteCriticalSection(pMutex);
-}
+static void loader_platform_thread_create_mutex(loader_platform_thread_mutex *pMutex) { InitializeCriticalSection(pMutex); }
+static void loader_platform_thread_lock_mutex(loader_platform_thread_mutex *pMutex) { EnterCriticalSection(pMutex); }
+static void loader_platform_thread_unlock_mutex(loader_platform_thread_mutex *pMutex) { LeaveCriticalSection(pMutex); }
+static void loader_platform_thread_delete_mutex(loader_platform_thread_mutex *pMutex) { DeleteCriticalSection(pMutex); }
 typedef CONDITION_VARIABLE loader_platform_thread_cond;
-static void
-loader_platform_thread_init_cond(loader_platform_thread_cond *pCond) {
-    InitializeConditionVariable(pCond);
-}
-static void
-loader_platform_thread_cond_wait(loader_platform_thread_cond *pCond,
-                                 loader_platform_thread_mutex *pMutex) {
+static void loader_platform_thread_init_cond(loader_platform_thread_cond *pCond) { InitializeConditionVariable(pCond); }
+static void loader_platform_thread_cond_wait(loader_platform_thread_cond *pCond, loader_platform_thread_mutex *pMutex) {
     SleepConditionVariableCS(pCond, pMutex, INFINITE);
 }
-static void
-loader_platform_thread_cond_broadcast(loader_platform_thread_cond *pCond) {
-    WakeAllConditionVariable(pCond);
-}
+static void loader_platform_thread_cond_broadcast(loader_platform_thread_cond *pCond) { WakeAllConditionVariable(pCond); }
 
 // Windows Registry:
-char *loader_get_registry_string(const HKEY hive, const LPCTSTR sub_key,
-                                 const char *value);
+char *loader_get_registry_string(const HKEY hive, const LPCTSTR sub_key, const char *value);
 
 #define loader_stack_alloc(size) _alloca(size)
 #else // defined(_WIN32)
@@ -419,6 +334,4 @@ char *loader_get_registry_string(const HKEY hive, const LPCTSTR sub_key,
 
 // returns true if the given string appears to be a relative or absolute
 // path, as opposed to a bare filename.
-static inline bool loader_platform_is_path(const char *path) {
-    return strchr(path, DIRECTORY_SYMBOL) != NULL;
-}
+static inline bool loader_platform_is_path(const char *path) { return strchr(path, DIRECTORY_SYMBOL) != NULL; }

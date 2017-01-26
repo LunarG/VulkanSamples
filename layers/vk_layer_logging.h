@@ -315,11 +315,11 @@ static inline int vasprintf(char **strp, char const *fmt, va_list ap) {
     *strp = nullptr;
     int size = _vscprintf(fmt, ap);
     if (size >= 0) {
-        *strp = (char *)malloc(size+1);
+        *strp = (char *)malloc(size + 1);
         if (!*strp) {
             return -1;
         }
-        _vsnprintf(*strp, size+1, fmt, ap);
+        _vsnprintf(*strp, size + 1, fmt, ap);
     }
     return size;
 }

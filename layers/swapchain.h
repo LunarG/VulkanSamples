@@ -51,27 +51,27 @@ enum SWAPCHAIN_ERROR {
     SWAPCHAIN_CREATE_SWAP_BAD_SHARING_MODE,     // Called vkCreateSwapchainKHR() with a non-supported imageSharingMode
     SWAPCHAIN_CREATE_SWAP_BAD_SHARING_VALUES,   // Called vkCreateSwapchainKHR() with bad values when imageSharingMode is
                                                 // VK_SHARING_MODE_CONCURRENT
-    SWAPCHAIN_BAD_BOOL,                 // VkBool32 that doesn't have value of VK_TRUE or VK_FALSE (e.g. is a non-zero form of true)
-    SWAPCHAIN_PRIOR_COUNT,              // Query must be called first to get value of pCount, then called second time
-    SWAPCHAIN_INVALID_COUNT,            // Second time a query called, the pCount value didn't match first time
-    SWAPCHAIN_WRONG_STYPE,              // The sType for a struct has the wrong value
-    SWAPCHAIN_WRONG_NEXT,               // The pNext for a struct is not NULL
-    SWAPCHAIN_ZERO_VALUE,               // A value should be non-zero
+    SWAPCHAIN_BAD_BOOL,      // VkBool32 that doesn't have value of VK_TRUE or VK_FALSE (e.g. is a non-zero form of true)
+    SWAPCHAIN_PRIOR_COUNT,   // Query must be called first to get value of pCount, then called second time
+    SWAPCHAIN_INVALID_COUNT, // Second time a query called, the pCount value didn't match first time
+    SWAPCHAIN_WRONG_STYPE,   // The sType for a struct has the wrong value
+    SWAPCHAIN_WRONG_NEXT,    // The pNext for a struct is not NULL
+    SWAPCHAIN_ZERO_VALUE,    // A value should be non-zero
     SWAPCHAIN_DID_NOT_QUERY_QUEUE_FAMILIES,     // A function using a queueFamilyIndex was called before
                                                 // vkGetPhysicalDeviceQueueFamilyProperties() was called
     SWAPCHAIN_QUEUE_FAMILY_INDEX_TOO_LARGE,     // A queueFamilyIndex value is not less than pQueueFamilyPropertyCount returned by
                                                 // vkGetPhysicalDeviceQueueFamilyProperties()
     SWAPCHAIN_SURFACE_NOT_SUPPORTED_WITH_QUEUE, // A surface is not supported by a given queueFamilyIndex, as seen by
                                                 // vkGetPhysicalDeviceSurfaceSupportKHR()
-    SWAPCHAIN_GET_SUPPORTED_DISPLAYS_WITHOUT_QUERY,     // vkGetDisplayPlaneSupportedDisplaysKHR should be called after querying 
-                                                        // device display plane properties
-    SWAPCHAIN_PLANE_INDEX_TOO_LARGE,    // a planeIndex value is larger than what vkGetDisplayPlaneSupportedDisplaysKHR returns
+    SWAPCHAIN_GET_SUPPORTED_DISPLAYS_WITHOUT_QUERY, // vkGetDisplayPlaneSupportedDisplaysKHR should be called after querying
+                                                    // device display plane properties
+    SWAPCHAIN_PLANE_INDEX_TOO_LARGE, // a planeIndex value is larger than what vkGetDisplayPlaneSupportedDisplaysKHR returns
 };
 
 // The following is for logging error messages:
-const char * swapchain_layer_name = "Swapchain";
+const char *swapchain_layer_name = "Swapchain";
 
-#define LAYER_NAME (char *) "Swapchain"
+#define LAYER_NAME (char *)"Swapchain"
 
 // NOTE: The following struct's/typedef's are for keeping track of
 // info that is used for validating the WSI extensions.

@@ -75,52 +75,47 @@
 
 #ifdef _WIN32
 bool in_callback = false;
-#define ERR_EXIT(err_msg, err_class)                                           \
-    do {                                                                       \
-        if (!demo->suppress_popups)                                            \
-            MessageBox(NULL, err_msg, err_class, MB_OK);                       \
-        exit(1);                                                               \
+#define ERR_EXIT(err_msg, err_class)                                                                                               \
+    do {                                                                                                                           \
+        if (!demo->suppress_popups)                                                                                                \
+            MessageBox(NULL, err_msg, err_class, MB_OK);                                                                           \
+        exit(1);                                                                                                                   \
     } while (0)
 
 #elif defined __ANDROID__
 #include <android/log.h>
-#define ERR_EXIT(err_msg, err_class)                                           \
-    do {                                                                       \
-        ((void)__android_log_print(ANDROID_LOG_INFO, "Cube", err_msg));        \
-        exit(1);                                                               \
+#define ERR_EXIT(err_msg, err_class)                                                                                               \
+    do {                                                                                                                           \
+        ((void)__android_log_print(ANDROID_LOG_INFO, "Cube", err_msg));                                                            \
+        exit(1);                                                                                                                   \
     } while (0)
 #else
-#define ERR_EXIT(err_msg, err_class)                                           \
-    do {                                                                       \
-        printf(err_msg);                                                       \
-        fflush(stdout);                                                        \
-        exit(1);                                                               \
+#define ERR_EXIT(err_msg, err_class)                                                                                               \
+    do {                                                                                                                           \
+        printf(err_msg);                                                                                                           \
+        fflush(stdout);                                                                                                            \
+        exit(1);                                                                                                                   \
     } while (0)
 #endif
 
-#define GET_INSTANCE_PROC_ADDR(inst, entrypoint)                               \
-    {                                                                          \
-        demo->fp##entrypoint =                                                 \
-            (PFN_vk##entrypoint)vkGetInstanceProcAddr(inst, "vk" #entrypoint); \
-        if (demo->fp##entrypoint == NULL) {                                    \
-            ERR_EXIT("vkGetInstanceProcAddr failed to find vk" #entrypoint,    \
-                     "vkGetInstanceProcAddr Failure");                         \
-        }                                                                      \
+#define GET_INSTANCE_PROC_ADDR(inst, entrypoint)                                                                                   \
+    {                                                                                                                              \
+        demo->fp##entrypoint = (PFN_vk##entrypoint)vkGetInstanceProcAddr(inst, "vk" #entrypoint);                                  \
+        if (demo->fp##entrypoint == NULL) {                                                                                        \
+            ERR_EXIT("vkGetInstanceProcAddr failed to find vk" #entrypoint, "vkGetInstanceProcAddr Failure");                      \
+        }                                                                                                                          \
     }
 
 static PFN_vkGetDeviceProcAddr g_gdpa = NULL;
 
-#define GET_DEVICE_PROC_ADDR(dev, entrypoint)                                  \
-    {                                                                          \
-        if (!g_gdpa)                                                           \
-            g_gdpa = (PFN_vkGetDeviceProcAddr)vkGetInstanceProcAddr(           \
-                demo->inst, "vkGetDeviceProcAddr");                            \
-        demo->fp##entrypoint =                                                 \
-            (PFN_vk##entrypoint)g_gdpa(dev, "vk" #entrypoint);                 \
-        if (demo->fp##entrypoint == NULL) {                                    \
-            ERR_EXIT("vkGetDeviceProcAddr failed to find vk" #entrypoint,      \
-                     "vkGetDeviceProcAddr Failure");                           \
-        }                                                                      \
+#define GET_DEVICE_PROC_ADDR(dev, entrypoint)                                                                                      \
+    {                                                                                                                              \
+        if (!g_gdpa)                                                                                                               \
+            g_gdpa = (PFN_vkGetDeviceProcAddr)vkGetInstanceProcAddr(demo->inst, "vkGetDeviceProcAddr");                            \
+        demo->fp##entrypoint = (PFN_vk##entrypoint)g_gdpa(dev, "vk" #entrypoint);                                                  \
+        if (demo->fp##entrypoint == NULL) {                                                                                        \
+            ERR_EXIT("vkGetDeviceProcAddr failed to find vk" #entrypoint, "vkGetDeviceProcAddr Failure");                          \
+        }                                                                                                                          \
     }
 
 /*
@@ -260,11 +255,9 @@ void dumpVec4(const char *note, vec4 vector) {
     fflush(stdout);
 }
 
-VKAPI_ATTR VkBool32 VKAPI_CALL
-BreakCallback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
-              uint64_t srcObject, size_t location, int32_t msgCode,
-              const char *pLayerPrefix, const char *pMsg,
-              void *pUserData) {
+VKAPI_ATTR VkBool32 VKAPI_CALL BreakCallback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType, uint64_t srcObject,
+                                             size_t location, int32_t msgCode, const char *pLayerPrefix, const char *pMsg,
+                                             void *pUserData) {
 #ifndef WIN32
     raise(SIGTRAP);
 #else
@@ -294,11 +287,11 @@ struct demo {
     HWND window;                 // hWnd - window handle
     POINT minsize;               // minimum window size
 #elif defined(VK_USE_PLATFORM_XLIB_KHR)
-    Display* display;
+    Display *display;
     Window xlib_window;
     Atom xlib_wm_delete_window;
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
-    Display* display;
+    Display *display;
     xcb_connection_t *connection;
     xcb_screen_t *screen;
     xcb_window_t xcb_window;
@@ -312,7 +305,7 @@ struct demo {
     struct wl_shell_surface *shell_surface;
 #elif defined(VK_USE_PLATFORM_MIR_KHR)
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
-    ANativeWindow* window;
+    ANativeWindow *window;
 #endif
     VkSurfaceKHR surface;
     bool prepared;
@@ -342,14 +335,10 @@ struct demo {
     VkFormat format;
     VkColorSpaceKHR color_space;
 
-    PFN_vkGetPhysicalDeviceSurfaceSupportKHR
-        fpGetPhysicalDeviceSurfaceSupportKHR;
-    PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR
-        fpGetPhysicalDeviceSurfaceCapabilitiesKHR;
-    PFN_vkGetPhysicalDeviceSurfaceFormatsKHR
-        fpGetPhysicalDeviceSurfaceFormatsKHR;
-    PFN_vkGetPhysicalDeviceSurfacePresentModesKHR
-        fpGetPhysicalDeviceSurfacePresentModesKHR;
+    PFN_vkGetPhysicalDeviceSurfaceSupportKHR fpGetPhysicalDeviceSurfaceSupportKHR;
+    PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR fpGetPhysicalDeviceSurfaceCapabilitiesKHR;
+    PFN_vkGetPhysicalDeviceSurfaceFormatsKHR fpGetPhysicalDeviceSurfaceFormatsKHR;
+    PFN_vkGetPhysicalDeviceSurfacePresentModesKHR fpGetPhysicalDeviceSurfacePresentModesKHR;
     PFN_vkCreateSwapchainKHR fpCreateSwapchainKHR;
     PFN_vkDestroySwapchainKHR fpDestroySwapchainKHR;
     PFN_vkGetSwapchainImagesKHR fpGetSwapchainImagesKHR;
@@ -412,10 +401,8 @@ struct demo {
     uint32_t queue_family_count;
 };
 
-VKAPI_ATTR VkBool32 VKAPI_CALL
-dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
-    uint64_t srcObject, size_t location, int32_t msgCode,
-    const char *pLayerPrefix, const char *pMsg, void *pUserData) {
+VKAPI_ATTR VkBool32 VKAPI_CALL dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType, uint64_t srcObject, size_t location,
+                                       int32_t msgCode, const char *pLayerPrefix, const char *pMsg, void *pUserData) {
 
     // clang-format off
     char *message = (char *)malloc(strlen(pMsg) + 100);

@@ -92,7 +92,6 @@ template <> struct hash<VK_OBJECT> {
 };
 }
 
-
 // Flags describing requirements imposed by the pipeline on a descriptor. These
 // can't be checked at pipeline creation time as they depend on the Image or
 // ImageView bound.
@@ -226,8 +225,8 @@ class IMAGE_STATE : public BINDABLE {
   public:
     VkImage image;
     VkImageCreateInfo createInfo;
-    bool valid; // If this is a swapchain image backing memory track valid here as it doesn't have DEVICE_MEM_INFO
-    bool acquired;  // If this is a swapchain image, has it been acquired by the app.
+    bool valid;    // If this is a swapchain image backing memory track valid here as it doesn't have DEVICE_MEM_INFO
+    bool acquired; // If this is a swapchain image, has it been acquired by the app.
     IMAGE_STATE(VkImage img, const VkImageCreateInfo *pCreateInfo)
         : image(img), createInfo(*pCreateInfo), valid(false), acquired(false) {
         if (createInfo.flags & VK_IMAGE_CREATE_SPARSE_BINDING_BIT) {
@@ -253,7 +252,7 @@ struct MemRange {
 
 struct MEMORY_RANGE {
     uint64_t handle;
-    bool image; // True for image, false for buffer
+    bool image;  // True for image, false for buffer
     bool linear; // True for buffers and linear images
     bool valid;  // True if this range is know to be valid
     VkDeviceMemory memory;
@@ -266,22 +265,22 @@ struct MEMORY_RANGE {
 
 // Data struct for tracking memory object
 struct DEVICE_MEM_INFO : public BASE_NODE {
-    void *object; // Dispatchable object used to create this memory (device of swapchain)
+    void *object;      // Dispatchable object used to create this memory (device of swapchain)
     bool global_valid; // If allocation is mapped, set to "true" to be picked up by subsequently bound ranges
     VkDeviceMemory mem;
     VkMemoryAllocateInfo alloc_info;
-    std::unordered_set<VK_OBJECT> obj_bindings;         // objects bound to this memory
-    std::unordered_map<uint64_t, MEMORY_RANGE> bound_ranges;     // Map of object to its binding range
+    std::unordered_set<VK_OBJECT> obj_bindings;              // objects bound to this memory
+    std::unordered_map<uint64_t, MEMORY_RANGE> bound_ranges; // Map of object to its binding range
     // Convenience vectors image/buff handles to speed up iterating over images or buffers independently
     std::unordered_set<uint64_t> bound_images;
     std::unordered_set<uint64_t> bound_buffers;
 
     MemRange mem_range;
-    void *shadow_copy_base;     // Base of layer's allocation for guard band, data, and alignment space
-    void *shadow_copy;          // Pointer to start of guard-band data before mapped region
-    uint64_t shadow_pad_size;   // Size of the guard-band data before and after actual data. It MUST be a
-                                // multiple of limits.minMemoryMapAlignment
-    void *p_driver_data;        // Pointer to application's actual memory
+    void *shadow_copy_base;   // Base of layer's allocation for guard band, data, and alignment space
+    void *shadow_copy;        // Pointer to start of guard-band data before mapped region
+    uint64_t shadow_pad_size; // Size of the guard-band data before and after actual data. It MUST be a
+                              // multiple of limits.minMemoryMapAlignment
+    void *p_driver_data;      // Pointer to application's actual memory
 
     DEVICE_MEM_INFO(void *disp_object, const VkDeviceMemory in_mem, const VkMemoryAllocateInfo *p_alloc_info)
         : object(disp_object), global_valid(false), mem(in_mem), alloc_info(*p_alloc_info), mem_range{}, shadow_copy_base(0),
@@ -431,7 +430,9 @@ template <> struct hash<QueryObject> {
     }
 };
 }
-struct DRAW_DATA { std::vector<VkBuffer> buffers; };
+struct DRAW_DATA {
+    std::vector<VkBuffer> buffers;
+};
 
 struct ImageSubresourcePair {
     VkImage image;
@@ -631,7 +632,8 @@ struct SEMAPHORE_WAIT {
 };
 
 struct CB_SUBMISSION {
-    CB_SUBMISSION(std::vector<VkCommandBuffer> const &cbs, std::vector<SEMAPHORE_WAIT> const &waitSemaphores, std::vector<VkSemaphore> const &signalSemaphores, VkFence fence)
+    CB_SUBMISSION(std::vector<VkCommandBuffer> const &cbs, std::vector<SEMAPHORE_WAIT> const &waitSemaphores,
+                  std::vector<VkSemaphore> const &signalSemaphores, VkFence fence)
         : cbs(cbs), waitSemaphores(waitSemaphores), signalSemaphores(signalSemaphores), fence(fence) {}
 
     std::vector<VkCommandBuffer> cbs;

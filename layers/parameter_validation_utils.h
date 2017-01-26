@@ -35,32 +35,32 @@
 namespace parameter_validation {
 
 enum ErrorCode {
-    NONE,                 // Used for INFO & other non-error messages
-    INVALID_USAGE,        // The value of a parameter is not consistent
-                          // with the valid usage criteria defined in
-                          // the Vulkan specification.
-    INVALID_STRUCT_STYPE, // The sType field of a Vulkan structure does
-                          // not contain the value expected for a structure
-                          // of that type.
-    INVALID_STRUCT_PNEXT, // The pNext field of a Vulkan structure references
-                          // a value that is not compatible with a structure of
-                          // that type or is not NULL when a structure of that
-                          // type has no compatible pNext values.
-    REQUIRED_PARAMETER,   // A required parameter was specified as 0 or NULL.
-    RESERVED_PARAMETER,   // A parameter reserved for future use was not
-                          // specified as 0 or NULL.
-    UNRECOGNIZED_VALUE,   // A Vulkan enumeration, VkFlags, or VkBool32 parameter
-                          // contains a value that is not recognized as valid for
-                          // that type.
-    DEVICE_LIMIT,         // A specified parameter exceeds the limits returned
-                          // by the physical device
-    DEVICE_FEATURE,       // Use of a requested feature is not supported by
-                          // the device
-    FAILURE_RETURN_CODE,  // A Vulkan return code indicating a failure condition
-                          // was encountered.
-    EXTENSION_NOT_ENABLED,// An extension entrypoint was called, but the required
-                          // extension was not enabled at CreateInstance or
-                          // CreateDevice time.
+    NONE,                  // Used for INFO & other non-error messages
+    INVALID_USAGE,         // The value of a parameter is not consistent
+                           // with the valid usage criteria defined in
+                           // the Vulkan specification.
+    INVALID_STRUCT_STYPE,  // The sType field of a Vulkan structure does
+                           // not contain the value expected for a structure
+                           // of that type.
+    INVALID_STRUCT_PNEXT,  // The pNext field of a Vulkan structure references
+                           // a value that is not compatible with a structure of
+                           // that type or is not NULL when a structure of that
+                           // type has no compatible pNext values.
+    REQUIRED_PARAMETER,    // A required parameter was specified as 0 or NULL.
+    RESERVED_PARAMETER,    // A parameter reserved for future use was not
+                           // specified as 0 or NULL.
+    UNRECOGNIZED_VALUE,    // A Vulkan enumeration, VkFlags, or VkBool32 parameter
+                           // contains a value that is not recognized as valid for
+                           // that type.
+    DEVICE_LIMIT,          // A specified parameter exceeds the limits returned
+                           // by the physical device
+    DEVICE_FEATURE,        // Use of a requested feature is not supported by
+                           // the device
+    FAILURE_RETURN_CODE,   // A Vulkan return code indicating a failure condition
+                           // was encountered.
+    EXTENSION_NOT_ENABLED, // An extension entrypoint was called, but the required
+                           // extension was not enabled at CreateInstance or
+                           // CreateDevice time.
 };
 
 struct GenericHeader {
@@ -186,15 +186,15 @@ bool validate_array(debug_report_data *report_data, const char *apiName, const P
     // Count parameters not tagged as optional cannot be 0
     if (countRequired && (count == 0)) {
         skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                            REQUIRED_PARAMETER, LayerName, "%s: parameter %s must be greater than 0", apiName,
-                            countName.get_name().c_str());
+                             REQUIRED_PARAMETER, LayerName, "%s: parameter %s must be greater than 0", apiName,
+                             countName.get_name().c_str());
     }
 
     // Array parameters not tagged as optional cannot be NULL, unless the count is 0
     if ((array == NULL) && arrayRequired && (count != 0)) {
         skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                            REQUIRED_PARAMETER, LayerName, "%s: required parameter %s specified as NULL", apiName,
-                            arrayName.get_name().c_str());
+                             REQUIRED_PARAMETER, LayerName, "%s: required parameter %s specified as NULL", apiName,
+                             arrayName.get_name().c_str());
     }
 
     return skip_call;
@@ -232,8 +232,7 @@ bool validate_array(debug_report_data *report_data, const char *apiName, const P
                                  REQUIRED_PARAMETER, LayerName, "%s: required parameter %s specified as NULL", apiName,
                                  countName.get_name().c_str());
         }
-    }
-    else {
+    } else {
         skip_call |= validate_array(report_data, apiName, countName, arrayName, (*count), array, countValueRequired, arrayRequired);
     }
 

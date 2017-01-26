@@ -23,8 +23,7 @@ void Game::print_stats() {
     // Output frame count and measured elapsed time
     auto now = std::chrono::system_clock::now();
     auto elapsed = now - start_time;
-    auto elapsed_millis =
-        std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
+    auto elapsed_millis = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
     std::stringstream ss;
     ss << "frames:" << frame_count << ", elapsedms:" << elapsed_millis;
     shell_->log(Shell::LogPriority::LOG_INFO, ss.str().c_str());

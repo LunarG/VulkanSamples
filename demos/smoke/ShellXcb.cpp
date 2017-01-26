@@ -26,19 +26,12 @@
 namespace {
 
 class PosixTimer {
-public:
-    PosixTimer()
-    {
-        reset();
-    }
+  public:
+    PosixTimer() { reset(); }
 
-    void reset()
-    {
-        clock_gettime(CLOCK_MONOTONIC, &start_);
-    }
+    void reset() { clock_gettime(CLOCK_MONOTONIC, &start_); }
 
-    double get() const
-    {
+    double get() const {
         struct timespec now;
         clock_gettime(CLOCK_MONOTONIC, &now);
 
@@ -58,17 +51,15 @@ public:
         return static_cast<double>(s) + static_cast<double>(ns) / one_s_in_ns_d;
     }
 
-private:
+  private:
     struct timespec start_;
 };
 
-xcb_intern_atom_cookie_t intern_atom_cookie(xcb_connection_t *c, const std::string &s)
-{
+xcb_intern_atom_cookie_t intern_atom_cookie(xcb_connection_t *c, const std::string &s) {
     return xcb_intern_atom(c, false, s.size(), s.c_str());
 }
 
-xcb_atom_t intern_atom(xcb_connection_t *c, xcb_intern_atom_cookie_t cookie)
-{
+xcb_atom_t intern_atom(xcb_connection_t *c, xcb_intern_atom_cookie_t cookie) {
     xcb_atom_t atom = XCB_ATOM_NONE;
     xcb_intern_atom_reply_t *reply = xcb_intern_atom_reply(c, cookie, nullptr);
     if (reply) {
@@ -81,8 +72,7 @@ xcb_atom_t intern_atom(xcb_connection_t *c, xcb_intern_atom_cookie_t cookie)
 
 } // namespace
 
-ShellXcb::ShellXcb(Game &game) : Shell(game)
-{
+ShellXcb::ShellXcb(Game &game) : Shell(game) {
     if (game.settings().validate)
         instance_layers_.push_back("VK_LAYER_LUNARG_standard_validation");
     instance_extensions_.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
@@ -91,16 +81,14 @@ ShellXcb::ShellXcb(Game &game) : Shell(game)
     init_vk();
 }
 
-ShellXcb::~ShellXcb()
-{
+ShellXcb::~ShellXcb() {
     cleanup_vk();
     dlclose(lib_handle_);
 
     xcb_disconnect(c_);
 }
 
-void ShellXcb::init_connection()
-{
+void ShellXcb::init_connection() {
     int scr;
 
     c_ = xcb_connect(nullptr, &scr);
@@ -117,23 +105,16 @@ void ShellXcb::init_connection()
     scr_ = iter.data;
 }
 
-void ShellXcb::create_window()
-{
+void ShellXcb::create_window() {
     win_ = xcb_generate_id(c_);
 
     uint32_t value_mask, value_list[32];
     value_mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
     value_list[0] = scr_->black_pixel;
-    value_list[1] = XCB_EVENT_MASK_KEY_PRESS |
-                    XCB_EVENT_MASK_STRUCTURE_NOTIFY;
+    value_list[1] = XCB_EVENT_MASK_KEY_PRESS | XCB_EVENT_MASK_STRUCTURE_NOTIFY;
 
-    xcb_create_window(c_,
-            XCB_COPY_FROM_PARENT,
-            win_, scr_->root, 0, 0,
-            settings_.initial_width, settings_.initial_height, 0,
-            XCB_WINDOW_CLASS_INPUT_OUTPUT,
-            scr_->root_visual,
-            value_mask, value_list);
+    xcb_create_window(c_, XCB_COPY_FROM_PARENT, win_, scr_->root, 0, 0, settings_.initial_width, settings_.initial_height, 0,
+                      XCB_WINDOW_CLASS_INPUT_OUTPUT, scr_->root_visual, value_mask, value_list);
 
     xcb_intern_atom_cookie_t utf8_string_cookie = intern_atom_cookie(c_, "UTF8_STRING");
     xcb_intern_atom_cookie_t _net_wm_name_cookie = intern_atom_cookie(c_, "_NET_WM_NAME");
@@ -143,18 +124,16 @@ void ShellXcb::create_window()
     // set title
     xcb_atom_t utf8_string = intern_atom(c_, utf8_string_cookie);
     xcb_atom_t _net_wm_name = intern_atom(c_, _net_wm_name_cookie);
-    xcb_change_property(c_, XCB_PROP_MODE_REPLACE, win_, _net_wm_name,
-            utf8_string, 8, settings_.name.size(), settings_.name.c_str());
+    xcb_change_property(c_, XCB_PROP_MODE_REPLACE, win_, _net_wm_name, utf8_string, 8, settings_.name.size(),
+                        settings_.name.c_str());
 
     // advertise WM_DELETE_WINDOW
     wm_protocols_ = intern_atom(c_, wm_protocols_cookie);
     wm_delete_window_ = intern_atom(c_, wm_delete_window_cookie);
-    xcb_change_property(c_, XCB_PROP_MODE_REPLACE, win_, wm_protocols_,
-            XCB_ATOM_ATOM, 32, 1, &wm_delete_window_);
+    xcb_change_property(c_, XCB_PROP_MODE_REPLACE, win_, wm_protocols_, XCB_ATOM_ATOM, 32, 1, &wm_delete_window_);
 }
 
-PFN_vkGetInstanceProcAddr ShellXcb::load_vk()
-{
+PFN_vkGetInstanceProcAddr ShellXcb::load_vk() {
     const char filename[] = "libvulkan.so";
     void *handle, *symbol;
 
@@ -184,14 +163,11 @@ PFN_vkGetInstanceProcAddr ShellXcb::load_vk()
     return reinterpret_cast<PFN_vkGetInstanceProcAddr>(symbol);
 }
 
-bool ShellXcb::can_present(VkPhysicalDevice phy, uint32_t queue_family)
-{
-    return vk::GetPhysicalDeviceXcbPresentationSupportKHR(phy,
-            queue_family, c_, scr_->root_visual);
+bool ShellXcb::can_present(VkPhysicalDevice phy, uint32_t queue_family) {
+    return vk::GetPhysicalDeviceXcbPresentationSupportKHR(phy, queue_family, c_, scr_->root_visual);
 }
 
-VkSurfaceKHR ShellXcb::create_surface(VkInstance instance)
-{
+VkSurfaceKHR ShellXcb::create_surface(VkInstance instance) {
     VkXcbSurfaceCreateInfoKHR surface_info = {};
     surface_info.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
     surface_info.connection = c_;
@@ -203,59 +179,48 @@ VkSurfaceKHR ShellXcb::create_surface(VkInstance instance)
     return surface;
 }
 
-void ShellXcb::handle_event(const xcb_generic_event_t *ev)
-{
+void ShellXcb::handle_event(const xcb_generic_event_t *ev) {
     switch (ev->response_type & 0x7f) {
-    case XCB_CONFIGURE_NOTIFY:
-        {
-            const xcb_configure_notify_event_t *notify =
-                reinterpret_cast<const xcb_configure_notify_event_t *>(ev);
-            resize_swapchain(notify->width, notify->height);
-        }
-        break;
-    case XCB_KEY_PRESS:
-        {
-            const xcb_key_press_event_t *press =
-                reinterpret_cast<const xcb_key_press_event_t *>(ev);
-            Game::Key key;
+    case XCB_CONFIGURE_NOTIFY: {
+        const xcb_configure_notify_event_t *notify = reinterpret_cast<const xcb_configure_notify_event_t *>(ev);
+        resize_swapchain(notify->width, notify->height);
+    } break;
+    case XCB_KEY_PRESS: {
+        const xcb_key_press_event_t *press = reinterpret_cast<const xcb_key_press_event_t *>(ev);
+        Game::Key key;
 
-            // TODO translate xcb_keycode_t
-            switch (press->detail) {
-            case 9:
-                key = Game::KEY_ESC;
-                break;
-            case 111:
-                key = Game::KEY_UP;
-                break;
-            case 116:
-                key = Game::KEY_DOWN;
-                break;
-            case 65:
-                key = Game::KEY_SPACE;
-                break;
-            default:
-                key = Game::KEY_UNKNOWN;
-                break;
-            }
+        // TODO translate xcb_keycode_t
+        switch (press->detail) {
+        case 9:
+            key = Game::KEY_ESC;
+            break;
+        case 111:
+            key = Game::KEY_UP;
+            break;
+        case 116:
+            key = Game::KEY_DOWN;
+            break;
+        case 65:
+            key = Game::KEY_SPACE;
+            break;
+        default:
+            key = Game::KEY_UNKNOWN;
+            break;
+        }
 
-            game_.on_key(key);
-        }
-        break;
-    case XCB_CLIENT_MESSAGE:
-        {
-            const xcb_client_message_event_t *msg =
-                reinterpret_cast<const xcb_client_message_event_t *>(ev);
-            if (msg->type == wm_protocols_ && msg->data.data32[0] == wm_delete_window_)
-                game_.on_key(Game::KEY_SHUTDOWN);
-        }
-        break;
+        game_.on_key(key);
+    } break;
+    case XCB_CLIENT_MESSAGE: {
+        const xcb_client_message_event_t *msg = reinterpret_cast<const xcb_client_message_event_t *>(ev);
+        if (msg->type == wm_protocols_ && msg->data.data32[0] == wm_delete_window_)
+            game_.on_key(Game::KEY_SHUTDOWN);
+    } break;
     default:
         break;
     }
 }
 
-void ShellXcb::loop_wait()
-{
+void ShellXcb::loop_wait() {
     while (true) {
         xcb_generic_event_t *ev = xcb_wait_for_event(c_);
         if (!ev)
@@ -272,8 +237,7 @@ void ShellXcb::loop_wait()
     }
 }
 
-void ShellXcb::loop_poll()
-{
+void ShellXcb::loop_poll() {
     PosixTimer timer;
 
     double current_time = timer.get();
@@ -307,9 +271,8 @@ void ShellXcb::loop_poll()
         if (current_time - profile_start_time >= 5.0) {
             const double fps = profile_present_count / (current_time - profile_start_time);
             std::stringstream ss;
-            ss << profile_present_count << " presents in " <<
-                  current_time - profile_start_time << " seconds " <<
-                  "(FPS: " << fps << ")";
+            ss << profile_present_count << " presents in " << current_time - profile_start_time << " seconds "
+               << "(FPS: " << fps << ")";
             log(LOG_INFO, ss.str().c_str());
 
             profile_start_time = current_time;
@@ -318,8 +281,7 @@ void ShellXcb::loop_poll()
     }
 }
 
-void ShellXcb::run()
-{
+void ShellXcb::run() {
     create_window();
     xcb_map_window(c_, win_);
     xcb_flush(c_);

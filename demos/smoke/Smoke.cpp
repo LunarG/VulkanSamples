@@ -38,12 +38,9 @@ struct ShaderParamBlock {
 } // namespace
 
 Smoke::Smoke(const std::vector<std::string> &args)
-    : Game("Smoke", args), multithread_(true), use_push_constants_(false),
-      sim_paused_(false), sim_(5000), camera_(2.5f), frame_data_(),
-      render_pass_clear_value_({{{ 0.0f, 0.1f, 0.2f, 1.0f }}}),
-      render_pass_begin_info_(),
-      primary_cmd_begin_info_(), primary_cmd_submit_info_()
-{
+    : Game("Smoke", args), multithread_(true), use_push_constants_(false), sim_paused_(false), sim_(5000), camera_(2.5f),
+      frame_data_(), render_pass_clear_value_({{{0.0f, 0.1f, 0.2f, 1.0f}}}), render_pass_begin_info_(), primary_cmd_begin_info_(),
+      primary_cmd_submit_info_() {
     for (auto it = args.begin(); it != args.end(); ++it) {
         if (*it == "-s")
             multithread_ = false;
@@ -54,12 +51,9 @@ Smoke::Smoke(const std::vector<std::string> &args)
     init_workers();
 }
 
-Smoke::~Smoke()
-{
-}
+Smoke::~Smoke() {}
 
-void Smoke::init_workers()
-{
+void Smoke::init_workers() {
     int worker_count = std::thread::hardware_concurrency();
 
     // not enough cores
@@ -68,8 +62,7 @@ void Smoke::init_workers()
         worker_count = 1;
     }
 
-    const int object_per_worker =
-        static_cast<int>(sim_.objects().size()) / worker_count;
+    const int object_per_worker = static_cast<int>(sim_.objects().size()) / worker_count;
     int object_begin = 0, object_end = 0;
 
     workers_.reserve(worker_count);
@@ -85,8 +78,7 @@ void Smoke::init_workers()
     }
 }
 
-void Smoke::attach_shell(Shell &sh)
-{
+void Smoke::attach_shell(Shell &sh) {
     Game::attach_shell(sh);
 
     const Shell::Context &ctx = sh.context();
@@ -98,8 +90,7 @@ void Smoke::attach_shell(Shell &sh)
 
     vk::GetPhysicalDeviceProperties(physical_dev_, &physical_dev_props_);
 
-    if (use_push_constants_ &&
-        sizeof(ShaderParamBlock) > physical_dev_props_.limits.maxPushConstantsSize) {
+    if (use_push_constants_ && sizeof(ShaderParamBlock) > physical_dev_props_.limits.maxPushConstantsSize) {
         shell_->log(Shell::LOG_WARN, "cannot enable push constants");
         use_push_constants_ = false;
     }
@@ -143,8 +134,7 @@ void Smoke::attach_shell(Shell &sh)
     }
 }
 
-void Smoke::detach_shell()
-{
+void Smoke::detach_shell() {
     if (multithread_) {
         for (auto &worker : workers_)
             worker->stop();
@@ -165,8 +155,7 @@ void Smoke::detach_shell()
     Game::detach_shell();
 }
 
-void Smoke::create_render_pass()
-{
+void Smoke::create_render_pass() {
     VkAttachmentDescription attachment = {};
     attachment.format = format_;
     attachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -190,16 +179,14 @@ void Smoke::create_render_pass()
     subpass_deps[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
     subpass_deps[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     subpass_deps[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-    subpass_deps[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
-                                    VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    subpass_deps[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
     subpass_deps[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
     subpass_deps[1].srcSubpass = 0;
     subpass_deps[1].dstSubpass = VK_SUBPASS_EXTERNAL;
     subpass_deps[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     subpass_deps[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-    subpass_deps[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
-                                    VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    subpass_deps[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
     subpass_deps[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
     subpass_deps[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
@@ -215,8 +202,7 @@ void Smoke::create_render_pass()
     vk::assert_success(vk::CreateRenderPass(dev_, &render_pass_info, nullptr, &render_pass_));
 }
 
-void Smoke::create_shader_modules()
-{
+void Smoke::create_shader_modules() {
     VkShaderModuleCreateInfo sh_info = {};
     sh_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     if (use_push_constants_) {
@@ -236,8 +222,7 @@ void Smoke::create_shader_modules()
     vk::assert_success(vk::CreateShaderModule(dev_, &sh_info, nullptr, &fs_));
 }
 
-void Smoke::create_descriptor_set_layout()
-{
+void Smoke::create_descriptor_set_layout() {
     if (use_push_constants_)
         return;
 
@@ -252,12 +237,10 @@ void Smoke::create_descriptor_set_layout()
     layout_info.bindingCount = 1;
     layout_info.pBindings = &layout_binding;
 
-    vk::assert_success(vk::CreateDescriptorSetLayout(dev_, &layout_info,
-                nullptr, &desc_set_layout_));
+    vk::assert_success(vk::CreateDescriptorSetLayout(dev_, &layout_info, nullptr, &desc_set_layout_));
 }
 
-void Smoke::create_pipeline_layout()
-{
+void Smoke::create_pipeline_layout() {
     VkPushConstantRange push_const_range = {};
 
     VkPipelineLayoutCreateInfo pipeline_layout_info = {};
@@ -275,12 +258,10 @@ void Smoke::create_pipeline_layout()
         pipeline_layout_info.pSetLayouts = &desc_set_layout_;
     }
 
-    vk::assert_success(vk::CreatePipelineLayout(dev_, &pipeline_layout_info,
-                nullptr, &pipeline_layout_));
+    vk::assert_success(vk::CreatePipelineLayout(dev_, &pipeline_layout_info, nullptr, &pipeline_layout_));
 }
 
-void Smoke::create_pipeline()
-{
+void Smoke::create_pipeline() {
     VkPipelineShaderStageCreateInfo stage_info[2] = {};
     stage_info[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     stage_info[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
@@ -323,10 +304,8 @@ void Smoke::create_pipeline()
     blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
     blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
     blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
-    blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
-                                      VK_COLOR_COMPONENT_G_BIT |
-                                      VK_COLOR_COMPONENT_B_BIT |
-                                      VK_COLOR_COMPONENT_A_BIT;
+    blend_attachment.colorWriteMask =
+        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 
     VkPipelineColorBlendStateCreateInfo blend_info = {};
     blend_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -334,10 +313,7 @@ void Smoke::create_pipeline()
     blend_info.attachmentCount = 1;
     blend_info.pAttachments = &blend_attachment;
 
-    std::array<VkDynamicState, 2> dynamic_states = {
-        {VK_DYNAMIC_STATE_VIEWPORT,
-         VK_DYNAMIC_STATE_SCISSOR}
-    };
+    std::array<VkDynamicState, 2> dynamic_states = {{VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR}};
     struct VkPipelineDynamicStateCreateInfo dynamic_info = {};
     dynamic_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
     dynamic_info.dynamicStateCount = (uint32_t)dynamic_states.size();
@@ -362,8 +338,7 @@ void Smoke::create_pipeline()
     vk::assert_success(vk::CreateGraphicsPipelines(dev_, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &pipeline_));
 }
 
-void Smoke::create_frame_data(int count)
-{
+void Smoke::create_frame_data(int count) {
     frame_data_.resize(count);
 
     create_fences();
@@ -378,8 +353,7 @@ void Smoke::create_frame_data(int count)
     frame_data_index_ = 0;
 }
 
-void Smoke::destroy_frame_data()
-{
+void Smoke::destroy_frame_data() {
     if (!use_push_constants_) {
         vk::DestroyDescriptorPool(dev_, desc_pool_, nullptr);
 
@@ -401,8 +375,7 @@ void Smoke::destroy_frame_data()
     frame_data_.clear();
 }
 
-void Smoke::create_fences()
-{
+void Smoke::create_fences() {
     VkFenceCreateInfo fence_info = {};
     fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
@@ -411,8 +384,7 @@ void Smoke::create_fences()
         vk::assert_success(vk::CreateFence(dev_, &fence_info, nullptr, &data.fence));
 }
 
-void Smoke::create_command_buffers()
-{
+void Smoke::create_command_buffers() {
     VkCommandPoolCreateInfo cmd_pool_info = {};
     cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
@@ -425,17 +397,15 @@ void Smoke::create_command_buffers()
     // create command pools and buffers
     std::vector<VkCommandPool> cmd_pools(workers_.size() + 1, VK_NULL_HANDLE);
     std::vector<std::vector<VkCommandBuffer>> cmds_vec(workers_.size() + 1,
-            std::vector<VkCommandBuffer>(frame_data_.size(), VK_NULL_HANDLE));
+                                                       std::vector<VkCommandBuffer>(frame_data_.size(), VK_NULL_HANDLE));
     for (size_t i = 0; i < cmd_pools.size(); i++) {
         auto &cmd_pool = cmd_pools[i];
         auto &cmds = cmds_vec[i];
 
-        vk::assert_success(vk::CreateCommandPool(dev_, &cmd_pool_info,
-                    nullptr, &cmd_pool));
+        vk::assert_success(vk::CreateCommandPool(dev_, &cmd_pool_info, nullptr, &cmd_pool));
 
         cmd_info.commandPool = cmd_pool;
-        cmd_info.level = (cmd_pool == cmd_pools.back()) ?
-            VK_COMMAND_BUFFER_LEVEL_PRIMARY : VK_COMMAND_BUFFER_LEVEL_SECONDARY;
+        cmd_info.level = (cmd_pool == cmd_pools.back()) ? VK_COMMAND_BUFFER_LEVEL_PRIMARY : VK_COMMAND_BUFFER_LEVEL_SECONDARY;
 
         vk::assert_success(vk::AllocateCommandBuffers(dev_, &cmd_info, cmds.data()));
     }
@@ -456,12 +426,10 @@ void Smoke::create_command_buffers()
     worker_cmd_pools_ = cmd_pools;
 }
 
-void Smoke::create_buffers()
-{
+void Smoke::create_buffers() {
     VkDeviceSize object_data_size = sizeof(ShaderParamBlock);
     // align object data to device limit
-    const VkDeviceSize &alignment =
-        physical_dev_props_.limits.minStorageBufferOffsetAlignment;
+    const VkDeviceSize &alignment = physical_dev_props_.limits.minStorageBufferOffsetAlignment;
     if (object_data_size % alignment)
         object_data_size += alignment - (object_data_size % alignment);
 
@@ -478,25 +446,21 @@ void Smoke::create_buffers()
         vk::assert_success(vk::CreateBuffer(dev_, &buf_info, nullptr, &data.buf));
 }
 
-void Smoke::create_buffer_memory()
-{
+void Smoke::create_buffer_memory() {
     VkMemoryRequirements mem_reqs;
     vk::GetBufferMemoryRequirements(dev_, frame_data_[0].buf, &mem_reqs);
 
     frame_data_aligned_size_ = mem_reqs.size;
     if (frame_data_aligned_size_ % mem_reqs.alignment)
-        frame_data_aligned_size_ += mem_reqs.alignment - 
-        (frame_data_aligned_size_ % mem_reqs.alignment);
+        frame_data_aligned_size_ += mem_reqs.alignment - (frame_data_aligned_size_ % mem_reqs.alignment);
 
     // allocate memory
     VkMemoryAllocateInfo mem_info = {};
     mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    mem_info.allocationSize = frame_data_aligned_size_ * (frame_data_.size() - 1) +
-        mem_reqs.size;
+    mem_info.allocationSize = frame_data_aligned_size_ * (frame_data_.size() - 1) + mem_reqs.size;
 
     for (uint32_t idx = 0; idx < mem_flags_.size(); idx++) {
-        if ((mem_reqs.memoryTypeBits & (1 << idx)) &&
-            (mem_flags_[idx] & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) &&
+        if ((mem_reqs.memoryTypeBits & (1 << idx)) && (mem_flags_[idx] & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) &&
             (mem_flags_[idx] & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
             // TODO is this guaranteed to exist?
             mem_info.memoryTypeIndex = idx;
@@ -517,8 +481,7 @@ void Smoke::create_buffer_memory()
     }
 }
 
-void Smoke::create_descriptor_sets()
-{
+void Smoke::create_descriptor_sets() {
     VkDescriptorPoolSize desc_pool_size = {};
     desc_pool_size.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
     desc_pool_size.descriptorCount = static_cast<uint32_t>(frame_data_.size());
@@ -530,8 +493,7 @@ void Smoke::create_descriptor_sets()
     desc_pool_info.pPoolSizes = &desc_pool_size;
 
     // create descriptor pool
-    vk::assert_success(vk::CreateDescriptorPool(dev_, &desc_pool_info,
-                nullptr, &desc_pool_));
+    vk::assert_success(vk::CreateDescriptorPool(dev_, &desc_pool_info, nullptr, &desc_pool_));
 
     std::vector<VkDescriptorSetLayout> set_layouts(frame_data_.size(), desc_set_layout_);
     VkDescriptorSetAllocateInfo set_info = {};
@@ -569,13 +531,10 @@ void Smoke::create_descriptor_sets()
         desc_writes[i] = desc_write;
     }
 
-    vk::UpdateDescriptorSets(dev_,
-            static_cast<uint32_t>(desc_writes.size()),
-            desc_writes.data(), 0, nullptr);
+    vk::UpdateDescriptorSets(dev_, static_cast<uint32_t>(desc_writes.size()), desc_writes.data(), 0, nullptr);
 }
 
-void Smoke::attach_swapchain()
-{
+void Smoke::attach_swapchain() {
     const Shell::Context &ctx = shell_->context();
 
     prepare_viewport(ctx.extent);
@@ -584,8 +543,7 @@ void Smoke::attach_swapchain()
     update_camera();
 }
 
-void Smoke::detach_swapchain()
-{
+void Smoke::detach_swapchain() {
     for (auto fb : framebuffers_)
         vk::DestroyFramebuffer(dev_, fb, nullptr);
     for (auto view : image_views_)
@@ -596,8 +554,7 @@ void Smoke::detach_swapchain()
     images_.clear();
 }
 
-void Smoke::prepare_viewport(const VkExtent2D &extent)
-{
+void Smoke::prepare_viewport(const VkExtent2D &extent) {
     extent_ = extent;
 
     viewport_.x = 0.0f;
@@ -607,12 +564,11 @@ void Smoke::prepare_viewport(const VkExtent2D &extent)
     viewport_.minDepth = 0.0f;
     viewport_.maxDepth = 1.0f;
 
-    scissor_.offset = { 0, 0 };
+    scissor_.offset = {0, 0};
     scissor_.extent = extent_;
 }
 
-void Smoke::prepare_framebuffers(VkSwapchainKHR swapchain)
-{
+void Smoke::prepare_framebuffers(VkSwapchainKHR swapchain) {
     // get swapchain images
     vk::get(dev_, swapchain, images_);
 
@@ -648,8 +604,7 @@ void Smoke::prepare_framebuffers(VkSwapchainKHR swapchain)
     }
 }
 
-void Smoke::update_camera()
-{
+void Smoke::update_camera() {
     const glm::vec3 center(0.0f);
     const glm::vec3 up(0.f, 0.0f, 1.0f);
     const glm::mat4 view = glm::lookAt(camera_.eye_pos, center, up);
@@ -658,16 +613,12 @@ void Smoke::update_camera()
     const glm::mat4 projection = glm::perspective(0.4f, aspect, 0.1f, 100.0f);
 
     // Vulkan clip space has inverted Y and half Z.
-    const glm::mat4 clip(1.0f,  0.0f, 0.0f, 0.0f,
-                         0.0f, -1.0f, 0.0f, 0.0f,
-                         0.0f,  0.0f, 0.5f, 0.0f,
-                         0.0f,  0.0f, 0.5f, 1.0f);
+    const glm::mat4 clip(1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.5f, 1.0f);
 
     camera_.view_projection = clip * projection * view;
 }
 
-void Smoke::draw_object(const Simulation::Object &obj, FrameData &data, VkCommandBuffer cmd) const
-{
+void Smoke::draw_object(const Simulation::Object &obj, FrameData &data, VkCommandBuffer cmd) const {
     if (use_push_constants_) {
         ShaderParamBlock params;
         memcpy(params.light_pos, glm::value_ptr(obj.light_pos), sizeof(obj.light_pos));
@@ -675,30 +626,26 @@ void Smoke::draw_object(const Simulation::Object &obj, FrameData &data, VkComman
         memcpy(params.model, glm::value_ptr(obj.model), sizeof(obj.model));
         memcpy(params.view_projection, glm::value_ptr(camera_.view_projection), sizeof(camera_.view_projection));
 
-        vk::CmdPushConstants(cmd, pipeline_layout_, VK_SHADER_STAGE_VERTEX_BIT,
-                0, sizeof(params), &params);
+        vk::CmdPushConstants(cmd, pipeline_layout_, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(params), &params);
     } else {
-        ShaderParamBlock *params =
-            reinterpret_cast<ShaderParamBlock *>(data.base + obj.frame_data_offset);
+        ShaderParamBlock *params = reinterpret_cast<ShaderParamBlock *>(data.base + obj.frame_data_offset);
         memcpy(params->light_pos, glm::value_ptr(obj.light_pos), sizeof(obj.light_pos));
         memcpy(params->light_color, glm::value_ptr(obj.light_color), sizeof(obj.light_color));
         memcpy(params->model, glm::value_ptr(obj.model), sizeof(obj.model));
         memcpy(params->view_projection, glm::value_ptr(camera_.view_projection), sizeof(camera_.view_projection));
 
-        vk::CmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                pipeline_layout_, 0, 1, &data.desc_set, 1, &obj.frame_data_offset);
+        vk::CmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout_, 0, 1, &data.desc_set, 1,
+                                  &obj.frame_data_offset);
     }
 
     meshes_->cmd_draw(cmd, obj.mesh);
 }
 
-void Smoke::update_simulation(const Worker &worker)
-{
+void Smoke::update_simulation(const Worker &worker) {
     sim_.update(worker.tick_interval_, worker.object_begin_, worker.object_end_);
 }
 
-void Smoke::draw_objects(Worker &worker)
-{
+void Smoke::draw_objects(Worker &worker) {
     auto &data = frame_data_[frame_data_index_];
     auto cmd = data.worker_cmds[worker.index_];
 
@@ -730,8 +677,7 @@ void Smoke::draw_objects(Worker &worker)
     vk::EndCommandBuffer(cmd);
 }
 
-void Smoke::on_key(Key key)
-{
+void Smoke::on_key(Key key) {
     switch (key) {
     case KEY_SHUTDOWN:
     case KEY_ESC:
@@ -753,8 +699,7 @@ void Smoke::on_key(Key key)
     }
 }
 
-void Smoke::on_tick()
-{
+void Smoke::on_tick() {
     if (sim_paused_)
         return;
 
@@ -762,13 +707,11 @@ void Smoke::on_tick()
         worker->update_simulation();
 }
 
-void Smoke::on_frame(float frame_pred)
-{
+void Smoke::on_frame(float frame_pred) {
     frame_count++;
 
     // Limit number of frames if argument was specified
-    if (settings_.max_frame_count != -1 &&
-        frame_count == settings_.max_frame_count) {
+    if (settings_.max_frame_count != -1 && frame_count == settings_.max_frame_count) {
         // Tell the Game we're done after this frame is drawn.
         Game::quit();
     }
@@ -797,16 +740,13 @@ void Smoke::on_frame(float frame_pred)
         buf_barrier.buffer = data.buf;
         buf_barrier.offset = 0;
         buf_barrier.size = VK_WHOLE_SIZE;
-        vk::CmdPipelineBarrier(data.primary_cmd,
-                               VK_PIPELINE_STAGE_HOST_BIT,
-                               VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
-                               0, 0, nullptr, 1, &buf_barrier, 0, nullptr);
+        vk::CmdPipelineBarrier(data.primary_cmd, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 1,
+                               &buf_barrier, 0, nullptr);
     }
 
     render_pass_begin_info_.framebuffer = framebuffers_[back.image_index];
     render_pass_begin_info_.renderArea.extent = extent_;
-    vk::CmdBeginRenderPass(data.primary_cmd, &render_pass_begin_info_,
-            VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+    vk::CmdBeginRenderPass(data.primary_cmd, &render_pass_begin_info_, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
     // record render pass commands
     for (auto &worker : workers_)
@@ -824,9 +764,7 @@ void Smoke::on_frame(float frame_pred)
         vk::FlushMappedMemoryRanges(dev_, 1, &range);
     }
 
-    vk::CmdExecuteCommands(data.primary_cmd,
-            static_cast<uint32_t>(data.worker_cmds.size()),
-            data.worker_cmds.data());
+    vk::CmdExecuteCommands(data.primary_cmd, static_cast<uint32_t>(data.worker_cmds.size()), data.worker_cmds.data());
 
     vk::CmdEndRenderPass(data.primary_cmd);
     vk::EndCommandBuffer(data.primary_cmd);
@@ -840,24 +778,19 @@ void Smoke::on_frame(float frame_pred)
 
     frame_data_index_ = (frame_data_index_ + 1) % frame_data_.size();
 
-    (void) res;
+    (void)res;
 }
 
 Smoke::Worker::Worker(Smoke &smoke, int index, int object_begin, int object_end)
-    : smoke_(smoke), index_(index),
-      object_begin_(object_begin), object_end_(object_end),
-      tick_interval_(1.0f / smoke.settings_.ticks_per_second), state_(INIT)
-{
-}
+    : smoke_(smoke), index_(index), object_begin_(object_begin), object_end_(object_end),
+      tick_interval_(1.0f / smoke.settings_.ticks_per_second), state_(INIT) {}
 
-void Smoke::Worker::start()
-{
+void Smoke::Worker::start() {
     state_ = IDLE;
     thread_ = std::thread(Smoke::Worker::thread_loop, this);
 }
 
-void Smoke::Worker::stop()
-{
+void Smoke::Worker::stop() {
     {
         std::lock_guard<std::mutex> lock(mutex_);
         state_ = INIT;
@@ -867,8 +800,7 @@ void Smoke::Worker::stop()
     thread_.join();
 }
 
-void Smoke::Worker::update_simulation()
-{
+void Smoke::Worker::update_simulation() {
     {
         std::lock_guard<std::mutex> lock(mutex_);
         bool started = (state_ != INIT);
@@ -884,8 +816,7 @@ void Smoke::Worker::update_simulation()
     state_cv_.notify_one();
 }
 
-void Smoke::Worker::draw_objects(VkFramebuffer fb)
-{
+void Smoke::Worker::draw_objects(VkFramebuffer fb) {
     // wait for step_objects first
     wait_idle();
 
@@ -905,8 +836,7 @@ void Smoke::Worker::draw_objects(VkFramebuffer fb)
     state_cv_.notify_one();
 }
 
-void Smoke::Worker::wait_idle()
-{
+void Smoke::Worker::wait_idle() {
     std::unique_lock<std::mutex> lock(mutex_);
     bool started = (state_ != INIT);
 
@@ -914,8 +844,7 @@ void Smoke::Worker::wait_idle()
         state_cv_.wait(lock, [this] { return (state_ == IDLE); });
 }
 
-void Smoke::Worker::update_loop()
-{
+void Smoke::Worker::update_loop() {
     while (true) {
         std::unique_lock<std::mutex> lock(mutex_);
 

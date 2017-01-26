@@ -40,10 +40,11 @@ VkLayerInstanceDispatchTable *instance_dispatch_table(void *object) {
     instance_table_map::const_iterator it = tableInstanceMap.find((void *)key);
 #if DISPATCH_MAP_DEBUG
     if (it != tableInstanceMap.end()) {
-        fprintf(stderr, "instance_dispatch_table: map:  0x%p, object:  0x%p, key:  0x%p, table:  0x%p\n", &tableInstanceMap, object, key,
-                it->second);
+        fprintf(stderr, "instance_dispatch_table: map:  0x%p, object:  0x%p, key:  0x%p, table:  0x%p\n", &tableInstanceMap, object,
+                key, it->second);
     } else {
-        fprintf(stderr, "instance_dispatch_table: map:  0x%p, object:  0x%p, key:  0x%p, table: UNKNOWN\n", &tableInstanceMap, object, key);
+        fprintf(stderr, "instance_dispatch_table: map:  0x%p, object:  0x%p, key:  0x%p, table: UNKNOWN\n", &tableInstanceMap,
+                object, key);
     }
 #endif
     assert(it != tableInstanceMap.end() && "Not able to find instance dispatch entry");
@@ -85,10 +86,11 @@ VkLayerDispatchTable *get_dispatch_table(device_table_map &map, void *object) {
     device_table_map::const_iterator it = map.find((void *)key);
 #if DISPATCH_MAP_DEBUG
     if (it != map.end()) {
-        fprintf(stderr, "device_dispatch_table: map:  0x%p, object:  0x%p, key:  0x%p, table:  0x%p\n", &tableInstanceMap, object, key,
-                it->second);
+        fprintf(stderr, "device_dispatch_table: map:  0x%p, object:  0x%p, key:  0x%p, table:  0x%p\n", &tableInstanceMap, object,
+                key, it->second);
     } else {
-        fprintf(stderr, "device_dispatch_table: map:  0x%p, object:  0x%p, key:  0x%p, table: UNKNOWN\n", &tableInstanceMap, object, key);
+        fprintf(stderr, "device_dispatch_table: map:  0x%p, object:  0x%p, key:  0x%p, table: UNKNOWN\n", &tableInstanceMap, object,
+                key);
     }
 #endif
     assert(it != map.end() && "Not able to find device dispatch entry");
@@ -100,10 +102,11 @@ VkLayerInstanceDispatchTable *get_dispatch_table(instance_table_map &map, void *
     instance_table_map::const_iterator it = map.find((void *)key);
 #if DISPATCH_MAP_DEBUG
     if (it != map.end()) {
-        fprintf(stderr, "instance_dispatch_table: map:  0x%p, object:  0x%p, key:  0x%p, table:  0x%p\n", &tableInstanceMap, object, key,
-                it->second);
+        fprintf(stderr, "instance_dispatch_table: map:  0x%p, object:  0x%p, key:  0x%p, table:  0x%p\n", &tableInstanceMap, object,
+                key, it->second);
     } else {
-        fprintf(stderr, "instance_dispatch_table: map:  0x%p, object:  0x%p, key:  0x%p, table: UNKNOWN\n", &tableInstanceMap, object, key);
+        fprintf(stderr, "instance_dispatch_table: map:  0x%p, object:  0x%p, key:  0x%p, table: UNKNOWN\n", &tableInstanceMap,
+                object, key);
     }
 #endif
     assert(it != map.end() && "Not able to find instance dispatch entry");

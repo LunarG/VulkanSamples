@@ -21,14 +21,14 @@
 #include "Shell.h"
 
 class ShellXcb : public Shell {
-public:
+  public:
     ShellXcb(Game &game);
     ~ShellXcb();
 
     void run();
     void quit() { quit_ = true; }
 
-private:
+  private:
     void init_connection();
 
     PFN_vkGetInstanceProcAddr load_vk();

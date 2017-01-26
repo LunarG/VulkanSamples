@@ -1067,7 +1067,6 @@ static bool validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
                                  "However, vkGetPhysicalDeviceSurfaceSupportKHR() was never called with this surface. %s",
                                  validation_error_map[VALIDATION_ERROR_01922]);
         }
-
     }
 
     // Validate pCreateInfo->imageSharingMode and related values:
@@ -1228,8 +1227,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchai
     return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
-VKAPI_ATTR void VKAPI_CALL
-GetDeviceQueue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue *pQueue) {
+VKAPI_ATTR void VKAPI_CALL GetDeviceQueue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue *pQueue) {
     bool skip_call = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
 
@@ -1552,7 +1550,8 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(V
     return swapchain::GetInstanceProcAddr(instance, funcName);
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vk_layerGetPhysicalDeviceProcAddr(VkInstance instance, const char *funcName) {
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vk_layerGetPhysicalDeviceProcAddr(VkInstance instance,
+                                                                                           const char *funcName) {
     return swapchain::GetPhysicalDeviceProcAddr(instance, funcName);
 }
 

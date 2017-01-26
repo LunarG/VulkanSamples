@@ -17,13 +17,13 @@
 
 #include <stdint.h>
 
-#define ICD_SPV_MAGIC   0x07230203
+#define ICD_SPV_MAGIC 0x07230203
 #define ICD_SPV_VERSION 99
 
 struct icd_spv_header {
     uint32_t magic;
     uint32_t version;
-    uint32_t gen_magic;  // Generator's magic number
+    uint32_t gen_magic; // Generator's magic number
 };
 
 #endif /* ICD_SPV_H */

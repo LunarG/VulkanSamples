@@ -362,16 +362,14 @@ cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const V
     }
 }
 
-cvdescriptorset::DescriptorSet::~DescriptorSet() {
-    InvalidateBoundCmdBuffers();
-}
-
+cvdescriptorset::DescriptorSet::~DescriptorSet() { InvalidateBoundCmdBuffers(); }
 
 static std::string string_descriptor_req_view_type(descriptor_req req) {
     std::string result("");
     for (unsigned i = 0; i <= VK_IMAGE_VIEW_TYPE_END_RANGE; i++) {
         if (req & (1 << i)) {
-            if (result.size()) result += ", ";
+            if (result.size())
+                result += ", ";
             result += string_VkImageViewType(VkImageViewType(i));
         }
     }
@@ -381,7 +379,6 @@ static std::string string_descriptor_req_view_type(descriptor_req req) {
 
     return result;
 }
-
 
 // Is this sets underlying layout compatible with passed in layout according to "Pipeline Layout Compatibility" in spec?
 bool cvdescriptorset::DescriptorSet::IsCompatible(const DescriptorSetLayout *layout, std::string *error) const {
@@ -469,11 +466,10 @@ bool cvdescriptorset::DescriptorSet::ValidateDrawState(const std::map<uint32_t, 
                                 }
                             }
                         }
-                    }
-                    else if (descriptor_class == ImageSampler || descriptor_class == Image) {
+                    } else if (descriptor_class == ImageSampler || descriptor_class == Image) {
                         auto image_view = (descriptor_class == ImageSampler)
-                                ? static_cast<ImageSamplerDescriptor *>(descriptors_[i].get())->GetImageView()
-                                : static_cast<ImageDescriptor *>(descriptors_[i].get())->GetImageView();
+                                              ? static_cast<ImageSamplerDescriptor *>(descriptors_[i].get())->GetImageView()
+                                              : static_cast<ImageDescriptor *>(descriptors_[i].get())->GetImageView();
                         auto reqs = binding_pair.second;
 
                         auto image_view_state = getImageViewState(device_data_, image_view);
@@ -484,8 +480,8 @@ bool cvdescriptorset::DescriptorSet::ValidateDrawState(const std::map<uint32_t, 
                             // bad view type
                             std::stringstream error_str;
                             error_str << "Descriptor in binding #" << binding << " at global descriptor index " << i
-                                      << " requires an image view of type " << string_descriptor_req_view_type(reqs)
-                                      << " but got " << string_VkImageViewType(image_view_ci.viewType) << ".";
+                                      << " requires an image view of type " << string_descriptor_req_view_type(reqs) << " but got "
+                                      << string_VkImageViewType(image_view_ci.viewType) << ".";
                             *error = error_str.str();
                             return false;
                         }
@@ -493,8 +489,7 @@ bool cvdescriptorset::DescriptorSet::ValidateDrawState(const std::map<uint32_t, 
                         auto image_node = getImageState(device_data_, image_view_ci.image);
                         assert(image_node);
 
-                        if ((reqs & DESCRIPTOR_REQ_SINGLE_SAMPLE) &&
-                            image_node->createInfo.samples != VK_SAMPLE_COUNT_1_BIT) {
+                        if ((reqs & DESCRIPTOR_REQ_SINGLE_SAMPLE) && image_node->createInfo.samples != VK_SAMPLE_COUNT_1_BIT) {
                             std::stringstream error_str;
                             error_str << "Descriptor in binding #" << binding << " at global descriptor index " << i
                                       << " requires bound image to have VK_SAMPLE_COUNT_1_BIT but got "
@@ -503,8 +498,7 @@ bool cvdescriptorset::DescriptorSet::ValidateDrawState(const std::map<uint32_t, 
                             return false;
                         }
 
-                        if ((reqs & DESCRIPTOR_REQ_MULTI_SAMPLE) &&
-                            image_node->createInfo.samples == VK_SAMPLE_COUNT_1_BIT) {
+                        if ((reqs & DESCRIPTOR_REQ_MULTI_SAMPLE) && image_node->createInfo.samples == VK_SAMPLE_COUNT_1_BIT) {
                             std::stringstream error_str;
                             error_str << "Descriptor in binding #" << binding << " at global descriptor index " << i
                                       << " requires bound image to have multiple samples, but got VK_SAMPLE_COUNT_1_BIT.";

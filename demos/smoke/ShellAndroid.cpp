@@ -27,19 +27,12 @@ namespace {
 
 // copied from ShellXCB.cpp
 class PosixTimer {
-public:
-    PosixTimer()
-    {
-        reset();
-    }
+  public:
+    PosixTimer() { reset(); }
 
-    void reset()
-    {
-        clock_gettime(CLOCK_MONOTONIC, &start_);
-    }
+    void reset() { clock_gettime(CLOCK_MONOTONIC, &start_); }
 
-    double get() const
-    {
+    double get() const {
         struct timespec now;
         clock_gettime(CLOCK_MONOTONIC, &now);
 
@@ -59,14 +52,13 @@ public:
         return static_cast<double>(s) + static_cast<double>(ns) / one_s_in_ns_d;
     }
 
-private:
+  private:
     struct timespec start_;
 };
 
 } // namespace
 
-std::vector<std::string> ShellAndroid::get_args(android_app &app)
-{
+std::vector<std::string> ShellAndroid::get_args(android_app &app) {
     const char intent_extra_data_key[] = "args";
     std::vector<std::string> args;
 
@@ -77,16 +69,14 @@ std::vector<std::string> ShellAndroid::get_args(android_app &app)
 
     JNIEnv &env = *p_env;
     jobject activity = app.activity->clazz;
-    jmethodID get_intent_method = env.GetMethodID(env.GetObjectClass(activity),
-            "getIntent", "()Landroid/content/Intent;");
+    jmethodID get_intent_method = env.GetMethodID(env.GetObjectClass(activity), "getIntent", "()Landroid/content/Intent;");
     jobject intent = env.CallObjectMethod(activity, get_intent_method);
 
-    jmethodID get_string_extra_method = env.GetMethodID(env.GetObjectClass(intent),
-            "getStringExtra", "(Ljava/lang/String;)Ljava/lang/String;");
+    jmethodID get_string_extra_method =
+        env.GetMethodID(env.GetObjectClass(intent), "getStringExtra", "(Ljava/lang/String;)Ljava/lang/String;");
     jvalue get_string_extra_args;
     get_string_extra_args.l = env.NewStringUTF(intent_extra_data_key);
-    jstring extra_str = static_cast<jstring>(env.CallObjectMethodA(intent,
-            get_string_extra_method, &get_string_extra_args));
+    jstring extra_str = static_cast<jstring>(env.CallObjectMethodA(intent, get_string_extra_method, &get_string_extra_args));
 
     std::string args_str;
     if (extra_str) {
@@ -113,8 +103,7 @@ std::vector<std::string> ShellAndroid::get_args(android_app &app)
     return args;
 }
 
-ShellAndroid::ShellAndroid(android_app &app, Game &game) : Shell(game), app_(app)
-{
+ShellAndroid::ShellAndroid(android_app &app, Game &game) : Shell(game), app_(app) {
     if (game.settings().validate) {
         instance_layers_.push_back("VK_LAYER_GOOGLE_threading");
         instance_layers_.push_back("VK_LAYER_LUNARG_parameter_validation");
@@ -135,14 +124,12 @@ ShellAndroid::ShellAndroid(android_app &app, Game &game) : Shell(game), app_(app
     init_vk();
 }
 
-ShellAndroid::~ShellAndroid()
-{
+ShellAndroid::~ShellAndroid() {
     cleanup_vk();
     dlclose(lib_handle_);
 }
 
-void ShellAndroid::log(LogPriority priority, const char *msg)
-{
+void ShellAndroid::log(LogPriority priority, const char *msg) {
     int prio;
 
     switch (priority) {
@@ -166,8 +153,7 @@ void ShellAndroid::log(LogPriority priority, const char *msg)
     __android_log_write(prio, settings_.name.c_str(), msg);
 }
 
-PFN_vkGetInstanceProcAddr ShellAndroid::load_vk()
-{
+PFN_vkGetInstanceProcAddr ShellAndroid::load_vk() {
     const char filename[] = "libvulkan.so";
     void *handle = nullptr, *symbol = nullptr;
 
@@ -186,8 +172,7 @@ PFN_vkGetInstanceProcAddr ShellAndroid::load_vk()
     return reinterpret_cast<PFN_vkGetInstanceProcAddr>(symbol);
 }
 
-VkSurfaceKHR ShellAndroid::create_surface(VkInstance instance)
-{
+VkSurfaceKHR ShellAndroid::create_surface(VkInstance instance) {
     VkAndroidSurfaceCreateInfoKHR surface_info = {};
     surface_info.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
     surface_info.window = app_.window;
@@ -198,8 +183,7 @@ VkSurfaceKHR ShellAndroid::create_surface(VkInstance instance)
     return surface;
 }
 
-void ShellAndroid::on_app_cmd(int32_t cmd)
-{
+void ShellAndroid::on_app_cmd(int32_t cmd) {
     switch (cmd) {
     case APP_CMD_INIT_WINDOW:
         create_context();
@@ -219,8 +203,7 @@ void ShellAndroid::on_app_cmd(int32_t cmd)
     }
 }
 
-int32_t ShellAndroid::on_input_event(const AInputEvent *event)
-{
+int32_t ShellAndroid::on_input_event(const AInputEvent *event) {
     if (AInputEvent_getType(event) != AINPUT_EVENT_TYPE_MOTION)
         return false;
 
@@ -238,13 +221,9 @@ int32_t ShellAndroid::on_input_event(const AInputEvent *event)
     return handled;
 }
 
-void ShellAndroid::quit()
-{
-    ANativeActivity_finish(app_.activity);
-}
+void ShellAndroid::quit() { ANativeActivity_finish(app_.activity); }
 
-void ShellAndroid::run()
-{
+void ShellAndroid::run() {
     PosixTimer timer;
 
     double current_time = timer.get();
@@ -253,8 +232,7 @@ void ShellAndroid::run()
         struct android_poll_source *source;
         while (true) {
             int timeout = (settings_.animate && app_.window) ? 0 : -1;
-            if (ALooper_pollAll(timeout, nullptr, nullptr,
-                    reinterpret_cast<void **>(&source)) < 0)
+            if (ALooper_pollAll(timeout, nullptr, nullptr, reinterpret_cast<void **>(&source)) < 0)
                 break;
 
             if (source)

@@ -1194,9 +1194,7 @@ void VkPipelineObj::AddColorAttachment(uint32_t binding, const VkPipelineColorBl
     m_colorAttachments[binding] = *att;
 }
 
-void VkPipelineObj::SetDepthStencil(const VkPipelineDepthStencilStateCreateInfo *ds_state) {
-    m_ds_state = ds_state;
-}
+void VkPipelineObj::SetDepthStencil(const VkPipelineDepthStencilStateCreateInfo *ds_state) { m_ds_state = ds_state; }
 
 void VkPipelineObj::SetViewport(const vector<VkViewport> viewports) {
     m_viewports = viewports;

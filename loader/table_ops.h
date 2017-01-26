@@ -32,8 +32,7 @@
 static VkResult VKAPI_CALL vkDevExtError(VkDevice dev) {
     struct loader_device *found_dev;
     // The device going in is a trampoline device
-    struct loader_icd_term *icd_term =
-        loader_get_icd_and_device(dev, &found_dev, NULL);
+    struct loader_icd_term *icd_term = loader_get_icd_and_device(dev, &found_dev, NULL);
 
     if (icd_term)
         loader_log(icd_term->this_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
@@ -42,15 +41,13 @@ static VkResult VKAPI_CALL vkDevExtError(VkDevice dev) {
     return VK_ERROR_EXTENSION_NOT_PRESENT;
 }
 
-static inline void
-loader_init_device_dispatch_table(struct loader_dev_dispatch_table *dev_table,
-                                  PFN_vkGetDeviceProcAddr gpa, VkDevice dev) {
+static inline void loader_init_device_dispatch_table(struct loader_dev_dispatch_table *dev_table, PFN_vkGetDeviceProcAddr gpa,
+                                                     VkDevice dev) {
     VkLayerDispatchTable *table = &dev_table->core_dispatch;
     for (uint32_t i = 0; i < MAX_NUM_UNKNOWN_EXTS; i++)
         dev_table->ext_dispatch.dev_ext[i] = (PFN_vkDevExt)vkDevExtError;
 
-    table->GetDeviceProcAddr =
-        (PFN_vkGetDeviceProcAddr)gpa(dev, "vkGetDeviceProcAddr");
+    table->GetDeviceProcAddr = (PFN_vkGetDeviceProcAddr)gpa(dev, "vkGetDeviceProcAddr");
     table->DestroyDevice = (PFN_vkDestroyDevice)gpa(dev, "vkDestroyDevice");
     table->GetDeviceQueue = (PFN_vkGetDeviceQueue)gpa(dev, "vkGetDeviceQueue");
     table->QueueSubmit = (PFN_vkQueueSubmit)gpa(dev, "vkQueueSubmit");
@@ -60,284 +57,170 @@ loader_init_device_dispatch_table(struct loader_dev_dispatch_table *dev_table,
     table->FreeMemory = (PFN_vkFreeMemory)gpa(dev, "vkFreeMemory");
     table->MapMemory = (PFN_vkMapMemory)gpa(dev, "vkMapMemory");
     table->UnmapMemory = (PFN_vkUnmapMemory)gpa(dev, "vkUnmapMemory");
-    table->FlushMappedMemoryRanges =
-        (PFN_vkFlushMappedMemoryRanges)gpa(dev, "vkFlushMappedMemoryRanges");
-    table->InvalidateMappedMemoryRanges =
-        (PFN_vkInvalidateMappedMemoryRanges)gpa(
-            dev, "vkInvalidateMappedMemoryRanges");
-    table->GetDeviceMemoryCommitment = (PFN_vkGetDeviceMemoryCommitment)gpa(
-        dev, "vkGetDeviceMemoryCommitment");
+    table->FlushMappedMemoryRanges = (PFN_vkFlushMappedMemoryRanges)gpa(dev, "vkFlushMappedMemoryRanges");
+    table->InvalidateMappedMemoryRanges = (PFN_vkInvalidateMappedMemoryRanges)gpa(dev, "vkInvalidateMappedMemoryRanges");
+    table->GetDeviceMemoryCommitment = (PFN_vkGetDeviceMemoryCommitment)gpa(dev, "vkGetDeviceMemoryCommitment");
     table->GetImageSparseMemoryRequirements =
-        (PFN_vkGetImageSparseMemoryRequirements)gpa(
-            dev, "vkGetImageSparseMemoryRequirements");
-    table->GetBufferMemoryRequirements = (PFN_vkGetBufferMemoryRequirements)gpa(
-        dev, "vkGetBufferMemoryRequirements");
-    table->GetImageMemoryRequirements = (PFN_vkGetImageMemoryRequirements)gpa(
-        dev, "vkGetImageMemoryRequirements");
-    table->BindBufferMemory =
-        (PFN_vkBindBufferMemory)gpa(dev, "vkBindBufferMemory");
-    table->BindImageMemory =
-        (PFN_vkBindImageMemory)gpa(dev, "vkBindImageMemory");
-    table->QueueBindSparse =
-        (PFN_vkQueueBindSparse)gpa(dev, "vkQueueBindSparse");
+        (PFN_vkGetImageSparseMemoryRequirements)gpa(dev, "vkGetImageSparseMemoryRequirements");
+    table->GetBufferMemoryRequirements = (PFN_vkGetBufferMemoryRequirements)gpa(dev, "vkGetBufferMemoryRequirements");
+    table->GetImageMemoryRequirements = (PFN_vkGetImageMemoryRequirements)gpa(dev, "vkGetImageMemoryRequirements");
+    table->BindBufferMemory = (PFN_vkBindBufferMemory)gpa(dev, "vkBindBufferMemory");
+    table->BindImageMemory = (PFN_vkBindImageMemory)gpa(dev, "vkBindImageMemory");
+    table->QueueBindSparse = (PFN_vkQueueBindSparse)gpa(dev, "vkQueueBindSparse");
     table->CreateFence = (PFN_vkCreateFence)gpa(dev, "vkCreateFence");
     table->DestroyFence = (PFN_vkDestroyFence)gpa(dev, "vkDestroyFence");
     table->ResetFences = (PFN_vkResetFences)gpa(dev, "vkResetFences");
     table->GetFenceStatus = (PFN_vkGetFenceStatus)gpa(dev, "vkGetFenceStatus");
     table->WaitForFences = (PFN_vkWaitForFences)gpa(dev, "vkWaitForFences");
-    table->CreateSemaphore =
-        (PFN_vkCreateSemaphore)gpa(dev, "vkCreateSemaphore");
-    table->DestroySemaphore =
-        (PFN_vkDestroySemaphore)gpa(dev, "vkDestroySemaphore");
+    table->CreateSemaphore = (PFN_vkCreateSemaphore)gpa(dev, "vkCreateSemaphore");
+    table->DestroySemaphore = (PFN_vkDestroySemaphore)gpa(dev, "vkDestroySemaphore");
     table->CreateEvent = (PFN_vkCreateEvent)gpa(dev, "vkCreateEvent");
     table->DestroyEvent = (PFN_vkDestroyEvent)gpa(dev, "vkDestroyEvent");
     table->GetEventStatus = (PFN_vkGetEventStatus)gpa(dev, "vkGetEventStatus");
     table->SetEvent = (PFN_vkSetEvent)gpa(dev, "vkSetEvent");
     table->ResetEvent = (PFN_vkResetEvent)gpa(dev, "vkResetEvent");
-    table->CreateQueryPool =
-        (PFN_vkCreateQueryPool)gpa(dev, "vkCreateQueryPool");
-    table->DestroyQueryPool =
-        (PFN_vkDestroyQueryPool)gpa(dev, "vkDestroyQueryPool");
-    table->GetQueryPoolResults =
-        (PFN_vkGetQueryPoolResults)gpa(dev, "vkGetQueryPoolResults");
+    table->CreateQueryPool = (PFN_vkCreateQueryPool)gpa(dev, "vkCreateQueryPool");
+    table->DestroyQueryPool = (PFN_vkDestroyQueryPool)gpa(dev, "vkDestroyQueryPool");
+    table->GetQueryPoolResults = (PFN_vkGetQueryPoolResults)gpa(dev, "vkGetQueryPoolResults");
     table->CreateBuffer = (PFN_vkCreateBuffer)gpa(dev, "vkCreateBuffer");
     table->DestroyBuffer = (PFN_vkDestroyBuffer)gpa(dev, "vkDestroyBuffer");
-    table->CreateBufferView =
-        (PFN_vkCreateBufferView)gpa(dev, "vkCreateBufferView");
-    table->DestroyBufferView =
-        (PFN_vkDestroyBufferView)gpa(dev, "vkDestroyBufferView");
+    table->CreateBufferView = (PFN_vkCreateBufferView)gpa(dev, "vkCreateBufferView");
+    table->DestroyBufferView = (PFN_vkDestroyBufferView)gpa(dev, "vkDestroyBufferView");
     table->CreateImage = (PFN_vkCreateImage)gpa(dev, "vkCreateImage");
     table->DestroyImage = (PFN_vkDestroyImage)gpa(dev, "vkDestroyImage");
-    table->GetImageSubresourceLayout = (PFN_vkGetImageSubresourceLayout)gpa(
-        dev, "vkGetImageSubresourceLayout");
-    table->CreateImageView =
-        (PFN_vkCreateImageView)gpa(dev, "vkCreateImageView");
-    table->DestroyImageView =
-        (PFN_vkDestroyImageView)gpa(dev, "vkDestroyImageView");
-    table->CreateShaderModule =
-        (PFN_vkCreateShaderModule)gpa(dev, "vkCreateShaderModule");
-    table->DestroyShaderModule =
-        (PFN_vkDestroyShaderModule)gpa(dev, "vkDestroyShaderModule");
-    table->CreatePipelineCache =
-        (PFN_vkCreatePipelineCache)gpa(dev, "vkCreatePipelineCache");
-    table->DestroyPipelineCache =
-        (PFN_vkDestroyPipelineCache)gpa(dev, "vkDestroyPipelineCache");
-    table->GetPipelineCacheData =
-        (PFN_vkGetPipelineCacheData)gpa(dev, "vkGetPipelineCacheData");
-    table->MergePipelineCaches =
-        (PFN_vkMergePipelineCaches)gpa(dev, "vkMergePipelineCaches");
-    table->CreateGraphicsPipelines =
-        (PFN_vkCreateGraphicsPipelines)gpa(dev, "vkCreateGraphicsPipelines");
-    table->CreateComputePipelines =
-        (PFN_vkCreateComputePipelines)gpa(dev, "vkCreateComputePipelines");
-    table->DestroyPipeline =
-        (PFN_vkDestroyPipeline)gpa(dev, "vkDestroyPipeline");
-    table->CreatePipelineLayout =
-        (PFN_vkCreatePipelineLayout)gpa(dev, "vkCreatePipelineLayout");
-    table->DestroyPipelineLayout =
-        (PFN_vkDestroyPipelineLayout)gpa(dev, "vkDestroyPipelineLayout");
+    table->GetImageSubresourceLayout = (PFN_vkGetImageSubresourceLayout)gpa(dev, "vkGetImageSubresourceLayout");
+    table->CreateImageView = (PFN_vkCreateImageView)gpa(dev, "vkCreateImageView");
+    table->DestroyImageView = (PFN_vkDestroyImageView)gpa(dev, "vkDestroyImageView");
+    table->CreateShaderModule = (PFN_vkCreateShaderModule)gpa(dev, "vkCreateShaderModule");
+    table->DestroyShaderModule = (PFN_vkDestroyShaderModule)gpa(dev, "vkDestroyShaderModule");
+    table->CreatePipelineCache = (PFN_vkCreatePipelineCache)gpa(dev, "vkCreatePipelineCache");
+    table->DestroyPipelineCache = (PFN_vkDestroyPipelineCache)gpa(dev, "vkDestroyPipelineCache");
+    table->GetPipelineCacheData = (PFN_vkGetPipelineCacheData)gpa(dev, "vkGetPipelineCacheData");
+    table->MergePipelineCaches = (PFN_vkMergePipelineCaches)gpa(dev, "vkMergePipelineCaches");
+    table->CreateGraphicsPipelines = (PFN_vkCreateGraphicsPipelines)gpa(dev, "vkCreateGraphicsPipelines");
+    table->CreateComputePipelines = (PFN_vkCreateComputePipelines)gpa(dev, "vkCreateComputePipelines");
+    table->DestroyPipeline = (PFN_vkDestroyPipeline)gpa(dev, "vkDestroyPipeline");
+    table->CreatePipelineLayout = (PFN_vkCreatePipelineLayout)gpa(dev, "vkCreatePipelineLayout");
+    table->DestroyPipelineLayout = (PFN_vkDestroyPipelineLayout)gpa(dev, "vkDestroyPipelineLayout");
     table->CreateSampler = (PFN_vkCreateSampler)gpa(dev, "vkCreateSampler");
     table->DestroySampler = (PFN_vkDestroySampler)gpa(dev, "vkDestroySampler");
-    table->CreateDescriptorSetLayout = (PFN_vkCreateDescriptorSetLayout)gpa(
-        dev, "vkCreateDescriptorSetLayout");
-    table->DestroyDescriptorSetLayout = (PFN_vkDestroyDescriptorSetLayout)gpa(
-        dev, "vkDestroyDescriptorSetLayout");
-    table->CreateDescriptorPool =
-        (PFN_vkCreateDescriptorPool)gpa(dev, "vkCreateDescriptorPool");
-    table->DestroyDescriptorPool =
-        (PFN_vkDestroyDescriptorPool)gpa(dev, "vkDestroyDescriptorPool");
-    table->ResetDescriptorPool =
-        (PFN_vkResetDescriptorPool)gpa(dev, "vkResetDescriptorPool");
-    table->AllocateDescriptorSets =
-        (PFN_vkAllocateDescriptorSets)gpa(dev, "vkAllocateDescriptorSets");
-    table->FreeDescriptorSets =
-        (PFN_vkFreeDescriptorSets)gpa(dev, "vkFreeDescriptorSets");
-    table->UpdateDescriptorSets =
-        (PFN_vkUpdateDescriptorSets)gpa(dev, "vkUpdateDescriptorSets");
-    table->CreateFramebuffer =
-        (PFN_vkCreateFramebuffer)gpa(dev, "vkCreateFramebuffer");
-    table->DestroyFramebuffer =
-        (PFN_vkDestroyFramebuffer)gpa(dev, "vkDestroyFramebuffer");
-    table->CreateRenderPass =
-        (PFN_vkCreateRenderPass)gpa(dev, "vkCreateRenderPass");
-    table->DestroyRenderPass =
-        (PFN_vkDestroyRenderPass)gpa(dev, "vkDestroyRenderPass");
-    table->GetRenderAreaGranularity =
-        (PFN_vkGetRenderAreaGranularity)gpa(dev, "vkGetRenderAreaGranularity");
-    table->CreateCommandPool =
-        (PFN_vkCreateCommandPool)gpa(dev, "vkCreateCommandPool");
-    table->DestroyCommandPool =
-        (PFN_vkDestroyCommandPool)gpa(dev, "vkDestroyCommandPool");
-    table->ResetCommandPool =
-        (PFN_vkResetCommandPool)gpa(dev, "vkResetCommandPool");
-    table->AllocateCommandBuffers =
-        (PFN_vkAllocateCommandBuffers)gpa(dev, "vkAllocateCommandBuffers");
-    table->FreeCommandBuffers =
-        (PFN_vkFreeCommandBuffers)gpa(dev, "vkFreeCommandBuffers");
-    table->BeginCommandBuffer =
-        (PFN_vkBeginCommandBuffer)gpa(dev, "vkBeginCommandBuffer");
-    table->EndCommandBuffer =
-        (PFN_vkEndCommandBuffer)gpa(dev, "vkEndCommandBuffer");
-    table->ResetCommandBuffer =
-        (PFN_vkResetCommandBuffer)gpa(dev, "vkResetCommandBuffer");
-    table->CmdBindPipeline =
-        (PFN_vkCmdBindPipeline)gpa(dev, "vkCmdBindPipeline");
+    table->CreateDescriptorSetLayout = (PFN_vkCreateDescriptorSetLayout)gpa(dev, "vkCreateDescriptorSetLayout");
+    table->DestroyDescriptorSetLayout = (PFN_vkDestroyDescriptorSetLayout)gpa(dev, "vkDestroyDescriptorSetLayout");
+    table->CreateDescriptorPool = (PFN_vkCreateDescriptorPool)gpa(dev, "vkCreateDescriptorPool");
+    table->DestroyDescriptorPool = (PFN_vkDestroyDescriptorPool)gpa(dev, "vkDestroyDescriptorPool");
+    table->ResetDescriptorPool = (PFN_vkResetDescriptorPool)gpa(dev, "vkResetDescriptorPool");
+    table->AllocateDescriptorSets = (PFN_vkAllocateDescriptorSets)gpa(dev, "vkAllocateDescriptorSets");
+    table->FreeDescriptorSets = (PFN_vkFreeDescriptorSets)gpa(dev, "vkFreeDescriptorSets");
+    table->UpdateDescriptorSets = (PFN_vkUpdateDescriptorSets)gpa(dev, "vkUpdateDescriptorSets");
+    table->CreateFramebuffer = (PFN_vkCreateFramebuffer)gpa(dev, "vkCreateFramebuffer");
+    table->DestroyFramebuffer = (PFN_vkDestroyFramebuffer)gpa(dev, "vkDestroyFramebuffer");
+    table->CreateRenderPass = (PFN_vkCreateRenderPass)gpa(dev, "vkCreateRenderPass");
+    table->DestroyRenderPass = (PFN_vkDestroyRenderPass)gpa(dev, "vkDestroyRenderPass");
+    table->GetRenderAreaGranularity = (PFN_vkGetRenderAreaGranularity)gpa(dev, "vkGetRenderAreaGranularity");
+    table->CreateCommandPool = (PFN_vkCreateCommandPool)gpa(dev, "vkCreateCommandPool");
+    table->DestroyCommandPool = (PFN_vkDestroyCommandPool)gpa(dev, "vkDestroyCommandPool");
+    table->ResetCommandPool = (PFN_vkResetCommandPool)gpa(dev, "vkResetCommandPool");
+    table->AllocateCommandBuffers = (PFN_vkAllocateCommandBuffers)gpa(dev, "vkAllocateCommandBuffers");
+    table->FreeCommandBuffers = (PFN_vkFreeCommandBuffers)gpa(dev, "vkFreeCommandBuffers");
+    table->BeginCommandBuffer = (PFN_vkBeginCommandBuffer)gpa(dev, "vkBeginCommandBuffer");
+    table->EndCommandBuffer = (PFN_vkEndCommandBuffer)gpa(dev, "vkEndCommandBuffer");
+    table->ResetCommandBuffer = (PFN_vkResetCommandBuffer)gpa(dev, "vkResetCommandBuffer");
+    table->CmdBindPipeline = (PFN_vkCmdBindPipeline)gpa(dev, "vkCmdBindPipeline");
     table->CmdSetViewport = (PFN_vkCmdSetViewport)gpa(dev, "vkCmdSetViewport");
     table->CmdSetScissor = (PFN_vkCmdSetScissor)gpa(dev, "vkCmdSetScissor");
-    table->CmdSetLineWidth =
-        (PFN_vkCmdSetLineWidth)gpa(dev, "vkCmdSetLineWidth");
-    table->CmdSetDepthBias =
-        (PFN_vkCmdSetDepthBias)gpa(dev, "vkCmdSetDepthBias");
-    table->CmdSetBlendConstants =
-        (PFN_vkCmdSetBlendConstants)gpa(dev, "vkCmdSetBlendConstants");
-    table->CmdSetDepthBounds =
-        (PFN_vkCmdSetDepthBounds)gpa(dev, "vkCmdSetDepthBounds");
-    table->CmdSetStencilCompareMask =
-        (PFN_vkCmdSetStencilCompareMask)gpa(dev, "vkCmdSetStencilCompareMask");
-    table->CmdSetStencilWriteMask =
-        (PFN_vkCmdSetStencilWriteMask)gpa(dev, "vkCmdSetStencilWriteMask");
-    table->CmdSetStencilReference =
-        (PFN_vkCmdSetStencilReference)gpa(dev, "vkCmdSetStencilReference");
-    table->CmdBindDescriptorSets =
-        (PFN_vkCmdBindDescriptorSets)gpa(dev, "vkCmdBindDescriptorSets");
-    table->CmdBindVertexBuffers =
-        (PFN_vkCmdBindVertexBuffers)gpa(dev, "vkCmdBindVertexBuffers");
-    table->CmdBindIndexBuffer =
-        (PFN_vkCmdBindIndexBuffer)gpa(dev, "vkCmdBindIndexBuffer");
+    table->CmdSetLineWidth = (PFN_vkCmdSetLineWidth)gpa(dev, "vkCmdSetLineWidth");
+    table->CmdSetDepthBias = (PFN_vkCmdSetDepthBias)gpa(dev, "vkCmdSetDepthBias");
+    table->CmdSetBlendConstants = (PFN_vkCmdSetBlendConstants)gpa(dev, "vkCmdSetBlendConstants");
+    table->CmdSetDepthBounds = (PFN_vkCmdSetDepthBounds)gpa(dev, "vkCmdSetDepthBounds");
+    table->CmdSetStencilCompareMask = (PFN_vkCmdSetStencilCompareMask)gpa(dev, "vkCmdSetStencilCompareMask");
+    table->CmdSetStencilWriteMask = (PFN_vkCmdSetStencilWriteMask)gpa(dev, "vkCmdSetStencilWriteMask");
+    table->CmdSetStencilReference = (PFN_vkCmdSetStencilReference)gpa(dev, "vkCmdSetStencilReference");
+    table->CmdBindDescriptorSets = (PFN_vkCmdBindDescriptorSets)gpa(dev, "vkCmdBindDescriptorSets");
+    table->CmdBindVertexBuffers = (PFN_vkCmdBindVertexBuffers)gpa(dev, "vkCmdBindVertexBuffers");
+    table->CmdBindIndexBuffer = (PFN_vkCmdBindIndexBuffer)gpa(dev, "vkCmdBindIndexBuffer");
     table->CmdDraw = (PFN_vkCmdDraw)gpa(dev, "vkCmdDraw");
     table->CmdDrawIndexed = (PFN_vkCmdDrawIndexed)gpa(dev, "vkCmdDrawIndexed");
-    table->CmdDrawIndirect =
-        (PFN_vkCmdDrawIndirect)gpa(dev, "vkCmdDrawIndirect");
-    table->CmdDrawIndexedIndirect =
-        (PFN_vkCmdDrawIndexedIndirect)gpa(dev, "vkCmdDrawIndexedIndirect");
+    table->CmdDrawIndirect = (PFN_vkCmdDrawIndirect)gpa(dev, "vkCmdDrawIndirect");
+    table->CmdDrawIndexedIndirect = (PFN_vkCmdDrawIndexedIndirect)gpa(dev, "vkCmdDrawIndexedIndirect");
     table->CmdDispatch = (PFN_vkCmdDispatch)gpa(dev, "vkCmdDispatch");
-    table->CmdDispatchIndirect =
-        (PFN_vkCmdDispatchIndirect)gpa(dev, "vkCmdDispatchIndirect");
+    table->CmdDispatchIndirect = (PFN_vkCmdDispatchIndirect)gpa(dev, "vkCmdDispatchIndirect");
     table->CmdCopyBuffer = (PFN_vkCmdCopyBuffer)gpa(dev, "vkCmdCopyBuffer");
     table->CmdCopyImage = (PFN_vkCmdCopyImage)gpa(dev, "vkCmdCopyImage");
     table->CmdBlitImage = (PFN_vkCmdBlitImage)gpa(dev, "vkCmdBlitImage");
-    table->CmdCopyBufferToImage =
-        (PFN_vkCmdCopyBufferToImage)gpa(dev, "vkCmdCopyBufferToImage");
-    table->CmdCopyImageToBuffer =
-        (PFN_vkCmdCopyImageToBuffer)gpa(dev, "vkCmdCopyImageToBuffer");
-    table->CmdUpdateBuffer =
-        (PFN_vkCmdUpdateBuffer)gpa(dev, "vkCmdUpdateBuffer");
+    table->CmdCopyBufferToImage = (PFN_vkCmdCopyBufferToImage)gpa(dev, "vkCmdCopyBufferToImage");
+    table->CmdCopyImageToBuffer = (PFN_vkCmdCopyImageToBuffer)gpa(dev, "vkCmdCopyImageToBuffer");
+    table->CmdUpdateBuffer = (PFN_vkCmdUpdateBuffer)gpa(dev, "vkCmdUpdateBuffer");
     table->CmdFillBuffer = (PFN_vkCmdFillBuffer)gpa(dev, "vkCmdFillBuffer");
-    table->CmdClearColorImage =
-        (PFN_vkCmdClearColorImage)gpa(dev, "vkCmdClearColorImage");
-    table->CmdClearDepthStencilImage = (PFN_vkCmdClearDepthStencilImage)gpa(
-        dev, "vkCmdClearDepthStencilImage");
-    table->CmdClearAttachments =
-        (PFN_vkCmdClearAttachments)gpa(dev, "vkCmdClearAttachments");
-    table->CmdResolveImage =
-        (PFN_vkCmdResolveImage)gpa(dev, "vkCmdResolveImage");
+    table->CmdClearColorImage = (PFN_vkCmdClearColorImage)gpa(dev, "vkCmdClearColorImage");
+    table->CmdClearDepthStencilImage = (PFN_vkCmdClearDepthStencilImage)gpa(dev, "vkCmdClearDepthStencilImage");
+    table->CmdClearAttachments = (PFN_vkCmdClearAttachments)gpa(dev, "vkCmdClearAttachments");
+    table->CmdResolveImage = (PFN_vkCmdResolveImage)gpa(dev, "vkCmdResolveImage");
     table->CmdSetEvent = (PFN_vkCmdSetEvent)gpa(dev, "vkCmdSetEvent");
     table->CmdResetEvent = (PFN_vkCmdResetEvent)gpa(dev, "vkCmdResetEvent");
     table->CmdWaitEvents = (PFN_vkCmdWaitEvents)gpa(dev, "vkCmdWaitEvents");
-    table->CmdPipelineBarrier =
-        (PFN_vkCmdPipelineBarrier)gpa(dev, "vkCmdPipelineBarrier");
+    table->CmdPipelineBarrier = (PFN_vkCmdPipelineBarrier)gpa(dev, "vkCmdPipelineBarrier");
     table->CmdBeginQuery = (PFN_vkCmdBeginQuery)gpa(dev, "vkCmdBeginQuery");
     table->CmdEndQuery = (PFN_vkCmdEndQuery)gpa(dev, "vkCmdEndQuery");
-    table->CmdResetQueryPool =
-        (PFN_vkCmdResetQueryPool)gpa(dev, "vkCmdResetQueryPool");
-    table->CmdWriteTimestamp =
-        (PFN_vkCmdWriteTimestamp)gpa(dev, "vkCmdWriteTimestamp");
-    table->CmdCopyQueryPoolResults =
-        (PFN_vkCmdCopyQueryPoolResults)gpa(dev, "vkCmdCopyQueryPoolResults");
-    table->CmdPushConstants =
-        (PFN_vkCmdPushConstants)gpa(dev, "vkCmdPushConstants");
-    table->CmdBeginRenderPass =
-        (PFN_vkCmdBeginRenderPass)gpa(dev, "vkCmdBeginRenderPass");
+    table->CmdResetQueryPool = (PFN_vkCmdResetQueryPool)gpa(dev, "vkCmdResetQueryPool");
+    table->CmdWriteTimestamp = (PFN_vkCmdWriteTimestamp)gpa(dev, "vkCmdWriteTimestamp");
+    table->CmdCopyQueryPoolResults = (PFN_vkCmdCopyQueryPoolResults)gpa(dev, "vkCmdCopyQueryPoolResults");
+    table->CmdPushConstants = (PFN_vkCmdPushConstants)gpa(dev, "vkCmdPushConstants");
+    table->CmdBeginRenderPass = (PFN_vkCmdBeginRenderPass)gpa(dev, "vkCmdBeginRenderPass");
     table->CmdNextSubpass = (PFN_vkCmdNextSubpass)gpa(dev, "vkCmdNextSubpass");
-    table->CmdEndRenderPass =
-        (PFN_vkCmdEndRenderPass)gpa(dev, "vkCmdEndRenderPass");
-    table->CmdExecuteCommands =
-        (PFN_vkCmdExecuteCommands)gpa(dev, "vkCmdExecuteCommands");
+    table->CmdEndRenderPass = (PFN_vkCmdEndRenderPass)gpa(dev, "vkCmdEndRenderPass");
+    table->CmdExecuteCommands = (PFN_vkCmdExecuteCommands)gpa(dev, "vkCmdExecuteCommands");
 }
 
-static inline void loader_init_device_extension_dispatch_table(
-    struct loader_dev_dispatch_table *dev_table, PFN_vkGetDeviceProcAddr gpa,
-    VkDevice dev) {
+static inline void loader_init_device_extension_dispatch_table(struct loader_dev_dispatch_table *dev_table,
+                                                               PFN_vkGetDeviceProcAddr gpa, VkDevice dev) {
     VkLayerDispatchTable *table = &dev_table->core_dispatch;
-    table->AcquireNextImageKHR =
-        (PFN_vkAcquireNextImageKHR)gpa(dev, "vkAcquireNextImageKHR");
-    table->CreateSwapchainKHR =
-        (PFN_vkCreateSwapchainKHR)gpa(dev, "vkCreateSwapchainKHR");
-    table->DestroySwapchainKHR =
-        (PFN_vkDestroySwapchainKHR)gpa(dev, "vkDestroySwapchainKHR");
-    table->GetSwapchainImagesKHR =
-        (PFN_vkGetSwapchainImagesKHR)gpa(dev, "vkGetSwapchainImagesKHR");
-    table->QueuePresentKHR =
-        (PFN_vkQueuePresentKHR)gpa(dev, "vkQueuePresentKHR");
+    table->AcquireNextImageKHR = (PFN_vkAcquireNextImageKHR)gpa(dev, "vkAcquireNextImageKHR");
+    table->CreateSwapchainKHR = (PFN_vkCreateSwapchainKHR)gpa(dev, "vkCreateSwapchainKHR");
+    table->DestroySwapchainKHR = (PFN_vkDestroySwapchainKHR)gpa(dev, "vkDestroySwapchainKHR");
+    table->GetSwapchainImagesKHR = (PFN_vkGetSwapchainImagesKHR)gpa(dev, "vkGetSwapchainImagesKHR");
+    table->QueuePresentKHR = (PFN_vkQueuePresentKHR)gpa(dev, "vkQueuePresentKHR");
 
     // KHR_display_swapchain
-    table->CreateSharedSwapchainsKHR = (PFN_vkCreateSharedSwapchainsKHR)gpa(
-        dev, "vkCreateSharedSwapchainsKHR");
+    table->CreateSharedSwapchainsKHR = (PFN_vkCreateSharedSwapchainsKHR)gpa(dev, "vkCreateSharedSwapchainsKHR");
 
     // KHR_maintenance1
-    table->TrimCommandPoolKHR =
-        (PFN_vkTrimCommandPoolKHR)gpa(dev, "vkTrimCommandPoolKHR");
+    table->TrimCommandPoolKHR = (PFN_vkTrimCommandPoolKHR)gpa(dev, "vkTrimCommandPoolKHR");
 
     // EXT_display_control
-    table->DisplayPowerControlEXT =
-        (PFN_vkDisplayPowerControlEXT)gpa(dev, "vkDisplayPowerControlEXT");
-    table->RegisterDeviceEventEXT =
-        (PFN_vkRegisterDeviceEventEXT)gpa(dev, "vkRegisterDeviceEventEXT");
-    table->RegisterDisplayEventEXT =
-        (PFN_vkRegisterDisplayEventEXT)gpa(dev, "vkRegisterDisplayEventEXT");
-    table->GetSwapchainCounterEXT =
-        (PFN_vkGetSwapchainCounterEXT)gpa(dev, "vkGetSwapchainCounterEXT");
+    table->DisplayPowerControlEXT = (PFN_vkDisplayPowerControlEXT)gpa(dev, "vkDisplayPowerControlEXT");
+    table->RegisterDeviceEventEXT = (PFN_vkRegisterDeviceEventEXT)gpa(dev, "vkRegisterDeviceEventEXT");
+    table->RegisterDisplayEventEXT = (PFN_vkRegisterDisplayEventEXT)gpa(dev, "vkRegisterDisplayEventEXT");
+    table->GetSwapchainCounterEXT = (PFN_vkGetSwapchainCounterEXT)gpa(dev, "vkGetSwapchainCounterEXT");
 
     // EXT_debug_marker
-    table->DebugMarkerSetObjectTagEXT = (PFN_vkDebugMarkerSetObjectTagEXT)gpa(
-        dev, "vkDebugMarkerSetObjectTagEXT");
-    table->DebugMarkerSetObjectNameEXT = (PFN_vkDebugMarkerSetObjectNameEXT)gpa(
-        dev, "vkDebugMarkerSetObjectNameEXT");
-    table->CmdDebugMarkerBeginEXT =
-        (PFN_vkCmdDebugMarkerBeginEXT)gpa(dev, "vkCmdDebugMarkerBeginEXT");
-    table->CmdDebugMarkerEndEXT =
-        (PFN_vkCmdDebugMarkerEndEXT)gpa(dev, "vkCmdDebugMarkerEndEXT");
-    table->CmdDebugMarkerInsertEXT =
-        (PFN_vkCmdDebugMarkerInsertEXT)gpa(dev, "vkCmdDebugMarkerInsertEXT");
+    table->DebugMarkerSetObjectTagEXT = (PFN_vkDebugMarkerSetObjectTagEXT)gpa(dev, "vkDebugMarkerSetObjectTagEXT");
+    table->DebugMarkerSetObjectNameEXT = (PFN_vkDebugMarkerSetObjectNameEXT)gpa(dev, "vkDebugMarkerSetObjectNameEXT");
+    table->CmdDebugMarkerBeginEXT = (PFN_vkCmdDebugMarkerBeginEXT)gpa(dev, "vkCmdDebugMarkerBeginEXT");
+    table->CmdDebugMarkerEndEXT = (PFN_vkCmdDebugMarkerEndEXT)gpa(dev, "vkCmdDebugMarkerEndEXT");
+    table->CmdDebugMarkerInsertEXT = (PFN_vkCmdDebugMarkerInsertEXT)gpa(dev, "vkCmdDebugMarkerInsertEXT");
 
     // AMD_draw_indirect_count
-    table->CmdDrawIndirectCountAMD =
-        (PFN_vkCmdDrawIndirectCountAMD)gpa(dev, "vkCmdDrawIndirectCountAMD");
-    table->CmdDrawIndexedIndirectCountAMD =
-        (PFN_vkCmdDrawIndexedIndirectCountAMD)gpa(
-            dev, "vkCmdDrawIndexedIndirectCountAMD");
+    table->CmdDrawIndirectCountAMD = (PFN_vkCmdDrawIndirectCountAMD)gpa(dev, "vkCmdDrawIndirectCountAMD");
+    table->CmdDrawIndexedIndirectCountAMD = (PFN_vkCmdDrawIndexedIndirectCountAMD)gpa(dev, "vkCmdDrawIndexedIndirectCountAMD");
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
     // NV_external_memory_win32
-    table->GetMemoryWin32HandleNV =
-        (PFN_vkGetMemoryWin32HandleNV)gpa(dev, "vkGetMemoryWin32HandleNV");
+    table->GetMemoryWin32HandleNV = (PFN_vkGetMemoryWin32HandleNV)gpa(dev, "vkGetMemoryWin32HandleNV");
 #endif
 
     // NVX_device_generated_commands
-    table->CmdProcessCommandsNVX =
-        (PFN_vkCmdProcessCommandsNVX)gpa(dev, "vkCmdProcessCommandsNVX");
-    table->CmdReserveSpaceForCommandsNVX =
-        (PFN_vkCmdReserveSpaceForCommandsNVX)gpa(
-            dev, "vkCmdReserveSpaceForCommandsNVX");
-    table->CreateIndirectCommandsLayoutNVX =
-        (PFN_vkCreateIndirectCommandsLayoutNVX)gpa(
-            dev, "vkCreateIndirectCommandsLayoutNVX");
+    table->CmdProcessCommandsNVX = (PFN_vkCmdProcessCommandsNVX)gpa(dev, "vkCmdProcessCommandsNVX");
+    table->CmdReserveSpaceForCommandsNVX = (PFN_vkCmdReserveSpaceForCommandsNVX)gpa(dev, "vkCmdReserveSpaceForCommandsNVX");
+    table->CreateIndirectCommandsLayoutNVX = (PFN_vkCreateIndirectCommandsLayoutNVX)gpa(dev, "vkCreateIndirectCommandsLayoutNVX");
     table->DestroyIndirectCommandsLayoutNVX =
-        (PFN_vkDestroyIndirectCommandsLayoutNVX)gpa(
-            dev, "vkDestroyIndirectCommandsLayoutNVX");
-    table->CreateObjectTableNVX =
-        (PFN_vkCreateObjectTableNVX)gpa(dev, "vkCreateObjectTableNVX");
-    table->DestroyObjectTableNVX =
-        (PFN_vkDestroyObjectTableNVX)gpa(dev, "vkDestroyObjectTableNVX");
-    table->RegisterObjectsNVX =
-        (PFN_vkRegisterObjectsNVX)gpa(dev, "vkRegisterObjectsNVX");
-    table->UnregisterObjectsNVX =
-        (PFN_vkUnregisterObjectsNVX)gpa(dev, "vkUnregisterObjectsNVX");
+        (PFN_vkDestroyIndirectCommandsLayoutNVX)gpa(dev, "vkDestroyIndirectCommandsLayoutNVX");
+    table->CreateObjectTableNVX = (PFN_vkCreateObjectTableNVX)gpa(dev, "vkCreateObjectTableNVX");
+    table->DestroyObjectTableNVX = (PFN_vkDestroyObjectTableNVX)gpa(dev, "vkDestroyObjectTableNVX");
+    table->RegisterObjectsNVX = (PFN_vkRegisterObjectsNVX)gpa(dev, "vkRegisterObjectsNVX");
+    table->UnregisterObjectsNVX = (PFN_vkUnregisterObjectsNVX)gpa(dev, "vkUnregisterObjectsNVX");
 }
 
-static inline void *
-loader_lookup_device_dispatch_table(const VkLayerDispatchTable *table,
-                                    const char *name) {
+static inline void *loader_lookup_device_dispatch_table(const VkLayerDispatchTable *table, const char *name) {
     if (!name || name[0] != 'v' || name[1] != 'k')
         return NULL;
 
@@ -612,180 +495,119 @@ loader_lookup_device_dispatch_table(const VkLayerDispatchTable *table,
     return NULL;
 }
 
-static inline void
-loader_init_instance_core_dispatch_table(VkLayerInstanceDispatchTable *table,
-                                         PFN_vkGetInstanceProcAddr gpa,
-                                         VkInstance inst) {
-    table->GetInstanceProcAddr =
-        (PFN_vkGetInstanceProcAddr)gpa(inst, "vkGetInstanceProcAddr");
-    table->DestroyInstance =
-        (PFN_vkDestroyInstance)gpa(inst, "vkDestroyInstance");
-    table->EnumeratePhysicalDevices =
-        (PFN_vkEnumeratePhysicalDevices)gpa(inst, "vkEnumeratePhysicalDevices");
-    table->GetPhysicalDeviceFeatures = (PFN_vkGetPhysicalDeviceFeatures)gpa(
-        inst, "vkGetPhysicalDeviceFeatures");
+static inline void loader_init_instance_core_dispatch_table(VkLayerInstanceDispatchTable *table, PFN_vkGetInstanceProcAddr gpa,
+                                                            VkInstance inst) {
+    table->GetInstanceProcAddr = (PFN_vkGetInstanceProcAddr)gpa(inst, "vkGetInstanceProcAddr");
+    table->DestroyInstance = (PFN_vkDestroyInstance)gpa(inst, "vkDestroyInstance");
+    table->EnumeratePhysicalDevices = (PFN_vkEnumeratePhysicalDevices)gpa(inst, "vkEnumeratePhysicalDevices");
+    table->GetPhysicalDeviceFeatures = (PFN_vkGetPhysicalDeviceFeatures)gpa(inst, "vkGetPhysicalDeviceFeatures");
     table->GetPhysicalDeviceImageFormatProperties =
-        (PFN_vkGetPhysicalDeviceImageFormatProperties)gpa(
-            inst, "vkGetPhysicalDeviceImageFormatProperties");
+        (PFN_vkGetPhysicalDeviceImageFormatProperties)gpa(inst, "vkGetPhysicalDeviceImageFormatProperties");
     table->GetPhysicalDeviceFormatProperties =
-        (PFN_vkGetPhysicalDeviceFormatProperties)gpa(
-            inst, "vkGetPhysicalDeviceFormatProperties");
+        (PFN_vkGetPhysicalDeviceFormatProperties)gpa(inst, "vkGetPhysicalDeviceFormatProperties");
     table->GetPhysicalDeviceSparseImageFormatProperties =
-        (PFN_vkGetPhysicalDeviceSparseImageFormatProperties)gpa(
-            inst, "vkGetPhysicalDeviceSparseImageFormatProperties");
-    table->GetPhysicalDeviceProperties = (PFN_vkGetPhysicalDeviceProperties)gpa(
-        inst, "vkGetPhysicalDeviceProperties");
+        (PFN_vkGetPhysicalDeviceSparseImageFormatProperties)gpa(inst, "vkGetPhysicalDeviceSparseImageFormatProperties");
+    table->GetPhysicalDeviceProperties = (PFN_vkGetPhysicalDeviceProperties)gpa(inst, "vkGetPhysicalDeviceProperties");
     table->GetPhysicalDeviceQueueFamilyProperties =
-        (PFN_vkGetPhysicalDeviceQueueFamilyProperties)gpa(
-            inst, "vkGetPhysicalDeviceQueueFamilyProperties");
+        (PFN_vkGetPhysicalDeviceQueueFamilyProperties)gpa(inst, "vkGetPhysicalDeviceQueueFamilyProperties");
     table->GetPhysicalDeviceMemoryProperties =
-        (PFN_vkGetPhysicalDeviceMemoryProperties)gpa(
-            inst, "vkGetPhysicalDeviceMemoryProperties");
+        (PFN_vkGetPhysicalDeviceMemoryProperties)gpa(inst, "vkGetPhysicalDeviceMemoryProperties");
     table->EnumerateDeviceExtensionProperties =
-        (PFN_vkEnumerateDeviceExtensionProperties)gpa(
-            inst, "vkEnumerateDeviceExtensionProperties");
-    table->EnumerateDeviceLayerProperties =
-        (PFN_vkEnumerateDeviceLayerProperties)gpa(
-            inst, "vkEnumerateDeviceLayerProperties");
+        (PFN_vkEnumerateDeviceExtensionProperties)gpa(inst, "vkEnumerateDeviceExtensionProperties");
+    table->EnumerateDeviceLayerProperties = (PFN_vkEnumerateDeviceLayerProperties)gpa(inst, "vkEnumerateDeviceLayerProperties");
 }
 
-static inline void loader_init_instance_extension_dispatch_table(
-    VkLayerInstanceDispatchTable *table, PFN_vkGetInstanceProcAddr gpa,
-    VkInstance inst) {
+static inline void loader_init_instance_extension_dispatch_table(VkLayerInstanceDispatchTable *table, PFN_vkGetInstanceProcAddr gpa,
+                                                                 VkInstance inst) {
     // WSI extensions
-    table->DestroySurfaceKHR =
-        (PFN_vkDestroySurfaceKHR)gpa(inst, "vkDestroySurfaceKHR");
+    table->DestroySurfaceKHR = (PFN_vkDestroySurfaceKHR)gpa(inst, "vkDestroySurfaceKHR");
     table->GetPhysicalDeviceSurfaceSupportKHR =
-        (PFN_vkGetPhysicalDeviceSurfaceSupportKHR)gpa(
-            inst, "vkGetPhysicalDeviceSurfaceSupportKHR");
+        (PFN_vkGetPhysicalDeviceSurfaceSupportKHR)gpa(inst, "vkGetPhysicalDeviceSurfaceSupportKHR");
     table->GetPhysicalDeviceSurfaceCapabilitiesKHR =
-        (PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR)gpa(
-            inst, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR");
+        (PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR)gpa(inst, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR");
     table->GetPhysicalDeviceSurfaceFormatsKHR =
-        (PFN_vkGetPhysicalDeviceSurfaceFormatsKHR)gpa(
-            inst, "vkGetPhysicalDeviceSurfaceFormatsKHR");
+        (PFN_vkGetPhysicalDeviceSurfaceFormatsKHR)gpa(inst, "vkGetPhysicalDeviceSurfaceFormatsKHR");
     table->GetPhysicalDeviceSurfacePresentModesKHR =
-        (PFN_vkGetPhysicalDeviceSurfacePresentModesKHR)gpa(
-            inst, "vkGetPhysicalDeviceSurfacePresentModesKHR");
+        (PFN_vkGetPhysicalDeviceSurfacePresentModesKHR)gpa(inst, "vkGetPhysicalDeviceSurfacePresentModesKHR");
 #ifdef VK_USE_PLATFORM_MIR_KHR
-    table->CreateMirSurfaceKHR =
-        (PFN_vkCreateMirSurfaceKHR)gpa(inst, "vkCreateMirSurfaceKHR");
+    table->CreateMirSurfaceKHR = (PFN_vkCreateMirSurfaceKHR)gpa(inst, "vkCreateMirSurfaceKHR");
     table->GetPhysicalDeviceMirPresentationSupportKHR =
-        (PFN_vkGetPhysicalDeviceMirPresentationSupportKHR)gpa(
-            inst, "vkGetPhysicalDeviceMirPresentationSupportKHR");
+        (PFN_vkGetPhysicalDeviceMirPresentationSupportKHR)gpa(inst, "vkGetPhysicalDeviceMirPresentationSupportKHR");
 #endif
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
-    table->CreateWaylandSurfaceKHR =
-        (PFN_vkCreateWaylandSurfaceKHR)gpa(inst, "vkCreateWaylandSurfaceKHR");
+    table->CreateWaylandSurfaceKHR = (PFN_vkCreateWaylandSurfaceKHR)gpa(inst, "vkCreateWaylandSurfaceKHR");
     table->GetPhysicalDeviceWaylandPresentationSupportKHR =
-        (PFN_vkGetPhysicalDeviceWaylandPresentationSupportKHR)gpa(
-            inst, "vkGetPhysicalDeviceWaylandPresentationSupportKHR");
+        (PFN_vkGetPhysicalDeviceWaylandPresentationSupportKHR)gpa(inst, "vkGetPhysicalDeviceWaylandPresentationSupportKHR");
 #endif
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-    table->CreateWin32SurfaceKHR =
-        (PFN_vkCreateWin32SurfaceKHR)gpa(inst, "vkCreateWin32SurfaceKHR");
+    table->CreateWin32SurfaceKHR = (PFN_vkCreateWin32SurfaceKHR)gpa(inst, "vkCreateWin32SurfaceKHR");
     table->GetPhysicalDeviceWin32PresentationSupportKHR =
-        (PFN_vkGetPhysicalDeviceWin32PresentationSupportKHR)gpa(
-            inst, "vkGetPhysicalDeviceWin32PresentationSupportKHR");
+        (PFN_vkGetPhysicalDeviceWin32PresentationSupportKHR)gpa(inst, "vkGetPhysicalDeviceWin32PresentationSupportKHR");
 #endif
 #ifdef VK_USE_PLATFORM_XCB_KHR
-    table->CreateXcbSurfaceKHR =
-        (PFN_vkCreateXcbSurfaceKHR)gpa(inst, "vkCreateXcbSurfaceKHR");
+    table->CreateXcbSurfaceKHR = (PFN_vkCreateXcbSurfaceKHR)gpa(inst, "vkCreateXcbSurfaceKHR");
     table->GetPhysicalDeviceXcbPresentationSupportKHR =
-        (PFN_vkGetPhysicalDeviceXcbPresentationSupportKHR)gpa(
-            inst, "vkGetPhysicalDeviceXcbPresentationSupportKHR");
+        (PFN_vkGetPhysicalDeviceXcbPresentationSupportKHR)gpa(inst, "vkGetPhysicalDeviceXcbPresentationSupportKHR");
 #endif
 #ifdef VK_USE_PLATFORM_XLIB_KHR
-    table->CreateXlibSurfaceKHR =
-        (PFN_vkCreateXlibSurfaceKHR)gpa(inst, "vkCreateXlibSurfaceKHR");
+    table->CreateXlibSurfaceKHR = (PFN_vkCreateXlibSurfaceKHR)gpa(inst, "vkCreateXlibSurfaceKHR");
     table->GetPhysicalDeviceXlibPresentationSupportKHR =
-        (PFN_vkGetPhysicalDeviceXlibPresentationSupportKHR)gpa(
-            inst, "vkGetPhysicalDeviceXlibPresentationSupportKHR");
+        (PFN_vkGetPhysicalDeviceXlibPresentationSupportKHR)gpa(inst, "vkGetPhysicalDeviceXlibPresentationSupportKHR");
 #endif
     table->GetPhysicalDeviceDisplayPropertiesKHR =
-        (PFN_vkGetPhysicalDeviceDisplayPropertiesKHR)gpa(
-            inst, "vkGetPhysicalDeviceDisplayPropertiesKHR");
+        (PFN_vkGetPhysicalDeviceDisplayPropertiesKHR)gpa(inst, "vkGetPhysicalDeviceDisplayPropertiesKHR");
     table->GetPhysicalDeviceDisplayPlanePropertiesKHR =
-        (PFN_vkGetPhysicalDeviceDisplayPlanePropertiesKHR)gpa(
-            inst, "vkGetPhysicalDeviceDisplayPlanePropertiesKHR");
+        (PFN_vkGetPhysicalDeviceDisplayPlanePropertiesKHR)gpa(inst, "vkGetPhysicalDeviceDisplayPlanePropertiesKHR");
     table->GetDisplayPlaneSupportedDisplaysKHR =
-        (PFN_vkGetDisplayPlaneSupportedDisplaysKHR)gpa(
-            inst, "vkGetDisplayPlaneSupportedDisplaysKHR");
-    table->GetDisplayModePropertiesKHR = (PFN_vkGetDisplayModePropertiesKHR)gpa(
-        inst, "vkGetDisplayModePropertiesKHR");
-    table->CreateDisplayModeKHR =
-        (PFN_vkCreateDisplayModeKHR)gpa(inst, "vkCreateDisplayModeKHR");
-    table->GetDisplayPlaneCapabilitiesKHR =
-        (PFN_vkGetDisplayPlaneCapabilitiesKHR)gpa(
-            inst, "vkGetDisplayPlaneCapabilitiesKHR");
-    table->CreateDisplayPlaneSurfaceKHR =
-        (PFN_vkCreateDisplayPlaneSurfaceKHR)gpa(
-            inst, "vkCreateDisplayPlaneSurfaceKHR");
+        (PFN_vkGetDisplayPlaneSupportedDisplaysKHR)gpa(inst, "vkGetDisplayPlaneSupportedDisplaysKHR");
+    table->GetDisplayModePropertiesKHR = (PFN_vkGetDisplayModePropertiesKHR)gpa(inst, "vkGetDisplayModePropertiesKHR");
+    table->CreateDisplayModeKHR = (PFN_vkCreateDisplayModeKHR)gpa(inst, "vkCreateDisplayModeKHR");
+    table->GetDisplayPlaneCapabilitiesKHR = (PFN_vkGetDisplayPlaneCapabilitiesKHR)gpa(inst, "vkGetDisplayPlaneCapabilitiesKHR");
+    table->CreateDisplayPlaneSurfaceKHR = (PFN_vkCreateDisplayPlaneSurfaceKHR)gpa(inst, "vkCreateDisplayPlaneSurfaceKHR");
 
     // KHR_get_physical_device_properties2
-    table->GetPhysicalDeviceFeatures2KHR =
-        (PFN_vkGetPhysicalDeviceFeatures2KHR)gpa(
-            inst, "vkGetPhysicalDeviceFeatures2KHR");
-    table->GetPhysicalDeviceProperties2KHR =
-        (PFN_vkGetPhysicalDeviceProperties2KHR)gpa(
-            inst, "vkGetPhysicalDeviceProperties2KHR");
+    table->GetPhysicalDeviceFeatures2KHR = (PFN_vkGetPhysicalDeviceFeatures2KHR)gpa(inst, "vkGetPhysicalDeviceFeatures2KHR");
+    table->GetPhysicalDeviceProperties2KHR = (PFN_vkGetPhysicalDeviceProperties2KHR)gpa(inst, "vkGetPhysicalDeviceProperties2KHR");
     table->GetPhysicalDeviceFormatProperties2KHR =
-        (PFN_vkGetPhysicalDeviceFormatProperties2KHR)gpa(
-            inst, "vkGetPhysicalDeviceFormatProperties2KHR");
+        (PFN_vkGetPhysicalDeviceFormatProperties2KHR)gpa(inst, "vkGetPhysicalDeviceFormatProperties2KHR");
     table->GetPhysicalDeviceImageFormatProperties2KHR =
-        (PFN_vkGetPhysicalDeviceImageFormatProperties2KHR)gpa(
-            inst, "vkGetPhysicalDeviceImageFormatProperties2KHR");
+        (PFN_vkGetPhysicalDeviceImageFormatProperties2KHR)gpa(inst, "vkGetPhysicalDeviceImageFormatProperties2KHR");
     table->GetPhysicalDeviceQueueFamilyProperties2KHR =
-        (PFN_vkGetPhysicalDeviceQueueFamilyProperties2KHR)gpa(
-            inst, "vkGetPhysicalDeviceQueueFamilyProperties2KHR");
+        (PFN_vkGetPhysicalDeviceQueueFamilyProperties2KHR)gpa(inst, "vkGetPhysicalDeviceQueueFamilyProperties2KHR");
     table->GetPhysicalDeviceMemoryProperties2KHR =
-        (PFN_vkGetPhysicalDeviceMemoryProperties2KHR)gpa(
-            inst, "vkGetPhysicalDeviceMemoryProperties2KHR");
+        (PFN_vkGetPhysicalDeviceMemoryProperties2KHR)gpa(inst, "vkGetPhysicalDeviceMemoryProperties2KHR");
     table->GetPhysicalDeviceSparseImageFormatProperties2KHR =
-        (PFN_vkGetPhysicalDeviceSparseImageFormatProperties2KHR)gpa(
-            inst, "vkGetPhysicalDeviceSparseImageFormatProperties2KHR");
+        (PFN_vkGetPhysicalDeviceSparseImageFormatProperties2KHR)gpa(inst, "vkGetPhysicalDeviceSparseImageFormatProperties2KHR");
 
 #ifdef VK_USE_PLATFORM_XLIB_XRANDR_EXT
     // EXT_acquire_xlib_display
-    table->AcquireXlibDisplayEXT =
-        (PFN_vkAcquireXlibDisplayEXT)gpa(inst, "vkAcquireXlibDisplayEXT");
-    table->GetRandROutputDisplayEXT =
-        (PFN_vkGetRandROutputDisplayEXT)gpa(inst, "vkGetRandROutputDisplayEXT");
+    table->AcquireXlibDisplayEXT = (PFN_vkAcquireXlibDisplayEXT)gpa(inst, "vkAcquireXlibDisplayEXT");
+    table->GetRandROutputDisplayEXT = (PFN_vkGetRandROutputDisplayEXT)gpa(inst, "vkGetRandROutputDisplayEXT");
 #endif
 
     // EXT_debug_report
-    table->CreateDebugReportCallbackEXT =
-        (PFN_vkCreateDebugReportCallbackEXT)gpa(
-            inst, "vkCreateDebugReportCallbackEXT");
-    table->DestroyDebugReportCallbackEXT =
-        (PFN_vkDestroyDebugReportCallbackEXT)gpa(
-            inst, "vkDestroyDebugReportCallbackEXT");
-    table->DebugReportMessageEXT =
-        (PFN_vkDebugReportMessageEXT)gpa(inst, "vkDebugReportMessageEXT");
+    table->CreateDebugReportCallbackEXT = (PFN_vkCreateDebugReportCallbackEXT)gpa(inst, "vkCreateDebugReportCallbackEXT");
+    table->DestroyDebugReportCallbackEXT = (PFN_vkDestroyDebugReportCallbackEXT)gpa(inst, "vkDestroyDebugReportCallbackEXT");
+    table->DebugReportMessageEXT = (PFN_vkDebugReportMessageEXT)gpa(inst, "vkDebugReportMessageEXT");
 
     // EXT_direct_mode_display
-    table->ReleaseDisplayEXT =
-        (PFN_vkReleaseDisplayEXT)gpa(inst, "vkReleaseDisplayEXT");
+    table->ReleaseDisplayEXT = (PFN_vkReleaseDisplayEXT)gpa(inst, "vkReleaseDisplayEXT");
 
     // EXT_display_surface_counter
     table->GetPhysicalDeviceSurfaceCapabilities2EXT =
-        (PFN_vkGetPhysicalDeviceSurfaceCapabilities2EXT)gpa(
-            inst, "vkGetPhysicalDeviceSurfaceCapabilities2EXT");
+        (PFN_vkGetPhysicalDeviceSurfaceCapabilities2EXT)gpa(inst, "vkGetPhysicalDeviceSurfaceCapabilities2EXT");
 
     // NV_external_memory_capabilities
     table->GetPhysicalDeviceExternalImageFormatPropertiesNV =
-        (PFN_vkGetPhysicalDeviceExternalImageFormatPropertiesNV)gpa(
-            inst, "vkGetPhysicalDeviceExternalImageFormatPropertiesNV");
+        (PFN_vkGetPhysicalDeviceExternalImageFormatPropertiesNV)gpa(inst, "vkGetPhysicalDeviceExternalImageFormatPropertiesNV");
 
     // NVX_device_generated_commands (physical device command)
     table->GetPhysicalDeviceGeneratedCommandsPropertiesNVX =
-        (PFN_vkGetPhysicalDeviceGeneratedCommandsPropertiesNVX)gpa(
-            inst, "vkGetPhysicalDeviceGeneratedCommandsPropertiesNVX");
+        (PFN_vkGetPhysicalDeviceGeneratedCommandsPropertiesNVX)gpa(inst, "vkGetPhysicalDeviceGeneratedCommandsPropertiesNVX");
 }
 
-static inline void *loader_lookup_instance_extension_dispatch_table(
-    const VkLayerInstanceDispatchTable *table, const char *name,
-    bool *found_name) {
+static inline void *loader_lookup_instance_extension_dispatch_table(const VkLayerInstanceDispatchTable *table, const char *name,
+                                                                    bool *found_name) {
 
     *found_name = true;
 
@@ -841,9 +663,8 @@ static inline void *loader_lookup_instance_extension_dispatch_table(
     return NULL;
 }
 
-static inline void *
-loader_lookup_instance_dispatch_table(const VkLayerInstanceDispatchTable *table,
-                                      const char *name, bool *found_name) {
+static inline void *loader_lookup_instance_dispatch_table(const VkLayerInstanceDispatchTable *table, const char *name,
+                                                          bool *found_name) {
     if (!name || name[0] != 'v' || name[1] != 'k') {
         *found_name = false;
         return NULL;
@@ -930,6 +751,5 @@ loader_lookup_instance_dispatch_table(const VkLayerInstanceDispatchTable *table,
     if (!strcmp(name, "CreateDisplayPlaneSurfaceKHR"))
         return (void *)table->CreateDisplayPlaneSurfaceKHR;
 
-    return loader_lookup_instance_extension_dispatch_table(table, name,
-                                                           found_name);
+    return loader_lookup_instance_extension_dispatch_table(table, name, found_name);
 }

@@ -231,7 +231,6 @@ extern PFN_vkGetPhysicalDeviceWin32PresentationSupportKHR vkGetPhysicalDeviceWin
 
 // VK_KHR_sampler_mirror_clamp_to_edge
 
-
 #ifdef __cplusplus
 }
 #endif

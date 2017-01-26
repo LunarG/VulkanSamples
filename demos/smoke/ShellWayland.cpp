@@ -69,44 +69,34 @@ class PosixTimer {
 
 } // namespace
 
-const struct wl_registry_listener ShellWayland::registry_listener_ = {
-    ShellWayland::handle_global, ShellWayland::handle_global_remove};
+const struct wl_registry_listener ShellWayland::registry_listener_ = {ShellWayland::handle_global,
+                                                                      ShellWayland::handle_global_remove};
 
 const struct wl_shell_surface_listener ShellWayland::shell_surface_listener_ = {
-    ShellWayland::handle_ping, ShellWayland::handle_configure,
-    ShellWayland::handle_popup_done};
+    ShellWayland::handle_ping, ShellWayland::handle_configure, ShellWayland::handle_popup_done};
 
-void ShellWayland::handle_global(void *data, struct wl_registry *registry,
-                                 uint32_t id, const char *interface,
+void ShellWayland::handle_global(void *data, struct wl_registry *registry, uint32_t id, const char *interface,
                                  uint32_t version UNUSED) {
     ShellWayland *_this = static_cast<ShellWayland *>(data);
 
     if (!strcmp(interface, "wl_compositor"))
-        _this->compositor_ = static_cast<struct wl_compositor *>(
-            wl_registry_bind(registry, id, &wl_compositor_interface, 3));
+        _this->compositor_ = static_cast<struct wl_compositor *>(wl_registry_bind(registry, id, &wl_compositor_interface, 3));
     /* Todo: When xdg_shell protocol has stablized, we should move wl_shell tp
      * xdg_shell */
     else if (!strcmp(interface, "wl_shell"))
-        _this->shell_ = static_cast<struct wl_shell *>(
-            wl_registry_bind(registry, id, &wl_shell_interface, 1));
+        _this->shell_ = static_cast<struct wl_shell *>(wl_registry_bind(registry, id, &wl_shell_interface, 1));
 }
 
-void ShellWayland::handle_global_remove(void *data UNUSED,
-                                        struct wl_registry *registry UNUSED,
-                                        uint32_t name UNUSED) {}
+void ShellWayland::handle_global_remove(void *data UNUSED, struct wl_registry *registry UNUSED, uint32_t name UNUSED) {}
 
-void ShellWayland::handle_ping(void *data UNUSED,
-                               struct wl_shell_surface *shell_surface,
-                               uint32_t serial) {
+void ShellWayland::handle_ping(void *data UNUSED, struct wl_shell_surface *shell_surface, uint32_t serial) {
     wl_shell_surface_pong(shell_surface, serial);
 }
 
-void ShellWayland::handle_configure(
-    void *data UNUSED, struct wl_shell_surface *shell_surface UNUSED,
-    uint32_t edges UNUSED, int32_t width UNUSED, int32_t height UNUSED) {}
+void ShellWayland::handle_configure(void *data UNUSED, struct wl_shell_surface *shell_surface UNUSED, uint32_t edges UNUSED,
+                                    int32_t width UNUSED, int32_t height UNUSED) {}
 
-void ShellWayland::handle_popup_done(
-    void *data UNUSED, struct wl_shell_surface *shell_surface UNUSED) {}
+void ShellWayland::handle_popup_done(void *data UNUSED, struct wl_shell_surface *shell_surface UNUSED) {}
 
 ShellWayland::ShellWayland(Game &game) : Shell(game) {
     if (game.settings().validate)
@@ -176,8 +166,7 @@ void ShellWayland::create_window() {
     if (!shell_surface_)
         throw std::runtime_error("failed to shell_surface");
 
-    wl_shell_surface_add_listener(shell_surface_, &shell_surface_listener_,
-                                  this);
+    wl_shell_surface_add_listener(shell_surface_, &shell_surface_listener_, this);
     // set title
     wl_shell_surface_set_title(shell_surface_, settings_.name.c_str());
     wl_shell_surface_set_toplevel(shell_surface_);
@@ -214,8 +203,7 @@ PFN_vkGetInstanceProcAddr ShellWayland::load_vk() {
 }
 
 bool ShellWayland::can_present(VkPhysicalDevice phy, uint32_t queue_family) {
-    return vk::GetPhysicalDeviceWaylandPresentationSupportKHR(phy, queue_family,
-                                                              display_);
+    return vk::GetPhysicalDeviceWaylandPresentationSupportKHR(phy, queue_family, display_);
 }
 
 VkSurfaceKHR ShellWayland::create_surface(VkInstance instance) {
@@ -225,8 +213,7 @@ VkSurfaceKHR ShellWayland::create_surface(VkInstance instance) {
     surface_info.surface = surface_;
 
     VkSurfaceKHR surface;
-    vk::assert_success(vk::CreateWaylandSurfaceKHR(instance, &surface_info,
-                                                   nullptr, &surface));
+    vk::assert_success(vk::CreateWaylandSurfaceKHR(instance, &surface_info, nullptr, &surface));
 
     return surface;
 }
@@ -263,11 +250,9 @@ void ShellWayland::loop_poll() {
 
         profile_present_count++;
         if (current_time - profile_start_time >= 5.0) {
-            const double fps =
-                profile_present_count / (current_time - profile_start_time);
+            const double fps = profile_present_count / (current_time - profile_start_time);
             std::stringstream ss;
-            ss << profile_present_count << " presents in "
-               << current_time - profile_start_time << " seconds "
+            ss << profile_present_count << " presents in " << current_time - profile_start_time << " seconds "
                << "(FPS: " << fps << ")";
             log(LOG_INFO, ss.str().c_str());
 
