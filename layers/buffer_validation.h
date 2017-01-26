@@ -21,10 +21,15 @@
 #define CORE_VALIDATION_BUFFER_VALIDATION_H_
 
 #include "core_validation_types.h"
+#include "core_validation_error_enums.h"
 #include "vulkan/vk_layer.h"
 #include <memory>
 #include <unordered_map>
 #include <vector>
+
+
+bool PreCallValidateCreateImage(core_validation::layer_data *device_data, const VkImageCreateInfo *pCreateInfo,
+                                const VkAllocationCallbacks *pAllocator, VkImage *pImage);
 
 void PostCallRecordCreateImage(std::unordered_map<VkImage, std::unique_ptr<IMAGE_STATE>> *imageMap,
                                std::unordered_map<VkImage, std::vector<ImageSubresourcePair>> *imageSubresourceMap,

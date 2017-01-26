@@ -49,6 +49,7 @@
 #include "vk_safe_struct.h"
 #include "vulkan/vulkan.h"
 #include "vk_validation_error_messages.h"
+#include "vk_layer_logging.h"
 #include <atomic>
 #include <functional>
 #include <map>
@@ -692,6 +693,13 @@ void AddCommandBufferBindingImage(const layer_data *, GLOBAL_CB_NODE *, IMAGE_ST
 void AddCommandBufferBindingImageView(const layer_data *, GLOBAL_CB_NODE *, IMAGE_VIEW_STATE *);
 void AddCommandBufferBindingBuffer(const layer_data *, GLOBAL_CB_NODE *, BUFFER_STATE *);
 void AddCommandBufferBindingBufferView(const layer_data *, GLOBAL_CB_NODE *, BUFFER_VIEW_STATE *);
+
+// Prototypes for layer_data accessor functions.  These should be in their own header file at some point
+PFN_vkGetPhysicalDeviceFormatProperties GetFormatPropertiesPointer(layer_data *);
+PFN_vkGetPhysicalDeviceImageFormatProperties GetImageFormatPropertiesPointer(layer_data *);
+VkPhysicalDevice GetPhysicalDevice(layer_data *);
+const debug_report_data *GetReportData(layer_data *);
+const VkPhysicalDeviceProperties *GetPhysicalDeviceProperties(layer_data *);
 }
 
 #endif  // CORE_VALIDATION_TYPES_H_

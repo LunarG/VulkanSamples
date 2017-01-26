@@ -6394,12 +6394,31 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateBufferView(VkDevice device, const VkBufferV
     return result;
 }
 
+// Access helper functions for external modules
+PFN_vkGetPhysicalDeviceFormatProperties GetFormatPropertiesPointer(core_validation::layer_data *device_data) {
+    return device_data->instance_data->dispatch_table.GetPhysicalDeviceFormatProperties;
+}
+
+PFN_vkGetPhysicalDeviceImageFormatProperties GetImageFormatPropertiesPointer(core_validation::layer_data *device_data) {
+    return device_data->instance_data->dispatch_table.GetPhysicalDeviceImageFormatProperties;
+}
+
+VkPhysicalDevice GetPhysicalDevice(core_validation::layer_data *device_data) { return device_data->physical_device; }
+
+const debug_report_data *GetReportData(core_validation::layer_data *device_data) { return device_data->report_data; }
+
+const VkPhysicalDeviceProperties *GetPhysicalDeviceProperties(core_validation::layer_data *device_data) {
+    return &device_data->phys_dev_props;
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo,
                                            const VkAllocationCallbacks *pAllocator, VkImage *pImage) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-
-    VkResult result = dev_data->dispatch_table.CreateImage(device, pCreateInfo, pAllocator, pImage);
-
+    bool skip = PreCallValidateCreateImage(dev_data, pCreateInfo, pAllocator, pImage);
+    if (!skip) {
+        result = dev_data->dispatch_table.CreateImage(device, pCreateInfo, pAllocator, pImage);
+    }
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
         PostCallRecordCreateImage(&dev_data->imageMap, &dev_data->imageSubresourceMap, &dev_data->imageLayoutMap, pCreateInfo,
