@@ -28,7 +28,7 @@ It should be straightforward to use it on other Linux distros.
 
 These packages are needed to build this repository:
 ```
-sudo apt-get install git cmake build-essential bison libx11-dev libxcb1-dev libxkbcommon-dev libmirclient-dev libwayland-dev libxrandr-dev
+sudo apt-get install git cmake build-essential bison libx11-xcb-dev libxkbcommon-dev libmirclient-dev libwayland-dev libxrandr-dev
 ```
 
 Example debug build (Note that the update\_external\_sources script used below builds external tools into predefined locations. See **Loader and Validation Layer Dependencies** for more information and other options):
