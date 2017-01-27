@@ -241,29 +241,6 @@ VKAPI_ATTR void VKAPI_CALL DestroyImage(VkDevice device, VkImage image, const Vk
     device_data->device_dispatch_table->DestroyImage(device, image, pAllocator);
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderPassCreateInfo *pCreateInfo,
-                                                const VkAllocationCallbacks *pAllocator, VkRenderPass *pRenderPass) {
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    bool skip_call = false;
-
-    for (uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i) {
-        if (pCreateInfo->pAttachments[i].format == VK_FORMAT_UNDEFINED) {
-            std::stringstream ss;
-            ss << "vkCreateRenderPass: pCreateInfo->pAttachments[" << i << "].format is VK_FORMAT_UNDEFINED";
-            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                                 IMAGE_RENDERPASS_INVALID_ATTACHMENT, "IMAGE", "%s", ss.str().c_str());
-        }
-    }
-
-    if (skip_call) {
-        return VK_ERROR_VALIDATION_FAILED_EXT;
-    }
-
-    VkResult result = my_data->device_dispatch_table->CreateRenderPass(device, pCreateInfo, pAllocator, pRenderPass);
-
-    return result;
-}
-
 VKAPI_ATTR void VKAPI_CALL CmdClearColorImage(VkCommandBuffer commandBuffer, VkImage image, VkImageLayout imageLayout,
                                               const VkClearColorValue *pColor, uint32_t rangeCount,
                                               const VkImageSubresourceRange *pRanges) {
@@ -1174,7 +1151,6 @@ static PFN_vkVoidFunction intercept_core_device_command(const char *name) {
         {"vkDestroyDevice", reinterpret_cast<PFN_vkVoidFunction>(DestroyDevice)},
         {"vkCreateImage", reinterpret_cast<PFN_vkVoidFunction>(CreateImage)},
         {"vkDestroyImage", reinterpret_cast<PFN_vkVoidFunction>(DestroyImage)},
-        {"vkCreateRenderPass", reinterpret_cast<PFN_vkVoidFunction>(CreateRenderPass)},
         {"vkCmdClearColorImage", reinterpret_cast<PFN_vkVoidFunction>(CmdClearColorImage)},
         {"vkCmdClearDepthStencilImage", reinterpret_cast<PFN_vkVoidFunction>(CmdClearDepthStencilImage)},
         {"vkCmdClearAttachments", reinterpret_cast<PFN_vkVoidFunction>(CmdClearAttachments)},

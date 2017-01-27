@@ -3754,6 +3754,16 @@ static bool PreCreateRenderPass(layer_data *dev_data, const VkRenderPassCreateIn
     bool skip = false;
     uint32_t max_color_attachments = dev_data->device_limits.maxColorAttachments;
 
+    for (uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i) {
+        if (pCreateInfo->pAttachments[i].format == VK_FORMAT_UNDEFINED) {
+            std::stringstream ss;
+            ss << "vkCreateRenderPass: pCreateInfo->pAttachments[" << i << "].format is VK_FORMAT_UNDEFINED. "
+               << validation_error_map[VALIDATION_ERROR_00336];
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                            VALIDATION_ERROR_00336, "IMAGE", "%s", ss.str().c_str());
+        }
+    }
+
     for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
         if (pCreateInfo->pSubpasses[i].colorAttachmentCount > max_color_attachments) {
             skip |=
