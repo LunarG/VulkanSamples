@@ -197,3 +197,41 @@ void PostCallRecordCreateImage(std::unordered_map<VkImage, std::unique_ptr<IMAGE
     (*imageSubresourceMap)[*pImage].push_back(subpair);
     (*imageLayoutMap)[subpair] = image_state;
 }
+
+bool PreCallValidateDestroyImage(core_validation::layer_data *device_data, VkImage image, IMAGE_STATE **image_state,
+                                 VK_OBJECT *obj_struct) {
+    const CHECK_DISABLED *disabled = core_validation::GetDisables(device_data);
+    *image_state = core_validation::getImageState(device_data, image);
+    *obj_struct = {reinterpret_cast<uint64_t &>(image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT};
+    if (disabled->destroy_image) return false;
+    bool skip = false;
+    if (*image_state) {
+        skip |= core_validation::ValidateObjectNotInUse(device_data, *image_state, *obj_struct, VALIDATION_ERROR_00743);
+    }
+    return skip;
+}
+
+void PostCallRecordDestroyImage(core_validation::layer_data *device_data, VkImage image, IMAGE_STATE *image_state,
+                                VK_OBJECT obj_struct) {
+    core_validation::invalidateCommandBuffers(device_data, image_state->cb_bindings, obj_struct);
+    // Clean up memory mapping, bindings and range references for image
+    for (auto mem_binding : image_state->GetBoundMemory()) {
+        auto mem_info = core_validation::getMemObjInfo(device_data, mem_binding);
+        if (mem_info) {
+            core_validation::RemoveImageMemoryRange(obj_struct.handle, mem_info);
+        }
+    }
+    core_validation::ClearMemoryObjectBindings(device_data, obj_struct.handle, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT);
+    // Remove image from imageMap
+    core_validation::GetImageMap(device_data)->erase(image);
+    std::unordered_map<VkImage, std::vector<ImageSubresourcePair>> *imageSubresourceMap =
+        core_validation::GetImageSubresourceMap(device_data);
+
+    const auto &sub_entry = imageSubresourceMap->find(image);
+    if (sub_entry != imageSubresourceMap->end()) {
+        for (const auto &pair : sub_entry->second) {
+            core_validation::GetImageLayoutMap(device_data)->erase(pair);
+        }
+        imageSubresourceMap->erase(sub_entry);
+    }
+}
