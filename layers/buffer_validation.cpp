@@ -115,36 +115,13 @@ bool PreCallValidateCreateImage(core_validation::layer_data *device_data, const 
     VkDeviceSize imageGranularity = core_validation::GetPhysicalDeviceProperties(device_data)->limits.bufferImageGranularity;
     imageGranularity = imageGranularity == 1 ? 0 : imageGranularity;
 
-    // Make sure all required dimension are non-zero at least.
-    bool failedMinSize = false;
-    switch (pCreateInfo->imageType) {
-        case VK_IMAGE_TYPE_3D:
-            if (pCreateInfo->extent.depth == 0) {
-                failedMinSize = true;
-            }
-        // Intentional fall-through
-        case VK_IMAGE_TYPE_2D:
-            if (pCreateInfo->extent.height == 0) {
-                failedMinSize = true;
-            }
-        // Intentional fall-through
-        case VK_IMAGE_TYPE_1D:
-            if (pCreateInfo->extent.width == 0) {
-                failedMinSize = true;
-            }
-            break;
-        default:
-            break;
-    }
-    // TODO: VALIDATION_ERROR_00716
-    // this is *almost* VU 00716, except should not be condidtional on image type - all extents must be non-zero for all types
-    if (failedMinSize) {
-        skip_call |=
-            log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, 0, __LINE__,
-                    IMAGE_INVALID_FORMAT_LIMITS_VIOLATION, "Image",
-                    "CreateImage extents is 0 for at least one required dimension for image of type %d: "
-                    "Width = %d Height = %d Depth = %d.",
-                    pCreateInfo->imageType, pCreateInfo->extent.width, pCreateInfo->extent.height, pCreateInfo->extent.depth);
+    if ((pCreateInfo->extent.width <= 0) || (pCreateInfo->extent.height <= 0) || (pCreateInfo->extent.depth <= 0)) {
+        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, 0, __LINE__,
+                             VALIDATION_ERROR_00716, "Image",
+                             "CreateImage extent is 0 for at least one required dimension for image: "
+                             "Width = %d Height = %d Depth = %d. %s",
+                             pCreateInfo->extent.width, pCreateInfo->extent.height, pCreateInfo->extent.depth,
+                             validation_error_map[VALIDATION_ERROR_00716]);
     }
 
     // TODO: VALIDATION_ERROR_02125 VALIDATION_ERROR_02126 VALIDATION_ERROR_02128 VALIDATION_ERROR_00720

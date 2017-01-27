@@ -14557,8 +14557,7 @@ TEST_F(VkLayerTest, CreateImageLimitsViolationMaxWidth) {
 }
 
 TEST_F(VkLayerTest, CreateImageLimitsViolationMinWidth) {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "CreateImage extents is 0 for at least one required dimension");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00716);
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
