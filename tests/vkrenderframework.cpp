@@ -204,7 +204,7 @@ void VkRenderFramework::GetPhysicalDeviceFeatures(VkPhysicalDeviceFeatures *feat
     }
 }
 
-void VkRenderFramework::InitState(VkPhysicalDeviceFeatures *features) {
+void VkRenderFramework::InitState(VkPhysicalDeviceFeatures *features, const VkCommandPoolCreateFlags flags) {
     VkResult U_ASSERT_ONLY err;
 
     m_device = new VkDeviceObj(0, objs[0], device_extension_names, features);
@@ -235,7 +235,7 @@ void VkRenderFramework::InitState(VkPhysicalDeviceFeatures *features) {
     VkCommandPoolCreateInfo cmd_pool_info;
     cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, cmd_pool_info.pNext = NULL,
     cmd_pool_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
-    cmd_pool_info.flags = 0;
+    cmd_pool_info.flags = flags;
     err = vkCreateCommandPool(device(), &cmd_pool_info, NULL, &m_commandPool);
     assert(!err);
 

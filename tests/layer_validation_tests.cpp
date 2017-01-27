@@ -5331,7 +5331,7 @@ TEST_F(VkLayerTest, InvalidCmdBufferDescriptorSetImageSamplerDestroyed) {
         "each respectively destroyed and then attempting to "
         "submit associated cmd buffers. Attempt to destroy a "
         "DescriptorSet that is in use.");
-    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitState(nullptr, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT));
     ASSERT_NO_FATAL_FAILURE(InitViewport());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
@@ -5342,6 +5342,7 @@ TEST_F(VkLayerTest, InvalidCmdBufferDescriptorSetImageSamplerDestroyed) {
     VkDescriptorPoolCreateInfo ds_pool_ci = {};
     ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     ds_pool_ci.pNext = NULL;
+    ds_pool_ci.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
     ds_pool_ci.maxSets = 1;
     ds_pool_ci.poolSizeCount = 1;
     ds_pool_ci.pPoolSizes = &ds_type_count;
@@ -5543,8 +5544,13 @@ TEST_F(VkLayerTest, InvalidCmdBufferDescriptorSetImageSamplerDestroyed) {
     // Now re-update descriptor with valid sampler and delete image
     img_info.sampler = sampler2;
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
+
+    VkCommandBufferBeginInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, " that is invalid because bound image ");
-    m_commandBuffer->BeginCommandBuffer();
+    m_commandBuffer->BeginCommandBuffer(&info);
     m_commandBuffer->BeginRenderPass(m_renderPassBeginInfo);
     vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
     vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1,
@@ -5566,7 +5572,7 @@ TEST_F(VkLayerTest, InvalidCmdBufferDescriptorSetImageSamplerDestroyed) {
     // Now update descriptor to be valid, but then free descriptor
     img_info.imageView = view2;
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
-    m_commandBuffer->BeginCommandBuffer();
+    m_commandBuffer->BeginCommandBuffer(&info);
     m_commandBuffer->BeginRenderPass(m_renderPassBeginInfo);
     vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
     vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1,
