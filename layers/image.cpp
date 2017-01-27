@@ -843,9 +843,10 @@ static bool ValidateBufferImageCopyData(layer_data *dev_data, uint32_t regionCou
                 }
             }
 
-            // BufferOffset must be a multiple of the calling command's VkImage parameter's texel size
+            // If the the calling command's VkImage parameter's format is not a depth/stencil format,
+            // then bufferOffset must be a multiple of the calling command's VkImage parameter's texel size
             auto texel_size = vk_format_get_size(image_info->format);
-            if (vk_safe_modulo(pRegions[i].bufferOffset, texel_size) != 0) {
+            if (!vk_format_is_depth_and_stencil(image_info->format) && vk_safe_modulo(pRegions[i].bufferOffset, texel_size) != 0) {
                 skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                                 reinterpret_cast<uint64_t &>(image), __LINE__, VALIDATION_ERROR_01263, "IMAGE",
                                 "%s(): pRegion[%d] bufferOffset 0x%" PRIxLEAST64
