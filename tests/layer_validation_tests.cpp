@@ -144,7 +144,7 @@ class ErrorMonitor {
     }
 
     // ErrorMonitor will look for an error message containing the specified string(s)
-    void SetDesiredFailureMsg(VkFlags msgFlags, const char *msgString) {
+    void SetDesiredFailureMsg(const VkFlags msgFlags, const char *const msgString) {
         test_platform_thread_lock_mutex(&mutex_);
         desired_message_strings_.insert(msgString);
         message_flags_ |= msgFlags;
@@ -153,7 +153,7 @@ class ErrorMonitor {
     }
 
     // ErrorMonitor will look for a message ID matching the specified one(s)
-    void SetDesiredFailureMsg(VkFlags msgFlags, UNIQUE_VALIDATION_ERROR_CODE msg_id) {
+    void SetDesiredFailureMsg(const VkFlags msgFlags, const UNIQUE_VALIDATION_ERROR_CODE msg_id) {
         test_platform_thread_lock_mutex(&mutex_);
         desired_message_ids_.insert(msg_id);
         message_flags_ |= msgFlags;
@@ -161,7 +161,7 @@ class ErrorMonitor {
         test_platform_thread_unlock_mutex(&mutex_);
     }
 
-    VkBool32 CheckForDesiredMsg(uint32_t message_code, const char *msgString) {
+    VkBool32 CheckForDesiredMsg(const uint32_t message_code, const char *const msgString) {
         VkBool32 result = VK_FALSE;
         test_platform_thread_lock_mutex(&mutex_);
         if (bailout_ != NULL) {
@@ -221,17 +221,17 @@ class ErrorMonitor {
         return result;
     }
 
-    vector<string> GetOtherFailureMsgs(void) { return other_messages_; }
+    vector<string> GetOtherFailureMsgs(void) const { return other_messages_; }
 
-    VkDebugReportFlagsEXT GetMessageFlags(void) { return message_flags_; }
+    VkDebugReportFlagsEXT GetMessageFlags(void) const { return message_flags_; }
 
-    VkBool32 AnyDesiredMsgFound(void) { return message_found_; }
+    VkBool32 AnyDesiredMsgFound(void) const { return message_found_; }
 
-    VkBool32 AllDesiredMsgsFound(void) { return (0 == message_outstanding_count_); }
+    VkBool32 AllDesiredMsgsFound(void) const { return (0 == message_outstanding_count_); }
 
     void SetBailout(bool *bailout) { bailout_ = bailout; }
 
-    void DumpFailureMsgs(void) {
+    void DumpFailureMsgs(void) const {
         vector<string> otherMsgs = GetOtherFailureMsgs();
         if (otherMsgs.size()) {
             cout << "Other error messages logged for this test were:" << endl;
@@ -244,7 +244,7 @@ class ErrorMonitor {
     // Helpers
 
     // ExpectSuccess now takes an optional argument allowing a custom combination of debug flags
-    void ExpectSuccess(VkDebugReportFlagsEXT message_flag_mask = VK_DEBUG_REPORT_ERROR_BIT_EXT) {
+    void ExpectSuccess(VkDebugReportFlagsEXT const message_flag_mask = VK_DEBUG_REPORT_ERROR_BIT_EXT) {
         // Match ANY message matching specified type
         SetDesiredFailureMsg(message_flag_mask, "");
         message_flags_ = message_flag_mask;  // override mask handling in SetDesired...
