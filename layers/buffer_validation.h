@@ -40,4 +40,6 @@ void PostCallRecordDestroyImage(core_validation::layer_data *device_data, VkImag
 bool PreCallValidateDestroyImage(core_validation::layer_data *device_data, VkImage image, IMAGE_STATE **image_state,
                                  VK_OBJECT *obj_struct);
 
+bool ValidateImageAttributes(core_validation::layer_data *device_data, IMAGE_STATE *image_state, VkImageSubresourceRange range);
+
 #endif  // CORE_VALIDATION_BUFFER_VALIDATION_H_

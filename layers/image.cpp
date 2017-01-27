@@ -241,51 +241,6 @@ VKAPI_ATTR void VKAPI_CALL DestroyImage(VkDevice device, VkImage image, const Vk
     device_data->device_dispatch_table->DestroyImage(device, image, pAllocator);
 }
 
-VKAPI_ATTR void VKAPI_CALL CmdClearColorImage(VkCommandBuffer commandBuffer, VkImage image, VkImageLayout imageLayout,
-                                              const VkClearColorValue *pColor, uint32_t rangeCount,
-                                              const VkImageSubresourceRange *pRanges) {
-    bool skipCall = false;
-    layer_data *device_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-
-    // For each range, image aspect must be color only
-    // TODO: this is a 'must' in the spec, so there should be a VU enum for it
-    for (uint32_t i = 0; i < rangeCount; i++) {
-        if (pRanges[i].aspectMask != VK_IMAGE_ASPECT_COLOR_BIT) {
-            char const str[] =
-                "vkCmdClearColorImage aspectMasks for all subresource ranges must be set to VK_IMAGE_ASPECT_COLOR_BIT";
-            skipCall |=
-                log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                        (uint64_t)commandBuffer, __LINE__, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", str);
-        }
-    }
-
-    auto image_state = getImageState(device_data, image);
-    if (image_state) {
-        if (vk_format_is_depth_or_stencil(image_state->format)) {
-            char const str[] = "vkCmdClearColorImage called with depth/stencil image.";
-            skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                                reinterpret_cast<uint64_t &>(image), __LINE__, VALIDATION_ERROR_01088, "IMAGE", "%s. %s", str,
-                                validation_error_map[VALIDATION_ERROR_01088]);
-        } else if (vk_format_is_compressed(image_state->format)) {
-            char const str[] = "vkCmdClearColorImage called with compressed image.";
-            skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                                reinterpret_cast<uint64_t &>(image), __LINE__, VALIDATION_ERROR_01088, "IMAGE", "%s. %s", str,
-                                validation_error_map[VALIDATION_ERROR_01088]);
-        }
-
-        if (!(image_state->usage & VK_IMAGE_USAGE_TRANSFER_DST_BIT)) {
-            char const str[] = "vkCmdClearColorImage called with image created without VK_IMAGE_USAGE_TRANSFER_DST_BIT.";
-            skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                                reinterpret_cast<uint64_t &>(image), __LINE__, VALIDATION_ERROR_01084, "IMAGE", "%s. %s", str,
-                                validation_error_map[VALIDATION_ERROR_01084]);
-        }
-    }
-
-    if (!skipCall) {
-        device_data->device_dispatch_table->CmdClearColorImage(commandBuffer, image, imageLayout, pColor, rangeCount, pRanges);
-    }
-}
-
 VKAPI_ATTR void VKAPI_CALL CmdClearDepthStencilImage(VkCommandBuffer commandBuffer, VkImage image, VkImageLayout imageLayout,
                                                      const VkClearDepthStencilValue *pDepthStencil, uint32_t rangeCount,
                                                      const VkImageSubresourceRange *pRanges) {
@@ -1151,7 +1106,6 @@ static PFN_vkVoidFunction intercept_core_device_command(const char *name) {
         {"vkDestroyDevice", reinterpret_cast<PFN_vkVoidFunction>(DestroyDevice)},
         {"vkCreateImage", reinterpret_cast<PFN_vkVoidFunction>(CreateImage)},
         {"vkDestroyImage", reinterpret_cast<PFN_vkVoidFunction>(DestroyImage)},
-        {"vkCmdClearColorImage", reinterpret_cast<PFN_vkVoidFunction>(CmdClearColorImage)},
         {"vkCmdClearDepthStencilImage", reinterpret_cast<PFN_vkVoidFunction>(CmdClearDepthStencilImage)},
         {"vkCmdClearAttachments", reinterpret_cast<PFN_vkVoidFunction>(CmdClearAttachments)},
         {"vkCmdCopyImage", reinterpret_cast<PFN_vkVoidFunction>(CmdCopyImage)},

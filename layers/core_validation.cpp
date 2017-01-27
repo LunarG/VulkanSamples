@@ -8879,6 +8879,7 @@ VKAPI_ATTR void VKAPI_CALL CmdClearColorImage(VkCommandBuffer commandBuffer, VkI
         assert(0);
     }
     for (uint32_t i = 0; i < rangeCount; ++i) {
+        skip_call |= ValidateImageAttributes(dev_data, image_state, pRanges[i]);
         skip_call |= VerifyClearImageLayout(dev_data, cb_node, image, pRanges[i], imageLayout, "vkCmdClearColorImage()");
     }
     lock.unlock();

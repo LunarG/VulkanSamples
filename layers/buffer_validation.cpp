@@ -232,3 +232,34 @@ void PostCallRecordDestroyImage(core_validation::layer_data *device_data, VkImag
         imageSubresourceMap->erase(sub_entry);
     }
 }
+
+bool ValidateImageAttributes(core_validation::layer_data *device_data, IMAGE_STATE *image_state, VkImageSubresourceRange range) {
+    bool skip = false;
+    const debug_report_data *report_data = core_validation::GetReportData(device_data);
+
+    if (range.aspectMask != VK_IMAGE_ASPECT_COLOR_BIT) {
+        char const str[] = "vkCmdClearColorImage aspectMasks for all subresource ranges must be set to VK_IMAGE_ASPECT_COLOR_BIT";
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                        reinterpret_cast<uint64_t &>(image_state->image), __LINE__, DRAWSTATE_INVALID_IMAGE_ASPECT, "IMAGE", str);
+    }
+
+    if (vk_format_is_depth_or_stencil(image_state->createInfo.format)) {
+        char const str[] = "vkCmdClearColorImage called with depth/stencil image.";
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                        reinterpret_cast<uint64_t &>(image_state->image), __LINE__, VALIDATION_ERROR_01088, "IMAGE", "%s. %s", str,
+                        validation_error_map[VALIDATION_ERROR_01088]);
+    } else if (vk_format_is_compressed(image_state->createInfo.format)) {
+        char const str[] = "vkCmdClearColorImage called with compressed image.";
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                        reinterpret_cast<uint64_t &>(image_state->image), __LINE__, VALIDATION_ERROR_01088, "IMAGE", "%s. %s", str,
+                        validation_error_map[VALIDATION_ERROR_01088]);
+    }
+
+    if (!(image_state->createInfo.usage & VK_IMAGE_USAGE_TRANSFER_DST_BIT)) {
+        char const str[] = "vkCmdClearColorImage called with image created without VK_IMAGE_USAGE_TRANSFER_DST_BIT.";
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                        reinterpret_cast<uint64_t &>(image_state->image), __LINE__, VALIDATION_ERROR_01084, "IMAGE", "%s. %s", str,
+                        validation_error_map[VALIDATION_ERROR_01084]);
+    }
+    return skip;
+}
