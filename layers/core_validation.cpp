@@ -6402,8 +6402,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateI
     }
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
-        PostCallRecordCreateImage(&dev_data->imageMap, &dev_data->imageSubresourceMap, &dev_data->imageLayoutMap, pCreateInfo,
-                                  pImage);
+        PostCallRecordCreateImage(dev_data, pCreateInfo, pImage);
     }
     return result;
 }

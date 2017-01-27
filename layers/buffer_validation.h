@@ -32,10 +32,7 @@
 bool PreCallValidateCreateImage(core_validation::layer_data *device_data, const VkImageCreateInfo *pCreateInfo,
                                 const VkAllocationCallbacks *pAllocator, VkImage *pImage);
 
-void PostCallRecordCreateImage(std::unordered_map<VkImage, std::unique_ptr<IMAGE_STATE>> *imageMap,
-                               std::unordered_map<VkImage, std::vector<ImageSubresourcePair>> *imageSubresourceMap,
-                               std::unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> *imageLayoutMap,
-                               const VkImageCreateInfo *pCreateInfo, VkImage *pImage);
+void PostCallRecordCreateImage(core_validation::layer_data *device_data, const VkImageCreateInfo *pCreateInfo, VkImage *pImage);
 
 void PostCallRecordDestroyImage(core_validation::layer_data *device_data, VkImage image, IMAGE_STATE *image_state,
                                 VK_OBJECT obj_struct);
