@@ -10080,11 +10080,10 @@ VKAPI_ATTR VkResult VKAPI_CALL InvalidateMappedMemoryRanges(VkDevice device, uin
     return result;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL BindImageMemory(VkDevice device, VkImage image, VkDeviceMemory mem, VkDeviceSize memoryOffset) {
-    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+static bool PreCallValidateBindImageMemory(layer_data *dev_data, VkImage image, VkDeviceMemory mem, VkDeviceSize memoryOffset) {
     bool skip = false;
     std::unique_lock<std::mutex> lock(global_lock);
+
     auto image_state = GetImageState(dev_data, image);
     if (image_state) {
         // Track objects tied to memory
@@ -10092,8 +10091,8 @@ VKAPI_ATTR VkResult VKAPI_CALL BindImageMemory(VkDevice device, VkImage image, V
         skip = SetMemBinding(dev_data, mem, image_handle, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, "vkBindImageMemory");
         if (!image_state->memory_requirements_checked) {
             // There's not an explicit requirement in the spec to call vkGetImageMemoryRequirements() prior to calling
-            //  BindImageMemory but it's implied in that memory being bound must conform with VkMemoryRequirements from
-            //  vkGetImageMemoryRequirements()
+            // BindImageMemory but it's implied in that memory being bound must conform with VkMemoryRequirements from
+            // vkGetImageMemoryRequirements()
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                             image_handle, __LINE__, DRAWSTATE_INVALID_IMAGE, "DS",
                             "vkBindImageMemory(): Binding memory to image 0x%" PRIxLEAST64
@@ -10101,7 +10100,7 @@ VKAPI_ATTR VkResult VKAPI_CALL BindImageMemory(VkDevice device, VkImage image, V
                             image_handle);
             // Make the call for them so we can verify the state
             lock.unlock();
-            dev_data->dispatch_table.GetImageMemoryRequirements(device, image, &image_state->requirements);
+            dev_data->dispatch_table.GetImageMemoryRequirements(dev_data->device, image, &image_state->requirements);
             lock.lock();
         }
 
@@ -10113,21 +10112,29 @@ VKAPI_ATTR VkResult VKAPI_CALL BindImageMemory(VkDevice device, VkImage image, V
             skip |= ValidateMemoryTypes(dev_data, mem_info, image_state->requirements.memoryTypeBits, "vkBindImageMemory",
                                         VALIDATION_ERROR_00806);
         }
+    }
+    return skip;
+}
 
-        lock.unlock();
-        if (!skip) {
-            result = dev_data->dispatch_table.BindImageMemory(device, image, mem, memoryOffset);
-            lock.lock();
-            image_state->binding.mem = mem;
-            image_state->binding.offset = memoryOffset;
-            image_state->binding.size = image_state->requirements.size;
-            lock.unlock();
+static void PostCallRecordBindImageMemory(layer_data *dev_data, VkImage image, VkDeviceMemory mem, VkDeviceSize memoryOffset) {
+    std::unique_lock<std::mutex> lock(global_lock);
+    auto image_state = GetImageState(dev_data, image);
+    if (image_state) {
+        image_state->binding.mem = mem;
+        image_state->binding.offset = memoryOffset;
+        image_state->binding.size = image_state->requirements.size;
+    }
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL BindImageMemory(VkDevice device, VkImage image, VkDeviceMemory mem, VkDeviceSize memoryOffset) {
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skip = PreCallValidateBindImageMemory(dev_data, image, mem, memoryOffset);
+    if (!skip) {
+        result = dev_data->dispatch_table.BindImageMemory(device, image, mem, memoryOffset);
+        if (result == VK_SUCCESS) {
+            PostCallRecordBindImageMemory(dev_data, image, mem, memoryOffset);
         }
-    } else {
-        log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
-                reinterpret_cast<const uint64_t &>(image), __LINE__, MEMTRACK_INVALID_OBJECT, "MT",
-                "vkBindImageMemory: Cannot find invalid image 0x%" PRIx64 ", has it already been deleted?",
-                reinterpret_cast<const uint64_t &>(image));
     }
     return result;
 }
