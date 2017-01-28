@@ -2632,6 +2632,50 @@ TEST_F(VkLayerTest, BindInvalidMemory) {
         vkDestroyBuffer(device(), buffer, NULL);
     }
 
+    // Try to bind memory to an object with an out-of-range memoryOffset
+    {
+        VkImage image = VK_NULL_HANDLE;
+        err = vkCreateImage(device(), &image_create_info, NULL, &image);
+        ASSERT_VK_SUCCESS(err);
+        VkBuffer buffer = VK_NULL_HANDLE;
+        err = vkCreateBuffer(device(), &buffer_create_info, NULL, &buffer);
+        ASSERT_VK_SUCCESS(err);
+        VkMemoryRequirements image_mem_reqs = {}, buffer_mem_reqs = {};
+        vkGetImageMemoryRequirements(device(), image, &image_mem_reqs);
+        vkGetBufferMemoryRequirements(device(), buffer, &buffer_mem_reqs);
+        VkMemoryAllocateInfo image_alloc_info = {}, buffer_alloc_info = {};
+        image_alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        image_alloc_info.allocationSize = image_mem_reqs.size;
+        buffer_alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        buffer_alloc_info.allocationSize = buffer_mem_reqs.size;
+        pass = m_device->phy().set_memory_type(image_mem_reqs.memoryTypeBits, &image_alloc_info, 0);
+        ASSERT_TRUE(pass);
+        pass = m_device->phy().set_memory_type(buffer_mem_reqs.memoryTypeBits, &buffer_alloc_info, 0);
+        ASSERT_TRUE(pass);
+        VkDeviceMemory image_mem, buffer_mem;
+        err = vkAllocateMemory(device(), &image_alloc_info, NULL, &image_mem);
+        ASSERT_VK_SUCCESS(err);
+        err = vkAllocateMemory(device(), &buffer_alloc_info, NULL, &buffer_mem);
+        ASSERT_VK_SUCCESS(err);
+
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00805);
+        VkDeviceSize image_offset = (image_mem_reqs.size + (image_mem_reqs.alignment - 1)) & ~(image_mem_reqs.alignment - 1);
+        err = vkBindImageMemory(device(), image, image_mem, image_offset);
+        (void)err;  // This may very well return an error.
+        m_errorMonitor->VerifyFound();
+
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00793);
+        VkDeviceSize buffer_offset = (buffer_mem_reqs.size + (buffer_mem_reqs.alignment - 1)) & ~(buffer_mem_reqs.alignment - 1);
+        err = vkBindBufferMemory(device(), buffer, buffer_mem, buffer_offset);
+        (void)err;  // This may very well return an error.
+        m_errorMonitor->VerifyFound();
+
+        vkFreeMemory(device(), image_mem, NULL);
+        vkFreeMemory(device(), buffer_mem, NULL);
+        vkDestroyImage(device(), image, NULL);
+        vkDestroyBuffer(device(), buffer, NULL);
+    }
+
     // Try to bind memory to an image created with sparse memory flags
     {
         VkImageCreateInfo sparse_image_create_info = image_create_info;
