@@ -286,16 +286,9 @@ if(NOT WIN32)
     include(GNUInstallDirs)
 
     add_definitions(-DSYSCONFDIR="${CMAKE_INSTALL_FULL_SYSCONFDIR}")
-    add_definitions(-DDATADIR="${CMAKE_INSTALL_FULL_DATADIR}")
-
     # Make sure /etc is searched by the loader
-    if (NOT (CMAKE_INSTALL_FULL_SYSCONFDIR STREQUAL "/etc"))
+    if(NOT (CMAKE_INSTALL_FULL_SYSCONFDIR STREQUAL "/etc"))
         add_definitions(-DEXTRASYSCONFDIR="/etc")
-    endif()
-
-    # Make sure /usr/share is searched by the loader
-    if (NOT (CMAKE_INSTALL_FULL_DATADIR STREQUAL "/usr/share"))
-        add_definitions(-DEXTRADATADIR="/usr/share")
     endif()
 endif()
 
