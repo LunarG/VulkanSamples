@@ -1,6 +1,5 @@
 project(WSIWindow_Sample1)
 cmake_minimum_required(VERSION 2.8)
-add_definitions(-std=c++11)
 
 include_directories("${PROJECT_SOURCE_DIR}")
 aux_source_directory(. SRC_LIST)

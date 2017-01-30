@@ -257,8 +257,8 @@ EventType Window_win32::GetEvent(bool wait_for_event) {
                 return ResizeEvent(w, h); // window resized
 
             GetWindowRect(hWnd, &r);
-            int16_t x = (int16_t)r.left;
-            int16_t y = (int16_t)r.top;
+            x = (int16_t)r.left;
+            y = (int16_t)r.top;
             if (x != shape.x || y != shape.y)
                 return MoveEvent(x, y); // window moved
         }

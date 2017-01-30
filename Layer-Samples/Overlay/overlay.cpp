@@ -259,7 +259,7 @@ static int fill_vertex_buffer(layer_data *data, vertex *vertices, int index) {
         }
     }
 
-    return v - vertices;
+    return (int) (v - vertices);
 }
 
 static void after_device_create(VkPhysicalDevice gpu, VkDevice device,
@@ -780,8 +780,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
 
         VkViewport viewport;
         memset(&viewport, 0, sizeof(viewport));
-        viewport.width = data->width;
-        viewport.height = data->height;
+        viewport.width = (float) data->width;
+        viewport.height = (float) data->height;
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
 

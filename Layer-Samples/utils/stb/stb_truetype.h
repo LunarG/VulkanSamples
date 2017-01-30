@@ -2001,12 +2001,12 @@ static void stbtt__fill_active_edges_new(float *scanline, float *scanline_fill, 
                // that, we need to explicitly produce segments based on x positions.
 
                // rename variables to clear pairs
-               float y0 = y_top;
+               y0 = y_top;
                float x1 = (float) (x);
                float x2 = (float) (x+1);
                float x3 = xb;
                float y3 = y_bottom;
-               float y1,y2;
+               float y2;
 
                // x = e->x + e->dx * (y-y_top)
                // (y-y_top) = (x - e->x) / e->dx

@@ -71,7 +71,6 @@ int sample_main(int argc, char *argv[]) {
     for (uint32_t i = 0; i < instance_layer_count; i++) {
         layer_properties layer_props;
         layer_props.properties = vk_props[i];
-        VkResult res;
 
         {
             VkExtensionProperties *instance_extensions;

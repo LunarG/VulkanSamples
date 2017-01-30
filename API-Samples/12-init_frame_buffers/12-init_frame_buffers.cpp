@@ -81,7 +81,7 @@ int sample_main(int argc, char *argv[]) {
     execute_queue_command_buffer(info);
     /* VULKAN_KEY_END */
 
-    for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
+    for (i = 0; i < info.swapchainImageCount; i++) {
         vkDestroyFramebuffer(info.device, info.framebuffers[i], NULL);
     }
     free(info.framebuffers);
