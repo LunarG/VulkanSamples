@@ -48,7 +48,7 @@ class MyWindow : public WSIWindow {
 };
 
 int main(int argc, char *argv[]) {
-    setbuf(stdout, NULL); // Prevent printf buffering in QtCreator
+    setvbuf(stdout, NULL, _IONBF, 0); // Prevent printf buffering in QtCreator
     printf("WSI-Window\n");
 
     CInstance inst(true);                           // Create a Vulkan Instance
