@@ -90,7 +90,7 @@
  */
 namespace cvdescriptorset {
 class DescriptorSetLayout {
-  public:
+   public:
     // Constructors and destructor
     DescriptorSetLayout(const VkDescriptorSetLayoutCreateInfo *p_create_info, const VkDescriptorSetLayout layout);
     // Validate create info - should be called prior to creation
@@ -126,7 +126,7 @@ class DescriptorSetLayout {
     int32_t GetDynamicOffsetIndexFromBinding(uint32_t binding) const {
         auto dyn_off = binding_to_dynamic_array_idx_map_.find(binding);
         if (dyn_off == binding_to_dynamic_array_idx_map_.end()) {
-            assert(0); // Requesting dyn offset for invalid binding/array idx pair
+            assert(0);  // Requesting dyn offset for invalid binding/array idx pair
             return -1;
         }
         return dyn_off->second;
@@ -139,7 +139,7 @@ class DescriptorSetLayout {
     //  updated, verify that for any binding boundaries crossed, the update is consistent
     bool VerifyUpdateConsistency(uint32_t, uint32_t, uint32_t, const char *, const VkDescriptorSet, std::string *) const;
 
-  private:
+   private:
     VkDescriptorSetLayout layout_;
     std::map<uint32_t, uint32_t> binding_to_index_map_;
     std::unordered_map<uint32_t, uint32_t> binding_to_global_start_index_map_;
@@ -147,9 +147,9 @@ class DescriptorSetLayout {
     // For a given binding map to associated index in the dynamic offset array
     std::unordered_map<uint32_t, uint32_t> binding_to_dynamic_array_idx_map_;
     // VkDescriptorSetLayoutCreateFlags flags_;
-    uint32_t binding_count_; // # of bindings in this layout
+    uint32_t binding_count_;  // # of bindings in this layout
     std::vector<safe_VkDescriptorSetLayoutBinding> bindings_;
-    uint32_t descriptor_count_; // total # descriptors in this layout
+    uint32_t descriptor_count_;  // total # descriptors in this layout
     uint32_t dynamic_descriptor_count_;
 };
 
@@ -164,7 +164,7 @@ class DescriptorSetLayout {
 enum DescriptorClass { PlainSampler, ImageSampler, Image, TexelBuffer, GeneralBuffer };
 
 class Descriptor {
-  public:
+   public:
     virtual ~Descriptor(){};
     virtual void WriteUpdate(const VkWriteDescriptorSet *, const uint32_t) = 0;
     virtual void CopyUpdate(const Descriptor *) = 0;
@@ -177,7 +177,7 @@ class Descriptor {
     virtual bool IsDynamic() const { return false; };
     // Check for storage descriptor type
     virtual bool IsStorage() const { return false; };
-    bool updated; // Has descriptor been updated?
+    bool updated;  // Has descriptor been updated?
     DescriptorClass descriptor_class;
 };
 // Shared helper functions - These are useful because the shared sampler image descriptor type
@@ -187,7 +187,7 @@ bool ValidateImageUpdate(VkImageView, VkImageLayout, VkDescriptorType, const cor
                          UNIQUE_VALIDATION_ERROR_CODE *, std::string *);
 
 class SamplerDescriptor : public Descriptor {
-  public:
+   public:
     SamplerDescriptor();
     SamplerDescriptor(const VkSampler *);
     void WriteUpdate(const VkWriteDescriptorSet *, const uint32_t) override;
@@ -196,14 +196,14 @@ class SamplerDescriptor : public Descriptor {
     virtual bool IsImmutableSampler() const override { return immutable_; };
     VkSampler GetSampler() const { return sampler_; }
 
-  private:
+   private:
     // bool ValidateSampler(const VkSampler) const;
     VkSampler sampler_;
     bool immutable_;
 };
 
 class ImageSamplerDescriptor : public Descriptor {
-  public:
+   public:
     ImageSamplerDescriptor();
     ImageSamplerDescriptor(const VkSampler *);
     void WriteUpdate(const VkWriteDescriptorSet *, const uint32_t) override;
@@ -214,7 +214,7 @@ class ImageSamplerDescriptor : public Descriptor {
     VkImageView GetImageView() const { return image_view_; }
     VkImageLayout GetImageLayout() const { return image_layout_; }
 
-  private:
+   private:
     VkSampler sampler_;
     bool immutable_;
     VkImageView image_view_;
@@ -222,7 +222,7 @@ class ImageSamplerDescriptor : public Descriptor {
 };
 
 class ImageDescriptor : public Descriptor {
-  public:
+   public:
     ImageDescriptor(const VkDescriptorType);
     void WriteUpdate(const VkWriteDescriptorSet *, const uint32_t) override;
     void CopyUpdate(const Descriptor *) override;
@@ -231,14 +231,14 @@ class ImageDescriptor : public Descriptor {
     VkImageView GetImageView() const { return image_view_; }
     VkImageLayout GetImageLayout() const { return image_layout_; }
 
-  private:
+   private:
     bool storage_;
     VkImageView image_view_;
     VkImageLayout image_layout_;
 };
 
 class TexelDescriptor : public Descriptor {
-  public:
+   public:
     TexelDescriptor(const VkDescriptorType);
     void WriteUpdate(const VkWriteDescriptorSet *, const uint32_t) override;
     void CopyUpdate(const Descriptor *) override;
@@ -246,13 +246,13 @@ class TexelDescriptor : public Descriptor {
     virtual bool IsStorage() const override { return storage_; }
     VkBufferView GetBufferView() const { return buffer_view_; }
 
-  private:
+   private:
     VkBufferView buffer_view_;
     bool storage_;
 };
 
 class BufferDescriptor : public Descriptor {
-  public:
+   public:
     BufferDescriptor(const VkDescriptorType);
     void WriteUpdate(const VkWriteDescriptorSet *, const uint32_t) override;
     void CopyUpdate(const Descriptor *) override;
@@ -263,7 +263,7 @@ class BufferDescriptor : public Descriptor {
     VkDeviceSize GetOffset() const { return offset_; }
     VkDeviceSize GetRange() const { return range_; }
 
-  private:
+   private:
     bool storage_;
     bool dynamic_;
     VkBuffer buffer_;
@@ -311,7 +311,7 @@ void PerformAllocateDescriptorSets(const VkDescriptorSetAllocateInfo *, const Vk
  *   be correct at the time of update.
  */
 class DescriptorSet : public BASE_NODE {
-  public:
+   public:
     DescriptorSet(const VkDescriptorSet, const VkDescriptorPool, const DescriptorSetLayout *, const core_validation::layer_data *);
     ~DescriptorSet();
     // A number of common Get* functions that return data based on layout from which this set was created
@@ -381,7 +381,7 @@ class DescriptorSet : public BASE_NODE {
     // Return true if any part of set has ever been updated
     bool IsUpdated() const { return some_update_; };
 
-  private:
+   private:
     bool VerifyWriteUpdateContents(const VkWriteDescriptorSet *, const uint32_t, UNIQUE_VALIDATION_ERROR_CODE *,
                                    std::string *) const;
     bool VerifyCopyUpdateContents(const VkCopyDescriptorSet *, const DescriptorSet *, VkDescriptorType, uint32_t,
@@ -391,7 +391,7 @@ class DescriptorSet : public BASE_NODE {
                               std::string *) const;
     // Private helper to set all bound cmd buffers to INVALID state
     void InvalidateBoundCmdBuffers();
-    bool some_update_; // has any part of the set ever been updated?
+    bool some_update_;  // has any part of the set ever been updated?
     VkDescriptorSet set_;
     DESCRIPTOR_POOL_STATE *pool_state_;
     const DescriptorSetLayout *p_layout_;
@@ -400,4 +400,4 @@ class DescriptorSet : public BASE_NODE {
     const core_validation::layer_data *device_data_;
 };
 }
-#endif // CORE_VALIDATION_DESCRIPTOR_SETS_H_
+#endif  // CORE_VALIDATION_DESCRIPTOR_SETS_H_

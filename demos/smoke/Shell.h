@@ -27,7 +27,7 @@
 class Game;
 
 class Shell {
-public:
+   public:
     Shell(const Shell &sh) = delete;
     Shell &operator=(const Shell &sh) = delete;
     virtual ~Shell() {}
@@ -77,7 +77,7 @@ public:
     virtual void run() = 0;
     virtual void quit() = 0;
 
-protected:
+   protected:
     Shell(Game &game);
 
     void init_vk();
@@ -101,24 +101,12 @@ protected:
 
     std::vector<const char *> device_extensions_;
 
-private:
-    bool debug_report_callback(VkDebugReportFlagsEXT flags,
-                               VkDebugReportObjectTypeEXT obj_type,
-                               uint64_t object,
-                               size_t location,
-                               int32_t msg_code,
-                               const char *layer_prefix,
-                               const char *msg);
-    static VKAPI_ATTR VkBool32 VKAPI_CALL debug_report_callback(
-                               VkDebugReportFlagsEXT flags,
-                               VkDebugReportObjectTypeEXT obj_type,
-                               uint64_t object,
-                               size_t location,
-                               int32_t msg_code,
-                               const char *layer_prefix,
-                               const char *msg,
-                               void *user_data)
-    {
+   private:
+    bool debug_report_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT obj_type, uint64_t object, size_t location,
+                               int32_t msg_code, const char *layer_prefix, const char *msg);
+    static VKAPI_ATTR VkBool32 VKAPI_CALL debug_report_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT obj_type,
+                                                                uint64_t object, size_t location, int32_t msg_code,
+                                                                const char *layer_prefix, const char *msg, void *user_data) {
         Shell *shell = reinterpret_cast<Shell *>(user_data);
         return shell->debug_report_callback(flags, obj_type, object, location, msg_code, layer_prefix, msg);
     }
@@ -152,4 +140,4 @@ private:
     float game_time_;
 };
 
-#endif // SHELL_H
+#endif  // SHELL_H

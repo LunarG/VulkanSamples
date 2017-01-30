@@ -17,7 +17,7 @@
 
 #include <stdint.h>
 
-#define ICD_SPV_MAGIC   0x07230203
+#define ICD_SPV_MAGIC 0x07230203
 #define ICD_SPV_VERSION 99
 
 struct icd_spv_header {

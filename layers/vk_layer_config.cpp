@@ -34,14 +34,14 @@
 #define MAX_CHARS_PER_LINE 4096
 
 class ConfigFile {
-  public:
+   public:
     ConfigFile();
     ~ConfigFile();
 
     const char *getOption(const std::string &_option);
     void setOption(const std::string &_option, const std::string &_val);
 
-  private:
+   private:
     bool m_fileIsParsed;
     std::map<std::string, std::string> m_valueMap;
 
@@ -98,7 +98,6 @@ VkFlags GetLayerOptionFlags(std::string _option, std::unordered_map<std::string,
     std::string option_list = g_configFileObj.getOption(_option.c_str());
 
     while (option_list.length() != 0) {
-
         // Find length of option string
         std::size_t option_length = option_list.find(",");
         if (option_length == option_list.npos) {
@@ -144,14 +143,21 @@ ConfigFile::ConfigFile() : m_fileIsParsed(false) {
 
 #ifdef WIN32
     // For Windows, enable message logging AND OutputDebugString
-    m_valueMap["lunarg_core_validation.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG,VK_DBG_LAYER_ACTION_DEBUG_OUTPUT";
-    m_valueMap["lunarg_image.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG,VK_DBG_LAYER_ACTION_DEBUG_OUTPUT";
-    m_valueMap["lunarg_object_tracker.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG,VK_DBG_LAYER_ACTION_DEBUG_OUTPUT";
-    m_valueMap["lunarg_parameter_validation.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG,VK_DBG_LAYER_ACTION_DEBUG_OUTPUT";
-    m_valueMap["lunarg_swapchain.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG,VK_DBG_LAYER_ACTION_DEBUG_OUTPUT";
-    m_valueMap["google_threading.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG,VK_DBG_LAYER_ACTION_DEBUG_OUTPUT";
-    m_valueMap["google_unique_objects.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG,VK_DBG_LAYER_ACTION_DEBUG_OUTPUT";
-#else  // WIN32
+    m_valueMap["lunarg_core_validation.debug_action"] =
+        "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG,VK_DBG_LAYER_ACTION_DEBUG_OUTPUT";
+    m_valueMap["lunarg_image.debug_action"] =
+        "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG,VK_DBG_LAYER_ACTION_DEBUG_OUTPUT";
+    m_valueMap["lunarg_object_tracker.debug_action"] =
+        "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG,VK_DBG_LAYER_ACTION_DEBUG_OUTPUT";
+    m_valueMap["lunarg_parameter_validation.debug_action"] =
+        "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG,VK_DBG_LAYER_ACTION_DEBUG_OUTPUT";
+    m_valueMap["lunarg_swapchain.debug_action"] =
+        "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG,VK_DBG_LAYER_ACTION_DEBUG_OUTPUT";
+    m_valueMap["google_threading.debug_action"] =
+        "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG,VK_DBG_LAYER_ACTION_DEBUG_OUTPUT";
+    m_valueMap["google_unique_objects.debug_action"] =
+        "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG,VK_DBG_LAYER_ACTION_DEBUG_OUTPUT";
+#else   // WIN32
     m_valueMap["lunarg_core_validation.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG";
     m_valueMap["lunarg_image.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG";
     m_valueMap["lunarg_object_tracker.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG";
@@ -159,7 +165,7 @@ ConfigFile::ConfigFile() : m_fileIsParsed(false) {
     m_valueMap["lunarg_swapchain.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG";
     m_valueMap["google_threading.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG";
     m_valueMap["google_unique_objects.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG";
-#endif // WIN32
+#endif  // WIN32
 
     m_valueMap["lunarg_core_validation.log_filename"] = "stdout";
     m_valueMap["lunarg_image.log_filename"] = "stdout";
@@ -227,7 +233,6 @@ void ConfigFile::parseFile(const char *filename) {
         return;
     }
 
-
     // read tokens from the file and form option, value pairs
     file.getline(buf, MAX_CHARS_PER_LINE);
     while (!file.eof()) {
@@ -238,8 +243,7 @@ void ConfigFile::parseFile(const char *filename) {
 
         // discard any comments delimited by '#' in the line
         pComment = strchr(buf, '#');
-        if (pComment)
-            *pComment = '\0';
+        if (pComment) *pComment = '\0';
 
         if (sscanf(buf, " %511[^\n\t =] = %511[^\n \t]", option, value) == 2) {
             std::string optStr(option);
@@ -259,26 +263,22 @@ void print_msg_flags(VkFlags msgFlags, char *msg_flags) {
         separator = true;
     }
     if (msgFlags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT) {
-        if (separator)
-            strcat(msg_flags, ",");
+        if (separator) strcat(msg_flags, ",");
         strcat(msg_flags, "INFO");
         separator = true;
     }
     if (msgFlags & VK_DEBUG_REPORT_WARNING_BIT_EXT) {
-        if (separator)
-            strcat(msg_flags, ",");
+        if (separator) strcat(msg_flags, ",");
         strcat(msg_flags, "WARN");
         separator = true;
     }
     if (msgFlags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT) {
-        if (separator)
-            strcat(msg_flags, ",");
+        if (separator) strcat(msg_flags, ",");
         strcat(msg_flags, "PERF");
         separator = true;
     }
     if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
-        if (separator)
-            strcat(msg_flags, ",");
+        if (separator) strcat(msg_flags, ",");
         strcat(msg_flags, "ERROR");
     }
 }

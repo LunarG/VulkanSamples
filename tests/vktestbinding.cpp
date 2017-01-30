@@ -23,21 +23,20 @@
 #include <assert.h>
 #include <iostream>
 #include <stdarg.h>
-#include <string.h> // memset(), memcmp()
+#include <string.h>  // memset(), memcmp()
 
 namespace {
 
-#define NON_DISPATCHABLE_HANDLE_INIT(create_func, dev, ...)                                                                        \
-    do {                                                                                                                           \
-        handle_type handle;                                                                                                        \
-        if (EXPECT(create_func(dev.handle(), __VA_ARGS__, NULL, &handle) == VK_SUCCESS))                                           \
-            NonDispHandle::init(dev.handle(), handle);                                                                             \
+#define NON_DISPATCHABLE_HANDLE_INIT(create_func, dev, ...)                              \
+    do {                                                                                 \
+        handle_type handle;                                                              \
+        if (EXPECT(create_func(dev.handle(), __VA_ARGS__, NULL, &handle) == VK_SUCCESS)) \
+            NonDispHandle::init(dev.handle(), handle);                                   \
     } while (0)
 
-#define NON_DISPATCHABLE_HANDLE_DTOR(cls, destroy_func)                                                                            \
-    cls::~cls() {                                                                                                                  \
-        if (initialized())                                                                                                         \
-            destroy_func(device(), handle(), NULL);                                                                                \
+#define NON_DISPATCHABLE_HANDLE_DTOR(cls, destroy_func)            \
+    cls::~cls() {                                                  \
+        if (initialized()) destroy_func(device(), handle(), NULL); \
     }
 
 #define STRINGIFY(x) #x
@@ -55,11 +54,11 @@ bool expect_failure(const char *expr, const char *file, unsigned int line, const
     return false;
 }
 
-template <class T, class S> std::vector<T> make_handles(const std::vector<S> &v) {
+template <class T, class S>
+std::vector<T> make_handles(const std::vector<S> &v) {
     std::vector<T> handles;
     handles.reserve(v.size());
-    for (typename std::vector<S>::const_iterator it = v.begin(); it != v.end(); it++)
-        handles.push_back((*it)->handle());
+    for (typename std::vector<S>::const_iterator it = v.begin(); it != v.end(); it++) handles.push_back((*it)->handle());
     return handles;
 }
 
@@ -71,7 +70,7 @@ VkMemoryAllocateInfo get_resource_alloc_info(const vk_testing::Device &dev, cons
     return info;
 }
 
-} // namespace
+}  // namespace
 
 namespace vk_testing {
 
@@ -234,12 +233,10 @@ std::vector<VkLayerProperties> PhysicalDevice::layers() const {
 }
 
 Device::~Device() {
-    if (!initialized())
-        return;
+    if (!initialized()) return;
 
     for (int i = 0; i < QUEUE_COUNT; i++) {
-        for (std::vector<Queue *>::iterator it = queues_[i].begin(); it != queues_[i].end(); it++)
-            delete *it;
+        for (std::vector<Queue *>::iterator it = queues_[i].begin(); it != queues_[i].end(); it++) delete *it;
         queues_[i].clear();
     }
 
@@ -295,8 +292,7 @@ void Device::init(std::vector<const char *> &extensions, VkPhysicalDeviceFeature
 void Device::init(const VkDeviceCreateInfo &info) {
     VkDevice dev;
 
-    if (EXPECT(vkCreateDevice(phy_.handle(), &info, NULL, &dev) == VK_SUCCESS))
-        Handle::init(dev);
+    if (EXPECT(vkCreateDevice(phy_.handle(), &info, NULL, &dev) == VK_SUCCESS)) Handle::init(dev);
 
     init_queues();
     init_formats();
@@ -407,8 +403,7 @@ void Queue::submit(const CommandBuffer &cmd) {
 void Queue::wait() { EXPECT(vkQueueWaitIdle(handle()) == VK_SUCCESS); }
 
 DeviceMemory::~DeviceMemory() {
-    if (initialized())
-        vkFreeMemory(device(), handle(), NULL);
+    if (initialized()) vkFreeMemory(device(), handle(), NULL);
 }
 
 void DeviceMemory::init(const Device &dev, const VkMemoryAllocateInfo &info) {
@@ -417,16 +412,14 @@ void DeviceMemory::init(const Device &dev, const VkMemoryAllocateInfo &info) {
 
 const void *DeviceMemory::map(VkFlags flags) const {
     void *data;
-    if (!EXPECT(vkMapMemory(device(), handle(), 0, VK_WHOLE_SIZE, flags, &data) == VK_SUCCESS))
-        data = NULL;
+    if (!EXPECT(vkMapMemory(device(), handle(), 0, VK_WHOLE_SIZE, flags, &data) == VK_SUCCESS)) data = NULL;
 
     return data;
 }
 
 void *DeviceMemory::map(VkFlags flags) {
     void *data;
-    if (!EXPECT(vkMapMemory(device(), handle(), 0, VK_WHOLE_SIZE, flags, &data) == VK_SUCCESS))
-        data = NULL;
+    if (!EXPECT(vkMapMemory(device(), handle(), 0, VK_WHOLE_SIZE, flags, &data) == VK_SUCCESS)) data = NULL;
 
     return data;
 }
@@ -541,8 +534,7 @@ VkSubresourceLayout Image::subresource_layout(const VkImageSubresource &subres) 
     VkSubresourceLayout data;
     size_t size = sizeof(data);
     vkGetImageSubresourceLayout(device(), handle(), &subres, &data);
-    if (size != sizeof(data))
-        memset(&data, 0, sizeof(data));
+    if (size != sizeof(data)) memset(&data, 0, sizeof(data));
 
     return data;
 }
@@ -552,8 +544,7 @@ VkSubresourceLayout Image::subresource_layout(const VkImageSubresourceLayers &su
     VkImageSubresource subres = subresource(subrescopy.aspectMask, subrescopy.mipLevel, subrescopy.baseArrayLayer);
     size_t size = sizeof(data);
     vkGetImageSubresourceLayout(device(), handle(), &subres, &data);
-    if (size != sizeof(data))
-        memset(&data, 0, sizeof(data));
+    if (size != sizeof(data)) memset(&data, 0, sizeof(data));
 
     return data;
 }
@@ -579,8 +570,7 @@ VkResult ShaderModule::init_try(const Device &dev, const VkShaderModuleCreateInf
     VkShaderModule mod;
 
     VkResult err = vkCreateShaderModule(dev.handle(), &info, NULL, &mod);
-    if (err == VK_SUCCESS)
-        NonDispHandle::init(dev.handle(), mod);
+    if (err == VK_SUCCESS) NonDispHandle::init(dev.handle(), mod);
 
     return err;
 }
@@ -754,4 +744,4 @@ void CommandBuffer::end() { EXPECT(vkEndCommandBuffer(handle()) == VK_SUCCESS); 
 
 void CommandBuffer::reset(VkCommandBufferResetFlags flags) { EXPECT(vkResetCommandBuffer(handle(), flags) == VK_SUCCESS); }
 
-}; // namespace vk_testing
+};  // namespace vk_testing

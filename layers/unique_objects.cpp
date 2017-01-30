@@ -103,7 +103,6 @@ static void checkInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateI
 #endif
 
         // Check for recognized instance extensions
-        layer_data *instance_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
         if (!white_list(pCreateInfo->ppEnabledExtensionNames[i], kUniqueObjectsSupportedInstanceExtensions)) {
             log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                     VALIDATION_ERROR_UNDEFINED, "UniqueObjects",
@@ -260,8 +259,8 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
 }
 
 static const VkLayerProperties globalLayerProps = {"VK_LAYER_GOOGLE_unique_objects",
-                                                   VK_LAYER_API_VERSION, // specVersion
-                                                   1,                    // implementationVersion
+                                                   VK_LAYER_API_VERSION,  // specVersion
+                                                   1,                     // implementationVersion
                                                    "Google Validation Layer"};
 
 /// Declare prototype for these functions
@@ -269,8 +268,7 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance in
 
 static inline PFN_vkVoidFunction layer_intercept_proc(const char *name) {
     for (unsigned int i = 0; i < sizeof(procmap) / sizeof(procmap[0]); i++) {
-        if (!strcmp(name, procmap[i].name))
-            return procmap[i].pFunc;
+        if (!strcmp(name, procmap[i].name)) return procmap[i].pFunc;
     }
     if (0 == strcmp(name, "vk_layerGetPhysicalDeviceProcAddr")) {
         return (PFN_vkVoidFunction)GetPhysicalDeviceProcAddr;
@@ -717,7 +715,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneCapabilitiesKHR(VkPhysicalDevice p
 }
 #endif
 
-} // namespace unique_objects
+}  // namespace unique_objects
 
 // vk_layer_logging.h expects these to be defined
 VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackEXT(VkInstance instance,
@@ -769,7 +767,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionPropert
     return unique_objects::EnumerateDeviceExtensionProperties(VK_NULL_HANDLE, pLayerName, pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vk_layerGetPhysicalDeviceProcAddr(VkInstance instance, const char *funcName) {
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vk_layerGetPhysicalDeviceProcAddr(VkInstance instance,
+                                                                                           const char *funcName) {
     return unique_objects::GetPhysicalDeviceProcAddr(instance, funcName);
 }
 

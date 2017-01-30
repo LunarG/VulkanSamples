@@ -36,5 +36,5 @@ VK_LAYER_EXPORT VkResult util_GetExtensionProperties(const uint32_t count, const
 VK_LAYER_EXPORT VkResult util_GetLayerProperties(const uint32_t count, const VkLayerProperties *layer_properties, uint32_t *pCount,
                                                  VkLayerProperties *pProperties);
 
-} // extern "C"
-#endif // LAYER_EXTENSION_UTILS_H
+}  // extern "C"
+#endif  // LAYER_EXTENSION_UTILS_H

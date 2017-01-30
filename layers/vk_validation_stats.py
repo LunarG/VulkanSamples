@@ -50,6 +50,7 @@ layer_source_files = [
 'parameter_validation.cpp',
 'object_tracker.cpp',
 'image.cpp',
+'buffer_validation.cpp',
 'swapchain.cpp'
 ]
 header_file = 'vk_validation_error_messages.h'

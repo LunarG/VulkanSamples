@@ -60,7 +60,7 @@ const std::unordered_map<std::string, VkFlags> report_flags_option_definitions =
 const char *getLayerOption(const char *_option);
 FILE *getLayerLogOutput(const char *_option, const char *layerName);
 VkFlags GetLayerOptionFlags(std::string _option, std::unordered_map<std::string, VkFlags> const &enum_data,
-                                          uint32_t option_default);
+                            uint32_t option_default);
 
 void setLayerOption(const char *_option, const char *_val);
 void print_msg_flags(VkFlags msgFlags, char *msg_flags);

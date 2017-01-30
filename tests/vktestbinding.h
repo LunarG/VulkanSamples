@@ -62,12 +62,13 @@ std::vector<VkExtensionProperties> GetGlobalExtensions(const char *pLayerName);
 
 namespace internal {
 
-template <typename T> class Handle {
-  public:
+template <typename T>
+class Handle {
+   public:
     const T &handle() const { return handle_; }
     bool initialized() const { return (handle_ != VK_NULL_HANDLE); }
 
-  protected:
+   protected:
     typedef T handle_type;
 
     explicit Handle() : handle_(VK_NULL_HANDLE) {}
@@ -78,7 +79,7 @@ template <typename T> class Handle {
         handle_ = handle;
     }
 
-  private:
+   private:
     // handles are non-copyable
     Handle(const Handle &);
     Handle &operator=(const Handle &);
@@ -86,8 +87,9 @@ template <typename T> class Handle {
     T handle_;
 };
 
-template <typename T> class NonDispHandle : public Handle<T> {
-  protected:
+template <typename T>
+class NonDispHandle : public Handle<T> {
+   protected:
     explicit NonDispHandle() : Handle<T>(), dev_handle_(VK_NULL_HANDLE) {}
     explicit NonDispHandle(VkDevice dev, T handle) : Handle<T>(handle), dev_handle_(dev) {}
 
@@ -99,14 +101,14 @@ template <typename T> class NonDispHandle : public Handle<T> {
         dev_handle_ = dev;
     }
 
-  private:
+   private:
     VkDevice dev_handle_;
 };
 
-} // namespace internal
+}  // namespace internal
 
 class PhysicalDevice : public internal::Handle<VkPhysicalDevice> {
-  public:
+   public:
     explicit PhysicalDevice(VkPhysicalDevice phy) : Handle(phy) {
         memory_properties_ = memory_properties();
         device_properties_ = properties();
@@ -127,7 +129,7 @@ class PhysicalDevice : public internal::Handle<VkPhysicalDevice> {
     // vkEnumerateLayers()
     std::vector<VkLayerProperties> layers() const;
 
-  private:
+   private:
     void add_extension_dependencies(uint32_t dependency_count, VkExtensionProperties *depencency_props,
                                     std::vector<VkExtensionProperties> &ext_list);
 
@@ -137,14 +139,14 @@ class PhysicalDevice : public internal::Handle<VkPhysicalDevice> {
 };
 
 class Device : public internal::Handle<VkDevice> {
-  public:
+   public:
     explicit Device(VkPhysicalDevice phy) : phy_(phy) {}
     ~Device();
 
     // vkCreateDevice()
     void init(const VkDeviceCreateInfo &info);
     void init(std::vector<const char *> &extensions,
-              VkPhysicalDeviceFeatures *features = nullptr); // all queues, all extensions, etc
+              VkPhysicalDeviceFeatures *features = nullptr);  // all queues, all extensions, etc
     void init() {
         std::vector<const char *> extensions;
         init(extensions);
@@ -202,7 +204,7 @@ class Device : public internal::Handle<VkDevice> {
                                                    const DescriptorSet &dst_set, uint32_t dst_binding, uint32_t dst_array_element,
                                                    uint32_t count);
 
-  private:
+   private:
     enum QueueIndex {
         GRAPHICS,
         COMPUTE,
@@ -220,7 +222,7 @@ class Device : public internal::Handle<VkDevice> {
 };
 
 class Queue : public internal::Handle<VkQueue> {
-  public:
+   public:
     explicit Queue(VkQueue queue, int index) : Handle(queue) { family_index_ = index; }
 
     // vkQueueSubmit()
@@ -233,12 +235,12 @@ class Queue : public internal::Handle<VkQueue> {
 
     int get_family_index() { return family_index_; }
 
-  private:
+   private:
     int family_index_;
 };
 
 class DeviceMemory : public internal::NonDispHandle<VkDeviceMemory> {
-  public:
+   public:
     ~DeviceMemory();
 
     // vkAllocateMemory()
@@ -257,7 +259,7 @@ class DeviceMemory : public internal::NonDispHandle<VkDeviceMemory> {
 };
 
 class Fence : public internal::NonDispHandle<VkFence> {
-  public:
+   public:
     ~Fence();
 
     // vkCreateFence()
@@ -271,7 +273,7 @@ class Fence : public internal::NonDispHandle<VkFence> {
 };
 
 class Semaphore : public internal::NonDispHandle<VkSemaphore> {
-  public:
+   public:
     ~Semaphore();
 
     // vkCreateSemaphore()
@@ -281,7 +283,7 @@ class Semaphore : public internal::NonDispHandle<VkSemaphore> {
 };
 
 class Event : public internal::NonDispHandle<VkEvent> {
-  public:
+   public:
     ~Event();
 
     // vkCreateEvent()
@@ -298,7 +300,7 @@ class Event : public internal::NonDispHandle<VkEvent> {
 };
 
 class QueryPool : public internal::NonDispHandle<VkQueryPool> {
-  public:
+   public:
     ~QueryPool();
 
     // vkCreateQueryPool()
@@ -311,7 +313,7 @@ class QueryPool : public internal::NonDispHandle<VkQueryPool> {
 };
 
 class Buffer : public internal::NonDispHandle<VkBuffer> {
-  public:
+   public:
     explicit Buffer() : NonDispHandle() {}
     explicit Buffer(const Device &dev, const VkBufferCreateInfo &info) { init(dev, info); }
     explicit Buffer(const Device &dev, VkDeviceSize size) { init(dev, size); }
@@ -358,14 +360,14 @@ class Buffer : public internal::NonDispHandle<VkBuffer> {
         return barrier;
     }
 
-  private:
+   private:
     VkBufferCreateInfo create_info_;
 
     DeviceMemory internal_mem_;
 };
 
 class BufferView : public internal::NonDispHandle<VkBufferView> {
-  public:
+   public:
     ~BufferView();
 
     // vkCreateBufferView()
@@ -373,7 +375,7 @@ class BufferView : public internal::NonDispHandle<VkBufferView> {
 };
 
 class Image : public internal::NonDispHandle<VkImage> {
-  public:
+   public:
     explicit Image() : NonDispHandle(), format_features_(0) {}
     explicit Image(const Device &dev, const VkImageCreateInfo &info) : format_features_(0) { init(dev, info); }
 
@@ -440,7 +442,7 @@ class Image : public internal::NonDispHandle<VkImage> {
     static VkExtent3D extent(int32_t width, int32_t height, int32_t depth);
     static VkExtent3D extent(const VkExtent3D &extent, uint32_t mip_level);
 
-  private:
+   private:
     void init_info(const Device &dev, const VkImageCreateInfo &info);
 
     VkImageCreateInfo create_info_;
@@ -450,7 +452,7 @@ class Image : public internal::NonDispHandle<VkImage> {
 };
 
 class ImageView : public internal::NonDispHandle<VkImageView> {
-  public:
+   public:
     ~ImageView();
 
     // vkCreateImageView()
@@ -458,7 +460,7 @@ class ImageView : public internal::NonDispHandle<VkImageView> {
 };
 
 class ShaderModule : public internal::NonDispHandle<VkShaderModule> {
-  public:
+   public:
     ~ShaderModule();
 
     // vkCreateShaderModule()
@@ -469,7 +471,7 @@ class ShaderModule : public internal::NonDispHandle<VkShaderModule> {
 };
 
 class Pipeline : public internal::NonDispHandle<VkPipeline> {
-  public:
+   public:
     ~Pipeline();
 
     // vkCreateGraphicsPipeline()
@@ -491,7 +493,7 @@ class Pipeline : public internal::NonDispHandle<VkPipeline> {
 };
 
 class PipelineLayout : public internal::NonDispHandle<VkPipelineLayout> {
-  public:
+   public:
     ~PipelineLayout();
 
     // vCreatePipelineLayout()
@@ -499,7 +501,7 @@ class PipelineLayout : public internal::NonDispHandle<VkPipelineLayout> {
 };
 
 class Sampler : public internal::NonDispHandle<VkSampler> {
-  public:
+   public:
     ~Sampler();
 
     // vkCreateSampler()
@@ -507,7 +509,7 @@ class Sampler : public internal::NonDispHandle<VkSampler> {
 };
 
 class DescriptorSetLayout : public internal::NonDispHandle<VkDescriptorSetLayout> {
-  public:
+   public:
     ~DescriptorSetLayout();
 
     // vkCreateDescriptorSetLayout()
@@ -515,7 +517,7 @@ class DescriptorSetLayout : public internal::NonDispHandle<VkDescriptorSetLayout
 };
 
 class DescriptorPool : public internal::NonDispHandle<VkDescriptorPool> {
-  public:
+   public:
     ~DescriptorPool();
 
     // Descriptor sets allocated from this pool will need access to the original
@@ -537,7 +539,7 @@ class DescriptorPool : public internal::NonDispHandle<VkDescriptorPool> {
     std::vector<DescriptorSet *> alloc_sets(const Device &dev, const DescriptorSetLayout &layout, uint32_t count);
     DescriptorSet *alloc_sets(const Device &dev, const DescriptorSetLayout &layout);
 
-  private:
+   private:
     VkDescriptorPool pool_;
 
     // Track whether this pool's usage is VK_DESCRIPTOR_POOL_USAGE_DYNAMIC
@@ -545,7 +547,7 @@ class DescriptorPool : public internal::NonDispHandle<VkDescriptorPool> {
 };
 
 class DescriptorSet : public internal::NonDispHandle<VkDescriptorSet> {
-  public:
+   public:
     ~DescriptorSet();
 
     explicit DescriptorSet() : NonDispHandle() {}
@@ -553,12 +555,12 @@ class DescriptorSet : public internal::NonDispHandle<VkDescriptorSet> {
         containing_pool_ = pool;
     }
 
-  private:
+   private:
     DescriptorPool *containing_pool_;
 };
 
 class CommandPool : public internal::NonDispHandle<VkCommandPool> {
-  public:
+   public:
     ~CommandPool();
 
     explicit CommandPool() : NonDispHandle() {}
@@ -578,7 +580,7 @@ inline VkCommandPoolCreateInfo CommandPool::create_info(uint32_t queue_family_in
 }
 
 class CommandBuffer : public internal::Handle<VkCommandBuffer> {
-  public:
+   public:
     ~CommandBuffer();
 
     explicit CommandBuffer() : Handle() {}
@@ -599,7 +601,7 @@ class CommandBuffer : public internal::Handle<VkCommandBuffer> {
 
     static VkCommandBufferAllocateInfo create_info(VkCommandPool const &pool);
 
-  private:
+   private:
     VkDevice dev_handle_;
     VkCommandPool cmd_pool_;
 };
@@ -686,14 +688,14 @@ inline VkImageSubresourceLayers Image::subresource(VkImageAspectFlags aspect, ui
                                                    uint32_t array_size) {
     VkImageSubresourceLayers subres = {};
     switch (aspect) {
-    case VK_IMAGE_ASPECT_COLOR_BIT:
-    case VK_IMAGE_ASPECT_DEPTH_BIT:
-    case VK_IMAGE_ASPECT_STENCIL_BIT:
-    case VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT:
-        /* valid */
-        break;
-    default:
-        assert(!"Invalid VkImageAspectFlags");
+        case VK_IMAGE_ASPECT_COLOR_BIT:
+        case VK_IMAGE_ASPECT_DEPTH_BIT:
+        case VK_IMAGE_ASPECT_STENCIL_BIT:
+        case VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT:
+            /* valid */
+            break;
+        default:
+            assert(!"Invalid VkImageAspectFlags");
     }
     subres.aspectMask = aspect;
     subres.mipLevel = mip_level;
@@ -850,6 +852,6 @@ inline VkCommandBufferAllocateInfo CommandBuffer::create_info(VkCommandPool cons
     return info;
 }
 
-}; // namespace vk_testing
+};  // namespace vk_testing
 
-#endif // VKTESTBINDING_H
+#endif  // VKTESTBINDING_H

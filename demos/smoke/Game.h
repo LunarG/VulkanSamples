@@ -25,7 +25,7 @@
 class Shell;
 
 class Game {
-public:
+   public:
     Game(const Game &game) = delete;
     Game &operator=(const Game &game) = delete;
     virtual ~Game() {}
@@ -77,13 +77,12 @@ public:
 
     void print_stats();
     void quit();
-  protected:
+
+   protected:
     int frame_count;
     std::chrono::time_point<std::chrono::system_clock> start_time;
 
-    Game(const std::string &name, const std::vector<std::string> &args)
-        : settings_(), shell_(nullptr)
-    {
+    Game(const std::string &name, const std::vector<std::string> &args) : settings_(), shell_(nullptr) {
         settings_.name = name;
         settings_.initial_width = 1280;
         settings_.initial_height = 1024;
@@ -114,9 +113,8 @@ public:
     Settings settings_;
     Shell *shell_;
 
-private:
-    void parse_args(const std::vector<std::string> &args)
-    {
+   private:
+    void parse_args(const std::vector<std::string> &args) {
         for (auto it = args.begin(); it != args.end(); ++it) {
             if (*it == "--b") {
                 settings_.vsync = false;
@@ -149,4 +147,4 @@ private:
     }
 };
 
-#endif // GAME_H
+#endif  // GAME_H

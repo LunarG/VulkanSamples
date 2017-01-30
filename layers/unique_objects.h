@@ -30,6 +30,9 @@
 
 namespace unique_objects {
 
+// The clang-format utility does not handle non-delimited strings well at all
+// clang-format off
+
 // The display-server-specific WSI extensions are handled explicitly
 static const char *kUniqueObjectsSupportedInstanceExtensions =
 #ifdef VK_USE_PLATFORM_XLIB_KHR
@@ -55,7 +58,10 @@ static const char *kUniqueObjectsSupportedInstanceExtensions =
     VK_KHR_DISPLAY_EXTENSION_NAME
     VK_KHR_SURFACE_EXTENSION_NAME
     VK_NV_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME
-    VK_EXT_VALIDATION_FLAGS_EXTENSION_NAME;
+    VK_EXT_VALIDATION_FLAGS_EXTENSION_NAME
+    VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME
+    VK_EXT_DIRECT_MODE_DISPLAY_EXTENSION_NAME
+    VK_EXT_DISPLAY_SURFACE_COUNTER_EXTENSION_NAME;
 
 static const char *kUniqueObjectsSupportedDeviceExtensions =
     VK_AMD_RASTERIZATION_ORDER_EXTENSION_NAME
@@ -78,7 +84,11 @@ static const char *kUniqueObjectsSupportedDeviceExtensions =
     VK_NV_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME
     VK_NV_WIN32_KEYED_MUTEX_EXTENSION_NAME
 #endif
-    VK_NV_EXTERNAL_MEMORY_EXTENSION_NAME;
+    VK_NV_EXTERNAL_MEMORY_EXTENSION_NAME
+    VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME
+    VK_EXT_DISPLAY_CONTROL_EXTENSION_NAME;
+
+// clang-format on
 
 // All increments must be guarded by global_lock
 static uint64_t global_unique_id = 1;
@@ -98,7 +108,7 @@ struct layer_data {
     VkDebugReportCallbackEXT *tmp_callbacks;
 
     bool wsi_enabled;
-    std::unordered_map<uint64_t, uint64_t> unique_id_mapping; // Map uniqueID to actual object handle
+    std::unordered_map<uint64_t, uint64_t> unique_id_mapping;  // Map uniqueID to actual object handle
     VkPhysicalDevice gpu;
 
     layer_data() : wsi_enabled(false), gpu(VK_NULL_HANDLE){};
@@ -118,14 +128,15 @@ struct instance_extension_enables {
 static std::unordered_map<void *, struct instance_extension_enables> instance_ext_map;
 static std::unordered_map<void *, layer_data *> layer_data_map;
 
-static std::mutex global_lock; // Protect map accesses and unique_id increments
+static std::mutex global_lock;  // Protect map accesses and unique_id increments
 
 struct GenericHeader {
     VkStructureType sType;
     void *pNext;
 };
 
-template <typename T> bool ContainsExtStruct(const T *target, VkStructureType ext_type) {
+template <typename T>
+bool ContainsExtStruct(const T *target, VkStructureType ext_type) {
     assert(target != nullptr);
 
     const GenericHeader *ext_struct = reinterpret_cast<const GenericHeader *>(target->pNext);
@@ -141,4 +152,4 @@ template <typename T> bool ContainsExtStruct(const T *target, VkStructureType ex
     return false;
 }
 
-} // namespace unique_objects
+}  // namespace unique_objects

@@ -35,7 +35,7 @@
 #define ICD_SPV_MAGIC 0x07230203
 
 class VkTestFramework : public ::testing::Test {
-  public:
+   public:
     VkTestFramework();
     ~VkTestFramework();
 
@@ -49,7 +49,7 @@ class VkTestFramework : public ::testing::Test {
 };
 
 class TestEnvironment : public ::testing::Environment {
-  public:
+   public:
     void SetUp();
 
     void TearDown();

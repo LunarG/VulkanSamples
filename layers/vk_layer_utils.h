@@ -24,7 +24,7 @@
 #include "vk_layer_logging.h"
 
 #ifndef WIN32
-#include <strings.h> // For ffs()
+#include <strings.h>  // For ffs()
 #else
 #include <intrin.h>  // For __lzcnt()
 #endif

@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2015-2016 The Khronos Group Inc.
- * Copyright (c) 2015-2016 Valve Corporation
- * Copyright (c) 2015-2016 LunarG, Inc.
+ * Copyright (c) 2015-2017 The Khronos Group Inc.
+ * Copyright (c) 2015-2017 Valve Corporation
+ * Copyright (c) 2015-2017 LunarG, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and/or associated documentation files (the "Materials"), to
@@ -23,6 +23,7 @@
  * USE OR OTHER DEALINGS IN THE MATERIALS.
  *
  * Author: Jeremy Hayes <jeremy@lunarG.com>
+ * Author: Mark Young <marky@lunarG.com>
  */
 
 #include <algorithm>
@@ -38,16 +39,16 @@ namespace VK {
 
 struct InstanceCreateInfo {
     InstanceCreateInfo()
-        : info // MSVC can't handle list initialization, thus explicit construction herein.
+        : info  // MSVC can't handle list initialization, thus explicit construction herein.
           (VkInstanceCreateInfo{
-              VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, // sType
-              nullptr,                                // pNext
-              0,                                      // flags
-              nullptr,                                // pApplicationInfo
-              0,                                      // enabledLayerCount
-              nullptr,                                // ppEnabledLayerNames
-              0,                                      // enabledExtensionCount
-              nullptr                                 // ppEnabledExtensionNames
+              VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,  // sType
+              nullptr,                                 // pNext
+              0,                                       // flags
+              nullptr,                                 // pApplicationInfo
+              0,                                       // enabledLayerCount
+              nullptr,                                 // ppEnabledLayerNames
+              0,                                       // enabledExtensionCount
+              nullptr                                  // ppEnabledExtensionNames
           }) {}
 
     InstanceCreateInfo &sType(VkStructureType const &sType) {
@@ -107,14 +108,14 @@ struct InstanceCreateInfo {
 
 struct DeviceQueueCreateInfo {
     DeviceQueueCreateInfo()
-        : info // MSVC can't handle list initialization, thus explicit construction herein.
+        : info  // MSVC can't handle list initialization, thus explicit construction herein.
           (VkDeviceQueueCreateInfo{
-              VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, // sType
-              nullptr,                                    // pNext
-              0,                                          // flags
-              0,                                          // queueFamilyIndex
-              0,                                          // queueCount
-              nullptr                                     // pQueuePriorities
+              VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,  // sType
+              nullptr,                                     // pNext
+              0,                                           // flags
+              0,                                           // queueFamilyIndex
+              0,                                           // queueCount
+              nullptr                                      // pQueuePriorities
           }) {}
 
     DeviceQueueCreateInfo &sType(VkStructureType const &sType) {
@@ -160,18 +161,18 @@ struct DeviceQueueCreateInfo {
 
 struct DeviceCreateInfo {
     DeviceCreateInfo()
-        : info // MSVC can't handle list initialization, thus explicit construction herein.
+        : info  // MSVC can't handle list initialization, thus explicit construction herein.
           (VkDeviceCreateInfo{
-              VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO, // sType
-              nullptr,                              // pNext
-              0,                                    // flags
-              0,                                    // queueCreateInfoCount
-              nullptr,                              // pQueueCreateInfos
-              0,                                    // enabledLayerCount
-              nullptr,                              // ppEnabledLayerNames
-              0,                                    // enabledExtensionCount
-              nullptr,                              // ppEnabledExtensionNames
-              nullptr                               // pEnabledFeatures
+              VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,  // sType
+              nullptr,                               // pNext
+              0,                                     // flags
+              0,                                     // queueCreateInfoCount
+              nullptr,                               // pQueueCreateInfos
+              0,                                     // enabledLayerCount
+              nullptr,                               // ppEnabledLayerNames
+              0,                                     // enabledExtensionCount
+              nullptr,                               // ppEnabledExtensionNames
+              nullptr                                // pEnabledFeatures
           }) {}
 
     DeviceCreateInfo &sType(VkStructureType const &sType) {
@@ -276,7 +277,7 @@ TEST(LX475, DestroyInstanceNullHandle) { vkDestroyInstance(VK_NULL_HANDLE, nullp
 TEST(LX475, DestroyDeviceNullHandle) { vkDestroyDevice(VK_NULL_HANDLE, nullptr); }
 
 TEST(CreateInstance, ExtensionNotPresent) {
-    char const *const names[] = {"NotPresent"}; // Temporary required due to MSVC bug.
+    char const *const names[] = {"NotPresent"};  // Temporary required due to MSVC bug.
     auto const info = VK::InstanceCreateInfo().enabledExtensionCount(1).ppEnabledExtensionNames(names);
 
     VkInstance instance = VK_NULL_HANDLE;
@@ -287,7 +288,7 @@ TEST(CreateInstance, ExtensionNotPresent) {
 }
 
 TEST(CreateInstance, LayerNotPresent) {
-    char const *const names[] = {"NotPresent"}; // Temporary required due to MSVC bug.
+    char const *const names[] = {"NotPresent"};  // Temporary required due to MSVC bug.
     auto const info = VK::InstanceCreateInfo().enabledLayerCount(1).ppEnabledLayerNames(names);
 
     VkInstance instance = VK_NULL_HANDLE;
@@ -299,12 +300,103 @@ TEST(CreateInstance, LayerNotPresent) {
 
 // Used by run_loader_tests.sh to test for layer insertion.
 TEST(CreateInstance, LayerPresent) {
-    char const *const names[] = {"VK_LAYER_LUNARG_parameter_validation"}; // Temporary required due to MSVC bug.
+    char const *const names[] = {"VK_LAYER_LUNARG_parameter_validation"};  // Temporary required due to MSVC bug.
     auto const info = VK::InstanceCreateInfo().enabledLayerCount(1).ppEnabledLayerNames(names);
 
     VkInstance instance = VK_NULL_HANDLE;
     VkResult result = vkCreateInstance(info, VK_NULL_HANDLE, &instance);
     ASSERT_EQ(result, VK_SUCCESS);
+
+    vkDestroyInstance(instance, nullptr);
+}
+
+// Used by run_loader_tests.sh to test that calling vkEnumeratePhysicalDevices without first querying
+// the count, works.
+TEST(EnumeratePhysicalDevicces, OneCall) {
+    VkInstance instance = VK_NULL_HANDLE;
+    VkResult result = vkCreateInstance(VK::InstanceCreateInfo(), VK_NULL_HANDLE, &instance);
+    ASSERT_EQ(result, VK_SUCCESS);
+
+    uint32_t physicalCount = 500;
+    std::unique_ptr<VkPhysicalDevice[]> physical(new VkPhysicalDevice[physicalCount]);
+    result = vkEnumeratePhysicalDevices(instance, &physicalCount, physical.get());
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(physicalCount, 0u);
+
+    vkDestroyInstance(instance, nullptr);
+}
+
+// Used by run_loader_tests.sh to test for the expected usage of the vkEnumeratePhysicalDevices call.
+TEST(EnumeratePhysicalDevicces, TwoCall) {
+    VkInstance instance = VK_NULL_HANDLE;
+    VkResult result = vkCreateInstance(VK::InstanceCreateInfo(), VK_NULL_HANDLE, &instance);
+    ASSERT_EQ(result, VK_SUCCESS);
+
+    uint32_t physicalCount = 0;
+    result = vkEnumeratePhysicalDevices(instance, &physicalCount, nullptr);
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(physicalCount, 0u);
+
+    std::unique_ptr<VkPhysicalDevice[]> physical(new VkPhysicalDevice[physicalCount]);
+    result = vkEnumeratePhysicalDevices(instance, &physicalCount, physical.get());
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(physicalCount, 0u);
+
+    vkDestroyInstance(instance, nullptr);
+}
+
+// Used by run_loader_tests.sh to test that calling vkEnumeratePhysicalDevices without first querying
+// the count, matches the count from the standard call.
+TEST(EnumeratePhysicalDevicces, MatchOneAndTwoCallNumbers) {
+    VkInstance instance_one = VK_NULL_HANDLE;
+    VkResult result = vkCreateInstance(VK::InstanceCreateInfo(), VK_NULL_HANDLE, &instance_one);
+    ASSERT_EQ(result, VK_SUCCESS);
+
+    uint32_t physicalCount_one = 500;
+    std::unique_ptr<VkPhysicalDevice[]> physical_one(new VkPhysicalDevice[physicalCount_one]);
+    result = vkEnumeratePhysicalDevices(instance_one, &physicalCount_one, physical_one.get());
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(physicalCount_one, 0u);
+
+    VkInstance instance_two = VK_NULL_HANDLE;
+    result = vkCreateInstance(VK::InstanceCreateInfo(), VK_NULL_HANDLE, &instance_two);
+    ASSERT_EQ(result, VK_SUCCESS);
+
+    uint32_t physicalCount_two = 0;
+    result = vkEnumeratePhysicalDevices(instance_two, &physicalCount_two, nullptr);
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(physicalCount_two, 0u);
+
+    std::unique_ptr<VkPhysicalDevice[]> physical_two(new VkPhysicalDevice[physicalCount_two]);
+    result = vkEnumeratePhysicalDevices(instance_two, &physicalCount_two, physical_two.get());
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(physicalCount_two, 0u);
+
+    ASSERT_EQ(physicalCount_one, physicalCount_two);
+
+    vkDestroyInstance(instance_one, nullptr);
+    vkDestroyInstance(instance_two, nullptr);
+}
+
+// Used by run_loader_tests.sh to test for the expected usage of the vkEnumeratePhysicalDevices
+// call if not enough numbers are provided for the final list.
+TEST(EnumeratePhysicalDevicces, TwoCallIncomplete) {
+    VkInstance instance = VK_NULL_HANDLE;
+    VkResult result = vkCreateInstance(VK::InstanceCreateInfo(), VK_NULL_HANDLE, &instance);
+    ASSERT_EQ(result, VK_SUCCESS);
+
+    uint32_t physicalCount = 0;
+    result = vkEnumeratePhysicalDevices(instance, &physicalCount, nullptr);
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(physicalCount, 0u);
+
+    std::unique_ptr<VkPhysicalDevice[]> physical(new VkPhysicalDevice[physicalCount]);
+
+    // Remove one from the physical device count so we can get the VK_INCOMPLETE message
+    physicalCount -= 1;
+
+    result = vkEnumeratePhysicalDevices(instance, &physicalCount, physical.get());
+    ASSERT_EQ(result, VK_INCOMPLETE);
 
     vkDestroyInstance(instance, nullptr);
 }
@@ -340,11 +432,11 @@ TEST(CreateDevice, ExtensionNotPresent) {
                 continue;
             }
 
-            float const priorities[] = {0.0f}; // Temporary required due to MSVC bug.
+            float const priorities[] = {0.0f};  // Temporary required due to MSVC bug.
             VkDeviceQueueCreateInfo const queueInfo[1]{
                 VK::DeviceQueueCreateInfo().queueFamilyIndex(q).queueCount(1).pQueuePriorities(priorities)};
 
-            char const *const names[] = {"NotPresent"}; // Temporary required due to MSVC bug.
+            char const *const names[] = {"NotPresent"};  // Temporary required due to MSVC bug.
             auto const deviceInfo = VK::DeviceCreateInfo()
                                         .queueCreateInfoCount(1)
                                         .pQueueCreateInfos(queueInfo)
@@ -396,11 +488,11 @@ TEST(CreateDevice, LayersNotPresent) {
                 continue;
             }
 
-            float const priorities[] = {0.0f}; // Temporary required due to MSVC bug.
+            float const priorities[] = {0.0f};  // Temporary required due to MSVC bug.
             VkDeviceQueueCreateInfo const queueInfo[1]{
                 VK::DeviceQueueCreateInfo().queueFamilyIndex(q).queueCount(1).pQueuePriorities(priorities)};
 
-            char const *const names[] = {"NotPresent"}; // Temporary required due to MSVC bug.
+            char const *const names[] = {"NotPresent"};  // Temporary required due to MSVC bug.
             auto const deviceInfo = VK::DeviceCreateInfo()
                                         .queueCreateInfoCount(1)
                                         .pQueueCreateInfos(queueInfo)
@@ -701,7 +793,7 @@ TEST(WrapObjects, Insert) {
                 continue;
             }
 
-            float const priorities[] = {0.0f}; // Temporary required due to MSVC bug.
+            float const priorities[] = {0.0f};  // Temporary required due to MSVC bug.
             VkDeviceQueueCreateInfo const queueInfo[1]{
                 VK::DeviceQueueCreateInfo().queueFamilyIndex(q).queueCount(1).pQueuePriorities(priorities)};
 

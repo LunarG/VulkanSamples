@@ -22,10 +22,21 @@
 
 #include "vktestframework.h"
 #include "vkrenderframework.h"
+
+// For versions prior to VS 2015, suppress the warning
+// caused by the inconsistent redefinition of snprintf
+// between a vulkan header and a glslang header.
+#if (defined(_MSC_VER) && _MSC_VER < 1900 /*vs2015*/)
+#pragma warning(push)
+#pragma warning(disable : 4005)
+#endif
 // TODO FIXME remove this once glslang doesn't define this
 #undef BadValue
 #include "SPIRV/GlslangToSpv.h"
 #include "SPIRV/SPVRemapper.h"
+#if (defined(_MSC_VER) && _MSC_VER < 1900 /*vs2015*/)
+#pragma warning(pop)
+#endif
 #include <limits.h>
 #include <math.h>
 
@@ -34,35 +45,35 @@
 #endif
 
 #ifdef _WIN32
-#define ERR_EXIT(err_msg, err_class)                                                                                               \
-    do {                                                                                                                           \
-        MessageBox(NULL, err_msg, err_class, MB_OK);                                                                               \
-        exit(1);                                                                                                                   \
+#define ERR_EXIT(err_msg, err_class)                 \
+    do {                                             \
+        MessageBox(NULL, err_msg, err_class, MB_OK); \
+        exit(1);                                     \
     } while (0)
-#else // _WIN32
+#else  // _WIN32
 
-#define ERR_EXIT(err_msg, err_class)                                                                                               \
-    do {                                                                                                                           \
-        printf(err_msg);                                                                                                           \
-        fflush(stdout);                                                                                                            \
-        exit(1);                                                                                                                   \
+#define ERR_EXIT(err_msg, err_class) \
+    do {                             \
+        printf(err_msg);             \
+        fflush(stdout);              \
+        exit(1);                     \
     } while (0)
-#endif // _WIN32
+#endif  // _WIN32
 
-#define GET_INSTANCE_PROC_ADDR(inst, entrypoint)                                                                                   \
-    {                                                                                                                              \
-        m_fp##entrypoint = (PFN_vk##entrypoint)vkGetInstanceProcAddr(inst, "vk" #entrypoint);                                      \
-        if (m_fp##entrypoint == NULL) {                                                                                            \
-            ERR_EXIT("vkGetInstanceProcAddr failed to find vk" #entrypoint, "vkGetInstanceProcAddr Failure");                      \
-        }                                                                                                                          \
+#define GET_INSTANCE_PROC_ADDR(inst, entrypoint)                                                              \
+    {                                                                                                         \
+        m_fp##entrypoint = (PFN_vk##entrypoint)vkGetInstanceProcAddr(inst, "vk" #entrypoint);                 \
+        if (m_fp##entrypoint == NULL) {                                                                       \
+            ERR_EXIT("vkGetInstanceProcAddr failed to find vk" #entrypoint, "vkGetInstanceProcAddr Failure"); \
+        }                                                                                                     \
     }
 
-#define GET_DEVICE_PROC_ADDR(dev, entrypoint)                                                                                      \
-    {                                                                                                                              \
-        m_fp##entrypoint = (PFN_vk##entrypoint)vkGetDeviceProcAddr(dev, "vk" #entrypoint);                                         \
-        if (m_fp##entrypoint == NULL) {                                                                                            \
-            ERR_EXIT("vkGetDeviceProcAddr failed to find vk" #entrypoint, "vkGetDeviceProcAddr Failure");                          \
-        }                                                                                                                          \
+#define GET_DEVICE_PROC_ADDR(dev, entrypoint)                                                             \
+    {                                                                                                     \
+        m_fp##entrypoint = (PFN_vk##entrypoint)vkGetDeviceProcAddr(dev, "vk" #entrypoint);                \
+        if (m_fp##entrypoint == NULL) {                                                                   \
+            ERR_EXIT("vkGetDeviceProcAddr failed to find vk" #entrypoint, "vkGetDeviceProcAddr Failure"); \
+        }                                                                                                 \
     }
 
 // Command-line options
@@ -155,28 +166,34 @@ void VkTestFramework::InitArgs(int *argc, char *argv[]) {
             m_canonicalize_spv = true;
         else if (optionMatch("--help", argv[i]) || optionMatch("-h", argv[i])) {
             printf("\nOther options:\n");
-            printf("\t--show-images\n"
-                   "\t\tDisplay test images in viewer after tests complete.\n");
-            printf("\t--save-images\n"
-                   "\t\tSave tests images as ppm files in current working "
-                   "directory.\n"
-                   "\t\tUsed to generate golden images for compare-images.\n");
-            printf("\t--compare-images\n"
-                   "\t\tCompare test images to 'golden' image in golden folder.\n"
-                   "\t\tAlso saves the generated test image in current working\n"
-                   "\t\t\tdirectory but only if the image is different from the "
-                   "golden\n"
-                   "\t\tSetting RENDERTEST_GOLDEN_DIR environment variable can "
-                   "specify\n"
-                   "\t\t\tdifferent directory for golden images\n"
-                   "\t\tSignal test failure if different.\n");
-            printf("\t--no-SPV\n"
-                   "\t\tUse built-in GLSL compiler rather than SPV code path.\n");
-            printf("\t--strip-SPV\n"
-                   "\t\tStrip SPIR-V debug information (line numbers, names, "
-                   "etc).\n");
-            printf("\t--canonicalize-SPV\n"
-                   "\t\tRemap SPIR-V ids before submission to aid compression.\n");
+            printf(
+                "\t--show-images\n"
+                "\t\tDisplay test images in viewer after tests complete.\n");
+            printf(
+                "\t--save-images\n"
+                "\t\tSave tests images as ppm files in current working "
+                "directory.\n"
+                "\t\tUsed to generate golden images for compare-images.\n");
+            printf(
+                "\t--compare-images\n"
+                "\t\tCompare test images to 'golden' image in golden folder.\n"
+                "\t\tAlso saves the generated test image in current working\n"
+                "\t\t\tdirectory but only if the image is different from the "
+                "golden\n"
+                "\t\tSetting RENDERTEST_GOLDEN_DIR environment variable can "
+                "specify\n"
+                "\t\t\tdifferent directory for golden images\n"
+                "\t\tSignal test failure if different.\n");
+            printf(
+                "\t--no-SPV\n"
+                "\t\tUse built-in GLSL compiler rather than SPV code path.\n");
+            printf(
+                "\t--strip-SPV\n"
+                "\t\tStrip SPIR-V debug information (line numbers, names, "
+                "etc).\n");
+            printf(
+                "\t--canonicalize-SPV\n"
+                "\t\tRemap SPIR-V ids before submission to aid compression.\n");
             exit(0);
         } else {
             printf("\nUnrecognized option: %s\n", argv[i]);
@@ -207,8 +224,9 @@ VkFormat VkTestFramework::GetFormat(VkInstance instance, vk_testing::Device *dev
         format_props.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) {
         return VK_FORMAT_R8G8B8A8_UNORM;
     }
-    printf("Error - device does not support VK_FORMAT_B8G8R8A8_UNORM nor "
-           "VK_FORMAT_R8G8B8A8_UNORM - exiting\n");
+    printf(
+        "Error - device does not support VK_FORMAT_B8G8R8A8_UNORM nor "
+        "VK_FORMAT_R8G8B8A8_UNORM - exiting\n");
     exit(1);
 }
 
@@ -219,106 +237,106 @@ void VkTestFramework::Finish() {}
 //  - parsing this string for the case where the user didn't supply one
 //  - dumping out a template for user construction of a config file
 //
-static const char *DefaultConfig = "MaxLights 32\n"
-                                   "MaxClipPlanes 6\n"
-                                   "MaxTextureUnits 32\n"
-                                   "MaxTextureCoords 32\n"
-                                   "MaxVertexAttribs 64\n"
-                                   "MaxVertexUniformComponents 4096\n"
-                                   "MaxVaryingFloats 64\n"
-                                   "MaxVertexTextureImageUnits 32\n"
-                                   "MaxCombinedTextureImageUnits 80\n"
-                                   "MaxTextureImageUnits 32\n"
-                                   "MaxFragmentUniformComponents 4096\n"
-                                   "MaxDrawBuffers 32\n"
-                                   "MaxVertexUniformVectors 128\n"
-                                   "MaxVaryingVectors 8\n"
-                                   "MaxFragmentUniformVectors 16\n"
-                                   "MaxVertexOutputVectors 16\n"
-                                   "MaxFragmentInputVectors 15\n"
-                                   "MinProgramTexelOffset -8\n"
-                                   "MaxProgramTexelOffset 7\n"
-                                   "MaxClipDistances 8\n"
-                                   "MaxComputeWorkGroupCountX 65535\n"
-                                   "MaxComputeWorkGroupCountY 65535\n"
-                                   "MaxComputeWorkGroupCountZ 65535\n"
-                                   "MaxComputeWorkGroupSizeX 1024\n"
-                                   "MaxComputeWorkGroupSizeY 1024\n"
-                                   "MaxComputeWorkGroupSizeZ 64\n"
-                                   "MaxComputeUniformComponents 1024\n"
-                                   "MaxComputeTextureImageUnits 16\n"
-                                   "MaxComputeImageUniforms 8\n"
-                                   "MaxComputeAtomicCounters 8\n"
-                                   "MaxComputeAtomicCounterBuffers 1\n"
-                                   "MaxVaryingComponents 60\n"
-                                   "MaxVertexOutputComponents 64\n"
-                                   "MaxGeometryInputComponents 64\n"
-                                   "MaxGeometryOutputComponents 128\n"
-                                   "MaxFragmentInputComponents 128\n"
-                                   "MaxImageUnits 8\n"
-                                   "MaxCombinedImageUnitsAndFragmentOutputs 8\n"
-                                   "MaxCombinedShaderOutputResources 8\n"
-                                   "MaxImageSamples 0\n"
-                                   "MaxVertexImageUniforms 0\n"
-                                   "MaxTessControlImageUniforms 0\n"
-                                   "MaxTessEvaluationImageUniforms 0\n"
-                                   "MaxGeometryImageUniforms 0\n"
-                                   "MaxFragmentImageUniforms 8\n"
-                                   "MaxCombinedImageUniforms 8\n"
-                                   "MaxGeometryTextureImageUnits 16\n"
-                                   "MaxGeometryOutputVertices 256\n"
-                                   "MaxGeometryTotalOutputComponents 1024\n"
-                                   "MaxGeometryUniformComponents 1024\n"
-                                   "MaxGeometryVaryingComponents 64\n"
-                                   "MaxTessControlInputComponents 128\n"
-                                   "MaxTessControlOutputComponents 128\n"
-                                   "MaxTessControlTextureImageUnits 16\n"
-                                   "MaxTessControlUniformComponents 1024\n"
-                                   "MaxTessControlTotalOutputComponents 4096\n"
-                                   "MaxTessEvaluationInputComponents 128\n"
-                                   "MaxTessEvaluationOutputComponents 128\n"
-                                   "MaxTessEvaluationTextureImageUnits 16\n"
-                                   "MaxTessEvaluationUniformComponents 1024\n"
-                                   "MaxTessPatchComponents 120\n"
-                                   "MaxPatchVertices 32\n"
-                                   "MaxTessGenLevel 64\n"
-                                   "MaxViewports 16\n"
-                                   "MaxVertexAtomicCounters 0\n"
-                                   "MaxTessControlAtomicCounters 0\n"
-                                   "MaxTessEvaluationAtomicCounters 0\n"
-                                   "MaxGeometryAtomicCounters 0\n"
-                                   "MaxFragmentAtomicCounters 8\n"
-                                   "MaxCombinedAtomicCounters 8\n"
-                                   "MaxAtomicCounterBindings 1\n"
-                                   "MaxVertexAtomicCounterBuffers 0\n"
-                                   "MaxTessControlAtomicCounterBuffers 0\n"
-                                   "MaxTessEvaluationAtomicCounterBuffers 0\n"
-                                   "MaxGeometryAtomicCounterBuffers 0\n"
-                                   "MaxFragmentAtomicCounterBuffers 1\n"
-                                   "MaxCombinedAtomicCounterBuffers 1\n"
-                                   "MaxAtomicCounterBufferSize 16384\n"
-                                   "MaxTransformFeedbackBuffers 4\n"
-                                   "MaxTransformFeedbackInterleavedComponents 64\n"
-                                   "MaxCullDistances 8\n"
-                                   "MaxCombinedClipAndCullDistances 8\n"
-                                   "MaxSamples 4\n"
+static const char *DefaultConfig =
+    "MaxLights 32\n"
+    "MaxClipPlanes 6\n"
+    "MaxTextureUnits 32\n"
+    "MaxTextureCoords 32\n"
+    "MaxVertexAttribs 64\n"
+    "MaxVertexUniformComponents 4096\n"
+    "MaxVaryingFloats 64\n"
+    "MaxVertexTextureImageUnits 32\n"
+    "MaxCombinedTextureImageUnits 80\n"
+    "MaxTextureImageUnits 32\n"
+    "MaxFragmentUniformComponents 4096\n"
+    "MaxDrawBuffers 32\n"
+    "MaxVertexUniformVectors 128\n"
+    "MaxVaryingVectors 8\n"
+    "MaxFragmentUniformVectors 16\n"
+    "MaxVertexOutputVectors 16\n"
+    "MaxFragmentInputVectors 15\n"
+    "MinProgramTexelOffset -8\n"
+    "MaxProgramTexelOffset 7\n"
+    "MaxClipDistances 8\n"
+    "MaxComputeWorkGroupCountX 65535\n"
+    "MaxComputeWorkGroupCountY 65535\n"
+    "MaxComputeWorkGroupCountZ 65535\n"
+    "MaxComputeWorkGroupSizeX 1024\n"
+    "MaxComputeWorkGroupSizeY 1024\n"
+    "MaxComputeWorkGroupSizeZ 64\n"
+    "MaxComputeUniformComponents 1024\n"
+    "MaxComputeTextureImageUnits 16\n"
+    "MaxComputeImageUniforms 8\n"
+    "MaxComputeAtomicCounters 8\n"
+    "MaxComputeAtomicCounterBuffers 1\n"
+    "MaxVaryingComponents 60\n"
+    "MaxVertexOutputComponents 64\n"
+    "MaxGeometryInputComponents 64\n"
+    "MaxGeometryOutputComponents 128\n"
+    "MaxFragmentInputComponents 128\n"
+    "MaxImageUnits 8\n"
+    "MaxCombinedImageUnitsAndFragmentOutputs 8\n"
+    "MaxCombinedShaderOutputResources 8\n"
+    "MaxImageSamples 0\n"
+    "MaxVertexImageUniforms 0\n"
+    "MaxTessControlImageUniforms 0\n"
+    "MaxTessEvaluationImageUniforms 0\n"
+    "MaxGeometryImageUniforms 0\n"
+    "MaxFragmentImageUniforms 8\n"
+    "MaxCombinedImageUniforms 8\n"
+    "MaxGeometryTextureImageUnits 16\n"
+    "MaxGeometryOutputVertices 256\n"
+    "MaxGeometryTotalOutputComponents 1024\n"
+    "MaxGeometryUniformComponents 1024\n"
+    "MaxGeometryVaryingComponents 64\n"
+    "MaxTessControlInputComponents 128\n"
+    "MaxTessControlOutputComponents 128\n"
+    "MaxTessControlTextureImageUnits 16\n"
+    "MaxTessControlUniformComponents 1024\n"
+    "MaxTessControlTotalOutputComponents 4096\n"
+    "MaxTessEvaluationInputComponents 128\n"
+    "MaxTessEvaluationOutputComponents 128\n"
+    "MaxTessEvaluationTextureImageUnits 16\n"
+    "MaxTessEvaluationUniformComponents 1024\n"
+    "MaxTessPatchComponents 120\n"
+    "MaxPatchVertices 32\n"
+    "MaxTessGenLevel 64\n"
+    "MaxViewports 16\n"
+    "MaxVertexAtomicCounters 0\n"
+    "MaxTessControlAtomicCounters 0\n"
+    "MaxTessEvaluationAtomicCounters 0\n"
+    "MaxGeometryAtomicCounters 0\n"
+    "MaxFragmentAtomicCounters 8\n"
+    "MaxCombinedAtomicCounters 8\n"
+    "MaxAtomicCounterBindings 1\n"
+    "MaxVertexAtomicCounterBuffers 0\n"
+    "MaxTessControlAtomicCounterBuffers 0\n"
+    "MaxTessEvaluationAtomicCounterBuffers 0\n"
+    "MaxGeometryAtomicCounterBuffers 0\n"
+    "MaxFragmentAtomicCounterBuffers 1\n"
+    "MaxCombinedAtomicCounterBuffers 1\n"
+    "MaxAtomicCounterBufferSize 16384\n"
+    "MaxTransformFeedbackBuffers 4\n"
+    "MaxTransformFeedbackInterleavedComponents 64\n"
+    "MaxCullDistances 8\n"
+    "MaxCombinedClipAndCullDistances 8\n"
+    "MaxSamples 4\n"
 
-                                   "nonInductiveForLoops 1\n"
-                                   "whileLoops 1\n"
-                                   "doWhileLoops 1\n"
-                                   "generalUniformIndexing 1\n"
-                                   "generalAttributeMatrixVectorIndexing 1\n"
-                                   "generalVaryingIndexing 1\n"
-                                   "generalSamplerIndexing 1\n"
-                                   "generalVariableIndexing 1\n"
-                                   "generalConstantMatrixVectorIndexing 1\n";
+    "nonInductiveForLoops 1\n"
+    "whileLoops 1\n"
+    "doWhileLoops 1\n"
+    "generalUniformIndexing 1\n"
+    "generalAttributeMatrixVectorIndexing 1\n"
+    "generalVaryingIndexing 1\n"
+    "generalSamplerIndexing 1\n"
+    "generalVariableIndexing 1\n"
+    "generalConstantMatrixVectorIndexing 1\n";
 
 //
 // *.conf => this is a config file that can set limits/resources
 //
 bool VkTestFramework::SetConfigFile(const std::string &name) {
-    if (name.size() < 5)
-        return false;
+    if (name.size() < 5) return false;
 
     if (name.compare(name.size() - 5, 5, ".conf") == 0) {
         ConfigFile = name;
@@ -339,8 +357,9 @@ void VkTestFramework::ProcessConfigFile() {
         if (configStrings)
             config = *configStrings;
         else {
-            printf("Error opening configuration file; will instead use the "
-                   "default configuration\n");
+            printf(
+                "Error opening configuration file; will instead use the "
+                "default configuration\n");
         }
     }
 
@@ -354,9 +373,10 @@ void VkTestFramework::ProcessConfigFile() {
     while (token) {
         const char *valueStr = strtok(0, delims);
         if (valueStr == 0 || !(valueStr[0] == '-' || (valueStr[0] >= '0' && valueStr[0] <= '9'))) {
-            printf("Error: '%s' bad .conf file.  Each name must be followed by "
-                   "one number.\n",
-                   valueStr ? valueStr : "");
+            printf(
+                "Error: '%s' bad .conf file.  Each name must be followed by "
+                "one number.\n",
+                valueStr ? valueStr : "");
             return;
         }
         int value = atoi(valueStr);
@@ -551,17 +571,13 @@ void VkTestFramework::ProcessConfigFile() {
 
         token = strtok(0, delims);
     }
-    if (configStrings)
-        FreeFileData(configStrings);
+    if (configStrings) FreeFileData(configStrings);
 }
 
 void VkTestFramework::SetMessageOptions(EShMessages &messages) {
-    if (m_compile_options & EOptionRelaxedErrors)
-        messages = (EShMessages)(messages | EShMsgRelaxedErrors);
-    if (m_compile_options & EOptionIntermediate)
-        messages = (EShMessages)(messages | EShMsgAST);
-    if (m_compile_options & EOptionSuppressWarnings)
-        messages = (EShMessages)(messages | EShMsgSuppressWarnings);
+    if (m_compile_options & EOptionRelaxedErrors) messages = (EShMessages)(messages | EShMsgRelaxedErrors);
+    if (m_compile_options & EOptionIntermediate) messages = (EShMessages)(messages | EShMsgAST);
+    if (m_compile_options & EOptionSuppressWarnings) messages = (EShMessages)(messages | EShMsgSuppressWarnings);
 }
 
 //
@@ -586,8 +602,7 @@ char **VkTestFramework::ReadFileData(const char *fileName) {
         return 0;
     }
 
-    while (fgetc(in) != EOF)
-        count++;
+    while (fgetc(in) != EOF) count++;
 
     fseek(in, 0, SEEK_SET);
 
@@ -630,8 +645,7 @@ char **VkTestFramework::ReadFileData(const char *fileName) {
 }
 
 void VkTestFramework::FreeFileData(char **data) {
-    for (int i = 0; i < m_num_shader_strings; i++)
-        free(data[i]);
+    for (int i = 0; i < m_num_shader_strings; i++) free(data[i]);
 }
 
 //
@@ -673,26 +687,26 @@ EShLanguage VkTestFramework::FindLanguage(const std::string &name) {
 //
 EShLanguage VkTestFramework::FindLanguage(const VkShaderStageFlagBits shader_type) {
     switch (shader_type) {
-    case VK_SHADER_STAGE_VERTEX_BIT:
-        return EShLangVertex;
+        case VK_SHADER_STAGE_VERTEX_BIT:
+            return EShLangVertex;
 
-    case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
-        return EShLangTessControl;
+        case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
+            return EShLangTessControl;
 
-    case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
-        return EShLangTessEvaluation;
+        case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
+            return EShLangTessEvaluation;
 
-    case VK_SHADER_STAGE_GEOMETRY_BIT:
-        return EShLangGeometry;
+        case VK_SHADER_STAGE_GEOMETRY_BIT:
+            return EShLangGeometry;
 
-    case VK_SHADER_STAGE_FRAGMENT_BIT:
-        return EShLangFragment;
+        case VK_SHADER_STAGE_FRAGMENT_BIT:
+            return EShLangFragment;
 
-    case VK_SHADER_STAGE_COMPUTE_BIT:
-        return EShLangCompute;
+        case VK_SHADER_STAGE_COMPUTE_BIT:
+            return EShLangCompute;
 
-    default:
-        return EShLangVertex;
+        default:
+            return EShLangVertex;
     }
 }
 
@@ -721,13 +735,12 @@ bool VkTestFramework::GLSLtoSPV(const VkShaderStageFlagBits shader_type, const c
     shader->setStrings(shaderStrings, 1);
 
     if (!shader->parse(&Resources, (m_compile_options & EOptionDefaultDesktop) ? 110 : 100, false, messages)) {
-
         if (!(m_compile_options & EOptionSuppressInfolog)) {
             puts(shader->getInfoLog());
             puts(shader->getInfoDebugLog());
         }
 
-        return false; // something didn't work
+        return false;  // something didn't work
     }
 
     program.addShader(shader);
@@ -737,7 +750,6 @@ bool VkTestFramework::GLSLtoSPV(const VkShaderStageFlagBits shader_type, const c
     //
 
     if (!program.link(messages)) {
-
         if (!(m_compile_options & EOptionSuppressInfolog)) {
             puts(shader->getInfoLog());
             puts(shader->getInfoDebugLog());
