@@ -1352,7 +1352,7 @@ static void AppGpuDumpMemoryProps(const struct AppGpu *gpu) {
     printf("=================================\n");
     printf("\tmemoryTypeCount       = %u\n", props->memoryTypeCount);
     for (uint32_t i = 0; i < props->memoryTypeCount; i++) {
-        printf("\tmemoryTypes[%u] : \n", i);
+        printf("\tmemoryTypes[%u] :\n", i);
         printf("\t\theapIndex     = %u\n", props->memoryTypes[i].heapIndex);
         printf("\t\tpropertyFlags = 0x%" PRIxLEAST32 ":\n", props->memoryTypes[i].propertyFlags);
 
@@ -1370,7 +1370,7 @@ static void AppGpuDumpMemoryProps(const struct AppGpu *gpu) {
     printf("\n");
     printf("\tmemoryHeapCount       = %u\n", props->memoryHeapCount);
     for (uint32_t i = 0; i < props->memoryHeapCount; i++) {
-        printf("\tmemoryHeaps[%u] : \n", i);
+        printf("\tmemoryHeaps[%u] :\n", i);
         const VkDeviceSize memSize = props->memoryHeaps[i].size;
         char *mem_size_human_readable = HumanReadable((const size_t)memSize);
         printf("\t\tsize          = " PRINTF_SIZE_T_SPECIFIER " (0x%" PRIxLEAST64 ") (%s)\n", (size_t)memSize, memSize,
@@ -1378,7 +1378,7 @@ static void AppGpuDumpMemoryProps(const struct AppGpu *gpu) {
         free(mem_size_human_readable);
 
         VkMemoryHeapFlags heap_flags = props->memoryHeaps[i].flags;
-        printf("\t\tflags: \n\t\t\t");
+        printf("\t\tflags:\n\t\t\t");
         printf((heap_flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) ? "VK_MEMORY_HEAP_DEVICE_LOCAL_BIT\n" : "None\n");
     }
     fflush(stdout);
