@@ -8212,8 +8212,8 @@ static bool VerifyClearImageLayout(layer_data *dev_data, GLOBAL_CB_NODE *cb_node
                                    VkImageLayout dest_image_layout, const char *func_name) {
     bool skip = false;
 
-    VkImageSubresourceRange resolvedRange = range;
-    ResolveRemainingLevelsLayers(dev_data, &resolvedRange, image);
+    VkImageSubresourceRange resolved_range = range;
+    ResolveRemainingLevelsLayers(dev_data, &resolved_range, image);
 
     if (dest_image_layout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
         if (dest_image_layout == VK_IMAGE_LAYOUT_GENERAL) {
@@ -8239,11 +8239,11 @@ static bool VerifyClearImageLayout(layer_data *dev_data, GLOBAL_CB_NODE *cb_node
         }
     }
 
-    for (uint32_t levelIdx = 0; levelIdx < resolvedRange.levelCount; ++levelIdx) {
-        uint32_t level = levelIdx + resolvedRange.baseMipLevel;
-        for (uint32_t layerIdx = 0; layerIdx < resolvedRange.layerCount; ++layerIdx) {
-            uint32_t layer = layerIdx + resolvedRange.baseArrayLayer;
-            VkImageSubresource sub = {resolvedRange.aspectMask, level, layer};
+    for (uint32_t level_index = 0; level_index < resolved_range.levelCount; ++level_index) {
+        uint32_t level = level_index + resolved_range.baseMipLevel;
+        for (uint32_t layer_index = 0; layer_index < resolved_range.layerCount; ++layer_index) {
+            uint32_t layer = layer_index + resolved_range.baseArrayLayer;
+            VkImageSubresource sub = {resolved_range.aspectMask, level, layer};
             IMAGE_CMD_BUF_LAYOUT_NODE node;
             if (FindLayout(cb_node, image, sub, node)) {
                 if (node.layout != dest_image_layout) {
@@ -8269,14 +8269,14 @@ static bool VerifyClearImageLayout(layer_data *dev_data, GLOBAL_CB_NODE *cb_node
 
 static void RecordClearImageLayout(layer_data *dev_data, GLOBAL_CB_NODE *cb_node, VkImage image, VkImageSubresourceRange range,
                                    VkImageLayout dest_image_layout) {
-    VkImageSubresourceRange resolvedRange = range;
-    ResolveRemainingLevelsLayers(dev_data, &resolvedRange, image);
+    VkImageSubresourceRange resolved_range = range;
+    ResolveRemainingLevelsLayers(dev_data, &resolved_range, image);
 
-    for (uint32_t levelIdx = 0; levelIdx < resolvedRange.levelCount; ++levelIdx) {
-        uint32_t level = levelIdx + resolvedRange.baseMipLevel;
-        for (uint32_t layerIdx = 0; layerIdx < resolvedRange.layerCount; ++layerIdx) {
-            uint32_t layer = layerIdx + resolvedRange.baseArrayLayer;
-            VkImageSubresource sub = {resolvedRange.aspectMask, level, layer};
+    for (uint32_t level_index = 0; level_index < resolved_range.levelCount; ++level_index) {
+        uint32_t level = level_index + resolved_range.baseMipLevel;
+        for (uint32_t layer_index = 0; layer_index < resolved_range.layerCount; ++layer_index) {
+            uint32_t layer = layer_index + resolved_range.baseArrayLayer;
+            VkImageSubresource sub = {resolved_range.aspectMask, level, layer};
             IMAGE_CMD_BUF_LAYOUT_NODE node;
             if (!FindLayout(cb_node, image, sub, node)) {
                 SetLayout(cb_node, image, sub, IMAGE_CMD_BUF_LAYOUT_NODE(dest_image_layout, dest_image_layout));
