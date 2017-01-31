@@ -195,9 +195,7 @@ int sample_main(int argc, char *argv[]) {
     // Convert the vertex assembly into binary format
     spv_binary vertexBinary = {};
     spv_diagnostic vertexDiag = {};
-    spv_result_t vertexResult =
-        spvTextToBinary(spvContext, vertexSPIRV.c_str(), vertexSPIRV.length(),
-                        &vertexBinary, &vertexDiag);
+    spv_result_t vertexResult = spvTextToBinary(spvContext, vertexSPIRV.c_str(), vertexSPIRV.length(), &vertexBinary, &vertexDiag);
     if (vertexDiag) {
         printf("Diagnostic info from vertex shader:\n");
         spvDiagnosticPrint(vertexDiag);
@@ -208,16 +206,14 @@ int sample_main(int argc, char *argv[]) {
     spv_binary fragmentBinary = {};
     spv_diagnostic fragmentDiag = {};
     spv_result_t fragmentResult =
-        spvTextToBinary(spvContext, fragmentSPIRV.c_str(),
-                        fragmentSPIRV.length(), &fragmentBinary, &fragmentDiag);
+        spvTextToBinary(spvContext, fragmentSPIRV.c_str(), fragmentSPIRV.length(), &fragmentBinary, &fragmentDiag);
     if (fragmentDiag) {
         printf("Diagnostic info from fragment shader:\n");
         spvDiagnosticPrint(fragmentDiag);
     }
     assert(fragmentResult == SPV_SUCCESS);
 
-    info.shaderStages[0].sType =
-        VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    info.shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     info.shaderStages[0].pNext = NULL;
     info.shaderStages[0].pSpecializationInfo = NULL;
     info.shaderStages[0].flags = 0;
@@ -230,12 +226,10 @@ int sample_main(int argc, char *argv[]) {
     // Use wordCount and code pointers from the spv_binary
     moduleCreateInfo.codeSize = vertexBinary->wordCount * sizeof(unsigned int);
     moduleCreateInfo.pCode = vertexBinary->code;
-    res = vkCreateShaderModule(info.device, &moduleCreateInfo, NULL,
-                               &info.shaderStages[0].module);
+    res = vkCreateShaderModule(info.device, &moduleCreateInfo, NULL, &info.shaderStages[0].module);
     assert(res == VK_SUCCESS);
 
-    info.shaderStages[1].sType =
-        VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    info.shaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     info.shaderStages[1].pNext = NULL;
     info.shaderStages[1].pSpecializationInfo = NULL;
     info.shaderStages[1].flags = 0;
@@ -245,11 +239,9 @@ int sample_main(int argc, char *argv[]) {
     moduleCreateInfo.pNext = NULL;
     moduleCreateInfo.flags = 0;
     // Use wordCount and code pointers from the spv_binary
-    moduleCreateInfo.codeSize =
-        fragmentBinary->wordCount * sizeof(unsigned int);
+    moduleCreateInfo.codeSize = fragmentBinary->wordCount * sizeof(unsigned int);
     moduleCreateInfo.pCode = fragmentBinary->code;
-    res = vkCreateShaderModule(info.device, &moduleCreateInfo, NULL,
-                               &info.shaderStages[1].module);
+    res = vkCreateShaderModule(info.device, &moduleCreateInfo, NULL, &info.shaderStages[1].module);
     assert(res == VK_SUCCESS);
 
     // Clean up the diagnostics
@@ -262,8 +254,7 @@ int sample_main(int argc, char *argv[]) {
     /* VULKAN_KEY_END */
 
     init_framebuffers(info, depthPresent);
-    init_vertex_buffer(info, g_vb_texture_Data, sizeof(g_vb_texture_Data),
-                       sizeof(g_vb_texture_Data[0]), true);
+    init_vertex_buffer(info, g_vb_texture_Data, sizeof(g_vb_texture_Data), sizeof(g_vb_texture_Data[0]), true);
     init_descriptor_pool(info, true);
     init_descriptor_set(info, true);
     init_pipeline_cache(info);
@@ -281,8 +272,7 @@ int sample_main(int argc, char *argv[]) {
     vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
     vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline);
-    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            info.pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
+    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
                             info.desc_set.data(), 0, NULL);
 
     const VkDeviceSize offsets[1] = {0};
@@ -298,8 +288,7 @@ int sample_main(int argc, char *argv[]) {
 
     VkFence drawFence = {};
     init_fence(info, drawFence);
-    VkPipelineStageFlags pipe_stage_flags =
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     VkSubmitInfo submit_info = {};
     init_submit_info(info, submit_info, pipe_stage_flags);
 
@@ -313,16 +302,14 @@ int sample_main(int argc, char *argv[]) {
 
     /* Make sure command buffer is finished before presenting */
     do {
-        res =
-            vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+        res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
     } while (res == VK_TIMEOUT);
     assert(res == VK_SUCCESS);
     res = vkQueuePresentKHR(info.present_queue, &present);
     assert(res == VK_SUCCESS);
 
     wait_seconds(1);
-    if (info.save_images)
-        write_ppm(info, "spirv_assembly");
+    if (info.save_images) write_ppm(info, "spirv_assembly");
 
     vkDestroyFence(info.device, drawFence, NULL);
     vkDestroySemaphore(info.device, info.imageAcquiredSemaphore, NULL);

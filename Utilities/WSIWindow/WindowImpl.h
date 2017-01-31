@@ -30,74 +30,73 @@
 #define WINDOWIMPL_H
 
 #ifdef WIN32
-#pragma warning( disable : 4351 ) //for VS2013
+#pragma warning(disable : 4351)  // for VS2013
 #endif
 
 #include "CInstance.h"
 #include "keycodes.h"
 
 typedef unsigned int uint;
-enum eAction { eUP, eDOWN, eMOVE }; // keyboard / mouse / touchscreen actions
+enum eAction { eUP, eDOWN, eMOVE };  // keyboard / mouse / touchscreen actions
 
 //========================Event Message=========================
 struct EventType {
-    enum { NONE, MOUSE, KEY, TEXT, MOVE, RESIZE, FOCUS, TOUCH, CLOSE, UNKNOWN } tag; // event type
+    enum { NONE, MOUSE, KEY, TEXT, MOVE, RESIZE, FOCUS, TOUCH, CLOSE, UNKNOWN } tag;  // event type
     union {
         struct {
             eAction action;
             int16_t x;
             int16_t y;
             uint8_t btn;
-        } mouse; // mouse move/click
+        } mouse;  // mouse move/click
         struct {
             eAction action;
             eKeycode keycode;
-        } key; // Keyboard key state
+        } key;  // Keyboard key state
         struct {
             const char *str;
-        } text; // Text entered
+        } text;  // Text entered
         struct {
             int16_t x;
             int16_t y;
-        } move; // Window move
+        } move;  // Window move
         struct {
             uint16_t width;
             uint16_t height;
-        } resize; // Window resize
+        } resize;  // Window resize
         struct {
             bool has_focus;
-        } focus; // Window gained/lost focus
+        } focus;  // Window gained/lost focus
         struct {
             eAction action;
             float x;
             float y;
             uint8_t id;
-        } touch; // multi-touch display
+        } touch;  // multi-touch display
         struct {
-        } close; // Window is closing
+        } close;  // Window is closing
     };
     void Clear() { tag = NONE; }
 };
 //==============================================================
 //======================== FIFO Buffer =========================  // Used for event message queue
 class EventFIFO {
-    static const char SIZE = 3; // The queue never contains more than 2 items.
+    static const char SIZE = 3;  // The queue never contains more than 2 items.
     int head, tail;
     EventType buf[SIZE] = {};
 
-  public:
+   public:
     EventFIFO() : head(0), tail(0) {}
-    bool isEmpty() { return head == tail; } // Check if queue is empty.
+    bool isEmpty() { return head == tail; }  // Check if queue is empty.
     void push(EventType const &item) {
         ++head;
         buf[head %= SIZE] = item;
-    } // Add item to queue
+    }  // Add item to queue
     EventType *pop() {
-        if (head == tail)
-            return 0;
+        if (head == tail) return 0;
         ++tail;
         return &buf[tail %= SIZE];
-    } // Returns item ptr, or null if queue is empty
+    }  // Returns item ptr, or null if queue is empty
 };
 //==============================================================
 //=========================MULTI-TOUCH==========================
@@ -108,18 +107,16 @@ class CMTouch {
         float y;
     };
 
-  public:
-    static const char MAX_POINTERS = 10; // Max 10 fingers
+   public:
+    static const char MAX_POINTERS = 10;  // Max 10 fingers
     int count;
     CPointer Pointers[MAX_POINTERS];
     void Clear() { memset(this, 0, sizeof(*this)); }
 
     EventType Event(eAction action, float x, float y, uint8_t id) {
-        if (id >= MAX_POINTERS)
-            return {}; // Exit if too many fingers
+        if (id >= MAX_POINTERS) return {};  // Exit if too many fingers
         CPointer &P = Pointers[id];
-        if (action != eMOVE)
-            P.active = (action == eDOWN);
+        if (action != eMOVE) P.active = (action == eDOWN);
         P.x = x;
         P.y = y;
         EventType e = {EventType::TOUCH};
@@ -129,14 +126,14 @@ class CMTouch {
 };
 //==============================================================
 //===========================CSurface===========================
-class CSurface { // Vulkan Surface
-  protected:
+class CSurface {  // Vulkan Surface
+   protected:
     VkInstance instance = 0;
     VkSurfaceKHR surface = 0;
 
-  public:
-    operator VkSurfaceKHR() const { return surface; }             // Use this class as a VkSurfaceKHR
-    bool CanPresent(VkPhysicalDevice gpu, uint32_t queue_family); // Checks if this surface can present the given queue type.
+   public:
+    operator VkSurfaceKHR() const { return surface; }              // Use this class as a VkSurfaceKHR
+    bool CanPresent(VkPhysicalDevice gpu, uint32_t queue_family);  // Checks if this surface can present the given queue type.
 };
 //==============================================================
 //=====================WSIWindow base class=====================
@@ -144,50 +141,49 @@ class WindowImpl : public CSurface {
     struct {
         int16_t x;
         int16_t y;
-    } mousepos = {};         // mouse position
-    bool btnstate[5] = {};   // mouse btn state
-    bool keystate[256] = {}; // keyboard state
-  protected:
-    EventFIFO eventFIFO; // Event message queue buffer
+    } mousepos = {};          // mouse position
+    bool btnstate[5] = {};    // mouse btn state
+    bool keystate[256] = {};  // keyboard state
+   protected:
+    EventFIFO eventFIFO;  // Event message queue buffer
 
-    EventType MouseEvent(eAction action, int16_t x, int16_t y, uint8_t btn); // Mouse event
-    EventType KeyEvent(eAction action, uint8_t key);                         // Keyboard event
-    EventType TextEvent(const char *str);                                    // Text event
-    EventType MoveEvent(int16_t x, int16_t y);                               // Window moved
-    EventType ResizeEvent(uint16_t width, uint16_t height);                  // Window resized
-    EventType FocusEvent(bool has_focus);                                    // Window gained/lost focus
-    EventType CloseEvent();                                                  // Window closing
-  public:
+    EventType MouseEvent(eAction action, int16_t x, int16_t y, uint8_t btn);  // Mouse event
+    EventType KeyEvent(eAction action, uint8_t key);                          // Keyboard event
+    EventType TextEvent(const char *str);                                     // Text event
+    EventType MoveEvent(int16_t x, int16_t y);                                // Window moved
+    EventType ResizeEvent(uint16_t width, uint16_t height);                   // Window resized
+    EventType FocusEvent(bool has_focus);                                     // Window gained/lost focus
+    EventType CloseEvent();                                                   // Window closing
+   public:
     bool running;
     bool textinput;
-    bool has_focus; // true if window has focus
+    bool has_focus;  // true if window has focus
     struct shape_t {
         int16_t x;
         int16_t y;
         uint16_t width;
         uint16_t height;
-    } shape = {}; // window shape
+    } shape = {};  // window shape
 
     WindowImpl() : running(false), textinput(false), has_focus(false) {}
     virtual ~WindowImpl() {
-        if (surface)
-            vkDestroySurfaceKHR(instance, surface, NULL);
+        if (surface) vkDestroySurfaceKHR(instance, surface, NULL);
         surface = 0;
     }
     virtual void Close() { eventFIFO.push(CloseEvent()); }
     virtual void CreateSurface(VkInstance instance) = 0;
-    virtual bool CanPresent(VkPhysicalDevice gpu, uint32_t queue_family) = 0; // Checks if window can present the given queue type.
+    virtual bool CanPresent(VkPhysicalDevice gpu, uint32_t queue_family) = 0;  // Checks if window can present the given queue type.
 
-    bool KeyState(eKeycode key) { return keystate[key]; }                // returns true if key is pressed
-    bool BtnState(uint8_t btn) { return (btn < 3) ? btnstate[btn] : 0; } // returns true if mouse btn is pressed
+    bool KeyState(eKeycode key) { return keystate[key]; }                 // returns true if key is pressed
+    bool BtnState(uint8_t btn) { return (btn < 3) ? btnstate[btn] : 0; }  // returns true if mouse btn is pressed
     void MousePos(int16_t &x, int16_t &y) {
         x = mousepos.x;
         y = mousepos.y;
-    } // returns mouse x,y position
+    }  // returns mouse x,y position
 
-    virtual void TextInput(bool enabled);                        // Shows the Android soft-keyboard. //TODO: Enable TextEvent?
-    virtual bool TextInput() { return textinput; }               // Returns true if text input is enabled TODO: Fix this
-    virtual EventType GetEvent(bool wait_for_event = false) = 0; // Fetch one event from the queue.
+    virtual void TextInput(bool enabled);                         // Shows the Android soft-keyboard. //TODO: Enable TextEvent?
+    virtual bool TextInput() { return textinput; }                // Returns true if text input is enabled TODO: Fix this
+    virtual EventType GetEvent(bool wait_for_event = false) = 0;  // Fetch one event from the queue.
 
     virtual void SetTitle(const char *title) = 0;
     virtual void SetWinPos(uint x, uint y) = 0;

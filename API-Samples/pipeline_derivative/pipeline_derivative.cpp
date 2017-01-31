@@ -101,8 +101,7 @@ int sample_main(int argc, char *argv[]) {
     init_renderpass(info, depthPresent);
     init_shaders(info, vertShaderText, fragShaderText);
     init_framebuffers(info, depthPresent);
-    init_vertex_buffer(info, g_vb_texture_Data, sizeof(g_vb_texture_Data),
-                       sizeof(g_vb_texture_Data[0]), true);
+    init_vertex_buffer(info, g_vb_texture_Data, sizeof(g_vb_texture_Data), sizeof(g_vb_texture_Data[0]), true);
     init_descriptor_pool(info, true);
     init_descriptor_set(info, true);
     init_pipeline_cache(info);
@@ -187,11 +186,9 @@ int sample_main(int argc, char *argv[]) {
     vp.pNext = NULL;
     vp.flags = 0;
     vp.viewportCount = NUM_VIEWPORTS;
-    dynamicStateEnables[dynamicState.dynamicStateCount++] =
-        VK_DYNAMIC_STATE_VIEWPORT;
+    dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_VIEWPORT;
     vp.scissorCount = NUM_SCISSORS;
-    dynamicStateEnables[dynamicState.dynamicStateCount++] =
-        VK_DYNAMIC_STATE_SCISSOR;
+    dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_SCISSOR;
     vp.pScissors = NULL;
     vp.pViewports = NULL;
 
@@ -255,8 +252,7 @@ int sample_main(int argc, char *argv[]) {
     // NOTE:  If desired, we can add timing info around pipeline creation to
     //        demonstrate any perf benefits to derivation.
     VkPipeline basePipeline;
-    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1,
-                                    &pipeline, NULL, &basePipeline);
+    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1, &pipeline, NULL, &basePipeline);
     assert(res == VK_SUCCESS);
 
     // Now create the derivative pipeline, using a different fragment shader
@@ -264,19 +260,19 @@ int sample_main(int argc, char *argv[]) {
     // NOTE:  If this step is too heavyweight to show any benefit of derivation,
     // then
     //        create a pipeline that differs in some other, simpler way.
-    const char *fragShaderText2 = "#version 450\n"
-                                  "layout (location = 0) in vec2 texcoord;\n"
-                                  "layout (location = 0) out vec4 outColor;\n"
-                                  "void main() {\n"
-                                  "   outColor = vec4(texcoord.x, texcoord.y, "
-                                  "1.0 - texcoord.x - texcoord.y, 1.0f);\n"
-                                  "}\n";
+    const char *fragShaderText2 =
+        "#version 450\n"
+        "layout (location = 0) in vec2 texcoord;\n"
+        "layout (location = 0) out vec4 outColor;\n"
+        "void main() {\n"
+        "   outColor = vec4(texcoord.x, texcoord.y, "
+        "1.0 - texcoord.x - texcoord.y, 1.0f);\n"
+        "}\n";
 
     // Convert GLSL to SPIR-V
     init_glslang();
     std::vector<unsigned int> fragSpv;
-    bool U_ASSERT_ONLY retVal =
-        GLSLtoSPV(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderText2, fragSpv);
+    bool U_ASSERT_ONLY retVal = GLSLtoSPV(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderText2, fragSpv);
     assert(retVal);
     finalize_glslang();
 
@@ -289,8 +285,7 @@ int sample_main(int argc, char *argv[]) {
     moduleCreateInfo.flags = 0;
     moduleCreateInfo.codeSize = fragSpv.size() * sizeof(unsigned int);
     moduleCreateInfo.pCode = fragSpv.data();
-    res = vkCreateShaderModule(info.device, &moduleCreateInfo, NULL,
-                               &info.shaderStages[1].module);
+    res = vkCreateShaderModule(info.device, &moduleCreateInfo, NULL, &info.shaderStages[1].module);
     assert(res == VK_SUCCESS);
 
     // Modify pipeline info to reflect derivation
@@ -300,8 +295,7 @@ int sample_main(int argc, char *argv[]) {
 
     // And create the derived pipeline, assigning to info.pipeline for use by
     // later helpers
-    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1,
-                                    &pipeline, NULL, &info.pipeline);
+    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1, &pipeline, NULL, &info.pipeline);
     assert(res == VK_SUCCESS);
 
     /* VULKAN_KEY_END */
@@ -319,8 +313,7 @@ int sample_main(int argc, char *argv[]) {
     vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
     vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline);
-    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            info.pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
+    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
                             info.desc_set.data(), 0, NULL);
 
     const VkDeviceSize offsets[1] = {0};
@@ -336,8 +329,7 @@ int sample_main(int argc, char *argv[]) {
 
     VkFence drawFence = {};
     init_fence(info, drawFence);
-    VkPipelineStageFlags pipe_stage_flags =
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     VkSubmitInfo submit_info = {};
     init_submit_info(info, submit_info, pipe_stage_flags);
 
@@ -351,16 +343,14 @@ int sample_main(int argc, char *argv[]) {
 
     /* Make sure command buffer is finished before presenting */
     do {
-        res =
-            vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+        res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
     } while (res == VK_TIMEOUT);
     assert(res == VK_SUCCESS);
     res = vkQueuePresentKHR(info.present_queue, &present);
     assert(res == VK_SUCCESS);
 
     wait_seconds(1);
-    if (info.save_images)
-        write_ppm(info, "pipeline_derivative");
+    if (info.save_images) write_ppm(info, "pipeline_derivative");
 
     vkDestroyFence(info.device, drawFence, NULL);
     vkDestroySemaphore(info.device, info.imageAcquiredSemaphore, NULL);

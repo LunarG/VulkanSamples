@@ -50,18 +50,15 @@ int sample_main(int argc, char *argv[]) {
      */
     do {
         res = vkEnumerateInstanceLayerProperties(&instance_layer_count, NULL);
-        if (res)
-            break;
+        if (res) break;
 
         if (instance_layer_count == 0) {
             break;
         }
 
-        vk_props = (VkLayerProperties *)realloc(
-            vk_props, instance_layer_count * sizeof(VkLayerProperties));
+        vk_props = (VkLayerProperties *)realloc(vk_props, instance_layer_count * sizeof(VkLayerProperties));
 
-        res =
-            vkEnumerateInstanceLayerProperties(&instance_layer_count, vk_props);
+        res = vkEnumerateInstanceLayerProperties(&instance_layer_count, vk_props);
     } while (res == VK_INCOMPLETE);
 
     std::cout << "Instance Layers:" << std::endl;
@@ -72,11 +69,9 @@ int sample_main(int argc, char *argv[]) {
         extract_version(props->specVersion, major, minor, patch);
         std::cout << "\tVersion: " << props->implementationVersion << std::endl;
         std::cout << "\tAPI Version: "
-                  << "(" << major << "." << minor << "." << patch << ")"
-                  << std::endl;
+                  << "(" << major << "." << minor << "." << patch << ")" << std::endl;
         std::cout << "\tDescription: " << props->description << std::endl;
-        std::cout << std::endl
-                  << std::endl;
+        std::cout << std::endl << std::endl;
     }
 
     std::cout << std::endl;

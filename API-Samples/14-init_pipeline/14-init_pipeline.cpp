@@ -88,8 +88,7 @@ int sample_main(int argc, char *argv[]) {
     init_uniform_buffer(info);
     init_renderpass(info, depthPresent);
     init_framebuffers(info, depthPresent);
-    init_vertex_buffer(info, g_vb_solid_face_colors_Data,
-                       sizeof(g_vb_solid_face_colors_Data),
+    init_vertex_buffer(info, g_vb_solid_face_colors_Data, sizeof(g_vb_solid_face_colors_Data),
                        sizeof(g_vb_solid_face_colors_Data[0]), false);
     init_descriptor_and_pipeline_layouts(info, false);
     init_descriptor_pool(info, false);
@@ -163,11 +162,9 @@ int sample_main(int argc, char *argv[]) {
     vp.pNext = NULL;
     vp.flags = 0;
     vp.viewportCount = NUM_VIEWPORTS;
-    dynamicStateEnables[dynamicState.dynamicStateCount++] =
-        VK_DYNAMIC_STATE_VIEWPORT;
+    dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_VIEWPORT;
     vp.scissorCount = NUM_SCISSORS;
-    dynamicStateEnables[dynamicState.dynamicStateCount++] =
-        VK_DYNAMIC_STATE_SCISSOR;
+    dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_SCISSOR;
     vp.pScissors = NULL;
     vp.pViewports = NULL;
 
@@ -223,8 +220,7 @@ int sample_main(int argc, char *argv[]) {
     pipeline.renderPass = info.render_pass;
     pipeline.subpass = 0;
 
-    res = vkCreateGraphicsPipelines(info.device, VK_NULL_HANDLE, 1,
-                                    &pipeline, NULL, &info.pipeline);
+    res = vkCreateGraphicsPipelines(info.device, VK_NULL_HANDLE, 1, &pipeline, NULL, &info.pipeline);
     assert(res == VK_SUCCESS);
     execute_end_command_buffer(info);
     execute_queue_command_buffer(info);

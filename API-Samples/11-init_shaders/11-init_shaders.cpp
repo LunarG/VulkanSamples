@@ -76,8 +76,7 @@ int sample_main(int argc, char *argv[]) {
         "}\n";
 
     std::vector<unsigned int> vtx_spv;
-    info.shaderStages[0].sType =
-        VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    info.shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     info.shaderStages[0].pNext = NULL;
     info.shaderStages[0].pSpecializationInfo = NULL;
     info.shaderStages[0].flags = 0;
@@ -94,13 +93,11 @@ int sample_main(int argc, char *argv[]) {
     moduleCreateInfo.flags = 0;
     moduleCreateInfo.codeSize = vtx_spv.size() * sizeof(unsigned int);
     moduleCreateInfo.pCode = vtx_spv.data();
-    res = vkCreateShaderModule(info.device, &moduleCreateInfo, NULL,
-                               &info.shaderStages[0].module);
+    res = vkCreateShaderModule(info.device, &moduleCreateInfo, NULL, &info.shaderStages[0].module);
     assert(res == VK_SUCCESS);
 
     std::vector<unsigned int> frag_spv;
-    info.shaderStages[1].sType =
-        VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    info.shaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     info.shaderStages[1].pNext = NULL;
     info.shaderStages[1].pSpecializationInfo = NULL;
     info.shaderStages[1].flags = 0;
@@ -115,8 +112,7 @@ int sample_main(int argc, char *argv[]) {
     moduleCreateInfo.flags = 0;
     moduleCreateInfo.codeSize = frag_spv.size() * sizeof(unsigned int);
     moduleCreateInfo.pCode = frag_spv.data();
-    res = vkCreateShaderModule(info.device, &moduleCreateInfo, NULL,
-                               &info.shaderStages[1].module);
+    res = vkCreateShaderModule(info.device, &moduleCreateInfo, NULL, &info.shaderStages[1].module);
     assert(res == VK_SUCCESS);
 
     finalize_glslang();

@@ -65,22 +65,17 @@ int sample_main(int argc, char *argv[]) {
     struct texture_object texObj;
     std::string filename = get_base_data_dir();
     filename.append("lunarg.ppm");
-    if (!read_ppm(filename.c_str(), texObj.tex_width, texObj.tex_height, 0,
-                  NULL)) {
+    if (!read_ppm(filename.c_str(), texObj.tex_width, texObj.tex_height, 0, NULL)) {
         std::cout << "Could not read texture file lunarg.ppm\n";
         exit(-1);
     }
 
     VkFormatProperties formatProps;
-    vkGetPhysicalDeviceFormatProperties(info.gpus[0], VK_FORMAT_R8G8B8A8_UNORM,
-                                        &formatProps);
+    vkGetPhysicalDeviceFormatProperties(info.gpus[0], VK_FORMAT_R8G8B8A8_UNORM, &formatProps);
 
     /* See if we can use a linear tiled image for a texture, if not, we will
      * need a staging image for the texture data */
-    bool needStaging = (!(formatProps.linearTilingFeatures &
-                          VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT))
-                           ? true
-                           : false;
+    bool needStaging = (!(formatProps.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) ? true : false;
 
     VkImageCreateInfo image_create_info = {};
     image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -95,8 +90,7 @@ int sample_main(int argc, char *argv[]) {
     image_create_info.samples = NUM_SAMPLES;
     image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
     image_create_info.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
-    image_create_info.usage = needStaging ? VK_IMAGE_USAGE_TRANSFER_SRC_BIT
-                                          : VK_IMAGE_USAGE_SAMPLED_BIT;
+    image_create_info.usage = needStaging ? VK_IMAGE_USAGE_TRANSFER_SRC_BIT : VK_IMAGE_USAGE_SAMPLED_BIT;
     image_create_info.queueFamilyIndexCount = 0;
     image_create_info.pQueueFamilyIndices = NULL;
     image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -125,8 +119,7 @@ int sample_main(int argc, char *argv[]) {
 
     /* Find the memory type that is host mappable */
     pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits,
-                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                                        &mem_alloc.memoryTypeIndex);
     assert(pass && "No mappable, coherent memory");
 
@@ -153,8 +146,7 @@ int sample_main(int argc, char *argv[]) {
     assert(res == VK_SUCCESS);
 
     /* Read the ppm file into the mappable image's memory */
-    if (!read_ppm(filename.c_str(), texObj.tex_width, texObj.tex_height,
-                  layout.rowPitch, (unsigned char *)data)) {
+    if (!read_ppm(filename.c_str(), texObj.tex_width, texObj.tex_height, layout.rowPitch, (unsigned char *)data)) {
         std::cout << "Could not load texture file lunarg.ppm\n";
         exit(-1);
     }
@@ -166,19 +158,16 @@ int sample_main(int argc, char *argv[]) {
         texObj.image = mappableImage;
         texObj.mem = mappableMemory;
         texObj.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        set_image_layout(info, texObj.image, VK_IMAGE_ASPECT_COLOR_BIT,
-                         VK_IMAGE_LAYOUT_PREINITIALIZED, texObj.imageLayout,
+        set_image_layout(info, texObj.image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_PREINITIALIZED, texObj.imageLayout,
                          VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
     } else {
         /* The mappable image cannot be our texture, so create an optimally
          * tiled image and blit to it */
         image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-        image_create_info.usage =
-            VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
         image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-        res =
-            vkCreateImage(info.device, &image_create_info, NULL, &texObj.image);
+        res = vkCreateImage(info.device, &image_create_info, NULL, &texObj.image);
         assert(res == VK_SUCCESS);
 
         vkGetImageMemoryRequirements(info.device, texObj.image, &mem_reqs);
@@ -186,8 +175,7 @@ int sample_main(int argc, char *argv[]) {
         mem_alloc.allocationSize = mem_reqs.size;
 
         /* Find memory type - don't specify any mapping requirements */
-        pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits, 0,
-                                           &mem_alloc.memoryTypeIndex);
+        pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits, 0, &mem_alloc.memoryTypeIndex);
         assert(pass);
 
         /* allocate memory */
@@ -201,18 +189,12 @@ int sample_main(int argc, char *argv[]) {
         /* Since we're going to blit from the mappable image, set its layout to
          * SOURCE_OPTIMAL */
         /* Side effect is that this will create info.cmd */
-        set_image_layout(info, mappableImage, VK_IMAGE_ASPECT_COLOR_BIT,
-                         VK_IMAGE_LAYOUT_PREINITIALIZED,
-                         VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                         VK_PIPELINE_STAGE_HOST_BIT,
-                         VK_PIPELINE_STAGE_TRANSFER_BIT);
+        set_image_layout(info, mappableImage, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_PREINITIALIZED,
+                         VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
         /* Since we're going to blit to the texture image, set its layout to
          * DESTINATION_OPTIMAL */
-        set_image_layout(info, texObj.image, VK_IMAGE_ASPECT_COLOR_BIT,
-                         VK_IMAGE_LAYOUT_UNDEFINED,
-                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                         VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                         VK_PIPELINE_STAGE_TRANSFER_BIT);
+        set_image_layout(info, texObj.image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
         VkImageCopy copy_region;
         copy_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         copy_region.srcSubresource.mipLevel = 0;
@@ -233,18 +215,14 @@ int sample_main(int argc, char *argv[]) {
         copy_region.extent.depth = 1;
 
         /* Put the copy command into the command buffer */
-        vkCmdCopyImage(info.cmd, mappableImage,
-                       VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, texObj.image,
+        vkCmdCopyImage(info.cmd, mappableImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, texObj.image,
                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region);
 
         /* Set the layout for the texture image from DESTINATION_OPTIMAL to
          * SHADER_READ_ONLY */
         texObj.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        set_image_layout(info, texObj.image, VK_IMAGE_ASPECT_COLOR_BIT,
-                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                         texObj.imageLayout,
-                         VK_PIPELINE_STAGE_TRANSFER_BIT,
-                         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+        set_image_layout(info, texObj.image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, texObj.imageLayout,
+                         VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
     }
     execute_end_command_buffer(info);
     execute_queue_command_buffer(info);
@@ -258,8 +236,7 @@ int sample_main(int argc, char *argv[]) {
     samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     samplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     samplerCreateInfo.mipLodBias = 0.0;
-    samplerCreateInfo.anisotropyEnable = VK_FALSE,
-    samplerCreateInfo.maxAnisotropy = 0;
+    samplerCreateInfo.anisotropyEnable = VK_FALSE, samplerCreateInfo.maxAnisotropy = 0;
     samplerCreateInfo.compareEnable = VK_FALSE;
     samplerCreateInfo.compareOp = VK_COMPARE_OP_NEVER;
     samplerCreateInfo.minLod = 0.0;
@@ -267,8 +244,7 @@ int sample_main(int argc, char *argv[]) {
     samplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
 
     /* create sampler */
-    res =
-        vkCreateSampler(info.device, &samplerCreateInfo, NULL, &texObj.sampler);
+    res = vkCreateSampler(info.device, &samplerCreateInfo, NULL, &texObj.sampler);
     assert(res == VK_SUCCESS);
 
     VkImageViewCreateInfo view_info = {};

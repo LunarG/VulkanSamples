@@ -26,7 +26,7 @@
 namespace {
 
 class Mesh {
-public:
+   public:
     struct Position {
         float x;
         float y;
@@ -45,16 +45,14 @@ public:
         int v2;
     };
 
-    static uint32_t vertex_stride()
-    {
+    static uint32_t vertex_stride() {
         // Position + Normal
         const int comp_count = 6;
 
         return sizeof(float) * comp_count;
     }
 
-    static VkVertexInputBindingDescription vertex_input_binding()
-    {
+    static VkVertexInputBindingDescription vertex_input_binding() {
         VkVertexInputBindingDescription vi_binding = {};
         vi_binding.binding = 0;
         vi_binding.stride = vertex_stride();
@@ -63,8 +61,7 @@ public:
         return vi_binding;
     }
 
-    static std::vector<VkVertexInputAttributeDescription> vertex_input_attributes()
-    {
+    static std::vector<VkVertexInputAttributeDescription> vertex_input_attributes() {
         std::vector<VkVertexInputAttributeDescription> vi_attrs(2);
         // Position
         vi_attrs[0].location = 0;
@@ -80,13 +77,9 @@ public:
         return vi_attrs;
     }
 
-    static VkIndexType index_type()
-    {
-        return VK_INDEX_TYPE_UINT32;
-    }
+    static VkIndexType index_type() { return VK_INDEX_TYPE_UINT32; }
 
-    static VkPipelineInputAssemblyStateCreateInfo input_assembly_state()
-    {
+    static VkPipelineInputAssemblyStateCreateInfo input_assembly_state() {
         VkPipelineInputAssemblyStateCreateInfo ia_info = {};
         ia_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
         ia_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
@@ -94,32 +87,23 @@ public:
         return ia_info;
     }
 
-    void build(const std::vector<std::array<float, 6>> &vertices, const std::vector<std::array<int, 3>> &faces)
-    {
+    void build(const std::vector<std::array<float, 6>> &vertices, const std::vector<std::array<int, 3>> &faces) {
         positions_.reserve(vertices.size());
         normals_.reserve(vertices.size());
         for (const auto &v : vertices) {
-            positions_.emplace_back(Position{ v[0], v[1], v[2] });
-            normals_.emplace_back(Normal{ v[3], v[4], v[5] });
+            positions_.emplace_back(Position{v[0], v[1], v[2]});
+            normals_.emplace_back(Normal{v[3], v[4], v[5]});
         }
 
         faces_.reserve(faces.size());
-        for (const auto &f : faces)
-            faces_.emplace_back(Face{ f[0], f[1], f[2] });
+        for (const auto &f : faces) faces_.emplace_back(Face{f[0], f[1], f[2]});
     }
 
-    uint32_t vertex_count() const
-    {
-        return static_cast<uint32_t>(positions_.size());
-    }
+    uint32_t vertex_count() const { return static_cast<uint32_t>(positions_.size()); }
 
-    VkDeviceSize vertex_buffer_size() const
-    {
-        return vertex_stride() * vertex_count();
-    }
+    VkDeviceSize vertex_buffer_size() const { return vertex_stride() * vertex_count(); }
 
-    void vertex_buffer_write(void *data) const
-    {
+    void vertex_buffer_write(void *data) const {
         float *dst = reinterpret_cast<float *>(data);
         for (size_t i = 0; i < positions_.size(); i++) {
             const Position &pos = positions_[i];
@@ -134,18 +118,11 @@ public:
         }
     }
 
-    uint32_t index_count() const
-    {
-        return static_cast<uint32_t>(faces_.size() * 3);
-    }
+    uint32_t index_count() const { return static_cast<uint32_t>(faces_.size() * 3); }
 
-    VkDeviceSize index_buffer_size() const
-    {
-        return sizeof(uint32_t) * index_count();
-    }
+    VkDeviceSize index_buffer_size() const { return sizeof(uint32_t) * index_count(); }
 
-    void index_buffer_write(void *data) const
-    {
+    void index_buffer_write(void *data) const {
         uint32_t *dst = reinterpret_cast<uint32_t *>(data);
         for (const auto &face : faces_) {
             dst[0] = face.v0;
@@ -161,25 +138,17 @@ public:
 };
 
 class BuildPyramid {
-public:
-    BuildPyramid(Mesh &mesh)
-    {
+   public:
+    BuildPyramid(Mesh &mesh) {
         const std::vector<std::array<float, 6>> vertices = {
             //      position                normal
-            {  0.0f,  0.0f,  1.0f,    0.0f,  0.0f,  1.0f },
-            { -1.0f, -1.0f, -1.0f,   -1.0f, -1.0f, -1.0f },
-            {  1.0f, -1.0f, -1.0f,    1.0f, -1.0f, -1.0f },
-            {  1.0f,  1.0f, -1.0f,    1.0f,  1.0f, -1.0f },
-            { -1.0f,  1.0f, -1.0f,   -1.0f,  1.0f, -1.0f },
+            {0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f},     {-1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f},
+            {1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f}, {1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f},
+            {-1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f},
         };
 
         const std::vector<std::array<int, 3>> faces = {
-            { 0, 1, 2 },
-            { 0, 2, 3 },
-            { 0, 3, 4 },
-            { 0, 4, 1 },
-            { 1, 4, 3 },
-            { 1, 3, 2 },
+            {0, 1, 2}, {0, 2, 3}, {0, 3, 4}, {0, 4, 1}, {1, 4, 3}, {1, 3, 2},
         };
 
         mesh.build(vertices, faces);
@@ -187,72 +156,92 @@ public:
 };
 
 class BuildIcosphere {
-public:
-    BuildIcosphere(Mesh &mesh) : mesh_(mesh), radius_(1.0f)
-    {
+   public:
+    BuildIcosphere(Mesh &mesh) : mesh_(mesh), radius_(1.0f) {
         const int tessellate_level = 2;
 
         build_icosahedron();
-        for (int i = 0; i < tessellate_level; i++)
-            tessellate();
+        for (int i = 0; i < tessellate_level; i++) tessellate();
     }
 
-private:
-    void build_icosahedron()
-    {
+   private:
+    void build_icosahedron() {
         // https://en.wikipedia.org/wiki/Regular_icosahedron
         const float l1 = std::sqrt(2.0f / (5.0f + std::sqrt(5.0f))) * radius_;
         const float l2 = std::sqrt(2.0f / (5.0f - std::sqrt(5.0f))) * radius_;
         // vertices are from three golden rectangles
         const std::vector<std::array<float, 6>> icosahedron_vertices = {
             //   position           normal
-            { -l1, -l2, 0.0f,   -l1, -l2, 0.0f, },
-            {  l1, -l2, 0.0f,    l1, -l2, 0.0f, },
-            {  l1,  l2, 0.0f,    l1,  l2, 0.0f, },
-            { -l1,  l2, 0.0f,   -l1,  l2, 0.0f, },
+            {
+                -l1, -l2, 0.0f, -l1, -l2, 0.0f,
+            },
+            {
+                l1, -l2, 0.0f, l1, -l2, 0.0f,
+            },
+            {
+                l1, l2, 0.0f, l1, l2, 0.0f,
+            },
+            {
+                -l1, l2, 0.0f, -l1, l2, 0.0f,
+            },
 
-            { -l2, 0.0f, -l1,   -l2, 0.0f, -l1, },
-            {  l2, 0.0f, -l1,    l2, 0.0f, -l1, },
-            {  l2, 0.0f,  l1,    l2, 0.0f,  l1, },
-            { -l2, 0.0f,  l1,   -l2, 0.0f,  l1, },
+            {
+                -l2, 0.0f, -l1, -l2, 0.0f, -l1,
+            },
+            {
+                l2, 0.0f, -l1, l2, 0.0f, -l1,
+            },
+            {
+                l2, 0.0f, l1, l2, 0.0f, l1,
+            },
+            {
+                -l2, 0.0f, l1, -l2, 0.0f, l1,
+            },
 
-            { 0.0f, -l1, -l2,   0.0f, -l1, -l2, },
-            { 0.0f,  l1, -l2,   0.0f,  l1, -l2, },
-            { 0.0f,  l1,  l2,   0.0f,  l1,  l2, },
-            { 0.0f, -l1,  l2,   0.0f, -l1,  l2, },
+            {
+                0.0f, -l1, -l2, 0.0f, -l1, -l2,
+            },
+            {
+                0.0f, l1, -l2, 0.0f, l1, -l2,
+            },
+            {
+                0.0f, l1, l2, 0.0f, l1, l2,
+            },
+            {
+                0.0f, -l1, l2, 0.0f, -l1, l2,
+            },
         };
         const std::vector<std::array<int, 3>> icosahedron_faces = {
             // triangles sharing vertex 0
-            {  0,  1, 11 },
-            {  0, 11,  7 },
-            {  0,  7,  4 },
-            {  0,  4,  8 },
-            {  0,  8,  1 },
+            {0, 1, 11},
+            {0, 11, 7},
+            {0, 7, 4},
+            {0, 4, 8},
+            {0, 8, 1},
             // adjacent triangles
-            { 11,  1,  6 },
-            {  7, 11, 10 },
-            {  4,  7,  3 },
-            {  8,  4,  9 },
-            {  1,  8,  5 },
+            {11, 1, 6},
+            {7, 11, 10},
+            {4, 7, 3},
+            {8, 4, 9},
+            {1, 8, 5},
             // triangles sharing vertex 2
-            {  2,  3, 10 },
-            {  2, 10,  6 },
-            {  2,  6,  5 },
-            {  2,  5,  9 },
-            {  2,  9,  3 },
+            {2, 3, 10},
+            {2, 10, 6},
+            {2, 6, 5},
+            {2, 5, 9},
+            {2, 9, 3},
             // adjacent triangles
-            { 10,  3,  7 },
-            {  6, 10, 11 },
-            {  5,  6,  1 },
-            {  9,  5,  8 },
-            {  3,  9,  4 },
+            {10, 3, 7},
+            {6, 10, 11},
+            {5, 6, 1},
+            {9, 5, 8},
+            {3, 9, 4},
         };
 
         mesh_.build(icosahedron_vertices, icosahedron_faces);
     }
 
-    void tessellate()
-    {
+    void tessellate() {
         size_t middle_point_count = mesh_.faces_.size() * 3 / 2;
         size_t final_face_count = mesh_.faces_.size() * 4;
 
@@ -274,37 +263,31 @@ private:
             int v12 = add_middle_point(v1, v2);
             int v20 = add_middle_point(v2, v0);
 
-            faces.emplace_back(Mesh::Face{ v0, v01, v20 });
-            faces.emplace_back(Mesh::Face{ v1, v12, v01 });
-            faces.emplace_back(Mesh::Face{ v2, v20, v12 });
-            faces.emplace_back(Mesh::Face{ v01, v12, v20 });
+            faces.emplace_back(Mesh::Face{v0, v01, v20});
+            faces.emplace_back(Mesh::Face{v1, v12, v01});
+            faces.emplace_back(Mesh::Face{v2, v20, v12});
+            faces.emplace_back(Mesh::Face{v01, v12, v20});
         }
 
         mesh_.faces_.swap(faces);
     }
 
-    int add_middle_point(int a, int b)
-    {
-        uint64_t key = (a < b) ? ((uint64_t) a << 32 | b) : ((uint64_t) b << 32 | a);
+    int add_middle_point(int a, int b) {
+        uint64_t key = (a < b) ? ((uint64_t)a << 32 | b) : ((uint64_t)b << 32 | a);
         auto it = middle_points_.find(key);
-        if (it != middle_points_.end())
-            return it->second;
+        if (it != middle_points_.end()) return it->second;
 
         const Mesh::Position &pos_a = mesh_.positions_[a];
         const Mesh::Position &pos_b = mesh_.positions_[b];
         Mesh::Position pos_mid = {
-            (pos_a.x + pos_b.x) / 2.0f,
-            (pos_a.y + pos_b.y) / 2.0f,
-            (pos_a.z + pos_b.z) / 2.0f,
+            (pos_a.x + pos_b.x) / 2.0f, (pos_a.y + pos_b.y) / 2.0f, (pos_a.z + pos_b.z) / 2.0f,
         };
-        float scale = radius_ / std::sqrt(pos_mid.x * pos_mid.x +
-                                          pos_mid.y * pos_mid.y +
-                                          pos_mid.z * pos_mid.z);
+        float scale = radius_ / std::sqrt(pos_mid.x * pos_mid.x + pos_mid.y * pos_mid.y + pos_mid.z * pos_mid.z);
         pos_mid.x *= scale;
         pos_mid.y *= scale;
         pos_mid.z *= scale;
 
-        Mesh::Normal normal_mid = { pos_mid.x, pos_mid.y, pos_mid.z };
+        Mesh::Normal normal_mid = {pos_mid.x, pos_mid.y, pos_mid.z};
         normal_mid.x /= radius_;
         normal_mid.y /= radius_;
         normal_mid.z /= radius_;
@@ -324,9 +307,8 @@ private:
 };
 
 class BuildTeapot {
-public:
-    BuildTeapot(Mesh &mesh)
-    {
+   public:
+    BuildTeapot(Mesh &mesh) {
 #include "Meshes.teapot.h"
         const int position_count = sizeof(teapot_positions) / sizeof(teapot_positions[0]);
         const int index_count = sizeof(teapot_indices) / sizeof(teapot_indices[0]);
@@ -338,46 +320,31 @@ public:
 
         for (int i = 0; i < position_count; i += 3) {
             mesh.positions_.emplace_back(Mesh::Position{
-                (teapot_positions[i + 0] + translate.x) * scale,
-                (teapot_positions[i + 1] + translate.y) * scale,
+                (teapot_positions[i + 0] + translate.x) * scale, (teapot_positions[i + 1] + translate.y) * scale,
                 (teapot_positions[i + 2] + translate.z) * scale,
             });
 
             mesh.normals_.emplace_back(Mesh::Normal{
-                teapot_normals[i + 0],
-                teapot_normals[i + 1],
-                teapot_normals[i + 2],
+                teapot_normals[i + 0], teapot_normals[i + 1], teapot_normals[i + 2],
             });
         }
 
         for (int i = 0; i < index_count; i += 3) {
-            mesh.faces_.emplace_back(Mesh::Face{
-                teapot_indices[i + 0],
-                teapot_indices[i + 1],
-                teapot_indices[i + 2]
-            });
+            mesh.faces_.emplace_back(Mesh::Face{teapot_indices[i + 0], teapot_indices[i + 1], teapot_indices[i + 2]});
         }
     }
 
-    void get_transform(const float *positions, int position_count,
-                       Mesh::Position &translate, float &scale)
-    {
+    void get_transform(const float *positions, int position_count, Mesh::Position &translate, float &scale) {
         float min[3] = {
-            positions[0],
-            positions[1],
-            positions[2],
+            positions[0], positions[1], positions[2],
         };
         float max[3] = {
-            positions[0],
-            positions[1],
-            positions[2],
+            positions[0], positions[1], positions[2],
         };
         for (int i = 3; i < position_count; i += 3) {
             for (int j = 0; j < 3; j++) {
-                if (min[j] > positions[i + j])
-                    min[j] = positions[i + j];
-                if (max[j] < positions[i + j])
-                    max[j] = positions[i + j];
+                if (min[j] > positions[i + j]) min[j] = positions[i + j];
+                if (max[j] < positions[i + j]) max[j] = positions[i + j];
             }
         }
 
@@ -386,29 +353,24 @@ public:
         translate.z = -(min[2] + max[2]) / 2.0f;
 
         float extents[3] = {
-            max[0] + translate.x,
-            max[1] + translate.y,
-            max[2] + translate.z,
+            max[0] + translate.x, max[1] + translate.y, max[2] + translate.z,
         };
 
         float max_extent = extents[0];
-        if (max_extent < extents[1])
-            max_extent = extents[1];
-        if (max_extent < extents[2])
-            max_extent = extents[2];
+        if (max_extent < extents[1]) max_extent = extents[1];
+        if (max_extent < extents[2]) max_extent = extents[2];
 
         scale = 1.0f / max_extent;
     }
 };
 
-void build_meshes(std::array<Mesh, Meshes::MESH_COUNT> &meshes)
-{
+void build_meshes(std::array<Mesh, Meshes::MESH_COUNT> &meshes) {
     BuildPyramid build_pyramid(meshes[Meshes::MESH_PYRAMID]);
     BuildIcosphere build_icosphere(meshes[Meshes::MESH_ICOSPHERE]);
     BuildTeapot build_teapot(meshes[Meshes::MESH_TEAPOT]);
 }
 
-} // namespace
+}  // namespace
 
 Meshes::Meshes(VkDevice dev, const std::vector<VkMemoryPropertyFlags> &mem_flags)
     : dev_(dev),
@@ -416,8 +378,7 @@ Meshes::Meshes(VkDevice dev, const std::vector<VkMemoryPropertyFlags> &mem_flags
       vertex_input_attrs_(Mesh::vertex_input_attributes()),
       vertex_input_state_(),
       input_assembly_state_(Mesh::input_assembly_state()),
-      index_type_(Mesh::index_type())
-{
+      index_type_(Mesh::index_type()) {
     vertex_input_state_.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertex_input_state_.vertexBindingDescriptionCount = 1;
     vertex_input_state_.pVertexBindingDescriptions = &vertex_input_binding_;
@@ -451,8 +412,7 @@ Meshes::Meshes(VkDevice dev, const std::vector<VkMemoryPropertyFlags> &mem_flags
     allocate_resources(vb_size, ib_size, mem_flags);
 
     uint8_t *vb_data, *ib_data;
-    vk::assert_success(vk::MapMemory(dev_, mem_, 0, VK_WHOLE_SIZE,
-                0, reinterpret_cast<void **>(&vb_data)));
+    vk::assert_success(vk::MapMemory(dev_, mem_, 0, VK_WHOLE_SIZE, 0, reinterpret_cast<void **>(&vb_data)));
     ib_data = vb_data + ib_mem_offset_;
 
     for (const auto &mesh : meshes) {
@@ -465,30 +425,25 @@ Meshes::Meshes(VkDevice dev, const std::vector<VkMemoryPropertyFlags> &mem_flags
     vk::UnmapMemory(dev_, mem_);
 }
 
-Meshes::~Meshes()
-{
+Meshes::~Meshes() {
     vk::FreeMemory(dev_, mem_, nullptr);
     vk::DestroyBuffer(dev_, vb_, nullptr);
     vk::DestroyBuffer(dev_, ib_, nullptr);
 }
 
-void Meshes::cmd_bind_buffers(VkCommandBuffer cmd) const
-{
+void Meshes::cmd_bind_buffers(VkCommandBuffer cmd) const {
     const VkDeviceSize vb_offset = 0;
     vk::CmdBindVertexBuffers(cmd, 0, 1, &vb_, &vb_offset);
 
     vk::CmdBindIndexBuffer(cmd, ib_, 0, index_type_);
 }
 
-void Meshes::cmd_draw(VkCommandBuffer cmd, Type type) const
-{
+void Meshes::cmd_draw(VkCommandBuffer cmd, Type type) const {
     const auto &draw = draw_commands_[type];
-    vk::CmdDrawIndexed(cmd, draw.indexCount, draw.instanceCount,
-            draw.firstIndex, draw.vertexOffset, draw.firstInstance);
+    vk::CmdDrawIndexed(cmd, draw.indexCount, draw.instanceCount, draw.firstIndex, draw.vertexOffset, draw.firstInstance);
 }
 
-void Meshes::allocate_resources(VkDeviceSize vb_size, VkDeviceSize ib_size, const std::vector<VkMemoryPropertyFlags> &mem_flags)
-{
+void Meshes::allocate_resources(VkDeviceSize vb_size, VkDeviceSize ib_size, const std::vector<VkMemoryPropertyFlags> &mem_flags) {
     VkBufferCreateInfo buf_info = {};
     buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     buf_info.size = vb_size;
@@ -505,8 +460,7 @@ void Meshes::allocate_resources(VkDeviceSize vb_size, VkDeviceSize ib_size, cons
     vk::GetBufferMemoryRequirements(dev_, ib_, &ib_mem_reqs);
 
     // indices follow vertices
-    ib_mem_offset_ = vb_mem_reqs.size +
-        (ib_mem_reqs.alignment - (vb_mem_reqs.size % ib_mem_reqs.alignment));
+    ib_mem_offset_ = vb_mem_reqs.size + (ib_mem_reqs.alignment - (vb_mem_reqs.size % ib_mem_reqs.alignment));
 
     VkMemoryAllocateInfo mem_info = {};
     mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -515,8 +469,7 @@ void Meshes::allocate_resources(VkDeviceSize vb_size, VkDeviceSize ib_size, cons
     // find any supported and mappable memory type
     uint32_t mem_types = (vb_mem_reqs.memoryTypeBits & ib_mem_reqs.memoryTypeBits);
     for (uint32_t idx = 0; idx < mem_flags.size(); idx++) {
-        if ((mem_types & (1 << idx)) &&
-            (mem_flags[idx] & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) &&
+        if ((mem_types & (1 << idx)) && (mem_flags[idx] & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) &&
             (mem_flags[idx] & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
             // TODO this may not be reachable
             mem_info.memoryTypeIndex = idx;

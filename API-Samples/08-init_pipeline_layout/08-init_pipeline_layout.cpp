@@ -58,34 +58,29 @@ int sample_main(int argc, char *argv[]) {
     /* Next take layout bindings and use them to create a descriptor set layout
      */
     VkDescriptorSetLayoutCreateInfo descriptor_layout = {};
-    descriptor_layout.sType =
-        VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    descriptor_layout.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     descriptor_layout.pNext = NULL;
     descriptor_layout.bindingCount = 1;
     descriptor_layout.pBindings = &layout_binding;
 
     info.desc_layout.resize(NUM_DESCRIPTOR_SETS);
-    res = vkCreateDescriptorSetLayout(info.device, &descriptor_layout, NULL,
-                                      info.desc_layout.data());
+    res = vkCreateDescriptorSetLayout(info.device, &descriptor_layout, NULL, info.desc_layout.data());
     assert(res == VK_SUCCESS);
 
     /* Now use the descriptor layout to create a pipeline layout */
     VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = {};
-    pPipelineLayoutCreateInfo.sType =
-        VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pPipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pPipelineLayoutCreateInfo.pNext = NULL;
     pPipelineLayoutCreateInfo.pushConstantRangeCount = 0;
     pPipelineLayoutCreateInfo.pPushConstantRanges = NULL;
     pPipelineLayoutCreateInfo.setLayoutCount = NUM_DESCRIPTOR_SETS;
     pPipelineLayoutCreateInfo.pSetLayouts = info.desc_layout.data();
 
-    res = vkCreatePipelineLayout(info.device, &pPipelineLayoutCreateInfo, NULL,
-                                 &info.pipeline_layout);
+    res = vkCreatePipelineLayout(info.device, &pPipelineLayoutCreateInfo, NULL, &info.pipeline_layout);
     assert(res == VK_SUCCESS);
     /* VULKAN_KEY_END */
 
-    for (int i = 0; i < NUM_DESCRIPTOR_SETS; i++)
-        vkDestroyDescriptorSetLayout(info.device, info.desc_layout[i], NULL);
+    for (int i = 0; i < NUM_DESCRIPTOR_SETS; i++) vkDestroyDescriptorSetLayout(info.device, info.desc_layout[i], NULL);
     vkDestroyPipelineLayout(info.device, info.pipeline_layout, NULL);
     destroy_device(info);
     destroy_instance(info);

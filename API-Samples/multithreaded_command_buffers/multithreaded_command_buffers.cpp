@@ -32,19 +32,15 @@ Use per-thread command buffers to draw 3 triangles
 #include <samples_platform.h>
 
 struct Vertex {
-    float posX, posY, posZ, posW; // Position data
-    float r, g, b, a;             // Color
+    float posX, posY, posZ, posW;  // Position data
+    float r, g, b, a;              // Color
 };
 #define XYZ1(_x_, _y_, _z_) (_x_), (_y_), (_z_), 1.f
 static const Vertex triData[] = {
-    {XYZ1(-0.25, -0.25, 0), XYZ1(1.f, 0.f, 0.f)},
-    {XYZ1(0.25, -0.25, 0), XYZ1(1.f, 0.f, 0.f)},
-    {XYZ1(0, 0.25, 0), XYZ1(1.f, 0.f, 0.f)},
-    {XYZ1(-0.75, -0.25, 0), XYZ1(0.f, 1.f, 0.f)},
-    {XYZ1(-0.25, -0.25, 0), XYZ1(0.f, 1.f, 0.f)},
-    {XYZ1(-0.5, 0.25, 0), XYZ1(0.f, 1.f, 0.f)},
-    {XYZ1(0.25, -0.25, 0), XYZ1(0.f, 0.f, 1.f)},
-    {XYZ1(0.75, -0.25, 0), XYZ1(0.f, 0.f, 1.f)},
+    {XYZ1(-0.25, -0.25, 0), XYZ1(1.f, 0.f, 0.f)}, {XYZ1(0.25, -0.25, 0), XYZ1(1.f, 0.f, 0.f)},
+    {XYZ1(0, 0.25, 0), XYZ1(1.f, 0.f, 0.f)},      {XYZ1(-0.75, -0.25, 0), XYZ1(0.f, 1.f, 0.f)},
+    {XYZ1(-0.25, -0.25, 0), XYZ1(0.f, 1.f, 0.f)}, {XYZ1(-0.5, 0.25, 0), XYZ1(0.f, 1.f, 0.f)},
+    {XYZ1(0.25, -0.25, 0), XYZ1(0.f, 0.f, 1.f)},  {XYZ1(0.75, -0.25, 0), XYZ1(0.f, 0.f, 1.f)},
     {XYZ1(0.5, 0.25, 0), XYZ1(0.f, 0.f, 1.f)},
 };
 
@@ -113,46 +109,39 @@ int sample_main(int argc, char *argv[]) {
     init_swap_chain(info);
 
     VkSemaphoreCreateInfo imageAcquiredSemaphoreCreateInfo;
-    imageAcquiredSemaphoreCreateInfo.sType =
-        VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    imageAcquiredSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     imageAcquiredSemaphoreCreateInfo.pNext = NULL;
     imageAcquiredSemaphoreCreateInfo.flags = 0;
 
-    res = vkCreateSemaphore(info.device, &imageAcquiredSemaphoreCreateInfo,
-                            NULL, &info.imageAcquiredSemaphore);
+    res = vkCreateSemaphore(info.device, &imageAcquiredSemaphoreCreateInfo, NULL, &info.imageAcquiredSemaphore);
     assert(res == VK_SUCCESS);
 
     // Get the index of the next available swapchain image:
-    res = vkAcquireNextImageKHR(info.device, info.swap_chain, UINT64_MAX,
-                                info.imageAcquiredSemaphore, VK_NULL_HANDLE,
+    res = vkAcquireNextImageKHR(info.device, info.swap_chain, UINT64_MAX, info.imageAcquiredSemaphore, VK_NULL_HANDLE,
                                 &info.current_buffer);
     // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
     // return codes
     assert(res == VK_SUCCESS);
 
-    set_image_layout(info, info.buffers[info.current_buffer].image,
-                     VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+    set_image_layout(info, info.buffers[info.current_buffer].image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
                      VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                      VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 
     VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = {};
-    pPipelineLayoutCreateInfo.sType =
-        VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pPipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pPipelineLayoutCreateInfo.pNext = NULL;
     pPipelineLayoutCreateInfo.pushConstantRangeCount = 0;
     pPipelineLayoutCreateInfo.pPushConstantRanges = NULL;
     pPipelineLayoutCreateInfo.setLayoutCount = 0;
     pPipelineLayoutCreateInfo.pSetLayouts = NULL;
 
-    res = vkCreatePipelineLayout(info.device, &pPipelineLayoutCreateInfo, NULL,
-                                 &info.pipeline_layout);
+    res = vkCreatePipelineLayout(info.device, &pPipelineLayoutCreateInfo, NULL, &info.pipeline_layout);
     assert(res == VK_SUCCESS);
-    init_renderpass(info, depthPresent, false,
-                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL); // Can't clear in
-                                                               // renderpass
-                                                               // load because
-                                                               // we re-use
-                                                               // pipeline
+    init_renderpass(info, depthPresent, false, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);  // Can't clear in
+                                                                                           // renderpass
+                                                                                           // load because
+                                                                                           // we re-use
+                                                                                           // pipeline
     init_shaders(info, vertShaderText, fragShaderText);
     init_framebuffers(info, depthPresent);
 
@@ -189,29 +178,20 @@ int sample_main(int argc, char *argv[]) {
 
     /* We need to do the clear here instead of as a load op since all 3 threads
      * share the same pipeline / renderpass */
-    set_image_layout(info, info.buffers[info.current_buffer].image,
-                     VK_IMAGE_ASPECT_COLOR_BIT,
-                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                     VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                     VK_PIPELINE_STAGE_TRANSFER_BIT);
-    vkCmdClearColorImage(info.cmd, info.buffers[info.current_buffer].image,
-                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, clear_color, 1,
+    set_image_layout(info, info.buffers[info.current_buffer].image, VK_IMAGE_ASPECT_COLOR_BIT,
+                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                     VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+    vkCmdClearColorImage(info.cmd, info.buffers[info.current_buffer].image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, clear_color, 1,
                          &srRange);
-    set_image_layout(info, info.buffers[info.current_buffer].image,
-                     VK_IMAGE_ASPECT_COLOR_BIT,
-                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                     VK_PIPELINE_STAGE_TRANSFER_BIT,
+    set_image_layout(info, info.buffers[info.current_buffer].image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TRANSFER_BIT,
                      VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-
 
     res = vkEndCommandBuffer(info.cmd);
     const VkCommandBuffer cmd_bufs[] = {info.cmd};
     VkFence clearFence;
     init_fence(info, clearFence);
-    VkPipelineStageFlags pipe_stage_flags =
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     VkSubmitInfo submit_info[1] = {};
     submit_info[0].pNext = NULL;
     submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -228,8 +208,7 @@ int sample_main(int argc, char *argv[]) {
     assert(!res);
 
     do {
-        res = vkWaitForFences(info.device, 1, &clearFence, VK_TRUE,
-                              FENCE_TIMEOUT);
+        res = vkWaitForFences(info.device, 1, &clearFence, VK_TRUE, FENCE_TIMEOUT);
     } while (res == VK_TIMEOUT);
     assert(res == VK_SUCCESS);
     vkDestroyFence(info.device, clearFence, NULL);
@@ -241,8 +220,7 @@ int sample_main(int argc, char *argv[]) {
     threadCmdBufs[3] = info.cmd;
     sample_platform_thread vk_threads[3];
     for (size_t i = 0; i < 3; i++) {
-        sample_platform_thread_create(&vk_threads[i], &per_thread_code,
-                                      (void *)i);
+        sample_platform_thread_create(&vk_threads[i], &per_thread_code, (void *)i);
     }
 
     VkCommandBufferBeginInfo cmd_buf_info = {};
@@ -268,10 +246,8 @@ int sample_main(int argc, char *argv[]) {
     prePresentBarrier.subresourceRange.baseArrayLayer = 0;
     prePresentBarrier.subresourceRange.layerCount = 1;
     prePresentBarrier.image = info.buffers[info.current_buffer].image;
-    vkCmdPipelineBarrier(threadCmdBufs[3],
-                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                         VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, NULL, 0,
-                         NULL, 1, &prePresentBarrier);
+    vkCmdPipelineBarrier(threadCmdBufs[3], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0,
+                         0, NULL, 0, NULL, 1, &prePresentBarrier);
 
     res = vkEndCommandBuffer(threadCmdBufs[3]);
     assert(res == VK_SUCCESS);
@@ -282,8 +258,7 @@ int sample_main(int argc, char *argv[]) {
     submit_info[0].waitSemaphoreCount = 0;
     submit_info[0].pWaitSemaphores = NULL;
     submit_info[0].pWaitDstStageMask = &pipe_stage_flags;
-    submit_info[0].commandBufferCount =
-        4; /* 3 from threads + prePresentBarrier */
+    submit_info[0].commandBufferCount = 4; /* 3 from threads + prePresentBarrier */
     submit_info[0].pCommandBuffers = threadCmdBufs;
     submit_info[0].signalSemaphoreCount = 0;
     submit_info[0].pSignalSemaphores = NULL;
@@ -306,8 +281,7 @@ int sample_main(int argc, char *argv[]) {
 
     /* Make sure command buffer is finished before presenting */
     do {
-        res =
-            vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+        res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
     } while (res == VK_TIMEOUT);
     assert(res == VK_SUCCESS);
 
@@ -315,8 +289,7 @@ int sample_main(int argc, char *argv[]) {
 
     wait_seconds(1);
     /* VULKAN_KEY_END */
-    if (info.save_images)
-        write_ppm(info, "multithreadcmdbuf");
+    if (info.save_images) write_ppm(info, "multithreadcmdbuf");
 
     vkDestroyBuffer(info.device, vertex_buffer[0].buf, NULL);
     vkDestroyBuffer(info.device, vertex_buffer[1].buf, NULL);
@@ -325,8 +298,7 @@ int sample_main(int argc, char *argv[]) {
     vkFreeMemory(info.device, vertex_buffer[1].mem, NULL);
     vkFreeMemory(info.device, vertex_buffer[2].mem, NULL);
     for (int i = 0; i < 3; i++) {
-        vkFreeCommandBuffers(info.device, threadCmdPools[i], 1,
-                             &threadCmdBufs[i]);
+        vkFreeCommandBuffers(info.device, threadCmdPools[i], 1, &threadCmdBufs[i]);
         vkDestroyCommandPool(info.device, threadCmdPools[i], NULL);
     }
     vkDestroySemaphore(info.device, info.imageAcquiredSemaphore, NULL);
@@ -358,8 +330,7 @@ static void *per_thread_code(void *arg) {
     poolInfo.pNext = NULL;
     poolInfo.queueFamilyIndex = info.graphics_queue_family_index;
     poolInfo.flags = 0;
-    vkCreateCommandPool(info.device, &poolInfo, NULL,
-                        &threadCmdPools[threadNum]);
+    vkCreateCommandPool(info.device, &poolInfo, NULL, &threadCmdPools[threadNum]);
 
     VkCommandBufferAllocateInfo cmdBufInfo;
     cmdBufInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -367,8 +338,7 @@ static void *per_thread_code(void *arg) {
     cmdBufInfo.commandBufferCount = 1;
     cmdBufInfo.commandPool = threadCmdPools[threadNum];
     cmdBufInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    vkAllocateCommandBuffers(info.device, &cmdBufInfo,
-                             &threadCmdBufs[threadNum]);
+    vkAllocateCommandBuffers(info.device, &cmdBufInfo, &threadCmdBufs[threadNum]);
 
     VkBufferCreateInfo buf_info = {};
     buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -379,13 +349,11 @@ static void *per_thread_code(void *arg) {
     buf_info.pQueueFamilyIndices = NULL;
     buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     buf_info.flags = 0;
-    res = vkCreateBuffer(info.device, &buf_info, NULL,
-                         &vertex_buffer[threadNum].buf);
+    res = vkCreateBuffer(info.device, &buf_info, NULL, &vertex_buffer[threadNum].buf);
     assert(res == VK_SUCCESS);
 
     VkMemoryRequirements mem_reqs;
-    vkGetBufferMemoryRequirements(info.device, vertex_buffer[threadNum].buf,
-                                  &mem_reqs);
+    vkGetBufferMemoryRequirements(info.device, vertex_buffer[threadNum].buf, &mem_reqs);
 
     VkMemoryAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -395,26 +363,22 @@ static void *per_thread_code(void *arg) {
     alloc_info.allocationSize = mem_reqs.size;
     bool pass;
     pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits,
-                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                                        &alloc_info.memoryTypeIndex);
     assert(pass && "No mappable, coherent memory");
 
-    res = vkAllocateMemory(info.device, &alloc_info, NULL,
-                           &(vertex_buffer[threadNum].mem));
+    res = vkAllocateMemory(info.device, &alloc_info, NULL, &(vertex_buffer[threadNum].mem));
     assert(res == VK_SUCCESS);
 
     uint8_t *pData;
-    res = vkMapMemory(info.device, vertex_buffer[threadNum].mem, 0,
-                      mem_reqs.size, 0, (void **)&pData);
+    res = vkMapMemory(info.device, vertex_buffer[threadNum].mem, 0, mem_reqs.size, 0, (void **)&pData);
     assert(res == VK_SUCCESS);
 
     memcpy(pData, &triData[threadNum * 3], 3 * sizeof(triData[0]));
 
     vkUnmapMemory(info.device, vertex_buffer[threadNum].mem);
 
-    res = vkBindBufferMemory(info.device, vertex_buffer[threadNum].buf,
-                             vertex_buffer[threadNum].mem, 0);
+    res = vkBindBufferMemory(info.device, vertex_buffer[threadNum].buf, vertex_buffer[threadNum].mem, 0);
     assert(res == VK_SUCCESS);
 
     VkCommandBufferBeginInfo cmd_buf_info = {};
@@ -438,14 +402,11 @@ static void *per_thread_code(void *arg) {
     rp_begin.clearValueCount = 0;
     rp_begin.pClearValues = NULL;
 
-    vkCmdBeginRenderPass(threadCmdBufs[threadNum], &rp_begin,
-                         VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(threadCmdBufs[threadNum], &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdBindPipeline(threadCmdBufs[threadNum], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                      info.pipeline);
+    vkCmdBindPipeline(threadCmdBufs[threadNum], VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline);
     const VkDeviceSize offsets[1] = {0};
-    vkCmdBindVertexBuffers(threadCmdBufs[threadNum], 0, 1,
-                           &vertex_buffer[threadNum].buf, offsets);
+    vkCmdBindVertexBuffers(threadCmdBufs[threadNum], 0, 1, &vertex_buffer[threadNum].buf, offsets);
 
     VkViewport viewport;
     viewport.height = (float)info.height;

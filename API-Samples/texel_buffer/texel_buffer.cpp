@@ -88,8 +88,7 @@ int sample_main(int argc, char *argv[]) {
     }
 
     VkFormatProperties props;
-    vkGetPhysicalDeviceFormatProperties(info.gpus[0], VK_FORMAT_R32_SFLOAT,
-                                        &props);
+    vkGetPhysicalDeviceFormatProperties(info.gpus[0], VK_FORMAT_R32_SFLOAT, &props);
     if (!(props.bufferFeatures & VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT)) {
         std::cout << "R32_SFLOAT format unsupported for texel buffer\n";
         exit(-1);
@@ -129,8 +128,7 @@ int sample_main(int argc, char *argv[]) {
 
     alloc_info.allocationSize = mem_reqs.size;
     pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits,
-                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                                        &alloc_info.memoryTypeIndex);
     assert(pass && "No mappable, coherent memory");
 
@@ -139,8 +137,7 @@ int sample_main(int argc, char *argv[]) {
     assert(res == VK_SUCCESS);
 
     uint8_t *pData;
-    res = vkMapMemory(info.device, texelMem, 0, mem_reqs.size, 0,
-                      (void **)&pData);
+    res = vkMapMemory(info.device, texelMem, 0, mem_reqs.size, 0, (void **)&pData);
     assert(res == VK_SUCCESS);
 
     memcpy(pData, &texels, sizeof(texels));
@@ -176,29 +173,25 @@ int sample_main(int argc, char *argv[]) {
     /* Next take layout bindings and use them to create a descriptor set layout
      */
     VkDescriptorSetLayoutCreateInfo descriptor_layout = {};
-    descriptor_layout.sType =
-        VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    descriptor_layout.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     descriptor_layout.pNext = NULL;
     descriptor_layout.bindingCount = 1;
     descriptor_layout.pBindings = layout_bindings;
 
     info.desc_layout.resize(NUM_DESCRIPTOR_SETS);
-    res = vkCreateDescriptorSetLayout(info.device, &descriptor_layout, NULL,
-                                      info.desc_layout.data());
+    res = vkCreateDescriptorSetLayout(info.device, &descriptor_layout, NULL, info.desc_layout.data());
     assert(res == VK_SUCCESS);
 
     /* Now use the descriptor layout to create a pipeline layout */
     VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = {};
-    pPipelineLayoutCreateInfo.sType =
-        VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pPipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pPipelineLayoutCreateInfo.pNext = NULL;
     pPipelineLayoutCreateInfo.pushConstantRangeCount = 0;
     pPipelineLayoutCreateInfo.pPushConstantRanges = NULL;
     pPipelineLayoutCreateInfo.setLayoutCount = NUM_DESCRIPTOR_SETS;
     pPipelineLayoutCreateInfo.pSetLayouts = info.desc_layout.data();
 
-    res = vkCreatePipelineLayout(info.device, &pPipelineLayoutCreateInfo, NULL,
-                                 &info.pipeline_layout);
+    res = vkCreatePipelineLayout(info.device, &pPipelineLayoutCreateInfo, NULL, &info.pipeline_layout);
     assert(res == VK_SUCCESS);
 
     init_renderpass(info, depthPresent);
@@ -216,8 +209,7 @@ int sample_main(int argc, char *argv[]) {
     descriptor_pool.poolSizeCount = 1;
     descriptor_pool.pPoolSizes = type_count;
 
-    res = vkCreateDescriptorPool(info.device, &descriptor_pool, NULL,
-                                 &info.desc_pool);
+    res = vkCreateDescriptorPool(info.device, &descriptor_pool, NULL, &info.desc_pool);
     assert(res == VK_SUCCESS);
 
     VkDescriptorSetAllocateInfo desc_alloc_info[1];
@@ -229,8 +221,7 @@ int sample_main(int argc, char *argv[]) {
 
     /* Allocate descriptor set with UNIFORM_BUFFER_DYNAMIC */
     info.desc_set.resize(NUM_DESCRIPTOR_SETS);
-    res = vkAllocateDescriptorSets(info.device, desc_alloc_info,
-                                   info.desc_set.data());
+    res = vkAllocateDescriptorSets(info.device, desc_alloc_info, info.desc_set.data());
     assert(res == VK_SUCCESS);
 
     VkWriteDescriptorSet writes[1];
@@ -261,18 +252,15 @@ int sample_main(int argc, char *argv[]) {
     clear_values[1].depthStencil.stencil = 0;
 
     VkSemaphoreCreateInfo imageAcquiredSemaphoreCreateInfo;
-    imageAcquiredSemaphoreCreateInfo.sType =
-        VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    imageAcquiredSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     imageAcquiredSemaphoreCreateInfo.pNext = NULL;
     imageAcquiredSemaphoreCreateInfo.flags = 0;
 
-    res = vkCreateSemaphore(info.device, &imageAcquiredSemaphoreCreateInfo,
-                            NULL, &info.imageAcquiredSemaphore);
+    res = vkCreateSemaphore(info.device, &imageAcquiredSemaphoreCreateInfo, NULL, &info.imageAcquiredSemaphore);
     assert(res == VK_SUCCESS);
 
     // Get the index of the next available swapchain image:
-    res = vkAcquireNextImageKHR(info.device, info.swap_chain, UINT64_MAX,
-                                info.imageAcquiredSemaphore, VK_NULL_HANDLE,
+    res = vkAcquireNextImageKHR(info.device, info.swap_chain, UINT64_MAX, info.imageAcquiredSemaphore, VK_NULL_HANDLE,
                                 &info.current_buffer);
     // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
     // return codes
@@ -294,8 +282,7 @@ int sample_main(int argc, char *argv[]) {
 
     vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline);
 
-    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            info.pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
+    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
                             info.desc_set.data(), 0, NULL);
 
     init_viewports(info);
@@ -317,8 +304,7 @@ int sample_main(int argc, char *argv[]) {
     execute_queue_cmdbuf(info, cmd_bufs, drawFence);
 
     do {
-        res =
-            vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+        res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
     } while (res == VK_TIMEOUT);
     assert(res == VK_SUCCESS);
     vkDestroyFence(info.device, drawFence, NULL);
@@ -327,8 +313,7 @@ int sample_main(int argc, char *argv[]) {
 
     wait_seconds(1);
     /* VULKAN_KEY_END */
-    if (info.save_images)
-        write_ppm(info, "texelbuffer");
+    if (info.save_images) write_ppm(info, "texelbuffer");
 
     vkDestroySemaphore(info.device, info.imageAcquiredSemaphore, NULL);
     vkDestroyBufferView(info.device, texel_view, NULL);

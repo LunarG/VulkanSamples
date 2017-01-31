@@ -33,7 +33,7 @@
 #ifndef VALIDATION_H
 #define VALIDATION_H
 
-#if defined(__linux__) && !defined(__ANDROID__) // Linux (desktop only)
+#if defined(__linux__) && !defined(__ANDROID__)  // Linux (desktop only)
 #define __LINUX__ 1
 #endif
 
@@ -54,17 +54,16 @@
 
 //===========================================Check VkResult=============================================
 // Macro to check VkResult for errors(negative) or warnings(positive), and print as a string.
-#ifdef NDEBUG // In release builds, don't print VkResult strings.
-#define VKERRCHECK(VKFN)                                                                                                           \
+#ifdef NDEBUG  // In release builds, don't print VkResult strings.
+#define VKERRCHECK(VKFN) \
     { VKFN; }
-#else // In debug builds, show warnings and errors. assert on error.
-#define VKERRCHECK(VKFN)                                                                                                           \
-    {                                                                                                                              \
-        VkResult VKRESULT = VKFN;                                                                                                  \
-        ShowVkResult(VKRESULT);                                                                                                    \
-        assert(VKRESULT >= 0);                                                                                                     \
-        if (VKRESULT)                                                                                                              \
-            printf("%s:%d\n", __FILE__, __LINE__);                                                                                 \
+#else  // In debug builds, show warnings and errors. assert on error.
+#define VKERRCHECK(VKFN)                                     \
+    {                                                        \
+        VkResult VKRESULT = VKFN;                            \
+        ShowVkResult(VKRESULT);                              \
+        assert(VKRESULT >= 0);                               \
+        if (VKRESULT) printf("%s:%d\n", __FILE__, __LINE__); \
     }
 #endif
 //======================================================================================================
@@ -106,11 +105,11 @@ enum eColor {
 
 void color(eColor color);
 // void print(eColor col,const char* format,...);
-#define print(COLOR, ...)                                                                                                          \
-    {                                                                                                                              \
-        color(COLOR);                                                                                                              \
-        printf(__VA_ARGS__);                                                                                                       \
-        color(eRESET);                                                                                                             \
+#define print(COLOR, ...)    \
+    {                        \
+        color(COLOR);        \
+        printf(__VA_ARGS__); \
+        color(eRESET);       \
     }
 // clang-format off
 #ifdef ANDROID
@@ -153,7 +152,7 @@ void color(eColor color);
 // clang-format on
 //======================================================================================================
 #include <assert.h>
-#include <stdio.h> //for Windows.
+#include <stdio.h>  //for Windows.
 
 //=========================================== Vulkan Wrapper ===========================================
 //  By default, all Vulkan functions call the loader trampoline-code, which then calls the ICD or layers.
@@ -167,14 +166,14 @@ void color(eColor color);
 //#define USE_VULKAN_WRAPPER
 
 #ifdef USE_VULKAN_WRAPPER
-#include <vulkan_wrapper.h> // PC: Build dispatch table, so we can skip loader trampoline-code
+#include <vulkan_wrapper.h>  // PC: Build dispatch table, so we can skip loader trampoline-code
 #else
-#include <vulkan/vulkan.h> // Android: This must be included AFTER native.h
+#include <vulkan/vulkan.h>  // Android: This must be included AFTER native.h
 #endif
 //======================================================================================================
 
-const char *VkResultStr(VkResult err); // Convert vulkan result code to a string.
-void ShowVkResult(VkResult err);       // Print warnings and errors.
+const char *VkResultStr(VkResult err);  // Convert vulkan result code to a string.
+void ShowVkResult(VkResult err);        // Print warnings and errors.
 
 //============================================ CDebugReport ============================================
 class CDebugReport {
@@ -187,15 +186,15 @@ class CDebugReport {
     VkDebugReportFlagsEXT flags;
 
     void Set(VkDebugReportFlagsEXT flags, PFN_vkDebugReportCallbackEXT debugFunc = 0);
-    void Print(); // Print the debug report flags state.
+    void Print();  // Print the debug report flags state.
 
-    friend class CInstance;     // CInstance calls Init and Destroy
-    void Init(VkInstance inst); // Initialize with default callback, and all flags enabled.
-    void Destroy();             // Destroy the debug report. Must be called BEFORE vkDestroyInstance()
-  public:
-    VkDebugReportFlagsEXT GetFlags() { return flags; }        // Returns current flag settings.
-    void SetFlags(VkDebugReportFlagsEXT flags);               // Select which type of messages to display
-    void SetCallback(PFN_vkDebugReportCallbackEXT debugFunc); // Set a custom callback function for printing debug reports
+    friend class CInstance;      // CInstance calls Init and Destroy
+    void Init(VkInstance inst);  // Initialize with default callback, and all flags enabled.
+    void Destroy();              // Destroy the debug report. Must be called BEFORE vkDestroyInstance()
+   public:
+    VkDebugReportFlagsEXT GetFlags() { return flags; }         // Returns current flag settings.
+    void SetFlags(VkDebugReportFlagsEXT flags);                // Select which type of messages to display
+    void SetCallback(PFN_vkDebugReportCallbackEXT debugFunc);  // Set a custom callback function for printing debug reports
 };
 //=======================================================================================================
 

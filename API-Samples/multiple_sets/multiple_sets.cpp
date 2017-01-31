@@ -107,8 +107,7 @@ int sample_main(int argc, char *argv[]) {
     init_renderpass(info, true);
     init_shaders(info, vertShaderText, fragShaderText);
     init_framebuffers(info, true);
-    init_vertex_buffer(info, g_vb_texture_Data, sizeof(g_vb_texture_Data),
-                       sizeof(g_vb_texture_Data[0]), true);
+    init_vertex_buffer(info, g_vb_texture_Data, sizeof(g_vb_texture_Data), sizeof(g_vb_texture_Data[0]), true);
 
     /* VULKAN_KEY_START */
 
@@ -123,8 +122,7 @@ int sample_main(int argc, char *argv[]) {
     uniform_binding[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     uniform_binding[0].pImmutableSamplers = NULL;
     VkDescriptorSetLayoutCreateInfo uniform_layout_info[1] = {};
-    uniform_layout_info[0].sType =
-        VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    uniform_layout_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     uniform_layout_info[0].pNext = NULL;
     uniform_layout_info[0].bindingCount = 1;
     uniform_layout_info[0].pBindings = uniform_binding;
@@ -132,14 +130,12 @@ int sample_main(int argc, char *argv[]) {
     // Create second layout containing combined sampler/image data
     VkDescriptorSetLayoutBinding sampler2D_binding[1] = {};
     sampler2D_binding[0].binding = 0;
-    sampler2D_binding[0].descriptorType =
-        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    sampler2D_binding[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     sampler2D_binding[0].descriptorCount = 1;
     sampler2D_binding[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     sampler2D_binding[0].pImmutableSamplers = NULL;
     VkDescriptorSetLayoutCreateInfo sampler2D_layout_info[1] = {};
-    sampler2D_layout_info[0].sType =
-        VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    sampler2D_layout_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     sampler2D_layout_info[0].pNext = NULL;
     sampler2D_layout_info[0].bindingCount = 1;
     sampler2D_layout_info[0].pBindings = sampler2D_binding;
@@ -148,24 +144,20 @@ int sample_main(int argc, char *argv[]) {
     static const unsigned uniform_set_index = 0;
     static const unsigned sampler_set_index = 1;
     VkDescriptorSetLayout descriptor_layouts[descriptor_set_count] = {};
-    res = vkCreateDescriptorSetLayout(info.device, uniform_layout_info, NULL,
-                                      &descriptor_layouts[uniform_set_index]);
+    res = vkCreateDescriptorSetLayout(info.device, uniform_layout_info, NULL, &descriptor_layouts[uniform_set_index]);
     assert(res == VK_SUCCESS);
-    res = vkCreateDescriptorSetLayout(info.device, sampler2D_layout_info, NULL,
-                                      &descriptor_layouts[sampler_set_index]);
+    res = vkCreateDescriptorSetLayout(info.device, sampler2D_layout_info, NULL, &descriptor_layouts[sampler_set_index]);
     assert(res == VK_SUCCESS);
 
     // Create pipeline layout with multiple descriptor sets
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo[1] = {};
-    pipelineLayoutCreateInfo[0].sType =
-        VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipelineLayoutCreateInfo[0].sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutCreateInfo[0].pNext = NULL;
     pipelineLayoutCreateInfo[0].pushConstantRangeCount = 0;
     pipelineLayoutCreateInfo[0].pPushConstantRanges = NULL;
     pipelineLayoutCreateInfo[0].setLayoutCount = descriptor_set_count;
     pipelineLayoutCreateInfo[0].pSetLayouts = descriptor_layouts;
-    res = vkCreatePipelineLayout(info.device, pipelineLayoutCreateInfo, NULL,
-                                 &info.pipeline_layout);
+    res = vkCreatePipelineLayout(info.device, pipelineLayoutCreateInfo, NULL, &info.pipeline_layout);
     assert(res == VK_SUCCESS);
 
     // Create a single pool to contain data for our two descriptor sets
@@ -179,8 +171,7 @@ int sample_main(int argc, char *argv[]) {
     pool_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     pool_info[0].pNext = NULL;
     pool_info[0].maxSets = descriptor_set_count;
-    pool_info[0].poolSizeCount =
-        sizeof(type_count) / sizeof(VkDescriptorPoolSize);
+    pool_info[0].poolSizeCount = sizeof(type_count) / sizeof(VkDescriptorPoolSize);
     pool_info[0].pPoolSizes = type_count;
 
     VkDescriptorPool descriptor_pool[1] = {};
@@ -211,8 +202,7 @@ int sample_main(int argc, char *argv[]) {
     descriptor_writes[0].dstSet = descriptor_sets[uniform_set_index];
     descriptor_writes[0].descriptorCount = 1;
     descriptor_writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    descriptor_writes[0].pBufferInfo =
-        &info.uniform_data.buffer_info; // populated by init_uniform_buffer()
+    descriptor_writes[0].pBufferInfo = &info.uniform_data.buffer_info;  // populated by init_uniform_buffer()
     descriptor_writes[0].dstArrayElement = 0;
     descriptor_writes[0].dstBinding = 0;
 
@@ -222,15 +212,12 @@ int sample_main(int argc, char *argv[]) {
     descriptor_writes[1].pNext = NULL;
     descriptor_writes[1].dstSet = descriptor_sets[sampler_set_index];
     descriptor_writes[1].descriptorCount = 1;
-    descriptor_writes[1].descriptorType =
-        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    descriptor_writes[1].pImageInfo =
-        &info.texture_data.image_info; // populated by init_texture()
+    descriptor_writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    descriptor_writes[1].pImageInfo = &info.texture_data.image_info;  // populated by init_texture()
     descriptor_writes[1].dstArrayElement = 0;
     descriptor_writes[1].dstBinding = 0;
 
-    vkUpdateDescriptorSets(info.device, descriptor_set_count, descriptor_writes,
-                           0, NULL);
+    vkUpdateDescriptorSets(info.device, descriptor_set_count, descriptor_writes, 0, NULL);
 
     /* VULKAN_KEY_END */
 
@@ -249,18 +236,15 @@ int sample_main(int argc, char *argv[]) {
 
     VkSemaphore imageAcquiredSemaphore;
     VkSemaphoreCreateInfo imageAcquiredSemaphoreCreateInfo;
-    imageAcquiredSemaphoreCreateInfo.sType =
-        VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    imageAcquiredSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     imageAcquiredSemaphoreCreateInfo.pNext = NULL;
     imageAcquiredSemaphoreCreateInfo.flags = 0;
 
-    res = vkCreateSemaphore(info.device, &imageAcquiredSemaphoreCreateInfo,
-                            NULL, &imageAcquiredSemaphore);
+    res = vkCreateSemaphore(info.device, &imageAcquiredSemaphoreCreateInfo, NULL, &imageAcquiredSemaphore);
     assert(res == VK_SUCCESS);
 
     // Get the index of the next available swapchain image:
-    res = vkAcquireNextImageKHR(info.device, info.swap_chain, UINT64_MAX,
-                                imageAcquiredSemaphore, VK_NULL_HANDLE,
+    res = vkAcquireNextImageKHR(info.device, info.swap_chain, UINT64_MAX, imageAcquiredSemaphore, VK_NULL_HANDLE,
                                 &info.current_buffer);
     // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
     // return codes
@@ -281,8 +265,7 @@ int sample_main(int argc, char *argv[]) {
     vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
     vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline);
-    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            info.pipeline_layout, 0, descriptor_set_count,
+    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline_layout, 0, descriptor_set_count,
                             descriptor_sets, 0, NULL);
 
     const VkDeviceSize offsets[1] = {0};
@@ -304,8 +287,7 @@ int sample_main(int argc, char *argv[]) {
     fenceInfo.flags = 0;
     vkCreateFence(info.device, &fenceInfo, NULL, &drawFence);
 
-    VkPipelineStageFlags pipe_stage_flags =
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     VkSubmitInfo submit_info[1] = {};
     submit_info[0].pNext = NULL;
     submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -335,16 +317,14 @@ int sample_main(int argc, char *argv[]) {
 
     /* Make sure command buffer is finished before presenting */
     do {
-        res =
-            vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+        res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
     } while (res == VK_TIMEOUT);
     assert(res == VK_SUCCESS);
     res = vkQueuePresentKHR(info.present_queue, &present);
     assert(res == VK_SUCCESS);
 
     wait_seconds(1);
-    if (info.save_images)
-        write_ppm(info, "multiple_sets");
+    if (info.save_images) write_ppm(info, "multiple_sets");
 
     vkDestroySemaphore(info.device, imageAcquiredSemaphore, NULL);
     vkDestroyFence(info.device, drawFence, NULL);
@@ -361,8 +341,7 @@ int sample_main(int argc, char *argv[]) {
     destroy_renderpass(info);
 
     // instead of destroy_descriptor_and_pipeline_layouts(info);
-    for (int i = 0; i < descriptor_set_count; i++)
-        vkDestroyDescriptorSetLayout(info.device, descriptor_layouts[i], NULL);
+    for (int i = 0; i < descriptor_set_count; i++) vkDestroyDescriptorSetLayout(info.device, descriptor_layouts[i], NULL);
     vkDestroyPipelineLayout(info.device, info.pipeline_layout, NULL);
 
     destroy_uniform_buffer(info);

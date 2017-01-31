@@ -47,8 +47,7 @@ int sample_main(int argc, char *argv[]) {
     cmd_pool_info.queueFamilyIndex = info.graphics_queue_family_index;
     cmd_pool_info.flags = 0;
 
-    res =
-        vkCreateCommandPool(info.device, &cmd_pool_info, NULL, &info.cmd_pool);
+    res = vkCreateCommandPool(info.device, &cmd_pool_info, NULL, &info.cmd_pool);
     assert(res == VK_SUCCESS);
 
     /* Create the command buffer from the command pool */

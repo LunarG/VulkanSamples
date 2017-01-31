@@ -87,12 +87,10 @@ int sample_main(int argc, char *argv[]) {
     init_depth_buffer(info);
     init_uniform_buffer(info);
     init_descriptor_and_pipeline_layouts(info, true);
-    init_renderpass(info, depthPresent, true,
-                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    init_renderpass(info, depthPresent, true, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     init_shaders(info, vertShaderText, fragShaderText);
     init_framebuffers(info, depthPresent);
-    init_vertex_buffer(info, g_vb_texture_Data, sizeof(g_vb_texture_Data),
-                       sizeof(g_vb_texture_Data[0]), true);
+    init_vertex_buffer(info, g_vb_texture_Data, sizeof(g_vb_texture_Data), sizeof(g_vb_texture_Data[0]), true);
     init_pipeline_cache(info);
     init_pipeline(info, depthPresent);
 
@@ -122,12 +120,10 @@ int sample_main(int argc, char *argv[]) {
     descriptor_pool.poolSizeCount = 2;
     descriptor_pool.pPoolSizes = pool_size;
 
-    res = vkCreateDescriptorPool(info.device, &descriptor_pool, NULL,
-                                 &info.desc_pool);
+    res = vkCreateDescriptorPool(info.device, &descriptor_pool, NULL, &info.desc_pool);
     assert(res == VK_SUCCESS);
 
-    VkDescriptorSetLayout layouts[] = {info.desc_layout[0],
-                                       info.desc_layout[0]};
+    VkDescriptorSetLayout layouts[] = {info.desc_layout[0], info.desc_layout[0]};
 
     VkDescriptorSetAllocateInfo alloc_info[1];
     alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -137,8 +133,7 @@ int sample_main(int argc, char *argv[]) {
     alloc_info[0].pSetLayouts = layouts;
 
     info.desc_set.resize(2);
-    res =
-        vkAllocateDescriptorSets(info.device, alloc_info, info.desc_set.data());
+    res = vkAllocateDescriptorSets(info.device, alloc_info, info.desc_set.data());
     assert(res == VK_SUCCESS);
 
     VkWriteDescriptorSet writes[2];
@@ -194,27 +189,22 @@ int sample_main(int argc, char *argv[]) {
 
     VkSemaphore imageAcquiredSemaphore;
     VkSemaphoreCreateInfo imageAcquiredSemaphoreCreateInfo;
-    imageAcquiredSemaphoreCreateInfo.sType =
-        VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    imageAcquiredSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     imageAcquiredSemaphoreCreateInfo.pNext = NULL;
     imageAcquiredSemaphoreCreateInfo.flags = 0;
 
-    res = vkCreateSemaphore(info.device, &imageAcquiredSemaphoreCreateInfo,
-                            NULL, &imageAcquiredSemaphore);
+    res = vkCreateSemaphore(info.device, &imageAcquiredSemaphoreCreateInfo, NULL, &imageAcquiredSemaphore);
     assert(res == VK_SUCCESS);
 
     // Get the index of the next available swapchain image:
-    res = vkAcquireNextImageKHR(info.device, info.swap_chain, UINT64_MAX,
-                                imageAcquiredSemaphore, VK_NULL_HANDLE,
+    res = vkAcquireNextImageKHR(info.device, info.swap_chain, UINT64_MAX, imageAcquiredSemaphore, VK_NULL_HANDLE,
                                 &info.current_buffer);
     // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
     // return codes
     assert(res == VK_SUCCESS);
 
-    set_image_layout(info, info.buffers[info.current_buffer].image,
-                     VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                     VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+    set_image_layout(info, info.buffers[info.current_buffer].image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                      VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 
     const VkDeviceSize offsets[1] = {0};
@@ -236,13 +226,10 @@ int sample_main(int argc, char *argv[]) {
     // now we record four separate command buffers, one for each quadrant of the
     // screen
     VkCommandBufferInheritanceInfo cmd_buf_inheritance_info = {};
-    cmd_buf_inheritance_info.sType =
-        VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
-    cmd_buf_inheritance_info.pNext = NULL;
+    cmd_buf_inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO, cmd_buf_inheritance_info.pNext = NULL;
     cmd_buf_inheritance_info.renderPass = info.render_pass;
     cmd_buf_inheritance_info.subpass = 0;
-    cmd_buf_inheritance_info.framebuffer =
-        info.framebuffers[info.current_buffer];
+    cmd_buf_inheritance_info.framebuffer = info.framebuffers[info.current_buffer];
     cmd_buf_inheritance_info.occlusionQueryEnable = VK_FALSE;
     cmd_buf_inheritance_info.queryFlags = 0;
     cmd_buf_inheritance_info.pipelineStatistics = 0;
@@ -250,22 +237,17 @@ int sample_main(int argc, char *argv[]) {
     VkCommandBufferBeginInfo secondary_begin = {};
     secondary_begin.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     secondary_begin.pNext = NULL;
-    secondary_begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT |
-                            VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
+    secondary_begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
     secondary_begin.pInheritanceInfo = &cmd_buf_inheritance_info;
 
     for (int i = 0; i < 4; i++) {
         vkBeginCommandBuffer(secondary_cmds[i], &secondary_begin);
 
-        vkCmdBindPipeline(secondary_cmds[i], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                          info.pipeline);
-        vkCmdBindDescriptorSets(secondary_cmds[i],
-                                VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                info.pipeline_layout, 0, 1,
+        vkCmdBindPipeline(secondary_cmds[i], VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline);
+        vkCmdBindDescriptorSets(secondary_cmds[i], VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline_layout, 0, 1,
                                 &info.desc_set[i == 0 || i == 3], 0, NULL);
 
-        vkCmdBindVertexBuffers(secondary_cmds[i], 0, 1, &info.vertex_buffer.buf,
-                               offsets);
+        vkCmdBindVertexBuffers(secondary_cmds[i], 0, 1, &info.vertex_buffer.buf, offsets);
 
         viewport.x = 25.0f + 250.0f * (i % 2);
         viewport.y = 25.0f + 250.0f * (i / 2);
@@ -293,8 +275,7 @@ int sample_main(int argc, char *argv[]) {
     // specifying VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS means this
     // render pass may
     // ONLY call vkCmdExecuteCommands
-    vkCmdBeginRenderPass(info.cmd, &rp_begin,
-                         VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+    vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
     vkCmdExecuteCommands(info.cmd, 4, secondary_cmds);
 
@@ -315,10 +296,8 @@ int sample_main(int argc, char *argv[]) {
     prePresentBarrier.subresourceRange.baseArrayLayer = 0;
     prePresentBarrier.subresourceRange.layerCount = 1;
     prePresentBarrier.image = info.buffers[info.current_buffer].image;
-    vkCmdPipelineBarrier(info.cmd,
-                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                         VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, NULL, 0,
-                         NULL, 1, &prePresentBarrier);
+    vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, NULL,
+                         0, NULL, 1, &prePresentBarrier);
 
     res = vkEndCommandBuffer(info.cmd);
     assert(res == VK_SUCCESS);
@@ -331,8 +310,7 @@ int sample_main(int argc, char *argv[]) {
     fenceInfo.flags = 0;
     vkCreateFence(info.device, &fenceInfo, NULL, &drawFence);
 
-    VkPipelineStageFlags pipe_stage_flags =
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     VkSubmitInfo submit_info[1] = {};
     submit_info[0].pNext = NULL;
     submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -362,8 +340,7 @@ int sample_main(int argc, char *argv[]) {
 
     /* Make sure command buffer is finished before presenting */
     do {
-        res =
-            vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+        res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
     } while (res == VK_TIMEOUT);
 
     assert(res == VK_SUCCESS);
@@ -371,8 +348,7 @@ int sample_main(int argc, char *argv[]) {
     assert(res == VK_SUCCESS);
 
     wait_seconds(1);
-    if (info.save_images)
-        write_ppm(info, "secondarycmd");
+    if (info.save_images) write_ppm(info, "secondarycmd");
 
     vkFreeCommandBuffers(info.device, info.cmd_pool, 4, secondary_cmds);
 

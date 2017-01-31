@@ -86,8 +86,7 @@ int sample_main(int argc, char *argv[]) {
     init_global_layer_properties(info);
     info.instance_extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 #ifdef _WIN32
-    info.instance_extension_names.push_back(
-        VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+    info.instance_extension_names.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #elif defined(__ANDROID__)
     info.instance_extension_names.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
 #else
@@ -112,8 +111,7 @@ int sample_main(int argc, char *argv[]) {
     init_renderpass(info, DEPTH_PRESENT);
     init_shaders(info, vertShaderText, fragShaderText);
     init_framebuffers(info, DEPTH_PRESENT);
-    init_vertex_buffer(info, g_vb_solid_face_colors_Data,
-                       sizeof(g_vb_solid_face_colors_Data),
+    init_vertex_buffer(info, g_vb_solid_face_colors_Data, sizeof(g_vb_solid_face_colors_Data),
                        sizeof(g_vb_solid_face_colors_Data[0]), false);
     init_descriptor_pool(info, false);
     init_descriptor_set(info, false);
@@ -132,18 +130,15 @@ int sample_main(int argc, char *argv[]) {
 
     VkSemaphore imageAcquiredSemaphore;
     VkSemaphoreCreateInfo imageAcquiredSemaphoreCreateInfo;
-    imageAcquiredSemaphoreCreateInfo.sType =
-        VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    imageAcquiredSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     imageAcquiredSemaphoreCreateInfo.pNext = NULL;
     imageAcquiredSemaphoreCreateInfo.flags = 0;
 
-    res = vkCreateSemaphore(info.device, &imageAcquiredSemaphoreCreateInfo,
-                            NULL, &imageAcquiredSemaphore);
+    res = vkCreateSemaphore(info.device, &imageAcquiredSemaphoreCreateInfo, NULL, &imageAcquiredSemaphore);
     assert(res == VK_SUCCESS);
 
     // Get the index of the next available swapchain image:
-    res = vkAcquireNextImageKHR(info.device, info.swap_chain, UINT64_MAX,
-                                imageAcquiredSemaphore, VK_NULL_HANDLE,
+    res = vkAcquireNextImageKHR(info.device, info.swap_chain, UINT64_MAX, imageAcquiredSemaphore, VK_NULL_HANDLE,
                                 &info.current_buffer);
     // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
     // return codes
@@ -155,8 +150,7 @@ int sample_main(int argc, char *argv[]) {
     VkBufferCreateInfo buf_info = {};
     buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     buf_info.pNext = NULL;
-    buf_info.usage =
-        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    buf_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     buf_info.size = 4 * sizeof(uint64_t);
     buf_info.queueFamilyIndexCount = 0;
     buf_info.pQueueFamilyIndices = NULL;
@@ -174,16 +168,14 @@ int sample_main(int argc, char *argv[]) {
     alloc_info.memoryTypeIndex = 0;
     alloc_info.allocationSize = mem_reqs.size;
     pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits,
-                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                                        &alloc_info.memoryTypeIndex);
     assert(pass && "No mappable, coherent memory");
 
     res = vkAllocateMemory(info.device, &alloc_info, NULL, &query_result_mem);
     assert(res == VK_SUCCESS);
 
-    res =
-        vkBindBufferMemory(info.device, query_result_buf, query_result_mem, 0);
+    res = vkBindBufferMemory(info.device, query_result_buf, query_result_mem, 0);
     assert(res == VK_SUCCESS);
 
     VkQueryPool query_pool;
@@ -198,8 +190,7 @@ int sample_main(int argc, char *argv[]) {
     res = vkCreateQueryPool(info.device, &query_pool_info, NULL, &query_pool);
     assert(res == VK_SUCCESS);
 
-    vkCmdResetQueryPool(info.cmd, query_pool, 0 /*startQuery*/,
-                        2 /*queryCount*/);
+    vkCmdResetQueryPool(info.cmd, query_pool, 0 /*startQuery*/, 2 /*queryCount*/);
 
     VkRenderPassBeginInfo rp_begin;
     rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -216,8 +207,7 @@ int sample_main(int argc, char *argv[]) {
     vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
     vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline);
-    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            info.pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
+    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
                             info.desc_set.data(), 0, NULL);
 
     const VkDeviceSize offsets[1] = {0};
@@ -249,10 +239,8 @@ int sample_main(int argc, char *argv[]) {
 
     vkCmdEndQuery(info.cmd, query_pool, 1 /*slot*/);
 
-    vkCmdCopyQueryPoolResults(
-        info.cmd, query_pool, 0 /*firstQuery*/, 2 /*queryCount*/,
-        query_result_buf, 0 /*dstOffset*/, sizeof(uint64_t) /*stride*/,
-        VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
+    vkCmdCopyQueryPoolResults(info.cmd, query_pool, 0 /*firstQuery*/, 2 /*queryCount*/, query_result_buf, 0 /*dstOffset*/,
+                              sizeof(uint64_t) /*stride*/, VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
 
     res = vkEndCommandBuffer(info.cmd);
     const VkCommandBuffer cmd_bufs[] = {info.cmd};
@@ -263,8 +251,7 @@ int sample_main(int argc, char *argv[]) {
     fenceInfo.flags = 0;
     vkCreateFence(info.device, &fenceInfo, NULL, &drawFence);
 
-    VkPipelineStageFlags pipe_stage_flags =
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     VkSubmitInfo submit_info[1] = {};
     submit_info[0].pNext = NULL;
     submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -287,11 +274,8 @@ int sample_main(int argc, char *argv[]) {
 
     samples_passed[0] = 0;
     samples_passed[1] = 0;
-    res = vkGetQueryPoolResults(
-        info.device, query_pool, 0 /*firstQuery*/, 2 /*queryCount*/,
-        sizeof(samples_passed) /*dataSize*/, samples_passed,
-        sizeof(uint64_t) /*stride*/,
-        VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
+    res = vkGetQueryPoolResults(info.device, query_pool, 0 /*firstQuery*/, 2 /*queryCount*/, sizeof(samples_passed) /*dataSize*/,
+                                samples_passed, sizeof(uint64_t) /*stride*/, VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
     assert(res == VK_SUCCESS);
 
     std::cout << "vkGetQueryPoolResults data"
@@ -301,8 +285,7 @@ int sample_main(int argc, char *argv[]) {
 
     /* Read back query result from buffer */
     uint64_t *samples_passed_ptr;
-    res = vkMapMemory(info.device, query_result_mem, 0, mem_reqs.size, 0,
-                      (void **)&samples_passed_ptr);
+    res = vkMapMemory(info.device, query_result_mem, 0, mem_reqs.size, 0, (void **)&samples_passed_ptr);
     assert(res == VK_SUCCESS);
 
     std::cout << "vkCmdCopyQueryPoolResults data"
@@ -326,8 +309,7 @@ int sample_main(int argc, char *argv[]) {
 
     /* Make sure command buffer is finished before presenting */
     do {
-        res =
-            vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+        res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
     } while (res == VK_TIMEOUT);
 
     assert(res == VK_SUCCESS);
@@ -336,8 +318,7 @@ int sample_main(int argc, char *argv[]) {
 
     wait_seconds(1);
     /* VULKAN_KEY_END */
-    if (info.save_images)
-        write_ppm(info, "occlusion_query");
+    if (info.save_images) write_ppm(info, "occlusion_query");
 
     vkDestroyBuffer(info.device, query_result_buf, NULL);
     vkFreeMemory(info.device, query_result_mem, NULL);

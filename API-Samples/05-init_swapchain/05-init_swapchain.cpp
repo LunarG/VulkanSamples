@@ -64,8 +64,7 @@ int sample_main(int argc, char *argv[]) {
     createInfo.pNext = NULL;
     createInfo.hinstance = info.connection;
     createInfo.hwnd = info.window;
-    res = vkCreateWin32SurfaceKHR(info.inst, &createInfo,
-                                  NULL, &info.surface);
+    res = vkCreateWin32SurfaceKHR(info.inst, &createInfo, NULL, &info.surface);
 #elif defined(__ANDROID__)
     GET_INSTANCE_PROC_ADDR(info.inst, CreateAndroidSurfaceKHR);
 
@@ -75,22 +74,20 @@ int sample_main(int argc, char *argv[]) {
     createInfo.flags = 0;
     createInfo.window = AndroidGetApplicationWindow();
     res = info.fpCreateAndroidSurfaceKHR(info.inst, &createInfo, nullptr, &info.surface);
-#else  // !__ANDROID__ && !_WIN32
+#else   // !__ANDROID__ && !_WIN32
     VkXcbSurfaceCreateInfoKHR createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
     createInfo.pNext = NULL;
     createInfo.connection = info.connection;
     createInfo.window = info.window;
     res = vkCreateXcbSurfaceKHR(info.inst, &createInfo, NULL, &info.surface);
-#endif // _WIN32
+#endif  // _WIN32
     assert(res == VK_SUCCESS);
 
     // Iterate over each queue to learn whether it supports presenting:
-    VkBool32 *pSupportsPresent =
-        (VkBool32 *)malloc(info.queue_family_count * sizeof(VkBool32));
+    VkBool32 *pSupportsPresent = (VkBool32 *)malloc(info.queue_family_count * sizeof(VkBool32));
     for (uint32_t i = 0; i < info.queue_family_count; i++) {
-        vkGetPhysicalDeviceSurfaceSupportKHR(info.gpus[0], i, info.surface,
-                                             &pSupportsPresent[i]);
+        vkGetPhysicalDeviceSurfaceSupportKHR(info.gpus[0], i, info.surface, &pSupportsPresent[i]);
     }
 
     // Search for a graphics and a present queue in the array of queue
@@ -99,8 +96,7 @@ int sample_main(int argc, char *argv[]) {
     info.present_queue_family_index = UINT32_MAX;
     for (uint32_t i = 0; i < info.queue_family_count; ++i) {
         if ((info.queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0) {
-            if (info.graphics_queue_family_index == UINT32_MAX)
-                info.graphics_queue_family_index = i;
+            if (info.graphics_queue_family_index == UINT32_MAX) info.graphics_queue_family_index = i;
 
             if (pSupportsPresent[i] == VK_TRUE) {
                 info.graphics_queue_family_index = i;
@@ -123,8 +119,7 @@ int sample_main(int argc, char *argv[]) {
 
     // Generate error if could not find queues that support graphics
     // and present
-    if (info.graphics_queue_family_index == UINT32_MAX ||
-        info.present_queue_family_index == UINT32_MAX) {
+    if (info.graphics_queue_family_index == UINT32_MAX || info.present_queue_family_index == UINT32_MAX) {
         std::cout << "Could not find a queues for graphics and "
                      "present\n";
         exit(-1);
@@ -134,13 +129,10 @@ int sample_main(int argc, char *argv[]) {
 
     // Get the list of VkFormats that are supported:
     uint32_t formatCount;
-    res = vkGetPhysicalDeviceSurfaceFormatsKHR(info.gpus[0], info.surface,
-                                               &formatCount, NULL);
+    res = vkGetPhysicalDeviceSurfaceFormatsKHR(info.gpus[0], info.surface, &formatCount, NULL);
     assert(res == VK_SUCCESS);
-    VkSurfaceFormatKHR *surfFormats =
-        (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
-    res = vkGetPhysicalDeviceSurfaceFormatsKHR(info.gpus[0], info.surface,
-                                               &formatCount, surfFormats);
+    VkSurfaceFormatKHR *surfFormats = (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
+    res = vkGetPhysicalDeviceSurfaceFormatsKHR(info.gpus[0], info.surface, &formatCount, surfFormats);
     assert(res == VK_SUCCESS);
     // If the format list includes just one entry of VK_FORMAT_UNDEFINED,
     // the surface has no preferred format.  Otherwise, at least one
@@ -155,19 +147,15 @@ int sample_main(int argc, char *argv[]) {
 
     VkSurfaceCapabilitiesKHR surfCapabilities;
 
-    res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(info.gpus[0], info.surface,
-                                                    &surfCapabilities);
+    res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(info.gpus[0], info.surface, &surfCapabilities);
     assert(res == VK_SUCCESS);
 
     uint32_t presentModeCount;
-    res = vkGetPhysicalDeviceSurfacePresentModesKHR(info.gpus[0], info.surface,
-                                                    &presentModeCount, NULL);
+    res = vkGetPhysicalDeviceSurfacePresentModesKHR(info.gpus[0], info.surface, &presentModeCount, NULL);
     assert(res == VK_SUCCESS);
-    VkPresentModeKHR *presentModes =
-        (VkPresentModeKHR *)malloc(presentModeCount * sizeof(VkPresentModeKHR));
+    VkPresentModeKHR *presentModes = (VkPresentModeKHR *)malloc(presentModeCount * sizeof(VkPresentModeKHR));
 
-    res = vkGetPhysicalDeviceSurfacePresentModesKHR(
-        info.gpus[0], info.surface, &presentModeCount, presentModes);
+    res = vkGetPhysicalDeviceSurfacePresentModesKHR(info.gpus[0], info.surface, &presentModeCount, presentModes);
     assert(res == VK_SUCCESS);
 
     VkExtent2D swapchainExtent;
@@ -179,15 +167,13 @@ int sample_main(int argc, char *argv[]) {
         swapchainExtent.height = info.height;
         if (swapchainExtent.width < surfCapabilities.minImageExtent.width) {
             swapchainExtent.width = surfCapabilities.minImageExtent.width;
-        } else if (swapchainExtent.width >
-                   surfCapabilities.maxImageExtent.width) {
+        } else if (swapchainExtent.width > surfCapabilities.maxImageExtent.width) {
             swapchainExtent.width = surfCapabilities.maxImageExtent.width;
         }
 
         if (swapchainExtent.height < surfCapabilities.minImageExtent.height) {
             swapchainExtent.height = surfCapabilities.minImageExtent.height;
-        } else if (swapchainExtent.height >
-                   surfCapabilities.maxImageExtent.height) {
+        } else if (swapchainExtent.height > surfCapabilities.maxImageExtent.height) {
             swapchainExtent.height = surfCapabilities.maxImageExtent.height;
         }
     } else {
@@ -206,8 +192,7 @@ int sample_main(int argc, char *argv[]) {
     uint32_t desiredNumberOfSwapChainImages = surfCapabilities.minImageCount;
 
     VkSurfaceTransformFlagBitsKHR preTransform;
-    if (surfCapabilities.supportedTransforms &
-        VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) {
+    if (surfCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) {
         preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
     } else {
         preTransform = surfCapabilities.currentTransform;
@@ -232,9 +217,7 @@ int sample_main(int argc, char *argv[]) {
     swapchain_ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     swapchain_ci.queueFamilyIndexCount = 0;
     swapchain_ci.pQueueFamilyIndices = NULL;
-    uint32_t queueFamilyIndices[2] = {
-        (uint32_t)info.graphics_queue_family_index,
-        (uint32_t)info.present_queue_family_index};
+    uint32_t queueFamilyIndices[2] = {(uint32_t)info.graphics_queue_family_index, (uint32_t)info.present_queue_family_index};
     if (info.graphics_queue_family_index != info.present_queue_family_index) {
         // If the graphics and present queues are from different queue families,
         // we either have to explicitly transfer ownership of images between
@@ -245,19 +228,15 @@ int sample_main(int argc, char *argv[]) {
         swapchain_ci.pQueueFamilyIndices = queueFamilyIndices;
     }
 
-    res = vkCreateSwapchainKHR(info.device, &swapchain_ci, NULL,
-                               &info.swap_chain);
+    res = vkCreateSwapchainKHR(info.device, &swapchain_ci, NULL, &info.swap_chain);
     assert(res == VK_SUCCESS);
 
-    res = vkGetSwapchainImagesKHR(info.device, info.swap_chain,
-                                  &info.swapchainImageCount, NULL);
+    res = vkGetSwapchainImagesKHR(info.device, info.swap_chain, &info.swapchainImageCount, NULL);
     assert(res == VK_SUCCESS);
 
-    VkImage *swapchainImages =
-        (VkImage *)malloc(info.swapchainImageCount * sizeof(VkImage));
+    VkImage *swapchainImages = (VkImage *)malloc(info.swapchainImageCount * sizeof(VkImage));
     assert(swapchainImages);
-    res = vkGetSwapchainImagesKHR(info.device, info.swap_chain,
-                                  &info.swapchainImageCount, swapchainImages);
+    res = vkGetSwapchainImagesKHR(info.device, info.swap_chain, &info.swapchainImageCount, swapchainImages);
     assert(res == VK_SUCCESS);
 
     info.buffers.resize(info.swapchainImageCount);
@@ -278,15 +257,13 @@ int sample_main(int argc, char *argv[]) {
         color_image_view.components.g = VK_COMPONENT_SWIZZLE_G;
         color_image_view.components.b = VK_COMPONENT_SWIZZLE_B;
         color_image_view.components.a = VK_COMPONENT_SWIZZLE_A;
-        color_image_view.subresourceRange.aspectMask =
-            VK_IMAGE_ASPECT_COLOR_BIT;
+        color_image_view.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         color_image_view.subresourceRange.baseMipLevel = 0;
         color_image_view.subresourceRange.levelCount = 1;
         color_image_view.subresourceRange.baseArrayLayer = 0;
         color_image_view.subresourceRange.layerCount = 1;
 
-        res = vkCreateImageView(info.device, &color_image_view, NULL,
-                                &info.buffers[i].view);
+        res = vkCreateImageView(info.device, &color_image_view, NULL, &info.buffers[i].view);
         assert(res == VK_SUCCESS);
     }
 

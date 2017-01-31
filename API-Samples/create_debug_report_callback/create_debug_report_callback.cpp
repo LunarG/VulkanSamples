@@ -32,10 +32,9 @@ reported
 
 #define APP_SHORT_NAME "Debug Report Callback"
 
-VKAPI_ATTR VkBool32 VKAPI_CALL
-dbgFunc(VkDebugReportFlagsEXT msgFlags, VkDebugReportObjectTypeEXT objType,
-        uint64_t srcObject, size_t location, int32_t msgCode,
-        const char *pLayerPrefix, const char *pMsg, void *pUserData) {
+VKAPI_ATTR VkBool32 VKAPI_CALL dbgFunc(VkDebugReportFlagsEXT msgFlags, VkDebugReportObjectTypeEXT objType, uint64_t srcObject,
+                                       size_t location, int32_t msgCode, const char *pLayerPrefix, const char *pMsg,
+                                       void *pUserData) {
     std::ostringstream message;
 
     if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
@@ -91,33 +90,29 @@ int sample_main(int argc, char *argv[]) {
      */
 
     do {
-        res = vkEnumerateInstanceExtensionProperties(
-            NULL, &instance_extension_count, NULL);
-        if (res)
-            break;
+        res = vkEnumerateInstanceExtensionProperties(NULL, &instance_extension_count, NULL);
+        if (res) break;
 
         if (instance_extension_count == 0) {
             break;
         }
 
-        vk_props = (VkExtensionProperties *)realloc(
-            vk_props, instance_extension_count * sizeof(VkExtensionProperties));
+        vk_props = (VkExtensionProperties *)realloc(vk_props, instance_extension_count * sizeof(VkExtensionProperties));
 
-        res = vkEnumerateInstanceExtensionProperties(
-            NULL, &instance_extension_count, vk_props);
+        res = vkEnumerateInstanceExtensionProperties(NULL, &instance_extension_count, vk_props);
     } while (res == VK_INCOMPLETE);
 
     bool found_extension = false;
     for (uint32_t i = 0; i < instance_extension_count; i++) {
-        if (!strcmp(vk_props[i].extensionName,
-                    VK_EXT_DEBUG_REPORT_EXTENSION_NAME)) {
+        if (!strcmp(vk_props[i].extensionName, VK_EXT_DEBUG_REPORT_EXTENSION_NAME)) {
             found_extension = true;
         }
     }
 
     if (!found_extension) {
         std::cout << "Something went very wrong, cannot find "
-                     "VK_EXT_debug_report extension" << std::endl;
+                     "VK_EXT_debug_report extension"
+                  << std::endl;
         exit(1);
     }
 
@@ -160,46 +155,42 @@ int sample_main(int argc, char *argv[]) {
     VkDebugReportCallbackEXT debug_report_callback;
 
     dbgCreateDebugReportCallback =
-        (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(
-            inst, "vkCreateDebugReportCallbackEXT");
+        (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(inst, "vkCreateDebugReportCallbackEXT");
     if (!dbgCreateDebugReportCallback) {
         std::cout << "GetInstanceProcAddr: Unable to find "
-                     "vkCreateDebugReportCallbackEXT function." << std::endl;
+                     "vkCreateDebugReportCallbackEXT function."
+                  << std::endl;
         exit(1);
     }
 
     dbgDestroyDebugReportCallback =
-        (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(
-            inst, "vkDestroyDebugReportCallbackEXT");
+        (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(inst, "vkDestroyDebugReportCallbackEXT");
     if (!dbgDestroyDebugReportCallback) {
         std::cout << "GetInstanceProcAddr: Unable to find "
-                     "vkDestroyDebugReportCallbackEXT function." << std::endl;
+                     "vkDestroyDebugReportCallbackEXT function."
+                  << std::endl;
         exit(1);
     }
 
     VkDebugReportCallbackCreateInfoEXT create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
     create_info.pNext = NULL;
-    create_info.flags =
-        VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
+    create_info.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
     create_info.pfnCallback = dbgFunc;
     create_info.pUserData = NULL;
 
-    res = dbgCreateDebugReportCallback(inst, &create_info, NULL,
-                                       &debug_report_callback);
+    res = dbgCreateDebugReportCallback(inst, &create_info, NULL, &debug_report_callback);
     switch (res) {
-    case VK_SUCCESS:
-        break;
-    case VK_ERROR_OUT_OF_HOST_MEMORY:
-        std::cout << "dbgCreateDebugReportCallback: out of host memory\n"
-                  << std::endl;
-        exit(1);
-        break;
-    default:
-        std::cout << "dbgCreateDebugReportCallback: unknown failure\n"
-                  << std::endl;
-        exit(1);
-        break;
+        case VK_SUCCESS:
+            break;
+        case VK_ERROR_OUT_OF_HOST_MEMORY:
+            std::cout << "dbgCreateDebugReportCallback: out of host memory\n" << std::endl;
+            exit(1);
+            break;
+        default:
+            std::cout << "dbgCreateDebugReportCallback: unknown failure\n" << std::endl;
+            exit(1);
+            break;
     }
 
     /* Clean up callback */

@@ -27,7 +27,7 @@
 
 #include "WSIWindow.h"
 
-const char *type[] = {"up  ", "down", "move"}; // Action types (mouse / keyboard / touchscreen)
+const char *type[] = {"up  ", "down", "move"};  // Action types (mouse / keyboard / touchscreen)
 
 //-- EVENT HANDLERS --
 class MyWindow : public WSIWindow {
@@ -48,21 +48,21 @@ class MyWindow : public WSIWindow {
 };
 
 int main(int argc, char *argv[]) {
-    setvbuf(stdout, NULL, _IONBF, 0); // Prevent printf buffering in QtCreator
+    setvbuf(stdout, NULL, _IONBF, 0);  // Prevent printf buffering in QtCreator
     printf("WSI-Window\n");
 
-    CInstance inst(true);                           // Create a Vulkan Instance
-    inst.DebugReport.SetFlags(31);                  // Select message types
-    MyWindow window;                                // Create a Vulkan window
-    window.SetTitle("WSI-Window Sample1");          // Set the window title
-    window.SetWinSize(640, 480);                    // Set the window size (Desktop)
-    VkSurfaceKHR surface = window.GetSurface(inst); // Create the Vulkan surface
-    surface = surface;                              // Silence compiler warning
-    window.ShowKeyboard(true);                      // Show soft-keyboard (Android)
+    CInstance inst(true);                            // Create a Vulkan Instance
+    inst.DebugReport.SetFlags(31);                   // Select message types
+    MyWindow window;                                 // Create a Vulkan window
+    window.SetTitle("WSI-Window Sample1");           // Set the window title
+    window.SetWinSize(640, 480);                     // Set the window size (Desktop)
+    VkSurfaceKHR surface = window.GetSurface(inst);  // Create the Vulkan surface
+    surface = surface;                               // Silence compiler warning
+    window.ShowKeyboard(true);                       // Show soft-keyboard (Android)
     LOGW("Test Warnings\n");
     window.SetWinPos(0, 0);
 
-    while (window.ProcessEvents()) { // Main event loop, runs until window is closed.
+    while (window.ProcessEvents()) {  // Main event loop, runs until window is closed.
         bool key_pressed = window.GetKeyState(KEY_LeftShift);
         if (key_pressed) {
             printf("LEFT SHIFT PRESSED\r");

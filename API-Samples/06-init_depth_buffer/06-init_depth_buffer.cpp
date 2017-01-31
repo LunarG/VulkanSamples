@@ -60,11 +60,9 @@ int sample_main(int argc, char *argv[]) {
     const VkFormat depth_format = VK_FORMAT_D16_UNORM;
     VkFormatProperties props;
     vkGetPhysicalDeviceFormatProperties(info.gpus[0], depth_format, &props);
-    if (props.linearTilingFeatures &
-        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+    if (props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
         image_info.tiling = VK_IMAGE_TILING_LINEAR;
-    } else if (props.optimalTilingFeatures &
-               VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+    } else if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
         image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
     } else {
         /* Try other depth formats? */
@@ -124,8 +122,7 @@ int sample_main(int argc, char *argv[]) {
 
     mem_alloc.allocationSize = mem_reqs.size;
     /* Use the memory properties to determine the type of memory required */
-    pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits,
-                                       0, /* No Requirements */
+    pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits, 0, /* No Requirements */
                                        &mem_alloc.memoryTypeIndex);
     assert(pass);
 

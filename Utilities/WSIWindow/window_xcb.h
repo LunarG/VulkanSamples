@@ -30,15 +30,15 @@
 #include "WindowImpl.h"
 //#include <xcb/xcb.h>           // XCB only
 //#include <X11/Xlib.h>          // XLib only
-#include <X11/Xlib-xcb.h>        // Xlib + XCB
-#include <xkbcommon/xkbcommon.h> // Keyboard
+#include <X11/Xlib-xcb.h>         // Xlib + XCB
+#include <xkbcommon/xkbcommon.h>  // Keyboard
 //-------------------------------------------------
 #ifdef ENABLE_MULTITOUCH
-#include <X11/extensions/XInput2.h> // MultiTouch
+#include <X11/extensions/XInput2.h>  // MultiTouch
 typedef uint16_t xcb_input_device_id_t;
 typedef uint32_t xcb_input_fp1616_t;
 
-typedef struct xcb_input_touch_begin_event_t { // from xinput.h in XCB 1.12 (current version is 1.11)
+typedef struct xcb_input_touch_begin_event_t {  // from xinput.h in XCB 1.12 (current version is 1.11)
     uint8_t response_type;
     uint8_t extension;
     uint16_t sequence;
@@ -88,20 +88,20 @@ const unsigned char EVDEV_TO_HID[256] = {
 // clang-format on
 //=============================XCB==============================
 class Window_xcb : public WindowImpl {
-    Display *display;                 // for XLib
-    xcb_connection_t *xcb_connection; // for XCB
+    Display *display;                  // for XLib
+    xcb_connection_t *xcb_connection;  // for XCB
     xcb_screen_t *xcb_screen;
     xcb_window_t xcb_window;
     xcb_intern_atom_reply_t *atom_wm_delete_window;
     //---xkb Keyboard---
-    xkb_context *k_ctx; // context for xkbcommon keyboard input
+    xkb_context *k_ctx;  // context for xkbcommon keyboard input
     xkb_keymap *k_keymap;
     xkb_state *k_state;
     //------------------
     //---Touch Device---
     CMTouch MTouch;
-    int xi_opcode; // 131
-    int xi_devid;  // 2
+    int xi_opcode;  // 131
+    int xi_devid;   // 2
     uint32_t touchID[CMTouch::MAX_POINTERS] = {};
     //------------------
 
@@ -109,13 +109,13 @@ class Window_xcb : public WindowImpl {
     void SetWinPos(uint x, uint y);
     void SetWinSize(uint w, uint h);
     void CreateSurface(VkInstance instance);
-    bool InitTouch();                                       // Returns false if no touch-device was found.
-    EventType TranslateEvent(xcb_generic_event_t *x_event); // Convert x_event to WSIWindow event
-  public:
+    bool InitTouch();                                        // Returns false if no touch-device was found.
+    EventType TranslateEvent(xcb_generic_event_t *x_event);  // Convert x_event to WSIWindow event
+   public:
     Window_xcb(const char *title, uint width, uint height);
     virtual ~Window_xcb();
     EventType GetEvent(bool wait_for_event = false);
-    bool CanPresent(VkPhysicalDevice phy, uint32_t queue_family); // check if this window can present this queue type
+    bool CanPresent(VkPhysicalDevice phy, uint32_t queue_family);  // check if this window can present this queue type
 };
 //==============================================================
 #endif
@@ -140,9 +140,9 @@ Window_xcb::Window_xcb(const char *title, uint width, uint height) {
 
     //----XLib + XCB----
     display = XOpenDisplay(NULL);
-    assert(display && "Failed to open Display"); // for XLIB functions
+    assert(display && "Failed to open Display");  // for XLIB functions
     xcb_connection = XGetXCBConnection(display);
-    assert(display && "Failed to open XCB connection"); // for XCB functions
+    assert(display && "Failed to open XCB connection");  // for XCB functions
     const xcb_setup_t *setup = xcb_get_setup(xcb_connection);
     setup = xcb_get_setup(xcb_connection);
     xcb_screen = (xcb_setup_roots_iterator(setup)).data;
@@ -185,27 +185,27 @@ Window_xcb::Window_xcb(const char *title, uint width, uint height) {
     k_ctx = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
     // xkb_rule_names names = {NULL,"pc105","is","dvorak","terminate:ctrl_alt_bksp"};
     // keymap = xkb_keymap_new_from_names(k_ctx, &names,XKB_KEYMAP_COMPILE_NO_FLAGS);
-    k_keymap = xkb_keymap_new_from_names(k_ctx, NULL, XKB_KEYMAP_COMPILE_NO_FLAGS); // use current keyboard settings
+    k_keymap = xkb_keymap_new_from_names(k_ctx, NULL, XKB_KEYMAP_COMPILE_NO_FLAGS);  // use current keyboard settings
     k_state = xkb_state_new(k_keymap);
     //--------------------
     InitTouch();
     //--------------------
     SetTitle(title);
-    eventFIFO.push(ResizeEvent(width, height)); // ResizeEvent BEFORE focus, for consistency with win32 and android
+    eventFIFO.push(ResizeEvent(width, height));  // ResizeEvent BEFORE focus, for consistency with win32 and android
 }
 
 Window_xcb::~Window_xcb() {
     free(atom_wm_delete_window);
     xcb_disconnect(xcb_connection);
-    free(k_ctx); // xkb keyboard
+    free(k_ctx);  // xkb keyboard
 }
 
 void Window_xcb::SetTitle(const char *title) {
     xcb_change_property(xcb_connection, XCB_PROP_MODE_REPLACE, xcb_window,
-                        XCB_ATOM_WM_NAME, // set window title
+                        XCB_ATOM_WM_NAME,  // set window title
                         XCB_ATOM_STRING, 8, strlen(title), title);
     xcb_change_property(xcb_connection, XCB_PROP_MODE_REPLACE, xcb_window,
-                        XCB_ATOM_WM_ICON_NAME, // set icon title
+                        XCB_ATOM_WM_ICON_NAME,  // set icon title
                         XCB_ATOM_STRING, 8, strlen(title), title);
     xcb_map_window(xcb_connection, xcb_window);
     xcb_flush(xcb_connection);
@@ -224,8 +224,7 @@ void Window_xcb::SetWinSize(uint w, uint h) {
 }
 
 void Window_xcb::CreateSurface(VkInstance instance) {
-    if (surface)
-        return;
+    if (surface) return;
     this->instance = instance;
     VkXcbSurfaceCreateInfoKHR xcb_createInfo;
     xcb_createInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
@@ -254,7 +253,7 @@ bool Window_xcb::InitTouch() {
         return false;
     }
 
-    { // select device
+    {  // select device
         int cnt;
         XIDeviceInfo *di = XIQueryDevice(display, XIAllDevices, &cnt);
         for (int i = 0; i < cnt; ++i) {
@@ -271,7 +270,7 @@ bool Window_xcb::InitTouch() {
         XIFreeDeviceInfo(di);
     }
 
-    { // select which events to listen to
+    {  // select which events to listen to
         unsigned char buf[3] = {};
         XIEventMask mask = {};
         mask.deviceid = xi_devid;
@@ -290,113 +289,109 @@ bool Window_xcb::InitTouch() {
 //---------------------------------------------------------------------------
 
 EventType Window_xcb::TranslateEvent(xcb_generic_event_t *x_event) {
-    static char buf[4] = {};                                            // store char for text event
-    xcb_button_press_event_t &e = *(xcb_button_press_event_t *)x_event; // xcb_motion_notify_event_t
+    static char buf[4] = {};                                             // store char for text event
+    xcb_button_press_event_t &e = *(xcb_button_press_event_t *)x_event;  // xcb_motion_notify_event_t
     int16_t mx = e.event_x;
     int16_t my = e.event_y;
     uint8_t btn = e.detail;
-    uint8_t bestBtn = BtnState(1) ? 1 : BtnState(2) ? 2 : BtnState(3) ? 3 : 0; // If multiple buttons pressed, pick left one.
+    uint8_t bestBtn = BtnState(1) ? 1 : BtnState(2) ? 2 : BtnState(3) ? 3 : 0;  // If multiple buttons pressed, pick left one.
     switch (x_event->response_type & ~0x80) {
-    case XCB_MOTION_NOTIFY:
-        return MouseEvent(eMOVE, mx, my, bestBtn); // mouse move
-    case XCB_BUTTON_PRESS:
-        return MouseEvent(eDOWN, mx, my, btn); // mouse btn press
-    case XCB_BUTTON_RELEASE:
-        return MouseEvent(eUP, mx, my, btn); // mouse btn release
-    case XCB_KEY_PRESS: {
-        uint8_t keycode = EVDEV_TO_HID[btn];
-        xkb_state_key_get_utf8(k_state, btn, buf, sizeof(buf));
-        xkb_state_update_key(k_state, btn, XKB_KEY_DOWN);
-        if (buf[0])
-            eventFIFO.push(TextEvent(buf)); // text typed event (store in FIFO for next run)
-        return KeyEvent(eDOWN, keycode);    // key pressed event
-    }
-    case XCB_KEY_RELEASE: {
-        xkb_state_update_key(k_state, btn, XKB_KEY_UP);
-        uint8_t keycode = EVDEV_TO_HID[btn];
-        return KeyEvent(eUP, keycode); // key released event
-    }
-    case XCB_CLIENT_MESSAGE: { // window close event
-        if ((*(xcb_client_message_event_t *)x_event).data.data32[0] == (*atom_wm_delete_window).atom) {
-            LOGI("Closing Window\n");
-            return CloseEvent();
+        case XCB_MOTION_NOTIFY:
+            return MouseEvent(eMOVE, mx, my, bestBtn);  // mouse move
+        case XCB_BUTTON_PRESS:
+            return MouseEvent(eDOWN, mx, my, btn);  // mouse btn press
+        case XCB_BUTTON_RELEASE:
+            return MouseEvent(eUP, mx, my, btn);  // mouse btn release
+        case XCB_KEY_PRESS: {
+            uint8_t keycode = EVDEV_TO_HID[btn];
+            xkb_state_key_get_utf8(k_state, btn, buf, sizeof(buf));
+            xkb_state_update_key(k_state, btn, XKB_KEY_DOWN);
+            if (buf[0]) eventFIFO.push(TextEvent(buf));  // text typed event (store in FIFO for next run)
+            return KeyEvent(eDOWN, keycode);             // key pressed event
         }
-        break;
-    }
-    case XCB_CONFIGURE_NOTIFY: { // Window Reshape (move or resize)
-        auto &e = *(xcb_configure_notify_event_t *)x_event;
-        // bool se = (e.response_type & 128);                 // True if message was sent with "SendEvent"
-        if (e.width != shape.width || e.height != shape.height)
-            return ResizeEvent(e.width, e.height); // window resized
-        else if (e.x != shape.x || e.y != shape.y)
-            return MoveEvent(e.x, e.y); // window moved
-        break;
-    }
-    case XCB_FOCUS_IN:
-        if (!has_focus)
-            return FocusEvent(true); // window gained focus
-    case XCB_FOCUS_OUT:
-        if (has_focus)
-            return FocusEvent(false); // window lost focus
+        case XCB_KEY_RELEASE: {
+            xkb_state_update_key(k_state, btn, XKB_KEY_UP);
+            uint8_t keycode = EVDEV_TO_HID[btn];
+            return KeyEvent(eUP, keycode);  // key released event
+        }
+        case XCB_CLIENT_MESSAGE: {  // window close event
+            if ((*(xcb_client_message_event_t *)x_event).data.data32[0] == (*atom_wm_delete_window).atom) {
+                LOGI("Closing Window\n");
+                return CloseEvent();
+            }
+            break;
+        }
+        case XCB_CONFIGURE_NOTIFY: {  // Window Reshape (move or resize)
+            auto &e = *(xcb_configure_notify_event_t *)x_event;
+            // bool se = (e.response_type & 128);                 // True if message was sent with "SendEvent"
+            if (e.width != shape.width || e.height != shape.height)
+                return ResizeEvent(e.width, e.height);  // window resized
+            else if (e.x != shape.x || e.y != shape.y)
+                return MoveEvent(e.x, e.y);  // window moved
+            break;
+        }
+        case XCB_FOCUS_IN:
+            if (!has_focus) return FocusEvent(true);  // window gained focus
+        case XCB_FOCUS_OUT:
+            if (has_focus) return FocusEvent(false);  // window lost focus
 
-    case XCB_GE_GENERIC: { // Multi touch screen events
+        case XCB_GE_GENERIC: {  // Multi touch screen events
 #ifdef ENABLE_MULTITOUCH
-        xcb_input_touch_begin_event_t &te = *(xcb_input_touch_begin_event_t *)x_event;
-        if (te.extension == xi_opcode) { // check if this event is from the touch device
-            float x = te.event_x / 65536.f;
-            float y = te.event_y / 65536.f;
-            switch (te.event_type) {
-            case XI_TouchBegin: {
-                for (uint32_t i = 0; i < CMTouch::MAX_POINTERS; ++i){
-                    if (touchID[i] == 0) {                   // Find first empty slot
-                        touchID[i] = te.detail;              // Claim slot
-                        return MTouch.Event(eDOWN, x, y, i); // touch down event
+            xcb_input_touch_begin_event_t &te = *(xcb_input_touch_begin_event_t *)x_event;
+            if (te.extension == xi_opcode) {  // check if this event is from the touch device
+                float x = te.event_x / 65536.f;
+                float y = te.event_y / 65536.f;
+                switch (te.event_type) {
+                    case XI_TouchBegin: {
+                        for (uint32_t i = 0; i < CMTouch::MAX_POINTERS; ++i) {
+                            if (touchID[i] == 0) {                    // Find first empty slot
+                                touchID[i] = te.detail;               // Claim slot
+                                return MTouch.Event(eDOWN, x, y, i);  // touch down event
+                            }
+                        }
                     }
-                }
-            }
-            case XI_TouchUpdate: {
-                for (uint32_t i = 0; i < CMTouch::MAX_POINTERS; ++i){
-                    if (touchID[i] == te.detail) {           // Find finger id
-                        return MTouch.Event(eMOVE, x, y, i); // Touch move event
+                    case XI_TouchUpdate: {
+                        for (uint32_t i = 0; i < CMTouch::MAX_POINTERS; ++i) {
+                            if (touchID[i] == te.detail) {            // Find finger id
+                                return MTouch.Event(eMOVE, x, y, i);  // Touch move event
+                            }
+                        }
                     }
-                }
-            }
-            case XI_TouchEnd: {
-                for (uint32_t i = 0; i < CMTouch::MAX_POINTERS; ++i){
-                    if (touchID[i] == te.detail) {         // Find finger id
-                        touchID[i] = 0;                    // Clear the slot
-                        return MTouch.Event(eUP, x, y, i); // Touch up event
+                    case XI_TouchEnd: {
+                        for (uint32_t i = 0; i < CMTouch::MAX_POINTERS; ++i) {
+                            if (touchID[i] == te.detail) {          // Find finger id
+                                touchID[i] = 0;                     // Clear the slot
+                                return MTouch.Event(eUP, x, y, i);  // Touch up event
+                            }
+                        }
                     }
-                }
+                    default:
+                        break;
+                }  // switch te
             }
-            default:
-                break;
-            } // switch te
-        }
 #endif
-        return {EventType::UNKNOWN};
-    } // XCB_GE_GENERIC
-    default:
-        // printf("EVENT: %d\n",(x_event->response_type & ~0x80));  //get event numerical value
-        break;
-    } // switch
+            return {EventType::UNKNOWN};
+        }  // XCB_GE_GENERIC
+        default:
+            // printf("EVENT: %d\n",(x_event->response_type & ~0x80));  //get event numerical value
+            break;
+    }  // switch
     return {EventType::NONE};
 }
 
 EventType Window_xcb::GetEvent(bool wait_for_event) {
-    if (!eventFIFO.isEmpty())
-        return *eventFIFO.pop(); // pop message from message queue buffer
+    if (!eventFIFO.isEmpty()) return *eventFIFO.pop();  // pop message from message queue buffer
 
     xcb_generic_event_t *x_event;
     if (wait_for_event)
-        x_event = xcb_wait_for_event(xcb_connection); // Blocking mode
+        x_event = xcb_wait_for_event(xcb_connection);  // Blocking mode
     else
-        x_event = xcb_poll_for_event(xcb_connection); // Non-blocking mode
+        x_event = xcb_poll_for_event(xcb_connection);  // Non-blocking mode
     while (x_event) {
         EventType event = TranslateEvent(x_event);
         free(x_event);
         if (event.tag == EventType::UNKNOWN) {
-            x_event = xcb_poll_for_event(xcb_connection); // Discard unknown events (Intel Mesa drivers spams event 35)
+            x_event = xcb_poll_for_event(xcb_connection);  // Discard unknown events (Intel Mesa drivers spams event 35)
         } else
             return event;
     }
@@ -408,5 +403,5 @@ bool Window_xcb::CanPresent(VkPhysicalDevice gpu, uint32_t queue_family) {
     return vkGetPhysicalDeviceXcbPresentationSupportKHR(gpu, queue_family, xcb_connection, xcb_screen->root_visual) == VK_TRUE;
 }
 
-#endif // VK_USE_PLATFORM_XCB_KHR
+#endif  // VK_USE_PLATFORM_XCB_KHR
 //==============================================================

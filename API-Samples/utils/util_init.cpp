@@ -43,10 +43,8 @@ VkResult init_global_extension_properties(layer_properties &layer_props) {
     layer_name = layer_props.properties.layerName;
 
     do {
-        res = vkEnumerateInstanceExtensionProperties(
-            layer_name, &instance_extension_count, NULL);
-        if (res)
-            return res;
+        res = vkEnumerateInstanceExtensionProperties(layer_name, &instance_extension_count, NULL);
+        if (res) return res;
 
         if (instance_extension_count == 0) {
             return VK_SUCCESS;
@@ -54,8 +52,7 @@ VkResult init_global_extension_properties(layer_properties &layer_props) {
 
         layer_props.extensions.resize(instance_extension_count);
         instance_extensions = layer_props.extensions.data();
-        res = vkEnumerateInstanceExtensionProperties(
-            layer_name, &instance_extension_count, instance_extensions);
+        res = vkEnumerateInstanceExtensionProperties(layer_name, &instance_extension_count, instance_extensions);
     } while (res == VK_INCOMPLETE);
 
     return res;
@@ -93,18 +90,15 @@ VkResult init_global_layer_properties(struct sample_info &info) {
      */
     do {
         res = vkEnumerateInstanceLayerProperties(&instance_layer_count, NULL);
-        if (res)
-            return res;
+        if (res) return res;
 
         if (instance_layer_count == 0) {
             return VK_SUCCESS;
         }
 
-        vk_props = (VkLayerProperties *)realloc(
-            vk_props, instance_layer_count * sizeof(VkLayerProperties));
+        vk_props = (VkLayerProperties *)realloc(vk_props, instance_layer_count * sizeof(VkLayerProperties));
 
-        res =
-            vkEnumerateInstanceLayerProperties(&instance_layer_count, vk_props);
+        res = vkEnumerateInstanceLayerProperties(&instance_layer_count, vk_props);
     } while (res == VK_INCOMPLETE);
 
     /*
@@ -114,8 +108,7 @@ VkResult init_global_layer_properties(struct sample_info &info) {
         layer_properties layer_props;
         layer_props.properties = vk_props[i];
         res = init_global_extension_properties(layer_props);
-        if (res)
-            return res;
+        if (res) return res;
         info.instance_layer_properties.push_back(layer_props);
     }
     free(vk_props);
@@ -123,8 +116,7 @@ VkResult init_global_layer_properties(struct sample_info &info) {
     return res;
 }
 
-VkResult init_device_extension_properties(struct sample_info &info,
-                                          layer_properties &layer_props) {
+VkResult init_device_extension_properties(struct sample_info &info, layer_properties &layer_props) {
     VkExtensionProperties *device_extensions;
     uint32_t device_extension_count;
     VkResult res;
@@ -133,10 +125,8 @@ VkResult init_device_extension_properties(struct sample_info &info,
     layer_name = layer_props.properties.layerName;
 
     do {
-        res = vkEnumerateDeviceExtensionProperties(
-            info.gpus[0], layer_name, &device_extension_count, NULL);
-        if (res)
-            return res;
+        res = vkEnumerateDeviceExtensionProperties(info.gpus[0], layer_name, &device_extension_count, NULL);
+        if (res) return res;
 
         if (device_extension_count == 0) {
             return VK_SUCCESS;
@@ -144,9 +134,7 @@ VkResult init_device_extension_properties(struct sample_info &info,
 
         layer_props.extensions.resize(device_extension_count);
         device_extensions = layer_props.extensions.data();
-        res = vkEnumerateDeviceExtensionProperties(info.gpus[0], layer_name,
-                                                   &device_extension_count,
-                                                   device_extensions);
+        res = vkEnumerateDeviceExtensionProperties(info.gpus[0], layer_name, &device_extension_count, device_extensions);
     } while (res == VK_INCOMPLETE);
 
     return res;
@@ -156,8 +144,7 @@ VkResult init_device_extension_properties(struct sample_info &info,
  * Return 1 (true) if all layer names specified in check_names
  * can be found in given layer properties.
  */
-VkBool32 demo_check_layers(const std::vector<layer_properties> &layer_props,
-                           const std::vector<const char *> &layer_names) {
+VkBool32 demo_check_layers(const std::vector<layer_properties> &layer_props, const std::vector<const char *> &layer_names) {
     uint32_t check_count = layer_names.size();
     uint32_t layer_count = layer_props.size();
     for (uint32_t i = 0; i < check_count; i++) {
@@ -180,15 +167,13 @@ void init_instance_extension_names(struct sample_info &info) {
 #ifdef __ANDROID__
     info.instance_extension_names.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
 #elif defined(_WIN32)
-    info.instance_extension_names.push_back(
-        VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+    info.instance_extension_names.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #else
     info.instance_extension_names.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
 #endif
 }
 
-VkResult init_instance(struct sample_info &info,
-                       char const *const app_short_name) {
+VkResult init_instance(struct sample_info &info, char const *const app_short_name) {
     VkApplicationInfo app_info = {};
     app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     app_info.pNext = NULL;
@@ -204,9 +189,7 @@ VkResult init_instance(struct sample_info &info,
     inst_info.flags = 0;
     inst_info.pApplicationInfo = &app_info;
     inst_info.enabledLayerCount = info.instance_layer_names.size();
-    inst_info.ppEnabledLayerNames = info.instance_layer_names.size()
-                                        ? info.instance_layer_names.data()
-                                        : NULL;
+    inst_info.ppEnabledLayerNames = info.instance_layer_names.size() ? info.instance_layer_names.data() : NULL;
     inst_info.enabledExtensionCount = info.instance_extension_names.size();
     inst_info.ppEnabledExtensionNames = info.instance_extension_names.data();
 
@@ -237,9 +220,7 @@ VkResult init_device(struct sample_info &info) {
     device_info.queueCreateInfoCount = 1;
     device_info.pQueueCreateInfos = &queue_info;
     device_info.enabledExtensionCount = info.device_extension_names.size();
-    device_info.ppEnabledExtensionNames =
-        device_info.enabledExtensionCount ? info.device_extension_names.data()
-                                          : NULL;
+    device_info.ppEnabledExtensionNames = device_info.enabledExtensionCount ? info.device_extension_names.data() : NULL;
     device_info.pEnabledFeatures = NULL;
 
     res = vkCreateDevice(info.gpus[0], &device_info, NULL, &info.device);
@@ -257,13 +238,11 @@ VkResult init_enumerate_device(struct sample_info &info, uint32_t gpu_count) {
     res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, info.gpus.data());
     assert(!res && gpu_count >= req_count);
 
-    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0],
-                                             &info.queue_family_count, NULL);
+    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_family_count, NULL);
     assert(info.queue_family_count >= 1);
 
     info.queue_props.resize(info.queue_family_count);
-    vkGetPhysicalDeviceQueueFamilyProperties(
-        info.gpus[0], &info.queue_family_count, info.queue_props.data());
+    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_family_count, info.queue_props.data());
     assert(info.queue_family_count >= 1);
 
     /* This is as good a place as any to do this */
@@ -282,13 +261,11 @@ void init_queue_family_index(struct sample_info &info) {
      * family
      */
 
-    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0],
-                                             &info.queue_family_count, NULL);
+    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_family_count, NULL);
     assert(info.queue_family_count >= 1);
 
     info.queue_props.resize(info.queue_family_count);
-    vkGetPhysicalDeviceQueueFamilyProperties(
-        info.gpus[0], &info.queue_family_count, info.queue_props.data());
+    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_family_count, info.queue_props.data());
     assert(info.queue_family_count >= 1);
 
     bool found = false;
@@ -302,27 +279,26 @@ void init_queue_family_index(struct sample_info &info) {
     assert(found);
 }
 
-VkResult init_debug_report_callback(struct sample_info &info,
-                                    PFN_vkDebugReportCallbackEXT dbgFunc) {
+VkResult init_debug_report_callback(struct sample_info &info, PFN_vkDebugReportCallbackEXT dbgFunc) {
     VkResult res;
     VkDebugReportCallbackEXT debug_report_callback;
 
     info.dbgCreateDebugReportCallback =
-        (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(
-            info.inst, "vkCreateDebugReportCallbackEXT");
+        (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(info.inst, "vkCreateDebugReportCallbackEXT");
     if (!info.dbgCreateDebugReportCallback) {
         std::cout << "GetInstanceProcAddr: Unable to find "
-                     "vkCreateDebugReportCallbackEXT function." << std::endl;
+                     "vkCreateDebugReportCallbackEXT function."
+                  << std::endl;
         return VK_ERROR_INITIALIZATION_FAILED;
     }
     std::cout << "Got dbgCreateDebugReportCallback function\n";
 
     info.dbgDestroyDebugReportCallback =
-        (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(
-            info.inst, "vkDestroyDebugReportCallbackEXT");
+        (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(info.inst, "vkDestroyDebugReportCallbackEXT");
     if (!info.dbgDestroyDebugReportCallback) {
         std::cout << "GetInstanceProcAddr: Unable to find "
-                     "vkDestroyDebugReportCallbackEXT function." << std::endl;
+                     "vkDestroyDebugReportCallbackEXT function."
+                  << std::endl;
         return VK_ERROR_INITIALIZATION_FAILED;
     }
     std::cout << "Got dbgDestroyDebugReportCallback function\n";
@@ -330,44 +306,38 @@ VkResult init_debug_report_callback(struct sample_info &info,
     VkDebugReportCallbackCreateInfoEXT create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
     create_info.pNext = NULL;
-    create_info.flags =
-        VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
+    create_info.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
     create_info.pfnCallback = dbgFunc;
     create_info.pUserData = NULL;
 
-    res = info.dbgCreateDebugReportCallback(info.inst, &create_info, NULL,
-                                            &debug_report_callback);
+    res = info.dbgCreateDebugReportCallback(info.inst, &create_info, NULL, &debug_report_callback);
     switch (res) {
-    case VK_SUCCESS:
-        std::cout << "Successfully created debug report callback object\n";
-        info.debug_report_callbacks.push_back(debug_report_callback);
-        break;
-    case VK_ERROR_OUT_OF_HOST_MEMORY:
-        std::cout
-            << "dbgCreateDebugReportCallback: out of host memory pointer\n"
-            << std::endl;
-        return VK_ERROR_INITIALIZATION_FAILED;
-        break;
-    default:
-        std::cout << "dbgCreateDebugReportCallback: unknown failure\n"
-                  << std::endl;
-        return VK_ERROR_INITIALIZATION_FAILED;
-        break;
+        case VK_SUCCESS:
+            std::cout << "Successfully created debug report callback object\n";
+            info.debug_report_callbacks.push_back(debug_report_callback);
+            break;
+        case VK_ERROR_OUT_OF_HOST_MEMORY:
+            std::cout << "dbgCreateDebugReportCallback: out of host memory pointer\n" << std::endl;
+            return VK_ERROR_INITIALIZATION_FAILED;
+            break;
+        default:
+            std::cout << "dbgCreateDebugReportCallback: unknown failure\n" << std::endl;
+            return VK_ERROR_INITIALIZATION_FAILED;
+            break;
     }
     return res;
 }
 
 void destroy_debug_report_callback(struct sample_info &info) {
     while (info.debug_report_callbacks.size() > 0) {
-        info.dbgDestroyDebugReportCallback(
-            info.inst, info.debug_report_callbacks.back(), NULL);
+        info.dbgDestroyDebugReportCallback(info.inst, info.debug_report_callbacks.back(), NULL);
         info.debug_report_callbacks.pop_back();
     }
 }
 
 void init_connection(struct sample_info &info) {
 #ifdef __ANDROID__
-    // Do nothing on Android.
+// Do nothing on Android.
 #elif !defined(_WIN32)
     const xcb_setup_t *setup;
     xcb_screen_iterator_t iter;
@@ -381,31 +351,27 @@ void init_connection(struct sample_info &info) {
 
     setup = xcb_get_setup(info.connection);
     iter = xcb_setup_roots_iterator(setup);
-    while (scr-- > 0)
-        xcb_screen_next(&iter);
+    while (scr-- > 0) xcb_screen_next(&iter);
 
     info.screen = iter.data;
-#endif //__Android__
+#endif  //__Android__
 }
 #ifdef _WIN32
-static void run(struct sample_info *info) {
-    /* Placeholder for samples that want to show dynamic content */
-}
+static void run(struct sample_info *info) { /* Placeholder for samples that want to show dynamic content */ }
 
 // MS-Windows event handling function:
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    struct sample_info *info = reinterpret_cast<struct sample_info *>(
-        GetWindowLongPtr(hWnd, GWLP_USERDATA));
+    struct sample_info *info = reinterpret_cast<struct sample_info *>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
 
     switch (uMsg) {
-    case WM_CLOSE:
-        PostQuitMessage(0);
-        break;
-    case WM_PAINT:
-        run(info);
-        return 0;
-    default:
-        break;
+        case WM_CLOSE:
+            PostQuitMessage(0);
+            break;
+        case WM_PAINT:
+            run(info);
+            return 0;
+        default:
+            break;
     }
     return (DefWindowProc(hWnd, uMsg, wParam, lParam));
 }
@@ -424,7 +390,7 @@ void init_window(struct sample_info &info) {
     win_class.lpfnWndProc = WndProc;
     win_class.cbClsExtra = 0;
     win_class.cbWndExtra = 0;
-    win_class.hInstance = info.connection; // hInstance
+    win_class.hInstance = info.connection;  // hInstance
     win_class.hIcon = LoadIcon(NULL, IDI_APPLICATION);
     win_class.hCursor = LoadCursor(NULL, IDC_ARROW);
     win_class.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
@@ -442,17 +408,17 @@ void init_window(struct sample_info &info) {
     RECT wr = {0, 0, info.width, info.height};
     AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
     info.window = CreateWindowEx(0,
-                                 info.name,            // class name
-                                 info.name,            // app name
-                                 WS_OVERLAPPEDWINDOW | // window style
+                                 info.name,             // class name
+                                 info.name,             // app name
+                                 WS_OVERLAPPEDWINDOW |  // window style
                                      WS_VISIBLE | WS_SYSMENU,
-                                 100, 100,           // x/y coords
-                                 wr.right - wr.left, // width
-                                 wr.bottom - wr.top, // height
-                                 NULL,               // handle to parent
-                                 NULL,               // handle to menu
-                                 info.connection,    // hInstance
-                                 NULL);              // no extra parameters
+                                 100, 100,            // x/y coords
+                                 wr.right - wr.left,  // width
+                                 wr.bottom - wr.top,  // height
+                                 NULL,                // handle to parent
+                                 NULL,                // handle to menu
+                                 info.connection,     // hInstance
+                                 NULL);               // no extra parameters
     if (!info.window) {
         // It didn't work, so try to give a useful error:
         printf("Cannot create a window in which to draw!\n");
@@ -468,11 +434,9 @@ void destroy_window(struct sample_info &info) {
 }
 #elif defined(__ANDROID__)
 // Android implementation.
-void init_window(struct sample_info &info) {
-}
+void init_window(struct sample_info &info) {}
 
-void destroy_window(struct sample_info &info) {
-}
+void destroy_window(struct sample_info &info) {}
 #else
 void init_window(struct sample_info &info) {
     assert(info.width > 0);
@@ -486,24 +450,17 @@ void init_window(struct sample_info &info) {
     value_list[0] = info.screen->black_pixel;
     value_list[1] = XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_EXPOSURE;
 
-    xcb_create_window(info.connection, XCB_COPY_FROM_PARENT, info.window,
-                      info.screen->root, 0, 0, info.width, info.height, 0,
-                      XCB_WINDOW_CLASS_INPUT_OUTPUT, info.screen->root_visual,
-                      value_mask, value_list);
+    xcb_create_window(info.connection, XCB_COPY_FROM_PARENT, info.window, info.screen->root, 0, 0, info.width, info.height, 0,
+                      XCB_WINDOW_CLASS_INPUT_OUTPUT, info.screen->root_visual, value_mask, value_list);
 
     /* Magic code that will send notification when window is destroyed */
-    xcb_intern_atom_cookie_t cookie =
-        xcb_intern_atom(info.connection, 1, 12, "WM_PROTOCOLS");
-    xcb_intern_atom_reply_t *reply =
-        xcb_intern_atom_reply(info.connection, cookie, 0);
+    xcb_intern_atom_cookie_t cookie = xcb_intern_atom(info.connection, 1, 12, "WM_PROTOCOLS");
+    xcb_intern_atom_reply_t *reply = xcb_intern_atom_reply(info.connection, cookie, 0);
 
-    xcb_intern_atom_cookie_t cookie2 =
-        xcb_intern_atom(info.connection, 0, 16, "WM_DELETE_WINDOW");
-    info.atom_wm_delete_window =
-        xcb_intern_atom_reply(info.connection, cookie2, 0);
+    xcb_intern_atom_cookie_t cookie2 = xcb_intern_atom(info.connection, 0, 16, "WM_DELETE_WINDOW");
+    info.atom_wm_delete_window = xcb_intern_atom_reply(info.connection, cookie2, 0);
 
-    xcb_change_property(info.connection, XCB_PROP_MODE_REPLACE, info.window,
-                        (*reply).atom, 4, 32, 1,
+    xcb_change_property(info.connection, XCB_PROP_MODE_REPLACE, info.window, (*reply).atom, 4, 32, 1,
                         &(*info.atom_wm_delete_window).atom);
     free(reply);
 
@@ -512,14 +469,12 @@ void init_window(struct sample_info &info) {
     // Force the x/y coordinates to 100,100 results are identical in consecutive
     // runs
     const uint32_t coords[] = {100, 100};
-    xcb_configure_window(info.connection, info.window,
-                         XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y, coords);
+    xcb_configure_window(info.connection, info.window, XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y, coords);
     xcb_flush(info.connection);
 
     xcb_generic_event_t *e;
     while ((e = xcb_wait_for_event(info.connection))) {
-        if ((e->response_type & ~0x80) == XCB_EXPOSE)
-            break;
+        if ((e->response_type & ~0x80) == XCB_EXPOSE) break;
     }
 }
 
@@ -529,10 +484,9 @@ void destroy_window(struct sample_info &info) {
     xcb_disconnect(info.connection);
 }
 
-#endif // _WIN32
+#endif  // _WIN32
 
-void init_window_size(struct sample_info &info, int32_t default_width,
-                      int32_t default_height) {
+void init_window_size(struct sample_info &info, int32_t default_width, int32_t default_height) {
 #ifdef __ANDROID__
     AndroidGetWindowSize(&info.width, &info.height);
 #else
@@ -547,8 +501,7 @@ void init_depth_buffer(struct sample_info &info) {
     VkImageCreateInfo image_info = {};
 
     /* allow custom depth formats */
-    if (info.depth.format == VK_FORMAT_UNDEFINED)
-        info.depth.format = VK_FORMAT_D16_UNORM;
+    if (info.depth.format == VK_FORMAT_UNDEFINED) info.depth.format = VK_FORMAT_D16_UNORM;
 
 #ifdef __ANDROID__
     // Depth format needs to be VK_FORMAT_D24_UNORM_S8_UINT on Android.
@@ -558,11 +511,9 @@ void init_depth_buffer(struct sample_info &info) {
 #endif
     VkFormatProperties props;
     vkGetPhysicalDeviceFormatProperties(info.gpus[0], depth_format, &props);
-    if (props.linearTilingFeatures &
-        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+    if (props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
         image_info.tiling = VK_IMAGE_TILING_LINEAR;
-    } else if (props.optimalTilingFeatures &
-               VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+    } else if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
         image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
     } else {
         /* Try other depth formats? */
@@ -610,8 +561,7 @@ void init_depth_buffer(struct sample_info &info) {
     view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
     view_info.flags = 0;
 
-    if (depth_format == VK_FORMAT_D16_UNORM_S8_UINT ||
-        depth_format == VK_FORMAT_D24_UNORM_S8_UINT ||
+    if (depth_format == VK_FORMAT_D16_UNORM_S8_UINT || depth_format == VK_FORMAT_D24_UNORM_S8_UINT ||
         depth_format == VK_FORMAT_D32_SFLOAT_S8_UINT) {
         view_info.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
     }
@@ -626,8 +576,7 @@ void init_depth_buffer(struct sample_info &info) {
 
     mem_alloc.allocationSize = mem_reqs.size;
     /* Use the memory properties to determine the type of memory required */
-    pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits,
-                                       0, /* No requirements */
+    pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits, 0, /* No requirements */
                                        &mem_alloc.memoryTypeIndex);
     assert(pass);
 
@@ -657,8 +606,7 @@ void init_swapchain_extension(struct sample_info &info) {
     createInfo.pNext = NULL;
     createInfo.hinstance = info.connection;
     createInfo.hwnd = info.window;
-    res = vkCreateWin32SurfaceKHR(info.inst, &createInfo,
-                                  NULL, &info.surface);
+    res = vkCreateWin32SurfaceKHR(info.inst, &createInfo, NULL, &info.surface);
 #elif defined(__ANDROID__)
     GET_INSTANCE_PROC_ADDR(info.inst, CreateAndroidSurfaceKHR);
 
@@ -668,23 +616,20 @@ void init_swapchain_extension(struct sample_info &info) {
     createInfo.flags = 0;
     createInfo.window = AndroidGetApplicationWindow();
     res = info.fpCreateAndroidSurfaceKHR(info.inst, &createInfo, nullptr, &info.surface);
-#else  // !__ANDROID__ && !_WIN32
+#else   // !__ANDROID__ && !_WIN32
     VkXcbSurfaceCreateInfoKHR createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
     createInfo.pNext = NULL;
     createInfo.connection = info.connection;
     createInfo.window = info.window;
-    res = vkCreateXcbSurfaceKHR(info.inst, &createInfo,
-                                NULL, &info.surface);
-#endif // __ANDROID__  && _WIN32
+    res = vkCreateXcbSurfaceKHR(info.inst, &createInfo, NULL, &info.surface);
+#endif  // __ANDROID__  && _WIN32
     assert(res == VK_SUCCESS);
 
     // Iterate over each queue to learn whether it supports presenting:
-    VkBool32 *pSupportsPresent =
-        (VkBool32 *)malloc(info.queue_family_count * sizeof(VkBool32));
+    VkBool32 *pSupportsPresent = (VkBool32 *)malloc(info.queue_family_count * sizeof(VkBool32));
     for (uint32_t i = 0; i < info.queue_family_count; i++) {
-        vkGetPhysicalDeviceSurfaceSupportKHR(info.gpus[0], i, info.surface,
-                                             &pSupportsPresent[i]);
+        vkGetPhysicalDeviceSurfaceSupportKHR(info.gpus[0], i, info.surface, &pSupportsPresent[i]);
     }
 
     // Search for a graphics and a present queue in the array of queue
@@ -693,8 +638,7 @@ void init_swapchain_extension(struct sample_info &info) {
     info.present_queue_family_index = UINT32_MAX;
     for (uint32_t i = 0; i < info.queue_family_count; ++i) {
         if ((info.queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0) {
-            if (info.graphics_queue_family_index == UINT32_MAX)
-                info.graphics_queue_family_index = i;
+            if (info.graphics_queue_family_index == UINT32_MAX) info.graphics_queue_family_index = i;
 
             if (pSupportsPresent[i] == VK_TRUE) {
                 info.graphics_queue_family_index = i;
@@ -717,21 +661,17 @@ void init_swapchain_extension(struct sample_info &info) {
 
     // Generate error if could not find queues that support graphics
     // and present
-    if (info.graphics_queue_family_index == UINT32_MAX ||
-        info.present_queue_family_index == UINT32_MAX) {
+    if (info.graphics_queue_family_index == UINT32_MAX || info.present_queue_family_index == UINT32_MAX) {
         std::cout << "Could not find a queues for both graphics and present";
         exit(-1);
     }
 
     // Get the list of VkFormats that are supported:
     uint32_t formatCount;
-    res = vkGetPhysicalDeviceSurfaceFormatsKHR(info.gpus[0], info.surface,
-                                               &formatCount, NULL);
+    res = vkGetPhysicalDeviceSurfaceFormatsKHR(info.gpus[0], info.surface, &formatCount, NULL);
     assert(res == VK_SUCCESS);
-    VkSurfaceFormatKHR *surfFormats =
-        (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
-    res = vkGetPhysicalDeviceSurfaceFormatsKHR(info.gpus[0], info.surface,
-                                               &formatCount, surfFormats);
+    VkSurfaceFormatKHR *surfFormats = (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
+    res = vkGetPhysicalDeviceSurfaceFormatsKHR(info.gpus[0], info.surface, &formatCount, surfFormats);
     assert(res == VK_SUCCESS);
     // If the format list includes just one entry of VK_FORMAT_UNDEFINED,
     // the surface has no preferred format.  Otherwise, at least one
@@ -750,31 +690,25 @@ void init_presentable_image(struct sample_info &info) {
 
     VkResult U_ASSERT_ONLY res;
     VkSemaphoreCreateInfo imageAcquiredSemaphoreCreateInfo;
-    imageAcquiredSemaphoreCreateInfo.sType =
-        VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    imageAcquiredSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     imageAcquiredSemaphoreCreateInfo.pNext = NULL;
     imageAcquiredSemaphoreCreateInfo.flags = 0;
 
-    res = vkCreateSemaphore(info.device, &imageAcquiredSemaphoreCreateInfo,
-                            NULL, &info.imageAcquiredSemaphore);
+    res = vkCreateSemaphore(info.device, &imageAcquiredSemaphoreCreateInfo, NULL, &info.imageAcquiredSemaphore);
     assert(!res);
 
     // Get the index of the next available swapchain image:
-    res = vkAcquireNextImageKHR(info.device, info.swap_chain, UINT64_MAX,
-                                info.imageAcquiredSemaphore, VK_NULL_HANDLE,
+    res = vkAcquireNextImageKHR(info.device, info.swap_chain, UINT64_MAX, info.imageAcquiredSemaphore, VK_NULL_HANDLE,
                                 &info.current_buffer);
     // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
     // return codes
     assert(!res);
 }
 
-void execute_queue_cmdbuf(struct sample_info &info,
-                          const VkCommandBuffer *cmd_bufs,
-                          VkFence &fence) {
+void execute_queue_cmdbuf(struct sample_info &info, const VkCommandBuffer *cmd_bufs, VkFence &fence) {
     VkResult U_ASSERT_ONLY res;
 
-    VkPipelineStageFlags pipe_stage_flags =
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     VkSubmitInfo submit_info[1] = {};
     submit_info[0].pNext = NULL;
     submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -810,10 +744,8 @@ void execute_pre_present_barrier(struct sample_info &info) {
     prePresentBarrier.subresourceRange.baseArrayLayer = 0;
     prePresentBarrier.subresourceRange.layerCount = 1;
     prePresentBarrier.image = info.buffers[info.current_buffer].image;
-    vkCmdPipelineBarrier(info.cmd,
-                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                         VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, NULL, 0,
-                         NULL, 1, &prePresentBarrier);
+    vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, NULL,
+                         0, NULL, 1, &prePresentBarrier);
 }
 void execute_present_image(struct sample_info &info) {
     /* DEPENDS on init_presentable_image() and init_swap_chain()*/
@@ -842,19 +774,15 @@ void init_swap_chain(struct sample_info &info, VkImageUsageFlags usageFlags) {
     VkResult U_ASSERT_ONLY res;
     VkSurfaceCapabilitiesKHR surfCapabilities;
 
-    res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(info.gpus[0], info.surface,
-                                                    &surfCapabilities);
+    res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(info.gpus[0], info.surface, &surfCapabilities);
     assert(res == VK_SUCCESS);
 
     uint32_t presentModeCount;
-    res = vkGetPhysicalDeviceSurfacePresentModesKHR(info.gpus[0], info.surface,
-                                                    &presentModeCount, NULL);
+    res = vkGetPhysicalDeviceSurfacePresentModesKHR(info.gpus[0], info.surface, &presentModeCount, NULL);
     assert(res == VK_SUCCESS);
-    VkPresentModeKHR *presentModes =
-        (VkPresentModeKHR *)malloc(presentModeCount * sizeof(VkPresentModeKHR));
+    VkPresentModeKHR *presentModes = (VkPresentModeKHR *)malloc(presentModeCount * sizeof(VkPresentModeKHR));
     assert(presentModes);
-    res = vkGetPhysicalDeviceSurfacePresentModesKHR(
-        info.gpus[0], info.surface, &presentModeCount, presentModes);
+    res = vkGetPhysicalDeviceSurfacePresentModesKHR(info.gpus[0], info.surface, &presentModeCount, presentModes);
     assert(res == VK_SUCCESS);
 
     VkExtent2D swapchainExtent;
@@ -866,15 +794,13 @@ void init_swap_chain(struct sample_info &info, VkImageUsageFlags usageFlags) {
         swapchainExtent.height = info.height;
         if (swapchainExtent.width < surfCapabilities.minImageExtent.width) {
             swapchainExtent.width = surfCapabilities.minImageExtent.width;
-        } else if (swapchainExtent.width >
-                   surfCapabilities.maxImageExtent.width) {
+        } else if (swapchainExtent.width > surfCapabilities.maxImageExtent.width) {
             swapchainExtent.width = surfCapabilities.maxImageExtent.width;
         }
 
         if (swapchainExtent.height < surfCapabilities.minImageExtent.height) {
             swapchainExtent.height = surfCapabilities.minImageExtent.height;
-        } else if (swapchainExtent.height >
-                   surfCapabilities.maxImageExtent.height) {
+        } else if (swapchainExtent.height > surfCapabilities.maxImageExtent.height) {
             swapchainExtent.height = surfCapabilities.maxImageExtent.height;
         }
     } else {
@@ -894,8 +820,7 @@ void init_swap_chain(struct sample_info &info, VkImageUsageFlags usageFlags) {
     uint32_t desiredNumberOfSwapChainImages = surfCapabilities.minImageCount;
 
     VkSurfaceTransformFlagBitsKHR preTransform;
-    if (surfCapabilities.supportedTransforms &
-        VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) {
+    if (surfCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) {
         preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
     } else {
         preTransform = surfCapabilities.currentTransform;
@@ -924,9 +849,7 @@ void init_swap_chain(struct sample_info &info, VkImageUsageFlags usageFlags) {
     swapchain_ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     swapchain_ci.queueFamilyIndexCount = 0;
     swapchain_ci.pQueueFamilyIndices = NULL;
-    uint32_t queueFamilyIndices[2] = {
-        (uint32_t)info.graphics_queue_family_index,
-        (uint32_t)info.present_queue_family_index};
+    uint32_t queueFamilyIndices[2] = {(uint32_t)info.graphics_queue_family_index, (uint32_t)info.present_queue_family_index};
     if (info.graphics_queue_family_index != info.present_queue_family_index) {
         // If the graphics and present queues are from different queue families,
         // we either have to explicitly transfer ownership of images between the
@@ -937,19 +860,15 @@ void init_swap_chain(struct sample_info &info, VkImageUsageFlags usageFlags) {
         swapchain_ci.pQueueFamilyIndices = queueFamilyIndices;
     }
 
-    res = vkCreateSwapchainKHR(info.device, &swapchain_ci, NULL,
-                               &info.swap_chain);
+    res = vkCreateSwapchainKHR(info.device, &swapchain_ci, NULL, &info.swap_chain);
     assert(res == VK_SUCCESS);
 
-    res = vkGetSwapchainImagesKHR(info.device, info.swap_chain,
-                                  &info.swapchainImageCount, NULL);
+    res = vkGetSwapchainImagesKHR(info.device, info.swap_chain, &info.swapchainImageCount, NULL);
     assert(res == VK_SUCCESS);
 
-    VkImage *swapchainImages =
-        (VkImage *)malloc(info.swapchainImageCount * sizeof(VkImage));
+    VkImage *swapchainImages = (VkImage *)malloc(info.swapchainImageCount * sizeof(VkImage));
     assert(swapchainImages);
-    res = vkGetSwapchainImagesKHR(info.device, info.swap_chain,
-                                  &info.swapchainImageCount, swapchainImages);
+    res = vkGetSwapchainImagesKHR(info.device, info.swap_chain, &info.swapchainImageCount, swapchainImages);
     assert(res == VK_SUCCESS);
 
     for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
@@ -963,8 +882,7 @@ void init_swap_chain(struct sample_info &info, VkImageUsageFlags usageFlags) {
         color_image_view.components.g = VK_COMPONENT_SWIZZLE_G;
         color_image_view.components.b = VK_COMPONENT_SWIZZLE_B;
         color_image_view.components.a = VK_COMPONENT_SWIZZLE_A;
-        color_image_view.subresourceRange.aspectMask =
-            VK_IMAGE_ASPECT_COLOR_BIT;
+        color_image_view.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         color_image_view.subresourceRange.baseMipLevel = 0;
         color_image_view.subresourceRange.levelCount = 1;
         color_image_view.subresourceRange.baseArrayLayer = 0;
@@ -976,8 +894,7 @@ void init_swap_chain(struct sample_info &info, VkImageUsageFlags usageFlags) {
 
         color_image_view.image = sc_buffer.image;
 
-        res = vkCreateImageView(info.device, &color_image_view, NULL,
-                                &sc_buffer.view);
+        res = vkCreateImageView(info.device, &color_image_view, NULL, &sc_buffer.view);
         info.buffers.push_back(sc_buffer);
         assert(res == VK_SUCCESS);
     }
@@ -996,20 +913,14 @@ void init_uniform_buffer(struct sample_info &info) {
     if (info.width > info.height) {
         fov *= static_cast<float>(info.height) / static_cast<float>(info.width);
     }
-    info.Projection = glm::perspective(fov,
-                                       static_cast<float>(info.width) /
-                                       static_cast<float>(info.height), 0.1f, 100.0f);
-    info.View = glm::lookAt(
-        glm::vec3(-5, 3,-10),  // Camera is at (-5,3,-10), in World Space
-        glm::vec3( 0, 0,  0),  // and looks at the origin
-        glm::vec3( 0,-1,  0)   // Head is up (set to 0,-1,0 to look upside-down)
-        );
+    info.Projection = glm::perspective(fov, static_cast<float>(info.width) / static_cast<float>(info.height), 0.1f, 100.0f);
+    info.View = glm::lookAt(glm::vec3(-5, 3, -10),  // Camera is at (-5,3,-10), in World Space
+                            glm::vec3(0, 0, 0),     // and looks at the origin
+                            glm::vec3(0, -1, 0)     // Head is up (set to 0,-1,0 to look upside-down)
+                            );
     info.Model = glm::mat4(1.0f);
     // Vulkan clip space has inverted Y and half Z.
-    info.Clip = glm::mat4(1.0f,  0.0f, 0.0f, 0.0f,
-                          0.0f, -1.0f, 0.0f, 0.0f,
-                          0.0f,  0.0f, 0.5f, 0.0f,
-                          0.0f,  0.0f, 0.5f, 1.0f);
+    info.Clip = glm::mat4(1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.5f, 1.0f);
 
     info.MVP = info.Clip * info.Projection * info.View * info.Model;
 
@@ -1027,8 +938,7 @@ void init_uniform_buffer(struct sample_info &info) {
     assert(res == VK_SUCCESS);
 
     VkMemoryRequirements mem_reqs;
-    vkGetBufferMemoryRequirements(info.device, info.uniform_data.buf,
-                                  &mem_reqs);
+    vkGetBufferMemoryRequirements(info.device, info.uniform_data.buf, &mem_reqs);
 
     VkMemoryAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -1037,26 +947,22 @@ void init_uniform_buffer(struct sample_info &info) {
 
     alloc_info.allocationSize = mem_reqs.size;
     pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits,
-                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                                        &alloc_info.memoryTypeIndex);
     assert(pass && "No mappable, coherent memory");
 
-    res = vkAllocateMemory(info.device, &alloc_info, NULL,
-                           &(info.uniform_data.mem));
+    res = vkAllocateMemory(info.device, &alloc_info, NULL, &(info.uniform_data.mem));
     assert(res == VK_SUCCESS);
 
     uint8_t *pData;
-    res = vkMapMemory(info.device, info.uniform_data.mem, 0, mem_reqs.size, 0,
-                      (void **)&pData);
+    res = vkMapMemory(info.device, info.uniform_data.mem, 0, mem_reqs.size, 0, (void **)&pData);
     assert(res == VK_SUCCESS);
 
     memcpy(pData, &info.MVP, sizeof(info.MVP));
 
     vkUnmapMemory(info.device, info.uniform_data.mem);
 
-    res = vkBindBufferMemory(info.device, info.uniform_data.buf,
-                             info.uniform_data.mem, 0);
+    res = vkBindBufferMemory(info.device, info.uniform_data.buf, info.uniform_data.mem, 0);
     assert(res == VK_SUCCESS);
 
     info.uniform_data.buffer_info.buffer = info.uniform_data.buf;
@@ -1064,8 +970,7 @@ void init_uniform_buffer(struct sample_info &info) {
     info.uniform_data.buffer_info.range = sizeof(info.MVP);
 }
 
-void init_descriptor_and_pipeline_layouts(struct sample_info &info,
-                                          bool use_texture) {
+void init_descriptor_and_pipeline_layouts(struct sample_info &info, bool use_texture) {
     VkDescriptorSetLayoutBinding layout_bindings[2];
     layout_bindings[0].binding = 0;
     layout_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -1075,8 +980,7 @@ void init_descriptor_and_pipeline_layouts(struct sample_info &info,
 
     if (use_texture) {
         layout_bindings[1].binding = 1;
-        layout_bindings[1].descriptorType =
-            VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        layout_bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         layout_bindings[1].descriptorCount = 1;
         layout_bindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
         layout_bindings[1].pImmutableSamplers = NULL;
@@ -1085,8 +989,7 @@ void init_descriptor_and_pipeline_layouts(struct sample_info &info,
     /* Next take layout bindings and use them to create a descriptor set layout
      */
     VkDescriptorSetLayoutCreateInfo descriptor_layout = {};
-    descriptor_layout.sType =
-        VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    descriptor_layout.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     descriptor_layout.pNext = NULL;
     descriptor_layout.bindingCount = use_texture ? 2 : 1;
     descriptor_layout.pBindings = layout_bindings;
@@ -1094,27 +997,23 @@ void init_descriptor_and_pipeline_layouts(struct sample_info &info,
     VkResult U_ASSERT_ONLY res;
 
     info.desc_layout.resize(NUM_DESCRIPTOR_SETS);
-    res = vkCreateDescriptorSetLayout(info.device, &descriptor_layout, NULL,
-                                      info.desc_layout.data());
+    res = vkCreateDescriptorSetLayout(info.device, &descriptor_layout, NULL, info.desc_layout.data());
     assert(res == VK_SUCCESS);
 
     /* Now use the descriptor layout to create a pipeline layout */
     VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = {};
-    pPipelineLayoutCreateInfo.sType =
-        VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pPipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pPipelineLayoutCreateInfo.pNext = NULL;
     pPipelineLayoutCreateInfo.pushConstantRangeCount = 0;
     pPipelineLayoutCreateInfo.pPushConstantRanges = NULL;
     pPipelineLayoutCreateInfo.setLayoutCount = NUM_DESCRIPTOR_SETS;
     pPipelineLayoutCreateInfo.pSetLayouts = info.desc_layout.data();
 
-    res = vkCreatePipelineLayout(info.device, &pPipelineLayoutCreateInfo, NULL,
-                                 &info.pipeline_layout);
+    res = vkCreatePipelineLayout(info.device, &pPipelineLayoutCreateInfo, NULL, &info.pipeline_layout);
     assert(res == VK_SUCCESS);
 }
 
-void init_renderpass(struct sample_info &info, bool include_depth, bool clear,
-                     VkImageLayout finalLayout) {
+void init_renderpass(struct sample_info &info, bool include_depth, bool clear, VkImageLayout finalLayout) {
     /* DEPENDS on init_swap_chain() and init_depth_buffer() */
 
     VkResult U_ASSERT_ONLY res;
@@ -1122,8 +1021,7 @@ void init_renderpass(struct sample_info &info, bool include_depth, bool clear,
     VkAttachmentDescription attachments[2];
     attachments[0].format = info.format;
     attachments[0].samples = NUM_SAMPLES;
-    attachments[0].loadOp =
-        clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachments[0].loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -1134,14 +1032,12 @@ void init_renderpass(struct sample_info &info, bool include_depth, bool clear,
     if (include_depth) {
         attachments[1].format = info.depth.format;
         attachments[1].samples = NUM_SAMPLES;
-        attachments[1].loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR
-                                      : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attachments[1].loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
         attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
         attachments[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        attachments[1].finalLayout =
-            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         attachments[1].flags = 0;
     }
 
@@ -1199,13 +1095,11 @@ void init_framebuffers(struct sample_info &info, bool include_depth) {
 
     uint32_t i;
 
-    info.framebuffers = (VkFramebuffer *)malloc(info.swapchainImageCount *
-                                                sizeof(VkFramebuffer));
+    info.framebuffers = (VkFramebuffer *)malloc(info.swapchainImageCount * sizeof(VkFramebuffer));
 
     for (i = 0; i < info.swapchainImageCount; i++) {
         attachments[0] = info.buffers[i].view;
-        res = vkCreateFramebuffer(info.device, &fb_info, NULL,
-                                  &info.framebuffers[i]);
+        res = vkCreateFramebuffer(info.device, &fb_info, NULL, &info.framebuffers[i]);
         assert(res == VK_SUCCESS);
     }
 }
@@ -1219,8 +1113,7 @@ void init_command_pool(struct sample_info &info) {
     cmd_pool_info.queueFamilyIndex = info.graphics_queue_family_index;
     cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
-    res =
-        vkCreateCommandPool(info.device, &cmd_pool_info, NULL, &info.cmd_pool);
+    res = vkCreateCommandPool(info.device, &cmd_pool_info, NULL, &info.cmd_pool);
     assert(res == VK_SUCCESS);
 }
 
@@ -1271,8 +1164,7 @@ void execute_queue_command_buffer(struct sample_info &info) {
     fenceInfo.flags = 0;
     vkCreateFence(info.device, &fenceInfo, NULL, &drawFence);
 
-    VkPipelineStageFlags pipe_stage_flags =
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     VkSubmitInfo submit_info[1] = {};
     submit_info[0].pNext = NULL;
     submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -1288,8 +1180,7 @@ void execute_queue_command_buffer(struct sample_info &info) {
     assert(res == VK_SUCCESS);
 
     do {
-        res =
-            vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+        res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
     } while (res == VK_TIMEOUT);
     assert(res == VK_SUCCESS);
 
@@ -1299,18 +1190,15 @@ void execute_queue_command_buffer(struct sample_info &info) {
 void init_device_queue(struct sample_info &info) {
     /* DEPENDS on init_swapchain_extension() */
 
-    vkGetDeviceQueue(info.device, info.graphics_queue_family_index, 0,
-                     &info.graphics_queue);
+    vkGetDeviceQueue(info.device, info.graphics_queue_family_index, 0, &info.graphics_queue);
     if (info.graphics_queue_family_index == info.present_queue_family_index) {
         info.present_queue = info.graphics_queue;
     } else {
-        vkGetDeviceQueue(info.device, info.present_queue_family_index, 0,
-                         &info.present_queue);
+        vkGetDeviceQueue(info.device, info.present_queue_family_index, 0, &info.present_queue);
     }
 }
 
-void init_vertex_buffer(struct sample_info &info, const void *vertexData,
-                        uint32_t dataSize, uint32_t dataStride,
+void init_vertex_buffer(struct sample_info &info, const void *vertexData, uint32_t dataSize, uint32_t dataStride,
                         bool use_texture) {
     VkResult U_ASSERT_ONLY res;
     bool U_ASSERT_ONLY pass;
@@ -1328,8 +1216,7 @@ void init_vertex_buffer(struct sample_info &info, const void *vertexData,
     assert(res == VK_SUCCESS);
 
     VkMemoryRequirements mem_reqs;
-    vkGetBufferMemoryRequirements(info.device, info.vertex_buffer.buf,
-                                  &mem_reqs);
+    vkGetBufferMemoryRequirements(info.device, info.vertex_buffer.buf, &mem_reqs);
 
     VkMemoryAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -1338,28 +1225,24 @@ void init_vertex_buffer(struct sample_info &info, const void *vertexData,
 
     alloc_info.allocationSize = mem_reqs.size;
     pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits,
-                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                                        &alloc_info.memoryTypeIndex);
     assert(pass && "No mappable, coherent memory");
 
-    res = vkAllocateMemory(info.device, &alloc_info, NULL,
-                           &(info.vertex_buffer.mem));
+    res = vkAllocateMemory(info.device, &alloc_info, NULL, &(info.vertex_buffer.mem));
     assert(res == VK_SUCCESS);
     info.vertex_buffer.buffer_info.range = mem_reqs.size;
     info.vertex_buffer.buffer_info.offset = 0;
 
     uint8_t *pData;
-    res = vkMapMemory(info.device, info.vertex_buffer.mem, 0, mem_reqs.size, 0,
-                      (void **)&pData);
+    res = vkMapMemory(info.device, info.vertex_buffer.mem, 0, mem_reqs.size, 0, (void **)&pData);
     assert(res == VK_SUCCESS);
 
     memcpy(pData, vertexData, dataSize);
 
     vkUnmapMemory(info.device, info.vertex_buffer.mem);
 
-    res = vkBindBufferMemory(info.device, info.vertex_buffer.buf,
-                             info.vertex_buffer.mem, 0);
+    res = vkBindBufferMemory(info.device, info.vertex_buffer.buf, info.vertex_buffer.mem, 0);
     assert(res == VK_SUCCESS);
 
     info.vi_binding.binding = 0;
@@ -1372,8 +1255,7 @@ void init_vertex_buffer(struct sample_info &info, const void *vertexData,
     info.vi_attribs[0].offset = 0;
     info.vi_attribs[1].binding = 0;
     info.vi_attribs[1].location = 1;
-    info.vi_attribs[1].format =
-        use_texture ? VK_FORMAT_R32G32_SFLOAT : VK_FORMAT_R32G32B32A32_SFLOAT;
+    info.vi_attribs[1].format = use_texture ? VK_FORMAT_R32G32_SFLOAT : VK_FORMAT_R32G32B32A32_SFLOAT;
     info.vi_attribs[1].offset = 16;
 }
 
@@ -1397,8 +1279,7 @@ void init_descriptor_pool(struct sample_info &info, bool use_texture) {
     descriptor_pool.poolSizeCount = use_texture ? 2 : 1;
     descriptor_pool.pPoolSizes = type_count;
 
-    res = vkCreateDescriptorPool(info.device, &descriptor_pool, NULL,
-                                 &info.desc_pool);
+    res = vkCreateDescriptorPool(info.device, &descriptor_pool, NULL, &info.desc_pool);
     assert(res == VK_SUCCESS);
 }
 
@@ -1415,8 +1296,7 @@ void init_descriptor_set(struct sample_info &info, bool use_texture) {
     alloc_info[0].pSetLayouts = info.desc_layout.data();
 
     info.desc_set.resize(NUM_DESCRIPTOR_SETS);
-    res =
-        vkAllocateDescriptorSets(info.device, alloc_info, info.desc_set.data());
+    res = vkAllocateDescriptorSets(info.device, alloc_info, info.desc_set.data());
     assert(res == VK_SUCCESS);
 
     VkWriteDescriptorSet writes[2];
@@ -1445,22 +1325,19 @@ void init_descriptor_set(struct sample_info &info, bool use_texture) {
     vkUpdateDescriptorSets(info.device, use_texture ? 2 : 1, writes, 0, NULL);
 }
 
-void init_shaders(struct sample_info &info, const char *vertShaderText,
-                  const char *fragShaderText) {
+void init_shaders(struct sample_info &info, const char *vertShaderText, const char *fragShaderText) {
     VkResult U_ASSERT_ONLY res;
     bool U_ASSERT_ONLY retVal;
 
     // If no shaders were submitted, just return
-    if (!(vertShaderText || fragShaderText))
-        return;
+    if (!(vertShaderText || fragShaderText)) return;
 
     init_glslang();
     VkShaderModuleCreateInfo moduleCreateInfo;
 
     if (vertShaderText) {
         std::vector<unsigned int> vtx_spv;
-        info.shaderStages[0].sType =
-            VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        info.shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         info.shaderStages[0].pNext = NULL;
         info.shaderStages[0].pSpecializationInfo = NULL;
         info.shaderStages[0].flags = 0;
@@ -1475,23 +1352,20 @@ void init_shaders(struct sample_info &info, const char *vertShaderText,
         moduleCreateInfo.flags = 0;
         moduleCreateInfo.codeSize = vtx_spv.size() * sizeof(unsigned int);
         moduleCreateInfo.pCode = vtx_spv.data();
-        res = vkCreateShaderModule(info.device, &moduleCreateInfo, NULL,
-                                   &info.shaderStages[0].module);
+        res = vkCreateShaderModule(info.device, &moduleCreateInfo, NULL, &info.shaderStages[0].module);
         assert(res == VK_SUCCESS);
     }
 
     if (fragShaderText) {
         std::vector<unsigned int> frag_spv;
-        info.shaderStages[1].sType =
-            VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        info.shaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         info.shaderStages[1].pNext = NULL;
         info.shaderStages[1].pSpecializationInfo = NULL;
         info.shaderStages[1].flags = 0;
         info.shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
         info.shaderStages[1].pName = "main";
 
-        retVal =
-            GLSLtoSPV(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderText, frag_spv);
+        retVal = GLSLtoSPV(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderText, frag_spv);
         assert(retVal);
 
         moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -1499,8 +1373,7 @@ void init_shaders(struct sample_info &info, const char *vertShaderText,
         moduleCreateInfo.flags = 0;
         moduleCreateInfo.codeSize = frag_spv.size() * sizeof(unsigned int);
         moduleCreateInfo.pCode = frag_spv.data();
-        res = vkCreateShaderModule(info.device, &moduleCreateInfo, NULL,
-                                   &info.shaderStages[1].module);
+        res = vkCreateShaderModule(info.device, &moduleCreateInfo, NULL, &info.shaderStages[1].module);
         assert(res == VK_SUCCESS);
     }
 
@@ -1516,13 +1389,11 @@ void init_pipeline_cache(struct sample_info &info) {
     pipelineCache.initialDataSize = 0;
     pipelineCache.pInitialData = NULL;
     pipelineCache.flags = 0;
-    res = vkCreatePipelineCache(info.device, &pipelineCache, NULL,
-                                &info.pipelineCache);
+    res = vkCreatePipelineCache(info.device, &pipelineCache, NULL, &info.pipelineCache);
     assert(res == VK_SUCCESS);
 }
 
-void init_pipeline(struct sample_info &info, VkBool32 include_depth,
-                   VkBool32 include_vi) {
+void init_pipeline(struct sample_info &info, VkBool32 include_depth, VkBool32 include_vi) {
     VkResult U_ASSERT_ONLY res;
 
     VkDynamicState dynamicStateEnables[VK_DYNAMIC_STATE_RANGE_SIZE];
@@ -1594,11 +1465,9 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth,
     vp.flags = 0;
 #ifndef __ANDROID__
     vp.viewportCount = NUM_VIEWPORTS;
-    dynamicStateEnables[dynamicState.dynamicStateCount++] =
-        VK_DYNAMIC_STATE_VIEWPORT;
+    dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_VIEWPORT;
     vp.scissorCount = NUM_SCISSORS;
-    dynamicStateEnables[dynamicState.dynamicStateCount++] =
-        VK_DYNAMIC_STATE_SCISSOR;
+    dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_SCISSOR;
     vp.pScissors = NULL;
     vp.pViewports = NULL;
 #else
@@ -1674,8 +1543,7 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth,
     pipeline.renderPass = info.render_pass;
     pipeline.subpass = 0;
 
-    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1,
-                                    &pipeline, NULL, &info.pipeline);
+    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1, &pipeline, NULL, &info.pipeline);
     assert(res == VK_SUCCESS);
 }
 
@@ -1691,8 +1559,7 @@ void init_sampler(struct sample_info &info, VkSampler &sampler) {
     samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     samplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     samplerCreateInfo.mipLodBias = 0.0;
-    samplerCreateInfo.anisotropyEnable = VK_FALSE,
-    samplerCreateInfo.maxAnisotropy = 0;
+    samplerCreateInfo.anisotropyEnable = VK_FALSE, samplerCreateInfo.maxAnisotropy = 0;
     samplerCreateInfo.compareOp = VK_COMPARE_OP_NEVER;
     samplerCreateInfo.minLod = 0.0;
     samplerCreateInfo.maxLod = 0.0;
@@ -1704,8 +1571,7 @@ void init_sampler(struct sample_info &info, VkSampler &sampler) {
     assert(res == VK_SUCCESS);
 }
 
-void init_image(struct sample_info &info, texture_object &texObj,
-                const char *textureName, VkImageUsageFlags extraUsages,
+void init_image(struct sample_info &info, texture_object &texObj, const char *textureName, VkImageUsageFlags extraUsages,
                 VkFormatFeatureFlags extraFeatures) {
     VkResult U_ASSERT_ONLY res;
     bool U_ASSERT_ONLY pass;
@@ -1716,28 +1582,21 @@ void init_image(struct sample_info &info, texture_object &texObj,
     else
         filename.append(textureName);
 
-    if (!read_ppm(filename.c_str(), texObj.tex_width, texObj.tex_height, 0,
-                  NULL)) {
+    if (!read_ppm(filename.c_str(), texObj.tex_width, texObj.tex_height, 0, NULL)) {
         std::cout << "Could not read texture file lunarg.ppm\n";
         exit(-1);
     }
 
     VkFormatProperties formatProps;
-    vkGetPhysicalDeviceFormatProperties(info.gpus[0], VK_FORMAT_R8G8B8A8_UNORM,
-                                        &formatProps);
+    vkGetPhysicalDeviceFormatProperties(info.gpus[0], VK_FORMAT_R8G8B8A8_UNORM, &formatProps);
 
     /* See if we can use a linear tiled image for a texture, if not, we will
      * need a staging image for the texture data */
-    VkFormatFeatureFlags allFeatures =
-        (VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT | extraFeatures);
-    bool needStaging =
-        ((formatProps.linearTilingFeatures & allFeatures) != allFeatures)
-            ? true
-            : false;
+    VkFormatFeatureFlags allFeatures = (VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT | extraFeatures);
+    bool needStaging = ((formatProps.linearTilingFeatures & allFeatures) != allFeatures) ? true : false;
 
     if (needStaging) {
-        assert((formatProps.optimalTilingFeatures & allFeatures) ==
-               allFeatures);
+        assert((formatProps.optimalTilingFeatures & allFeatures) == allFeatures);
     }
 
     VkImageCreateInfo image_create_info = {};
@@ -1754,8 +1613,7 @@ void init_image(struct sample_info &info, texture_object &texObj,
     image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
     image_create_info.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
     image_create_info.usage =
-        needStaging ? (VK_IMAGE_USAGE_TRANSFER_SRC_BIT | extraUsages)
-                    : (VK_IMAGE_USAGE_SAMPLED_BIT | extraUsages);
+        needStaging ? (VK_IMAGE_USAGE_TRANSFER_SRC_BIT | extraUsages) : (VK_IMAGE_USAGE_SAMPLED_BIT | extraUsages);
     image_create_info.queueFamilyIndexCount = 0;
     image_create_info.pQueueFamilyIndices = NULL;
     image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -1784,8 +1642,7 @@ void init_image(struct sample_info &info, texture_object &texObj,
 
     /* Find the memory type that is host mappable */
     pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits,
-                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                                        &mem_alloc.memoryTypeIndex);
     assert(pass && "No mappable, coherent memory");
 
@@ -1835,8 +1692,7 @@ void init_image(struct sample_info &info, texture_object &texObj,
 
     /* Make sure command buffer is finished before mapping */
     do {
-        res =
-            vkWaitForFences(info.device, 1, &cmdFence, VK_TRUE, FENCE_TIMEOUT);
+        res = vkWaitForFences(info.device, 1, &cmdFence, VK_TRUE, FENCE_TIMEOUT);
     } while (res == VK_TIMEOUT);
     assert(res == VK_SUCCESS);
 
@@ -1846,8 +1702,7 @@ void init_image(struct sample_info &info, texture_object &texObj,
     assert(res == VK_SUCCESS);
 
     /* Read the ppm file into the mappable image's memory */
-    if (!read_ppm(filename.c_str(), texObj.tex_width, texObj.tex_height,
-                  layout.rowPitch, (unsigned char *)data)) {
+    if (!read_ppm(filename.c_str(), texObj.tex_width, texObj.tex_height, layout.rowPitch, (unsigned char *)data)) {
         std::cout << "Could not load texture file lunarg.ppm\n";
         exit(-1);
     }
@@ -1869,8 +1724,7 @@ void init_image(struct sample_info &info, texture_object &texObj,
         texObj.image = mappableImage;
         texObj.mem = mappableMemory;
         texObj.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        set_image_layout(info, texObj.image, VK_IMAGE_ASPECT_COLOR_BIT,
-                         VK_IMAGE_LAYOUT_PREINITIALIZED, texObj.imageLayout,
+        set_image_layout(info, texObj.image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_PREINITIALIZED, texObj.imageLayout,
                          VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
         /* No staging resources to free later */
         info.stagingImage = VK_NULL_HANDLE;
@@ -1879,12 +1733,10 @@ void init_image(struct sample_info &info, texture_object &texObj,
         /* The mappable image cannot be our texture, so create an optimally
          * tiled image and blit to it */
         image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-        image_create_info.usage =
-            VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
         image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-        res =
-            vkCreateImage(info.device, &image_create_info, NULL, &texObj.image);
+        res = vkCreateImage(info.device, &image_create_info, NULL, &texObj.image);
         assert(res == VK_SUCCESS);
 
         vkGetImageMemoryRequirements(info.device, texObj.image, &mem_reqs);
@@ -1892,8 +1744,7 @@ void init_image(struct sample_info &info, texture_object &texObj,
         mem_alloc.allocationSize = mem_reqs.size;
 
         /* Find memory type - dont specify any mapping requirements */
-        pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits,
-                                           VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                                            &mem_alloc.memoryTypeIndex);
         assert(pass);
 
@@ -1907,19 +1758,13 @@ void init_image(struct sample_info &info, texture_object &texObj,
 
         /* Since we're going to blit from the mappable image, set its layout to
          * SOURCE_OPTIMAL. Side effect is that this will create info.cmd */
-        set_image_layout(info, mappableImage, VK_IMAGE_ASPECT_COLOR_BIT,
-                         VK_IMAGE_LAYOUT_PREINITIALIZED,
-                         VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                         VK_PIPELINE_STAGE_HOST_BIT,
-                         VK_PIPELINE_STAGE_TRANSFER_BIT);
+        set_image_layout(info, mappableImage, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_PREINITIALIZED,
+                         VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 
         /* Since we're going to blit to the texture image, set its layout to
          * DESTINATION_OPTIMAL */
-        set_image_layout(info, texObj.image, VK_IMAGE_ASPECT_COLOR_BIT,
-                         VK_IMAGE_LAYOUT_UNDEFINED,
-                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                         VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                         VK_PIPELINE_STAGE_TRANSFER_BIT);
+        set_image_layout(info, texObj.image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 
         VkImageCopy copy_region;
         copy_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -1941,18 +1786,14 @@ void init_image(struct sample_info &info, texture_object &texObj,
         copy_region.extent.depth = 1;
 
         /* Put the copy command into the command buffer */
-        vkCmdCopyImage(info.cmd, mappableImage,
-                       VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, texObj.image,
+        vkCmdCopyImage(info.cmd, mappableImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, texObj.image,
                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region);
 
         /* Set the layout for the texture image from DESTINATION_OPTIMAL to
          * SHADER_READ_ONLY */
         texObj.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        set_image_layout(info, texObj.image, VK_IMAGE_ASPECT_COLOR_BIT,
-                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                         texObj.imageLayout,
-                         VK_PIPELINE_STAGE_TRANSFER_BIT,
-                         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+        set_image_layout(info, texObj.image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, texObj.imageLayout,
+                         VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
         /* Remember staging resources to free later */
         info.stagingImage = mappableImage;
@@ -1981,8 +1822,7 @@ void init_image(struct sample_info &info, texture_object &texObj,
     assert(res == VK_SUCCESS);
 }
 
-void init_texture(struct sample_info &info, const char *textureName,
-                  VkImageUsageFlags extraUsages,
+void init_texture(struct sample_info &info, const char *textureName, VkImageUsageFlags extraUsages,
                   VkFormatFeatureFlags extraFeatures) {
     struct texture_object texObj;
 
@@ -2002,8 +1842,8 @@ void init_texture(struct sample_info &info, const char *textureName,
 
 void init_viewports(struct sample_info &info) {
 #ifdef __ANDROID__
-    // Disable dynamic viewport on Android. Some drive has an issue with the dynamic viewport
-    // feature.
+// Disable dynamic viewport on Android. Some drive has an issue with the dynamic viewport
+// feature.
 #else
     info.viewport.height = (float)info.height;
     info.viewport.width = (float)info.width;
@@ -2017,8 +1857,8 @@ void init_viewports(struct sample_info &info) {
 
 void init_scissors(struct sample_info &info) {
 #ifdef __ANDROID__
-    // Disable dynamic viewport on Android. Some drive has an issue with the dynamic scissors
-    // feature.
+// Disable dynamic viewport on Android. Some drive has an issue with the dynamic scissors
+// feature.
 #else
     info.scissor.extent.width = info.width;
     info.scissor.extent.height = info.height;
@@ -2036,8 +1876,7 @@ void init_fence(struct sample_info &info, VkFence &fence) {
     vkCreateFence(info.device, &fenceInfo, NULL, &fence);
 }
 
-void init_submit_info(struct sample_info &info, VkSubmitInfo &submit_info,
-                      VkPipelineStageFlags &pipe_stage_flags) {
+void init_submit_info(struct sample_info &info, VkSubmitInfo &submit_info, VkPipelineStageFlags &pipe_stage_flags) {
     submit_info.pNext = NULL;
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.waitSemaphoreCount = 1;
@@ -2060,8 +1899,7 @@ void init_present_info(struct sample_info &info, VkPresentInfoKHR &present) {
     present.pResults = NULL;
 }
 
-void init_clear_color_and_depth(struct sample_info &info,
-                                VkClearValue *clear_values) {
+void init_clear_color_and_depth(struct sample_info &info, VkClearValue *clear_values) {
     clear_values[0].color.float32[0] = 0.2f;
     clear_values[0].color.float32[1] = 0.2f;
     clear_values[0].color.float32[2] = 0.2f;
@@ -2070,8 +1908,7 @@ void init_clear_color_and_depth(struct sample_info &info,
     clear_values[1].depthStencil.stencil = 0;
 }
 
-void init_render_pass_begin_info(struct sample_info &info,
-                                 VkRenderPassBeginInfo &rp_begin) {
+void init_render_pass_begin_info(struct sample_info &info, VkRenderPassBeginInfo &rp_begin) {
     rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     rp_begin.pNext = NULL;
     rp_begin.renderPass = info.render_pass;
@@ -2084,13 +1921,9 @@ void init_render_pass_begin_info(struct sample_info &info,
     rp_begin.pClearValues = nullptr;
 }
 
-void destroy_pipeline(struct sample_info &info) {
-    vkDestroyPipeline(info.device, info.pipeline, NULL);
-}
+void destroy_pipeline(struct sample_info &info) { vkDestroyPipeline(info.device, info.pipeline, NULL); }
 
-void destroy_pipeline_cache(struct sample_info &info) {
-    vkDestroyPipelineCache(info.device, info.pipelineCache, NULL);
-}
+void destroy_pipeline_cache(struct sample_info &info) { vkDestroyPipelineCache(info.device, info.pipelineCache, NULL); }
 
 void destroy_uniform_buffer(struct sample_info &info) {
     vkDestroyBuffer(info.device, info.uniform_data.buf, NULL);
@@ -2098,14 +1931,11 @@ void destroy_uniform_buffer(struct sample_info &info) {
 }
 
 void destroy_descriptor_and_pipeline_layouts(struct sample_info &info) {
-    for (int i = 0; i < NUM_DESCRIPTOR_SETS; i++)
-        vkDestroyDescriptorSetLayout(info.device, info.desc_layout[i], NULL);
+    for (int i = 0; i < NUM_DESCRIPTOR_SETS; i++) vkDestroyDescriptorSetLayout(info.device, info.desc_layout[i], NULL);
     vkDestroyPipelineLayout(info.device, info.pipeline_layout, NULL);
 }
 
-void destroy_descriptor_pool(struct sample_info &info) {
-    vkDestroyDescriptorPool(info.device, info.desc_pool, NULL);
-}
+void destroy_descriptor_pool(struct sample_info &info) { vkDestroyDescriptorPool(info.device, info.desc_pool, NULL); }
 
 void destroy_shaders(struct sample_info &info) {
     vkDestroyShaderModule(info.device, info.shaderStages[0].module, NULL);
@@ -2117,9 +1947,7 @@ void destroy_command_buffer(struct sample_info &info) {
     vkFreeCommandBuffers(info.device, info.cmd_pool, 1, cmd_bufs);
 }
 
-void destroy_command_pool(struct sample_info &info) {
-    vkDestroyCommandPool(info.device, info.cmd_pool, NULL);
-}
+void destroy_command_pool(struct sample_info &info) { vkDestroyCommandPool(info.device, info.cmd_pool, NULL); }
 
 void destroy_depth_buffer(struct sample_info &info) {
     vkDestroyImageView(info.device, info.depth.view, NULL);
@@ -2146,18 +1974,14 @@ void destroy_framebuffers(struct sample_info &info) {
     free(info.framebuffers);
 }
 
-void destroy_renderpass(struct sample_info &info) {
-    vkDestroyRenderPass(info.device, info.render_pass, NULL);
-}
+void destroy_renderpass(struct sample_info &info) { vkDestroyRenderPass(info.device, info.render_pass, NULL); }
 
 void destroy_device(struct sample_info &info) {
     vkDeviceWaitIdle(info.device);
     vkDestroyDevice(info.device, NULL);
 }
 
-void destroy_instance(struct sample_info &info) {
-    vkDestroyInstance(info.inst, NULL);
-}
+void destroy_instance(struct sample_info &info) { vkDestroyInstance(info.inst, NULL); }
 
 void destroy_textures(struct sample_info &info) {
     for (size_t i = 0; i < info.textures.size(); i++) {

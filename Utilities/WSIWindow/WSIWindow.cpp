@@ -67,7 +67,7 @@ void WSIWindow::SetTitle(const char *title) { pimpl->SetTitle(title); }
 void WSIWindow::SetWinPos(uint16_t x, uint16_t y) { pimpl->SetWinPos(x, y); }
 void WSIWindow::SetWinSize(uint16_t w, uint16_t h) { pimpl->SetWinSize(w, h); }
 
-void WSIWindow::ShowKeyboard(bool enabled) { pimpl->TextInput(enabled); } // On Android, show the soft-keyboard.
+void WSIWindow::ShowKeyboard(bool enabled) { pimpl->TextInput(enabled); }  // On Android, show the soft-keyboard.
 void WSIWindow::Close() { pimpl->Close(); }
 
 EventType WSIWindow::GetEvent(bool wait_for_event) { return pimpl->GetEvent(wait_for_event); }
@@ -77,32 +77,32 @@ bool WSIWindow::ProcessEvents(bool wait_for_event) {
     while (e.tag != EventType::NONE) {
         // Calling the event handlers
         switch (e.tag) {
-        case EventType::MOUSE:
-            OnMouseEvent(e.mouse.action, e.mouse.x, e.mouse.y, e.mouse.btn);
-            break;
-        case EventType::KEY:
-            OnKeyEvent(e.key.action, e.key.keycode);
-            break;
-        case EventType::TEXT:
-            OnTextEvent(e.text.str);
-            break;
-        case EventType::MOVE:
-            OnMoveEvent(e.move.x, e.move.y);
-            break;
-        case EventType::RESIZE:
-            OnResizeEvent(e.resize.width, e.resize.height);
-            break;
-        case EventType::FOCUS:
-            OnFocusEvent(e.focus.has_focus);
-            break;
-        case EventType::TOUCH:
-            OnTouchEvent(e.touch.action, e.touch.x, e.touch.y, e.touch.id);
-            break;
-        case EventType::CLOSE:
-            OnCloseEvent();
-            return false;
-        default:
-            break;
+            case EventType::MOUSE:
+                OnMouseEvent(e.mouse.action, e.mouse.x, e.mouse.y, e.mouse.btn);
+                break;
+            case EventType::KEY:
+                OnKeyEvent(e.key.action, e.key.keycode);
+                break;
+            case EventType::TEXT:
+                OnTextEvent(e.text.str);
+                break;
+            case EventType::MOVE:
+                OnMoveEvent(e.move.x, e.move.y);
+                break;
+            case EventType::RESIZE:
+                OnResizeEvent(e.resize.width, e.resize.height);
+                break;
+            case EventType::FOCUS:
+                OnFocusEvent(e.focus.has_focus);
+                break;
+            case EventType::TOUCH:
+                OnTouchEvent(e.touch.action, e.touch.x, e.touch.y, e.touch.id);
+                break;
+            case EventType::CLOSE:
+                OnCloseEvent();
+                return false;
+            default:
+                break;
         }
         e = pimpl->GetEvent();
     }

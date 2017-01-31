@@ -215,6 +215,6 @@ void init_dispatch_table_top(PFN_vkGetInstanceProcAddr get_instance_proc_addr);
 void init_dispatch_table_middle(VkInstance instance, bool include_bottom);
 void init_dispatch_table_bottom(VkInstance instance, VkDevice dev);
 
-} // namespace vk
+}  // namespace vk
 
-#endif // HELPERSDISPATCHTABLE_H
+#endif  // HELPERSDISPATCHTABLE_H

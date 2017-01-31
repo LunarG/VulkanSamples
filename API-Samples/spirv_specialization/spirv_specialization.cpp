@@ -280,15 +280,14 @@ int sample_main(int argc, char *argv[]) {
 
     // Set up the info describing our spec map and data
     const VkSpecializationInfo specInfo = {
-        4,                 // mapEntryCount
-        entries,           // pMapEntries
-        4 * sizeof(float), // dataSize
-        data,              // pData
+        4,                  // mapEntryCount
+        entries,            // pMapEntries
+        4 * sizeof(float),  // dataSize
+        data,               // pData
     };
 
     // Provide the specialization data to fragment stage
-    info.shaderStages[1].sType =
-        VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    info.shaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     info.shaderStages[1].pNext = NULL;
     info.shaderStages[1].pSpecializationInfo = &specInfo;
     info.shaderStages[1].flags = 0;
@@ -301,32 +300,27 @@ int sample_main(int argc, char *argv[]) {
     moduleCreateInfo.flags = 0;
 
     if (use_SPIRV_asm) {
-
         // Use the hand edited SPIR-V assembly
         spv_context spvContext = spvContextCreate(SPV_ENV_VULKAN_1_0);
         spv_binary fragmentBinary = {};
         spv_diagnostic fragmentDiag = {};
-        spv_result_t fragmentResult = spvTextToBinary(
-            spvContext, fragmentSPIRV_specialized.c_str(),
-            fragmentSPIRV_specialized.length(), &fragmentBinary, &fragmentDiag);
+        spv_result_t fragmentResult = spvTextToBinary(spvContext, fragmentSPIRV_specialized.c_str(),
+                                                      fragmentSPIRV_specialized.length(), &fragmentBinary, &fragmentDiag);
         if (fragmentDiag) {
             printf("Diagnostic info from fragment shader:\n");
             spvDiagnosticPrint(fragmentDiag);
         }
         assert(fragmentResult == SPV_SUCCESS);
-        moduleCreateInfo.codeSize =
-            fragmentBinary->wordCount * sizeof(unsigned int);
+        moduleCreateInfo.codeSize = fragmentBinary->wordCount * sizeof(unsigned int);
         moduleCreateInfo.pCode = fragmentBinary->code;
         spvDiagnosticDestroy(fragmentDiag);
         spvContextDestroy(spvContext);
 
     } else {
-
         // Convert GLSL to SPIR-V
         init_glslang();
         std::vector<unsigned int> fragSpv;
-        bool U_ASSERT_ONLY retVal =
-            GLSLtoSPV(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderText, fragSpv);
+        bool U_ASSERT_ONLY retVal = GLSLtoSPV(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderText, fragSpv);
         assert(retVal);
         finalize_glslang();
 
@@ -334,15 +328,13 @@ int sample_main(int argc, char *argv[]) {
         moduleCreateInfo.pCode = fragSpv.data();
     }
 
-    res = vkCreateShaderModule(info.device, &moduleCreateInfo, NULL,
-                               &info.shaderStages[1].module);
+    res = vkCreateShaderModule(info.device, &moduleCreateInfo, NULL, &info.shaderStages[1].module);
     assert(res == VK_SUCCESS);
 
     /* VULKAN_KEY_END */
 
     init_framebuffers(info, depthPresent);
-    init_vertex_buffer(info, g_vb_texture_Data, sizeof(g_vb_texture_Data),
-                       sizeof(g_vb_texture_Data[0]), true);
+    init_vertex_buffer(info, g_vb_texture_Data, sizeof(g_vb_texture_Data), sizeof(g_vb_texture_Data[0]), true);
     init_descriptor_pool(info, true);
     init_descriptor_set(info, true);
     init_pipeline_cache(info);
@@ -360,8 +352,7 @@ int sample_main(int argc, char *argv[]) {
     vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
     vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline);
-    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            info.pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
+    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
                             info.desc_set.data(), 0, NULL);
 
     const VkDeviceSize offsets[1] = {0};
@@ -377,8 +368,7 @@ int sample_main(int argc, char *argv[]) {
 
     VkFence drawFence = {};
     init_fence(info, drawFence);
-    VkPipelineStageFlags pipe_stage_flags =
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     VkSubmitInfo submit_info = {};
     init_submit_info(info, submit_info, pipe_stage_flags);
 
@@ -392,16 +382,14 @@ int sample_main(int argc, char *argv[]) {
 
     /* Make sure command buffer is finished before presenting */
     do {
-        res =
-            vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+        res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
     } while (res == VK_TIMEOUT);
     assert(res == VK_SUCCESS);
     res = vkQueuePresentKHR(info.present_queue, &present);
     assert(res == VK_SUCCESS);
 
     wait_seconds(1);
-    if (info.save_images)
-        write_ppm(info, "spirv_specialization");
+    if (info.save_images) write_ppm(info, "spirv_specialization");
 
     vkDestroyFence(info.device, drawFence, NULL);
     vkDestroySemaphore(info.device, info.imageAcquiredSemaphore, NULL);

@@ -38,21 +38,21 @@ Use memory barriers to update texture
 
 // Using OpenGL based glm, so Y is upside down between OpenGL and Vulkan
 
-static const VertexUV vb_Data[] =
-{   //Textured quad:
-    { XYZ1( -2, -0.5, -1 ), UV( 0.f, 0.f ) },  //lft-top        / Z
-    { XYZ1( -1, -0.5, -1 ), UV( 1.f, 0.f ) },  //rgt-top       /
-    { XYZ1( -2,  0.5, -1 ), UV( 0.f, 1.f ) },  //lft-btm      +------> X
-    { XYZ1( -2,  0.5, -1 ), UV( 0.f, 1.f ) },  //lft-btm      |
-    { XYZ1( -1, -0.5, -1 ), UV( 1.f, 0.f ) },  //rgt-top      |
-    { XYZ1( -1,  0.5, -1 ), UV( 1.f, 1.f ) },  //rgt-btm      v Y
-    //Green quad:
-    { XYZ1(  1, -0.5, -1 ), UV( 0.f, 0.f ) },  //lft-top
-    { XYZ1(  2, -0.5, -1 ), UV( 1.f, 0.f ) },  //rgt-top
-    { XYZ1(  1,  0.5, -1 ), UV( 0.f, 1.f ) },  //lft-btm
-    { XYZ1(  1,  0.5, -1 ), UV( 0.f, 1.f ) },  //lft-btm
-    { XYZ1(  2, -0.5, -1 ), UV( 1.f, 0.f ) },  //rgt-top
-    { XYZ1(  2,  0.5, -1 ), UV( 1.f, 1.f ) },  //rgt-btm
+static const VertexUV vb_Data[] = {
+    // Textured quad:
+    {XYZ1(-2, -0.5, -1), UV(0.f, 0.f)},  // lft-top        / Z
+    {XYZ1(-1, -0.5, -1), UV(1.f, 0.f)},  // rgt-top       /
+    {XYZ1(-2, 0.5, -1), UV(0.f, 1.f)},   // lft-btm      +------> X
+    {XYZ1(-2, 0.5, -1), UV(0.f, 1.f)},   // lft-btm      |
+    {XYZ1(-1, -0.5, -1), UV(1.f, 0.f)},  // rgt-top      |
+    {XYZ1(-1, 0.5, -1), UV(1.f, 1.f)},   // rgt-btm      v Y
+    // Green quad:
+    {XYZ1(1, -0.5, -1), UV(0.f, 0.f)},  // lft-top
+    {XYZ1(2, -0.5, -1), UV(1.f, 0.f)},  // rgt-top
+    {XYZ1(1, 0.5, -1), UV(0.f, 1.f)},   // lft-btm
+    {XYZ1(1, 0.5, -1), UV(0.f, 1.f)},   // lft-btm
+    {XYZ1(2, -0.5, -1), UV(1.f, 0.f)},  // rgt-top
+    {XYZ1(2, 0.5, -1), UV(1.f, 1.f)},   // rgt-btm
 };
 
 #define DEPTH_PRESENT false
@@ -91,8 +91,7 @@ const char *fragShaderText =
     "   outColor = textureLod(tex, texcoord, 0.0);\n"
     "}\n";
 
-int sample_main(int argc, char **argv)
-{
+int sample_main(int argc, char **argv) {
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
     char sample_title[] = "Memory Barriers";
@@ -102,7 +101,7 @@ int sample_main(int argc, char **argv)
     info.instance_extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 #ifdef _WIN32
     info.instance_extension_names.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-#elif  __ANDROID__
+#elif __ANDROID__
     info.instance_extension_names.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
 #else
     info.instance_extension_names.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
@@ -123,12 +122,10 @@ int sample_main(int argc, char **argv)
     // CmdClearColorImage is going to require usage of TRANSFER_DST, but
     // it's not clear which format feature maps to the required TRANSFER_DST usage,
     // BLIT_DST is a reasonable guess and it seems to work
-    init_texture(info, nullptr, VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-                 VK_FORMAT_FEATURE_BLIT_DST_BIT);
+    init_texture(info, nullptr, VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_FORMAT_FEATURE_BLIT_DST_BIT);
     init_uniform_buffer(info);
     init_descriptor_and_pipeline_layouts(info, true);
-    init_renderpass(info, DEPTH_PRESENT, false,
-                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    init_renderpass(info, DEPTH_PRESENT, false, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     init_shaders(info, vertShaderText, fragShaderText);
     init_framebuffers(info, DEPTH_PRESENT);
     init_vertex_buffer(info, vb_Data, sizeof(vb_Data), sizeof(vb_Data[0]), true);
@@ -157,33 +154,23 @@ int sample_main(int argc, char **argv)
     presentCompleteSemaphoreCreateInfo.pNext = NULL;
     presentCompleteSemaphoreCreateInfo.flags = 0;
 
-    res = vkCreateSemaphore(info.device,
-                            &presentCompleteSemaphoreCreateInfo,
-                            NULL,
-                            &info.imageAcquiredSemaphore);
+    res = vkCreateSemaphore(info.device, &presentCompleteSemaphoreCreateInfo, NULL, &info.imageAcquiredSemaphore);
     assert(res == VK_SUCCESS);
 
     // Get the index of the next available swapchain image:
-    res = vkAcquireNextImageKHR(info.device, info.swap_chain,
-                                      UINT64_MAX,
-                                      info.imageAcquiredSemaphore,
-                                      VK_NULL_HANDLE,
-                                      &info.current_buffer);
+    res = vkAcquireNextImageKHR(info.device, info.swap_chain, UINT64_MAX, info.imageAcquiredSemaphore, VK_NULL_HANDLE,
+                                &info.current_buffer);
     // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
     // return codes
     assert(res == VK_SUCCESS);
 
-    set_image_layout(info, info.buffers[info.current_buffer].image,
-                     VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                     VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                     VK_PIPELINE_STAGE_TRANSFER_BIT);
+    set_image_layout(info, info.buffers[info.current_buffer].image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 
     // We need to do the clear here instead of using a renderpass load op since
     // we will use the same renderpass multiple times in the frame
-    vkCmdClearColorImage(info.cmd,
-           info.buffers[info.current_buffer].image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-           clear_color, 1, &srRange );
+    vkCmdClearColorImage(info.cmd, info.buffers[info.current_buffer].image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, clear_color, 1,
+                         &srRange);
 
     VkRenderPassBeginInfo rp_begin;
     rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -200,10 +187,9 @@ int sample_main(int argc, char **argv)
     // Draw a textured quad on the left side of the window
     vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                  info.pipeline);
-    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline_layout,
-            0, NUM_DESCRIPTOR_SETS, info.desc_set.data(), 0, NULL);
+    vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline);
+    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
+                            info.desc_set.data(), 0, NULL);
 
     const VkDeviceSize offsets[1] = {0};
     vkCmdBindVertexBuffers(info.cmd, 0, 1, &info.vertex_buffer.buf, offsets);
@@ -233,18 +219,15 @@ int sample_main(int argc, char **argv)
     textureBarrier.subresourceRange.baseArrayLayer = 0;
     textureBarrier.subresourceRange.layerCount = 1;
     textureBarrier.image = info.textures[0].image;
-    vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                         VK_PIPELINE_STAGE_TRANSFER_BIT,
-                         0, 0, NULL, 0, NULL, 1, &textureBarrier);
+    vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1,
+                         &textureBarrier);
 
     clear_color[0].float32[0] = 0.0f;
     clear_color[0].float32[1] = 1.0f;
     clear_color[0].float32[2] = 0.0f;
     clear_color[0].float32[3] = 1.0f;
     /* Clear texture to green */
-    vkCmdClearColorImage(info.cmd,
-           info.textures[0].image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-           clear_color, 1, &srRange );
+    vkCmdClearColorImage(info.cmd, info.textures[0].image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, clear_color, 1, &srRange);
 
     // Send a barrier to change the texture image's layout back to SHADER_READ_ONLY
     // because we're going to use it as a texture again
@@ -262,9 +245,8 @@ int sample_main(int argc, char **argv)
     textureBarrier.subresourceRange.baseArrayLayer = 0;
     textureBarrier.subresourceRange.layerCount = 1;
     textureBarrier.image = info.textures[0].image;
-    vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                         0, 0, NULL, 0, NULL, 1, &textureBarrier);
+    vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, NULL, 0, NULL, 1,
+                         &textureBarrier);
 
     // Draw the second quad to the right using the (now) green texture
     vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
@@ -282,8 +264,7 @@ int sample_main(int argc, char **argv)
     assert(res == VK_SUCCESS);
 
     VkSubmitInfo submit_info = {};
-    VkPipelineStageFlags pipe_stage_flags =
-           VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     init_submit_info(info, submit_info, pipe_stage_flags);
     assert(res == VK_SUCCESS);
 
@@ -295,13 +276,12 @@ int sample_main(int argc, char **argv)
     assert(res == VK_SUCCESS);
 
     // Now present the image in the window
-    VkPresentInfoKHR present {};
+    VkPresentInfoKHR present{};
     init_present_info(info, present);
 
     // Make sure command buffer is finished before presenting
     do {
-        res =
-            vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+        res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
     } while (res == VK_TIMEOUT);
     assert(res == VK_SUCCESS);
     res = vkQueuePresentKHR(info.present_queue, &present);
@@ -309,8 +289,7 @@ int sample_main(int argc, char **argv)
     /* VULKAN_KEY_END */
 
     wait_seconds(1);
-    if (info.save_images)
-        write_ppm(info, "memory_barriers");
+    if (info.save_images) write_ppm(info, "memory_barriers");
 
     vkDestroySemaphore(info.device, info.imageAcquiredSemaphore, NULL);
     vkDestroyFence(info.device, drawFence, NULL);
@@ -332,4 +311,3 @@ int sample_main(int argc, char **argv)
     destroy_instance(info);
     return 0;
 }
-

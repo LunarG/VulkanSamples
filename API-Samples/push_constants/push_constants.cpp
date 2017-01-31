@@ -110,8 +110,7 @@ int sample_main(int argc, char *argv[]) {
     init_renderpass(info, depthPresent);
     init_shaders(info, vertShaderText, fragShaderText);
     init_framebuffers(info, depthPresent);
-    init_vertex_buffer(info, g_vb_texture_Data, sizeof(g_vb_texture_Data),
-                       sizeof(g_vb_texture_Data[0]), true);
+    init_vertex_buffer(info, g_vb_texture_Data, sizeof(g_vb_texture_Data), sizeof(g_vb_texture_Data[0]), true);
 
     // Set up one descriptor sets
     static const unsigned descriptor_set_count = 1;
@@ -127,15 +126,13 @@ int sample_main(int argc, char *argv[]) {
     resource_binding[0].pImmutableSamplers = NULL;
 
     VkDescriptorSetLayoutCreateInfo resource_layout_info[1] = {};
-    resource_layout_info[0].sType =
-        VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    resource_layout_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     resource_layout_info[0].pNext = NULL;
     resource_layout_info[0].bindingCount = resource_count;
     resource_layout_info[0].pBindings = resource_binding;
 
     VkDescriptorSetLayout descriptor_layouts[1] = {};
-    res = vkCreateDescriptorSetLayout(info.device, resource_layout_info, NULL,
-                                      &descriptor_layouts[0]);
+    res = vkCreateDescriptorSetLayout(info.device, resource_layout_info, NULL, &descriptor_layouts[0]);
     assert(res == VK_SUCCESS);
 
     /* VULKAN_KEY_START */
@@ -151,16 +148,13 @@ int sample_main(int argc, char *argv[]) {
 
     // Create pipeline layout with multiple descriptor sets
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo[1] = {};
-    pipelineLayoutCreateInfo[0].sType =
-        VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipelineLayoutCreateInfo[0].sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutCreateInfo[0].pNext = NULL;
-    pipelineLayoutCreateInfo[0].pushConstantRangeCount =
-        push_constant_range_count;
+    pipelineLayoutCreateInfo[0].pushConstantRangeCount = push_constant_range_count;
     pipelineLayoutCreateInfo[0].pPushConstantRanges = push_constant_ranges;
     pipelineLayoutCreateInfo[0].setLayoutCount = descriptor_set_count;
     pipelineLayoutCreateInfo[0].pSetLayouts = descriptor_layouts;
-    res = vkCreatePipelineLayout(info.device, pipelineLayoutCreateInfo, NULL,
-                                 &info.pipeline_layout);
+    res = vkCreatePipelineLayout(info.device, pipelineLayoutCreateInfo, NULL, &info.pipeline_layout);
     assert(res == VK_SUCCESS);
 
     // Create a single pool to contain data for our descriptor set
@@ -174,8 +168,7 @@ int sample_main(int argc, char *argv[]) {
     pool_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     pool_info[0].pNext = NULL;
     pool_info[0].maxSets = descriptor_set_count;
-    pool_info[0].poolSizeCount =
-        sizeof(type_count) / sizeof(VkDescriptorPoolSize);
+    pool_info[0].poolSizeCount = sizeof(type_count) / sizeof(VkDescriptorPoolSize);
     pool_info[0].pPoolSizes = type_count;
 
     VkDescriptorPool descriptor_pool[1] = {};
@@ -206,13 +199,11 @@ int sample_main(int argc, char *argv[]) {
     descriptor_writes[0].dstSet = descriptor_sets[0];
     descriptor_writes[0].descriptorCount = 1;
     descriptor_writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    descriptor_writes[0].pBufferInfo =
-        &info.uniform_data.buffer_info; // populated by init_uniform_buffer()
+    descriptor_writes[0].pBufferInfo = &info.uniform_data.buffer_info;  // populated by init_uniform_buffer()
     descriptor_writes[0].dstArrayElement = 0;
     descriptor_writes[0].dstBinding = 0;
 
-    vkUpdateDescriptorSets(info.device, resource_count, descriptor_writes, 0,
-                           NULL);
+    vkUpdateDescriptorSets(info.device, resource_count, descriptor_writes, 0, NULL);
 
     // Create our push constant data, which matches shader expectations
     unsigned pushConstants[2] = {};
@@ -220,12 +211,9 @@ int sample_main(int argc, char *argv[]) {
     pushConstants[1] = (unsigned)0x3F800000;
 
     // Ensure we have enough room for push constant data
-    if (sizeof(pushConstants) > info.gpu_props.limits.maxPushConstantsSize)
-        assert(0 && "Too many push constants");
+    if (sizeof(pushConstants) > info.gpu_props.limits.maxPushConstantsSize) assert(0 && "Too many push constants");
 
-    vkCmdPushConstants(info.cmd, info.pipeline_layout,
-                       VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(pushConstants),
-                       pushConstants);
+    vkCmdPushConstants(info.cmd, info.pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(pushConstants), pushConstants);
 
     /* VULKAN_KEY_END */
 
@@ -244,8 +232,7 @@ int sample_main(int argc, char *argv[]) {
     vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
     vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline);
-    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            info.pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
+    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
                             descriptor_sets, 0, NULL);
 
     const VkDeviceSize offsets[1] = {0};
@@ -261,8 +248,7 @@ int sample_main(int argc, char *argv[]) {
 
     VkFence drawFence = {};
     init_fence(info, drawFence);
-    VkPipelineStageFlags pipe_stage_flags =
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     VkSubmitInfo submit_info = {};
     init_submit_info(info, submit_info, pipe_stage_flags);
 
@@ -276,16 +262,14 @@ int sample_main(int argc, char *argv[]) {
 
     /* Make sure command buffer is finished before presenting */
     do {
-        res =
-            vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+        res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
     } while (res == VK_TIMEOUT);
     assert(res == VK_SUCCESS);
     res = vkQueuePresentKHR(info.present_queue, &present);
     assert(res == VK_SUCCESS);
 
     wait_seconds(1);
-    if (info.save_images)
-        write_ppm(info, "push_constants");
+    if (info.save_images) write_ppm(info, "push_constants");
 
     vkDestroyFence(info.device, drawFence, NULL);
     vkDestroySemaphore(info.device, info.imageAcquiredSemaphore, NULL);
@@ -298,8 +282,7 @@ int sample_main(int argc, char *argv[]) {
     destroy_shaders(info);
     destroy_renderpass(info);
     // instead of destroy_descriptor_and_pipeline_layouts(info);
-    for (int i = 0; i < descriptor_set_count; i++)
-        vkDestroyDescriptorSetLayout(info.device, descriptor_layouts[i], NULL);
+    for (int i = 0; i < descriptor_set_count; i++) vkDestroyDescriptorSetLayout(info.device, descriptor_layouts[i], NULL);
     vkDestroyPipelineLayout(info.device, info.pipeline_layout, NULL);
     destroy_uniform_buffer(info);
     destroy_depth_buffer(info);

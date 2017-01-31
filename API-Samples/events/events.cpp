@@ -28,7 +28,6 @@ Use basic events
 #include <cstdlib>
 #include "cube_data.h"
 
-
 int sample_main(int argc, char *argv[]) {
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
@@ -45,7 +44,6 @@ int sample_main(int argc, char *argv[]) {
     init_command_buffer(info);
     execute_begin_command_buffer(info);
     init_device_queue(info);
-
 
     /* VULKAN_KEY_START */
 
@@ -66,8 +64,7 @@ int sample_main(int argc, char *argv[]) {
     fenceInfo.flags = 0;
     vkCreateFence(info.device, &fenceInfo, NULL, &fence);
 
-    VkPipelineStageFlags pipe_stage_flags =
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     const VkCommandBuffer cmd_bufs[] = {info.cmd};
     VkSubmitInfo submit_info[1] = {};
     submit_info[0].pNext = NULL;
@@ -87,8 +84,7 @@ int sample_main(int argc, char *argv[]) {
     // waiting for an event
     int timeouts = -1;
     do {
-        res =
-            vkWaitForFences(info.device, 1, &fence, VK_TRUE, FENCE_TIMEOUT);
+        res = vkWaitForFences(info.device, 1, &fence, VK_TRUE, FENCE_TIMEOUT);
         timeouts++;
     } while (res == VK_TIMEOUT);
     assert(res == VK_SUCCESS);
@@ -108,9 +104,8 @@ int sample_main(int argc, char *argv[]) {
     vkCreateEvent(info.device, &eventInfo, NULL, &event);
 
     execute_begin_command_buffer(info);
-    vkCmdWaitEvents(info.cmd, 1, &event, VK_PIPELINE_STAGE_HOST_BIT,
-                    VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-                    0, nullptr, 0, nullptr,0, nullptr);
+    vkCmdWaitEvents(info.cmd, 1, &event, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, nullptr, 0, nullptr,
+                    0, nullptr);
     execute_end_command_buffer(info);
     vkResetFences(info.device, 1, &fence);
 
@@ -134,12 +129,12 @@ int sample_main(int argc, char *argv[]) {
     vkSetEvent(info.device, event);
     do {
         res = vkWaitForFences(info.device, 1, &fence, VK_TRUE, FENCE_TIMEOUT);
-    } while ( res == VK_TIMEOUT);
+    } while (res == VK_TIMEOUT);
     assert(res == VK_SUCCESS);
 
     vkResetCommandBuffer(info.cmd, 0);
     vkResetFences(info.device, 1, &fence);
-    vkResetEvent(info.device,event);
+    vkResetEvent(info.device, event);
 
     // Now set the event from the GPU and wait on the CPU
     execute_begin_command_buffer(info);
@@ -160,7 +155,7 @@ int sample_main(int argc, char *argv[]) {
         res = vkGetEventStatus(info.device, event);
         polls++;
     } while (res != VK_EVENT_SET);
-    printf ("%d polls to find the event set\n", polls);
+    printf("%d polls to find the event set\n", polls);
 
     do {
         res = vkWaitForFences(info.device, 1, &fence, VK_TRUE, FENCE_TIMEOUT);

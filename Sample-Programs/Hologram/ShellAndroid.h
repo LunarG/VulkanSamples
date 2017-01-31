@@ -24,7 +24,7 @@
 #include "Shell.h"
 
 class ShellAndroid : public Shell {
-public:
+   public:
     static std::vector<std::string> get_args(android_app &app);
 
     ShellAndroid(android_app &app, Game &game);
@@ -35,7 +35,7 @@ public:
     void run();
     void quit();
 
-private:
+   private:
     PFN_vkGetInstanceProcAddr load_vk();
     bool can_present(VkPhysicalDevice phy, uint32_t queue_family) { return true; }
 
@@ -52,16 +52,14 @@ private:
     void *lib_handle_;
 };
 
-void ShellAndroid::on_app_cmd(android_app *app, int32_t cmd)
-{
+void ShellAndroid::on_app_cmd(android_app *app, int32_t cmd) {
     auto android = reinterpret_cast<ShellAndroid *>(app->userData);
     android->on_app_cmd(cmd);
 }
 
-int32_t ShellAndroid::on_input_event(android_app *app, AInputEvent *event)
-{
+int32_t ShellAndroid::on_input_event(android_app *app, AInputEvent *event) {
     auto android = reinterpret_cast<ShellAndroid *>(app->userData);
     return android->on_input_event(event);
 }
 
-#endif // SHELL_ANDROID_H
+#endif  // SHELL_ANDROID_H

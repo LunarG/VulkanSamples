@@ -40,13 +40,11 @@ int sample_main(int argc, char *argv[]) {
 
     VkDeviceQueueCreateInfo queue_info = {};
 
-    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0],
-                                             &info.queue_family_count, NULL);
+    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_family_count, NULL);
     assert(info.queue_family_count >= 1);
 
     info.queue_props.resize(info.queue_family_count);
-    vkGetPhysicalDeviceQueueFamilyProperties(
-        info.gpus[0], &info.queue_family_count, info.queue_props.data());
+    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_family_count, info.queue_props.data());
     assert(info.queue_family_count >= 1);
 
     bool found = false;
@@ -78,8 +76,7 @@ int sample_main(int argc, char *argv[]) {
     device_info.pEnabledFeatures = NULL;
 
     VkDevice device;
-    VkResult U_ASSERT_ONLY res =
-        vkCreateDevice(info.gpus[0], &device_info, NULL, &device);
+    VkResult U_ASSERT_ONLY res = vkCreateDevice(info.gpus[0], &device_info, NULL, &device);
     assert(res == VK_SUCCESS);
 
     vkDestroyDevice(device, NULL);

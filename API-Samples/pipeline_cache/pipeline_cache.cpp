@@ -94,8 +94,7 @@ int sample_main(int argc, char *argv[]) {
     init_renderpass(info, depthPresent);
     init_shaders(info, vertShaderText, fragShaderText);
     init_framebuffers(info, depthPresent);
-    init_vertex_buffer(info, g_vb_texture_Data, sizeof(g_vb_texture_Data),
-                       sizeof(g_vb_texture_Data[0]), true);
+    init_vertex_buffer(info, g_vb_texture_Data, sizeof(g_vb_texture_Data), sizeof(g_vb_texture_Data[0]), true);
     init_descriptor_pool(info, true);
     init_descriptor_set(info, true);
 
@@ -110,7 +109,6 @@ int sample_main(int argc, char *argv[]) {
     FILE *pReadFile = fopen(readFileName.c_str(), "rb");
 
     if (pReadFile) {
-
         // Determine cache size
         fseek(pReadFile, 0, SEEK_END);
         startCacheSize = ftell(pReadFile);
@@ -214,8 +212,7 @@ int sample_main(int argc, char *argv[]) {
             printf("    Driver expects: 0x%.8x\n", info.gpu_props.deviceID);
         }
 
-        if (memcmp(pipelineCacheUUID, info.gpu_props.pipelineCacheUUID,
-                   sizeof(pipelineCacheUUID)) != 0) {
+        if (memcmp(pipelineCacheUUID, info.gpu_props.pipelineCacheUUID, sizeof(pipelineCacheUUID)) != 0) {
             badCache = true;
             printf("  UUID mismatch in %s.\n", readFileName.c_str());
             printf("    Cache contains: ");
@@ -248,8 +245,7 @@ int sample_main(int argc, char *argv[]) {
     pipelineCache.initialDataSize = startCacheSize;
     pipelineCache.pInitialData = startCacheData;
     pipelineCache.flags = 0;
-    res = vkCreatePipelineCache(info.device, &pipelineCache, nullptr,
-                                &info.pipelineCache);
+    res = vkCreatePipelineCache(info.device, &pipelineCache, nullptr, &info.pipelineCache);
     assert(res == VK_SUCCESS);
 
     // Free our initialData now that pipeline has been created
@@ -272,8 +268,7 @@ int sample_main(int argc, char *argv[]) {
     rp_begin.pClearValues = clear_values;
     vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline);
-    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            info.pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
+    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
                             info.desc_set.data(), 0, NULL);
     const VkDeviceSize offsets[1] = {0};
     vkCmdBindVertexBuffers(info.cmd, 0, 1, &info.vertex_buffer.buf, offsets);
@@ -285,8 +280,7 @@ int sample_main(int argc, char *argv[]) {
     assert(res == VK_SUCCESS);
     VkFence drawFence = {};
     init_fence(info, drawFence);
-    VkPipelineStageFlags pipe_stage_flags =
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     VkSubmitInfo submit_info = {};
     init_submit_info(info, submit_info, pipe_stage_flags);
     /* Queue the command buffer for execution */
@@ -297,15 +291,13 @@ int sample_main(int argc, char *argv[]) {
     init_present_info(info, present);
     /* Make sure command buffer is finished before presenting */
     do {
-        res =
-            vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+        res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
     } while (res == VK_TIMEOUT);
     assert(res == VK_SUCCESS);
     res = vkQueuePresentKHR(info.present_queue, &present);
     assert(res == VK_SUCCESS);
     wait_seconds(1);
-    if (info.save_images)
-        write_ppm(info, "pipeline_cache");
+    if (info.save_images) write_ppm(info, "pipeline_cache");
 
     // End standard draw stuff
 
@@ -321,8 +313,7 @@ int sample_main(int argc, char *argv[]) {
     void *endCacheData = nullptr;
 
     // Call with nullptr to get cache size
-    res = vkGetPipelineCacheData(info.device, info.pipelineCache, &endCacheSize,
-                           nullptr);
+    res = vkGetPipelineCacheData(info.device, info.pipelineCache, &endCacheSize, nullptr);
     assert(res == VK_SUCCESS);
 
     // Allocate memory to hold the populated cache data
@@ -333,8 +324,7 @@ int sample_main(int argc, char *argv[]) {
     }
 
     // Call again with pointer to buffer
-    res = vkGetPipelineCacheData(info.device, info.pipelineCache, &endCacheSize,
-                           endCacheData);
+    res = vkGetPipelineCacheData(info.device, info.pipelineCache, &endCacheSize, endCacheData);
     assert(res == VK_SUCCESS);
 
     // Write the file to disk, overwriting whatever was there

@@ -33,7 +33,7 @@
 class Meshes;
 
 class Hologram : public Game {
-public:
+   public:
     Hologram(const std::vector<std::string> &args);
     ~Hologram();
 
@@ -48,9 +48,9 @@ public:
 
     void on_frame(float frame_pred);
 
-private:
+   private:
     class Worker {
-    public:
+       public:
         Worker(Hologram &hologram, int index, int object_begin, int object_end);
 
         void start();
@@ -69,7 +69,7 @@ private:
 
         VkFramebuffer fb_;
 
-    private:
+       private:
         enum State {
             INIT,
             IDLE,
@@ -188,4 +188,4 @@ private:
     void draw_objects(Worker &worker);
 };
 
-#endif // HOLOGRAM_H
+#endif  // HOLOGRAM_H

@@ -113,8 +113,7 @@ int sample_main(int argc, char *argv[]) {
 
     init_uniform_buffer(info);
     init_descriptor_and_pipeline_layouts(info, false);
-    init_vertex_buffer(info, g_vb_solid_face_colors_Data,
-                       sizeof(g_vb_solid_face_colors_Data),
+    init_vertex_buffer(info, g_vb_solid_face_colors_Data, sizeof(g_vb_solid_face_colors_Data),
                        sizeof(g_vb_solid_face_colors_Data[0]), false);
     init_descriptor_pool(info, false);
     init_descriptor_set(info, false);
@@ -145,8 +144,7 @@ int sample_main(int argc, char *argv[]) {
     attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
     attachments[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    attachments[1].finalLayout =
-        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     attachments[1].flags = 0;
 
     VkAttachmentReference color_reference = {};
@@ -187,10 +185,8 @@ int sample_main(int argc, char *argv[]) {
     dependency.dependencyFlags = 0;
     dependency.srcStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
     dependency.dstStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
-    dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
-                               VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
-    dependency.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
-                               VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+    dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+    dependency.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
 
     VkRenderPassCreateInfo rp_info = {};
     rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -276,11 +272,9 @@ int sample_main(int argc, char *argv[]) {
     vp.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     vp.pNext = NULL;
     vp.viewportCount = NUM_VIEWPORTS;
-    dynamicStateEnables[dynamicState.dynamicStateCount++] =
-        VK_DYNAMIC_STATE_VIEWPORT;
+    dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_VIEWPORT;
     vp.scissorCount = NUM_SCISSORS;
-    dynamicStateEnables[dynamicState.dynamicStateCount++] =
-        VK_DYNAMIC_STATE_SCISSOR;
+    dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_SCISSOR;
 
     VkPipelineDepthStencilStateCreateInfo ds;
     ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
@@ -341,8 +335,7 @@ int sample_main(int argc, char *argv[]) {
     pipeline.subpass = 0;
 
     VkPipeline stencil_cube_pipe = VK_NULL_HANDLE;
-    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1,
-                                    &pipeline, NULL, &stencil_cube_pipe);
+    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1, &pipeline, NULL, &stencil_cube_pipe);
     assert(res == VK_SUCCESS);
 
     /* destroy the shaders used for the above pipelin eand replace them with
@@ -373,8 +366,7 @@ int sample_main(int argc, char *argv[]) {
     pipeline.pColorBlendState = &cb;
 
     VkPipeline stencil_fullscreen_pipe = VK_NULL_HANDLE;
-    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1,
-                                    &pipeline, NULL, &stencil_fullscreen_pipe);
+    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1, &pipeline, NULL, &stencil_fullscreen_pipe);
     assert(res == VK_SUCCESS);
 
     destroy_shaders(info);
@@ -390,18 +382,15 @@ int sample_main(int argc, char *argv[]) {
 
     VkSemaphore imageAcquiredSemaphore;
     VkSemaphoreCreateInfo imageAcquiredSemaphoreCreateInfo;
-    imageAcquiredSemaphoreCreateInfo.sType =
-        VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    imageAcquiredSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     imageAcquiredSemaphoreCreateInfo.pNext = NULL;
     imageAcquiredSemaphoreCreateInfo.flags = 0;
 
-    res = vkCreateSemaphore(info.device, &imageAcquiredSemaphoreCreateInfo,
-                            NULL, &imageAcquiredSemaphore);
+    res = vkCreateSemaphore(info.device, &imageAcquiredSemaphoreCreateInfo, NULL, &imageAcquiredSemaphore);
     assert(res == VK_SUCCESS);
 
     // Get the index of the next available swapchain image:
-    res = vkAcquireNextImageKHR(info.device, info.swap_chain, UINT64_MAX,
-                                imageAcquiredSemaphore, VK_NULL_HANDLE,
+    res = vkAcquireNextImageKHR(info.device, info.swap_chain, UINT64_MAX, imageAcquiredSemaphore, VK_NULL_HANDLE,
                                 &info.current_buffer);
     // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
     // return codes
@@ -425,10 +414,8 @@ int sample_main(int argc, char *argv[]) {
        outputting color only where the cube filled in stencil */
     vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                      stencil_cube_pipe);
-    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            info.pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
+    vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, stencil_cube_pipe);
+    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
                             info.desc_set.data(), 0, NULL);
 
     const VkDeviceSize offsets[1] = {0};
@@ -457,8 +444,7 @@ int sample_main(int argc, char *argv[]) {
     vkCmdNextSubpass(info.cmd, VK_SUBPASS_CONTENTS_INLINE);
 
     /* Bind the fullscreen pass pipeline */
-    vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                      stencil_fullscreen_pipe);
+    vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, stencil_fullscreen_pipe);
 
     vkCmdSetViewport(info.cmd, 0, NUM_VIEWPORTS, &viewport);
     vkCmdSetScissor(info.cmd, 0, NUM_SCISSORS, &scissor);
@@ -483,14 +469,11 @@ int sample_main(int argc, char *argv[]) {
     /* This time we care about the contents of the color and depth buffers */
     attachments[0].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     attachments[0].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    attachments[1].initialLayout =
-        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    attachments[1].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
     /* The dependency between the subpasses now includes the color attachment */
-    dependency.srcAccessMask |= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
-                                VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
-    dependency.dstAccessMask |= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
-                                VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+    dependency.srcAccessMask |= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+    dependency.dstAccessMask |= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
 
     /* Otherwise, the render pass is identical */
     VkRenderPass blend_render_pass;
@@ -546,8 +529,7 @@ int sample_main(int argc, char *argv[]) {
     pipeline.subpass = 0;
 
     VkPipeline blend_cube_pipe = VK_NULL_HANDLE;
-    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1,
-                                    &pipeline, NULL, &blend_cube_pipe);
+    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1, &pipeline, NULL, &blend_cube_pipe);
     assert(res == VK_SUCCESS);
 
     /* Now we will set up the fullscreen pass to render on top. */
@@ -569,8 +551,7 @@ int sample_main(int argc, char *argv[]) {
     pipeline.subpass = 1;
 
     VkPipeline blend_fullscreen_pipe = VK_NULL_HANDLE;
-    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1,
-                                    &pipeline, NULL, &blend_fullscreen_pipe);
+    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1, &pipeline, NULL, &blend_fullscreen_pipe);
     assert(res == VK_SUCCESS);
 
     destroy_shaders(info);
@@ -586,10 +567,8 @@ int sample_main(int argc, char *argv[]) {
     rp_begin.renderPass = blend_render_pass;
     vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                      blend_cube_pipe);
-    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            info.pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
+    vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, blend_cube_pipe);
+    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
                             info.desc_set.data(), 0, NULL);
     vkCmdBindVertexBuffers(info.cmd, 0, 1, &info.vertex_buffer.buf, offsets);
     vkCmdSetViewport(info.cmd, 0, NUM_VIEWPORTS, &viewport);
@@ -601,8 +580,7 @@ int sample_main(int argc, char *argv[]) {
     /* Advance to the next subpass */
     vkCmdNextSubpass(info.cmd, VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                      blend_fullscreen_pipe);
+    vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, blend_fullscreen_pipe);
 
     /* Adjust the viewport to be a square in the centre, just overlapping the
      * cube */
@@ -628,8 +606,7 @@ int sample_main(int argc, char *argv[]) {
     fenceInfo.flags = 0;
     vkCreateFence(info.device, &fenceInfo, NULL, &drawFence);
 
-    VkPipelineStageFlags pipe_stage_flags =
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     VkSubmitInfo submit_info[1] = {};
     submit_info[0].pNext = NULL;
     submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -659,8 +636,7 @@ int sample_main(int argc, char *argv[]) {
 
     /* Make sure command buffer is finished before presenting */
     do {
-        res =
-            vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+        res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
     } while (res == VK_TIMEOUT);
     assert(res == VK_SUCCESS);
     res = vkQueuePresentKHR(info.present_queue, &present);
@@ -668,11 +644,9 @@ int sample_main(int argc, char *argv[]) {
 
     wait_seconds(1);
     /* VULKAN_KEY_END */
-    if (info.save_images)
-        write_ppm(info, "drawsubpasses");
+    if (info.save_images) write_ppm(info, "drawsubpasses");
 
-    for (uint32_t i = 0; i < info.swapchainImageCount; i++)
-        vkDestroyFramebuffer(info.device, stencil_framebuffers[i], NULL);
+    for (uint32_t i = 0; i < info.swapchainImageCount; i++) vkDestroyFramebuffer(info.device, stencil_framebuffers[i], NULL);
     free(stencil_framebuffers);
 
     vkDestroyRenderPass(info.device, stencil_render_pass, NULL);

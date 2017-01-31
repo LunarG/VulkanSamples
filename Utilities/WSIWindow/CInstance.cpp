@@ -25,56 +25,49 @@
 //---------------------------PickList-----------------------------
 bool CPickList::IsPicked(const char *name) const {
     for (auto item : pick_list) {
-        if (strcmp(name, item) == 0)
-            return true;
+        if (strcmp(name, item) == 0) return true;
     }
     return false;
 }
 
 int CPickList::IndexOf(const char *name) {
     for (uint32_t i = 0; i < Count(); ++i) {
-        if (strcmp(name, Name(i)) == 0)
-            return i;
+        if (strcmp(name, Name(i)) == 0) return i;
     }
     return -1;
 }
 
 void CPickList::Pick(initializer_list<const char *> list) {
-    for (auto item : list)
-        Pick(item);
+    for (auto item : list) Pick(item);
 }
 
 bool CPickList::Pick(const char *name) {
     int inx = IndexOf(name);
     if (inx == -1) {
-        LOGW("%s not found.\n", name); // Warn if picked item was not found.
+        LOGW("%s not found.\n", name);  // Warn if picked item was not found.
         return false;
     }
     return Pick(inx);
 }
 
-bool CPickList::Pick(const uint32_t inx) { // Add indexed item to picklist. Returns false if index is out of range.
-    if (inx >= Count())
-        return false;
+bool CPickList::Pick(const uint32_t inx) {  // Add indexed item to picklist. Returns false if index is out of range.
+    if (inx >= Count()) return false;
     for (const char *pickItem : pick_list)
-        if (pickItem == Name(inx))
-            return true;            // Check if item was already picked
-    pick_list.push_back(Name(inx)); // if not, add item to pick-list
+        if (pickItem == Name(inx)) return true;  // Check if item was already picked
+    pick_list.push_back(Name(inx));              // if not, add item to pick-list
     return true;
 }
 
 void CPickList::UnPick(const char *name) {
     for (uint32_t i = 0; i < PickCount(); ++i) {
-        if (strcmp(name, pick_list[i]) == 0)
-            pick_list.erase(pick_list.begin() + i);
+        if (strcmp(name, pick_list[i]) == 0) pick_list.erase(pick_list.begin() + i);
     }
 }
 
 void CPickList::PickAll() {
-    for (uint32_t i = 0; i < Count(); ++i)
-        Pick(i);
-} // Pick All items
-void CPickList::Clear() { pick_list.clear(); } // Clear Picklist
+    for (uint32_t i = 0; i < Count(); ++i) Pick(i);
+}  // Pick All items
+void CPickList::Clear() { pick_list.clear(); }  // Clear Picklist
 char **CPickList::PickList() const { return (char **)pick_list.data(); }
 uint32_t CPickList::PickCount() const { return (uint32_t)pick_list.size(); }
 
@@ -116,13 +109,13 @@ CExtensions::CExtensions(const char *layer_name) {
     VkResult result;
     do {
         uint count = 0;
-        result = vkEnumerateInstanceExtensionProperties(layer_name, &count, NULL);                 // Get list size
-        if (result == VK_SUCCESS && count > 0) {                                                   //
-            item_list.resize(count);                                                               // Resize buffer
-            result = vkEnumerateInstanceExtensionProperties(layer_name, &count, item_list.data()); // Fetch list
+        result = vkEnumerateInstanceExtensionProperties(layer_name, &count, NULL);                  // Get list size
+        if (result == VK_SUCCESS && count > 0) {                                                    //
+            item_list.resize(count);                                                                // Resize buffer
+            result = vkEnumerateInstanceExtensionProperties(layer_name, &count, item_list.data());  // Fetch list
         }
-    } while (result == VK_INCOMPLETE); // If list is incomplete, try again.
-    VKERRCHECK(result);                // report errors
+    } while (result == VK_INCOMPLETE);  // If list is incomplete, try again.
+    VKERRCHECK(result);                 // report errors
 }
 //----------------------------------------------------------------
 
@@ -167,7 +160,7 @@ CInstance::CInstance(const bool enable_validation, const char *app_name, const c
         LOGE("Failed to load VK_KHR_Surface");
 
 #ifdef ENABLE_VALIDATION
-    extensions.Pick(VK_EXT_DEBUG_REPORT_EXTENSION_NAME); // in Debug mode, Enable Validation
+    extensions.Pick(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);  // in Debug mode, Enable Validation
     extensions.Print();
 #endif
     assert(extensions.PickCount() >= 2);
@@ -204,7 +197,7 @@ void CInstance::Create(const CLayers &layers, const CExtensions &extensions, con
     LOGI("Vulkan Instance created\n");
 #ifdef ENABLE_VALIDATION
     if (extensions.IsPicked(VK_EXT_DEBUG_REPORT_EXTENSION_NAME))
-        DebugReport.Init(instance); // If VK_EXT_debug_report is loaded, initialize it.
+        DebugReport.Init(instance);  // If VK_EXT_debug_report is loaded, initialize it.
 #endif
 }
 
@@ -212,7 +205,7 @@ void CInstance::Print() { printf("->Instance %s created.\n", (!!instance) ? "" :
 
 CInstance::~CInstance() {
 #ifdef ENABLE_VALIDATION
-    DebugReport.Destroy(); // Must be called BEFORE vkDestroyInstance()
+    DebugReport.Destroy();  // Must be called BEFORE vkDestroyInstance()
 #endif
     vkDestroyInstance(instance, NULL);
     LOGI("Vulkan Instance destroyed\n");

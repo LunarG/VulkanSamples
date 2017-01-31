@@ -34,8 +34,7 @@ int sample_main(int argc, char *argv[]) {
     /* VULKAN_KEY_START */
 
     uint32_t gpu_count = 1;
-    VkResult U_ASSERT_ONLY res =
-        vkEnumeratePhysicalDevices(info.inst, &gpu_count, NULL);
+    VkResult U_ASSERT_ONLY res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, NULL);
     assert(gpu_count);
     info.gpus.resize(gpu_count);
     res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, info.gpus.data());

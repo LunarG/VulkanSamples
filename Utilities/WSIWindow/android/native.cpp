@@ -47,8 +47,7 @@ struct printBuf {
     }
     printBuf &operator+=(const char *c) {
         strncat(buf, c, SIZE - len() - 1);
-        if (len() >= SIZE - 1)
-            flush();
+        if (len() >= SIZE - 1) flush();
         return *this;
     }
     int len() { return strlen(buf); }
@@ -59,7 +58,7 @@ struct printBuf {
     }
 } printBuf;
 
-int printf(const char *format, ...) { // printf for Android
+int printf(const char *format, ...) {  // printf for Android
     char buf[printBuf.SIZE];
     va_list argptr;
     va_start(argptr, format);
@@ -67,13 +66,12 @@ int printf(const char *format, ...) { // printf for Android
     va_end(argptr);
     printBuf += buf;
     int len = strlen(buf);
-    if ((len >= printBuf.SIZE - 1) || (buf[len - 1] == '\n'))
-        printBuf.flush(); // flush on
+    if ((len >= printBuf.SIZE - 1) || (buf[len - 1] == '\n')) printBuf.flush();  // flush on
     return strlen(buf);
 }
 //--------------------------------------------------------------------------------------------------
 
-android_app *Android_App = 0; // Android native-actvity state
+android_app *Android_App = 0;  // Android native-actvity state
 /*
 //--------------------TEMP------------------------
 //--Window event handler--
@@ -115,16 +113,16 @@ static int32_t handle_input(struct android_app* app, AInputEvent* event) {
 //------------------------------------------------
 */
 //====================Main====================
-int main(int argc, char *argv[]); // Forward declaration of main function
+int main(int argc, char *argv[]);  // Forward declaration of main function
 
 void android_main(struct android_app *state) {
     printf("Native Activity\n");
-    app_dummy(); // Make sure glue isn't stripped
+    app_dummy();  // Make sure glue isn't stripped
     // state->onAppCmd     = handle_cmd;      // Register window event callback  (Temporary)
     // state->onInputEvent = handle_input;    // Register input event callback   (Temporary)
-    Android_App = state; // Pass android app state to window_andoid.cpp
+    Android_App = state;  // Pass android app state to window_andoid.cpp
 
-    android_fopen_set_asset_manager(state->activity->assetManager); // Re-direct fopen to read assets from our APK.
+    android_fopen_set_asset_manager(state->activity->assetManager);  // Re-direct fopen to read assets from our APK.
 
     // int success=InitVulkan();
     // printf("InitVulkan : %s\n",success ? "SUCCESS" : "FAILED");
@@ -138,9 +136,9 @@ void android_main(struct android_app *state) {
 
 //========================UGLY JNI code for showing the Keyboard========================
 
-#define CALL_OBJ_METHOD(OBJ, METHOD, SIGNATURE, ...)                                                                               \
+#define CALL_OBJ_METHOD(OBJ, METHOD, SIGNATURE, ...) \
     jniEnv->CallObjectMethod(OBJ, jniEnv->GetMethodID(jniEnv->GetObjectClass(OBJ), METHOD, SIGNATURE), __VA_ARGS__)
-#define CALL_BOOL_METHOD(OBJ, METHOD, SIGNATURE, ...)                                                                              \
+#define CALL_BOOL_METHOD(OBJ, METHOD, SIGNATURE, ...) \
     jniEnv->CallBooleanMethod(OBJ, jniEnv->GetMethodID(jniEnv->GetObjectClass(OBJ), METHOD, SIGNATURE), __VA_ARGS__)
 
 void ShowKeyboard(bool visible, int flags) {
@@ -184,8 +182,7 @@ int GetUnicodeChar(int eventType, int keyCode, int metaState) {
 
     JavaVMAttachArgs Args = {JNI_VERSION_1_6, "NativeThread", NULL};
     jint result = javaVM->AttachCurrentThread(&jniEnv, &Args);
-    if (result == JNI_ERR)
-        return 0;
+    if (result == JNI_ERR) return 0;
 
     jclass class_key_event = jniEnv->FindClass("android/view/KeyEvent");
 
