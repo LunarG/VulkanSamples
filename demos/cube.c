@@ -2241,6 +2241,7 @@ static void demo_create_window(struct demo *demo) {
 #elif defined(VK_USE_PLATFORM_XLIB_KHR)
 static void demo_create_xlib_window(struct demo *demo) {
 
+    XInitThreads();
     demo->display = XOpenDisplay(NULL);
     long visualMask = VisualScreenMask;
     int numberOfVisuals;

@@ -2157,6 +2157,7 @@ struct Demo {
 #elif defined(VK_USE_PLATFORM_XLIB_KHR)
 
     void create_xlib_window() {
+        XInitThreads();
         display = XOpenDisplay(nullptr);
         long visualMask = VisualScreenMask;
         int numberOfVisuals;
