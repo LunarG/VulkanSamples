@@ -8190,7 +8190,7 @@ TEST_F(VkLayerTest, RenderPassClearOpMismatch) {
     rpci.pSubpasses = &subpass;
     rpci.attachmentCount = 1;
     VkAttachmentDescription attach_desc = {};
-    attach_desc.format = VK_FORMAT_UNDEFINED;
+    attach_desc.format = VK_FORMAT_B8G8R8A8_UNORM;
     // Set loadOp to CLEAR
     attach_desc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     rpci.pAttachments = &attach_desc;
