@@ -8245,28 +8245,44 @@ static bool VerifyClearImageLayout(layer_data *dev_data, GLOBAL_CB_NODE *cb_node
             uint32_t layer = layerIdx + resolvedRange.baseArrayLayer;
             VkImageSubresource sub = {resolvedRange.aspectMask, level, layer};
             IMAGE_CMD_BUF_LAYOUT_NODE node;
-            if (!FindLayout(cb_node, image, sub, node)) {
-                SetLayout(cb_node, image, sub, IMAGE_CMD_BUF_LAYOUT_NODE(dest_image_layout, dest_image_layout));
-                continue;
-            }
-            if (node.layout != dest_image_layout) {
-                UNIQUE_VALIDATION_ERROR_CODE error_code = VALIDATION_ERROR_01085;
-                if (strcmp(func_name, "vkCmdClearDepthStencilImage()") == 0) {
-                    error_code = VALIDATION_ERROR_01100;
-                } else {
-                    assert(strcmp(func_name, "vkCmdClearColorImage()") == 0);
+            if (FindLayout(cb_node, image, sub, node)) {
+                if (node.layout != dest_image_layout) {
+                    UNIQUE_VALIDATION_ERROR_CODE error_code = VALIDATION_ERROR_01085;
+                    if (strcmp(func_name, "vkCmdClearDepthStencilImage()") == 0) {
+                        error_code = VALIDATION_ERROR_01100;
+                    } else {
+                        assert(strcmp(func_name, "vkCmdClearColorImage()") == 0);
+                    }
+                    skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                    VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, error_code, "DS",
+                                    "%s: Cannot clear an image whose layout is %s and "
+                                    "doesn't match the current layout %s. %s",
+                                    func_name, string_VkImageLayout(dest_image_layout), string_VkImageLayout(node.layout),
+                                    validation_error_map[error_code]);
                 }
-                skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, error_code, "DS",
-                                "%s: Cannot clear an image whose layout is %s and "
-                                "doesn't match the current layout %s. %s",
-                                func_name, string_VkImageLayout(dest_image_layout), string_VkImageLayout(node.layout),
-                                validation_error_map[error_code]);
             }
         }
     }
 
     return skip;
+}
+
+static void RecordClearImageLayout(layer_data *dev_data, GLOBAL_CB_NODE *cb_node, VkImage image, VkImageSubresourceRange range,
+                                   VkImageLayout dest_image_layout) {
+    VkImageSubresourceRange resolvedRange = range;
+    ResolveRemainingLevelsLayers(dev_data, &resolvedRange, image);
+
+    for (uint32_t levelIdx = 0; levelIdx < resolvedRange.levelCount; ++levelIdx) {
+        uint32_t level = levelIdx + resolvedRange.baseMipLevel;
+        for (uint32_t layerIdx = 0; layerIdx < resolvedRange.layerCount; ++layerIdx) {
+            uint32_t layer = layerIdx + resolvedRange.baseArrayLayer;
+            VkImageSubresource sub = {resolvedRange.aspectMask, level, layer};
+            IMAGE_CMD_BUF_LAYOUT_NODE node;
+            if (!FindLayout(cb_node, image, sub, node)) {
+                SetLayout(cb_node, image, sub, IMAGE_CMD_BUF_LAYOUT_NODE(dest_image_layout, dest_image_layout));
+            }
+        }
+    }
 }
 
 // Test if two VkExtent3D structs are equivalent
@@ -8881,6 +8897,7 @@ VKAPI_ATTR void VKAPI_CALL CmdClearColorImage(VkCommandBuffer commandBuffer, VkI
     for (uint32_t i = 0; i < rangeCount; ++i) {
         skip_call |= ValidateImageAttributes(dev_data, image_state, pRanges[i]);
         skip_call |= VerifyClearImageLayout(dev_data, cb_node, image, pRanges[i], imageLayout, "vkCmdClearColorImage()");
+        RecordClearImageLayout(dev_data, cb_node, image, pRanges[i], imageLayout);
     }
     lock.unlock();
     if (!skip_call) dev_data->dispatch_table.CmdClearColorImage(commandBuffer, image, imageLayout, pColor, rangeCount, pRanges);
@@ -8911,8 +8928,10 @@ VKAPI_ATTR void VKAPI_CALL CmdClearDepthStencilImage(VkCommandBuffer commandBuff
     } else {
         assert(0);
     }
+
     for (uint32_t i = 0; i < rangeCount; ++i) {
         skip_call |= VerifyClearImageLayout(dev_data, cb_node, image, pRanges[i], imageLayout, "vkCmdClearDepthStencilImage()");
+        RecordClearImageLayout(dev_data, cb_node, image, pRanges[i], imageLayout);
     }
     lock.unlock();
     if (!skip_call)
