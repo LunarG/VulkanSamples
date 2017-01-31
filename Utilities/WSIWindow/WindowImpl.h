@@ -29,6 +29,10 @@
 #ifndef WINDOWIMPL_H
 #define WINDOWIMPL_H
 
+#ifdef WIN32
+#pragma warning( disable : 4351 ) //for VS2013
+#endif
+
 #include "CInstance.h"
 #include "keycodes.h"
 

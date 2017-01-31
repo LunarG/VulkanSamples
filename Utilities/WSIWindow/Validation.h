@@ -47,7 +47,7 @@
 //------------Fix for VS2013----------------
 #if _MSC_VER == 1800
 #ifndef snprintf
-#define snprintf _snprintf
+#define snprintf _snprintf_s
 #endif
 #endif
 //------------------------------------------
