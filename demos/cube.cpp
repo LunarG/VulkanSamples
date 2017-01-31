@@ -816,6 +816,14 @@ struct Demo {
                     extension_names[enabled_extension_count++] = VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME;
                 }
 #elif defined(VK_USE_PLATFORM_MIR_KHR)
+#elif defined(VK_USE_PLATFORM_DISPLAY_KHR)
+                if (!strcmp(VK_KHR_DISPLAY_EXTENSION_NAME,
+                            instance_extensions[i].extensionName)) {
+                    platformSurfaceExtFound = 1;
+                    extension_names[enabled_extension_count++] =
+                        VK_KHR_DISPLAY_EXTENSION_NAME;
+                }
+
 #endif
                 assert(enabled_extension_count < 64);
             }
@@ -875,6 +883,14 @@ struct Demo {
                 "Please look at the Getting Started guide for additional "
                 "information.\n",
                 "vkCreateInstance Failure");
+#elif defined(VK_USE_PLATFORM_DISPLAY_KHR)
+            ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
+                     "the " VK_KHR_DISPLAY_EXTENSION_NAME " extension.\n\n"
+                     "Do you have a compatible Vulkan installable client "
+                     "driver (ICD) installed?\n"
+                     "Please look at the Getting Started guide for additional "
+                     "information.\n",
+                     "vkCreateInstance Failure");
 #endif
         }
         auto const app = vk::ApplicationInfo()
@@ -1016,6 +1032,11 @@ struct Demo {
             auto const createInfo = vk::XcbSurfaceCreateInfoKHR().setConnection(connection).setWindow(xcb_window);
 
             auto result = inst.createXcbSurfaceKHR(&createInfo, nullptr, &surface);
+            VERIFY(result == vk::Result::eSuccess);
+        }
+#elif defined(VK_USE_PLATFORM_DISPLAY_KHR)
+        {
+            auto result = create_display_surface();
             VERIFY(result == vk::Result::eSuccess);
         }
 #endif
@@ -2352,6 +2373,144 @@ struct Demo {
         wl_shell_surface_set_title(shell_surface, APP_SHORT_NAME);
     }
 #elif defined(VK_USE_PLATFORM_MIR_KHR)
+#elif defined(VK_USE_PLATFORM_DISPLAY_KHR)
+
+    vk::Result create_display_surface() {
+        vk::Result result;
+        uint32_t display_count;
+        uint32_t mode_count;
+        uint32_t plane_count;
+        vk::DisplayPropertiesKHR display_props;
+        vk::DisplayKHR display;
+        vk::DisplayModePropertiesKHR mode_props;
+        vk::DisplayPlanePropertiesKHR *plane_props;
+        vk::Bool32 found_plane = VK_FALSE;
+        uint32_t plane_index;
+        vk::Extent2D image_extent;
+
+        // Get the first display
+        result = gpu.getDisplayPropertiesKHR(&display_count, nullptr);
+        VERIFY(result == vk::Result::eSuccess);
+
+        if (display_count == 0) {
+            printf("Cannot find any display!\n");
+            fflush(stdout);
+            exit(1);
+        }
+
+        display_count = 1;
+        result = gpu.getDisplayPropertiesKHR(&display_count, &display_props);
+        VERIFY((result == vk::Result::eSuccess) ||
+               (result == vk::Result::eIncomplete));
+
+        display = display_props.display;
+
+        // Get the first mode of the display
+        result = gpu.getDisplayModePropertiesKHR(display, &mode_count, nullptr);
+        VERIFY(result == vk::Result::eSuccess);
+
+        if (mode_count == 0) {
+            printf("Cannot find any mode for the display!\n");
+            fflush(stdout);
+            exit(1);
+        }
+
+        mode_count = 1;
+        result = gpu.getDisplayModePropertiesKHR(display, &mode_count, &mode_props);
+        VERIFY((result == vk::Result::eSuccess) ||
+               (result == vk::Result::eIncomplete));
+
+        // Get the list of planes
+        result = gpu.getDisplayPlanePropertiesKHR(&plane_count, nullptr);
+        VERIFY(result == vk::Result::eSuccess);
+
+        if (plane_count == 0) {
+            printf("Cannot find any plane!\n");
+            fflush(stdout);
+            exit(1);
+        }
+
+        plane_props = (vk::DisplayPlanePropertiesKHR *)
+            malloc(sizeof(vk::DisplayPlanePropertiesKHR) * plane_count);
+        VERIFY(plane_props != nullptr);
+
+        result = gpu.getDisplayPlanePropertiesKHR(&plane_count, plane_props);
+        VERIFY(result == vk::Result::eSuccess);
+
+        // Find a plane compatible with the display
+        for (plane_index = 0; plane_index < plane_count; plane_index++) {
+            uint32_t supported_count;
+            vk::DisplayKHR *supported_displays;
+
+            // Disqualify planes that are bound to a different display
+            if (plane_props[plane_index].currentDisplay &&
+                (plane_props[plane_index].currentDisplay != display)) {
+                continue;
+            }
+
+            result = gpu.getDisplayPlaneSupportedDisplaysKHR(plane_index,
+                                                             &supported_count,
+                                                             nullptr);
+            VERIFY(result == vk::Result::eSuccess);
+
+            if (supported_count == 0) {
+                continue;
+            }
+
+            supported_displays = (vk::DisplayKHR *)
+                malloc(sizeof(vk::DisplayKHR) * supported_count);
+            VERIFY(supported_displays != nullptr);
+
+            result = gpu.getDisplayPlaneSupportedDisplaysKHR(plane_index,
+                                                             &supported_count,
+                                                             supported_displays);
+            VERIFY(result == vk::Result::eSuccess);
+
+            for (uint32_t i = 0; i < supported_count; i++) {
+                if (supported_displays[i] == display) {
+                    found_plane = VK_TRUE;
+                    break;
+                }
+            }
+
+            free(supported_displays);
+
+            if (found_plane) {
+                break;
+            }
+        }
+
+        if (!found_plane) {
+            printf("Cannot find a plane compatible with the display!\n");
+            fflush(stdout);
+            exit(1);
+        }
+
+        free(plane_props);
+
+        image_extent.setWidth(mode_props.parameters.visibleRegion.width);
+        image_extent.setHeight(mode_props.parameters.visibleRegion.height);
+
+        auto const createInfo = vk::DisplaySurfaceCreateInfoKHR()
+                                    .setDisplayMode(mode_props.displayMode)
+                                    .setPlaneIndex(plane_index)
+                                    .setPlaneStackIndex(plane_props[plane_index].currentStackIndex)
+                                    .setImageExtent(image_extent);
+
+        return inst.createDisplayPlaneSurfaceKHR(&createInfo, nullptr, &surface);
+    }
+
+    void run_display() {
+        while (!quit) {
+            update_data_buffer();
+            draw();
+            curFrame++;
+
+            if (frameCount != INT32_MAX && curFrame == frameCount) {
+                quit = true;
+            }
+        }
+    }
 #endif
 
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
@@ -2611,6 +2770,8 @@ int main(int argc, char **argv) {
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
     demo.run();
 #elif defined(VK_USE_PLATFORM_MIR_KHR)
+#elif defined(VK_USE_PLATFORM_DISPLAY_KHR)
+    demo.run_display();
 #endif
 
     demo.cleanup();
