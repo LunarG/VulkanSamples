@@ -8869,12 +8869,10 @@ VKAPI_ATTR void VKAPI_CALL CmdClearAttachments(VkCommandBuffer commandBuffer, ui
     if (!skip) dev_data->dispatch_table.CmdClearAttachments(commandBuffer, attachmentCount, pAttachments, rectCount, pRects);
 }
 
-VKAPI_ATTR void VKAPI_CALL CmdClearColorImage(VkCommandBuffer commandBuffer, VkImage image, VkImageLayout imageLayout,
-                                              const VkClearColorValue *pColor, uint32_t rangeCount,
+static bool PreCallValidateCmdClearColorImage(layer_data *dev_data, VkCommandBuffer commandBuffer, VkImage image,
+                                              VkImageLayout imageLayout, uint32_t rangeCount,
                                               const VkImageSubresourceRange *pRanges) {
     bool skip = false;
-    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-    std::unique_lock<std::mutex> lock(global_lock);
     // TODO : Verify memory is in VK_IMAGE_STATE_CLEAR state
     auto cb_node = getCBNode(dev_data, commandBuffer);
     auto image_state = getImageState(dev_data, image);
@@ -8886,30 +8884,48 @@ VKAPI_ATTR void VKAPI_CALL CmdClearColorImage(VkCommandBuffer commandBuffer, VkI
             skip |= ValidateImageAttributes(dev_data, image_state, pRanges[i]);
             skip |= VerifyClearImageLayout(dev_data, cb_node, image, pRanges[i], imageLayout, "vkCmdClearColorImage()");
         }
-        if (!skip) {
-            AddCommandBufferBindingImage(dev_data, cb_node, image_state);
-            std::function<bool()> function = [=]() {
-                SetImageMemoryValid(dev_data, image_state, true);
-                return false;
-            };
-            cb_node->validate_functions.push_back(function);
+    }
+    return skip;
+}
 
-            UpdateCmdBufferLastCmd(dev_data, cb_node, CMD_CLEARCOLORIMAGE);
-            for (uint32_t i = 0; i < rangeCount; ++i) {
-                RecordClearImageLayout(dev_data, cb_node, image, pRanges[i], imageLayout);
-            }
-            lock.unlock();
-            dev_data->dispatch_table.CmdClearColorImage(commandBuffer, image, imageLayout, pColor, rangeCount, pRanges);
+// This state recording routine is shared between ClearColorImage and ClearDepthStencilImage
+static void PreCallRecordCmdClearImage(layer_data *dev_data, VkCommandBuffer commandBuffer, VkImage image,
+                                       VkImageLayout imageLayout, uint32_t rangeCount, const VkImageSubresourceRange *pRanges,
+                                       CMD_TYPE cmd_type) {
+    auto cb_node = getCBNode(dev_data, commandBuffer);
+    auto image_state = getImageState(dev_data, image);
+    if (cb_node && image_state) {
+        AddCommandBufferBindingImage(dev_data, cb_node, image_state);
+        std::function<bool()> function = [=]() {
+            SetImageMemoryValid(dev_data, image_state, true);
+            return false;
+        };
+        cb_node->validate_functions.push_back(function);
+        UpdateCmdBufferLastCmd(dev_data, cb_node, cmd_type);
+        for (uint32_t i = 0; i < rangeCount; ++i) {
+            RecordClearImageLayout(dev_data, cb_node, image, pRanges[i], imageLayout);
         }
     }
 }
 
-VKAPI_ATTR void VKAPI_CALL CmdClearDepthStencilImage(VkCommandBuffer commandBuffer, VkImage image, VkImageLayout imageLayout,
-                                                     const VkClearDepthStencilValue *pDepthStencil, uint32_t rangeCount,
-                                                     const VkImageSubresourceRange *pRanges) {
-    bool skip = false;
+VKAPI_ATTR void VKAPI_CALL CmdClearColorImage(VkCommandBuffer commandBuffer, VkImage image, VkImageLayout imageLayout,
+                                              const VkClearColorValue *pColor, uint32_t rangeCount,
+                                              const VkImageSubresourceRange *pRanges) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
+
+    bool skip = PreCallValidateCmdClearColorImage(dev_data, commandBuffer, image, imageLayout, rangeCount, pRanges);
+    if (!skip) {
+        PreCallRecordCmdClearImage(dev_data, commandBuffer, image, imageLayout, rangeCount, pRanges, CMD_CLEARCOLORIMAGE);
+        lock.unlock();
+        dev_data->dispatch_table.CmdClearColorImage(commandBuffer, image, imageLayout, pColor, rangeCount, pRanges);
+    }
+}
+
+static bool PreCallValidateCmdClearDepthStencilImage(layer_data *dev_data, VkCommandBuffer commandBuffer, VkImage image,
+                                                     VkImageLayout imageLayout, uint32_t rangeCount,
+                                                     const VkImageSubresourceRange *pRanges) {
+    bool skip = false;
     // TODO : Verify memory is in VK_IMAGE_STATE_CLEAR state
     auto cb_node = getCBNode(dev_data, commandBuffer);
     auto image_state = getImageState(dev_data, image);
@@ -8920,20 +8936,21 @@ VKAPI_ATTR void VKAPI_CALL CmdClearDepthStencilImage(VkCommandBuffer commandBuff
         for (uint32_t i = 0; i < rangeCount; ++i) {
             skip |= VerifyClearImageLayout(dev_data, cb_node, image, pRanges[i], imageLayout, "vkCmdClearDepthStencilImage()");
         }
-        if (!skip) {
-            AddCommandBufferBindingImage(dev_data, cb_node, image_state);
-            std::function<bool()> function = [=]() {
-                SetImageMemoryValid(dev_data, image_state, true);
-                return false;
-            };
-            cb_node->validate_functions.push_back(function);
-            UpdateCmdBufferLastCmd(dev_data, cb_node, CMD_CLEARDEPTHSTENCILIMAGE);
-            for (uint32_t i = 0; i < rangeCount; ++i) {
-                RecordClearImageLayout(dev_data, cb_node, image, pRanges[i], imageLayout);
-            }
-            lock.unlock();
-            dev_data->dispatch_table.CmdClearDepthStencilImage(commandBuffer, image, imageLayout, pDepthStencil, rangeCount, pRanges);
-        }
+    }
+    return skip;
+}
+
+VKAPI_ATTR void VKAPI_CALL CmdClearDepthStencilImage(VkCommandBuffer commandBuffer, VkImage image, VkImageLayout imageLayout,
+                                                     const VkClearDepthStencilValue *pDepthStencil, uint32_t rangeCount,
+                                                     const VkImageSubresourceRange *pRanges) {
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+    std::unique_lock<std::mutex> lock(global_lock);
+
+    bool skip = PreCallValidateCmdClearDepthStencilImage(dev_data, commandBuffer, image, imageLayout, rangeCount, pRanges);
+    if (!skip) {
+        PreCallRecordCmdClearImage(dev_data, commandBuffer, image, imageLayout, rangeCount, pRanges, CMD_CLEARDEPTHSTENCILIMAGE);
+        lock.unlock();
+        dev_data->dispatch_table.CmdClearDepthStencilImage(commandBuffer, image, imageLayout, pDepthStencil, rangeCount, pRanges);
     }
 }
 
