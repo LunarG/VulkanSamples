@@ -91,7 +91,7 @@ bool in_callback = false;
 #else
 #define ERR_EXIT(err_msg, err_class) \
     do {                             \
-        printf(err_msg);             \
+        printf("%s\n", err_msg);     \
         fflush(stdout);              \
         exit(1);                     \
     } while (0)
@@ -1661,6 +1661,9 @@ static VkShaderModule demo_prepare_vs(struct demo *demo) {
     size_t size;
 
     vertShaderCode = demo_read_spv("cube-vert.spv", &size);
+    if (!vertShaderCode) {
+        ERR_EXIT("Failed to load cube-vert.spv", "Load Shader Failure");
+    }
 
     demo->vert_shader_module =
         demo_prepare_shader_module(demo, vertShaderCode, size);
@@ -1686,6 +1689,9 @@ static VkShaderModule demo_prepare_fs(struct demo *demo) {
     size_t size;
 
     fragShaderCode = demo_read_spv("cube-frag.spv", &size);
+    if (!fragShaderCode) {
+        ERR_EXIT("Failed to load cube-frag.spv", "Load Shader Failure");
+    }
 
     demo->frag_shader_module =
         demo_prepare_shader_module(demo, fragShaderCode, size);
