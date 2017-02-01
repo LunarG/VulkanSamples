@@ -263,3 +263,172 @@ bool ValidateImageAttributes(core_validation::layer_data *device_data, IMAGE_STA
     }
     return skip;
 }
+
+void ResolveRemainingLevelsLayers(core_validation::layer_data *dev_data, VkImageSubresourceRange *range, VkImage image) {
+    // Expects global_lock to be held by caller
+
+    auto image_state = getImageState(dev_data, image);
+    if (image_state) {
+        // If the caller used the special values VK_REMAINING_MIP_LEVELS and VK_REMAINING_ARRAY_LAYERS, resolve them now in our
+        // internal state to the actual values.
+        if (range->levelCount == VK_REMAINING_MIP_LEVELS) {
+            range->levelCount = image_state->createInfo.mipLevels - range->baseMipLevel;
+        }
+
+        if (range->layerCount == VK_REMAINING_ARRAY_LAYERS) {
+            range->layerCount = image_state->createInfo.arrayLayers - range->baseArrayLayer;
+        }
+    }
+}
+
+// Return the correct layer/level counts if the caller used the special values VK_REMAINING_MIP_LEVELS or VK_REMAINING_ARRAY_LAYERS.
+void ResolveRemainingLevelsLayers(core_validation::layer_data *dev_data, uint32_t *levels, uint32_t *layers,
+                                  VkImageSubresourceRange range, VkImage image) {
+    // Expects global_lock to be held by caller
+
+    *levels = range.levelCount;
+    *layers = range.layerCount;
+    auto image_state = getImageState(dev_data, image);
+    if (image_state) {
+        if (range.levelCount == VK_REMAINING_MIP_LEVELS) {
+            *levels = image_state->createInfo.mipLevels - range.baseMipLevel;
+        }
+        if (range.layerCount == VK_REMAINING_ARRAY_LAYERS) {
+            *layers = image_state->createInfo.arrayLayers - range.baseArrayLayer;
+        }
+    }
+}
+
+bool VerifyClearImageLayout(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, VkImage image,
+                            VkImageSubresourceRange range, VkImageLayout dest_image_layout, const char *func_name) {
+    bool skip = false;
+    const debug_report_data *report_data = core_validation::GetReportData(device_data);
+
+    VkImageSubresourceRange resolved_range = range;
+    ResolveRemainingLevelsLayers(device_data, &resolved_range, image);
+
+    if (dest_image_layout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+        if (dest_image_layout == VK_IMAGE_LAYOUT_GENERAL) {
+            auto image_state = getImageState(device_data, image);
+            if (image_state->createInfo.tiling != VK_IMAGE_TILING_LINEAR) {
+                // LAYOUT_GENERAL is allowed, but may not be performance optimal, flag as perf warning.
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
+                                __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                                "%s: Layout for cleared image should be TRANSFER_DST_OPTIMAL instead of GENERAL.", func_name);
+            }
+        } else {
+            UNIQUE_VALIDATION_ERROR_CODE error_code = VALIDATION_ERROR_01086;
+            if (strcmp(func_name, "vkCmdClearDepthStencilImage()") == 0) {
+                error_code = VALIDATION_ERROR_01101;
+            } else {
+                assert(strcmp(func_name, "vkCmdClearColorImage()") == 0);
+            }
+            skip |=
+                log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, error_code, "DS",
+                        "%s: Layout for cleared image is %s but can only be "
+                        "TRANSFER_DST_OPTIMAL or GENERAL. %s",
+                        func_name, string_VkImageLayout(dest_image_layout), validation_error_map[error_code]);
+        }
+    }
+
+    for (uint32_t level_index = 0; level_index < resolved_range.levelCount; ++level_index) {
+        uint32_t level = level_index + resolved_range.baseMipLevel;
+        for (uint32_t layer_index = 0; layer_index < resolved_range.layerCount; ++layer_index) {
+            uint32_t layer = layer_index + resolved_range.baseArrayLayer;
+            VkImageSubresource sub = {resolved_range.aspectMask, level, layer};
+            IMAGE_CMD_BUF_LAYOUT_NODE node;
+            if (core_validation::FindLayout(cb_node, image, sub, node)) {
+                if (node.layout != dest_image_layout) {
+                    UNIQUE_VALIDATION_ERROR_CODE error_code = VALIDATION_ERROR_01085;
+                    if (strcmp(func_name, "vkCmdClearDepthStencilImage()") == 0) {
+                        error_code = VALIDATION_ERROR_01100;
+                    } else {
+                        assert(strcmp(func_name, "vkCmdClearColorImage()") == 0);
+                    }
+                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0,
+                                    __LINE__, error_code, "DS",
+                                    "%s: Cannot clear an image whose layout is %s and "
+                                    "doesn't match the current layout %s. %s",
+                                    func_name, string_VkImageLayout(dest_image_layout), string_VkImageLayout(node.layout),
+                                    validation_error_map[error_code]);
+                }
+            }
+        }
+    }
+
+    return skip;
+}
+
+void RecordClearImageLayout(core_validation::layer_data *dev_data, GLOBAL_CB_NODE *cb_node, VkImage image,
+                            VkImageSubresourceRange range, VkImageLayout dest_image_layout) {
+    VkImageSubresourceRange resolved_range = range;
+    ResolveRemainingLevelsLayers(dev_data, &resolved_range, image);
+
+    for (uint32_t level_index = 0; level_index < resolved_range.levelCount; ++level_index) {
+        uint32_t level = level_index + resolved_range.baseMipLevel;
+        for (uint32_t layer_index = 0; layer_index < resolved_range.layerCount; ++layer_index) {
+            uint32_t layer = layer_index + resolved_range.baseArrayLayer;
+            VkImageSubresource sub = {resolved_range.aspectMask, level, layer};
+            IMAGE_CMD_BUF_LAYOUT_NODE node;
+            if (!core_validation::FindLayout(cb_node, image, sub, node)) {
+                SetLayout(cb_node, image, sub, IMAGE_CMD_BUF_LAYOUT_NODE(dest_image_layout, dest_image_layout));
+            }
+        }
+    }
+}
+
+bool PreCallValidateCmdClearColorImage(core_validation::layer_data *dev_data, VkCommandBuffer commandBuffer, VkImage image,
+                                       VkImageLayout imageLayout, uint32_t rangeCount, const VkImageSubresourceRange *pRanges) {
+    bool skip = false;
+    // TODO : Verify memory is in VK_IMAGE_STATE_CLEAR state
+    auto cb_node = core_validation::getCBNode(dev_data, commandBuffer);
+    auto image_state = getImageState(dev_data, image);
+    if (cb_node && image_state) {
+        skip |= ValidateMemoryIsBoundToImage(dev_data, image_state, "vkCmdClearColorImage()", VALIDATION_ERROR_02527);
+        skip |= ValidateCmd(dev_data, cb_node, CMD_CLEARCOLORIMAGE, "vkCmdClearColorImage()");
+        skip |= insideRenderPass(dev_data, cb_node, "vkCmdClearColorImage()", VALIDATION_ERROR_01096);
+        for (uint32_t i = 0; i < rangeCount; ++i) {
+            skip |= ValidateImageAttributes(dev_data, image_state, pRanges[i]);
+            skip |= VerifyClearImageLayout(dev_data, cb_node, image, pRanges[i], imageLayout, "vkCmdClearColorImage()");
+        }
+    }
+    return skip;
+}
+
+// This state recording routine is shared between ClearColorImage and ClearDepthStencilImage
+void PreCallRecordCmdClearImage(core_validation::layer_data *dev_data, VkCommandBuffer commandBuffer, VkImage image,
+                                VkImageLayout imageLayout, uint32_t rangeCount, const VkImageSubresourceRange *pRanges,
+                                CMD_TYPE cmd_type) {
+    auto cb_node = getCBNode(dev_data, commandBuffer);
+    auto image_state = getImageState(dev_data, image);
+    if (cb_node && image_state) {
+        AddCommandBufferBindingImage(dev_data, cb_node, image_state);
+        std::function<bool()> function = [=]() {
+            SetImageMemoryValid(dev_data, image_state, true);
+            return false;
+        };
+        cb_node->validate_functions.push_back(function);
+        UpdateCmdBufferLastCmd(dev_data, cb_node, cmd_type);
+        for (uint32_t i = 0; i < rangeCount; ++i) {
+            RecordClearImageLayout(dev_data, cb_node, image, pRanges[i], imageLayout);
+        }
+    }
+}
+
+bool PreCallValidateCmdClearDepthStencilImage(core_validation::layer_data *dev_data, VkCommandBuffer commandBuffer, VkImage image,
+                                              VkImageLayout imageLayout, uint32_t rangeCount,
+                                              const VkImageSubresourceRange *pRanges) {
+    bool skip = false;
+    // TODO : Verify memory is in VK_IMAGE_STATE_CLEAR state
+    auto cb_node = getCBNode(dev_data, commandBuffer);
+    auto image_state = getImageState(dev_data, image);
+    if (cb_node && image_state) {
+        skip |= ValidateMemoryIsBoundToImage(dev_data, image_state, "vkCmdClearDepthStencilImage()", VALIDATION_ERROR_02528);
+        skip |= ValidateCmd(dev_data, cb_node, CMD_CLEARDEPTHSTENCILIMAGE, "vkCmdClearDepthStencilImage()");
+        skip |= insideRenderPass(dev_data, cb_node, "vkCmdClearDepthStencilImage()", VALIDATION_ERROR_01111);
+        for (uint32_t i = 0; i < rangeCount; ++i) {
+            skip |= VerifyClearImageLayout(dev_data, cb_node, image, pRanges[i], imageLayout, "vkCmdClearDepthStencilImage()");
+        }
+    }
+    return skip;
+}

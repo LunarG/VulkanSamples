@@ -418,7 +418,7 @@ static BINDABLE *GetObjectMemBinding(layer_data *my_data, uint64_t handle, VkDeb
     return nullptr;
 }
 // prototype
-static GLOBAL_CB_NODE *getCBNode(layer_data const *, const VkCommandBuffer);
+GLOBAL_CB_NODE *getCBNode(layer_data const *, const VkCommandBuffer);
 
 // Helper function to validate correct usage bits set for buffers or images
 //  Verify that (actual & desired) flags != 0 or,
@@ -577,7 +577,7 @@ static void SetMemoryValid(layer_data *dev_data, VkDeviceMemory mem, uint64_t ha
 // For given image node
 //  If mem is special swapchain key, then set entire image_state to valid param value
 //  Else set the image's bound memory range to valid param value
-static void SetImageMemoryValid(layer_data *dev_data, IMAGE_STATE *image_state, bool valid) {
+void SetImageMemoryValid(layer_data *dev_data, IMAGE_STATE *image_state, bool valid) {
     if (image_state->binding.mem == MEMTRACKER_SWAP_CHAIN_IMAGE_KEY) {
         image_state->valid = valid;
     } else {
@@ -3523,29 +3523,6 @@ void SetLayout(GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair, const VkImageL
     }
 }
 
-template <class OBJECT, class LAYOUT>
-void SetLayout(OBJECT *pObject, ImageSubresourcePair imgpair, const LAYOUT &layout, VkImageAspectFlags aspectMask) {
-    if (imgpair.subresource.aspectMask & aspectMask) {
-        imgpair.subresource.aspectMask = aspectMask;
-        SetLayout(pObject, imgpair, layout);
-    }
-}
-
-template <class OBJECT, class LAYOUT>
-void SetLayout(OBJECT *pObject, VkImage image, VkImageSubresource range, const LAYOUT &layout) {
-    ImageSubresourcePair imgpair = {image, true, range};
-    SetLayout(pObject, imgpair, layout, VK_IMAGE_ASPECT_COLOR_BIT);
-    SetLayout(pObject, imgpair, layout, VK_IMAGE_ASPECT_DEPTH_BIT);
-    SetLayout(pObject, imgpair, layout, VK_IMAGE_ASPECT_STENCIL_BIT);
-    SetLayout(pObject, imgpair, layout, VK_IMAGE_ASPECT_METADATA_BIT);
-}
-
-template <class OBJECT, class LAYOUT>
-void SetLayout(OBJECT *pObject, VkImage image, const LAYOUT &layout) {
-    ImageSubresourcePair imgpair = {image, false, VkImageSubresource()};
-    SetLayout(pObject, image, imgpair, layout);
-}
-
 void SetLayout(const layer_data *dev_data, GLOBAL_CB_NODE *pCB, VkImageView imageView, const VkImageLayout &layout) {
     auto view_state = getImageViewState(dev_data, imageView);
     assert(view_state);
@@ -3632,7 +3609,7 @@ static void clearDescriptorPool(layer_data *my_data, const VkDevice device, cons
 }
 
 // For given CB object, fetch associated CB Node from map
-static GLOBAL_CB_NODE *getCBNode(layer_data const *my_data, const VkCommandBuffer cb) {
+GLOBAL_CB_NODE *getCBNode(layer_data const *my_data, const VkCommandBuffer cb) {
     auto it = my_data->commandBufferMap.find(cb);
     if (it == my_data->commandBufferMap.end()) {
         log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
@@ -3701,9 +3678,9 @@ static bool checkGraphicsOrComputeBit(const layer_data *my_data, VkQueueFlags fl
     return false;
 }
 
-// Validate the given command being added to the specified cmd buffer, flagging errors if CB is not
-//  in the recording state or if there's an issue with the Cmd ordering
-static bool ValidateCmd(layer_data *my_data, GLOBAL_CB_NODE *pCB, const CMD_TYPE cmd, const char *caller_name) {
+// Validate the given command being added to the specified cmd buffer, flagging errors if CB is not in the recording state or if
+// there's an issue with the Cmd ordering
+bool ValidateCmd(layer_data *my_data, GLOBAL_CB_NODE *pCB, const CMD_TYPE cmd, const char *caller_name) {
     bool skip_call = false;
     auto pPool = getCommandPoolNode(my_data, pCB->createInfo.commandPool);
     if (pPool) {
@@ -3774,7 +3751,7 @@ static bool ValidateCmd(layer_data *my_data, GLOBAL_CB_NODE *pCB, const CMD_TYPE
     return skip_call;
 }
 
-static void UpdateCmdBufferLastCmd(layer_data *my_data, GLOBAL_CB_NODE *cb_state, const CMD_TYPE cmd) {
+void UpdateCmdBufferLastCmd(layer_data *my_data, GLOBAL_CB_NODE *cb_state, const CMD_TYPE cmd) {
     if (cb_state->state == CB_RECORDING) {
         cb_state->last_cmd = cmd;
     }
@@ -3970,10 +3947,9 @@ static void set_cb_pso_status(GLOBAL_CB_NODE *pCB, const PIPELINE_STATE *pPipe) 
     }
 }
 
-// Flags validation error if the associated call is made inside a render pass. The apiName
-// routine should ONLY be called outside a render pass.
-static bool insideRenderPass(const layer_data *my_data, GLOBAL_CB_NODE *pCB, const char *apiName,
-                             UNIQUE_VALIDATION_ERROR_CODE msgCode) {
+// Flags validation error if the associated call is made inside a render pass. The apiName routine should ONLY be called outside a
+// render pass.
+bool insideRenderPass(const layer_data *my_data, GLOBAL_CB_NODE *pCB, const char *apiName, UNIQUE_VALIDATION_ERROR_CODE msgCode) {
     bool inside = false;
     if (pCB->activeRenderPass) {
         inside = log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
@@ -6405,42 +6381,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateI
     return result;
 }
 
-static void ResolveRemainingLevelsLayers(layer_data *dev_data, VkImageSubresourceRange *range, VkImage image) {
-    // Expects global_lock to be held by caller
-
-    auto image_state = getImageState(dev_data, image);
-    if (image_state) {
-        // If the caller used the special values VK_REMAINING_MIP_LEVELS and VK_REMAINING_ARRAY_LAYERS, resolve them now in our
-        // internal state to the actual values.
-        if (range->levelCount == VK_REMAINING_MIP_LEVELS) {
-            range->levelCount = image_state->createInfo.mipLevels - range->baseMipLevel;
-        }
-
-        if (range->layerCount == VK_REMAINING_ARRAY_LAYERS) {
-            range->layerCount = image_state->createInfo.arrayLayers - range->baseArrayLayer;
-        }
-    }
-}
-
-// Return the correct layer/level counts if the caller used the special
-// values VK_REMAINING_MIP_LEVELS or VK_REMAINING_ARRAY_LAYERS.
-static void ResolveRemainingLevelsLayers(layer_data *dev_data, uint32_t *levels, uint32_t *layers, VkImageSubresourceRange range,
-                                         VkImage image) {
-    // Expects global_lock to be held by caller
-
-    *levels = range.levelCount;
-    *layers = range.layerCount;
-    auto image_state = getImageState(dev_data, image);
-    if (image_state) {
-        if (range.levelCount == VK_REMAINING_MIP_LEVELS) {
-            *levels = image_state->createInfo.mipLevels - range.baseMipLevel;
-        }
-        if (range.layerCount == VK_REMAINING_ARRAY_LAYERS) {
-            *layers = image_state->createInfo.arrayLayers - range.baseArrayLayer;
-        }
-    }
-}
-
 // For the given format verify that the aspect masks make sense
 static bool ValidateImageAspectMask(layer_data *dev_data, VkImage image, VkFormat format, VkImageAspectFlags aspect_mask,
                                     const char *func_name) {
@@ -8206,83 +8146,6 @@ static bool VerifyDestImageLayout(layer_data *dev_data, GLOBAL_CB_NODE *cb_node,
     return skip_call;
 }
 
-static bool VerifyClearImageLayout(layer_data *dev_data, GLOBAL_CB_NODE *cb_node, VkImage image, VkImageSubresourceRange range,
-                                   VkImageLayout dest_image_layout, const char *func_name) {
-    bool skip = false;
-
-    VkImageSubresourceRange resolved_range = range;
-    ResolveRemainingLevelsLayers(dev_data, &resolved_range, image);
-
-    if (dest_image_layout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-        if (dest_image_layout == VK_IMAGE_LAYOUT_GENERAL) {
-            auto image_state = getImageState(dev_data, image);
-            if (image_state->createInfo.tiling != VK_IMAGE_TILING_LINEAR) {
-                // LAYOUT_GENERAL is allowed, but may not be performance optimal, flag as perf warning.
-                skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0,
-                                0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                                "%s: Layout for cleared image should be TRANSFER_DST_OPTIMAL instead of GENERAL.", func_name);
-            }
-        } else {
-            UNIQUE_VALIDATION_ERROR_CODE error_code = VALIDATION_ERROR_01086;
-            if (strcmp(func_name, "vkCmdClearDepthStencilImage()") == 0) {
-                error_code = VALIDATION_ERROR_01101;
-            } else {
-                assert(strcmp(func_name, "vkCmdClearColorImage()") == 0);
-            }
-            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                            error_code, "DS",
-                            "%s: Layout for cleared image is %s but can only be "
-                            "TRANSFER_DST_OPTIMAL or GENERAL. %s",
-                            func_name, string_VkImageLayout(dest_image_layout), validation_error_map[error_code]);
-        }
-    }
-
-    for (uint32_t level_index = 0; level_index < resolved_range.levelCount; ++level_index) {
-        uint32_t level = level_index + resolved_range.baseMipLevel;
-        for (uint32_t layer_index = 0; layer_index < resolved_range.layerCount; ++layer_index) {
-            uint32_t layer = layer_index + resolved_range.baseArrayLayer;
-            VkImageSubresource sub = {resolved_range.aspectMask, level, layer};
-            IMAGE_CMD_BUF_LAYOUT_NODE node;
-            if (FindLayout(cb_node, image, sub, node)) {
-                if (node.layout != dest_image_layout) {
-                    UNIQUE_VALIDATION_ERROR_CODE error_code = VALIDATION_ERROR_01085;
-                    if (strcmp(func_name, "vkCmdClearDepthStencilImage()") == 0) {
-                        error_code = VALIDATION_ERROR_01100;
-                    } else {
-                        assert(strcmp(func_name, "vkCmdClearColorImage()") == 0);
-                    }
-                    skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                    VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, error_code, "DS",
-                                    "%s: Cannot clear an image whose layout is %s and "
-                                    "doesn't match the current layout %s. %s",
-                                    func_name, string_VkImageLayout(dest_image_layout), string_VkImageLayout(node.layout),
-                                    validation_error_map[error_code]);
-                }
-            }
-        }
-    }
-
-    return skip;
-}
-
-static void RecordClearImageLayout(layer_data *dev_data, GLOBAL_CB_NODE *cb_node, VkImage image, VkImageSubresourceRange range,
-                                   VkImageLayout dest_image_layout) {
-    VkImageSubresourceRange resolved_range = range;
-    ResolveRemainingLevelsLayers(dev_data, &resolved_range, image);
-
-    for (uint32_t level_index = 0; level_index < resolved_range.levelCount; ++level_index) {
-        uint32_t level = level_index + resolved_range.baseMipLevel;
-        for (uint32_t layer_index = 0; layer_index < resolved_range.layerCount; ++layer_index) {
-            uint32_t layer = layer_index + resolved_range.baseArrayLayer;
-            VkImageSubresource sub = {resolved_range.aspectMask, level, layer};
-            IMAGE_CMD_BUF_LAYOUT_NODE node;
-            if (!FindLayout(cb_node, image, sub, node)) {
-                SetLayout(cb_node, image, sub, IMAGE_CMD_BUF_LAYOUT_NODE(dest_image_layout, dest_image_layout));
-            }
-        }
-    }
-}
-
 // Test if two VkExtent3D structs are equivalent
 static inline bool IsExtentEqual(const VkExtent3D *extent, const VkExtent3D *other_extent) {
     bool result = true;
@@ -8867,45 +8730,6 @@ VKAPI_ATTR void VKAPI_CALL CmdClearAttachments(VkCommandBuffer commandBuffer, ui
     if (!skip) dev_data->dispatch_table.CmdClearAttachments(commandBuffer, attachmentCount, pAttachments, rectCount, pRects);
 }
 
-static bool PreCallValidateCmdClearColorImage(layer_data *dev_data, VkCommandBuffer commandBuffer, VkImage image,
-                                              VkImageLayout imageLayout, uint32_t rangeCount,
-                                              const VkImageSubresourceRange *pRanges) {
-    bool skip = false;
-    // TODO : Verify memory is in VK_IMAGE_STATE_CLEAR state
-    auto cb_node = getCBNode(dev_data, commandBuffer);
-    auto image_state = getImageState(dev_data, image);
-    if (cb_node && image_state) {
-        skip |= ValidateMemoryIsBoundToImage(dev_data, image_state, "vkCmdClearColorImage()", VALIDATION_ERROR_02527);
-        skip |= ValidateCmd(dev_data, cb_node, CMD_CLEARCOLORIMAGE, "vkCmdClearColorImage()");
-        skip |= insideRenderPass(dev_data, cb_node, "vkCmdClearColorImage()", VALIDATION_ERROR_01096);
-        for (uint32_t i = 0; i < rangeCount; ++i) {
-            skip |= ValidateImageAttributes(dev_data, image_state, pRanges[i]);
-            skip |= VerifyClearImageLayout(dev_data, cb_node, image, pRanges[i], imageLayout, "vkCmdClearColorImage()");
-        }
-    }
-    return skip;
-}
-
-// This state recording routine is shared between ClearColorImage and ClearDepthStencilImage
-static void PreCallRecordCmdClearImage(layer_data *dev_data, VkCommandBuffer commandBuffer, VkImage image,
-                                       VkImageLayout imageLayout, uint32_t rangeCount, const VkImageSubresourceRange *pRanges,
-                                       CMD_TYPE cmd_type) {
-    auto cb_node = getCBNode(dev_data, commandBuffer);
-    auto image_state = getImageState(dev_data, image);
-    if (cb_node && image_state) {
-        AddCommandBufferBindingImage(dev_data, cb_node, image_state);
-        std::function<bool()> function = [=]() {
-            SetImageMemoryValid(dev_data, image_state, true);
-            return false;
-        };
-        cb_node->validate_functions.push_back(function);
-        UpdateCmdBufferLastCmd(dev_data, cb_node, cmd_type);
-        for (uint32_t i = 0; i < rangeCount; ++i) {
-            RecordClearImageLayout(dev_data, cb_node, image, pRanges[i], imageLayout);
-        }
-    }
-}
-
 VKAPI_ATTR void VKAPI_CALL CmdClearColorImage(VkCommandBuffer commandBuffer, VkImage image, VkImageLayout imageLayout,
                                               const VkClearColorValue *pColor, uint32_t rangeCount,
                                               const VkImageSubresourceRange *pRanges) {
@@ -8918,24 +8742,6 @@ VKAPI_ATTR void VKAPI_CALL CmdClearColorImage(VkCommandBuffer commandBuffer, VkI
         lock.unlock();
         dev_data->dispatch_table.CmdClearColorImage(commandBuffer, image, imageLayout, pColor, rangeCount, pRanges);
     }
-}
-
-static bool PreCallValidateCmdClearDepthStencilImage(layer_data *dev_data, VkCommandBuffer commandBuffer, VkImage image,
-                                                     VkImageLayout imageLayout, uint32_t rangeCount,
-                                                     const VkImageSubresourceRange *pRanges) {
-    bool skip = false;
-    // TODO : Verify memory is in VK_IMAGE_STATE_CLEAR state
-    auto cb_node = getCBNode(dev_data, commandBuffer);
-    auto image_state = getImageState(dev_data, image);
-    if (cb_node && image_state) {
-        skip |= ValidateMemoryIsBoundToImage(dev_data, image_state, "vkCmdClearDepthStencilImage()", VALIDATION_ERROR_02528);
-        skip |= ValidateCmd(dev_data, cb_node, CMD_CLEARDEPTHSTENCILIMAGE, "vkCmdClearDepthStencilImage()");
-        skip |= insideRenderPass(dev_data, cb_node, "vkCmdClearDepthStencilImage()", VALIDATION_ERROR_01111);
-        for (uint32_t i = 0; i < rangeCount; ++i) {
-            skip |= VerifyClearImageLayout(dev_data, cb_node, image, pRanges[i], imageLayout, "vkCmdClearDepthStencilImage()");
-        }
-    }
-    return skip;
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdClearDepthStencilImage(VkCommandBuffer commandBuffer, VkImage image, VkImageLayout imageLayout,
