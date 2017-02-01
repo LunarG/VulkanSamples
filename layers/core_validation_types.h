@@ -742,7 +742,6 @@ void UpdateCmdBufferLastCmd(layer_data *my_data, GLOBAL_CB_NODE *cb_state, const
 void SetLayout(GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair, const IMAGE_CMD_BUF_LAYOUT_NODE &node);
 void SetLayout(GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair, const VkImageLayout &layout);
 
-
 // Prototypes for layer_data accessor functions.  These should be in their own header file at some point
 PFN_vkGetPhysicalDeviceFormatProperties GetFormatPropertiesPointer(layer_data *);
 PFN_vkGetPhysicalDeviceImageFormatProperties GetImageFormatPropertiesPointer(layer_data *);

@@ -415,19 +415,36 @@ void PreCallRecordCmdClearImage(core_validation::layer_data *dev_data, VkCommand
     }
 }
 
-bool PreCallValidateCmdClearDepthStencilImage(core_validation::layer_data *dev_data, VkCommandBuffer commandBuffer, VkImage image,
-                                              VkImageLayout imageLayout, uint32_t rangeCount,
+bool PreCallValidateCmdClearDepthStencilImage(core_validation::layer_data *device_data, VkCommandBuffer commandBuffer,
+                                              VkImage image, VkImageLayout imageLayout, uint32_t rangeCount,
                                               const VkImageSubresourceRange *pRanges) {
     bool skip = false;
+    const debug_report_data *report_data = core_validation::GetReportData(device_data);
+
     // TODO : Verify memory is in VK_IMAGE_STATE_CLEAR state
-    auto cb_node = getCBNode(dev_data, commandBuffer);
-    auto image_state = getImageState(dev_data, image);
+    auto cb_node = getCBNode(device_data, commandBuffer);
+    auto image_state = getImageState(device_data, image);
     if (cb_node && image_state) {
-        skip |= ValidateMemoryIsBoundToImage(dev_data, image_state, "vkCmdClearDepthStencilImage()", VALIDATION_ERROR_02528);
-        skip |= ValidateCmd(dev_data, cb_node, CMD_CLEARDEPTHSTENCILIMAGE, "vkCmdClearDepthStencilImage()");
-        skip |= insideRenderPass(dev_data, cb_node, "vkCmdClearDepthStencilImage()", VALIDATION_ERROR_01111);
+        skip |= ValidateMemoryIsBoundToImage(device_data, image_state, "vkCmdClearDepthStencilImage()", VALIDATION_ERROR_02528);
+        skip |= ValidateCmd(device_data, cb_node, CMD_CLEARDEPTHSTENCILIMAGE, "vkCmdClearDepthStencilImage()");
+        skip |= insideRenderPass(device_data, cb_node, "vkCmdClearDepthStencilImage()", VALIDATION_ERROR_01111);
         for (uint32_t i = 0; i < rangeCount; ++i) {
-            skip |= VerifyClearImageLayout(dev_data, cb_node, image, pRanges[i], imageLayout, "vkCmdClearDepthStencilImage()");
+            skip |= VerifyClearImageLayout(device_data, cb_node, image, pRanges[i], imageLayout, "vkCmdClearDepthStencilImage()");
+            // Image aspect must be depth or stencil or both
+            if (((pRanges[i].aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT) != VK_IMAGE_ASPECT_DEPTH_BIT) &&
+                ((pRanges[i].aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) != VK_IMAGE_ASPECT_STENCIL_BIT)) {
+                char const str[] =
+                    "vkCmdClearDepthStencilImage aspectMasks for all subresource ranges must be "
+                    "set to VK_IMAGE_ASPECT_DEPTH_BIT and/or VK_IMAGE_ASPECT_STENCIL_BIT";
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                (uint64_t)commandBuffer, __LINE__, DRAWSTATE_INVALID_IMAGE_ASPECT, "IMAGE", str);
+            }
+        }
+        if (image_state && !vk_format_is_depth_or_stencil(image_state->createInfo.format)) {
+            char const str[] = "vkCmdClearDepthStencilImage called without a depth/stencil image.";
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                            reinterpret_cast<uint64_t &>(image), __LINE__, VALIDATION_ERROR_01103, "IMAGE", "%s. %s", str,
+                            validation_error_map[VALIDATION_ERROR_01103]);
         }
     }
     return skip;

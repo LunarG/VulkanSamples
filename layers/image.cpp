@@ -241,38 +241,6 @@ VKAPI_ATTR void VKAPI_CALL DestroyImage(VkDevice device, VkImage image, const Vk
     device_data->device_dispatch_table->DestroyImage(device, image, pAllocator);
 }
 
-VKAPI_ATTR void VKAPI_CALL CmdClearDepthStencilImage(VkCommandBuffer commandBuffer, VkImage image, VkImageLayout imageLayout,
-                                                     const VkClearDepthStencilValue *pDepthStencil, uint32_t rangeCount,
-                                                     const VkImageSubresourceRange *pRanges) {
-    bool skipCall = false;
-    layer_data *device_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-    // For each range, Image aspect must be depth or stencil or both
-    for (uint32_t i = 0; i < rangeCount; i++) {
-        if (((pRanges[i].aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT) != VK_IMAGE_ASPECT_DEPTH_BIT) &&
-            ((pRanges[i].aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) != VK_IMAGE_ASPECT_STENCIL_BIT)) {
-            char const str[] =
-                "vkCmdClearDepthStencilImage aspectMasks for all subresource ranges must be "
-                "set to VK_IMAGE_ASPECT_DEPTH_BIT and/or VK_IMAGE_ASPECT_STENCIL_BIT";
-            skipCall |=
-                log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                        (uint64_t)commandBuffer, __LINE__, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", str);
-        }
-    }
-
-    auto image_state = getImageState(device_data, image);
-    if (image_state && !vk_format_is_depth_or_stencil(image_state->format)) {
-        char const str[] = "vkCmdClearDepthStencilImage called without a depth/stencil image.";
-        skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                            reinterpret_cast<uint64_t &>(image), __LINE__, VALIDATION_ERROR_01103, "IMAGE", "%s. %s", str,
-                            validation_error_map[VALIDATION_ERROR_01103]);
-    }
-
-    if (!skipCall) {
-        device_data->device_dispatch_table->CmdClearDepthStencilImage(commandBuffer, image, imageLayout, pDepthStencil, rangeCount,
-                                                                      pRanges);
-    }
-}
-
 // Returns true if [x, xoffset] and [y, yoffset] overlap
 static bool RangesIntersect(int32_t start, uint32_t start_offset, int32_t end, uint32_t end_offset) {
     bool result = false;
@@ -1106,7 +1074,6 @@ static PFN_vkVoidFunction intercept_core_device_command(const char *name) {
         {"vkDestroyDevice", reinterpret_cast<PFN_vkVoidFunction>(DestroyDevice)},
         {"vkCreateImage", reinterpret_cast<PFN_vkVoidFunction>(CreateImage)},
         {"vkDestroyImage", reinterpret_cast<PFN_vkVoidFunction>(DestroyImage)},
-        {"vkCmdClearDepthStencilImage", reinterpret_cast<PFN_vkVoidFunction>(CmdClearDepthStencilImage)},
         {"vkCmdClearAttachments", reinterpret_cast<PFN_vkVoidFunction>(CmdClearAttachments)},
         {"vkCmdCopyImage", reinterpret_cast<PFN_vkVoidFunction>(CmdCopyImage)},
         {"vkCmdCopyImageToBuffer", reinterpret_cast<PFN_vkVoidFunction>(CmdCopyImageToBuffer)},
