@@ -2099,7 +2099,7 @@ static PIPELINE_STATE *getPipelineState(layer_data const *my_data, VkPipeline pi
     return it->second;
 }
 
-static RENDER_PASS_STATE *getRenderPassState(layer_data const *my_data, VkRenderPass renderpass) {
+RENDER_PASS_STATE *getRenderPassState(layer_data const *my_data, VkRenderPass renderpass) {
     auto it = my_data->renderPassMap.find(renderpass);
     if (it == my_data->renderPassMap.end()) {
         return nullptr;
@@ -3371,181 +3371,6 @@ static bool validateUpdateConsistency(layer_data *my_data, const VkDevice device
     }
     return skip_call;
 }
-// TODO: Consolidate functions
-bool FindLayout(const GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair, IMAGE_CMD_BUF_LAYOUT_NODE &node,
-                const VkImageAspectFlags aspectMask) {
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(pCB->commandBuffer), layer_data_map);
-    if (!(imgpair.subresource.aspectMask & aspectMask)) {
-        return false;
-    }
-    VkImageAspectFlags oldAspectMask = imgpair.subresource.aspectMask;
-    imgpair.subresource.aspectMask = aspectMask;
-    auto imgsubIt = pCB->imageLayoutMap.find(imgpair);
-    if (imgsubIt == pCB->imageLayoutMap.end()) {
-        return false;
-    }
-    if (node.layout != VK_IMAGE_LAYOUT_MAX_ENUM && node.layout != imgsubIt->second.layout) {
-        log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                reinterpret_cast<uint64_t &>(imgpair.image), __LINE__, DRAWSTATE_INVALID_LAYOUT, "DS",
-                "Cannot query for VkImage 0x%" PRIx64 " layout when combined aspect mask %d has multiple layout types: %s and %s",
-                reinterpret_cast<uint64_t &>(imgpair.image), oldAspectMask, string_VkImageLayout(node.layout),
-                string_VkImageLayout(imgsubIt->second.layout));
-    }
-    if (node.initialLayout != VK_IMAGE_LAYOUT_MAX_ENUM && node.initialLayout != imgsubIt->second.initialLayout) {
-        log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                reinterpret_cast<uint64_t &>(imgpair.image), __LINE__, DRAWSTATE_INVALID_LAYOUT, "DS",
-                "Cannot query for VkImage 0x%" PRIx64
-                " layout when combined aspect mask %d has multiple initial layout types: %s and %s",
-                reinterpret_cast<uint64_t &>(imgpair.image), oldAspectMask, string_VkImageLayout(node.initialLayout),
-                string_VkImageLayout(imgsubIt->second.initialLayout));
-    }
-    node = imgsubIt->second;
-    return true;
-}
-
-bool FindLayout(const layer_data *my_data, ImageSubresourcePair imgpair, VkImageLayout &layout,
-                const VkImageAspectFlags aspectMask) {
-    if (!(imgpair.subresource.aspectMask & aspectMask)) {
-        return false;
-    }
-    VkImageAspectFlags oldAspectMask = imgpair.subresource.aspectMask;
-    imgpair.subresource.aspectMask = aspectMask;
-    auto imgsubIt = my_data->imageLayoutMap.find(imgpair);
-    if (imgsubIt == my_data->imageLayoutMap.end()) {
-        return false;
-    }
-    if (layout != VK_IMAGE_LAYOUT_MAX_ENUM && layout != imgsubIt->second.layout) {
-        log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                reinterpret_cast<uint64_t &>(imgpair.image), __LINE__, DRAWSTATE_INVALID_LAYOUT, "DS",
-                "Cannot query for VkImage 0x%" PRIx64 " layout when combined aspect mask %d has multiple layout types: %s and %s",
-                reinterpret_cast<uint64_t &>(imgpair.image), oldAspectMask, string_VkImageLayout(layout),
-                string_VkImageLayout(imgsubIt->second.layout));
-    }
-    layout = imgsubIt->second.layout;
-    return true;
-}
-
-// find layout(s) on the cmd buf level
-bool FindLayout(const GLOBAL_CB_NODE *pCB, VkImage image, VkImageSubresource range, IMAGE_CMD_BUF_LAYOUT_NODE &node) {
-    ImageSubresourcePair imgpair = {image, true, range};
-    node = IMAGE_CMD_BUF_LAYOUT_NODE(VK_IMAGE_LAYOUT_MAX_ENUM, VK_IMAGE_LAYOUT_MAX_ENUM);
-    FindLayout(pCB, imgpair, node, VK_IMAGE_ASPECT_COLOR_BIT);
-    FindLayout(pCB, imgpair, node, VK_IMAGE_ASPECT_DEPTH_BIT);
-    FindLayout(pCB, imgpair, node, VK_IMAGE_ASPECT_STENCIL_BIT);
-    FindLayout(pCB, imgpair, node, VK_IMAGE_ASPECT_METADATA_BIT);
-    if (node.layout == VK_IMAGE_LAYOUT_MAX_ENUM) {
-        imgpair = {image, false, VkImageSubresource()};
-        auto imgsubIt = pCB->imageLayoutMap.find(imgpair);
-        if (imgsubIt == pCB->imageLayoutMap.end()) return false;
-        node = imgsubIt->second;
-    }
-    return true;
-}
-
-// find layout(s) on the global level
-bool FindLayout(const layer_data *my_data, ImageSubresourcePair imgpair, VkImageLayout &layout) {
-    layout = VK_IMAGE_LAYOUT_MAX_ENUM;
-    FindLayout(my_data, imgpair, layout, VK_IMAGE_ASPECT_COLOR_BIT);
-    FindLayout(my_data, imgpair, layout, VK_IMAGE_ASPECT_DEPTH_BIT);
-    FindLayout(my_data, imgpair, layout, VK_IMAGE_ASPECT_STENCIL_BIT);
-    FindLayout(my_data, imgpair, layout, VK_IMAGE_ASPECT_METADATA_BIT);
-    if (layout == VK_IMAGE_LAYOUT_MAX_ENUM) {
-        imgpair = {imgpair.image, false, VkImageSubresource()};
-        auto imgsubIt = my_data->imageLayoutMap.find(imgpair);
-        if (imgsubIt == my_data->imageLayoutMap.end()) return false;
-        layout = imgsubIt->second.layout;
-    }
-    return true;
-}
-
-bool FindLayout(const layer_data *my_data, VkImage image, VkImageSubresource range, VkImageLayout &layout) {
-    ImageSubresourcePair imgpair = {image, true, range};
-    return FindLayout(my_data, imgpair, layout);
-}
-
-bool FindLayouts(const layer_data *my_data, VkImage image, std::vector<VkImageLayout> &layouts) {
-    auto sub_data = my_data->imageSubresourceMap.find(image);
-    if (sub_data == my_data->imageSubresourceMap.end()) return false;
-    auto image_state = getImageState(my_data, image);
-    if (!image_state) return false;
-    bool ignoreGlobal = false;
-    // TODO: Make this robust for >1 aspect mask. Now it will just say ignore
-    // potential errors in this case.
-    if (sub_data->second.size() >= (image_state->createInfo.arrayLayers * image_state->createInfo.mipLevels + 1)) {
-        ignoreGlobal = true;
-    }
-    for (auto imgsubpair : sub_data->second) {
-        if (ignoreGlobal && !imgsubpair.hasSubresource) continue;
-        auto img_data = my_data->imageLayoutMap.find(imgsubpair);
-        if (img_data != my_data->imageLayoutMap.end()) {
-            layouts.push_back(img_data->second.layout);
-        }
-    }
-    return true;
-}
-
-// Set the layout on the global level
-void SetLayout(layer_data *my_data, ImageSubresourcePair imgpair, const VkImageLayout &layout) {
-    VkImage &image = imgpair.image;
-    // TODO (mlentine): Maybe set format if new? Not used atm.
-    my_data->imageLayoutMap[imgpair].layout = layout;
-    // TODO (mlentine): Maybe make vector a set?
-    auto subresource = std::find(my_data->imageSubresourceMap[image].begin(), my_data->imageSubresourceMap[image].end(), imgpair);
-    if (subresource == my_data->imageSubresourceMap[image].end()) {
-        my_data->imageSubresourceMap[image].push_back(imgpair);
-    }
-}
-
-// Set the layout on the cmdbuf level
-void SetLayout(GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair, const IMAGE_CMD_BUF_LAYOUT_NODE &node) {
-    pCB->imageLayoutMap[imgpair] = node;
-    // TODO (mlentine): Maybe make vector a set?
-    auto subresource =
-        std::find(pCB->imageSubresourceMap[imgpair.image].begin(), pCB->imageSubresourceMap[imgpair.image].end(), imgpair);
-    if (subresource == pCB->imageSubresourceMap[imgpair.image].end()) {
-        pCB->imageSubresourceMap[imgpair.image].push_back(imgpair);
-    }
-}
-
-void SetLayout(GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair, const VkImageLayout &layout) {
-    // TODO (mlentine): Maybe make vector a set?
-    if (std::find(pCB->imageSubresourceMap[imgpair.image].begin(), pCB->imageSubresourceMap[imgpair.image].end(), imgpair) !=
-        pCB->imageSubresourceMap[imgpair.image].end()) {
-        pCB->imageLayoutMap[imgpair].layout = layout;
-    } else {
-        // TODO (mlentine): Could be expensive and might need to be removed.
-        assert(imgpair.hasSubresource);
-        IMAGE_CMD_BUF_LAYOUT_NODE node;
-        if (!FindLayout(pCB, imgpair.image, imgpair.subresource, node)) {
-            node.initialLayout = layout;
-        }
-        SetLayout(pCB, imgpair, {node.initialLayout, layout});
-    }
-}
-
-void SetLayout(const layer_data *dev_data, GLOBAL_CB_NODE *pCB, VkImageView imageView, const VkImageLayout &layout) {
-    auto view_state = getImageViewState(dev_data, imageView);
-    assert(view_state);
-    auto image = view_state->create_info.image;
-    const VkImageSubresourceRange &subRange = view_state->create_info.subresourceRange;
-    // TODO: Do not iterate over every possibility - consolidate where possible
-    for (uint32_t j = 0; j < subRange.levelCount; j++) {
-        uint32_t level = subRange.baseMipLevel + j;
-        for (uint32_t k = 0; k < subRange.layerCount; k++) {
-            uint32_t layer = subRange.baseArrayLayer + k;
-            VkImageSubresource sub = {subRange.aspectMask, level, layer};
-            // TODO: If ImageView was created with depth or stencil, transition both layouts as
-            // the aspectMask is ignored and both are used. Verify that the extra implicit layout
-            // is OK for descriptor set layout validation
-            if (subRange.aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) {
-                if (vk_format_is_depth_and_stencil(view_state->create_info.format)) {
-                    sub.aspectMask |= (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
-                }
-            }
-            SetLayout(pCB, image, sub, layout);
-        }
-    }
-}
 
 // Validate that given set is valid and that it's not being used by an in-flight CmdBuffer
 // func_str is the name of the calling function
@@ -4293,7 +4118,7 @@ static bool ValidateCmdBufImageLayouts(layer_data *dev_data, GLOBAL_CB_NODE *pCB
     bool skip_call = false;
     for (auto cb_image_data : pCB->imageLayoutMap) {
         VkImageLayout imageLayout;
-        if (!FindLayout(dev_data, cb_image_data.first, imageLayout)) {
+        if (!FindGlobalLayout(dev_data, cb_image_data.first, imageLayout)) {
             skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                  VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
                                  "Cannot submit cmd buffer using deleted image 0x%" PRIx64 ".",
@@ -4323,7 +4148,7 @@ static bool ValidateCmdBufImageLayouts(layer_data *dev_data, GLOBAL_CB_NODE *pCB
                                 string_VkImageLayout(cb_image_data.second.initialLayout));
                 }
             }
-            SetLayout(dev_data, cb_image_data.first, cb_image_data.second.layout);
+            SetGlobalLayout(dev_data, cb_image_data.first, cb_image_data.second.layout);
         }
     }
     return skip_call;
@@ -8067,86 +7892,6 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer
     if (!skip_call) dev_data->dispatch_table.CmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, regionCount, pRegions);
 }
 
-static bool VerifySourceImageLayout(layer_data *dev_data, GLOBAL_CB_NODE *cb_node, VkImage srcImage,
-                                    VkImageSubresourceLayers subLayers, VkImageLayout srcImageLayout,
-                                    UNIQUE_VALIDATION_ERROR_CODE msgCode) {
-    bool skip_call = false;
-
-    for (uint32_t i = 0; i < subLayers.layerCount; ++i) {
-        uint32_t layer = i + subLayers.baseArrayLayer;
-        VkImageSubresource sub = {subLayers.aspectMask, subLayers.mipLevel, layer};
-        IMAGE_CMD_BUF_LAYOUT_NODE node;
-        if (!FindLayout(cb_node, srcImage, sub, node)) {
-            SetLayout(cb_node, srcImage, sub, IMAGE_CMD_BUF_LAYOUT_NODE(srcImageLayout, srcImageLayout));
-            continue;
-        }
-        if (node.layout != srcImageLayout) {
-            // TODO: Improve log message in the next pass
-            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                 VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                                 "Cannot copy from an image whose source layout is %s "
-                                 "and doesn't match the current layout %s.",
-                                 string_VkImageLayout(srcImageLayout), string_VkImageLayout(node.layout));
-        }
-    }
-    if (srcImageLayout != VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL) {
-        if (srcImageLayout == VK_IMAGE_LAYOUT_GENERAL) {
-            // TODO : Can we deal with image node from the top of call tree and avoid map look-up here?
-            auto image_state = getImageState(dev_data, srcImage);
-            if (image_state->createInfo.tiling != VK_IMAGE_TILING_LINEAR) {
-                // LAYOUT_GENERAL is allowed, but may not be performance optimal, flag as perf warning.
-                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
-                                     (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                                     "Layout for input image should be TRANSFER_SRC_OPTIMAL instead of GENERAL.");
-            }
-        } else {
-            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                                 msgCode, "DS", "Layout for input image is %s but can only be TRANSFER_SRC_OPTIMAL or GENERAL. %s",
-                                 string_VkImageLayout(srcImageLayout), validation_error_map[msgCode]);
-        }
-    }
-    return skip_call;
-}
-
-static bool VerifyDestImageLayout(layer_data *dev_data, GLOBAL_CB_NODE *cb_node, VkImage destImage,
-                                  VkImageSubresourceLayers subLayers, VkImageLayout destImageLayout,
-                                  UNIQUE_VALIDATION_ERROR_CODE msgCode) {
-    bool skip_call = false;
-
-    for (uint32_t i = 0; i < subLayers.layerCount; ++i) {
-        uint32_t layer = i + subLayers.baseArrayLayer;
-        VkImageSubresource sub = {subLayers.aspectMask, subLayers.mipLevel, layer};
-        IMAGE_CMD_BUF_LAYOUT_NODE node;
-        if (!FindLayout(cb_node, destImage, sub, node)) {
-            SetLayout(cb_node, destImage, sub, IMAGE_CMD_BUF_LAYOUT_NODE(destImageLayout, destImageLayout));
-            continue;
-        }
-        if (node.layout != destImageLayout) {
-            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                 VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                                 "Cannot copy from an image whose dest layout is %s and "
-                                 "doesn't match the current layout %s.",
-                                 string_VkImageLayout(destImageLayout), string_VkImageLayout(node.layout));
-        }
-    }
-    if (destImageLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-        if (destImageLayout == VK_IMAGE_LAYOUT_GENERAL) {
-            auto image_state = getImageState(dev_data, destImage);
-            if (image_state->createInfo.tiling != VK_IMAGE_TILING_LINEAR) {
-                // LAYOUT_GENERAL is allowed, but may not be performance optimal, flag as perf warning.
-                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
-                                     (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                                     "Layout for output image should be TRANSFER_DST_OPTIMAL instead of GENERAL.");
-            }
-        } else {
-            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                                 msgCode, "DS", "Layout for output image is %s but can only be TRANSFER_DST_OPTIMAL or GENERAL. %s",
-                                 string_VkImageLayout(destImageLayout), validation_error_map[msgCode]);
-        }
-    }
-    return skip_call;
-}
-
 // Test if two VkExtent3D structs are equivalent
 static inline bool IsExtentEqual(const VkExtent3D *extent, const VkExtent3D *other_extent) {
     bool result = true;
@@ -8869,60 +8614,6 @@ VKAPI_ATTR void VKAPI_CALL CmdResetEvent(VkCommandBuffer commandBuffer, VkEvent 
     if (!skip_call) dev_data->dispatch_table.CmdResetEvent(commandBuffer, event, stageMask);
 }
 
-static bool TransitionImageAspectLayout(layer_data *dev_data, GLOBAL_CB_NODE *pCB, const VkImageMemoryBarrier *mem_barrier,
-                                        uint32_t level, uint32_t layer, VkImageAspectFlags aspect) {
-    if (!(mem_barrier->subresourceRange.aspectMask & aspect)) {
-        return false;
-    }
-    VkImageSubresource sub = {aspect, level, layer};
-    IMAGE_CMD_BUF_LAYOUT_NODE node;
-    if (!FindLayout(pCB, mem_barrier->image, sub, node)) {
-        SetLayout(pCB, mem_barrier->image, sub, IMAGE_CMD_BUF_LAYOUT_NODE(mem_barrier->oldLayout, mem_barrier->newLayout));
-        return false;
-    }
-    bool skip = false;
-    if (mem_barrier->oldLayout == VK_IMAGE_LAYOUT_UNDEFINED) {
-        // TODO: Set memory invalid which is in mem_tracker currently
-    } else if (node.layout != mem_barrier->oldLayout) {
-        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                        DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                        "You cannot transition the layout of aspect %d from %s when current layout is %s.", aspect,
-                        string_VkImageLayout(mem_barrier->oldLayout), string_VkImageLayout(node.layout));
-    }
-    SetLayout(pCB, mem_barrier->image, sub, mem_barrier->newLayout);
-    return skip;
-}
-
-// TODO: Separate validation and layout state updates
-static bool TransitionImageLayouts(VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
-                                   const VkImageMemoryBarrier *pImgMemBarriers) {
-    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
-    GLOBAL_CB_NODE *pCB = getCBNode(dev_data, cmdBuffer);
-    bool skip = false;
-    uint32_t levelCount = 0;
-    uint32_t layerCount = 0;
-
-    for (uint32_t i = 0; i < memBarrierCount; ++i) {
-        auto mem_barrier = &pImgMemBarriers[i];
-        if (!mem_barrier) continue;
-        // TODO: Do not iterate over every possibility - consolidate where possible
-        ResolveRemainingLevelsLayers(dev_data, &levelCount, &layerCount, mem_barrier->subresourceRange,
-                                     getImageState(dev_data, mem_barrier->image));
-
-        for (uint32_t j = 0; j < levelCount; j++) {
-            uint32_t level = mem_barrier->subresourceRange.baseMipLevel + j;
-            for (uint32_t k = 0; k < layerCount; k++) {
-                uint32_t layer = mem_barrier->subresourceRange.baseArrayLayer + k;
-                skip |= TransitionImageAspectLayout(dev_data, pCB, mem_barrier, level, layer, VK_IMAGE_ASPECT_COLOR_BIT);
-                skip |= TransitionImageAspectLayout(dev_data, pCB, mem_barrier, level, layer, VK_IMAGE_ASPECT_DEPTH_BIT);
-                skip |= TransitionImageAspectLayout(dev_data, pCB, mem_barrier, level, layer, VK_IMAGE_ASPECT_STENCIL_BIT);
-                skip |= TransitionImageAspectLayout(dev_data, pCB, mem_barrier, level, layer, VK_IMAGE_ASPECT_METADATA_BIT);
-            }
-        }
-    }
-    return skip;
-}
-
 // Print readable FlagBits in FlagMask
 static std::string string_VkAccessFlags(VkAccessFlags accessMask) {
     std::string result;
@@ -9373,7 +9064,7 @@ VKAPI_ATTR void VKAPI_CALL CmdWaitEvents(VkCommandBuffer commandBuffer, uint32_t
         } else {
             skip |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdWaitEvents()");
         }
-        skip |= TransitionImageLayouts(commandBuffer, imageMemoryBarrierCount, pImageMemoryBarriers);
+        skip |= TransitionImageLayouts(dev_data, commandBuffer, imageMemoryBarrierCount, pImageMemoryBarriers);
         skip |= ValidateBarriers("vkCmdWaitEvents()", commandBuffer, memoryBarrierCount, pMemoryBarriers, bufferMemoryBarrierCount,
                                  pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
     }
@@ -9402,7 +9093,7 @@ VKAPI_ATTR void VKAPI_CALL CmdPipelineBarrier(VkCommandBuffer commandBuffer, VkP
         skip |= ValidateStageMaskGsTsEnables(dev_data, dstStageMask, "vkCmdPipelineBarrier()", VALIDATION_ERROR_00266,
                                              VALIDATION_ERROR_00268);
         UpdateCmdBufferLastCmd(dev_data, cb_state, CMD_PIPELINEBARRIER);
-        skip |= TransitionImageLayouts(commandBuffer, imageMemoryBarrierCount, pImageMemoryBarriers);
+        skip |= TransitionImageLayouts(dev_data, commandBuffer, imageMemoryBarrierCount, pImageMemoryBarriers);
         skip |= ValidateBarriers("vkCmdPipelineBarrier()", commandBuffer, memoryBarrierCount, pMemoryBarriers,
                                  bufferMemoryBarrierCount, pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
     }
@@ -10494,80 +10185,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
     return result;
 }
 
-static bool VerifyFramebufferAndRenderPassLayouts(layer_data *dev_data, GLOBAL_CB_NODE *pCB,
-                                                  const VkRenderPassBeginInfo *pRenderPassBegin) {
-    bool skip_call = false;
-    auto const pRenderPassInfo = getRenderPassState(dev_data, pRenderPassBegin->renderPass)->createInfo.ptr();
-    auto const &framebufferInfo = dev_data->frameBufferMap[pRenderPassBegin->framebuffer]->createInfo;
-    if (pRenderPassInfo->attachmentCount != framebufferInfo.attachmentCount) {
-        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                             DRAWSTATE_INVALID_RENDERPASS, "DS",
-                             "You cannot start a render pass using a framebuffer "
-                             "with a different number of attachments.");
-    }
-    for (uint32_t i = 0; i < pRenderPassInfo->attachmentCount; ++i) {
-        const VkImageView &image_view = framebufferInfo.pAttachments[i];
-        auto view_state = getImageViewState(dev_data, image_view);
-        assert(view_state);
-        const VkImage &image = view_state->create_info.image;
-        const VkImageSubresourceRange &subRange = view_state->create_info.subresourceRange;
-        IMAGE_CMD_BUF_LAYOUT_NODE newNode = {pRenderPassInfo->pAttachments[i].initialLayout,
-                                             pRenderPassInfo->pAttachments[i].initialLayout};
-        // TODO: Do not iterate over every possibility - consolidate where possible
-        for (uint32_t j = 0; j < subRange.levelCount; j++) {
-            uint32_t level = subRange.baseMipLevel + j;
-            for (uint32_t k = 0; k < subRange.layerCount; k++) {
-                uint32_t layer = subRange.baseArrayLayer + k;
-                VkImageSubresource sub = {subRange.aspectMask, level, layer};
-                IMAGE_CMD_BUF_LAYOUT_NODE node;
-                if (!FindLayout(pCB, image, sub, node)) {
-                    SetLayout(pCB, image, sub, newNode);
-                    continue;
-                }
-                if (newNode.layout != VK_IMAGE_LAYOUT_UNDEFINED && newNode.layout != node.layout) {
-                    skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
-                                         __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
-                                         "You cannot start a render pass using attachment %u "
-                                         "where the render pass initial layout is %s and the previous "
-                                         "known layout of the attachment is %s. The layouts must match, or "
-                                         "the render pass initial layout for the attachment must be "
-                                         "VK_IMAGE_LAYOUT_UNDEFINED",
-                                         i, string_VkImageLayout(newNode.layout), string_VkImageLayout(node.layout));
-                }
-            }
-        }
-    }
-    return skip_call;
-}
-
-static void TransitionAttachmentRefLayout(layer_data *dev_data, GLOBAL_CB_NODE *pCB, FRAMEBUFFER_STATE *pFramebuffer,
-                                          VkAttachmentReference ref) {
-    if (ref.attachment != VK_ATTACHMENT_UNUSED) {
-        auto image_view = pFramebuffer->createInfo.pAttachments[ref.attachment];
-        SetLayout(dev_data, pCB, image_view, ref.layout);
-    }
-}
-
-static void TransitionSubpassLayouts(layer_data *dev_data, GLOBAL_CB_NODE *pCB, const VkRenderPassBeginInfo *pRenderPassBegin,
-                                     const int subpass_index) {
-    auto renderPass = getRenderPassState(dev_data, pRenderPassBegin->renderPass);
-    if (!renderPass) return;
-
-    auto framebuffer = getFramebufferState(dev_data, pRenderPassBegin->framebuffer);
-    if (!framebuffer) return;
-
-    auto const &subpass = renderPass->createInfo.pSubpasses[subpass_index];
-    for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
-        TransitionAttachmentRefLayout(dev_data, pCB, framebuffer, subpass.pInputAttachments[j]);
-    }
-    for (uint32_t j = 0; j < subpass.colorAttachmentCount; ++j) {
-        TransitionAttachmentRefLayout(dev_data, pCB, framebuffer, subpass.pColorAttachments[j]);
-    }
-    if (subpass.pDepthStencilAttachment) {
-        TransitionAttachmentRefLayout(dev_data, pCB, framebuffer, *subpass.pDepthStencilAttachment);
-    }
-}
-
 static bool validatePrimaryCommandBuffer(const layer_data *dev_data, const GLOBAL_CB_NODE *pCB, const std::string &cmd_name,
                                          UNIQUE_VALIDATION_ERROR_CODE error_code) {
     bool skip_call = false;
@@ -10577,21 +10194,6 @@ static bool validatePrimaryCommandBuffer(const layer_data *dev_data, const GLOBA
                              validation_error_map[error_code]);
     }
     return skip_call;
-}
-
-static void TransitionFinalSubpassLayouts(layer_data *dev_data, GLOBAL_CB_NODE *pCB,
-                                          const VkRenderPassBeginInfo *pRenderPassBegin) {
-    auto renderPass = getRenderPassState(dev_data, pRenderPassBegin->renderPass);
-    if (!renderPass) return;
-
-    const VkRenderPassCreateInfo *pRenderPassInfo = renderPass->createInfo.ptr();
-    auto framebuffer = getFramebufferState(dev_data, pRenderPassBegin->framebuffer);
-    if (!framebuffer) return;
-
-    for (uint32_t i = 0; i < pRenderPassInfo->attachmentCount; ++i) {
-        auto image_view = framebuffer->createInfo.pAttachments[i];
-        SetLayout(dev_data, pCB, image_view, pRenderPassInfo->pAttachments[i].finalLayout);
-    }
 }
 
 static bool VerifyRenderAreaBounds(const layer_data *dev_data, const VkRenderPassBeginInfo *pRenderPassBegin) {
@@ -10700,7 +10302,8 @@ VKAPI_ATTR void VKAPI_CALL CmdBeginRenderPass(VkCommandBuffer commandBuffer, con
                     clear_op_size - 1);
             }
             skip_call |= VerifyRenderAreaBounds(dev_data, pRenderPassBegin);
-            skip_call |= VerifyFramebufferAndRenderPassLayouts(dev_data, cb_node, pRenderPassBegin);
+            skip_call |= VerifyFramebufferAndRenderPassLayouts(dev_data, cb_node, pRenderPassBegin,
+                                                               getFramebufferState(dev_data, pRenderPassBegin->framebuffer));
             skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdBeginRenderPass()", VALIDATION_ERROR_00440);
             skip_call |= ValidateDependencies(dev_data, framebuffer, render_pass_state);
             skip_call |= validatePrimaryCommandBuffer(dev_data, cb_node, "vkCmdBeginRenderPass", VALIDATION_ERROR_00441);
@@ -10715,7 +10318,7 @@ VKAPI_ATTR void VKAPI_CALL CmdBeginRenderPass(VkCommandBuffer commandBuffer, con
             // Connect this framebuffer and its children to this cmdBuffer
             AddFramebufferBinding(dev_data, cb_node, framebuffer);
             // transition attachments to the correct layouts for the first subpass
-            TransitionSubpassLayouts(dev_data, cb_node, &cb_node->activeRenderPassBeginInfo, cb_node->activeSubpass);
+            TransitionSubpassLayouts(dev_data, cb_node, &cb_node->activeRenderPassBeginInfo, cb_node->activeSubpass, framebuffer);
         }
     }
     lock.unlock();
@@ -10753,7 +10356,8 @@ VKAPI_ATTR void VKAPI_CALL CmdNextSubpass(VkCommandBuffer commandBuffer, VkSubpa
         lock.lock();
         pCB->activeSubpass++;
         pCB->activeSubpassContents = contents;
-        TransitionSubpassLayouts(dev_data, pCB, &pCB->activeRenderPassBeginInfo, pCB->activeSubpass);
+        TransitionSubpassLayouts(dev_data, pCB, &pCB->activeRenderPassBeginInfo, pCB->activeSubpass,
+                                 getFramebufferState(dev_data, pCB->activeRenderPassBeginInfo.framebuffer));
     }
 }
 
@@ -10762,9 +10366,10 @@ VKAPI_ATTR void VKAPI_CALL CmdEndRenderPass(VkCommandBuffer commandBuffer) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
     auto pCB = getCBNode(dev_data, commandBuffer);
+    FRAMEBUFFER_STATE *framebuffer = NULL;
     if (pCB) {
         RENDER_PASS_STATE *rp_state = pCB->activeRenderPass;
-        auto framebuffer = getFramebufferState(dev_data, pCB->activeFramebuffer);
+        framebuffer = getFramebufferState(dev_data, pCB->activeFramebuffer);
         if (rp_state) {
             if (pCB->activeSubpass != rp_state->createInfo.subpassCount - 1) {
                 skip_call |= log_msg(
@@ -10806,7 +10411,7 @@ VKAPI_ATTR void VKAPI_CALL CmdEndRenderPass(VkCommandBuffer commandBuffer) {
 
     if (pCB) {
         lock.lock();
-        TransitionFinalSubpassLayouts(dev_data, pCB, &pCB->activeRenderPassBeginInfo);
+        TransitionFinalSubpassLayouts(dev_data, pCB, &pCB->activeRenderPassBeginInfo, framebuffer);
         pCB->activeRenderPass = nullptr;
         pCB->activeSubpass = 0;
         pCB->activeFramebuffer = VK_NULL_HANDLE;
@@ -11116,7 +10721,7 @@ VKAPI_ATTR void VKAPI_CALL CmdExecuteCommands(VkCommandBuffer commandBuffer, uin
             }
             // Propagate layout transitions to the primary cmd buffer
             for (auto ilm_entry : pSubCB->imageLayoutMap) {
-                SetLayout(pCB, ilm_entry.first, ilm_entry.second);
+                SetLayout(dev_data, pCB, ilm_entry.first, ilm_entry.second);
             }
             pSubCB->primaryCommandBuffer = pCB->commandBuffer;
             pCB->secondaryCommandBuffers.insert(pSubCB->commandBuffer);

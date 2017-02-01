@@ -27,6 +27,11 @@
 #include <unordered_map>
 #include <vector>
 #include <utility>
+#include <algorithm>
+
+
+
+
 
 
 bool PreCallValidateCreateImage(core_validation::layer_data *device_data, const VkImageCreateInfo *pCreateInfo,
@@ -63,5 +68,57 @@ void PreCallRecordCmdClearImage(core_validation::layer_data *dev_data, VkCommand
 bool PreCallValidateCmdClearDepthStencilImage(core_validation::layer_data *dev_data, VkCommandBuffer commandBuffer, VkImage image,
                                               VkImageLayout imageLayout, uint32_t rangeCount,
                                               const VkImageSubresourceRange *pRanges);
+
+bool FindLayoutVerifyNode(core_validation::layer_data *device_data, GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair,
+                          IMAGE_CMD_BUF_LAYOUT_NODE &node, const VkImageAspectFlags aspectMask);
+
+bool FindLayoutVerifyLayout(core_validation::layer_data *device_data, ImageSubresourcePair imgpair, VkImageLayout &layout,
+                            const VkImageAspectFlags aspectMask);
+
+bool FindCmdBufLayout(core_validation::layer_data *device_data, GLOBAL_CB_NODE *pCB, VkImage image, VkImageSubresource range,
+                      IMAGE_CMD_BUF_LAYOUT_NODE &node);
+
+bool FindGlobalLayout(core_validation::layer_data *device_data, ImageSubresourcePair imgpair, VkImageLayout &layout);
+
+bool FindLayouts(core_validation::layer_data *device_data, VkImage image, std::vector<VkImageLayout> &layouts);
+
+void SetGlobalLayout(core_validation::layer_data *device_data, ImageSubresourcePair imgpair, const VkImageLayout &layout);
+
+void SetLayout(core_validation::layer_data *device_data, GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair,
+               const IMAGE_CMD_BUF_LAYOUT_NODE &node);
+
+void SetLayout(core_validation::layer_data *device_data, GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair,
+               const VkImageLayout &layout);
+
+void SetImageViewLayout(core_validation::layer_data *device_data, GLOBAL_CB_NODE *pCB, VkImageView imageView,
+                        const VkImageLayout &layout);
+
+bool VerifyFramebufferAndRenderPassLayouts(core_validation::layer_data *dev_data, GLOBAL_CB_NODE *pCB,
+                                           const VkRenderPassBeginInfo *pRenderPassBegin,
+                                           const FRAMEBUFFER_STATE *framebuffer_state);
+
+void TransitionAttachmentRefLayout(core_validation::layer_data *dev_data, GLOBAL_CB_NODE *pCB, FRAMEBUFFER_STATE *pFramebuffer,
+                                   VkAttachmentReference ref);
+
+void TransitionSubpassLayouts(core_validation::layer_data *dev_data, GLOBAL_CB_NODE *pCB,
+                              const VkRenderPassBeginInfo *pRenderPassBegin, const int subpass_index,
+                              FRAMEBUFFER_STATE *framebuffer_state);
+
+bool TransitionImageAspectLayout(core_validation::layer_data *dev_data, GLOBAL_CB_NODE *pCB,
+                                 const VkImageMemoryBarrier *mem_barrier, uint32_t level, uint32_t layer,
+                                 VkImageAspectFlags aspect);
+
+bool TransitionImageLayouts(core_validation::layer_data *device_data, VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
+                            const VkImageMemoryBarrier *pImgMemBarriers);
+
+bool VerifySourceImageLayout(core_validation::layer_data *dev_data, GLOBAL_CB_NODE *cb_node, VkImage srcImage,
+                             VkImageSubresourceLayers subLayers, VkImageLayout srcImageLayout,
+                             UNIQUE_VALIDATION_ERROR_CODE msgCode);
+
+bool VerifyDestImageLayout(core_validation::layer_data *dev_data, GLOBAL_CB_NODE *cb_node, VkImage destImage,
+                           VkImageSubresourceLayers subLayers, VkImageLayout destImageLayout, UNIQUE_VALIDATION_ERROR_CODE msgCode);
+
+void TransitionFinalSubpassLayouts(core_validation::layer_data *dev_data, GLOBAL_CB_NODE *pCB,
+                                   const VkRenderPassBeginInfo *pRenderPassBegin, FRAMEBUFFER_STATE *framebuffer_state);
 
 #endif  // CORE_VALIDATION_BUFFER_VALIDATION_H_
