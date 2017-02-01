@@ -10342,8 +10342,7 @@ TEST_F(VkLayerTest, NumBlendAttachMismatch) {
     // blend attachments even though we have a color attachment.
     VkResult err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "Render pass subpass 0 mismatch with blending state defined and blend state attachment");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02109);
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -10414,23 +10413,6 @@ TEST_F(VkLayerTest, NumBlendAttachMismatch) {
     pipe.AddShader(&fs);
     pipe.SetMSAA(&pipe_ms_state_ci);
     pipe.CreateVKPipeline(pipeline_layout, renderPass());
-
-    m_commandBuffer->BeginCommandBuffer();
-    m_commandBuffer->BeginRenderPass(m_renderPassBeginInfo);
-    vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
-
-    VkViewport viewport = {0, 0, 16, 16, 0, 1};
-    VkRect2D scissor = {{0, 0}, {16, 16}};
-    vkCmdSetViewport(m_commandBuffer->handle(), 0, 1, &viewport);
-    vkCmdSetScissor(m_commandBuffer->handle(), 0, 1, &scissor);
-
-    // Render triangle (the error should trigger on the attempt to draw).
-    Draw(3, 1, 0, 0);
-
-    // Finalize recording of the command buffer
-    m_commandBuffer->EndRenderPass();
-    m_commandBuffer->EndCommandBuffer();
-
     m_errorMonitor->VerifyFound();
 
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);

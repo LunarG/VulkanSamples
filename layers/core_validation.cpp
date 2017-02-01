@@ -2885,21 +2885,6 @@ static bool ValidatePipelineDrawtimeState(layer_data const *my_data, LAST_BOUND_
             auto const render_pass_info = pCB->activeRenderPass->createInfo.ptr();
             const VkSubpassDescription *subpass_desc = &render_pass_info->pSubpasses[pCB->activeSubpass];
             uint32_t i;
-
-            const safe_VkPipelineColorBlendStateCreateInfo *color_blend_state = pPipeline->graphicsPipelineCI.pColorBlendState;
-            if ((color_blend_state != NULL) && (pCB->activeSubpass == pPipeline->graphicsPipelineCI.subpass) &&
-                (color_blend_state->attachmentCount != subpass_desc->colorAttachmentCount)) {
-                skip_call |=
-                    log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
-                            reinterpret_cast<const uint64_t &>(pPipeline->pipeline), __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
-                            "Render pass subpass %u mismatch with blending state defined and blend state attachment "
-                            "count %u while subpass color attachment count %u in Pipeline (0x%" PRIxLEAST64
-                            ")!  These "
-                            "must be the same at draw-time.",
-                            pCB->activeSubpass, color_blend_state->attachmentCount, subpass_desc->colorAttachmentCount,
-                            reinterpret_cast<const uint64_t &>(pPipeline->pipeline));
-            }
-
             unsigned subpass_num_samples = 0;
 
             for (i = 0; i < subpass_desc->colorAttachmentCount; i++) {
@@ -3132,6 +3117,19 @@ static bool verifyPipelineCreateState(layer_data *my_data, std::vector<PIPELINE_
     }
 
     if (pPipeline->graphicsPipelineCI.pColorBlendState != NULL) {
+        const safe_VkPipelineColorBlendStateCreateInfo *color_blend_state = pPipeline->graphicsPipelineCI.pColorBlendState;
+        auto const render_pass_info = getRenderPassState(my_data, pPipeline->graphicsPipelineCI.renderPass)->createInfo.ptr();
+        const VkSubpassDescription *subpass_desc = &render_pass_info->pSubpasses[pPipeline->graphicsPipelineCI.subpass];
+        if (color_blend_state->attachmentCount != subpass_desc->colorAttachmentCount) {
+            skip_call |= log_msg(
+                my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
+                reinterpret_cast<const uint64_t &>(pPipeline->pipeline), __LINE__, VALIDATION_ERROR_02109, "DS",
+                "vkCreateGraphicsPipelines(): Render pass (0x%" PRIxLEAST64
+                ") subpass %u has colorAttachmentCount of %u which doesn't match the pColorBlendState->attachmentCount of %u. %s",
+                reinterpret_cast<const uint64_t &>(pPipeline->graphicsPipelineCI.renderPass), pPipeline->graphicsPipelineCI.subpass,
+                subpass_desc->colorAttachmentCount, color_blend_state->attachmentCount,
+                validation_error_map[VALIDATION_ERROR_02109]);
+        }
         if (!my_data->enabled_features.independentBlend) {
             if (pPipeline->attachments.size() > 1) {
                 VkPipelineColorBlendAttachmentState *pAttachments = &pPipeline->attachments[0];
