@@ -3437,9 +3437,6 @@ static void clearDescriptorPool(layer_data *my_data, const VkDevice device, cons
 GLOBAL_CB_NODE *getCBNode(layer_data const *my_data, const VkCommandBuffer cb) {
     auto it = my_data->commandBufferMap.find(cb);
     if (it == my_data->commandBufferMap.end()) {
-        log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                reinterpret_cast<const uint64_t &>(cb), __LINE__, DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
-                "Attempt to use CommandBuffer 0x%p that doesn't exist!", cb);
         return NULL;
     }
     return it->second;
@@ -4761,7 +4758,9 @@ VKAPI_ATTR void VKAPI_CALL FreeMemory(VkDevice device, VkDeviceMemory mem, const
         lock.unlock();
         dev_data->dispatch_table.FreeMemory(device, mem, pAllocator);
         lock.lock();
-        PostCallRecordFreeMemory(dev_data, mem, mem_info, obj_struct);
+        if (mem != VK_NULL_HANDLE) {
+            PostCallRecordFreeMemory(dev_data, mem, mem_info, obj_struct);
+        }
     }
 }
 
@@ -5137,7 +5136,9 @@ VKAPI_ATTR void VKAPI_CALL DestroyEvent(VkDevice device, VkEvent event, const Vk
         lock.unlock();
         dev_data->dispatch_table.DestroyEvent(device, event, pAllocator);
         lock.lock();
-        PostCallRecordDestroyEvent(dev_data, event, event_state, obj_struct);
+        if (event != VK_NULL_HANDLE) {
+            PostCallRecordDestroyEvent(dev_data, event, event_state, obj_struct);
+        }
     }
 }
 
@@ -5169,7 +5170,9 @@ VKAPI_ATTR void VKAPI_CALL DestroyQueryPool(VkDevice device, VkQueryPool queryPo
         lock.unlock();
         dev_data->dispatch_table.DestroyQueryPool(device, queryPool, pAllocator);
         lock.lock();
-        PostCallRecordDestroyQueryPool(dev_data, queryPool, qp_state, obj_struct);
+        if (queryPool != VK_NULL_HANDLE) {
+            PostCallRecordDestroyQueryPool(dev_data, queryPool, qp_state, obj_struct);
+        }
     }
 }
 static bool PreCallValidateGetQueryPoolResults(layer_data *dev_data, VkQueryPool query_pool, uint32_t first_query,
@@ -5469,7 +5472,9 @@ VKAPI_ATTR void VKAPI_CALL DestroyBuffer(VkDevice device, VkBuffer buffer, const
         lock.unlock();
         dev_data->dispatch_table.DestroyBuffer(device, buffer, pAllocator);
         lock.lock();
-        PostCallRecordDestroyBuffer(dev_data, buffer, buffer_state, obj_struct);
+        if (buffer != VK_NULL_HANDLE) {
+            PostCallRecordDestroyBuffer(dev_data, buffer, buffer_state, obj_struct);
+        }
     }
 }
 
@@ -5504,7 +5509,9 @@ VKAPI_ATTR void VKAPI_CALL DestroyBufferView(VkDevice device, VkBufferView buffe
         lock.unlock();
         dev_data->dispatch_table.DestroyBufferView(device, bufferView, pAllocator);
         lock.lock();
-        PostCallRecordDestroyBufferView(dev_data, bufferView, buffer_view_state, obj_struct);
+        if (bufferView != VK_NULL_HANDLE) {
+            PostCallRecordDestroyBufferView(dev_data, bufferView, buffer_view_state, obj_struct);
+        }
     }
 }
 
@@ -5518,7 +5525,9 @@ VKAPI_ATTR void VKAPI_CALL DestroyImage(VkDevice device, VkImage image, const Vk
         lock.unlock();
         dev_data->dispatch_table.DestroyImage(device, image, pAllocator);
         lock.lock();
-        PostCallRecordDestroyImage(dev_data, image, image_state, obj_struct);
+        if (image != VK_NULL_HANDLE) {
+            PostCallRecordDestroyImage(dev_data, image, image_state, obj_struct);
+        }
     }
 }
 
@@ -5675,7 +5684,9 @@ VKAPI_ATTR void VKAPI_CALL DestroyImageView(VkDevice device, VkImageView imageVi
         lock.unlock();
         dev_data->dispatch_table.DestroyImageView(device, imageView, pAllocator);
         lock.lock();
-        PostCallRecordDestroyImageView(dev_data, imageView, image_view_state, obj_struct);
+        if (imageView != VK_NULL_HANDLE) {
+            PostCallRecordDestroyImageView(dev_data, imageView, image_view_state, obj_struct);
+        }
     }
 }
 
@@ -5719,7 +5730,9 @@ VKAPI_ATTR void VKAPI_CALL DestroyPipeline(VkDevice device, VkPipeline pipeline,
         lock.unlock();
         dev_data->dispatch_table.DestroyPipeline(device, pipeline, pAllocator);
         lock.lock();
-        PostCallRecordDestroyPipeline(dev_data, pipeline, pipeline_state, obj_struct);
+        if (pipeline != VK_NULL_HANDLE) {
+            PostCallRecordDestroyPipeline(dev_data, pipeline, pipeline_state, obj_struct);
+        }
     }
 }
 
@@ -5762,7 +5775,9 @@ VKAPI_ATTR void VKAPI_CALL DestroySampler(VkDevice device, VkSampler sampler, co
         lock.unlock();
         dev_data->dispatch_table.DestroySampler(device, sampler, pAllocator);
         lock.lock();
-        PostCallRecordDestroySampler(dev_data, sampler, sampler_state, obj_struct);
+        if (sampler != VK_NULL_HANDLE) {
+            PostCallRecordDestroySampler(dev_data, sampler, sampler_state, obj_struct);
+        }
     }
 }
 
@@ -5812,7 +5827,9 @@ VKAPI_ATTR void VKAPI_CALL DestroyDescriptorPool(VkDevice device, VkDescriptorPo
         lock.unlock();
         dev_data->dispatch_table.DestroyDescriptorPool(device, descriptorPool, pAllocator);
         lock.lock();
-        PostCallRecordDestroyDescriptorPool(dev_data, descriptorPool, desc_pool_state, obj_struct);
+        if (descriptorPool != VK_NULL_HANDLE) {
+            PostCallRecordDestroyDescriptorPool(dev_data, descriptorPool, desc_pool_state, obj_struct);
+        }
     }
 }
 // Verify cmdBuffer in given cb_node is not in global in-flight set, and return skip_call result
@@ -5972,7 +5989,9 @@ VKAPI_ATTR void VKAPI_CALL DestroyCommandPool(VkDevice device, VkCommandPool com
         lock.unlock();
         dev_data->dispatch_table.DestroyCommandPool(device, commandPool, pAllocator);
         lock.lock();
-        PostCallRecordDestroyCommandPool(dev_data, commandPool, cp_state);
+        if (commandPool != VK_NULL_HANDLE) {
+            PostCallRecordDestroyCommandPool(dev_data, commandPool, cp_state);
+        }
     }
 }
 
@@ -6075,7 +6094,9 @@ VKAPI_ATTR void VKAPI_CALL DestroyFramebuffer(VkDevice device, VkFramebuffer fra
         lock.unlock();
         dev_data->dispatch_table.DestroyFramebuffer(device, framebuffer, pAllocator);
         lock.lock();
-        PostCallRecordDestroyFramebuffer(dev_data, framebuffer, framebuffer_state, obj_struct);
+        if (framebuffer != VK_NULL_HANDLE) {
+            PostCallRecordDestroyFramebuffer(dev_data, framebuffer, framebuffer_state, obj_struct);
+        }
     }
 }
 
@@ -6107,7 +6128,9 @@ VKAPI_ATTR void VKAPI_CALL DestroyRenderPass(VkDevice device, VkRenderPass rende
         lock.unlock();
         dev_data->dispatch_table.DestroyRenderPass(device, renderPass, pAllocator);
         lock.lock();
-        PostCallRecordDestroyRenderPass(dev_data, renderPass, rp_state, obj_struct);
+        if (renderPass != VK_NULL_HANDLE) {
+            PostCallRecordDestroyRenderPass(dev_data, renderPass, rp_state, obj_struct);
+        }
     }
 }
 
@@ -6844,8 +6867,11 @@ static bool PreCallValidateFreeDescriptorSets(const layer_data *dev_data, VkDesc
     if (dev_data->instance_data->disabled.free_descriptor_sets) return false;
     bool skip_call = false;
     // First make sure sets being destroyed are not currently in-use
-    for (uint32_t i = 0; i < count; ++i)
-        skip_call |= validateIdleDescriptorSet(dev_data, descriptor_sets[i], "vkFreeDescriptorSets");
+    for (uint32_t i = 0; i < count; ++i) {
+        if (descriptor_sets[i] != VK_NULL_HANDLE) {
+            skip_call |= validateIdleDescriptorSet(dev_data, descriptor_sets[i], "vkFreeDescriptorSets");
+        }
+    }
 
     DESCRIPTOR_POOL_STATE *pool_state = getDescriptorPoolState(dev_data, pool);
     if (pool_state && !(VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT & pool_state->createInfo.flags)) {
@@ -6867,15 +6893,17 @@ static void PostCallRecordFreeDescriptorSets(layer_data *dev_data, VkDescriptorP
 
     // For each freed descriptor add its resources back into the pool as available and remove from pool and setMap
     for (uint32_t i = 0; i < count; ++i) {
-        auto descriptor_set = dev_data->setMap[descriptor_sets[i]];
-        uint32_t type_index = 0, descriptor_count = 0;
-        for (uint32_t j = 0; j < descriptor_set->GetBindingCount(); ++j) {
-            type_index = static_cast<uint32_t>(descriptor_set->GetTypeFromIndex(j));
-            descriptor_count = descriptor_set->GetDescriptorCountFromIndex(j);
-            pool_state->availableDescriptorTypeCount[type_index] += descriptor_count;
+        if (descriptor_sets[i] != VK_NULL_HANDLE) {
+            auto descriptor_set = dev_data->setMap[descriptor_sets[i]];
+            uint32_t type_index = 0, descriptor_count = 0;
+            for (uint32_t j = 0; j < descriptor_set->GetBindingCount(); ++j) {
+                type_index = static_cast<uint32_t>(descriptor_set->GetTypeFromIndex(j));
+                descriptor_count = descriptor_set->GetDescriptorCountFromIndex(j);
+                pool_state->availableDescriptorTypeCount[type_index] += descriptor_count;
+            }
+            freeDescriptorSet(dev_data, descriptor_set);
+            pool_state->sets.erase(descriptor_set);
         }
-        freeDescriptorSet(dev_data, descriptor_set);
-        pool_state->sets.erase(descriptor_set);
     }
 }
 

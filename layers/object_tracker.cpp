@@ -3475,7 +3475,9 @@ VKAPI_ATTR void VKAPI_CALL FreeCommandBuffers(VkDevice device, VkCommandPool com
     ValidateObject(device, commandPool, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT, false, VALIDATION_ERROR_00099);
     ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00098);
     for (uint32_t i = 0; i < commandBufferCount; i++) {
-        skip_call |= ValidateCommandBuffer(device, commandPool, pCommandBuffers[i]);
+        if (pCommandBuffers[i] != VK_NULL_HANDLE) {
+            skip_call |= ValidateCommandBuffer(device, commandPool, pCommandBuffers[i]);
+        }
     }
 
     for (uint32_t i = 0; i < commandBufferCount; i++) {
@@ -3521,7 +3523,9 @@ VKAPI_ATTR VkResult VKAPI_CALL FreeDescriptorSets(VkDevice device, VkDescriptorP
         ValidateObject(device, descriptorPool, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT, false, VALIDATION_ERROR_00924);
     skip_call |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00923);
     for (uint32_t i = 0; i < descriptorSetCount; i++) {
-        skip_call |= ValidateDescriptorSet(device, descriptorPool, pDescriptorSets[i]);
+        if (pDescriptorSets[i] != VK_NULL_HANDLE) {
+            skip_call |= ValidateDescriptorSet(device, descriptorPool, pDescriptorSets[i]);
+        }
     }
 
     for (uint32_t i = 0; i < descriptorSetCount; i++) {
