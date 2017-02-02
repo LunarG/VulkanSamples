@@ -109,8 +109,12 @@ int sample_main(int argc, char *argv[]) {
                             );
     info.Model = glm::mat4(1.0f);
     // Vulkan clip space has inverted Y and half Z.
-    info.Clip = glm::mat4(1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.5f, 1.0f);
-
+    // clang-format off
+    info.Clip = glm::mat4(1.0f, 0.0f, 0.0f, 0.0f,
+                          0.0f,-1.0f, 0.0f, 0.0f,
+                          0.0f, 0.0f, 0.5f, 0.0f,
+                          0.0f, 0.0f, 0.5f, 1.0f);
+    // clang-format on
     info.MVP = info.Clip * info.Projection * info.View * info.Model;
     /* VULKAN_KEY_START */
     info.Model = glm::translate(info.Model, glm::vec3(-1.5, 1.5, -1.5));
