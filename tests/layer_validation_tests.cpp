@@ -17412,6 +17412,102 @@ TEST_F(VkPositiveLayerTest, TestAliasedMemoryTracking) {
     vkDestroyImage(m_device->device(), image, NULL);
 }
 
+// This is a positive test. No failures are expected.
+TEST_F(VkPositiveLayerTest, TestDestroyFreeNullHandles) {
+    VkResult err;
+
+    TEST_DESCRIPTION(
+        "Call all applicable destroy and free routines with NULL"
+        "handles, expecting no validation errors");
+
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    vkDestroyBuffer(m_device->device(), VK_NULL_HANDLE, NULL);
+    vkDestroyBufferView(m_device->device(), VK_NULL_HANDLE, NULL);
+    vkDestroyCommandPool(m_device->device(), VK_NULL_HANDLE, NULL);
+    vkDestroyDescriptorPool(m_device->device(), VK_NULL_HANDLE, NULL);
+    vkDestroyDescriptorSetLayout(m_device->device(), VK_NULL_HANDLE, NULL);
+    vkDestroyDevice(VK_NULL_HANDLE, NULL);
+    vkDestroyEvent(m_device->device(), VK_NULL_HANDLE, NULL);
+    vkDestroyFence(m_device->device(), VK_NULL_HANDLE, NULL);
+    vkDestroyFramebuffer(m_device->device(), VK_NULL_HANDLE, NULL);
+    vkDestroyImage(m_device->device(), VK_NULL_HANDLE, NULL);
+    vkDestroyImageView(m_device->device(), VK_NULL_HANDLE, NULL);
+    vkDestroyInstance(VK_NULL_HANDLE, NULL);
+    vkDestroyPipeline(m_device->device(), VK_NULL_HANDLE, NULL);
+    vkDestroyPipelineCache(m_device->device(), VK_NULL_HANDLE, NULL);
+    vkDestroyPipelineLayout(m_device->device(), VK_NULL_HANDLE, NULL);
+    vkDestroyQueryPool(m_device->device(), VK_NULL_HANDLE, NULL);
+    vkDestroyRenderPass(m_device->device(), VK_NULL_HANDLE, NULL);
+    vkDestroySampler(m_device->device(), VK_NULL_HANDLE, NULL);
+    vkDestroySemaphore(m_device->device(), VK_NULL_HANDLE, NULL);
+    vkDestroyShaderModule(m_device->device(), VK_NULL_HANDLE, NULL);
+
+    VkCommandPool command_pool;
+    VkCommandPoolCreateInfo pool_create_info{};
+    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
+    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr, &command_pool);
+    VkCommandBuffer command_buffers[3] = {};
+    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
+    command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    command_buffer_allocate_info.commandPool = command_pool;
+    command_buffer_allocate_info.commandBufferCount = 1;
+    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, &command_buffers[1]);
+    vkFreeCommandBuffers(m_device->device(), command_pool, 3, command_buffers);
+    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
+
+    VkDescriptorPoolSize ds_type_count = {};
+    ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+    ds_type_count.descriptorCount = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+    ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    ds_pool_ci.pNext = NULL;
+    ds_pool_ci.maxSets = 1;
+    ds_pool_ci.poolSizeCount = 1;
+    ds_pool_ci.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+    ds_pool_ci.pPoolSizes = &ds_type_count;
+
+    VkDescriptorPool ds_pool;
+    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+    dsl_binding.binding = 2;
+    dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+    dsl_binding.descriptorCount = 1;
+    dsl_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    dsl_binding.pImmutableSamplers = NULL;
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+    ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    ds_layout_ci.pNext = NULL;
+    ds_layout_ci.bindingCount = 1;
+    ds_layout_ci.pBindings = &dsl_binding;
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSet descriptor_sets[3] = {};
+    VkDescriptorSetAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    alloc_info.descriptorSetCount = 1;
+    alloc_info.descriptorPool = ds_pool;
+    alloc_info.pSetLayouts = &ds_layout;
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptor_sets[1]);
+    ASSERT_VK_SUCCESS(err);
+    vkFreeDescriptorSets(m_device->device(), ds_pool, 3, descriptor_sets);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
+
+    vkFreeMemory(m_device->device(), VK_NULL_HANDLE, NULL);
+
+    m_errorMonitor->VerifyNotFound();
+}
+
 TEST_F(VkPositiveLayerTest, DynamicOffsetWithInactiveBinding) {
     // Create a descriptorSet w/ dynamic descriptors where 1 binding is inactive
     // We previously had a bug where dynamic offset of inactive bindings was still being used
