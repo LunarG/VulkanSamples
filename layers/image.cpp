@@ -241,17 +241,6 @@ VKAPI_ATTR void VKAPI_CALL DestroyImage(VkDevice device, VkImage image, const Vk
     device_data->device_dispatch_table->DestroyImage(device, image, pAllocator);
 }
 
-VKAPI_ATTR void VKAPI_CALL CmdClearAttachments(VkCommandBuffer commandBuffer, uint32_t attachmentCount,
-                                               const VkClearAttachment *pAttachments, uint32_t rectCount,
-                                               const VkClearRect *pRects) {
-    bool skipCall = false;
-    layer_data *device_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-
-    if (!skipCall) {
-        device_data->device_dispatch_table->CmdClearAttachments(commandBuffer, attachmentCount, pAttachments, rectCount, pRects);
-    }
-}
-
 static bool ValidateBufferImageCopyData(layer_data *dev_data, uint32_t regionCount, const VkBufferImageCopy *pRegions,
                                         VkImage image, const char *function) {
     bool skip = false;
@@ -775,7 +764,6 @@ static PFN_vkVoidFunction intercept_core_device_command(const char *name) {
         {"vkDestroyDevice", reinterpret_cast<PFN_vkVoidFunction>(DestroyDevice)},
         {"vkCreateImage", reinterpret_cast<PFN_vkVoidFunction>(CreateImage)},
         {"vkDestroyImage", reinterpret_cast<PFN_vkVoidFunction>(DestroyImage)},
-        {"vkCmdClearAttachments", reinterpret_cast<PFN_vkVoidFunction>(CmdClearAttachments)},
         {"vkCmdCopyImageToBuffer", reinterpret_cast<PFN_vkVoidFunction>(CmdCopyImageToBuffer)},
         {"vkCmdCopyBufferToImage", reinterpret_cast<PFN_vkVoidFunction>(CmdCopyBufferToImage)},
         {"vkCmdBlitImage", reinterpret_cast<PFN_vkVoidFunction>(CmdBlitImage)},
