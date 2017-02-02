@@ -8338,10 +8338,9 @@ TEST_F(VkLayerTest, UpdateBufferWithinRenderPass) {
     dstBuffer.init_as_dst(*m_device, (VkDeviceSize)1024, reqs);
 
     VkDeviceSize dstOffset = 0;
-    VkDeviceSize dataSize = 1024;
-    const void *pData = NULL;
-
-    vkCmdUpdateBuffer(m_commandBuffer->GetBufferHandle(), dstBuffer.handle(), dstOffset, dataSize, pData);
+    uint32_t Data[] = {1, 2, 3, 4, 5, 6, 7, 8};
+    VkDeviceSize dataSize = sizeof(Data) / sizeof(uint32_t);
+    vkCmdUpdateBuffer(m_commandBuffer->GetBufferHandle(), dstBuffer.handle(), dstOffset, dataSize, &Data);
 
     m_errorMonitor->VerifyFound();
 }
