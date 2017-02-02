@@ -264,52 +264,41 @@ bool ValidateImageAttributes(core_validation::layer_data *device_data, IMAGE_STA
     return skip;
 }
 
-void ResolveRemainingLevelsLayers(core_validation::layer_data *dev_data, VkImageSubresourceRange *range, VkImage image) {
-    // Expects global_lock to be held by caller
+void ResolveRemainingLevelsLayers(core_validation::layer_data *dev_data, VkImageSubresourceRange *range, IMAGE_STATE *image_state) {
+    // If the caller used the special values VK_REMAINING_MIP_LEVELS and VK_REMAINING_ARRAY_LAYERS, resolve them now in our
+    // internal state to the actual values.
+    if (range->levelCount == VK_REMAINING_MIP_LEVELS) {
+        range->levelCount = image_state->createInfo.mipLevels - range->baseMipLevel;
+    }
 
-    auto image_state = getImageState(dev_data, image);
-    if (image_state) {
-        // If the caller used the special values VK_REMAINING_MIP_LEVELS and VK_REMAINING_ARRAY_LAYERS, resolve them now in our
-        // internal state to the actual values.
-        if (range->levelCount == VK_REMAINING_MIP_LEVELS) {
-            range->levelCount = image_state->createInfo.mipLevels - range->baseMipLevel;
-        }
-
-        if (range->layerCount == VK_REMAINING_ARRAY_LAYERS) {
-            range->layerCount = image_state->createInfo.arrayLayers - range->baseArrayLayer;
-        }
+    if (range->layerCount == VK_REMAINING_ARRAY_LAYERS) {
+        range->layerCount = image_state->createInfo.arrayLayers - range->baseArrayLayer;
     }
 }
 
 // Return the correct layer/level counts if the caller used the special values VK_REMAINING_MIP_LEVELS or VK_REMAINING_ARRAY_LAYERS.
 void ResolveRemainingLevelsLayers(core_validation::layer_data *dev_data, uint32_t *levels, uint32_t *layers,
-                                  VkImageSubresourceRange range, VkImage image) {
-    // Expects global_lock to be held by caller
-
+                                  VkImageSubresourceRange range, IMAGE_STATE *image_state) {
     *levels = range.levelCount;
     *layers = range.layerCount;
-    auto image_state = getImageState(dev_data, image);
-    if (image_state) {
-        if (range.levelCount == VK_REMAINING_MIP_LEVELS) {
-            *levels = image_state->createInfo.mipLevels - range.baseMipLevel;
-        }
-        if (range.layerCount == VK_REMAINING_ARRAY_LAYERS) {
-            *layers = image_state->createInfo.arrayLayers - range.baseArrayLayer;
-        }
+    if (range.levelCount == VK_REMAINING_MIP_LEVELS) {
+        *levels = image_state->createInfo.mipLevels - range.baseMipLevel;
+    }
+    if (range.layerCount == VK_REMAINING_ARRAY_LAYERS) {
+        *layers = image_state->createInfo.arrayLayers - range.baseArrayLayer;
     }
 }
 
-bool VerifyClearImageLayout(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, VkImage image,
+bool VerifyClearImageLayout(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *image_state,
                             VkImageSubresourceRange range, VkImageLayout dest_image_layout, const char *func_name) {
     bool skip = false;
     const debug_report_data *report_data = core_validation::GetReportData(device_data);
 
     VkImageSubresourceRange resolved_range = range;
-    ResolveRemainingLevelsLayers(device_data, &resolved_range, image);
+    ResolveRemainingLevelsLayers(device_data, &resolved_range, image_state);
 
     if (dest_image_layout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
         if (dest_image_layout == VK_IMAGE_LAYOUT_GENERAL) {
-            auto image_state = getImageState(device_data, image);
             if (image_state->createInfo.tiling != VK_IMAGE_TILING_LINEAR) {
                 // LAYOUT_GENERAL is allowed, but may not be performance optimal, flag as perf warning.
                 skip |= log_msg(report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
@@ -337,7 +326,7 @@ bool VerifyClearImageLayout(core_validation::layer_data *device_data, GLOBAL_CB_
             uint32_t layer = layer_index + resolved_range.baseArrayLayer;
             VkImageSubresource sub = {resolved_range.aspectMask, level, layer};
             IMAGE_CMD_BUF_LAYOUT_NODE node;
-            if (core_validation::FindLayout(cb_node, image, sub, node)) {
+            if (core_validation::FindLayout(cb_node, image_state->image, sub, node)) {
                 if (node.layout != dest_image_layout) {
                     UNIQUE_VALIDATION_ERROR_CODE error_code = VALIDATION_ERROR_01085;
                     if (strcmp(func_name, "vkCmdClearDepthStencilImage()") == 0) {
@@ -359,10 +348,10 @@ bool VerifyClearImageLayout(core_validation::layer_data *device_data, GLOBAL_CB_
     return skip;
 }
 
-void RecordClearImageLayout(core_validation::layer_data *dev_data, GLOBAL_CB_NODE *cb_node, VkImage image,
+void RecordClearImageLayout(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, VkImage image,
                             VkImageSubresourceRange range, VkImageLayout dest_image_layout) {
     VkImageSubresourceRange resolved_range = range;
-    ResolveRemainingLevelsLayers(dev_data, &resolved_range, image);
+    ResolveRemainingLevelsLayers(device_data, &resolved_range, getImageState(device_data, image));
 
     for (uint32_t level_index = 0; level_index < resolved_range.levelCount; ++level_index) {
         uint32_t level = level_index + resolved_range.baseMipLevel;
@@ -389,7 +378,7 @@ bool PreCallValidateCmdClearColorImage(core_validation::layer_data *dev_data, Vk
         skip |= insideRenderPass(dev_data, cb_node, "vkCmdClearColorImage()", VALIDATION_ERROR_01096);
         for (uint32_t i = 0; i < rangeCount; ++i) {
             skip |= ValidateImageAttributes(dev_data, image_state, pRanges[i]);
-            skip |= VerifyClearImageLayout(dev_data, cb_node, image, pRanges[i], imageLayout, "vkCmdClearColorImage()");
+            skip |= VerifyClearImageLayout(dev_data, cb_node, image_state, pRanges[i], imageLayout, "vkCmdClearColorImage()");
         }
     }
     return skip;
@@ -429,7 +418,8 @@ bool PreCallValidateCmdClearDepthStencilImage(core_validation::layer_data *devic
         skip |= ValidateCmd(device_data, cb_node, CMD_CLEARDEPTHSTENCILIMAGE, "vkCmdClearDepthStencilImage()");
         skip |= insideRenderPass(device_data, cb_node, "vkCmdClearDepthStencilImage()", VALIDATION_ERROR_01111);
         for (uint32_t i = 0; i < rangeCount; ++i) {
-            skip |= VerifyClearImageLayout(device_data, cb_node, image, pRanges[i], imageLayout, "vkCmdClearDepthStencilImage()");
+            skip |=
+                VerifyClearImageLayout(device_data, cb_node, image_state, pRanges[i], imageLayout, "vkCmdClearDepthStencilImage()");
             // Image aspect must be depth or stencil or both
             if (((pRanges[i].aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT) != VK_IMAGE_ASPECT_DEPTH_BIT) &&
                 ((pRanges[i].aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) != VK_IMAGE_ASPECT_STENCIL_BIT)) {

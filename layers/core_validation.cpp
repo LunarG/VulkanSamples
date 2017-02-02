@@ -6528,7 +6528,8 @@ static bool PreCallValidateCreateImageView(layer_data *dev_data, const VkImageVi
 
 static inline void PostCallRecordCreateImageView(layer_data *dev_data, const VkImageViewCreateInfo *create_info, VkImageView view) {
     dev_data->imageViewMap[view] = unique_ptr<IMAGE_VIEW_STATE>(new IMAGE_VIEW_STATE(view, create_info));
-    ResolveRemainingLevelsLayers(dev_data, &dev_data->imageViewMap[view].get()->create_info.subresourceRange, create_info->image);
+    ResolveRemainingLevelsLayers(dev_data, &dev_data->imageViewMap[view].get()->create_info.subresourceRange,
+                                 getImageState(dev_data, create_info->image));
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateImageView(VkDevice device, const VkImageViewCreateInfo *pCreateInfo,
@@ -8904,9 +8905,9 @@ static bool TransitionImageLayouts(VkCommandBuffer cmdBuffer, uint32_t memBarrie
     for (uint32_t i = 0; i < memBarrierCount; ++i) {
         auto mem_barrier = &pImgMemBarriers[i];
         if (!mem_barrier) continue;
-        // TODO: Do not iterate over every possibility - consolidate where
-        // possible
-        ResolveRemainingLevelsLayers(dev_data, &levelCount, &layerCount, mem_barrier->subresourceRange, mem_barrier->image);
+        // TODO: Do not iterate over every possibility - consolidate where possible
+        ResolveRemainingLevelsLayers(dev_data, &levelCount, &layerCount, mem_barrier->subresourceRange,
+                                     getImageState(dev_data, mem_barrier->image));
 
         for (uint32_t j = 0; j < levelCount; j++) {
             uint32_t level = mem_barrier->subresourceRange.baseMipLevel + j;

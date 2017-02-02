@@ -42,12 +42,12 @@ bool PreCallValidateDestroyImage(core_validation::layer_data *device_data, VkIma
 
 bool ValidateImageAttributes(core_validation::layer_data *device_data, IMAGE_STATE *image_state, VkImageSubresourceRange range);
 
-void ResolveRemainingLevelsLayers(core_validation::layer_data *dev_data, VkImageSubresourceRange *range, VkImage image);
+void ResolveRemainingLevelsLayers(core_validation::layer_data *dev_data, VkImageSubresourceRange *range, IMAGE_STATE *image_state);
 
 void ResolveRemainingLevelsLayers(core_validation::layer_data *dev_data, uint32_t *levels, uint32_t *layers,
-                                  VkImageSubresourceRange range, VkImage image);
+                                  VkImageSubresourceRange range, IMAGE_STATE *image_state);
 
-bool VerifyClearImageLayout(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, VkImage image,
+bool VerifyClearImageLayout(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *image_state,
                             VkImageSubresourceRange range, VkImageLayout dest_image_layout, const char *func_name);
 
 void RecordClearImageLayout(core_validation::layer_data *dev_data, GLOBAL_CB_NODE *cb_node, VkImage image,
