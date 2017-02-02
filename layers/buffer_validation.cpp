@@ -855,3 +855,246 @@ bool PreCallValidateCmdClearDepthStencilImage(core_validation::layer_data *devic
     }
     return skip;
 }
+
+// Returns true if [x, xoffset] and [y, yoffset] overlap
+static bool RangesIntersect(int32_t start, uint32_t start_offset, int32_t end, uint32_t end_offset) {
+    bool result = false;
+    uint32_t intersection_min = std::max(static_cast<uint32_t>(start), static_cast<uint32_t>(end));
+    uint32_t intersection_max = std::min(static_cast<uint32_t>(start) + start_offset, static_cast<uint32_t>(end) + end_offset);
+
+    if (intersection_max > intersection_min) {
+        result = true;
+    }
+    return result;
+}
+
+// Returns true if two VkImageCopy structures overlap
+static bool RegionIntersects(const VkImageCopy *src, const VkImageCopy *dst, VkImageType type) {
+    bool result = false;
+    if ((src->srcSubresource.mipLevel == dst->dstSubresource.mipLevel) &&
+        (RangesIntersect(src->srcSubresource.baseArrayLayer, src->srcSubresource.layerCount, dst->dstSubresource.baseArrayLayer,
+                         dst->dstSubresource.layerCount))) {
+        result = true;
+        switch (type) {
+            case VK_IMAGE_TYPE_3D:
+                result &= RangesIntersect(src->srcOffset.z, src->extent.depth, dst->dstOffset.z, dst->extent.depth);
+            // Intentionally fall through to 2D case
+            case VK_IMAGE_TYPE_2D:
+                result &= RangesIntersect(src->srcOffset.y, src->extent.height, dst->dstOffset.y, dst->extent.height);
+            // Intentionally fall through to 1D case
+            case VK_IMAGE_TYPE_1D:
+                result &= RangesIntersect(src->srcOffset.x, src->extent.width, dst->dstOffset.x, dst->extent.width);
+                break;
+            default:
+                // Unrecognized or new IMAGE_TYPE enums will be caught in parameter_validation
+                assert(false);
+        }
+    }
+    return result;
+}
+
+// Returns true if offset and extent exceed image extents
+static bool ExceedsBounds(const VkOffset3D *offset, const VkExtent3D *extent, const IMAGE_STATE *image_state) {
+    bool result = false;
+    // Extents/depths cannot be negative but checks left in for clarity
+    switch (image_state->createInfo.imageType) {
+        case VK_IMAGE_TYPE_3D:  // Validate z and depth
+            if ((offset->z + extent->depth > image_state->createInfo.extent.depth) || (offset->z < 0) ||
+                ((offset->z + static_cast<int32_t>(extent->depth)) < 0)) {
+                result = true;
+            }
+        // Intentionally fall through to 2D case to check height
+        case VK_IMAGE_TYPE_2D:  // Validate y and height
+            if ((offset->y + extent->height > image_state->createInfo.extent.height) || (offset->y < 0) ||
+                ((offset->y + static_cast<int32_t>(extent->height)) < 0)) {
+                result = true;
+            }
+        // Intentionally fall through to 1D case to check width
+        case VK_IMAGE_TYPE_1D:  // Validate x and width
+            if ((offset->x + extent->width > image_state->createInfo.extent.width) || (offset->x < 0) ||
+                ((offset->x + static_cast<int32_t>(extent->width)) < 0)) {
+                result = true;
+            }
+            break;
+        default:
+            assert(false);
+    }
+    return result;
+}
+
+bool PreCallValidateCmdCopyImage(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
+                                 IMAGE_STATE *dst_image_state, uint32_t region_count, const VkImageCopy *regions) {
+    bool skip = false;
+    const debug_report_data *report_data = core_validation::GetReportData(device_data);
+    VkCommandBuffer command_buffer = cb_node->commandBuffer;
+
+    // TODO: This does not cover swapchain-created images. This should fall out when this layer is moved into the core_validation
+    // layer
+    if (src_image_state && dst_image_state) {
+        for (uint32_t i = 0; i < region_count; i++) {
+            if (regions[i].srcSubresource.layerCount == 0) {
+                std::stringstream ss;
+                ss << "vkCmdCopyImage: number of layers in pRegions[" << i << "] srcSubresource is zero";
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                reinterpret_cast<uint64_t &>(command_buffer), __LINE__, DRAWSTATE_INVALID_IMAGE_ASPECT, "IMAGE",
+                                "%s", ss.str().c_str());
+            }
+
+            if (regions[i].dstSubresource.layerCount == 0) {
+                std::stringstream ss;
+                ss << "vkCmdCopyImage: number of layers in pRegions[" << i << "] dstSubresource is zero";
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                reinterpret_cast<uint64_t &>(command_buffer), __LINE__, DRAWSTATE_INVALID_IMAGE_ASPECT, "IMAGE",
+                                "%s", ss.str().c_str());
+            }
+
+            // For each region the layerCount member of srcSubresource and dstSubresource must match
+            if (regions[i].srcSubresource.layerCount != regions[i].dstSubresource.layerCount) {
+                std::stringstream ss;
+                ss << "vkCmdCopyImage: number of layers in source and destination subresources for pRegions[" << i
+                   << "] do not match";
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                reinterpret_cast<uint64_t &>(command_buffer), __LINE__, VALIDATION_ERROR_01198, "IMAGE", "%s. %s",
+                                ss.str().c_str(), validation_error_map[VALIDATION_ERROR_01198]);
+            }
+
+            // For each region, the aspectMask member of srcSubresource and dstSubresource must match
+            if (regions[i].srcSubresource.aspectMask != regions[i].dstSubresource.aspectMask) {
+                char const str[] = "vkCmdCopyImage: Src and dest aspectMasks for each region must match";
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                reinterpret_cast<uint64_t &>(command_buffer), __LINE__, VALIDATION_ERROR_01197, "IMAGE", "%s. %s",
+                                str, validation_error_map[VALIDATION_ERROR_01197]);
+            }
+
+            // AspectMask must not contain VK_IMAGE_ASPECT_METADATA_BIT
+            if ((regions[i].srcSubresource.aspectMask & VK_IMAGE_ASPECT_METADATA_BIT) ||
+                (regions[i].dstSubresource.aspectMask & VK_IMAGE_ASPECT_METADATA_BIT)) {
+                std::stringstream ss;
+                ss << "vkCmdCopyImage: pRegions[" << i << "] may not specify aspectMask containing VK_IMAGE_ASPECT_METADATA_BIT";
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                reinterpret_cast<uint64_t &>(command_buffer), __LINE__, VALIDATION_ERROR_01222, "IMAGE", "%s. %s",
+                                ss.str().c_str(), validation_error_map[VALIDATION_ERROR_01222]);
+            }
+
+            // For each region, if aspectMask contains VK_IMAGE_ASPECT_COLOR_BIT, it must not contain either of
+            // VK_IMAGE_ASPECT_DEPTH_BIT or VK_IMAGE_ASPECT_STENCIL_BIT
+            if ((regions[i].srcSubresource.aspectMask & VK_IMAGE_ASPECT_COLOR_BIT) &&
+                (regions[i].srcSubresource.aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT))) {
+                char const str[] = "vkCmdCopyImage aspectMask cannot specify both COLOR and DEPTH/STENCIL aspects";
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                reinterpret_cast<uint64_t &>(command_buffer), __LINE__, VALIDATION_ERROR_01221, "IMAGE", "%s. %s",
+                                str, validation_error_map[VALIDATION_ERROR_01221]);
+            }
+
+            // If either of the calling command's src_image or dst_image parameters are of VkImageType VK_IMAGE_TYPE_3D,
+            // the baseArrayLayer and layerCount members of both srcSubresource and dstSubresource must be 0 and 1, respectively
+            if (((src_image_state->createInfo.imageType == VK_IMAGE_TYPE_3D) ||
+                 (dst_image_state->createInfo.imageType == VK_IMAGE_TYPE_3D)) &&
+                ((regions[i].srcSubresource.baseArrayLayer != 0) || (regions[i].srcSubresource.layerCount != 1) ||
+                 (regions[i].dstSubresource.baseArrayLayer != 0) || (regions[i].dstSubresource.layerCount != 1))) {
+                std::stringstream ss;
+                ss << "vkCmdCopyImage: src or dstImage type was IMAGE_TYPE_3D, but in subRegion[" << i
+                   << "] baseArrayLayer was not zero or layerCount was not 1.";
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                reinterpret_cast<uint64_t &>(command_buffer), __LINE__, VALIDATION_ERROR_01199, "IMAGE", "%s. %s",
+                                ss.str().c_str(), validation_error_map[VALIDATION_ERROR_01199]);
+            }
+
+            // MipLevel must be less than the mipLevels specified in VkImageCreateInfo when the image was created
+            if (regions[i].srcSubresource.mipLevel >= src_image_state->createInfo.mipLevels) {
+                std::stringstream ss;
+                ss << "vkCmdCopyImage: pRegions[" << i
+                   << "] specifies a src mipLevel greater than the number specified when the srcImage was created.";
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                reinterpret_cast<uint64_t &>(command_buffer), __LINE__, VALIDATION_ERROR_01223, "IMAGE", "%s. %s",
+                                ss.str().c_str(), validation_error_map[VALIDATION_ERROR_01223]);
+            }
+            if (regions[i].dstSubresource.mipLevel >= dst_image_state->createInfo.mipLevels) {
+                std::stringstream ss;
+                ss << "vkCmdCopyImage: pRegions[" << i
+                   << "] specifies a dst mipLevel greater than the number specified when the dstImage was created.";
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                reinterpret_cast<uint64_t &>(command_buffer), __LINE__, VALIDATION_ERROR_01223, "IMAGE", "%s. %s",
+                                ss.str().c_str(), validation_error_map[VALIDATION_ERROR_01223]);
+            }
+
+            // (baseArrayLayer + layerCount) must be less than or equal to the arrayLayers specified in VkImageCreateInfo when the
+            // image was created
+            if ((regions[i].srcSubresource.baseArrayLayer + regions[i].srcSubresource.layerCount) >
+                src_image_state->createInfo.arrayLayers) {
+                std::stringstream ss;
+                ss << "vkCmdCopyImage: srcImage arrayLayers was " << src_image_state->createInfo.arrayLayers << " but subRegion["
+                   << i << "] baseArrayLayer + layerCount is "
+                   << (regions[i].srcSubresource.baseArrayLayer + regions[i].srcSubresource.layerCount);
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                reinterpret_cast<uint64_t &>(command_buffer), __LINE__, VALIDATION_ERROR_01224, "IMAGE", "%s. %s",
+                                ss.str().c_str(), validation_error_map[VALIDATION_ERROR_01224]);
+            }
+            if ((regions[i].dstSubresource.baseArrayLayer + regions[i].dstSubresource.layerCount) >
+                dst_image_state->createInfo.arrayLayers) {
+                std::stringstream ss;
+                ss << "vkCmdCopyImage: dstImage arrayLayers was " << dst_image_state->createInfo.arrayLayers << " but subRegion["
+                   << i << "] baseArrayLayer + layerCount is "
+                   << (regions[i].dstSubresource.baseArrayLayer + regions[i].dstSubresource.layerCount);
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                reinterpret_cast<uint64_t &>(command_buffer), __LINE__, VALIDATION_ERROR_01224, "IMAGE", "%s. %s",
+                                ss.str().c_str(), validation_error_map[VALIDATION_ERROR_01224]);
+            }
+
+            // The source region specified by a given element of regions must be a region that is contained within srcImage
+            if (ExceedsBounds(&regions[i].srcOffset, &regions[i].extent, src_image_state)) {
+                std::stringstream ss;
+                ss << "vkCmdCopyImage: srcSubResource in pRegions[" << i << "] exceeds extents srcImage was created with";
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                reinterpret_cast<uint64_t &>(command_buffer), __LINE__, VALIDATION_ERROR_01175, "IMAGE", "%s. %s",
+                                ss.str().c_str(), validation_error_map[VALIDATION_ERROR_01175]);
+            }
+
+            // The destination region specified by a given element of regions must be a region that is contained within dst_image
+            if (ExceedsBounds(&regions[i].dstOffset, &regions[i].extent, dst_image_state)) {
+                std::stringstream ss;
+                ss << "vkCmdCopyImage: dstSubResource in pRegions[" << i << "] exceeds extents dstImage was created with";
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                reinterpret_cast<uint64_t &>(command_buffer), __LINE__, VALIDATION_ERROR_01176, "IMAGE", "%s. %s",
+                                ss.str().c_str(), validation_error_map[VALIDATION_ERROR_01176]);
+            }
+
+            // The union of all source regions, and the union of all destination regions, specified by the elements of regions,
+            // must not overlap in memory
+            if (src_image_state->image == dst_image_state->image) {
+                for (uint32_t j = 0; j < region_count; j++) {
+                    if (RegionIntersects(&regions[i], &regions[j], src_image_state->createInfo.imageType)) {
+                        std::stringstream ss;
+                        ss << "vkCmdCopyImage: pRegions[" << i << "] src overlaps with pRegions[" << j << "].";
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                        reinterpret_cast<uint64_t &>(command_buffer), __LINE__, VALIDATION_ERROR_01177, "IMAGE",
+                                        "%s. %s", ss.str().c_str(), validation_error_map[VALIDATION_ERROR_01177]);
+                    }
+                }
+            }
+        }
+
+        // The formats of src_image and dst_image must be compatible. Formats are considered compatible if their texel size in bytes
+        // is the same between both formats. For example, VK_FORMAT_R8G8B8A8_UNORM is compatible with VK_FORMAT_R32_UINT because
+        // because both texels are 4 bytes in size. Depth/stencil formats must match exactly.
+        if (vk_format_is_depth_or_stencil(src_image_state->createInfo.format) ||
+            vk_format_is_depth_or_stencil(dst_image_state->createInfo.format)) {
+            if (src_image_state->createInfo.format != dst_image_state->createInfo.format) {
+                char const str[] = "vkCmdCopyImage called with unmatched source and dest image depth/stencil formats.";
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                reinterpret_cast<uint64_t &>(command_buffer), __LINE__, DRAWSTATE_MISMATCHED_IMAGE_FORMAT, "IMAGE",
+                                str);
+            }
+        } else {
+            size_t srcSize = vk_format_get_size(src_image_state->createInfo.format);
+            size_t destSize = vk_format_get_size(dst_image_state->createInfo.format);
+            if (srcSize != destSize) {
+                char const str[] = "vkCmdCopyImage called with unmatched source and dest image format sizes.";
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                reinterpret_cast<uint64_t &>(command_buffer), __LINE__, VALIDATION_ERROR_01184, "IMAGE", "%s. %s",
+                                str, validation_error_map[VALIDATION_ERROR_01184]);
+            }
+        }
+    }
+    return skip;
+}

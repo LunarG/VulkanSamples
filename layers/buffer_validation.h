@@ -121,4 +121,7 @@ bool VerifyDestImageLayout(core_validation::layer_data *dev_data, GLOBAL_CB_NODE
 void TransitionFinalSubpassLayouts(core_validation::layer_data *dev_data, GLOBAL_CB_NODE *pCB,
                                    const VkRenderPassBeginInfo *pRenderPassBegin, FRAMEBUFFER_STATE *framebuffer_state);
 
+bool PreCallValidateCmdCopyImage(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
+                                 IMAGE_STATE *dst_image_state, uint32_t region_count, const VkImageCopy *regions);
+
 #endif  // CORE_VALIDATION_BUFFER_VALIDATION_H_
