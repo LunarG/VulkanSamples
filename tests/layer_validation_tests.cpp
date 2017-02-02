@@ -11512,8 +11512,6 @@ TEST_F(VkLayerTest, InUseDestroyedSignaled) {
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
-    const char *cannot_destroy_fence_message = "Fence 0x";
-
     m_commandBuffer->BeginCommandBuffer();
 
     VkEvent event;
@@ -11640,7 +11638,7 @@ TEST_F(VkLayerTest, InUseDestroyedSignaled) {
     vkDestroySemaphore(m_device->device(), semaphore, nullptr);
     m_errorMonitor->VerifyFound();
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, cannot_destroy_fence_message);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Fence 0x");
     vkDestroyFence(m_device->device(), fence, nullptr);
     m_errorMonitor->VerifyFound();
 
