@@ -13,7 +13,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     endif()
 
     if (BUILD_WSI_XLIB_SUPPORT)
-       add_definitions(-DVK_USE_PLATFORM_XLIB_KHR)
+       add_definitions(-DVK_USE_PLATFORM_XLIB_KHR -DVK_USE_PLATFORM_XLIB_XRANDR_EXT)
     endif()
 
     if (BUILD_WSI_WAYLAND_SUPPORT)
@@ -61,6 +61,7 @@ set(NORMAL_LOADER_SRCS
 
 set (OPT_LOADER_SRCS
     dev_ext_trampoline.c
+    phys_dev_ext.c
 )
 
 set (LOADER_SRCS ${NORMAL_LOADER_SRCS} ${OPT_LOADER_SRCS})
@@ -110,7 +111,7 @@ else()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wpointer-arith")
 
     add_library(${API_LOWERCASE} SHARED ${LOADER_SRCS})
-    set_target_properties(${API_LOWERCASE} PROPERTIES SOVERSION "1" VERSION "1.0.38")
+    set_target_properties(${API_LOWERCASE} PROPERTIES SOVERSION "1" VERSION "1.0.39")
     target_link_libraries(${API_LOWERCASE} -ldl -lpthread -lm)
     install(TARGETS ${API_LOWERCASE} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()

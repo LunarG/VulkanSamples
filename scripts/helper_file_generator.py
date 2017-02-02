@@ -592,7 +592,7 @@ class HelperFileOutputGenerator(OutputGenerator):
                         init_list += '\n    %s(nullptr),' % (member.name)
                         init_func_txt += '    %s = nullptr;\n' % (member.name)
                         if 'pNext' != member.name and 'void' not in m_type:
-                            if not member.isstaticarray and member.len is None:
+                            if not member.isstaticarray and (member.len is None or '/' in member.len):
                                 construct_txt += '    if (in_struct->%s) {\n' % member.name
                                 construct_txt += '        %s = new %s(*in_struct->%s);\n' % (member.name, m_type, member.name)
                                 construct_txt += '    }\n'

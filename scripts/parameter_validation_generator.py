@@ -492,6 +492,8 @@ class ParamCheckerOutputGenerator(OutputGenerator):
     def genVkStructureType(self, typename):
         # Add underscore between lowercase then uppercase
         value = re.sub('([a-z0-9])([A-Z])', r'\1_\2', typename)
+        value = value.replace('D3_D12', 'D3D12')
+        value = value.replace('Device_IDProp', 'Device_ID_Prop')
         # Change to uppercase
         value = value.upper()
         # Add STRUCTURE_TYPE_
@@ -796,7 +798,11 @@ class ParamCheckerOutputGenerator(OutputGenerator):
             # Need to process all elements in the array
             indexName = lenValue.name.replace('Count', 'Index')
             expr[-1] += '\n'
-            expr.append(indent + 'for (uint32_t {iname} = 0; {iname} < {}{}; ++{iname})\n'.format(prefix, lenValue.name, iname=indexName))
+            if lenValue.ispointer:
+                # If the length value is a pointer, de-reference it for the count.
+                expr.append(indent + 'for (uint32_t {iname} = 0; {iname} < *{}{}; ++{iname})\n'.format(prefix, lenValue.name, iname=indexName))
+            else:
+                expr.append(indent + 'for (uint32_t {iname} = 0; {iname} < {}{}; ++{iname})\n'.format(prefix, lenValue.name, iname=indexName))
             expr.append(indent + '{')
             indent = self.incIndent(indent)
             # Prefix for value name to display in error message

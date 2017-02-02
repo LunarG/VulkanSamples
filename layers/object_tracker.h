@@ -98,6 +98,8 @@ struct layer_data {
     bool wsi_display_swapchain_enabled;
     bool wsi_display_extension_enabled;
     bool objtrack_extensions_enabled;
+    bool nvx_device_generated_commands_enabled;
+    bool ext_display_control_enabled;
 
     // The following are for keeping track of the temporary callbacks that can
     // be used in vkCreateInstance and vkDestroyInstance:

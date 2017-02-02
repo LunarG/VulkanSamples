@@ -116,6 +116,8 @@ struct instance_layer_data {
 
     CALL_STATE vkEnumeratePhysicalDevicesState = UNCALLED;
     uint32_t physical_devices_count = 0;
+    CALL_STATE vkEnumeratePhysicalDeviceGroupsState = UNCALLED;
+    uint32_t physical_device_groups_count = 0;
     CHECK_DISABLED disabled = {};
 
     unordered_map<VkPhysicalDevice, PHYSICAL_DEVICE_STATE> physical_device_map;
@@ -179,6 +181,8 @@ struct layer_data {
 // TODO : Do we need to guard access to layer_data_map w/ lock?
 static unordered_map<void *, layer_data *> layer_data_map;
 static unordered_map<void *, instance_layer_data *> instance_layer_data_map;
+
+static uint32_t loader_layer_if_version = CURRENT_LOADER_LAYER_INTERFACE_VERSION;
 
 static const VkLayerProperties global_layer = {
     "VK_LAYER_LUNARG_core_validation", VK_LAYER_API_VERSION, 1, "LunarG Validation Layer",
@@ -4101,7 +4105,6 @@ CreateInstance(const VkInstanceCreateInfo *pCreateInfo, const VkAllocationCallba
     instance_layer_data *instance_data = get_my_data_ptr(get_dispatch_key(*pInstance), instance_layer_data_map);
     instance_data->instance = *pInstance;
     layer_init_instance_dispatch_table(*pInstance, &instance_data->dispatch_table, fpGetInstanceProcAddr);
-
     instance_data->report_data = debug_report_create_instance(
         &instance_data->dispatch_table, *pInstance, pCreateInfo->enabledExtensionCount, pCreateInfo->ppEnabledExtensionNames);
     checkInstanceRegisterExtensions(pCreateInfo, instance_data);
@@ -12864,6 +12867,9 @@ intercept_khr_swapchain_command(const char *name, VkDevice dev);
 static PFN_vkVoidFunction
 intercept_khr_surface_command(const char *name, VkInstance instance);
 
+static PFN_vkVoidFunction
+intercept_extension_instance_commands(const char *name, VkInstance instance);
+
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice dev, const char *funcName) {
     PFN_vkVoidFunction proc = intercept_core_device_command(funcName);
     if (proc)
@@ -12901,10 +12907,25 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance
     if (proc)
         return proc;
 
+    proc = intercept_extension_instance_commands(funcName, instance);
+    if (proc)
+        return proc;
+
     auto &table = instance_data->dispatch_table;
     if (!table.GetInstanceProcAddr)
         return nullptr;
     return table.GetInstanceProcAddr(instance, funcName);
+}
+
+VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance instance, const char *funcName) {
+    assert(instance);
+
+    instance_layer_data *instance_data = get_my_data_ptr(get_dispatch_key(instance), instance_layer_data_map);
+
+    auto &table = instance_data->dispatch_table;
+    if (!table.GetPhysicalDeviceProcAddr)
+        return nullptr;
+    return table.GetPhysicalDeviceProcAddr(instance, funcName);
 }
 
 static PFN_vkVoidFunction
@@ -12914,6 +12935,7 @@ intercept_core_instance_command(const char *name) {
         PFN_vkVoidFunction proc;
     } core_instance_commands[] = {
         { "vkGetInstanceProcAddr", reinterpret_cast<PFN_vkVoidFunction>(GetInstanceProcAddr) },
+        { "vk_layerGetPhysicalDeviceProcAddr", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceProcAddr) },
         { "vkGetDeviceProcAddr", reinterpret_cast<PFN_vkVoidFunction>(GetDeviceProcAddr) },
         { "vkCreateInstance", reinterpret_cast<PFN_vkVoidFunction>(CreateInstance) },
         { "vkCreateDevice", reinterpret_cast<PFN_vkVoidFunction>(CreateDevice) },
@@ -13163,6 +13185,11 @@ intercept_khr_surface_command(const char *name, VkInstance instance) {
     return nullptr;
 }
 
+static PFN_vkVoidFunction
+intercept_extension_instance_commands(const char *name, VkInstance instance) {
+    return NULL;
+}
+
 } // namespace core_validation
 
 // vk_layer_logging.h expects these to be defined
@@ -13220,3 +13247,28 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
 VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char *funcName) {
     return core_validation::GetInstanceProcAddr(instance, funcName);
 }
+
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vk_layerGetPhysicalDeviceProcAddr(VkInstance instance, const char *funcName) {
+    return core_validation::GetPhysicalDeviceProcAddr(instance, funcName);
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkNegotiateLoaderLayerInterfaceVersion(VkNegotiateLayerInterface *pVersionStruct) {
+    assert(pVersionStruct != NULL);
+    assert(pVersionStruct->sType == LAYER_NEGOTIATE_INTERFACE_STRUCT);
+
+    // Fill in the function pointers if our version is at least capable of having the structure contain them.
+    if (pVersionStruct->loaderLayerInterfaceVersion >= 2) {
+        pVersionStruct->pfnGetInstanceProcAddr = vkGetInstanceProcAddr;
+        pVersionStruct->pfnGetDeviceProcAddr = vkGetDeviceProcAddr;
+        pVersionStruct->pfnGetPhysicalDeviceProcAddr = vk_layerGetPhysicalDeviceProcAddr;
+    }
+
+    if (pVersionStruct->loaderLayerInterfaceVersion < CURRENT_LOADER_LAYER_INTERFACE_VERSION) {
+        core_validation::loader_layer_if_version = pVersionStruct->loaderLayerInterfaceVersion;
+    } else if (pVersionStruct->loaderLayerInterfaceVersion > CURRENT_LOADER_LAYER_INTERFACE_VERSION) {
+        pVersionStruct->loaderLayerInterfaceVersion = CURRENT_LOADER_LAYER_INTERFACE_VERSION;
+    }
+
+    return VK_SUCCESS;
+}
+

@@ -1,7 +1,7 @@
 //
-// Copyright (c) 2014-2016 The Khronos Group Inc.
-// Copyright (c) 2014-2016 Valve Corporation
-// Copyright (c) 2014-2016 LunarG, Inc.
+// Copyright (c) 2014-2017 The Khronos Group Inc.
+// Copyright (c) 2014-2017 Valve Corporation
+// Copyright (c) 2014-2017 LunarG, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -86,7 +86,7 @@ BEGIN
         BEGIN
             VALUE "FileDescription", VER_FILE_DESCRIPTION_STR
             VALUE "FileVersion", VER_FILE_VERSION_STR
-            VALUE "LegalCopyright", "Copyright (C) 2015-2016"
+            VALUE "LegalCopyright", "Copyright (C) 2015-2017"
             VALUE "ProductName", "Vulkan Runtime"
             VALUE "ProductVersion", VER_FILE_VERSION_STR
         END

@@ -15,8 +15,15 @@ string(TOLOWER ${API_NAME} API_LOWERCASE)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(PythonInterp 3 REQUIRED)
 
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    include(FindPkgConfig)
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    add_definitions(-DVK_USE_PLATFORM_WIN32_KHR -DVK_USE_PLATFORM_WIN32_KHX -DWIN32_LEAN_AND_MEAN)
+    set(DisplayServer Win32)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Android")
+    add_definitions(-DVK_USE_PLATFORM_ANDROID_KHR)
+    set(DisplayServer Android)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    #   Note: Supported configurations are XCB, XCB + Xlib, Wayland.
+    #         MIR is stubbed and untested
     option(BUILD_WSI_XCB_SUPPORT "Build XCB WSI support" ON)
     option(BUILD_WSI_XLIB_SUPPORT "Build Xlib WSI support" ON)
     option(BUILD_WSI_WAYLAND_SUPPORT "Build Wayland WSI support" ON)
