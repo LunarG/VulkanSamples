@@ -1098,3 +1098,121 @@ bool PreCallValidateCmdCopyImage(core_validation::layer_data *device_data, GLOBA
     }
     return skip;
 }
+
+// TODO : Should be tracking lastBound per commandBuffer and when draws occur, report based on that cmd buffer lastBound
+//   Then need to synchronize the accesses based on cmd buffer so that if I'm reading state on one cmd buffer, updates
+//   to that same cmd buffer by separate thread are not changing state from underneath us
+// Track the last cmd buffer touched by this thread
+static bool hasDrawCmd(GLOBAL_CB_NODE *pCB) {
+    for (uint32_t i = 0; i < NUM_DRAW_TYPES; i++) {
+        if (pCB->drawCount[i]) return true;
+    }
+    return false;
+}
+
+// Returns true if sub_rect is entirely contained within rect
+static inline bool ContainsRect(VkRect2D rect, VkRect2D sub_rect) {
+    if ((sub_rect.offset.x < rect.offset.x) || (sub_rect.offset.x + sub_rect.extent.width > rect.offset.x + rect.extent.width) ||
+        (sub_rect.offset.y < rect.offset.y) || (sub_rect.offset.y + sub_rect.extent.height > rect.offset.y + rect.extent.height))
+        return false;
+    return true;
+}
+
+bool PreCallValidateCmdClearAttachments(core_validation::layer_data *device_data, VkCommandBuffer commandBuffer,
+                                        uint32_t attachmentCount, const VkClearAttachment *pAttachments, uint32_t rectCount,
+                                        const VkClearRect *pRects) {
+    GLOBAL_CB_NODE *cb_node = getCBNode(device_data, commandBuffer);
+    const debug_report_data *report_data = core_validation::GetReportData(device_data);
+
+    bool skip = false;
+    if (cb_node) {
+        skip |= ValidateCmd(device_data, cb_node, CMD_CLEARATTACHMENTS, "vkCmdClearAttachments()");
+        UpdateCmdBufferLastCmd(device_data, cb_node, CMD_CLEARATTACHMENTS);
+        // Warn if this is issued prior to Draw Cmd and clearing the entire attachment
+        if (!hasDrawCmd(cb_node) && (cb_node->activeRenderPassBeginInfo.renderArea.extent.width == pRects[0].rect.extent.width) &&
+            (cb_node->activeRenderPassBeginInfo.renderArea.extent.height == pRects[0].rect.extent.height)) {
+            // There are times where app needs to use ClearAttachments (generally when reusing a buffer inside of a render pass)
+            // Can we make this warning more specific? I'd like to avoid triggering this test if we can tell it's a use that must
+            // call CmdClearAttachments. Otherwise this seems more like a performance warning.
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
+                VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t &>(commandBuffer), 0,
+                DRAWSTATE_CLEAR_CMD_BEFORE_DRAW, "DS",
+                "vkCmdClearAttachments() issued on command buffer object 0x%p prior to any Draw Cmds."
+                " It is recommended you use RenderPass LOAD_OP_CLEAR on Attachments prior to any Draw.",
+                commandBuffer);
+        }
+        skip |= outsideRenderPass(device_data, cb_node, "vkCmdClearAttachments()", VALIDATION_ERROR_01122);
+    }
+
+    // Validate that attachment is in reference list of active subpass
+    if (cb_node->activeRenderPass) {
+        const VkRenderPassCreateInfo *renderpass_create_info = cb_node->activeRenderPass->createInfo.ptr();
+        const VkSubpassDescription *subpass_desc = &renderpass_create_info->pSubpasses[cb_node->activeSubpass];
+        auto framebuffer = getFramebufferState(device_data, cb_node->activeFramebuffer);
+
+        for (uint32_t i = 0; i < attachmentCount; i++) {
+            auto clear_desc = &pAttachments[i];
+            VkImageView image_view = VK_NULL_HANDLE;
+
+            if (clear_desc->aspectMask & VK_IMAGE_ASPECT_COLOR_BIT) {
+                if (clear_desc->colorAttachment >= subpass_desc->colorAttachmentCount) {
+                    skip |= log_msg(
+                        report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                        (uint64_t)commandBuffer, __LINE__, VALIDATION_ERROR_01114, "DS",
+                        "vkCmdClearAttachments() color attachment index %d out of range for active subpass %d. %s",
+                        clear_desc->colorAttachment, cb_node->activeSubpass, validation_error_map[VALIDATION_ERROR_01114]);
+                } else if (subpass_desc->pColorAttachments[clear_desc->colorAttachment].attachment == VK_ATTACHMENT_UNUSED) {
+                    skip |= log_msg(report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
+                        VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)commandBuffer, __LINE__,
+                        DRAWSTATE_MISSING_ATTACHMENT_REFERENCE, "DS",
+                        "vkCmdClearAttachments() color attachment index %d is VK_ATTACHMENT_UNUSED; ignored.",
+                        clear_desc->colorAttachment);
+                } else {
+                    image_view = framebuffer->createInfo
+                        .pAttachments[subpass_desc->pColorAttachments[clear_desc->colorAttachment].attachment];
+                }
+            } else if (clear_desc->aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) {
+                if (!subpass_desc->pDepthStencilAttachment ||  // Says no DS will be used in active subpass
+                    (subpass_desc->pDepthStencilAttachment->attachment ==
+                        VK_ATTACHMENT_UNUSED)) {  // Says no DS will be used in active subpass
+
+                    skip |=
+                        log_msg(report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
+                            VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)commandBuffer, __LINE__,
+                            DRAWSTATE_MISSING_ATTACHMENT_REFERENCE, "DS",
+                            "vkCmdClearAttachments() depth/stencil clear with no depth/stencil attachment in subpass; ignored");
+                } else {
+                    image_view = framebuffer->createInfo.pAttachments[subpass_desc->pDepthStencilAttachment->attachment];
+                }
+            }
+
+            if (image_view) {
+                auto image_view_state = getImageViewState(device_data, image_view);
+                for (uint32_t j = 0; j < rectCount; j++) {
+                    // The rectangular region specified by a given element of pRects must be contained within the render area of the
+                    // current render pass instance
+                    if (false == ContainsRect(cb_node->activeRenderPassBeginInfo.renderArea, pRects[j].rect)) {
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                            VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, VALIDATION_ERROR_01115, "DS",
+                            "vkCmdClearAttachments(): The area defined by pRects[%d] is not contained in the area of "
+                            "the current render pass instance. %s",
+                            j, validation_error_map[VALIDATION_ERROR_01115]);
+                    }
+                    // The layers specified by a given element of pRects must be contained within every attachment that
+                    // pAttachments refers to
+                    auto attachment_base_array_layer = image_view_state->create_info.subresourceRange.baseArrayLayer;
+                    auto attachment_layer_count = image_view_state->create_info.subresourceRange.layerCount;
+                    if ((pRects[j].baseArrayLayer < attachment_base_array_layer) || pRects[j].layerCount > attachment_layer_count) {
+                        skip |=
+                            log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT,
+                                0, __LINE__, VALIDATION_ERROR_01116, "DS",
+                                "vkCmdClearAttachments(): The layers defined in pRects[%d] are not contained in the layers of "
+                                "pAttachment[%d]. %s",
+                                j, i, validation_error_map[VALIDATION_ERROR_01116]);
+                    }
+                }
+            }
+        }
+    }
+    return skip;
+}

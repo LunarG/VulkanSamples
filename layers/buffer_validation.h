@@ -124,4 +124,8 @@ void TransitionFinalSubpassLayouts(core_validation::layer_data *dev_data, GLOBAL
 bool PreCallValidateCmdCopyImage(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
                                  IMAGE_STATE *dst_image_state, uint32_t region_count, const VkImageCopy *regions);
 
+bool PreCallValidateCmdClearAttachments(core_validation::layer_data *device_data, VkCommandBuffer commandBuffer,
+                                        uint32_t attachmentCount, const VkClearAttachment *pAttachments, uint32_t rectCount,
+                                        const VkClearRect *pRects);
+
 #endif  // CORE_VALIDATION_BUFFER_VALIDATION_H_
