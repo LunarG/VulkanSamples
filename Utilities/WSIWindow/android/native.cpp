@@ -41,11 +41,11 @@ struct printBuf {
     static const int SIZE = 256;
     char buf[SIZE];
     printBuf() { clear(); }
-    printBuf(const char *c) {
+    printBuf(const char* c) {
         memset(buf, 0, SIZE);
         strncpy(buf, c, SIZE - 1);
     }
-    printBuf &operator+=(const char *c) {
+    printBuf& operator+=(const char* c) {
         strncat(buf, c, SIZE - len() - 1);
         if (len() >= SIZE - 1) flush();
         return *this;
@@ -58,7 +58,7 @@ struct printBuf {
     }
 } printBuf;
 
-int printf(const char *format, ...) {  // printf for Android
+int printf(const char* format, ...) {  // printf for Android
     char buf[printBuf.SIZE];
     va_list argptr;
     va_start(argptr, format);
@@ -71,7 +71,7 @@ int printf(const char *format, ...) {  // printf for Android
 }
 //--------------------------------------------------------------------------------------------------
 
-android_app *Android_App = 0;  // Android native-actvity state
+android_app* Android_App = 0;  // Android native-actvity state
 /*
 //--------------------TEMP------------------------
 //--Window event handler--

@@ -27,7 +27,7 @@
 
 #include "WSIWindow.h"
 
-const char *type[] = {"up  ", "down", "move"};  // Action types (mouse / keyboard / touchscreen)
+const char *type[] = {"up  ", "down", "move"};  // Action types for mouse, keyboard and touch-screen.
 
 //-- EVENT HANDLERS --
 class MyWindow : public WSIWindow {

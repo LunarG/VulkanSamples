@@ -27,7 +27,7 @@
 #define WINDOW_WIN32
 
 #include "WindowImpl.h"
-#include <windowsx.h>  //   Mouse
+#include <windowsx.h>  // Mouse
 //#pragma warning(disable:4996)
 // clang-format off
 // Convert native Win32 keyboard scancode to cross-platform USB HID code.
@@ -56,18 +56,15 @@ class Window_win32 : public WindowImpl {
     HWND hWnd;
     // bool ShapeMode;
 
-    //---Touch Device---
-    CMTouch MTouch;
-    uint32_t touchID[CMTouch::MAX_POINTERS] = {};
-    //------------------
+    CMTouch MTouch;  // Multi-Touch device
 
-    void SetTitle(const char *title);
+    void SetTitle(const char* title);
     void SetWinPos(uint x, uint y);
     void SetWinSize(uint w, uint h);
     void CreateSurface(VkInstance instance);
 
-   public:
-    Window_win32(const char *title, uint width, uint height);
+  public:
+    Window_win32(const char* title, uint width, uint height);
     virtual ~Window_win32();
     EventType GetEvent(bool wait_for_event = false);
     bool CanPresent(VkPhysicalDevice phy, uint32_t queue_family);  // check if this window can present this queue type
@@ -78,7 +75,7 @@ class Window_win32 : public WindowImpl {
 //=====================Win32 IMPLEMENTATION=====================
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
-Window_win32::Window_win32(const char *title, uint width, uint height) {
+Window_win32::Window_win32(const char* title, uint width, uint height) {
     shape.width = width;
     shape.height = height;
     running = true;
@@ -126,7 +123,7 @@ Window_win32::Window_win32(const char *title, uint width, uint height) {
 
 Window_win32::~Window_win32() { DestroyWindow(hWnd); }
 
-void Window_win32::SetTitle(const char *title) { SetWindowText(hWnd, title); }
+void Window_win32::SetTitle(const char* title) { SetWindowText(hWnd, title); }
 
 void Window_win32::SetWinPos(uint x, uint y) {
     SetWindowPos(hWnd, NULL, x, y, 0, 0, SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOSIZE);
@@ -160,9 +157,7 @@ void Window_win32::CreateSurface(VkInstance instance) {
 
 EventType Window_win32::GetEvent(bool wait_for_event) {
     // EventType event;
-    if (!eventFIFO.isEmpty()) {
-        return *eventFIFO.pop();
-    }
+    if (!eventFIFO.isEmpty()) return *eventFIFO.pop();
 
     MSG msg = {};
     if (wait_for_event)
@@ -228,7 +223,7 @@ EventType Window_win32::GetEvent(bool wait_for_event) {
 
             //--Char event--
             case WM_CHAR: {
-                strncpy_s(buf, (const char *)&msg.wParam, 4);
+                strncpy_s(buf, (const char*)&msg.wParam, 4);
                 return TextEvent(buf);
             }  // return UTF8 code of key pressed
             //--Window events--
@@ -267,29 +262,12 @@ EventType Window_win32::GetEvent(bool wait_for_event) {
                     POINT pt = pointerInfo.ptPixelLocation;
                     ScreenToClient(hWnd, &pt);
                     switch (msg.message) {
-                        case WM_POINTERDOWN: {
-                            for (uint32_t i = 0; i < CMTouch::MAX_POINTERS; ++i) {
-                                if (touchID[i] == 0) {                    // Find first empty slot
-                                    touchID[i] = id;                      // Claim slot
-                                    return MTouch.Event(eDOWN, x, y, i);  // touch down event
-                                }
-                            }
-                        }
-                        case WM_POINTERUPDATE: {
-                            for (uint32_t i = 0; i < CMTouch::MAX_POINTERS; ++i) {
-                                if (touchID[i] == id) {                   // Find first empty slot
-                                    return MTouch.Event(eMOVE, x, y, i);  // touch move event
-                                }
-                            }
-                        }
-                        case WM_POINTERUP: {
-                            for (uint32_t i = 0; i < CMTouch::MAX_POINTERS; ++i) {
-                                if (touchID[i] == id) {                 // Find first empty slot
-                                    touchID[i] = 0;                     // Clear slot
-                                    return MTouch.Event(eUP, x, y, i);  // touch up event
-                                }
-                            }
-                        }
+                        case WM_POINTERDOWN:
+                            return MTouch.Event_by_ID(eDOWN, x, y, 0, id);  // touch down event
+                        case WM_POINTERUPDATE:
+                            return MTouch.Event_by_ID(eMOVE, x, y, id, id);  // touch move event
+                        case WM_POINTERUP:
+                            return MTouch.Event_by_ID(eUP, x, y, id, 0);  // touch up event
                     }
                 }
             }

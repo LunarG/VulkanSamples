@@ -23,42 +23,42 @@
 #include "CInstance.h"
 
 //---------------------------PickList-----------------------------
-bool CPickList::IsPicked(const char *name) const {
+bool CPickList::IsPicked(const char* name) const {
     for (auto item : pick_list) {
         if (strcmp(name, item) == 0) return true;
     }
     return false;
 }
 
-int CPickList::IndexOf(const char *name) {
+int CPickList::IndexOf(const char* name) {
     for (uint32_t i = 0; i < Count(); ++i) {
         if (strcmp(name, Name(i)) == 0) return i;
     }
     return -1;
 }
 
-void CPickList::Pick(initializer_list<const char *> list) {
-    for (auto item : list) Pick(item);
+bool CPickList::Pick(initializer_list<const char*> list) {  // Return true if all items were found.
+    bool found = true;
+    for (auto item : list) found &= Pick(item);
+    return found;
 }
 
-bool CPickList::Pick(const char *name) {
+bool CPickList::Pick(const char* name) {
     int inx = IndexOf(name);
-    if (inx == -1) {
-        LOGW("%s not found.\n", name);  // Warn if picked item was not found.
-        return false;
-    }
-    return Pick(inx);
+    if (inx > -1) return Pick(inx);
+    LOGW("%s not found.\n", name);  // Warn if picked item was not found.
+    return false;
 }
 
-bool CPickList::Pick(const uint32_t inx) {  // Add indexed item to picklist. Returns false if index is out of range.
-    if (inx >= Count()) return false;
-    for (const char *pickItem : pick_list)
+bool CPickList::Pick(const uint32_t inx) {       // Add indexed item to picklist.
+    if (inx >= Count()) return false;            // Return false if index is out of range.
+    for (const char* pickItem : pick_list)       //
         if (pickItem == Name(inx)) return true;  // Check if item was already picked
     pick_list.push_back(Name(inx));              // if not, add item to pick-list
     return true;
 }
 
-void CPickList::UnPick(const char *name) {
+void CPickList::UnPick(const char* name) {
     for (uint32_t i = 0; i < PickCount(); ++i) {
         if (strcmp(name, pick_list[i]) == 0) pick_list.erase(pick_list.begin() + i);
     }
@@ -68,18 +68,15 @@ void CPickList::PickAll() {
     for (uint32_t i = 0; i < Count(); ++i) Pick(i);
 }  // Pick All items
 void CPickList::Clear() { pick_list.clear(); }  // Clear Picklist
-char **CPickList::PickList() const { return (char **)pick_list.data(); }
+char** CPickList::PickList() const { return (char**)pick_list.data(); }
 uint32_t CPickList::PickCount() const { return (uint32_t)pick_list.size(); }
 
-void CPickList::Print(const char *listName) {
+void CPickList::Print(const char* listName) {
     printf("%s picked: %d of %d\n", listName, PickCount(), Count());
     for (uint32_t i = 0; i < Count(); ++i) {
         bool picked = false;
-        char *name = Name(i);
-        for (auto &pick : pick_list)
-            if (pick == name) {
-                picked = true;
-            }
+        char* name = Name(i);
+        for (char* pick : pick_list) picked |= (!strcmp(pick, name));
         if (picked) {
             print(eRESET, "\t%s %s\n", cTICK, name);
         } else {
@@ -105,7 +102,7 @@ CLayers::CLayers() {
 //----------------------------------------------------------------
 
 //--------------------------Extensions----------------------------
-CExtensions::CExtensions(const char *layer_name) {
+CExtensions::CExtensions(const char* layer_name) {
     VkResult result;
     do {
         uint count = 0;
@@ -120,7 +117,7 @@ CExtensions::CExtensions(const char *layer_name) {
 //----------------------------------------------------------------
 
 //---------------------------CInstance----------------------------
-CInstance::CInstance(const bool enable_validation, const char *app_name, const char *engine_name) {
+CInstance::CInstance(const bool enable_validation, const char* app_name, const char* engine_name) {
     CLayers layers;
 #ifdef ENABLE_VALIDATION
     // clang-format off
@@ -167,11 +164,11 @@ CInstance::CInstance(const bool enable_validation, const char *app_name, const c
     Create(layers, extensions, app_name, engine_name);
 }
 
-CInstance::CInstance(const CLayers &layers, const CExtensions &extensions, const char *app_name, const char *engine_name) {
+CInstance::CInstance(const CLayers& layers, const CExtensions& extensions, const char* app_name, const char* engine_name) {
     Create(layers, extensions, app_name, engine_name);
 }
 
-void CInstance::Create(const CLayers &layers, const CExtensions &extensions, const char *app_name, const char *engine_name) {
+void CInstance::Create(const CLayers& layers, const CExtensions& extensions, const char* app_name, const char* engine_name) {
     // initialize the VkApplicationInfo structure
     VkApplicationInfo app_info = {};
     app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;

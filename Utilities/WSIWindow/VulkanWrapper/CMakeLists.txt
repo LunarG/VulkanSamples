@@ -4,12 +4,6 @@ file(GLOB SRC_LIST "*.h" "*.cpp")                       # List all source files 
 add_library (${LIBRARY_NAME} STATIC ${SRC_LIST})        # and add them to the WSIWindow library.
 
 target_include_directories (${LIBRARY_NAME} PUBLIC .)
-target_link_libraries(${LIBRARY_NAME} ${CMAKE_DL_LIBS}) # for dlsym
+target_include_directories (${LIBRARY_NAME} PUBLIC "${VULKAN_INCLUDE}") # include vulkan.h
 
-#=======================Find Vulkan Header========================
-find_path(VULKAN_INCLUDE vulkan/vulkan.h DOC "Path to Vulkan header file. (vulkan.h)")
-find_path(VULKAN_INCLUDE vulkan/vulkan.h PATH "$ENV{VULKAN_SDK}/include")    # Search in Vulkan SDK
-find_path(VULKAN_INCLUDE vulkan/vulkan.h PATH "../../../include")            # Search in VulkanSamples
-target_include_directories(${LIBRARY_NAME} PUBLIC "${VULKAN_INCLUDE}")       # include vulkan.h
-message("VULKAN_INCLUDE path: ${VULKAN_INCLUDE}")
-#=================================================================
+target_link_libraries (${LIBRARY_NAME} ${CMAKE_DL_LIBS}) # for dlsym

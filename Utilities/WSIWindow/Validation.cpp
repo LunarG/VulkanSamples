@@ -20,7 +20,7 @@
 */
 
 #include "Validation.h"
-#include <string.h>  //for strlen
+#include <string.h>  // for strlen
 
 //--------------------Vulkan Dispatch Table---------------------
 // WARNING: vulkan_wrapper.h must be #included BEFORE vulkan.h
@@ -32,7 +32,7 @@
 struct INITVULKAN {
     INITVULKAN() {
         bool success = (InitVulkan() == 1);  // Returns true if this device supports Vulkan.
-        LOG("Initialize Vulkan: ");
+        printf("Initialize Vulkan: ");
         print(success ? eGREEN : eRED, success ? "SUCCESS\n" : "FAILED (Vulkan driver not found.)\n");
     }
 } INITVULKAN;  // Run this function BEFORE main.
@@ -47,7 +47,11 @@ void color(eColor color) {  // Sets Terminal text color (Win32/Linux)
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     SetConsoleTextAttribute(hConsole, bgr[color]);
 #elif __LINUX__
-    printf("\033[%dm", (color & 8) ? 1 : 0);    // faint or normal
+    if (color == eFAINT) {
+        printf("\033[37m\033[2m");
+        return;
+    }                                           // set faint white
+    printf("\033[%dm", (color & 8) ? 1 : 0);    // bright or normal
     if (color) printf("\033[3%dm", color & 7);  // set text color
 #endif
 }
@@ -79,7 +83,7 @@ const char *VkResultStr(VkResult err) {
         STR(VK_ERROR_INCOMPATIBLE_DRIVER);    // -9
         STR(VK_ERROR_TOO_MANY_OBJECTS);       // -10
         STR(VK_ERROR_FORMAT_NOT_SUPPORTED);   // -11
-        STR(VK_ERROR_FRAGMENTED_POOL);        // -12
+        // STR(VK_ERROR_FRAGMENTED_POOL);       // -12
 
         STR(VK_ERROR_SURFACE_LOST_KHR);          // -1000000000
         STR(VK_ERROR_NATIVE_WINDOW_IN_USE_KHR);  // -1000000001
@@ -98,6 +102,8 @@ void ShowVkResult(VkResult err) {
     if (err > 0) _LOGW("%s ", VkResultStr(err));  // Print warning
     if (err < 0) _LOGE("%s ", VkResultStr(err));  // Print error
 }
+#else
+void ShowVkResult(VkResult err) {}
 #endif
 //----------------------------------------------------------------
 
@@ -184,10 +190,10 @@ void CDebugReport::Destroy() {
 void CDebugReport::Print() {  // print the state of the report flags
     printf("Debug Report flags : [");
     print((flags & 1) ? eGREEN : eFAINT, (flags & 1) ? "INFO:1 |" : "info:0 |");
-    print((flags & 2) ? eYELLOW : eFAINT, (flags & 2) ? "WARN:1 |" : "warn:0 |");
-    print((flags & 4) ? eCYAN : eFAINT, (flags & 4) ? "PERF:1 |" : "perf:0 |");
-    print((flags & 8) ? eRED : eFAINT, (flags & 8) ? "ERROR:1 |" : "error:0 |");
-    print((flags & 16) ? eBLUE : eFAINT, (flags & 16) ? "DEBUG:1" : "debug:0");
+    print((flags & 2) ? eYELLOW : eFAINT, (flags & 2) ? "WARN:2 |" : "warn:0 |");
+    print((flags & 4) ? eCYAN : eFAINT, (flags & 4) ? "PERF:4 |" : "perf:0 |");
+    print((flags & 8) ? eRED : eFAINT, (flags & 8) ? "ERROR:8 |" : "error:0 |");
+    print((flags & 16) ? eBLUE : eFAINT, (flags & 16) ? "DEBUG:16" : "debug:0 ");
     print(eRESET, "] = %d\n", flags);
 }
 

@@ -28,7 +28,7 @@
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
 
 #include "WindowImpl.h"
-#include "native.h"  //for Android_App
+#include "native.h"  // for Android_App
 
 #ifndef WINDOW_ANDROID
 #define WINDOW_ANDROID
@@ -57,18 +57,16 @@ const unsigned char ANDROID_TO_HID[256] = {
 // clang-format on
 //==========================Android=============================
 class Window_android : public WindowImpl {
-    android_app *app = 0;
+    android_app* app = 0;
     CMTouch MTouch;
 
-    void SetTitle(const char *title){};  // TODO : Set window title?
+    void SetTitle(const char* title){};  // TODO : Set window title?
     void SetWinPos(uint x, uint y){};
     void SetWinSize(uint w, uint h){};
     bool CanPresent(VkPhysicalDevice gpu, uint32_t queue_family) { return true; }
 
     void CreateSurface(VkInstance instance) {
-        if (surface) {
-            return;
-        }
+        if (surface) return;
         this->instance = instance;
         VkAndroidSurfaceCreateInfoKHR android_createInfo;
         android_createInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
@@ -80,7 +78,7 @@ class Window_android : public WindowImpl {
     }
 
    public:
-    Window_android(const char *title, uint width, uint height) {
+    Window_android(const char* title, uint width, uint height) {
         shape.width = 0;   // width;
         shape.height = 0;  // height;
         running = true;
@@ -90,23 +88,18 @@ class Window_android : public WindowImpl {
         //---Wait for window to be created AND gain focus---
         while (!has_focus) {
             int events = 0;
-            struct android_poll_source *source;
-            int id = ALooper_pollOnce(100, NULL, &events, (void **)&source);
+            struct android_poll_source* source;
+            int id = ALooper_pollOnce(100, NULL, &events, (void**)&source);
             if (id == LOOPER_ID_MAIN) {
                 int8_t cmd = android_app_read_cmd(app);
                 android_app_pre_exec_cmd(app, cmd);
-                if (app->onAppCmd != NULL) {
-                    app->onAppCmd(app, cmd);
-                }
+                if (app->onAppCmd != NULL) app->onAppCmd(app, cmd);
                 if (cmd == APP_CMD_INIT_WINDOW) {
                     shape.width = (uint16_t)ANativeWindow_getWidth(app->window);
                     shape.height = (uint16_t)ANativeWindow_getHeight(app->window);
                     eventFIFO.push(ResizeEvent(shape.width, shape.height));  // post window-resize event
                 }
-                if (cmd == APP_CMD_GAINED_FOCUS) {
-                    eventFIFO.push(FocusEvent(true));
-                }  // post focus-event
-
+                if (cmd == APP_CMD_GAINED_FOCUS) eventFIFO.push(FocusEvent(true));  // post focus-event
                 android_app_post_exec_cmd(app, cmd);
             }
         }
@@ -118,15 +111,13 @@ class Window_android : public WindowImpl {
 
     EventType GetEvent(bool wait_for_event = false) {
         EventType event = {};
-        static char buf[4] = {};  // store char for text event
-        if (!eventFIFO.isEmpty()) {
-            return *eventFIFO.pop();
-        }  // pop message from message queue buffer
+        static char buf[4] = {};                            // store char for text event
+        if (!eventFIFO.isEmpty()) return *eventFIFO.pop();  // pop message from message queue buffer
 
         int events = 0;
-        struct android_poll_source *source;
+        struct android_poll_source* source;
         int timeoutMillis = wait_for_event ? -1 : 0;  // Blocking or non-blocking mode
-        int id = ALooper_pollOnce(timeoutMillis, NULL, &events, (void **)&source);
+        int id = ALooper_pollOnce(timeoutMillis, NULL, &events, (void**)&source);
         // ALooper_pollAll(0, NULL,&events,(void**)&source);
 
         // if(id>=0) printf("id=%d events=%d, source=%d",id,(int)events, source[0]);
@@ -135,9 +126,7 @@ class Window_android : public WindowImpl {
         if (id == LOOPER_ID_MAIN) {
             int8_t cmd = android_app_read_cmd(app);
             android_app_pre_exec_cmd(app, cmd);
-            if (app->onAppCmd != NULL) {
-                app->onAppCmd(app, cmd);
-            }
+            if (app->onAppCmd != NULL) app->onAppCmd(app, cmd);
             switch (cmd) {
                 case APP_CMD_GAINED_FOCUS:
                     event = FocusEvent(true);
@@ -151,7 +140,7 @@ class Window_android : public WindowImpl {
             android_app_post_exec_cmd(app, cmd);
             return event;
         } else if (id == LOOPER_ID_INPUT) {
-            AInputEvent *a_event = NULL;
+            AInputEvent* a_event = NULL;
             while (AInputQueue_getEvent(app->inputQueue, &a_event) >= 0) {
                 // LOGV("New input event: type=%d\n", AInputEvent_getType(event));
                 if (AInputQueue_preDispatchEvent(app->inputQueue, a_event)) {
@@ -172,11 +161,9 @@ class Window_android : public WindowImpl {
                         case AKEY_EVENT_ACTION_DOWN: {
                             int metaState = AKeyEvent_getMetaState(a_event);
                             int unicode = GetUnicodeChar(AKEY_EVENT_ACTION_DOWN, keycode, metaState);
-                            (int &)buf = unicode;
-                            event = KeyEvent(eDOWN, hidcode);  // key pressed event (returned on this run)
-                            if (buf[0]) {
-                                eventFIFO.push(TextEvent(buf));
-                            }  // text typed event  (store in FIFO for next run)
+                            (int&)buf = unicode;
+                            event = KeyEvent(eDOWN, hidcode);            // key pressed event (returned on this run)
+                            if (buf[0]) eventFIFO.push(TextEvent(buf));  // text typed event  (store in FIFO for next run)
                             break;
                         }
                         case AKEY_EVENT_ACTION_UP: {

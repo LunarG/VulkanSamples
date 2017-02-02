@@ -28,8 +28,8 @@
 
 //-------------------------------------------------
 #include "WindowImpl.h"
-//#include <xcb/xcb.h>           // XCB only
-//#include <X11/Xlib.h>          // XLib only
+//#include <xcb/xcb.h>            // XCB only
+//#include <X11/Xlib.h>           // XLib only
 #include <X11/Xlib-xcb.h>         // Xlib + XCB
 #include <xkbcommon/xkbcommon.h>  // Keyboard
 //-------------------------------------------------
@@ -85,34 +85,34 @@ const unsigned char EVDEV_TO_HID[256] = {
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
 };
+
 // clang-format on
 //=============================XCB==============================
 class Window_xcb : public WindowImpl {
-    Display *display;                  // for XLib
-    xcb_connection_t *xcb_connection;  // for XCB
-    xcb_screen_t *xcb_screen;
+    Display* display;                  // for XLib
+    xcb_connection_t* xcb_connection;  // for XCB
+    xcb_screen_t* xcb_screen;
     xcb_window_t xcb_window;
-    xcb_intern_atom_reply_t *atom_wm_delete_window;
+    xcb_intern_atom_reply_t* atom_wm_delete_window;
     //---xkb Keyboard---
-    xkb_context *k_ctx;  // context for xkbcommon keyboard input
-    xkb_keymap *k_keymap;
-    xkb_state *k_state;
+    xkb_context* k_ctx;  // context for xkbcommon keyboard input
+    xkb_keymap* k_keymap;
+    xkb_state* k_state;
     //------------------
     //---Touch Device---
     CMTouch MTouch;
     int xi_opcode;  // 131
     int xi_devid;   // 2
-    uint32_t touchID[CMTouch::MAX_POINTERS] = {};
     //------------------
 
-    void SetTitle(const char *title);
+    void SetTitle(const char* title);
     void SetWinPos(uint x, uint y);
     void SetWinSize(uint w, uint h);
     void CreateSurface(VkInstance instance);
     bool InitTouch();                                        // Returns false if no touch-device was found.
-    EventType TranslateEvent(xcb_generic_event_t *x_event);  // Convert x_event to WSIWindow event
-   public:
-    Window_xcb(const char *title, uint width, uint height);
+    EventType TranslateEvent(xcb_generic_event_t* x_event);  // Convert x_event to WSIWindow event
+  public:
+    Window_xcb(const char* title, uint width, uint height);
     virtual ~Window_xcb();
     EventType GetEvent(bool wait_for_event = false);
     bool CanPresent(VkPhysicalDevice phy, uint32_t queue_family);  // check if this window can present this queue type
@@ -121,7 +121,7 @@ class Window_xcb : public WindowImpl {
 #endif
 
 //=======================XCB IMPLEMENTATION=====================
-Window_xcb::Window_xcb(const char *title, uint width, uint height) {
+Window_xcb::Window_xcb(const char* title, uint width, uint height) {
     shape.width = width;
     shape.height = height;
     running = true;
@@ -139,11 +139,12 @@ Window_xcb::Window_xcb(const char *title, uint width, uint height) {
     //-------------------
 
     //----XLib + XCB----
+    XInitThreads();  // Required by Vulkan, when using XLib. (Vulkan spec section: 30.2.6 Xlib Platform)
     display = XOpenDisplay(NULL);
     assert(display && "Failed to open Display");  // for XLIB functions
     xcb_connection = XGetXCBConnection(display);
     assert(display && "Failed to open XCB connection");  // for XCB functions
-    const xcb_setup_t *setup = xcb_get_setup(xcb_connection);
+    const xcb_setup_t* setup = xcb_get_setup(xcb_connection);
     setup = xcb_get_setup(xcb_connection);
     xcb_screen = (xcb_setup_roots_iterator(setup)).data;
     XSetEventQueueOwner(display, XCBOwnsEventQueue);
@@ -172,7 +173,7 @@ Window_xcb::Window_xcb(const char *title, uint width, uint height) {
                       XCB_WINDOW_CLASS_INPUT_OUTPUT, xcb_screen->root_visual, value_mask, value_list);
 
     xcb_intern_atom_cookie_t cookie = xcb_intern_atom(xcb_connection, 1, 12, "WM_PROTOCOLS");
-    xcb_intern_atom_reply_t *reply = xcb_intern_atom_reply(xcb_connection, cookie, 0);
+    xcb_intern_atom_reply_t* reply = xcb_intern_atom_reply(xcb_connection, cookie, 0);
 
     //--
     xcb_intern_atom_cookie_t cookie2 = xcb_intern_atom(xcb_connection, 0, 16, "WM_DELETE_WINDOW");
@@ -200,7 +201,7 @@ Window_xcb::~Window_xcb() {
     free(k_ctx);  // xkb keyboard
 }
 
-void Window_xcb::SetTitle(const char *title) {
+void Window_xcb::SetTitle(const char* title) {
     xcb_change_property(xcb_connection, XCB_PROP_MODE_REPLACE, xcb_window,
                         XCB_ATOM_WM_NAME,  // set window title
                         XCB_ATOM_STRING, 8, strlen(title), title);
@@ -255,11 +256,11 @@ bool Window_xcb::InitTouch() {
 
     {  // select device
         int cnt;
-        XIDeviceInfo *di = XIQueryDevice(display, XIAllDevices, &cnt);
+        XIDeviceInfo* di = XIQueryDevice(display, XIAllDevices, &cnt);
         for (int i = 0; i < cnt; ++i) {
-            XIDeviceInfo *dev = &di[i];
+            XIDeviceInfo* dev = &di[i];
             for (int j = 0; j < dev->num_classes; ++j) {
-                XITouchClassInfo *tcinfo = (XITouchClassInfo *)(dev->classes[j]);
+                XITouchClassInfo* tcinfo = (XITouchClassInfo*)(dev->classes[j]);
                 if (tcinfo->type != XITouchClass) {
                     xi_devid = dev->deviceid;
                     goto endloop;
@@ -288,9 +289,9 @@ bool Window_xcb::InitTouch() {
 }
 //---------------------------------------------------------------------------
 
-EventType Window_xcb::TranslateEvent(xcb_generic_event_t *x_event) {
-    static char buf[4] = {};                                             // store char for text event
-    xcb_button_press_event_t &e = *(xcb_button_press_event_t *)x_event;  // xcb_motion_notify_event_t
+EventType Window_xcb::TranslateEvent(xcb_generic_event_t* x_event) {
+    static char buf[4] = {};                                            // store char for text event
+    xcb_button_press_event_t& e = *(xcb_button_press_event_t*)x_event;  // xcb_motion_notify_event_t
     int16_t mx = e.event_x;
     int16_t my = e.event_y;
     uint8_t btn = e.detail;
@@ -315,14 +316,14 @@ EventType Window_xcb::TranslateEvent(xcb_generic_event_t *x_event) {
             return KeyEvent(eUP, keycode);  // key released event
         }
         case XCB_CLIENT_MESSAGE: {  // window close event
-            if ((*(xcb_client_message_event_t *)x_event).data.data32[0] == (*atom_wm_delete_window).atom) {
+            if ((*(xcb_client_message_event_t*)x_event).data.data32[0] == (*atom_wm_delete_window).atom) {
                 LOGI("Closing Window\n");
                 return CloseEvent();
             }
             break;
         }
         case XCB_CONFIGURE_NOTIFY: {  // Window Reshape (move or resize)
-            auto &e = *(xcb_configure_notify_event_t *)x_event;
+            auto& e = *(xcb_configure_notify_event_t*)x_event;
             // bool se = (e.response_type & 128);                 // True if message was sent with "SendEvent"
             if (e.width != shape.width || e.height != shape.height)
                 return ResizeEvent(e.width, e.height);  // window resized
@@ -337,37 +338,22 @@ EventType Window_xcb::TranslateEvent(xcb_generic_event_t *x_event) {
 
         case XCB_GE_GENERIC: {  // Multi touch screen events
 #ifdef ENABLE_MULTITOUCH
-            xcb_input_touch_begin_event_t &te = *(xcb_input_touch_begin_event_t *)x_event;
+            xcb_input_touch_begin_event_t& te = *(xcb_input_touch_begin_event_t*)x_event;
             if (te.extension == xi_opcode) {  // check if this event is from the touch device
                 float x = te.event_x / 65536.f;
                 float y = te.event_y / 65536.f;
+                uint id = te.detail;
+
                 switch (te.event_type) {
-                    case XI_TouchBegin: {
-                        for (uint32_t i = 0; i < CMTouch::MAX_POINTERS; ++i) {
-                            if (touchID[i] == 0) {                    // Find first empty slot
-                                touchID[i] = te.detail;               // Claim slot
-                                return MTouch.Event(eDOWN, x, y, i);  // touch down event
-                            }
-                        }
-                    }
-                    case XI_TouchUpdate: {
-                        for (uint32_t i = 0; i < CMTouch::MAX_POINTERS; ++i) {
-                            if (touchID[i] == te.detail) {            // Find finger id
-                                return MTouch.Event(eMOVE, x, y, i);  // Touch move event
-                            }
-                        }
-                    }
-                    case XI_TouchEnd: {
-                        for (uint32_t i = 0; i < CMTouch::MAX_POINTERS; ++i) {
-                            if (touchID[i] == te.detail) {          // Find finger id
-                                touchID[i] = 0;                     // Clear the slot
-                                return MTouch.Event(eUP, x, y, i);  // Touch up event
-                            }
-                        }
-                    }
+                    case XI_TouchBegin:
+                        return MTouch.Event_by_ID(eDOWN, x, y, 0, id);  // touch down event
+                    case XI_TouchUpdate:
+                        return MTouch.Event_by_ID(eMOVE, x, y, id, id);  // touch move event
+                    case XI_TouchEnd:
+                        return MTouch.Event_by_ID(eUP, x, y, id, 0);  // touch up event
                     default:
                         break;
-                }  // switch te
+                }
             }
 #endif
             return {EventType::UNKNOWN};
@@ -381,8 +367,7 @@ EventType Window_xcb::TranslateEvent(xcb_generic_event_t *x_event) {
 
 EventType Window_xcb::GetEvent(bool wait_for_event) {
     if (!eventFIFO.isEmpty()) return *eventFIFO.pop();  // pop message from message queue buffer
-
-    xcb_generic_event_t *x_event;
+    xcb_generic_event_t* x_event;
     if (wait_for_event)
         x_event = xcb_wait_for_event(xcb_connection);  // Blocking mode
     else

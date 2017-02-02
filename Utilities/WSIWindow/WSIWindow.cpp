@@ -25,7 +25,7 @@
 #include "window_xcb.h"
 //==============================================================
 
-WSIWindow::WSIWindow(const char *title, const uint width, const uint height) {
+WSIWindow::WSIWindow(const char* title, const uint width, const uint height) {
 #ifdef VK_USE_PLATFORM_XCB_KHR
     LOGI("PLATFORM: XCB\n");
     pimpl = new Window_xcb(title, width, height);
@@ -44,26 +44,26 @@ WSIWindow::WSIWindow(const char *title, const uint width, const uint height) {
 
 WSIWindow::~WSIWindow() { delete (pimpl); }
 
-CSurface &WSIWindow::GetSurface(VkInstance instance) {
+CSurface& WSIWindow::GetSurface(VkInstance instance) {
     pimpl->CreateSurface(instance);
     return *pimpl;
 }
 
 bool WSIWindow::CanPresent(VkPhysicalDevice gpu, uint32_t queue_family) { return pimpl->CanPresent(gpu, queue_family); }
 
-void WSIWindow::GetWinPos(int16_t &x, int16_t &y) {
+void WSIWindow::GetWinPos(int16_t& x, int16_t& y) {
     x = pimpl->shape.x;
     y = pimpl->shape.y;
 }
-void WSIWindow::GetWinSize(int16_t &width, int16_t &height) {
+void WSIWindow::GetWinSize(int16_t& width, int16_t& height) {
     width = pimpl->shape.width;
     height = pimpl->shape.height;
 }
 bool WSIWindow::GetKeyState(eKeycode key) { return pimpl->KeyState(key); }
 bool WSIWindow::GetBtnState(uint8_t btn) { return pimpl->BtnState(btn); }
-void WSIWindow::GetMousePos(int16_t &x, int16_t &y) { pimpl->MousePos(x, y); }
+void WSIWindow::GetMousePos(int16_t& x, int16_t& y) { pimpl->MousePos(x, y); }
 
-void WSIWindow::SetTitle(const char *title) { pimpl->SetTitle(title); }
+void WSIWindow::SetTitle(const char* title) { pimpl->SetTitle(title); }
 void WSIWindow::SetWinPos(uint16_t x, uint16_t y) { pimpl->SetWinPos(x, y); }
 void WSIWindow::SetWinSize(uint16_t w, uint16_t h) { pimpl->SetWinSize(w, h); }
 

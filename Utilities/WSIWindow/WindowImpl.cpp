@@ -40,7 +40,7 @@ EventType WindowImpl::KeyEvent(eAction action, uint8_t key) {
     return e;
 }
 
-EventType WindowImpl::TextEvent(const char *str) {
+EventType WindowImpl::TextEvent(const char* str) {
     EventType e = {EventType::TEXT};
     e.text.str = str;
     return e;

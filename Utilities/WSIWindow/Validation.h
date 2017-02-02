@@ -111,6 +111,7 @@ void color(eColor color);
         printf(__VA_ARGS__); \
         color(eRESET);       \
     }
+
 // clang-format off
 #ifdef ANDROID
     #include <jni.h>
@@ -172,8 +173,7 @@ void color(eColor color);
 #endif
 //======================================================================================================
 
-const char *VkResultStr(VkResult err);  // Convert vulkan result code to a string.
-void ShowVkResult(VkResult err);        // Print warnings and errors.
+void ShowVkResult(VkResult err);       // Print warnings and errors.
 
 //============================================ CDebugReport ============================================
 class CDebugReport {

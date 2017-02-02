@@ -54,7 +54,7 @@ struct EventType {
             eKeycode keycode;
         } key;  // Keyboard key state
         struct {
-            const char *str;
+            const char* str;
         } text;  // Text entered
         struct {
             int16_t x;
@@ -88,15 +88,15 @@ class EventFIFO {
    public:
     EventFIFO() : head(0), tail(0) {}
     bool isEmpty() { return head == tail; }  // Check if queue is empty.
-    void push(EventType const &item) {
+    void push(EventType const& item) {
         ++head;
         buf[head %= SIZE] = item;
     }  // Add item to queue
-    EventType *pop() {
+    EventType* pop() {
         if (head == tail) return 0;
         ++tail;
         return &buf[tail %= SIZE];
-    }  // Returns item ptr, or null if queue is empty
+    }  // Returns item ptr, or 0 if queue is empty
 };
 //==============================================================
 //=========================MULTI-TOUCH==========================
@@ -106,16 +106,28 @@ class CMTouch {
         float x;
         float y;
     };
-
-   public:
-    static const char MAX_POINTERS = 10;  // Max 10 fingers
-    int count;
+    static const int MAX_POINTERS = 10;  // Max 10 fingers
+    uint32_t touchID[MAX_POINTERS];      // finger-id lookup table (Desktop)
     CPointer Pointers[MAX_POINTERS];
+
+  public:
+    int count;  // number of active touch-id's (Android only)
     void Clear() { memset(this, 0, sizeof(*this)); }
+
+    // Convert desktop-style touch-id's to an android-style finger-id.
+    EventType Event_by_ID(eAction action, float x, float y, uint32_t findval, uint32_t setval) {
+        for (uint32_t i = 0; i < MAX_POINTERS; ++i) {  // lookup finger-id
+            if (touchID[i] == findval) {
+                touchID[i] = setval;
+                return Event(action, x, y, i);
+            }
+        }
+        return {EventType::UNKNOWN};
+    }
 
     EventType Event(eAction action, float x, float y, uint8_t id) {
         if (id >= MAX_POINTERS) return {};  // Exit if too many fingers
-        CPointer &P = Pointers[id];
+        CPointer& P = Pointers[id];
         if (action != eMOVE) P.active = (action == eDOWN);
         P.x = x;
         P.y = y;
@@ -149,7 +161,7 @@ class WindowImpl : public CSurface {
 
     EventType MouseEvent(eAction action, int16_t x, int16_t y, uint8_t btn);  // Mouse event
     EventType KeyEvent(eAction action, uint8_t key);                          // Keyboard event
-    EventType TextEvent(const char *str);                                     // Text event
+    EventType TextEvent(const char* str);                                     // Text event
     EventType MoveEvent(int16_t x, int16_t y);                                // Window moved
     EventType ResizeEvent(uint16_t width, uint16_t height);                   // Window resized
     EventType FocusEvent(bool has_focus);                                     // Window gained/lost focus
@@ -176,7 +188,7 @@ class WindowImpl : public CSurface {
 
     bool KeyState(eKeycode key) { return keystate[key]; }                 // returns true if key is pressed
     bool BtnState(uint8_t btn) { return (btn < 3) ? btnstate[btn] : 0; }  // returns true if mouse btn is pressed
-    void MousePos(int16_t &x, int16_t &y) {
+    void MousePos(int16_t& x, int16_t& y) {
         x = mousepos.x;
         y = mousepos.y;
     }  // returns mouse x,y position
@@ -185,7 +197,7 @@ class WindowImpl : public CSurface {
     virtual bool TextInput() { return textinput; }                // Returns true if text input is enabled TODO: Fix this
     virtual EventType GetEvent(bool wait_for_event = false) = 0;  // Fetch one event from the queue.
 
-    virtual void SetTitle(const char *title) = 0;
+    virtual void SetTitle(const char* title) = 0;
     virtual void SetWinPos(uint x, uint y) = 0;
     virtual void SetWinSize(uint w, uint h) = 0;
 };
