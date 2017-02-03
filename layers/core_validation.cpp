@@ -259,12 +259,16 @@ struct shader_module {
     // A mapping of <id> to the first word of its def. this is useful because walking type
     // trees, constant expressions, etc requires jumping all over the instruction stream.
     unordered_map<unsigned, unsigned> def_index;
+    bool has_valid_spirv;
 
     shader_module(VkShaderModuleCreateInfo const *pCreateInfo)
         : words((uint32_t *)pCreateInfo->pCode, (uint32_t *)pCreateInfo->pCode + pCreateInfo->codeSize / sizeof(uint32_t)),
-          def_index() {
+          def_index(),
+          has_valid_spirv(true) {
         build_def_index(this);
     }
+
+    shader_module() : has_valid_spirv(false) {}
 
     // Expose begin() / end() to enable range-based for
     spirv_inst_iter begin() const { return spirv_inst_iter(words.begin(), words.begin() + 5); }  // First insn
@@ -2589,6 +2593,8 @@ static bool validate_pipeline_shader_stage(
     auto module_it = shaderModuleMap.find(pStage->module);
     auto module = *out_module = module_it->second.get();
 
+    if (!module->has_valid_spirv) return pass;
+
     // Find the entrypoint
     auto entrypoint = *out_entrypoint = find_entrypoint(module, pStage->pName, pStage->stage);
     if (entrypoint == module->end()) {
@@ -2726,7 +2732,7 @@ static bool validate_and_capture_pipeline_shader_state(
         pass &= validate_vi_consistency(report_data, vi);
     }
 
-    if (shaders[vertex_stage]) {
+    if (shaders[vertex_stage] && shaders[vertex_stage]->has_valid_spirv) {
         pass &= validate_vi_against_vs_inputs(report_data, vi, shaders[vertex_stage], entrypoints[vertex_stage]);
     }
 
@@ -2740,7 +2746,7 @@ static bool validate_and_capture_pipeline_shader_state(
 
     for (; producer != fragment_stage && consumer <= fragment_stage; consumer++) {
         assert(shaders[producer]);
-        if (shaders[consumer]) {
+        if (shaders[consumer] && shaders[consumer]->has_valid_spirv && shaders[producer]->has_valid_spirv) {
             pass &= validate_interface_between_stages(report_data, shaders[producer], entrypoints[producer],
                                                       &shader_stage_attribs[producer], shaders[consumer], entrypoints[consumer],
                                                       &shader_stage_attribs[consumer]);
@@ -2749,7 +2755,7 @@ static bool validate_and_capture_pipeline_shader_state(
         }
     }
 
-    if (shaders[fragment_stage]) {
+    if (shaders[fragment_stage] && shaders[fragment_stage]->has_valid_spirv) {
         pass &= validate_fs_outputs_against_render_pass(report_data, shaders[fragment_stage], entrypoints[fragment_stage],
                                                         pPipeline->render_pass_ci.ptr(), pCreateInfo->subpass);
     }
@@ -9907,6 +9913,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateShaderModule(VkDevice device, const VkShade
                                                   const VkAllocationCallbacks *pAllocator, VkShaderModule *pShaderModule) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     bool skip_call = false;
+    spv_result_t spv_valid = SPV_SUCCESS;
 
     if (!GetDisables(dev_data)->shader_validation) {
         // Use SPIRV-Tools validator to try and catch any issues with the module itself
@@ -9914,12 +9921,15 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateShaderModule(VkDevice device, const VkShade
         spv_const_binary_t binary{pCreateInfo->pCode, pCreateInfo->codeSize / sizeof(uint32_t)};
         spv_diagnostic diag = nullptr;
 
-        auto result = spvValidate(ctx, &binary, &diag);
-        if (result != SPV_SUCCESS) {
-            skip_call |= log_msg(dev_data->report_data,
-                                 result == SPV_WARNING ? VK_DEBUG_REPORT_WARNING_BIT_EXT : VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                 VkDebugReportObjectTypeEXT(0), 0, __LINE__, SHADER_CHECKER_INCONSISTENT_SPIRV, "SC",
-                                 "SPIR-V module not valid: %s", diag && diag->error ? diag->error : "(no error text)");
+        spv_valid = spvValidate(ctx, &binary, &diag);
+        if (spv_valid != SPV_SUCCESS) {
+            static const uint32_t kSpirvMagicNumber = 0x07230203;
+            if (!dev_data->device_extensions.nv_glsl_shader_enabled || (pCreateInfo->pCode[0] == kSpirvMagicNumber)) {
+                skip_call |= log_msg(dev_data->report_data,
+                    spv_valid == SPV_WARNING ? VK_DEBUG_REPORT_WARNING_BIT_EXT : VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                    VkDebugReportObjectTypeEXT(0), 0, __LINE__, SHADER_CHECKER_INCONSISTENT_SPIRV, "SC",
+                    "SPIR-V module not valid: %s", diag && diag->error ? diag->error : "(no error text)");
+            }
         }
 
         spvDiagnosticDestroy(diag);
@@ -9932,7 +9942,8 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateShaderModule(VkDevice device, const VkShade
 
     if (res == VK_SUCCESS && !GetDisables(dev_data)->shader_validation) {
         std::lock_guard<std::mutex> lock(global_lock);
-        dev_data->shaderModuleMap[*pShaderModule] = unique_ptr<shader_module>(new shader_module(pCreateInfo));
+        const auto new_shader_module = (SPV_SUCCESS == spv_valid ? new shader_module(pCreateInfo) : new shader_module());
+        dev_data->shaderModuleMap[*pShaderModule] = unique_ptr<shader_module>(new_shader_module);
     }
     return res;
 }
