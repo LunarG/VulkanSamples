@@ -5046,15 +5046,17 @@ VkResult setupLoaderTermPhysDevs(struct loader_instance *inst) {
 out:
 
     if (VK_SUCCESS != res) {
-        if (NULL != inst->phys_devs_term) {
-            // We've encountered an error, so we should free the
-            // new buffers.
+        if (NULL != new_phys_devs) {
+            // We've encountered an error, so we should free the new buffers.
             for (uint32_t i = 0; i < inst->total_gpu_count; i++) {
                 loader_instance_heap_free(inst, new_phys_devs[i]);
             }
-            loader_instance_heap_free(inst, inst->phys_devs_term);
-            inst->total_gpu_count = 0;
+            loader_instance_heap_free(inst, new_phys_devs);
         }
+        if (NULL != inst->phys_devs_term) {
+            loader_instance_heap_free(inst, inst->phys_devs_term);
+        }
+        inst->total_gpu_count = 0;
     } else {
         // Free everything that didn't carry over to the new array of
         // physical devices.  Everything else will have been copied over
