@@ -1,6 +1,6 @@
-/* Copyright (c) 2015-2016 The Khronos Group Inc.
- * Copyright (c) 2015-2016 Valve Corporation
- * Copyright (c) 2015-2016 LunarG, Inc.
+/* Copyright (c) 2015-2017 The Khronos Group Inc.
+ * Copyright (c) 2015-2017 Valve Corporation
+ * Copyright (c) 2015-2017 LunarG, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
  *
  * Author: Mark Lobodzinski <mark@lunarg.com>
  * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
+ * Author: Dave Houlton <daveh@lunarg.com>
  */
 
 #pragma once
@@ -102,6 +103,14 @@ bool vk_format_is_stencil_only(VkFormat format);
 
 static inline bool vk_format_is_color(VkFormat format) {
     return !(vk_format_is_undef(format) || vk_format_is_depth_or_stencil(format));
+}
+
+static inline bool vk_format_has_depth(VkFormat format) {
+    return (vk_format_is_depth_only(format) || vk_format_is_depth_and_stencil(format));
+}
+
+static inline bool vk_format_has_stencil(VkFormat format) {
+    return (vk_format_is_stencil_only(format) || vk_format_is_depth_and_stencil(format));
 }
 
 VK_LAYER_EXPORT bool vk_format_is_norm(VkFormat format);
