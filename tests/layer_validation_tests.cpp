@@ -9307,6 +9307,163 @@ TEST_F(VkLayerTest, DSBufferInfoErrors) {
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
 
+TEST_F(VkLayerTest, DSBufferLimitErrors) {
+    TEST_DESCRIPTION(
+        "Attempt to update buffer descriptor set that has VkDescriptorBufferInfo values that violate device limits.\n"
+        "Test cases include:\n"
+        "1. range of uniform buffer update exceeds maxUniformBufferRange\n"
+        "2. offset of uniform buffer update is not multiple of minUniformBufferOffsetAlignment\n"
+        "3. range of storage buffer update exceeds maxStorageBufferRange\n"
+        "4. offset of storage buffer update is not multiple of minStorageBufferOffsetAlignment");
+    VkResult err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    VkDescriptorPoolSize ds_type_count[2] = {};
+    ds_type_count[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    ds_type_count[0].descriptorCount = 1;
+    ds_type_count[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    ds_type_count[1].descriptorCount = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+    ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    ds_pool_ci.pNext = NULL;
+    ds_pool_ci.maxSets = 1;
+    ds_pool_ci.poolSizeCount = 2;
+    ds_pool_ci.pPoolSizes = ds_type_count;
+
+    VkDescriptorPool ds_pool;
+    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    // Create layout with single uniform buffer & single storage buffer descriptor
+    VkDescriptorSetLayoutBinding dsl_binding[2] = {};
+    dsl_binding[0].binding = 0;
+    dsl_binding[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    dsl_binding[0].descriptorCount = 1;
+    dsl_binding[0].stageFlags = VK_SHADER_STAGE_ALL;
+    dsl_binding[0].pImmutableSamplers = NULL;
+    dsl_binding[1].binding = 1;
+    dsl_binding[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    dsl_binding[1].descriptorCount = 1;
+    dsl_binding[1].stageFlags = VK_SHADER_STAGE_ALL;
+    dsl_binding[1].pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+    ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    ds_layout_ci.pNext = NULL;
+    ds_layout_ci.bindingCount = 2;
+    ds_layout_ci.pBindings = dsl_binding;
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSet descriptor_set = {};
+    VkDescriptorSetAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    alloc_info.descriptorSetCount = 1;
+    alloc_info.descriptorPool = ds_pool;
+    alloc_info.pSetLayouts = &ds_layout;
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptor_set);
+    ASSERT_VK_SUCCESS(err);
+
+    // Create a buffer to be used for invalid updates
+    auto max_ub_range = m_device->props.limits.maxUniformBufferRange;
+    auto min_ub_align = m_device->props.limits.minUniformBufferOffsetAlignment;
+    auto max_sb_range = m_device->props.limits.maxStorageBufferRange;
+    auto min_sb_align = m_device->props.limits.minStorageBufferOffsetAlignment;
+    VkBufferCreateInfo ub_ci = {};
+    ub_ci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    ub_ci.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    ub_ci.size = max_ub_range + 128;  // Make buffer bigger than range limit
+    ub_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    VkBuffer uniform_buffer;
+    err = vkCreateBuffer(m_device->device(), &ub_ci, NULL, &uniform_buffer);
+    ASSERT_VK_SUCCESS(err);
+    VkBufferCreateInfo sb_ci = {};
+    sb_ci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    sb_ci.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    sb_ci.size = max_sb_range + 128;  // Make buffer bigger than range limit
+    sb_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    VkBuffer storage_buffer;
+    err = vkCreateBuffer(m_device->device(), &sb_ci, NULL, &storage_buffer);
+    ASSERT_VK_SUCCESS(err);
+    // Have to bind memory to buffer before descriptor update
+    VkMemoryAllocateInfo mem_alloc = {};
+    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    mem_alloc.pNext = NULL;
+    mem_alloc.allocationSize = ub_ci.size + sb_ci.size + 1024;  // additional buffer for offset
+    mem_alloc.memoryTypeIndex = 0;
+
+    VkMemoryRequirements mem_reqs;
+    vkGetBufferMemoryRequirements(m_device->device(), uniform_buffer, &mem_reqs);
+    bool pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
+    vkGetBufferMemoryRequirements(m_device->device(), storage_buffer, &mem_reqs);
+    pass &= m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
+    if (!pass) {
+        vkDestroyBuffer(m_device->device(), uniform_buffer, NULL);
+        return;
+    }
+
+    VkDeviceMemory mem;
+    err = vkAllocateMemory(m_device->device(), &mem_alloc, NULL, &mem);
+    ASSERT_VK_SUCCESS(err);
+    err = vkBindBufferMemory(m_device->device(), uniform_buffer, mem, 0);
+    ASSERT_VK_SUCCESS(err);
+    auto sb_offset = ub_ci.size + 1024;
+    // Verify offset alignment, I know there's a bit trick to do this but it escapes me
+    sb_offset = (sb_offset % mem_reqs.alignment) ? sb_offset - (sb_offset % mem_reqs.alignment) : sb_offset;
+    err = vkBindBufferMemory(m_device->device(), storage_buffer, mem, sb_offset);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorBufferInfo buff_info = {};
+    buff_info.buffer = uniform_buffer;
+    buff_info.range = ub_ci.size;  // This will exceed limit
+    VkWriteDescriptorSet descriptor_write = {};
+    descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptor_write.dstBinding = 0;
+    descriptor_write.descriptorCount = 1;
+    descriptor_write.pTexelBufferView = nullptr;
+    descriptor_write.pBufferInfo = &buff_info;
+    descriptor_write.pImageInfo = nullptr;
+
+    descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    descriptor_write.dstSet = descriptor_set;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00948);
+    vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
+    m_errorMonitor->VerifyFound();
+
+    // Reduce size of range to acceptable limit & cause offset error
+    buff_info.range = max_ub_range;
+    buff_info.offset = min_ub_align - 1;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00944);
+    vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
+    m_errorMonitor->VerifyFound();
+
+    // Now break storage updates
+    buff_info.buffer = storage_buffer;
+    buff_info.range = sb_ci.size;  // This will exceed limit
+    buff_info.offset = 0;          // Reset offset for this update
+
+    descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    descriptor_write.dstBinding = 1;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00949);
+    vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
+    m_errorMonitor->VerifyFound();
+
+    // Reduce size of range to acceptable limit & cause offset error
+    buff_info.range = max_sb_range;
+    buff_info.offset = min_sb_align - 1;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00945);
+    vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
+    m_errorMonitor->VerifyFound();
+
+    vkFreeMemory(m_device->device(), mem, NULL);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
+    vkDestroyBuffer(m_device->device(), uniform_buffer, NULL);
+    vkDestroyBuffer(m_device->device(), storage_buffer, NULL);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
+}
+
 TEST_F(VkLayerTest, DSAspectBitsErrors) {
     // TODO : Initially only catching case where DEPTH & STENCIL aspect bits
     //  are set, but could expand this test to hit more cases.
