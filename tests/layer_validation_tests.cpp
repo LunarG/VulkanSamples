@@ -8660,7 +8660,7 @@ TEST_F(VkLayerTest, InvalidBarriers) {
     img_barrier.image = ds_image.handle();
 
     // Not having DEPTH or STENCIL set is an error
-    img_barrier.subresourceRange.aspectMask = 0;
+    img_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_METADATA_BIT;
     vkCmdPipelineBarrier(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
                          nullptr, 0, nullptr, 1, &img_barrier);
     m_errorMonitor->VerifyFound();
@@ -8688,7 +8688,7 @@ TEST_F(VkLayerTest, InvalidBarriers) {
         // DEPTH bit must be set
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                              "Depth-only image formats must have the VK_IMAGE_ASPECT_DEPTH_BIT set.");
-        img_barrier.subresourceRange.aspectMask = 0;
+        img_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_METADATA_BIT;
         vkCmdPipelineBarrier(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0,
                              0, nullptr, 0, nullptr, 1, &img_barrier);
         m_errorMonitor->VerifyFound();
@@ -8731,7 +8731,7 @@ TEST_F(VkLayerTest, InvalidBarriers) {
     // COLOR bit must be set
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "Color image formats must have the VK_IMAGE_ASPECT_COLOR_BIT set.");
-    img_barrier.subresourceRange.aspectMask = 0;
+    img_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_METADATA_BIT;
     vkCmdPipelineBarrier(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
                          nullptr, 0, nullptr, 1, &img_barrier);
     m_errorMonitor->VerifyFound();
