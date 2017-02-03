@@ -304,7 +304,12 @@ cvdescriptorset::AllocateDescriptorSetsData::AllocateDescriptorSetsData(uint32_t
 
 cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const VkDescriptorPool pool,
                                               const DescriptorSetLayout *layout, const core_validation::layer_data *dev_data)
-    : some_update_(false), set_(set), pool_state_(nullptr), p_layout_(layout), device_data_(dev_data) {
+    : some_update_(false),
+      set_(set),
+      pool_state_(nullptr),
+      p_layout_(layout),
+      device_data_(dev_data),
+      limits_(GetPhysicalDeviceLimits(dev_data)) {
     pool_state_ = getDescriptorPoolState(dev_data, pool);
     // Foreach binding, create default descriptors of given type
     for (uint32_t i = 0; i < p_layout_->GetBindingCount(); ++i) {
@@ -1256,6 +1261,7 @@ bool cvdescriptorset::DescriptorSet::ValidateBufferUsage(BUFFER_STATE const *buf
 //  2. buffer was created with correct usage flags
 //  3. offset is less than buffer size
 //  4. range is either VK_WHOLE_SIZE or falls in (0, (buffer size - offset)]
+//  5. range and offset are within the device's limits
 // If there's an error, update the error_msg string with details and return false, else return true
 bool cvdescriptorset::DescriptorSet::ValidateBufferUpdate(VkDescriptorBufferInfo const *buffer_info, VkDescriptorType type,
                                                           UNIQUE_VALIDATION_ERROR_CODE *error_code, std::string *error_msg) const {
@@ -1273,7 +1279,6 @@ bool cvdescriptorset::DescriptorSet::ValidateBufferUpdate(VkDescriptorBufferInfo
         // error_msg will have been updated by ValidateBufferUsage()
         return false;
     }
-    // TODO : Need to also validate device limit offset requirements captured in VALIDATION_ERROR_00944,945
     // offset must be less than buffer size
     if (buffer_info->offset > buffer_node->createInfo.size) {
         *error_code = VALIDATION_ERROR_00959;
@@ -1283,7 +1288,6 @@ bool cvdescriptorset::DescriptorSet::ValidateBufferUpdate(VkDescriptorBufferInfo
         *error_msg = error_str.str();
         return false;
     }
-    // TODO : Need to also validate device limit range requirements captured in VALIDATION_ERROR_00948,949
     if (buffer_info->range != VK_WHOLE_SIZE) {
         // Range must be VK_WHOLE_SIZE or > 0
         if (!buffer_info->range) {
@@ -1299,6 +1303,30 @@ bool cvdescriptorset::DescriptorSet::ValidateBufferUpdate(VkDescriptorBufferInfo
             std::stringstream error_str;
             error_str << "VkDescriptorBufferInfo range is " << buffer_info->range << " which is greater than buffer size ("
                       << buffer_node->createInfo.size << ") minus requested offset of " << buffer_info->offset;
+            *error_msg = error_str.str();
+            return false;
+        }
+    }
+    // Check buffer update sizes against device limits
+    if (VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER == type || VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC == type) {
+        auto max_ub_range = limits_.maxUniformBufferRange;
+        // TODO : If range is WHOLE_SIZE, need to make sure underlying buffer size doesn't exceed device max
+        if (buffer_info->range != VK_WHOLE_SIZE && buffer_info->range > max_ub_range) {
+            *error_code = VALIDATION_ERROR_00948;
+            std::stringstream error_str;
+            error_str << "VkDescriptorBufferInfo range is " << buffer_info->range
+                      << " which is greater than this device's maxUniformBufferRange (" << max_ub_range << ")";
+            *error_msg = error_str.str();
+            return false;
+        }
+    } else if (VK_DESCRIPTOR_TYPE_STORAGE_BUFFER == type || VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC == type) {
+        auto max_sb_range = limits_.maxStorageBufferRange;
+        // TODO : If range is WHOLE_SIZE, need to make sure underlying buffer size doesn't exceed device max
+        if (buffer_info->range != VK_WHOLE_SIZE && buffer_info->range > max_sb_range) {
+            *error_code = VALIDATION_ERROR_00949;
+            std::stringstream error_str;
+            error_str << "VkDescriptorBufferInfo range is " << buffer_info->range
+                      << " which is greater than this device's maxStorageBufferRange (" << max_sb_range << ")";
             *error_msg = error_str.str();
             return false;
         }

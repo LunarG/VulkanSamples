@@ -398,6 +398,7 @@ class DescriptorSet : public BASE_NODE {
     std::vector<std::unique_ptr<Descriptor>> descriptors_;
     // Ptr to device data used for various data look-ups
     const core_validation::layer_data *device_data_;
+    const VkPhysicalDeviceLimits limits_;
 };
 }
 #endif  // CORE_VALIDATION_DESCRIPTOR_SETS_H_

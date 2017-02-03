@@ -2122,6 +2122,10 @@ static PIPELINE_LAYOUT_NODE const *getPipelineLayout(layer_data const *my_data, 
     return &it->second;
 }
 
+VkPhysicalDeviceLimits GetPhysicalDeviceLimits(layer_data const *dev_data) {
+    return dev_data->phys_dev_properties.properties.limits;
+}
+
 // Return true if for a given PSO, the given state enum is dynamic, else return false
 static bool isDynamic(const PIPELINE_STATE *pPipeline, const VkDynamicState state) {
     if (pPipeline && pPipeline->graphicsPipelineCI.pDynamicState) {
