@@ -238,14 +238,14 @@ class Specification:
         db_lines.append("# The format of the lines is:")
         db_lines.append("# <error_enum>%s<check_implemented>%s<testname>%s<api>%s<errormsg>%s<note>" % (self.delimiter, self.delimiter, self.delimiter, self.delimiter, self.delimiter))
         db_lines.append("# error_enum: Unique error enum for this check of format %s<uniqueid>" % validation_error_enum_name)
-        db_lines.append("# check_implemented: 'Y' if check has been implemented in layers, 'U' for unknown, or 'N' for not implemented")
+        db_lines.append("# check_implemented: 'Y' if check has been implemented in layers, or 'N' for not implemented")
         db_lines.append("# testname: Name of validation test for this check, 'Unknown' for unknown, or 'None' if not implmented")
         db_lines.append("# api: Vulkan API function that this check is related to")
         db_lines.append("# errormsg: The unique error message for this check that includes spec language and link")
         db_lines.append("# note: Free txt field with any custom notes related to the check in question")
         for enum in sorted(self.val_error_dict):
-            # Default to unknown if check or test are implemented, then update below if appropriate
-            implemented = 'U'
+            # Default check/test implementation status to N/Unknown, then update below if appropriate
+            implemented = 'N'
             testname = 'Unknown'
             note = ''
             implicit = self.val_error_dict[enum]['implicit']
