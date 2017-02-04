@@ -742,11 +742,11 @@ static bool SetMemBinding(layer_data *dev_data, VkDeviceMemory mem, uint64_t han
         if (mem_binding->sparse) {
             UNIQUE_VALIDATION_ERROR_CODE error_code = VALIDATION_ERROR_00804;
             const char *handle_type = "IMAGE";
-            if (strcmp(apiName, "vkBindBufferMemory") == 0) {
+            if (strcmp(apiName, "vkBindBufferMemory()") == 0) {
                 error_code = VALIDATION_ERROR_00792;
                 handle_type = "BUFFER";
             } else {
-                assert(strcmp(apiName, "vkBindImageMemory") == 0);
+                assert(strcmp(apiName, "vkBindImageMemory()") == 0);
             }
             skip_call |=
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
@@ -760,10 +760,10 @@ static bool SetMemBinding(layer_data *dev_data, VkDeviceMemory mem, uint64_t han
             DEVICE_MEM_INFO *prev_binding = GetMemObjInfo(dev_data, mem_binding->binding.mem);
             if (prev_binding) {
                 UNIQUE_VALIDATION_ERROR_CODE error_code = VALIDATION_ERROR_00803;
-                if (strcmp(apiName, "vkBindBufferMemory") == 0) {
+                if (strcmp(apiName, "vkBindBufferMemory()") == 0) {
                     error_code = VALIDATION_ERROR_00791;
                 } else {
-                    assert(strcmp(apiName, "vkBindImageMemory") == 0);
+                    assert(strcmp(apiName, "vkBindImageMemory()") == 0);
                 }
                 skip_call |=
                     log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
@@ -5445,7 +5445,7 @@ VKAPI_ATTR VkResult VKAPI_CALL BindBufferMemory(VkDevice device, VkBuffer buffer
     std::unique_lock<std::mutex> lock(global_lock);
     // Track objects tied to memory
     uint64_t buffer_handle = reinterpret_cast<uint64_t &>(buffer);
-    bool skip_call = SetMemBinding(dev_data, mem, buffer_handle, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, "vkBindBufferMemory");
+    bool skip_call = SetMemBinding(dev_data, mem, buffer_handle, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, "vkBindBufferMemory()");
     auto buffer_state = GetBufferState(dev_data, buffer);
     if (buffer_state) {
         if (!buffer_state->memory_requirements_checked) {
@@ -5470,8 +5470,8 @@ VKAPI_ATTR VkResult VKAPI_CALL BindBufferMemory(VkDevice device, VkBuffer buffer
         auto mem_info = GetMemObjInfo(dev_data, mem);
         if (mem_info) {
             skip_call |=
-                InsertBufferMemoryRange(dev_data, buffer, mem_info, memoryOffset, buffer_state->requirements, "vkBindBufferMemory");
-            skip_call |= ValidateMemoryTypes(dev_data, mem_info, buffer_state->requirements.memoryTypeBits, "vkBindBufferMemory",
+                InsertBufferMemoryRange(dev_data, buffer, mem_info, memoryOffset, buffer_state->requirements, "vkBindBufferMemory()");
+            skip_call |= ValidateMemoryTypes(dev_data, mem_info, buffer_state->requirements.memoryTypeBits, "vkBindBufferMemory()",
                                              VALIDATION_ERROR_00797);
         }
 
@@ -10120,7 +10120,7 @@ static bool PreCallValidateBindImageMemory(layer_data *dev_data, VkImage image, 
     if (image_state) {
         // Track objects tied to memory
         uint64_t image_handle = reinterpret_cast<uint64_t &>(image);
-        skip = SetMemBinding(dev_data, mem, image_handle, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, "vkBindImageMemory");
+        skip = SetMemBinding(dev_data, mem, image_handle, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, "vkBindImageMemory()");
         if (!image_state->memory_requirements_checked) {
             // There's not an explicit requirement in the spec to call vkGetImageMemoryRequirements() prior to calling
             // BindImageMemory but it's implied in that memory being bound must conform with VkMemoryRequirements from
@@ -10140,8 +10140,8 @@ static bool PreCallValidateBindImageMemory(layer_data *dev_data, VkImage image, 
         auto mem_info = GetMemObjInfo(dev_data, mem);
         if (mem_info) {
             skip |= InsertImageMemoryRange(dev_data, image, mem_info, memoryOffset, image_state->requirements,
-                                           image_state->createInfo.tiling == VK_IMAGE_TILING_LINEAR, "vkBindImageMemory");
-            skip |= ValidateMemoryTypes(dev_data, mem_info, image_state->requirements.memoryTypeBits, "vkBindImageMemory",
+                                           image_state->createInfo.tiling == VK_IMAGE_TILING_LINEAR, "vkBindImageMemory()");
+            skip |= ValidateMemoryTypes(dev_data, mem_info, image_state->requirements.memoryTypeBits, "vkBindImageMemory()",
                                         VALIDATION_ERROR_00806);
         }
     }
