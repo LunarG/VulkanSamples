@@ -705,6 +705,7 @@ struct CHECK_DISABLED {
     bool destroy_query_pool;
     bool get_query_pool_results;
     bool destroy_buffer;
+    bool shader_validation;         // Skip validation for shaders
 };
 
 struct MT_FB_ATTACHMENT_INFO {

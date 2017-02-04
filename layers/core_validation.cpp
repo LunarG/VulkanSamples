@@ -3158,7 +3158,8 @@ static bool verifyPipelineCreateState(layer_data *my_data, std::vector<PIPELINE_
                              validation_error_map[VALIDATION_ERROR_02122]);
     }
 
-    if (!validate_and_capture_pipeline_shader_state(my_data->report_data, pPipeline, &my_data->enabled_features,
+    if (!GetDisables(my_data)->shader_validation &&
+        !validate_and_capture_pipeline_shader_state(my_data->report_data, pPipeline, &my_data->enabled_features,
                                                     my_data->shaderModuleMap)) {
         skip_call = true;
     }
@@ -9907,27 +9908,29 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateShaderModule(VkDevice device, const VkShade
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     bool skip_call = false;
 
-    // Use SPIRV-Tools validator to try and catch any issues with the module itself
-    spv_context ctx = spvContextCreate(SPV_ENV_VULKAN_1_0);
-    spv_const_binary_t binary{pCreateInfo->pCode, pCreateInfo->codeSize / sizeof(uint32_t)};
-    spv_diagnostic diag = nullptr;
+    if (!GetDisables(dev_data)->shader_validation) {
+        // Use SPIRV-Tools validator to try and catch any issues with the module itself
+        spv_context ctx = spvContextCreate(SPV_ENV_VULKAN_1_0);
+        spv_const_binary_t binary{pCreateInfo->pCode, pCreateInfo->codeSize / sizeof(uint32_t)};
+        spv_diagnostic diag = nullptr;
 
-    auto result = spvValidate(ctx, &binary, &diag);
-    if (result != SPV_SUCCESS) {
-        skip_call |=
-            log_msg(dev_data->report_data, result == SPV_WARNING ? VK_DEBUG_REPORT_WARNING_BIT_EXT : VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                    VkDebugReportObjectTypeEXT(0), 0, __LINE__, SHADER_CHECKER_INCONSISTENT_SPIRV, "SC",
-                    "SPIR-V module not valid: %s", diag && diag->error ? diag->error : "(no error text)");
+        auto result = spvValidate(ctx, &binary, &diag);
+        if (result != SPV_SUCCESS) {
+            skip_call |= log_msg(dev_data->report_data,
+                                 result == SPV_WARNING ? VK_DEBUG_REPORT_WARNING_BIT_EXT : VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                 VkDebugReportObjectTypeEXT(0), 0, __LINE__, SHADER_CHECKER_INCONSISTENT_SPIRV, "SC",
+                                 "SPIR-V module not valid: %s", diag && diag->error ? diag->error : "(no error text)");
+        }
+
+        spvDiagnosticDestroy(diag);
+        spvContextDestroy(ctx);
+
+        if (skip_call) return VK_ERROR_VALIDATION_FAILED_EXT;
     }
-
-    spvDiagnosticDestroy(diag);
-    spvContextDestroy(ctx);
-
-    if (skip_call) return VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkResult res = dev_data->dispatch_table.CreateShaderModule(device, pCreateInfo, pAllocator, pShaderModule);
 
-    if (res == VK_SUCCESS) {
+    if (res == VK_SUCCESS && !GetDisables(dev_data)->shader_validation) {
         std::lock_guard<std::mutex> lock(global_lock);
         dev_data->shaderModuleMap[*pShaderModule] = unique_ptr<shader_module>(new shader_module(pCreateInfo));
     }
