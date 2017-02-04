@@ -2692,34 +2692,39 @@ TEST_F(VkLayerTest, BindInvalidMemory) {
         image_alloc_info.allocationSize = image_mem_reqs.size;
         buffer_alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         buffer_alloc_info.allocationSize = buffer_mem_reqs.size;
-        // Create a mask of available memory types *not* supported by these resource.
+        // Create a mask of available memory types *not* supported by these resources,
+        // and try to use one of them.
         VkPhysicalDeviceMemoryProperties memory_properties = {};
         vkGetPhysicalDeviceMemoryProperties(m_device->phy().handle(), &memory_properties);
+        VkDeviceMemory image_mem, buffer_mem;
+
         uint32_t image_unsupported_mem_type_bits = ((1 << memory_properties.memoryTypeCount) - 1) & ~image_mem_reqs.memoryTypeBits;
-        pass = m_device->phy().set_memory_type(image_unsupported_mem_type_bits, &image_alloc_info, 0);
-        ASSERT_TRUE(pass);
+        if (image_unsupported_mem_type_bits != 0) {
+          pass = m_device->phy().set_memory_type(image_unsupported_mem_type_bits, &image_alloc_info, 0);
+          ASSERT_TRUE(pass);
+          err = vkAllocateMemory(device(), &image_alloc_info, NULL, &image_mem);
+          ASSERT_VK_SUCCESS(err);
+          m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00806);
+          err = vkBindImageMemory(device(), image, image_mem, 0);
+          (void)err;  // This may very well return an error.
+          m_errorMonitor->VerifyFound();
+          vkFreeMemory(device(), image_mem, NULL);
+        }
+
         uint32_t buffer_unsupported_mem_type_bits =
             ((1 << memory_properties.memoryTypeCount) - 1) & ~buffer_mem_reqs.memoryTypeBits;
-        pass = m_device->phy().set_memory_type(buffer_unsupported_mem_type_bits, &buffer_alloc_info, 0);
-        ASSERT_TRUE(pass);
-        VkDeviceMemory image_mem, buffer_mem;
-        err = vkAllocateMemory(device(), &image_alloc_info, NULL, &image_mem);
-        ASSERT_VK_SUCCESS(err);
-        err = vkAllocateMemory(device(), &buffer_alloc_info, NULL, &buffer_mem);
-        ASSERT_VK_SUCCESS(err);
+        if (buffer_unsupported_mem_type_bits != 0) {
+          pass = m_device->phy().set_memory_type(buffer_unsupported_mem_type_bits, &buffer_alloc_info, 0);
+          ASSERT_TRUE(pass);
+          err = vkAllocateMemory(device(), &buffer_alloc_info, NULL, &buffer_mem);
+          ASSERT_VK_SUCCESS(err);
+          m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00797);
+          err = vkBindBufferMemory(device(), buffer, buffer_mem, 0);
+          (void)err;  // This may very well return an error.
+          m_errorMonitor->VerifyFound();
+          vkFreeMemory(device(), buffer_mem, NULL);
+        }
 
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00806);
-        err = vkBindImageMemory(device(), image, image_mem, 0);
-        (void)err;  // This may very well return an error.
-        m_errorMonitor->VerifyFound();
-
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00797);
-        err = vkBindBufferMemory(device(), buffer, buffer_mem, 0);
-        (void)err;  // This may very well return an error.
-        m_errorMonitor->VerifyFound();
-
-        vkFreeMemory(device(), image_mem, NULL);
-        vkFreeMemory(device(), buffer_mem, NULL);
         vkDestroyImage(device(), image, NULL);
         vkDestroyBuffer(device(), buffer, NULL);
     }
