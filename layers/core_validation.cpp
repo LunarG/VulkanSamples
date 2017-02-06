@@ -11785,56 +11785,119 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumeratePhysicalDevices(VkInstance instance, uin
     return result;
 }
 
+// Common function to handle validation for GetPhysicalDeviceQueueFamilyProperties & 2KHR version
+static bool ValidateCommonGetPhysicalDeviceQueueFamilyProperties(instance_layer_data *instance_data,
+                                                                 PHYSICAL_DEVICE_STATE *pd_state,
+                                                                 uint32_t *pQueueFamilyPropertyCount, bool qfp_null,
+                                                                 const char *count_var_name, const char *caller_name) {
+    bool skip = false;
+    if (qfp_null) {
+        pd_state->vkGetPhysicalDeviceQueueFamilyPropertiesState = QUERY_COUNT;
+    } else {
+        // Verify that for each physical device, this function is called first with NULL pQueueFamilyProperties ptr in order to get
+        // count
+        if (UNCALLED == pd_state->vkGetPhysicalDeviceQueueFamilyPropertiesState) {
+            skip |= log_msg(instance_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT,
+                            VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVLIMITS_MISSING_QUERY_COUNT, "DL",
+                            "Call sequence has %s() w/ non-NULL "
+                            "pQueueFamilyProperties. You should first call %s() w/ "
+                            "NULL pQueueFamilyProperties to query pCount.",
+                            caller_name, caller_name);
+        }
+        // Then verify that pCount that is passed in on second call matches what was returned
+        if (pd_state->queueFamilyPropertiesCount != *pQueueFamilyPropertyCount) {
+            // TODO: this is not a requirement of the Valid Usage section for vkGetPhysicalDeviceQueueFamilyProperties, so
+            // provide as warning
+            skip |= log_msg(instance_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT,
+                            VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVLIMITS_COUNT_MISMATCH, "DL",
+                            "Call to %s() w/ %s value %u, but actual count supported by this physicalDevice is %u.", caller_name,
+                            count_var_name, *pQueueFamilyPropertyCount, pd_state->queueFamilyPropertiesCount);
+        }
+        pd_state->vkGetPhysicalDeviceQueueFamilyPropertiesState = QUERY_DETAILS;
+    }
+    return skip;
+}
+
+static bool PreCallValidateGetPhysicalDeviceQueueFamilyProperties(instance_layer_data *instance_data,
+                                                                  PHYSICAL_DEVICE_STATE *pd_state, uint32_t *pCount,
+                                                                  VkQueueFamilyProperties *pQueueFamilyProperties) {
+    return ValidateCommonGetPhysicalDeviceQueueFamilyProperties(instance_data, pd_state, pCount,
+                                                                (nullptr == pQueueFamilyProperties), "pCount",
+                                                                "vkGetPhysicalDeviceQueueFamilyProperties()");
+}
+
+static bool PreCallValidateGetPhysicalDeviceQueueFamilyProperties2KHR(instance_layer_data *instance_data,
+                                                                      PHYSICAL_DEVICE_STATE *pd_state,
+                                                                      uint32_t *pQueueFamilyPropertyCount,
+                                                                      VkQueueFamilyProperties2KHR *pQueueFamilyProperties) {
+    return ValidateCommonGetPhysicalDeviceQueueFamilyProperties(instance_data, pd_state, pQueueFamilyPropertyCount,
+                                                                (nullptr == pQueueFamilyProperties), "pQueueFamilyPropertyCount",
+                                                                "vkGetPhysicalDeviceQueueFamilyProperties2KHR()");
+}
+
+// Common function to update state for GetPhysicalDeviceQueueFamilyProperties & 2KHR version
+static void StateUpdateCommonGetPhysicalDeviceQueueFamilyProperties(PHYSICAL_DEVICE_STATE *pd_state, uint32_t count,
+                                                                    VkQueueFamilyProperties2KHR *pQueueFamilyProperties) {
+    if (!pQueueFamilyProperties) {
+        pd_state->queueFamilyPropertiesCount = count;
+    } else {  // Save queue family properties
+        if (pd_state->queue_family_properties.size() < count) pd_state->queue_family_properties.resize(count);
+        for (uint32_t i = 0; i < count; i++) {
+            pd_state->queue_family_properties[i] = pQueueFamilyProperties[i].queueFamilyProperties;
+        }
+    }
+}
+
+static void PostCallRecordGetPhysicalDeviceQueueFamilyProperties(PHYSICAL_DEVICE_STATE *pd_state, uint32_t count,
+                                                                 VkQueueFamilyProperties *pQueueFamilyProperties) {
+    VkQueueFamilyProperties2KHR *pqfp = nullptr;
+    std::vector<VkQueueFamilyProperties2KHR> qfp;
+    qfp.resize(count);
+    if (pQueueFamilyProperties) {
+        for (uint32_t i = 0; i < count; ++i) {
+            qfp[i].sType = VK_STRUCTURE_TYPE_QUEUE_FAMILY_PROPERTIES_2_KHR;
+            qfp[i].pNext = nullptr;
+            qfp[i].queueFamilyProperties = pQueueFamilyProperties[i];
+        }
+        pqfp = qfp.data();
+    }
+    StateUpdateCommonGetPhysicalDeviceQueueFamilyProperties(pd_state, count, pqfp);
+}
+
+static void PostCallRecordGetPhysicalDeviceQueueFamilyProperties2KHR(PHYSICAL_DEVICE_STATE *pd_state, uint32_t count,
+                                                                     VkQueueFamilyProperties2KHR *pQueueFamilyProperties) {
+    StateUpdateCommonGetPhysicalDeviceQueueFamilyProperties(pd_state, count, pQueueFamilyProperties);
+}
+
 VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceQueueFamilyProperties(VkPhysicalDevice physicalDevice, uint32_t *pCount,
                                                                   VkQueueFamilyProperties *pQueueFamilyProperties) {
-    bool skip_call = false;
     instance_layer_data *instance_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     auto physical_device_state = getPhysicalDeviceState(instance_data, physicalDevice);
-    if (physical_device_state) {
-        if (!pQueueFamilyProperties) {
-            physical_device_state->vkGetPhysicalDeviceQueueFamilyPropertiesState = QUERY_COUNT;
-        } else {
-            // Verify that for each physical device, this function is called first with NULL pQueueFamilyProperties ptr in order to
-            // get count
-            if (UNCALLED == physical_device_state->vkGetPhysicalDeviceQueueFamilyPropertiesState) {
-                skip_call |=
-                    log_msg(instance_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT,
-                            VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVLIMITS_MISSING_QUERY_COUNT, "DL",
-                            "Call sequence has vkGetPhysicalDeviceQueueFamilyProperties() w/ non-NULL "
-                            "pQueueFamilyProperties. You should first call vkGetPhysicalDeviceQueueFamilyProperties() w/ "
-                            "NULL pQueueFamilyProperties to query pCount.");
-            }
-            // Then verify that pCount that is passed in on second call matches what was returned
-            if (physical_device_state->queueFamilyPropertiesCount != *pCount) {
-                // TODO: this is not a requirement of the Valid Usage section for vkGetPhysicalDeviceQueueFamilyProperties, so
-                // provide as warning
-                skip_call |= log_msg(instance_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT,
-                                     VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVLIMITS_COUNT_MISMATCH, "DL",
-                                     "Call to vkGetPhysicalDeviceQueueFamilyProperties() w/ pCount value %u, but actual count "
-                                     "supported by this physicalDevice is %u.",
-                                     *pCount, physical_device_state->queueFamilyPropertiesCount);
-            }
-            physical_device_state->vkGetPhysicalDeviceQueueFamilyPropertiesState = QUERY_DETAILS;
-        }
-        if (skip_call) {
-            return;
-        }
-        instance_data->dispatch_table.GetPhysicalDeviceQueueFamilyProperties(physicalDevice, pCount, pQueueFamilyProperties);
-        if (!pQueueFamilyProperties) {
-            physical_device_state->queueFamilyPropertiesCount = *pCount;
-        } else {  // Save queue family properties
-            if (physical_device_state->queue_family_properties.size() < *pCount)
-                physical_device_state->queue_family_properties.resize(*pCount);
-            for (uint32_t i = 0; i < *pCount; i++) {
-                physical_device_state->queue_family_properties[i] = pQueueFamilyProperties[i];
-            }
-        }
-    } else {
-        log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0,
-                __LINE__, VALIDATION_ERROR_00028, "DL",
-                "Invalid physicalDevice (0x%p) passed into vkGetPhysicalDeviceQueueFamilyProperties(). %s", physicalDevice,
-                validation_error_map[VALIDATION_ERROR_00028]);
+    assert(physical_device_state);
+    bool skip =
+        PreCallValidateGetPhysicalDeviceQueueFamilyProperties(instance_data, physical_device_state, pCount, pQueueFamilyProperties);
+    if (skip) {
+        return;
     }
+    instance_data->dispatch_table.GetPhysicalDeviceQueueFamilyProperties(physicalDevice, pCount, pQueueFamilyProperties);
+    PostCallRecordGetPhysicalDeviceQueueFamilyProperties(physical_device_state, *pCount, pQueueFamilyProperties);
+}
+
+VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceQueueFamilyProperties2KHR(VkPhysicalDevice physicalDevice,
+                                                                      uint32_t *pQueueFamilyPropertyCount,
+                                                                      VkQueueFamilyProperties2KHR *pQueueFamilyProperties) {
+    instance_layer_data *instance_data = get_my_data_ptr(get_dispatch_key(physicalDevice), instance_layer_data_map);
+    auto physical_device_state = getPhysicalDeviceState(instance_data, physicalDevice);
+    assert(physical_device_state);
+    bool skip = PreCallValidateGetPhysicalDeviceQueueFamilyProperties2KHR(instance_data, physical_device_state,
+                                                                          pQueueFamilyPropertyCount, pQueueFamilyProperties);
+    if (skip) {
+        return;
+    }
+    instance_data->dispatch_table.GetPhysicalDeviceQueueFamilyProperties2KHR(physicalDevice, pQueueFamilyPropertyCount,
+                                                                             pQueueFamilyProperties);
+    PostCallRecordGetPhysicalDeviceQueueFamilyProperties2KHR(physical_device_state, *pQueueFamilyPropertyCount,
+                                                             pQueueFamilyProperties);
 }
 
 template <typename TCreateInfo, typename FPtr>
@@ -12438,7 +12501,23 @@ static PFN_vkVoidFunction intercept_khr_surface_command(const char *name, VkInst
     return nullptr;
 }
 
-static PFN_vkVoidFunction intercept_extension_instance_commands(const char *name, VkInstance instance) { return NULL; }
+static PFN_vkVoidFunction intercept_extension_instance_commands(const char *name, VkInstance instance) {
+    static const struct {
+        const char *name;
+        PFN_vkVoidFunction proc;
+        bool instance_layer_data::*enable;
+    } instance_extension_commands[] = {
+        {"vkGetPhysicalDeviceQueueFamilyProperties2KHR",
+         reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceQueueFamilyProperties2KHR)},
+    };
+
+    for (size_t i = 0; i < ARRAY_SIZE(instance_extension_commands); i++) {
+        if (!strcmp(instance_extension_commands[i].name, name)) {
+            return instance_extension_commands[i].proc;
+        }
+    }
+    return nullptr;
+}
 
 }  // namespace core_validation
 
