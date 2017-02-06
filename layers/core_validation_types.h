@@ -763,6 +763,12 @@ bool outsideRenderPass(const layer_data *my_data, GLOBAL_CB_NODE *pCB, const cha
 void SetLayout(GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair, const IMAGE_CMD_BUF_LAYOUT_NODE &node);
 void SetLayout(GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair, const VkImageLayout &layout);
 VkPhysicalDeviceLimits GetPhysicalDeviceLimits(layer_data const *);
+bool ValidateImageMemoryIsValid(layer_data *dev_data, IMAGE_STATE *image_state, const char *functionName);
+bool ValidateImageSampleCount(layer_data *dev_data, IMAGE_STATE *image_state, VkSampleCountFlagBits sample_count,
+                              const char *location, UNIQUE_VALIDATION_ERROR_CODE msgCode);
+bool ValidateImageUsageFlags(layer_data *dev_data, IMAGE_STATE const *image_state, VkFlags desired, VkBool32 strict,
+    int32_t const msgCode, char const *func_name, char const *usage_string);
+
 
 // Prototypes for layer_data accessor functions.  These should be in their own header file at some point
 PFN_vkGetPhysicalDeviceFormatProperties GetFormatPropertiesPointer(layer_data *);

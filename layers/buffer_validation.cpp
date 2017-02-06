@@ -1235,3 +1235,75 @@ bool PreCallValidateCmdClearAttachments(core_validation::layer_data *device_data
     }
     return skip;
 }
+
+bool PreCallValidateCmdResolveImage(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
+    IMAGE_STATE *dst_image_state) {
+    bool skip = false;
+    if (cb_node && src_image_state && dst_image_state) {
+        skip |= ValidateMemoryIsBoundToImage(device_data, src_image_state, "vkCmdResolveImage()", VALIDATION_ERROR_02541);
+        skip |= ValidateMemoryIsBoundToImage(device_data, dst_image_state, "vkCmdResolveImage()", VALIDATION_ERROR_02542);
+        skip |= ValidateCmd(device_data, cb_node, CMD_RESOLVEIMAGE, "vkCmdResolveImage()");
+        skip |= insideRenderPass(device_data, cb_node, "vkCmdResolveImage()", VALIDATION_ERROR_01335);
+    } else {
+        assert(0);
+    }
+    return skip;
+}
+
+void PreCallRecordCmdResolveImage(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
+    IMAGE_STATE *dst_image_state) {
+    // Update bindings between images and cmd buffer
+    AddCommandBufferBindingImage(device_data, cb_node, src_image_state);
+    AddCommandBufferBindingImage(device_data, cb_node, dst_image_state);
+
+    std::function<bool()> function = [=]() {
+        return ValidateImageMemoryIsValid(device_data, src_image_state, "vkCmdResolveImage()");
+    };
+    cb_node->validate_functions.push_back(function);
+    function = [=]() {
+        SetImageMemoryValid(device_data, dst_image_state, true);
+        return false;
+    };
+    cb_node->validate_functions.push_back(function);
+    UpdateCmdBufferLastCmd(device_data, cb_node, CMD_RESOLVEIMAGE);
+}
+
+bool PreCallValidateCmdBlitImage(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
+    IMAGE_STATE *dst_image_state) {
+    bool skip = false;
+    if (cb_node && src_image_state && dst_image_state) {
+        skip |= ValidateImageSampleCount(device_data, src_image_state, VK_SAMPLE_COUNT_1_BIT, "vkCmdBlitImage(): srcImage",
+            VALIDATION_ERROR_02194);
+        skip |= ValidateImageSampleCount(device_data, dst_image_state, VK_SAMPLE_COUNT_1_BIT, "vkCmdBlitImage(): dstImage",
+            VALIDATION_ERROR_02195);
+        skip |= ValidateMemoryIsBoundToImage(device_data, src_image_state, "vkCmdBlitImage()", VALIDATION_ERROR_02539);
+        skip |= ValidateMemoryIsBoundToImage(device_data, dst_image_state, "vkCmdBlitImage()", VALIDATION_ERROR_02540);
+        skip |= ValidateImageUsageFlags(device_data, src_image_state, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, true, VALIDATION_ERROR_02182,
+            "vkCmdBlitImage()", "VK_IMAGE_USAGE_TRANSFER_SRC_BIT");
+        skip |= ValidateImageUsageFlags(device_data, dst_image_state, VK_IMAGE_USAGE_TRANSFER_DST_BIT, true, VALIDATION_ERROR_02186,
+            "vkCmdBlitImage()", "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
+        skip |= ValidateCmd(device_data, cb_node, CMD_BLITIMAGE, "vkCmdBlitImage()");
+        skip |= insideRenderPass(device_data, cb_node, "vkCmdBlitImage()", VALIDATION_ERROR_01300);
+    } else {
+        assert(0);
+    }
+    return skip;
+}
+
+void PreCallRecordCmdBlitImage(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
+    IMAGE_STATE *dst_image_state) {
+    // Update bindings between images and cmd buffer
+    AddCommandBufferBindingImage(device_data, cb_node, src_image_state);
+    AddCommandBufferBindingImage(device_data, cb_node, dst_image_state);
+
+    std::function<bool()> function = [=]() { return ValidateImageMemoryIsValid(device_data, src_image_state, "vkCmdBlitImage()"); };
+    cb_node->validate_functions.push_back(function);
+    function = [=]() {
+        SetImageMemoryValid(device_data, dst_image_state, true);
+        return false;
+    };
+    cb_node->validate_functions.push_back(function);
+    UpdateCmdBufferLastCmd(device_data, cb_node, CMD_BLITIMAGE);
+}
+
+

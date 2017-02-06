@@ -128,4 +128,17 @@ bool PreCallValidateCmdClearAttachments(core_validation::layer_data *device_data
                                         uint32_t attachmentCount, const VkClearAttachment *pAttachments, uint32_t rectCount,
                                         const VkClearRect *pRects);
 
+bool PreCallValidateCmdResolveImage(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
+    IMAGE_STATE *dst_image_state);
+
+void PreCallRecordCmdResolveImage(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
+    IMAGE_STATE *dst_image_state);
+
+bool PreCallValidateCmdBlitImage(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
+    IMAGE_STATE *dst_image_state);
+
+void PreCallRecordCmdBlitImage(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
+    IMAGE_STATE *dst_image_state);
+
+
 #endif  // CORE_VALIDATION_BUFFER_VALIDATION_H_
