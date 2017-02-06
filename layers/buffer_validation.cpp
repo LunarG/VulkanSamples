@@ -1287,8 +1287,9 @@ bool PreCallValidateCmdBlitImage(core_validation::layer_data *device_data, GLOBA
         skip |= ValidateCmd(device_data, cb_node, CMD_BLITIMAGE, "vkCmdBlitImage()");
         skip |= insideRenderPass(device_data, cb_node, "vkCmdBlitImage()", VALIDATION_ERROR_01300);
 
-        // Warn for zero-sized regions
         for (uint32_t i = 0; i < regionCount; i++) {
+
+            // Warn for zero-sized regions
             if ((pRegions[i].srcOffsets[0].x == pRegions[i].srcOffsets[1].x) ||
                 (pRegions[i].srcOffsets[0].y == pRegions[i].srcOffsets[1].y) ||
                 (pRegions[i].srcOffsets[0].z == pRegions[i].srcOffsets[1].z)) {
@@ -1306,6 +1307,27 @@ bool PreCallValidateCmdBlitImage(core_validation::layer_data *device_data, GLOBA
                 skip |= log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                                 reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, DRAWSTATE_INVALID_EXTENTS, "IMAGE",
                                 "%s", ss.str().c_str());
+            }
+            if (pRegions[i].srcSubresource.layerCount == 0) {
+                char const str[] = "vkCmdBlitImage: number of layers in source subresource is zero";
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                    reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, DRAWSTATE_MISMATCHED_IMAGE_ASPECT,
+                    "IMAGE", str);
+            }
+            if (pRegions[i].dstSubresource.layerCount == 0) {
+                char const str[] = "vkCmdBlitImage: number of layers in destination subresource is zero";
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                    reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, DRAWSTATE_MISMATCHED_IMAGE_ASPECT,
+                    "IMAGE", str);
+            }
+
+            // Check that src/dst layercounts match
+            if (pRegions[i].srcSubresource.layerCount != pRegions[i].dstSubresource.layerCount) {
+                skip |=
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, VALIDATION_ERROR_01304, "IMAGE",
+                            "vkCmdBlitImage: layerCount in source and destination subresource of pRegions[%d] does not match. %s",
+                            i, validation_error_map[VALIDATION_ERROR_01304]);
             }
         }
 
@@ -1336,6 +1358,7 @@ bool PreCallValidateCmdBlitImage(core_validation::layer_data *device_data, GLOBA
 
         // Validate aspect bits and formats for depth/stencil images
         if (vk_format_is_depth_or_stencil(src_format) || vk_format_is_depth_or_stencil(dst_format)) {
+
             if (src_format != dst_format) {
                 std::stringstream ss;
                 ss << "vkCmdBlitImage: If one of srcImage and dstImage images has a format of depth, stencil or depth "
@@ -1347,31 +1370,7 @@ bool PreCallValidateCmdBlitImage(core_validation::layer_data *device_data, GLOBA
                                 "%s. %s", ss.str().c_str(), validation_error_map[VALIDATION_ERROR_02192]);
             }
 
-            // TODO: Confirm that all these checks are intended to be nested under depth/stencil only
             for (uint32_t i = 0; i < regionCount; i++) {
-                if (pRegions[i].srcSubresource.layerCount == 0) {
-                    char const str[] = "vkCmdBlitImage: number of layers in source subresource is zero";
-                    // TODO: Verify against Valid Use section of spec, if this case yields undefined results, then it's an error
-                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                                    reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, DRAWSTATE_MISMATCHED_IMAGE_ASPECT,
-                                    "IMAGE", str);
-                }
-
-                if (pRegions[i].dstSubresource.layerCount == 0) {
-                    char const str[] = "vkCmdBlitImage: number of layers in destination subresource is zero";
-                    // TODO: Verify against Valid Use section of spec, if this case yields undefined results, then it's an error
-                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                                    reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, DRAWSTATE_MISMATCHED_IMAGE_ASPECT,
-                                    "IMAGE", str);
-                }
-
-                if (pRegions[i].srcSubresource.layerCount != pRegions[i].dstSubresource.layerCount) {
-                    char const str[] = "vkCmdBlitImage: number of layers in source and destination subresources must match";
-                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                                    reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, DRAWSTATE_MISMATCHED_IMAGE_ASPECT,
-                                    "IMAGE", str);
-                }
-
                 VkImageAspectFlags srcAspect = pRegions[i].srcSubresource.aspectMask;
                 VkImageAspectFlags dstAspect = pRegions[i].dstSubresource.aspectMask;
 

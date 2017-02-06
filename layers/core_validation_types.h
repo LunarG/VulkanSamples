@@ -767,8 +767,10 @@ bool ValidateImageMemoryIsValid(layer_data *dev_data, IMAGE_STATE *image_state, 
 bool ValidateImageSampleCount(layer_data *dev_data, IMAGE_STATE *image_state, VkSampleCountFlagBits sample_count,
                               const char *location, UNIQUE_VALIDATION_ERROR_CODE msgCode);
 bool ValidateImageUsageFlags(layer_data *dev_data, IMAGE_STATE const *image_state, VkFlags desired, VkBool32 strict,
-    int32_t const msgCode, char const *func_name, char const *usage_string);
-
+                             int32_t const msgCode, char const *func_name, char const *usage_string);
+bool ValidateImageSubrangeLevelLayerCounts(layer_data *dev_data, const VkImageSubresourceRange &subresourceRange,
+                                           const char *func_name, UNIQUE_VALIDATION_ERROR_CODE layer_msg_code,
+                                           UNIQUE_VALIDATION_ERROR_CODE level_msg_code);
 
 // Prototypes for layer_data accessor functions.  These should be in their own header file at some point
 PFN_vkGetPhysicalDeviceFormatProperties GetFormatPropertiesPointer(layer_data *);

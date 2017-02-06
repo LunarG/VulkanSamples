@@ -6291,8 +6291,8 @@ static bool ValidateImageAspectMask(layer_data *dev_data, VkImage image, VkForma
     return skip;
 }
 
-static bool ValidateImageSubrangeLevelLayerCounts(layer_data *dev_data, const VkImageSubresourceRange &subresourceRange,
-                                                  const char *func_name) {
+bool ValidateImageSubrangeLevelLayerCounts(layer_data *dev_data, const VkImageSubresourceRange &subresourceRange,
+                                           const char *func_name) {
     bool skip = false;
     if (subresourceRange.levelCount == 0) {
         skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
