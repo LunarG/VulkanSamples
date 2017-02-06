@@ -8186,10 +8186,47 @@ static inline bool ValidateImageSampleCount(layer_data *dev_data, IMAGE_STATE *i
     return skip;
 }
 
+bool PreCallValidateCmdBlitImage(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
+                                 IMAGE_STATE *dst_image_state) {
+    bool skip = false;
+    if (cb_node && src_image_state && dst_image_state) {
+        skip |= ValidateImageSampleCount(device_data, src_image_state, VK_SAMPLE_COUNT_1_BIT, "vkCmdBlitImage(): srcImage",
+                                         VALIDATION_ERROR_02194);
+        skip |= ValidateImageSampleCount(device_data, dst_image_state, VK_SAMPLE_COUNT_1_BIT, "vkCmdBlitImage(): dstImage",
+                                         VALIDATION_ERROR_02195);
+        skip |= ValidateMemoryIsBoundToImage(device_data, src_image_state, "vkCmdBlitImage()", VALIDATION_ERROR_02539);
+        skip |= ValidateMemoryIsBoundToImage(device_data, dst_image_state, "vkCmdBlitImage()", VALIDATION_ERROR_02540);
+        skip |= ValidateImageUsageFlags(device_data, src_image_state, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, true, VALIDATION_ERROR_02182,
+                                        "vkCmdBlitImage()", "VK_IMAGE_USAGE_TRANSFER_SRC_BIT");
+        skip |= ValidateImageUsageFlags(device_data, dst_image_state, VK_IMAGE_USAGE_TRANSFER_DST_BIT, true, VALIDATION_ERROR_02186,
+                                        "vkCmdBlitImage()", "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
+        skip |= ValidateCmd(device_data, cb_node, CMD_BLITIMAGE, "vkCmdBlitImage()");
+        skip |= insideRenderPass(device_data, cb_node, "vkCmdBlitImage()", VALIDATION_ERROR_01300);
+    } else {
+        assert(0);
+    }
+    return skip;
+}
+
+void PreCallRecordCmdBlitImage(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
+                               IMAGE_STATE *dst_image_state) {
+    // Update bindings between images and cmd buffer
+    AddCommandBufferBindingImage(device_data, cb_node, src_image_state);
+    AddCommandBufferBindingImage(device_data, cb_node, dst_image_state);
+
+    std::function<bool()> function = [=]() { return ValidateImageMemoryIsValid(device_data, src_image_state, "vkCmdBlitImage()"); };
+    cb_node->validate_functions.push_back(function);
+    function = [=]() {
+        SetImageMemoryValid(device_data, dst_image_state, true);
+        return false;
+    };
+    cb_node->validate_functions.push_back(function);
+    UpdateCmdBufferLastCmd(device_data, cb_node, CMD_BLITIMAGE);
+}
+
 VKAPI_ATTR void VKAPI_CALL CmdBlitImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout,
                                         VkImage dstImage, VkImageLayout dstImageLayout, uint32_t regionCount,
                                         const VkImageBlit *pRegions, VkFilter filter) {
-    bool skip = false;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
 
@@ -8197,41 +8234,11 @@ VKAPI_ATTR void VKAPI_CALL CmdBlitImage(VkCommandBuffer commandBuffer, VkImage s
     auto src_image_state = getImageState(dev_data, srcImage);
     auto dst_image_state = getImageState(dev_data, dstImage);
 
-    if (cb_node && src_image_state && dst_image_state) {
-        skip |= ValidateImageSampleCount(dev_data, src_image_state, VK_SAMPLE_COUNT_1_BIT, "vkCmdBlitImage(): srcImage",
-                                              VALIDATION_ERROR_02194);
-        skip |= ValidateImageSampleCount(dev_data, dst_image_state, VK_SAMPLE_COUNT_1_BIT, "vkCmdBlitImage(): dstImage",
-                                              VALIDATION_ERROR_02195);
-        skip |= ValidateMemoryIsBoundToImage(dev_data, src_image_state, "vkCmdBlitImage()", VALIDATION_ERROR_02539);
-        skip |= ValidateMemoryIsBoundToImage(dev_data, dst_image_state, "vkCmdBlitImage()", VALIDATION_ERROR_02540);
-        skip |= ValidateImageUsageFlags(dev_data, src_image_state, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, true,
-                                             VALIDATION_ERROR_02182, "vkCmdBlitImage()", "VK_IMAGE_USAGE_TRANSFER_SRC_BIT");
-        skip |= ValidateImageUsageFlags(dev_data, dst_image_state, VK_IMAGE_USAGE_TRANSFER_DST_BIT, true,
-                                             VALIDATION_ERROR_02186, "vkCmdBlitImage()", "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
-        skip |= ValidateCmd(dev_data, cb_node, CMD_BLITIMAGE, "vkCmdBlitImage()");
-        skip |= insideRenderPass(dev_data, cb_node, "vkCmdBlitImage()", VALIDATION_ERROR_01300);
+    bool skip = PreCallValidateCmdBlitImage(dev_data, cb_node, src_image_state, dst_image_state);
 
-        if (!skip) {
-            // Update bindings between images and cmd buffer
-            AddCommandBufferBindingImage(dev_data, cb_node, src_image_state);
-            AddCommandBufferBindingImage(dev_data, cb_node, dst_image_state);
-
-            std::function<bool()> function = [=]() {
-                return ValidateImageMemoryIsValid(dev_data, src_image_state, "vkCmdBlitImage()");
-            };
-            cb_node->validate_functions.push_back(function);
-            function = [=]() {
-                SetImageMemoryValid(dev_data, dst_image_state, true);
-                return false;
-            };
-            cb_node->validate_functions.push_back(function);
-            UpdateCmdBufferLastCmd(dev_data, cb_node, CMD_BLITIMAGE);
-        }
-    } else {
-        assert(0);
-    }
-    lock.unlock();
     if (!skip) {
+        PreCallRecordCmdBlitImage(dev_data, cb_node, src_image_state, dst_image_state);
+        lock.unlock();
         dev_data->dispatch_table.CmdBlitImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount,
                                               pRegions, filter);
     }
