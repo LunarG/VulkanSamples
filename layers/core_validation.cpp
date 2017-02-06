@@ -6292,8 +6292,7 @@ static bool ValidateImageAspectMask(layer_data *dev_data, VkImage image, VkForma
 }
 
 static bool ValidateImageSubrangeLevelLayerCounts(layer_data *dev_data, const VkImageSubresourceRange &subresourceRange,
-                                                  const char *func_name, UNIQUE_VALIDATION_ERROR_CODE layer_msg_code,
-                                                  UNIQUE_VALIDATION_ERROR_CODE level_msg_code) {
+                                                  const char *func_name) {
     bool skip = false;
     if (subresourceRange.levelCount == 0) {
         skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
@@ -6337,8 +6336,7 @@ static bool PreCallValidateCreateImageView(layer_data *dev_data, const VkImageVi
                         VALIDATION_ERROR_00769, "IMAGE", "%s %s", ss.str().c_str(), validation_error_map[VALIDATION_ERROR_00769]);
         }
         // TODO: Need new valid usage language for levelCount == 0 & layerCount == 0
-        skip |= ValidateImageSubrangeLevelLayerCounts(dev_data, create_info->subresourceRange, "vkCreateImageView()",
-                                                      VALIDATION_ERROR_00768, VALIDATION_ERROR_00769);
+        skip |= ValidateImageSubrangeLevelLayerCounts(dev_data, create_info->subresourceRange, "vkCreateImageView()");
 
         VkImageCreateFlags image_flags = image_state->createInfo.flags;
         VkFormat image_format = image_state->createInfo.format;
@@ -8761,8 +8759,7 @@ static bool ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, ui
                 }
             }
             if (imageFound) {
-                skip |= ValidateImageSubrangeLevelLayerCounts(dev_data, mem_barrier->subresourceRange, funcName,
-                                                              VALIDATION_ERROR_00768, VALIDATION_ERROR_00769);
+                skip |= ValidateImageSubrangeLevelLayerCounts(dev_data, mem_barrier->subresourceRange, funcName);
                 auto aspect_mask = mem_barrier->subresourceRange.aspectMask;
                 skip |= ValidateImageAspectMask(dev_data, image_data->image, format, aspect_mask, funcName);
                 int layerCount = (mem_barrier->subresourceRange.layerCount == VK_REMAINING_ARRAY_LAYERS)
