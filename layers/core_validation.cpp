@@ -8196,6 +8196,7 @@ VKAPI_ATTR void VKAPI_CALL CmdBlitImage(VkCommandBuffer commandBuffer, VkImage s
     auto cb_node = getCBNode(dev_data, commandBuffer);
     auto src_image_state = getImageState(dev_data, srcImage);
     auto dst_image_state = getImageState(dev_data, dstImage);
+
     if (cb_node && src_image_state && dst_image_state) {
         skip_call |= ValidateImageSampleCount(dev_data, src_image_state, VK_SAMPLE_COUNT_1_BIT, "vkCmdBlitImage(): srcImage",
                                               VALIDATION_ERROR_02194);
@@ -8203,34 +8204,37 @@ VKAPI_ATTR void VKAPI_CALL CmdBlitImage(VkCommandBuffer commandBuffer, VkImage s
                                               VALIDATION_ERROR_02195);
         skip_call |= ValidateMemoryIsBoundToImage(dev_data, src_image_state, "vkCmdBlitImage()", VALIDATION_ERROR_02539);
         skip_call |= ValidateMemoryIsBoundToImage(dev_data, dst_image_state, "vkCmdBlitImage()", VALIDATION_ERROR_02540);
-        // Update bindings between images and cmd buffer
-        AddCommandBufferBindingImage(dev_data, cb_node, src_image_state);
-        AddCommandBufferBindingImage(dev_data, cb_node, dst_image_state);
-        // Validate that SRC & DST images have correct usage flags set
         skip_call |= ValidateImageUsageFlags(dev_data, src_image_state, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, true,
                                              VALIDATION_ERROR_02182, "vkCmdBlitImage()", "VK_IMAGE_USAGE_TRANSFER_SRC_BIT");
         skip_call |= ValidateImageUsageFlags(dev_data, dst_image_state, VK_IMAGE_USAGE_TRANSFER_DST_BIT, true,
                                              VALIDATION_ERROR_02186, "vkCmdBlitImage()", "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
-        std::function<bool()> function = [=]() {
-            return ValidateImageMemoryIsValid(dev_data, src_image_state, "vkCmdBlitImage()");
-        };
-        cb_node->validate_functions.push_back(function);
-        function = [=]() {
-            SetImageMemoryValid(dev_data, dst_image_state, true);
-            return false;
-        };
-        cb_node->validate_functions.push_back(function);
-
         skip_call |= ValidateCmd(dev_data, cb_node, CMD_BLITIMAGE, "vkCmdBlitImage()");
-        UpdateCmdBufferLastCmd(dev_data, cb_node, CMD_BLITIMAGE);
         skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdBlitImage()", VALIDATION_ERROR_01300);
+
+        if (!skip_call) {
+            // Update bindings between images and cmd buffer
+            AddCommandBufferBindingImage(dev_data, cb_node, src_image_state);
+            AddCommandBufferBindingImage(dev_data, cb_node, dst_image_state);
+
+            std::function<bool()> function = [=]() {
+                return ValidateImageMemoryIsValid(dev_data, src_image_state, "vkCmdBlitImage()");
+            };
+            cb_node->validate_functions.push_back(function);
+            function = [=]() {
+                SetImageMemoryValid(dev_data, dst_image_state, true);
+                return false;
+            };
+            cb_node->validate_functions.push_back(function);
+            UpdateCmdBufferLastCmd(dev_data, cb_node, CMD_BLITIMAGE);
+        }
     } else {
         assert(0);
     }
     lock.unlock();
-    if (!skip_call)
+    if (!skip_call) {
         dev_data->dispatch_table.CmdBlitImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount,
                                               pRegions, filter);
+    }
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdCopyBufferToImage(VkCommandBuffer commandBuffer, VkBuffer srcBuffer, VkImage dstImage,
