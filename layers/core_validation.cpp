@@ -8425,6 +8425,44 @@ VKAPI_ATTR void VKAPI_CALL CmdResolveImage(VkCommandBuffer commandBuffer, VkImag
     }
 }
 
+VKAPI_ATTR void VKAPI_CALL GetImageSubresourceLayout(VkDevice device, VkImage image, const VkImageSubresource *pSubresource,
+    VkSubresourceLayout *pLayout) {
+    bool skipCall = false;
+    layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkFormat format;
+
+    auto imageEntry = getImageState(device_data, image);
+
+    // Validate that image aspects match formats
+    if (imageEntry) {
+        format = imageEntry->createInfo.format;
+        if (vk_format_is_color(format)) {
+            if (pSubresource->aspectMask != VK_IMAGE_ASPECT_COLOR_BIT) {
+                std::stringstream ss;
+                ss << "vkGetImageSubresourceLayout: For color formats, the aspectMask field of VkImageSubresource must be "
+                    "VK_IMAGE_ASPECT_COLOR.";
+                skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                    (uint64_t)image, __LINE__, VALIDATION_ERROR_00741, "IMAGE", "%s. %s", ss.str().c_str(),
+                    validation_error_map[VALIDATION_ERROR_00741]);
+            }
+        } else if (vk_format_is_depth_or_stencil(format)) {
+            if ((pSubresource->aspectMask != VK_IMAGE_ASPECT_DEPTH_BIT) &&
+                (pSubresource->aspectMask != VK_IMAGE_ASPECT_STENCIL_BIT)) {
+                std::stringstream ss;
+                ss << "vkGetImageSubresourceLayout: For depth/stencil formats, the aspectMask selects either the depth or stencil "
+                    "image aspectMask.";
+                skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                    (uint64_t)image, __LINE__, VALIDATION_ERROR_00741, "IMAGE", "%s. %s", ss.str().c_str(),
+                    validation_error_map[VALIDATION_ERROR_00741]);
+            }
+        }
+    }
+
+    if (!skipCall) {
+        device_data->dispatch_table.GetImageSubresourceLayout(device, image, pSubresource, pLayout);
+    }
+}
+
 bool setEventStageMask(VkQueue queue, VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags stageMask) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
@@ -12325,6 +12363,7 @@ static PFN_vkVoidFunction intercept_core_device_command(const char *name) {
         {"vkCmdClearDepthStencilImage", reinterpret_cast<PFN_vkVoidFunction>(CmdClearDepthStencilImage)},
         {"vkCmdClearAttachments", reinterpret_cast<PFN_vkVoidFunction>(CmdClearAttachments)},
         {"vkCmdResolveImage", reinterpret_cast<PFN_vkVoidFunction>(CmdResolveImage)},
+        {"vkGetImageSubresourceLayout", reinterpret_cast<PFN_vkVoidFunction>(GetImageSubresourceLayout) },
         {"vkCmdSetEvent", reinterpret_cast<PFN_vkVoidFunction>(CmdSetEvent)},
         {"vkCmdResetEvent", reinterpret_cast<PFN_vkVoidFunction>(CmdResetEvent)},
         {"vkCmdWaitEvents", reinterpret_cast<PFN_vkVoidFunction>(CmdWaitEvents)},
