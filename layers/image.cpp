@@ -349,67 +349,6 @@ VKAPI_ATTR void VKAPI_CALL CmdResolveImage(VkCommandBuffer commandBuffer, VkImag
                                            const VkImageResolve *pRegions) {
     bool skipCall = false;
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-    auto srcImageEntry = getImageState(device_data, srcImage);
-    auto dstImageEntry = getImageState(device_data, dstImage);
-
-    // For each region, the number of layers in the image subresource should not be zero
-    // For each region, src and dest image aspect must be color only
-    for (uint32_t i = 0; i < regionCount; i++) {
-        if (pRegions[i].srcSubresource.layerCount == 0) {
-            char const str[] = "vkCmdResolveImage: number of layers in source subresource is zero";
-            // TODO: Verify against Valid Use section of spec. Generally if something yield an undefined result, it's invalid/error
-            skipCall |=
-                log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                        (uint64_t)commandBuffer, __LINE__, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
-        }
-
-        if (pRegions[i].dstSubresource.layerCount == 0) {
-            char const str[] = "vkCmdResolveImage: number of layers in destination subresource is zero";
-
-            // TODO: Verify against Valid Use section of spec. Generally if something yield an undefined result, it's invalid/error
-            skipCall |=
-                log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                        (uint64_t)commandBuffer, __LINE__, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
-        }
-
-        // TODO: VALIDATION_ERROR_01339
-
-        if ((pRegions[i].srcSubresource.aspectMask != VK_IMAGE_ASPECT_COLOR_BIT) ||
-            (pRegions[i].dstSubresource.aspectMask != VK_IMAGE_ASPECT_COLOR_BIT)) {
-            char const str[] =
-                "vkCmdResolveImage: src and dest aspectMasks for each region must specify only VK_IMAGE_ASPECT_COLOR_BIT";
-            skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)commandBuffer, __LINE__,
-                                VALIDATION_ERROR_01338, "IMAGE", "%s. %s", str, validation_error_map[VALIDATION_ERROR_01338]);
-        }
-    }
-
-    if (srcImageEntry && dstImageEntry) {
-        if (srcImageEntry->format != dstImageEntry->format) {
-            char const str[] = "vkCmdResolveImage called with unmatched source and dest formats.";
-            skipCall |=
-                log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                        (uint64_t)commandBuffer, __LINE__, IMAGE_MISMATCHED_IMAGE_FORMAT, "IMAGE", str);
-        }
-        if (srcImageEntry->imageType != dstImageEntry->imageType) {
-            char const str[] = "vkCmdResolveImage called with unmatched source and dest image types.";
-            skipCall |=
-                log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                        (uint64_t)commandBuffer, __LINE__, IMAGE_MISMATCHED_IMAGE_TYPE, "IMAGE", str);
-        }
-        if (srcImageEntry->samples == VK_SAMPLE_COUNT_1_BIT) {
-            char const str[] = "vkCmdResolveImage called with source sample count less than 2.";
-            skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)commandBuffer, __LINE__,
-                                VALIDATION_ERROR_01320, "IMAGE", "%s. %s", str, validation_error_map[VALIDATION_ERROR_01320]);
-        }
-        if (dstImageEntry->samples != VK_SAMPLE_COUNT_1_BIT) {
-            char const str[] = "vkCmdResolveImage called with dest sample count greater than 1.";
-            skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)commandBuffer, __LINE__,
-                                VALIDATION_ERROR_01321, "IMAGE", "%s. %s", str, validation_error_map[VALIDATION_ERROR_01321]);
-        }
-    }
 
     if (!skipCall) {
         device_data->device_dispatch_table->CmdResolveImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout,

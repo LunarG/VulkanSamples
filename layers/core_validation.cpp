@@ -8415,7 +8415,7 @@ VKAPI_ATTR void VKAPI_CALL CmdResolveImage(VkCommandBuffer commandBuffer, VkImag
     auto src_image_state = getImageState(dev_data, srcImage);
     auto dst_image_state = getImageState(dev_data, dstImage);
 
-    bool skip = PreCallValidateCmdResolveImage(dev_data, cb_node, src_image_state, dst_image_state);
+    bool skip = PreCallValidateCmdResolveImage(dev_data, cb_node, src_image_state, dst_image_state, regionCount, pRegions);
 
     if (!skip) {
         PreCallRecordCmdResolveImage(dev_data, cb_node, src_image_state, dst_image_state);

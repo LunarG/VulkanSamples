@@ -1237,13 +1237,73 @@ bool PreCallValidateCmdClearAttachments(core_validation::layer_data *device_data
 }
 
 bool PreCallValidateCmdResolveImage(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
-    IMAGE_STATE *dst_image_state) {
+    IMAGE_STATE *dst_image_state, uint32_t regionCount, const VkImageResolve *pRegions) {
+    const debug_report_data *report_data = core_validation::GetReportData(device_data);
     bool skip = false;
     if (cb_node && src_image_state && dst_image_state) {
         skip |= ValidateMemoryIsBoundToImage(device_data, src_image_state, "vkCmdResolveImage()", VALIDATION_ERROR_02541);
         skip |= ValidateMemoryIsBoundToImage(device_data, dst_image_state, "vkCmdResolveImage()", VALIDATION_ERROR_02542);
         skip |= ValidateCmd(device_data, cb_node, CMD_RESOLVEIMAGE, "vkCmdResolveImage()");
         skip |= insideRenderPass(device_data, cb_node, "vkCmdResolveImage()", VALIDATION_ERROR_01335);
+
+        // For each region, the number of layers in the image subresource should not be zero
+        // For each region, src and dest image aspect must be color only
+        for (uint32_t i = 0; i < regionCount; i++) {
+            if (pRegions[i].srcSubresource.layerCount == 0) {
+                char const str[] = "vkCmdResolveImage: number of layers in source subresource is zero";
+                // TODO: Verify against Valid Use section of spec. Generally if something yield an undefined result, it's
+                // invalid/error
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, DRAWSTATE_MISMATCHED_IMAGE_ASPECT,
+                                "IMAGE", str);
+            }
+
+            if (pRegions[i].dstSubresource.layerCount == 0) {
+                char const str[] = "vkCmdResolveImage: number of layers in destination subresource is zero";
+
+                // TODO: Verify against Valid Use section of spec. Generally if something yield an undefined result, it's
+                // invalid/error
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, DRAWSTATE_MISMATCHED_IMAGE_ASPECT,
+                                "IMAGE", str);
+            }
+
+            // TODO: VALIDATION_ERROR_01339
+
+            if ((pRegions[i].srcSubresource.aspectMask != VK_IMAGE_ASPECT_COLOR_BIT) ||
+                (pRegions[i].dstSubresource.aspectMask != VK_IMAGE_ASPECT_COLOR_BIT)) {
+                char const str[] =
+                    "vkCmdResolveImage: src and dest aspectMasks for each region must specify only VK_IMAGE_ASPECT_COLOR_BIT";
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, VALIDATION_ERROR_01338, "IMAGE",
+                                "%s. %s", str, validation_error_map[VALIDATION_ERROR_01338]);
+            }
+        }
+
+        if (src_image_state->createInfo.format != dst_image_state->createInfo.format) {
+            char const str[] = "vkCmdResolveImage called with unmatched source and dest formats.";
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, DRAWSTATE_MISMATCHED_IMAGE_FORMAT,
+                            "IMAGE", str);
+        }
+        if (src_image_state->createInfo.imageType != dst_image_state->createInfo.imageType) {
+            char const str[] = "vkCmdResolveImage called with unmatched source and dest image types.";
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, DRAWSTATE_MISMATCHED_IMAGE_TYPE, "IMAGE",
+                            str);
+        }
+        if (src_image_state->createInfo.samples == VK_SAMPLE_COUNT_1_BIT) {
+            char const str[] = "vkCmdResolveImage called with source sample count less than 2.";
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, VALIDATION_ERROR_01320, "IMAGE", "%s. %s",
+                            str, validation_error_map[VALIDATION_ERROR_01320]);
+        }
+        if (dst_image_state->createInfo.samples != VK_SAMPLE_COUNT_1_BIT) {
+            char const str[] = "vkCmdResolveImage called with dest sample count greater than 1.";
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, VALIDATION_ERROR_01321, "IMAGE", "%s. %s",
+                            str, validation_error_map[VALIDATION_ERROR_01321]);
+        }
     } else {
         assert(0);
     }

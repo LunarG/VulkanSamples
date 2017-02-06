@@ -129,7 +129,7 @@ bool PreCallValidateCmdClearAttachments(core_validation::layer_data *device_data
                                         const VkClearRect *pRects);
 
 bool PreCallValidateCmdResolveImage(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
-    IMAGE_STATE *dst_image_state);
+    IMAGE_STATE *dst_image_state, uint32_t regionCount, const VkImageResolve *pRegions);
 
 void PreCallRecordCmdResolveImage(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
     IMAGE_STATE *dst_image_state);
