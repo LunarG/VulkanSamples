@@ -1424,15 +1424,6 @@ bool PreCallValidateCmdBlitImage(core_validation::layer_data *device_data, GLOBA
                             reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, VALIDATION_ERROR_02193, "IMAGE", "%s. %s",
                             ss.str().c_str(), validation_error_map[VALIDATION_ERROR_02193]);
         }
-        if (vk_format_is_int(src_format) && (filter != VK_FILTER_NEAREST)) {
-            std::stringstream ss;
-            ss << "vkCmdBlitImage: If the format of srcImage is an integer-based format "
-               << "then filter must be VK_FILTER_NEAREST.";
-            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, DRAWSTATE_INVALID_IMAGE_FILTER, "IMAGE",
-                            "%s", ss.str().c_str());
-        }
-
     } else {
         assert(0);
     }
