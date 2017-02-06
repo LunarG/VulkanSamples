@@ -135,7 +135,7 @@ void PreCallRecordCmdResolveImage(core_validation::layer_data *device_data, GLOB
     IMAGE_STATE *dst_image_state);
 
 bool PreCallValidateCmdBlitImage(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
-    IMAGE_STATE *dst_image_state);
+    IMAGE_STATE *dst_image_state, uint32_t regionCount, const VkImageBlit *pRegions, VkFilter filter);
 
 void PreCallRecordCmdBlitImage(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
     IMAGE_STATE *dst_image_state);

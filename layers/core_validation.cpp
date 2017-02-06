@@ -8196,7 +8196,7 @@ VKAPI_ATTR void VKAPI_CALL CmdBlitImage(VkCommandBuffer commandBuffer, VkImage s
     auto src_image_state = getImageState(dev_data, srcImage);
     auto dst_image_state = getImageState(dev_data, dstImage);
 
-    bool skip = PreCallValidateCmdBlitImage(dev_data, cb_node, src_image_state, dst_image_state);
+    bool skip = PreCallValidateCmdBlitImage(dev_data, cb_node, src_image_state, dst_image_state, regionCount, pRegions, filter);
 
     if (!skip) {
         PreCallRecordCmdBlitImage(dev_data, cb_node, src_image_state, dst_image_state);

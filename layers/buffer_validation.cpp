@@ -1269,21 +1269,170 @@ void PreCallRecordCmdResolveImage(core_validation::layer_data *device_data, GLOB
 }
 
 bool PreCallValidateCmdBlitImage(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
-    IMAGE_STATE *dst_image_state) {
+                                 IMAGE_STATE *dst_image_state, uint32_t regionCount, const VkImageBlit *pRegions, VkFilter filter) {
+    const debug_report_data *report_data = core_validation::GetReportData(device_data);
+
     bool skip = false;
     if (cb_node && src_image_state && dst_image_state) {
         skip |= ValidateImageSampleCount(device_data, src_image_state, VK_SAMPLE_COUNT_1_BIT, "vkCmdBlitImage(): srcImage",
-            VALIDATION_ERROR_02194);
+                                         VALIDATION_ERROR_02194);
         skip |= ValidateImageSampleCount(device_data, dst_image_state, VK_SAMPLE_COUNT_1_BIT, "vkCmdBlitImage(): dstImage",
-            VALIDATION_ERROR_02195);
+                                         VALIDATION_ERROR_02195);
         skip |= ValidateMemoryIsBoundToImage(device_data, src_image_state, "vkCmdBlitImage()", VALIDATION_ERROR_02539);
         skip |= ValidateMemoryIsBoundToImage(device_data, dst_image_state, "vkCmdBlitImage()", VALIDATION_ERROR_02540);
         skip |= ValidateImageUsageFlags(device_data, src_image_state, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, true, VALIDATION_ERROR_02182,
-            "vkCmdBlitImage()", "VK_IMAGE_USAGE_TRANSFER_SRC_BIT");
+                                        "vkCmdBlitImage()", "VK_IMAGE_USAGE_TRANSFER_SRC_BIT");
         skip |= ValidateImageUsageFlags(device_data, dst_image_state, VK_IMAGE_USAGE_TRANSFER_DST_BIT, true, VALIDATION_ERROR_02186,
-            "vkCmdBlitImage()", "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
+                                        "vkCmdBlitImage()", "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
         skip |= ValidateCmd(device_data, cb_node, CMD_BLITIMAGE, "vkCmdBlitImage()");
         skip |= insideRenderPass(device_data, cb_node, "vkCmdBlitImage()", VALIDATION_ERROR_01300);
+
+        // Warn for zero-sized regions
+        for (uint32_t i = 0; i < regionCount; i++) {
+            if ((pRegions[i].srcOffsets[0].x == pRegions[i].srcOffsets[1].x) ||
+                (pRegions[i].srcOffsets[0].y == pRegions[i].srcOffsets[1].y) ||
+                (pRegions[i].srcOffsets[0].z == pRegions[i].srcOffsets[1].z)) {
+                std::stringstream ss;
+                ss << "vkCmdBlitImage: pRegions[" << i << "].srcOffsets specify a zero-volume area.";
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, DRAWSTATE_INVALID_EXTENTS, "IMAGE",
+                                "%s", ss.str().c_str());
+            }
+            if ((pRegions[i].dstOffsets[0].x == pRegions[i].dstOffsets[1].x) ||
+                (pRegions[i].dstOffsets[0].y == pRegions[i].dstOffsets[1].y) ||
+                (pRegions[i].dstOffsets[0].z == pRegions[i].dstOffsets[1].z)) {
+                std::stringstream ss;
+                ss << "vkCmdBlitImage: pRegions[" << i << "].dstOffsets specify a zero-volume area.";
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, DRAWSTATE_INVALID_EXTENTS, "IMAGE",
+                                "%s", ss.str().c_str());
+            }
+        }
+
+        VkFormat src_format = src_image_state->createInfo.format;
+        VkFormat dst_format = dst_image_state->createInfo.format;
+
+        // Validate consistency for unsigned formats
+        if (vk_format_is_uint(src_format) != vk_format_is_uint(dst_format)) {
+            std::stringstream ss;
+            ss << "vkCmdBlitImage: If one of srcImage and dstImage images has unsigned integer format, "
+               << "the other one must also have unsigned integer format.  "
+               << "Source format is " << string_VkFormat(src_format) << " Destination format is " << string_VkFormat(dst_format);
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, VALIDATION_ERROR_02191, "IMAGE", "%s. %s",
+                            ss.str().c_str(), validation_error_map[VALIDATION_ERROR_02191]);
+        }
+
+        // Validate consistency for signed formats
+        if (vk_format_is_sint(src_format) != vk_format_is_sint(dst_format)) {
+            std::stringstream ss;
+            ss << "vkCmdBlitImage: If one of srcImage and dstImage images has signed integer format, "
+               << "the other one must also have signed integer format.  "
+               << "Source format is " << string_VkFormat(src_format) << " Destination format is " << string_VkFormat(dst_format);
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, VALIDATION_ERROR_02190, "IMAGE", "%s. %s",
+                            ss.str().c_str(), validation_error_map[VALIDATION_ERROR_02190]);
+        }
+
+        // Validate aspect bits and formats for depth/stencil images
+        if (vk_format_is_depth_or_stencil(src_format) || vk_format_is_depth_or_stencil(dst_format)) {
+            if (src_format != dst_format) {
+                std::stringstream ss;
+                ss << "vkCmdBlitImage: If one of srcImage and dstImage images has a format of depth, stencil or depth "
+                   << "stencil, the other one must have exactly the same format.  "
+                   << "Source format is " << string_VkFormat(src_format) << " Destination format is "
+                   << string_VkFormat(dst_format);
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, VALIDATION_ERROR_02192, "IMAGE",
+                                "%s. %s", ss.str().c_str(), validation_error_map[VALIDATION_ERROR_02192]);
+            }
+
+            // TODO: Confirm that all these checks are intended to be nested under depth/stencil only
+            for (uint32_t i = 0; i < regionCount; i++) {
+                if (pRegions[i].srcSubresource.layerCount == 0) {
+                    char const str[] = "vkCmdBlitImage: number of layers in source subresource is zero";
+                    // TODO: Verify against Valid Use section of spec, if this case yields undefined results, then it's an error
+                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                    reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, DRAWSTATE_MISMATCHED_IMAGE_ASPECT,
+                                    "IMAGE", str);
+                }
+
+                if (pRegions[i].dstSubresource.layerCount == 0) {
+                    char const str[] = "vkCmdBlitImage: number of layers in destination subresource is zero";
+                    // TODO: Verify against Valid Use section of spec, if this case yields undefined results, then it's an error
+                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                    reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, DRAWSTATE_MISMATCHED_IMAGE_ASPECT,
+                                    "IMAGE", str);
+                }
+
+                if (pRegions[i].srcSubresource.layerCount != pRegions[i].dstSubresource.layerCount) {
+                    char const str[] = "vkCmdBlitImage: number of layers in source and destination subresources must match";
+                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                    reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, DRAWSTATE_MISMATCHED_IMAGE_ASPECT,
+                                    "IMAGE", str);
+                }
+
+                VkImageAspectFlags srcAspect = pRegions[i].srcSubresource.aspectMask;
+                VkImageAspectFlags dstAspect = pRegions[i].dstSubresource.aspectMask;
+
+                if (srcAspect != dstAspect) {
+                    std::stringstream ss;
+                    ss << "vkCmdBlitImage: Image aspects of depth/stencil images should match";
+                    // TODO: Verify against Valid Use section of spec, if this case yields undefined results, then it's an error
+                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                    reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, DRAWSTATE_INVALID_IMAGE_ASPECT,
+                                    "IMAGE", "%s", ss.str().c_str());
+                }
+                if (vk_format_is_depth_and_stencil(src_format)) {
+                    if ((srcAspect != VK_IMAGE_ASPECT_DEPTH_BIT) && (srcAspect != VK_IMAGE_ASPECT_STENCIL_BIT)) {
+                        std::stringstream ss;
+                        ss << "vkCmdBlitImage: Combination depth/stencil image formats must have only one of "
+                              "VK_IMAGE_ASPECT_DEPTH_BIT "
+                           << "and VK_IMAGE_ASPECT_STENCIL_BIT set in srcImage and dstImage";
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                        reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__,
+                                        DRAWSTATE_INVALID_IMAGE_ASPECT, "IMAGE", "%s", ss.str().c_str());
+                    }
+                } else if (vk_format_is_stencil_only(src_format)) {
+                    if (srcAspect != VK_IMAGE_ASPECT_STENCIL_BIT) {
+                        std::stringstream ss;
+                        ss << "vkCmdBlitImage: Stencil-only image formats must have only the VK_IMAGE_ASPECT_STENCIL_BIT "
+                           << "set in both the srcImage and dstImage";
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                        reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__,
+                                        DRAWSTATE_INVALID_IMAGE_ASPECT, "IMAGE", "%s", ss.str().c_str());
+                    }
+                } else if (vk_format_is_depth_only(src_format)) {
+                    if (srcAspect != VK_IMAGE_ASPECT_DEPTH_BIT) {
+                        std::stringstream ss;
+                        ss << "vkCmdBlitImage: Depth-only image formats must have only the VK_IMAGE_ASPECT_DEPTH "
+                           << "set in both the srcImage and dstImage";
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                        reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__,
+                                        DRAWSTATE_INVALID_IMAGE_ASPECT, "IMAGE", "%s", ss.str().c_str());
+                    }
+                }
+            }
+        }
+
+        // Validate filter
+        if (vk_format_is_depth_or_stencil(src_format) && (filter != VK_FILTER_NEAREST)) {
+            std::stringstream ss;
+            ss << "vkCmdBlitImage: If the format of srcImage is a depth, stencil, or depth stencil "
+               << "then filter must be VK_FILTER_NEAREST.";
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, VALIDATION_ERROR_02193, "IMAGE", "%s. %s",
+                            ss.str().c_str(), validation_error_map[VALIDATION_ERROR_02193]);
+        }
+        if (vk_format_is_int(src_format) && (filter != VK_FILTER_NEAREST)) {
+            std::stringstream ss;
+            ss << "vkCmdBlitImage: If the format of srcImage is an integer-based format "
+               << "then filter must be VK_FILTER_NEAREST.";
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, DRAWSTATE_INVALID_IMAGE_FILTER, "IMAGE",
+                            "%s", ss.str().c_str());
+        }
+
     } else {
         assert(0);
     }
