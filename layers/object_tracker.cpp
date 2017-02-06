@@ -3992,7 +3992,7 @@ VKAPI_ATTR void VKAPI_CALL CmdDrawIndexedIndirectCountAMD(VkCommandBuffer comman
 VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceFeatures2KHR(VkPhysicalDevice physicalDevice, VkPhysicalDeviceFeatures2KHR *pFeatures) {
     bool skip = false;
     {
-        std::unique_lock<std::mutex> lock(global_lock);
+        std::lock_guard<std::mutex> lock(global_lock);
         skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
                                VALIDATION_ERROR_UNDEFINED);
     }
@@ -4005,7 +4005,7 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceProperties2KHR(VkPhysicalDevice phys
                                                            VkPhysicalDeviceProperties2KHR *pProperties) {
     bool skip = false;
     {
-        std::unique_lock<std::mutex> lock(global_lock);
+        std::lock_guard<std::mutex> lock(global_lock);
         skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
                                VALIDATION_ERROR_UNDEFINED);
     }
@@ -4018,7 +4018,7 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceFormatProperties2KHR(VkPhysicalDevic
                                                                  VkFormatProperties2KHR *pFormatProperties) {
     bool skip = false;
     {
-        std::unique_lock<std::mutex> lock(global_lock);
+        std::lock_guard<std::mutex> lock(global_lock);
         skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
                                VALIDATION_ERROR_UNDEFINED);
     }
@@ -4031,18 +4031,17 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceFormatProperties2KHR(VkPhysicalDevic
 VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceImageFormatProperties2KHR(
     VkPhysicalDevice physicalDevice, const VkPhysicalDeviceImageFormatInfo2KHR *pImageFormatInfo,
     VkImageFormatProperties2KHR *pImageFormatProperties) {
-    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip = false;
     {
-        std::unique_lock<std::mutex> lock(global_lock);
+        std::lock_guard<std::mutex> lock(global_lock);
         skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
                                VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
-    result = get_dispatch_table(ot_instance_table_map, physicalDevice)
-                 ->GetPhysicalDeviceImageFormatProperties2KHR(physicalDevice, pImageFormatInfo, pImageFormatProperties);
+    VkResult result = get_dispatch_table(ot_instance_table_map, physicalDevice)
+                          ->GetPhysicalDeviceImageFormatProperties2KHR(physicalDevice, pImageFormatInfo, pImageFormatProperties);
 
     return result;
 }
@@ -4052,13 +4051,21 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceQueueFamilyProperties2KHR(VkPhysical
                                                                       VkQueueFamilyProperties2KHR *pQueueFamilyProperties) {
     bool skip = false;
     {
-        std::unique_lock<std::mutex> lock(global_lock);
+        std::lock_guard<std::mutex> lock(global_lock);
         skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
                                VALIDATION_ERROR_UNDEFINED);
     }
-    if (!skip) {
-        get_dispatch_table(ot_instance_table_map, physicalDevice)
-            ->GetPhysicalDeviceQueueFamilyProperties2KHR(physicalDevice, pQueueFamilyPropertyCount, pQueueFamilyProperties);
+    if (skip) {
+        return;
+    }
+    get_dispatch_table(ot_instance_table_map, physicalDevice)
+        ->GetPhysicalDeviceQueueFamilyProperties2KHR(physicalDevice, pQueueFamilyPropertyCount, pQueueFamilyProperties);
+    std::lock_guard<std::mutex> lock(global_lock);
+    if (pQueueFamilyProperties != NULL) {
+        layer_data *instance_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+        for (uint32_t i = 0; i < *pQueueFamilyPropertyCount; i++) {
+            instance_data->queue_family_properties.emplace_back(pQueueFamilyProperties[i].queueFamilyProperties);
+        }
     }
 }
 
@@ -4066,7 +4073,7 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceMemoryProperties2KHR(VkPhysicalDevic
                                                                  VkPhysicalDeviceMemoryProperties2KHR *pMemoryProperties) {
     bool skip = false;
     {
-        std::unique_lock<std::mutex> lock(global_lock);
+        std::lock_guard<std::mutex> lock(global_lock);
         skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
                                VALIDATION_ERROR_UNDEFINED);
     }
@@ -4081,7 +4088,7 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceSparseImageFormatProperties2KHR(
     VkSparseImageFormatProperties2KHR *pProperties) {
     bool skip = false;
     {
-        std::unique_lock<std::mutex> lock(global_lock);
+        std::lock_guard<std::mutex> lock(global_lock);
         skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
                                VALIDATION_ERROR_UNDEFINED);
     }
