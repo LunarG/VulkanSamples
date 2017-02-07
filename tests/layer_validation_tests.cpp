@@ -9400,12 +9400,23 @@ TEST_F(VkLayerTest, DSBufferLimitErrors) {
     vkGetBufferMemoryRequirements(m_device->device(), storage_buffer, &mem_reqs);
     pass &= m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
     if (!pass) {
+        vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
         vkDestroyBuffer(m_device->device(), uniform_buffer, NULL);
+        vkDestroyBuffer(m_device->device(), storage_buffer, NULL);
+        vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
         return;
     }
 
     VkDeviceMemory mem;
     err = vkAllocateMemory(m_device->device(), &mem_alloc, NULL, &mem);
+    if (VK_SUCCESS != err) {
+        printf("Failed to allocate memory in DSBufferLimitErrors; skipped.\n");
+        vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
+        vkDestroyBuffer(m_device->device(), uniform_buffer, NULL);
+        vkDestroyBuffer(m_device->device(), storage_buffer, NULL);
+        vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
+        return;
+    }
     ASSERT_VK_SUCCESS(err);
     err = vkBindBufferMemory(m_device->device(), uniform_buffer, mem, 0);
     ASSERT_VK_SUCCESS(err);
