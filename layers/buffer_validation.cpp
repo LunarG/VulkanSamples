@@ -1387,6 +1387,13 @@ bool PreCallValidateCmdBlitImage(core_validation::layer_data *device_data, GLOBA
                             "vkCmdBlitImage: layerCount in source and destination subresource of pRegions[%d] does not match. %s",
                             i, validation_error_map[VALIDATION_ERROR_01304]);
             }
+
+            if (pRegions[i].srcSubresource.aspectMask != pRegions[i].dstSubresource.aspectMask) {
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, VALIDATION_ERROR_01303, "IMAGE",
+                                "vkCmdBlitImage: aspectMask members for pRegion[%d] do not match. %s", i,
+                                validation_error_map[VALIDATION_ERROR_01303]);
+            }
         }
 
         VkFormat src_format = src_image_state->createInfo.format;
@@ -1430,16 +1437,7 @@ bool PreCallValidateCmdBlitImage(core_validation::layer_data *device_data, GLOBA
 
             for (uint32_t i = 0; i < regionCount; i++) {
                 VkImageAspectFlags srcAspect = pRegions[i].srcSubresource.aspectMask;
-                VkImageAspectFlags dstAspect = pRegions[i].dstSubresource.aspectMask;
 
-                if (srcAspect != dstAspect) {
-                    std::stringstream ss;
-                    ss << "vkCmdBlitImage: Image aspects of depth/stencil images should match";
-                    // TODO: Verify against Valid Use section of spec, if this case yields undefined results, then it's an error
-                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                                    reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, DRAWSTATE_INVALID_IMAGE_ASPECT,
-                                    "IMAGE", "%s", ss.str().c_str());
-                }
                 if (vk_format_is_depth_and_stencil(src_format)) {
                     if ((srcAspect != VK_IMAGE_ASPECT_DEPTH_BIT) && (srcAspect != VK_IMAGE_ASPECT_STENCIL_BIT)) {
                         std::stringstream ss;
