@@ -142,4 +142,7 @@ void PreCallRecordCmdBlitImage(core_validation::layer_data *device_data, GLOBAL_
 
 bool ValidateCmdBufImageLayouts(core_validation::layer_data *dev_data, GLOBAL_CB_NODE *pCB);
 
+bool ValidateMaskBitsFromLayouts(core_validation::layer_data *my_data, VkCommandBuffer cmdBuffer, const VkAccessFlags &accessMask,
+                                 const VkImageLayout &layout, const char *type);
+
 #endif  // CORE_VALIDATION_BUFFER_VALIDATION_H_
