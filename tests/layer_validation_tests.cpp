@@ -43,15 +43,6 @@
 #include "glm/glm.hpp"
 #include <glm/gtc/matrix_transform.hpp>
 
-#define PARAMETER_VALIDATION_TESTS 1
-#define MEM_TRACKER_TESTS 1
-#define OBJ_TRACKER_TESTS 1
-#define DRAW_STATE_TESTS 1
-#define THREADING_TESTS 1
-#define SHADER_CHECKER_TESTS 1
-#define DEVICE_LIMITS_TESTS 1
-#define IMAGE_TESTS 1
-
 //--------------------------------------------------------------------------------------
 // Mesh and VertexFormat Data
 //--------------------------------------------------------------------------------------
@@ -791,7 +782,6 @@ uint32_t VkVerticesObj::BindIdGenerator;
 // ********************************************************************************************************************
 // ********************************************************************************************************************
 // ********************************************************************************************************************
-#if PARAMETER_VALIDATION_TESTS
 TEST_F(VkLayerTest, RequiredParameter) {
     TEST_DESCRIPTION(
         "Specify VK_NULL_HANDLE, NULL, and 0 for required handle, "
@@ -1179,9 +1169,6 @@ TEST_F(VkLayerTest, PSOPolygonModeInvalid) {
     vkDestroyPipelineLayout(test_device.device(), pipeline_layout, NULL);
 }
 
-#endif  // PARAMETER_VALIDATION_TESTS
-
-#if MEM_TRACKER_TESTS
 #if 0
 TEST_F(VkLayerTest, CallResetCommandBufferBeforeCompletion)
 {
@@ -2194,10 +2181,6 @@ TEST_F(VkLayerTest, InvalidUsageBits) {
     m_errorMonitor->VerifyFound();
 }
 
-#endif  // MEM_TRACKER_TESTS
-
-#if OBJ_TRACKER_TESTS
-
 TEST_F(VkLayerTest, LeakAnObject) {
     VkResult err;
 
@@ -2655,10 +2638,6 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject) {
 
     vkFreeMemory(m_device->device(), mem, NULL);
 }
-
-#endif  // OBJ_TRACKER_TESTS
-
-#if DRAW_STATE_TESTS
 
 TEST_F(VkLayerTest, CreatePipelineBadVertexAttributeFormat) {
     TEST_DESCRIPTION("Test that pipeline validation catches invalid vertex attribute formats");
@@ -12679,9 +12658,7 @@ TEST_F(VkLayerTest, ColorBlendLogicOpTests) {
     vkDestroyPipelineCache(m_device->device(), pipelineCache, NULL);
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
 }
-#endif  // DRAW_STATE_TESTS
 
-#if THREADING_TESTS
 #if GTEST_IS_THREADSAFE
 struct thread_data_struct {
     VkCommandBuffer commandBuffer;
@@ -12761,9 +12738,7 @@ TEST_F(VkLayerTest, ThreadCommandBufferCollision) {
     vkDestroyEvent(device(), event, NULL);
 }
 #endif  // GTEST_IS_THREADSAFE
-#endif  // THREADING_TESTS
 
-#if SHADER_CHECKER_TESTS
 TEST_F(VkLayerTest, InvalidSPIRVCodeSize) {
     TEST_DESCRIPTION(
         "Test that an error is produced for a spirv module "
@@ -14875,9 +14850,6 @@ TEST_F(VkLayerTest, DrawTimeImageMultisampleMismatchWithPipeline) {
     m_commandBuffer->EndCommandBuffer();
 }
 
-#endif  // SHADER_CHECKER_TESTS
-
-#if DEVICE_LIMITS_TESTS
 TEST_F(VkLayerTest, CreateImageLimitsViolationMaxWidth) {
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "CreateImage extents exceed allowable limits for format");
 
@@ -14945,9 +14917,6 @@ TEST_F(VkLayerTest, CreateImageLimitsViolationMinWidth) {
 
     m_errorMonitor->VerifyFound();
 }
-#endif  // DEVICE_LIMITS_TESTS
-
-#if IMAGE_TESTS
 
 TEST_F(VkLayerTest, AttachmentDescriptionUndefinedFormat) {
     TEST_DESCRIPTION(
@@ -16452,7 +16421,6 @@ TEST_F(VkLayerTest, ClearImageErrors) {
 
     m_errorMonitor->VerifyFound();
 }
-#endif  // IMAGE_TESTS
 
 // WSI Enabled Tests
 //
