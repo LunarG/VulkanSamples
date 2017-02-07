@@ -1,8 +1,8 @@
 /*
- * Copyright (c) 2015-2016 The Khronos Group Inc.
- * Copyright (c) 2015-2016 Valve Corporation
- * Copyright (c) 2015-2016 LunarG, Inc.
- * Copyright (c) 2015-2016 Google, Inc.
+ * Copyright (c) 2015-2017 The Khronos Group Inc.
+ * Copyright (c) 2015-2017 Valve Corporation
+ * Copyright (c) 2015-2017 LunarG, Inc.
+ * Copyright (c) 2015-2017 Google, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -3271,6 +3271,40 @@ TEST_F(VkLayerTest, DisabledIndependentBlend) {
     pipeline.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderpass);
     m_errorMonitor->VerifyFound();
     vkDestroyRenderPass(m_device->device(), renderpass, NULL);
+}
+
+// Is the Pipeline compatible with the expectations of the Renderpass/subpasses?
+TEST_F(VkLayerTest, PipelineRenderpassCompatibility) {
+    TEST_DESCRIPTION(
+        "Create a graphics pipeline that is incompatible with the requirements "
+        "of its contained Renderpass/subpasses.");
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkDescriptorSetObj ds_obj(m_device);
+    ds_obj.AppendDummy();
+    ds_obj.CreateVKDescriptorSet(m_commandBuffer);
+
+    VkShaderObj vs_obj(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
+
+    VkPipelineColorBlendAttachmentState att_state1 = {};
+    att_state1.dstAlphaBlendFactor = VK_BLEND_FACTOR_CONSTANT_COLOR;
+    att_state1.blendEnable = VK_TRUE;
+
+    VkRenderpassObj rp_obj(m_device);
+
+    {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02116);
+        VkPipelineObj pipeline(m_device);
+        pipeline.AddShader(&vs_obj);
+        pipeline.AddColorAttachment(0, &att_state1);
+
+        VkGraphicsPipelineCreateInfo info = {};
+        pipeline.InitGraphicsPipelineCreateInfo(&info);
+        info.pColorBlendState = nullptr;
+
+        pipeline.CreateVKPipeline(ds_obj.GetPipelineLayout(), rp_obj.handle(), &info);
+        m_errorMonitor->VerifyFound();
+    }
 }
 
 #if 0
