@@ -3266,8 +3266,11 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceQueueFamilyProperties(VkPhysicalDevi
     std::lock_guard<std::mutex> lock(global_lock);
     if (pQueueFamilyProperties != NULL) {
         layer_data *instance_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+        if (instance_data->queue_family_properties.size() < *pQueueFamilyPropertyCount) {
+            instance_data->queue_family_properties.resize(*pQueueFamilyPropertyCount);
+        }
         for (uint32_t i = 0; i < *pQueueFamilyPropertyCount; i++) {
-            instance_data->queue_family_properties.emplace_back(pQueueFamilyProperties[i]);
+            instance_data->queue_family_properties[i] = pQueueFamilyProperties[i];
         }
     }
 }
@@ -4063,8 +4066,11 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceQueueFamilyProperties2KHR(VkPhysical
     std::lock_guard<std::mutex> lock(global_lock);
     if (pQueueFamilyProperties != NULL) {
         layer_data *instance_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+        if (instance_data->queue_family_properties.size() < *pQueueFamilyPropertyCount) {
+            instance_data->queue_family_properties.resize(*pQueueFamilyPropertyCount);
+        }
         for (uint32_t i = 0; i < *pQueueFamilyPropertyCount; i++) {
-            instance_data->queue_family_properties.emplace_back(pQueueFamilyProperties[i].queueFamilyProperties);
+            instance_data->queue_family_properties[i] = pQueueFamilyProperties[i].queueFamilyProperties;
         }
     }
 }
