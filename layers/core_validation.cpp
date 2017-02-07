@@ -4111,49 +4111,6 @@ static bool ValidateStageMaskGsTsEnables(layer_data *dev_data, VkPipelineStageFl
     return skip;
 }
 
-// This validates that the initial layout specified in the command buffer for
-// the IMAGE is the same
-// as the global IMAGE layout
-static bool ValidateCmdBufImageLayouts(layer_data *dev_data, GLOBAL_CB_NODE *pCB) {
-    bool skip_call = false;
-    for (auto cb_image_data : pCB->imageLayoutMap) {
-        VkImageLayout imageLayout;
-        if (!FindGlobalLayout(dev_data, cb_image_data.first, imageLayout)) {
-            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                 VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                                 "Cannot submit cmd buffer using deleted image 0x%" PRIx64 ".",
-                                 reinterpret_cast<const uint64_t &>(cb_image_data.first));
-        } else {
-            if (cb_image_data.second.initialLayout == VK_IMAGE_LAYOUT_UNDEFINED) {
-                // TODO: Set memory invalid which is in mem_tracker currently
-            } else if (imageLayout != cb_image_data.second.initialLayout) {
-                if (cb_image_data.first.hasSubresource) {
-                    skip_call |= log_msg(
-                        dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                        reinterpret_cast<uint64_t &>(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                        "Cannot submit cmd buffer using image (0x%" PRIx64
-                        ") [sub-resource: aspectMask 0x%X array layer %u, mip level %u], "
-                        "with layout %s when first use is %s.",
-                        reinterpret_cast<const uint64_t &>(cb_image_data.first.image), cb_image_data.first.subresource.aspectMask,
-                        cb_image_data.first.subresource.arrayLayer, cb_image_data.first.subresource.mipLevel,
-                        string_VkImageLayout(imageLayout), string_VkImageLayout(cb_image_data.second.initialLayout));
-                } else {
-                    skip_call |=
-                        log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t &>(pCB->commandBuffer),
-                                __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS", "Cannot submit cmd buffer using image (0x%" PRIx64
-                                                                                ") with layout %s when "
-                                                                                "first use is %s.",
-                                reinterpret_cast<const uint64_t &>(cb_image_data.first.image), string_VkImageLayout(imageLayout),
-                                string_VkImageLayout(cb_image_data.second.initialLayout));
-                }
-            }
-            SetGlobalLayout(dev_data, cb_image_data.first, cb_image_data.second.layout);
-        }
-    }
-    return skip_call;
-}
-
 // Loop through bound objects and increment their in_use counts
 //  For any unknown objects, flag an error
 static bool ValidateAndIncrementBoundObjects(layer_data *dev_data, GLOBAL_CB_NODE const *cb_node) {

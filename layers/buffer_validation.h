@@ -140,5 +140,6 @@ bool PreCallValidateCmdBlitImage(core_validation::layer_data *device_data, GLOBA
 void PreCallRecordCmdBlitImage(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
     IMAGE_STATE *dst_image_state);
 
+bool ValidateCmdBufImageLayouts(core_validation::layer_data *dev_data, GLOBAL_CB_NODE *pCB);
 
 #endif  // CORE_VALIDATION_BUFFER_VALIDATION_H_
