@@ -124,6 +124,8 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                  diagFile = sys.stdout):
         OutputGenerator.__init__(self, errFile, warnFile, diagFile)
         self.INDENT_SPACES = 4
+        self.intercepts = []
+        self.declarations = []
         # Commands to ignore
         self.blacklist = [
             'vkGetInstanceProcAddr',
@@ -204,6 +206,15 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         write('namespace parameter_validation {', file = self.outFile)
     def endFile(self):
         # C-specific
+        self.newline()
+
+        # Output declarations and record intercepted procedures
+        write('// Declarations', file=self.outFile)
+        write('\n'.join(self.declarations), file=self.outFile)
+        write('// Intercepts', file=self.outFile)
+        write('struct { const char* name; PFN_vkVoidFunction pFunc;} procmap[] = {', file=self.outFile)
+        write('\n'.join(self.intercepts), file=self.outFile)
+        write('};\n', file=self.outFile)
         self.newline()
         # Namespace
         write('} // namespace parameter_validation', file = self.outFile)
@@ -400,6 +411,31 @@ class ParamCheckerOutputGenerator(OutputGenerator):
     # check code generation.
     def genCmd(self, cmdinfo, name):
         OutputGenerator.genCmd(self, cmdinfo, name)
+        interface_functions = [
+            'vkEnumerateInstanceLayerProperties',
+            'vkEnumerateInstanceExtensionProperties',
+            'vkEnumerateDeviceLayerProperties',
+            # These are unimplemented in the PV layer -- need to be added.
+            'vkDisplayPowerControlEXT',
+            'vkGetSwapchainCounterEXT',
+            'vkRegisterDeviceEventEXT',
+            'vkRegisterDisplayEventEXT',
+            'vkCmdDebugMarkerEndEXT',
+            'vkCmdDrawIndexedIndirectCountAMD',
+            'vkCmdDrawIndirectCountAMD',
+        ]
+        # Record that the function will be intercepted
+        if name not in interface_functions:
+            if (self.featureExtraProtect != None):
+                self.declarations += [ '#ifdef %s' % self.featureExtraProtect ]
+                self.intercepts += [ '#ifdef %s' % self.featureExtraProtect ]
+            self.intercepts += [ '    {"%s", reinterpret_cast<PFN_vkVoidFunction>(%s)},' % (name,name[2:]) ]
+            decls = self.makeCDecls(cmdinfo.elem)
+            # Strip off 'vk' from API name
+            self.declarations += [ '%s' % decls[0].replace("VKAPI_CALL vk", "VKAPI_CALL ") ]
+            if (self.featureExtraProtect != None):
+                self.intercepts += [ '#endif' ]
+                self.declarations += [ '#endif' ]
         if name not in self.blacklist:
             params = cmdinfo.elem.findall('param')
             # Get list of array lengths
