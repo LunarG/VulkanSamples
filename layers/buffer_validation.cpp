@@ -1785,32 +1785,31 @@ bool ValidateLayouts(core_validation::layer_data *device_data, VkDevice device, 
 }
 
 // For any image objects that overlap mapped memory, verify that their layouts are PREINIT or GENERAL
-bool ValidateMapImageLayouts(core_validation::layer_data *dev_data, VkDevice device, DEVICE_MEM_INFO const *mem_info, VkDeviceSize offset,
-    VkDeviceSize end_offset) {
-    const debug_report_data *report_data = core_validation::GetReportData(dev_data);
-    bool skip_call = false;
-    // Iterate over all bound image ranges and verify that for any that overlap the
-    //  map ranges, the layouts are VK_IMAGE_LAYOUT_PREINITIALIZED or VK_IMAGE_LAYOUT_GENERAL
+bool ValidateMapImageLayouts(core_validation::layer_data *device_data, VkDevice device, DEVICE_MEM_INFO const *mem_info,
+                             VkDeviceSize offset, VkDeviceSize end_offset) {
+    const debug_report_data *report_data = core_validation::GetReportData(device_data);
+    bool skip = false;
+    // Iterate over all bound image ranges and verify that for any that overlap the map ranges, the layouts are
+    // VK_IMAGE_LAYOUT_PREINITIALIZED or VK_IMAGE_LAYOUT_GENERAL
     // TODO : This can be optimized if we store ranges based on starting address and early exit when we pass our range
     for (auto image_handle : mem_info->bound_images) {
         auto img_it = mem_info->bound_ranges.find(image_handle);
         if (img_it != mem_info->bound_ranges.end()) {
-            if (rangesIntersect(dev_data, &img_it->second, offset, end_offset)) {
+            if (rangesIntersect(device_data, &img_it->second, offset, end_offset)) {
                 std::vector<VkImageLayout> layouts;
-                if (FindLayouts(dev_data, VkImage(image_handle), layouts)) {
+                if (FindLayouts(device_data, VkImage(image_handle), layouts)) {
                     for (auto layout : layouts) {
                         if (layout != VK_IMAGE_LAYOUT_PREINITIALIZED && layout != VK_IMAGE_LAYOUT_GENERAL) {
-                            skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                                "Cannot map an image with layout %s. Only "
-                                "GENERAL or PREINITIALIZED are supported.",
-                                string_VkImageLayout(layout));
+                            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                                            DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                                            "Cannot map an image with layout %s. Only "
+                                            "GENERAL or PREINITIALIZED are supported.",
+                                            string_VkImageLayout(layout));
                         }
                     }
                 }
             }
         }
     }
-    return skip_call;
+    return skip;
 }
-
