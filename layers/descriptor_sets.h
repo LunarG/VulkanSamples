@@ -56,6 +56,8 @@
 #include <unordered_set>
 #include <vector>
 
+using core_validation::layer_data;
+
 // Descriptor Data structures
 
 /*

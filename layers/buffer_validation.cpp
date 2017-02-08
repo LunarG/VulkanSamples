@@ -31,8 +31,7 @@
 
 #include "buffer_validation.h"
 
-void SetLayout(core_validation::layer_data *device_data, GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair,
-               const VkImageLayout &layout) {
+void SetLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair, const VkImageLayout &layout) {
     if (std::find(pCB->imageSubresourceMap[imgpair.image].begin(), pCB->imageSubresourceMap[imgpair.image].end(), imgpair) !=
         pCB->imageSubresourceMap[imgpair.image].end()) {
         pCB->imageLayoutMap[imgpair].layout = layout;
@@ -46,8 +45,7 @@ void SetLayout(core_validation::layer_data *device_data, GLOBAL_CB_NODE *pCB, Im
     }
 }
 template <class OBJECT, class LAYOUT>
-void SetLayout(core_validation::layer_data *device_data, OBJECT *pObject, VkImage image, VkImageSubresource range,
-               const LAYOUT &layout) {
+void SetLayout(layer_data *device_data, OBJECT *pObject, VkImage image, VkImageSubresource range, const LAYOUT &layout) {
     ImageSubresourcePair imgpair = {image, true, range};
     SetLayout(device_data, pObject, imgpair, layout, VK_IMAGE_ASPECT_COLOR_BIT);
     SetLayout(device_data, pObject, imgpair, layout, VK_IMAGE_ASPECT_DEPTH_BIT);
@@ -56,7 +54,7 @@ void SetLayout(core_validation::layer_data *device_data, OBJECT *pObject, VkImag
 }
 
 template <class OBJECT, class LAYOUT>
-void SetLayout(core_validation::layer_data *device_data, OBJECT *pObject, ImageSubresourcePair imgpair, const LAYOUT &layout,
+void SetLayout(layer_data *device_data, OBJECT *pObject, ImageSubresourcePair imgpair, const LAYOUT &layout,
                VkImageAspectFlags aspectMask) {
     if (imgpair.subresource.aspectMask & aspectMask) {
         imgpair.subresource.aspectMask = aspectMask;
@@ -64,7 +62,7 @@ void SetLayout(core_validation::layer_data *device_data, OBJECT *pObject, ImageS
     }
 }
 
-bool FindLayoutVerifyNode(core_validation::layer_data *device_data, GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair,
+bool FindLayoutVerifyNode(layer_data *device_data, GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair,
                           IMAGE_CMD_BUF_LAYOUT_NODE &node, const VkImageAspectFlags aspectMask) {
     const debug_report_data *report_data = core_validation::GetReportData(device_data);
 
@@ -96,7 +94,7 @@ bool FindLayoutVerifyNode(core_validation::layer_data *device_data, GLOBAL_CB_NO
     return true;
 }
 
-bool FindLayoutVerifyLayout(core_validation::layer_data *device_data, ImageSubresourcePair imgpair, VkImageLayout &layout,
+bool FindLayoutVerifyLayout(layer_data *device_data, ImageSubresourcePair imgpair, VkImageLayout &layout,
                             const VkImageAspectFlags aspectMask) {
     if (!(imgpair.subresource.aspectMask & aspectMask)) {
         return false;
@@ -120,7 +118,7 @@ bool FindLayoutVerifyLayout(core_validation::layer_data *device_data, ImageSubre
 }
 
 // Find layout(s) on the command buffer level
-bool FindCmdBufLayout(core_validation::layer_data *device_data, GLOBAL_CB_NODE *pCB, VkImage image, VkImageSubresource range,
+bool FindCmdBufLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, VkImage image, VkImageSubresource range,
                       IMAGE_CMD_BUF_LAYOUT_NODE &node) {
     ImageSubresourcePair imgpair = {image, true, range};
     node = IMAGE_CMD_BUF_LAYOUT_NODE(VK_IMAGE_LAYOUT_MAX_ENUM, VK_IMAGE_LAYOUT_MAX_ENUM);
@@ -139,7 +137,7 @@ bool FindCmdBufLayout(core_validation::layer_data *device_data, GLOBAL_CB_NODE *
 }
 
 // Find layout(s) on the global level
-bool FindGlobalLayout(core_validation::layer_data *device_data, ImageSubresourcePair imgpair, VkImageLayout &layout) {
+bool FindGlobalLayout(layer_data *device_data, ImageSubresourcePair imgpair, VkImageLayout &layout) {
     layout = VK_IMAGE_LAYOUT_MAX_ENUM;
     FindLayoutVerifyLayout(device_data, imgpair, layout, VK_IMAGE_ASPECT_COLOR_BIT);
     FindLayoutVerifyLayout(device_data, imgpair, layout, VK_IMAGE_ASPECT_DEPTH_BIT);
@@ -154,7 +152,7 @@ bool FindGlobalLayout(core_validation::layer_data *device_data, ImageSubresource
     return true;
 }
 
-bool FindLayouts(core_validation::layer_data *device_data, VkImage image, std::vector<VkImageLayout> &layouts) {
+bool FindLayouts(layer_data *device_data, VkImage image, std::vector<VkImageLayout> &layouts) {
     auto sub_data = (*core_validation::GetImageSubresourceMap(device_data)).find(image);
     if (sub_data == (*core_validation::GetImageSubresourceMap(device_data)).end()) return false;
     auto image_state = GetImageState(device_data, image);
@@ -175,7 +173,7 @@ bool FindLayouts(core_validation::layer_data *device_data, VkImage image, std::v
 }
 
 // Set the layout on the global level
-void SetGlobalLayout(core_validation::layer_data *device_data, ImageSubresourcePair imgpair, const VkImageLayout &layout) {
+void SetGlobalLayout(layer_data *device_data, ImageSubresourcePair imgpair, const VkImageLayout &layout) {
     VkImage &image = imgpair.image;
     (*core_validation::GetImageLayoutMap(device_data))[imgpair].layout = layout;
     auto &image_subresources = (*core_validation::GetImageSubresourceMap(device_data))[image];
@@ -186,8 +184,7 @@ void SetGlobalLayout(core_validation::layer_data *device_data, ImageSubresourceP
 }
 
 // Set the layout on the cmdbuf level
-void SetLayout(core_validation::layer_data *device_data, GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair,
-               const IMAGE_CMD_BUF_LAYOUT_NODE &node) {
+void SetLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair, const IMAGE_CMD_BUF_LAYOUT_NODE &node) {
     pCB->imageLayoutMap[imgpair] = node;
     auto subresource =
         std::find(pCB->imageSubresourceMap[imgpair.image].begin(), pCB->imageSubresourceMap[imgpair.image].end(), imgpair);
@@ -196,8 +193,7 @@ void SetLayout(core_validation::layer_data *device_data, GLOBAL_CB_NODE *pCB, Im
     }
 }
 
-void SetImageViewLayout(core_validation::layer_data *device_data, GLOBAL_CB_NODE *pCB, VkImageView imageView,
-                        const VkImageLayout &layout) {
+void SetImageViewLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, VkImageView imageView, const VkImageLayout &layout) {
     auto view_state = GetImageViewState(device_data, imageView);
     assert(view_state);
     auto image = view_state->create_info.image;
@@ -220,7 +216,7 @@ void SetImageViewLayout(core_validation::layer_data *device_data, GLOBAL_CB_NODE
     }
 }
 
-bool VerifyFramebufferAndRenderPassLayouts(core_validation::layer_data *device_data, GLOBAL_CB_NODE *pCB,
+bool VerifyFramebufferAndRenderPassLayouts(layer_data *device_data, GLOBAL_CB_NODE *pCB,
                                            const VkRenderPassBeginInfo *pRenderPassBegin,
                                            const FRAMEBUFFER_STATE *framebuffer_state) {
     bool skip_call = false;
@@ -268,7 +264,7 @@ bool VerifyFramebufferAndRenderPassLayouts(core_validation::layer_data *device_d
     return skip_call;
 }
 
-void TransitionAttachmentRefLayout(core_validation::layer_data *device_data, GLOBAL_CB_NODE *pCB, FRAMEBUFFER_STATE *pFramebuffer,
+void TransitionAttachmentRefLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, FRAMEBUFFER_STATE *pFramebuffer,
                                    VkAttachmentReference ref) {
     if (ref.attachment != VK_ATTACHMENT_UNUSED) {
         auto image_view = pFramebuffer->createInfo.pAttachments[ref.attachment];
@@ -276,9 +272,8 @@ void TransitionAttachmentRefLayout(core_validation::layer_data *device_data, GLO
     }
 }
 
-void TransitionSubpassLayouts(core_validation::layer_data *device_data, GLOBAL_CB_NODE *pCB,
-                              const VkRenderPassBeginInfo *pRenderPassBegin, const int subpass_index,
-                              FRAMEBUFFER_STATE *framebuffer_state) {
+void TransitionSubpassLayouts(layer_data *device_data, GLOBAL_CB_NODE *pCB, const VkRenderPassBeginInfo *pRenderPassBegin,
+                              const int subpass_index, FRAMEBUFFER_STATE *framebuffer_state) {
     auto renderPass = GetRenderPassState(device_data, pRenderPassBegin->renderPass);
     if (!renderPass) return;
 
@@ -296,9 +291,8 @@ void TransitionSubpassLayouts(core_validation::layer_data *device_data, GLOBAL_C
     }
 }
 
-bool TransitionImageAspectLayout(core_validation::layer_data *device_data, GLOBAL_CB_NODE *pCB,
-                                 const VkImageMemoryBarrier *mem_barrier, uint32_t level, uint32_t layer,
-                                 VkImageAspectFlags aspect) {
+bool TransitionImageAspectLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, const VkImageMemoryBarrier *mem_barrier,
+                                 uint32_t level, uint32_t layer, VkImageAspectFlags aspect) {
     if (!(mem_barrier->subresourceRange.aspectMask & aspect)) {
         return false;
     }
@@ -323,7 +317,7 @@ bool TransitionImageAspectLayout(core_validation::layer_data *device_data, GLOBA
 }
 
 // TODO: Separate validation and layout state updates
-bool TransitionImageLayouts(core_validation::layer_data *device_data, VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
+bool TransitionImageLayouts(layer_data *device_data, VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
                             const VkImageMemoryBarrier *pImgMemBarriers) {
     GLOBAL_CB_NODE *pCB = GetCBNode(device_data, cmdBuffer);
     bool skip = false;
@@ -351,9 +345,8 @@ bool TransitionImageLayouts(core_validation::layer_data *device_data, VkCommandB
     return skip;
 }
 
-bool VerifySourceImageLayout(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, VkImage srcImage,
-                             VkImageSubresourceLayers subLayers, VkImageLayout srcImageLayout,
-                             UNIQUE_VALIDATION_ERROR_CODE msgCode) {
+bool VerifySourceImageLayout(layer_data *device_data, GLOBAL_CB_NODE *cb_node, VkImage srcImage, VkImageSubresourceLayers subLayers,
+                             VkImageLayout srcImageLayout, UNIQUE_VALIDATION_ERROR_CODE msgCode) {
     const auto report_data = core_validation::GetReportData(device_data);
     bool skip_call = false;
 
@@ -393,9 +386,8 @@ bool VerifySourceImageLayout(core_validation::layer_data *device_data, GLOBAL_CB
     return skip_call;
 }
 
-bool VerifyDestImageLayout(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, VkImage destImage,
-                           VkImageSubresourceLayers subLayers, VkImageLayout destImageLayout,
-                           UNIQUE_VALIDATION_ERROR_CODE msgCode) {
+bool VerifyDestImageLayout(layer_data *device_data, GLOBAL_CB_NODE *cb_node, VkImage destImage, VkImageSubresourceLayers subLayers,
+                           VkImageLayout destImageLayout, UNIQUE_VALIDATION_ERROR_CODE msgCode) {
     const auto report_data = core_validation::GetReportData(device_data);
     bool skip_call = false;
 
@@ -433,8 +425,8 @@ bool VerifyDestImageLayout(core_validation::layer_data *device_data, GLOBAL_CB_N
     return skip_call;
 }
 
-void TransitionFinalSubpassLayouts(core_validation::layer_data *device_data, GLOBAL_CB_NODE *pCB,
-                                   const VkRenderPassBeginInfo *pRenderPassBegin, FRAMEBUFFER_STATE *framebuffer_state) {
+void TransitionFinalSubpassLayouts(layer_data *device_data, GLOBAL_CB_NODE *pCB, const VkRenderPassBeginInfo *pRenderPassBegin,
+                                   FRAMEBUFFER_STATE *framebuffer_state) {
     auto renderPass = GetRenderPassState(device_data, pRenderPassBegin->renderPass);
     if (!renderPass) return;
 
@@ -447,7 +439,7 @@ void TransitionFinalSubpassLayouts(core_validation::layer_data *device_data, GLO
     }
 }
 
-bool PreCallValidateCreateImage(core_validation::layer_data *device_data, const VkImageCreateInfo *pCreateInfo,
+bool PreCallValidateCreateImage(layer_data *device_data, const VkImageCreateInfo *pCreateInfo,
                                 const VkAllocationCallbacks *pAllocator, VkImage *pImage) {
     bool skip_call = false;
     VkImageFormatProperties ImageFormatProperties;
@@ -601,7 +593,7 @@ bool PreCallValidateCreateImage(core_validation::layer_data *device_data, const 
     return skip_call;
 }
 
-void PostCallRecordCreateImage(core_validation::layer_data *device_data, const VkImageCreateInfo *pCreateInfo, VkImage *pImage) {
+void PostCallRecordCreateImage(layer_data *device_data, const VkImageCreateInfo *pCreateInfo, VkImage *pImage) {
     IMAGE_LAYOUT_NODE image_state;
     image_state.layout = pCreateInfo->initialLayout;
     image_state.format = pCreateInfo->format;
@@ -611,8 +603,7 @@ void PostCallRecordCreateImage(core_validation::layer_data *device_data, const V
     (*core_validation::GetImageLayoutMap(device_data))[subpair] = image_state;
 }
 
-bool PreCallValidateDestroyImage(core_validation::layer_data *device_data, VkImage image, IMAGE_STATE **image_state,
-                                 VK_OBJECT *obj_struct) {
+bool PreCallValidateDestroyImage(layer_data *device_data, VkImage image, IMAGE_STATE **image_state, VK_OBJECT *obj_struct) {
     const CHECK_DISABLED *disabled = core_validation::GetDisables(device_data);
     *image_state = core_validation::GetImageState(device_data, image);
     *obj_struct = {reinterpret_cast<uint64_t &>(image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT};
@@ -624,8 +615,7 @@ bool PreCallValidateDestroyImage(core_validation::layer_data *device_data, VkIma
     return skip;
 }
 
-void PostCallRecordDestroyImage(core_validation::layer_data *device_data, VkImage image, IMAGE_STATE *image_state,
-                                VK_OBJECT obj_struct) {
+void PostCallRecordDestroyImage(layer_data *device_data, VkImage image, IMAGE_STATE *image_state, VK_OBJECT obj_struct) {
     core_validation::invalidateCommandBuffers(device_data, image_state->cb_bindings, obj_struct);
     // Clean up memory mapping, bindings and range references for image
     for (auto mem_binding : image_state->GetBoundMemory()) {
@@ -649,7 +639,7 @@ void PostCallRecordDestroyImage(core_validation::layer_data *device_data, VkImag
     }
 }
 
-bool ValidateImageAttributes(core_validation::layer_data *device_data, IMAGE_STATE *image_state, VkImageSubresourceRange range) {
+bool ValidateImageAttributes(layer_data *device_data, IMAGE_STATE *image_state, VkImageSubresourceRange range) {
     bool skip = false;
     const debug_report_data *report_data = core_validation::GetReportData(device_data);
 
@@ -680,7 +670,7 @@ bool ValidateImageAttributes(core_validation::layer_data *device_data, IMAGE_STA
     return skip;
 }
 
-void ResolveRemainingLevelsLayers(core_validation::layer_data *dev_data, VkImageSubresourceRange *range, IMAGE_STATE *image_state) {
+void ResolveRemainingLevelsLayers(layer_data *dev_data, VkImageSubresourceRange *range, IMAGE_STATE *image_state) {
     // If the caller used the special values VK_REMAINING_MIP_LEVELS and VK_REMAINING_ARRAY_LAYERS, resolve them now in our
     // internal state to the actual values.
     if (range->levelCount == VK_REMAINING_MIP_LEVELS) {
@@ -693,8 +683,8 @@ void ResolveRemainingLevelsLayers(core_validation::layer_data *dev_data, VkImage
 }
 
 // Return the correct layer/level counts if the caller used the special values VK_REMAINING_MIP_LEVELS or VK_REMAINING_ARRAY_LAYERS.
-void ResolveRemainingLevelsLayers(core_validation::layer_data *dev_data, uint32_t *levels, uint32_t *layers,
-                                  VkImageSubresourceRange range, IMAGE_STATE *image_state) {
+void ResolveRemainingLevelsLayers(layer_data *dev_data, uint32_t *levels, uint32_t *layers, VkImageSubresourceRange range,
+                                  IMAGE_STATE *image_state) {
     *levels = range.levelCount;
     *layers = range.layerCount;
     if (range.levelCount == VK_REMAINING_MIP_LEVELS) {
@@ -705,7 +695,7 @@ void ResolveRemainingLevelsLayers(core_validation::layer_data *dev_data, uint32_
     }
 }
 
-bool VerifyClearImageLayout(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *image_state,
+bool VerifyClearImageLayout(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *image_state,
                             VkImageSubresourceRange range, VkImageLayout dest_image_layout, const char *func_name) {
     bool skip = false;
     const debug_report_data *report_data = core_validation::GetReportData(device_data);
@@ -764,8 +754,8 @@ bool VerifyClearImageLayout(core_validation::layer_data *device_data, GLOBAL_CB_
     return skip;
 }
 
-void RecordClearImageLayout(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, VkImage image,
-                            VkImageSubresourceRange range, VkImageLayout dest_image_layout) {
+void RecordClearImageLayout(layer_data *device_data, GLOBAL_CB_NODE *cb_node, VkImage image, VkImageSubresourceRange range,
+                            VkImageLayout dest_image_layout) {
     VkImageSubresourceRange resolved_range = range;
     ResolveRemainingLevelsLayers(device_data, &resolved_range, GetImageState(device_data, image));
 
@@ -782,7 +772,7 @@ void RecordClearImageLayout(core_validation::layer_data *device_data, GLOBAL_CB_
     }
 }
 
-bool PreCallValidateCmdClearColorImage(core_validation::layer_data *dev_data, VkCommandBuffer commandBuffer, VkImage image,
+bool PreCallValidateCmdClearColorImage(layer_data *dev_data, VkCommandBuffer commandBuffer, VkImage image,
                                        VkImageLayout imageLayout, uint32_t rangeCount, const VkImageSubresourceRange *pRanges) {
     bool skip = false;
     // TODO : Verify memory is in VK_IMAGE_STATE_CLEAR state
@@ -801,9 +791,8 @@ bool PreCallValidateCmdClearColorImage(core_validation::layer_data *dev_data, Vk
 }
 
 // This state recording routine is shared between ClearColorImage and ClearDepthStencilImage
-void PreCallRecordCmdClearImage(core_validation::layer_data *dev_data, VkCommandBuffer commandBuffer, VkImage image,
-                                VkImageLayout imageLayout, uint32_t rangeCount, const VkImageSubresourceRange *pRanges,
-                                CMD_TYPE cmd_type) {
+void PreCallRecordCmdClearImage(layer_data *dev_data, VkCommandBuffer commandBuffer, VkImage image, VkImageLayout imageLayout,
+                                uint32_t rangeCount, const VkImageSubresourceRange *pRanges, CMD_TYPE cmd_type) {
     auto cb_node = GetCBNode(dev_data, commandBuffer);
     auto image_state = GetImageState(dev_data, image);
     if (cb_node && image_state) {
@@ -820,8 +809,8 @@ void PreCallRecordCmdClearImage(core_validation::layer_data *dev_data, VkCommand
     }
 }
 
-bool PreCallValidateCmdClearDepthStencilImage(core_validation::layer_data *device_data, VkCommandBuffer commandBuffer,
-                                              VkImage image, VkImageLayout imageLayout, uint32_t rangeCount,
+bool PreCallValidateCmdClearDepthStencilImage(layer_data *device_data, VkCommandBuffer commandBuffer, VkImage image,
+                                              VkImageLayout imageLayout, uint32_t rangeCount,
                                               const VkImageSubresourceRange *pRanges) {
     bool skip = false;
     const debug_report_data *report_data = core_validation::GetReportData(device_data);
@@ -922,7 +911,7 @@ static bool ExceedsBounds(const VkOffset3D *offset, const VkExtent3D *extent, co
     return result;
 }
 
-bool PreCallValidateCmdCopyImage(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
+bool PreCallValidateCmdCopyImage(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
                                  IMAGE_STATE *dst_image_state, uint32_t region_count, const VkImageCopy *regions) {
     bool skip = false;
     const debug_report_data *report_data = core_validation::GetReportData(device_data);
@@ -1118,9 +1107,8 @@ static inline bool ContainsRect(VkRect2D rect, VkRect2D sub_rect) {
     return true;
 }
 
-bool PreCallValidateCmdClearAttachments(core_validation::layer_data *device_data, VkCommandBuffer commandBuffer,
-                                        uint32_t attachmentCount, const VkClearAttachment *pAttachments, uint32_t rectCount,
-                                        const VkClearRect *pRects) {
+bool PreCallValidateCmdClearAttachments(layer_data *device_data, VkCommandBuffer commandBuffer, uint32_t attachmentCount,
+                                        const VkClearAttachment *pAttachments, uint32_t rectCount, const VkClearRect *pRects) {
     GLOBAL_CB_NODE *cb_node = GetCBNode(device_data, commandBuffer);
     const debug_report_data *report_data = core_validation::GetReportData(device_data);
 
@@ -1236,7 +1224,7 @@ bool PreCallValidateCmdClearAttachments(core_validation::layer_data *device_data
     return skip;
 }
 
-bool PreCallValidateCmdResolveImage(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
+bool PreCallValidateCmdResolveImage(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
                                     IMAGE_STATE *dst_image_state, uint32_t regionCount, const VkImageResolve *pRegions) {
     const debug_report_data *report_data = core_validation::GetReportData(device_data);
     bool skip = false;
@@ -1308,8 +1296,8 @@ bool PreCallValidateCmdResolveImage(core_validation::layer_data *device_data, GL
     return skip;
 }
 
-void PreCallRecordCmdResolveImage(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
-    IMAGE_STATE *dst_image_state) {
+void PreCallRecordCmdResolveImage(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
+                                  IMAGE_STATE *dst_image_state) {
     // Update bindings between images and cmd buffer
     AddCommandBufferBindingImage(device_data, cb_node, src_image_state);
     AddCommandBufferBindingImage(device_data, cb_node, dst_image_state);
@@ -1326,7 +1314,7 @@ void PreCallRecordCmdResolveImage(core_validation::layer_data *device_data, GLOB
     core_validation::UpdateCmdBufferLastCmd(cb_node, CMD_RESOLVEIMAGE);
 }
 
-bool PreCallValidateCmdBlitImage(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
+bool PreCallValidateCmdBlitImage(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
                                  IMAGE_STATE *dst_image_state, uint32_t regionCount, const VkImageBlit *pRegions, VkFilter filter) {
     const debug_report_data *report_data = core_validation::GetReportData(device_data);
 
@@ -1485,8 +1473,8 @@ bool PreCallValidateCmdBlitImage(core_validation::layer_data *device_data, GLOBA
     return skip;
 }
 
-void PreCallRecordCmdBlitImage(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
-    IMAGE_STATE *dst_image_state) {
+void PreCallRecordCmdBlitImage(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
+                               IMAGE_STATE *dst_image_state) {
     // Update bindings between images and cmd buffer
     AddCommandBufferBindingImage(device_data, cb_node, src_image_state);
     AddCommandBufferBindingImage(device_data, cb_node, dst_image_state);

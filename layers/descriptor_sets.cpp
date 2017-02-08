@@ -303,7 +303,7 @@ cvdescriptorset::AllocateDescriptorSetsData::AllocateDescriptorSetsData(uint32_t
     : required_descriptors_by_type{}, layout_nodes(count, nullptr) {}
 
 cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const VkDescriptorPool pool,
-                                              const DescriptorSetLayout *layout, const core_validation::layer_data *dev_data)
+                                              const DescriptorSetLayout *layout, const layer_data *dev_data)
     : some_update_(false),
       set_(set),
       pool_state_(nullptr),
@@ -723,12 +723,12 @@ cvdescriptorset::SamplerDescriptor::SamplerDescriptor(const VkSampler *immut) : 
     }
 }
 // Validate given sampler. Currently this only checks to make sure it exists in the samplerMap
-bool cvdescriptorset::ValidateSampler(const VkSampler sampler, const core_validation::layer_data *dev_data) {
+bool cvdescriptorset::ValidateSampler(const VkSampler sampler, const layer_data *dev_data) {
     return (GetSamplerState(dev_data, sampler) != nullptr);
 }
 
 bool cvdescriptorset::ValidateImageUpdate(VkImageView image_view, VkImageLayout image_layout, VkDescriptorType type,
-                                          const core_validation::layer_data *dev_data, UNIQUE_VALIDATION_ERROR_CODE *error_code,
+                                          const layer_data *dev_data, UNIQUE_VALIDATION_ERROR_CODE *error_code,
                                           std::string *error_msg) {
     // TODO : Defaulting to 00943 for all cases here. Need to create new error codes for various cases.
     *error_code = VALIDATION_ERROR_00943;
@@ -910,7 +910,7 @@ void cvdescriptorset::SamplerDescriptor::CopyUpdate(const Descriptor *src) {
     updated = true;
 }
 
-void cvdescriptorset::SamplerDescriptor::BindCommandBuffer(const core_validation::layer_data *dev_data, GLOBAL_CB_NODE *cb_node) {
+void cvdescriptorset::SamplerDescriptor::BindCommandBuffer(const layer_data *dev_data, GLOBAL_CB_NODE *cb_node) {
     if (!immutable_) {
         auto sampler_state = GetSamplerState(dev_data, sampler_);
         if (sampler_state) core_validation::AddCommandBufferBindingSampler(cb_node, sampler_state);
@@ -954,8 +954,7 @@ void cvdescriptorset::ImageSamplerDescriptor::CopyUpdate(const Descriptor *src) 
     image_layout_ = image_layout;
 }
 
-void cvdescriptorset::ImageSamplerDescriptor::BindCommandBuffer(const core_validation::layer_data *dev_data,
-                                                                GLOBAL_CB_NODE *cb_node) {
+void cvdescriptorset::ImageSamplerDescriptor::BindCommandBuffer(const layer_data *dev_data, GLOBAL_CB_NODE *cb_node) {
     // First add binding for any non-immutable sampler
     if (!immutable_) {
         auto sampler_state = GetSamplerState(dev_data, sampler_);
@@ -990,7 +989,7 @@ void cvdescriptorset::ImageDescriptor::CopyUpdate(const Descriptor *src) {
     image_layout_ = image_layout;
 }
 
-void cvdescriptorset::ImageDescriptor::BindCommandBuffer(const core_validation::layer_data *dev_data, GLOBAL_CB_NODE *cb_node) {
+void cvdescriptorset::ImageDescriptor::BindCommandBuffer(const layer_data *dev_data, GLOBAL_CB_NODE *cb_node) {
     // Add binding for image
     auto iv_state = GetImageViewState(dev_data, image_view_);
     if (iv_state) {
@@ -1027,7 +1026,7 @@ void cvdescriptorset::BufferDescriptor::CopyUpdate(const Descriptor *src) {
     range_ = buff_desc->range_;
 }
 
-void cvdescriptorset::BufferDescriptor::BindCommandBuffer(const core_validation::layer_data *dev_data, GLOBAL_CB_NODE *cb_node) {
+void cvdescriptorset::BufferDescriptor::BindCommandBuffer(const layer_data *dev_data, GLOBAL_CB_NODE *cb_node) {
     auto buffer_node = GetBufferState(dev_data, buffer_);
     if (buffer_node) core_validation::AddCommandBufferBindingBuffer(dev_data, cb_node, buffer_node);
 }
@@ -1048,7 +1047,7 @@ void cvdescriptorset::TexelDescriptor::CopyUpdate(const Descriptor *src) {
     buffer_view_ = static_cast<const TexelDescriptor *>(src)->buffer_view_;
 }
 
-void cvdescriptorset::TexelDescriptor::BindCommandBuffer(const core_validation::layer_data *dev_data, GLOBAL_CB_NODE *cb_node) {
+void cvdescriptorset::TexelDescriptor::BindCommandBuffer(const layer_data *dev_data, GLOBAL_CB_NODE *cb_node) {
     auto bv_state = GetBufferViewState(dev_data, buffer_view_);
     if (bv_state) {
         core_validation::AddCommandBufferBindingBufferView(dev_data, cb_node, bv_state);
@@ -1060,9 +1059,8 @@ void cvdescriptorset::TexelDescriptor::BindCommandBuffer(const core_validation::
 // If the update hits an issue for which the callback returns "true", meaning that the call down the chain should
 //  be skipped, then true is returned.
 // If there is no issue with the update, then false is returned.
-bool cvdescriptorset::ValidateUpdateDescriptorSets(const debug_report_data *report_data,
-                                                   const core_validation::layer_data *dev_data, uint32_t write_count,
-                                                   const VkWriteDescriptorSet *p_wds, uint32_t copy_count,
+bool cvdescriptorset::ValidateUpdateDescriptorSets(const debug_report_data *report_data, const layer_data *dev_data,
+                                                   uint32_t write_count, const VkWriteDescriptorSet *p_wds, uint32_t copy_count,
                                                    const VkCopyDescriptorSet *p_cds) {
     bool skip_call = false;
     // Validate Write updates
@@ -1115,7 +1113,7 @@ bool cvdescriptorset::ValidateUpdateDescriptorSets(const debug_report_data *repo
 //  with the same set of updates.
 // This is split from the validate code to allow validation prior to calling down the chain, and then update after
 //  calling down the chain.
-void cvdescriptorset::PerformUpdateDescriptorSets(const core_validation::layer_data *dev_data, uint32_t write_count,
+void cvdescriptorset::PerformUpdateDescriptorSets(const layer_data *dev_data, uint32_t write_count,
                                                   const VkWriteDescriptorSet *p_wds, uint32_t copy_count,
                                                   const VkCopyDescriptorSet *p_cds) {
     // Write updates first
@@ -1538,8 +1536,7 @@ bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescri
 }
 // Verify that the state at allocate time is correct, but don't actually allocate the sets yet
 bool cvdescriptorset::ValidateAllocateDescriptorSets(const debug_report_data *report_data,
-                                                     const VkDescriptorSetAllocateInfo *p_alloc_info,
-                                                     const core_validation::layer_data *dev_data,
+                                                     const VkDescriptorSetAllocateInfo *p_alloc_info, const layer_data *dev_data,
                                                      AllocateDescriptorSetsData *ds_data) {
     bool skip_call = false;
 
@@ -1592,7 +1589,7 @@ void cvdescriptorset::PerformAllocateDescriptorSets(const VkDescriptorSetAllocat
                                                     const AllocateDescriptorSetsData *ds_data,
                                                     std::unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_STATE *> *pool_map,
                                                     std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> *set_map,
-                                                    const core_validation::layer_data *dev_data) {
+                                                    const layer_data *dev_data) {
     auto pool_state = (*pool_map)[p_alloc_info->descriptorPool];
     /* Account for sets and individual descriptors allocated from pool */
     pool_state->availableSets -= p_alloc_info->descriptorSetCount;
