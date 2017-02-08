@@ -42,7 +42,7 @@ typedef struct _debug_report_data {
     bool g_DEBUG_REPORT;
 } debug_report_data;
 
-template debug_report_data *get_my_data_ptr<debug_report_data>(void *data_key,
+template debug_report_data *GetLayerDataPtr<debug_report_data>(void *data_key,
                                                                std::unordered_map<void *, debug_report_data *> &data_map);
 
 // Forward Declarations

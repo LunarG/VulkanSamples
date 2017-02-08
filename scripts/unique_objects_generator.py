@@ -717,7 +717,7 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
         dispatchable_type = cmdinfo.elem.find('param/type').text
         dispatchable_name = cmdinfo.elem.find('param/name').text
         # Generate local instance/pdev/device data lookup
-        self.appendSection('command', '    layer_data *dev_data = get_my_data_ptr(get_dispatch_key('+dispatchable_name+'), layer_data_map);')
+        self.appendSection('command', '    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key('+dispatchable_name+'), layer_data_map);')
         # Handle return values, if any
         resulttype = cmdinfo.elem.find('proto/type')
         if (resulttype != None and resulttype.text == 'void'):

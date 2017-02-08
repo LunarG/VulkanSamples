@@ -432,7 +432,7 @@ class ThreadOutputGenerator(OutputGenerator):
         dispatchable_type = cmdinfo.elem.find('param/type').text
         dispatchable_name = cmdinfo.elem.find('param/name').text
         self.appendSection('command', '    dispatch_key key = get_dispatch_key('+dispatchable_name+');')
-        self.appendSection('command', '    layer_data *my_data = get_my_data_ptr(key, layer_data_map);')
+        self.appendSection('command', '    layer_data *my_data = GetLayerDataPtr(key, layer_data_map);')
         if dispatchable_type in ["VkPhysicalDevice", "VkInstance"]:
             self.appendSection('command', '    VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;')
         else:
