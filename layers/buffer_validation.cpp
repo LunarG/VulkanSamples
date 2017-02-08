@@ -1663,27 +1663,26 @@ bool ValidateMaskBitsFromLayouts(core_validation::layer_data *device_data, VkCom
 }
 
 // ValidateLayoutVsAttachmentDescription is a general function where we can validate various state associated with the
-// VkAttachmentDescription structs that are used by the sub-passes of a renderpass. Initial check is to make sure that
-// READ_ONLY layout attachments don't have CLEAR as their loadOp.
+// VkAttachmentDescription structs that are used by the sub-passes of a renderpass. Initial check is to make sure that READ_ONLY
+// layout attachments don't have CLEAR as their loadOp.
 bool ValidateLayoutVsAttachmentDescription(const debug_report_data *report_data, const VkImageLayout first_layout,
-    const uint32_t attachment,
-    const VkAttachmentDescription &attachment_description) {
-    bool skip_call = false;
+                                           const uint32_t attachment, const VkAttachmentDescription &attachment_description) {
+    bool skip = false;
     // Verify that initial loadOp on READ_ONLY attachments is not CLEAR
     if (attachment_description.loadOp == VK_ATTACHMENT_LOAD_OP_CLEAR) {
         if ((first_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL) ||
             (first_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)) {
-            skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT,
-                VkDebugReportObjectTypeEXT(0), __LINE__, VALIDATION_ERROR_02351, "DS",
-                "Cannot clear attachment %d with invalid first layout %s. %s", attachment,
-                string_VkImageLayout(first_layout), validation_error_map[VALIDATION_ERROR_02351]);
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT,
+                            VkDebugReportObjectTypeEXT(0), __LINE__, VALIDATION_ERROR_02351, "DS",
+                            "Cannot clear attachment %d with invalid first layout %s. %s", attachment,
+                            string_VkImageLayout(first_layout), validation_error_map[VALIDATION_ERROR_02351]);
         }
     }
-    return skip_call;
+    return skip;
 }
 
-bool ValidateLayouts(core_validation::layer_data *dev_data, VkDevice device, const VkRenderPassCreateInfo *pCreateInfo) {
-    const debug_report_data *report_data = core_validation::GetReportData(dev_data);
+bool ValidateLayouts(core_validation::layer_data *device_data, VkDevice device, const VkRenderPassCreateInfo *pCreateInfo) {
+    const debug_report_data *report_data = core_validation::GetReportData(device_data);
     bool skip = false;
 
     // Track when we're observing the first use of an attachment
@@ -1695,59 +1694,58 @@ bool ValidateLayouts(core_validation::layer_data *dev_data, VkDevice device, con
             if (attach_index == VK_ATTACHMENT_UNUSED) continue;
 
             switch (subpass.pColorAttachments[j].layout) {
-            case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-                // This is ideal.
-                break;
+                case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+                    // This is ideal.
+                    break;
 
-            case VK_IMAGE_LAYOUT_GENERAL:
-                // May not be optimal; TODO: reconsider this warning based on other constraints?
-                skip |= log_msg(report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
-                    VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                    "Layout for color attachment is GENERAL but should be COLOR_ATTACHMENT_OPTIMAL.");
-                break;
+                case VK_IMAGE_LAYOUT_GENERAL:
+                    // May not be optimal; TODO: reconsider this warning based on other constraints?
+                    skip |= log_msg(report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
+                                    VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                                    "Layout for color attachment is GENERAL but should be COLOR_ATTACHMENT_OPTIMAL.");
+                    break;
 
-            default:
-                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT,
-                    0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                    "Layout for color attachment is %s but can only be COLOR_ATTACHMENT_OPTIMAL or GENERAL.",
-                    string_VkImageLayout(subpass.pColorAttachments[j].layout));
+                default:
+                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                    __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                                    "Layout for color attachment is %s but can only be COLOR_ATTACHMENT_OPTIMAL or GENERAL.",
+                                    string_VkImageLayout(subpass.pColorAttachments[j].layout));
             }
 
             if (attach_first_use[attach_index]) {
-                skip |= ValidateLayoutVsAttachmentDescription(report_data, subpass.pColorAttachments[j].layout,
-                    attach_index, pCreateInfo->pAttachments[attach_index]);
+                skip |= ValidateLayoutVsAttachmentDescription(report_data, subpass.pColorAttachments[j].layout, attach_index,
+                                                              pCreateInfo->pAttachments[attach_index]);
             }
             attach_first_use[attach_index] = false;
         }
         if (subpass.pDepthStencilAttachment && subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
             switch (subpass.pDepthStencilAttachment->layout) {
-            case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-            case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
-                // These are ideal.
-                break;
+                case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+                case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+                    // These are ideal.
+                    break;
 
-            case VK_IMAGE_LAYOUT_GENERAL:
-                // May not be optimal; TODO: reconsider this warning based on other constraints? GENERAL can be better than
-                // doing
-                // a bunch of transitions.
-                skip |= log_msg(report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
-                    VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                    "GENERAL layout for depth attachment may not give optimal performance.");
-                break;
+                case VK_IMAGE_LAYOUT_GENERAL:
+                    // May not be optimal; TODO: reconsider this warning based on other constraints? GENERAL can be better than
+                    // doing a bunch of transitions.
+                    skip |= log_msg(report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
+                                    VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                                    "GENERAL layout for depth attachment may not give optimal performance.");
+                    break;
 
-            default:
-                // No other layouts are acceptable
-                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT,
-                    0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                    "Layout for depth attachment is %s but can only be DEPTH_STENCIL_ATTACHMENT_OPTIMAL, "
-                    "DEPTH_STENCIL_READ_ONLY_OPTIMAL or GENERAL.",
-                    string_VkImageLayout(subpass.pDepthStencilAttachment->layout));
+                default:
+                    // No other layouts are acceptable
+                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                    __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                                    "Layout for depth attachment is %s but can only be DEPTH_STENCIL_ATTACHMENT_OPTIMAL, "
+                                    "DEPTH_STENCIL_READ_ONLY_OPTIMAL or GENERAL.",
+                                    string_VkImageLayout(subpass.pDepthStencilAttachment->layout));
             }
 
             auto attach_index = subpass.pDepthStencilAttachment->attachment;
             if (attach_first_use[attach_index]) {
-                skip |= ValidateLayoutVsAttachmentDescription(report_data, subpass.pDepthStencilAttachment->layout,
-                    attach_index, pCreateInfo->pAttachments[attach_index]);
+                skip |= ValidateLayoutVsAttachmentDescription(report_data, subpass.pDepthStencilAttachment->layout, attach_index,
+                                                              pCreateInfo->pAttachments[attach_index]);
             }
             attach_first_use[attach_index] = false;
         }
@@ -1756,29 +1754,29 @@ bool ValidateLayouts(core_validation::layer_data *dev_data, VkDevice device, con
             if (attach_index == VK_ATTACHMENT_UNUSED) continue;
 
             switch (subpass.pInputAttachments[j].layout) {
-            case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
-            case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-                // These are ideal.
-                break;
+                case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+                case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+                    // These are ideal.
+                    break;
 
-            case VK_IMAGE_LAYOUT_GENERAL:
-                // May not be optimal. TODO: reconsider this warning based on other constraints.
-                skip |= log_msg(report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
-                    VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                    "Layout for input attachment is GENERAL but should be READ_ONLY_OPTIMAL.");
-                break;
+                case VK_IMAGE_LAYOUT_GENERAL:
+                    // May not be optimal. TODO: reconsider this warning based on other constraints.
+                    skip |= log_msg(report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
+                                    VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                                    "Layout for input attachment is GENERAL but should be READ_ONLY_OPTIMAL.");
+                    break;
 
-            default:
-                // No other layouts are acceptable
-                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
-                    __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                    "Layout for input attachment is %s but can only be READ_ONLY_OPTIMAL or GENERAL.",
-                    string_VkImageLayout(subpass.pInputAttachments[j].layout));
+                default:
+                    // No other layouts are acceptable
+                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                                    DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                                    "Layout for input attachment is %s but can only be READ_ONLY_OPTIMAL or GENERAL.",
+                                    string_VkImageLayout(subpass.pInputAttachments[j].layout));
             }
 
             if (attach_first_use[attach_index]) {
-                skip |= ValidateLayoutVsAttachmentDescription(report_data, subpass.pInputAttachments[j].layout,
-                    attach_index, pCreateInfo->pAttachments[attach_index]);
+                skip |= ValidateLayoutVsAttachmentDescription(report_data, subpass.pInputAttachments[j].layout, attach_index,
+                                                              pCreateInfo->pAttachments[attach_index]);
             }
             attach_first_use[attach_index] = false;
         }
