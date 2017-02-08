@@ -82,12 +82,15 @@
 // This intentionally includes a cpp file
 #include "vk_safe_struct.cpp"
 
-using namespace std;
-
 namespace core_validation {
 
 using std::unordered_map;
 using std::unordered_set;
+using std::unique_ptr;
+using std::vector;
+using std::string;
+using std::stringstream;
+using std::max;
 
 // WSI Image Objects bypass usual Image Object creation methods.  A special Memory
 // Object value will be used to identify them internally.
