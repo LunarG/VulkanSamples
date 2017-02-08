@@ -11619,6 +11619,55 @@ TEST_F(VkLayerTest, SimultaneousUse) {
     vkQueueWaitIdle(m_device->m_queue);
 }
 
+TEST_F(VkLayerTest, SimultaneousUseOneShot) {
+    TEST_DESCRIPTION(
+        "Submit the same command buffer twice in one submit looking for simultaneous use and one time submit"
+        "errors");
+    const char *simultaneous_use_message = "is already in use and is not marked for simultaneous use";
+    const char *one_shot_message = "VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT set, but has been submitted";
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkCommandBuffer cmd_bufs[2];
+    VkCommandBufferAllocateInfo alloc_info;
+    alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    alloc_info.pNext = NULL;
+    alloc_info.commandBufferCount = 2;
+    alloc_info.commandPool = m_commandPool;
+    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    vkAllocateCommandBuffers(m_device->device(), &alloc_info, cmd_bufs);
+
+    VkCommandBufferBeginInfo cb_binfo;
+    cb_binfo.pNext = NULL;
+    cb_binfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    cb_binfo.pInheritanceInfo = VK_NULL_HANDLE;
+    cb_binfo.flags = 0;
+    vkBeginCommandBuffer(cmd_bufs[0], &cb_binfo);
+    VkViewport viewport = {0, 0, 16, 16, 0, 1};
+    vkCmdSetViewport(cmd_bufs[0], 0, 1, &viewport);
+    vkEndCommandBuffer(cmd_bufs[0]);
+    VkCommandBuffer duplicates[2] = {cmd_bufs[0], cmd_bufs[0]};
+
+    VkSubmitInfo submit_info = {};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.commandBufferCount = 2;
+    submit_info.pCommandBuffers = duplicates;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, simultaneous_use_message);
+    vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
+    m_errorMonitor->VerifyFound();
+    vkQueueWaitIdle(m_device->m_queue);
+
+    // Set one time use and now look for one time submit
+    duplicates[0] = duplicates[1] = cmd_bufs[1];
+    cb_binfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT | VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    vkBeginCommandBuffer(cmd_bufs[1], &cb_binfo);
+    vkCmdSetViewport(cmd_bufs[1], 0, 1, &viewport);
+    vkEndCommandBuffer(cmd_bufs[1]);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, one_shot_message);
+    vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
+    m_errorMonitor->VerifyFound();
+    vkQueueWaitIdle(m_device->m_queue);
+}
+
 TEST_F(VkLayerTest, StageMaskGsTsEnabled) {
     TEST_DESCRIPTION(
         "Attempt to use a stageMask w/ geometry shader and tesselation shader bits enabled when those features are "
@@ -17658,6 +17707,111 @@ TEST_F(VkPositiveLayerTest, TestDestroyFreeNullHandles) {
 
     vkFreeMemory(m_device->device(), VK_NULL_HANDLE, NULL);
 
+    m_errorMonitor->VerifyNotFound();
+}
+
+TEST_F(VkPositiveLayerTest, QueueSubmitSemaphoresAndLayoutTracking) {
+    TEST_DESCRIPTION(
+        "Submit multiple command buffers with chained semaphore signals and layout transitions");
+
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    VkCommandBuffer cmd_bufs[4];
+    VkCommandBufferAllocateInfo alloc_info;
+    alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    alloc_info.pNext = NULL;
+    alloc_info.commandBufferCount = 4;
+    alloc_info.commandPool = m_commandPool;
+    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    vkAllocateCommandBuffers(m_device->device(), &alloc_info, cmd_bufs);
+    VkImageObj image(m_device);
+    image.init(128, 128, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
+    ASSERT_TRUE(image.initialized());
+    VkCommandBufferBeginInfo cb_binfo;
+    cb_binfo.pNext = NULL;
+    cb_binfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    cb_binfo.pInheritanceInfo = VK_NULL_HANDLE;
+    cb_binfo.flags = 0;
+    // Use 4 command buffers, each with an image layout transition, ColorAO->General->ColorAO->TransferSrc->TransferDst
+    vkBeginCommandBuffer(cmd_bufs[0], &cb_binfo);
+    VkImageMemoryBarrier img_barrier = {};
+    img_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    img_barrier.pNext = NULL;
+    img_barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+    img_barrier.dstAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+    img_barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    img_barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+    img_barrier.image = image.handle();
+    img_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    img_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    img_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    img_barrier.subresourceRange.baseArrayLayer = 0;
+    img_barrier.subresourceRange.baseMipLevel = 0;
+    img_barrier.subresourceRange.layerCount = 1;
+    img_barrier.subresourceRange.levelCount = 1;
+    vkCmdPipelineBarrier(cmd_bufs[0], VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_HOST_BIT, 0, 0, nullptr, 0, nullptr, 1,
+                         &img_barrier);
+    vkEndCommandBuffer(cmd_bufs[0]);
+    vkBeginCommandBuffer(cmd_bufs[1], &cb_binfo);
+    img_barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+    img_barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    vkCmdPipelineBarrier(cmd_bufs[1], VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_HOST_BIT, 0, 0, nullptr, 0, nullptr, 1,
+                         &img_barrier);
+    vkEndCommandBuffer(cmd_bufs[1]);
+    vkBeginCommandBuffer(cmd_bufs[2], &cb_binfo);
+    img_barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    img_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    vkCmdPipelineBarrier(cmd_bufs[2], VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_HOST_BIT, 0, 0, nullptr, 0, nullptr, 1,
+                         &img_barrier);
+    vkEndCommandBuffer(cmd_bufs[2]);
+    vkBeginCommandBuffer(cmd_bufs[3], &cb_binfo);
+    img_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    img_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    vkCmdPipelineBarrier(cmd_bufs[3], VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_HOST_BIT, 0, 0, nullptr, 0, nullptr, 1,
+                         &img_barrier);
+    vkEndCommandBuffer(cmd_bufs[3]);
+
+    // Submit 4 command buffers in 3 submits, with submits 2 and 3 waiting for semaphores from submits 1 and 2
+    VkSemaphore semaphore1, semaphore2;
+    VkSemaphoreCreateInfo semaphore_create_info{};
+    semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    vkCreateSemaphore(m_device->device(), &semaphore_create_info, nullptr, &semaphore1);
+    vkCreateSemaphore(m_device->device(), &semaphore_create_info, nullptr, &semaphore2);
+    VkPipelineStageFlags flags[]{VK_PIPELINE_STAGE_ALL_COMMANDS_BIT};
+    VkSubmitInfo submit_info[3];
+    submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info[0].pNext = nullptr;
+    submit_info[0].commandBufferCount = 1;
+    submit_info[0].pCommandBuffers = &cmd_bufs[0];
+    submit_info[0].signalSemaphoreCount = 1;
+    submit_info[0].pSignalSemaphores = &semaphore1;
+    submit_info[0].waitSemaphoreCount = 0;
+    submit_info[0].pWaitDstStageMask = nullptr;
+    submit_info[0].pWaitDstStageMask = flags;
+    submit_info[1].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info[1].pNext = nullptr;
+    submit_info[1].commandBufferCount = 1;
+    submit_info[1].pCommandBuffers = &cmd_bufs[1];
+    submit_info[1].waitSemaphoreCount = 1;
+    submit_info[1].pWaitSemaphores = &semaphore1;
+    submit_info[1].signalSemaphoreCount = 1;
+    submit_info[1].pSignalSemaphores = &semaphore2;
+    submit_info[1].pWaitDstStageMask = flags;
+    submit_info[2].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info[2].pNext = nullptr;
+    submit_info[2].commandBufferCount = 2;
+    submit_info[2].pCommandBuffers = &cmd_bufs[2];
+    submit_info[2].waitSemaphoreCount = 1;
+    submit_info[2].pWaitSemaphores = &semaphore2;
+    submit_info[2].signalSemaphoreCount = 0;
+    submit_info[2].pSignalSemaphores = nullptr;
+    submit_info[2].pWaitDstStageMask = flags;
+    vkQueueSubmit(m_device->m_queue, 3, submit_info, VK_NULL_HANDLE);
+    vkQueueWaitIdle(m_device->m_queue);
+
+    vkDestroySemaphore(m_device->device(), semaphore1, NULL);
+    vkDestroySemaphore(m_device->device(), semaphore2, NULL);
     m_errorMonitor->VerifyNotFound();
 }
 
