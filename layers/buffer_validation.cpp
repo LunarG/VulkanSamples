@@ -157,7 +157,7 @@ bool FindGlobalLayout(core_validation::layer_data *device_data, ImageSubresource
 bool FindLayouts(core_validation::layer_data *device_data, VkImage image, std::vector<VkImageLayout> &layouts) {
     auto sub_data = (*core_validation::GetImageSubresourceMap(device_data)).find(image);
     if (sub_data == (*core_validation::GetImageSubresourceMap(device_data)).end()) return false;
-    auto image_state = getImageState(device_data, image);
+    auto image_state = GetImageState(device_data, image);
     if (!image_state) return false;
     bool ignoreGlobal = false;
     // TODO: Make this robust for >1 aspect mask. Now it will just say ignore potential errors in this case.
@@ -198,7 +198,7 @@ void SetLayout(core_validation::layer_data *device_data, GLOBAL_CB_NODE *pCB, Im
 
 void SetImageViewLayout(core_validation::layer_data *device_data, GLOBAL_CB_NODE *pCB, VkImageView imageView,
                         const VkImageLayout &layout) {
-    auto view_state = getImageViewState(device_data, imageView);
+    auto view_state = GetImageViewState(device_data, imageView);
     assert(view_state);
     auto image = view_state->create_info.image;
     const VkImageSubresourceRange &subRange = view_state->create_info.subresourceRange;
@@ -224,7 +224,7 @@ bool VerifyFramebufferAndRenderPassLayouts(core_validation::layer_data *device_d
                                            const VkRenderPassBeginInfo *pRenderPassBegin,
                                            const FRAMEBUFFER_STATE *framebuffer_state) {
     bool skip_call = false;
-    auto const pRenderPassInfo = getRenderPassState(device_data, pRenderPassBegin->renderPass)->createInfo.ptr();
+    auto const pRenderPassInfo = GetRenderPassState(device_data, pRenderPassBegin->renderPass)->createInfo.ptr();
     auto const &framebufferInfo = framebuffer_state->createInfo;
     const auto report_data = core_validation::GetReportData(device_data);
     if (pRenderPassInfo->attachmentCount != framebufferInfo.attachmentCount) {
@@ -235,7 +235,7 @@ bool VerifyFramebufferAndRenderPassLayouts(core_validation::layer_data *device_d
     }
     for (uint32_t i = 0; i < pRenderPassInfo->attachmentCount; ++i) {
         const VkImageView &image_view = framebufferInfo.pAttachments[i];
-        auto view_state = getImageViewState(device_data, image_view);
+        auto view_state = GetImageViewState(device_data, image_view);
         assert(view_state);
         const VkImage &image = view_state->create_info.image;
         const VkImageSubresourceRange &subRange = view_state->create_info.subresourceRange;
@@ -279,7 +279,7 @@ void TransitionAttachmentRefLayout(core_validation::layer_data *device_data, GLO
 void TransitionSubpassLayouts(core_validation::layer_data *device_data, GLOBAL_CB_NODE *pCB,
                               const VkRenderPassBeginInfo *pRenderPassBegin, const int subpass_index,
                               FRAMEBUFFER_STATE *framebuffer_state) {
-    auto renderPass = getRenderPassState(device_data, pRenderPassBegin->renderPass);
+    auto renderPass = GetRenderPassState(device_data, pRenderPassBegin->renderPass);
     if (!renderPass) return;
 
     if (framebuffer_state) {
@@ -325,7 +325,7 @@ bool TransitionImageAspectLayout(core_validation::layer_data *device_data, GLOBA
 // TODO: Separate validation and layout state updates
 bool TransitionImageLayouts(core_validation::layer_data *device_data, VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
                             const VkImageMemoryBarrier *pImgMemBarriers) {
-    GLOBAL_CB_NODE *pCB = getCBNode(device_data, cmdBuffer);
+    GLOBAL_CB_NODE *pCB = GetCBNode(device_data, cmdBuffer);
     bool skip = false;
     uint32_t levelCount = 0;
     uint32_t layerCount = 0;
@@ -335,7 +335,7 @@ bool TransitionImageLayouts(core_validation::layer_data *device_data, VkCommandB
         if (!mem_barrier) continue;
         // TODO: Do not iterate over every possibility - consolidate where possible
         ResolveRemainingLevelsLayers(device_data, &levelCount, &layerCount, mem_barrier->subresourceRange,
-                                     getImageState(device_data, mem_barrier->image));
+                                     GetImageState(device_data, mem_barrier->image));
 
         for (uint32_t j = 0; j < levelCount; j++) {
             uint32_t level = mem_barrier->subresourceRange.baseMipLevel + j;
@@ -377,7 +377,7 @@ bool VerifySourceImageLayout(core_validation::layer_data *device_data, GLOBAL_CB
     if (srcImageLayout != VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL) {
         if (srcImageLayout == VK_IMAGE_LAYOUT_GENERAL) {
             // TODO : Can we deal with image node from the top of call tree and avoid map look-up here?
-            auto image_state = getImageState(device_data, srcImage);
+            auto image_state = GetImageState(device_data, srcImage);
             if (image_state->createInfo.tiling != VK_IMAGE_TILING_LINEAR) {
                 // LAYOUT_GENERAL is allowed, but may not be performance optimal, flag as perf warning.
                 skip_call |= log_msg(report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
@@ -417,7 +417,7 @@ bool VerifyDestImageLayout(core_validation::layer_data *device_data, GLOBAL_CB_N
     }
     if (destImageLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
         if (destImageLayout == VK_IMAGE_LAYOUT_GENERAL) {
-            auto image_state = getImageState(device_data, destImage);
+            auto image_state = GetImageState(device_data, destImage);
             if (image_state->createInfo.tiling != VK_IMAGE_TILING_LINEAR) {
                 // LAYOUT_GENERAL is allowed, but may not be performance optimal, flag as perf warning.
                 skip_call |= log_msg(report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
@@ -435,7 +435,7 @@ bool VerifyDestImageLayout(core_validation::layer_data *device_data, GLOBAL_CB_N
 
 void TransitionFinalSubpassLayouts(core_validation::layer_data *device_data, GLOBAL_CB_NODE *pCB,
                                    const VkRenderPassBeginInfo *pRenderPassBegin, FRAMEBUFFER_STATE *framebuffer_state) {
-    auto renderPass = getRenderPassState(device_data, pRenderPassBegin->renderPass);
+    auto renderPass = GetRenderPassState(device_data, pRenderPassBegin->renderPass);
     if (!renderPass) return;
 
     const VkRenderPassCreateInfo *pRenderPassInfo = renderPass->createInfo.ptr();
@@ -614,7 +614,7 @@ void PostCallRecordCreateImage(core_validation::layer_data *device_data, const V
 bool PreCallValidateDestroyImage(core_validation::layer_data *device_data, VkImage image, IMAGE_STATE **image_state,
                                  VK_OBJECT *obj_struct) {
     const CHECK_DISABLED *disabled = core_validation::GetDisables(device_data);
-    *image_state = core_validation::getImageState(device_data, image);
+    *image_state = core_validation::GetImageState(device_data, image);
     *obj_struct = {reinterpret_cast<uint64_t &>(image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT};
     if (disabled->destroy_image) return false;
     bool skip = false;
@@ -629,7 +629,7 @@ void PostCallRecordDestroyImage(core_validation::layer_data *device_data, VkImag
     core_validation::invalidateCommandBuffers(device_data, image_state->cb_bindings, obj_struct);
     // Clean up memory mapping, bindings and range references for image
     for (auto mem_binding : image_state->GetBoundMemory()) {
-        auto mem_info = core_validation::getMemObjInfo(device_data, mem_binding);
+        auto mem_info = core_validation::GetMemObjInfo(device_data, mem_binding);
         if (mem_info) {
             core_validation::RemoveImageMemoryRange(obj_struct.handle, mem_info);
         }
@@ -767,7 +767,7 @@ bool VerifyClearImageLayout(core_validation::layer_data *device_data, GLOBAL_CB_
 void RecordClearImageLayout(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, VkImage image,
                             VkImageSubresourceRange range, VkImageLayout dest_image_layout) {
     VkImageSubresourceRange resolved_range = range;
-    ResolveRemainingLevelsLayers(device_data, &resolved_range, getImageState(device_data, image));
+    ResolveRemainingLevelsLayers(device_data, &resolved_range, GetImageState(device_data, image));
 
     for (uint32_t level_index = 0; level_index < resolved_range.levelCount; ++level_index) {
         uint32_t level = level_index + resolved_range.baseMipLevel;
@@ -786,8 +786,8 @@ bool PreCallValidateCmdClearColorImage(core_validation::layer_data *dev_data, Vk
                                        VkImageLayout imageLayout, uint32_t rangeCount, const VkImageSubresourceRange *pRanges) {
     bool skip = false;
     // TODO : Verify memory is in VK_IMAGE_STATE_CLEAR state
-    auto cb_node = getCBNode(dev_data, commandBuffer);
-    auto image_state = getImageState(dev_data, image);
+    auto cb_node = GetCBNode(dev_data, commandBuffer);
+    auto image_state = GetImageState(dev_data, image);
     if (cb_node && image_state) {
         skip |= ValidateMemoryIsBoundToImage(dev_data, image_state, "vkCmdClearColorImage()", VALIDATION_ERROR_02527);
         skip |= ValidateCmd(dev_data, cb_node, CMD_CLEARCOLORIMAGE, "vkCmdClearColorImage()");
@@ -804,8 +804,8 @@ bool PreCallValidateCmdClearColorImage(core_validation::layer_data *dev_data, Vk
 void PreCallRecordCmdClearImage(core_validation::layer_data *dev_data, VkCommandBuffer commandBuffer, VkImage image,
                                 VkImageLayout imageLayout, uint32_t rangeCount, const VkImageSubresourceRange *pRanges,
                                 CMD_TYPE cmd_type) {
-    auto cb_node = getCBNode(dev_data, commandBuffer);
-    auto image_state = getImageState(dev_data, image);
+    auto cb_node = GetCBNode(dev_data, commandBuffer);
+    auto image_state = GetImageState(dev_data, image);
     if (cb_node && image_state) {
         AddCommandBufferBindingImage(dev_data, cb_node, image_state);
         std::function<bool()> function = [=]() {
@@ -813,7 +813,7 @@ void PreCallRecordCmdClearImage(core_validation::layer_data *dev_data, VkCommand
             return false;
         };
         cb_node->validate_functions.push_back(function);
-        UpdateCmdBufferLastCmd(dev_data, cb_node, cmd_type);
+        core_validation::UpdateCmdBufferLastCmd(cb_node, cmd_type);
         for (uint32_t i = 0; i < rangeCount; ++i) {
             RecordClearImageLayout(dev_data, cb_node, image, pRanges[i], imageLayout);
         }
@@ -827,8 +827,8 @@ bool PreCallValidateCmdClearDepthStencilImage(core_validation::layer_data *devic
     const debug_report_data *report_data = core_validation::GetReportData(device_data);
 
     // TODO : Verify memory is in VK_IMAGE_STATE_CLEAR state
-    auto cb_node = getCBNode(device_data, commandBuffer);
-    auto image_state = getImageState(device_data, image);
+    auto cb_node = GetCBNode(device_data, commandBuffer);
+    auto image_state = GetImageState(device_data, image);
     if (cb_node && image_state) {
         skip |= ValidateMemoryIsBoundToImage(device_data, image_state, "vkCmdClearDepthStencilImage()", VALIDATION_ERROR_02528);
         skip |= ValidateCmd(device_data, cb_node, CMD_CLEARDEPTHSTENCILIMAGE, "vkCmdClearDepthStencilImage()");
@@ -1121,13 +1121,13 @@ static inline bool ContainsRect(VkRect2D rect, VkRect2D sub_rect) {
 bool PreCallValidateCmdClearAttachments(core_validation::layer_data *device_data, VkCommandBuffer commandBuffer,
                                         uint32_t attachmentCount, const VkClearAttachment *pAttachments, uint32_t rectCount,
                                         const VkClearRect *pRects) {
-    GLOBAL_CB_NODE *cb_node = getCBNode(device_data, commandBuffer);
+    GLOBAL_CB_NODE *cb_node = GetCBNode(device_data, commandBuffer);
     const debug_report_data *report_data = core_validation::GetReportData(device_data);
 
     bool skip = false;
     if (cb_node) {
         skip |= ValidateCmd(device_data, cb_node, CMD_CLEARATTACHMENTS, "vkCmdClearAttachments()");
-        UpdateCmdBufferLastCmd(device_data, cb_node, CMD_CLEARATTACHMENTS);
+        core_validation::UpdateCmdBufferLastCmd(cb_node, CMD_CLEARATTACHMENTS);
         // Warn if this is issued prior to Draw Cmd and clearing the entire attachment
         if (!hasDrawCmd(cb_node) && (cb_node->activeRenderPassBeginInfo.renderArea.extent.width == pRects[0].rect.extent.width) &&
             (cb_node->activeRenderPassBeginInfo.renderArea.extent.height == pRects[0].rect.extent.height)) {
@@ -1148,7 +1148,7 @@ bool PreCallValidateCmdClearAttachments(core_validation::layer_data *device_data
     if (cb_node->activeRenderPass) {
         const VkRenderPassCreateInfo *renderpass_create_info = cb_node->activeRenderPass->createInfo.ptr();
         const VkSubpassDescription *subpass_desc = &renderpass_create_info->pSubpasses[cb_node->activeSubpass];
-        auto framebuffer = getFramebufferState(device_data, cb_node->activeFramebuffer);
+        auto framebuffer = GetFramebufferState(device_data, cb_node->activeFramebuffer);
 
         for (uint32_t i = 0; i < attachmentCount; i++) {
             auto clear_desc = &pAttachments[i];
@@ -1206,7 +1206,7 @@ bool PreCallValidateCmdClearAttachments(core_validation::layer_data *device_data
                 }
             }
             if (image_view) {
-                auto image_view_state = getImageViewState(device_data, image_view);
+                auto image_view_state = GetImageViewState(device_data, image_view);
                 for (uint32_t j = 0; j < rectCount; j++) {
                     // The rectangular region specified by a given element of pRects must be contained within the render area of
                     // the current render pass instance
@@ -1323,7 +1323,7 @@ void PreCallRecordCmdResolveImage(core_validation::layer_data *device_data, GLOB
         return false;
     };
     cb_node->validate_functions.push_back(function);
-    UpdateCmdBufferLastCmd(device_data, cb_node, CMD_RESOLVEIMAGE);
+    core_validation::UpdateCmdBufferLastCmd(cb_node, CMD_RESOLVEIMAGE);
 }
 
 bool PreCallValidateCmdBlitImage(core_validation::layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
@@ -1498,7 +1498,7 @@ void PreCallRecordCmdBlitImage(core_validation::layer_data *device_data, GLOBAL_
         return false;
     };
     cb_node->validate_functions.push_back(function);
-    UpdateCmdBufferLastCmd(device_data, cb_node, CMD_BLITIMAGE);
+    core_validation::UpdateCmdBufferLastCmd(cb_node, CMD_BLITIMAGE);
 }
 
 // This validates that the initial layout specified in the command buffer for the IMAGE is the same as the global IMAGE layout

@@ -728,20 +728,20 @@ public:
 // Fwd declarations of layer_data and helpers to look-up/validate state from layer_data maps
 namespace core_validation {
 struct layer_data;
-cvdescriptorset::DescriptorSet *getSetNode(const layer_data *, VkDescriptorSet);
-cvdescriptorset::DescriptorSetLayout const *getDescriptorSetLayout(layer_data const *, VkDescriptorSetLayout);
-DESCRIPTOR_POOL_STATE *getDescriptorPoolState(const layer_data *, const VkDescriptorPool);
-BUFFER_STATE *getBufferState(const layer_data *, VkBuffer);
-IMAGE_STATE *getImageState(const layer_data *, VkImage);
-DEVICE_MEM_INFO *getMemObjInfo(const layer_data *, VkDeviceMemory);
-BUFFER_VIEW_STATE *getBufferViewState(const layer_data *, VkBufferView);
-SAMPLER_STATE *getSamplerState(const layer_data *, VkSampler);
-IMAGE_VIEW_STATE *getImageViewState(const layer_data *, VkImageView);
-VkSwapchainKHR getSwapchainFromImage(const layer_data *, VkImage);
-SWAPCHAIN_NODE *getSwapchainNode(const layer_data *, VkSwapchainKHR);
-GLOBAL_CB_NODE *getCBNode(layer_data const *my_data, const VkCommandBuffer cb);
-RENDER_PASS_STATE *getRenderPassState(layer_data const *my_data, VkRenderPass renderpass);
-FRAMEBUFFER_STATE *getFramebufferState(const layer_data *my_data, VkFramebuffer framebuffer);
+cvdescriptorset::DescriptorSet *GetSetNode(const layer_data *, VkDescriptorSet);
+cvdescriptorset::DescriptorSetLayout const *GetDescriptorSetLayout(layer_data const *, VkDescriptorSetLayout);
+DESCRIPTOR_POOL_STATE *GetDescriptorPoolState(const layer_data *, const VkDescriptorPool);
+BUFFER_STATE *GetBufferState(const layer_data *, VkBuffer);
+IMAGE_STATE *GetImageState(const layer_data *, VkImage);
+DEVICE_MEM_INFO *GetMemObjInfo(const layer_data *, VkDeviceMemory);
+BUFFER_VIEW_STATE *GetBufferViewState(const layer_data *, VkBufferView);
+SAMPLER_STATE *GetSamplerState(const layer_data *, VkSampler);
+IMAGE_VIEW_STATE *GetImageViewState(const layer_data *, VkImageView);
+VkSwapchainKHR GetSwapchainFromImage(const layer_data *, VkImage);
+SWAPCHAIN_NODE *GetSwapchainNode(const layer_data *, VkSwapchainKHR);
+GLOBAL_CB_NODE *GetCBNode(layer_data const *my_data, const VkCommandBuffer cb);
+RENDER_PASS_STATE *GetRenderPassState(layer_data const *my_data, VkRenderPass renderpass);
+FRAMEBUFFER_STATE *GetFramebufferState(const layer_data *my_data, VkFramebuffer framebuffer);
 
 void invalidateCommandBuffers(const layer_data *, std::unordered_set<GLOBAL_CB_NODE *> const &, VK_OBJECT);
 bool ValidateMemoryIsBoundToBuffer(const layer_data *, const BUFFER_STATE *, const char *, UNIQUE_VALIDATION_ERROR_CODE);
@@ -758,7 +758,7 @@ bool ClearMemoryObjectBindings(layer_data *dev_data, uint64_t handle, VkDebugRep
 bool ValidateCmd(layer_data *my_data, GLOBAL_CB_NODE *pCB, const CMD_TYPE cmd, const char *caller_name);
 bool insideRenderPass(const layer_data *my_data, GLOBAL_CB_NODE *pCB, const char *apiName, UNIQUE_VALIDATION_ERROR_CODE msgCode);
 void SetImageMemoryValid(layer_data *dev_data, IMAGE_STATE *image_state, bool valid);
-void UpdateCmdBufferLastCmd(layer_data *my_data, GLOBAL_CB_NODE *cb_state, const CMD_TYPE cmd);
+void UpdateCmdBufferLastCmd(GLOBAL_CB_NODE *cb_state, const CMD_TYPE cmd);
 bool outsideRenderPass(const layer_data *my_data, GLOBAL_CB_NODE *pCB, const char *apiName, UNIQUE_VALIDATION_ERROR_CODE msgCode);
 void SetLayout(GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair, const IMAGE_CMD_BUF_LAYOUT_NODE &node);
 void SetLayout(GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair, const VkImageLayout &layout);

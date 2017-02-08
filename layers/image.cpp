@@ -84,7 +84,7 @@ static void init_image(layer_data *my_data, const VkAllocationCallbacks *pAlloca
     layer_debug_actions(my_data->report_data, my_data->logging_callback, pAllocator, "lunarg_image");
 }
 
-static IMAGE_STATE const *getImageState(layer_data const *dev_data, VkImage image) {
+static IMAGE_STATE const *GetImageState(layer_data const *dev_data, VkImage image) {
     auto it = dev_data->imageMap.find(image);
     if (it == dev_data->imageMap.end()) {
         return nullptr;
@@ -246,7 +246,7 @@ static bool ValidateBufferImageCopyData(layer_data *dev_data, uint32_t regionCou
     bool skip = false;
 
     for (uint32_t i = 0; i < regionCount; i++) {
-        auto image_info = getImageState(dev_data, image);
+        auto image_info = GetImageState(dev_data, image);
         if (image_info) {
             if ((image_info->imageType == VK_IMAGE_TYPE_1D) || (image_info->imageType == VK_IMAGE_TYPE_2D)) {
                 if ((pRegions[i].imageOffset.z != 0) || (pRegions[i].imageExtent.depth != 1)) {
