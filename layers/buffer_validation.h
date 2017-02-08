@@ -150,4 +150,7 @@ bool ValidateLayoutVsAttachmentDescription(const debug_report_data *report_data,
 
 bool ValidateLayouts(core_validation::layer_data *dev_data, VkDevice device, const VkRenderPassCreateInfo *pCreateInfo);
 
+bool ValidateMapImageLayouts(core_validation::layer_data *dev_data, VkDevice device, DEVICE_MEM_INFO const *mem_info,
+                             VkDeviceSize offset, VkDeviceSize end_offset);
+
 #endif  // CORE_VALIDATION_BUFFER_VALIDATION_H_

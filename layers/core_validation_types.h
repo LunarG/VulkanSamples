@@ -771,6 +771,7 @@ bool ValidateImageUsageFlags(layer_data *dev_data, IMAGE_STATE const *image_stat
 bool ValidateImageSubrangeLevelLayerCounts(layer_data *dev_data, const VkImageSubresourceRange &subresourceRange,
                                            const char *func_name, UNIQUE_VALIDATION_ERROR_CODE layer_msg_code,
                                            UNIQUE_VALIDATION_ERROR_CODE level_msg_code);
+bool rangesIntersect(layer_data const *dev_data, MEMORY_RANGE const *range1, VkDeviceSize offset, VkDeviceSize end);
 
 // Prototypes for layer_data accessor functions.  These should be in their own header file at some point
 PFN_vkGetPhysicalDeviceFormatProperties GetFormatPropertiesPointer(layer_data *);
