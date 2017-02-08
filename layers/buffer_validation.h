@@ -145,4 +145,9 @@ bool ValidateCmdBufImageLayouts(core_validation::layer_data *dev_data, GLOBAL_CB
 bool ValidateMaskBitsFromLayouts(core_validation::layer_data *device_data, VkCommandBuffer cmdBuffer,
                                  const VkAccessFlags &accessMask, const VkImageLayout &layout, const char *type);
 
+bool ValidateLayoutVsAttachmentDescription(const debug_report_data *report_data, const VkImageLayout first_layout,
+                                           const uint32_t attachment, const VkAttachmentDescription &attachment_description);
+
+bool ValidateLayouts(core_validation::layer_data *dev_data, VkDevice device, const VkRenderPassCreateInfo *pCreateInfo);
+
 #endif  // CORE_VALIDATION_BUFFER_VALIDATION_H_
