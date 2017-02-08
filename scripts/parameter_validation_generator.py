@@ -415,14 +415,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
             'vkEnumerateInstanceLayerProperties',
             'vkEnumerateInstanceExtensionProperties',
             'vkEnumerateDeviceLayerProperties',
-            # These are unimplemented in the PV layer -- need to be added.
-            'vkDisplayPowerControlEXT',
-            'vkGetSwapchainCounterEXT',
-            'vkRegisterDeviceEventEXT',
-            'vkRegisterDisplayEventEXT',
-            'vkCmdDebugMarkerEndEXT',
-            'vkCmdDrawIndexedIndirectCountAMD',
-            'vkCmdDrawIndirectCountAMD',
+            'vkCmdDebugMarkerEndEXT',       # No validation!
         ]
         # Record that the function will be intercepted
         if name not in interface_functions:

@@ -87,6 +87,8 @@ struct layer_data {
             bool nv_external_memory : 1;
             bool nv_external_memory_win32 : 1;
             bool nvx_device_generated_commands : 1;
+            bool ext_display_control : 1;
+            bool amd_draw_indirect_count : 1;
         };
         uint64_t padding[4];
     } enables;
@@ -1634,6 +1636,10 @@ static void CheckDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo,
             device_data->enables.nv_external_memory = true;
         } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_NVX_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME) == 0) {
             device_data->enables.nvx_device_generated_commands = true;
+        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_DISPLAY_CONTROL_EXTENSION_NAME) == 0) {
+            device_data->enables.ext_display_control = true;
+        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_AMD_DRAW_INDIRECT_COUNT_EXTENSION_NAME) == 0) {
+            device_data->enables.amd_draw_indirect_count = true;
         }
     }
 }
@@ -6097,6 +6103,97 @@ VKAPI_ATTR VkResult VKAPI_CALL UnregisterObjectsNVX(VkDevice device, VkObjectTab
         validate_result(my_data->report_data, "vkUnregisterObjectsNVX", result);
     }
     return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL DisplayPowerControlEXT(VkDevice device, VkDisplayKHR display,
+                                                      const VkDisplayPowerInfoEXT *pDisplayPowerInfo) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skip = false;
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    skip |= require_device_extension(dev_data, dev_data->enables.ext_display_control, "vkDisplayPowerControlEXT",
+                                     VK_EXT_DISPLAY_CONTROL_EXTENSION_NAME);
+    skip |= parameter_validation_vkDisplayPowerControlEXT(dev_data->report_data, display, pDisplayPowerInfo);
+    if (!skip) {
+        result = dev_data->dispatch_table.DisplayPowerControlEXT(device, display, pDisplayPowerInfo);
+        validate_result(dev_data->report_data, "vkDisplayPowerControlEXT", result);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainCounterEXT(VkDevice device, VkSwapchainKHR swapchain,
+                                                      VkSurfaceCounterFlagBitsEXT counter, uint64_t *pCounterValue) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skip = false;
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    skip |= require_device_extension(dev_data, dev_data->enables.ext_display_control, "vkGetSwapchainCounterEXT",
+                                     VK_EXT_DISPLAY_CONTROL_EXTENSION_NAME);
+    skip |= parameter_validation_vkGetSwapchainCounterEXT(dev_data->report_data, swapchain, counter, pCounterValue);
+    if (!skip) {
+        result = dev_data->dispatch_table.GetSwapchainCounterEXT(device, swapchain, counter, pCounterValue);
+        validate_result(dev_data->report_data, "vkGetSwapchainCounterEXT", result);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL RegisterDeviceEventEXT(VkDevice device, const VkDeviceEventInfoEXT *pDeviceEventInfo,
+                                                      const VkAllocationCallbacks *pAllocator, VkFence *pFence) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skip = false;
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    skip |= require_device_extension(dev_data, dev_data->enables.ext_display_control, "vkDisplayPowerControlEXT",
+                                     VK_EXT_DISPLAY_CONTROL_EXTENSION_NAME);
+    skip |= parameter_validation_vkRegisterDeviceEventEXT(dev_data->report_data, pDeviceEventInfo, pAllocator, pFence);
+    if (!skip) {
+        result = dev_data->dispatch_table.RegisterDeviceEventEXT(device, pDeviceEventInfo, pAllocator, pFence);
+        validate_result(dev_data->report_data, "vkRegisterDeviceEventEXT", result);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL RegisterDisplayEventEXT(VkDevice device, VkDisplayKHR display,
+                                                       const VkDisplayEventInfoEXT *pDisplayEventInfo,
+                                                       const VkAllocationCallbacks *pAllocator, VkFence *pFence) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skip = false;
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    skip |= require_device_extension(dev_data, dev_data->enables.ext_display_control, "vkDisplayPowerControlEXT",
+                                     VK_EXT_DISPLAY_CONTROL_EXTENSION_NAME);
+    skip |= parameter_validation_vkRegisterDisplayEventEXT(dev_data->report_data, display, pDisplayEventInfo, pAllocator, pFence);
+    if (!skip) {
+        result = dev_data->dispatch_table.RegisterDisplayEventEXT(device, display, pDisplayEventInfo, pAllocator, pFence);
+        validate_result(dev_data->report_data, "vkRegisterDisplayEventEXT", result);
+    }
+    return result;
+}
+
+VKAPI_ATTR void VKAPI_CALL CmdDrawIndirectCountAMD(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset,
+                                                   VkBuffer countBuffer, VkDeviceSize countBufferOffset, uint32_t maxDrawCount,
+                                                   uint32_t stride) {
+    bool skip = false;
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
+    skip |= require_device_extension(dev_data, dev_data->enables.amd_draw_indirect_count, "vkCmdDrawIndirectCountAMD",
+                                     VK_AMD_DRAW_INDIRECT_COUNT_EXTENSION_NAME);
+    skip |= parameter_validation_vkCmdDrawIndirectCountAMD(dev_data->report_data, buffer, offset, countBuffer, countBufferOffset,
+                                                           maxDrawCount, stride);
+    if (!skip) {
+        dev_data->dispatch_table.CmdDrawIndirectCountAMD(commandBuffer, buffer, offset, countBuffer, countBufferOffset,
+                                                         maxDrawCount, stride);
+    }
+}
+
+VKAPI_ATTR void VKAPI_CALL CmdDrawIndexedIndirectCountAMD(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset,
+                                                          VkBuffer countBuffer, VkDeviceSize countBufferOffset,
+                                                          uint32_t maxDrawCount, uint32_t stride) {
+    bool skip = false;
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
+    skip |= require_device_extension(dev_data, dev_data->enables.amd_draw_indirect_count, "CmdDrawIndexedIndirectCountAMD",
+                                     VK_AMD_DRAW_INDIRECT_COUNT_EXTENSION_NAME);
+    skip |= parameter_validation_vkCmdDrawIndexedIndirectCountAMD(dev_data->report_data, buffer, offset, countBuffer,
+                                                                  countBufferOffset, maxDrawCount, stride);
+    if (!skip) {
+        dev_data->dispatch_table.CmdDrawIndexedIndirectCountAMD(commandBuffer, buffer, offset, countBuffer, countBufferOffset,
+                                                                maxDrawCount, stride);
+    }
 }
 
 VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceGeneratedCommandsPropertiesNVX(VkPhysicalDevice physicalDevice,
