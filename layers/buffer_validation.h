@@ -76,10 +76,11 @@ bool FindGlobalLayout(layer_data *device_data, ImageSubresourcePair imgpair, VkI
 
 bool FindLayouts(layer_data *device_data, VkImage image, std::vector<VkImageLayout> &layouts);
 
-bool FindLayout(const std::unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> &imageLayoutMap, ImageSubresourcePair imgpair, VkImageLayout &layout,
-                const VkImageAspectFlags aspectMask);
+bool FindLayout(const std::unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> &imageLayoutMap, ImageSubresourcePair imgpair,
+                VkImageLayout &layout, const VkImageAspectFlags aspectMask);
 
-bool FindLayout(const std::unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> &imageLayoutMap, ImageSubresourcePair imgpair, VkImageLayout &layout);
+bool FindLayout(const std::unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> &imageLayoutMap, ImageSubresourcePair imgpair,
+                VkImageLayout &layout);
 
 void SetGlobalLayout(layer_data *device_data, ImageSubresourcePair imgpair, const VkImageLayout &layout);
 
@@ -87,7 +88,8 @@ void SetLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, ImageSubresourcePai
 
 void SetLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair, const VkImageLayout &layout);
 
-void SetLayout(std::unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> &imageLayoutMap, ImageSubresourcePair imgpair, VkImageLayout layout);
+void SetLayout(std::unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> &imageLayoutMap, ImageSubresourcePair imgpair,
+               VkImageLayout layout);
 
 void SetImageViewLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, VkImageView imageView,
                         const VkImageLayout &layout);
@@ -135,7 +137,8 @@ bool PreCallValidateCmdBlitImage(layer_data *device_data, GLOBAL_CB_NODE *cb_nod
 void PreCallRecordCmdBlitImage(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
                                IMAGE_STATE *dst_image_state);
 
-bool ValidateCmdBufImageLayouts(layer_data *device_data, GLOBAL_CB_NODE *pCB, std::unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> &imageLayoutMap);
+bool ValidateCmdBufImageLayouts(layer_data *device_data, GLOBAL_CB_NODE *pCB,
+                                std::unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> &imageLayoutMap);
 
 void UpdateCmdBufImageLayouts(layer_data *device_data, GLOBAL_CB_NODE *pCB);
 

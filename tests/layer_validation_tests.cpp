@@ -17711,8 +17711,7 @@ TEST_F(VkPositiveLayerTest, TestDestroyFreeNullHandles) {
 }
 
 TEST_F(VkPositiveLayerTest, QueueSubmitSemaphoresAndLayoutTracking) {
-    TEST_DESCRIPTION(
-        "Submit multiple command buffers with chained semaphore signals and layout transitions");
+    TEST_DESCRIPTION("Submit multiple command buffers with chained semaphore signals and layout transitions");
 
     m_errorMonitor->ExpectSuccess();
 
