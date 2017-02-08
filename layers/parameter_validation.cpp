@@ -4577,7 +4577,7 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyImageToBuffer(VkCommandBuffer commandBuffer, V
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdUpdateBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize dstOffset,
-                                           VkDeviceSize dataSize, const uint32_t *pData) {
+                                           VkDeviceSize dataSize, const void *pData) {
     bool skip = false;
     layer_data *my_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     assert(my_data != NULL);
