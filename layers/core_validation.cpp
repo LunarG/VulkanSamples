@@ -3501,7 +3501,7 @@ bool ValidateCmd(layer_data *dev_data, GLOBAL_CB_NODE *pCB, const CMD_TYPE cmd, 
     return skip_call;
 }
 
-void UpdateCmdBufferLastCmd(layer_data *dev_data, GLOBAL_CB_NODE *cb_state, const CMD_TYPE cmd) {
+void UpdateCmdBufferLastCmd(GLOBAL_CB_NODE *cb_state, const CMD_TYPE cmd) {
     if (cb_state->state == CB_RECORDING) {
         cb_state->last_cmd = cmd;
     }
@@ -7042,7 +7042,7 @@ VKAPI_ATTR VkResult VKAPI_CALL EndCommandBuffer(VkCommandBuffer commandBuffer) {
             skip_call |= insideRenderPass(dev_data, pCB, "vkEndCommandBuffer()", VALIDATION_ERROR_00123);
         }
         skip_call |= ValidateCmd(dev_data, pCB, CMD_END, "vkEndCommandBuffer()");
-        UpdateCmdBufferLastCmd(dev_data, pCB, CMD_END);
+        UpdateCmdBufferLastCmd(pCB, CMD_END);
         for (auto query : pCB->activeQueries) {
             skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                  VALIDATION_ERROR_00124, "DS",
@@ -7101,7 +7101,7 @@ VKAPI_ATTR void VKAPI_CALL CmdBindPipeline(VkCommandBuffer commandBuffer, VkPipe
     GLOBAL_CB_NODE *cb_state = getCBNode(dev_data, commandBuffer);
     if (cb_state) {
         skip |= ValidateCmd(dev_data, cb_state, CMD_BINDPIPELINE, "vkCmdBindPipeline()");
-        UpdateCmdBufferLastCmd(dev_data, cb_state, CMD_BINDPIPELINE);
+        UpdateCmdBufferLastCmd(cb_state, CMD_BINDPIPELINE);
         if ((VK_PIPELINE_BIND_POINT_COMPUTE == pipelineBindPoint) && (cb_state->activeRenderPass)) {
             skip |=
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
@@ -7146,7 +7146,7 @@ VKAPI_ATTR void VKAPI_CALL CmdSetViewport(VkCommandBuffer commandBuffer, uint32_
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         skip_call |= ValidateCmd(dev_data, pCB, CMD_SETVIEWPORTSTATE, "vkCmdSetViewport()");
-        UpdateCmdBufferLastCmd(dev_data, pCB, CMD_SETVIEWPORTSTATE);
+        UpdateCmdBufferLastCmd(pCB, CMD_SETVIEWPORTSTATE);
         pCB->viewportMask |= ((1u << viewportCount) - 1u) << firstViewport;
     }
     lock.unlock();
@@ -7161,7 +7161,7 @@ VKAPI_ATTR void VKAPI_CALL CmdSetScissor(VkCommandBuffer commandBuffer, uint32_t
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         skip_call |= ValidateCmd(dev_data, pCB, CMD_SETSCISSORSTATE, "vkCmdSetScissor()");
-        UpdateCmdBufferLastCmd(dev_data, pCB, CMD_SETSCISSORSTATE);
+        UpdateCmdBufferLastCmd(pCB, CMD_SETSCISSORSTATE);
         pCB->scissorMask |= ((1u << scissorCount) - 1u) << firstScissor;
     }
     lock.unlock();
@@ -7175,7 +7175,7 @@ VKAPI_ATTR void VKAPI_CALL CmdSetLineWidth(VkCommandBuffer commandBuffer, float 
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         skip_call |= ValidateCmd(dev_data, pCB, CMD_SETLINEWIDTHSTATE, "vkCmdSetLineWidth()");
-        UpdateCmdBufferLastCmd(dev_data, pCB, CMD_SETLINEWIDTHSTATE);
+        UpdateCmdBufferLastCmd(pCB, CMD_SETLINEWIDTHSTATE);
         pCB->status |= CBSTATUS_LINE_WIDTH_SET;
 
         PIPELINE_STATE *pPipeTrav = pCB->lastBound[VK_PIPELINE_BIND_POINT_GRAPHICS].pipeline_state;
@@ -7201,7 +7201,7 @@ VKAPI_ATTR void VKAPI_CALL CmdSetDepthBias(VkCommandBuffer commandBuffer, float 
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         skip_call |= ValidateCmd(dev_data, pCB, CMD_SETDEPTHBIASSTATE, "vkCmdSetDepthBias()");
-        UpdateCmdBufferLastCmd(dev_data, pCB, CMD_SETDEPTHBIASSTATE);
+        UpdateCmdBufferLastCmd(pCB, CMD_SETDEPTHBIASSTATE);
         pCB->status |= CBSTATUS_DEPTH_BIAS_SET;
     }
     lock.unlock();
@@ -7216,7 +7216,7 @@ VKAPI_ATTR void VKAPI_CALL CmdSetBlendConstants(VkCommandBuffer commandBuffer, c
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         skip_call |= ValidateCmd(dev_data, pCB, CMD_SETBLENDSTATE, "vkCmdSetBlendConstants()");
-        UpdateCmdBufferLastCmd(dev_data, pCB, CMD_SETBLENDSTATE);
+        UpdateCmdBufferLastCmd(pCB, CMD_SETBLENDSTATE);
         pCB->status |= CBSTATUS_BLEND_CONSTANTS_SET;
     }
     lock.unlock();
@@ -7230,7 +7230,7 @@ VKAPI_ATTR void VKAPI_CALL CmdSetDepthBounds(VkCommandBuffer commandBuffer, floa
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         skip_call |= ValidateCmd(dev_data, pCB, CMD_SETDEPTHBOUNDSSTATE, "vkCmdSetDepthBounds()");
-        UpdateCmdBufferLastCmd(dev_data, pCB, CMD_SETDEPTHBOUNDSSTATE);
+        UpdateCmdBufferLastCmd(pCB, CMD_SETDEPTHBOUNDSSTATE);
         pCB->status |= CBSTATUS_DEPTH_BOUNDS_SET;
     }
     lock.unlock();
@@ -7245,7 +7245,7 @@ VKAPI_ATTR void VKAPI_CALL CmdSetStencilCompareMask(VkCommandBuffer commandBuffe
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         skip_call |= ValidateCmd(dev_data, pCB, CMD_SETSTENCILREADMASKSTATE, "vkCmdSetStencilCompareMask()");
-        UpdateCmdBufferLastCmd(dev_data, pCB, CMD_SETSTENCILREADMASKSTATE);
+        UpdateCmdBufferLastCmd(pCB, CMD_SETSTENCILREADMASKSTATE);
         pCB->status |= CBSTATUS_STENCIL_READ_MASK_SET;
     }
     lock.unlock();
@@ -7259,7 +7259,7 @@ VKAPI_ATTR void VKAPI_CALL CmdSetStencilWriteMask(VkCommandBuffer commandBuffer,
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         skip_call |= ValidateCmd(dev_data, pCB, CMD_SETSTENCILWRITEMASKSTATE, "vkCmdSetStencilWriteMask()");
-        UpdateCmdBufferLastCmd(dev_data, pCB, CMD_SETSTENCILWRITEMASKSTATE);
+        UpdateCmdBufferLastCmd(pCB, CMD_SETSTENCILWRITEMASKSTATE);
         pCB->status |= CBSTATUS_STENCIL_WRITE_MASK_SET;
     }
     lock.unlock();
@@ -7273,7 +7273,7 @@ VKAPI_ATTR void VKAPI_CALL CmdSetStencilReference(VkCommandBuffer commandBuffer,
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         skip_call |= ValidateCmd(dev_data, pCB, CMD_SETSTENCILREFERENCESTATE, "vkCmdSetStencilReference()");
-        UpdateCmdBufferLastCmd(dev_data, pCB, CMD_SETSTENCILREFERENCESTATE);
+        UpdateCmdBufferLastCmd(pCB, CMD_SETSTENCILREFERENCESTATE);
         pCB->status |= CBSTATUS_STENCIL_REFERENCE_SET;
     }
     lock.unlock();
@@ -7397,7 +7397,7 @@ VKAPI_ATTR void VKAPI_CALL CmdBindDescriptorSets(VkCommandBuffer commandBuffer, 
                                          (uint64_t)pDescriptorSets[set_idx]);
                 }
                 skip_call |= ValidateCmd(dev_data, pCB, CMD_BINDDESCRIPTORSETS, "vkCmdBindDescriptorSets()");
-                UpdateCmdBufferLastCmd(dev_data, pCB, CMD_BINDDESCRIPTORSETS);
+                UpdateCmdBufferLastCmd(pCB, CMD_BINDDESCRIPTORSETS);
                 // For any previously bound sets, need to set them to "invalid" if they were disturbed by this update
                 if (firstSet > 0) {  // Check set #s below the first bound set
                     for (uint32_t i = 0; i < firstSet; ++i) {
@@ -7469,7 +7469,7 @@ VKAPI_ATTR void VKAPI_CALL CmdBindIndexBuffer(VkCommandBuffer commandBuffer, VkB
         };
         cb_node->validate_functions.push_back(function);
         skip_call |= ValidateCmd(dev_data, cb_node, CMD_BINDINDEXBUFFER, "vkCmdBindIndexBuffer()");
-        UpdateCmdBufferLastCmd(dev_data, cb_node, CMD_BINDINDEXBUFFER);
+        UpdateCmdBufferLastCmd(cb_node, CMD_BINDINDEXBUFFER);
         VkDeviceSize offset_align = 0;
         switch (indexType) {
             case VK_INDEX_TYPE_UINT16:
@@ -7527,7 +7527,7 @@ VKAPI_ATTR void VKAPI_CALL CmdBindVertexBuffers(VkCommandBuffer commandBuffer, u
             cb_node->validate_functions.push_back(function);
         }
         skip_call |= ValidateCmd(dev_data, cb_node, CMD_BINDVERTEXBUFFER, "vkCmdBindVertexBuffer()");
-        UpdateCmdBufferLastCmd(dev_data, cb_node, CMD_BINDVERTEXBUFFER);
+        UpdateCmdBufferLastCmd(cb_node, CMD_BINDVERTEXBUFFER);
         updateResourceTracking(cb_node, firstBinding, bindingCount, pBuffers);
     } else {
         skip_call |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdBindVertexBuffer()");
@@ -7581,7 +7581,7 @@ static void UpdateStateCmdDrawDispatchType(layer_data *dev_data, GLOBAL_CB_NODE 
                                            CMD_TYPE cmd_type) {
     UpdateDrawState(dev_data, cb_state, bind_point);
     MarkStoreImagesAndBuffersAsWritten(dev_data, cb_state);
-    UpdateCmdBufferLastCmd(dev_data, cb_state, cmd_type);
+    UpdateCmdBufferLastCmd(cb_state, cmd_type);
 }
 
 // Generic function to handle state update for all CmdDraw* type functions
@@ -7798,7 +7798,7 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer
         cb_node->validate_functions.push_back(function);
 
         skip_call |= ValidateCmd(dev_data, cb_node, CMD_COPYBUFFER, "vkCmdCopyBuffer()");
-        UpdateCmdBufferLastCmd(dev_data, cb_node, CMD_COPYBUFFER);
+        UpdateCmdBufferLastCmd(cb_node, CMD_COPYBUFFER);
         skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyBuffer()", VALIDATION_ERROR_01172);
     } else {
         // Param_checker will flag errors on invalid objects, just assert here as debugging aid
@@ -8039,7 +8039,7 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyImage(VkCommandBuffer commandBuffer, VkImage s
         cb_node->validate_functions.push_back(function);
 
         skip_call |= ValidateCmd(dev_data, cb_node, CMD_COPYIMAGE, "vkCmdCopyImage()");
-        UpdateCmdBufferLastCmd(dev_data, cb_node, CMD_COPYIMAGE);
+        UpdateCmdBufferLastCmd(cb_node, CMD_COPYIMAGE);
         skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyImage()", VALIDATION_ERROR_01194);
         for (uint32_t i = 0; i < regionCount; ++i) {
             skip_call |= VerifySourceImageLayout(dev_data, cb_node, srcImage, pRegions[i].srcSubresource, srcImageLayout,
@@ -8124,7 +8124,7 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBufferToImage(VkCommandBuffer commandBuffer, V
         cb_node->validate_functions.push_back(function);
 
         skip_call |= ValidateCmd(dev_data, cb_node, CMD_COPYBUFFERTOIMAGE, "vkCmdCopyBufferToImage()");
-        UpdateCmdBufferLastCmd(dev_data, cb_node, CMD_COPYBUFFERTOIMAGE);
+        UpdateCmdBufferLastCmd(cb_node, CMD_COPYBUFFERTOIMAGE);
         skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyBufferToImage()", VALIDATION_ERROR_01242);
         for (uint32_t i = 0; i < regionCount; ++i) {
             skip_call |= VerifyDestImageLayout(dev_data, cb_node, dstImage, pRegions[i].imageSubresource, dstImageLayout,
@@ -8174,7 +8174,7 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyImageToBuffer(VkCommandBuffer commandBuffer, V
         cb_node->validate_functions.push_back(function);
 
         skip_call |= ValidateCmd(dev_data, cb_node, CMD_COPYIMAGETOBUFFER, "vkCmdCopyImageToBuffer()");
-        UpdateCmdBufferLastCmd(dev_data, cb_node, CMD_COPYIMAGETOBUFFER);
+        UpdateCmdBufferLastCmd(cb_node, CMD_COPYIMAGETOBUFFER);
         skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyImageToBuffer()", VALIDATION_ERROR_01260);
         for (uint32_t i = 0; i < regionCount; ++i) {
             skip_call |= VerifySourceImageLayout(dev_data, cb_node, srcImage, pRegions[i].imageSubresource, srcImageLayout,
@@ -8212,7 +8212,7 @@ VKAPI_ATTR void VKAPI_CALL CmdUpdateBuffer(VkCommandBuffer commandBuffer, VkBuff
         cb_node->validate_functions.push_back(function);
 
         skip_call |= ValidateCmd(dev_data, cb_node, CMD_UPDATEBUFFER, "vkCmdUpdateBuffer()");
-        UpdateCmdBufferLastCmd(dev_data, cb_node, CMD_UPDATEBUFFER);
+        UpdateCmdBufferLastCmd(cb_node, CMD_UPDATEBUFFER);
         skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdUpdateBuffer()", VALIDATION_ERROR_01155);
     } else {
         assert(0);
@@ -8243,7 +8243,7 @@ VKAPI_ATTR void VKAPI_CALL CmdFillBuffer(VkCommandBuffer commandBuffer, VkBuffer
         cb_node->validate_functions.push_back(function);
 
         skip_call |= ValidateCmd(dev_data, cb_node, CMD_FILLBUFFER, "vkCmdFillBuffer()");
-        UpdateCmdBufferLastCmd(dev_data, cb_node, CMD_FILLBUFFER);
+        UpdateCmdBufferLastCmd(cb_node, CMD_FILLBUFFER);
         skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdFillBuffer()", VALIDATION_ERROR_01142);
     } else {
         assert(0);
@@ -8370,7 +8370,7 @@ VKAPI_ATTR void VKAPI_CALL CmdSetEvent(VkCommandBuffer commandBuffer, VkEvent ev
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         skip_call |= ValidateCmd(dev_data, pCB, CMD_SETEVENT, "vkCmdSetEvent()");
-        UpdateCmdBufferLastCmd(dev_data, pCB, CMD_SETEVENT);
+        UpdateCmdBufferLastCmd(pCB, CMD_SETEVENT);
         skip_call |= insideRenderPass(dev_data, pCB, "vkCmdSetEvent()", VALIDATION_ERROR_00238);
         skip_call |=
             ValidateStageMaskGsTsEnables(dev_data, stageMask, "vkCmdSetEvent()", VALIDATION_ERROR_00230, VALIDATION_ERROR_00231);
@@ -8399,7 +8399,7 @@ VKAPI_ATTR void VKAPI_CALL CmdResetEvent(VkCommandBuffer commandBuffer, VkEvent 
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         skip_call |= ValidateCmd(dev_data, pCB, CMD_RESETEVENT, "vkCmdResetEvent()");
-        UpdateCmdBufferLastCmd(dev_data, pCB, CMD_RESETEVENT);
+        UpdateCmdBufferLastCmd(pCB, CMD_RESETEVENT);
         skip_call |= insideRenderPass(dev_data, pCB, "vkCmdResetEvent()", VALIDATION_ERROR_00249);
         skip_call |=
             ValidateStageMaskGsTsEnables(dev_data, stageMask, "vkCmdResetEvent()", VALIDATION_ERROR_00240, VALIDATION_ERROR_00241);
@@ -8749,7 +8749,7 @@ VKAPI_ATTR void VKAPI_CALL CmdWaitEvents(VkCommandBuffer commandBuffer, uint32_t
         cb_state->eventUpdates.push_back(event_update);
         if (cb_state->state == CB_RECORDING) {
             skip |= ValidateCmd(dev_data, cb_state, CMD_WAITEVENTS, "vkCmdWaitEvents()");
-            UpdateCmdBufferLastCmd(dev_data, cb_state, CMD_WAITEVENTS);
+            UpdateCmdBufferLastCmd(cb_state, CMD_WAITEVENTS);
         } else {
             skip |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdWaitEvents()");
         }
@@ -8781,7 +8781,7 @@ VKAPI_ATTR void VKAPI_CALL CmdPipelineBarrier(VkCommandBuffer commandBuffer, VkP
                                              VALIDATION_ERROR_00267);
         skip |= ValidateStageMaskGsTsEnables(dev_data, dstStageMask, "vkCmdPipelineBarrier()", VALIDATION_ERROR_00266,
                                              VALIDATION_ERROR_00268);
-        UpdateCmdBufferLastCmd(dev_data, cb_state, CMD_PIPELINEBARRIER);
+        UpdateCmdBufferLastCmd(cb_state, CMD_PIPELINEBARRIER);
         skip |= TransitionImageLayouts(dev_data, commandBuffer, imageMemoryBarrierCount, pImageMemoryBarriers);
         skip |= ValidateBarriers("vkCmdPipelineBarrier()", commandBuffer, memoryBarrierCount, pMemoryBarriers,
                                  bufferMemoryBarrierCount, pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
@@ -8818,7 +8818,7 @@ VKAPI_ATTR void VKAPI_CALL CmdBeginQuery(VkCommandBuffer commandBuffer, VkQueryP
             pCB->startedQueries.insert(query);
         }
         skip_call |= ValidateCmd(dev_data, pCB, CMD_BEGINQUERY, "vkCmdBeginQuery()");
-        UpdateCmdBufferLastCmd(dev_data, pCB, CMD_BEGINQUERY);
+        UpdateCmdBufferLastCmd(pCB, CMD_BEGINQUERY);
         addCommandBufferBinding(&getQueryPoolNode(dev_data, queryPool)->cb_bindings,
                                 {reinterpret_cast<uint64_t &>(queryPool), VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT}, pCB);
     }
@@ -8845,7 +8845,7 @@ VKAPI_ATTR void VKAPI_CALL CmdEndQuery(VkCommandBuffer commandBuffer, VkQueryPoo
         pCB->queryUpdates.push_back(queryUpdate);
         if (pCB->state == CB_RECORDING) {
             skip_call |= ValidateCmd(dev_data, pCB, CMD_ENDQUERY, "VkCmdEndQuery()");
-            UpdateCmdBufferLastCmd(dev_data, pCB, CMD_ENDQUERY);
+            UpdateCmdBufferLastCmd(pCB, CMD_ENDQUERY);
         } else {
             skip_call |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdEndQuery()");
         }
@@ -8871,7 +8871,7 @@ VKAPI_ATTR void VKAPI_CALL CmdResetQueryPool(VkCommandBuffer commandBuffer, VkQu
         }
         if (pCB->state == CB_RECORDING) {
             skip_call |= ValidateCmd(dev_data, pCB, CMD_RESETQUERYPOOL, "VkCmdResetQueryPool()");
-            UpdateCmdBufferLastCmd(dev_data, pCB, CMD_RESETQUERYPOOL);
+            UpdateCmdBufferLastCmd(pCB, CMD_RESETQUERYPOOL);
         } else {
             skip_call |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdResetQueryPool()");
         }
@@ -8943,7 +8943,7 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyQueryPoolResults(VkCommandBuffer commandBuffer
         cb_node->queryUpdates.push_back(queryUpdate);
         if (cb_node->state == CB_RECORDING) {
             skip_call |= ValidateCmd(dev_data, cb_node, CMD_COPYQUERYPOOLRESULTS, "vkCmdCopyQueryPoolResults()");
-            UpdateCmdBufferLastCmd(dev_data, cb_node, CMD_COPYQUERYPOOLRESULTS);
+            UpdateCmdBufferLastCmd(cb_node, CMD_COPYQUERYPOOLRESULTS);
         } else {
             skip_call |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdCopyQueryPoolResults()");
         }
@@ -8968,7 +8968,7 @@ VKAPI_ATTR void VKAPI_CALL CmdPushConstants(VkCommandBuffer commandBuffer, VkPip
     if (pCB) {
         if (pCB->state == CB_RECORDING) {
             skip_call |= ValidateCmd(dev_data, pCB, CMD_PUSHCONSTANTS, "vkCmdPushConstants()");
-            UpdateCmdBufferLastCmd(dev_data, pCB, CMD_PUSHCONSTANTS);
+            UpdateCmdBufferLastCmd(pCB, CMD_PUSHCONSTANTS);
         } else {
             skip_call |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdPushConstants()");
         }
@@ -9065,7 +9065,7 @@ VKAPI_ATTR void VKAPI_CALL CmdWriteTimestamp(VkCommandBuffer commandBuffer, VkPi
         pCB->queryUpdates.push_back(queryUpdate);
         if (pCB->state == CB_RECORDING) {
             skip_call |= ValidateCmd(dev_data, pCB, CMD_WRITETIMESTAMP, "vkCmdWriteTimestamp()");
-            UpdateCmdBufferLastCmd(dev_data, pCB, CMD_WRITETIMESTAMP);
+            UpdateCmdBufferLastCmd(pCB, CMD_WRITETIMESTAMP);
         } else {
             skip_call |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdWriteTimestamp()");
         }
@@ -9881,7 +9881,7 @@ VKAPI_ATTR void VKAPI_CALL CmdBeginRenderPass(VkCommandBuffer commandBuffer, con
             skip_call |= ValidateDependencies(dev_data, framebuffer, render_pass_state);
             skip_call |= validatePrimaryCommandBuffer(dev_data, cb_node, "vkCmdBeginRenderPass", VALIDATION_ERROR_00441);
             skip_call |= ValidateCmd(dev_data, cb_node, CMD_BEGINRENDERPASS, "vkCmdBeginRenderPass()");
-            UpdateCmdBufferLastCmd(dev_data, cb_node, CMD_BEGINRENDERPASS);
+            UpdateCmdBufferLastCmd(cb_node, CMD_BEGINRENDERPASS);
             cb_node->activeRenderPass = render_pass_state;
             // This is a shallow copy as that is all that is needed for now
             cb_node->activeRenderPassBeginInfo = *pRenderPassBegin;
@@ -9908,7 +9908,7 @@ VKAPI_ATTR void VKAPI_CALL CmdNextSubpass(VkCommandBuffer commandBuffer, VkSubpa
     if (pCB) {
         skip_call |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdNextSubpass", VALIDATION_ERROR_00459);
         skip_call |= ValidateCmd(dev_data, pCB, CMD_NEXTSUBPASS, "vkCmdNextSubpass()");
-        UpdateCmdBufferLastCmd(dev_data, pCB, CMD_NEXTSUBPASS);
+        UpdateCmdBufferLastCmd(pCB, CMD_NEXTSUBPASS);
         skip_call |= outsideRenderPass(dev_data, pCB, "vkCmdNextSubpass()", VALIDATION_ERROR_00458);
 
         auto subpassCount = pCB->activeRenderPass->createInfo.subpassCount;
@@ -9974,7 +9974,7 @@ VKAPI_ATTR void VKAPI_CALL CmdEndRenderPass(VkCommandBuffer commandBuffer) {
         skip_call |= outsideRenderPass(dev_data, pCB, "vkCmdEndRenderpass()", VALIDATION_ERROR_00464);
         skip_call |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdEndRenderPass", VALIDATION_ERROR_00465);
         skip_call |= ValidateCmd(dev_data, pCB, CMD_ENDRENDERPASS, "vkCmdEndRenderPass()");
-        UpdateCmdBufferLastCmd(dev_data, pCB, CMD_ENDRENDERPASS);
+        UpdateCmdBufferLastCmd(pCB, CMD_ENDRENDERPASS);
     }
     lock.unlock();
 
@@ -10305,7 +10305,7 @@ VKAPI_ATTR void VKAPI_CALL CmdExecuteCommands(VkCommandBuffer commandBuffer, uin
         }
         skip_call |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdExecuteComands", VALIDATION_ERROR_00163);
         skip_call |= ValidateCmd(dev_data, pCB, CMD_EXECUTECOMMANDS, "vkCmdExecuteComands()");
-        UpdateCmdBufferLastCmd(dev_data, pCB, CMD_EXECUTECOMMANDS);
+        UpdateCmdBufferLastCmd(pCB, CMD_EXECUTECOMMANDS);
     }
     lock.unlock();
     if (!skip_call) dev_data->dispatch_table.CmdExecuteCommands(commandBuffer, commandBuffersCount, pCommandBuffers);
