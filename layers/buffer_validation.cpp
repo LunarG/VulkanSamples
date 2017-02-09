@@ -1804,13 +1804,13 @@ bool ValidateMapImageLayouts(core_validation::layer_data *device_data, VkDevice 
 
 // Helper function to validate correct usage bits set for buffers or images. Verify that (actual & desired) flags != 0 or, if strict
 // is true, verify that (actual & desired) flags == desired
-static bool validate_usage_flags(layer_data *dev_data, VkFlags actual, VkFlags desired, VkBool32 strict, uint64_t obj_handle,
+static bool validate_usage_flags(layer_data *device_data, VkFlags actual, VkFlags desired, VkBool32 strict, uint64_t obj_handle,
                                  VkDebugReportObjectTypeEXT obj_type, int32_t const msgCode, char const *ty_str,
                                  char const *func_name, char const *usage_str) {
-    const debug_report_data *report_data = core_validation::GetReportData(dev_data);
+    const debug_report_data *report_data = core_validation::GetReportData(device_data);
 
     bool correct_usage = false;
-    bool skip_call = false;
+    bool skip = false;
     if (strict) {
         correct_usage = ((actual & desired) == desired);
     } else {
@@ -1819,40 +1819,40 @@ static bool validate_usage_flags(layer_data *dev_data, VkFlags actual, VkFlags d
     if (!correct_usage) {
         if (msgCode == -1) {
             // TODO: Fix callers with msgCode == -1 to use correct validation checks.
-            skip_call = log_msg(
-                report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, obj_type, obj_handle, __LINE__, MEMTRACK_INVALID_USAGE_FLAG, "MEM",
-                "Invalid usage flag for %s 0x%" PRIxLEAST64 " used by %s. In this case, %s should have %s set during creation.",
-                ty_str, obj_handle, func_name, ty_str, usage_str);
+            skip = log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, obj_type, obj_handle, __LINE__, MEMTRACK_INVALID_USAGE_FLAG,
+                           "MEM", "Invalid usage flag for %s 0x%" PRIxLEAST64
+                                  " used by %s. In this case, %s should have %s set during creation.",
+                           ty_str, obj_handle, func_name, ty_str, usage_str);
         } else {
             const char *valid_usage = (msgCode == -1) ? "" : validation_error_map[msgCode];
-            skip_call = log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, obj_type, obj_handle, __LINE__, msgCode, "MEM",
-                                "Invalid usage flag for %s 0x%" PRIxLEAST64
-                                " used by %s. In this case, %s should have %s set during creation. %s",
-                                ty_str, obj_handle, func_name, ty_str, usage_str, valid_usage);
+            skip = log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, obj_type, obj_handle, __LINE__, msgCode, "MEM",
+                           "Invalid usage flag for %s 0x%" PRIxLEAST64
+                           " used by %s. In this case, %s should have %s set during creation. %s",
+                           ty_str, obj_handle, func_name, ty_str, usage_str, valid_usage);
         }
     }
-    return skip_call;
+    return skip;
 }
 
 // Helper function to validate usage flags for buffers. For given buffer_state send actual vs. desired usage off to helper above
 // where an error will be flagged if usage is not correct
-bool ValidateImageUsageFlags(layer_data *dev_data, IMAGE_STATE const *image_state, VkFlags desired, VkBool32 strict,
+bool ValidateImageUsageFlags(layer_data *device_data, IMAGE_STATE const *image_state, VkFlags desired, VkBool32 strict,
                              int32_t const msgCode, char const *func_name, char const *usage_string) {
-    return validate_usage_flags(dev_data, image_state->createInfo.usage, desired, strict,
+    return validate_usage_flags(device_data, image_state->createInfo.usage, desired, strict,
                                 reinterpret_cast<const uint64_t &>(image_state->image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                                 msgCode, "image", func_name, usage_string);
 }
 
 // Helper function to validate usage flags for buffers. For given buffer_state send actual vs. desired usage off to helper above
 // where an error will be flagged if usage is not correct
-bool ValidateBufferUsageFlags(layer_data *dev_data, BUFFER_STATE const *buffer_state, VkFlags desired, VkBool32 strict,
+bool ValidateBufferUsageFlags(layer_data *device_data, BUFFER_STATE const *buffer_state, VkFlags desired, VkBool32 strict,
                               int32_t const msgCode, char const *func_name, char const *usage_string) {
-    return validate_usage_flags(dev_data, buffer_state->createInfo.usage, desired, strict,
+    return validate_usage_flags(device_data, buffer_state->createInfo.usage, desired, strict,
                                 reinterpret_cast<const uint64_t &>(buffer_state->buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
                                 msgCode, "buffer", func_name, usage_string);
 }
 
-bool PreCallValidateCreateBuffer(layer_data *dev_data, const VkBufferCreateInfo *pCreateInfo) {
+bool PreCallValidateCreateBuffer(layer_data *device_data, const VkBufferCreateInfo *pCreateInfo) {
     bool skip = false;
     // TODO: Add check for VALIDATION_ERROR_00658
     // TODO: Add check for VALIDATION_ERROR_00666
@@ -1868,19 +1868,19 @@ void PostCallRecordCreateBuffer(layer_data *device_data, const VkBufferCreateInf
         ->insert(std::make_pair(*pBuffer, std::unique_ptr<BUFFER_STATE>(new BUFFER_STATE(*pBuffer, pCreateInfo))));
 }
 
-bool PreCallValidateCreateBufferView(layer_data *dev_data, const VkBufferViewCreateInfo *pCreateInfo) {
-    bool skip_call = false;
-    BUFFER_STATE *buffer_state = GetBufferState(dev_data, pCreateInfo->buffer);
+bool PreCallValidateCreateBufferView(layer_data *device_data, const VkBufferViewCreateInfo *pCreateInfo) {
+    bool skip = false;
+    BUFFER_STATE *buffer_state = GetBufferState(device_data, pCreateInfo->buffer);
     // If this isn't a sparse buffer, it needs to have memory backing it at CreateBufferView time
     if (buffer_state) {
-        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, buffer_state, "vkCreateBufferView()", VALIDATION_ERROR_02522);
+        skip |= ValidateMemoryIsBoundToBuffer(device_data, buffer_state, "vkCreateBufferView()", VALIDATION_ERROR_02522);
         // In order to create a valid buffer view, the buffer must have been created with at least one of the following flags:
         // UNIFORM_TEXEL_BUFFER_BIT or STORAGE_TEXEL_BUFFER_BIT
-        skip_call |= ValidateBufferUsageFlags(
-            dev_data, buffer_state, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT, false,
+        skip |= ValidateBufferUsageFlags(
+            device_data, buffer_state, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT, false,
             VALIDATION_ERROR_00694, "vkCreateBufferView()", "VK_BUFFER_USAGE_[STORAGE|UNIFORM]_TEXEL_BUFFER_BIT");
     }
-    return skip_call;
+    return skip;
 }
 
 void PostCallRecordCreateBufferView(layer_data *device_data, const VkBufferViewCreateInfo *pCreateInfo, VkBufferView *pView) {
