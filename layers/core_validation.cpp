@@ -3198,32 +3198,34 @@ static bool verifyPipelineCreateState(layer_data *dev_data, std::vector<PIPELINE
                              validation_error_map[VALIDATION_ERROR_01426]);
     }
 
-    // If a rasterization state is provided, make sure that the line width conforms to the HW.
+    // If a rasterization state is provided...
     if (pPipeline->graphicsPipelineCI.pRasterizationState) {
+
+        // Make sure that the line width conforms to the HW.
         if (!isDynamic(pPipeline, VK_DYNAMIC_STATE_LINE_WIDTH)) {
             skip_call |= verifyLineWidth(dev_data, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE,
                                          reinterpret_cast<uint64_t const &>(pPipeline->pipeline),
                                          pPipeline->graphicsPipelineCI.pRasterizationState->lineWidth);
         }
-    }
 
-    // If rasterization is not disabled and subpass uses a depth/stencil attachment, pDepthStencilState must be a pointer to a
-    // valid structure
-    if (pPipeline->graphicsPipelineCI.pRasterizationState &&
-        (pPipeline->graphicsPipelineCI.pRasterizationState->rasterizerDiscardEnable == VK_FALSE)) {
-        auto subpass_desc = renderPass ? &renderPass->createInfo.pSubpasses[pPipeline->graphicsPipelineCI.subpass] : nullptr;
-        if (subpass_desc && subpass_desc->pDepthStencilAttachment &&
-            subpass_desc->pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
-            if (!pPipeline->graphicsPipelineCI.pDepthStencilState) {
-                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT,
-                                     0, __LINE__, VALIDATION_ERROR_02115, "DS",
-                                     "Invalid Pipeline CreateInfo State: "
-                                     "pDepthStencilState is NULL when rasterization is enabled and subpass uses a "
-                                     "depth/stencil attachment. %s",
-                                     validation_error_map[VALIDATION_ERROR_02115]);
+        // If rasterization is enabled...
+        if (pPipeline->graphicsPipelineCI.pRasterizationState->rasterizerDiscardEnable == VK_FALSE) {
+            auto subpass_desc = renderPass ? &renderPass->createInfo.pSubpasses[pPipeline->graphicsPipelineCI.subpass] : nullptr;
+
+            // If subpass uses a depth/stencil attachment, pDepthStencilState must be a pointer to a valid structure
+            if (subpass_desc && subpass_desc->pDepthStencilAttachment &&
+                subpass_desc->pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
+                if (!pPipeline->graphicsPipelineCI.pDepthStencilState) {
+                    skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, VALIDATION_ERROR_02115, "DS",
+                                         "Invalid Pipeline CreateInfo State: pDepthStencilState is NULL when rasterization is "
+                                         "enabled and subpass uses a depth/stencil attachment. %s",
+                                         validation_error_map[VALIDATION_ERROR_02115]);
+                }
             }
         }
     }
+
     return skip_call;
 }
 
