@@ -3223,6 +3223,23 @@ static bool verifyPipelineCreateState(layer_data *dev_data, std::vector<PIPELINE
                                          validation_error_map[VALIDATION_ERROR_02115]);
                 }
             }
+
+            // If subpass uses color attachments, pColorBlendState must be valid pointer
+            if (subpass_desc) {
+                uint32_t color_attachment_count = 0;
+                for (uint32_t i = 0; i < subpass_desc->colorAttachmentCount; ++i) {
+                    if (subpass_desc->pColorAttachments[i].attachment != VK_ATTACHMENT_UNUSED) {
+                        ++color_attachment_count;
+                    }
+                }
+                if (color_attachment_count > 0 && pPipeline->graphicsPipelineCI.pColorBlendState == nullptr) {
+                    skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, VALIDATION_ERROR_02116, "DS",
+                                         "Invalid Pipeline CreateInfo State: pColorBlendState is NULL when rasterization is "
+                                         "enabled and subpass uses color attachments. %s",
+                                         validation_error_map[VALIDATION_ERROR_02116]);
+                }
+            }
         }
     }
 
