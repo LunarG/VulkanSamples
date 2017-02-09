@@ -153,4 +153,14 @@ bool PreCallValidateCreateBufferView(layer_data *dev_data, const VkBufferViewCre
 
 void PostCallRecordCreateBufferView(layer_data *device_data, const VkBufferViewCreateInfo *pCreateInfo, VkBufferView *pView);
 
+bool ValidateImageAspectMask(layer_data *device_data, VkImage image, VkFormat format, VkImageAspectFlags aspect_mask,
+                             const char *func_name);
+
+bool ValidateImageSubrangeLevelLayerCounts(layer_data *device_data, const VkImageSubresourceRange &subresourceRange,
+                                           const char *func_name);
+
+bool PreCallValidateCreateImageView(layer_data *device_data, const VkImageViewCreateInfo *create_info);
+
+void PostCallRecordCreateImageView(layer_data *device_data, const VkImageViewCreateInfo *create_info, VkImageView view);
+
 #endif  // CORE_VALIDATION_BUFFER_VALIDATION_H_

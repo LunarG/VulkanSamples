@@ -766,9 +766,6 @@ VkPhysicalDeviceLimits GetPhysicalDeviceLimits(layer_data const *);
 bool ValidateImageMemoryIsValid(layer_data *dev_data, IMAGE_STATE *image_state, const char *functionName);
 bool ValidateImageSampleCount(layer_data *dev_data, IMAGE_STATE *image_state, VkSampleCountFlagBits sample_count,
                               const char *location, UNIQUE_VALIDATION_ERROR_CODE msgCode);
-bool ValidateImageSubrangeLevelLayerCounts(layer_data *dev_data, const VkImageSubresourceRange &subresourceRange,
-                                           const char *func_name, UNIQUE_VALIDATION_ERROR_CODE layer_msg_code,
-                                           UNIQUE_VALIDATION_ERROR_CODE level_msg_code);
 bool rangesIntersect(layer_data const *dev_data, MEMORY_RANGE const *range1, VkDeviceSize offset, VkDeviceSize end);
 
 // Prototypes for layer_data accessor functions.  These should be in their own header file at some point
@@ -783,6 +780,7 @@ std::unordered_map<VkImage, std::vector<ImageSubresourcePair>> *GetImageSubresou
 std::unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> *GetImageLayoutMap(layer_data *);
 std::unordered_map<VkBuffer, std::unique_ptr<BUFFER_STATE>> *GetBufferMap(layer_data *device_data);
 std::unordered_map<VkBufferView, std::unique_ptr<BUFFER_VIEW_STATE>> *GetBufferViewMap(layer_data *device_data);
+std::unordered_map<VkImageView, std::unique_ptr<IMAGE_VIEW_STATE>> *GetImageViewMap(layer_data *device_data);
 }
 
 #endif  // CORE_VALIDATION_TYPES_H_
