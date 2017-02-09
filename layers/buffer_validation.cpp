@@ -2275,4 +2275,35 @@ void PostCallRecordCreateImageView(layer_data *device_data, const VkImageViewCre
                                  GetImageState(device_data, create_info->image));
 }
 
+bool PreCallValidateCmdCopyBuffer(layer_data *device_data, GLOBAL_CB_NODE *cb_node, BUFFER_STATE *src_buffer_state,
+                                  BUFFER_STATE *dst_buffer_state) {
+    bool skip = false;
+    skip |= ValidateMemoryIsBoundToBuffer(device_data, src_buffer_state, "vkCmdCopyBuffer()", VALIDATION_ERROR_02531);
+    skip |= ValidateMemoryIsBoundToBuffer(device_data, dst_buffer_state, "vkCmdCopyBuffer()", VALIDATION_ERROR_02532);
+    // Validate that SRC & DST buffers have correct usage flags set
+    skip |= ValidateBufferUsageFlags(device_data, src_buffer_state, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true, VALIDATION_ERROR_01164,
+                                     "vkCmdCopyBuffer()", "VK_BUFFER_USAGE_TRANSFER_SRC_BIT");
+    skip |= ValidateBufferUsageFlags(device_data, dst_buffer_state, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true, VALIDATION_ERROR_01165,
+                                     "vkCmdCopyBuffer()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
+    skip |= ValidateCmd(device_data, cb_node, CMD_COPYBUFFER, "vkCmdCopyBuffer()");
+    skip |= insideRenderPass(device_data, cb_node, "vkCmdCopyBuffer()", VALIDATION_ERROR_01172);
+    return skip;
+}
 
+void PreCallRecordCmdCopyBuffer(layer_data *device_data, GLOBAL_CB_NODE *cb_node, BUFFER_STATE *src_buffer_state,
+                                BUFFER_STATE *dst_buffer_state) {
+    // Update bindings between buffers and cmd buffer
+    AddCommandBufferBindingBuffer(device_data, cb_node, src_buffer_state);
+    AddCommandBufferBindingBuffer(device_data, cb_node, dst_buffer_state);
+
+    std::function<bool()> function = [=]() {
+        return ValidateBufferMemoryIsValid(device_data, src_buffer_state, "vkCmdCopyBuffer()");
+    };
+    cb_node->validate_functions.push_back(function);
+    function = [=]() {
+        SetBufferMemoryValid(device_data, dst_buffer_state, true);
+        return false;
+    };
+    cb_node->validate_functions.push_back(function);
+    core_validation::UpdateCmdBufferLastCmd(cb_node, CMD_COPYBUFFER);
+}

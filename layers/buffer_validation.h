@@ -171,4 +171,10 @@ bool ValidateCopyBufferImageTransferGranularityRequirements(layer_data *device_d
 void PreCallRecordCmdCopyImage(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
                                IMAGE_STATE *dst_image_state);
 
+bool PreCallValidateCmdCopyBuffer(layer_data *device_data, GLOBAL_CB_NODE *cb_node, BUFFER_STATE *src_buffer_state,
+                                  BUFFER_STATE *dst_buffer_state);
+
+void PreCallRecordCmdCopyBuffer(layer_data *device_data, GLOBAL_CB_NODE *cb_node, BUFFER_STATE *src_buffer_state,
+                                BUFFER_STATE *dst_buffer_state);
+
 #endif  // CORE_VALIDATION_BUFFER_VALIDATION_H_
