@@ -1,8 +1,8 @@
 /*
- * Copyright (c) 2015-2016 The Khronos Group Inc.
- * Copyright (c) 2015-2016 Valve Corporation
- * Copyright (c) 2015-2016 LunarG, Inc.
- * Copyright (c) 2015-2016 Google, Inc.
+ * Copyright (c) 2015-2017 The Khronos Group Inc.
+ * Copyright (c) 2015-2017 Valve Corporation
+ * Copyright (c) 2015-2017 LunarG, Inc.
+ * Copyright (c) 2015-2017 Google, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1179,6 +1179,8 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device) {
     m_vp_state.pScissors = NULL;
 
     m_ds_state = nullptr;
+
+    memset(&m_pd_state, 0, sizeof(m_pd_state));
 };
 
 void VkPipelineObj::AddShader(VkShaderObj *shader) { m_shaderObjs.push_back(shader); }
@@ -1236,27 +1238,23 @@ void VkPipelineObj::SetRasterization(const VkPipelineRasterizationStateCreateInf
 
 void VkPipelineObj::SetTessellation(const VkPipelineTessellationStateCreateInfo *te_state) { m_te_state = *te_state; }
 
-VkResult VkPipelineObj::CreateVKPipeline(VkPipelineLayout layout, VkRenderPass render_pass) {
-    VkGraphicsPipelineCreateInfo info = {};
-    VkPipelineDynamicStateCreateInfo dsci = {};
-
-    info.stageCount = m_shaderObjs.size();
-    info.pStages = new VkPipelineShaderStageCreateInfo[info.stageCount];
+void VkPipelineObj::InitGraphicsPipelineCreateInfo(VkGraphicsPipelineCreateInfo *gp_ci) {
+    gp_ci->stageCount = m_shaderObjs.size();
+    gp_ci->pStages = new VkPipelineShaderStageCreateInfo[gp_ci->stageCount];
 
     for (size_t i = 0; i < m_shaderObjs.size(); i++) {
-        ((VkPipelineShaderStageCreateInfo *)info.pStages)[i] = m_shaderObjs[i]->GetStageCreateInfo();
+        ((VkPipelineShaderStageCreateInfo *)gp_ci->pStages)[i] = m_shaderObjs[i]->GetStageCreateInfo();
     }
 
     m_vi_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    info.pVertexInputState = &m_vi_state;
+    gp_ci->pVertexInputState = &m_vi_state;
 
     m_ia_state.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    info.pInputAssemblyState = &m_ia_state;
+    gp_ci->pInputAssemblyState = &m_ia_state;
 
-    info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    info.pNext = NULL;
-    info.flags = 0;
-    info.layout = layout;
+    gp_ci->sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    gp_ci->pNext = NULL;
+    gp_ci->flags = 0;
 
     m_cb_state.attachmentCount = m_colorAttachments.size();
     m_cb_state.pAttachments = m_colorAttachments.data();
@@ -1275,29 +1273,43 @@ VkResult VkPipelineObj::CreateVKPipeline(VkPipelineLayout layout, VkRenderPass r
         MakeDynamic(VK_DYNAMIC_STATE_SCISSOR);
     }
 
+    memset(&m_pd_state, 0, sizeof(m_pd_state));
     if (m_dynamic_state_enables.size() > 0) {
-        dsci.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-        dsci.dynamicStateCount = m_dynamic_state_enables.size();
-        dsci.pDynamicStates = m_dynamic_state_enables.data();
-        info.pDynamicState = &dsci;
+        m_pd_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        m_pd_state.dynamicStateCount = m_dynamic_state_enables.size();
+        m_pd_state.pDynamicStates = m_dynamic_state_enables.data();
+        gp_ci->pDynamicState = &m_pd_state;
     }
 
-    info.renderPass = render_pass;
-    info.subpass = 0;
-    info.pViewportState = &m_vp_state;
-    info.pRasterizationState = &m_rs_state;
-    info.pMultisampleState = &m_ms_state;
-    info.pDepthStencilState = m_ds_state;
-    info.pColorBlendState = &m_cb_state;
+    gp_ci->subpass = 0;
+    gp_ci->pViewportState = &m_vp_state;
+    gp_ci->pRasterizationState = &m_rs_state;
+    gp_ci->pMultisampleState = &m_ms_state;
+    gp_ci->pDepthStencilState = m_ds_state;
+    gp_ci->pColorBlendState = &m_cb_state;
 
     if (m_ia_state.topology == VK_PRIMITIVE_TOPOLOGY_PATCH_LIST) {
         m_te_state.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
-        info.pTessellationState = &m_te_state;
+        gp_ci->pTessellationState = &m_te_state;
     } else {
-        info.pTessellationState = nullptr;
+        gp_ci->pTessellationState = nullptr;
+    }
+}
+
+VkResult VkPipelineObj::CreateVKPipeline(VkPipelineLayout layout, VkRenderPass render_pass,
+                                         VkGraphicsPipelineCreateInfo *gp_ci) {
+    VkGraphicsPipelineCreateInfo info = {};
+
+    // if not given a CreateInfo, create and initialize a local one.
+    if (gp_ci == nullptr) {
+        gp_ci = &info;
+        InitGraphicsPipelineCreateInfo(gp_ci);
     }
 
-    return init_try(*m_device, info);
+    gp_ci->layout = layout;
+    gp_ci->renderPass = render_pass;
+
+    return init_try(*m_device, *gp_ci);
 }
 
 VkCommandBufferObj::VkCommandBufferObj(VkDeviceObj *device, VkCommandPool pool) {
