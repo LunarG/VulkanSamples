@@ -428,58 +428,6 @@ static BINDABLE *GetObjectMemBinding(layer_data *dev_data, uint64_t handle, VkDe
 // prototype
 GLOBAL_CB_NODE *GetCBNode(layer_data const *, const VkCommandBuffer);
 
-// Helper function to validate correct usage bits set for buffers or images
-//  Verify that (actual & desired) flags != 0 or,
-//   if strict is true, verify that (actual & desired) flags == desired
-//  In case of error, report it via dbg callbacks
-static bool validate_usage_flags(layer_data *dev_data, VkFlags actual, VkFlags desired, VkBool32 strict, uint64_t obj_handle,
-                                 VkDebugReportObjectTypeEXT obj_type, int32_t const msgCode, char const *ty_str,
-                                 char const *func_name, char const *usage_str) {
-    bool correct_usage = false;
-    bool skip_call = false;
-    if (strict)
-        correct_usage = ((actual & desired) == desired);
-    else
-        correct_usage = ((actual & desired) != 0);
-    if (!correct_usage) {
-        if (msgCode == -1) {
-            // TODO: Fix callers with msgCode == -1 to use correct validation checks.
-            skip_call = log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, obj_type, obj_handle, __LINE__,
-                                MEMTRACK_INVALID_USAGE_FLAG, "MEM",
-                                "Invalid usage flag for %s 0x%" PRIxLEAST64
-                                " used by %s. In this case, %s should have %s set during creation.",
-                                ty_str, obj_handle, func_name, ty_str, usage_str);
-        } else {
-            const char *valid_usage = (msgCode == -1) ? "" : validation_error_map[msgCode];
-            skip_call = log_msg(
-                dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, obj_type, obj_handle, __LINE__, msgCode, "MEM",
-                "Invalid usage flag for %s 0x%" PRIxLEAST64 " used by %s. In this case, %s should have %s set during creation. %s",
-                ty_str, obj_handle, func_name, ty_str, usage_str, valid_usage);
-        }
-    }
-    return skip_call;
-}
-
-// Helper function to validate usage flags for buffers
-// For given buffer_state send actual vs. desired usage off to helper above where
-//  an error will be flagged if usage is not correct
-bool ValidateImageUsageFlags(layer_data *dev_data, IMAGE_STATE const *image_state, VkFlags desired, VkBool32 strict,
-                             int32_t const msgCode, char const *func_name, char const *usage_string) {
-    return validate_usage_flags(dev_data, image_state->createInfo.usage, desired, strict,
-                                reinterpret_cast<const uint64_t &>(image_state->image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                                msgCode, "image", func_name, usage_string);
-}
-
-// Helper function to validate usage flags for buffers
-// For given buffer_state send actual vs. desired usage off to helper above where
-//  an error will be flagged if usage is not correct
-static bool ValidateBufferUsageFlags(layer_data *dev_data, BUFFER_STATE const *buffer_state, VkFlags desired, VkBool32 strict,
-                                     int32_t const msgCode, char const *func_name, char const *usage_string) {
-    return validate_usage_flags(dev_data, buffer_state->createInfo.usage, desired, strict,
-                                reinterpret_cast<const uint64_t &>(buffer_state->buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
-                                msgCode, "buffer", func_name, usage_string);
-}
-
 // Return ptr to info in map container containing mem, or NULL if not found
 //  Calls to this function should be wrapped in mutex
 DEVICE_MEM_INFO *GetMemObjInfo(const layer_data *dev_data, const VkDeviceMemory mem) {
@@ -6030,34 +5978,19 @@ VKAPI_ATTR void VKAPI_CALL DestroyRenderPass(VkDevice device, VkRenderPass rende
 VKAPI_ATTR VkResult VKAPI_CALL CreateBuffer(VkDevice device, const VkBufferCreateInfo *pCreateInfo,
                                             const VkAllocationCallbacks *pAllocator, VkBuffer *pBuffer) {
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-    // TODO: Add check for VALIDATION_ERROR_00658
-    // TODO: Add check for VALIDATION_ERROR_00666
-    // TODO: Add check for VALIDATION_ERROR_00667
-    // TODO: Add check for VALIDATION_ERROR_00668
-    // TODO: Add check for VALIDATION_ERROR_00669
+    std::unique_lock<std::mutex> lock(global_lock);
+    bool skip = PreCallValidateCreateBuffer(dev_data, pCreateInfo);
+    lock.unlock();
+
+    if (skip) return VK_ERROR_VALIDATION_FAILED_EXT;
     VkResult result = dev_data->dispatch_table.CreateBuffer(device, pCreateInfo, pAllocator, pBuffer);
 
     if (VK_SUCCESS == result) {
-        std::lock_guard<std::mutex> lock(global_lock);
-        // TODO : This doesn't create deep copy of pQueueFamilyIndices so need to fix that if/when we want that data to be valid
-        dev_data->bufferMap.insert(std::make_pair(*pBuffer, unique_ptr<BUFFER_STATE>(new BUFFER_STATE(*pBuffer, pCreateInfo))));
+        lock.lock();
+        PostCallRecordCreateBuffer(dev_data, pCreateInfo, pBuffer);
+        lock.unlock();
     }
     return result;
-}
-
-static bool PreCallValidateCreateBufferView(layer_data *dev_data, const VkBufferViewCreateInfo *pCreateInfo) {
-    bool skip_call = false;
-    BUFFER_STATE *buffer_state = GetBufferState(dev_data, pCreateInfo->buffer);
-    // If this isn't a sparse buffer, it needs to have memory backing it at CreateBufferView time
-    if (buffer_state) {
-        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, buffer_state, "vkCreateBufferView()", VALIDATION_ERROR_02522);
-        // In order to create a valid buffer view, the buffer must have been created with at least one of the
-        // following flags:  UNIFORM_TEXEL_BUFFER_BIT or STORAGE_TEXEL_BUFFER_BIT
-        skip_call |= ValidateBufferUsageFlags(
-            dev_data, buffer_state, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT, false,
-            VALIDATION_ERROR_00694, "vkCreateBufferView()", "VK_BUFFER_USAGE_[STORAGE|UNIFORM]_TEXEL_BUFFER_BIT");
-    }
-    return skip_call;
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateBufferView(VkDevice device, const VkBufferViewCreateInfo *pCreateInfo,
@@ -6070,7 +6003,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateBufferView(VkDevice device, const VkBufferV
     VkResult result = dev_data->dispatch_table.CreateBufferView(device, pCreateInfo, pAllocator, pView);
     if (VK_SUCCESS == result) {
         lock.lock();
-        dev_data->bufferViewMap[*pView] = unique_ptr<BUFFER_VIEW_STATE>(new BUFFER_VIEW_STATE(*pView, pCreateInfo));
+        PostCallRecordCreateBufferView(dev_data, pCreateInfo, pView);
         lock.unlock();
     }
     return result;
@@ -6105,6 +6038,14 @@ std::unordered_map<VkImage, std::vector<ImageSubresourcePair>> *GetImageSubresou
 
 std::unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> *GetImageLayoutMap(layer_data *device_data) {
     return &device_data->imageLayoutMap;
+}
+
+std::unordered_map<VkBuffer, std::unique_ptr<BUFFER_STATE>> *GetBufferMap(layer_data *device_data) {
+    return &device_data->bufferMap;
+}
+
+std::unordered_map<VkBufferView, std::unique_ptr<BUFFER_VIEW_STATE>> *GetBufferViewMap(layer_data *device_data) {
+    return &device_data->bufferViewMap;
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo,

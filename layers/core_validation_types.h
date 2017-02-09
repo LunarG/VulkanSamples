@@ -766,8 +766,6 @@ VkPhysicalDeviceLimits GetPhysicalDeviceLimits(layer_data const *);
 bool ValidateImageMemoryIsValid(layer_data *dev_data, IMAGE_STATE *image_state, const char *functionName);
 bool ValidateImageSampleCount(layer_data *dev_data, IMAGE_STATE *image_state, VkSampleCountFlagBits sample_count,
                               const char *location, UNIQUE_VALIDATION_ERROR_CODE msgCode);
-bool ValidateImageUsageFlags(layer_data *dev_data, IMAGE_STATE const *image_state, VkFlags desired, VkBool32 strict,
-                             int32_t const msgCode, char const *func_name, char const *usage_string);
 bool ValidateImageSubrangeLevelLayerCounts(layer_data *dev_data, const VkImageSubresourceRange &subresourceRange,
                                            const char *func_name, UNIQUE_VALIDATION_ERROR_CODE layer_msg_code,
                                            UNIQUE_VALIDATION_ERROR_CODE level_msg_code);
@@ -783,6 +781,8 @@ const CHECK_DISABLED *GetDisables(layer_data *);
 std::unordered_map<VkImage, std::unique_ptr<IMAGE_STATE>> *GetImageMap(core_validation::layer_data *);
 std::unordered_map<VkImage, std::vector<ImageSubresourcePair>> *GetImageSubresourceMap(layer_data *);
 std::unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> *GetImageLayoutMap(layer_data *);
+std::unordered_map<VkBuffer, std::unique_ptr<BUFFER_STATE>> *GetBufferMap(layer_data *device_data);
+std::unordered_map<VkBufferView, std::unique_ptr<BUFFER_VIEW_STATE>> *GetBufferViewMap(layer_data *device_data);
 }
 
 #endif  // CORE_VALIDATION_TYPES_H_
