@@ -14925,7 +14925,7 @@ TEST_F(VkLayerTest, AttachmentDescriptionUndefinedFormat) {
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "format is VK_FORMAT_UNDEFINED");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT, "format is VK_FORMAT_UNDEFINED");
 
     VkAttachmentReference color_attach = {};
     color_attach.layout = VK_IMAGE_LAYOUT_GENERAL;

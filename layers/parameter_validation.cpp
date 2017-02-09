@@ -3861,7 +3861,7 @@ static bool PreCreateRenderPass(layer_data *dev_data, const VkRenderPassCreateIn
             std::stringstream ss;
             ss << "vkCreateRenderPass: pCreateInfo->pAttachments[" << i << "].format is VK_FORMAT_UNDEFINED. "
                << validation_error_map[VALIDATION_ERROR_00336];
-            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                             VALIDATION_ERROR_00336, "IMAGE", "%s", ss.str().c_str());
         }
     }
