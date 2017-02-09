@@ -109,7 +109,8 @@ void TransitionFinalSubpassLayouts(layer_data *dev_data, GLOBAL_CB_NODE *pCB, co
                                    FRAMEBUFFER_STATE *framebuffer_state);
 
 bool PreCallValidateCmdCopyImage(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
-                                 IMAGE_STATE *dst_image_state, uint32_t region_count, const VkImageCopy *regions);
+                                 IMAGE_STATE *dst_image_state, uint32_t region_count, const VkImageCopy *regions,
+                                 VkImageLayout src_image_layout, VkImageLayout dst_image_layout);
 
 bool PreCallValidateCmdClearAttachments(layer_data *device_data, VkCommandBuffer commandBuffer, uint32_t attachmentCount,
                                         const VkClearAttachment *pAttachments, uint32_t rectCount, const VkClearRect *pRects);
@@ -162,5 +163,12 @@ bool ValidateImageSubrangeLevelLayerCounts(layer_data *device_data, const VkImag
 bool PreCallValidateCreateImageView(layer_data *device_data, const VkImageViewCreateInfo *create_info);
 
 void PostCallRecordCreateImageView(layer_data *device_data, const VkImageViewCreateInfo *create_info, VkImageView view);
+
+bool ValidateCopyBufferImageTransferGranularityRequirements(layer_data *device_data, const GLOBAL_CB_NODE *cb_node,
+                                                            const IMAGE_STATE *img, const VkBufferImageCopy *region,
+                                                            const uint32_t i, const char *function);
+
+void PreCallRecordCmdCopyImage(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
+                               IMAGE_STATE *dst_image_state);
 
 #endif  // CORE_VALIDATION_BUFFER_VALIDATION_H_

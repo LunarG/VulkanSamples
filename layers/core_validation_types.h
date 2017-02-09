@@ -58,6 +58,7 @@
 #include <unordered_set>
 #include <vector>
 #include <memory>
+#include <list>
 
 // Fwd declarations
 namespace cvdescriptorset {
@@ -80,6 +81,14 @@ class BASE_NODE {
     BASE_NODE() { in_use.store(0); };
 };
 
+// Track command pools and their command buffers
+struct COMMAND_POOL_NODE : public BASE_NODE {
+    VkCommandPoolCreateFlags createFlags;
+    uint32_t queueFamilyIndex;
+    // TODO: why is this std::list?
+    std::list<VkCommandBuffer> commandBuffers;  // container of cmd buffers allocated from this pool
+};
+
 // Generic wrapper for vulkan objects
 struct VK_OBJECT {
     uint64_t handle;
@@ -94,6 +103,12 @@ struct hash<VK_OBJECT> {
     size_t operator()(VK_OBJECT obj) const NOEXCEPT { return hash<uint64_t>()(obj.handle) ^ hash<uint32_t>()(obj.type); }
 };
 }
+
+class PHYS_DEV_PROPERTIES_NODE {
+public:
+    VkPhysicalDeviceProperties properties;
+    std::vector<VkQueueFamilyProperties> queue_family_properties;
+};
 
 // Flags describing requirements imposed by the pipeline on a descriptor. These
 // can't be checked at pipeline creation time as they depend on the Image or
@@ -742,6 +757,8 @@ SWAPCHAIN_NODE *GetSwapchainNode(const layer_data *, VkSwapchainKHR);
 GLOBAL_CB_NODE *GetCBNode(layer_data const *my_data, const VkCommandBuffer cb);
 RENDER_PASS_STATE *GetRenderPassState(layer_data const *my_data, VkRenderPass renderpass);
 FRAMEBUFFER_STATE *GetFramebufferState(const layer_data *my_data, VkFramebuffer framebuffer);
+COMMAND_POOL_NODE *GetCommandPoolNode(layer_data *dev_data, VkCommandPool pool);
+PHYS_DEV_PROPERTIES_NODE *GetPhysDevProperties(layer_data *device_data);
 
 void invalidateCommandBuffers(const layer_data *, std::unordered_set<GLOBAL_CB_NODE *> const &, VK_OBJECT);
 bool ValidateMemoryIsBoundToBuffer(const layer_data *, const BUFFER_STATE *, const char *, UNIQUE_VALIDATION_ERROR_CODE);

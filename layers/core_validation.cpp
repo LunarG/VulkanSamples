@@ -6052,6 +6052,10 @@ std::unordered_map<VkImageView, std::unique_ptr<IMAGE_VIEW_STATE>> *GetImageView
     return &device_data->imageViewMap;
 }
 
+PHYS_DEV_PROPERTIES_NODE *GetPhysDevProperties(layer_data *device_data) {
+    return &device_data->phys_dev_properties;
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo,
                                            const VkAllocationCallbacks *pAllocator, VkImage *pImage) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
@@ -7607,254 +7611,29 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer
     if (!skip_call) dev_data->dispatch_table.CmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, regionCount, pRegions);
 }
 
-// Test if two VkExtent3D structs are equivalent
-static inline bool IsExtentEqual(const VkExtent3D *extent, const VkExtent3D *other_extent) {
-    bool result = true;
-    if ((extent->width != other_extent->width) || (extent->height != other_extent->height) ||
-        (extent->depth != other_extent->depth)) {
-        result = false;
-    }
-    return result;
-}
-
-// Returns the image extent of a specific subresource.
-static inline VkExtent3D GetImageSubresourceExtent(const IMAGE_STATE *img, const VkImageSubresourceLayers *subresource) {
-    const uint32_t mip = subresource->mipLevel;
-    VkExtent3D extent = img->createInfo.extent;
-    extent.width = std::max(1U, extent.width >> mip);
-    extent.height = std::max(1U, extent.height >> mip);
-    extent.depth = std::max(1U, extent.depth >> mip);
-    return extent;
-}
-
-// Test if the extent argument has all dimensions set to 0.
-static inline bool IsExtentZero(const VkExtent3D *extent) {
-    return ((extent->width == 0) && (extent->height == 0) && (extent->depth == 0));
-}
-
-// Returns the image transfer granularity for a specific image scaled by compressed block size if necessary.
-static inline VkExtent3D GetScaledItg(layer_data *dev_data, const GLOBAL_CB_NODE *cb_node, const IMAGE_STATE *img) {
-    // Default to (0, 0, 0) granularity in case we can't find the real granularity for the physical device.
-    VkExtent3D granularity = {0, 0, 0};
-    auto pPool = GetCommandPoolNode(dev_data, cb_node->createInfo.commandPool);
-    if (pPool) {
-        granularity = dev_data->phys_dev_properties.queue_family_properties[pPool->queueFamilyIndex].minImageTransferGranularity;
-        if (vk_format_is_compressed(img->createInfo.format)) {
-            auto block_size = vk_format_compressed_block_size(img->createInfo.format);
-            granularity.width *= block_size.width;
-            granularity.height *= block_size.height;
-        }
-    }
-    return granularity;
-}
-
-// Test elements of a VkExtent3D structure against alignment constraints contained in another VkExtent3D structure
-static inline bool IsExtentAligned(const VkExtent3D *extent, const VkExtent3D *granularity) {
-    bool valid = true;
-    if ((vk_safe_modulo(extent->depth, granularity->depth) != 0) || (vk_safe_modulo(extent->width, granularity->width) != 0) ||
-        (vk_safe_modulo(extent->height, granularity->height) != 0)) {
-        valid = false;
-    }
-    return valid;
-}
-
-// Check elements of a VkOffset3D structure against a queue family's Image Transfer Granularity values
-static inline bool CheckItgOffset(layer_data *dev_data, const GLOBAL_CB_NODE *cb_node, const VkOffset3D *offset,
-                                  const VkExtent3D *granularity, const uint32_t i, const char *function, const char *member) {
-    bool skip = false;
-    VkExtent3D offset_extent = {};
-    offset_extent.width = static_cast<uint32_t>(abs(offset->x));
-    offset_extent.height = static_cast<uint32_t>(abs(offset->y));
-    offset_extent.depth = static_cast<uint32_t>(abs(offset->z));
-    if (IsExtentZero(granularity)) {
-        // If the queue family image transfer granularity is (0, 0, 0), then the offset must always be (0, 0, 0)
-        if (IsExtentZero(&offset_extent) == false) {
-            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                            DRAWSTATE_IMAGE_TRANSFER_GRANULARITY, "DS",
-                            "%s: pRegion[%d].%s (x=%d, y=%d, z=%d) must be (x=0, y=0, z=0) "
-                            "when the command buffer's queue family image transfer granularity is (w=0, h=0, d=0).",
-                            function, i, member, offset->x, offset->y, offset->z);
-        }
-    } else {
-        // If the queue family image transfer granularity is not (0, 0, 0), then the offset dimensions must always be even
-        // integer multiples of the image transfer granularity.
-        if (IsExtentAligned(&offset_extent, granularity) == false) {
-            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                            DRAWSTATE_IMAGE_TRANSFER_GRANULARITY, "DS",
-                            "%s: pRegion[%d].%s (x=%d, y=%d, z=%d) dimensions must be even integer "
-                            "multiples of this command buffer's queue family image transfer granularity (w=%d, h=%d, d=%d).",
-                            function, i, member, offset->x, offset->y, offset->z, granularity->width, granularity->height,
-                            granularity->depth);
-        }
-    }
-    return skip;
-}
-
-// Check elements of a VkExtent3D structure against a queue family's Image Transfer Granularity values
-static inline bool CheckItgExtent(layer_data *dev_data, const GLOBAL_CB_NODE *cb_node, const VkExtent3D *extent,
-                                  const VkOffset3D *offset, const VkExtent3D *granularity, const VkExtent3D *subresource_extent,
-                                  const uint32_t i, const char *function, const char *member) {
-    bool skip = false;
-    if (IsExtentZero(granularity)) {
-        // If the queue family image transfer granularity is (0, 0, 0), then the extent must always match the image
-        // subresource extent.
-        if (IsExtentEqual(extent, subresource_extent) == false) {
-            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                            DRAWSTATE_IMAGE_TRANSFER_GRANULARITY, "DS",
-                            "%s: pRegion[%d].%s (w=%d, h=%d, d=%d) must match the image subresource extents (w=%d, h=%d, d=%d) "
-                            "when the command buffer's queue family image transfer granularity is (w=0, h=0, d=0).",
-                            function, i, member, extent->width, extent->height, extent->depth, subresource_extent->width,
-                            subresource_extent->height, subresource_extent->depth);
-        }
-    } else {
-        // If the queue family image transfer granularity is not (0, 0, 0), then the extent dimensions must always be even
-        // integer multiples of the image transfer granularity or the offset + extent dimensions must always match the image
-        // subresource extent dimensions.
-        VkExtent3D offset_extent_sum = {};
-        offset_extent_sum.width = static_cast<uint32_t>(abs(offset->x)) + extent->width;
-        offset_extent_sum.height = static_cast<uint32_t>(abs(offset->y)) + extent->height;
-        offset_extent_sum.depth = static_cast<uint32_t>(abs(offset->z)) + extent->depth;
-        if ((IsExtentAligned(extent, granularity) == false) && (IsExtentEqual(&offset_extent_sum, subresource_extent) == false)) {
-            skip |=
-                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                        DRAWSTATE_IMAGE_TRANSFER_GRANULARITY, "DS",
-                        "%s: pRegion[%d].%s (w=%d, h=%d, d=%d) dimensions must be even integer multiples of this command buffer's "
-                        "queue family image transfer granularity (w=%d, h=%d, d=%d) or offset (x=%d, y=%d, z=%d) + "
-                        "extent (w=%d, h=%d, d=%d) must match the image subresource extents (w=%d, h=%d, d=%d).",
-                        function, i, member, extent->width, extent->height, extent->depth, granularity->width, granularity->height,
-                        granularity->depth, offset->x, offset->y, offset->z, extent->width, extent->height, extent->depth,
-                        subresource_extent->width, subresource_extent->height, subresource_extent->depth);
-        }
-    }
-    return skip;
-}
-
-// Check a uint32_t width or stride value against a queue family's Image Transfer Granularity width value
-static inline bool CheckItgInt(layer_data *dev_data, const GLOBAL_CB_NODE *cb_node, const uint32_t value,
-                               const uint32_t granularity, const uint32_t i, const char *function, const char *member) {
-    bool skip = false;
-    if (vk_safe_modulo(value, granularity) != 0) {
-        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                        DRAWSTATE_IMAGE_TRANSFER_GRANULARITY, "DS",
-                        "%s: pRegion[%d].%s (%d) must be an even integer multiple of this command buffer's queue family image "
-                        "transfer granularity width (%d).",
-                        function, i, member, value, granularity);
-    }
-    return skip;
-}
-
-// Check a VkDeviceSize value against a queue family's Image Transfer Granularity width value
-static inline bool CheckItgSize(layer_data *dev_data, const GLOBAL_CB_NODE *cb_node, const VkDeviceSize value,
-                                const uint32_t granularity, const uint32_t i, const char *function, const char *member) {
-    bool skip = false;
-    if (vk_safe_modulo(value, granularity) != 0) {
-        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                        DRAWSTATE_IMAGE_TRANSFER_GRANULARITY, "DS",
-                        "%s: pRegion[%d].%s (%" PRIdLEAST64
-                        ") must be an even integer multiple of this command buffer's queue family image transfer "
-                        "granularity width (%d).",
-                        function, i, member, value, granularity);
-    }
-    return skip;
-}
-
-// Check valid usage Image Tranfer Granularity requirements for elements of a VkImageCopy structure
-static inline bool ValidateCopyImageTransferGranularityRequirements(layer_data *dev_data, const GLOBAL_CB_NODE *cb_node,
-                                                                    const IMAGE_STATE *img, const VkImageCopy *region,
-                                                                    const uint32_t i, const char *function) {
-    bool skip = false;
-    VkExtent3D granularity = GetScaledItg(dev_data, cb_node, img);
-    skip |= CheckItgOffset(dev_data, cb_node, &region->srcOffset, &granularity, i, function, "srcOffset");
-    skip |= CheckItgOffset(dev_data, cb_node, &region->dstOffset, &granularity, i, function, "dstOffset");
-    VkExtent3D subresource_extent = GetImageSubresourceExtent(img, &region->dstSubresource);
-    skip |= CheckItgExtent(dev_data, cb_node, &region->extent, &region->dstOffset, &granularity, &subresource_extent, i, function,
-                           "extent");
-    return skip;
-}
-
-// Check valid usage Image Tranfer Granularity requirements for elements of a VkBufferImageCopy structure
-static inline bool ValidateCopyBufferImageTransferGranularityRequirements(layer_data *dev_data, const GLOBAL_CB_NODE *cb_node,
-                                                                          const IMAGE_STATE *img, const VkBufferImageCopy *region,
-                                                                          const uint32_t i, const char *function) {
-    bool skip = false;
-    if (vk_format_is_compressed(img->createInfo.format) == true) {
-        // TODO: Add granularity checking for compressed formats
-
-        // bufferRowLength must be a multiple of the compressed texel block width
-        // bufferImageHeight must be a multiple of the compressed texel block height
-        // all members of imageOffset must be a multiple of the corresponding dimensions of the compressed texel block
-        // bufferOffset must be a multiple of the compressed texel block size in bytes
-        // imageExtent.width must be a multiple of the compressed texel block width or (imageExtent.width + imageOffset.x)
-        //     must equal the image subresource width
-        // imageExtent.height must be a multiple of the compressed texel block height or (imageExtent.height + imageOffset.y)
-        //     must equal the image subresource height
-        // imageExtent.depth must be a multiple of the compressed texel block depth or (imageExtent.depth + imageOffset.z)
-        //     must equal the image subresource depth
-    } else {
-        VkExtent3D granularity = GetScaledItg(dev_data, cb_node, img);
-        skip |= CheckItgSize(dev_data, cb_node, region->bufferOffset, granularity.width, i, function, "bufferOffset");
-        skip |= CheckItgInt(dev_data, cb_node, region->bufferRowLength, granularity.width, i, function, "bufferRowLength");
-        skip |= CheckItgInt(dev_data, cb_node, region->bufferImageHeight, granularity.width, i, function, "bufferImageHeight");
-        skip |= CheckItgOffset(dev_data, cb_node, &region->imageOffset, &granularity, i, function, "imageOffset");
-        VkExtent3D subresource_extent = GetImageSubresourceExtent(img, &region->imageSubresource);
-        skip |= CheckItgExtent(dev_data, cb_node, &region->imageExtent, &region->imageOffset, &granularity, &subresource_extent, i,
-                               function, "imageExtent");
-    }
-    return skip;
-}
-
 VKAPI_ATTR void VKAPI_CALL CmdCopyImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout,
                                         VkImage dstImage, VkImageLayout dstImageLayout, uint32_t regionCount,
                                         const VkImageCopy *pRegions) {
-    bool skip_call = false;
-    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
+    bool skip = false;
+    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
 
-    auto cb_node = GetCBNode(dev_data, commandBuffer);
-    auto src_image_state = GetImageState(dev_data, srcImage);
-    auto dst_image_state = GetImageState(dev_data, dstImage);
+    auto cb_node = GetCBNode(device_data, commandBuffer);
+    auto src_image_state = GetImageState(device_data, srcImage);
+    auto dst_image_state = GetImageState(device_data, dstImage);
     if (cb_node && src_image_state && dst_image_state) {
-
-        skip_call = PreCallValidateCmdCopyImage(dev_data, cb_node, src_image_state, dst_image_state, regionCount, pRegions);
-
-        skip_call |= ValidateMemoryIsBoundToImage(dev_data, src_image_state, "vkCmdCopyImage()", VALIDATION_ERROR_02533);
-        skip_call |= ValidateMemoryIsBoundToImage(dev_data, dst_image_state, "vkCmdCopyImage()", VALIDATION_ERROR_02534);
-        // Update bindings between images and cmd buffer
-        AddCommandBufferBindingImage(dev_data, cb_node, src_image_state);
-        AddCommandBufferBindingImage(dev_data, cb_node, dst_image_state);
-        // Validate that SRC & DST images have correct usage flags set
-        skip_call |= ValidateImageUsageFlags(dev_data, src_image_state, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, true,
-                                             VALIDATION_ERROR_01178, "vkCmdCopyImage()", "VK_IMAGE_USAGE_TRANSFER_SRC_BIT");
-        skip_call |= ValidateImageUsageFlags(dev_data, dst_image_state, VK_IMAGE_USAGE_TRANSFER_DST_BIT, true,
-                                             VALIDATION_ERROR_01181, "vkCmdCopyImage()", "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
-        std::function<bool()> function = [=]() {
-            return ValidateImageMemoryIsValid(dev_data, src_image_state, "vkCmdCopyImage()");
-        };
-        cb_node->validate_functions.push_back(function);
-        function = [=]() {
-            SetImageMemoryValid(dev_data, dst_image_state, true);
-            return false;
-        };
-        cb_node->validate_functions.push_back(function);
-
-        skip_call |= ValidateCmd(dev_data, cb_node, CMD_COPYIMAGE, "vkCmdCopyImage()");
-        UpdateCmdBufferLastCmd(cb_node, CMD_COPYIMAGE);
-        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyImage()", VALIDATION_ERROR_01194);
-        for (uint32_t i = 0; i < regionCount; ++i) {
-            skip_call |= VerifySourceImageLayout(dev_data, cb_node, srcImage, pRegions[i].srcSubresource, srcImageLayout,
-                                                 VALIDATION_ERROR_01180);
-            skip_call |= VerifyDestImageLayout(dev_data, cb_node, dstImage, pRegions[i].dstSubresource, dstImageLayout,
-                                               VALIDATION_ERROR_01183);
-            skip_call |= ValidateCopyImageTransferGranularityRequirements(dev_data, cb_node, dst_image_state, &pRegions[i], i,
-                                                                          "vkCmdCopyImage()");
+        skip = PreCallValidateCmdCopyImage(device_data, cb_node, src_image_state, dst_image_state, regionCount, pRegions,
+                                           srcImageLayout, dstImageLayout);
+        if (!skip) {
+            PreCallRecordCmdCopyImage(device_data, cb_node, src_image_state, dst_image_state);
+            lock.unlock();
+            device_data->dispatch_table.CmdCopyImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount,
+                                                     pRegions);
         }
     } else {
+        lock.unlock();
         assert(0);
     }
-    lock.unlock();
-    if (!skip_call)
-        dev_data->dispatch_table.CmdCopyImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount,
-                                              pRegions);
 }
 
 // Validate that an image's sampleCount matches the requirement for a specific API call
