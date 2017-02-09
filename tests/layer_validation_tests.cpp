@@ -36,6 +36,8 @@
 #include "vk_layer_config.h"
 #include "vk_validation_error_messages.h"
 #include "vkrenderframework.h"
+
+#include <algorithm>
 #include <limits.h>
 #include <unordered_set>
 
@@ -130,6 +132,7 @@ class ErrorMonitor {
         failure_message_strings_.clear();
         desired_message_strings_.clear();
         desired_message_ids_.clear();
+        ignore_message_strings_.clear();
         other_messages_.clear();
         message_outstanding_count_ = 0;
     }
@@ -160,6 +163,17 @@ class ErrorMonitor {
         test_platform_thread_unlock_mutex(&mutex_);
     }
 
+    // Set an error that the error monitor will ignore. Do not use this function if you are creating a new test.
+    // TODO: This is stopgap to block new unexpected errors from being introduced. The long-term goal is to remove the use of this
+    // function and its definition.
+    void SetUnexpectedError(const char *const msg) {
+        test_platform_thread_lock_mutex(&mutex_);
+
+        ignore_message_strings_.emplace_back(msg);
+
+        test_platform_thread_unlock_mutex(&mutex_);
+    }
+
     VkBool32 CheckForDesiredMsg(const uint32_t message_code, const char *const msgString) {
         VkBool32 result = VK_FALSE;
         test_platform_thread_lock_mutex(&mutex_);
@@ -169,53 +183,56 @@ class ErrorMonitor {
         string errorString(msgString);
         bool found_expected = false;
 
-        for (auto desired_msg : desired_message_strings_) {
-            if (desired_msg.length() == 0) {
-                // An empty desired_msg string "" indicates a positive test - not expecting an error.
-                // Return true to avoid calling layers/driver with this error.
-                // And don't erase the "" string, so it remains if another error is found.
-                result = VK_TRUE;
-                found_expected = true;
-                message_found_ = VK_TRUE;
-                failure_message_strings_.insert(errorString);
-            } else if (errorString.find(desired_msg) != string::npos) {
-                found_expected = true;
-                message_outstanding_count_--;
-                failure_message_strings_.insert(errorString);
-                message_found_ = VK_TRUE;
-                result = VK_TRUE;
-                // We only want one match for each expected error so remove from set here
-                // Since we're about the break the loop it's ok to remove from set we're iterating over
-                desired_message_strings_.erase(desired_msg);
-                break;
-            }
-        }
-        for (auto desired_id : desired_message_ids_) {
-            if (desired_id == VALIDATION_ERROR_MAX_ENUM) {
-                // A message ID set to MAX_ENUM indicates a positive test - not expecting an error.
-                // Return true to avoid calling layers/driver with this error.
-                result = VK_TRUE;
-            } else if (desired_id == message_code) {
-                // Double-check that the string matches the error enum
-                if (errorString.find(validation_error_map[desired_id]) != string::npos) {
+        if (!IgnoreMessage(errorString)) {
+            for (auto desired_msg : desired_message_strings_) {
+                if (desired_msg.length() == 0) {
+                    // An empty desired_msg string "" indicates a positive test - not expecting an error.
+                    // Return true to avoid calling layers/driver with this error.
+                    // And don't erase the "" string, so it remains if another error is found.
+                    result = VK_TRUE;
+                    found_expected = true;
+                    message_found_ = VK_TRUE;
+                    failure_message_strings_.insert(errorString);
+                } else if (errorString.find(desired_msg) != string::npos) {
                     found_expected = true;
                     message_outstanding_count_--;
-                    result = VK_TRUE;
+                    failure_message_strings_.insert(errorString);
                     message_found_ = VK_TRUE;
-                    desired_message_ids_.erase(desired_id);
+                    result = VK_TRUE;
+                    // We only want one match for each expected error so remove from set here
+                    // Since we're about the break the loop it's ok to remove from set we're iterating over
+                    desired_message_strings_.erase(desired_msg);
                     break;
-                } else {
-                    // Treat this message as a regular unexpected error, but print a warning jic
-                    printf("Message (%s) from MessageID %d does not correspond to expected message from error Database (%s)\n",
-                           errorString.c_str(), desired_id, validation_error_map[desired_id]);
                 }
+            }
+            for (auto desired_id : desired_message_ids_) {
+                if (desired_id == VALIDATION_ERROR_MAX_ENUM) {
+                    // A message ID set to MAX_ENUM indicates a positive test - not expecting an error.
+                    // Return true to avoid calling layers/driver with this error.
+                    result = VK_TRUE;
+                } else if (desired_id == message_code) {
+                    // Double-check that the string matches the error enum
+                    if (errorString.find(validation_error_map[desired_id]) != string::npos) {
+                        found_expected = true;
+                        message_outstanding_count_--;
+                        result = VK_TRUE;
+                        message_found_ = VK_TRUE;
+                        desired_message_ids_.erase(desired_id);
+                        break;
+                    } else {
+                        // Treat this message as a regular unexpected error, but print a warning jic
+                        printf("Message (%s) from MessageID %d does not correspond to expected message from error Database (%s)\n",
+                               errorString.c_str(), desired_id, validation_error_map[desired_id]);
+                    }
+                }
+            }
+
+            if (!found_expected) {
+                printf("Unexpected: %s\n", msgString);
+                other_messages_.push_back(errorString);
             }
         }
 
-        if (!found_expected) {
-            printf("Unexpected: %s\n", msgString);
-            other_messages_.push_back(errorString);
-        }
         test_platform_thread_unlock_mutex(&mutex_);
         return result;
     }
@@ -275,10 +292,23 @@ class ErrorMonitor {
     }
 
    private:
+    // TODO: This is stopgap to block new unexpected errors from being introduced. The long-term goal is to remove the use of this
+    // function and its definition.
+    bool IgnoreMessage(std::string const &msg) const {
+        if (ignore_message_strings_.empty()) {
+            return false;
+        }
+
+        return std::find_if(ignore_message_strings_.begin(), ignore_message_strings_.end(), [&msg](std::string const &str) {
+                   return msg.find(str) != std::string::npos;
+               }) != ignore_message_strings_.end();
+    }
+
     VkFlags message_flags_;
     std::unordered_set<uint32_t> desired_message_ids_;
     std::unordered_set<string> desired_message_strings_;
     std::unordered_set<string> failure_message_strings_;
+    std::vector<std::string> ignore_message_strings_;
     vector<string> other_messages_;
     test_platform_thread_mutex mutex_;
     bool *bailout_;
@@ -2975,6 +3005,7 @@ TEST_F(VkLayerTest, ImageSampleCounts) {
         image_create_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         vk_testing::Image dst_image;
         dst_image.init(*m_device, (const VkImageCreateInfo &)image_create_info, reqs);
+        m_errorMonitor->SetUnexpectedError("attempts to implicitly reset cmdBuffer created from command pool");
         m_commandBuffer->BeginCommandBuffer();
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                              "was created with a sample count "
@@ -2997,6 +3028,7 @@ TEST_F(VkLayerTest, ImageSampleCounts) {
         image_create_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         vk_testing::Image dst_image;
         dst_image.init(*m_device, (const VkImageCreateInfo &)image_create_info, reqs);
+        m_errorMonitor->SetUnexpectedError("attempts to implicitly reset cmdBuffer created from command pool");
         m_commandBuffer->BeginCommandBuffer();
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                              "was created with a sample count "
@@ -3026,6 +3058,9 @@ TEST_F(VkLayerTest, ImageSampleCounts) {
         image_create_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         vk_testing::Image dst_image;
         dst_image.init(*m_device, (const VkImageCreateInfo &)image_create_info, reqs);
+        m_errorMonitor->SetUnexpectedError(
+            "If commandBuffer was allocated from a VkCommandPool which did not have the "
+            "VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT flag set, commandBuffer must be in the initial state");
         m_commandBuffer->BeginCommandBuffer();
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                              "was created with a sample count "
@@ -3046,6 +3081,7 @@ TEST_F(VkLayerTest, ImageSampleCounts) {
         image_create_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
         vk_testing::Image src_image;
         src_image.init(*m_device, (const VkImageCreateInfo &)image_create_info, reqs);
+        m_errorMonitor->SetUnexpectedError("attempts to implicitly reset cmdBuffer created from command pool");
         m_commandBuffer->BeginCommandBuffer();
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                              "was created with a sample count "
@@ -3282,6 +3318,7 @@ TEST_F(VkLayerTest, MismatchedQueueFamiliesOnSubmit) {
         "queue family.");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
+
     // This test is meaningless unless we have multiple queue families
     auto queue_family_properties = m_device->phy().queue_properties();
     if (queue_family_properties.size() < 2) {
@@ -3944,6 +3981,10 @@ TEST_F(VkLayerTest, FramebufferCreateErrors) {
     fb_info.height = 100;
     fb_info.layers = 1;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00413);
+    m_errorMonitor->SetUnexpectedError(
+        "has dimensions smaller than the corresponding framebuffer dimensions. Attachment dimensions must be at least as large. "
+        "Here are the respective dimensions for attachment");
+
     err = vkCreateFramebuffer(device(), &fb_info, NULL, &fb);
 
     m_errorMonitor->VerifyFound();
@@ -3956,6 +3997,9 @@ TEST_F(VkLayerTest, FramebufferCreateErrors) {
     fb_info.height = m_device->props.limits.maxFramebufferHeight + 1;
     fb_info.layers = 1;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00414);
+    m_errorMonitor->SetUnexpectedError(
+        "has dimensions smaller than the corresponding framebuffer dimensions. Attachment dimensions must be at least as large. "
+        "Here are the respective dimensions for attachment");
     err = vkCreateFramebuffer(device(), &fb_info, NULL, &fb);
 
     m_errorMonitor->VerifyFound();
@@ -3968,6 +4012,9 @@ TEST_F(VkLayerTest, FramebufferCreateErrors) {
     fb_info.height = 100;
     fb_info.layers = m_device->props.limits.maxFramebufferLayers + 1;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00415);
+    m_errorMonitor->SetUnexpectedError(
+        "has dimensions smaller than the corresponding framebuffer dimensions. Attachment dimensions must be at least as large. "
+        "Here are the respective dimensions for attachment");
     err = vkCreateFramebuffer(device(), &fb_info, NULL, &fb);
 
     m_errorMonitor->VerifyFound();
@@ -4587,6 +4634,7 @@ TEST_F(VkLayerTest, InvalidCmdBufferBufferDestroyed) {
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &m_commandBuffer->handle();
+    m_errorMonitor->SetUnexpectedError("Cannot submit cmd buffer using deleted buffer");
     vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
 
     m_errorMonitor->VerifyFound();
@@ -4823,6 +4871,7 @@ TEST_F(VkLayerTest, InvalidCmdBufferImageDestroyed) {
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &m_commandBuffer->handle();
+    m_errorMonitor->SetUnexpectedError("Cannot submit cmd buffer using deleted image");
     vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
 
     m_errorMonitor->VerifyFound();
@@ -4901,6 +4950,7 @@ TEST_F(VkLayerTest, InvalidCmdBufferFramebufferImageDestroyed) {
     m_renderPassBeginInfo.framebuffer = fb;
     // Create Null cmd buffer for submit
     m_commandBuffer->BeginCommandBuffer();
+    m_errorMonitor->SetUnexpectedError("Cannot execute a render pass with renderArea not within the bound of the framebuffer.");
     m_commandBuffer->BeginRenderPass(m_renderPassBeginInfo);
     m_commandBuffer->EndRenderPass();
     m_commandBuffer->EndCommandBuffer();
@@ -4908,6 +4958,7 @@ TEST_F(VkLayerTest, InvalidCmdBufferFramebufferImageDestroyed) {
     vkDestroyImage(m_device->device(), image, NULL);
     // Now attempt to submit cmd buffer and verify error
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, " that is invalid because bound image ");
+    m_errorMonitor->SetUnexpectedError("Cannot submit cmd buffer using deleted image");
     QueueCommandBuffer(false);
     m_errorMonitor->VerifyFound();
 
@@ -4954,6 +5005,8 @@ TEST_F(VkLayerTest, FramebufferInUseDestroyedSignaled) {
     m_errorMonitor->VerifyFound();
     // Wait for queue to complete so we can safely destroy everything
     vkQueueWaitIdle(m_device->m_queue);
+    m_errorMonitor->SetUnexpectedError("If framebuffer is not VK_NULL_HANDLE, framebuffer must be a valid VkFramebuffer handle");
+    m_errorMonitor->SetUnexpectedError("Unable to remove Framebuffer obj");
     vkDestroyFramebuffer(m_device->device(), fb, nullptr);
 }
 
@@ -5040,6 +5093,8 @@ TEST_F(VkLayerTest, FramebufferImageInUseDestroyedSignaled) {
     m_errorMonitor->VerifyFound();
     // Wait for queue to complete so we can safely destroy image and other objects
     vkQueueWaitIdle(m_device->m_queue);
+    m_errorMonitor->SetUnexpectedError("If image is not VK_NULL_HANDLE, image must be a valid VkImage handle");
+    m_errorMonitor->SetUnexpectedError("Unable to remove Image obj");
     vkDestroyImage(m_device->device(), image, NULL);
     vkDestroyFramebuffer(m_device->device(), fb, nullptr);
     vkDestroyImageView(m_device->device(), view, nullptr);
@@ -5138,6 +5193,9 @@ TEST_F(VkLayerTest, RenderPassInUseDestroyedSignaled) {
     err = vkCreatePipelineCache(m_device->device(), &pc_ci, NULL, &pipe_cache);
     ASSERT_VK_SUCCESS(err);
 
+    m_errorMonitor->SetUnexpectedError(
+        "If pColorBlendState is not NULL, The attachmentCount member of pColorBlendState must be equal to the colorAttachmentCount "
+        "used to create subpass");
     err = vkCreateGraphicsPipelines(m_device->device(), pipe_cache, 1, &gp_ci, NULL, &pipeline);
     ASSERT_VK_SUCCESS(err);
     // Bind pipeline to cmd buffer, will also bind renderpass
@@ -5157,6 +5215,8 @@ TEST_F(VkLayerTest, RenderPassInUseDestroyedSignaled) {
 
     // Wait for queue to complete so we can safely destroy everything
     vkQueueWaitIdle(m_device->m_queue);
+    m_errorMonitor->SetUnexpectedError("If renderPass is not VK_NULL_HANDLE, renderPass must be a valid VkRenderPass handle");
+    m_errorMonitor->SetUnexpectedError("Unable to remove Render Pass obj");
     vkDestroyRenderPass(m_device->device(), rp, nullptr);
     vkDestroyPipeline(m_device->device(), pipeline, nullptr);
     vkDestroyPipelineCache(m_device->device(), pipe_cache, nullptr);
@@ -5306,6 +5366,7 @@ TEST_F(VkLayerTest, InvalidCmdBufferEventDestroyed) {
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &m_commandBuffer->handle();
+    m_errorMonitor->SetUnexpectedError("Cannot submit cmd buffer using deleted event");
     vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
 
     m_errorMonitor->VerifyFound();
@@ -5337,6 +5398,7 @@ TEST_F(VkLayerTest, InvalidCmdBufferQueryPoolDestroyed) {
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &m_commandBuffer->handle();
+    m_errorMonitor->SetUnexpectedError("Cannot submit cmd buffer using deleted query pool");
     vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
 
     m_errorMonitor->VerifyFound();
@@ -5433,6 +5495,7 @@ TEST_F(VkLayerTest, InvalidCmdBufferPipelineDestroyed) {
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &m_commandBuffer->handle();
+    m_errorMonitor->SetUnexpectedError("Cannot submit cmd buffer using deleted pipeline");
     vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
 
     m_errorMonitor->VerifyFound();
@@ -5595,6 +5658,7 @@ TEST_F(VkLayerTest, InvalidCmdBufferDescriptorSetBufferDestroyed) {
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &m_commandBuffer->handle();
+    m_errorMonitor->SetUnexpectedError("Cannot submit cmd buffer using deleted buffer");
     vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
     m_errorMonitor->VerifyFound();
     // Cleanup
@@ -5820,6 +5884,7 @@ TEST_F(VkLayerTest, InvalidCmdBufferDescriptorSetImageSamplerDestroyed) {
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &m_commandBuffer->handle();
+    m_errorMonitor->SetUnexpectedError("that is invalid because bound sampler");
     vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
     m_errorMonitor->VerifyFound();
 
@@ -5849,6 +5914,7 @@ TEST_F(VkLayerTest, InvalidCmdBufferDescriptorSetImageSamplerDestroyed) {
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &m_commandBuffer->handle();
+    m_errorMonitor->SetUnexpectedError("Cannot submit cmd buffer using deleted image");
     vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
     m_errorMonitor->VerifyFound();
     // Now update descriptor to be valid, but then free descriptor
@@ -5874,6 +5940,10 @@ TEST_F(VkLayerTest, InvalidCmdBufferDescriptorSetImageSamplerDestroyed) {
     // Try again once the queue is idle - should succeed w/o error
     // TODO - though the particular error above doesn't re-occur, there are other 'unexpecteds' still to clean up
     vkQueueWaitIdle(m_device->m_queue);
+    m_errorMonitor->SetUnexpectedError(
+        "pDescriptorSets must be a pointer to an array of descriptorSetCount VkDescriptorSet handles, each element of which must "
+        "either be a valid handle or VK_NULL_HANDLE");
+    m_errorMonitor->SetUnexpectedError("Unable to remove Descriptor Set obj");
     vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
 
     // Attempt to submit cmd buffer containing the freed descriptor set
@@ -5882,6 +5952,7 @@ TEST_F(VkLayerTest, InvalidCmdBufferDescriptorSetImageSamplerDestroyed) {
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &m_commandBuffer->handle();
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, " that is invalid because bound descriptor set ");
+    m_errorMonitor->SetUnexpectedError("Cannot submit cmd buffer using deleted descriptor set");
     vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
     m_errorMonitor->VerifyFound();
 
@@ -6052,6 +6123,9 @@ TEST_F(VkLayerTest, DescriptorPoolInUseDestroyedSignaled) {
     vkDestroySampler(m_device->device(), sampler, NULL);
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
+    m_errorMonitor->SetUnexpectedError(
+        "If descriptorPool is not VK_NULL_HANDLE, descriptorPool must be a valid VkDescriptorPool handle");
+    m_errorMonitor->SetUnexpectedError("Unable to remove Descriptor Pool obj");
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
     // TODO : It seems Validation layers think ds_pool was already destroyed, even though it wasn't?
 }
@@ -8652,6 +8726,7 @@ TEST_F(VkLayerTest, ClearColorImageWithinRenderPass) {
 
     const VkImageSubresourceRange range = vk_testing::Image::subresource_range(image_create_info, VK_IMAGE_ASPECT_COLOR_BIT);
 
+    m_errorMonitor->SetUnexpectedError("image must have been created with VK_IMAGE_USAGE_TRANSFER_DST_BIT usage flag");
     vkCmdClearColorImage(m_commandBuffer->GetBufferHandle(), dstImage.handle(), VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1, &range);
 
     m_errorMonitor->VerifyFound();
@@ -9138,6 +9213,8 @@ TEST_F(VkLayerTest, IdxBufferAlignmentError) {
     // vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(),
     // VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
     // Should error before calling to driver so don't care about actual data
+    m_errorMonitor->SetUnexpectedError(
+        "If buffer is non-sparse then it must be bound completely and contiguously to a single VkDeviceMemory object");
     vkCmdBindIndexBuffer(m_commandBuffer->GetBufferHandle(), ib, 7, VK_INDEX_TYPE_UINT16);
 
     m_errorMonitor->VerifyFound();
@@ -9165,6 +9242,8 @@ TEST_F(VkLayerTest, InvalidQueueFamilyIndex) {
     buffCI.sharingMode = VK_SHARING_MODE_CONCURRENT;  // qfi only matters in CONCURRENT mode
 
     VkBuffer ib;
+    m_errorMonitor->SetUnexpectedError(
+        "If sharingMode is VK_SHARING_MODE_CONCURRENT, queueFamilyIndexCount must be greater than 1");
     vkCreateBuffer(m_device->device(), &buffCI, NULL, &ib);
 
     m_errorMonitor->VerifyFound();
@@ -9191,6 +9270,8 @@ TEST_F(VkLayerTest, ExecuteCommandsPrimaryCB) {
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "vkCmdExecuteCommands() called w/ Primary Cmd Buffer ");
     vkCmdExecuteCommands(m_commandBuffer->handle(), 1, &handle);
     m_errorMonitor->VerifyFound();
+
+    m_errorMonitor->SetUnexpectedError("All elements of pCommandBuffers must not be pending execution");
 }
 
 TEST_F(VkLayerTest, DSUsageBitsErrors) {
@@ -9530,6 +9611,9 @@ TEST_F(VkLayerTest, DSBufferInfoErrors) {
     descriptor_write.dstSet = descriptor_set;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00959);
 
+    m_errorMonitor->SetUnexpectedError(
+        "If descriptorType is VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER or VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, the offset member of "
+        "any given element of pBufferInfo must be a multiple of VkPhysicalDeviceLimits::minUniformBufferOffsetAlignment");
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
 
     m_errorMonitor->VerifyFound();
@@ -9546,12 +9630,17 @@ TEST_F(VkLayerTest, DSBufferInfoErrors) {
     buff_info.range = 200;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00961);
 
+    m_errorMonitor->SetUnexpectedError(
+        "If descriptorType is VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER or VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, the offset member of "
+        "any given element of pBufferInfo must be a multiple of VkPhysicalDeviceLimits::minUniformBufferOffsetAlignment");
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
 
     m_errorMonitor->VerifyFound();
     vkFreeMemory(m_device->device(), mem, NULL);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
     vkDestroyBuffer(m_device->device(), buffer, NULL);
+    m_errorMonitor->SetUnexpectedError(
+        "descriptorPool must have been created with the VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT flag");
     vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptor_set);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
@@ -9847,6 +9936,8 @@ TEST_F(VkLayerTest, DSAspectBitsErrors) {
     vkDestroyImage(m_device->device(), image, NULL);
     vkFreeMemory(m_device->device(), image_mem, NULL);
     vkDestroyImageView(m_device->device(), image_view, NULL);
+    m_errorMonitor->SetUnexpectedError(
+        "descriptorPool must have been created with the VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT flag");
     vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptor_set);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
@@ -10008,6 +10099,7 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds) {
     descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     descriptor_write.pBufferInfo = &buff_info;
 
+    m_errorMonitor->SetUnexpectedError("required parameter pDescriptorWrites");
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
 
     m_errorMonitor->VerifyFound();
@@ -10974,6 +11066,9 @@ TEST_F(VkLayerTest, CmdClearAttachmentTests) {
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
     pipe.SetMSAA(&pipe_ms_state_ci);
+    m_errorMonitor->SetUnexpectedError(
+        "If pColorBlendState is not NULL, The attachmentCount member of pColorBlendState must be equal to the colorAttachmentCount "
+        "used to create subpass");
     pipe.CreateVKPipeline(pipeline_layout, renderPass());
 
     m_commandBuffer->BeginCommandBuffer();
@@ -11149,6 +11244,7 @@ TEST_F(VkLayerTest, MismatchCountQueueCreateRequestedFeature) {
     device_create_info.queueCreateInfoCount = 1;
     device_create_info.pQueueCreateInfos = &queue_create_info;
     device_create_info.pEnabledFeatures = &features;
+    m_errorMonitor->SetUnexpectedError("Failed to create device chain.");
     vkCreateDevice(gpu(), &device_create_info, nullptr, &testDevice);
     m_errorMonitor->VerifyFound();
 
@@ -11161,6 +11257,10 @@ TEST_F(VkLayerTest, MismatchCountQueueCreateRequestedFeature) {
             feature_array[i] = VK_TRUE;
             m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, unavailable_feature_message);
             device_create_info.pEnabledFeatures = &features;
+            m_errorMonitor->SetUnexpectedError(
+                "You requested features that are unavailable on this device. You should first query feature availability by "
+                "calling vkGetPhysicalDeviceFeatures().");
+            m_errorMonitor->SetUnexpectedError("Failed to create device chain.");
             vkCreateDevice(gpu(), &device_create_info, nullptr, &testDevice);
             m_errorMonitor->VerifyFound();
             break;
@@ -11373,9 +11473,13 @@ TEST_F(VkLayerTest, VertexBufferInvalid) {
     }
     m_errorMonitor->VerifyFound();
 
+    m_errorMonitor->SetUnexpectedError("value of pCreateInfo->usage must not be 0");
     if (VkBufferTest::GetTestConditionValid(m_device, VkBufferTest::eInvalidMemoryOffset)) {
         // Create and bind a memory buffer with an invalid offset.
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, invalid_offset_message);
+        m_errorMonitor->SetUnexpectedError(
+            "If buffer was created with the VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT or VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT, "
+            "memoryOffset must be a multiple of VkPhysicalDeviceLimits::minTexelBufferOffsetAlignment");
         VkBufferTest buffer_test(m_device, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, VkBufferTest::eInvalidMemoryOffset);
         (void)buffer_test;
         m_errorMonitor->VerifyFound();
@@ -11386,6 +11490,9 @@ TEST_F(VkLayerTest, VertexBufferInvalid) {
         // Create and bind a memory buffer with an invalid offset again,
         // but look for a texel buffer message.
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, invalid_texel_buffer_offset_message);
+        m_errorMonitor->SetUnexpectedError(
+            "memoryOffset must be an integer multiple of the alignment member of the VkMemoryRequirements structure returned from "
+            "a call to vkGetBufferMemoryRequirements with buffer");
         VkBufferTest buffer_test(m_device, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, VkBufferTest::eInvalidDeviceOffset);
         (void)buffer_test;
         m_errorMonitor->VerifyFound();
@@ -11395,6 +11502,9 @@ TEST_F(VkLayerTest, VertexBufferInvalid) {
         // Create and bind a memory buffer with an invalid offset again, but
         // look for a uniform buffer message.
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, invalid_uniform_buffer_offset_message);
+        m_errorMonitor->SetUnexpectedError(
+            "memoryOffset must be an integer multiple of the alignment member of the VkMemoryRequirements structure returned from "
+            "a call to vkGetBufferMemoryRequirements with buffer");
         VkBufferTest buffer_test(m_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VkBufferTest::eInvalidDeviceOffset);
         (void)buffer_test;
         m_errorMonitor->VerifyFound();
@@ -11404,6 +11514,9 @@ TEST_F(VkLayerTest, VertexBufferInvalid) {
         // Create and bind a memory buffer with an invalid offset again, but
         // look for a storage buffer message.
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, invalid_storage_buffer_offset_message);
+        m_errorMonitor->SetUnexpectedError(
+            "memoryOffset must be an integer multiple of the alignment member of the VkMemoryRequirements structure returned from "
+            "a call to vkGetBufferMemoryRequirements with buffer");
         VkBufferTest buffer_test(m_device, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VkBufferTest::eInvalidDeviceOffset);
         (void)buffer_test;
         m_errorMonitor->VerifyFound();
@@ -11412,6 +11525,8 @@ TEST_F(VkLayerTest, VertexBufferInvalid) {
     {
         // Attempt to bind a null buffer.
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00799);
+        m_errorMonitor->SetUnexpectedError("required parameter memory specified as VK_NULL_HANDLE");
+        m_errorMonitor->SetUnexpectedError("memory must be a valid VkDeviceMemory handle");
         VkBufferTest buffer_test(m_device, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VkBufferTest::eBindNullBuffer);
         (void)buffer_test;
         m_errorMonitor->VerifyFound();
@@ -11534,6 +11649,7 @@ TEST_F(VkLayerTest, InvalidImageLayout) {
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
                                          "Layout for input image should be TRANSFER_SRC_OPTIMAL instead of GENERAL.");
+    m_errorMonitor->SetUnexpectedError("Layout for output image should be TRANSFER_DST_OPTIMAL instead of GENERAL.");
     m_commandBuffer->CopyImage(src_image, VK_IMAGE_LAYOUT_GENERAL, dst_image, VK_IMAGE_LAYOUT_GENERAL, 1, &copy_region);
     m_errorMonitor->VerifyFound();
     // Now cause error due to src image layout changing
@@ -11541,17 +11657,23 @@ TEST_F(VkLayerTest, InvalidImageLayout) {
                                          "Cannot copy from an image whose source layout is "
                                          "VK_IMAGE_LAYOUT_UNDEFINED and doesn't match the current "
                                          "layout VK_IMAGE_LAYOUT_GENERAL.");
+    m_errorMonitor->SetUnexpectedError(
+        "srcImageLayout must be either of VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL or VK_IMAGE_LAYOUT_GENERAL");
     m_commandBuffer->CopyImage(src_image, VK_IMAGE_LAYOUT_UNDEFINED, dst_image, VK_IMAGE_LAYOUT_GENERAL, 1, &copy_region);
     m_errorMonitor->VerifyFound();
     // Final src error is due to bad layout type
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "Layout for input image is VK_IMAGE_LAYOUT_UNDEFINED but can only be TRANSFER_SRC_OPTIMAL or GENERAL.");
+    m_errorMonitor->SetUnexpectedError(
+        "Cannot copy from an image whose source layout is VK_IMAGE_LAYOUT_UNDEFINED and doesn't match the current layout "
+        "VK_IMAGE_LAYOUT_GENERAL.");
     m_commandBuffer->CopyImage(src_image, VK_IMAGE_LAYOUT_UNDEFINED, dst_image, VK_IMAGE_LAYOUT_GENERAL, 1, &copy_region);
     m_errorMonitor->VerifyFound();
     // Now verify same checks for dst
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
                                          "Layout for output image should be TRANSFER_DST_OPTIMAL instead of GENERAL.");
+    m_errorMonitor->SetUnexpectedError("Layout for input image should be TRANSFER_SRC_OPTIMAL instead of GENERAL.");
     m_commandBuffer->CopyImage(src_image, VK_IMAGE_LAYOUT_GENERAL, dst_image, VK_IMAGE_LAYOUT_GENERAL, 1, &copy_region);
     m_errorMonitor->VerifyFound();
     // Now cause error due to src image layout changing
@@ -11559,11 +11681,16 @@ TEST_F(VkLayerTest, InvalidImageLayout) {
                                          "Cannot copy from an image whose dest layout is "
                                          "VK_IMAGE_LAYOUT_UNDEFINED and doesn't match the current "
                                          "layout VK_IMAGE_LAYOUT_GENERAL.");
+    m_errorMonitor->SetUnexpectedError(
+        "dstImageLayout must be either of VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL or VK_IMAGE_LAYOUT_GENERAL");
     m_commandBuffer->CopyImage(src_image, VK_IMAGE_LAYOUT_GENERAL, dst_image, VK_IMAGE_LAYOUT_UNDEFINED, 1, &copy_region);
     m_errorMonitor->VerifyFound();
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "Layout for output image is VK_IMAGE_LAYOUT_UNDEFINED but can only be TRANSFER_DST_OPTIMAL or GENERAL.");
+    m_errorMonitor->SetUnexpectedError(
+        "Cannot copy from an image whose dest layout is VK_IMAGE_LAYOUT_UNDEFINED and doesn't match the current layout "
+        "VK_IMAGE_LAYOUT_GENERAL.");
     m_commandBuffer->CopyImage(src_image, VK_IMAGE_LAYOUT_GENERAL, dst_image, VK_IMAGE_LAYOUT_UNDEFINED, 1, &copy_region);
     m_errorMonitor->VerifyFound();
 
@@ -11877,6 +12004,10 @@ TEST_F(VkLayerTest, SimultaneousUse) {
     m_errorMonitor->VerifyNotFound();
 
     command_buffer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+    m_errorMonitor->SetUnexpectedError("commandBuffer must not currently be pending execution");
+    m_errorMonitor->SetUnexpectedError(
+        "If commandBuffer was allocated from a VkCommandPool which did not have the "
+        "VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT flag set, commandBuffer must be in the initial state");
     vkBeginCommandBuffer(m_commandBuffer->handle(), &command_buffer_begin_info);
     vkCmdBeginRenderPass(m_commandBuffer->handle(), &renderPassBeginInfo(), VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
@@ -11887,6 +12018,8 @@ TEST_F(VkLayerTest, SimultaneousUse) {
     vkEndCommandBuffer(m_commandBuffer->handle());
 
     vkQueueWaitIdle(m_device->m_queue);
+
+    m_errorMonitor->SetUnexpectedError("All elements of pCommandBuffers must not be pending execution");
 }
 
 TEST_F(VkLayerTest, SimultaneousUseOneShot) {
@@ -12134,8 +12267,14 @@ TEST_F(VkLayerTest, InUseDestroyedSignaled) {
     m_errorMonitor->VerifyFound();
 
     vkQueueWaitIdle(m_device->m_queue);
+    m_errorMonitor->SetUnexpectedError("If semaphore is not VK_NULL_HANDLE, semaphore must be a valid VkSemaphore handle");
+    m_errorMonitor->SetUnexpectedError("Unable to remove Semaphore obj");
     vkDestroySemaphore(m_device->device(), semaphore, nullptr);
+    m_errorMonitor->SetUnexpectedError("If fence is not VK_NULL_HANDLE, fence must be a valid VkFence handle");
+    m_errorMonitor->SetUnexpectedError("Unable to remove Fence obj");
     vkDestroyFence(m_device->device(), fence, nullptr);
+    m_errorMonitor->SetUnexpectedError("If event is not VK_NULL_HANDLE, event must be a valid VkEvent handle");
+    m_errorMonitor->SetUnexpectedError("Unable to remove Event obj");
     vkDestroyEvent(m_device->device(), event, nullptr);
     vkDestroyDescriptorPool(m_device->device(), descriptorset_pool, nullptr);
     vkDestroyDescriptorSetLayout(m_device->device(), descriptorset_layout, nullptr);
@@ -12173,6 +12312,8 @@ TEST_F(VkLayerTest, QueryPoolInUseDestroyedSignaled) {
 
     vkQueueWaitIdle(m_device->m_queue);
     // Now that cmd buffer done we can safely destroy query_pool
+    m_errorMonitor->SetUnexpectedError("If queryPool is not VK_NULL_HANDLE, queryPool must be a valid VkQueryPool handle");
+    m_errorMonitor->SetUnexpectedError("Unable to remove Query Pool obj");
     vkDestroyQueryPool(m_device->handle(), query_pool, NULL);
 }
 
@@ -12222,6 +12363,8 @@ TEST_F(VkLayerTest, PipelineInUseDestroyedSignaled) {
     m_errorMonitor->VerifyFound();
     // Make sure queue finished and then actually delete pipeline
     vkQueueWaitIdle(m_device->m_queue);
+    m_errorMonitor->SetUnexpectedError("If pipeline is not VK_NULL_HANDLE, pipeline must be a valid VkPipeline handle");
+    m_errorMonitor->SetUnexpectedError("Unable to remove Pipeline obj");
     vkDestroyPipeline(m_device->handle(), delete_this_pipeline, nullptr);
     vkDestroyPipelineLayout(m_device->handle(), pipeline_layout, nullptr);
 }
@@ -12391,6 +12534,8 @@ TEST_F(VkLayerTest, ImageViewInUseDestroyedSignaled) {
     m_errorMonitor->VerifyFound();
     vkQueueWaitIdle(m_device->m_queue);
     // Now we can actually destroy imageView
+    m_errorMonitor->SetUnexpectedError("If imageView is not VK_NULL_HANDLE, imageView must be a valid VkImageView handle");
+    m_errorMonitor->SetUnexpectedError("Unable to remove Image View obj");
     vkDestroyImageView(m_device->device(), view, NULL);
     vkDestroySampler(m_device->device(), sampler, nullptr);
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
@@ -12554,6 +12699,8 @@ TEST_F(VkLayerTest, BufferViewInUseDestroyedSignaled) {
     m_errorMonitor->VerifyFound();
     vkQueueWaitIdle(m_device->m_queue);
     // Now we can actually destroy bufferView
+    m_errorMonitor->SetUnexpectedError("If bufferView is not VK_NULL_HANDLE, bufferView must be a valid VkBufferView handle");
+    m_errorMonitor->SetUnexpectedError("Unable to remove Buffer View obj");
     vkDestroyBufferView(m_device->device(), view, NULL);
     vkDestroyBuffer(m_device->device(), buffer, NULL);
     vkFreeMemory(m_device->device(), buffer_memory, NULL);
@@ -12728,6 +12875,8 @@ TEST_F(VkLayerTest, SamplerInUseDestroyedSignaled) {
     vkQueueWaitIdle(m_device->m_queue);
 
     // Now we can actually destroy sampler
+    m_errorMonitor->SetUnexpectedError("If sampler is not VK_NULL_HANDLE, sampler must be a valid VkSampler handle");
+    m_errorMonitor->SetUnexpectedError("Unable to remove Sampler obj");
     vkDestroySampler(m_device->device(), sampler, NULL);  // Destroyed for real
     vkDestroyImageView(m_device->device(), view, NULL);
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
@@ -13935,6 +14084,7 @@ TEST_F(VkLayerTest, CreatePipelineVsFsMismatchByLocation) {
     descriptorSet.AppendDummy();
     descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
 
+    m_errorMonitor->SetUnexpectedError("Vertex shader consumes input at location 1 but not provided");
     pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
 
     m_errorMonitor->VerifyFound();
@@ -14159,6 +14309,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribLocationMismatch) {
     descriptorSet.AppendDummy();
     descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
 
+    m_errorMonitor->SetUnexpectedError("Vertex shader consumes input at location 1 but not provided");
     pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
 
     m_errorMonitor->VerifyFound();
@@ -15232,6 +15383,7 @@ TEST_F(VkLayerTest, CreateImageLimitsViolationMinWidth) {
 
     // Introduce error by sending down a bogus width extent
     image_create_info.extent.width = 0;
+    m_errorMonitor->SetUnexpectedError("parameter pCreateInfo->extent.width must be greater than 0");
     vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
 
     m_errorMonitor->VerifyFound();
@@ -15315,6 +15467,8 @@ TEST_F(VkLayerTest, InvalidImageView) {
     image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
     VkImageView view;
+    m_errorMonitor->SetUnexpectedError(
+        "If image is non-sparse then it must be bound completely and contiguously to a single VkDeviceMemory object");
     err = vkCreateImageView(m_device->device(), &image_view_create_info, NULL, &view);
 
     m_errorMonitor->VerifyFound();
@@ -15524,6 +15678,10 @@ TEST_F(VkLayerTest, ImageLayerUnsupportedFormat) {
                                          "vkCreateImage: VkFormat for image must not be VK_FORMAT_UNDEFINED");
 
     VkImage localImage;
+    m_errorMonitor->SetUnexpectedError("CreateImage extents exceed allowable limits for format");
+    m_errorMonitor->SetUnexpectedError("CreateImage mipLevels=1 exceeds allowable maximum supported by format of 0");
+    m_errorMonitor->SetUnexpectedError("arrayLayers must be less than or equal to VkImageFormatProperties::maxArrayLayers");
+    m_errorMonitor->SetUnexpectedError("samples must be a bit value that is set in VkImageFormatProperties::sampleCounts");
     vkCreateImage(m_device->handle(), &image_create_info, NULL, &localImage);
     m_errorMonitor->VerifyFound();
 
@@ -15542,6 +15700,14 @@ TEST_F(VkLayerTest, ImageLayerUnsupportedFormat) {
         image_create_info.format = unsupported;
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "is an unsupported format");
 
+        m_errorMonitor->SetUnexpectedError("CreateImage extents exceed allowable limits for format");
+        m_errorMonitor->SetUnexpectedError("CreateImage resource size exceeds allowable maximum Image resource size");
+        m_errorMonitor->SetUnexpectedError("CreateImage mipLevels=1 exceeds allowable maximum supported by format of 0");
+        m_errorMonitor->SetUnexpectedError("arrayLayers must be less than or equal to VkImageFormatProperties::maxArrayLayers");
+        m_errorMonitor->SetUnexpectedError(
+            "samples must be a bit value that is set in VkImageFormatProperties::sampleCounts returned by "
+            "vkGetPhysicalDeviceImageFormatProperties with format, type, tiling, usage, and flags equal to those in this "
+            "structure");
         vkCreateImage(m_device->handle(), &image_create_info, NULL, &localImage);
         m_errorMonitor->VerifyFound();
     }
@@ -15636,6 +15802,8 @@ TEST_F(VkLayerTest, ImageLayerViewTests) {
     ret = vkCreateImage(m_device->handle(), &mutImgInfo, NULL, &mutImage);
     ASSERT_VK_SUCCESS(ret);
     imgViewInfo.image = mutImage;
+    m_errorMonitor->SetUnexpectedError(
+        "If image is non-sparse then it must be bound completely and contiguously to a single VkDeviceMemory object");
     vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
     m_errorMonitor->VerifyFound();
     imgViewInfo.image = image.handle();
@@ -15757,6 +15925,7 @@ TEST_F(VkLayerTest, MiscImageLayerTests) {
 
     // Look for NULL-blit warning
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT, "Offsets specify a zero-volume area.");
+    m_errorMonitor->SetUnexpectedError("vkCmdBlitImage: pRegions[0].dstOffsets specify a zero-volume area.");
     vkCmdBlitImage(m_commandBuffer->GetBufferHandle(), intImage1.handle(), intImage1.layout(), intImage2.handle(),
                    intImage2.layout(), 1, &blitRegion, VK_FILTER_LINEAR);
     m_errorMonitor->VerifyFound();
