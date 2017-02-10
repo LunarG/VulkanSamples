@@ -2304,3 +2304,83 @@ void PreCallRecordCmdCopyBuffer(layer_data *device_data, GLOBAL_CB_NODE *cb_node
     cb_node->validate_functions.push_back(function);
     core_validation::UpdateCmdBufferLastCmd(cb_node, CMD_COPYBUFFER);
 }
+
+static bool validateIdleBuffer(layer_data *device_data, VkBuffer buffer) {
+    const debug_report_data *report_data = core_validation::GetReportData(device_data);
+    bool skip = false;
+    auto buffer_state = GetBufferState(device_data, buffer);
+    if (!buffer_state) {
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, (uint64_t)(buffer),
+                        __LINE__, DRAWSTATE_DOUBLE_DESTROY, "DS",
+                        "Cannot free buffer 0x%" PRIxLEAST64 " that has not been allocated.", (uint64_t)(buffer));
+    } else {
+        if (buffer_state->in_use.load()) {
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, (uint64_t)(buffer),
+                            __LINE__, VALIDATION_ERROR_00676, "DS",
+                            "Cannot free buffer 0x%" PRIxLEAST64 " that is in use by a command buffer. %s", (uint64_t)(buffer),
+                            validation_error_map[VALIDATION_ERROR_00676]);
+        }
+    }
+    return skip;
+}
+
+bool PreCallValidateDestroyImageView(layer_data *device_data, VkImageView image_view, IMAGE_VIEW_STATE **image_view_state,
+                                     VK_OBJECT *obj_struct) {
+    *image_view_state = GetImageViewState(device_data, image_view);
+    *obj_struct = {reinterpret_cast<uint64_t &>(image_view), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT};
+    if (GetDisables(device_data)->destroy_image_view) return false;
+    bool skip = false;
+    if (*image_view_state) {
+        skip |= ValidateObjectNotInUse(device_data, *image_view_state, *obj_struct, VALIDATION_ERROR_00776);
+    }
+    return skip;
+}
+
+void PostCallRecordDestroyImageView(layer_data *device_data, VkImageView image_view, IMAGE_VIEW_STATE *image_view_state,
+                                    VK_OBJECT obj_struct) {
+    // Any bound cmd buffers are now invalid
+    invalidateCommandBuffers(device_data, image_view_state->cb_bindings, obj_struct);
+    (*GetImageViewMap(device_data)).erase(image_view);
+}
+
+bool PreCallValidateDestroyBuffer(layer_data *device_data, VkBuffer buffer, BUFFER_STATE **buffer_state, VK_OBJECT *obj_struct) {
+    *buffer_state = GetBufferState(device_data, buffer);
+    *obj_struct = {reinterpret_cast<uint64_t &>(buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT};
+    if (GetDisables(device_data)->destroy_buffer) return false;
+    bool skip = false;
+    if (*buffer_state) {
+        skip |= validateIdleBuffer(device_data, buffer);
+    }
+    return skip;
+}
+
+void PostCallRecordDestroyBuffer(layer_data *device_data, VkBuffer buffer, BUFFER_STATE *buffer_state, VK_OBJECT obj_struct) {
+    invalidateCommandBuffers(device_data, buffer_state->cb_bindings, obj_struct);
+    for (auto mem_binding : buffer_state->GetBoundMemory()) {
+        auto mem_info = GetMemObjInfo(device_data, mem_binding);
+        if (mem_info) {
+            core_validation::RemoveBufferMemoryRange(reinterpret_cast<uint64_t &>(buffer), mem_info);
+        }
+    }
+    ClearMemoryObjectBindings(device_data, reinterpret_cast<uint64_t &>(buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT);
+    GetBufferMap(device_data)->erase(buffer_state->buffer);
+}
+
+bool PreCallValidateDestroyBufferView(layer_data *device_data, VkBufferView buffer_view, BUFFER_VIEW_STATE **buffer_view_state,
+                                      VK_OBJECT *obj_struct) {
+    *buffer_view_state = GetBufferViewState(device_data, buffer_view);
+    *obj_struct = {reinterpret_cast<uint64_t &>(buffer_view), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT};
+    if (GetDisables(device_data)->destroy_buffer_view) return false;
+    bool skip = false;
+    if (*buffer_view_state) {
+        skip |= ValidateObjectNotInUse(device_data, *buffer_view_state, *obj_struct, VALIDATION_ERROR_00701);
+    }
+    return skip;
+}
+
+void PostCallRecordDestroyBufferView(layer_data *device_data, VkBufferView buffer_view, BUFFER_VIEW_STATE *buffer_view_state,
+                                     VK_OBJECT obj_struct) {
+    // Any bound cmd buffers are now invalid
+    invalidateCommandBuffers(device_data, buffer_view_state->cb_bindings, obj_struct);
+    GetBufferViewMap(device_data)->erase(buffer_view);
+}
