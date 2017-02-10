@@ -193,4 +193,8 @@ bool PreCallValidateDestroyBufferView(layer_data *device_data, VkBufferView buff
 void PostCallRecordDestroyBufferView(layer_data *device_data, VkBufferView buffer_view, BUFFER_VIEW_STATE *buffer_view_state,
                                      VK_OBJECT obj_struct);
 
+bool PreCallValidateCmdFillBuffer(layer_data *device_data, GLOBAL_CB_NODE *cb_node, BUFFER_STATE *buffer_state);
+
+void PreCallRecordCmdFillBuffer(layer_data *device_data, GLOBAL_CB_NODE *cb_node, BUFFER_STATE *buffer_state);
+
 #endif  // CORE_VALIDATION_BUFFER_VALIDATION_H_

@@ -7706,33 +7706,22 @@ VKAPI_ATTR void VKAPI_CALL CmdUpdateBuffer(VkCommandBuffer commandBuffer, VkBuff
 
 VKAPI_ATTR void VKAPI_CALL CmdFillBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize dstOffset,
                                          VkDeviceSize size, uint32_t data) {
-    bool skip_call = false;
-    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
+    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
+    auto cb_node = GetCBNode(device_data, commandBuffer);
+    auto buffer_state = GetBufferState(device_data, dstBuffer);
 
-    auto cb_node = GetCBNode(dev_data, commandBuffer);
-    auto dst_buff_state = GetBufferState(dev_data, dstBuffer);
-    if (cb_node && dst_buff_state) {
-        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, dst_buff_state, "vkCmdFillBuffer()", VALIDATION_ERROR_02529);
-        // Update bindings between buffer and cmd buffer
-        AddCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_state);
-        // Validate that DST buffer has correct usage flags set
-        skip_call |= ValidateBufferUsageFlags(dev_data, dst_buff_state, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true,
-                                              VALIDATION_ERROR_01137, "vkCmdFillBuffer()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
-        std::function<bool()> function = [=]() {
-            SetBufferMemoryValid(dev_data, dst_buff_state, true);
-            return false;
-        };
-        cb_node->validate_functions.push_back(function);
-
-        skip_call |= ValidateCmd(dev_data, cb_node, CMD_FILLBUFFER, "vkCmdFillBuffer()");
-        UpdateCmdBufferLastCmd(cb_node, CMD_FILLBUFFER);
-        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdFillBuffer()", VALIDATION_ERROR_01142);
+    if (cb_node && buffer_state) {
+        bool skip = PreCallValidateCmdFillBuffer(device_data, cb_node, buffer_state);
+        if (!skip) {
+            PreCallRecordCmdFillBuffer(device_data, cb_node, buffer_state);
+            lock.unlock();
+            device_data->dispatch_table.CmdFillBuffer(commandBuffer, dstBuffer, dstOffset, size, data);
+        }
     } else {
+        lock.unlock();
         assert(0);
     }
-    lock.unlock();
-    if (!skip_call) dev_data->dispatch_table.CmdFillBuffer(commandBuffer, dstBuffer, dstOffset, size, data);
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdClearAttachments(VkCommandBuffer commandBuffer, uint32_t attachmentCount,

@@ -2384,3 +2384,25 @@ void PostCallRecordDestroyBufferView(layer_data *device_data, VkBufferView buffe
     invalidateCommandBuffers(device_data, buffer_view_state->cb_bindings, obj_struct);
     GetBufferViewMap(device_data)->erase(buffer_view);
 }
+
+bool PreCallValidateCmdFillBuffer(layer_data *device_data, GLOBAL_CB_NODE *cb_node, BUFFER_STATE *buffer_state) {
+    bool skip = false;
+    skip |= ValidateMemoryIsBoundToBuffer(device_data, buffer_state, "vkCmdFillBuffer()", VALIDATION_ERROR_02529);
+    skip |= ValidateCmd(device_data, cb_node, CMD_FILLBUFFER, "vkCmdFillBuffer()");
+    // Validate that DST buffer has correct usage flags set
+    skip |= ValidateBufferUsageFlags(device_data, buffer_state, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true, VALIDATION_ERROR_01137,
+                                     "vkCmdFillBuffer()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
+    skip |= insideRenderPass(device_data, cb_node, "vkCmdFillBuffer()", VALIDATION_ERROR_01142);
+    return skip;
+}
+
+void PreCallRecordCmdFillBuffer(layer_data *device_data, GLOBAL_CB_NODE *cb_node, BUFFER_STATE *buffer_state) {
+    std::function<bool()> function = [=]() {
+        SetBufferMemoryValid(device_data, buffer_state, true);
+        return false;
+    };
+    cb_node->validate_functions.push_back(function);
+    // Update bindings between buffer and cmd buffer
+    AddCommandBufferBindingBuffer(device_data, cb_node, buffer_state);
+    core_validation::UpdateCmdBufferLastCmd(cb_node, CMD_FILLBUFFER);
+}
