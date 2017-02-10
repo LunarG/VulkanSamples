@@ -309,7 +309,7 @@ cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const V
       pool_state_(nullptr),
       p_layout_(layout),
       device_data_(dev_data),
-      limits_(GetPhysicalDeviceLimits(dev_data)) {
+      limits_(GetPhysDevProperties(dev_data)->properties.limits) {
     pool_state_ = GetDescriptorPoolState(dev_data, pool);
     // Foreach binding, create default descriptors of given type
     for (uint32_t i = 0; i < p_layout_->GetBindingCount(); ++i) {

@@ -2073,10 +2073,6 @@ static PIPELINE_LAYOUT_NODE const *getPipelineLayout(layer_data const *dev_data,
     return &it->second;
 }
 
-VkPhysicalDeviceLimits GetPhysicalDeviceLimits(layer_data const *dev_data) {
-    return dev_data->phys_dev_properties.properties.limits;
-}
-
 // Return true if for a given PSO, the given state enum is dynamic, else return false
 static bool isDynamic(const PIPELINE_STATE *pPipeline, const VkDynamicState state) {
     if (pPipeline && pPipeline->graphicsPipelineCI.pDynamicState) {
@@ -6010,15 +6006,24 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateBufferView(VkDevice device, const VkBufferV
 }
 
 // Access helper functions for external modules
-PFN_vkGetPhysicalDeviceFormatProperties GetFormatPropertiesPointer(core_validation::layer_data *device_data) {
-    return device_data->instance_data->dispatch_table.GetPhysicalDeviceFormatProperties;
+const VkFormatProperties *GetFormatProperties(core_validation::layer_data *device_data, VkFormat format) {
+    VkFormatProperties *format_properties = new VkFormatProperties;
+    instance_layer_data *instance_data =
+        GetLayerDataPtr(get_dispatch_key(device_data->instance_data->instance), instance_layer_data_map);
+    instance_data->dispatch_table.GetPhysicalDeviceFormatProperties(device_data->physical_device, format, format_properties);
+    return format_properties;
 }
 
-PFN_vkGetPhysicalDeviceImageFormatProperties GetImageFormatPropertiesPointer(core_validation::layer_data *device_data) {
-    return device_data->instance_data->dispatch_table.GetPhysicalDeviceImageFormatProperties;
+const VkImageFormatProperties *GetImageFormatProperties(core_validation::layer_data *device_data, VkFormat format,
+                                                        VkImageType image_type, VkImageTiling tiling, VkImageUsageFlags usage,
+                                                        VkImageCreateFlags flags) {
+    VkImageFormatProperties *image_format_properties = new VkImageFormatProperties;
+    instance_layer_data *instance_data =
+        GetLayerDataPtr(get_dispatch_key(device_data->instance_data->instance), instance_layer_data_map);
+    instance_data->dispatch_table.GetPhysicalDeviceImageFormatProperties(device_data->physical_device, format, image_type, tiling,
+                                                                         usage, flags, image_format_properties);
+    return image_format_properties;
 }
-
-VkPhysicalDevice GetPhysicalDevice(core_validation::layer_data *device_data) { return device_data->physical_device; }
 
 const debug_report_data *GetReportData(core_validation::layer_data *device_data) { return device_data->report_data; }
 
@@ -6052,7 +6057,7 @@ std::unordered_map<VkImageView, std::unique_ptr<IMAGE_VIEW_STATE>> *GetImageView
     return &device_data->imageViewMap;
 }
 
-PHYS_DEV_PROPERTIES_NODE *GetPhysDevProperties(layer_data *device_data) {
+const PHYS_DEV_PROPERTIES_NODE *GetPhysDevProperties(const layer_data *device_data) {
     return &device_data->phys_dev_properties;
 }
 

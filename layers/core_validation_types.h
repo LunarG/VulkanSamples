@@ -758,7 +758,7 @@ GLOBAL_CB_NODE *GetCBNode(layer_data const *my_data, const VkCommandBuffer cb);
 RENDER_PASS_STATE *GetRenderPassState(layer_data const *my_data, VkRenderPass renderpass);
 FRAMEBUFFER_STATE *GetFramebufferState(const layer_data *my_data, VkFramebuffer framebuffer);
 COMMAND_POOL_NODE *GetCommandPoolNode(layer_data *dev_data, VkCommandPool pool);
-PHYS_DEV_PROPERTIES_NODE *GetPhysDevProperties(layer_data *device_data);
+const PHYS_DEV_PROPERTIES_NODE *GetPhysDevProperties(const layer_data *device_data);
 
 void invalidateCommandBuffers(const layer_data *, std::unordered_set<GLOBAL_CB_NODE *> const &, VK_OBJECT);
 bool ValidateMemoryIsBoundToBuffer(const layer_data *, const BUFFER_STATE *, const char *, UNIQUE_VALIDATION_ERROR_CODE);
@@ -779,7 +779,6 @@ void UpdateCmdBufferLastCmd(GLOBAL_CB_NODE *cb_state, const CMD_TYPE cmd);
 bool outsideRenderPass(const layer_data *my_data, GLOBAL_CB_NODE *pCB, const char *apiName, UNIQUE_VALIDATION_ERROR_CODE msgCode);
 void SetLayout(GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair, const IMAGE_CMD_BUF_LAYOUT_NODE &node);
 void SetLayout(GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair, const VkImageLayout &layout);
-VkPhysicalDeviceLimits GetPhysicalDeviceLimits(layer_data const *);
 bool ValidateImageMemoryIsValid(layer_data *dev_data, IMAGE_STATE *image_state, const char *functionName);
 bool ValidateImageSampleCount(layer_data *dev_data, IMAGE_STATE *image_state, VkSampleCountFlagBits sample_count,
                               const char *location, UNIQUE_VALIDATION_ERROR_CODE msgCode);
@@ -790,9 +789,10 @@ void SetBufferMemoryValid(layer_data *dev_data, BUFFER_STATE *buffer_state, bool
 
 
 // Prototypes for layer_data accessor functions.  These should be in their own header file at some point
-PFN_vkGetPhysicalDeviceFormatProperties GetFormatPropertiesPointer(layer_data *);
-PFN_vkGetPhysicalDeviceImageFormatProperties GetImageFormatPropertiesPointer(layer_data *);
-VkPhysicalDevice GetPhysicalDevice(layer_data *);
+const VkFormatProperties *GetFormatProperties(core_validation::layer_data *device_data, VkFormat format);
+const VkImageFormatProperties *GetImageFormatProperties(core_validation::layer_data *device_data, VkFormat format,
+                                                        VkImageType image_type, VkImageTiling tiling, VkImageUsageFlags usage,
+                                                        VkImageCreateFlags flags);
 const debug_report_data *GetReportData(layer_data *);
 const VkPhysicalDeviceProperties *GetPhysicalDeviceProperties(layer_data *);
 const CHECK_DISABLED *GetDisables(layer_data *);
