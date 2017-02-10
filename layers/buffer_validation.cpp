@@ -2017,10 +2017,10 @@ bool ValidateMapImageLayouts(core_validation::layer_data *device_data, VkDevice 
                 if (FindLayouts(device_data, VkImage(image_handle), layouts)) {
                     for (auto layout : layouts) {
                         if (layout != VK_IMAGE_LAYOUT_PREINITIALIZED && layout != VK_IMAGE_LAYOUT_GENERAL) {
-                            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                            skip |= log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                             DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                                            "Cannot map an image with layout %s. Only "
-                                            "GENERAL or PREINITIALIZED are supported.",
+                                            "Mapping an image with layout %s can result in undefined behavior if this memory is "
+                                            "used by the device. Only GENERAL or PREINITIALIZED should be used.",
                                             string_VkImageLayout(layout));
                         }
                     }
