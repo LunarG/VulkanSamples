@@ -8913,6 +8913,9 @@ static bool CheckPreserved(const layer_data *dev_data, const VkRenderPassCreateI
     for (uint32_t j = 0; j < subpass.colorAttachmentCount; ++j) {
         if (attachment == subpass.pColorAttachments[j].attachment) return true;
     }
+    for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
+        if (attachment == subpass.pInputAttachments[j].attachment) return true;
+    }
     if (subpass.pDepthStencilAttachment && subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
         if (attachment == subpass.pDepthStencilAttachment->attachment) return true;
     }
