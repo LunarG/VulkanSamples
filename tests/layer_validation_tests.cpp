@@ -15554,6 +15554,79 @@ TEST_F(VkLayerTest, InvalidImageViewAspect) {
     m_errorMonitor->VerifyFound();
 }
 
+TEST_F(VkLayerTest, ExerciseGetImageSubresourceLayout) {
+    TEST_DESCRIPTION("Test vkGetImageSubresourceLayout() valid usages");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    VkSubresourceLayout subres_layout = {};
+
+    // VU 00732: image must have been created with tiling equal to VK_IMAGE_TILING_LINEAR
+    {
+        const VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;  // ERROR: violates VU 00732
+        VkImageObj img(m_device);
+        img.init_no_layout(32, 32, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, tiling);
+        ASSERT_TRUE(img.initialized());
+
+        VkImageSubresource subres = {};
+        subres.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        subres.mipLevel = 0;
+        subres.arrayLayer = 0;
+
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00732);
+        vkGetImageSubresourceLayout(m_device->device(), img.image(), &subres, &subres_layout);
+        m_errorMonitor->VerifyFound();
+    }
+
+    // VU 00733: The aspectMask member of pSubresource must only have a single bit set
+    {
+        VkImageObj img(m_device);
+        img.init_no_layout(32, 32, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
+        ASSERT_TRUE(img.initialized());
+
+        VkImageSubresource subres = {};
+        subres.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_METADATA_BIT;  // ERROR: triggers VU 00733
+        subres.mipLevel = 0;
+        subres.arrayLayer = 0;
+
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00733);
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00741);
+        vkGetImageSubresourceLayout(m_device->device(), img.image(), &subres, &subres_layout);
+        m_errorMonitor->VerifyFound();
+    }
+
+    // 00739 mipLevel must be less than the mipLevels specified in VkImageCreateInfo when the image was created
+    {
+        VkImageObj img(m_device);
+        img.init_no_layout(32, 32, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
+        ASSERT_TRUE(img.initialized());
+
+        VkImageSubresource subres = {};
+        subres.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        subres.mipLevel = 1;  // ERROR: triggers VU 00739
+        subres.arrayLayer = 0;
+
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00739);
+        vkGetImageSubresourceLayout(m_device->device(), img.image(), &subres, &subres_layout);
+        m_errorMonitor->VerifyFound();
+    }
+
+    // 00740 arrayLayer must be less than the arrayLayers specified in VkImageCreateInfo when the image was created
+    {
+        VkImageObj img(m_device);
+        img.init_no_layout(32, 32, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
+        ASSERT_TRUE(img.initialized());
+
+        VkImageSubresource subres = {};
+        subres.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        subres.mipLevel = 0;
+        subres.arrayLayer = 1;  // ERROR: triggers VU 00740
+
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00740);
+        vkGetImageSubresourceLayout(m_device->device(), img.image(), &subres, &subres_layout);
+        m_errorMonitor->VerifyFound();
+    }
+}
+
 TEST_F(VkLayerTest, CopyImageLayerCountMismatch) {
     VkResult err;
     bool pass;
