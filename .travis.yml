@@ -1,0 +1,57 @@
+# Build Configuration for Travis CI
+# https://travis-ci.org
+
+dist: trusty
+sudo: required
+language: cpp
+
+matrix:
+  # Show final status immediately if a test fails.
+  fast_finish: true
+  include:
+    # Android build.
+    - os: linux
+      compiler: gcc
+      env: VULKAN_BUILD_TARGET=ANDROID ANDROID_TARGET=android-23 ANDROID_ABI=armeabi-v7a
+    # Linux GCC debug build.
+    - os: linux
+      compiler: gcc
+      env: VULKAN_BUILD_TARGET=LINUX
+    # Linux clang debug build.
+    - os: linux
+      compiler: clang
+      env: VULKAN_BUILD_TARGET=LINUX
+
+android:
+  components:
+    - tools
+    - platform-tools
+    - build-tools-23.0.2
+    - android-23
+
+cache:
+  directories:
+    - external
+    - build-android/external
+
+before_install:
+  # Install the appropriate Linux packages.
+  - if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then sudo apt-get -y install libxkbcommon-dev libwayland-dev libmirclient-dev libxrandr-dev; fi
+
+  # Install the Android NDK.
+  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then export ARCH=`uname -m`; fi
+  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then wget http://dl.google.com/android/repository/android-ndk-r13b-linux-${ARCH}.zip; fi
+  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then unzip -u -q android-ndk-r13b-linux-${ARCH}.zip; fi
+  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then export ANDROID_NDK_HOME=`pwd`/android-ndk-r13b; fi
+  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then export JAVA_HOME="/usr/lib/jvm/java-8-oracle"; fi
+  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then export PATH="$ANDROID_NDK_HOME:$PATH"; fi
+
+script:
+  - if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then ./update_external_sources.sh; fi
+  - if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then cmake -H. -Bdbuild -DCMAKE_BUILD_TYPE=Debug; fi
+  - if [[ "$VULKAN_BUILD_TARGET" == "LINUX" ]]; then make -C dbuild; fi
+  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then pushd build-android; fi
+  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then ./update_external_sources_android.sh; fi
+  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then ./android-generate.sh; fi
+  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then ndk-build APP_ABI=$ANDROID_ABI; fi
+  - if [[ "$VULKAN_BUILD_TARGET" == "ANDROID" ]]; then popd; fi

@@ -36,7 +36,7 @@ android:hasCode="false" android:theme="@android:style/Theme.NoTitleBar.Fullscree
                 android:configChanges="orientation|keyboardHidden">
             <!-- Tell NativeActivity the name of or .so -->
             <meta-data android:name="android.app.lib_name"
-                    android:value="vulkan_samples" />
+                    android:value="vulkan_sample" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

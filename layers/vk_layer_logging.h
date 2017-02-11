@@ -53,7 +53,6 @@ static inline bool debug_report_log_msg(const debug_report_data *debug_data, VkF
 // Add a debug message callback node structure to the specified callback linked list
 static inline void AddDebugMessageCallback(debug_report_data *debug_data, VkLayerDbgFunctionNode **list_head,
                                            VkLayerDbgFunctionNode *new_node) {
-
     new_node->pNext = *list_head;
     *list_head = new_node;
 }
@@ -64,8 +63,8 @@ static inline void RemoveDebugMessageCallback(debug_report_data *debug_data, VkL
     VkLayerDbgFunctionNode *cur_callback = *list_head;
     VkLayerDbgFunctionNode *prev_callback = cur_callback;
     bool matched = false;
+    VkFlags local_flags = 0;
 
-    debug_data->active_flags = 0;
     while (cur_callback) {
         if (cur_callback->msgCallback == callback) {
             matched = true;
@@ -75,10 +74,10 @@ static inline void RemoveDebugMessageCallback(debug_report_data *debug_data, VkL
             }
             debug_report_log_msg(debug_data, VK_DEBUG_REPORT_DEBUG_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT,
                                  reinterpret_cast<uint64_t &>(cur_callback->msgCallback), 0, VK_DEBUG_REPORT_ERROR_CALLBACK_REF_EXT,
-                                 "DebugReport", "Destroyed callback");
+                                 "DebugReport", "Destroyed callback\n");
         } else {
             matched = false;
-            debug_data->active_flags |= cur_callback->msgFlags;
+            local_flags |= cur_callback->msgFlags;
         }
         prev_callback = cur_callback;
         cur_callback = cur_callback->pNext;
@@ -86,6 +85,7 @@ static inline void RemoveDebugMessageCallback(debug_report_data *debug_data, VkL
             free(prev_callback);
         }
     }
+    debug_data->active_flags = local_flags;
 }
 
 // Removes all debug callback function nodes from the specified callback linked lists and frees their resources
@@ -129,20 +129,12 @@ static inline bool debug_report_log_msg(const debug_report_data *debug_data, VkF
     return bail;
 }
 
-static inline debug_report_data *
-debug_report_create_instance(VkLayerInstanceDispatchTable *table, VkInstance inst, uint32_t extension_count,
-                             const char *const *ppEnabledExtensions) // layer or extension name to be enabled
+static inline debug_report_data *debug_report_create_instance(
+    VkLayerInstanceDispatchTable *table, VkInstance inst, uint32_t extension_count,
+    const char *const *ppEnabledExtensions)  // layer or extension name to be enabled
 {
-    debug_report_data *debug_data;
-    PFN_vkGetInstanceProcAddr gpa = table->GetInstanceProcAddr;
-
-    table->CreateDebugReportCallbackEXT = (PFN_vkCreateDebugReportCallbackEXT)gpa(inst, "vkCreateDebugReportCallbackEXT");
-    table->DestroyDebugReportCallbackEXT = (PFN_vkDestroyDebugReportCallbackEXT)gpa(inst, "vkDestroyDebugReportCallbackEXT");
-    table->DebugReportMessageEXT = (PFN_vkDebugReportMessageEXT)gpa(inst, "vkDebugReportMessageEXT");
-
-    debug_data = (debug_report_data *)malloc(sizeof(debug_report_data));
-    if (!debug_data)
-        return NULL;
+    debug_report_data *debug_data = (debug_report_data *)malloc(sizeof(debug_report_data));
+    if (!debug_data) return NULL;
 
     memset(debug_data, 0, sizeof(debug_report_data));
     for (uint32_t i = 0; i < extension_count; i++) {
@@ -182,12 +174,10 @@ static inline VkResult layer_create_msg_callback(debug_report_data *debug_data, 
                                                  const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
                                                  const VkAllocationCallbacks *pAllocator, VkDebugReportCallbackEXT *pCallback) {
     VkLayerDbgFunctionNode *pNewDbgFuncNode = (VkLayerDbgFunctionNode *)malloc(sizeof(VkLayerDbgFunctionNode));
-    if (!pNewDbgFuncNode)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
+    if (!pNewDbgFuncNode) return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     // Handle of 0 is logging_callback so use allocated Node address as unique handle
-    if (!(*pCallback))
-        *pCallback = (VkDebugReportCallbackEXT)pNewDbgFuncNode;
+    if (!(*pCallback)) *pCallback = (VkDebugReportCallbackEXT)pNewDbgFuncNode;
     pNewDbgFuncNode->msgCallback = *pCallback;
     pNewDbgFuncNode->pfnMsgCallback = pCreateInfo->pfnCallback;
     pNewDbgFuncNode->msgFlags = pCreateInfo->flags;
@@ -195,10 +185,11 @@ static inline VkResult layer_create_msg_callback(debug_report_data *debug_data, 
 
     if (default_callback) {
         AddDebugMessageCallback(debug_data, &debug_data->default_debug_callback_list, pNewDbgFuncNode);
+        debug_data->active_flags |= pCreateInfo->flags;
     } else {
         AddDebugMessageCallback(debug_data, &debug_data->debug_callback_list, pNewDbgFuncNode);
+        debug_data->active_flags = pCreateInfo->flags;
     }
-    debug_data->active_flags |= pCreateInfo->flags;
 
     debug_report_log_msg(debug_data, VK_DEBUG_REPORT_DEBUG_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT,
                          (uint64_t)*pCallback, 0, VK_DEBUG_REPORT_ERROR_CALLBACK_REF_EXT, "DebugReport", "Added callback");
@@ -216,11 +207,9 @@ static inline PFN_vkVoidFunction debug_report_get_instance_proc_addr(debug_repor
     if (!strcmp(funcName, "vkDestroyDebugReportCallbackEXT")) {
         return (PFN_vkVoidFunction)vkDestroyDebugReportCallbackEXT;
     }
-
     if (!strcmp(funcName, "vkDebugReportMessageEXT")) {
         return (PFN_vkVoidFunction)vkDebugReportMessageEXT;
     }
-
     return NULL;
 }
 
@@ -322,11 +311,11 @@ static inline int vasprintf(char **strp, char const *fmt, va_list ap) {
     *strp = nullptr;
     int size = _vscprintf(fmt, ap);
     if (size >= 0) {
-        *strp = (char *)malloc(size+1);
+        *strp = (char *)malloc(size + 1);
         if (!*strp) {
             return -1;
         }
-        _vsnprintf(*strp, size+1, fmt, ap);
+        _vsnprintf(*strp, size + 1, fmt, ap);
     }
     return size;
 }
@@ -394,4 +383,4 @@ static inline VKAPI_ATTR VkBool32 VKAPI_CALL win32_debug_output_msg(VkFlags msgF
     return false;
 }
 
-#endif // LAYER_LOGGING_H
+#endif  // LAYER_LOGGING_H

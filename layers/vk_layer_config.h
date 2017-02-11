@@ -20,6 +20,7 @@
 #pragma once
 #include "vulkan/vulkan.h"
 #include "vulkan/vk_layer.h"
+#include <string>
 #include <unordered_map>
 #include <stdbool.h>
 #include <stdio.h>
@@ -44,7 +45,7 @@ const std::unordered_map<std::string, VkFlags> debug_actions_option_definitions 
     {std::string("VK_DBG_LAYER_ACTION_CALLBACK"), VK_DBG_LAYER_ACTION_CALLBACK},
     {std::string("VK_DBG_LAYER_ACTION_LOG_MSG"), VK_DBG_LAYER_ACTION_LOG_MSG},
     {std::string("VK_DBG_LAYER_ACTION_BREAK"), VK_DBG_LAYER_ACTION_BREAK},
-#if WIN32
+#if defined(WIN32)
     {std::string("VK_DBG_LAYER_ACTION_DEBUG_OUTPUT"), VK_DBG_LAYER_ACTION_DEBUG_OUTPUT},
 #endif
     {std::string("VK_DBG_LAYER_ACTION_DEFAULT"), VK_DBG_LAYER_ACTION_DEFAULT}};
@@ -59,7 +60,7 @@ const std::unordered_map<std::string, VkFlags> report_flags_option_definitions =
 const char *getLayerOption(const char *_option);
 FILE *getLayerLogOutput(const char *_option, const char *layerName);
 VkFlags GetLayerOptionFlags(std::string _option, std::unordered_map<std::string, VkFlags> const &enum_data,
-                                          uint32_t option_default);
+                            uint32_t option_default);
 
 void setLayerOption(const char *_option, const char *_val);
 void print_msg_flags(VkFlags msgFlags, char *msg_flags);

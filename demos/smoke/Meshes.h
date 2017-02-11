@@ -21,7 +21,7 @@
 #include <vector>
 
 class Meshes {
-public:
+   public:
     Meshes(VkDevice dev, const std::vector<VkMemoryPropertyFlags> &mem_flags);
     ~Meshes();
 
@@ -39,7 +39,7 @@ public:
     void cmd_bind_buffers(VkCommandBuffer cmd) const;
     void cmd_draw(VkCommandBuffer cmd, Type type) const;
 
-private:
+   private:
     void allocate_resources(VkDeviceSize vb_size, VkDeviceSize ib_size, const std::vector<VkMemoryPropertyFlags> &mem_flags);
 
     VkDevice dev_;
@@ -58,4 +58,4 @@ private:
     VkDeviceSize ib_mem_offset_;
 };
 
-#endif // MESHES_H
+#endif  // MESHES_H

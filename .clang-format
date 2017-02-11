@@ -1,5 +1,7 @@
 ---
-# We'll use defaults from the LLVM style, but with 4 columns indentation.
-BasedOnStyle: LLVM
+# Use defaults from the Google style with the following exceptions:
+BasedOnStyle: Google
 IndentWidth: 4
+ColumnLimit: 132
+SortIncludes: false
 ...

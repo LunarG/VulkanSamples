@@ -18,22 +18,10 @@ SRC_DIR := $(LOCAL_PATH)/../../..
 DEMO_DIR := $(SRC_DIR)/demos
 
 include $(CLEAR_VARS)
-LOCAL_MODULE := Tri
-LOCAL_SRC_FILES += $(DEMO_DIR)/tri.c \
-                   $(SRC_DIR)/common/vulkan_wrapper.cpp
-LOCAL_C_INCLUDES += $(SRC_DIR)/include \
-                    $(DEMO_DIR)/android/include \
-                    $(SRC_DIR)/libs \
-                    $(SRC_DIR)/common
-LOCAL_CFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR --include=$(SRC_DIR)/common/vulkan_wrapper.h
-LOCAL_WHOLE_STATIC_LIBRARIES += android_native_app_glue
-LOCAL_LDLIBS    := -llog -landroid
-include $(BUILD_SHARED_LIBRARY)
-
-include $(CLEAR_VARS)
 LOCAL_MODULE := Cube
 LOCAL_SRC_FILES += $(DEMO_DIR)/cube.c \
-                   $(SRC_DIR)/common/vulkan_wrapper.cpp
+                   $(SRC_DIR)/common/vulkan_wrapper.cpp \
+                   $(SRC_DIR)/common/android_util.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include \
                     $(DEMO_DIR)/android/include \
                     $(SRC_DIR)/libs \

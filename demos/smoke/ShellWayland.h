@@ -20,14 +20,14 @@
 #include "Shell.h"
 
 class ShellWayland : public Shell {
-  public:
+   public:
     ShellWayland(Game &game);
     ~ShellWayland();
 
     void run();
     void quit() { quit_ = true; }
 
-  private:
+   private:
     void init_connection();
 
     PFN_vkGetInstanceProcAddr load_vk();
@@ -49,21 +49,14 @@ class ShellWayland : public Shell {
     struct wl_surface *surface_;
     struct wl_shell_surface *shell_surface_;
 
-    static void handle_global(void *data, struct wl_registry *registry,
-                              uint32_t id, const char *interface,
-                              uint32_t version);
-    static void handle_global_remove(void *data, struct wl_registry *registry,
-                                     uint32_t name);
-    static void handle_ping(void *data, struct wl_shell_surface *shell_surface,
-                            uint32_t serial);
-    static void handle_configure(void *data,
-                                 struct wl_shell_surface *shell_surface,
-                                 uint32_t edges, int32_t width, int32_t height);
-    static void handle_popup_done(void *data,
-                                  struct wl_shell_surface *shell_surface);
+    static void handle_global(void *data, struct wl_registry *registry, uint32_t id, const char *interface, uint32_t version);
+    static void handle_global_remove(void *data, struct wl_registry *registry, uint32_t name);
+    static void handle_ping(void *data, struct wl_shell_surface *shell_surface, uint32_t serial);
+    static void handle_configure(void *data, struct wl_shell_surface *shell_surface, uint32_t edges, int32_t width, int32_t height);
+    static void handle_popup_done(void *data, struct wl_shell_surface *shell_surface);
 
     static const struct wl_registry_listener registry_listener_;
     static const struct wl_shell_surface_listener shell_surface_listener_;
 };
 
-#endif // SHELL_WAYLAND_H
+#endif  // SHELL_WAYLAND_H

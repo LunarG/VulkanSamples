@@ -40,10 +40,11 @@ VkLayerInstanceDispatchTable *instance_dispatch_table(void *object) {
     instance_table_map::const_iterator it = tableInstanceMap.find((void *)key);
 #if DISPATCH_MAP_DEBUG
     if (it != tableInstanceMap.end()) {
-        fprintf(stderr, "instance_dispatch_table: map:  0x%p, object:  0x%p, key:  0x%p, table:  0x%p\n", &tableInstanceMap, object, key,
-                it->second);
+        fprintf(stderr, "instance_dispatch_table: map:  0x%p, object:  0x%p, key:  0x%p, table:  0x%p\n", &tableInstanceMap, object,
+                key, it->second);
     } else {
-        fprintf(stderr, "instance_dispatch_table: map:  0x%p, object:  0x%p, key:  0x%p, table: UNKNOWN\n", &tableInstanceMap, object, key);
+        fprintf(stderr, "instance_dispatch_table: map:  0x%p, object:  0x%p, key:  0x%p, table: UNKNOWN\n", &tableInstanceMap,
+                object, key);
     }
 #endif
     assert(it != tableInstanceMap.end() && "Not able to find instance dispatch entry");
@@ -85,10 +86,11 @@ VkLayerDispatchTable *get_dispatch_table(device_table_map &map, void *object) {
     device_table_map::const_iterator it = map.find((void *)key);
 #if DISPATCH_MAP_DEBUG
     if (it != map.end()) {
-        fprintf(stderr, "device_dispatch_table: map:  0x%p, object:  0x%p, key:  0x%p, table:  0x%p\n", &tableInstanceMap, object, key,
-                it->second);
+        fprintf(stderr, "device_dispatch_table: map:  0x%p, object:  0x%p, key:  0x%p, table:  0x%p\n", &tableInstanceMap, object,
+                key, it->second);
     } else {
-        fprintf(stderr, "device_dispatch_table: map:  0x%p, object:  0x%p, key:  0x%p, table: UNKNOWN\n", &tableInstanceMap, object, key);
+        fprintf(stderr, "device_dispatch_table: map:  0x%p, object:  0x%p, key:  0x%p, table: UNKNOWN\n", &tableInstanceMap, object,
+                key);
     }
 #endif
     assert(it != map.end() && "Not able to find device dispatch entry");
@@ -96,15 +98,15 @@ VkLayerDispatchTable *get_dispatch_table(device_table_map &map, void *object) {
 }
 
 VkLayerInstanceDispatchTable *get_dispatch_table(instance_table_map &map, void *object) {
-    //    VkLayerInstanceDispatchTable *pDisp = *(VkLayerInstanceDispatchTable **) object;
     dispatch_key key = get_dispatch_key(object);
     instance_table_map::const_iterator it = map.find((void *)key);
 #if DISPATCH_MAP_DEBUG
     if (it != map.end()) {
-        fprintf(stderr, "instance_dispatch_table: map:  0x%p, object:  0x%p, key:  0x%p, table:  0x%p\n", &tableInstanceMap, object, key,
-                it->second);
+        fprintf(stderr, "instance_dispatch_table: map:  0x%p, object:  0x%p, key:  0x%p, table:  0x%p\n", &tableInstanceMap, object,
+                key, it->second);
     } else {
-        fprintf(stderr, "instance_dispatch_table: map:  0x%p, object:  0x%p, key:  0x%p, table: UNKNOWN\n", &tableInstanceMap, object, key);
+        fprintf(stderr, "instance_dispatch_table: map:  0x%p, object:  0x%p, key:  0x%p, table: UNKNOWN\n", &tableInstanceMap,
+                object, key);
     }
 #endif
     assert(it != map.end() && "Not able to find instance dispatch entry");
@@ -155,6 +157,10 @@ VkLayerInstanceDispatchTable *initInstanceTable(VkInstance instance, const PFN_v
     }
 
     layer_init_instance_dispatch_table(instance, pTable, gpa);
+
+    // Setup func pointers that are required but not externally exposed.  These won't be added to the instance dispatch table by
+    // default.
+    pTable->GetPhysicalDeviceProcAddr = (PFN_GetPhysicalDeviceProcAddr)gpa(instance, "vk_layerGetPhysicalDeviceProcAddr");
 
     return pTable;
 }

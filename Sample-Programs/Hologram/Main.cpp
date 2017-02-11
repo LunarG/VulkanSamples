@@ -21,25 +21,20 @@
 
 namespace {
 
-Game *create_game(const std::vector<std::string> &args)
-{
-    return new Hologram(args);
-}
+Game *create_game(const std::vector<std::string> &args) { return new Hologram(args); }
 
-Game *create_game(int argc, char **argv)
-{
+Game *create_game(int argc, char **argv) {
     std::vector<std::string> args(argv, argv + argc);
     return create_game(args);
 }
 
-} // namespace
+}  // namespace
 
 #if defined(VK_USE_PLATFORM_XCB_KHR)
 
 #include "ShellXcb.h"
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     Game *game = create_game(argc, argv);
     {
         ShellXcb shell(*game);
@@ -55,15 +50,13 @@ int main(int argc, char **argv)
 #include <android/log.h>
 #include "ShellAndroid.h"
 
-void android_main(android_app *app)
-{
+void android_main(android_app *app) {
     Game *game = create_game(ShellAndroid::get_args(*app));
     try {
         ShellAndroid shell(*app, *game);
         shell.run();
     } catch (const std::runtime_error &e) {
-        __android_log_print(ANDROID_LOG_ERROR, game->settings().name.c_str(),
-                "%s", e.what());
+        __android_log_print(ANDROID_LOG_ERROR, game->settings().name.c_str(), "%s", e.what());
     }
 
     delete game;
@@ -73,8 +66,7 @@ void android_main(android_app *app)
 
 #include "ShellWin32.h"
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     Game *game = create_game(argc, argv);
     {
         ShellWin32 shell(*game);
@@ -85,4 +77,4 @@ int main(int argc, char **argv)
     return 0;
 }
 
-#endif // VK_USE_PLATFORM_XCB_KHR
+#endif  // VK_USE_PLATFORM_XCB_KHR

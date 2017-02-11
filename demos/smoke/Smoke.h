@@ -33,7 +33,7 @@
 class Meshes;
 
 class Smoke : public Game {
-public:
+   public:
     Smoke(const std::vector<std::string> &args);
     ~Smoke();
 
@@ -48,9 +48,9 @@ public:
 
     void on_frame(float frame_pred);
 
-private:
+   private:
     class Worker {
-    public:
+       public:
         Worker(Smoke &smoke, int index, int object_begin, int object_end);
 
         void start();
@@ -69,7 +69,7 @@ private:
 
         VkFramebuffer fb_;
 
-    private:
+       private:
         enum State {
             INIT,
             IDLE,
@@ -158,6 +158,7 @@ private:
     std::vector<VkCommandPool> worker_cmd_pools_;
     VkDescriptorPool desc_pool_;
     VkDeviceMemory frame_data_mem_;
+    VkDeviceSize frame_data_aligned_size_;
     std::vector<FrameData> frame_data_;
     int frame_data_index_;
 
@@ -186,4 +187,4 @@ private:
     void draw_objects(Worker &worker);
 };
 
-#endif // HOLOGRAM_H
+#endif  // HOLOGRAM_H

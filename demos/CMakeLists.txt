@@ -1,13 +1,49 @@
-if(NOT WIN32)
-    if (BUILD_WSI_XCB_SUPPORT)
-        find_package(XCB REQUIRED)
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    add_definitions(-DVK_USE_PLATFORM_WIN32_KHR -DWIN32_LEAN_AND_MEAN)
+    set(DisplayServer Win32)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Android")
+    add_definitions(-DVK_USE_PLATFORM_ANDROID_KHR)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    if (NOT DEMOS_WSI_SELECTION)
+        set(DEMOS_WSI_SELECTION "XCB")
     endif()
-    if (BUILD_WSI_XLIB_SUPPORT)
-        find_package(X11 REQUIRED)
-    endif()
-    if (BUILD_WSI_WAYLAND_SUPPORT)
-        find_package(Wayland REQUIRED)
-    endif()
+
+    if (DEMOS_WSI_SELECTION STREQUAL "XCB")
+        if (NOT BUILD_WSI_XCB_SUPPORT)
+            message( FATAL_ERROR "Selected XCB for demos build but not building Xcb support" )
+        endif()
+        include_directories(${XCB_INCLUDE_DIRS})
+        link_libraries(${XCB_LIBRARIES})
+        add_definitions(-DVK_USE_PLATFORM_XCB_KHR)
+    elseif(DEMOS_WSI_SELECTION STREQUAL "XLIB")
+        if (NOT BUILD_WSI_XLIB_SUPPORT)
+            message( FATAL_ERROR "Selected XLIB for demos build but not building Xlib support" )
+        endif()
+        include_directories(${X11_INCLUDE_DIR})
+        link_libraries(${X11_LIBRARIES})
+        add_definitions(-DVK_USE_PLATFORM_XLIB_KHR)
+    elseif(DEMOS_WSI_SELECTION STREQUAL "WAYLAND")
+        if (NOT BUILD_WSI_WAYLAND_SUPPORT)
+            message( FATAL_ERROR "Selected Wayland for demos build but not building Wayland support" )
+        endif()
+        include_directories(${WAYLAND_CLIENT_INCLUDE_DIR})
+        link_libraries(${WAYLAND_CLIENT_LIBRARIES})
+        add_definitions(-DVK_USE_PLATFORM_WAYLAND_KHR)
+    elseif(DEMOS_WSI_SELECTION STREQUAL "MIR")
+        if (NOT BUILD_WSI_MIR_SUPPORT)
+            message( FATAL_ERROR "Selected MIR for demos build but not building Mir support" )
+        endif()
+        add_definitions(-DVK_USE_PLATFORM_MIR_KHR)
+        include_directories(${MIR_INCLUDE_DIR})
+        # TODO - Add Mir support
+    else()
+        message( FATAL_ERROR "Unrecognized value for DEMOS_WSI_SELECTION: ${DEMOS_WSI_SELECTION}" )
+     endif()
+
+    include_directories ("${PROJECT_SOURCE_DIR}/icd/common")
+    link_libraries(${API_LOWERCASE} m)
+else()
+    message(FATAL_ERROR "Unsupported Platform!")
 endif()
 
 file(GLOB TEXTURES
@@ -19,9 +55,9 @@ set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 if(WIN32)
-  set (LIBRARIES "vulkan-${MAJOR}")
+  set (LIBRARIES "${API_LOWERCASE}-${MAJOR}")
 elseif(UNIX)
-  set (LIBRARIES "vulkan")
+  set (LIBRARIES "${API_LOWERCASE}")
 else()
 endif()
 
@@ -43,66 +79,29 @@ if(WIN32)
         endif()
     endforeach()
 
-    add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/tri-vert.spv
-       COMMAND ${GLSLANG_VALIDATOR} -s -V ${PROJECT_SOURCE_DIR}/demos/tri.vert
-       COMMAND move vert.spv ${CMAKE_BINARY_DIR}/demos/tri-vert.spv
-       DEPENDS tri.vert ${GLSLANG_VALIDATOR}
-       )
-    add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/tri-frag.spv
-       COMMAND ${GLSLANG_VALIDATOR} -s -V ${PROJECT_SOURCE_DIR}/demos/tri.frag
-       COMMAND move frag.spv ${CMAKE_BINARY_DIR}/demos/tri-frag.spv
-       DEPENDS tri.frag ${GLSLANG_VALIDATOR}
-       )
     add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/cube-vert.spv
-       COMMAND ${GLSLANG_VALIDATOR} -s -V ${PROJECT_SOURCE_DIR}/demos/cube.vert
-       COMMAND move vert.spv ${CMAKE_BINARY_DIR}/demos/cube-vert.spv
+       COMMAND ${GLSLANG_VALIDATOR} -s -V -o ${CMAKE_BINARY_DIR}/demos/cube-vert.spv ${PROJECT_SOURCE_DIR}/demos/cube.vert
        DEPENDS cube.vert ${GLSLANG_VALIDATOR}
        )
     add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/cube-frag.spv
-       COMMAND ${GLSLANG_VALIDATOR} -s -V ${PROJECT_SOURCE_DIR}/demos/cube.frag
-       COMMAND move frag.spv ${CMAKE_BINARY_DIR}/demos/cube-frag.spv
+       COMMAND ${GLSLANG_VALIDATOR} -s -V -o ${CMAKE_BINARY_DIR}/demos/cube-frag.spv ${PROJECT_SOURCE_DIR}/demos/cube.frag
        DEPENDS cube.frag ${GLSLANG_VALIDATOR}
        )
    file(COPY cube.vcxproj.user DESTINATION ${CMAKE_BINARY_DIR}/demos)
-   file(COPY tri.vcxproj.user DESTINATION ${CMAKE_BINARY_DIR}/demos)
    file(COPY vulkaninfo.vcxproj.user DESTINATION ${CMAKE_BINARY_DIR}/demos)
 else()
-    add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/tri-vert.spv
-       COMMAND ${GLSLANG_VALIDATOR} -s -V -o tri-vert.spv ${PROJECT_SOURCE_DIR}/demos/tri.vert 
-       DEPENDS tri.vert ${GLSLANG_VALIDATOR}
-       )
-    add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/tri-frag.spv
-       COMMAND ${GLSLANG_VALIDATOR} -s -V -o tri-frag.spv ${PROJECT_SOURCE_DIR}/demos/tri.frag
-       DEPENDS tri.frag ${GLSLANG_VALIDATOR}
-       )
-    add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/cube-vert.spv
-       COMMAND ${GLSLANG_VALIDATOR} -s -V -o cube-vert.spv ${PROJECT_SOURCE_DIR}/demos/cube.vert
-       DEPENDS cube.vert ${GLSLANG_VALIDATOR}
-       )
-
-    add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/cube-frag.spv
-       COMMAND ${GLSLANG_VALIDATOR} -s -V -o cube-frag.spv ${PROJECT_SOURCE_DIR}/demos/cube.frag
-       DEPENDS cube.frag ${GLSLANG_VALIDATOR}
-       )
+    if (${CMAKE_SYSTEM_PROCESSOR} STREQUAL ${CMAKE_HOST_SYSTEM_PROCESSOR})
+        add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/cube-vert.spv
+            COMMAND ${GLSLANG_VALIDATOR} -s -V -o cube-vert.spv ${PROJECT_SOURCE_DIR}/demos/cube.vert
+            DEPENDS cube.vert ${GLSLANG_VALIDATOR}
+            )
+        add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/cube-frag.spv
+            COMMAND ${GLSLANG_VALIDATOR} -s -V -o cube-frag.spv ${PROJECT_SOURCE_DIR}/demos/cube.frag
+            DEPENDS cube.frag ${GLSLANG_VALIDATOR}
+            )
+    endif()         
 endif()
 
-if(NOT WIN32)
-    if(BUILD_WSI_XCB_SUPPORT)
-        include_directories(${XCB_INCLUDE_DIRS})
-        link_libraries(${XCB_LIBRARIES})
-    endif()
-    if(BUILD_WSI_XLIB_SUPPORT)
-        include_directories(${X11_INCLUDE_DIRS})
-        link_libraries(${X11_LIBRARIES})
-    endif()
-    if(BUILD_WSI_WAYLAND_SUPPORT)
-        include_directories(${WAYLAND_CLIENT_INCLUDE_DIR})
-        link_libraries(${WAYLAND_CLIENT_LIBRARIES})
-    endif()
-
-    include_directories ("${PROJECT_SOURCE_DIR}/icd/common")
-    link_libraries(vulkan m)
-endif()
 if(WIN32)
     include_directories (
        "${PROJECT_SOURCE_DIR}/icd/common"
@@ -112,19 +111,14 @@ if(WIN32)
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_CRT_SECURE_NO_WARNINGS -D_USE_MATH_DEFINES")
 endif()
 
-add_executable(vulkaninfo vulkaninfo.c)
-target_link_libraries(vulkaninfo ${LIBRARIES})
-
-if(UNIX)
-    add_executable(tri tri.c ${CMAKE_BINARY_DIR}/demos/tri-vert.spv ${CMAKE_BINARY_DIR}/demos/tri-frag.spv)
-else()
-    add_executable(tri WIN32 tri.c ${CMAKE_BINARY_DIR}/demos/tri-vert.spv ${CMAKE_BINARY_DIR}/demos/tri-frag.spv)
-endif()
-target_link_libraries(tri ${LIBRARIES})
+add_executable(${API_LOWERCASE}info vulkaninfo.c)
+target_link_libraries(${API_LOWERCASE}info ${LIBRARIES})
 
 if(NOT WIN32)
-    add_executable(cube cube.c ${CMAKE_BINARY_DIR}/demos/cube-vert.spv ${CMAKE_BINARY_DIR}/demos/cube-frag.spv)
-    target_link_libraries(cube ${LIBRARIES})
+    if (${CMAKE_SYSTEM_PROCESSOR} STREQUAL ${CMAKE_HOST_SYSTEM_PROCESSOR})
+        add_executable(cube cube.c ${CMAKE_BINARY_DIR}/demos/cube-vert.spv ${CMAKE_BINARY_DIR}/demos/cube-frag.spv)
+        target_link_libraries(cube ${LIBRARIES})
+    endif()
 else()
     if (CMAKE_CL_64)
         set (LIB_DIR "Win64")
@@ -133,8 +127,31 @@ else()
     endif()
 
     add_executable(cube WIN32 cube.c ${CMAKE_BINARY_DIR}/demos/cube-vert.spv ${CMAKE_BINARY_DIR}/demos/cube-frag.spv)
-    target_link_libraries(cube ${LIBRARIES} )
+    target_link_libraries(cube ${LIBRARIES})
 endif()
 
-add_subdirectory(smoke)
+if(NOT WIN32)
+    if (${CMAKE_SYSTEM_PROCESSOR} STREQUAL ${CMAKE_HOST_SYSTEM_PROCESSOR})
+        add_executable(cubepp cube.cpp ${CMAKE_BINARY_DIR}/demos/cube-vert.spv ${CMAKE_BINARY_DIR}/demos/cube-frag.spv)
+        target_link_libraries(cubepp ${LIBRARIES})
+    endif()
+else()
+    if (CMAKE_CL_64)
+        set (LIB_DIR "Win64")
+    else()
+        set (LIB_DIR "Win32")
+    endif()
 
+    add_executable(cubepp WIN32 cube.cpp ${CMAKE_BINARY_DIR}/demos/cube-vert.spv ${CMAKE_BINARY_DIR}/demos/cube-frag.spv)
+    target_link_libraries(cubepp ${LIBRARIES})
+endif()
+
+if ((${CMAKE_SYSTEM_PROCESSOR} STREQUAL ${CMAKE_HOST_SYSTEM_PROCESSOR}))
+    if  ((DEMOS_WSI_SELECTION STREQUAL "XCB") OR (DEMOS_WSI_SELECTION STREQUAL "WAYLAND") OR WIN32 OR (CMAKE_SYSTEM_NAME STREQUAL "Android"))
+        add_subdirectory(smoke)
+    endif()
+endif()
+
+if(UNIX)
+    install(TARGETS ${API_LOWERCASE}info DESTINATION ${CMAKE_INSTALL_BINDIR})
+endif()

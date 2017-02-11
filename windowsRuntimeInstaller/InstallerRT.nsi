@@ -26,13 +26,25 @@
 #    x.devbuild.z for development builds
 #    x for releases
 #
-!define PRODUCTNAME "VulkanRT"
-!define VERSION_ABI_MAJOR "1"
-!define VERSION_API_MAJOR "1"
-!define VERSION_MINOR "0"
-!define VERSION_PATCH "12"
-!define VERSION_BUILDNO "0.devbuild.1"
-!define PUBLISHER "YourCompany, Inc."
+
+# Set the default name to "Vulkan", but allow this to be overriden
+!ifndef APINAME
+    !define APINAME "Vulkan"
+    !define APILOWER "vulkan"
+!endif
+
+!define PRODUCTNAME "${APINAME}RT"
+
+!ifndef HIDE_VERSION
+  !define VERSION_ABI_MAJOR "1"
+  !define VERSION_API_MAJOR "1"
+  !define VERSION_MINOR "0"
+  !define VERSION_PATCH "12"
+  !define VERSION_BUILDNO "0.devbuild.1"
+!endif
+!ifndef HIDE_PUBLISHER
+  !define PUBLISHER "YourCompany, Inc."
+!endif
 #!define VERSION_BUILDNO "0"
 !define PRODUCTVERSION "${VERSION_API_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}.${VERSION_BUILDNO}"
 
@@ -65,7 +77,7 @@ WindowIcon off
   !echo "Creating RT installer...."
 
   # Define name of installer
-  OutFile "VulkanRT-${PRODUCTVERSION}-Installer.exe"
+  OutFile "${PRODUCTNAME}-${PRODUCTVERSION}-Installer.exe"
   SetCompressor /SOLID lzma
 
 !endif
@@ -217,64 +229,28 @@ UninstPage instFiles
 
 # File Properties
 VIProductVersion "${PRODUCTVERSION}"
-VIAddVersionKey  "ProductName" "Vulkan Runtime"
+VIAddVersionKey  "ProductName" "${APINAME} Runtime"
 VIAddVersionKey  "FileVersion" "${PRODUCTVERSION}"
 VIAddVersionKey  "ProductVersion" "${PRODUCTVERSION}"
 VIAddVersionKey  "LegalCopyright" ""
 
 !ifdef UNINSTALLER
-    VIAddVersionKey  "FileDescription" "Vulkan Runtime Uninstaller"
+    VIAddVersionKey  "FileDescription" "${APINAME} Runtime Uninstaller"
 !else
-    VIAddVersionKey  "FileDescription" "Vulkan Runtime Installer"
+    VIAddVersionKey  "FileDescription" "${APINAME} Runtime Installer"
 !endif
 
 
-# Function to run ConfigLayersAndVulkanDll ps script.
+# Function to run ConfigureRT program.
 # Return value is in $0 - 0 is success, all else is failure.
 !macro ConfigLayersAndVulkanDLL un
 Function ${un}ConfigLayersAndVulkanDLL
 
-    ${If} ${RunningX64}
-        Strcpy $1 64
-    ${Else}
-        Strcpy $1 32
-    ${Endif}
-
-    # Create the script, the first two lines are the majorabi and ossize.
-    nsExec::ExecToStack 'cmd /k echo $$majorabi=${VERSION_ABI_MAJOR} >"$TEMP\VulkanRT\VulkanRT.ps1"'
-    nsExec::ExecToStack 'cmd /k echo $$ossize=$1 >>"$TEMP\VulkanRT\VulkanRT.ps1"'
-    nsExec::ExecToStack 'cmd /k type ConfigLayersAndVulkanDLL.ps1 >>"$TEMP\VulkanRT\VulkanRT.ps1"'
-
-    # Exectute the script by piping it to powershell.exe. This gets around possible OS
-    # security restrictions on running powershell scripts.
-    nsExec::ExecToStack 'cmd /k type "$TEMP\VulkanRT\VulkanRT.ps1" | powershell -NoProfile -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -Command -'
-    Delete "$TEMP\VulkanRT\ConfigLayersAndVulkanDLL1.${un}log"
-    Rename "$TEMP\ConfigLayersAndVulkanDLL.log" "$TEMP\VulkanRT\ConfigLayersAndVulkanDLL1.${un}log"
+    # Execute the configuration program
+    nsExec::ExecToStack 'ConfigureRT.exe --abi-major ${VERSION_ABI_MAJOR} --api-name ${APINAME}'
+    Delete "$TEMP\VulkanRT\configure_rt.log"
+    Rename "configure_rt.log" "$TEMP\VulkanRT\configure_rt.log"
     pop $0
-
-    # If it failed, try again, with a full path to powershell.exe
-    ${If} $0 != 0
-        nsExec::ExecToStack 'cmd /k type "$TEMP\VulkanRT\VulkanRT.ps1" | "$WINDIR\System32\WindowsPowerShell\v1.0\powershell" -NoProfile -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -Command -'
-        pop $0
-        Delete "$TEMP\VulkanRT\ConfigLayersAndVulkanDLL2.${un}log"
-        Rename "$TEMP\ConfigLayersAndVulkanDLL.log" "$TEMP\VulkanRT\ConfigLayersAndVulkanDLL2.${un}log"
-    ${Endif}
-
-    # Read the return value of the script and put it in $0, stripping trailing newline
-    FileOpen $1 "$TEMP\ConfigLayersAndVulkanDLL.stat" r
-    ${If} $1 != ""
-        FileRead $1 $2
-        FileClose $1
-        ${StrRep} $3 $2 "$\n" ""
-        ${StrRep} $0 $3 "$\r" ""
-    ${Else}
-       # error
-       StrCpy $0 -1
-    ${Endif}
-
-    # Cleanup
-    Delete "$TEMP\ConfigLayersAndVulkanDLL.stat"
-    Delete "$TEMP\VulkanRT\VulkanRT.ps1"
 
     # Ignore errors. If something went wrong, the return value will indicate it.
     ClearErrors
@@ -285,21 +261,13 @@ FunctionEnd
 !insertmacro ConfigLayersAndVulkanDLL "un."
 
 
-# Function to run diagnostics if ConfigLayersAndVulkanDll ps script failed.
-# On entry $0, contains the return value from ConfigLayersAndVulkanDll.ps1. It shouldn't be changed.
+# Function to run diagnostics if ConfigureRT program failed.
+# On entry $0, contains the return value from ConfigureRT.exe. It shouldn't be changed.
 !macro DiagConfigLayersAndVulkanDLL un
 Function ${un}DiagConfigLayersAndVulkanDLL
-    LogText "ConfigLayersAndVulkanDLL.ps1 rval is $0"
-    nsExec::ExecToStack 'powershell -NoProfile -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -Command Write-Output Diagnostic0 | Out-File  -encoding ascii -filePath "$TEMP\VulkanRT\Diagnostic0.${un}log"'
-    pop $1
-    LogText "ps cmd rval is $1"
-    nsExec::ExecToStack 'cmd /k echo %PATH% >"$TEMP\VulkanRT\Diagnostic1.${un}log"'
-    pop $1
-    LogText "cmd1 rval is $1"
-    nsExec::ExecToStack 'cmd /k dir "$WINDIR\System32\WindowsPowerShell\v1.0" >"$TEMP\VulkanRT\Diagnostic2.${un}log"'
-    pop $1
-    LogText "cmd2 rval is $1"
-    
+    # Report the failure
+    LogText "ConfigureRT.exe failed with return code $0"
+
     # Ignore errors
     ClearErrors
 
@@ -351,7 +319,7 @@ Section
         strcmp $INSTDIR $0 notinstalled
 
         ${If} $0 != ""
-            MessageBox MB_OK "The Windows Vulkan Runtime is already installed to $0. It will be re-installed to the same folder." /SD IDOK
+            MessageBox MB_OK "The Windows ${APINAME} Runtime is already installed to $0. It will be re-installed to the same folder." /SD IDOK
             Strcpy $INSTDIR $0
         ${Endif}
 
@@ -371,7 +339,7 @@ Section
     File ${ICOFILE}
     File VULKANRT_LICENSE.RTF
     File /oname=LICENSE.txt ..\COPYRIGHT.txt
-    File ConfigLayersAndVulkanDLL.ps1
+    File Release\ConfigureRT.exe
     StrCpy $1 15
     Call CheckForError
 
@@ -416,7 +384,7 @@ Section
     ${EndIf}
 
     # Modify registry for Programs and Features
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "DisplayName" "Vulkan Run Time Libraries ${PRODUCTVERSION}"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "DisplayName" "${APINAME} Run Time Libraries ${PRODUCTVERSION}"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "UninstallString" "$INSTDIR\Uninstall${PRODUCTNAME}.exe"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "Publisher" "${PUBLISHER}"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "DisplayVersion" "${PRODUCTVERSION}"
@@ -426,7 +394,7 @@ Section
     WriteRegDword HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "InstallCount" $IC
 
     ${If} $IC > 1
-        WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}-$IC" "DisplayName" "Vulkan Run Time Libraries ${PRODUCTVERSION}"
+        WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}-$IC" "DisplayName" "${APINAME} Run Time Libraries ${PRODUCTVERSION}"
         WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}-$IC" "UninstallString" "$INSTDIR\Instance_$IC\Uninstall${PRODUCTNAME}.exe"
         WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}-$IC" "Publisher" "${PUBLISHER}"
         WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}-$IC" "DisplayVersion" "${PRODUCTVERSION}"
@@ -468,23 +436,23 @@ Section
         # 32-bit DLLs/EXEs destined for SysWOW64
         ##########################################
         SetOutPath $WINDIR\SysWow64
-        File /oname=vulkan-$FileVersion.dll ..\build32\loader\Release\vulkan-${VERSION_ABI_MAJOR}.dll
-        File /oname=vulkaninfo-$FileVersion.exe ..\build32\demos\Release\vulkaninfo.exe
+        File /oname=${APILOWER}-$FileVersion.dll ..\build32\loader\Release\${APILOWER}-${VERSION_ABI_MAJOR}.dll
+        File /oname=${APILOWER}info-$FileVersion.exe ..\build32\demos\Release\${APILOWER}info.exe
         StrCpy $1 30
         Call CheckForError
 
         # 64-bit DLLs/EXEs
         ##########################################
         SetOutPath $WINDIR\System32
-        File /oname=vulkan-$FileVersion.dll ..\build\loader\Release\vulkan-${VERSION_ABI_MAJOR}.dll
+        File /oname=${APILOWER}-$FileVersion.dll ..\build\loader\Release\${APILOWER}-${VERSION_ABI_MAJOR}.dll
         StrCpy $1 35
         Call CheckForError
 
         # vulkaninfo.exe
-        File /oname=vulkaninfo-$FileVersion.exe ..\build\demos\Release\vulkaninfo.exe
+        File /oname=${APILOWER}info-$FileVersion.exe ..\build\demos\Release\${APILOWER}info.exe
         SetOutPath "$INSTDIR"
-        File ..\build\demos\Release\vulkaninfo.exe
-        File /oname=vulkaninfo32.exe ..\build32\demos\Release\vulkaninfo.exe
+        File /oname=${APILOWER}info.exe ..\build\demos\Release\${APILOWER}info.exe
+        File /oname=${APILOWER}info32.exe ..\build32\demos\Release\${APILOWER}info.exe
         StrCpy $1 40
         Call CheckForError
 
@@ -494,20 +462,20 @@ Section
         # 32-bit DLLs/EXEs destined for SysWOW64
         ##########################################
         SetOutPath $WINDIR\System32
-        File /oname=vulkan-$FileVersion.dll ..\build32\loader\Release\vulkan-${VERSION_ABI_MAJOR}.dll
+        File /oname=${APILOWER}-$FileVersion.dll ..\build32\loader\Release\${APILOWER}-${VERSION_ABI_MAJOR}.dll
         StrCpy $1 50
         Call CheckForError
 
         # vulkaninfo.exe
-        File /oname=vulkaninfo-$FileVersion.exe ..\build32\demos\Release\vulkaninfo.exe
+        File /oname=${APILOWER}info-$FileVersion.exe ..\build32\demos\Release\${APILOWER}info.exe
         SetOutPath "$INSTDIR"
-        File ..\build32\demos\Release\vulkaninfo.exe
+        File /oname=${APILOWER}info ..\build32\demos\Release\${APILOWER}info.exe
         StrCpy $1 55
         Call CheckForError
 
     ${Endif}
 
-    # Run the ConfigLayersAndVulkanDLL.ps1 script to copy the most recent version of
+    # Run the ConfigureRT program to copy the most recent version of
     # vulkan-<abimajor>-*.dll to vulkan-<abimajor>.dll, and to set up layer registry
     # entries to use layers from the corresponding SDK
     SetOutPath "$INSTDIR"
@@ -516,27 +484,27 @@ Section
         SetOutPath "$INSTDIR"
         Call DiagConfigLayersAndVulkanDLL
 
-        # The Powershell script failed, and we don't know why.
+        # The program failed, and we don't know why.
         # Simply configure system to use our loader and vulkaninfo.
-        MessageBox MB_OK "Warning!$\n$\nPowershell script called by VulkanRT Installer failed with error $0. Is Powershell installed on your system?$\n$\nWill configure system with Vulkan $FileVersion." /SD IDOK
+        MessageBox MB_OK "Warning!$\n$\nConfigureRT program called by VulkanRT Installer failed with error $0. This may result in an incomplete installation.$\n$\nWill configure system with Vulkan $FileVersion." /SD IDOK
         ${If} ${RunningX64}
-            Delete  $WINDIR\SysWow64\vulkan-${VERSION_ABI_MAJOR}.dll
-            Delete  $WINDIR\SysWow64\vulkaninfo.exe
-            CopyFiles /SILENT $WINDIR\SysWow64\vulkan-$FileVersion.dll $WINDIR\SysWow64\vulkan-${VERSION_ABI_MAJOR}.dll
-            CopyFiles /SILENT $WINDIR\SysWow64\vulkaninfo-$FileVersion.exe $WINDIR\SysWow64\vulkaninfo.exe
+            Delete  $WINDIR\SysWow64\${APILOWER}-${VERSION_ABI_MAJOR}.dll
+            Delete  $WINDIR\SysWow64\${APILOWER}info.exe
+            CopyFiles /SILENT $WINDIR\SysWow64\${APILOWER}-$FileVersion.dll $WINDIR\SysWow64\${APILOWER}-${VERSION_ABI_MAJOR}.dll
+            CopyFiles /SILENT $WINDIR\SysWow64\${APILOWER}info-$FileVersion.exe $WINDIR\SysWow64\${APILOWER}info.exe
         ${Endif}
-        Delete  $WINDIR\System32\vulkan-${VERSION_ABI_MAJOR}.dll
-        Delete  $WINDIR\System32\vulkaninfo.exe
-        CopyFiles /SILENT $WINDIR\System32\vulkan-$FileVersion.dll $WINDIR\System32\vulkan-${VERSION_ABI_MAJOR}.dll
-        CopyFiles /SILENT $WINDIR\System32\vulkaninfo-$FileVersion.exe $WINDIR\System32\vulkaninfo.exe
+        Delete  $WINDIR\System32\${APILOWER}-${VERSION_ABI_MAJOR}.dll
+        Delete  $WINDIR\System32\${APILOWER}info.exe
+        CopyFiles /SILENT $WINDIR\System32\${APILOWER}-$FileVersion.dll $WINDIR\System32\${APILOWER}-${VERSION_ABI_MAJOR}.dll
+        CopyFiles /SILENT $WINDIR\System32\${APILOWER}info-$FileVersion.exe $WINDIR\System32\${APILOWER}info.exe
         ClearErrors
     ${Endif}
     StrCpy $1 60
     Call CheckForError
 
-    # We are done using ConfigLayersAndVulkanDLL.ps1, delete it. It will be re-installed
+    # We are done using ConfigureRT.exe, delete it. It will be re-installed
     # by the uninstaller when it needs to be run again during uninstall.
-    Delete ConfigLayersAndVulkanDLL.ps1
+    Delete ConfigureRT.exe
 
     # Finish logging and move log file to TEMP dir
     LogSet off
@@ -547,7 +515,6 @@ SectionEnd
 # Uninstaller section start
 !ifdef UNINSTALLER
 Section "uninstall"
-
     # Turn on logging
     SetOutPath "$TEMP\VulkanRT"
     StrCpy $INSTDIR "$TEMP\VulkanRT"
@@ -609,29 +576,29 @@ Section "uninstall"
     Call un.CheckForError
 
 
-    # Install the ConfigLayersAndVulkanDLL.ps1 so we can run it.
+    # Install ConfigureRT.exe so we can run it.
     # It will be deleted later when we remove the install directory.
-    File ConfigLayersAndVulkanDLL.ps1
+    File Release\ConfigureRT.exe
 
     # If running on a 64-bit OS machine
     ${If} ${RunningX64}
 
         # Delete vulkaninfo.exe in C:\Windows\System32 and C:\Windows\SysWOW64
-        Delete /REBOOTOK $WINDIR\SysWow64\vulkaninfo.exe
-        Delete /REBOOTOK $WINDIR\System32\vulkaninfo.exe
+        Delete /REBOOTOK $WINDIR\SysWow64\${APILOWER}info.exe
+        Delete /REBOOTOK $WINDIR\System32\${APILOWER}info.exe
 
         # Delete vulkan-<majorabi>.dll in C:\Windows\System32 and C:\Windows\SysWOW64
-        Delete /REBOOTOK $WINDIR\SysWow64\vulkan-${VERSION_ABI_MAJOR}.dll
-        Delete /REBOOTOK $WINDIR\System32\vulkan-${VERSION_ABI_MAJOR}.dll
+        Delete /REBOOTOK $WINDIR\SysWow64\${APILOWER}-${VERSION_ABI_MAJOR}.dll
+        Delete /REBOOTOK $WINDIR\System32\${APILOWER}-${VERSION_ABI_MAJOR}.dll
 
     # Else, running on a 32-bit OS machine
     ${Else}
 
         # Delete vulkaninfo.exe in C:\Windows\System32
-        Delete /REBOOTOK $WINDIR\System32\vulkaninfo.exe
+        Delete /REBOOTOK $WINDIR\System32\${APILOWER}info.exe
 
         # Delete vulkan-<majorabi>.dll in C:\Windows\System32
-        Delete /REBOOTOK $WINDIR\System32\vulkan-${VERSION_ABI_MAJOR}.dll
+        Delete /REBOOTOK $WINDIR\System32\${APILOWER}-${VERSION_ABI_MAJOR}.dll
 
     ${EndIf}
     StrCpy $1 80
@@ -642,21 +609,21 @@ Section "uninstall"
 
         ${If} ${RunningX64}
             # Delete vulkaninfo.exe in C:\Windows\System32 and C:\Windows\SysWOW64
-            Delete /REBOOTOK "$WINDIR\SysWow64\vulkaninfo-$FileVersion.exe"
-            Delete /REBOOTOK "$WINDIR\System32\vulkaninfo-$FileVersion.exe"
+            Delete /REBOOTOK "$WINDIR\SysWow64\${APILOWER}info-$FileVersion.exe"
+            Delete /REBOOTOK "$WINDIR\System32\${APILOWER}info-$FileVersion.exe"
             # Delete vulkan-<majorabi>-<major>-<minor>-<patch>-<buildno>.dll from sys dirs
-            Delete /REBOOTOK $WINDIR\SysWow64\vulkan-$FileVersion.dll
-            Delete /REBOOTOK $WINDIR\System32\vulkan-$FileVersion.dll
+            Delete /REBOOTOK $WINDIR\SysWow64\${APILOWER}-$FileVersion.dll
+            Delete /REBOOTOK $WINDIR\System32\${APILOWER}-$FileVersion.dll
         ${Else}
             # Delete vulkaninfo.exe in C:\Windows\System32
-            Delete /REBOOTOK "$WINDIR\System32\vulkaninfo-$FileVersion.exe"
+            Delete /REBOOTOK "$WINDIR\System32\${APILOWER}info-$FileVersion.exe"
             # Delete vulkan-<majorabi>-<major>-<minor>-<patch>-<buildno>.dll from sys dir
-            Delete /REBOOTOK $WINDIR\System32\vulkan-$FileVersion.dll
+            Delete /REBOOTOK $WINDIR\System32\${APILOWER}-$FileVersion.dll
         ${EndIf}
 
     ${Endif}
 
-    # Run the ConfigLayersAndVulkanDLL.ps1 script to copy the most recent version of
+    # Run the ConfigureRT.exe program to copy the most recent version of
     # vulkan-<abimajor>-*.dll to vulkan-<abimajor>.dll, and to set up layer registry
     # entries to use layers from the corresponding SDK
     SetOutPath "$IDir"
@@ -664,18 +631,21 @@ Section "uninstall"
     ${If} $0 != 0
         SetOutPath "$IDir"
         Call un.DiagConfigLayersAndVulkanDLL
-        MessageBox MB_OK "Warning!$\n$\nPowershell script called by VulkanRT Uninstaller failed with error $0. Is Powershell installed on your system?$\n$\nVulkan $FileVersion has been uninstalled from your system." /SD IDOK
+        MessageBox MB_OK "Warning!$\n$\nConfigureRT program called by ${APILOWER} Runtime Installer failed with error $0. This may result in an incomplete uninstall.$\n$\nVulkan $FileVersion has been uninstalled from your system." /SD IDOK
         ${If} ${RunningX64}
-            Delete  $WINDIR\SysWow64\vulkan-${VERSION_ABI_MAJOR}.dll
-            Delete  $WINDIR\SysWow64\vulkaninfo.exe
+            Delete  $WINDIR\SysWow64\${APILOWER}-${VERSION_ABI_MAJOR}.dll
+            Delete  $WINDIR\SysWow64\${APILOWER}info.exe
         ${Endif}
-        Delete  $WINDIR\System32\vulkan-${VERSION_ABI_MAJOR}.dll
-        Delete  $WINDIR\System32\vulkaninfo.exe
+        Delete  $WINDIR\System32\${APILOWER}-${VERSION_ABI_MAJOR}.dll
+        Delete  $WINDIR\System32\${APILOWER}info.exe
         ClearErrors
     ${Else}
         StrCpy $1 85
     ${Endif}
     Call un.CheckForError
+    
+    # Remove ConfigureRT regardless of the ref count
+    Delete /REBOOTOK "$IDir\ConfigureRT.exe"
 
     # If Ref Count is zero, remove install dir
     ${If} $IC <= 0
@@ -685,12 +655,11 @@ Section "uninstall"
         Delete /REBOOTOK "$IDir\LICENSE.txt"
         Delete /REBOOTOK "$IDir\Uninstall${PRODUCTNAME}.exe"
         Delete /REBOOTOK "$IDir\V.ico"
-        Delete /REBOOTOK "$IDir\ConfigLayersAndVulkanDLL.ps1"
-        Delete /REBOOTOK "$IDir\vulkaninfo.exe"
+        Delete /REBOOTOK "$IDir\${APILOWER}info.exe"
 
         # If running on a 64-bit OS machine
         ${If} ${RunningX64}
-            Delete /REBOOTOK "$IDir\vulkaninfo32.exe"
+            Delete /REBOOTOK "$IDir\${APILOWER}info32.exe"
         ${EndIf}
 
         StrCpy $1 90

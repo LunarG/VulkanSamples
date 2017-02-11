@@ -26,12 +26,12 @@
 #include "Meshes.h"
 
 class Animation {
-public:
+   public:
     Animation(unsigned rng_seed, float scale);
 
     glm::mat4 transformation(float t);
 
-private:
+   private:
     struct Data {
         glm::vec3 axis;
         float speed;
@@ -50,12 +50,12 @@ private:
 class Curve;
 
 class Path {
-public:
+   public:
     Path(unsigned rng_seed);
 
     glm::vec3 position(float t);
 
-private:
+   private:
     struct Subpath {
         glm::vec3 origin;
         float start;
@@ -75,7 +75,7 @@ private:
 };
 
 class Simulation {
-public:
+   public:
     Simulation(int object_count);
 
     struct Object {
@@ -98,9 +98,9 @@ public:
     void set_frame_data_size(uint32_t size);
     void update(float time, int begin, int end);
 
-private:
+   private:
     std::random_device random_dev_;
     std::vector<Object> objects_;
 };
 
-#endif // SIMULATION_H
+#endif  // SIMULATION_H

@@ -12,130 +12,51 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import org.apache.tools.ant.taskdefs.condition.Os
-
-apply plugin: 'com.android.model.application'
+apply plugin: 'com.android.application'
 
 Properties properties = new Properties()
 properties.load(project.rootProject.file('local.properties').newDataInputStream())
 def ndkDir = properties.getProperty('ndk.dir')
-def shadercLibPath = file(ndkDir).absolutePath + "/sources/third_party/shaderc"
-def vulkanWrapperPath = file(project.rootProject.projectDir).absolutePath + "/vulkan_wrapper"
 
-def stlType = "c++_shared"
+def stlType = 'gnustl_static'
 
-def ndkbuild = "ndk-build"
-if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-    ndkbuild = "ndk-build.cmd"
-}
+android {
+    compileSdkVersion  24
+    buildToolsVersion '23.0.2'
 
-model {
-    repositories {
-        libs(PrebuiltLibraries) {
-            shaderc {
-                headers.srcDir "${shadercLibPath}/include"
-                binaries.withType(StaticLibraryBinary) {
-                    staticLibraryFile = file("${shadercLibPath}/libs/${stlType}/${targetPlatform.getName()}/libshaderc.a")
-                }
+    defaultConfig {
+        applicationId 'com.google.vulkan.samples.@PACKAGE_NAME@'
+        minSdkVersion    22
+        targetSdkVersion 24
+        versionCode  1
+        versionName '0.0.1'
+        ndk {
+            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+        }
+        externalNativeBuild {
+            cmake {
+                arguments '-DANDROID_PLATFORM=android-24', '-DANDROID_TOOLCHAIN=clang',
+                          "-DANDROID_STL=${stlType}", '-DSAMPLE_NAME=' + project.getName()
             }
         }
     }
-
-    android {
-        compileSdkVersion = "android-N"
-        buildToolsVersion = "23.0.2"
-
-        defaultConfig.with {
-            applicationId = "@PACKAGE_NAME@"
-            minSdkVersion.apiLevel = 22
-            targetSdkVersion.apiLevel = 24
-            versionCode = 1
-            versionName = "0.0.1"
-        }
-
-        compileOptions.with {
-            sourceCompatibility=JavaVersion.VERSION_1_7
-            targetCompatibility=JavaVersion.VERSION_1_7
+    externalNativeBuild {
+        cmake {
+            path '../CMakeLists.txt'
         }
     }
-
-    android.ndk {
-        moduleName = "vulkan_samples"
-        cppFlags.add("-Werror")
-        cppFlags.add("-std=c++11")
-        toolchain = "clang"
-        stl = stlType
-        ldLibs.addAll(["log", "android"])
-        cppFlags.add("-I${file("${ndkDir}/sources/android/native_app_glue")}".toString())
-        cppFlags.add("-I${file("../../data")}".toString())
-        cppFlags.add("-I${file("../../utils")}".toString())
-        cppFlags.add("-I${file("../../utils/glm")}".toString())
-        cppFlags.add("-I${file(vulkanWrapperPath)}".toString())
-        cppFlags.add("-I${file("${shadercLibPath}/third_party/spirv-tools/include")}".toString())
-        cppFlags.add("-I${file("${shadercLibPath}/third_party/spirv-tools/include/spirv-tools")}".toString())
-        cppFlags.add("-D VK_USE_PLATFORM_ANDROID_KHR")
-        @OTHER_FLAGS@
-    }
-
-    android.sources {
-        main {
-            jni {
-                dependencies {
-                    project ":nativeactivity" linkage "static"
-                    @SHADERC_LINKAGE@
-                 }
-                source {
-                    srcDir 'src/main/jni'
-                    srcDir '../../@SAMPLE_NAME@'
-                    srcDir '../../ext/'
-                    srcDir '../../utils'
-                    srcDir vulkanWrapperPath
-                }
-            }
-            jniLibs {
-                dependencies {
-                    @VALIDATIONLAYER_LINKAGE@
-                }
-            }
-            assets {
-                source {
-                    @ASSET_DIR@
-                }
-            }
-        }
-    }
-
-    android.buildTypes {
+    @OTHER_FLAGS@
+    buildTypes {
         release {
-            ndk.with {
-                debuggable = true
-            }
-            minifyEnabled = false
-            proguardFiles.add(file('proguard-rules.pro'))
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'),
+                    'proguard-rules.pro'
         }
     }
-
-    android.productFlavors {
-        // for detailed abiFilter descriptions, refer to "Supported ABIs" @
-        // https://developer.android.com/ndk/guides/abis.html#sa
-        create("@FLAVOR@") {
-            @ABI_FILTER@
-        }
-    }
-}
-
-task build_shaderc(type:Exec) {
-    workingDir "${shadercLibPath}"
-    commandLine "${ndkDir}/${ndkbuild}", "NDK_PROJECT_PATH=.", "APP_BUILD_SCRIPT=Android.mk", "APP_STL:=${stlType}", "APP_ABI=@FLAVOR@", "libshaderc_combined", "-j16"
-}
-
-tasks.whenTaskAdded { task ->
-    if (task.name.contains('compile')) {
-        task.dependsOn build_shaderc
-    }
+    @ASSET_DIR@
+    @VALIDATIONLAYER_PACKING@
 }
 
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
-    compile project(':nativeactivity')
 }

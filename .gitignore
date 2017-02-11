@@ -3,7 +3,7 @@ CMakeLists.txt.user
 CMakeFiles/
 cmake_install.cmake
 Makefile
-__pycache__
+scripts/__pycache__
 VKConfig.h
 *.so
 *.so.*
@@ -11,8 +11,6 @@ _out64
 out32/*
 out64/*
 demos/Debug/*
-demos/tri.dir/Debug/*
-demos/tri/Debug/*
 demos/Win32/Debug/*
 demos/xcb_nvidia.dir/*
 demos/smoke/HelpersDispatchTable.cpp
@@ -31,8 +29,10 @@ build
 build32
 dbuild
 external
+build-android/external
 *.config
 *.creator
 *.creator.user
 *.files
 *.includes
+*.autosave

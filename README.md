@@ -7,11 +7,18 @@
     samples with a long description set:
     `$ src/get-descripts.sh`
 
+## CI Build Status
+| Platform | Build Status |
+|:--------:|:------------:|
+| Linux/Android | [![Build Status](https://travis-ci.org/LunarG/VulkanSamples.svg?branch=master)](https://travis-ci.org/LunarG/VulkanSamples) |
+| Windows | [![Build status](https://ci.appveyor.com/api/projects/status/c5l2y9nk7wve9xvu/branch/master?svg=true)](https://ci.appveyor.com/project/karl-lunarg/vulkansamples/branch/master) |
+
 ## Structure
   - The Vulkan Samples repo is a set of source and data files in a specific
     directory hierarchy:
       - API-Samples - Samples that demonstrate the use of various aspects of the
         Vulkan API
+      - Vulkan Tutorial - Steps you through the process of creating a simple Vulkan application, learning the basics along the way. This [Vulkan Tutorial link](https://vulkan.lunarg.com/doc/sdk/latest/windows/tutorial/html/index.html) allows you to view the Vulkan Tutorial on LunarXchange as well. 
       - Sample-Programs - Samples that are more functional and go deeper than simple API use.
       - Layer-Samples - Samples that are implemented as layers.
       - Android-Only - Samples that are only meant to be run on Android
@@ -54,7 +61,7 @@ make
 ## Android:
 
 ```
-$ cmake -DANDROID=ON -DANDROID_ABI=[armeabi-v7a|arm64-v8a| x86|x86_64|all(default)]
+$ cmake -DANDROID=ON
 ```
 And import VulkanSamples/API-Samples/android/build.gradle in Android Studio.
 

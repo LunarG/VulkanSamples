@@ -27,9 +27,5 @@ if ($lastexitcode -ne 0) {
 }
 
 & $dPath\vk_layer_validation_tests --gtest_filter=-$TestExceptions
-if ($lastexitcode -ne 0) {
-   exit 1
-}
 
-.\vkvalidatelayerdoc.ps1
 exit $lastexitcode

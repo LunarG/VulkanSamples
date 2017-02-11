@@ -8,6 +8,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <link rel="icon" href="vulkan_lunarg_icon.png">
+    <style media="screen" type="text/css">
+        html {
+            background: url(samples_images/bg-planetfall.jpg) no-repeat center center fixed;
+            -webkit-background-size: cover;
+            -moz-background-size: cover;
+            -o-background-size: cover;
+            background-size: cover;
+            background-color: black;
+        }
+
+        #page-wrap { width: 400px; margin: 50px auto; padding: 20px; background: white; -moz-box-shadow: 0 0 20px black; -webkit-box-shadow: 0 0 20px black; box-shadow: 0 0 20px black; }
+    </style>
 
     <script src="samples_images/sorttable.js"></script>
     <style>
@@ -30,11 +42,6 @@
           padding-bottom: 5px;
           padding-right: 10%;
           padding-left: 10%;
-      }
-      body
-      {
-          background: linear-gradient( rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5) ), url("samples_images/bg-planetfall.jpg");
-          background-position: center top;
       }
     </style>
   </head>
@@ -103,7 +110,7 @@
         </tr>
         <tr>
           <td style="font-size:18px;text-align:center;">1</td>
-          <td style="font-size:18px;text-align:left;">instance</td>
+          <td style="font-size:18px;text-align:left;">01-init_instance</td>
           <td style="font-size:18px;text-align:left;">Create and destroy a Vulkan instance</td>
           <td style="font-size:16px;text-align:center;">
               vkCreateInstance,<br>
@@ -112,7 +119,7 @@
         </tr>
         <tr>
           <td style="font-size:18px;text-align:center;">2</td>
-          <td style="font-size:18px;text-align:left;">enumerate</td>
+          <td style="font-size:18px;text-align:left;">02-enumerate_devices</td>
           <td style="font-size:18px;text-align:left;">Enumerate physical devices</td>
           <td style="font-size:16px;text-align:center;">
               vkEnumeratePhysicalDevices
@@ -120,7 +127,7 @@
         </tr>
         <tr>
           <td style="font-size:18px;text-align:center;">3</td>
-          <td style="font-size:18px;text-align:left;">device</td>
+          <td style="font-size:18px;text-align:left;">03-init_device</td>
           <td style="font-size:18px;text-align:left;">Create and destroy a Vulkan device</td>
           <td style="font-size:16px;text-align:center;">
               vkCreateDevice,<br>
@@ -129,7 +136,7 @@
         </tr>
         <tr>
           <td style="font-size:18px;text-align:center;">4</td>
-          <td style="font-size:18px;text-align:left;">initcommandbuffer</td>
+          <td style="font-size:18px;text-align:left;">04-init_command_buffer</td>
           <td style="font-size:18px;text-align:left;">Create a Vulkan Command buffer</td>
           <td style="font-size:16px;text-align:center;">
               vkCreateCommandPool,<br>
@@ -140,8 +147,8 @@
         </tr>
         <tr>
           <td style="font-size:18px;text-align:center;">5</td>
-          <td style="font-size:18px;text-align:left;">initswapchain</td>
-          <td style="font-size:18px;text-align:left;">Init a Vulkan Swap chain</td>
+          <td style="font-size:18px;text-align:left;">05-init_swapchain</td>
+          <td style="font-size:18px;text-align:left;">Init a Vulkan Swapchain</td>
           <td style="font-size:16px;text-align:center;">
               PFN_vkCreateSwapchainKHR,<br>
               PFN_vkDestroySwapchainKHR,<br>
@@ -154,7 +161,7 @@
         </tr>
         <tr>
           <td style="font-size:18px;text-align:center;">6</td>
-          <td style="font-size:18px;text-align:left;">depthbuffer</td>
+          <td style="font-size:18px;text-align:left;">06-init_depth_buffer</td>
           <td style="font-size:18px;text-align:left;">Create a Vulkan Depth buffer</td>
           <td style="font-size:16px;text-align:center;">
               vkAllocateMemory,<br>
@@ -165,7 +172,7 @@
         </tr>
         <tr>
           <td style="font-size:18px;text-align:center;">7</td>
-          <td style="font-size:18px;text-align:left;">uniformbuffer</td>
+          <td style="font-size:18px;text-align:left;">07-init_uniform_buffer</td>
           <td style="font-size:18px;text-align:left;">Create a Vulkan Uniform buffer</td>
           <td style="font-size:16px;text-align:center;">
               vkCreateBuffer,<br>
@@ -179,7 +186,7 @@
         </tr>
         <tr>
           <td style="font-size:18px;text-align:center;">8</td>
-          <td style="font-size:18px;text-align:left;">descriptor_pipeline_layouts</td>
+          <td style="font-size:18px;text-align:left;">08-init_pipeline_layout</td>
           <td style="font-size:18px;text-align:left;">Create Descriptor Layout and Pipeline Layout</td>
           <td style="font-size:16px;text-align:center;">
               vkCreateDescriptorSetLayout,<br>
@@ -190,46 +197,7 @@
         </tr>
         <tr>
           <td style="font-size:18px;text-align:center;">9</td>
-          <td style="font-size:18px;text-align:left;">initrenderpass</td>
-          <td style="font-size:18px;text-align:left;">Initialize a Vulkan Render pass</td>
-          <td style="font-size:16px;text-align:center;">
-              vkCreateRenderPass,<br>
-              vkDestroyRenderPass
-          </td>
-        </tr>
-        <tr>
-          <td style="font-size:18px;text-align:center;">10</td>
-          <td style="font-size:18px;text-align:left;">initshaders</td>
-          <td style="font-size:18px;text-align:left;">
-              Initialize Vertex and Fragment Shaders. <br>
-              <i><b>NOTE:</b> This example converts shaders from GLSL into SPIR-V using GLSLang</i></td>
-          <td style="font-size:16px;text-align:center;">
-              vkCreateShaderModule,<br>
-              vkDestroyShaderModule
-          </td>
-        </tr>
-
-
-        <tr>
-          <td style="font-size:18px;text-align:center;">11</td>
-          <td style="font-size:18px;text-align:left;">initframebuffers</td>
-          <td style="font-size:18px;text-align:left;">Initialize the Vulkan Framebuffer</td>
-          <td style="font-size:16px;text-align:center;">
-              vkCreateFramebuffer,<br>
-              vkDestroyFramebuffer
-          </td>
-        </tr>
-        <tr>
-          <td style="font-size:18px;text-align:center;">12</td>
-          <td style="font-size:18px;text-align:left;">vertexbuffer</td>
-          <td style="font-size:18px;text-align:left;">Create a Vulkan Vertex buffer</td>
-          <td style="font-size:16px;text-align:center;">
-              vkCmdBindVertexBuffers
-          </td>
-        </tr>
-        <tr>
-          <td style="font-size:18px;text-align:center;">13</td>
-          <td style="font-size:18px;text-align:left;">allocdescriptorsets</td>
+          <td style="font-size:18px;text-align:left;">09-init_descriptor_set</td>
           <td style="font-size:18px;text-align:left;">Allocate, setup, and destroy a Vulkan Descriptor Set</td>
           <td style="font-size:16px;text-align:center;">
               vkCreateDescriptorPool,<br>
@@ -239,9 +207,46 @@
           </td>
         </tr>
         <tr>
+          <td style="font-size:18px;text-align:center;">10</td>
+          <td style="font-size:18px;text-align:left;">10-init_render_pass</td>
+          <td style="font-size:18px;text-align:left;">Initialize a Vulkan Render pass</td>
+          <td style="font-size:16px;text-align:center;">
+              vkCreateRenderPass,<br>
+              vkDestroyRenderPass
+          </td>
+        </tr>
+        <tr>
+          <td style="font-size:18px;text-align:center;">11</td>
+          <td style="font-size:18px;text-align:left;">11-init_shaders</td>
+          <td style="font-size:18px;text-align:left;">
+              Initialize Vertex and Fragment Shaders. <br>
+              <i><b>NOTE:</b> This example converts shaders from GLSL into SPIR-V using GLSLang</i></td>
+          <td style="font-size:16px;text-align:center;">
+              vkCreateShaderModule,<br>
+              vkDestroyShaderModule
+          </td>
+        </tr>
+        <tr>
+          <td style="font-size:18px;text-align:center;">12</td>
+          <td style="font-size:18px;text-align:left;">12-init_frame_buffers</td>
+          <td style="font-size:18px;text-align:left;">Initialize the Vulkan Framebuffer</td>
+          <td style="font-size:16px;text-align:center;">
+              vkCreateFramebuffer,<br>
+              vkDestroyFramebuffer
+          </td>
+        </tr>
+        <tr>
+          <td style="font-size:18px;text-align:center;">13</td>
+          <td style="font-size:18px;text-align:left;">13-init_vertex_buffer</td>
+          <td style="font-size:18px;text-align:left;">Create a Vulkan Vertex buffer</td>
+          <td style="font-size:16px;text-align:center;">
+              vkCmdBindVertexBuffers
+          </td>
+        </tr>
+        <tr>
           <td style="font-size:18px;text-align:center;">14</td>
-          <td style="font-size:18px;text-align:left;">initpipeline</td>
-          <td style="font-size:18px;text-align:left;">Create a Vulkan Graphics Pipelinee</td>
+          <td style="font-size:18px;text-align:left;">14-init_pipeline</td>
+          <td style="font-size:18px;text-align:left;">Create a Vulkan Graphics Pipeline</td>
           <td style="font-size:16px;text-align:center;">
               vkCreatePipelineCache,<br>
               vkDestroyPipelineCache,<br>
@@ -251,7 +256,7 @@
         </tr>
         <tr>
           <td style="font-size:18px;text-align:center;">15</td>
-          <td style="font-size:18px;text-align:left;">drawcube</td>
+          <td style="font-size:18px;text-align:left;">15-draw_cube</td>
           <td style="font-size:18px;text-align:left;">Draw a 3D cube using Vulkan</td>
           <td style="font-size:16px;text-align:center;">
               PFN_vkQueuePresentKHR,<br>
@@ -306,7 +311,7 @@
           <th style="width:10%;font-size:20px;text-align:center;">Group</th>
         </tr>
         <tr>
-          <td style="font-size:16px;text-align:left;">copyblitimage</td>
+          <td style="font-size:16px;text-align:left;">copy_blit_image</td>
           <td style="font-size:16px;text-align:center;">
                 <a href="samples_images/CopyBlitImage.png" TARGET="_blank">
                     <img class="center"  width="60" height="60" src="samples_images/CopyBlitImage.png">
@@ -318,7 +323,7 @@
           <td style="font-size:16px;text-align:center;">Vulkan-Extended</td>
         </tr>
         <tr>
-          <td style="font-size:16px;text-align:left;">dbgcreatemsgcallback</td>
+          <td style="font-size:16px;text-align:left;">dbg_create_msg_callback</td>
           <td style="font-size:16px;text-align:center;"></td>
           <td style="font-size:16px;text-align:center;">Create and Destroy a Debug message callback for Vulkan.</td>
           <td style="font-size:16px;text-align:center;">PFN_vkDbgCreateMsgCallback<br>PFN_vkDbgDestroyMsgCallback</td>
@@ -326,7 +331,7 @@
           <td style="font-size:16px;text-align:center;">Vulkan-Debug-01</td>
         </tr>
         <tr>
-          <td style="font-size:16px;text-align:left;">drawsubpasses</td>
+          <td style="font-size:16px;text-align:left;">draw_subpasses</td>
           <td style="font-size:16px;text-align:center;">
                 <a href="samples_images/drawsubpasses.png" TARGET="_blank">
                     <img class="center" width="60" height="60" src="samples_images/drawsubpasses.png">
@@ -338,7 +343,7 @@
           <td style="font-size:16px;text-align:center;">Vulkan-Extended</td>
         </tr>
         <tr>
-          <td style="font-size:16px;text-align:left;">drawtexturedcube</td>
+          <td style="font-size:16px;text-align:left;">draw_textured_cube</td>
           <td style="font-size:16px;text-align:center;">
                 <a href="samples_images/drawtexturedcube.png" TARGET="_blank">
                     <img class="center"  width="60" height="60" src="samples_images/drawtexturedcube.png">
@@ -350,7 +355,7 @@
           <td style="font-size:16px;text-align:center;">Textured-Cube-2</td>
         </tr>
         <tr>
-          <td style="font-size:16px;text-align:left;">dynamicuniform</td>
+          <td style="font-size:16px;text-align:left;">dynamic_uniform</td>
           <td style="font-size:16px;text-align:center;">
                 <a href="samples_images/dynamicuniform.png" TARGET="_blank">
                     <img class="center" width="60" height="60" src="samples_images/dynamicuniform.png">
@@ -370,12 +375,20 @@
           <td style="font-size:16px;text-align:center;">Vulkan-Debug-02</td>
         </tr>
         <tr>
-          <td style="font-size:16px;text-align:left;">enumerate-adv</td>
+          <td style="font-size:16px;text-align:left;">enumerate_adv</td>
           <td style="font-size:16px;text-align:center;"></td>
           <td style="font-size:16px;text-align:center;">Explore the Physical Device properties.</td>
           <td style="font-size:16px;text-align:center;">Physical Device Info</td>
           <td style="font-size:16px;text-align:center;">1.0</td>
           <td style="font-size:16px;text-align:center;">Hello-Vulkan-02B (optional)</td>
+        </tr>
+	<tr>
+          <td style="font-size:16px;text-align:left;">events</td>
+          <td style="font-size:16px;text-align:center;"></td>
+          <td style="font-size:16px;text-align:center;">Wait for and set events on the GPU and CPU</td>
+          <td style="font-size:16px;text-align:center;">vkCmdWaitEvents<br>vkSetEvent<br>vkCmdSetEvent<br>vkGetEventStatus</td>
+          <td style="font-size:16px;text-align:center;">1.0</td>
+          <td style="font-size:16px;text-align:center;">Vulkan-Extended</td>
         </tr>
         <tr>
           <td style="font-size:16px;text-align:left;">immutable_sampler</td>
@@ -390,12 +403,24 @@
           <td style="font-size:16px;text-align:center;">Vulkan-Extended</td>
         </tr>
         <tr>
-          <td style="font-size:16px;text-align:left;">inittexture</td>
+          <td style="font-size:16px;text-align:left;">init_texture</td>
           <td style="font-size:16px;text-align:center;"></td>
           <td style="font-size:16px;text-align:center;">Setup a texture and sampler.</td>
           <td style="font-size:16px;text-align:center;">vkGetImageSubresourceLayout<br>vkCmdCopyImage<br>vkCreateImageView<br>vkDestroyImageView<br>vkCreateSampler<br>vkDestroySampler</td>
           <td style="font-size:16px;text-align:center;">1.0</td>
           <td style="font-size:16px;text-align:center;">Textured-Cube-1</td>
+        </tr>
+        <tr>
+          <td style="font-size:16px;text-align:left;">input_attachment</td>
+          <td style="font-size:16px;text-align:center;">
+                <a href="samples_images/secondarycmd.png" TARGET="_blank">
+                    <img class="center" width="60" height="60" src="samples_images/inputattachment.png">
+                </a>
+          </td>
+          <td style="font-size:16px;text-align:center;">Use an input attachment to color a triangle</td>
+          <td style="font-size:16px;text-align:center;">subpassLoad<br>VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT<br>VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT</td>
+          <td style="font-size:16px;text-align:center;">1.0</td>
+          <td style="font-size:16px;text-align:center;">Vulkan-Extended</td>
         </tr>
         <tr>
           <td style="font-size:16px;text-align:left;">instance_extension_properties</td>
@@ -422,13 +447,13 @@
           <td style="font-size:16px;text-align:center;">Hello-Vulkan-01C (optional)</td>
         </tr>
         <tr>
-          <td style="font-size:16px;text-align:left;">membarriers</td>
+          <td style="font-size:16px;text-align:left;">memory_barriers</td>
           <td style="font-size:16px;text-align:center;">
                 <a href="samples_images/memory_barriers.png" TARGET="_blank">
                     <img class="center" width="60" height="60" src="samples_images/memory_barriers.png">
                 </a>
           </td>
-          <td style="font-size:16px;text-align:center;">Use memory barrieres to clear a texture between draws (read, write, read)</td>
+          <td style="font-size:16px;text-align:center;">Use memory barriers to clear a texture between draws (read, write, read)</td>
           <td style="font-size:12x;text-align:center;">VkCmdPipelineBarrier</td>
           <td style="font-size:16px;text-align:center;">1.0</td>
           <td style="font-size:16px;text-align:center;">Vulkan-Extended</td>
@@ -446,7 +471,7 @@
           <td style="font-size:16px;text-align:center;">Vulkan-Extended</td>
         </tr>
         <tr>
-          <td style="font-size:16px;text-align:left;">multithreadcmdbuf</td>
+          <td style="font-size:16px;text-align:left;">multithreaded_command_buffer</td>
           <td style="font-size:16px;text-align:center;">
                 <a href="samples_images/multithreadedcmdbuf.png" TARGET="_blank">
                     <img class="center"  width="60" height="60" src="samples_images/multithreadedcmdbuf.png">
@@ -458,7 +483,7 @@
           <td style="font-size:16px;text-align:center;">Vulkan-Extended</td>
         </tr>
         <tr>
-          <td style="font-size:16px;text-align:left;">occlusionquery</td>
+          <td style="font-size:16px;text-align:left;">occlusion_query</td>
           <td style="font-size:16px;text-align:center;">
                 <a href="samples_images/occlusionquery.png" TARGET="_blank">
                     <img class="center" width="60" height="60" src="samples_images/occlusionquery.png">
@@ -494,7 +519,7 @@
           <td style="font-size:16px;text-align:center;">Vulkan-Extended</td>
         </tr>
         <tr>
-          <td style="font-size:16px;text-align:left;">secondarycmd</td>
+          <td style="font-size:16px;text-align:left;">secondary_command_buffer</td>
           <td style="font-size:16px;text-align:center;">
                 <a href="samples_images/secondarycmd.png" TARGET="_blank">
                     <img class="center" width="60" height="60" src="samples_images/secondarycmd.png">
@@ -554,7 +579,7 @@
           <td style="font-size:16px;text-align:center;">Vulkan-Extended</td>
         </tr>
         <tr>
-          <td style="font-size:16px;text-align:left;">texelbuffer</td>
+          <td style="font-size:16px;text-align:left;">texel_buffer</td>
           <td style="font-size:16px;text-align:center;">
                 <a href="samples_images/texelbuffer.png" TARGET="_blank">
                     <img class="center" width="60" height="60" src="samples_images/texelbuffer.png">
@@ -588,6 +613,28 @@
           <th style="width:20%;font-size:20px;text-align:center;">Contributor</th>
           <th style="width:35%;font-size:20px;text-align:center;">Description</th>
           <th style="width:10%;font-size:20px;text-align:center;">Vulkan Version</th>
+        </tr>
+        <tr>
+          <td style="font-size:18px;text-align:left;">cube</td>
+          <td style="font-size:18px;text-align:center;">
+                <a href="samples_images/cube.png" TARGET="_blank">
+                    <img class="center" width="60" height="60" src="samples_images/cube.png">
+                </a>
+          </td>
+          <td style="font-size:18px;text-align:center;">LunarG</td>
+          <td style="font-size:18px;text-align:center;">Spinning textured cube demo (C version).</td>
+          <td style="font-size:18px;text-align:center;">1.0</td>
+        </tr>
+        <tr>
+          <td style="font-size:18px;text-align:left;">cubepp</td>
+          <td style="font-size:18px;text-align:center;">
+                <a href="samples_images/cube.png" TARGET="_blank">
+                    <img class="center" width="60" height="60" src="samples_images/cube.png">
+                </a>
+          </td>
+          <td style="font-size:18px;text-align:center;">LunarG</td>
+          <td style="font-size:18px;text-align:center;">Spinning textured cube demo (C++11 version).</td>
+          <td style="font-size:18px;text-align:center;">1.0</td>
         </tr>
         <tr>
           <td style="font-size:18px;text-align:left;">Hologram</td>

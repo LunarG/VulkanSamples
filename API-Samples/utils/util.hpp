@@ -171,8 +171,10 @@ struct sample_info {
     std::vector<VkExtensionProperties> device_extension_properties;
     std::vector<VkPhysicalDevice> gpus;
     VkDevice device;
-    VkQueue queue;
+    VkQueue graphics_queue;
+    VkQueue present_queue;
     uint32_t graphics_queue_family_index;
+    uint32_t present_queue_family_index;
     VkPhysicalDeviceProperties gpu_props;
     std::vector<VkQueueFamilyProperties> queue_props;
     VkPhysicalDeviceMemoryProperties memory_properties;
@@ -242,7 +244,7 @@ struct sample_info {
     std::vector<VkDebugReportCallbackEXT> debug_report_callbacks;
 
     uint32_t current_buffer;
-    uint32_t queue_count;
+    uint32_t queue_family_count;
 
     VkViewport viewport;
     VkRect2D scissor;
@@ -256,7 +258,9 @@ bool memory_type_from_properties(struct sample_info &info, uint32_t typeBits,
 void set_image_layout(struct sample_info &demo, VkImage image,
                       VkImageAspectFlags aspectMask,
                       VkImageLayout old_image_layout,
-                      VkImageLayout new_image_layout);
+                      VkImageLayout new_image_layout,
+                      VkPipelineStageFlags src_stages,
+                      VkPipelineStageFlags dest_stages);
 
 bool read_ppm(char const *const filename, int &width, int &height,
               uint64_t rowPitch, unsigned char *dataPtr);

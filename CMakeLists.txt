@@ -5,63 +5,45 @@ cmake_minimum_required(VERSION 2.8.11)
 project (VULKAN_SAMPLES)
 # set (CMAKE_VERBOSE_MAKEFILE 1)
 
+# The API_NAME allows renaming builds to avoid conflicts with installed SDKs
 # The MAJOR number of the version we're building, used in naming
-# vulkan-<major>.dll (and other files).
+# <api-name>-<major>.dll (and other files).
+set(API_NAME "Vulkan" CACHE STRING "API name to use when building")
 set(MAJOR "1")
+string(TOLOWER ${API_NAME} API_LOWERCASE)
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(PythonInterp 3 REQUIRED)
 
-# Set CMAKE_SYSTEM_NAME to Android if we're building Android Studio project.
-if(ANDROID)
-    set (CMAKE_SYSTEM_NAME Android)
-endif()
-
-if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-    add_definitions(-DVK_USE_PLATFORM_WIN32_KHR -DWIN32_LEAN_AND_MEAN)
-    set(DisplayServer Win32)
-elseif(CMAKE_SYSTEM_NAME STREQUAL "Android")
-    add_definitions(-DVK_USE_PLATFORM_ANDROID_KHR)
-    set(DisplayServer Android)
-elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    #   TODO: Basic support is present for Xlib but is untested.
-    #         Mir support is stubbed in but unimplemented and untested.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    include(FindPkgConfig)
     option(BUILD_WSI_XCB_SUPPORT "Build XCB WSI support" ON)
     option(BUILD_WSI_XLIB_SUPPORT "Build Xlib WSI support" ON)
-    option(BUILD_WSI_WAYLAND_SUPPORT "Build Wayland WSI support" OFF)
-    option(BUILD_WSI_MIR_SUPPORT "Build Mir WSI support" OFF)
+    option(BUILD_WSI_WAYLAND_SUPPORT "Build Wayland WSI support" ON)
+    option(BUILD_WSI_MIR_SUPPORT "Build Mir WSI support" ON)
+    set(DEMOS_WSI_SELECTION "XCB" CACHE STRING "Select WSI target for demos")
 
     if (BUILD_WSI_XCB_SUPPORT)
-        add_definitions(-DVK_USE_PLATFORM_XCB_KHR)
-        set(DisplayServer Xcb)
+        find_package(XCB REQUIRED)
     endif()
 
     if (BUILD_WSI_XLIB_SUPPORT)
-        add_definitions(-DVK_USE_PLATFORM_XLIB_KHR)
-        set(DisplayServer Xlib)
+        find_package(X11 REQUIRED)
     endif()
 
     if (BUILD_WSI_WAYLAND_SUPPORT)
-        add_definitions(-DVK_USE_PLATFORM_WAYLAND_KHR)
-        set(DisplayServer Wayland)
+        find_package(Wayland REQUIRED)
     endif()
 
     if (BUILD_WSI_MIR_SUPPORT)
-        add_definitions(-DVK_USE_PLATFORM_MIR_KHR)
-        set(DisplayServer Mir)
+        find_package(Mir REQUIRED)
     endif()
-else()
-    message(FATAL_ERROR "Unsupported Platform!")
 endif()
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
+set(SCRIPTS_DIR "${CMAKE_SOURCE_DIR}/scripts")
 
 # Header file for CMake settings
 include_directories("${PROJECT_SOURCE_DIR}/include")
-
-if(NOT WIN32)
-    include(FindPkgConfig)
-endif()
-
-set (CMAKE_INSTALL_PREFIX "")
 
 if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
     set(COMMON_COMPILE_FLAGS "-Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers")
@@ -75,12 +57,15 @@ if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
 endif()
 
 if(WIN32)
+    # Treat warnings as errors
+    add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/WX>")
     # Disable RTTI
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR-")
+    add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/GR->")
+    # Warn about nested declarations
+    add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/w34456>")
 endif()
 
 if(NOT WIN32)
-    find_package(XCB REQUIRED)
     set (BUILDTGT_DIR build)
     set (BINDATA_DIR Bin)
     set (LIBSOURCE_DIR Lib)
@@ -111,6 +96,7 @@ option(BUILD_TESTS "Build tests" ON)
 option(BUILD_LAYERS "Build layers" ON)
 option(BUILD_DEMOS "Build demos" ON)
 option(BUILD_VKJSON "Build vkjson" ON)
+option(BUILD_UTILITIES "Build WSIWindow and Teapots" ON)
 option(CUSTOM_GLSLANG_BIN_ROOT "Use the user defined GLSLANG_BINARY_ROOT" OFF)
 option(CUSTOM_SPIRV_TOOLS_BIN_ROOT "Use the user defined SPIRV_TOOLS_BINARY_ROOT" OFF)
 
@@ -209,6 +195,9 @@ find_library(HLSL_LIB NAMES HLSL
 find_library(SPIRV_LIB NAMES SPIRV
              HINTS ${GLSLANG_SEARCH_PATH} )
 
+find_library(SPIRV_REMAPPER_LIB NAMES SPVRemapper
+             HINTS ${GLSLANG_SEARCH_PATH} )
+
 find_library(SPIRV_TOOLS_LIB NAMES SPIRV-Tools
              HINTS ${SPIRV_TOOLS_SEARCH_PATH} )
 
@@ -218,6 +207,7 @@ if (WIN32)
     add_library(OSDependent STATIC IMPORTED)
     add_library(HLSL        STATIC IMPORTED)
     add_library(SPIRV       STATIC IMPORTED)
+    add_library(SPVRemapper       STATIC IMPORTED)
     add_library(Loader      STATIC IMPORTED)
     add_library(SPIRV-Tools STATIC IMPORTED)
 
@@ -230,6 +220,8 @@ if (WIN32)
     find_library(HLSL_DLIB NAMES HLSLd
                  HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
     find_library(SPIRV_DLIB NAMES SPIRVd
+                 HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
+    find_library(SPIRV_REMAPPER_DLIB NAMES SPVRemapperd
                  HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
     find_library(SPIRV_TOOLS_DLIB NAMES SPIRV-Tools
                  HINTS ${SPIRV_TOOLS_DEBUG_SEARCH_PATH} )
@@ -249,28 +241,67 @@ if (WIN32)
     set_target_properties(SPIRV PROPERTIES
                          IMPORTED_LOCATION       "${SPIRV_LIB}"
                          IMPORTED_LOCATION_DEBUG "${SPIRV_DLIB}")
+    set_target_properties(SPVRemapper PROPERTIES
+                         IMPORTED_LOCATION       "${SPIRV_REMAPPER_LIB}"
+                         IMPORTED_LOCATION_DEBUG "${SPIRV_REMAPPER_DLIB}")
     set_target_properties(SPIRV-Tools PROPERTIES
                          IMPORTED_LOCATION       "${SPIRV_TOOLS_LIB}"
                          IMPORTED_LOCATION_DEBUG "${SPIRV_TOOLS_DLIB}")
 
-    set (GLSLANG_LIBRARIES glslang OGLCompiler OSDependent HLSL SPIRV)
+    set (GLSLANG_LIBRARIES glslang OGLCompiler OSDependent HLSL SPIRV SPVRemapper)
     set (SPIRV_TOOLS_LIBRARIES SPIRV-Tools)
 else ()
-    set (GLSLANG_LIBRARIES ${GLSLANG_LIB} ${OGLCompiler_LIB} ${OSDependent_LIB} ${HLSL_LIB} ${SPIRV_LIB})
+    set (GLSLANG_LIBRARIES ${GLSLANG_LIB} ${OGLCompiler_LIB} ${OSDependent_LIB} ${HLSL_LIB} ${SPIRV_LIB} ${SPIRV_REMAPPER_LIB})
     set (SPIRV_TOOLS_LIBRARIES ${SPIRV_TOOLS_LIB})
 endif()
 
 set (PYTHON_CMD ${PYTHON_EXECUTABLE})
 
+# Define macro used for building vkxml generated files
+macro(run_vk_xml_generate dependency output)
+    add_custom_command(OUTPUT ${output}
+    COMMAND ${PYTHON_CMD} ${SCRIPTS_DIR}/lvl_genvk.py -registry ${SCRIPTS_DIR}/vk.xml ${output}
+    DEPENDS ${SCRIPTS_DIR}/vk.xml ${SCRIPTS_DIR}/generator.py ${SCRIPTS_DIR}/${dependency} ${SCRIPTS_DIR}/lvl_genvk.py ${SCRIPTS_DIR}/reg.py
+    )
+endmacro()
+
+# Custom target for generated vulkan helper file dependencies
+add_custom_target(generate_helper_files DEPENDS
+    vk_dispatch_table_helper.h
+    vk_enum_string_helper.h
+    vk_struct_size_helper.h
+    vk_struct_size_helper.c
+    vk_safe_struct.h
+    vk_safe_struct.cpp
+    )
+
+# Rules to build generated helper files
+run_vk_xml_generate(helper_file_generator.py vk_safe_struct.h)
+run_vk_xml_generate(helper_file_generator.py vk_safe_struct.cpp)
+run_vk_xml_generate(helper_file_generator.py vk_struct_size_helper.h)
+run_vk_xml_generate(helper_file_generator.py vk_struct_size_helper.c)
+run_vk_xml_generate(helper_file_generator.py vk_enum_string_helper.h)
+run_vk_xml_generate(dispatch_table_generator.py vk_dispatch_table_helper.h)
+
 if(NOT WIN32)
     include(GNUInstallDirs)
-    add_definitions(-DSYSCONFDIR="${CMAKE_INSTALL_SYSCONFDIR}")
-    add_definitions(-DDATADIR="${CMAKE_INSTALL_DATADIR}")
-    if (CMAKE_INSTALL_PREFIX STREQUAL "/usr")
-    elseif (CMAKE_INSTALL_PREFIX STREQUAL "")
-    else()
-        add_definitions(-DLOCALPREFIX="${CMAKE_INSTALL_PREFIX}")
+
+    add_definitions(-DSYSCONFDIR="${CMAKE_INSTALL_FULL_SYSCONFDIR}")
+    add_definitions(-DDATADIR="${CMAKE_INSTALL_FULL_DATADIR}")
+
+    # Make sure /etc is searched by the loader
+    if (NOT (CMAKE_INSTALL_FULL_SYSCONFDIR STREQUAL "/etc"))
+        add_definitions(-DEXTRASYSCONFDIR="/etc")
     endif()
+
+    # Make sure /usr/share is searched by the loader
+    if (NOT (CMAKE_INSTALL_FULL_DATADIR STREQUAL "/usr/share"))
+        add_definitions(-DEXTRADATADIR="/usr/share")
+    endif()
+endif()
+
+if(UNIX)
+    install(DIRECTORY "${PROJECT_SOURCE_DIR}/include/vulkan" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 endif()
 
 # loader: Generic VULKAN ICD loader
@@ -324,6 +355,25 @@ else()
     include_directories("/usr/include/vulkan")
 endif()
 
-add_subdirectory(API-Samples)
+option(BUILD_API_SAMPLES "Build API Samples " ON)
+option(BUILD_SAMPLE_LAYERS "Build Sample Layers " ON)
+
+if((CMAKE_SYSTEM_NAME STREQUAL "Linux") AND (NOT BUILD_WSI_XCB_SUPPORT))
+    set(BUILD_API_SAMPLES OFF)
+    set(BUILD_SAMPLE_LAYERS OFF)
+    set(BUILD_UTILITIES OFF)
+endif()
+
+if(BUILD_UTILITIES)
+    add_subdirectory(Utilities)
+endif()
+
+if (BUILD_API_SAMPLES)
+    add_subdirectory(API-Samples)
+endif()
+
 add_subdirectory(Sample-Programs/Hologram)
-add_subdirectory(Layer-Samples/Overlay)
+
+if (BUILD_SAMPLE_LAYERS)
+    add_subdirectory(Layer-Samples/Overlay)
+endif()

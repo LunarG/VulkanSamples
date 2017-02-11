@@ -3,7 +3,7 @@ REM Update source for glslang, spirv-tools
 
 REM Determine the appropriate CMake strings for the current version of Visual Studio
 echo Determining VS version
-python .\determine_vs_version.py > vsversion.tmp
+python .\scripts\determine_vs_version.py > vsversion.tmp
 set /p VS_VERSION=< vsversion.tmp
 echo Detected Visual Studio Version as %VS_VERSION%
 
@@ -13,7 +13,8 @@ del /Q /F vsversion.tmp
 setlocal EnableDelayedExpansion
 set errorCode=0
 set BUILD_DIR=%~dp0
-set BASE_DIR=%BUILD_DIR%external
+set BASE_DIR="%BUILD_DIR%external"
+set REVISION_DIR="%BUILD_DIR%external_revisions"
 set GLSLANG_DIR=%BASE_DIR%\glslang
 set SPIRV_TOOLS_DIR=%BASE_DIR%\spirv-tools
 
@@ -121,32 +122,38 @@ if %errorCode% neq 0 (goto:error)
 
 REM Read the target versions from external file, which is shared with Linux script
 
-if not exist glslang_revision (
+if not exist %REVISION_DIR%\glslang_revision (
    echo.
-   echo Missing glslang_revision file!  Place it next to this script with target version in it.
+   echo Missing glslang_revision file!  Place it in %REVSION_DIR% with target version in it.
    set errorCode=1
    goto:error
 )
 
-if not exist spirv-tools_revision (
+if not exist %REVISION_DIR%\spirv-tools_revision (
    echo.
-   echo Missing spirv-tools_revision file!  Place it next to this script with target version in it.
+   echo Missing spirv-tools_revision file!  Place it in %REVISION_DIR% with target version in it.
    set errorCode=1
    goto:error
 )
 
-set /p GLSLANG_REVISION= < glslang_revision
-set /p SPIRV_TOOLS_REVISION= < spirv-tools_revision
+if not exist %REVISION_DIR%\spirv-headers_revision (
+   echo.
+   echo Missing spirv-headers_revision file!  Place it in %REVISION_DIR% with target version in it.
+   set errorCode=1
+   goto:error
+)
+
+set /p GLSLANG_REVISION= < %REVISION_DIR%\glslang_revision
+set /p SPIRV_TOOLS_REVISION= < %REVISION_DIR%\spirv-tools_revision
+set /p SPIRV_HEADERS_REVISION= < %REVISION_DIR%\spirv-headers_revision
 echo GLSLANG_REVISION=%GLSLANG_REVISION%
 echo SPIRV_TOOLS_REVISION=%SPIRV_TOOLS_REVISION%
+echo SPIRV_HEADERS_REVISION=%SPIRV_HEADERS_REVISION%
 
 
 echo Creating and/or updating glslang, spirv-tools in %BASE_DIR%
 
 if %sync-glslang% equ 1 (
-   if exist %GLSLANG_DIR% (
-      rd /S /Q %GLSLANG_DIR%
-   )
    if not exist %GLSLANG_DIR% (
       call:create_glslang
    )
@@ -156,9 +163,6 @@ if %sync-glslang% equ 1 (
 )
 
 if %sync-spirv-tools% equ 1 (
-   if exist %SPIRV_TOOLS_DIR% (
-      rd /S /Q %SPIRV_TOOLS_DIR%
-   )
    if %errorlevel% neq 0 (goto:error)
    if not exist %SPIRV_TOOLS_DIR% (
       call:create_spirv-tools
@@ -215,9 +219,6 @@ goto:eof
    cd %GLSLANG_DIR%
    git fetch --all
    git checkout %GLSLANG_REVISION%
-   REM Revert glslang a5c33d6ffb34ccede5b233bc724c907166b6e479
-   REM See https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers/issues/681
-   git apply --whitespace=fix %BUILD_DIR%\glslang_revert_a5c33d.patch.txt
 goto:eof
 
 :create_spirv-tools
@@ -235,6 +236,7 @@ goto:eof
    mkdir %SPIRV_TOOLS_DIR%\external\spirv-headers
    cd %SPIRV_TOOLS_DIR%\external\spirv-headers
    git clone https://github.com/KhronosGroup/SPIRV-HEADERS.git .
+   git checkout %SPIRV_HEADERS_REVISION%
    if not exist %SPIRV_TOOLS_DIR%\external\spirv-headers\README.md (
       echo spirv-headers download failed!
       set errorCode=1
@@ -247,34 +249,25 @@ goto:eof
    cd %SPIRV_TOOLS_DIR%
    git fetch --all
    git checkout %SPIRV_TOOLS_REVISION%
-   if not exist %SPIRV_TOOLS_DIR%\external\spirv-headers\README.md (
-      mkdir %SPIRV_TOOLS_DIR%\external
-      mkdir %SPIRV_TOOLS_DIR%\external\spirv-headers
-      cd %SPIRV_TOOLS_DIR%\external\spirv-headers
-      git clone https://github.com/KhronosGroup/SPIRV-HEADERS.git .
-      goto:eof
-   )
    cd %SPIRV_TOOLS_DIR%\external\spirv-headers
    git fetch --all
-   git pull
+   git checkout %SPIRV_HEADERS_REVISION%
 goto:eof
 
 :build_glslang
    echo.
    echo Building %GLSLANG_DIR%
    cd  %GLSLANG_DIR%
-
-   REM Cleanup any old directories lying around.
-   if exist build32 (
-      rmdir /s /q build32
+   
+   if not exist build32 (
+       mkdir build32
    )
-   if exist build (
-      rmdir /s /q build
+   if not exist build (
+      mkdir build
    )
 
    echo Making 32-bit glslang
    echo *************************
-   mkdir build32
    set GLSLANG_BUILD_DIR=%GLSLANG_DIR%\build32
    cd %GLSLANG_BUILD_DIR%
 
@@ -304,7 +297,6 @@ goto:eof
  
    echo Making 64-bit glslang
    echo *************************
-   mkdir build
    set GLSLANG_BUILD_DIR=%GLSLANG_DIR%\build
    cd %GLSLANG_BUILD_DIR%
 
@@ -337,16 +329,15 @@ goto:eof
    cd  %SPIRV_TOOLS_DIR%
 
    REM Cleanup any old directories lying around.
-   if exist build32 (
-      rmdir /s /q build32
+   if not exist build32 (
+       mkdir build32
    )
-   if exist build (
-      rmdir /s /q build
+   if not exist build (
+      mkdir build
    )
 
    echo Making 32-bit spirv-tools
    echo *************************
-   mkdir build32
    set SPIRV_TOOLS_BUILD_DIR=%SPIRV_TOOLS_DIR%\build32
 
    cd %SPIRV_TOOLS_BUILD_DIR%
@@ -378,7 +369,6 @@ goto:eof
  
    echo Making 64-bit spirv-tools  
    echo *************************
-   mkdir build
    set SPIRV_TOOLS_BUILD_DIR=%SPIRV_TOOLS_DIR%\build
    cd %SPIRV_TOOLS_BUILD_DIR%
 

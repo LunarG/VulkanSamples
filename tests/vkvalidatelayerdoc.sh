@@ -12,11 +12,11 @@ fi
 
 printf "$GREEN[ RUN      ]$NC $0\n"
 
-# Run doc validation from project root dir
-pushd ../..
+# Run doc validation from project layers dir
+pushd ../../layers
 
-# Validate that layer documentation matches source contents
-./vk_layer_documentation_generate.py --validate
+# Validate that layer database matches source contents
+python vk_validation_stats.py
 
 RES=$?
 
@@ -25,7 +25,7 @@ if [ $RES -eq 0 ] ; then
    printf "$GREEN[  PASSED  ]$NC 1 test\n"
    exit 0
 else
-   printf "$RED[  FAILED  ]$NC Validation of vk_validation_layer_details.md failed\n"
+   printf "$RED[  FAILED  ]$NC Validation of vk_validation_error_database.txt failed\n"
    printf "$RED[  FAILED  ]$NC 1 test\n"
    printf "1 TEST FAILED\n"
    exit 1

@@ -1,11 +1,38 @@
 cmake_minimum_required(VERSION 2.8.11)
-set(SAMPLES_DATA_DIR ${SAMPLES_DATA_DIR} "${PROJECT_SOURCE_DIR}/API-Samples/data")
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    add_definitions(-DVK_USE_PLATFORM_WIN32_KHR -DWIN32_LEAN_AND_MEAN)
+    set(DisplayServer Win32)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Android")
+    add_definitions(-DVK_USE_PLATFORM_ANDROID_KHR)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    if (BUILD_WSI_XCB_SUPPORT)
+        add_definitions(-DVK_USE_PLATFORM_XCB_KHR)
+    endif()
+
+    if (BUILD_WSI_XLIB_SUPPORT)
+        add_definitions(-DVK_USE_PLATFORM_XLIB_KHR)
+    endif()
+
+    if (BUILD_WSI_WAYLAND_SUPPORT)
+        add_definitions(-DVK_USE_PLATFORM_WAYLAND_KHR)
+    endif()
+
+    if (BUILD_WSI_MIR_SUPPORT)
+        add_definitions(-DVK_USE_PLATFORM_MIR_KHR)
+        include_directories(${MIR_INCLUDE_DIR})
+    endif()
+else()
+    message(FATAL_ERROR "Unsupported Platform!")
+endif()
+
+set(SAMPLES_DATA_DIR ${SAMPLES_DATA_DIR} "${CMAKE_SOURCE_DIR}/API-Samples/data")
 set(SHADER_FILES ${SHADER_FILES} "")
 include_directories( ${SAMPLES_DATA_DIR} ${GLSLANG_SPIRV_INCLUDE_DIR} ${GLMINC_PREFIX})
 
 # Additional includes for spirv-tools
 include_directories(${SPIRV_TOOLS_INCLUDE_DIR})
-                    
+
 # function to build a single-source-file sample that uses glsl shaders;
 #   - assumes SAMPLE_GLSL_VERT_SHADERS and SAMPLE_GLSL_FRAG_SHADERS is set to
 #     the list of shader files of that type, with .vert and .frag omitted
@@ -49,21 +76,6 @@ endfunction(sampleExtSPIRVShaders)
 # function to build a simple single-source-file sample
 #   - assumes S_TARGETS set to list of build targets
 function(sampleWithSingleFile)
-    # Projectwide settings.
-    # Product flavor (ABI).
-    # mips & mips64 does not work with -finline_functions flag.
-    set (SUPPORTED_ABI armeabi-v7a arm64-v8a x86 x86_64)
-    if (";${SUPPORTED_ABI};" MATCHES ";${ANDROID_ABI};")
-        set (FLAVOR "${ANDROID_ABI}")
-        set (ABI_FILTER "ndk.abiFilters.add(\"${ANDROID_ABI}\")")
-    else()
-        set (FLAVOR "all")
-        foreach(ABI ${SUPPORTED_ABI})
-            set (ABI_FILTER
-              "${ABI_FILTER}\n            ndk.abiFilters.add(\"${ABI}\")")
-        endforeach(ABI)
-    endif()
-
     foreach(TARG ${S_TARGETS})
         set(SAMPLE_NAME ${TARG})
         if(ANDROID)
@@ -71,6 +83,10 @@ function(sampleWithSingleFile)
             MESSAGE("Generating AndroidStudio project:" ${SAMPLE_NAME})
             # Replace "-" to "_", which is invalid in a package name.
             STRING(REPLACE "-" "_" PACKAGE_NAME ${SAMPLE_NAME})
+            STRING(REGEX MATCH "^[0-9]" LEADING_DIGIT "${PACKAGE_NAME}")
+            if(NOT LEADING_DIGIT STREQUAL "")
+                STRING(CONCAT PACKAGE_NAME "T" "${PACKAGE_NAME}")
+            endif()
             set (PACKAGE_NAME org.khronos.vulkan.samples.${PACKAGE_NAME})
             set (SAMPLE_DESCRIPTION "Vulkan sample: ${SAMPLE_NAME}")
             file(COPY ./android/project_template/ DESTINATION ./android/${SAMPLE_NAME}/)
@@ -80,7 +96,7 @@ function(sampleWithSingleFile)
             set (ASSET_DIR "")
             set (EXTRA_PERMISSIONS "")
             set (SHADERC_LINKAGE "")
-            set (VALIDATIONLAYER_LINKAGE "")
+            set (VALIDATIONLAYER_PACKING "")
 
             # Add extra setting for some samples.
             # shaderc usage.
@@ -88,11 +104,11 @@ function(sampleWithSingleFile)
 
             # Include resource files.
             set (SAMPLE_WITH_RESOURCES
-             drawtexturedcube inittexture immutable_sampler multiple_sets pipeline_cache
-             pipeline_derivative secondarycmd separate_image_sampler spirv_assembly
+             draw_textured_cube init_texture immutable_sampler multiple_sets pipeline_cache
+             pipeline_derivative secondary_command_buffer separate_image_sampler spirv_assembly
              spirv_specialization template)
             if (";${SAMPLE_WITH_RESOURCES};" MATCHES ";${SAMPLE_NAME};")
-                set (ASSET_DIR "srcDir '../../data/'")
+                set (ASSET_DIR "sourceSets.main.assets.srcDirs '../../data'")
             endif()
 
             # Add external storage access permission.
@@ -102,15 +118,9 @@ function(sampleWithSingleFile)
             endif()
 
             # Add validation layer settings.
-            set (SAMPLE_WITH_TOOLS dbgcreatemsgcallback enable_validation_with_callback)
+            set (SAMPLE_WITH_TOOLS create_debug_report_callback enable_validation_with_callback)
             if (";${SAMPLE_WITH_TOOLS};" MATCHES ";${SAMPLE_NAME};")
-                set (VALIDATIONLAYER_LINKAGE "project \":threading\"
-                    project \":parameter_validation\"
-                    project \":object_tracker\"
-                    project \":core_validation\"
-                    project \":image\"
-                    project \":swapchain\"
-                    project \":unique_objects\"")
+                set (VALIDATIONLAYER_PACKING "sourceSets.main.jniLibs.srcDirs file(ndkDir).absolutePath +\n\t\t\t\t'/sources/third_party/vulkan/src/build-android/jniLibs'")
             endif()
 
             # Cook template files.
@@ -123,7 +133,7 @@ function(sampleWithSingleFile)
             foreach(TEMPLATE_FILE ${TEMPLATE_FILES})
                 configure_file(${TEMPLATE_FILE} ${TEMPLATE_FILE} @ONLY)
             endforeach(TEMPLATE_FILE)
-            SET(SETTINGS_GRADLE "${SETTINGS_GRADLE} ,\n':${SAMPLE_NAME}'")
+            SET(SETTINGS_GRADLE "${SETTINGS_GRADLE}include ':${SAMPLE_NAME}'\n")
         elseif(UNIX)
             add_executable(${SAMPLE_NAME} ${SAMPLE_NAME}/${SAMPLE_NAME}.cpp)
             target_link_libraries(${SAMPLE_NAME} ${UTILS_NAME} ${GLSLANG_LIBRARIES} ${XCB_LIBRARIES} ${VULKAN_LOADER} ${PTHREAD} ${SPIRV_TOOLS_LIBRARIES})
@@ -157,21 +167,21 @@ endfunction(sampleInlineGLSLShaders)
 
 if(WIN32)
     set (MOVE_CMD "move")
-    set (VULKAN_LOADER_NAME "vulkan-${MAJOR}")
+    set (VULKAN_LOADER_NAME "${API_LOWERCASE}-${MAJOR}")
 else()
     set (MOVE_CMD "mv")
     set (PTHREAD "pthread")
-    set (VULKAN_LOADER_NAME "vulkan")
+    set (VULKAN_LOADER_NAME "${API_LOWERCASE}")
 endif()
 
 if(EXISTS "${CMAKE_SOURCE_DIR}/layers")
     set (VULKAN_LOADER ${VULKAN_LOADER_NAME})
 else()
     find_library(VULKAN_LOADER NAMES ${VULKAN_LOADER_NAME}
-                 HINTS "${PROJECT_SOURCE_DIR}/../${BINDATA_DIR}" "${PROJECT_SOURCE_DIR}/../x86_64/lib" )
+                 HINTS "${CMAKE_SOURCE_DIR}/../${BINDATA_DIR}" "${CMAKE_SOURCE_DIR}/../x86_64/lib" )
 endif()
 
-set (LIBGLM_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/libs)
+set (LIBGLM_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/libs)
 
 if(NOT WIN32 AND NOT ANDROID)
     if(SDK_INCLUDE_PATH)
@@ -230,22 +240,25 @@ endif()
 option(ANDROID OFF)
 
 # simple one file sample targets, no additional files
-set (S_TARGETS instance device enumerate enumerate-adv
-    depthbuffer initswapchain inittexture uniformbuffer
-    descriptor_pipeline_layouts initcommandbuffer
-    initrenderpass initframebuffers vertexbuffer
-    allocdescriptorsets initshaders initpipeline multithreadcmdbuf
-    drawcube drawtexturedcube dynamicuniform texelbuffer
+set (S_TARGETS
+    01-init_instance 02-enumerate_devices 03-init_device 04-init_command_buffer
+    05-init_swapchain 06-init_depth_buffer 07-init_uniform_buffer
+    08-init_pipeline_layout 09-init_descriptor_set 10-init_render_pass
+    11-init_shaders 12-init_frame_buffers 13-init_vertex_buffer 14-init_pipeline 15-draw_cube
+    enumerate_devices_adv init_texture multithreaded_command_buffers
+    draw_textured_cube dynamic_uniform texel_buffer events
     instance_layer_properties instance_extension_properties
-    instance_layer_extension_properties dbgcreatemsgcallback
+    instance_layer_extension_properties create_debug_report_callback
     enable_validation_with_callback multiple_sets
-    copyblitimage template separate_image_sampler
+    copy_blit_image template separate_image_sampler input_attachment
     occlusion_query pipeline_cache pipeline_derivative
-    immutable_sampler push_constants drawsubpasses secondarycmd
-    spirv_assembly spirv_specialization membarriers)
+    immutable_sampler push_constants draw_subpasses secondary_command_buffer
+    spirv_assembly spirv_specialization memory_barriers)
 sampleWithSingleFile()
 
-add_subdirectory(utils)
+if (NOT ANDROID)
+    add_subdirectory(utils)
+endif()
 
 # targets that use spv shaders
 
@@ -259,4 +272,3 @@ add_subdirectory(utils)
 # set(SAMPLE_GLSL_FRAG_SHADERS glslshader)
 # set(SAMPLE_GLSL_VERT_SHADERS glslshader)
 # sampleExtGLSLShaders()
-

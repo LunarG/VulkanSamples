@@ -51,20 +51,16 @@ int sample_main(int argc, char *argv[]) {
      */
 
     do {
-        res = vkEnumerateInstanceExtensionProperties(
-            NULL, &instance_extension_count, NULL);
-        if (res)
-            break;
+        res = vkEnumerateInstanceExtensionProperties(NULL, &instance_extension_count, NULL);
+        if (res) break;
 
         if (instance_extension_count == 0) {
             break;
         }
 
-        vk_props = (VkExtensionProperties *)realloc(
-            vk_props, instance_extension_count * sizeof(VkExtensionProperties));
+        vk_props = (VkExtensionProperties *)realloc(vk_props, instance_extension_count * sizeof(VkExtensionProperties));
 
-        res = vkEnumerateInstanceExtensionProperties(
-            NULL, &instance_extension_count, vk_props);
+        res = vkEnumerateInstanceExtensionProperties(NULL, &instance_extension_count, vk_props);
     } while (res == VK_INCOMPLETE);
 
     std::cout << "Instance Extensions:" << std::endl;
@@ -72,8 +68,7 @@ int sample_main(int argc, char *argv[]) {
         VkExtensionProperties *props = &vk_props[i];
         std::cout << props->extensionName << ":" << std::endl;
         std::cout << "\tVersion: " << props->specVersion << std::endl;
-        std::cout << std::endl
-                  << std::endl;
+        std::cout << std::endl << std::endl;
     }
 
     std::cout << std::endl;

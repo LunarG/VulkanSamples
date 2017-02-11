@@ -13,23 +13,4 @@
 // limitations under the License.
 
 // configure path to the source code generated on your machine
-Properties properties = new Properties()
-properties.load(file('local.properties').newDataInputStream())
-def ndkDir = properties.getProperty('ndk.dir')
-def layerProjRoot = file(ndkDir).absolutePath + '/sources/third_party/vulkan/src/build-android/generated/gradle-build'
-String[] layers = ['threading',
-                   'parameter_validation',
-                   'object_tracker',
-                   'core_validation',
-                   'device_limits',
-                   'image',
-                   'swapchain',
-                   'unique_objects']
-for (layer in layers) {
-    include ":"+ layer
-    project(":" + layer.toString()).projectDir =
-        new File("${layerProjRoot}/${layer}")
-}
-
-include ':nativeactivity'@SETTINGS_GRADLE@
-project(':nativeactivity').projectDir = new File(settingsDir, 'external/nativeactivity')
+@SETTINGS_GRADLE@

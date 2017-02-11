@@ -22,10 +22,21 @@
 
 #include "vktestframework.h"
 #include "vkrenderframework.h"
+
+// For versions prior to VS 2015, suppress the warning
+// caused by the inconsistent redefinition of snprintf
+// between a vulkan header and a glslang header.
+#if (defined(_MSC_VER) && _MSC_VER < 1900 /*vs2015*/)
+#pragma warning(push)
+#pragma warning(disable : 4005)
+#endif
 // TODO FIXME remove this once glslang doesn't define this
 #undef BadValue
 #include "SPIRV/GlslangToSpv.h"
 #include "SPIRV/SPVRemapper.h"
+#if (defined(_MSC_VER) && _MSC_VER < 1900 /*vs2015*/)
+#pragma warning(pop)
+#endif
 #include <limits.h>
 #include <math.h>
 
@@ -34,39 +45,35 @@
 #endif
 
 #ifdef _WIN32
-#define ERR_EXIT(err_msg, err_class)                                           \
-    do {                                                                       \
-        MessageBox(NULL, err_msg, err_class, MB_OK);                           \
-        exit(1);                                                               \
+#define ERR_EXIT(err_msg, err_class)                 \
+    do {                                             \
+        MessageBox(NULL, err_msg, err_class, MB_OK); \
+        exit(1);                                     \
     } while (0)
-#else // _WIN32
+#else  // _WIN32
 
-#define ERR_EXIT(err_msg, err_class)                                           \
-    do {                                                                       \
-        printf(err_msg);                                                       \
-        fflush(stdout);                                                        \
-        exit(1);                                                               \
+#define ERR_EXIT(err_msg, err_class) \
+    do {                             \
+        printf(err_msg);             \
+        fflush(stdout);              \
+        exit(1);                     \
     } while (0)
-#endif // _WIN32
+#endif  // _WIN32
 
-#define GET_INSTANCE_PROC_ADDR(inst, entrypoint)                               \
-    {                                                                          \
-        m_fp##entrypoint =                                                     \
-            (PFN_vk##entrypoint)vkGetInstanceProcAddr(inst, "vk" #entrypoint); \
-        if (m_fp##entrypoint == NULL) {                                        \
-            ERR_EXIT("vkGetInstanceProcAddr failed to find vk" #entrypoint,    \
-                     "vkGetInstanceProcAddr Failure");                         \
-        }                                                                      \
+#define GET_INSTANCE_PROC_ADDR(inst, entrypoint)                                                              \
+    {                                                                                                         \
+        m_fp##entrypoint = (PFN_vk##entrypoint)vkGetInstanceProcAddr(inst, "vk" #entrypoint);                 \
+        if (m_fp##entrypoint == NULL) {                                                                       \
+            ERR_EXIT("vkGetInstanceProcAddr failed to find vk" #entrypoint, "vkGetInstanceProcAddr Failure"); \
+        }                                                                                                     \
     }
 
-#define GET_DEVICE_PROC_ADDR(dev, entrypoint)                                  \
-    {                                                                          \
-        m_fp##entrypoint =                                                     \
-            (PFN_vk##entrypoint)vkGetDeviceProcAddr(dev, "vk" #entrypoint);    \
-        if (m_fp##entrypoint == NULL) {                                        \
-            ERR_EXIT("vkGetDeviceProcAddr failed to find vk" #entrypoint,      \
-                     "vkGetDeviceProcAddr Failure");                           \
-        }                                                                      \
+#define GET_DEVICE_PROC_ADDR(dev, entrypoint)                                                             \
+    {                                                                                                     \
+        m_fp##entrypoint = (PFN_vk##entrypoint)vkGetDeviceProcAddr(dev, "vk" #entrypoint);                \
+        if (m_fp##entrypoint == NULL) {                                                                   \
+            ERR_EXIT("vkGetDeviceProcAddr failed to find vk" #entrypoint, "vkGetDeviceProcAddr Failure"); \
+        }                                                                                                 \
     }
 
 // Command-line options
@@ -128,8 +135,7 @@ void TestEnvironment::SetUp() {
 
 void TestEnvironment::TearDown() { glslang::FinalizeProcess(); }
 
-VkTestFramework::VkTestFramework()
-    : m_compile_options(0), m_num_shader_strings(0) {}
+VkTestFramework::VkTestFramework() : m_compile_options(0), m_num_shader_strings(0) {}
 
 VkTestFramework::~VkTestFramework() {}
 
@@ -160,12 +166,14 @@ void VkTestFramework::InitArgs(int *argc, char *argv[]) {
             m_canonicalize_spv = true;
         else if (optionMatch("--help", argv[i]) || optionMatch("-h", argv[i])) {
             printf("\nOther options:\n");
-            printf("\t--show-images\n"
-                   "\t\tDisplay test images in viewer after tests complete.\n");
-            printf("\t--save-images\n"
-                   "\t\tSave tests images as ppm files in current working "
-                   "directory.\n"
-                   "\t\tUsed to generate golden images for compare-images.\n");
+            printf(
+                "\t--show-images\n"
+                "\t\tDisplay test images in viewer after tests complete.\n");
+            printf(
+                "\t--save-images\n"
+                "\t\tSave tests images as ppm files in current working "
+                "directory.\n"
+                "\t\tUsed to generate golden images for compare-images.\n");
             printf(
                 "\t--compare-images\n"
                 "\t\tCompare test images to 'golden' image in golden folder.\n"
@@ -179,9 +187,10 @@ void VkTestFramework::InitArgs(int *argc, char *argv[]) {
             printf(
                 "\t--no-SPV\n"
                 "\t\tUse built-in GLSL compiler rather than SPV code path.\n");
-            printf("\t--strip-SPV\n"
-                   "\t\tStrip SPIR-V debug information (line numbers, names, "
-                   "etc).\n");
+            printf(
+                "\t--strip-SPV\n"
+                "\t\tStrip SPIR-V debug information (line numbers, names, "
+                "etc).\n");
             printf(
                 "\t--canonicalize-SPV\n"
                 "\t\tRemap SPIR-V ids before submission to aid compression.\n");
@@ -202,28 +211,22 @@ void VkTestFramework::InitArgs(int *argc, char *argv[]) {
     }
 }
 
-VkFormat VkTestFramework::GetFormat(VkInstance instance,
-                                    vk_testing::Device *device) {
+VkFormat VkTestFramework::GetFormat(VkInstance instance, vk_testing::Device *device) {
     VkFormatProperties format_props;
 
-    vkGetPhysicalDeviceFormatProperties(
-        device->phy().handle(), VK_FORMAT_B8G8R8A8_UNORM, &format_props);
-    if (format_props.linearTilingFeatures &
-            VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT ||
-        format_props.optimalTilingFeatures &
-            VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) {
+    vkGetPhysicalDeviceFormatProperties(device->phy().handle(), VK_FORMAT_B8G8R8A8_UNORM, &format_props);
+    if (format_props.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT ||
+        format_props.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) {
         return VK_FORMAT_B8G8R8A8_UNORM;
     }
-    vkGetPhysicalDeviceFormatProperties(
-        device->phy().handle(), VK_FORMAT_R8G8B8A8_UNORM, &format_props);
-    if (format_props.linearTilingFeatures &
-            VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT ||
-        format_props.optimalTilingFeatures &
-            VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) {
+    vkGetPhysicalDeviceFormatProperties(device->phy().handle(), VK_FORMAT_R8G8B8A8_UNORM, &format_props);
+    if (format_props.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT ||
+        format_props.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) {
         return VK_FORMAT_R8G8B8A8_UNORM;
     }
-    printf("Error - device does not support VK_FORMAT_B8G8R8A8_UNORM nor "
-           "VK_FORMAT_R8G8B8A8_UNORM - exiting\n");
+    printf(
+        "Error - device does not support VK_FORMAT_B8G8R8A8_UNORM nor "
+        "VK_FORMAT_R8G8B8A8_UNORM - exiting\n");
     exit(1);
 }
 
@@ -333,8 +336,7 @@ static const char *DefaultConfig =
 // *.conf => this is a config file that can set limits/resources
 //
 bool VkTestFramework::SetConfigFile(const std::string &name) {
-    if (name.size() < 5)
-        return false;
+    if (name.size() < 5) return false;
 
     if (name.compare(name.size() - 5, 5, ".conf") == 0) {
         ConfigFile = name;
@@ -355,8 +357,9 @@ void VkTestFramework::ProcessConfigFile() {
         if (configStrings)
             config = *configStrings;
         else {
-            printf("Error opening configuration file; will instead use the "
-                   "default configuration\n");
+            printf(
+                "Error opening configuration file; will instead use the "
+                "default configuration\n");
         }
     }
 
@@ -369,12 +372,11 @@ void VkTestFramework::ProcessConfigFile() {
     const char *token = strtok(config, delims);
     while (token) {
         const char *valueStr = strtok(0, delims);
-        if (valueStr == 0 ||
-            !(valueStr[0] == '-' ||
-              (valueStr[0] >= '0' && valueStr[0] <= '9'))) {
-            printf("Error: '%s' bad .conf file.  Each name must be followed by "
-                   "one number.\n",
-                   valueStr ? valueStr : "");
+        if (valueStr == 0 || !(valueStr[0] == '-' || (valueStr[0] >= '0' && valueStr[0] <= '9'))) {
+            printf(
+                "Error: '%s' bad .conf file.  Each name must be followed by "
+                "one number.\n",
+                valueStr ? valueStr : "");
             return;
         }
         int value = atoi(valueStr);
@@ -537,8 +539,7 @@ void VkTestFramework::ProcessConfigFile() {
             Resources.maxAtomicCounterBufferSize = value;
         else if (strcmp(token, "MaxTransformFeedbackBuffers") == 0)
             Resources.maxTransformFeedbackBuffers = value;
-        else if (strcmp(token, "MaxTransformFeedbackInterleavedComponents") ==
-                 0)
+        else if (strcmp(token, "MaxTransformFeedbackInterleavedComponents") == 0)
             Resources.maxTransformFeedbackInterleavedComponents = value;
         else if (strcmp(token, "MaxCullDistances") == 0)
             Resources.maxCullDistances = value;
@@ -556,8 +557,7 @@ void VkTestFramework::ProcessConfigFile() {
         else if (strcmp(token, "generalUniformIndexing") == 0)
             Resources.limits.generalUniformIndexing = (value != 0);
         else if (strcmp(token, "generalAttributeMatrixVectorIndexing") == 0)
-            Resources.limits.generalAttributeMatrixVectorIndexing =
-                (value != 0);
+            Resources.limits.generalAttributeMatrixVectorIndexing = (value != 0);
         else if (strcmp(token, "generalVaryingIndexing") == 0)
             Resources.limits.generalVaryingIndexing = (value != 0);
         else if (strcmp(token, "generalSamplerIndexing") == 0)
@@ -567,22 +567,17 @@ void VkTestFramework::ProcessConfigFile() {
         else if (strcmp(token, "generalConstantMatrixVectorIndexing") == 0)
             Resources.limits.generalConstantMatrixVectorIndexing = (value != 0);
         else
-            printf("Warning: unrecognized limit (%s) in configuration file.\n",
-                   token);
+            printf("Warning: unrecognized limit (%s) in configuration file.\n", token);
 
         token = strtok(0, delims);
     }
-    if (configStrings)
-        FreeFileData(configStrings);
+    if (configStrings) FreeFileData(configStrings);
 }
 
 void VkTestFramework::SetMessageOptions(EShMessages &messages) {
-    if (m_compile_options & EOptionRelaxedErrors)
-        messages = (EShMessages)(messages | EShMsgRelaxedErrors);
-    if (m_compile_options & EOptionIntermediate)
-        messages = (EShMessages)(messages | EShMsgAST);
-    if (m_compile_options & EOptionSuppressWarnings)
-        messages = (EShMessages)(messages | EShMsgSuppressWarnings);
+    if (m_compile_options & EOptionRelaxedErrors) messages = (EShMessages)(messages | EShMsgRelaxedErrors);
+    if (m_compile_options & EOptionIntermediate) messages = (EShMessages)(messages | EShMsgAST);
+    if (m_compile_options & EOptionSuppressWarnings) messages = (EShMessages)(messages | EShMsgSuppressWarnings);
 }
 
 //
@@ -600,16 +595,14 @@ char **VkTestFramework::ReadFileData(const char *fileName) {
     char *fdata;
     size_t count = 0;
     const int maxSourceStrings = 5;
-    char **return_data =
-        (char **)malloc(sizeof(char *) * (maxSourceStrings + 1));
+    char **return_data = (char **)malloc(sizeof(char *) * (maxSourceStrings + 1));
 
     if (errorCode) {
         printf("Error: unable to open input file: %s\n", fileName);
         return 0;
     }
 
-    while (fgetc(in) != EOF)
-        count++;
+    while (fgetc(in) != EOF) count++;
 
     fseek(in, 0, SEEK_SET);
 
@@ -652,8 +645,7 @@ char **VkTestFramework::ReadFileData(const char *fileName) {
 }
 
 void VkTestFramework::FreeFileData(char **data) {
-    for (int i = 0; i < m_num_shader_strings; i++)
-        free(data[i]);
+    for (int i = 0; i < m_num_shader_strings; i++) free(data[i]);
 }
 
 //
@@ -693,29 +685,28 @@ EShLanguage VkTestFramework::FindLanguage(const std::string &name) {
 //
 // Convert VK shader type to compiler's
 //
-EShLanguage
-VkTestFramework::FindLanguage(const VkShaderStageFlagBits shader_type) {
+EShLanguage VkTestFramework::FindLanguage(const VkShaderStageFlagBits shader_type) {
     switch (shader_type) {
-    case VK_SHADER_STAGE_VERTEX_BIT:
-        return EShLangVertex;
+        case VK_SHADER_STAGE_VERTEX_BIT:
+            return EShLangVertex;
 
-    case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
-        return EShLangTessControl;
+        case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
+            return EShLangTessControl;
 
-    case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
-        return EShLangTessEvaluation;
+        case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
+            return EShLangTessEvaluation;
 
-    case VK_SHADER_STAGE_GEOMETRY_BIT:
-        return EShLangGeometry;
+        case VK_SHADER_STAGE_GEOMETRY_BIT:
+            return EShLangGeometry;
 
-    case VK_SHADER_STAGE_FRAGMENT_BIT:
-        return EShLangFragment;
+        case VK_SHADER_STAGE_FRAGMENT_BIT:
+            return EShLangFragment;
 
-    case VK_SHADER_STAGE_COMPUTE_BIT:
-        return EShLangCompute;
+        case VK_SHADER_STAGE_COMPUTE_BIT:
+            return EShLangCompute;
 
-    default:
-        return EShLangVertex;
+        default:
+            return EShLangVertex;
     }
 }
 
@@ -723,9 +714,7 @@ VkTestFramework::FindLanguage(const VkShaderStageFlagBits shader_type) {
 // Compile a given string containing GLSL into SPV for use by VK
 // Return value of false means an error was encountered.
 //
-bool VkTestFramework::GLSLtoSPV(const VkShaderStageFlagBits shader_type,
-                                const char *pshader,
-                                std::vector<unsigned int> &spirv) {
+bool VkTestFramework::GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std::vector<unsigned int> &spirv) {
     glslang::TProgram program;
     const char *shaderStrings[1];
 
@@ -737,8 +726,7 @@ bool VkTestFramework::GLSLtoSPV(const VkShaderStageFlagBits shader_type,
 
     EShMessages messages = EShMsgDefault;
     SetMessageOptions(messages);
-    messages =
-        static_cast<EShMessages>(messages | EShMsgSpvRules | EShMsgVulkanRules);
+    messages = static_cast<EShMessages>(messages | EShMsgSpvRules | EShMsgVulkanRules);
 
     EShLanguage stage = FindLanguage(shader_type);
     glslang::TShader *shader = new glslang::TShader(stage);
@@ -746,16 +734,13 @@ bool VkTestFramework::GLSLtoSPV(const VkShaderStageFlagBits shader_type,
     shaderStrings[0] = pshader;
     shader->setStrings(shaderStrings, 1);
 
-    if (!shader->parse(&Resources,
-                       (m_compile_options & EOptionDefaultDesktop) ? 110 : 100,
-                       false, messages)) {
-
+    if (!shader->parse(&Resources, (m_compile_options & EOptionDefaultDesktop) ? 110 : 100, false, messages)) {
         if (!(m_compile_options & EOptionSuppressInfolog)) {
             puts(shader->getInfoLog());
             puts(shader->getInfoDebugLog());
         }
 
-        return false; // something didn't work
+        return false;  // something didn't work
     }
 
     program.addShader(shader);
@@ -765,7 +750,6 @@ bool VkTestFramework::GLSLtoSPV(const VkShaderStageFlagBits shader_type,
     //
 
     if (!program.link(messages)) {
-
         if (!(m_compile_options & EOptionSuppressInfolog)) {
             puts(shader->getInfoLog());
             puts(shader->getInfoDebugLog());

@@ -23,7 +23,7 @@
 class Shell;
 
 class Game {
-public:
+   public:
     Game(const Game &game) = delete;
     Game &operator=(const Game &game) = delete;
     virtual ~Game() {}
@@ -69,10 +69,8 @@ public:
 
     virtual void on_frame(float frame_pred) {}
 
-protected:
-    Game(const std::string &name, const std::vector<std::string> &args)
-        : settings_(), shell_(nullptr)
-    {
+   protected:
+    Game(const std::string &name, const std::vector<std::string> &args) : settings_(), shell_(nullptr) {
         settings_.name = name;
         settings_.initial_width = 1280;
         settings_.initial_height = 1024;
@@ -95,9 +93,8 @@ protected:
     Settings settings_;
     Shell *shell_;
 
-private:
-    void parse_args(const std::vector<std::string> &args)
-    {
+   private:
+    void parse_args(const std::vector<std::string> &args) {
         for (auto it = args.begin(); it != args.end(); ++it) {
             if (*it == "-b") {
                 settings_.vsync = false;
@@ -107,7 +104,7 @@ private:
             } else if (*it == "-h") {
                 ++it;
                 settings_.initial_height = std::stoi(*it);
-            } else if (*it == "-v") {
+            } else if ((*it == "-v") || (*it == "--validate")) {
                 settings_.validate = true;
             } else if (*it == "-vv") {
                 settings_.validate = true;
@@ -123,4 +120,4 @@ private:
     }
 };
 
-#endif // GAME_H
+#endif  // GAME_H

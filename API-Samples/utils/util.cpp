@@ -39,7 +39,7 @@ samples utility functions
 #include <android_native_app_glue.h>
 #include "shaderc/shaderc.hpp"
 // Static variable that keeps ANativeWindow and asset manager instances.
-static android_app* Android_application = nullptr;
+static android_app *Android_application = nullptr;
 #elif (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
 #	include <MoltenGLSLToSPIRVConverter/GLSLToSPIRVConverter.h>
 #else
@@ -60,15 +60,13 @@ using namespace std;
 int main(int argc, char **argv) { return sample_main(argc, argv); }
 #endif
 
-void extract_version(uint32_t version, uint32_t &major, uint32_t &minor,
-                     uint32_t &patch) {
+void extract_version(uint32_t version, uint32_t &major, uint32_t &minor, uint32_t &patch) {
     major = version >> 22;
     minor = (version >> 12) & 0x3ff;
     patch = version & 0xfff;
 }
 
 string get_file_name(const string &s) {
-
     char sep = '/';
 
 #ifdef _WIN32
@@ -108,15 +106,12 @@ std::string get_data_dir(std::string filename) {
     return ddir;
 }
 
-bool memory_type_from_properties(struct sample_info &info, uint32_t typeBits,
-                                 VkFlags requirements_mask,
-                                 uint32_t *typeIndex) {
+bool memory_type_from_properties(struct sample_info &info, uint32_t typeBits, VkFlags requirements_mask, uint32_t *typeIndex) {
     // Search memtypes to find first index with those properties
     for (uint32_t i = 0; i < info.memory_properties.memoryTypeCount; i++) {
         if ((typeBits & 1) == 1) {
             // Type is available, does it match user properties?
-            if ((info.memory_properties.memoryTypes[i].propertyFlags &
-                 requirements_mask) == requirements_mask) {
+            if ((info.memory_properties.memoryTypes[i].propertyFlags & requirements_mask) == requirements_mask) {
                 *typeIndex = i;
                 return true;
             }
@@ -127,14 +122,12 @@ bool memory_type_from_properties(struct sample_info &info, uint32_t typeBits,
     return false;
 }
 
-void set_image_layout(struct sample_info &info, VkImage image,
-                      VkImageAspectFlags aspectMask,
-                      VkImageLayout old_image_layout,
-                      VkImageLayout new_image_layout) {
+void set_image_layout(struct sample_info &info, VkImage image, VkImageAspectFlags aspectMask, VkImageLayout old_image_layout,
+                      VkImageLayout new_image_layout, VkPipelineStageFlags src_stages, VkPipelineStageFlags dest_stages) {
     /* DEPENDS on info.cmd and info.queue initialized */
 
     assert(info.cmd != VK_NULL_HANDLE);
-    assert(info.queue != VK_NULL_HANDLE);
+    assert(info.graphics_queue != VK_NULL_HANDLE);
 
     VkImageMemoryBarrier image_memory_barrier = {};
     image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -152,50 +145,52 @@ void set_image_layout(struct sample_info &info, VkImage image,
     image_memory_barrier.subresourceRange.baseArrayLayer = 0;
     image_memory_barrier.subresourceRange.layerCount = 1;
 
-    if (old_image_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
-        image_memory_barrier.srcAccessMask =
-            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    switch (old_image_layout) {
+        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+            image_memory_barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            break;
+
+        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+            image_memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            break;
+
+        case VK_IMAGE_LAYOUT_PREINITIALIZED:
+            image_memory_barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+            break;
+
+        default:
+            break;
     }
 
-    if (new_image_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-        image_memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    switch (new_image_layout) {
+        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+            image_memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            break;
+
+        case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+            image_memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+            break;
+
+        case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+            image_memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            break;
+
+        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+            image_memory_barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            break;
+
+        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+            image_memory_barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+            break;
+
+        default:
+            break;
     }
 
-    if (new_image_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL) {
-        image_memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-    }
-
-    if (old_image_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-        image_memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    }
-
-    if (old_image_layout == VK_IMAGE_LAYOUT_PREINITIALIZED) {
-        image_memory_barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
-    }
-
-    if (new_image_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-        image_memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    }
-
-    if (new_image_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
-        image_memory_barrier.dstAccessMask =
-            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    }
-
-    if (new_image_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
-        image_memory_barrier.dstAccessMask =
-            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-    }
-
-    VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-
-    vkCmdPipelineBarrier(info.cmd, src_stages, dest_stages, 0, 0, NULL, 0, NULL,
-                         1, &image_memory_barrier);
+    vkCmdPipelineBarrier(info.cmd, src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, &image_memory_barrier);
 }
 
-bool read_ppm(char const *const filename, int &width, int &height,
-              uint64_t rowPitch, unsigned char *dataPtr) {
+bool read_ppm(char const *const filename, int &width, int &height, uint64_t rowPitch, unsigned char *dataPtr) {
     // PPM format expected from http://netpbm.sourceforge.net/doc/ppm.html
     //  1. magic number
     //  2. whitespace
@@ -212,13 +207,12 @@ bool read_ppm(char const *const filename, int &width, int &height,
     // If dataPtr is nullptr, only width and height are returned
 
     // Read in values from the PPM file as characters to check for comments
-    char magicStr[3] = {}, heightStr[6] = {}, widthStr[6] = {},
-         formatStr[6] = {};
+    char magicStr[3] = {}, heightStr[6] = {}, widthStr[6] = {}, formatStr[6] = {};
 
 #ifndef __ANDROID__
-    FILE *fPtr = fopen(filename,"rb");
+    FILE *fPtr = fopen(filename, "rb");
 #else
-    FILE *fPtr = AndroidFopen(filename,"rb");
+    FILE *fPtr = AndroidFopen(filename, "rb");
 #endif
     if (!fPtr) {
         printf("Bad filename in read_ppm: %s\n", filename);
@@ -229,8 +223,7 @@ bool read_ppm(char const *const filename, int &width, int &height,
     fscanf(fPtr, "%s %s %s %s ", magicStr, widthStr, heightStr, formatStr);
 
     // Kick out if comments present
-    if (magicStr[0] == '#' || widthStr[0] == '#' || heightStr[0] == '#' ||
-        formatStr[0] == '#') {
+    if (magicStr[0] == '#' || widthStr[0] == '#' || heightStr[0] == '#' || formatStr[0] == '#') {
         printf("Unhandled comment in PPM file\n");
         return false;
     }
@@ -245,7 +238,7 @@ bool read_ppm(char const *const filename, int &width, int &height,
     height = atoi(heightStr);
 
     // Ensure we got something sane for width/height
-    static const int saneDimension = 32768; //??
+    static const int saneDimension = 32768;  //??
     if (width <= 0 || width > saneDimension) {
         printf("Width seems wrong.  Update read_ppm if not: %u\n", width);
         return false;
@@ -415,26 +408,26 @@ void init_resources(TBuiltInResource &Resources) {
 
 EShLanguage FindLanguage(const VkShaderStageFlagBits shader_type) {
     switch (shader_type) {
-    case VK_SHADER_STAGE_VERTEX_BIT:
-        return EShLangVertex;
+        case VK_SHADER_STAGE_VERTEX_BIT:
+            return EShLangVertex;
 
-    case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
-        return EShLangTessControl;
+        case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
+            return EShLangTessControl;
 
-    case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
-        return EShLangTessEvaluation;
+        case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
+            return EShLangTessEvaluation;
 
-    case VK_SHADER_STAGE_GEOMETRY_BIT:
-        return EShLangGeometry;
+        case VK_SHADER_STAGE_GEOMETRY_BIT:
+            return EShLangGeometry;
 
-    case VK_SHADER_STAGE_FRAGMENT_BIT:
-        return EShLangFragment;
+        case VK_SHADER_STAGE_FRAGMENT_BIT:
+            return EShLangFragment;
 
-    case VK_SHADER_STAGE_COMPUTE_BIT:
-        return EShLangCompute;
+        case VK_SHADER_STAGE_COMPUTE_BIT:
+            return EShLangCompute;
 
-    default:
-        return EShLangVertex;
+        default:
+            return EShLangVertex;
     }
 }
 #endif
@@ -445,8 +438,7 @@ void init_glslang() {
 #endif
 }
 
-void finalize_glslang()
-{
+void finalize_glslang() {
 #ifndef __ANDROID__
     glslang::FinalizeProcess();
 #endif
@@ -456,32 +448,15 @@ void finalize_glslang()
 // Android specific helper functions for shaderc.
 struct shader_type_mapping {
     VkShaderStageFlagBits vkshader_type;
-    shaderc_shader_kind   shaderc_type;
+    shaderc_shader_kind shaderc_type;
 };
 static const shader_type_mapping shader_map_table[] = {
-    {
-        VK_SHADER_STAGE_VERTEX_BIT,
-        shaderc_glsl_vertex_shader
-    },
-    {
-        VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT,
-        shaderc_glsl_tess_control_shader
-    },
-    {
-        VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT,
-        shaderc_glsl_tess_evaluation_shader
-    },
-    {
-        VK_SHADER_STAGE_GEOMETRY_BIT,
-        shaderc_glsl_geometry_shader},
-    {
-        VK_SHADER_STAGE_FRAGMENT_BIT,
-        shaderc_glsl_fragment_shader
-    },
-    {
-        VK_SHADER_STAGE_COMPUTE_BIT,
-        shaderc_glsl_compute_shader
-    },
+    {VK_SHADER_STAGE_VERTEX_BIT, shaderc_glsl_vertex_shader},
+    {VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, shaderc_glsl_tess_control_shader},
+    {VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, shaderc_glsl_tess_evaluation_shader},
+    {VK_SHADER_STAGE_GEOMETRY_BIT, shaderc_glsl_geometry_shader},
+    {VK_SHADER_STAGE_FRAGMENT_BIT, shaderc_glsl_fragment_shader},
+    {VK_SHADER_STAGE_COMPUTE_BIT, shaderc_glsl_compute_shader},
 };
 shaderc_shader_kind MapShadercType(VkShaderStageFlagBits vkShader) {
     for (auto shader : shader_map_table) {
@@ -498,8 +473,7 @@ shaderc_shader_kind MapShadercType(VkShaderStageFlagBits vkShader) {
 // Compile a given string containing GLSL into SPV for use by VK
 // Return value of false means an error was encountered.
 //
-bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader,
-               std::vector<unsigned int> &spirv) {
+bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std::vector<unsigned int> &spirv) {
 #ifndef __ANDROID__
     EShLanguage stage = FindLanguage(shader_type);
     glslang::TShader shader(stage);
@@ -517,7 +491,7 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader,
     if (!shader.parse(&Resources, 100, false, messages)) {
         puts(shader.getInfoLog());
         puts(shader.getInfoDebugLog());
-        return false; // something didn't work
+        return false;  // something didn't work
     }
 
     program.addShader(&shader);
@@ -538,14 +512,9 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader,
     // On Android, use shaderc instead.
     shaderc::Compiler compiler;
     shaderc::SpvCompilationResult module =
-        compiler.CompileGlslToSpv(pshader, strlen(pshader),
-                                  MapShadercType(shader_type),
-                                  "shader");
-    if (module.GetCompilationStatus() !=
-        shaderc_compilation_status_success) {
-        LOGE("Error: Id=%d, Msg=%s",
-             module.GetCompilationStatus(),
-             module.GetErrorMessage().c_str());
+        compiler.CompileGlslToSpv(pshader, strlen(pshader), MapShadercType(shader_type), "shader");
+    if (module.GetCompilationStatus() != shaderc_compilation_status_success) {
+        LOGE("Error: Id=%d, Msg=%s", module.GetCompilationStatus(), module.GetErrorMessage().c_str());
         return false;
     }
     spirv.assign(module.cbegin(), module.cend());
@@ -598,8 +567,7 @@ static bool optionMatch(const char *option, char *optionLine) {
         return false;
 }
 
-void process_command_line_args(struct sample_info &info, int argc,
-                               char *argv[]) {
+void process_command_line_args(struct sample_info &info, int argc, char *argv[]) {
     int i, n;
 
     for (i = 1, n = 1; i < argc; i++) {
@@ -607,9 +575,10 @@ void process_command_line_args(struct sample_info &info, int argc,
             info.save_images = true;
         else if (optionMatch("--help", argv[i]) || optionMatch("-h", argv[i])) {
             printf("\nOther options:\n");
-            printf("\t--save-images\n"
-                   "\t\tSave tests images as ppm files in current working "
-                   "directory.\n");
+            printf(
+                "\t--save-images\n"
+                "\t\tSave tests images as ppm files in current working "
+                "directory.\n");
             exit(0);
         } else {
             printf("\nUnrecognized option: %s\n", argv[i]);
@@ -670,10 +639,9 @@ void write_ppm(struct sample_info &info, const char *basename) {
     mem_alloc.allocationSize = mem_reqs.size;
 
     /* Find the memory type that is host mappable */
-    bool pass = memory_type_from_properties(
-        info, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                           &mem_alloc.memoryTypeIndex);
+    bool pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits,
+                                            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                            &mem_alloc.memoryTypeIndex);
     assert(pass && "No mappable, coherent memory");
 
     /* allocate memory */
@@ -691,13 +659,11 @@ void write_ppm(struct sample_info &info, const char *basename) {
     cmd_buf_info.pInheritanceInfo = NULL;
 
     res = vkBeginCommandBuffer(info.cmd, &cmd_buf_info);
-    set_image_layout(info, mappableImage, VK_IMAGE_ASPECT_COLOR_BIT,
-                     VK_IMAGE_LAYOUT_UNDEFINED,
-                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    set_image_layout(info, mappableImage, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 
-    set_image_layout(info, info.buffers[info.current_buffer].image,
-                     VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                     VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    set_image_layout(info, info.buffers[info.current_buffer].image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                     VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 
     VkImageCopy copy_region;
     copy_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -719,13 +685,11 @@ void write_ppm(struct sample_info &info, const char *basename) {
     copy_region.extent.depth = 1;
 
     /* Put the copy command into the command buffer */
-    vkCmdCopyImage(info.cmd, info.buffers[info.current_buffer].image,
-                   VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, mappableImage,
+    vkCmdCopyImage(info.cmd, info.buffers[info.current_buffer].image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, mappableImage,
                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region);
 
-    set_image_layout(info, mappableImage, VK_IMAGE_ASPECT_COLOR_BIT,
-                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                     VK_IMAGE_LAYOUT_GENERAL);
+    set_image_layout(info, mappableImage, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL,
+                     VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT);
 
     res = vkEndCommandBuffer(info.cmd);
     assert(res == VK_SUCCESS);
@@ -749,13 +713,12 @@ void write_ppm(struct sample_info &info, const char *basename) {
     submit_info[0].pSignalSemaphores = NULL;
 
     /* Queue the command buffer for execution */
-    res = vkQueueSubmit(info.queue, 1, submit_info, cmdFence);
+    res = vkQueueSubmit(info.graphics_queue, 1, submit_info, cmdFence);
     assert(res == VK_SUCCESS);
 
     /* Make sure command buffer is finished before mapping */
     do {
-        res =
-            vkWaitForFences(info.device, 1, &cmdFence, VK_TRUE, FENCE_TIMEOUT);
+        res = vkWaitForFences(info.device, 1, &cmdFence, VK_TRUE, FENCE_TIMEOUT);
     } while (res == VK_TIMEOUT);
     assert(res == VK_SUCCESS);
 
@@ -769,12 +732,10 @@ void write_ppm(struct sample_info &info, const char *basename) {
     subres.mipLevel = 0;
     subres.arrayLayer = 0;
     VkSubresourceLayout sr_layout;
-    vkGetImageSubresourceLayout(info.device, mappableImage, &subres,
-                                &sr_layout);
+    vkGetImageSubresourceLayout(info.device, mappableImage, &subres, &sr_layout);
 
     char *ptr;
-    res = vkMapMemory(info.device, mappableMemory, 0, mem_reqs.size, 0,
-                      (void **)&ptr);
+    res = vkMapMemory(info.device, mappableMemory, 0, mem_reqs.size, 0, (void **)&ptr);
     assert(res == VK_SUCCESS);
 
     ptr += sr_layout.offset;
@@ -789,11 +750,9 @@ void write_ppm(struct sample_info &info, const char *basename) {
         const int *row = (const int *)ptr;
         int swapped;
 
-        if (info.format == VK_FORMAT_B8G8R8A8_UNORM ||
-            info.format == VK_FORMAT_B8G8R8A8_SRGB) {
+        if (info.format == VK_FORMAT_B8G8R8A8_UNORM || info.format == VK_FORMAT_B8G8R8A8_SRGB) {
             for (x = 0; x < info.width; x++) {
-                swapped = (*row & 0xff00ff00) | (*row & 0x000000ff) << 16 |
-                          (*row & 0x00ff0000) >> 16;
+                swapped = (*row & 0xff00ff00) | (*row & 0x000000ff) << 16 | (*row & 0x00ff0000) >> 16;
                 file.write((char *)&swapped, 3);
                 row++;
             }
@@ -816,7 +775,6 @@ void write_ppm(struct sample_info &info, const char *basename) {
     vkFreeMemory(info.device, mappableMemory, NULL);
 }
 
-
 std::string get_file_directory() {
 #ifndef __ANDROID__
     return "";
@@ -826,7 +784,6 @@ std::string get_file_directory() {
 #endif
 }
 
-
 #ifdef __ANDROID__
 //
 // Android specific helper functions.
@@ -835,19 +792,20 @@ std::string get_file_directory() {
 // Helpder class to forward the cout/cerr output to logcat derived from:
 // http://stackoverflow.com/questions/8870174/is-stdcout-usable-in-android-ndk
 class AndroidBuffer : public std::streambuf {
-public:
+   public:
     AndroidBuffer(android_LogPriority priority) {
         priority_ = priority;
         this->setp(buffer_, buffer_ + kBufferSize - 1);
     }
-private:
+
+   private:
     static const int32_t kBufferSize = 128;
     int32_t overflow(int32_t c) {
         if (c == traits_type::eof()) {
             *this->pptr() = traits_type::to_char_type(c);
             this->sbumpc();
         }
-        return this->sync()? traits_type::eof(): traits_type::not_eof(c);
+        return this->sync() ? traits_type::eof() : traits_type::not_eof(c);
     }
 
     int32_t sync() {
@@ -867,8 +825,8 @@ private:
     char buffer_[kBufferSize];
 };
 
-void Android_handle_cmd(android_app* app, int32_t cmd)  {
-    switch( cmd ){
+void Android_handle_cmd(android_app *app, int32_t cmd) {
+    switch (cmd) {
         case APP_CMD_INIT_WINDOW:
             // The window is being shown, get it ready.
             sample_main(0, nullptr);
@@ -879,7 +837,7 @@ void Android_handle_cmd(android_app* app, int32_t cmd)  {
         case APP_CMD_TERM_WINDOW:
             // The window is being hidden or closed, clean it up.
             break;
-        default :
+        default:
             LOGI("event not handled: %d", cmd);
     }
 }
@@ -887,17 +845,16 @@ void Android_handle_cmd(android_app* app, int32_t cmd)  {
 bool Android_process_command() {
     assert(Android_application != nullptr);
     int events;
-    android_poll_source* source;
+    android_poll_source *source;
     // Poll all pending events.
-    if( ALooper_pollAll(0, NULL, &events, (void**)&source) >= 0 ){
+    if (ALooper_pollAll(0, NULL, &events, (void **)&source) >= 0) {
         // Process each polled events
-        if (source != NULL)
-            source->process(Android_application, source);
+        if (source != NULL) source->process(Android_application, source);
     }
     return Android_application->destroyRequested;
 }
 
-void android_main(struct android_app* app) {
+void android_main(struct android_app *app) {
     // Magic call, please ignore it (Android specific).
     app_dummy();
     // Set static variables.
@@ -912,33 +869,30 @@ void android_main(struct android_app* app) {
     // Main loop
     do {
         Android_process_command();
-    } // Check if system requested to quit the application
-    while(app->destroyRequested == 0);
+    }  // Check if system requested to quit the application
+    while (app->destroyRequested == 0);
 
     return;
 }
 
-ANativeWindow* AndroidGetApplicationWindow() {
+ANativeWindow *AndroidGetApplicationWindow() {
     assert(Android_application != nullptr);
     return Android_application->window;
 }
 
-bool AndroidFillShaderMap(const char *path,
-                          std::unordered_map<std::string, std::string> *map_shaders) {
+bool AndroidFillShaderMap(const char *path, std::unordered_map<std::string, std::string> *map_shaders) {
     assert(Android_application != nullptr);
-    auto directory = AAssetManager_openDir(Android_application->activity->assetManager,
-                                           path);
+    auto directory = AAssetManager_openDir(Android_application->activity->assetManager, path);
 
     const char *name = nullptr;
     while (1) {
-        name =  AAssetDir_getNextFileName(directory);
+        name = AAssetDir_getNextFileName(directory);
         if (name == nullptr) {
             break;
         }
 
         std::string file_name = name;
-        if (file_name.find(".frag") != std::string::npos ||
-                file_name.find(".vert") != std::string::npos) {
+        if (file_name.find(".frag") != std::string::npos || file_name.find(".vert") != std::string::npos) {
             // Add path to the filename.
             file_name = std::string(path) + "/" + file_name;
             std::string shader;
@@ -954,7 +908,7 @@ bool AndroidFillShaderMap(const char *path,
                 shader.erase(ret_pos, 1);
             }
 
-            auto pos = file_name.find_last_of (".");
+            auto pos = file_name.find_last_of(".");
             if (pos == std::string::npos) {
                 // Invalid file nmae.
                 continue;
@@ -973,10 +927,9 @@ bool AndroidFillShaderMap(const char *path,
     return true;
 }
 
-bool AndroidLoadFile(const char* filePath, std::string *data){
+bool AndroidLoadFile(const char *filePath, std::string *data) {
     assert(Android_application != nullptr);
-    AAsset* file = AAssetManager_open(Android_application->activity->assetManager,
-                                      filePath, AASSET_MODE_BUFFER);
+    AAsset *file = AAssetManager_open(Android_application->activity->assetManager, filePath, AASSET_MODE_BUFFER);
     size_t fileLength = AAsset_getLength(file);
     LOGI("Loaded file:%s size:%zu", filePath, fileLength);
     if (fileLength == 0) {
@@ -996,30 +949,26 @@ void AndroidGetWindowSize(int32_t *width, int32_t *height) {
 
 // Android fopen stub described at
 // http://www.50ply.com/blog/2013/01/19/loading-compressed-android-assets-with-file-pointer/#comment-1850768990
-static int android_read(void* cookie, char* buf, int size) {
-    return AAsset_read((AAsset*)cookie, buf, size);
+static int android_read(void *cookie, char *buf, int size) { return AAsset_read((AAsset *)cookie, buf, size); }
+
+static int android_write(void *cookie, const char *buf, int size) {
+    return EACCES;  // can't provide write access to the apk
 }
 
-static int android_write(void* cookie, const char* buf, int size) {
-    return EACCES; // can't provide write access to the apk
-}
+static fpos_t android_seek(void *cookie, fpos_t offset, int whence) { return AAsset_seek((AAsset *)cookie, offset, whence); }
 
-static fpos_t android_seek(void* cookie, fpos_t offset, int whence) {
-    return AAsset_seek((AAsset*)cookie, offset, whence);
-}
-
-static int android_close(void* cookie) {
-    AAsset_close((AAsset*)cookie);
+static int android_close(void *cookie) {
+    AAsset_close((AAsset *)cookie);
     return 0;
 }
 
-FILE* AndroidFopen(const char* fname, const char* mode) {
+FILE *AndroidFopen(const char *fname, const char *mode) {
     if (mode[0] == 'w') {
         return NULL;
     }
 
     assert(Android_application != nullptr);
-    AAsset* asset = AAssetManager_open(Android_application->activity->assetManager, fname, 0);
+    AAsset *asset = AAssetManager_open(Android_application->activity->assetManager, fname, 0);
     if (!asset) {
         return NULL;
     }
@@ -1027,5 +976,3 @@ FILE* AndroidFopen(const char* fname, const char* mode) {
     return funopen(asset, android_read, android_write, android_seek, android_close);
 }
 #endif
-
-

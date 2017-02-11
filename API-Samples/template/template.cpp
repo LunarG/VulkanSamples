@@ -92,8 +92,7 @@ int sample_main(int argc, char *argv[]) {
     init_renderpass(info, depthPresent);
     init_shaders(info, vertShaderText, fragShaderText);
     init_framebuffers(info, depthPresent);
-    init_vertex_buffer(info, g_vb_texture_Data, sizeof(g_vb_texture_Data),
-                       sizeof(g_vb_texture_Data[0]), true);
+    init_vertex_buffer(info, g_vb_texture_Data, sizeof(g_vb_texture_Data), sizeof(g_vb_texture_Data[0]), true);
     init_descriptor_pool(info, true);
     init_descriptor_set(info, true);
     init_pipeline_cache(info);
@@ -111,8 +110,7 @@ int sample_main(int argc, char *argv[]) {
     vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
     vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline);
-    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            info.pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
+    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
                             info.desc_set.data(), 0, NULL);
 
     const VkDeviceSize offsets[1] = {0};
@@ -123,21 +121,17 @@ int sample_main(int argc, char *argv[]) {
 
     vkCmdDraw(info.cmd, 12 * 3, 1, 0, 0);
     vkCmdEndRenderPass(info.cmd);
-
-    execute_pre_present_barrier(info);
-
     res = vkEndCommandBuffer(info.cmd);
     assert(res == VK_SUCCESS);
 
     VkFence drawFence = {};
     init_fence(info, drawFence);
-    VkPipelineStageFlags pipe_stage_flags =
-        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     VkSubmitInfo submit_info = {};
     init_submit_info(info, submit_info, pipe_stage_flags);
 
     /* Queue the command buffer for execution */
-    res = vkQueueSubmit(info.queue, 1, &submit_info, drawFence);
+    res = vkQueueSubmit(info.graphics_queue, 1, &submit_info, drawFence);
     assert(res == VK_SUCCESS);
 
     /* Now present the image in the window */
@@ -146,16 +140,14 @@ int sample_main(int argc, char *argv[]) {
 
     /* Make sure command buffer is finished before presenting */
     do {
-        res =
-            vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+        res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
     } while (res == VK_TIMEOUT);
     assert(res == VK_SUCCESS);
-    res = vkQueuePresentKHR(info.queue, &present);
+    res = vkQueuePresentKHR(info.present_queue, &present);
     assert(res == VK_SUCCESS);
 
     wait_seconds(1);
-    if (info.save_images)
-        write_ppm(info, "template");
+    if (info.save_images) write_ppm(info, "template");
 
     vkDestroyFence(info.device, drawFence, NULL);
     vkDestroySemaphore(info.device, info.imageAcquiredSemaphore, NULL);

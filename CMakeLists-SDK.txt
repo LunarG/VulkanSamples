@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8.11)
 project (VULKAN_SAMPLES)
 # set (CMAKE_VERBOSE_MAKEFILE 1)
+set(API_NAME "Vulkan" CACHE STRING "API name to use when building")
+string(TOLOWER ${API_NAME} API_LOWERCASE)
 
 if(EXISTS "${CMAKE_SOURCE_DIR}/../x86_64/include")
     set(SDK_INCLUDE_PATH "${CMAKE_SOURCE_DIR}/../x86_64/include")
@@ -186,7 +188,23 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/API-Samples/utils)
 if(WIN32)
     include_directories(${CMAKE_SOURCE_DIR}\\..\\Include)
 else()
-    include_directories("/usr/include/vulkan")
+    include_directories("/usr/include/vulkan" "${CMAKE_SOURCE_DIR}/include")
+endif()
+
+if(WIN32)
+    set (MOVE_CMD "move")
+    set (VULKAN_LOADER_NAME "${API_LOWERCASE}-${MAJOR}")
+else()
+    set (MOVE_CMD "mv")
+    set (PTHREAD "pthread")
+    set (VULKAN_LOADER_NAME "${API_LOWERCASE}")
+endif()
+
+if(EXISTS "${CMAKE_SOURCE_DIR}/layers")
+    set (VULKAN_LOADER ${VULKAN_LOADER_NAME})
+else()
+    find_library(VULKAN_LOADER NAMES ${VULKAN_LOADER_NAME}
+                 HINTS "${CMAKE_SOURCE_DIR}/../${BINDATA_DIR}" "${CMAKE_SOURCE_DIR}/../x86_64/lib" )
 endif()
 
 add_subdirectory(API-Samples)
