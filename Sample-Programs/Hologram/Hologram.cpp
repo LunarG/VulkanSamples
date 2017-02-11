@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 Google, Inc.
+ * Copyright (C) 2017 The Brenwill Workshop Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,12 +25,17 @@
 #include "Meshes.h"
 #include "Shell.h"
 
+// iOS and macOS demos use different camera orientation
 #if defined(__IPHONE_OS_VERSION_MAX_ALLOWED) || defined(__MAC_OS_X_VERSION_MAX_ALLOWED)
-#   define HG_CAM_POSITION     180.0f
-#   define HG_CAM_VELOCITY     1.0f
+#   define HG_CAMERA_POSITION           180.0f
+#   define HG_CAMERA_VELOCITY           1.0f
+#   define HG_CAMERA_FAR                1000.0f
+#   define HG_USE_MVK_SHADER_CONVERTER  1
 #else
-#   define HG_CAM_POSITION     2.5f
-#   define HG_CAM_VELOCITY     0.05f
+#   define HG_CAMERA_POSITION           2.5f
+#   define HG_CAMERA_VELOCITY           0.05f
+#   define HG_CAMERA_FAR                100.0f
+#   define HG_USE_MVK_SHADER_CONVERTER  0
 #endif
 
 
@@ -54,7 +60,7 @@ Hologram::Hologram(const std::vector<std::string> &args)
       sim_paused_(false),
       sim_fade_(false),
       sim_(5000),
-      camera_(HG_CAM_POSITION),
+      camera_(HG_CAMERA_POSITION),
       frame_data_(),
       render_pass_clear_value_({{0.0f, 0.1f, 0.2f, 1.0f}}),
       render_pass_begin_info_(),
@@ -218,7 +224,7 @@ void Hologram::create_render_pass() {
     vk::assert_success(vk::CreateRenderPass(dev_, &render_pass_info, nullptr, &render_pass_));
 }
 
-#if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) || defined(__MAC_OS_X_VERSION_MAX_ALLOWED))
+#if HG_USE_MVK_SHADER_CONVERTER
 
 #include <MoltenGLSLToSPIRVConverter/GLSLConversion.h>
 void Hologram::create_shader_modules() {
@@ -272,7 +278,8 @@ void Hologram::create_shader_modules() {
     vk::assert_success(vk::CreateShaderModule(dev_, &sh_info, nullptr, &fs_));
 }
 
-#endif      // __IPHONE_OS_VERSION_MAX_ALLOWED || __MAC_OS_X_VERSION_MAX_ALLOWED
+#endif      // HG_USE_MVK_SHADER_CONVERTER
+
 void Hologram::create_descriptor_set_layout() {
     if (use_push_constants_) return;
 
@@ -654,7 +661,7 @@ void Hologram::update_camera() {
     const glm::mat4 view = glm::lookAt(camera_.eye_pos, center, up);
 
     float aspect = static_cast<float>(extent_.width) / static_cast<float>(extent_.height);
-    const glm::mat4 projection = glm::perspective(0.4f, aspect, 0.1f, 1000.0f);
+    const glm::mat4 projection = glm::perspective(0.4f, aspect, 0.1f, HG_CAMERA_FAR);
 
     // Vulkan clip space has inverted Y and half Z.
     const glm::mat4 clip(1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.5f, 1.0f);
@@ -742,11 +749,11 @@ void Hologram::on_key(Key key) {
             shell_->quit();
             break;
         case KEY_UP:
-            camera_.eye_pos -= glm::vec3(HG_CAM_VELOCITY);
+            camera_.eye_pos -= glm::vec3(HG_CAMERA_VELOCITY);
             update_camera();
             break;
         case KEY_DOWN:
-            camera_.eye_pos += glm::vec3(HG_CAM_VELOCITY);
+            camera_.eye_pos += glm::vec3(HG_CAMERA_VELOCITY);
             update_camera();
             break;
         case KEY_SPACE:
