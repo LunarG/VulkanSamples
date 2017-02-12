@@ -2684,19 +2684,26 @@ static VkResult loader_get_manifest_files(const struct loader_instance *inst, co
         char *loc_write = loc;
 #if !defined(_WIN32)
         const char *loc_read;
+        size_t start, stop;
 
         loc_read = &xdgconfdirs[0];
-        for (const char *x = loc_read;; ++x) {
-            if (*x == PATH_SEPARATOR || *x == '\0') {
-                const size_t s = x - loc_read;
-                memcpy(loc_write, loc_read, s);
+        start = 0;
+        while (loc_read[start] != '\0') {
+            while (loc_read[start] == PATH_SEPARATOR) {
+                start++;
+            }
+            stop = start;
+            while (loc_read[stop] != PATH_SEPARATOR && loc_read[stop] != '\0') {
+                stop++;
+            }
+            const size_t s = stop - start;
+            if (s) {
+                memcpy(loc_write, &loc_read[start], s);
                 loc_write += s;
                 memcpy(loc_write, relative_location, rel_size);
                 loc_write += rel_size;
                 *loc_write++ = PATH_SEPARATOR;
-                if (*x == 0)
-                    break;
-                loc_read = ++x;
+                start = stop;
             }
         }
 
@@ -2715,19 +2722,26 @@ static VkResult loader_get_manifest_files(const struct loader_instance *inst, co
 #endif
 
         loc_read = &xdgdatadirs[0];
-        for (const char *x = loc_read;; ++x) {
-            if (*x == PATH_SEPARATOR || *x == '\0') {
-                const size_t s = x - loc_read;
-                memcpy(loc_write, loc_read, s);
+        start = 0;
+        while (loc_read[start] != '\0') {
+            while (loc_read[start] == PATH_SEPARATOR) {
+                start++;
+            }
+            stop = start;
+            while (loc_read[stop] != PATH_SEPARATOR && loc_read[stop] != '\0') {
+                stop++;
+            }
+            const size_t s = stop - start;
+            if (s) {
+                memcpy(loc_write, &loc_read[start], s);
                 loc_write += s;
                 memcpy(loc_write, relative_location, rel_size);
                 loc_write += rel_size;
                 *loc_write++ = PATH_SEPARATOR;
-                if (*x == 0)
-                    break;
-                loc_read = ++x;
+                start = stop;
             }
         }
+
         --loc_write;
 #else
         memcpy(loc_write, location, strlen(location));
