@@ -50,6 +50,7 @@
 #include <vulkan/vulkan.h>
 #endif
 
+#include <vulkan/vk_sdk_platform.h>
 #include "linmath.h"
 
 #define DEMO_TEXTURE_COUNT 1
