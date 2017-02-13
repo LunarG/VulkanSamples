@@ -699,6 +699,19 @@ No!  Most extension functionality only affects either a physical or logical
 device and not an instance.  Thus, the overwhelming majority of extensions
 should be supported with direct loader support.
 
+##### Filtering Out Unknown Instance Extension Names
+In some cases, an ICD may support instance extensions that the loader does not.
+For the above reasons, the loader will filter out the names of these unknown instance
+extensions when an application calls `vkEnumerateInstanceExtensionProperties`.
+Additionally, this behavior will cause the loader to throw an error during
+`vkCreateInstance` if you still attempt to use one of these extensions.  The intent is
+to protect applications so that they don't inadvertantly use functionality
+which could lead to a crash.  
+
+On the other-hand, if you know you can safely use the extension, you may disable
+the filtering by defining the environment variable `VK_LOADER_DISABLE_INST_EXT_FILTER`
+and setting the value to a non-zero number.  This will effectively disable the
+loader's filtering out of instance extension names.
 
 <br/>
 <br/>
