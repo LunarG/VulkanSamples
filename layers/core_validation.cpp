@@ -732,8 +732,31 @@ bool ValidateMemoryIsBoundToBuffer(const layer_data *dev_data, const BUFFER_STAT
 //  Otherwise, add reference from objectInfo to memoryInfo
 //  Add reference off of objInfo
 // TODO: We may need to refactor or pass in multiple valid usage statements to handle multiple valid usage conditions.
-static bool SetMemBinding(layer_data *dev_data, VkDeviceMemory mem, uint64_t handle, VkDebugReportObjectTypeEXT type,
+static void SetMemBinding(layer_data *dev_data, VkDeviceMemory mem, uint64_t handle, VkDebugReportObjectTypeEXT type,
                           const char *apiName) {
+    if (mem != VK_NULL_HANDLE) {
+        BINDABLE *mem_binding = GetObjectMemBinding(dev_data, handle, type);
+        assert(mem_binding);
+        DEVICE_MEM_INFO *mem_info = GetMemObjInfo(dev_data, mem);
+        if (mem_info) {
+            mem_info->obj_bindings.insert({handle, type});
+            // For image objects, make sure default memory state is correctly set
+            // TODO : What's the best/correct way to handle this?
+            if (VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT == type) {
+                auto const image_state = GetImageState(dev_data, VkImage(handle));
+                if (image_state) {
+                    VkImageCreateInfo ici = image_state->createInfo;
+                    if (ici.usage & (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
+                        // TODO::  More memory state transition stuff.
+                    }
+                }
+            }
+            mem_binding->binding.mem = mem;
+        }
+    }
+}
+static bool ValidateSetMemBinding(layer_data *dev_data, VkDeviceMemory mem, uint64_t handle, VkDebugReportObjectTypeEXT type,
+                                  const char *apiName) {
     bool skip_call = false;
     // It's an error to bind an object to NULL memory
     if (mem != VK_NULL_HANDLE) {
@@ -780,20 +803,6 @@ static bool SetMemBinding(layer_data *dev_data, VkDeviceMemory mem, uint64_t han
                             ") which was previous bound to memory that has since been freed. Memory bindings are immutable in "
                             "Vulkan so this attempt to bind to new memory is not allowed.",
                             apiName, reinterpret_cast<uint64_t &>(mem), handle);
-            } else {
-                mem_info->obj_bindings.insert({handle, type});
-                // For image objects, make sure default memory state is correctly set
-                // TODO : What's the best/correct way to handle this?
-                if (VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT == type) {
-                    auto const image_state = GetImageState(dev_data, VkImage(handle));
-                    if (image_state) {
-                        VkImageCreateInfo ici = image_state->createInfo;
-                        if (ici.usage & (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
-                            // TODO::  More memory state transition stuff.
-                        }
-                    }
-                }
-                mem_binding->binding.mem = mem;
             }
         }
     }
@@ -5447,7 +5456,7 @@ static bool PreCallValidateBindBufferMemory(layer_data *dev_data, VkBuffer buffe
     if (buffer_state) {
         // Track objects tied to memory
         uint64_t buffer_handle = reinterpret_cast<uint64_t &>(buffer);
-        skip = SetMemBinding(dev_data, mem, buffer_handle, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, "vkBindBufferMemory()");
+        skip = ValidateSetMemBinding(dev_data, mem, buffer_handle, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, "vkBindBufferMemory()");
         if (!buffer_state->memory_requirements_checked) {
             // There's not an explicit requirement in the spec to call vkGetBufferMemoryRequirements() prior to calling
             // BindBufferMemory, but it's implied in that memory being bound must conform with VkMemoryRequirements from
@@ -5524,6 +5533,10 @@ static void PostCallRecordBindBufferMemory(layer_data *dev_data, VkBuffer buffer
     std::unique_lock<std::mutex> lock(global_lock);
     auto buffer_state = GetBufferState(dev_data, buffer);
     if (buffer_state) {
+        // Track objects tied to memory
+        uint64_t buffer_handle = reinterpret_cast<uint64_t &>(buffer);
+        SetMemBinding(dev_data, mem, buffer_handle, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, "vkBindBufferMemory()");
+
         buffer_state->binding.mem = mem;
         buffer_state->binding.offset = memoryOffset;
         buffer_state->binding.size = buffer_state->requirements.size;
@@ -10136,7 +10149,7 @@ static bool PreCallValidateBindImageMemory(layer_data *dev_data, VkImage image, 
     if (image_state) {
         // Track objects tied to memory
         uint64_t image_handle = reinterpret_cast<uint64_t &>(image);
-        skip = SetMemBinding(dev_data, mem, image_handle, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, "vkBindImageMemory()");
+        skip = ValidateSetMemBinding(dev_data, mem, image_handle, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, "vkBindImageMemory()");
         if (!image_state->memory_requirements_checked) {
             // There's not an explicit requirement in the spec to call vkGetImageMemoryRequirements() prior to calling
             // BindImageMemory but it's implied in that memory being bound must conform with VkMemoryRequirements from
@@ -10168,6 +10181,10 @@ static void PostCallRecordBindImageMemory(layer_data *dev_data, VkImage image, V
     std::unique_lock<std::mutex> lock(global_lock);
     auto image_state = GetImageState(dev_data, image);
     if (image_state) {
+        // Track objects tied to memory
+        uint64_t image_handle = reinterpret_cast<uint64_t &>(image);
+        SetMemBinding(dev_data, mem, image_handle, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, "vkBindImageMemory()");
+
         image_state->binding.mem = mem;
         image_state->binding.offset = memoryOffset;
         image_state->binding.size = image_state->requirements.size;
