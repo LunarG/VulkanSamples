@@ -579,15 +579,15 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         name = 'ERROR'
         decoratedName = 'ERROR'
         if 'mathit' in source:
-            # Matches expressions similar to 'latexmath:[$\lceil{\mathit{rasterizationSamples} \over 32}\rceil$]'
-            match = re.match(r'latexmath\s*\:\s*\[\s*\$\\l(\w+)\s*\{\s*\\mathit\s*\{\s*(\w+)\s*\}\s*\\over\s*(\d+)\s*\}\s*\\r(\w+)\$\s*\]', source)
+            # Matches expressions similar to 'latexmath:[\lceil{\mathit{rasterizationSamples} \over 32}\rceil]'
+            match = re.match(r'latexmath\s*\:\s*\[\s*\\l(\w+)\s*\{\s*\\mathit\s*\{\s*(\w+)\s*\}\s*\\over\s*(\d+)\s*\}\s*\\r(\w+)\s*\]', source)
             if not match or match.group(1) != match.group(4):
                 raise 'Unrecognized latexmath expression'
             name = match.group(2)
             decoratedName = '{}({}/{})'.format(*match.group(1, 2, 3))
         else:
-            # Matches expressions similar to 'latexmath : [$dataSize \over 4$]'
-            match = re.match(r'latexmath\s*\:\s*\[\s*\$\s*(\w+)\s*\\over\s*(\d+)\s*\$\s*\]', source)
+            # Matches expressions similar to 'latexmath : [dataSize \over 4]'
+            match = re.match(r'latexmath\s*\:\s*\[\s*\s*(\w+)\s*\\over\s*(\d+)\s*\s*\]', source)
             name = match.group(1)
             decoratedName = '{}/{}'.format(*match.group(1, 2))
         return name, decoratedName
