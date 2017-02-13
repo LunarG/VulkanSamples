@@ -44,11 +44,9 @@
 #include <android/log.h>
 #include "vulkan_wrapper.h" // Include Vulkan_wrapper and dynamically load symbols.
 #elif defined(__IPHONE_OS_VERSION_MAX_ALLOWED)
-#	define VK_USE_PLATFORM_IOS_MVK
 #	include <MoltenVK/vk_mvk_ios_surface.h>
 #   include <unistd.h>
 #elif defined(__MAC_OS_X_VERSION_MAX_ALLOWED)
-#	define VK_USE_PLATFORM_MACOS_MVK
 #	include <MoltenVK/vk_mvk_macos_surface.h>
 #   include <unistd.h>
 #else
