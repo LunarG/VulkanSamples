@@ -7341,32 +7341,36 @@ VKAPI_ATTR void VKAPI_CALL CmdBindIndexBuffer(VkCommandBuffer commandBuffer, VkB
     auto buffer_state = GetBufferState(dev_data, buffer);
     auto cb_node = GetCBNode(dev_data, commandBuffer);
     if (cb_node && buffer_state) {
-        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, buffer_state, "vkCmdBindIndexBuffer()", VALIDATION_ERROR_02543);
-        std::function<bool()> function = [=]() {
-            return ValidateBufferMemoryIsValid(dev_data, buffer_state, "vkCmdBindIndexBuffer()");
-        };
-        cb_node->validate_functions.push_back(function);
-        skip_call |= ValidateCmd(dev_data, cb_node, CMD_BINDINDEXBUFFER, "vkCmdBindIndexBuffer()");
-        UpdateCmdBufferLastCmd(cb_node, CMD_BINDINDEXBUFFER);
-        VkDeviceSize offset_align = 0;
-        switch (indexType) {
-            case VK_INDEX_TYPE_UINT16:
-                offset_align = 2;
-                break;
-            case VK_INDEX_TYPE_UINT32:
-                offset_align = 4;
-                break;
-            default:
-                // ParamChecker should catch bad enum, we'll also throw alignment error below if offset_align stays 0
-                break;
+        if (cb_node->state == CB_RECORDING) {
+            skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, buffer_state, "vkCmdBindIndexBuffer()", VALIDATION_ERROR_02543);
+            std::function<bool()> function = [=]() {
+                return ValidateBufferMemoryIsValid(dev_data, buffer_state, "vkCmdBindIndexBuffer()");
+            };
+            cb_node->validate_functions.push_back(function);
+            skip_call |= ValidateCmd(dev_data, cb_node, CMD_BINDINDEXBUFFER, "vkCmdBindIndexBuffer()");
+            UpdateCmdBufferLastCmd(cb_node, CMD_BINDINDEXBUFFER);
+            VkDeviceSize offset_align = 0;
+            switch (indexType) {
+                case VK_INDEX_TYPE_UINT16:
+                    offset_align = 2;
+                    break;
+                case VK_INDEX_TYPE_UINT32:
+                    offset_align = 4;
+                    break;
+                default:
+                    // ParamChecker should catch bad enum, we'll also throw alignment error below if offset_align stays 0
+                    break;
+            }
+            if (!offset_align || (offset % offset_align)) {
+                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
+                                     __LINE__, DRAWSTATE_VTX_INDEX_ALIGNMENT_ERROR, "DS",
+                                     "vkCmdBindIndexBuffer() offset (0x%" PRIxLEAST64 ") does not fall on alignment (%s) boundary.",
+                                     offset, string_VkIndexType(indexType));
+            }
+            cb_node->status |= CBSTATUS_INDEX_BUFFER_BOUND;
+        } else {
+            skip_call |= report_error_no_cb_begin(dev_data, commandBuffer, "CmdBindIndexBuffer()");
         }
-        if (!offset_align || (offset % offset_align)) {
-            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                                 DRAWSTATE_VTX_INDEX_ALIGNMENT_ERROR, "DS",
-                                 "vkCmdBindIndexBuffer() offset (0x%" PRIxLEAST64 ") does not fall on alignment (%s) boundary.",
-                                 offset, string_VkIndexType(indexType));
-        }
-        cb_node->status |= CBSTATUS_INDEX_BUFFER_BOUND;
     } else {
         assert(0);
     }
@@ -7395,20 +7399,25 @@ VKAPI_ATTR void VKAPI_CALL CmdBindVertexBuffers(VkCommandBuffer commandBuffer, u
 
     auto cb_node = GetCBNode(dev_data, commandBuffer);
     if (cb_node) {
-        for (uint32_t i = 0; i < bindingCount; ++i) {
-            auto buffer_state = GetBufferState(dev_data, pBuffers[i]);
-            assert(buffer_state);
-            skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, buffer_state, "vkCmdBindVertexBuffers()", VALIDATION_ERROR_02546);
-            std::function<bool()> function = [=]() {
-                return ValidateBufferMemoryIsValid(dev_data, buffer_state, "vkCmdBindVertexBuffers()");
-            };
-            cb_node->validate_functions.push_back(function);
+        if (cb_node->state == CB_RECORDING) {
+            for (uint32_t i = 0; i < bindingCount; ++i) {
+                auto buffer_state = GetBufferState(dev_data, pBuffers[i]);
+                assert(buffer_state);
+                skip_call |=
+                    ValidateMemoryIsBoundToBuffer(dev_data, buffer_state, "vkCmdBindVertexBuffers()", VALIDATION_ERROR_02546);
+                std::function<bool()> function = [=]() {
+                    return ValidateBufferMemoryIsValid(dev_data, buffer_state, "vkCmdBindVertexBuffers()");
+                };
+                cb_node->validate_functions.push_back(function);
+            }
+            skip_call |= ValidateCmd(dev_data, cb_node, CMD_BINDVERTEXBUFFER, "vkCmdBindVertexBuffer()");
+            UpdateCmdBufferLastCmd(cb_node, CMD_BINDVERTEXBUFFER);
+            updateResourceTracking(cb_node, firstBinding, bindingCount, pBuffers);
+        } else {
+            skip_call |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdBindVertexBuffer()");
         }
-        skip_call |= ValidateCmd(dev_data, cb_node, CMD_BINDVERTEXBUFFER, "vkCmdBindVertexBuffer()");
-        UpdateCmdBufferLastCmd(cb_node, CMD_BINDVERTEXBUFFER);
-        updateResourceTracking(cb_node, firstBinding, bindingCount, pBuffers);
     } else {
-        skip_call |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdBindVertexBuffer()");
+        assert(0);
     }
     lock.unlock();
     if (!skip_call) dev_data->dispatch_table.CmdBindVertexBuffers(commandBuffer, firstBinding, bindingCount, pBuffers, pOffsets);
