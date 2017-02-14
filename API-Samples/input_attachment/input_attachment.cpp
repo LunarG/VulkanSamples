@@ -34,7 +34,6 @@ Use an input attachment to draw a yellow triangle
 
 static const char *vertShaderText =
     "#version 450\n"
-    "layout (location = 0) out vec4 outColor;\n"
     "vec2 vertices[3];\n"
     "out gl_PerVertex { \n"
     "    vec4 gl_Position;\n"
