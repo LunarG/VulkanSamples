@@ -2891,65 +2891,64 @@ VKAPI_ATTR VkResult VKAPI_CALL MergePipelineCaches(VkDevice device, VkPipelineCa
 
 static bool PreCreateGraphicsPipelines(VkDevice device, const VkGraphicsPipelineCreateInfo *pCreateInfos) {
     layer_data *data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    bool skip = false;
 
     // TODO: Handle count
     if (pCreateInfos != nullptr) {
         if (pCreateInfos->flags & VK_PIPELINE_CREATE_DERIVATIVE_BIT) {
             if (pCreateInfos->basePipelineIndex != -1) {
                 if (pCreateInfos->basePipelineHandle != VK_NULL_HANDLE) {
-                    log_msg(data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                            VALIDATION_ERROR_00526, LayerName,
-                            "vkCreateGraphicsPipelines parameter, pCreateInfos->basePipelineHandle, must be VK_NULL_HANDLE if "
-                            "pCreateInfos->flags "
-                            "contains the VK_PIPELINE_CREATE_DERIVATIVE_BIT flag and pCreateInfos->basePipelineIndex is not -1. %s",
-                            validation_error_map[VALIDATION_ERROR_00526]);
-                    return false;
+                    skip |= log_msg(
+                        data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_00526, LayerName,
+                        "vkCreateGraphicsPipelines parameter, pCreateInfos->basePipelineHandle, must be VK_NULL_HANDLE if "
+                        "pCreateInfos->flags "
+                        "contains the VK_PIPELINE_CREATE_DERIVATIVE_BIT flag and pCreateInfos->basePipelineIndex is not -1. %s",
+                        validation_error_map[VALIDATION_ERROR_00526]);
                 }
             }
 
             if (pCreateInfos->basePipelineHandle != VK_NULL_HANDLE) {
                 if (pCreateInfos->basePipelineIndex != -1) {
-                    log_msg(
+                    skip |= log_msg(
                         data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                         VALIDATION_ERROR_00528, LayerName,
                         "vkCreateGraphicsPipelines parameter, pCreateInfos->basePipelineIndex, must be -1 if pCreateInfos->flags "
                         "contains the VK_PIPELINE_CREATE_DERIVATIVE_BIT flag and pCreateInfos->basePipelineHandle is not "
                         "VK_NULL_HANDLE. %s",
                         validation_error_map[VALIDATION_ERROR_00528]);
-                    return false;
                 }
             }
         }
 
         if (pCreateInfos->pRasterizationState != nullptr) {
             if (pCreateInfos->pRasterizationState->cullMode & ~VK_CULL_MODE_FRONT_AND_BACK) {
-                log_msg(data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                        UNRECOGNIZED_VALUE, LayerName,
-                        "vkCreateGraphicsPipelines parameter, VkCullMode pCreateInfos->pRasterizationState->cullMode, is an "
-                        "unrecognized enumerator");
-                return false;
+                skip |=
+                    log_msg(data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                            UNRECOGNIZED_VALUE, LayerName,
+                            "vkCreateGraphicsPipelines parameter, VkCullMode pCreateInfos->pRasterizationState->cullMode, is an "
+                            "unrecognized enumerator");
             }
 
             if ((pCreateInfos->pRasterizationState->polygonMode != VK_POLYGON_MODE_FILL) &&
                 (data->physical_device_features.fillModeNonSolid == false)) {
-                log_msg(
+                skip |= log_msg(
                     data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                     DEVICE_FEATURE, LayerName,
                     "vkCreateGraphicsPipelines parameter, VkPolygonMode pCreateInfos->pRasterizationState->polygonMode cannot be "
                     "VK_POLYGON_MODE_POINT or VK_POLYGON_MODE_LINE if VkPhysicalDeviceFeatures->fillModeNonSolid is false.");
-                return false;
             }
         }
 
         size_t i = 0;
         for (size_t j = 0; j < pCreateInfos[i].stageCount; j++) {
-            validate_string(data->report_data, "vkCreateGraphicsPipelines",
-                            ParameterName("pCreateInfos[%i].pStages[%i].pName", ParameterName::IndexVector{i, j}),
-                            pCreateInfos[i].pStages[j].pName);
+            skip |= validate_string(data->report_data, "vkCreateGraphicsPipelines",
+                                    ParameterName("pCreateInfos[%i].pStages[%i].pName", ParameterName::IndexVector{i, j}),
+                                    pCreateInfos[i].pStages[j].pName);
         }
     }
 
-    return true;
+    return skip;
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t createInfoCount,
@@ -3373,14 +3372,12 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
                 }
             }
         }
+        skip |= PreCreateGraphicsPipelines(device, pCreateInfos);
     }
 
     if (!skip) {
-        PreCreateGraphicsPipelines(device, pCreateInfos);
-
         result = device_data->dispatch_table.CreateGraphicsPipelines(device, pipelineCache, createInfoCount, pCreateInfos,
                                                                      pAllocator, pPipelines);
-
         validate_result(report_data, "vkCreateGraphicsPipelines", result);
     }
 
@@ -3389,15 +3386,16 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
 
 bool PreCreateComputePipelines(VkDevice device, const VkComputePipelineCreateInfo *pCreateInfos) {
     layer_data *data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-
+    bool skip = false;
     if (pCreateInfos != nullptr) {
         // TODO: Handle count!
         uint32_t i = 0;
-        validate_string(data->report_data, "vkCreateComputePipelines",
-                        ParameterName("pCreateInfos[%i].stage.pName", ParameterName::IndexVector{i}), pCreateInfos[i].stage.pName);
+        skip |= validate_string(data->report_data, "vkCreateComputePipelines",
+                                ParameterName("pCreateInfos[%i].stage.pName", ParameterName::IndexVector{i}),
+                                pCreateInfos[i].stage.pName);
     }
 
-    return true;
+    return skip;
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t createInfoCount,
@@ -3410,13 +3408,11 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateComputePipelines(VkDevice device, VkPipelin
 
     skip |= parameter_validation_vkCreateComputePipelines(my_data->report_data, pipelineCache, createInfoCount, pCreateInfos,
                                                           pAllocator, pPipelines);
+    skip |= PreCreateComputePipelines(device, pCreateInfos);
 
     if (!skip) {
-        PreCreateComputePipelines(device, pCreateInfos);
-
         result = my_data->dispatch_table.CreateComputePipelines(device, pipelineCache, createInfoCount, pCreateInfos, pAllocator,
                                                                 pPipelines);
-
         validate_result(my_data->report_data, "vkCreateComputePipelines", result);
     }
 
