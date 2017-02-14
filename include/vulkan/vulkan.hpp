@@ -1092,7 +1092,7 @@ namespace vk
       : m_deviceMemory(VK_NULL_HANDLE)
     {}
 
-    DeviceMemory( nullptr_t )
+    DeviceMemory( std::nullptr_t )
       : m_deviceMemory(VK_NULL_HANDLE)
     {}
 
@@ -1108,7 +1108,7 @@ namespace vk
     }
 #endif
 
-    DeviceMemory& operator=( nullptr_t )
+    DeviceMemory& operator=( std::nullptr_t )
     {
       m_deviceMemory = VK_NULL_HANDLE;
       return *this;
@@ -1159,7 +1159,7 @@ namespace vk
       : m_commandPool(VK_NULL_HANDLE)
     {}
 
-    CommandPool( nullptr_t )
+    CommandPool( std::nullptr_t )
       : m_commandPool(VK_NULL_HANDLE)
     {}
 
@@ -1175,7 +1175,7 @@ namespace vk
     }
 #endif
 
-    CommandPool& operator=( nullptr_t )
+    CommandPool& operator=( std::nullptr_t )
     {
       m_commandPool = VK_NULL_HANDLE;
       return *this;
@@ -1226,7 +1226,7 @@ namespace vk
       : m_buffer(VK_NULL_HANDLE)
     {}
 
-    Buffer( nullptr_t )
+    Buffer( std::nullptr_t )
       : m_buffer(VK_NULL_HANDLE)
     {}
 
@@ -1242,7 +1242,7 @@ namespace vk
     }
 #endif
 
-    Buffer& operator=( nullptr_t )
+    Buffer& operator=( std::nullptr_t )
     {
       m_buffer = VK_NULL_HANDLE;
       return *this;
@@ -1293,7 +1293,7 @@ namespace vk
       : m_bufferView(VK_NULL_HANDLE)
     {}
 
-    BufferView( nullptr_t )
+    BufferView( std::nullptr_t )
       : m_bufferView(VK_NULL_HANDLE)
     {}
 
@@ -1309,7 +1309,7 @@ namespace vk
     }
 #endif
 
-    BufferView& operator=( nullptr_t )
+    BufferView& operator=( std::nullptr_t )
     {
       m_bufferView = VK_NULL_HANDLE;
       return *this;
@@ -1360,7 +1360,7 @@ namespace vk
       : m_image(VK_NULL_HANDLE)
     {}
 
-    Image( nullptr_t )
+    Image( std::nullptr_t )
       : m_image(VK_NULL_HANDLE)
     {}
 
@@ -1376,7 +1376,7 @@ namespace vk
     }
 #endif
 
-    Image& operator=( nullptr_t )
+    Image& operator=( std::nullptr_t )
     {
       m_image = VK_NULL_HANDLE;
       return *this;
@@ -1427,7 +1427,7 @@ namespace vk
       : m_imageView(VK_NULL_HANDLE)
     {}
 
-    ImageView( nullptr_t )
+    ImageView( std::nullptr_t )
       : m_imageView(VK_NULL_HANDLE)
     {}
 
@@ -1443,7 +1443,7 @@ namespace vk
     }
 #endif
 
-    ImageView& operator=( nullptr_t )
+    ImageView& operator=( std::nullptr_t )
     {
       m_imageView = VK_NULL_HANDLE;
       return *this;
@@ -1494,7 +1494,7 @@ namespace vk
       : m_shaderModule(VK_NULL_HANDLE)
     {}
 
-    ShaderModule( nullptr_t )
+    ShaderModule( std::nullptr_t )
       : m_shaderModule(VK_NULL_HANDLE)
     {}
 
@@ -1510,7 +1510,7 @@ namespace vk
     }
 #endif
 
-    ShaderModule& operator=( nullptr_t )
+    ShaderModule& operator=( std::nullptr_t )
     {
       m_shaderModule = VK_NULL_HANDLE;
       return *this;
@@ -1561,7 +1561,7 @@ namespace vk
       : m_pipeline(VK_NULL_HANDLE)
     {}
 
-    Pipeline( nullptr_t )
+    Pipeline( std::nullptr_t )
       : m_pipeline(VK_NULL_HANDLE)
     {}
 
@@ -1577,7 +1577,7 @@ namespace vk
     }
 #endif
 
-    Pipeline& operator=( nullptr_t )
+    Pipeline& operator=( std::nullptr_t )
     {
       m_pipeline = VK_NULL_HANDLE;
       return *this;
@@ -1628,7 +1628,7 @@ namespace vk
       : m_pipelineLayout(VK_NULL_HANDLE)
     {}
 
-    PipelineLayout( nullptr_t )
+    PipelineLayout( std::nullptr_t )
       : m_pipelineLayout(VK_NULL_HANDLE)
     {}
 
@@ -1644,7 +1644,7 @@ namespace vk
     }
 #endif
 
-    PipelineLayout& operator=( nullptr_t )
+    PipelineLayout& operator=( std::nullptr_t )
     {
       m_pipelineLayout = VK_NULL_HANDLE;
       return *this;
@@ -1695,7 +1695,7 @@ namespace vk
       : m_sampler(VK_NULL_HANDLE)
     {}
 
-    Sampler( nullptr_t )
+    Sampler( std::nullptr_t )
       : m_sampler(VK_NULL_HANDLE)
     {}
 
@@ -1711,7 +1711,7 @@ namespace vk
     }
 #endif
 
-    Sampler& operator=( nullptr_t )
+    Sampler& operator=( std::nullptr_t )
     {
       m_sampler = VK_NULL_HANDLE;
       return *this;
@@ -1762,7 +1762,7 @@ namespace vk
       : m_descriptorSet(VK_NULL_HANDLE)
     {}
 
-    DescriptorSet( nullptr_t )
+    DescriptorSet( std::nullptr_t )
       : m_descriptorSet(VK_NULL_HANDLE)
     {}
 
@@ -1778,7 +1778,7 @@ namespace vk
     }
 #endif
 
-    DescriptorSet& operator=( nullptr_t )
+    DescriptorSet& operator=( std::nullptr_t )
     {
       m_descriptorSet = VK_NULL_HANDLE;
       return *this;
@@ -1829,7 +1829,7 @@ namespace vk
       : m_descriptorSetLayout(VK_NULL_HANDLE)
     {}
 
-    DescriptorSetLayout( nullptr_t )
+    DescriptorSetLayout( std::nullptr_t )
       : m_descriptorSetLayout(VK_NULL_HANDLE)
     {}
 
@@ -1845,7 +1845,7 @@ namespace vk
     }
 #endif
 
-    DescriptorSetLayout& operator=( nullptr_t )
+    DescriptorSetLayout& operator=( std::nullptr_t )
     {
       m_descriptorSetLayout = VK_NULL_HANDLE;
       return *this;
@@ -1896,7 +1896,7 @@ namespace vk
       : m_descriptorPool(VK_NULL_HANDLE)
     {}
 
-    DescriptorPool( nullptr_t )
+    DescriptorPool( std::nullptr_t )
       : m_descriptorPool(VK_NULL_HANDLE)
     {}
 
@@ -1912,7 +1912,7 @@ namespace vk
     }
 #endif
 
-    DescriptorPool& operator=( nullptr_t )
+    DescriptorPool& operator=( std::nullptr_t )
     {
       m_descriptorPool = VK_NULL_HANDLE;
       return *this;
@@ -1963,7 +1963,7 @@ namespace vk
       : m_fence(VK_NULL_HANDLE)
     {}
 
-    Fence( nullptr_t )
+    Fence( std::nullptr_t )
       : m_fence(VK_NULL_HANDLE)
     {}
 
@@ -1979,7 +1979,7 @@ namespace vk
     }
 #endif
 
-    Fence& operator=( nullptr_t )
+    Fence& operator=( std::nullptr_t )
     {
       m_fence = VK_NULL_HANDLE;
       return *this;
@@ -2030,7 +2030,7 @@ namespace vk
       : m_semaphore(VK_NULL_HANDLE)
     {}
 
-    Semaphore( nullptr_t )
+    Semaphore( std::nullptr_t )
       : m_semaphore(VK_NULL_HANDLE)
     {}
 
@@ -2046,7 +2046,7 @@ namespace vk
     }
 #endif
 
-    Semaphore& operator=( nullptr_t )
+    Semaphore& operator=( std::nullptr_t )
     {
       m_semaphore = VK_NULL_HANDLE;
       return *this;
@@ -2097,7 +2097,7 @@ namespace vk
       : m_event(VK_NULL_HANDLE)
     {}
 
-    Event( nullptr_t )
+    Event( std::nullptr_t )
       : m_event(VK_NULL_HANDLE)
     {}
 
@@ -2113,7 +2113,7 @@ namespace vk
     }
 #endif
 
-    Event& operator=( nullptr_t )
+    Event& operator=( std::nullptr_t )
     {
       m_event = VK_NULL_HANDLE;
       return *this;
@@ -2164,7 +2164,7 @@ namespace vk
       : m_queryPool(VK_NULL_HANDLE)
     {}
 
-    QueryPool( nullptr_t )
+    QueryPool( std::nullptr_t )
       : m_queryPool(VK_NULL_HANDLE)
     {}
 
@@ -2180,7 +2180,7 @@ namespace vk
     }
 #endif
 
-    QueryPool& operator=( nullptr_t )
+    QueryPool& operator=( std::nullptr_t )
     {
       m_queryPool = VK_NULL_HANDLE;
       return *this;
@@ -2231,7 +2231,7 @@ namespace vk
       : m_framebuffer(VK_NULL_HANDLE)
     {}
 
-    Framebuffer( nullptr_t )
+    Framebuffer( std::nullptr_t )
       : m_framebuffer(VK_NULL_HANDLE)
     {}
 
@@ -2247,7 +2247,7 @@ namespace vk
     }
 #endif
 
-    Framebuffer& operator=( nullptr_t )
+    Framebuffer& operator=( std::nullptr_t )
     {
       m_framebuffer = VK_NULL_HANDLE;
       return *this;
@@ -2298,7 +2298,7 @@ namespace vk
       : m_renderPass(VK_NULL_HANDLE)
     {}
 
-    RenderPass( nullptr_t )
+    RenderPass( std::nullptr_t )
       : m_renderPass(VK_NULL_HANDLE)
     {}
 
@@ -2314,7 +2314,7 @@ namespace vk
     }
 #endif
 
-    RenderPass& operator=( nullptr_t )
+    RenderPass& operator=( std::nullptr_t )
     {
       m_renderPass = VK_NULL_HANDLE;
       return *this;
@@ -2365,7 +2365,7 @@ namespace vk
       : m_pipelineCache(VK_NULL_HANDLE)
     {}
 
-    PipelineCache( nullptr_t )
+    PipelineCache( std::nullptr_t )
       : m_pipelineCache(VK_NULL_HANDLE)
     {}
 
@@ -2381,7 +2381,7 @@ namespace vk
     }
 #endif
 
-    PipelineCache& operator=( nullptr_t )
+    PipelineCache& operator=( std::nullptr_t )
     {
       m_pipelineCache = VK_NULL_HANDLE;
       return *this;
@@ -2432,7 +2432,7 @@ namespace vk
       : m_objectTableNVX(VK_NULL_HANDLE)
     {}
 
-    ObjectTableNVX( nullptr_t )
+    ObjectTableNVX( std::nullptr_t )
       : m_objectTableNVX(VK_NULL_HANDLE)
     {}
 
@@ -2448,7 +2448,7 @@ namespace vk
     }
 #endif
 
-    ObjectTableNVX& operator=( nullptr_t )
+    ObjectTableNVX& operator=( std::nullptr_t )
     {
       m_objectTableNVX = VK_NULL_HANDLE;
       return *this;
@@ -2499,7 +2499,7 @@ namespace vk
       : m_indirectCommandsLayoutNVX(VK_NULL_HANDLE)
     {}
 
-    IndirectCommandsLayoutNVX( nullptr_t )
+    IndirectCommandsLayoutNVX( std::nullptr_t )
       : m_indirectCommandsLayoutNVX(VK_NULL_HANDLE)
     {}
 
@@ -2515,7 +2515,7 @@ namespace vk
     }
 #endif
 
-    IndirectCommandsLayoutNVX& operator=( nullptr_t )
+    IndirectCommandsLayoutNVX& operator=( std::nullptr_t )
     {
       m_indirectCommandsLayoutNVX = VK_NULL_HANDLE;
       return *this;
@@ -2566,7 +2566,7 @@ namespace vk
       : m_displayKHR(VK_NULL_HANDLE)
     {}
 
-    DisplayKHR( nullptr_t )
+    DisplayKHR( std::nullptr_t )
       : m_displayKHR(VK_NULL_HANDLE)
     {}
 
@@ -2582,7 +2582,7 @@ namespace vk
     }
 #endif
 
-    DisplayKHR& operator=( nullptr_t )
+    DisplayKHR& operator=( std::nullptr_t )
     {
       m_displayKHR = VK_NULL_HANDLE;
       return *this;
@@ -2633,7 +2633,7 @@ namespace vk
       : m_displayModeKHR(VK_NULL_HANDLE)
     {}
 
-    DisplayModeKHR( nullptr_t )
+    DisplayModeKHR( std::nullptr_t )
       : m_displayModeKHR(VK_NULL_HANDLE)
     {}
 
@@ -2649,7 +2649,7 @@ namespace vk
     }
 #endif
 
-    DisplayModeKHR& operator=( nullptr_t )
+    DisplayModeKHR& operator=( std::nullptr_t )
     {
       m_displayModeKHR = VK_NULL_HANDLE;
       return *this;
@@ -2700,7 +2700,7 @@ namespace vk
       : m_surfaceKHR(VK_NULL_HANDLE)
     {}
 
-    SurfaceKHR( nullptr_t )
+    SurfaceKHR( std::nullptr_t )
       : m_surfaceKHR(VK_NULL_HANDLE)
     {}
 
@@ -2716,7 +2716,7 @@ namespace vk
     }
 #endif
 
-    SurfaceKHR& operator=( nullptr_t )
+    SurfaceKHR& operator=( std::nullptr_t )
     {
       m_surfaceKHR = VK_NULL_HANDLE;
       return *this;
@@ -2767,7 +2767,7 @@ namespace vk
       : m_swapchainKHR(VK_NULL_HANDLE)
     {}
 
-    SwapchainKHR( nullptr_t )
+    SwapchainKHR( std::nullptr_t )
       : m_swapchainKHR(VK_NULL_HANDLE)
     {}
 
@@ -2783,7 +2783,7 @@ namespace vk
     }
 #endif
 
-    SwapchainKHR& operator=( nullptr_t )
+    SwapchainKHR& operator=( std::nullptr_t )
     {
       m_swapchainKHR = VK_NULL_HANDLE;
       return *this;
@@ -2834,7 +2834,7 @@ namespace vk
       : m_debugReportCallbackEXT(VK_NULL_HANDLE)
     {}
 
-    DebugReportCallbackEXT( nullptr_t )
+    DebugReportCallbackEXT( std::nullptr_t )
       : m_debugReportCallbackEXT(VK_NULL_HANDLE)
     {}
 
@@ -2850,7 +2850,7 @@ namespace vk
     }
 #endif
 
-    DebugReportCallbackEXT& operator=( nullptr_t )
+    DebugReportCallbackEXT& operator=( std::nullptr_t )
     {
       m_debugReportCallbackEXT = VK_NULL_HANDLE;
       return *this;
@@ -17559,7 +17559,7 @@ namespace vk
       : m_commandBuffer(VK_NULL_HANDLE)
     {}
 
-    CommandBuffer( nullptr_t )
+    CommandBuffer( std::nullptr_t )
       : m_commandBuffer(VK_NULL_HANDLE)
     {}
 
@@ -17575,7 +17575,7 @@ namespace vk
     }
 #endif
 
-    CommandBuffer& operator=( nullptr_t )
+    CommandBuffer& operator=( std::nullptr_t )
     {
       m_commandBuffer = VK_NULL_HANDLE;
       return *this;
@@ -18372,7 +18372,7 @@ namespace vk
       : m_queue(VK_NULL_HANDLE)
     {}
 
-    Queue( nullptr_t )
+    Queue( std::nullptr_t )
       : m_queue(VK_NULL_HANDLE)
     {}
 
@@ -18388,7 +18388,7 @@ namespace vk
     }
 #endif
 
-    Queue& operator=( nullptr_t )
+    Queue& operator=( std::nullptr_t )
     {
       m_queue = VK_NULL_HANDLE;
       return *this;
@@ -18559,7 +18559,7 @@ namespace vk
       : m_device(VK_NULL_HANDLE)
     {}
 
-    Device( nullptr_t )
+    Device( std::nullptr_t )
       : m_device(VK_NULL_HANDLE)
     {}
 
@@ -18575,7 +18575,7 @@ namespace vk
     }
 #endif
 
-    Device& operator=( nullptr_t )
+    Device& operator=( std::nullptr_t )
     {
       m_device = VK_NULL_HANDLE;
       return *this;
@@ -21018,7 +21018,7 @@ namespace vk
       : m_physicalDevice(VK_NULL_HANDLE)
     {}
 
-    PhysicalDevice( nullptr_t )
+    PhysicalDevice( std::nullptr_t )
       : m_physicalDevice(VK_NULL_HANDLE)
     {}
 
@@ -21034,7 +21034,7 @@ namespace vk
     }
 #endif
 
-    PhysicalDevice& operator=( nullptr_t )
+    PhysicalDevice& operator=( std::nullptr_t )
     {
       m_physicalDevice = VK_NULL_HANDLE;
       return *this;
@@ -21945,7 +21945,7 @@ namespace vk
       : m_instance(VK_NULL_HANDLE)
     {}
 
-    Instance( nullptr_t )
+    Instance( std::nullptr_t )
       : m_instance(VK_NULL_HANDLE)
     {}
 
@@ -21961,7 +21961,7 @@ namespace vk
     }
 #endif
 
-    Instance& operator=( nullptr_t )
+    Instance& operator=( std::nullptr_t )
     {
       m_instance = VK_NULL_HANDLE;
       return *this;
