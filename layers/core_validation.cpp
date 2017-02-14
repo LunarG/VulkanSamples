@@ -725,13 +725,8 @@ bool ValidateMemoryIsBoundToBuffer(const layer_data *dev_data, const BUFFER_STAT
     return result;
 }
 
-// SetMemBinding is used to establish immutable, non-sparse binding between a single image/buffer object and memory object
-// For NULL mem case, output warning
-// Make sure given object is in global object map
-//  IF a previous binding existed, output validation error
-//  Otherwise, add reference from objectInfo to memoryInfo
-//  Add reference off of objInfo
-// TODO: We may need to refactor or pass in multiple valid usage statements to handle multiple valid usage conditions.
+// SetMemBinding is used to establish immutable, non-sparse binding between a single image/buffer object and memory object.
+// Corresponding valid usage checks are in ValidateSetMemBinding().
 static void SetMemBinding(layer_data *dev_data, VkDeviceMemory mem, uint64_t handle, VkDebugReportObjectTypeEXT type,
                           const char *apiName) {
     if (mem != VK_NULL_HANDLE) {
@@ -755,6 +750,14 @@ static void SetMemBinding(layer_data *dev_data, VkDeviceMemory mem, uint64_t han
         }
     }
 }
+
+// Valid usage checks for a call to SetMemBinding().
+// For NULL mem case, output warning
+// Make sure given object is in global object map
+//  IF a previous binding existed, output validation error
+//  Otherwise, add reference from objectInfo to memoryInfo
+//  Add reference off of objInfo
+// TODO: We may need to refactor or pass in multiple valid usage statements to handle multiple valid usage conditions.
 static bool ValidateSetMemBinding(layer_data *dev_data, VkDeviceMemory mem, uint64_t handle, VkDebugReportObjectTypeEXT type,
                                   const char *apiName) {
     bool skip_call = false;
