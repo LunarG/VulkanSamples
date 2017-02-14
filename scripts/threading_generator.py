@@ -137,44 +137,26 @@ class ThreadOutputGenerator(OutputGenerator):
             if ((elem.tag is not 'type') and (elem.tail is not None)) and '*' in elem.tail:
                 ispointer = True
         return ispointer
+
+    # Check if an object is a non-dispatchable handle
+    def isHandleTypeNonDispatchable(self, handletype):
+        handle = self.registry.tree.find("types/type/[name='" + handletype + "'][@category='handle']")
+        if handle is not None and handle.find('type').text == 'VK_DEFINE_NON_DISPATCHABLE_HANDLE':
+            return True
+        else:
+            return False
+
+    # Check if an object is a dispatchable handle
+    def isHandleTypeDispatchable(self, handletype):
+        handle = self.registry.tree.find("types/type/[name='" + handletype + "'][@category='handle']")
+        if handle is not None and handle.find('type').text == 'VK_DEFINE_HANDLE':
+            return True
+        else:
+            return False
+
     def makeThreadUseBlock(self, cmd, functionprefix):
         """Generate C function pointer typedef for <command> Element"""
         paramdecl = ''
-        # TODO: We should generate these lists
-        thread_check_dispatchable_objects = [
-            "VkCommandBuffer",
-            "VkDevice",
-            "VkInstance",
-            "VkQueue",
-        ]
-        thread_check_nondispatchable_objects = [
-            "VkBuffer",
-            "VkBufferView",
-            "VkCommandPool",
-            "VkDescriptorPool",
-            "VkDescriptorSetLayout",
-            "VkDeviceMemory",
-            "VkEvent",
-            "VkFence",
-            "VkFramebuffer",
-            "VkImage",
-            "VkImageView",
-            "VkPipeline",
-            "VkPipelineCache",
-            "VkPipelineLayout",
-            "VkQueryPool",
-            "VkRenderPass",
-            "VkSampler",
-            "VkSemaphore",
-            "VkShaderModule",
-            "VkObjectTableNVX",
-            "VkIndirectCommandsLayoutNVX",
-            "VkDisplayKHR",
-            "VkDisplayModeKHR",
-            "VkSurfaceKHR",
-            "VkSwapchainKHR",
-        ]
-
         # Find and add any parameters that are thread unsafe
         params = cmd.findall('param')
         for param in params:
@@ -222,7 +204,7 @@ class ThreadOutputGenerator(OutputGenerator):
                         paramtype = paramtype.text
                     else:
                         paramtype = 'None'
-                    if paramtype in thread_check_dispatchable_objects or paramtype in thread_check_nondispatchable_objects:
+                    if (self.isHandleTypeDispatchable(paramtype) or self.isHandleTypeNonDispatchable(paramtype)) and paramtype != 'VkPhysicalDevice':
                         if self.paramIsArray(param) and ('pPipelines' != paramname.text):
                             # Add pointer dereference for array counts that are pointer values
                             dereference = ''
@@ -230,7 +212,8 @@ class ThreadOutputGenerator(OutputGenerator):
                                 if param.attrib.get('len') == candidate.find('name').text:
                                     if self.paramIsPointer(candidate):
                                         dereference = '*'
-                            paramdecl += '    for (uint32_t index = 0; index < ' + dereference + param.attrib.get('len') + '; index++) {\n'
+                            param_len = str(param.attrib.get('len')).replace("::", "->")
+                            paramdecl += '    for (uint32_t index = 0; index < ' + dereference + param_len + '; index++) {\n'
                             paramdecl += '        ' + functionprefix + 'ReadObject(my_data, ' + paramname.text + '[index]);\n'
                             paramdecl += '    }\n'
                         elif not self.paramIsPointer(param):
