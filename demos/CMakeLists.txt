@@ -36,6 +36,8 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         add_definitions(-DVK_USE_PLATFORM_MIR_KHR)
         include_directories(${MIR_INCLUDE_DIR})
         # TODO - Add Mir support
+    elseif(DEMOS_WSI_SELECTION STREQUAL "DISPLAY")
+        add_definitions(-DVK_USE_PLATFORM_DISPLAY_KHR)
     else()
         message( FATAL_ERROR "Unrecognized value for DEMOS_WSI_SELECTION: ${DEMOS_WSI_SELECTION}" )
      endif()

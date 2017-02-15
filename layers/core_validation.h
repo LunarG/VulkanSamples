@@ -61,43 +61,6 @@
 #include <deque>
 
 /*
- * CHECK_DISABLED struct is a container for bools that can block validation checks from being performed.
- * The end goal is to have all checks guarded by a bool. The bools are all "false" by default meaning that all checks
- * are enabled. At CreateInstance time, the user can use the VK_EXT_validation_flags extension to pass in enum values
- * of VkValidationCheckEXT that will selectively disable checks.
- */
-struct CHECK_DISABLED {
-    bool command_buffer_state;
-    bool create_descriptor_set_layout;
-    bool destroy_buffer_view;       // Skip validation at DestroyBufferView time
-    bool destroy_image_view;        // Skip validation at DestroyImageView time
-    bool destroy_pipeline;          // Skip validation at DestroyPipeline time
-    bool destroy_descriptor_pool;   // Skip validation at DestroyDescriptorPool time
-    bool destroy_framebuffer;       // Skip validation at DestroyFramebuffer time
-    bool destroy_renderpass;        // Skip validation at DestroyRenderpass time
-    bool destroy_image;             // Skip validation at DestroyImage time
-    bool destroy_sampler;           // Skip validation at DestroySampler time
-    bool destroy_command_pool;      // Skip validation at DestroyCommandPool time
-    bool destroy_event;             // Skip validation at DestroyEvent time
-    bool free_memory;               // Skip validation at FreeMemory time
-    bool object_in_use;             // Skip all object in_use checking
-    bool idle_descriptor_set;       // Skip check to verify that descriptor set is no in-use
-    bool push_constant_range;       // Skip push constant range checks
-    bool free_descriptor_sets;      // Skip validation prior to vkFreeDescriptorSets()
-    bool allocate_descriptor_sets;  // Skip validation prior to vkAllocateDescriptorSets()
-    bool update_descriptor_sets;    // Skip validation prior to vkUpdateDescriptorSets()
-    bool wait_for_fences;
-    bool get_fence_state;
-    bool queue_wait_idle;
-    bool device_wait_idle;
-    bool destroy_fence;
-    bool destroy_semaphore;
-    bool destroy_query_pool;
-    bool get_query_pool_results;
-    bool destroy_buffer;
-};
-
-/*
  * MTMTODO : Update this comment
  * Data Structure overview
  *  There are 4 global STL(' maps
@@ -128,21 +91,11 @@ struct CHECK_DISABLED {
 // TODO : Is there a way to track when Cmd Buffer finishes & remove mem references at that point?
 // TODO : Could potentially store a list of freed mem allocs to flag when they're incorrectly used
 
-struct MT_FB_ATTACHMENT_INFO {
-    IMAGE_VIEW_STATE *view_state;
-    VkImage image;
-    VkDeviceMemory mem;
-};
+
 
 struct GENERIC_HEADER {
     VkStructureType sType;
     const void *pNext;
-};
-
-class PHYS_DEV_PROPERTIES_NODE {
-   public:
-    VkPhysicalDeviceProperties properties;
-    std::vector<VkQueueFamilyProperties> queue_family_properties;
 };
 
 enum FENCE_STATE { FENCE_UNSIGNALED, FENCE_INFLIGHT, FENCE_RETIRED };
@@ -185,25 +138,6 @@ class QUEUE_STATE {
 class QUERY_POOL_NODE : public BASE_NODE {
    public:
     VkQueryPoolCreateInfo createInfo;
-};
-
-class FRAMEBUFFER_STATE : public BASE_NODE {
-   public:
-    VkFramebuffer framebuffer;
-    safe_VkFramebufferCreateInfo createInfo;
-    safe_VkRenderPassCreateInfo renderPassCreateInfo;
-    std::unordered_set<VkCommandBuffer> referencingCmdBuffers;
-    std::vector<MT_FB_ATTACHMENT_INFO> attachments;
-    FRAMEBUFFER_STATE(VkFramebuffer fb, const VkFramebufferCreateInfo *pCreateInfo, const VkRenderPassCreateInfo *pRPCI)
-        : framebuffer(fb), createInfo(pCreateInfo), renderPassCreateInfo(pRPCI){};
-};
-
-// Track command pools and their command buffers
-struct COMMAND_POOL_NODE : public BASE_NODE {
-    VkCommandPoolCreateFlags createFlags;
-    uint32_t queueFamilyIndex;
-    // TODO: why is this std::list?
-    std::list<VkCommandBuffer> commandBuffers;  // container of cmd buffers allocated from this pool
 };
 
 // Stuff from Device Limits Layer

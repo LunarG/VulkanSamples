@@ -62,12 +62,12 @@ wanting a better understanding of the Vulkan runtime.
 
 #### The Loader
 
-As you can see, the application sits on one end, and interfaces directly to the
-loader.  The loader itself can contain some number of [layers](#layers), which
-provide special functionality an application may wish to take advantage of.
-Finally, on the other end of the loader from the application are the ICDs, which
+The application sits on one end of, and interfaces directly with, the
+loader.  On the other end of the loader from the application are the ICDs, which
 control the Vulkan-capable hardware.  An important point to remember is that
-Vulkan-capable hardware can be graphics-based, compute-based, or both.
+Vulkan-capable hardware can be graphics-based, compute-based, or both. Between
+the application and the ICDs the loader can inject a number of optional
+[layers](#layers) that provide special functionality.
 
 The loader is responsible for working with the various layers as well as
 supporting multiple GPUs and their drivers.  Any Vulkan function may
@@ -371,7 +371,7 @@ backwards compatibility is guaranteed for all versions with the same major
 number (e.g. 1.0 and 1.1). On Windows, the loader library encodes the ABI
 version in its name such that multiple ABI incompatible versions of the loader
 can peacefully coexist on a given system. The Vulkan loader library file name is
-"vulkan-<ABI version>.dll". For example, for Vulkan version 1.X on Windows the
+`vulkan-<ABI version>.dll`. For example, for Vulkan version 1.X on Windows the
 library filename is vulkan-1.dll. And this library file can typically be found
 in the windows/system32 directory (on 64-bit Windows installs, the 32-bit
 version of the loader with the same name can be found in the windows/sysWOW64
@@ -699,6 +699,19 @@ No!  Most extension functionality only affects either a physical or logical
 device and not an instance.  Thus, the overwhelming majority of extensions
 should be supported with direct loader support.
 
+##### Filtering Out Unknown Instance Extension Names
+In some cases, an ICD may support instance extensions that the loader does not.
+For the above reasons, the loader will filter out the names of these unknown instance
+extensions when an application calls `vkEnumerateInstanceExtensionProperties`.
+Additionally, this behavior will cause the loader to throw an error during
+`vkCreateInstance` if you still attempt to use one of these extensions.  The intent is
+to protect applications so that they don't inadvertantly use functionality
+which could lead to a crash.  
+
+On the other-hand, if you know you can safely use the extension, you may disable
+the filtering by defining the environment variable `VK_LOADER_DISABLE_INST_EXT_FILTER`
+and setting the value to a non-zero number.  This will effectively disable the
+loader's filtering out of instance extension names.
 
 <br/>
 <br/>

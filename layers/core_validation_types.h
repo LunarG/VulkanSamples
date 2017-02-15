@@ -49,6 +49,7 @@
 #include "vk_safe_struct.h"
 #include "vulkan/vulkan.h"
 #include "vk_validation_error_messages.h"
+#include "vk_layer_logging.h"
 #include <atomic>
 #include <functional>
 #include <map>
@@ -56,6 +57,8 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <memory>
+#include <list>
 
 // Fwd declarations
 namespace cvdescriptorset {
@@ -78,6 +81,14 @@ class BASE_NODE {
     BASE_NODE() { in_use.store(0); };
 };
 
+// Track command pools and their command buffers
+struct COMMAND_POOL_NODE : public BASE_NODE {
+    VkCommandPoolCreateFlags createFlags;
+    uint32_t queueFamilyIndex;
+    // TODO: why is this std::list?
+    std::list<VkCommandBuffer> commandBuffers;  // container of cmd buffers allocated from this pool
+};
+
 // Generic wrapper for vulkan objects
 struct VK_OBJECT {
     uint64_t handle;
@@ -92,6 +103,12 @@ struct hash<VK_OBJECT> {
     size_t operator()(VK_OBJECT obj) const NOEXCEPT { return hash<uint64_t>()(obj.handle) ^ hash<uint32_t>()(obj.type); }
 };
 }
+
+class PHYS_DEV_PROPERTIES_NODE {
+public:
+    VkPhysicalDeviceProperties properties;
+    std::vector<VkQueueFamilyProperties> queue_family_properties;
+};
 
 // Flags describing requirements imposed by the pipeline on a descriptor. These
 // can't be checked at pipeline creation time as they depend on the Image or
@@ -670,20 +687,79 @@ struct IMAGE_LAYOUT_NODE {
     VkFormat format;
 };
 
+// CHECK_DISABLED struct is a container for bools that can block validation checks from being performed.
+// The end goal is to have all checks guarded by a bool. The bools are all "false" by default meaning that all checks
+// are enabled. At CreateInstance time, the user can use the VK_EXT_validation_flags extension to pass in enum values
+// of VkValidationCheckEXT that will selectively disable checks.
+struct CHECK_DISABLED {
+    bool command_buffer_state;
+    bool create_descriptor_set_layout;
+    bool destroy_buffer_view;       // Skip validation at DestroyBufferView time
+    bool destroy_image_view;        // Skip validation at DestroyImageView time
+    bool destroy_pipeline;          // Skip validation at DestroyPipeline time
+    bool destroy_descriptor_pool;   // Skip validation at DestroyDescriptorPool time
+    bool destroy_framebuffer;       // Skip validation at DestroyFramebuffer time
+    bool destroy_renderpass;        // Skip validation at DestroyRenderpass time
+    bool destroy_image;             // Skip validation at DestroyImage time
+    bool destroy_sampler;           // Skip validation at DestroySampler time
+    bool destroy_command_pool;      // Skip validation at DestroyCommandPool time
+    bool destroy_event;             // Skip validation at DestroyEvent time
+    bool free_memory;               // Skip validation at FreeMemory time
+    bool object_in_use;             // Skip all object in_use checking
+    bool idle_descriptor_set;       // Skip check to verify that descriptor set is no in-use
+    bool push_constant_range;       // Skip push constant range checks
+    bool free_descriptor_sets;      // Skip validation prior to vkFreeDescriptorSets()
+    bool allocate_descriptor_sets;  // Skip validation prior to vkAllocateDescriptorSets()
+    bool update_descriptor_sets;    // Skip validation prior to vkUpdateDescriptorSets()
+    bool wait_for_fences;
+    bool get_fence_state;
+    bool queue_wait_idle;
+    bool device_wait_idle;
+    bool destroy_fence;
+    bool destroy_semaphore;
+    bool destroy_query_pool;
+    bool get_query_pool_results;
+    bool destroy_buffer;
+    bool shader_validation;         // Skip validation for shaders
+};
+
+struct MT_FB_ATTACHMENT_INFO {
+    IMAGE_VIEW_STATE *view_state;
+    VkImage image;
+    VkDeviceMemory mem;
+};
+
+class FRAMEBUFFER_STATE : public BASE_NODE {
+public:
+    VkFramebuffer framebuffer;
+    safe_VkFramebufferCreateInfo createInfo;
+    safe_VkRenderPassCreateInfo renderPassCreateInfo;
+    std::unordered_set<VkCommandBuffer> referencingCmdBuffers;
+    std::vector<MT_FB_ATTACHMENT_INFO> attachments;
+    FRAMEBUFFER_STATE(VkFramebuffer fb, const VkFramebufferCreateInfo *pCreateInfo, const VkRenderPassCreateInfo *pRPCI)
+        : framebuffer(fb), createInfo(pCreateInfo), renderPassCreateInfo(pRPCI) {};
+};
+
 // Fwd declarations of layer_data and helpers to look-up/validate state from layer_data maps
 namespace core_validation {
 struct layer_data;
-cvdescriptorset::DescriptorSet *getSetNode(const layer_data *, VkDescriptorSet);
-cvdescriptorset::DescriptorSetLayout const *getDescriptorSetLayout(layer_data const *, VkDescriptorSetLayout);
-DESCRIPTOR_POOL_STATE *getDescriptorPoolState(const layer_data *, const VkDescriptorPool);
-BUFFER_STATE *getBufferState(const layer_data *, VkBuffer);
-IMAGE_STATE *getImageState(const layer_data *, VkImage);
-DEVICE_MEM_INFO *getMemObjInfo(const layer_data *, VkDeviceMemory);
-BUFFER_VIEW_STATE *getBufferViewState(const layer_data *, VkBufferView);
-SAMPLER_STATE *getSamplerState(const layer_data *, VkSampler);
-IMAGE_VIEW_STATE *getImageViewState(const layer_data *, VkImageView);
-VkSwapchainKHR getSwapchainFromImage(const layer_data *, VkImage);
-SWAPCHAIN_NODE *getSwapchainNode(const layer_data *, VkSwapchainKHR);
+cvdescriptorset::DescriptorSet *GetSetNode(const layer_data *, VkDescriptorSet);
+cvdescriptorset::DescriptorSetLayout const *GetDescriptorSetLayout(layer_data const *, VkDescriptorSetLayout);
+DESCRIPTOR_POOL_STATE *GetDescriptorPoolState(const layer_data *, const VkDescriptorPool);
+BUFFER_STATE *GetBufferState(const layer_data *, VkBuffer);
+IMAGE_STATE *GetImageState(const layer_data *, VkImage);
+DEVICE_MEM_INFO *GetMemObjInfo(const layer_data *, VkDeviceMemory);
+BUFFER_VIEW_STATE *GetBufferViewState(const layer_data *, VkBufferView);
+SAMPLER_STATE *GetSamplerState(const layer_data *, VkSampler);
+IMAGE_VIEW_STATE *GetImageViewState(const layer_data *, VkImageView);
+VkSwapchainKHR GetSwapchainFromImage(const layer_data *, VkImage);
+SWAPCHAIN_NODE *GetSwapchainNode(const layer_data *, VkSwapchainKHR);
+GLOBAL_CB_NODE *GetCBNode(layer_data const *my_data, const VkCommandBuffer cb);
+RENDER_PASS_STATE *GetRenderPassState(layer_data const *my_data, VkRenderPass renderpass);
+FRAMEBUFFER_STATE *GetFramebufferState(const layer_data *my_data, VkFramebuffer framebuffer);
+COMMAND_POOL_NODE *GetCommandPoolNode(layer_data *dev_data, VkCommandPool pool);
+const PHYS_DEV_PROPERTIES_NODE *GetPhysDevProperties(const layer_data *device_data);
+
 void invalidateCommandBuffers(const layer_data *, std::unordered_set<GLOBAL_CB_NODE *> const &, VK_OBJECT);
 bool ValidateMemoryIsBoundToBuffer(const layer_data *, const BUFFER_STATE *, const char *, UNIQUE_VALIDATION_ERROR_CODE);
 bool ValidateMemoryIsBoundToImage(const layer_data *, const IMAGE_STATE *, const char *, UNIQUE_VALIDATION_ERROR_CODE);
@@ -692,6 +768,41 @@ void AddCommandBufferBindingImage(const layer_data *, GLOBAL_CB_NODE *, IMAGE_ST
 void AddCommandBufferBindingImageView(const layer_data *, GLOBAL_CB_NODE *, IMAGE_VIEW_STATE *);
 void AddCommandBufferBindingBuffer(const layer_data *, GLOBAL_CB_NODE *, BUFFER_STATE *);
 void AddCommandBufferBindingBufferView(const layer_data *, GLOBAL_CB_NODE *, BUFFER_VIEW_STATE *);
+bool ValidateObjectNotInUse(const layer_data *dev_data, BASE_NODE *obj_node, VK_OBJECT obj_struct, UNIQUE_VALIDATION_ERROR_CODE error_code);
+void invalidateCommandBuffers(const layer_data *dev_data, std::unordered_set<GLOBAL_CB_NODE *> const &cb_nodes, VK_OBJECT obj);
+void RemoveImageMemoryRange(uint64_t handle, DEVICE_MEM_INFO *mem_info);
+void RemoveBufferMemoryRange(uint64_t handle, DEVICE_MEM_INFO *mem_info);
+bool ClearMemoryObjectBindings(layer_data *dev_data, uint64_t handle, VkDebugReportObjectTypeEXT type);
+bool ValidateCmd(layer_data *my_data, GLOBAL_CB_NODE *pCB, const CMD_TYPE cmd, const char *caller_name);
+bool insideRenderPass(const layer_data *my_data, GLOBAL_CB_NODE *pCB, const char *apiName, UNIQUE_VALIDATION_ERROR_CODE msgCode);
+void SetImageMemoryValid(layer_data *dev_data, IMAGE_STATE *image_state, bool valid);
+void UpdateCmdBufferLastCmd(GLOBAL_CB_NODE *cb_state, const CMD_TYPE cmd);
+bool outsideRenderPass(const layer_data *my_data, GLOBAL_CB_NODE *pCB, const char *apiName, UNIQUE_VALIDATION_ERROR_CODE msgCode);
+void SetLayout(GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair, const IMAGE_CMD_BUF_LAYOUT_NODE &node);
+void SetLayout(GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair, const VkImageLayout &layout);
+bool ValidateImageMemoryIsValid(layer_data *dev_data, IMAGE_STATE *image_state, const char *functionName);
+bool ValidateImageSampleCount(layer_data *dev_data, IMAGE_STATE *image_state, VkSampleCountFlagBits sample_count,
+                              const char *location, UNIQUE_VALIDATION_ERROR_CODE msgCode);
+bool rangesIntersect(layer_data const *dev_data, MEMORY_RANGE const *range1, VkDeviceSize offset, VkDeviceSize end);
+bool ValidateBufferMemoryIsValid(layer_data *dev_data, BUFFER_STATE *buffer_state, const char *functionName);
+void SetBufferMemoryValid(layer_data *dev_data, BUFFER_STATE *buffer_state, bool valid);
+
+
+
+// Prototypes for layer_data accessor functions.  These should be in their own header file at some point
+const VkFormatProperties *GetFormatProperties(core_validation::layer_data *device_data, VkFormat format);
+const VkImageFormatProperties *GetImageFormatProperties(core_validation::layer_data *device_data, VkFormat format,
+                                                        VkImageType image_type, VkImageTiling tiling, VkImageUsageFlags usage,
+                                                        VkImageCreateFlags flags);
+const debug_report_data *GetReportData(layer_data *);
+const VkPhysicalDeviceProperties *GetPhysicalDeviceProperties(layer_data *);
+const CHECK_DISABLED *GetDisables(layer_data *);
+std::unordered_map<VkImage, std::unique_ptr<IMAGE_STATE>> *GetImageMap(core_validation::layer_data *);
+std::unordered_map<VkImage, std::vector<ImageSubresourcePair>> *GetImageSubresourceMap(layer_data *);
+std::unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> *GetImageLayoutMap(layer_data *);
+std::unordered_map<VkBuffer, std::unique_ptr<BUFFER_STATE>> *GetBufferMap(layer_data *device_data);
+std::unordered_map<VkBufferView, std::unique_ptr<BUFFER_VIEW_STATE>> *GetBufferViewMap(layer_data *device_data);
+std::unordered_map<VkImageView, std::unique_ptr<IMAGE_VIEW_STATE>> *GetImageViewMap(layer_data *device_data);
 }
 
 #endif  // CORE_VALIDATION_TYPES_H_

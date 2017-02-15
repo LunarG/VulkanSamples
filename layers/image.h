@@ -29,9 +29,6 @@
 enum IMAGE_ERROR {
     IMAGE_NONE,                           // Used for INFO & other non-error messages
     IMAGE_FORMAT_UNSUPPORTED,             // Request to create Image or RenderPass with a format that is not supported
-    IMAGE_RENDERPASS_INVALID_ATTACHMENT,  // Invalid image layouts and/or load/storeOps for an attachment when creating RenderPass
-    IMAGE_RENDERPASS_INVALID_DS_ATTACHMENT,  // If no depth/stencil attachment for a RenderPass, verify that subpass DS attachment
-                                             // is set to UNUSED
     IMAGE_INVALID_IMAGE_ASPECT,              // Image aspect mask bits are invalid for this API call
     IMAGE_MISMATCHED_IMAGE_ASPECT,           // Image aspect masks for source and dest images do not match
     IMAGE_VIEW_CREATE_ERROR,                 // Error occurred trying to create Image View
@@ -41,7 +38,6 @@ enum IMAGE_ERROR {
     IMAGE_INVALID_FORMAT,                    // Operation specifies an invalid format, or there is a format mismatch
     IMAGE_INVALID_FILTER,                    // Operation specifies an invalid filter setting
     IMAGE_INVALID_IMAGE_RESOURCE,            // Image resource/subresource called with invalid setting
-    IMAGE_INVALID_FORMAT_LIMITS_VIOLATION,   // Device limits for this format have been exceeded
     IMAGE_INVALID_LAYOUT,                    // Operation specifies an invalid layout
     IMAGE_INVALID_EXTENTS,                   // Operation specifies invalid image extents
     IMAGE_INVALID_USAGE,                     // Image was created without necessary usage for operation

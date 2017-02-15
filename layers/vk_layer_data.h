@@ -1,6 +1,6 @@
-/* Copyright (c) 2015-2016 The Khronos Group Inc.
- * Copyright (c) 2015-2016 Valve Corporation
- * Copyright (c) 2015-2016 LunarG, Inc.
+/* Copyright (c) 2015-2017 The Khronos Group Inc.
+ * Copyright (c) 2015-2017 Valve Corporation
+ * Copyright (c) 2015-2017 LunarG, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Author: Tobin Ehlis <tobin@lunarg.com>
+ * Author: Tobin Ehlis <tobine@google.com>
  */
 
 #ifndef LAYER_DATA_H
@@ -23,8 +23,9 @@
 #include <unordered_map>
 #include "vk_layer_table.h"
 
+// For the given data key, look up the layer_data instance from given layer_data_map
 template <typename DATA_T>
-DATA_T *get_my_data_ptr(void *data_key, std::unordered_map<void *, DATA_T *> &layer_data_map) {
+DATA_T *GetLayerDataPtr(void *data_key, std::unordered_map<void *, DATA_T *> &layer_data_map) {
     DATA_T *debug_data;
     typename std::unordered_map<void *, DATA_T *>::const_iterator got;
 

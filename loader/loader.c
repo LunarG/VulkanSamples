@@ -30,6 +30,7 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include <string.h>
+#include <stddef.h>
 
 #include <sys/types.h>
 #if defined(_WIN32)
@@ -1237,8 +1238,17 @@ VkResult loader_get_icd_loader_instance_extensions(const struct loader_instance 
                                                    struct loader_extension_list *inst_exts) {
     struct loader_extension_list icd_exts;
     VkResult res = VK_SUCCESS;
+    char *env_value;
+    bool filter_extensions = true;
 
     loader_log(inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0, "Build ICD instance extension list");
+
+    // Check if a user wants to disable the instance extension filtering behavior
+    env_value = loader_getenv("VK_LOADER_DISABLE_INST_EXT_FILTER", inst);
+    if (NULL != env_value && atoi(env_value) != 0) {
+        filter_extensions = false;
+    }
+    loader_free_getenv(env_value, inst);
 
     // traverse scanned icd list adding non-duplicate extensions to the list
     for (uint32_t i = 0; i < icd_tramp_list->count; i++) {
@@ -1249,24 +1259,26 @@ VkResult loader_get_icd_loader_instance_extensions(const struct loader_instance 
         res = loader_add_instance_extensions(inst, icd_tramp_list->scanned_list[i].EnumerateInstanceExtensionProperties,
                                              icd_tramp_list->scanned_list[i].lib_name, &icd_exts);
         if (VK_SUCCESS == res) {
-            // Remove any extensions not recognized by the loader
-            for (int32_t j = 0; j < (int32_t)icd_exts.count; j++) {
-                // See if the extension is in the list of supported extensions
-                bool found = false;
-                for (uint32_t k = 0; LOADER_INSTANCE_EXTENSIONS[k] != NULL; k++) {
-                    if (strcmp(icd_exts.list[j].extensionName, LOADER_INSTANCE_EXTENSIONS[k]) == 0) {
-                        found = true;
-                        break;
+            if (filter_extensions) {
+                // Remove any extensions not recognized by the loader
+                for (int32_t j = 0; j < (int32_t)icd_exts.count; j++) {
+                    // See if the extension is in the list of supported extensions
+                    bool found = false;
+                    for (uint32_t k = 0; LOADER_INSTANCE_EXTENSIONS[k] != NULL; k++) {
+                        if (strcmp(icd_exts.list[j].extensionName, LOADER_INSTANCE_EXTENSIONS[k]) == 0) {
+                            found = true;
+                            break;
+                        }
                     }
-                }
 
-                // If it isn't in the list, remove it
-                if (!found) {
-                    for (uint32_t k = j + 1; k < icd_exts.count; k++) {
-                        icd_exts.list[k - 1] = icd_exts.list[k];
+                    // If it isn't in the list, remove it
+                    if (!found) {
+                        for (uint32_t k = j + 1; k < icd_exts.count; k++) {
+                            icd_exts.list[k - 1] = icd_exts.list[k];
+                        }
+                        --icd_exts.count;
+                        --j;
                     }
-                    --icd_exts.count;
-                    --j;
                 }
             }
 
@@ -2585,7 +2597,7 @@ static void loader_add_layer_properties(const struct loader_instance *inst, stru
  * Linux Layer| dirs     | dirs
  */
 static VkResult loader_get_manifest_files(const struct loader_instance *inst, const char *env_override, const char *source_override,
-                                          bool is_layer, bool warn_if_not_present, const char *location, const char *home_location,
+                                          bool is_layer, bool warn_if_not_present, const char *location, const char *relative_location,
                                           struct loader_manifest_files *out_files) {
     const char * override = NULL;
     char *override_getenv = NULL;
@@ -2617,9 +2629,9 @@ static VkResult loader_get_manifest_files(const struct loader_instance *inst, co
     }
 
 #if !defined(_WIN32)
-    if (location == NULL && home_location == NULL) {
+    if (relative_location == NULL) {
 #else
-    home_location = NULL;
+    relative_location = NULL;
     if (location == NULL) {
 #endif
         loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
@@ -2638,16 +2650,106 @@ static VkResult loader_get_manifest_files(const struct loader_instance *inst, co
     // Make a copy of the input we are using so it is not modified
     // Also handle getting the location(s) from registry on Windows
     if (override == NULL) {
-        loc = loader_stack_alloc(strlen(location) + 1);
+        size_t loc_size = 0;
+#if !defined(_WIN32)
+        const char *xdgconfdirs = secure_getenv("XDG_CONFIG_DIRS");
+        const char *xdgdatadirs = secure_getenv("XDG_DATA_DIRS");
+        if (xdgconfdirs == NULL || xdgconfdirs[0] == '\0')
+            xdgconfdirs = "/etc/xdg";
+        if (xdgdatadirs == NULL || xdgdatadirs[0] == '\0')
+            xdgdatadirs = "/usr/local/share:/usr/share";
+        const size_t rel_size = strlen(relative_location);
+        // Leave space for trailing separators
+        loc_size += strlen(xdgconfdirs) + strlen(xdgdatadirs) + 2*rel_size + 2;
+        for (const char *x = xdgconfdirs; *x; ++x)
+            if (*x == PATH_SEPARATOR) loc_size += rel_size;
+        for (const char *x = xdgdatadirs; *x; ++x)
+            if (*x == PATH_SEPARATOR) loc_size += rel_size;
+        loc_size += strlen(SYSCONFDIR) + rel_size + 1;
+#if defined(EXTRASYSCONFDIR)
+        loc_size += strlen(EXTRASYSCONFDIR) + rel_size + 1;
+#endif
+#else
+        loc_size += strlen(location) + 1;
+#endif
+        loc = loader_stack_alloc(loc_size);
         if (loc == NULL) {
             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                        "loader_get_manifest_files: Failed to allocate "
                        "%d bytes for manifest file location.",
-                       strlen(location));
+                       loc_size);
             res = VK_ERROR_OUT_OF_HOST_MEMORY;
             goto out;
         }
-        strcpy(loc, location);
+        char *loc_write = loc;
+#if !defined(_WIN32)
+        const char *loc_read;
+        size_t start, stop;
+
+        loc_read = &xdgconfdirs[0];
+        start = 0;
+        while (loc_read[start] != '\0') {
+            while (loc_read[start] == PATH_SEPARATOR) {
+                start++;
+            }
+            stop = start;
+            while (loc_read[stop] != PATH_SEPARATOR && loc_read[stop] != '\0') {
+                stop++;
+            }
+            const size_t s = stop - start;
+            if (s) {
+                memcpy(loc_write, &loc_read[start], s);
+                loc_write += s;
+                memcpy(loc_write, relative_location, rel_size);
+                loc_write += rel_size;
+                *loc_write++ = PATH_SEPARATOR;
+                start = stop;
+            }
+        }
+
+        memcpy(loc_write, SYSCONFDIR, strlen(SYSCONFDIR));
+        loc_write += strlen(SYSCONFDIR);
+        memcpy(loc_write, relative_location, rel_size);
+        loc_write += rel_size;
+        *loc_write++ = PATH_SEPARATOR;
+
+#if defined(EXTRASYSCONFDIR)
+        memcpy(loc_write, EXTRASYSCONFDIR, strlen(EXTRASYSCONFDIR));
+        loc_write += strlen(EXTRASYSCONFDIR);
+        memcpy(loc_write, relative_location, rel_size);
+        loc_write += rel_size;
+        *loc_write++ = PATH_SEPARATOR;
+#endif
+
+        loc_read = &xdgdatadirs[0];
+        start = 0;
+        while (loc_read[start] != '\0') {
+            while (loc_read[start] == PATH_SEPARATOR) {
+                start++;
+            }
+            stop = start;
+            while (loc_read[stop] != PATH_SEPARATOR && loc_read[stop] != '\0') {
+                stop++;
+            }
+            const size_t s = stop - start;
+            if (s) {
+                memcpy(loc_write, &loc_read[start], s);
+                loc_write += s;
+                memcpy(loc_write, relative_location, rel_size);
+                loc_write += rel_size;
+                *loc_write++ = PATH_SEPARATOR;
+                start = stop;
+            }
+        }
+
+        --loc_write;
+#else
+        memcpy(loc_write, location, strlen(location));
+        loc_write += strlen(location);
+#endif
+        assert(loc_write - loc < (ptrdiff_t)loc_size);
+        *loc_write = '\0';
+
 #if defined(_WIN32)
         VkResult reg_result = loaderGetRegistryFiles(inst, loc, &reg);
         if (VK_SUCCESS != reg_result || NULL == reg) {
@@ -2786,11 +2888,11 @@ static VkResult loader_get_manifest_files(const struct loader_instance *inst, co
         }
         file = next_file;
 #if !defined(_WIN32)
-        if (home_location != NULL && (next_file == NULL || *next_file == '\0') && override == NULL) {
+        if (relative_location != NULL && (next_file == NULL || *next_file == '\0') && override == NULL) {
             char *xdgdatahome = secure_getenv("XDG_DATA_HOME");
             size_t len;
             if (xdgdatahome != NULL) {
-                char *home_loc = loader_stack_alloc(strlen(xdgdatahome) + 2 + strlen(home_location));
+                char *home_loc = loader_stack_alloc(strlen(xdgdatahome) + 2 + strlen(relative_location));
                 if (home_loc == NULL) {
                     loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                                "loader_get_manifest_files: Failed to allocate "
@@ -2800,15 +2902,15 @@ static VkResult loader_get_manifest_files(const struct loader_instance *inst, co
                 }
                 strcpy(home_loc, xdgdatahome);
                 // Add directory separator if needed
-                if (home_location[0] != DIRECTORY_SYMBOL) {
+                if (relative_location[0] != DIRECTORY_SYMBOL) {
                     len = strlen(home_loc);
                     home_loc[len] = DIRECTORY_SYMBOL;
                     home_loc[len + 1] = '\0';
                 }
-                strcat(home_loc, home_location);
+                strcat(home_loc, relative_location);
                 file = home_loc;
                 next_file = loader_get_next_path(file);
-                home_location = NULL;
+                relative_location = NULL;
 
                 loader_log(inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0, "Searching the following path for manifest files: %s\n",
                            home_loc);
@@ -2817,7 +2919,7 @@ static VkResult loader_get_manifest_files(const struct loader_instance *inst, co
             } else {
                 char *home = secure_getenv("HOME");
                 if (home != NULL) {
-                    char *home_loc = loader_stack_alloc(strlen(home) + 16 + strlen(home_location));
+                    char *home_loc = loader_stack_alloc(strlen(home) + 16 + strlen(relative_location));
                     if (home_loc == NULL) {
                         loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                                    "loader_get_manifest_files: Failed to allocate "
@@ -2834,15 +2936,15 @@ static VkResult loader_get_manifest_files(const struct loader_instance *inst, co
                     }
                     strcat(home_loc, ".local/share");
 
-                    if (home_location[0] != DIRECTORY_SYMBOL) {
+                    if (relative_location[0] != DIRECTORY_SYMBOL) {
                         len = strlen(home_loc);
                         home_loc[len] = DIRECTORY_SYMBOL;
                         home_loc[len + 1] = '\0';
                     }
-                    strcat(home_loc, home_location);
+                    strcat(home_loc, relative_location);
                     file = home_loc;
                     next_file = loader_get_next_path(file);
-                    home_location = NULL;
+                    relative_location = NULL;
 
                     loader_log(inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0, "Searching the following path for manifest files: %s\n",
                                home_loc);
@@ -2914,7 +3016,7 @@ VkResult loader_icd_scan(const struct loader_instance *inst, struct loader_icd_t
     }
 
     // Get a list of manifest files for ICDs
-    res = loader_get_manifest_files(inst, "VK_ICD_FILENAMES", NULL, false, true, DEFAULT_VK_DRIVERS_INFO, HOME_VK_DRIVERS_INFO,
+    res = loader_get_manifest_files(inst, "VK_ICD_FILENAMES", NULL, false, true, DEFAULT_VK_DRIVERS_INFO, RELATIVE_VK_DRIVERS_INFO,
                                     &manifest_files);
     if (VK_SUCCESS != res || manifest_files.count == 0) {
         goto out;
@@ -3128,14 +3230,14 @@ void loader_layer_scan(const struct loader_instance *inst, struct loader_layer_l
 
     // Get a list of manifest files for explicit layers
     if (VK_SUCCESS != loader_get_manifest_files(inst, LAYERS_PATH_ENV, LAYERS_SOURCE_PATH, true, true, DEFAULT_VK_ELAYERS_INFO,
-                                                HOME_VK_ELAYERS_INFO, &manifest_files[0])) {
+                                                RELATIVE_VK_ELAYERS_INFO, &manifest_files[0])) {
         goto out;
     }
 
     // Get a list of manifest files for any implicit layers
     // Pass NULL for environment variable override - implicit layers are not
     // overridden by LAYERS_PATH_ENV
-    if (VK_SUCCESS != loader_get_manifest_files(inst, NULL, NULL, true, false, DEFAULT_VK_ILAYERS_INFO, HOME_VK_ILAYERS_INFO,
+    if (VK_SUCCESS != loader_get_manifest_files(inst, NULL, NULL, true, false, DEFAULT_VK_ILAYERS_INFO, RELATIVE_VK_ILAYERS_INFO,
                                                 &manifest_files[1])) {
         goto out;
     }
@@ -3198,7 +3300,7 @@ void loader_implicit_layer_scan(const struct loader_instance *inst, struct loade
     // Pass NULL for environment variable override - implicit layers are not
     // overridden by LAYERS_PATH_ENV
     VkResult res =
-        loader_get_manifest_files(inst, NULL, NULL, true, false, DEFAULT_VK_ILAYERS_INFO, HOME_VK_ILAYERS_INFO, &manifest_files);
+        loader_get_manifest_files(inst, NULL, NULL, true, false, DEFAULT_VK_ILAYERS_INFO, RELATIVE_VK_ILAYERS_INFO, &manifest_files);
     if (VK_SUCCESS != res || manifest_files.count == 0) {
         return;
     }
@@ -4969,15 +5071,17 @@ VkResult setupLoaderTermPhysDevs(struct loader_instance *inst) {
 out:
 
     if (VK_SUCCESS != res) {
-        if (NULL != inst->phys_devs_term) {
-            // We've encountered an error, so we should free the
-            // new buffers.
+        if (NULL != new_phys_devs) {
+            // We've encountered an error, so we should free the new buffers.
             for (uint32_t i = 0; i < inst->total_gpu_count; i++) {
                 loader_instance_heap_free(inst, new_phys_devs[i]);
             }
-            loader_instance_heap_free(inst, inst->phys_devs_term);
-            inst->total_gpu_count = 0;
+            loader_instance_heap_free(inst, new_phys_devs);
         }
+        if (NULL != inst->phys_devs_term) {
+            loader_instance_heap_free(inst, inst->phys_devs_term);
+        }
+        inst->total_gpu_count = 0;
     } else {
         // Free everything that didn't carry over to the new array of
         // physical devices.  Everything else will have been copied over

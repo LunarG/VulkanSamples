@@ -54,6 +54,8 @@ def determine_year(version):
         return 2013
     elif version == 14:
         return 2015
+    elif version == 15:
+        return 2017
     else:
         return 0000
 

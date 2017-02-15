@@ -62,7 +62,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateInstance(const VkInstanceCreateInfo* pCreat
         return result;
     }
 
-    layer_data *instance_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
+    layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(*pInstance), layer_data_map);
     instance_data->instance = *pInstance;
     instance_data->instance_dispatch_table = new VkLayerInstanceDispatchTable;
     layer_init_instance_dispatch_table(*pInstance, instance_data->instance_dispatch_table, fpGetInstanceProcAddr);
@@ -75,7 +75,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateInstance(const VkInstanceCreateInfo* pCreat
 VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocationCallbacks *pAllocator)
 {
     dispatch_key key = get_dispatch_key(instance);
-    layer_data *instance_data = get_my_data_ptr(key, layer_data_map);
+    layer_data *instance_data = GetLayerDataPtr(key, layer_data_map);
     instance_data->instance_dispatch_table->DestroyInstance(instance, pAllocator);
 
     delete instance_data->instance_dispatch_table;
@@ -108,7 +108,7 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance
     }
 
     // Only call down the chain for Vulkan commands that this layer does not intercept.
-    layer_data *instance_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(instance), layer_data_map);
     VkLayerInstanceDispatchTable *pTable = instance_data->instance_dispatch_table;
     if (pTable->GetInstanceProcAddr == nullptr)
     {
@@ -121,7 +121,7 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance instance, const char *funcName) {
     assert(instance);
 
-    layer_data *instance_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(instance), layer_data_map);
     VkLayerInstanceDispatchTable *pTable = instance_data->instance_dispatch_table;
     if (pTable->GetPhysicalDeviceProcAddr == nullptr)
     {

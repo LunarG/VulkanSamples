@@ -124,6 +124,8 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                  diagFile = sys.stdout):
         OutputGenerator.__init__(self, errFile, warnFile, diagFile)
         self.INDENT_SPACES = 4
+        self.intercepts = []
+        self.declarations = []
         # Commands to ignore
         self.blacklist = [
             'vkGetInstanceProcAddr',
@@ -204,6 +206,15 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         write('namespace parameter_validation {', file = self.outFile)
     def endFile(self):
         # C-specific
+        self.newline()
+
+        # Output declarations and record intercepted procedures
+        write('// Declarations', file=self.outFile)
+        write('\n'.join(self.declarations), file=self.outFile)
+        write('// Intercepts', file=self.outFile)
+        write('struct { const char* name; PFN_vkVoidFunction pFunc;} procmap[] = {', file=self.outFile)
+        write('\n'.join(self.intercepts), file=self.outFile)
+        write('};\n', file=self.outFile)
         self.newline()
         # Namespace
         write('} // namespace parameter_validation', file = self.outFile)
@@ -400,6 +411,24 @@ class ParamCheckerOutputGenerator(OutputGenerator):
     # check code generation.
     def genCmd(self, cmdinfo, name):
         OutputGenerator.genCmd(self, cmdinfo, name)
+        interface_functions = [
+            'vkEnumerateInstanceLayerProperties',
+            'vkEnumerateInstanceExtensionProperties',
+            'vkEnumerateDeviceLayerProperties',
+            'vkCmdDebugMarkerEndEXT',       # No validation!
+        ]
+        # Record that the function will be intercepted
+        if name not in interface_functions:
+            if (self.featureExtraProtect != None):
+                self.declarations += [ '#ifdef %s' % self.featureExtraProtect ]
+                self.intercepts += [ '#ifdef %s' % self.featureExtraProtect ]
+            self.intercepts += [ '    {"%s", reinterpret_cast<PFN_vkVoidFunction>(%s)},' % (name,name[2:]) ]
+            decls = self.makeCDecls(cmdinfo.elem)
+            # Strip off 'vk' from API name
+            self.declarations += [ '%s' % decls[0].replace("VKAPI_CALL vk", "VKAPI_CALL ") ]
+            if (self.featureExtraProtect != None):
+                self.intercepts += [ '#endif' ]
+                self.declarations += [ '#endif' ]
         if name not in self.blacklist:
             params = cmdinfo.elem.findall('param')
             # Get list of array lengths
@@ -550,15 +579,15 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         name = 'ERROR'
         decoratedName = 'ERROR'
         if 'mathit' in source:
-            # Matches expressions similar to 'latexmath:[$\lceil{\mathit{rasterizationSamples} \over 32}\rceil$]'
-            match = re.match(r'latexmath\s*\:\s*\[\s*\$\\l(\w+)\s*\{\s*\\mathit\s*\{\s*(\w+)\s*\}\s*\\over\s*(\d+)\s*\}\s*\\r(\w+)\$\s*\]', source)
+            # Matches expressions similar to 'latexmath:[\lceil{\mathit{rasterizationSamples} \over 32}\rceil]'
+            match = re.match(r'latexmath\s*\:\s*\[\s*\\l(\w+)\s*\{\s*\\mathit\s*\{\s*(\w+)\s*\}\s*\\over\s*(\d+)\s*\}\s*\\r(\w+)\s*\]', source)
             if not match or match.group(1) != match.group(4):
                 raise 'Unrecognized latexmath expression'
             name = match.group(2)
             decoratedName = '{}({}/{})'.format(*match.group(1, 2, 3))
         else:
-            # Matches expressions similar to 'latexmath : [$dataSize \over 4$]'
-            match = re.match(r'latexmath\s*\:\s*\[\s*\$\s*(\w+)\s*\\over\s*(\d+)\s*\$\s*\]', source)
+            # Matches expressions similar to 'latexmath : [dataSize \over 4]'
+            match = re.match(r'latexmath\s*\:\s*\[\s*\s*(\w+)\s*\\over\s*(\d+)\s*\s*\]', source)
             name = match.group(1)
             decoratedName = '{}/{}'.format(*match.group(1, 2))
         return name, decoratedName
