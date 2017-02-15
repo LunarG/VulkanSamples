@@ -212,10 +212,12 @@ bool PreCallValidateCmdFillBuffer(layer_data *device_data, GLOBAL_CB_NODE *cb_no
 
 void PreCallRecordCmdFillBuffer(layer_data *device_data, GLOBAL_CB_NODE *cb_node, BUFFER_STATE *buffer_state);
 
-bool PreCallValidateCmdCopyImageToBuffer(layer_data *dev_data, VkImage srcImage, uint32_t regionCount,
+bool PreCallValidateCmdCopyImageToBuffer(layer_data *device_data, VkImageLayout srcImageLayout, GLOBAL_CB_NODE *cb_node,
+                                         IMAGE_STATE *src_image_state, BUFFER_STATE *dst_buff_state, uint32_t regionCount,
                                          const VkBufferImageCopy *pRegions, const char *func_name);
 
-bool PreCallValidateCmdCopyBufferToImage(layer_data *dev_data, VkImage dstImage, uint32_t regionCount,
+bool PreCallValidateCmdCopyBufferToImage(layer_data *dev_data, VkImageLayout dstImageLayout, GLOBAL_CB_NODE *cb_node,
+                                         BUFFER_STATE *src_buff_state, IMAGE_STATE *dst_image_state, uint32_t regionCount,
                                          const VkBufferImageCopy *pRegions, const char *func_name);
 
 #endif  // CORE_VALIDATION_BUFFER_VALIDATION_H_
