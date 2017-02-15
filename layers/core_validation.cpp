@@ -7834,6 +7834,7 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBufferToImage(VkCommandBuffer commandBuffer, V
         } else {
             skip_call |= ValidateCmdSubpassState(dev_data, cb_node, CMD_COPYBUFFERTOIMAGE);
         }
+        skip_call |= PreCallValidateCmdCopyBufferToImage(dev_data, dstImage, regionCount, pRegions, "vkCmdCopyBufferToImage()");
 
         // Command pool must support graphics, compute, or transfer operations
         auto pPool = GetCommandPoolNode(dev_data, cb_node->createInfo.commandPool);
@@ -7909,6 +7910,8 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyImageToBuffer(VkCommandBuffer commandBuffer, V
         } else {
             skip_call |= ValidateCmdSubpassState(dev_data, cb_node, CMD_COPYIMAGETOBUFFER);
         }
+
+        skip_call |= PreCallValidateCmdCopyImageToBuffer(dev_data, srcImage, regionCount, pRegions, "vkCmdCopyImageToBuffer()");
 
         // Command pool must support graphics, compute, or transfer operations
         auto pPool = GetCommandPoolNode(dev_data, cb_node->createInfo.commandPool);
