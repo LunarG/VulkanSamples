@@ -373,7 +373,6 @@ class VkLayerTest : public VkRenderFramework {
         instance_layer_names.push_back("VK_LAYER_LUNARG_parameter_validation");
         instance_layer_names.push_back("VK_LAYER_LUNARG_object_tracker");
         instance_layer_names.push_back("VK_LAYER_LUNARG_core_validation");
-        instance_layer_names.push_back("VK_LAYER_LUNARG_image");
         instance_layer_names.push_back("VK_LAYER_LUNARG_swapchain");
         instance_layer_names.push_back("VK_LAYER_GOOGLE_unique_objects");
 
@@ -16008,7 +16007,7 @@ TEST_F(VkLayerTest, ImageBufferCopyTests) {
 }
 
 TEST_F(VkLayerTest, MiscImageLayerTests) {
-    TEST_DESCRIPTION("Image layer tests that don't belong elsewhare");
+    TEST_DESCRIPTION("Image-related tests that don't belong elsewhare");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
