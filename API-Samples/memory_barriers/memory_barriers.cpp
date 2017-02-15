@@ -118,7 +118,7 @@ int sample_main(int argc, char **argv) {
     init_command_buffer(info);
     execute_begin_command_buffer(info);
     init_device_queue(info);
-    init_swap_chain(info);
+    init_swap_chain(info, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
     // CmdClearColorImage is going to require usage of TRANSFER_DST, but
     // it's not clear which format feature maps to the required TRANSFER_DST usage,
     // BLIT_DST is a reasonable guess and it seems to work

@@ -106,7 +106,7 @@ int sample_main(int argc, char *argv[]) {
     init_command_buffer(info);
     execute_begin_command_buffer(info);
     init_device_queue(info);
-    init_swap_chain(info);
+    init_swap_chain(info, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
 
     VkSemaphoreCreateInfo imageAcquiredSemaphoreCreateInfo;
     imageAcquiredSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;

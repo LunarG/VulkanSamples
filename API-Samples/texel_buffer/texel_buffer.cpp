@@ -243,13 +243,11 @@ int sample_main(int argc, char *argv[]) {
 
     /* VULKAN_KEY_START */
 
-    VkClearValue clear_values[2];
+    VkClearValue clear_values[1];
     clear_values[0].color.float32[0] = 0.2f;
     clear_values[0].color.float32[1] = 0.2f;
     clear_values[0].color.float32[2] = 0.2f;
     clear_values[0].color.float32[3] = 0.2f;
-    clear_values[1].depthStencil.depth = 1.0f;
-    clear_values[1].depthStencil.stencil = 0;
 
     VkSemaphoreCreateInfo imageAcquiredSemaphoreCreateInfo;
     imageAcquiredSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -275,7 +273,7 @@ int sample_main(int argc, char *argv[]) {
     rp_begin.renderArea.offset.y = 0;
     rp_begin.renderArea.extent.width = info.width;
     rp_begin.renderArea.extent.height = info.height;
-    rp_begin.clearValueCount = 2;
+    rp_begin.clearValueCount = 1;
     rp_begin.pClearValues = clear_values;
 
     vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
