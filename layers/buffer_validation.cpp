@@ -2707,7 +2707,7 @@ static inline bool ValidtateBufferBounds(const debug_report_data *report_data, I
 }
 
 bool PreCallValidateCmdCopyImageToBuffer(layer_data *device_data, VkImageLayout srcImageLayout, GLOBAL_CB_NODE *cb_node,
-                                         IMAGE_STATE *src_image_state, BUFFER_STATE *dst_buff_state, uint32_t regionCount,
+                                         IMAGE_STATE *src_image_state, BUFFER_STATE *dst_buffer_state, uint32_t regionCount,
                                          const VkBufferImageCopy *pRegions, const char *func_name) {
     const debug_report_data *report_data = core_validation::GetReportData(device_data);
     bool skip = ValidateBufferImageCopyData(report_data, regionCount, pRegions, src_image_state, "vkCmdCopyImageToBuffer");
@@ -2735,18 +2735,18 @@ bool PreCallValidateCmdCopyImageToBuffer(layer_data *device_data, VkImageLayout 
     }
     skip |= ValidateImageBounds(report_data, &(src_image_state->createInfo), regionCount, pRegions, "vkCmdCopyBufferToImage()",
                                 VALIDATION_ERROR_01245);
-    skip |= ValidtateBufferBounds(report_data, src_image_state, dst_buff_state, regionCount, pRegions, "vkCmdCopyImageToBuffer()",
+    skip |= ValidtateBufferBounds(report_data, src_image_state, dst_buffer_state, regionCount, pRegions, "vkCmdCopyImageToBuffer()",
                                   VALIDATION_ERROR_01246);
 
     skip |= ValidateImageSampleCount(device_data, src_image_state, VK_SAMPLE_COUNT_1_BIT, "vkCmdCopyImageToBuffer(): srcImage",
                                      VALIDATION_ERROR_01249);
     skip |= ValidateMemoryIsBoundToImage(device_data, src_image_state, "vkCmdCopyImageToBuffer()", VALIDATION_ERROR_02537);
-    skip |= ValidateMemoryIsBoundToBuffer(device_data, dst_buff_state, "vkCmdCopyImageToBuffer()", VALIDATION_ERROR_02538);
+    skip |= ValidateMemoryIsBoundToBuffer(device_data, dst_buffer_state, "vkCmdCopyImageToBuffer()", VALIDATION_ERROR_02538);
 
     // Validate that SRC image & DST buffer have correct usage flags set
     skip |= ValidateImageUsageFlags(device_data, src_image_state, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, true, VALIDATION_ERROR_01248,
                                     "vkCmdCopyImageToBuffer()", "VK_IMAGE_USAGE_TRANSFER_SRC_BIT");
-    skip |= ValidateBufferUsageFlags(device_data, dst_buff_state, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true, VALIDATION_ERROR_01252,
+    skip |= ValidateBufferUsageFlags(device_data, dst_buffer_state, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true, VALIDATION_ERROR_01252,
                                      "vkCmdCopyImageToBuffer()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
     skip |= insideRenderPass(device_data, cb_node, "vkCmdCopyImageToBuffer()", VALIDATION_ERROR_01260);
     for (uint32_t i = 0; i < regionCount; ++i) {
@@ -2759,17 +2759,17 @@ bool PreCallValidateCmdCopyImageToBuffer(layer_data *device_data, VkImageLayout 
 }
 
 void PreCallRecordCmdCopyImageToBuffer(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
-                                       BUFFER_STATE *dst_buff_state) {
+                                       BUFFER_STATE *dst_buffer_state) {
     // Update bindings between buffer/image and cmd buffer
     AddCommandBufferBindingImage(device_data, cb_node, src_image_state);
-    AddCommandBufferBindingBuffer(device_data, cb_node, dst_buff_state);
+    AddCommandBufferBindingBuffer(device_data, cb_node, dst_buffer_state);
 
     std::function<bool()> function = [=]() {
         return ValidateImageMemoryIsValid(device_data, src_image_state, "vkCmdCopyImageToBuffer()");
     };
     cb_node->validate_functions.push_back(function);
     function = [=]() {
-        SetBufferMemoryValid(device_data, dst_buff_state, true);
+        SetBufferMemoryValid(device_data, dst_buffer_state, true);
         return false;
     };
     cb_node->validate_functions.push_back(function);
@@ -2778,7 +2778,7 @@ void PreCallRecordCmdCopyImageToBuffer(layer_data *device_data, GLOBAL_CB_NODE *
 }
 
 bool PreCallValidateCmdCopyBufferToImage(layer_data *device_data, VkImageLayout dstImageLayout, GLOBAL_CB_NODE *cb_node,
-                                         BUFFER_STATE *src_buff_state, IMAGE_STATE *dst_image_state, uint32_t regionCount,
+                                         BUFFER_STATE *src_buffer_state, IMAGE_STATE *dst_image_state, uint32_t regionCount,
                                          const VkBufferImageCopy *pRegions, const char *func_name) {
     const debug_report_data *report_data = core_validation::GetReportData(device_data);
     bool skip = ValidateBufferImageCopyData(report_data, regionCount, pRegions, dst_image_state, "vkCmdCopyBufferToImage");
@@ -2805,13 +2805,13 @@ bool PreCallValidateCmdCopyBufferToImage(layer_data *device_data, VkImageLayout 
     }
     skip |= ValidateImageBounds(report_data, &(dst_image_state->createInfo), regionCount, pRegions, "vkCmdCopyBufferToImage()",
                                 VALIDATION_ERROR_01228);
-    skip |= ValidtateBufferBounds(report_data, dst_image_state, src_buff_state, regionCount, pRegions, "vkCmdCopyBufferToImage()",
+    skip |= ValidtateBufferBounds(report_data, dst_image_state, src_buffer_state, regionCount, pRegions, "vkCmdCopyBufferToImage()",
                                   VALIDATION_ERROR_01227);
     skip |= ValidateImageSampleCount(device_data, dst_image_state, VK_SAMPLE_COUNT_1_BIT, "vkCmdCopyBufferToImage(): dstImage",
                                      VALIDATION_ERROR_01232);
-    skip |= ValidateMemoryIsBoundToBuffer(device_data, src_buff_state, "vkCmdCopyBufferToImage()", VALIDATION_ERROR_02535);
+    skip |= ValidateMemoryIsBoundToBuffer(device_data, src_buffer_state, "vkCmdCopyBufferToImage()", VALIDATION_ERROR_02535);
     skip |= ValidateMemoryIsBoundToImage(device_data, dst_image_state, "vkCmdCopyBufferToImage()", VALIDATION_ERROR_02536);
-    skip |= ValidateBufferUsageFlags(device_data, src_buff_state, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true, VALIDATION_ERROR_01230,
+    skip |= ValidateBufferUsageFlags(device_data, src_buffer_state, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true, VALIDATION_ERROR_01230,
                                      "vkCmdCopyBufferToImage()", "VK_BUFFER_USAGE_TRANSFER_SRC_BIT");
     skip |= ValidateImageUsageFlags(device_data, dst_image_state, VK_IMAGE_USAGE_TRANSFER_DST_BIT, true, VALIDATION_ERROR_01231,
                                     "vkCmdCopyBufferToImage()", "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
@@ -2825,16 +2825,16 @@ bool PreCallValidateCmdCopyBufferToImage(layer_data *device_data, VkImageLayout 
     return skip;
 }
 
-void PreCallRecordCmdCopyBufferToImage(layer_data *device_data, GLOBAL_CB_NODE *cb_node, BUFFER_STATE *src_buff_state,
+void PreCallRecordCmdCopyBufferToImage(layer_data *device_data, GLOBAL_CB_NODE *cb_node, BUFFER_STATE *src_buffer_state,
                                        IMAGE_STATE *dst_image_state) {
-    AddCommandBufferBindingBuffer(device_data, cb_node, src_buff_state);
+    AddCommandBufferBindingBuffer(device_data, cb_node, src_buffer_state);
     AddCommandBufferBindingImage(device_data, cb_node, dst_image_state);
     std::function<bool()> function = [=]() {
         SetImageMemoryValid(device_data, dst_image_state, true);
         return false;
     };
     cb_node->validate_functions.push_back(function);
-    function = [=]() { return ValidateBufferMemoryIsValid(device_data, src_buff_state, "vkCmdCopyBufferToImage()"); };
+    function = [=]() { return ValidateBufferMemoryIsValid(device_data, src_buffer_state, "vkCmdCopyBufferToImage()"); };
     cb_node->validate_functions.push_back(function);
 
     core_validation::UpdateCmdBufferLastCmd(cb_node, CMD_COPYBUFFERTOIMAGE);

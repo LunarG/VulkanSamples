@@ -7722,48 +7722,48 @@ VKAPI_ATTR void VKAPI_CALL CmdBlitImage(VkCommandBuffer commandBuffer, VkImage s
 VKAPI_ATTR void VKAPI_CALL CmdCopyBufferToImage(VkCommandBuffer commandBuffer, VkBuffer srcBuffer, VkImage dstImage,
                                                 VkImageLayout dstImageLayout, uint32_t regionCount,
                                                 const VkBufferImageCopy *pRegions) {
-    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
+    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
-    bool skip_call = false;
-    auto cb_node = GetCBNode(dev_data, commandBuffer);
-    auto src_buff_state = GetBufferState(dev_data, srcBuffer);
-    auto dst_image_state = GetImageState(dev_data, dstImage);
-    if (cb_node && src_buff_state && dst_image_state) {
-        skip_call = PreCallValidateCmdCopyBufferToImage(dev_data, dstImageLayout, cb_node, src_buff_state, dst_image_state,
+    bool skip = false;
+    auto cb_node = GetCBNode(device_data, commandBuffer);
+    auto src_buffer_state = GetBufferState(device_data, srcBuffer);
+    auto dst_image_state = GetImageState(device_data, dstImage);
+    if (cb_node && src_buffer_state && dst_image_state) {
+        skip = PreCallValidateCmdCopyBufferToImage(device_data, dstImageLayout, cb_node, src_buffer_state, dst_image_state,
                                                         regionCount, pRegions, "vkCmdCopyBufferToImage()");
     } else {
         lock.unlock();
         assert(0);
         // TODO: report VU01244 here, or put in object tracker?
     }
-    if (!skip_call) {
-        PreCallRecordCmdCopyBufferToImage(dev_data, cb_node, src_buff_state, dst_image_state);
+    if (!skip) {
+        PreCallRecordCmdCopyBufferToImage(device_data, cb_node, src_buffer_state, dst_image_state);
         lock.unlock();
-        dev_data->dispatch_table.CmdCopyBufferToImage(commandBuffer, srcBuffer, dstImage, dstImageLayout, regionCount, pRegions);
+        device_data->dispatch_table.CmdCopyBufferToImage(commandBuffer, srcBuffer, dstImage, dstImageLayout, regionCount, pRegions);
     }
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdCopyImageToBuffer(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout,
                                                 VkBuffer dstBuffer, uint32_t regionCount, const VkBufferImageCopy *pRegions) {
-    bool skip_call = false;
-    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
+    bool skip = false;
+    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
 
-    auto cb_node = GetCBNode(dev_data, commandBuffer);
-    auto src_image_state = GetImageState(dev_data, srcImage);
-    auto dst_buff_state = GetBufferState(dev_data, dstBuffer);
-    if (cb_node && src_image_state && dst_buff_state) {
-        skip_call = PreCallValidateCmdCopyImageToBuffer(dev_data, srcImageLayout, cb_node, src_image_state, dst_buff_state,
+    auto cb_node = GetCBNode(device_data, commandBuffer);
+    auto src_image_state = GetImageState(device_data, srcImage);
+    auto dst_buffer_state = GetBufferState(device_data, dstBuffer);
+    if (cb_node && src_image_state && dst_buffer_state) {
+        skip = PreCallValidateCmdCopyImageToBuffer(device_data, srcImageLayout, cb_node, src_image_state, dst_buffer_state,
                                                         regionCount, pRegions, "vkCmdCopyImageToBuffer()");
     } else {
         lock.unlock();
         assert(0);
         // TODO: report VU01262 here, or put in object tracker?
     }
-    if (!skip_call) {
-        PreCallRecordCmdCopyImageToBuffer(dev_data, cb_node, src_image_state, dst_buff_state);
+    if (!skip) {
+        PreCallRecordCmdCopyImageToBuffer(device_data, cb_node, src_image_state, dst_buffer_state);
         lock.unlock();
-        dev_data->dispatch_table.CmdCopyImageToBuffer(commandBuffer, srcImage, srcImageLayout, dstBuffer, regionCount, pRegions);
+        device_data->dispatch_table.CmdCopyImageToBuffer(commandBuffer, srcImage, srcImageLayout, dstBuffer, regionCount, pRegions);
     }
 }
 
