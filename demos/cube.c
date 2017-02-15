@@ -92,7 +92,7 @@ bool in_callback = false;
 #else
 #define ERR_EXIT(err_msg, err_class) \
     do {                             \
-        printf(err_msg);             \
+        printf("%s\n", err_msg);     \
         fflush(stdout);              \
         exit(1);                     \
     } while (0)
@@ -306,7 +306,7 @@ struct demo {
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
     ANativeWindow *window;
 #elif (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
-    void* window;
+    void *window;
 #endif
     VkSurfaceKHR surface;
     bool prepared;
@@ -1673,6 +1673,9 @@ static VkShaderModule demo_prepare_vs(struct demo *demo) {
     size_t size;
 
     vertShaderCode = demo_read_spv("cube-vert.spv", &size);
+    if (!vertShaderCode) {
+        ERR_EXIT("Failed to load cube-vert.spv", "Load Shader Failure");
+    }
 
     demo->vert_shader_module =
         demo_prepare_shader_module(demo, vertShaderCode, size);
@@ -1698,6 +1701,9 @@ static VkShaderModule demo_prepare_fs(struct demo *demo) {
     size_t size;
 
     fragShaderCode = demo_read_spv("cube-frag.spv", &size);
+    if (!fragShaderCode) {
+        ERR_EXIT("Failed to load cube-frag.spv", "Load Shader Failure");
+    }
 
     demo->frag_shader_module =
         demo_prepare_shader_module(demo, fragShaderCode, size);
@@ -2253,6 +2259,7 @@ static void demo_create_window(struct demo *demo) {
 #elif defined(VK_USE_PLATFORM_XLIB_KHR)
 static void demo_create_xlib_window(struct demo *demo) {
 
+    XInitThreads();
     demo->display = XOpenDisplay(NULL);
     long visualMask = VisualScreenMask;
     int numberOfVisuals;
@@ -2507,6 +2514,141 @@ static void demo_run(struct demo *demo) {
     demo->curFrame++;
 }
 #elif defined(VK_USE_PLATFORM_MIR_KHR)
+#elif defined(VK_USE_PLATFORM_DISPLAY_KHR)
+static VkResult demo_create_display_surface(struct demo *demo) {
+    VkResult U_ASSERT_ONLY err;
+    uint32_t display_count;
+    uint32_t mode_count;
+    uint32_t plane_count;
+    VkDisplayPropertiesKHR display_props;
+    VkDisplayKHR display;
+    VkDisplayModePropertiesKHR mode_props;
+    VkDisplayPlanePropertiesKHR *plane_props;
+    VkBool32 found_plane = VK_FALSE;
+    uint32_t plane_index;
+    VkExtent2D image_extent;
+    VkDisplaySurfaceCreateInfoKHR create_info;
+
+    // Get the first display
+    err = vkGetPhysicalDeviceDisplayPropertiesKHR(demo->gpu, &display_count, NULL);
+    assert(!err);
+
+    if (display_count == 0) {
+        printf("Cannot find any display!\n");
+        fflush(stdout);
+        exit(1);
+    }
+
+    display_count = 1;
+    err = vkGetPhysicalDeviceDisplayPropertiesKHR(demo->gpu, &display_count, &display_props);
+    assert(!err || (err == VK_INCOMPLETE));
+
+    display = display_props.display;
+
+    // Get the first mode of the display
+    err = vkGetDisplayModePropertiesKHR(demo->gpu, display, &mode_count, NULL);
+    assert(!err);
+
+    if (mode_count == 0) {
+        printf("Cannot find any mode for the display!\n");
+        fflush(stdout);
+        exit(1);
+    }
+
+    mode_count = 1;
+    err = vkGetDisplayModePropertiesKHR(demo->gpu, display, &mode_count, &mode_props);
+    assert(!err || (err == VK_INCOMPLETE));
+
+    // Get the list of planes
+    err = vkGetPhysicalDeviceDisplayPlanePropertiesKHR(demo->gpu, &plane_count, NULL);
+    assert(!err);
+
+    if (plane_count == 0) {
+        printf("Cannot find any plane!\n");
+        fflush(stdout);
+        exit(1);
+    }
+
+    plane_props = malloc(sizeof(VkDisplayPlanePropertiesKHR) * plane_count);
+    assert(plane_props);
+
+    err = vkGetPhysicalDeviceDisplayPlanePropertiesKHR(demo->gpu, &plane_count, plane_props);
+    assert(!err);
+
+    // Find a plane compatible with the display
+    for (plane_index = 0; plane_index < plane_count; plane_index++) {
+        uint32_t supported_count;
+        VkDisplayKHR *supported_displays;
+
+        // Disqualify planes that are bound to a different display
+        if ((plane_props[plane_index].currentDisplay != VK_NULL_HANDLE) &&
+            (plane_props[plane_index].currentDisplay != display)) {
+            continue;
+        }
+
+        err = vkGetDisplayPlaneSupportedDisplaysKHR(demo->gpu, plane_index, &supported_count, NULL);
+        assert(!err);
+
+        if (supported_count == 0) {
+            continue;
+        }
+
+        supported_displays = malloc(sizeof(VkDisplayKHR) * supported_count);
+        assert(supported_displays);
+
+        err = vkGetDisplayPlaneSupportedDisplaysKHR(demo->gpu, plane_index, &supported_count, supported_displays);
+        assert(!err);
+
+        for (uint32_t i = 0; i < supported_count; i++) {
+            if (supported_displays[i] == display) {
+                found_plane = VK_TRUE;
+                break;
+            }
+        }
+
+        free(supported_displays);
+
+        if (found_plane) {
+            break;
+        }
+    }
+
+    if (!found_plane) {
+        printf("Cannot find a plane compatible with the display!\n");
+        fflush(stdout);
+        exit(1);
+    }
+
+    free(plane_props);
+
+    image_extent.width = mode_props.parameters.visibleRegion.width;
+    image_extent.height = mode_props.parameters.visibleRegion.height;
+
+    create_info.sType = VK_STRUCTURE_TYPE_DISPLAY_SURFACE_CREATE_INFO_KHR;
+    create_info.pNext = NULL;
+    create_info.flags = 0;
+    create_info.displayMode = mode_props.displayMode;
+    create_info.planeIndex = plane_index;
+    create_info.planeStackIndex = plane_props[plane_index].currentStackIndex;
+    create_info.transform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+    create_info.alphaMode = VK_DISPLAY_PLANE_ALPHA_OPAQUE_BIT_KHR;
+    create_info.globalAlpha = 1.0f;
+    create_info.imageExtent = image_extent;
+
+    return vkCreateDisplayPlaneSurfaceKHR(demo->inst, &create_info, NULL, &demo->surface);
+}
+
+static void demo_run_display(struct demo *demo)
+{
+    while (!demo->quit) {
+        demo_draw(demo);
+        demo->curFrame++;
+
+        if (demo->frameCount != INT32_MAX && demo->curFrame == demo->frameCount) {
+            demo->quit = true;
+        }
+    }
+}
 #endif
 
 /*
@@ -2653,6 +2795,13 @@ static void demo_init_vk(struct demo *demo) {
                     VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME;
             }
 #elif defined(VK_USE_PLATFORM_MIR_KHR)
+#elif defined(VK_USE_PLATFORM_DISPLAY_KHR)
+            if (!strcmp(VK_KHR_DISPLAY_EXTENSION_NAME,
+                        instance_extensions[i].extensionName)) {
+                platformSurfaceExtFound = 1;
+                demo->extension_names[demo->enabled_extension_count++] =
+                    VK_KHR_DISPLAY_EXTENSION_NAME;
+            }
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
             if (!strcmp(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME,
                         instance_extensions[i].extensionName)) {
@@ -2733,6 +2882,14 @@ static void demo_init_vk(struct demo *demo) {
                  "information.\n",
                  "vkCreateInstance Failure");
 #elif defined(VK_USE_PLATFORM_MIR_KHR)
+#elif defined(VK_USE_PLATFORM_DISPLAY_KHR)
+        ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
+                 "the " VK_KHR_DISPLAY_EXTENSION_NAME
+                 " extension.\n\nDo you have a compatible "
+                 "Vulkan installable client driver (ICD) installed?\nPlease "
+                 "look at the Getting Started guide for additional "
+                 "information.\n",
+                 "vkCreateInstance Failure");
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
         ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
                  "the " VK_KHR_ANDROID_SURFACE_EXTENSION_NAME
@@ -3026,6 +3183,8 @@ static void demo_init_vk_swapchain(struct demo *demo) {
     createInfo.window = demo->xcb_window;
 
     err = vkCreateXcbSurfaceKHR(demo->inst, &createInfo, NULL, &demo->surface);
+#elif defined(VK_USE_PLATFORM_DISPLAY_KHR)
+    err = demo_create_display_surface(demo);
 #elif defined(VK_USE_PLATFORM_IOS_MVK)
     VkIOSSurfaceCreateInfoMVK surface;
     surface.sType = VK_STRUCTURE_TYPE_IOS_SURFACE_CREATE_INFO_MVK;
@@ -3543,6 +3702,8 @@ int main(int argc, char **argv) {
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
     demo_run(&demo);
 #elif defined(VK_USE_PLATFORM_MIR_KHR)
+#elif defined(VK_USE_PLATFORM_DISPLAY_KHR)
+    demo_run_display(&demo);
 #endif
 
     demo_cleanup(&demo);
