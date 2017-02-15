@@ -2742,14 +2742,28 @@ bool PreCallValidateCmdCopyImageToBuffer(layer_data *device_data, VkImageLayout 
                                      VALIDATION_ERROR_01249);
     skip |= ValidateMemoryIsBoundToImage(device_data, src_image_state, "vkCmdCopyImageToBuffer()", VALIDATION_ERROR_02537);
     skip |= ValidateMemoryIsBoundToBuffer(device_data, dst_buff_state, "vkCmdCopyImageToBuffer()", VALIDATION_ERROR_02538);
-    // Update bindings between buffer/image and cmd buffer
-    AddCommandBufferBindingImage(device_data, cb_node, src_image_state);
-    AddCommandBufferBindingBuffer(device_data, cb_node, dst_buff_state);
+
     // Validate that SRC image & DST buffer have correct usage flags set
     skip |= ValidateImageUsageFlags(device_data, src_image_state, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, true, VALIDATION_ERROR_01248,
                                     "vkCmdCopyImageToBuffer()", "VK_IMAGE_USAGE_TRANSFER_SRC_BIT");
     skip |= ValidateBufferUsageFlags(device_data, dst_buff_state, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true, VALIDATION_ERROR_01252,
                                      "vkCmdCopyImageToBuffer()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
+    skip |= insideRenderPass(device_data, cb_node, "vkCmdCopyImageToBuffer()", VALIDATION_ERROR_01260);
+    for (uint32_t i = 0; i < regionCount; ++i) {
+        skip |= VerifySourceImageLayout(device_data, cb_node, src_image_state->image, pRegions[i].imageSubresource, srcImageLayout,
+                                        VALIDATION_ERROR_01251);
+        skip |= ValidateCopyBufferImageTransferGranularityRequirements(device_data, cb_node, src_image_state, &pRegions[i], i,
+                                                                       "CmdCopyImageToBuffer");
+    }
+    return skip;
+}
+
+void PreCallRecordCmdCopyImageToBuffer(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
+                                       BUFFER_STATE *dst_buff_state) {
+    // Update bindings between buffer/image and cmd buffer
+    AddCommandBufferBindingImage(device_data, cb_node, src_image_state);
+    AddCommandBufferBindingBuffer(device_data, cb_node, dst_buff_state);
+
     std::function<bool()> function = [=]() {
         return ValidateImageMemoryIsValid(device_data, src_image_state, "vkCmdCopyImageToBuffer()");
     };
@@ -2761,14 +2775,6 @@ bool PreCallValidateCmdCopyImageToBuffer(layer_data *device_data, VkImageLayout 
     cb_node->validate_functions.push_back(function);
 
     core_validation::UpdateCmdBufferLastCmd(cb_node, CMD_COPYIMAGETOBUFFER);
-    skip |= insideRenderPass(device_data, cb_node, "vkCmdCopyImageToBuffer()", VALIDATION_ERROR_01260);
-    for (uint32_t i = 0; i < regionCount; ++i) {
-        skip |= VerifySourceImageLayout(device_data, cb_node, src_image_state->image, pRegions[i].imageSubresource, srcImageLayout,
-                                        VALIDATION_ERROR_01251);
-        skip |= ValidateCopyBufferImageTransferGranularityRequirements(device_data, cb_node, src_image_state, &pRegions[i], i,
-                                                                       "CmdCopyImageToBuffer");
-    }
-    return skip;
 }
 
 bool PreCallValidateCmdCopyBufferToImage(layer_data *device_data, VkImageLayout dstImageLayout, GLOBAL_CB_NODE *cb_node,
@@ -2805,12 +2811,24 @@ bool PreCallValidateCmdCopyBufferToImage(layer_data *device_data, VkImageLayout 
                                      VALIDATION_ERROR_01232);
     skip |= ValidateMemoryIsBoundToBuffer(device_data, src_buff_state, "vkCmdCopyBufferToImage()", VALIDATION_ERROR_02535);
     skip |= ValidateMemoryIsBoundToImage(device_data, dst_image_state, "vkCmdCopyBufferToImage()", VALIDATION_ERROR_02536);
-    AddCommandBufferBindingBuffer(device_data, cb_node, src_buff_state);
-    AddCommandBufferBindingImage(device_data, cb_node, dst_image_state);
     skip |= ValidateBufferUsageFlags(device_data, src_buff_state, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true, VALIDATION_ERROR_01230,
                                      "vkCmdCopyBufferToImage()", "VK_BUFFER_USAGE_TRANSFER_SRC_BIT");
     skip |= ValidateImageUsageFlags(device_data, dst_image_state, VK_IMAGE_USAGE_TRANSFER_DST_BIT, true, VALIDATION_ERROR_01231,
                                     "vkCmdCopyBufferToImage()", "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
+    skip |= insideRenderPass(device_data, cb_node, "vkCmdCopyBufferToImage()", VALIDATION_ERROR_01242);
+    for (uint32_t i = 0; i < regionCount; ++i) {
+        skip |= VerifyDestImageLayout(device_data, cb_node, dst_image_state->image, pRegions[i].imageSubresource, dstImageLayout,
+                                      VALIDATION_ERROR_01234);
+        skip |= ValidateCopyBufferImageTransferGranularityRequirements(device_data, cb_node, dst_image_state, &pRegions[i], i,
+                                                                       "vkCmdCopyBufferToImage()");
+    }
+    return skip;
+}
+
+void PreCallRecordCmdCopyBufferToImage(layer_data *device_data, GLOBAL_CB_NODE *cb_node, BUFFER_STATE *src_buff_state,
+                                       IMAGE_STATE *dst_image_state) {
+    AddCommandBufferBindingBuffer(device_data, cb_node, src_buff_state);
+    AddCommandBufferBindingImage(device_data, cb_node, dst_image_state);
     std::function<bool()> function = [=]() {
         SetImageMemoryValid(device_data, dst_image_state, true);
         return false;
@@ -2820,12 +2838,4 @@ bool PreCallValidateCmdCopyBufferToImage(layer_data *device_data, VkImageLayout 
     cb_node->validate_functions.push_back(function);
 
     core_validation::UpdateCmdBufferLastCmd(cb_node, CMD_COPYBUFFERTOIMAGE);
-    skip |= insideRenderPass(device_data, cb_node, "vkCmdCopyBufferToImage()", VALIDATION_ERROR_01242);
-    for (uint32_t i = 0; i < regionCount; ++i) {
-        skip |= VerifyDestImageLayout(device_data, cb_node, dst_image_state->image, pRegions[i].imageSubresource, dstImageLayout,
-                                      VALIDATION_ERROR_01234);
-        skip |= ValidateCopyBufferImageTransferGranularityRequirements(device_data, cb_node, dst_image_state, &pRegions[i], i,
-                                                                       "vkCmdCopyBufferToImage()");
-    }
-    return skip;
 }

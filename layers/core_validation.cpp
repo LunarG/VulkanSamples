@@ -7732,12 +7732,15 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBufferToImage(VkCommandBuffer commandBuffer, V
         skip_call = PreCallValidateCmdCopyBufferToImage(dev_data, dstImageLayout, cb_node, src_buff_state, dst_image_state,
                                                         regionCount, pRegions, "vkCmdCopyBufferToImage()");
     } else {
+        lock.unlock();
         assert(0);
         // TODO: report VU01244 here, or put in object tracker?
     }
-    lock.unlock();
-    if (!skip_call)
+    if (!skip_call) {
+        PreCallRecordCmdCopyBufferToImage(dev_data, cb_node, src_buff_state, dst_image_state);
+        lock.unlock();
         dev_data->dispatch_table.CmdCopyBufferToImage(commandBuffer, srcBuffer, dstImage, dstImageLayout, regionCount, pRegions);
+    }
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdCopyImageToBuffer(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout,
@@ -7753,12 +7756,15 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyImageToBuffer(VkCommandBuffer commandBuffer, V
         skip_call = PreCallValidateCmdCopyImageToBuffer(dev_data, srcImageLayout, cb_node, src_image_state, dst_buff_state,
                                                         regionCount, pRegions, "vkCmdCopyImageToBuffer()");
     } else {
+        lock.unlock();
         assert(0);
         // TODO: report VU01262 here, or put in object tracker?
     }
-    lock.unlock();
-    if (!skip_call)
+    if (!skip_call) {
+        PreCallRecordCmdCopyImageToBuffer(dev_data, cb_node, src_image_state, dst_buff_state);
+        lock.unlock();
         dev_data->dispatch_table.CmdCopyImageToBuffer(commandBuffer, srcImage, srcImageLayout, dstBuffer, regionCount, pRegions);
+    }
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdUpdateBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize dstOffset,
