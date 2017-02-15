@@ -5262,6 +5262,46 @@ static void SetMemRangesValid(layer_data const *dev_data, DEVICE_MEM_INFO *mem_i
         }
     }
 }
+
+static bool ValidateInsertMemoryRange(layer_data const *dev_data, uint64_t handle, DEVICE_MEM_INFO *mem_info,
+                                      VkDeviceSize memoryOffset, VkMemoryRequirements memRequirements, bool is_image,
+                                      bool is_linear, const char *api_name) {
+    bool skip = false;
+
+    MEMORY_RANGE range;
+    range.image = is_image;
+    range.handle = handle;
+    range.linear = is_linear;
+    range.valid = mem_info->global_valid;
+    range.memory = mem_info->mem;
+    range.start = memoryOffset;
+    range.size = memRequirements.size;
+    range.end = memoryOffset + memRequirements.size - 1;
+    range.aliases.clear();
+
+    // Check for aliasing problems.
+    for (auto &obj_range_pair : mem_info->bound_ranges) {
+        auto check_range = &obj_range_pair.second;
+        bool intersection_error = false;
+        if (rangesIntersect(dev_data, &range, check_range, &intersection_error)) {
+            skip |= intersection_error;
+            range.aliases.insert(check_range);
+        }
+    }
+
+    if (memoryOffset >= mem_info->alloc_info.allocationSize) {
+        UNIQUE_VALIDATION_ERROR_CODE error_code = is_image ? VALIDATION_ERROR_00805 : VALIDATION_ERROR_00793;
+        skip = log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
+                       reinterpret_cast<uint64_t &>(mem_info->mem), __LINE__, error_code, "MEM",
+                       "In %s, attempting to bind memory (0x%" PRIxLEAST64 ") to object (0x%" PRIxLEAST64
+                       "), memoryOffset=0x%" PRIxLEAST64 " must be less than the memory allocation size 0x%" PRIxLEAST64 ". %s",
+                       api_name, reinterpret_cast<uint64_t &>(mem_info->mem), handle, memoryOffset,
+                       mem_info->alloc_info.allocationSize, validation_error_map[error_code]);
+    }
+
+    return skip;
+}
+
 // Object with given handle is being bound to memory w/ given mem_info struct.
 //  Track the newly bound memory range with given memoryOffset
 //  Also scan any previous ranges, track aliased ranges with new range, and flag an error if a linear
@@ -5269,22 +5309,9 @@ static void SetMemRangesValid(layer_data const *dev_data, DEVICE_MEM_INFO *mem_i
 // Return true if an error is flagged and the user callback returns "true", otherwise false
 // is_image indicates an image object, otherwise handle is for a buffer
 // is_linear indicates a buffer or linear image
-// api_name API entry point that triggered this call
-static bool InsertMemoryRange(layer_data const *dev_data, uint64_t handle, DEVICE_MEM_INFO *mem_info, VkDeviceSize memoryOffset,
-                              VkMemoryRequirements memRequirements, bool is_image, bool is_linear, const char *api_name) {
-    bool skip_call = false;
+static void InsertMemoryRange(layer_data const *dev_data, uint64_t handle, DEVICE_MEM_INFO *mem_info, VkDeviceSize memoryOffset,
+                              VkMemoryRequirements memRequirements, bool is_image, bool is_linear) {
     MEMORY_RANGE range;
-
-    if (memoryOffset >= mem_info->alloc_info.allocationSize) {
-        UNIQUE_VALIDATION_ERROR_CODE error_code = is_image ? VALIDATION_ERROR_00805 : VALIDATION_ERROR_00793;
-        skip_call =
-            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
-                    reinterpret_cast<uint64_t &>(mem_info->mem), __LINE__, error_code, "MEM",
-                    "In %s, attempting to bind memory (0x%" PRIxLEAST64 ") to object (0x%" PRIxLEAST64
-                    "), memoryOffset=0x%" PRIxLEAST64 " must be less than the memory allocation size 0x%" PRIxLEAST64 ". %s",
-                    api_name, reinterpret_cast<uint64_t &>(mem_info->mem), handle, memoryOffset,
-                    mem_info->alloc_info.allocationSize, validation_error_map[error_code]);
-    }
 
     range.image = is_image;
     range.handle = handle;
@@ -5303,7 +5330,7 @@ static bool InsertMemoryRange(layer_data const *dev_data, uint64_t handle, DEVIC
         auto check_range = &obj_range_pair.second;
         bool intersection_error = false;
         if (rangesIntersect(dev_data, &range, check_range, &intersection_error)) {
-            skip_call |= intersection_error;
+            assert(!intersection_error);  // should have been caught in ValidateInsertMemoryRange()
             range.aliases.insert(check_range);
             tmp_alias_ranges.insert(check_range);
         }
@@ -5316,19 +5343,27 @@ static bool InsertMemoryRange(layer_data const *dev_data, uint64_t handle, DEVIC
         mem_info->bound_images.insert(handle);
     else
         mem_info->bound_buffers.insert(handle);
-
-    return skip_call;
 }
 
-static bool InsertImageMemoryRange(layer_data const *dev_data, VkImage image, DEVICE_MEM_INFO *mem_info, VkDeviceSize mem_offset,
-                                   VkMemoryRequirements mem_reqs, bool is_linear, const char *api_name) {
-    return InsertMemoryRange(dev_data, reinterpret_cast<uint64_t &>(image), mem_info, mem_offset, mem_reqs, true, is_linear,
-                             api_name);
+static bool ValidateInsertImageMemoryRange(layer_data const *dev_data, VkImage image, DEVICE_MEM_INFO *mem_info,
+                                           VkDeviceSize mem_offset, VkMemoryRequirements mem_reqs, bool is_linear,
+                                           const char *api_name) {
+    return ValidateInsertMemoryRange(dev_data, reinterpret_cast<uint64_t &>(image), mem_info, mem_offset, mem_reqs, true, is_linear,
+                                     api_name);
+}
+static void InsertImageMemoryRange(layer_data const *dev_data, VkImage image, DEVICE_MEM_INFO *mem_info, VkDeviceSize mem_offset,
+                                   VkMemoryRequirements mem_reqs, bool is_linear) {
+    InsertMemoryRange(dev_data, reinterpret_cast<uint64_t &>(image), mem_info, mem_offset, mem_reqs, true, is_linear);
 }
 
-static bool InsertBufferMemoryRange(layer_data const *dev_data, VkBuffer buffer, DEVICE_MEM_INFO *mem_info, VkDeviceSize mem_offset,
-                                    VkMemoryRequirements mem_reqs, const char *api_name) {
-    return InsertMemoryRange(dev_data, reinterpret_cast<uint64_t &>(buffer), mem_info, mem_offset, mem_reqs, false, true, api_name);
+static bool ValidateInsertBufferMemoryRange(layer_data const *dev_data, VkBuffer buffer, DEVICE_MEM_INFO *mem_info,
+                                            VkDeviceSize mem_offset, VkMemoryRequirements mem_reqs, const char *api_name) {
+    return ValidateInsertMemoryRange(dev_data, reinterpret_cast<uint64_t &>(buffer), mem_info, mem_offset, mem_reqs, false, true,
+                                     api_name);
+}
+static void InsertBufferMemoryRange(layer_data const *dev_data, VkBuffer buffer, DEVICE_MEM_INFO *mem_info, VkDeviceSize mem_offset,
+                                    VkMemoryRequirements mem_reqs) {
+    InsertMemoryRange(dev_data, reinterpret_cast<uint64_t &>(buffer), mem_info, mem_offset, mem_reqs, false, true);
 }
 
 // Remove MEMORY_RANGE struct for give handle from bound_ranges of mem_info
@@ -5442,11 +5477,11 @@ static bool PreCallValidateBindBufferMemory(layer_data *dev_data, VkBuffer buffe
             lock.lock();
         }
 
-        // Track and validate bound memory range information
+        // Validate bound memory range information
         auto mem_info = GetMemObjInfo(dev_data, mem);
         if (mem_info) {
-            skip |= InsertBufferMemoryRange(dev_data, buffer, mem_info, memoryOffset, buffer_state->requirements,
-                                            "vkBindBufferMemory()");
+            skip |= ValidateInsertBufferMemoryRange(dev_data, buffer, mem_info, memoryOffset, buffer_state->requirements,
+                                                    "vkBindBufferMemory()");
             skip |= ValidateMemoryTypes(dev_data, mem_info, buffer_state->requirements.memoryTypeBits, "vkBindBufferMemory()",
                                         VALIDATION_ERROR_00797);
         }
@@ -5472,8 +5507,8 @@ static bool PreCallValidateBindBufferMemory(layer_data *dev_data, VkBuffer buffe
 
         // TODO:  vk_validation_stats.py cannot abide braces immediately preceding or following a validation error enum
         // clang-format off
-    static const UNIQUE_VALIDATION_ERROR_CODE msgCode[3] = { VALIDATION_ERROR_00794, VALIDATION_ERROR_00795,
-      VALIDATION_ERROR_00796 };
+        static const UNIQUE_VALIDATION_ERROR_CODE msgCode[3] = { VALIDATION_ERROR_00794, VALIDATION_ERROR_00795,
+            VALIDATION_ERROR_00796 };
         // clang-format on
 
         // Keep this one fresh!
@@ -5503,6 +5538,12 @@ static void PostCallRecordBindBufferMemory(layer_data *dev_data, VkBuffer buffer
     std::unique_lock<std::mutex> lock(global_lock);
     auto buffer_state = GetBufferState(dev_data, buffer);
     if (buffer_state) {
+        // Track bound memory range information
+        auto mem_info = GetMemObjInfo(dev_data, mem);
+        if (mem_info) {
+            InsertBufferMemoryRange(dev_data, buffer, mem_info, memoryOffset, buffer_state->requirements);
+        }
+
         // Track objects tied to memory
         uint64_t buffer_handle = reinterpret_cast<uint64_t &>(buffer);
         SetMemBinding(dev_data, mem, buffer_handle, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, "vkBindBufferMemory()");
@@ -10045,11 +10086,11 @@ static bool PreCallValidateBindImageMemory(layer_data *dev_data, VkImage image, 
             lock.lock();
         }
 
-        // Track and validate bound memory range information
+        // Validate bound memory range information
         auto mem_info = GetMemObjInfo(dev_data, mem);
         if (mem_info) {
-            skip |= InsertImageMemoryRange(dev_data, image, mem_info, memoryOffset, image_state->requirements,
-                                           image_state->createInfo.tiling == VK_IMAGE_TILING_LINEAR, "vkBindImageMemory()");
+            skip |= ValidateInsertImageMemoryRange(dev_data, image, mem_info, memoryOffset, image_state->requirements,
+                                                   image_state->createInfo.tiling == VK_IMAGE_TILING_LINEAR, "vkBindImageMemory()");
             skip |= ValidateMemoryTypes(dev_data, mem_info, image_state->requirements.memoryTypeBits, "vkBindImageMemory()",
                                         VALIDATION_ERROR_00806);
         }
@@ -10061,6 +10102,13 @@ static void PostCallRecordBindImageMemory(layer_data *dev_data, VkImage image, V
     std::unique_lock<std::mutex> lock(global_lock);
     auto image_state = GetImageState(dev_data, image);
     if (image_state) {
+        // Track bound memory range information
+        auto mem_info = GetMemObjInfo(dev_data, mem);
+        if (mem_info) {
+            InsertImageMemoryRange(dev_data, image, mem_info, memoryOffset, image_state->requirements,
+                                   image_state->createInfo.tiling == VK_IMAGE_TILING_LINEAR);
+        }
+
         // Track objects tied to memory
         uint64_t image_handle = reinterpret_cast<uint64_t &>(image);
         SetMemBinding(dev_data, mem, image_handle, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, "vkBindImageMemory()");
