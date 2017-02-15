@@ -27,7 +27,6 @@ endif()
 
 set(LAYER_JSON_FILES
     VkLayer_core_validation
-    VkLayer_image
     VkLayer_object_tracker
     VkLayer_unique_objects
     VkLayer_parameter_validation
@@ -147,7 +146,6 @@ endif()
 
 add_vk_layer(core_validation core_validation.cpp vk_layer_table.cpp descriptor_sets.cpp buffer_validation.cpp)
 add_vk_layer(object_tracker object_tracker.cpp vk_layer_table.cpp)
-add_vk_layer(image image.cpp vk_layer_table.cpp)
 add_vk_layer(swapchain swapchain.cpp vk_layer_table.cpp)
 # generated
 add_vk_layer(threading threading.cpp thread_check.h vk_layer_table.cpp)
