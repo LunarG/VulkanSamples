@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 Google, Inc.
+ * Copyright (C) 2017 The Brenwill Workshop Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -209,6 +210,40 @@ void Hologram::create_render_pass() {
     vk::assert_success(vk::CreateRenderPass(dev_, &render_pass_info, nullptr, &render_pass_));
 }
 
+#ifdef MVK_USE_MOLTENVK_SHADER_CONVERTER
+
+#include <MoltenGLSLToSPIRVConverter/GLSLConversion.h>
+void Hologram::create_shader_modules() {
+    char* spvLog;
+    bool wasConverted;
+
+    const char* filename;
+    VkShaderModuleCreateInfo sh_info = {};
+    sh_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+
+    // Vertex shader
+    filename = use_push_constants_ ? "Hologram.push_constant.vert" : "Hologram.vert";
+    wasConverted = mlnConvertGLSLFileToSPIRV(filename, kMLNShaderStageVertex,
+                                             (uint32_t**)&sh_info.pCode, &sh_info.codeSize,
+                                             &spvLog, true, true);
+    if ( !wasConverted ) { printf("Could not convert GLSL to SPIRV:\n%s", spvLog); }
+    vk::assert_success(vk::CreateShaderModule(dev_, &sh_info, nullptr, &vs_));
+    free((void*)sh_info.pCode);
+    free((void*)spvLog);
+
+    // Fragment shader
+    filename = "Hologram.frag";
+    wasConverted = mlnConvertGLSLFileToSPIRV(filename, kMLNShaderStageFragment,
+                                             (uint32_t**)&sh_info.pCode, &sh_info.codeSize,
+                                             &spvLog, true, true);
+    if ( !wasConverted ) { printf("Could not convert GLSL to SPIRV:\n%s", spvLog); }
+    vk::assert_success(vk::CreateShaderModule(dev_, &sh_info, nullptr, &fs_));
+    free((void*)sh_info.pCode);
+    free((void*)spvLog);
+}
+
+#else
+
 void Hologram::create_shader_modules() {
     VkShaderModuleCreateInfo sh_info = {};
     sh_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -228,6 +263,8 @@ void Hologram::create_shader_modules() {
     sh_info.pCode = Hologram_frag;
     vk::assert_success(vk::CreateShaderModule(dev_, &sh_info, nullptr, &fs_));
 }
+
+#endif      // HG_USE_MOLTENVK_SHADER_CONVERTER
 
 void Hologram::create_descriptor_set_layout() {
     if (use_push_constants_) return;

@@ -17,8 +17,7 @@
  * limitations under the License.
  */
 
-#if defined(__linux__)
-/* Linux-specific common code: */
+#if (defined(__linux__) || defined(__IPHONE_OS_VERSION_MAX_ALLOWED) || defined(__MAC_OS_X_VERSION_MAX_ALLOWED))
 
 #include <pthread.h>
 

@@ -40,8 +40,10 @@ samples utility functions
 #include "shaderc/shaderc.hpp"
 // Static variable that keeps ANativeWindow and asset manager instances.
 static android_app *Android_application = nullptr;
+#elif (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
+#	include <MoltenGLSLToSPIRVConverter/GLSLToSPIRVConverter.h>
 #else
-#include "SPIRV/GlslangToSpv.h"
+#	include "SPIRV/GlslangToSpv.h"
 #endif
 
 // For timestamp code (get_milliseconds)
@@ -53,8 +55,9 @@ static android_app *Android_application = nullptr;
 
 using namespace std;
 
-#ifndef __ANDROID__
-int main(int argc, char **argv) { sample_main(argc, argv); }
+#if !(defined(__ANDROID__) || defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
+// Android, iOS, and macOS: main() implemented externally to allow access to Objective-C components
+int main(int argc, char **argv) { return sample_main(argc, argv); }
 #endif
 
 void extract_version(uint32_t version, uint32_t &major, uint32_t &minor, uint32_t &patch) {
@@ -79,6 +82,8 @@ string get_file_name(const string &s) {
     return ("");
 }
 
+#if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
+// iOS & macOS: get_base_data_dir() implemented externally to allow access to Objective-C components
 std::string get_base_data_dir() {
 #ifdef __ANDROID__
     return "";
@@ -86,6 +91,7 @@ std::string get_base_data_dir() {
     return std::string(VULKAN_SAMPLES_BASE_DIR) + "/API-Samples/data/";
 #endif
 }
+#endif
 
 std::string get_data_dir(std::string filename) {
     std::string basedir = get_base_data_dir();
@@ -261,6 +267,48 @@ bool read_ppm(char const *const filename, int &width, int &height, uint64_t rowP
 
     return true;
 }
+
+#if (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
+
+void init_glslang() {}
+
+void finalize_glslang() {}
+
+bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std::vector<unsigned int> &spirv) {
+
+ 	MLNShaderStage shaderStage;
+ 	switch (shader_type) {
+		 		case VK_SHADER_STAGE_VERTEX_BIT:
+		 			shaderStage = kMLNShaderStageVertex;
+		 			break;
+		 		case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
+		 			shaderStage = kMLNShaderStageTessControl;
+		 			break;
+				case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
+		 			shaderStage = kMLNShaderStageTessEval;
+		 			break;
+		 		case VK_SHADER_STAGE_GEOMETRY_BIT:
+		 			shaderStage = kMLNShaderStageGeometry;
+		 			break;
+		 		case VK_SHADER_STAGE_FRAGMENT_BIT:
+		 			shaderStage = kMLNShaderStageFragment;
+		 			break;
+		 		case VK_SHADER_STAGE_COMPUTE_BIT:
+		 			shaderStage = kMLNShaderStageCompute;
+		 			break;
+		 		default:
+		 			shaderStage = kMLNShaderStageAuto;
+		 			break;
+	 	}
+
+ 	molten::GLSLToSPIRVConverter glslConverter;
+ 	glslConverter.setGLSL(pshader);
+ 	bool wasConverted = glslConverter.convert(shaderStage, false, false);
+ 	if (wasConverted) { spirv = glslConverter.getSPIRV(); }
+ 	return wasConverted;
+ }
+
+#else   // not IOS OR macOS
 
 #ifndef __ANDROID__
 void init_resources(TBuiltInResource &Resources) {
@@ -473,6 +521,8 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std
 #endif
     return true;
 }
+
+#endif  // IOS or macOS
 
 void wait_seconds(int seconds) {
 #ifdef WIN32

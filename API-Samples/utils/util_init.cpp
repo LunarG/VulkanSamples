@@ -168,6 +168,10 @@ void init_instance_extension_names(struct sample_info &info) {
     info.instance_extension_names.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
 #elif defined(_WIN32)
     info.instance_extension_names.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#elif defined(VK_USE_PLATFORM_IOS_MVK)
+    info.instance_extension_names.push_back(VK_MVK_IOS_SURFACE_EXTENSION_NAME);
+#elif defined(VK_USE_PLATFORM_MACOS_MVK)
+    info.instance_extension_names.push_back(VK_MVK_MACOS_SURFACE_EXTENSION_NAME);
 #else
     info.instance_extension_names.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
 #endif
@@ -336,9 +340,8 @@ void destroy_debug_report_callback(struct sample_info &info) {
 }
 
 void init_connection(struct sample_info &info) {
-#ifdef __ANDROID__
-// Do nothing on Android.
-#elif !defined(_WIN32)
+#if !(defined(_WIN32) || defined(__ANDROID__) || defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
+// Do nothing on Android, Apple, or Windows.
     const xcb_setup_t *setup;
     xcb_screen_iterator_t iter;
     int scr;
@@ -354,7 +357,7 @@ void init_connection(struct sample_info &info) {
     while (scr-- > 0) xcb_screen_next(&iter);
 
     info.screen = iter.data;
-#endif  //__Android__
+#endif
 }
 #ifdef _WIN32
 static void run(struct sample_info *info) { /* Placeholder for samples that want to show dynamic content */ }
@@ -432,6 +435,15 @@ void destroy_window(struct sample_info &info) {
     vkDestroySurfaceKHR(info.inst, info.surface, NULL);
     DestroyWindow(info.window);
 }
+
+#elif defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK)
+
+// iOS & macOS: init_window() implemented externally to allow access to Objective-C components
+
+void destroy_window(struct sample_info &info) {
+	info.window = NULL;
+}
+
 #elif defined(__ANDROID__)
 // Android implementation.
 void init_window(struct sample_info &info) {}
@@ -616,7 +628,21 @@ void init_swapchain_extension(struct sample_info &info) {
     createInfo.flags = 0;
     createInfo.window = AndroidGetApplicationWindow();
     res = info.fpCreateAndroidSurfaceKHR(info.inst, &createInfo, nullptr, &info.surface);
-#else   // !__ANDROID__ && !_WIN32
+#elif defined(VK_USE_PLATFORM_IOS_MVK)
+    VkIOSSurfaceCreateInfoMVK createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_IOS_SURFACE_CREATE_INFO_MVK;
+    createInfo.pNext = NULL;
+    createInfo.flags = 0;
+    createInfo.pView = info.window;
+    res = vkCreateIOSSurfaceMVK(info.inst, &createInfo, NULL, &info.surface);
+#elif defined(VK_USE_PLATFORM_MACOS_MVK)
+    VkMacOSSurfaceCreateInfoMVK createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK;
+    createInfo.pNext = NULL;
+    createInfo.flags = 0;
+    createInfo.pView = info.window;
+    res = vkCreateMacOSSurfaceMVK(info.inst, &createInfo, NULL, &info.surface);
+#else
     VkXcbSurfaceCreateInfoKHR createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
     createInfo.pNext = NULL;
