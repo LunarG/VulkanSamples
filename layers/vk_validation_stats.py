@@ -49,7 +49,6 @@ layer_source_files = [
 'descriptor_sets.cpp',
 'parameter_validation.cpp',
 'object_tracker.cpp',
-'image.cpp',
 'buffer_validation.cpp',
 'swapchain.cpp'
 ]
