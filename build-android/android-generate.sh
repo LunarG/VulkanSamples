@@ -41,8 +41,8 @@ cp -f ../layers/buffer_validation.cpp generated/common/
 # layer names and their original source files directory
 # 1 to 1 correspondence -- one layer one source file; additional files are copied
 # at fixup step
-declare layers=(core_validation image object_tracker parameter_validation swapchain threading unique_objects)
-declare src_dirs=(../layers ../layers ../layers ../layers ../layers ../layers ../layers)
+declare layers=(core_validation object_tracker parameter_validation swapchain threading unique_objects)
+declare src_dirs=(../layers ../layers ../layers ../layers ../layers ../layers)
 
 SRC_ROOT=generated/layer-src
 BUILD_ROOT=generated/gradle-build
