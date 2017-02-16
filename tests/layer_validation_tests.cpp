@@ -2730,29 +2730,29 @@ TEST_F(VkLayerTest, BindInvalidMemory) {
 
         uint32_t image_unsupported_mem_type_bits = ((1 << memory_properties.memoryTypeCount) - 1) & ~image_mem_reqs.memoryTypeBits;
         if (image_unsupported_mem_type_bits != 0) {
-          pass = m_device->phy().set_memory_type(image_unsupported_mem_type_bits, &image_alloc_info, 0);
-          ASSERT_TRUE(pass);
-          err = vkAllocateMemory(device(), &image_alloc_info, NULL, &image_mem);
-          ASSERT_VK_SUCCESS(err);
-          m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00806);
-          err = vkBindImageMemory(device(), image, image_mem, 0);
-          (void)err;  // This may very well return an error.
-          m_errorMonitor->VerifyFound();
-          vkFreeMemory(device(), image_mem, NULL);
+            pass = m_device->phy().set_memory_type(image_unsupported_mem_type_bits, &image_alloc_info, 0);
+            ASSERT_TRUE(pass);
+            err = vkAllocateMemory(device(), &image_alloc_info, NULL, &image_mem);
+            ASSERT_VK_SUCCESS(err);
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00806);
+            err = vkBindImageMemory(device(), image, image_mem, 0);
+            (void)err;  // This may very well return an error.
+            m_errorMonitor->VerifyFound();
+            vkFreeMemory(device(), image_mem, NULL);
         }
 
         uint32_t buffer_unsupported_mem_type_bits =
             ((1 << memory_properties.memoryTypeCount) - 1) & ~buffer_mem_reqs.memoryTypeBits;
         if (buffer_unsupported_mem_type_bits != 0) {
-          pass = m_device->phy().set_memory_type(buffer_unsupported_mem_type_bits, &buffer_alloc_info, 0);
-          ASSERT_TRUE(pass);
-          err = vkAllocateMemory(device(), &buffer_alloc_info, NULL, &buffer_mem);
-          ASSERT_VK_SUCCESS(err);
-          m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00797);
-          err = vkBindBufferMemory(device(), buffer, buffer_mem, 0);
-          (void)err;  // This may very well return an error.
-          m_errorMonitor->VerifyFound();
-          vkFreeMemory(device(), buffer_mem, NULL);
+            pass = m_device->phy().set_memory_type(buffer_unsupported_mem_type_bits, &buffer_alloc_info, 0);
+            ASSERT_TRUE(pass);
+            err = vkAllocateMemory(device(), &buffer_alloc_info, NULL, &buffer_mem);
+            ASSERT_VK_SUCCESS(err);
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00797);
+            err = vkBindBufferMemory(device(), buffer, buffer_mem, 0);
+            (void)err;  // This may very well return an error.
+            m_errorMonitor->VerifyFound();
+            vkFreeMemory(device(), buffer_mem, NULL);
         }
 
         vkDestroyImage(device(), image, NULL);
@@ -11865,8 +11865,7 @@ TEST_F(VkLayerTest, InvalidStorageImageLayout) {
     } else if (format_properties.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT) {
         tiling = VK_IMAGE_TILING_OPTIMAL;
     } else {
-        printf(
-            "             Device does not support VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT; skipped.\n");
+        printf("             Device does not support VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT; skipped.\n");
         return;
     }
 
@@ -15813,10 +15812,20 @@ TEST_F(VkLayerTest, ImageBufferCopyTests) {
     TEST_DESCRIPTION("Image to buffer and buffer to image tests");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
+
+    // Bail if any dimension of transfer granularity is 0.
+    auto index = m_device->graphics_queue_node_index_;
+    auto queue_family_properties = m_device->phy().queue_properties();
+    if ((queue_family_properties[index].minImageTransferGranularity.depth == 0) ||
+        (queue_family_properties[index].minImageTransferGranularity.width == 0) ||
+        (queue_family_properties[index].minImageTransferGranularity.height == 0)) {
+        printf("             Subresource copies are disallowed when xfer granularity (x|y|z) is 0. Skipped.\n");
+        return;
+    }
+
     VkImageObj image_64k(m_device);        // 128^2 texels, 64k
     VkImageObj image_16k(m_device);        // 64^2 texels, 16k
     VkImageObj image_16k_depth(m_device);  // 64^2 texels, depth, 16k
-    VkImageObj image_16k_bc5(m_device);    // 128^2 texels as 32^2 compressed (4x4) blocks, 16k
     image_64k.init(128, 128, VK_FORMAT_R8G8B8A8_UINT,
                    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
                    VK_IMAGE_TILING_OPTIMAL, 0);
@@ -15825,11 +15834,9 @@ TEST_F(VkLayerTest, ImageBufferCopyTests) {
                    VK_IMAGE_TILING_OPTIMAL, 0);
     image_16k_depth.init(64, 64, VK_FORMAT_D24_UNORM_S8_UINT, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
                          VK_IMAGE_TILING_OPTIMAL, 0);
-    image_16k_bc5.init(32, 32, VK_FORMAT_BC5_UNORM_BLOCK, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
     ASSERT_TRUE(image_64k.initialized());
     ASSERT_TRUE(image_16k.initialized());
     ASSERT_TRUE(image_16k_depth.initialized());
-    ASSERT_TRUE(image_16k_bc5.initialized());
 
     vk_testing::Buffer buffer_64k, buffer_16k;
     VkMemoryPropertyFlags reqs = 0;
@@ -15949,61 +15956,77 @@ TEST_F(VkLayerTest, ImageBufferCopyTests) {
                            buffer_16k.handle(), 1, &region);
     m_errorMonitor->VerifyFound();
 
-    // copying compressed formats
+    // Test compressed formats, if supported
+    VkPhysicalDeviceFeatures device_features;
+    ASSERT_NO_FATAL_FAILURE(GetPhysicalDeviceFeatures(&device_features));
+    if (device_features.textureCompressionBC || device_features.textureCompressionETC2 ||
+        device_features.textureCompressionASTC_LDR) {
+        VkImageObj image_16k_4x4comp(m_device);  // 128^2 texels as 32^2 compressed (4x4) blocks, 16k
+        if (device_features.textureCompressionBC) {
+            image_16k_4x4comp.init(32, 32, VK_FORMAT_BC5_UNORM_BLOCK, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
+        } else if (device_features.textureCompressionETC2) {
+            image_16k_4x4comp.init(32, 32, VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK, VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+                                   VK_IMAGE_TILING_OPTIMAL, 0);
+        } else {
+            image_16k_4x4comp.init(32, 32, VK_FORMAT_ASTC_4x4_UNORM_BLOCK, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_TILING_OPTIMAL,
+                                   0);
+        }
+        ASSERT_TRUE(image_16k_4x4comp.initialized());
 
-    // Just fits
-    m_errorMonitor->ExpectSuccess();
-    region.imageExtent = {128, 128, 1};
-    vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image_16k_bc5.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16k.handle(),
-                           1, &region);
-    m_errorMonitor->VerifyNotFound();
+        // Just fits
+        m_errorMonitor->ExpectSuccess();
+        region.imageExtent = {128, 128, 1};
+        vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image_16k_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL,
+                               buffer_16k.handle(), 1, &region);
+        m_errorMonitor->VerifyNotFound();
 
-    // with offset, too big for buffer
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01246);
-    region.bufferOffset = 16;
-    vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image_16k_bc5.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16k.handle(),
-                           1, &region);
-    m_errorMonitor->VerifyFound();
+        // with offset, too big for buffer
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01246);
+        region.bufferOffset = 16;
+        vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image_16k_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL,
+                               buffer_16k.handle(), 1, &region);
+        m_errorMonitor->VerifyFound();
 
-    // buffer offset must be a multiple of texel block size (16)
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01274);
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01263);
-    region.imageExtent = {64, 64, 1};
-    region.bufferOffset = 24;
-    vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image_16k_bc5.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16k.handle(),
-                           1, &region);
-    m_errorMonitor->VerifyFound();
+        // buffer offset must be a multiple of texel block size (16)
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01274);
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01263);
+        region.imageExtent = {64, 64, 1};
+        region.bufferOffset = 24;
+        vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image_16k_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL,
+                               buffer_16k.handle(), 1, &region);
+        m_errorMonitor->VerifyFound();
 
-    // rowlength not a multiple of block width (4)
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01271);
-    region.bufferOffset = 0;
-    region.bufferRowLength = 130;
-    region.bufferImageHeight = 0;
-    vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image_16k_bc5.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_64k.handle(),
-                           1, &region);
-    m_errorMonitor->VerifyFound();
+        // rowlength not a multiple of block width (4)
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01271);
+        region.bufferOffset = 0;
+        region.bufferRowLength = 130;
+        region.bufferImageHeight = 0;
+        vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image_16k_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL,
+                               buffer_64k.handle(), 1, &region);
+        m_errorMonitor->VerifyFound();
 
-    // imageheight not a multiple of block height (4)
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01272);
-    region.bufferRowLength = 0;
-    region.bufferImageHeight = 130;
-    vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image_16k_bc5.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_64k.handle(),
-                           1, &region);
-    m_errorMonitor->VerifyFound();
+        // imageheight not a multiple of block height (4)
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01272);
+        region.bufferRowLength = 0;
+        region.bufferImageHeight = 130;
+        vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image_16k_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL,
+                               buffer_64k.handle(), 1, &region);
+        m_errorMonitor->VerifyFound();
 
-    // image extents must be multiple of block dimensions (4x4)
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01273);
-    region.bufferImageHeight = 0;
-    region.imageOffset = {4, 6, 0};
-    vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image_16k_bc5.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_64k.handle(),
-                           1, &region);
-    m_errorMonitor->VerifyFound();
+        // image extents must be multiple of block dimensions (4x4)
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01273);
+        region.bufferImageHeight = 0;
+        region.imageOffset = {4, 6, 0};
+        vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image_16k_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL,
+                               buffer_64k.handle(), 1, &region);
+        m_errorMonitor->VerifyFound();
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01273);
-    region.imageOffset = {22, 0, 0};
-    vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image_16k_bc5.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_64k.handle(),
-                           1, &region);
-    m_errorMonitor->VerifyFound();
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01273);
+        region.imageOffset = {22, 0, 0};
+        vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image_16k_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL,
+                               buffer_64k.handle(), 1, &region);
+        m_errorMonitor->VerifyFound();
+    }
 }
 
 TEST_F(VkLayerTest, MiscImageLayerTests) {
