@@ -186,13 +186,12 @@ Alternatively, WSIWindow also contains a similar CanPresent() member function, w
 #### Output:
 *(Notice the ticks next to picked items.  Available items may vary, depending on your setup.)*
 
-    Layers picked: 3 of 11
+    Layers picked: 3 of 10
         ✓ VK_LAYER_LUNARG_core_validation
           VK_LAYER_LUNARG_vktrace
         ✓ VK_LAYER_LUNARG_object_tracker
           VK_LAYER_LUNARG_screenshot
           VK_LAYER_GOOGLE_threading
-          VK_LAYER_LUNARG_image
           VK_LAYER_GOOGLE_unique_objects
           VK_LAYER_LUNARG_swapchain
         ✓ VK_LAYER_LUNARG_parameter_validation

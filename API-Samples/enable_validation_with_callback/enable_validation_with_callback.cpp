@@ -76,7 +76,6 @@ int sample_main(int argc, char *argv[]) {
         info.instance_layer_names.push_back("VK_LAYER_LUNARG_parameter_validation");
         info.instance_layer_names.push_back("VK_LAYER_LUNARG_object_tracker");
         info.instance_layer_names.push_back("VK_LAYER_LUNARG_core_validation");
-        info.instance_layer_names.push_back("VK_LAYER_LUNARG_image");
         info.instance_layer_names.push_back("VK_LAYER_LUNARG_swapchain");
         info.instance_layer_names.push_back("VK_LAYER_GOOGLE_unique_objects");
 
