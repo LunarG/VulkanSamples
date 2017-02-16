@@ -178,7 +178,7 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/layers")
     set (VULKAN_LOADER ${VULKAN_LOADER_NAME})
 else()
     find_library(VULKAN_LOADER NAMES ${VULKAN_LOADER_NAME}
-                 HINTS "${CMAKE_SOURCE_DIR}/../${BINDATA_DIR}" "${CMAKE_SOURCE_DIR}/../x86_64/lib" )
+    HINTS "${CMAKE_SOURCE_DIR}/../${LIBSOURCE_DIR}" "${CMAKE_SOURCE_DIR}/../x86_64/lib" )
 endif()
 
 set (LIBGLM_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/libs)
