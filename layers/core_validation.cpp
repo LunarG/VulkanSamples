@@ -7771,9 +7771,9 @@ static bool ValidateImageBounds(const layer_data *dev_data, const VkImageCreateI
     return skip;
 }
 
-static inline bool ValidtateBufferBounds(layer_data *dev_data, IMAGE_STATE *image_state, BUFFER_STATE *buff_state,
-                                         uint32_t regionCount, const VkBufferImageCopy *pRegions, const char *func_name,
-                                         UNIQUE_VALIDATION_ERROR_CODE msg_code) {
+static inline bool ValidateBufferBounds(layer_data *dev_data, IMAGE_STATE *image_state, BUFFER_STATE *buff_state,
+                                        uint32_t regionCount, const VkBufferImageCopy *pRegions, const char *func_name,
+                                        UNIQUE_VALIDATION_ERROR_CODE msg_code) {
     bool skip = false;
 
     VkDeviceSize buffer_size = buff_state->createInfo.size;
@@ -7849,8 +7849,8 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBufferToImage(VkCommandBuffer commandBuffer, V
 
         skip_call |= ValidateImageBounds(dev_data, &(dst_image_state->createInfo), regionCount, pRegions,
                                          "vkCmdCopyBufferToImage()", VALIDATION_ERROR_01228);
-        skip_call |= ValidtateBufferBounds(dev_data, dst_image_state, src_buff_state, regionCount, pRegions,
-                                           "vkCmdCopyBufferToImage()", VALIDATION_ERROR_01227);
+        skip_call |= ValidateBufferBounds(dev_data, dst_image_state, src_buff_state, regionCount, pRegions,
+                                          "vkCmdCopyBufferToImage()", VALIDATION_ERROR_01227);
 
         skip_call |= ValidateImageSampleCount(dev_data, dst_image_state, VK_SAMPLE_COUNT_1_BIT,
                                               "vkCmdCopyBufferToImage(): dstImage", VALIDATION_ERROR_01232);
@@ -7924,8 +7924,8 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyImageToBuffer(VkCommandBuffer commandBuffer, V
 
         skip_call |= ValidateImageBounds(dev_data, &(src_image_state->createInfo), regionCount, pRegions,
                                          "vkCmdCopyBufferToImage()", VALIDATION_ERROR_01245);
-        skip_call |= ValidtateBufferBounds(dev_data, src_image_state, dst_buff_state, regionCount, pRegions,
-                                           "vkCmdCopyImageToBuffer()", VALIDATION_ERROR_01246);
+        skip_call |= ValidateBufferBounds(dev_data, src_image_state, dst_buff_state, regionCount, pRegions,
+                                          "vkCmdCopyImageToBuffer()", VALIDATION_ERROR_01246);
 
         skip_call |= ValidateImageSampleCount(dev_data, src_image_state, VK_SAMPLE_COUNT_1_BIT,
                                               "vkCmdCopyImageToBuffer(): srcImage", VALIDATION_ERROR_01249);
