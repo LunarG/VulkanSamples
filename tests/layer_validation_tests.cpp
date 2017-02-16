@@ -2519,7 +2519,7 @@ TEST_F(VkLayerTest, BindImageInvalidMemoryType) {
         }
     }
     if (i >= memory_info.memoryTypeCount) {
-        printf("No invalid memory type index could be found; skipped.\n");
+        printf("             No invalid memory type index could be found; skipped.\n");
         vkDestroyImage(m_device->device(), image, NULL);
         return;
     }
@@ -2773,7 +2773,7 @@ TEST_F(VkLayerTest, BindInvalidMemory) {
         } else {
             ASSERT_VK_SUCCESS(err);
             if (image_format_properties.maxExtent.width == 0) {
-                printf("sparse image format not supported; skipped.\n");
+                printf("             Sparse image format not supported; skipped.\n");
                 return;
             } else {
                 VkImage sparse_image = VK_NULL_HANDLE;
@@ -2921,7 +2921,7 @@ TEST_F(VkLayerTest, CreatePipelineBadVertexAttributeFormat) {
     input_attribs.format = VK_FORMAT_BC2_UNORM_BLOCK;
     VkFormatProperties format_props = m_device->format_properties(input_attribs.format);
     if ((format_props.bufferFeatures & VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT) != 0) {
-        printf("Format unsuitable for test; skipped.\n");
+        printf("             Format unsuitable for test; skipped.\n");
         return;
     }
 
@@ -4095,7 +4095,7 @@ TEST_F(VkLayerTest, DynamicDepthBoundsNotBound) {
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     if (!m_device->phy().features().depthBounds) {
-        printf("Device does not support depthBounds test; skipped.\n");
+        printf("             Device does not support depthBounds test; skipped.\n");
         return;
     }
     // Dynamic depth bounds
@@ -7780,7 +7780,7 @@ TEST_F(VkLayerTest, PSOViewportScissorCountTests) {
     ASSERT_VK_SUCCESS(err);
 
     if (!m_device->phy().features().multiViewport) {
-        printf("MultiViewport feature is disabled -- skipping enabled-state checks.\n");
+        printf("             MultiViewport feature is disabled -- skipping enabled-state checks.\n");
 
         // Check case where multiViewport is disabled and viewport count is not 1
         // We check scissor/viewport simultaneously since separating them would trigger the mismatch error, 1434.
@@ -7792,9 +7792,9 @@ TEST_F(VkLayerTest, PSOViewportScissorCountTests) {
         m_errorMonitor->VerifyFound();
     } else {
         if (m_device->props.limits.maxViewports == 1) {
-            printf("Device limit maxViewports is 1, skipping tests that require higher limits.\n");
+            printf("             Device limit maxViewports is 1, skipping tests that require higher limits.\n");
         } else {
-            printf("MultiViewport feature is enabled -- skipping disabled-state checks.\n");
+            printf("             MultiViewport feature is enabled -- skipping disabled-state checks.\n");
 
             // Check is that viewportcount and scissorcount match
             m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01434);
@@ -7967,7 +7967,7 @@ TEST_F(VkLayerTest, PSOViewportCountWithoutDataAndDynScissorMismatch) {
     ASSERT_NO_FATAL_FAILURE(InitState());
 
     if (!m_device->phy().features().multiViewport) {
-        printf("Device does not support multiple viewports/scissors; skipped.\n");
+        printf("             Device does not support multiple viewports/scissors; skipped.\n");
         return;
     }
 
@@ -8141,7 +8141,7 @@ TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch) {
     ASSERT_NO_FATAL_FAILURE(InitState());
 
     if (!m_device->phy().features().multiViewport) {
-        printf("Device does not support multiple viewports/scissors; skipped.\n");
+        printf("             Device does not support multiple viewports/scissors; skipped.\n");
         return;
     }
 
@@ -9101,7 +9101,7 @@ TEST_F(VkLayerTest, InvalidBarriers) {
         }
     }
     if (queue_family_index == UINT32_MAX) {
-        printf("No non-compute queue found; skipped.\n");
+        printf("             No non-compute queue found; skipped.\n");
         return;
     }
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02513);
@@ -9134,7 +9134,7 @@ TEST_F(VkLayerTest, InvalidBarriers) {
     if ((queue_props[queue_family_index].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0) {
         vkEndCommandBuffer(bad_command_buffer);
         vkDestroyCommandPool(m_device->device(), command_pool, NULL);
-        printf("The non-compute queue does not support graphics; skipped.\n");
+        printf("             The non-compute queue does not support graphics; skipped.\n");
         return;
     }
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02510);
@@ -9748,7 +9748,7 @@ TEST_F(VkLayerTest, DSBufferLimitErrors) {
     VkDeviceMemory mem;
     err = vkAllocateMemory(m_device->device(), &mem_alloc, NULL, &mem);
     if (VK_SUCCESS != err) {
-        printf("Failed to allocate memory in DSBufferLimitErrors; skipped.\n");
+        printf("             Failed to allocate memory in DSBufferLimitErrors; skipped.\n");
         vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
         vkDestroyBuffer(m_device->device(), uniform_buffer, NULL);
         vkDestroyBuffer(m_device->device(), storage_buffer, NULL);
@@ -11866,8 +11866,7 @@ TEST_F(VkLayerTest, InvalidStorageImageLayout) {
         tiling = VK_IMAGE_TILING_OPTIMAL;
     } else {
         printf(
-            "Device does not support VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT; "
-            "skipped.\n");
+            "             Device does not support VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT; skipped.\n");
         return;
     }
 
@@ -14571,7 +14570,7 @@ TEST_F(VkLayerTest, CreatePipelineTessPatchDecorationMismatch) {
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     if (!m_device->phy().features().tessellationShader) {
-        printf("Device does not support tessellation shaders; skipped.\n");
+        printf("             Device does not support tessellation shaders; skipped.\n");
         return;
     }
 
@@ -18194,7 +18193,7 @@ TEST_F(VkPositiveLayerTest, TestAliasedMemoryTracking) {
     vkGetPhysicalDeviceImageFormatProperties(gpu(), VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TYPE_2D, image_tiling,
                                              VK_IMAGE_USAGE_TRANSFER_SRC_BIT, 0, &image_format_properties);
     if (image_format_properties.maxExtent.width == 0) {
-        printf("Image format not supported; skipped.\n");
+        printf("             Image format not supported; skipped.\n");
         vkFreeMemory(m_device->device(), mem, NULL);
         return;
     }
@@ -20276,7 +20275,7 @@ TEST_F(VkPositiveLayerTest, TwoQueueSubmitsSeparateQueuesWithSemaphoreAndOneFenc
 TEST_F(VkPositiveLayerTest, TwoQueuesEnsureCorrectRetirementWithWorkStolen) {
     ASSERT_NO_FATAL_FAILURE(InitState());
     if ((m_device->queue_props.empty()) || (m_device->queue_props[0].queueCount < 2)) {
-        printf("Test requires two queues, skipping\n");
+        printf("             Test requires two queues, skipping\n");
         return;
     }
 
@@ -21180,7 +21179,7 @@ TEST_F(VkPositiveLayerTest, CreatePipelineTessPerVertex) {
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     if (!m_device->phy().features().tessellationShader) {
-        printf("Device does not support tessellation shaders; skipped.\n");
+        printf("             Device does not support tessellation shaders; skipped.\n");
         return;
     }
 
@@ -21252,7 +21251,7 @@ TEST_F(VkPositiveLayerTest, CreatePipelineGeometryInputBlockPositive) {
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     if (!m_device->phy().features().geometryShader) {
-        printf("Device does not support geometry shaders; skipped.\n");
+        printf("             Device does not support geometry shaders; skipped.\n");
         return;
     }
 
@@ -21309,7 +21308,7 @@ TEST_F(VkPositiveLayerTest, CreatePipeline64BitAttributesPositive) {
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     if (!m_device->phy().features().shaderFloat64) {
-        printf("Device does not support 64bit vertex attributes; skipped.\n");
+        printf("             Device does not support 64bit vertex attributes; skipped.\n");
         return;
     }
 
