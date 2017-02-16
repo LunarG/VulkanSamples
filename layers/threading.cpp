@@ -360,6 +360,29 @@ VKAPI_ATTR VkResult VKAPI_CALL AllocateCommandBuffers(VkDevice device, const VkC
     return result;
 }
 
+VKAPI_ATTR VkResult VKAPI_CALL AllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo *pAllocateInfo,
+                                                      VkDescriptorSet *pDescriptorSets) {
+    dispatch_key key = get_dispatch_key(device);
+    layer_data *my_data = GetLayerDataPtr(key, layer_data_map);
+    VkLayerDispatchTable *pTable = my_data->device_dispatch_table;
+    VkResult result;
+    bool threadChecks = startMultiThread();
+    if (threadChecks) {
+        startReadObject(my_data, device);
+        startWriteObject(my_data, pAllocateInfo->descriptorPool);
+        // Host access to pAllocateInfo::descriptorPool must be externally synchronized
+    }
+    result = pTable->AllocateDescriptorSets(device, pAllocateInfo, pDescriptorSets);
+    if (threadChecks) {
+        finishReadObject(my_data, device);
+        finishWriteObject(my_data, pAllocateInfo->descriptorPool);
+        // Host access to pAllocateInfo::descriptorPool must be externally synchronized
+    } else {
+        finishMultiThread();
+    }
+    return result;
+}
+
 VKAPI_ATTR void VKAPI_CALL FreeCommandBuffers(VkDevice device, VkCommandPool commandPool, uint32_t commandBufferCount,
                                               const VkCommandBuffer *pCommandBuffers) {
     dispatch_key key = get_dispatch_key(device);

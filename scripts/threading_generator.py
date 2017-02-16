@@ -382,6 +382,7 @@ class ThreadOutputGenerator(OutputGenerator):
             'vkFreeCommandBuffers',
             'vkCreateDebugReportCallbackEXT',
             'vkDestroyDebugReportCallbackEXT',
+            'vkAllocateDescriptorSets',
         ]
         if name in special_functions:
             decls = self.makeCDecls(cmdinfo.elem)
