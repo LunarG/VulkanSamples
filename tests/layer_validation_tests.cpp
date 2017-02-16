@@ -1567,6 +1567,7 @@ TEST_F(VkLayerTest, InvalidMemoryAliasing) {
     if (!pass) {
         vkDestroyBuffer(m_device->device(), buffer, NULL);
         vkDestroyImage(m_device->device(), image, NULL);
+        vkDestroyImage(m_device->device(), image2, NULL);
         return;
     }
     err = vkAllocateMemory(m_device->device(), &alloc_info, NULL, &mem);
