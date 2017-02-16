@@ -2193,14 +2193,13 @@ TEST_F(VkLayerTest, InvalidUsageBits) {
     VkBufferImageCopy region = {};
     region.bufferRowLength = 128;
     region.bufferImageHeight = 128;
-    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
     region.imageSubresource.layerCount = 1;
     region.imageExtent.height = 16;
     region.imageExtent.width = 16;
     region.imageExtent.depth = 1;
 
-    // Buffer usage not set to TRANSFER_SRC and image usage not set to
-    // TRANSFER_DST
+    // Buffer usage not set to TRANSFER_SRC and image usage not set to TRANSFER_DST
     m_commandBuffer->BeginCommandBuffer();
 
     // two separate errors from this call:
@@ -5301,7 +5300,7 @@ TEST_F(VkLayerTest, BufferMemoryNotBound) {
     VkBufferCreateInfo buf_info = {};
     buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     buf_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-    buf_info.size = 256;
+    buf_info.size = 1024;
     buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     VkResult err = vkCreateBuffer(m_device->device(), &buf_info, NULL, &buffer);
     ASSERT_VK_SUCCESS(err);
@@ -5310,7 +5309,7 @@ TEST_F(VkLayerTest, BufferMemoryNotBound) {
 
     VkMemoryAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    alloc_info.allocationSize = 256;
+    alloc_info.allocationSize = 1024;
     bool pass = false;
     pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &alloc_info, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
     if (!pass) {
@@ -5324,8 +5323,8 @@ TEST_F(VkLayerTest, BufferMemoryNotBound) {
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          " used with no memory bound. Memory should be bound by calling vkBindBufferMemory().");
     VkBufferImageCopy region = {};
-    region.bufferRowLength = 128;
-    region.bufferImageHeight = 128;
+    region.bufferRowLength = 16;
+    region.bufferImageHeight = 16;
     region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
     region.imageSubresource.layerCount = 1;
@@ -15908,7 +15907,7 @@ TEST_F(VkLayerTest, ImageBufferCopyTests) {
     // image/buffer too small on copy to buffer
     region.imageExtent = {64, 64, 1};
     region.imageOffset = {0, 0, 0};
-    region.bufferOffset = 2;
+    region.bufferOffset = 4;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01246);  // buffer too small
     vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image_64k.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16k.handle(), 1,
                            &region);
@@ -15925,15 +15924,6 @@ TEST_F(VkLayerTest, ImageBufferCopyTests) {
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01246);
     region.imageExtent = {64, 64, 1};
     region.bufferRowLength = 68;
-    vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image_16k.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16k.handle(), 1,
-                           &region);
-    m_errorMonitor->VerifyFound();
-
-    // buffer size ok but imageheight causes loose packing
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01246);
-    region.imageExtent = {32, 32, 2};  // invalid (VU01747), but masked here by VU01246
-    region.bufferRowLength = 32;
-    region.bufferImageHeight = 97;
     vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image_16k.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16k.handle(), 1,
                            &region);
     m_errorMonitor->VerifyFound();
