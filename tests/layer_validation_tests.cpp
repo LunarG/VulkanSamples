@@ -658,7 +658,7 @@ class VkBufferTest {
 
             VkMemoryAllocateInfo memory_allocate_info = {};
             memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-            memory_allocate_info.allocationSize = memory_requirements.size;
+            memory_allocate_info.allocationSize = memory_requirements.size + eOffsetAlignment;
             bool pass = aVulkanDevice->phy().set_memory_type(memory_requirements.memoryTypeBits, &memory_allocate_info,
                                                              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
             if (!pass) {
@@ -9824,11 +9824,11 @@ TEST_F(VkLayerTest, DSBufferLimitErrors) {
     mem_alloc.allocationSize = ub_ci.size + sb_ci.size + 1024;  // additional buffer for offset
     mem_alloc.memoryTypeIndex = 0;
 
-    VkMemoryRequirements mem_reqs;
-    vkGetBufferMemoryRequirements(m_device->device(), uniform_buffer, &mem_reqs);
-    bool pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
-    vkGetBufferMemoryRequirements(m_device->device(), storage_buffer, &mem_reqs);
-    pass &= m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
+    VkMemoryRequirements ub_mem_reqs, sb_mem_reqs;
+    vkGetBufferMemoryRequirements(m_device->device(), uniform_buffer, &ub_mem_reqs);
+    bool pass = m_device->phy().set_memory_type(ub_mem_reqs.memoryTypeBits, &mem_alloc, 0);
+    vkGetBufferMemoryRequirements(m_device->device(), storage_buffer, &sb_mem_reqs);
+    pass &= m_device->phy().set_memory_type(sb_mem_reqs.memoryTypeBits, &mem_alloc, 0);
     if (!pass) {
         vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
         vkDestroyBuffer(m_device->device(), uniform_buffer, NULL);
@@ -9850,9 +9850,7 @@ TEST_F(VkLayerTest, DSBufferLimitErrors) {
     ASSERT_VK_SUCCESS(err);
     err = vkBindBufferMemory(m_device->device(), uniform_buffer, mem, 0);
     ASSERT_VK_SUCCESS(err);
-    auto sb_offset = ub_ci.size + 1024;
-    // Verify offset alignment, I know there's a bit trick to do this but it escapes me
-    sb_offset = (sb_offset % mem_reqs.alignment) ? sb_offset - (sb_offset % mem_reqs.alignment) : sb_offset;
+    auto sb_offset = (ub_ci.size + sb_mem_reqs.alignment - 1) & ~(sb_mem_reqs.alignment - 1);
     err = vkBindBufferMemory(m_device->device(), storage_buffer, mem, sb_offset);
     ASSERT_VK_SUCCESS(err);
 
