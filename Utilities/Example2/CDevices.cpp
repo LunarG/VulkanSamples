@@ -145,8 +145,8 @@ void CDevice::Print(){  // List created queues
 }
 
 //----------------------------------------------------------------
-//----------------------------CDevices----------------------------
-CDevices::CDevices(const CSurface& surface){
+//------------------------CPhysicalDevices------------------------
+CPhysicalDevices::CPhysicalDevices(const CSurface& surface){
     VkInstance instance = surface.instance;
     VkResult result;
     uint gpu_count=0;
@@ -191,14 +191,14 @@ CDevices::CDevices(const CSurface& surface){
     }
 }
 
-CPhysicalDevice* CDevices::FindPresentable(){
+CPhysicalDevice* CPhysicalDevices::FindPresentable(){
     for(auto& gpu : gpu_list)
         if(gpu.presentable) return &gpu;
     return 0;
 }
 
 
-void CDevices::Print(bool show_queues){
+void CPhysicalDevices::Print(bool show_queues){
     printf("Physical Devices: %d\n",Count());
     for(uint i=0; i<Count(); ++i) { // each gpu
         CPhysicalDevice& device = gpu_list[i];

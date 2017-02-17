@@ -22,7 +22,7 @@
 
 //-------------------------CQueueFamily---------------------------
 class CQueueFamily{
-    friend class CDevices;
+    friend class CPhysicalDevices;
     friend class CPhysicalDevice;
     VkQueueFamilyProperties properties;
     bool                    presentable = false;
@@ -37,7 +37,7 @@ class CQueueFamily{
 //----------------------------------------------------------------
 //-------------------------CQueueFamilies-------------------------
 class CQueueFamilies{
-    friend class CDevices;
+    friend class CPhysicalDevices;
     friend class CPhysicalDevice;
     vector<CQueueFamily> family_list;
 
@@ -95,10 +95,10 @@ struct CPhysicalDevice{
 };
 //----------------------------------------------------------------
 //----------------------------------------------------------------
-class CDevices{
+class CPhysicalDevices{
     vector<CPhysicalDevice> gpu_list;
 public:
-    CDevices(const CSurface& surface);
+    CPhysicalDevices(const CSurface& surface);
     uint32_t Count(){return (uint32_t)gpu_list.size();}
     CPhysicalDevice* FindPresentable();  // Returns first device which is able to present to the given surface, or null if none.
 
