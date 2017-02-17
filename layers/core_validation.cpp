@@ -5488,8 +5488,8 @@ static bool PreCallValidateBindBufferMemory(layer_data *dev_data, VkBuffer buffe
 
         // Validate memory requirements alignment
         if (vk_safe_modulo(memoryOffset, buffer_state->requirements.alignment) != 0) {
-            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
-                            0, __LINE__, VALIDATION_ERROR_02174, "DS",
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
+                            buffer_handle, __LINE__, VALIDATION_ERROR_02174, "DS",
                             "vkBindBufferMemory(): memoryOffset is 0x%" PRIxLEAST64
                             " but must be an integer multiple of the "
                             "VkMemoryRequirements::alignment value 0x%" PRIxLEAST64
@@ -5522,7 +5522,7 @@ static bool PreCallValidateBindBufferMemory(layer_data *dev_data, VkBuffer buffe
             if (usage & usage_list[i]) {
                 if (vk_safe_modulo(memoryOffset, offset_requirement[i]) != 0) {
                     skip |= log_msg(
-                        dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0,
+                        dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, buffer_handle,
                         __LINE__, msgCode[i], "DS", "vkBindBufferMemory(): %s memoryOffset is 0x%" PRIxLEAST64
                                                     " but must be a multiple of "
                                                     "device limit %s 0x%" PRIxLEAST64 ". %s",
