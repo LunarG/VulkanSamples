@@ -28,7 +28,7 @@ REM // ======== Parameter parsing ======== //
       echo   --sync-spirv-tools  just pull spirv-tools_revision
       echo   --build-glslang     pulls glslang_revision, configures CMake, builds Release and Debug
       echo   --build-spirv-tools pulls spirv-tools_revision, configures CMake, builds Release and Debug
-      echo   --all               sync and build glslang, LunarGLASS, spirv-tools
+      echo   --all               sync and build glslang, spirv-tools
       goto:finish
    )
 
@@ -122,9 +122,23 @@ if %errorCode% neq 0 (goto:error)
 
 REM Read the target versions from external file, which is shared with Linux script
 
+if not exist %REVISION_DIR%\glslang_giturl (
+   echo.
+   echo Missing glslang_giturl file!  Place it in %REVISION_DIR% with git repo URL in it.
+   set errorCode=1
+   goto:error
+)
+
 if not exist %REVISION_DIR%\glslang_revision (
    echo.
-   echo Missing glslang_revision file!  Place it in %REVSION_DIR% with target version in it.
+   echo Missing glslang_revision file!  Place it in %REVISION_DIR% with target version in it.
+   set errorCode=1
+   goto:error
+)
+
+if not exist %REVISION_DIR%\spirv-tools_giturl (
+   echo.
+   echo Missing spirv-tools_giturl file!  Place it in %REVISION_DIR% with git repo URL in it.
    set errorCode=1
    goto:error
 )
@@ -136,6 +150,13 @@ if not exist %REVISION_DIR%\spirv-tools_revision (
    goto:error
 )
 
+if not exist %REVISION_DIR%\spirv-headers_giturl (
+   echo.
+   echo Missing spirv-headers_giturl file!  Place it in %REVISION_DIR% with git repo URL in it.
+   set errorCode=1
+   goto:error
+)
+
 if not exist %REVISION_DIR%\spirv-headers_revision (
    echo.
    echo Missing spirv-headers_revision file!  Place it in %REVISION_DIR% with target version in it.
@@ -143,11 +164,18 @@ if not exist %REVISION_DIR%\spirv-headers_revision (
    goto:error
 )
 
+set /p GLSLANG_GITURL= < %REVISION_DIR%\glslang_giturl
 set /p GLSLANG_REVISION= < %REVISION_DIR%\glslang_revision
+set /p SPIRV_TOOLS_GITURL= < %REVISION_DIR%\spirv-tools_giturl
 set /p SPIRV_TOOLS_REVISION= < %REVISION_DIR%\spirv-tools_revision
+set /p SPIRV_HEADERS_GITURL= < %REVISION_DIR%\spirv-headers_giturl
 set /p SPIRV_HEADERS_REVISION= < %REVISION_DIR%\spirv-headers_revision
+
+echo GLSLANG_GITURL=%GLSLANG_GITURL%
 echo GLSLANG_REVISION=%GLSLANG_REVISION%
+echo SPIRV_TOOLS_GITURL=%SPIRV_TOOLS_GITURL%
 echo SPIRV_TOOLS_REVISION=%SPIRV_TOOLS_REVISION%
+echo SPIRV_HEADERS_GITURL=%SPIRV_HEADERS_GITURL%
 echo SPIRV_HEADERS_REVISION=%SPIRV_HEADERS_REVISION%
 
 
@@ -205,7 +233,7 @@ REM // ======== Functions ======== //
    echo Creating local glslang repository %GLSLANG_DIR%)
    mkdir %GLSLANG_DIR%
    cd %GLSLANG_DIR%
-   git clone https://github.com/KhronosGroup/glslang.git .
+   git clone %GLSLANG_GITURL% .
    git checkout %GLSLANG_REVISION%
    if not exist %GLSLANG_DIR%\SPIRV (
       echo glslang source download failed!
@@ -226,7 +254,7 @@ goto:eof
    echo Creating local spirv-tools repository %SPIRV_TOOLS_DIR%)
    mkdir %SPIRV_TOOLS_DIR%
    cd %SPIRV_TOOLS_DIR%
-   git clone https://github.com/KhronosGroup/SPIRV-Tools.git .
+   git clone %SPIRV_TOOLS_GITURL% .
    git checkout %SPIRV_TOOLS_REVISION%
    if not exist %SPIRV_TOOLS_DIR%\source (
       echo spirv-tools source download failed!
@@ -235,7 +263,7 @@ goto:eof
    mkdir %SPIRV_TOOLS_DIR%\external
    mkdir %SPIRV_TOOLS_DIR%\external\spirv-headers
    cd %SPIRV_TOOLS_DIR%\external\spirv-headers
-   git clone https://github.com/KhronosGroup/SPIRV-HEADERS.git .
+   git clone %SPIRV_HEADERS_GITURL% .
    git checkout %SPIRV_HEADERS_REVISION%
    if not exist %SPIRV_TOOLS_DIR%\external\spirv-headers\README.md (
       echo spirv-headers download failed!
