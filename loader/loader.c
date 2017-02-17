@@ -415,43 +415,43 @@ void loader_log(const struct loader_instance *inst, VkFlags msg_type, int32_t ms
 
     va_start(ap, format);
     if ((msg_type & LOADER_INFO_BIT) != 0) {
-        strcat(cmd_line_msg, "INFO");
+        strncat(cmd_line_msg, "INFO", cmd_line_size);
         cmd_line_size -= 4;
     }
     if ((msg_type & LOADER_WARN_BIT) != 0) {
         if (cmd_line_size != sizeof(cmd_line_msg)) {
-            strcat(cmd_line_msg, " | ");
+            strncat(cmd_line_msg, " | ", cmd_line_size);
             cmd_line_size -= 3;
         }
-        strcat(cmd_line_msg, "WARNING");
+        strncat(cmd_line_msg, "WARNING", cmd_line_size);
         cmd_line_size -= 7;
     }
     if ((msg_type & LOADER_PERF_BIT) != 0) {
         if (cmd_line_size != sizeof(cmd_line_msg)) {
-            strcat(cmd_line_msg, " | ");
+            strncat(cmd_line_msg, " | ", cmd_line_size);
             cmd_line_size -= 3;
         }
-        strcat(cmd_line_msg, "PERF");
+        strncat(cmd_line_msg, "PERF", cmd_line_size);
         cmd_line_size -= 4;
     }
     if ((msg_type & LOADER_ERROR_BIT) != 0) {
         if (cmd_line_size != sizeof(cmd_line_msg)) {
-            strcat(cmd_line_msg, " | ");
+            strncat(cmd_line_msg, " | ", cmd_line_size);
             cmd_line_size -= 3;
         }
-        strcat(cmd_line_msg, "ERROR");
+        strncat(cmd_line_msg, "ERROR", cmd_line_size);
         cmd_line_size -= 5;
     }
     if ((msg_type & LOADER_DEBUG_BIT) != 0) {
         if (cmd_line_size != sizeof(cmd_line_msg)) {
-            strcat(cmd_line_msg, " | ");
+            strncat(cmd_line_msg, " | ", cmd_line_size);
             cmd_line_size -= 3;
         }
-        strcat(cmd_line_msg, "DEBUG");
+        strncat(cmd_line_msg, "DEBUG", cmd_line_size);
         cmd_line_size -= 5;
     }
     if (cmd_line_size != sizeof(cmd_line_msg)) {
-        strcat(cmd_line_msg, ": ");
+        strncat(cmd_line_msg, ": ", cmd_line_size);
         cmd_line_size -= 2;
     }
     strncat(cmd_line_msg, msg, cmd_line_size);
@@ -2892,7 +2892,8 @@ static VkResult loader_get_manifest_files(const struct loader_instance *inst, co
             char *xdgdatahome = secure_getenv("XDG_DATA_HOME");
             size_t len;
             if (xdgdatahome != NULL) {
-                char *home_loc = loader_stack_alloc(strlen(xdgdatahome) + 2 + strlen(relative_location));
+                size_t alloc_len = strlen(xdgdatahome) + 2 + strlen(relative_location);
+                char *home_loc = loader_stack_alloc(alloc_len);
                 if (home_loc == NULL) {
                     loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                                "loader_get_manifest_files: Failed to allocate "
@@ -2907,7 +2908,7 @@ static VkResult loader_get_manifest_files(const struct loader_instance *inst, co
                     home_loc[len] = DIRECTORY_SYMBOL;
                     home_loc[len + 1] = '\0';
                 }
-                strcat(home_loc, relative_location);
+                strncat(home_loc, relative_location, alloc_len);
                 file = home_loc;
                 next_file = loader_get_next_path(file);
                 relative_location = NULL;
@@ -2919,7 +2920,8 @@ static VkResult loader_get_manifest_files(const struct loader_instance *inst, co
             } else {
                 char *home = secure_getenv("HOME");
                 if (home != NULL) {
-                    char *home_loc = loader_stack_alloc(strlen(home) + 16 + strlen(relative_location));
+                    size_t alloc_len = strlen(home) + 16 + strlen(relative_location);
+                    char *home_loc = loader_stack_alloc(alloc_len);
                     if (home_loc == NULL) {
                         loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                                    "loader_get_manifest_files: Failed to allocate "
@@ -2927,21 +2929,21 @@ static VkResult loader_get_manifest_files(const struct loader_instance *inst, co
                         res = VK_ERROR_OUT_OF_HOST_MEMORY;
                         goto out;
                     }
-                    strcpy(home_loc, home);
+                    strncpy(home_loc, home, alloc_len);
 
                     len = strlen(home);
                     if (home[len] != DIRECTORY_SYMBOL) {
                         home_loc[len] = DIRECTORY_SYMBOL;
                         home_loc[len + 1] = '\0';
                     }
-                    strcat(home_loc, ".local/share");
+                    strncat(home_loc, ".local/share", alloc_len);
 
                     if (relative_location[0] != DIRECTORY_SYMBOL) {
                         len = strlen(home_loc);
                         home_loc[len] = DIRECTORY_SYMBOL;
                         home_loc[len + 1] = '\0';
                     }
-                    strcat(home_loc, relative_location);
+                    strncat(home_loc, relative_location, alloc_len);
                     file = home_loc;
                     next_file = loader_get_next_path(file);
                     relative_location = NULL;
