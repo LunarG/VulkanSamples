@@ -9581,8 +9581,8 @@ VKAPI_ATTR void VKAPI_CALL CmdBeginRenderPass(VkCommandBuffer commandBuffer, con
             cb_node->framebuffers.insert(pRenderPassBegin->framebuffer);
             // Connect this framebuffer and its children to this cmdBuffer
             AddFramebufferBinding(dev_data, cb_node, framebuffer);
-            // transition attachments to the correct layouts for the first subpass
-            TransitionSubpassLayouts(dev_data, cb_node, &cb_node->activeRenderPassBeginInfo, cb_node->activeSubpass, framebuffer);
+            // transition attachments to the correct layouts for beginning of renderPass and first subpass
+            TransitionBeginRenderPassLayouts(dev_data, cb_node, render_pass_state, framebuffer);
         }
     }
     lock.unlock();
@@ -9621,7 +9621,7 @@ VKAPI_ATTR void VKAPI_CALL CmdNextSubpass(VkCommandBuffer commandBuffer, VkSubpa
         lock.lock();
         pCB->activeSubpass++;
         pCB->activeSubpassContents = contents;
-        TransitionSubpassLayouts(dev_data, pCB, &pCB->activeRenderPassBeginInfo, pCB->activeSubpass,
+        TransitionSubpassLayouts(dev_data, pCB, pCB->activeRenderPass, pCB->activeSubpass,
                                  GetFramebufferState(dev_data, pCB->activeRenderPassBeginInfo.framebuffer));
     }
 }

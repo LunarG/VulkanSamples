@@ -105,8 +105,9 @@ bool VerifyFramebufferAndRenderPassLayouts(layer_data *dev_data, GLOBAL_CB_NODE 
 void TransitionAttachmentRefLayout(layer_data *dev_data, GLOBAL_CB_NODE *pCB, FRAMEBUFFER_STATE *pFramebuffer,
                                    VkAttachmentReference ref);
 
-void TransitionSubpassLayouts(layer_data *dev_data, GLOBAL_CB_NODE *pCB, const VkRenderPassBeginInfo *pRenderPassBegin,
-                              const int subpass_index, FRAMEBUFFER_STATE *framebuffer_state);
+void TransitionSubpassLayouts(layer_data *, GLOBAL_CB_NODE *, const RENDER_PASS_STATE *, const int, FRAMEBUFFER_STATE *);
+
+void TransitionBeginRenderPassLayouts(layer_data *, GLOBAL_CB_NODE *, const RENDER_PASS_STATE *, FRAMEBUFFER_STATE *);
 
 bool ValidateImageAspectLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, const VkImageMemoryBarrier *mem_barrier,
                                uint32_t level, uint32_t layer, VkImageAspectFlags aspect);

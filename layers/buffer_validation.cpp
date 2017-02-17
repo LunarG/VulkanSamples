@@ -288,10 +288,8 @@ bool VerifyFramebufferAndRenderPassLayouts(layer_data *device_data, GLOBAL_CB_NO
         assert(view_state);
         const VkImage &image = view_state->create_info.image;
         const VkImageSubresourceRange &subRange = view_state->create_info.subresourceRange;
-        IMAGE_CMD_BUF_LAYOUT_NODE newNode = {pRenderPassInfo->pAttachments[i].initialLayout,
-                                             pRenderPassInfo->pAttachments[i].initialLayout};
+        auto initial_layout = pRenderPassInfo->pAttachments[i].initialLayout;
         // TODO: Do not iterate over every possibility - consolidate where possible
-        // TODO: Consolidate this with SetImageViewLayout() function above
         for (uint32_t j = 0; j < subRange.levelCount; j++) {
             uint32_t level = subRange.baseMipLevel + j;
             for (uint32_t k = 0; k < subRange.layerCount; k++) {
@@ -299,25 +297,18 @@ bool VerifyFramebufferAndRenderPassLayouts(layer_data *device_data, GLOBAL_CB_NO
                 VkImageSubresource sub = {subRange.aspectMask, level, layer};
                 IMAGE_CMD_BUF_LAYOUT_NODE node;
                 if (!FindCmdBufLayout(device_data, pCB, image, sub, node)) {
-                    // If ImageView was created with depth or stencil, transition both aspects if it's a DS image
-                    if (subRange.aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) {
-                        if (FormatIsDepthAndStencil(view_state->create_info.format)) {
-                            sub.aspectMask |= (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
-                        }
-                    }
-                    SetLayout(device_data, pCB, image, sub, newNode);
+                    // Missing layouts will be added during state update
                     continue;
                 }
-                if (newNode.layout != VK_IMAGE_LAYOUT_UNDEFINED && newNode.layout != node.layout) {
-                    skip_call |=
-                        log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                                reinterpret_cast<uint64_t>(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
-                                "You cannot start a render pass using attachment %u "
-                                "where the render pass initial layout is %s and the previous "
-                                "known layout of the attachment is %s. The layouts must match, or "
-                                "the render pass initial layout for the attachment must be "
-                                "VK_IMAGE_LAYOUT_UNDEFINED",
-                                i, string_VkImageLayout(newNode.layout), string_VkImageLayout(node.layout));
+                if (initial_layout != VK_IMAGE_LAYOUT_UNDEFINED && initial_layout != node.layout) {
+                    skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                                         DRAWSTATE_INVALID_RENDERPASS, "DS",
+                                         "You cannot start a render pass using attachment %u "
+                                         "where the render pass initial layout is %s and the previous "
+                                         "known layout of the attachment is %s. The layouts must match, or "
+                                         "the render pass initial layout for the attachment must be "
+                                         "VK_IMAGE_LAYOUT_UNDEFINED",
+                                         i, string_VkImageLayout(initial_layout), string_VkImageLayout(node.layout));
                 }
             }
         }
@@ -333,13 +324,12 @@ void TransitionAttachmentRefLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB,
     }
 }
 
-void TransitionSubpassLayouts(layer_data *device_data, GLOBAL_CB_NODE *pCB, const VkRenderPassBeginInfo *pRenderPassBegin,
+void TransitionSubpassLayouts(layer_data *device_data, GLOBAL_CB_NODE *pCB, const RENDER_PASS_STATE *render_pass_state,
                               const int subpass_index, FRAMEBUFFER_STATE *framebuffer_state) {
-    auto renderPass = GetRenderPassState(device_data, pRenderPassBegin->renderPass);
-    if (!renderPass) return;
+    assert(render_pass_state);
 
     if (framebuffer_state) {
-        auto const &subpass = renderPass->createInfo.pSubpasses[subpass_index];
+        auto const &subpass = render_pass_state->createInfo.pSubpasses[subpass_index];
         for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
             TransitionAttachmentRefLayout(device_data, pCB, framebuffer_state, subpass.pInputAttachments[j]);
         }
@@ -375,6 +365,21 @@ bool ValidateImageAspectLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, con
                     string_VkImageLayout(node.layout));
     }
     return skip;
+}
+
+// Transition the layout state for renderpass attachments based on the BeginRenderPass() call. This includes:
+// 1. Transition into initialLayout state
+// 2. Transition from initialLayout to layout used in subpass 0
+void TransitionBeginRenderPassLayouts(layer_data *device_data, GLOBAL_CB_NODE *cb_state, const RENDER_PASS_STATE *render_pass_state,
+                                      FRAMEBUFFER_STATE *framebuffer_state) {
+    // First transition into initialLayout
+    auto const rpci = render_pass_state->createInfo.ptr();
+    for (uint32_t i = 0; i < rpci->attachmentCount; ++i) {
+        VkImageView image_view = framebuffer_state->createInfo.pAttachments[i];
+        SetImageViewLayout(device_data, cb_state, image_view, rpci->pAttachments[i].initialLayout);
+    }
+    // Now transition for first subpass (index 0)
+    TransitionSubpassLayouts(device_data, cb_state, render_pass_state, 0, framebuffer_state);
 }
 
 void TransitionImageAspectLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, const VkImageMemoryBarrier *mem_barrier,
