@@ -2584,8 +2584,8 @@ TEST_F(VkLayerTest, BindInvalidMemory) {
     ASSERT_NO_FATAL_FAILURE(InitState());
 
     const VkFormat tex_format = VK_FORMAT_R8G8B8A8_UNORM;
-    const int32_t tex_width = 32;
-    const int32_t tex_height = 32;
+    const int32_t tex_width = 256;
+    const int32_t tex_height = 256;
 
     VkImageCreateInfo image_create_info = {};
     image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -2606,8 +2606,8 @@ TEST_F(VkLayerTest, BindInvalidMemory) {
     buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     buffer_create_info.pNext = NULL;
     buffer_create_info.flags = 0;
-    buffer_create_info.size = tex_width;
-    buffer_create_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    buffer_create_info.size = 4 * 1024 * 1024;
+    buffer_create_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
     buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
     // Create an image/buffer, allocate memory, free it, and then try to bind it
@@ -2701,7 +2701,7 @@ TEST_F(VkLayerTest, BindInvalidMemory) {
         vkDestroyBuffer(device(), buffer, NULL);
     }
 
-    // Try to bind memory to an object with an out-of-range memoryOffset
+    // Try to bind memory to an object with an invalid memoryOffset
     {
         VkImage image = VK_NULL_HANDLE;
         err = vkCreateImage(device(), &image_create_info, NULL, &image);
@@ -2714,9 +2714,10 @@ TEST_F(VkLayerTest, BindInvalidMemory) {
         vkGetBufferMemoryRequirements(device(), buffer, &buffer_mem_reqs);
         VkMemoryAllocateInfo image_alloc_info = {}, buffer_alloc_info = {};
         image_alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        image_alloc_info.allocationSize = image_mem_reqs.size;
+        // Leave some extra space for alignment wiggle room
+        image_alloc_info.allocationSize = image_mem_reqs.size + image_mem_reqs.alignment;
         buffer_alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        buffer_alloc_info.allocationSize = buffer_mem_reqs.size;
+        buffer_alloc_info.allocationSize = buffer_mem_reqs.size + buffer_mem_reqs.alignment;
         pass = m_device->phy().set_memory_type(image_mem_reqs.memoryTypeBits, &image_alloc_info, 0);
         ASSERT_TRUE(pass);
         pass = m_device->phy().set_memory_type(buffer_mem_reqs.memoryTypeBits, &buffer_alloc_info, 0);
@@ -2727,17 +2728,61 @@ TEST_F(VkLayerTest, BindInvalidMemory) {
         err = vkAllocateMemory(device(), &buffer_alloc_info, NULL, &buffer_mem);
         ASSERT_VK_SUCCESS(err);
 
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00805);
-        VkDeviceSize image_offset = (image_mem_reqs.size + (image_mem_reqs.alignment - 1)) & ~(image_mem_reqs.alignment - 1);
-        err = vkBindImageMemory(device(), image, image_mem, image_offset);
-        (void)err;  // This may very well return an error.
-        m_errorMonitor->VerifyFound();
+        // Test unaligned memory offset
+        {
+            if (image_mem_reqs.alignment > 1) {
+                VkDeviceSize image_offset = 1;
+                m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02178);
+                err = vkBindImageMemory(device(), image, image_mem, image_offset);
+                (void)err;  // This may very well return an error.
+                m_errorMonitor->VerifyFound();
+            }
 
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00793);
-        VkDeviceSize buffer_offset = (buffer_mem_reqs.size + (buffer_mem_reqs.alignment - 1)) & ~(buffer_mem_reqs.alignment - 1);
-        err = vkBindBufferMemory(device(), buffer, buffer_mem, buffer_offset);
-        (void)err;  // This may very well return an error.
-        m_errorMonitor->VerifyFound();
+            if (buffer_mem_reqs.alignment > 1) {
+                VkDeviceSize buffer_offset = 1;
+                m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02174);
+                err = vkBindBufferMemory(device(), buffer, buffer_mem, buffer_offset);
+                (void)err;  // This may very well return an error.
+                m_errorMonitor->VerifyFound();
+            }
+        }
+
+        // Test memory offsets outside the memory allocation
+        {
+            VkDeviceSize image_offset =
+                (image_alloc_info.allocationSize + image_mem_reqs.alignment) & ~(image_mem_reqs.alignment - 1);
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00805);
+            err = vkBindImageMemory(device(), image, image_mem, image_offset);
+            (void)err;  // This may very well return an error.
+            m_errorMonitor->VerifyFound();
+
+            VkDeviceSize buffer_offset =
+                (buffer_alloc_info.allocationSize + buffer_mem_reqs.alignment) & ~(buffer_mem_reqs.alignment - 1);
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00793);
+            err = vkBindBufferMemory(device(), buffer, buffer_mem, buffer_offset);
+            (void)err;  // This may very well return an error.
+            m_errorMonitor->VerifyFound();
+        }
+
+        // Test memory offsets within the memory allocation, but which leave too little memory for
+        // the resource.
+        {
+            VkDeviceSize image_offset = (image_mem_reqs.size - 1) & ~(image_mem_reqs.alignment - 1);
+            if (image_offset > 0) {
+                m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02179);
+                err = vkBindImageMemory(device(), image, image_mem, image_offset);
+                (void)err;  // This may very well return an error.
+                m_errorMonitor->VerifyFound();
+            }
+
+            VkDeviceSize buffer_offset = (buffer_mem_reqs.size - 1) & ~(buffer_mem_reqs.alignment - 1);
+            if (buffer_offset > 0) {
+                m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02175);
+                err = vkBindBufferMemory(device(), buffer, buffer_mem, buffer_offset);
+                (void)err;  // This may very well return an error.
+                m_errorMonitor->VerifyFound();
+            }
+        }
 
         vkFreeMemory(device(), image_mem, NULL);
         vkFreeMemory(device(), buffer_mem, NULL);

@@ -5453,12 +5453,11 @@ static bool ValidateMemoryTypes(const layer_data *dev_data, const DEVICE_MEM_INF
     return skip_call;
 }
 
-static bool PreCallValidateBindBufferMemory(layer_data *dev_data, VkBuffer buffer, VkDeviceMemory mem, VkDeviceSize memoryOffset) {
+static bool PreCallValidateBindBufferMemory(layer_data *dev_data, VkBuffer buffer, BUFFER_STATE *buffer_state, VkDeviceMemory mem,
+                                            VkDeviceSize memoryOffset) {
     bool skip = false;
-    std::unique_lock<std::mutex> lock(global_lock);
-
-    auto buffer_state = GetBufferState(dev_data, buffer);
     if (buffer_state) {
+        std::unique_lock<std::mutex> lock(global_lock);
         // Track objects tied to memory
         uint64_t buffer_handle = reinterpret_cast<uint64_t &>(buffer);
         skip = ValidateSetMemBinding(dev_data, mem, buffer_handle, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, "vkBindBufferMemory()");
@@ -5495,6 +5494,18 @@ static bool PreCallValidateBindBufferMemory(layer_data *dev_data, VkBuffer buffe
                             "VkMemoryRequirements::alignment value 0x%" PRIxLEAST64
                             ", returned from a call to vkGetBufferMemoryRequirements with buffer. %s",
                             memoryOffset, buffer_state->requirements.alignment, validation_error_map[VALIDATION_ERROR_02174]);
+        }
+
+        // Validate memory requirements size
+        if (buffer_state->requirements.size > (mem_info->alloc_info.allocationSize - memoryOffset)) {
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
+                            buffer_handle, __LINE__, VALIDATION_ERROR_02175, "DS",
+                            "vkBindBufferMemory(): memory size minus memoryOffset is 0x%" PRIxLEAST64
+                            " but must be at least as large as "
+                            "VkMemoryRequirements::size value 0x%" PRIxLEAST64
+                            ", returned from a call to vkGetBufferMemoryRequirements with buffer. %s",
+                            mem_info->alloc_info.allocationSize - memoryOffset, buffer_state->requirements.size,
+                            validation_error_map[VALIDATION_ERROR_02175]);
         }
 
         // Validate device limits alignments
@@ -5534,10 +5545,10 @@ static bool PreCallValidateBindBufferMemory(layer_data *dev_data, VkBuffer buffe
     return skip;
 }
 
-static void PostCallRecordBindBufferMemory(layer_data *dev_data, VkBuffer buffer, VkDeviceMemory mem, VkDeviceSize memoryOffset) {
-    std::unique_lock<std::mutex> lock(global_lock);
-    auto buffer_state = GetBufferState(dev_data, buffer);
+static void PostCallRecordBindBufferMemory(layer_data *dev_data, VkBuffer buffer, BUFFER_STATE *buffer_state, VkDeviceMemory mem,
+                                           VkDeviceSize memoryOffset) {
     if (buffer_state) {
+        std::unique_lock<std::mutex> lock(global_lock);
         // Track bound memory range information
         auto mem_info = GetMemObjInfo(dev_data, mem);
         if (mem_info) {
@@ -5557,11 +5568,12 @@ static void PostCallRecordBindBufferMemory(layer_data *dev_data, VkBuffer buffer
 VKAPI_ATTR VkResult VKAPI_CALL BindBufferMemory(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDeviceSize memoryOffset) {
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
-    bool skip = PreCallValidateBindBufferMemory(dev_data, buffer, mem, memoryOffset);
+    auto buffer_state = GetBufferState(dev_data, buffer);
+    bool skip = PreCallValidateBindBufferMemory(dev_data, buffer, buffer_state, mem, memoryOffset);
     if (!skip) {
         result = dev_data->dispatch_table.BindBufferMemory(device, buffer, mem, memoryOffset);
         if (result == VK_SUCCESS) {
-            PostCallRecordBindBufferMemory(dev_data, buffer, mem, memoryOffset);
+            PostCallRecordBindBufferMemory(dev_data, buffer, buffer_state, mem, memoryOffset);
         }
     }
     return result;
@@ -10062,12 +10074,11 @@ VKAPI_ATTR VkResult VKAPI_CALL InvalidateMappedMemoryRanges(VkDevice device, uin
     return result;
 }
 
-static bool PreCallValidateBindImageMemory(layer_data *dev_data, VkImage image, VkDeviceMemory mem, VkDeviceSize memoryOffset) {
+static bool PreCallValidateBindImageMemory(layer_data *dev_data, VkImage image, IMAGE_STATE *image_state, VkDeviceMemory mem,
+                                           VkDeviceSize memoryOffset) {
     bool skip = false;
-    std::unique_lock<std::mutex> lock(global_lock);
-
-    auto image_state = GetImageState(dev_data, image);
     if (image_state) {
+        std::unique_lock<std::mutex> lock(global_lock);
         // Track objects tied to memory
         uint64_t image_handle = reinterpret_cast<uint64_t &>(image);
         skip = ValidateSetMemBinding(dev_data, mem, image_handle, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, "vkBindImageMemory()");
@@ -10094,14 +10105,37 @@ static bool PreCallValidateBindImageMemory(layer_data *dev_data, VkImage image, 
             skip |= ValidateMemoryTypes(dev_data, mem_info, image_state->requirements.memoryTypeBits, "vkBindImageMemory()",
                                         VALIDATION_ERROR_00806);
         }
+
+        // Validate memory requirements alignment
+        if (vk_safe_modulo(memoryOffset, image_state->requirements.alignment) != 0) {
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                            image_handle, __LINE__, VALIDATION_ERROR_02178, "DS",
+                            "vkBindImageMemory(): memoryOffset is 0x%" PRIxLEAST64
+                            " but must be an integer multiple of the "
+                            "VkMemoryRequirements::alignment value 0x%" PRIxLEAST64
+                            ", returned from a call to vkGetImageMemoryRequirements with image. %s",
+                            memoryOffset, image_state->requirements.alignment, validation_error_map[VALIDATION_ERROR_02178]);
+        }
+
+        // Validate memory requirements size
+        if (image_state->requirements.size > mem_info->alloc_info.allocationSize - memoryOffset) {
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                            image_handle, __LINE__, VALIDATION_ERROR_02179, "DS",
+                            "vkBindImageMemory(): memory size minus memoryOffset is 0x%" PRIxLEAST64
+                            " but must be at least as large as "
+                            "VkMemoryRequirements::size value 0x%" PRIxLEAST64
+                            ", returned from a call to vkGetImageMemoryRequirements with image. %s",
+                            mem_info->alloc_info.allocationSize - memoryOffset, image_state->requirements.size,
+                            validation_error_map[VALIDATION_ERROR_02179]);
+        }
     }
     return skip;
 }
 
-static void PostCallRecordBindImageMemory(layer_data *dev_data, VkImage image, VkDeviceMemory mem, VkDeviceSize memoryOffset) {
-    std::unique_lock<std::mutex> lock(global_lock);
-    auto image_state = GetImageState(dev_data, image);
+static void PostCallRecordBindImageMemory(layer_data *dev_data, VkImage image, IMAGE_STATE *image_state, VkDeviceMemory mem,
+                                          VkDeviceSize memoryOffset) {
     if (image_state) {
+        std::unique_lock<std::mutex> lock(global_lock);
         // Track bound memory range information
         auto mem_info = GetMemObjInfo(dev_data, mem);
         if (mem_info) {
@@ -10122,11 +10156,12 @@ static void PostCallRecordBindImageMemory(layer_data *dev_data, VkImage image, V
 VKAPI_ATTR VkResult VKAPI_CALL BindImageMemory(VkDevice device, VkImage image, VkDeviceMemory mem, VkDeviceSize memoryOffset) {
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
-    bool skip = PreCallValidateBindImageMemory(dev_data, image, mem, memoryOffset);
+    auto image_state = GetImageState(dev_data, image);
+    bool skip = PreCallValidateBindImageMemory(dev_data, image, image_state, mem, memoryOffset);
     if (!skip) {
         result = dev_data->dispatch_table.BindImageMemory(device, image, mem, memoryOffset);
         if (result == VK_SUCCESS) {
-            PostCallRecordBindImageMemory(dev_data, image, mem, memoryOffset);
+            PostCallRecordBindImageMemory(dev_data, image, image_state, mem, memoryOffset);
         }
     }
     return result;
