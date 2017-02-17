@@ -76,7 +76,8 @@ struct CDevice{  // Logical device
 };
 //----------------------------------------------------------------
 //------------------------CPhysicalDevice-------------------------
-struct CPhysicalDevice{
+class CPhysicalDevice{
+  public:
     CPhysicalDevice();
     const char* VendorName() const;
     VkPhysicalDevice           handle;
@@ -97,7 +98,7 @@ struct CPhysicalDevice{
 //----------------------------------------------------------------
 class CPhysicalDevices{
     vector<CPhysicalDevice> gpu_list;
-public:
+  public:
     CPhysicalDevices(const CSurface& surface);
     uint32_t Count(){return (uint32_t)gpu_list.size();}
     CPhysicalDevice* FindPresentable();  // Returns first device which is able to present to the given surface, or null if none.

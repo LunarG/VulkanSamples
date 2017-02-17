@@ -12,7 +12,7 @@ CSwapchain::CSwapchain(CDevice* device, VkSurfaceKHR surface, uint32_t image_cou
 void CSwapchain::Init(CDevice* device, VkSurfaceKHR surface, uint32_t image_count){
     this->device  = device;
     this->surface = surface;
-    swapchain     = nullptr;
+    swapchain     = 0;
     extent        = {0, 0};
 
     //---Surface format---

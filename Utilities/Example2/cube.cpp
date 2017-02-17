@@ -1008,8 +1008,8 @@ struct Demo {
     }
 
     //-----------------------------------------vk_swapchain----------------------------------------
-    void init_vk_swapchain(VkSurfaceKHR _surface) {
-        surface = _surface;
+    void init_vk_swapchain(VkSurfaceKHR surface) {
+        this->surface = surface;
 
 /*
 // Create a WSI surface for the window:        
@@ -2646,6 +2646,7 @@ struct Demo {
     uint32_t current_buffer;
     uint32_t queue_family_count;
 };
+
 /*
 #if _WIN32
 // Include header required for parsing the command line options.
@@ -2819,11 +2820,18 @@ void cube_main(VkSurfaceKHR surface){
 */
 
 //===================CCube==================
-CCube::CCube(VkSurfaceKHR surface){
+CCube::CCube(){
     demo = new Demo;
+}
+
+void CCube::InitSwapchain(VkSurfaceKHR surface){
     demo->init(0,0);
     demo->init_vk_swapchain(surface);
     demo->prepare();
+}
+
+void CCube::Resize(){
+    demo->resize();
 }
 
 void CCube::Draw(){
