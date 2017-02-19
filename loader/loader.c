@@ -2655,9 +2655,9 @@ static VkResult loader_get_manifest_files(const struct loader_instance *inst, co
         const char *xdgconfdirs = secure_getenv("XDG_CONFIG_DIRS");
         const char *xdgdatadirs = secure_getenv("XDG_DATA_DIRS");
         if (xdgconfdirs == NULL || xdgconfdirs[0] == '\0')
-            xdgconfdirs = "/etc/xdg";
+            xdgconfdirs = FALLBACK_CONFIG_DIRS;
         if (xdgdatadirs == NULL || xdgdatadirs[0] == '\0')
-            xdgdatadirs = "/usr/local/share:/usr/share";
+            xdgdatadirs = FALLBACK_DATA_DIRS;
         const size_t rel_size = strlen(relative_location);
         // Leave space for trailing separators
         loc_size += strlen(xdgconfdirs) + strlen(xdgdatadirs) + 2*rel_size + 2;
