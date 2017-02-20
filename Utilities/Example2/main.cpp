@@ -27,7 +27,6 @@
 
 #include "WSIWindow.h"
 #include "CDevices.h"
-//#include "CSwapchain.h"
 #include "cube.h"
 
 CCube cube;
@@ -67,11 +66,6 @@ int main(int argc, char *argv[]){
         LOGE("No devices can present to this suface.");
         return 0;
     }
-    gpu->extensions.Print();
-
-//    CDevice device = gpu->CreateDevice(1, 0, 0, 0);         // create logical device with 1 present-queue
-//    CSwapchain swapchain(&device, surface, 3);              // create swapchain with tripple-buffering
-//    swapchain.Print();
 
     cube.InitDevice(*gpu);                                  // Run cube on given GPU
     cube.InitSwapchain(surface);                            // Attach cube demo to wsi-window's surface

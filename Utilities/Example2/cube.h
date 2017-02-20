@@ -6,8 +6,8 @@
 struct Demo;
 
 class CCube{
-    Demo* demo;                                         //Cube does not need the VkInstance... just the vkPhysicalDevice.
-  public:
+    Demo* demo;                                         // Cube does not need the VkInstance... just the vkPhysicalDevice.
+  public:                                               //
     CCube();                                            // Create cube demo
     ~CCube();                                           // clean up
     void InitDevice(VkPhysicalDevice physical_device);  // Set the selected physical device
