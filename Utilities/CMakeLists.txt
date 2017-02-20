@@ -8,5 +8,6 @@ endif()
 #=================================================================
 
 add_subdirectory(WSIWindow)
-add_subdirectory(WSIWindow_Sample1)
-#add_subdirectory(WSIWindow_Teapots)
+add_subdirectory(Example1)
+add_subdirectory(Example2)
+#add_subdirectory(Teapots)

@@ -1,0 +1,21 @@
+project(Example2)
+cmake_minimum_required(VERSION 2.8)
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_definitions(-std=c++11)
+endif()
+
+include_directories("${PROJECT_SOURCE_DIR}")
+aux_source_directory(. SRC_LIST)
+add_executable(${PROJECT_NAME} ${SRC_LIST})
+
+#---------------Find WSIWindow---------------
+if(NOT TARGET WSIWindow)
+    add_subdirectory(../WSIWindow ${CMAKE_BINARY_DIR}/WSIWindow)
+endif()
+
+target_link_libraries(${PROJECT_NAME} WSIWindow)
+#-------------------------------------------
+
+#  Copy all files from ./Assets to the binary directory.
+file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/Assets/" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
