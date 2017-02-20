@@ -100,7 +100,7 @@ CDevice CPhysicalDevice::CreateDevice(uint present, uint graphics, uint compute,
     VkPhysicalDeviceFeatures enabled_features = {};  // TODO: Finish this. (For now, disable all optional features. )
     VkDeviceCreateInfo device_create_info = {};
     device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    device_create_info.queueCreateInfoCount    = info_list.size();
+    device_create_info.queueCreateInfoCount    = (uint32_t)info_list.size();
     device_create_info.pQueueCreateInfos       = info_list.data();
     device_create_info.enabledExtensionCount   = extensions.PickCount();
     device_create_info.ppEnabledExtensionNames = extensions.PickList();
@@ -134,7 +134,7 @@ CDevice CPhysicalDevice::CreateDevice(uint present, uint graphics, uint compute,
 
 void CDevice::Print(){  // List created queues
     printf("Logical Device queues:\n");
-    uint qcount = queues.size();
+    uint32_t qcount = (uint32_t)queues.size();
     repeat(qcount){
        CQueue& q=queues[i];
        printf("\t%d: family=%d index=%d presentable=%s flags=", i, q.family,q.index, q.presentable ? "True" : "False");

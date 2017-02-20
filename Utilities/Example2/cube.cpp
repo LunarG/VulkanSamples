@@ -20,6 +20,11 @@
 
 #include "cube.h"
 
+#if defined(WIN32)
+#pragma warning(disable: 4996)
+#include <windows.h>
+#endif
+
 #if defined(VK_USE_PLATFORM_XLIB_KHR) || defined(VK_USE_PLATFORM_XCB_KHR)
 #include <X11/Xutil.h>
 #endif

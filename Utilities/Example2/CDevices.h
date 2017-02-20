@@ -14,6 +14,11 @@
 *  Interfaces are highly experimental and very likely to change.
 */
 
+#if defined(WIN32)
+#pragma warning(disable: 4456 4996)
+#endif
+
+
 #ifndef CDEVICES_H
 #define CDEVICES_H
 
@@ -82,10 +87,10 @@ class CPhysicalDevice{
     const char* VendorName() const;
     VkPhysicalDevice           handle;
     VkPhysicalDeviceProperties properties;
-    VkPhysicalDeviceFeatures   features;       // list of available features
-    CQueueFamilies             queue_families; // array
-    CDeviceExtensions          extensions;     // picklist
-    bool                       presentable;    // has presentable queues
+    VkPhysicalDeviceFeatures   features;        // list of available features
+    CQueueFamilies             queue_families;  // array
+    CDeviceExtensions          extensions;      // picklist
+    bool                       presentable;     // has presentable queues
 
     //VkPhysicalDeviceFeatures enabled_features = {};  // Set required features.   TODO: finish this.
     //VkSurfaceCapabilitiesKHR   surface_caps;
