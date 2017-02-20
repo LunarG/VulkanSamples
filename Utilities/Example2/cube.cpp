@@ -40,6 +40,7 @@
 #warning "Cubepp does not have code for Mir at this time"
 #endif
 
+#define VULKAN_HPP_TYPESAFE_CONVERSION
 #define VULKAN_HPP_NO_EXCEPTIONS
 #include <vulkan/vulkan.hpp>
 #include <vulkan/vk_sdk_platform.h>
@@ -1021,24 +1022,13 @@ struct Demo {
 
     //-----------------------------------------vk_physical_device----------------------------------------
 
-//    void init_vk(VkInstance instance, VkPhysicalDevice physical_device) {
-//        inst = instance;
-//        gpu = physical_device;
-//    }
-
-        void init_vk(VkPhysicalDevice physical_device) {
-            //gpu = physical_device;
-           memcpy(&gpu, &physical_device, sizeof(physical_device));
-
-        }
-
-
+    void set_physical_device(VkPhysicalDevice physical_device) {
+        gpu = physical_device;
+    }
 
     //-----------------------------------------vk_swapchain----------------------------------------
     void init_vk_swapchain(VkSurfaceKHR surface) {
-        //this->surface = surface;
-        memcpy(&this->surface, &surface, sizeof(surface));
-
+        this->surface = surface;
 
 /*
 // Create a WSI surface for the window:        
@@ -2859,7 +2849,7 @@ CCube::CCube(){
 }
 
 void CCube::InitDevice(VkPhysicalDevice physical_device){
-    demo->init_vk(physical_device);
+    demo->set_physical_device(physical_device);
 }
 
 void CCube::InitSwapchain(VkSurfaceKHR surface){

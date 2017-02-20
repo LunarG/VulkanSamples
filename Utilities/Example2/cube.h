@@ -1,7 +1,7 @@
 #ifndef CUBE_H
 #define CUBE_H
 
-#include <vulkan/vulkan.h>
+#include "WSIWindow.h"
 
 struct Demo;
 
