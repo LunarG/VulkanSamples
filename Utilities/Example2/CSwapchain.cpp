@@ -29,8 +29,8 @@ void CSwapchain::Init(CDevice* device, VkSurfaceKHR surface, uint32_t image_coun
     //---- Image Count and back_buffers ----
     VkSurfaceCapabilitiesKHR caps;
     VKERRCHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(*device, surface, &caps));
-    image_count = std::max(image_count, caps.minImageCount);
-    if(caps.maxImageCount > 0) image_count = std::min(image_count, caps.maxImageCount);
+    image_count = max(image_count, caps.minImageCount);
+    if(caps.maxImageCount > 0) image_count = min(image_count, caps.maxImageCount);
     //CreateFramebuffers(image_count);
     //CreateBackBuffers(image_count);
     //--------------------------------------

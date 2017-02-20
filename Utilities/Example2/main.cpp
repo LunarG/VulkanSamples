@@ -26,7 +26,7 @@
 */
 
 #include "WSIWindow.h"
-//#include "CDevices.h"
+#include "CDevices.h"
 //#include "CSwapchain.h"
 #include "cube.h"
 
@@ -52,13 +52,14 @@ class MyWindow : public WSIWindow {
 int main(int argc, char *argv[]){
     setvbuf(stdout, NULL, _IONBF, 0);                       // Prevent printf buffering in QtCreator
     CInstance instance;                                     // Create a Vulkan Instance
+    instance.DebugReport.SetFlags(14);
+
     MyWindow Window;                                        // Create a Vulkan window
     Window.SetTitle("WSI-Window Example2: Jeremy's cube");  // Set the window title
     Window.SetWinSize(500, 500);                            // Set the window size (Desktop)
     Window.SetWinPos(0, 0);                                 // Set the window position to top-left
     CSurface surface = Window.GetSurface(instance);         // Create the Vulkan surface
 
-/*
     CPhysicalDevices gpus(surface);                         // Enumerate GPUs, and their properties
     gpus.Print(true);
     CPhysicalDevice* gpu = gpus.FindPresentable();          // Find first GPU, capable of presenting to the given surface.
@@ -67,14 +68,16 @@ int main(int argc, char *argv[]){
         return 0;
     }
     gpu->extensions.Print();
-    CDevice device = gpu->CreateDevice(1, 0, 0, 0);         // create logical device with 1 present-queue
-    CSwapchain swapchain(&device, surface, 3);              // create swapchain with tripple-buffering
-    swapchain.Print();
-*/
 
+//    CDevice device = gpu->CreateDevice(1, 0, 0, 0);         // create logical device with 1 present-queue
+//    CSwapchain swapchain(&device, surface, 3);              // create swapchain with tripple-buffering
+//    swapchain.Print();
+
+    cube.InitDevice(*gpu);                                  // Run cube on given GPU
     cube.InitSwapchain(surface);                            // Attach cube demo to wsi-window's surface
     while(Window.ProcessEvents()){                          // Main event loop, runs until window is closed.
         cube.Draw();
     }
+    cube.Cleanup();
     return 0;
 }

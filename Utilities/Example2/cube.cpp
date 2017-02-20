@@ -667,9 +667,9 @@ struct Demo {
             exit(1);
         }
 
-        if (!use_xlib) {
-            init_connection();
-        }
+//        if (!use_xlib) {
+//            init_connection();
+//        }
 
         init_vk();
 
@@ -686,7 +686,7 @@ struct Demo {
 
         projection_matrix[1][1] *= -1;  // Flip projection matrix from GL to Vulkan orientation.
     }
-
+/*
     void init_connection() {
 #if defined(VK_USE_PLATFORM_XCB_KHR)
         const xcb_setup_t *setup;
@@ -724,8 +724,9 @@ struct Demo {
 #elif defined(VK_USE_PLATFORM_MIR_KHR)
 #endif
     }
-
+*/
     void init_vk() {
+/*
         uint32_t instance_extension_count = 0;
         uint32_t instance_layer_count = 0;
         uint32_t validation_layer_count = 0;
@@ -781,7 +782,7 @@ struct Demo {
             }
         }
 
-        /* Look for instance extensions */
+        // Look for instance extensions
         vk::Bool32 surfaceExtFound = VK_FALSE;
         vk::Bool32 platformSurfaceExtFound = VK_FALSE;
         memset(extension_names, 0, sizeof(extension_names));
@@ -869,7 +870,7 @@ struct Demo {
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
             ERR_EXIT(
                 "vkEnumerateInstanceExtensionProperties failed to find "
-                "the " VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME
+                "the " instVK_KHR_WAYLAND_SURFACE_EXTENSION_NAME
                 " extension.\n\n"
                 "Do you have a compatible Vulkan installable client "
                 "driver (ICD) installed?\n"
@@ -932,8 +933,11 @@ struct Demo {
                 "information.\n",
                 "vkCreateInstance Failure");
         }
+*/
 
-        /* Make initial call to query gpu_count, then second call for gpu info*/
+
+/*
+        // Make initial call to query gpu_count, then second call for gpu info
         uint32_t gpu_count;
         result = inst.enumeratePhysicalDevices(&gpu_count, nullptr);
         VERIFY(result == vk::Result::eSuccess);
@@ -943,7 +947,7 @@ struct Demo {
             std::unique_ptr<vk::PhysicalDevice[]> physical_devices(new vk::PhysicalDevice[gpu_count]);
             result = inst.enumeratePhysicalDevices(&gpu_count, physical_devices.get());
             VERIFY(result == vk::Result::eSuccess);
-            /* For cube demo we just grab the first physical device */
+            // For cube demo we just grab the first physical device
             gpu = physical_devices[0];
         } else {
             ERR_EXIT(
@@ -955,6 +959,8 @@ struct Demo {
                 "information.\n",
                 "vkEnumeratePhysicalDevices Failure");
         }
+*/
+        vk::Result result;
 
         /* Look for device extensions */
         uint32_t device_extension_count = 0;
@@ -1007,9 +1013,27 @@ struct Demo {
         gpu.getFeatures(&physDevFeatures);
     }
 
+
+    //-----------------------------------------vk_physical_device----------------------------------------
+
+//    void init_vk(VkInstance instance, VkPhysicalDevice physical_device) {
+//        inst = instance;
+//        gpu = physical_device;
+//    }
+
+        void init_vk(VkPhysicalDevice physical_device) {
+            //gpu = physical_device;
+           memcpy(&gpu, &physical_device, sizeof(physical_device));
+
+        }
+
+
+
     //-----------------------------------------vk_swapchain----------------------------------------
     void init_vk_swapchain(VkSurfaceKHR surface) {
-        this->surface = surface;
+        //this->surface = surface;
+        memcpy(&this->surface, &surface, sizeof(surface));
+
 
 /*
 // Create a WSI surface for the window:        
@@ -1048,11 +1072,11 @@ struct Demo {
             VERIFY(result == vk::Result::eSuccess);
         }
 #endif
-*/
+
         // Iterate over each queue to learn whether it supports presenting:
         std::unique_ptr<vk::Bool32[]> supportsPresent(new vk::Bool32[queue_family_count]);
         for (uint32_t i = 0; i < queue_family_count; i++) {
-            gpu.getSurfaceSupportKHR(i, surface, &supportsPresent[i]);
+            //gpu.getSurfaceSupportKHR(i, surface, &supportsPresent[i]);
         }
 
         uint32_t graphicsQueueFamilyIndex = UINT32_MAX;
@@ -1082,6 +1106,11 @@ struct Demo {
                 }
             }
         }
+*/
+
+        uint32_t graphicsQueueFamilyIndex = 0;
+        uint32_t presentQueueFamilyIndex = 0;
+
 
         // Generate error if could not find both a graphics and a present queue
         if (graphicsQueueFamilyIndex == UINT32_MAX || presentQueueFamilyIndex == UINT32_MAX) {
@@ -2560,7 +2589,7 @@ struct Demo {
     bool use_xlib;
     bool separate_present_queue;
 
-    vk::Instance inst;
+//    vk::Instance inst;  // not used
     vk::PhysicalDevice gpu;
     vk::Device device;
     vk::Queue graphics_queue;
@@ -2824,6 +2853,10 @@ CCube::CCube(){
     demo = new Demo;
 }
 
+void CCube::InitDevice(VkPhysicalDevice physical_device){
+    demo->init_vk(physical_device);
+}
+
 void CCube::InitSwapchain(VkSurfaceKHR surface){
     demo->init(0,0);
     demo->init_vk_swapchain(surface);
@@ -2839,8 +2872,11 @@ void CCube::Draw(){
     demo->draw();
 }
 
-CCube::~CCube(){
+void CCube::Cleanup(){
     demo->cleanup();
+}
+
+CCube::~CCube(){
     delete demo;
 }
 //==========================================
