@@ -3414,7 +3414,7 @@ static bool checkGraphicsOrComputeBit(const layer_data *dev_data, VkQueueFlags f
     if (!((flags & VK_QUEUE_GRAPHICS_BIT) || (flags & VK_QUEUE_COMPUTE_BIT)))
         return log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                        DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
-                       "Cannot call %s on a command buffer allocated from a pool without graphics capabilities.", name);
+                       "Cannot call %s on a command buffer allocated from a pool without graphics or compute capabilities.", name);
     return false;
 }
 
@@ -7722,98 +7722,49 @@ VKAPI_ATTR void VKAPI_CALL CmdBlitImage(VkCommandBuffer commandBuffer, VkImage s
 VKAPI_ATTR void VKAPI_CALL CmdCopyBufferToImage(VkCommandBuffer commandBuffer, VkBuffer srcBuffer, VkImage dstImage,
                                                 VkImageLayout dstImageLayout, uint32_t regionCount,
                                                 const VkBufferImageCopy *pRegions) {
-    bool skip_call = false;
-    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
+    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
-
-    auto cb_node = GetCBNode(dev_data, commandBuffer);
-    auto src_buff_state = GetBufferState(dev_data, srcBuffer);
-    auto dst_image_state = GetImageState(dev_data, dstImage);
-    if (cb_node && src_buff_state && dst_image_state) {
-        skip_call |= ValidateImageSampleCount(dev_data, dst_image_state, VK_SAMPLE_COUNT_1_BIT,
-                                              "vkCmdCopyBufferToImage(): dstImage", VALIDATION_ERROR_01232);
-        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, src_buff_state, "vkCmdCopyBufferToImage()", VALIDATION_ERROR_02535);
-        skip_call |= ValidateMemoryIsBoundToImage(dev_data, dst_image_state, "vkCmdCopyBufferToImage()", VALIDATION_ERROR_02536);
-        AddCommandBufferBindingBuffer(dev_data, cb_node, src_buff_state);
-        AddCommandBufferBindingImage(dev_data, cb_node, dst_image_state);
-        skip_call |=
-            ValidateBufferUsageFlags(dev_data, src_buff_state, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true, VALIDATION_ERROR_01230,
-                                     "vkCmdCopyBufferToImage()", "VK_BUFFER_USAGE_TRANSFER_SRC_BIT");
-        skip_call |= ValidateImageUsageFlags(dev_data, dst_image_state, VK_IMAGE_USAGE_TRANSFER_DST_BIT, true,
-                                             VALIDATION_ERROR_01231, "vkCmdCopyBufferToImage()", "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
-        std::function<bool()> function = [=]() {
-            SetImageMemoryValid(dev_data, dst_image_state, true);
-            return false;
-        };
-        cb_node->validate_functions.push_back(function);
-        function = [=]() { return ValidateBufferMemoryIsValid(dev_data, src_buff_state, "vkCmdCopyBufferToImage()"); };
-        cb_node->validate_functions.push_back(function);
-
-        skip_call |= ValidateCmd(dev_data, cb_node, CMD_COPYBUFFERTOIMAGE, "vkCmdCopyBufferToImage()");
-        UpdateCmdBufferLastCmd(cb_node, CMD_COPYBUFFERTOIMAGE);
-        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyBufferToImage()", VALIDATION_ERROR_01242);
-        for (uint32_t i = 0; i < regionCount; ++i) {
-            skip_call |= VerifyDestImageLayout(dev_data, cb_node, dstImage, pRegions[i].imageSubresource, dstImageLayout,
-                                               VALIDATION_ERROR_01234);
-            skip_call |= ValidateCopyBufferImageTransferGranularityRequirements(dev_data, cb_node, dst_image_state, &pRegions[i], i,
-                                                                                "vkCmdCopyBufferToImage()");
-        }
+    bool skip = false;
+    auto cb_node = GetCBNode(device_data, commandBuffer);
+    auto src_buffer_state = GetBufferState(device_data, srcBuffer);
+    auto dst_image_state = GetImageState(device_data, dstImage);
+    if (cb_node && src_buffer_state && dst_image_state) {
+        skip = PreCallValidateCmdCopyBufferToImage(device_data, dstImageLayout, cb_node, src_buffer_state, dst_image_state,
+                                                        regionCount, pRegions, "vkCmdCopyBufferToImage()");
     } else {
+        lock.unlock();
         assert(0);
+        // TODO: report VU01244 here, or put in object tracker?
     }
-    lock.unlock();
-    if (!skip_call)
-        dev_data->dispatch_table.CmdCopyBufferToImage(commandBuffer, srcBuffer, dstImage, dstImageLayout, regionCount, pRegions);
+    if (!skip) {
+        PreCallRecordCmdCopyBufferToImage(device_data, cb_node, src_buffer_state, dst_image_state);
+        lock.unlock();
+        device_data->dispatch_table.CmdCopyBufferToImage(commandBuffer, srcBuffer, dstImage, dstImageLayout, regionCount, pRegions);
+    }
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdCopyImageToBuffer(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout,
                                                 VkBuffer dstBuffer, uint32_t regionCount, const VkBufferImageCopy *pRegions) {
-    bool skip_call = false;
-    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
+    bool skip = false;
+    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
 
-    auto cb_node = GetCBNode(dev_data, commandBuffer);
-    auto src_image_state = GetImageState(dev_data, srcImage);
-    auto dst_buff_state = GetBufferState(dev_data, dstBuffer);
-    if (cb_node && src_image_state && dst_buff_state) {
-        skip_call |= ValidateImageSampleCount(dev_data, src_image_state, VK_SAMPLE_COUNT_1_BIT,
-                                              "vkCmdCopyImageToBuffer(): srcImage", VALIDATION_ERROR_01249);
-        skip_call |= ValidateMemoryIsBoundToImage(dev_data, src_image_state, "vkCmdCopyImageToBuffer()", VALIDATION_ERROR_02537);
-        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, dst_buff_state, "vkCmdCopyImageToBuffer()", VALIDATION_ERROR_02538);
-        // Update bindings between buffer/image and cmd buffer
-        AddCommandBufferBindingImage(dev_data, cb_node, src_image_state);
-        AddCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_state);
-        // Validate that SRC image & DST buffer have correct usage flags set
-        skip_call |= ValidateImageUsageFlags(dev_data, src_image_state, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, true,
-                                             VALIDATION_ERROR_01248, "vkCmdCopyImageToBuffer()", "VK_IMAGE_USAGE_TRANSFER_SRC_BIT");
-        skip_call |=
-            ValidateBufferUsageFlags(dev_data, dst_buff_state, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true, VALIDATION_ERROR_01252,
-                                     "vkCmdCopyImageToBuffer()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
-        std::function<bool()> function = [=]() {
-            return ValidateImageMemoryIsValid(dev_data, src_image_state, "vkCmdCopyImageToBuffer()");
-        };
-        cb_node->validate_functions.push_back(function);
-        function = [=]() {
-            SetBufferMemoryValid(dev_data, dst_buff_state, true);
-            return false;
-        };
-        cb_node->validate_functions.push_back(function);
-
-        skip_call |= ValidateCmd(dev_data, cb_node, CMD_COPYIMAGETOBUFFER, "vkCmdCopyImageToBuffer()");
-        UpdateCmdBufferLastCmd(cb_node, CMD_COPYIMAGETOBUFFER);
-        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyImageToBuffer()", VALIDATION_ERROR_01260);
-        for (uint32_t i = 0; i < regionCount; ++i) {
-            skip_call |= VerifySourceImageLayout(dev_data, cb_node, srcImage, pRegions[i].imageSubresource, srcImageLayout,
-                                                 VALIDATION_ERROR_01251);
-            skip_call |= ValidateCopyBufferImageTransferGranularityRequirements(dev_data, cb_node, src_image_state, &pRegions[i], i,
-                                                                                "CmdCopyImageToBuffer");
-        }
+    auto cb_node = GetCBNode(device_data, commandBuffer);
+    auto src_image_state = GetImageState(device_data, srcImage);
+    auto dst_buffer_state = GetBufferState(device_data, dstBuffer);
+    if (cb_node && src_image_state && dst_buffer_state) {
+        skip = PreCallValidateCmdCopyImageToBuffer(device_data, srcImageLayout, cb_node, src_image_state, dst_buffer_state,
+                                                        regionCount, pRegions, "vkCmdCopyImageToBuffer()");
     } else {
+        lock.unlock();
         assert(0);
+        // TODO: report VU01262 here, or put in object tracker?
     }
-    lock.unlock();
-    if (!skip_call)
-        dev_data->dispatch_table.CmdCopyImageToBuffer(commandBuffer, srcImage, srcImageLayout, dstBuffer, regionCount, pRegions);
+    if (!skip) {
+        PreCallRecordCmdCopyImageToBuffer(device_data, cb_node, src_image_state, dst_buffer_state);
+        lock.unlock();
+        device_data->dispatch_table.CmdCopyImageToBuffer(commandBuffer, srcImage, srcImageLayout, dstBuffer, regionCount, pRegions);
+    }
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdUpdateBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize dstOffset,
@@ -7927,40 +7878,79 @@ VKAPI_ATTR void VKAPI_CALL CmdResolveImage(VkCommandBuffer commandBuffer, VkImag
     }
 }
 
-VKAPI_ATTR void VKAPI_CALL GetImageSubresourceLayout(VkDevice device, VkImage image, const VkImageSubresource *pSubresource,
-    VkSubresourceLayout *pLayout) {
-    bool skipCall = false;
-    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-    VkFormat format;
+static bool PreCallValidateGetImageSubresourceLayout(layer_data *device_data, VkImage image,
+                                                     const VkImageSubresource *pSubresource) {
+    bool skip = false;
+    const VkImageAspectFlags sub_aspect = pSubresource->aspectMask;
 
-    auto imageEntry = GetImageState(device_data, image);
-
-    // Validate that image aspects match formats
-    if (imageEntry) {
-        format = imageEntry->createInfo.format;
-        if (vk_format_is_color(format)) {
-            if (pSubresource->aspectMask != VK_IMAGE_ASPECT_COLOR_BIT) {
-                std::stringstream ss;
-                ss << "vkGetImageSubresourceLayout: For color formats, the aspectMask field of VkImageSubresource must be "
-                    "VK_IMAGE_ASPECT_COLOR.";
-                skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                    (uint64_t)image, __LINE__, VALIDATION_ERROR_00741, "IMAGE", "%s. %s", ss.str().c_str(),
-                    validation_error_map[VALIDATION_ERROR_00741]);
-            }
-        } else if (vk_format_is_depth_or_stencil(format)) {
-            if ((pSubresource->aspectMask != VK_IMAGE_ASPECT_DEPTH_BIT) &&
-                (pSubresource->aspectMask != VK_IMAGE_ASPECT_STENCIL_BIT)) {
-                std::stringstream ss;
-                ss << "vkGetImageSubresourceLayout: For depth/stencil formats, the aspectMask selects either the depth or stencil "
-                    "image aspectMask.";
-                skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                    (uint64_t)image, __LINE__, VALIDATION_ERROR_00741, "IMAGE", "%s. %s", ss.str().c_str(),
-                    validation_error_map[VALIDATION_ERROR_00741]);
-            }
-        }
+    // VU 00733: The aspectMask member of pSubresource must only have a single bit set
+    const int num_bits = sizeof(sub_aspect) * CHAR_BIT;
+    std::bitset<num_bits> aspect_mask_bits(sub_aspect);
+    if (aspect_mask_bits.count() != 1) {
+        skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                        __LINE__, VALIDATION_ERROR_00733, "IMAGE",
+                        "vkGetImageSubresourceLayout(): VkImageSubresource.aspectMask must have exactly 1 bit set. %s",
+                        validation_error_map[VALIDATION_ERROR_00733]);
     }
 
-    if (!skipCall) {
+    IMAGE_STATE *image_entry = GetImageState(device_data, image);
+    if (!image_entry) {
+        return skip;
+    }
+
+    // VU 00732: image must have been created with tiling equal to VK_IMAGE_TILING_LINEAR
+    if (image_entry->createInfo.tiling != VK_IMAGE_TILING_LINEAR) {
+        skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                        (uint64_t)image, __LINE__, VALIDATION_ERROR_00732, "IMAGE",
+                        "vkGetImageSubresourceLayout(): Image must have tiling of VK_IMAGE_TILING_LINEAR. %s",
+                        validation_error_map[VALIDATION_ERROR_00732]);
+    }
+
+    // VU 00739: mipLevel must be less than the mipLevels specified in VkImageCreateInfo when the image was created
+    if (pSubresource->mipLevel >= image_entry->createInfo.mipLevels) {
+        skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                        (uint64_t)image, __LINE__, VALIDATION_ERROR_00739, "IMAGE",
+                        "vkGetImageSubresourceLayout(): pSubresource.mipLevel (%d) must be less than %d. %s",
+                        pSubresource->mipLevel, image_entry->createInfo.mipLevels, validation_error_map[VALIDATION_ERROR_00739]);
+    }
+
+    // VU 00740: arrayLayer must be less than the arrayLayers specified in VkImageCreateInfo when the image was created
+    if (pSubresource->arrayLayer >= image_entry->createInfo.arrayLayers) {
+        skip |=
+            log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, (uint64_t)image,
+                    __LINE__, VALIDATION_ERROR_00740, "IMAGE",
+                    "vkGetImageSubresourceLayout(): pSubresource.arrayLayer (%d) must be less than %d. %s",
+                    pSubresource->arrayLayer, image_entry->createInfo.arrayLayers, validation_error_map[VALIDATION_ERROR_00740]);
+    }
+
+    // VU 00741: subresource's aspect must be compatible with image's format.
+    const VkFormat img_format = image_entry->createInfo.format;
+    if (vk_format_is_color(img_format)) {
+        if (sub_aspect != VK_IMAGE_ASPECT_COLOR_BIT) {
+            skip |= log_msg(
+                device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, (uint64_t)image,
+                __LINE__, VALIDATION_ERROR_00741, "IMAGE",
+                "vkGetImageSubresourceLayout(): For color formats, VkImageSubresource.aspectMask must be VK_IMAGE_ASPECT_COLOR. %s",
+                validation_error_map[VALIDATION_ERROR_00741]);
+        }
+    } else if (vk_format_is_depth_or_stencil(img_format)) {
+        if ((sub_aspect != VK_IMAGE_ASPECT_DEPTH_BIT) && (sub_aspect != VK_IMAGE_ASPECT_STENCIL_BIT)) {
+            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                            (uint64_t)image, __LINE__, VALIDATION_ERROR_00741, "IMAGE",
+                            "vkGetImageSubresourceLayout(): For depth/stencil formats, VkImageSubresource.aspectMask must be "
+                            "either VK_IMAGE_ASPECT_DEPTH_BIT or VK_IMAGE_ASPECT_STENCIL_BIT. %s",
+                            validation_error_map[VALIDATION_ERROR_00741]);
+        }
+    }
+    return skip;
+}
+
+VKAPI_ATTR void VKAPI_CALL GetImageSubresourceLayout(VkDevice device, VkImage image, const VkImageSubresource *pSubresource,
+                                                     VkSubresourceLayout *pLayout) {
+    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+
+    bool skip = PreCallValidateGetImageSubresourceLayout(device_data, image, pSubresource);
+    if (!skip) {
         device_data->dispatch_table.GetImageSubresourceLayout(device, image, pSubresource, pLayout);
     }
 }

@@ -23,11 +23,13 @@
 #include "core_validation_types.h"
 #include "core_validation_error_enums.h"
 #include "vulkan/vk_layer.h"
+#include <limits.h>
 #include <memory>
 #include <unordered_map>
 #include <vector>
 #include <utility>
 #include <algorithm>
+#include <bitset>
 
 using core_validation::layer_data;
 
@@ -209,5 +211,19 @@ void PostCallRecordDestroyBufferView(layer_data *device_data, VkBufferView buffe
 bool PreCallValidateCmdFillBuffer(layer_data *device_data, GLOBAL_CB_NODE *cb_node, BUFFER_STATE *buffer_state);
 
 void PreCallRecordCmdFillBuffer(layer_data *device_data, GLOBAL_CB_NODE *cb_node, BUFFER_STATE *buffer_state);
+
+bool PreCallValidateCmdCopyImageToBuffer(layer_data *device_data, VkImageLayout srcImageLayout, GLOBAL_CB_NODE *cb_node,
+                                         IMAGE_STATE *src_image_state, BUFFER_STATE *dst_buff_state, uint32_t regionCount,
+                                         const VkBufferImageCopy *pRegions, const char *func_name);
+
+void PreCallRecordCmdCopyImageToBuffer(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
+                                       BUFFER_STATE *dst_buff_state);
+
+bool PreCallValidateCmdCopyBufferToImage(layer_data *dev_data, VkImageLayout dstImageLayout, GLOBAL_CB_NODE *cb_node,
+                                         BUFFER_STATE *src_buff_state, IMAGE_STATE *dst_image_state, uint32_t regionCount,
+                                         const VkBufferImageCopy *pRegions, const char *func_name);
+
+void PreCallRecordCmdCopyBufferToImage(layer_data *device_data, GLOBAL_CB_NODE *cb_node, BUFFER_STATE *src_buff_state,
+                                       IMAGE_STATE *dst_image_state);
 
 #endif  // CORE_VALIDATION_BUFFER_VALIDATION_H_

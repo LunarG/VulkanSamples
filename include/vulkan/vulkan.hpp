@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <initializer_list>
@@ -41,7 +42,7 @@
 # include <vector>
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
 
-static_assert( VK_HEADER_VERSION ==  40 , "Wrong VK_HEADER_VERSION!" );
+static_assert( VK_HEADER_VERSION ==  41 , "Wrong VK_HEADER_VERSION!" );
 
 // 32-bit vulkan is not typesafe for handles, so don't allow copy constructors on this platform by default.
 // To enable this feature on 32-bit platforms please define VULKAN_HPP_TYPESAFE_CONVERSION
@@ -68,7 +69,6 @@ static_assert( VK_HEADER_VERSION ==  40 , "Wrong VK_HEADER_VERSION!" );
 # endif
 #endif
 
-
 #if !defined(VULKAN_HPP_INLINE)
 # if defined(__clang___)
 #  if __has_attribute(always_inline)
@@ -83,6 +83,12 @@ static_assert( VK_HEADER_VERSION ==  40 , "Wrong VK_HEADER_VERSION!" );
 # else
 #  define VULKAN_HPP_INLINE inline
 # endif
+#endif
+
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
+# define VULKAN_HPP_TYPESAFE_EXPLICIT
+#else
+# define VULKAN_HPP_TYPESAFE_EXPLICIT explicit
 #endif
 
 namespace vk
@@ -1096,11 +1102,11 @@ namespace vk
       : m_deviceMemory(VK_NULL_HANDLE)
     {}
 
-#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    DeviceMemory(VkDeviceMemory deviceMemory)
+    VULKAN_HPP_TYPESAFE_EXPLICIT DeviceMemory(VkDeviceMemory deviceMemory)
        : m_deviceMemory(deviceMemory)
     {}
 
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     DeviceMemory& operator=(VkDeviceMemory deviceMemory)
     {
       m_deviceMemory = deviceMemory;
@@ -1129,10 +1135,7 @@ namespace vk
       return m_deviceMemory < rhs.m_deviceMemory;
     }
 
-#if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    explicit
-#endif
-    operator VkDeviceMemory() const
+    VULKAN_HPP_TYPESAFE_EXPLICIT operator VkDeviceMemory() const
     {
       return m_deviceMemory;
     }
@@ -1163,11 +1166,11 @@ namespace vk
       : m_commandPool(VK_NULL_HANDLE)
     {}
 
-#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    CommandPool(VkCommandPool commandPool)
+    VULKAN_HPP_TYPESAFE_EXPLICIT CommandPool(VkCommandPool commandPool)
        : m_commandPool(commandPool)
     {}
 
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     CommandPool& operator=(VkCommandPool commandPool)
     {
       m_commandPool = commandPool;
@@ -1196,10 +1199,7 @@ namespace vk
       return m_commandPool < rhs.m_commandPool;
     }
 
-#if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    explicit
-#endif
-    operator VkCommandPool() const
+    VULKAN_HPP_TYPESAFE_EXPLICIT operator VkCommandPool() const
     {
       return m_commandPool;
     }
@@ -1230,11 +1230,11 @@ namespace vk
       : m_buffer(VK_NULL_HANDLE)
     {}
 
-#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    Buffer(VkBuffer buffer)
+    VULKAN_HPP_TYPESAFE_EXPLICIT Buffer(VkBuffer buffer)
        : m_buffer(buffer)
     {}
 
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     Buffer& operator=(VkBuffer buffer)
     {
       m_buffer = buffer;
@@ -1263,10 +1263,7 @@ namespace vk
       return m_buffer < rhs.m_buffer;
     }
 
-#if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    explicit
-#endif
-    operator VkBuffer() const
+    VULKAN_HPP_TYPESAFE_EXPLICIT operator VkBuffer() const
     {
       return m_buffer;
     }
@@ -1297,11 +1294,11 @@ namespace vk
       : m_bufferView(VK_NULL_HANDLE)
     {}
 
-#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    BufferView(VkBufferView bufferView)
+    VULKAN_HPP_TYPESAFE_EXPLICIT BufferView(VkBufferView bufferView)
        : m_bufferView(bufferView)
     {}
 
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     BufferView& operator=(VkBufferView bufferView)
     {
       m_bufferView = bufferView;
@@ -1330,10 +1327,7 @@ namespace vk
       return m_bufferView < rhs.m_bufferView;
     }
 
-#if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    explicit
-#endif
-    operator VkBufferView() const
+    VULKAN_HPP_TYPESAFE_EXPLICIT operator VkBufferView() const
     {
       return m_bufferView;
     }
@@ -1364,11 +1358,11 @@ namespace vk
       : m_image(VK_NULL_HANDLE)
     {}
 
-#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    Image(VkImage image)
+    VULKAN_HPP_TYPESAFE_EXPLICIT Image(VkImage image)
        : m_image(image)
     {}
 
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     Image& operator=(VkImage image)
     {
       m_image = image;
@@ -1397,10 +1391,7 @@ namespace vk
       return m_image < rhs.m_image;
     }
 
-#if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    explicit
-#endif
-    operator VkImage() const
+    VULKAN_HPP_TYPESAFE_EXPLICIT operator VkImage() const
     {
       return m_image;
     }
@@ -1431,11 +1422,11 @@ namespace vk
       : m_imageView(VK_NULL_HANDLE)
     {}
 
-#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    ImageView(VkImageView imageView)
+    VULKAN_HPP_TYPESAFE_EXPLICIT ImageView(VkImageView imageView)
        : m_imageView(imageView)
     {}
 
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     ImageView& operator=(VkImageView imageView)
     {
       m_imageView = imageView;
@@ -1464,10 +1455,7 @@ namespace vk
       return m_imageView < rhs.m_imageView;
     }
 
-#if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    explicit
-#endif
-    operator VkImageView() const
+    VULKAN_HPP_TYPESAFE_EXPLICIT operator VkImageView() const
     {
       return m_imageView;
     }
@@ -1498,11 +1486,11 @@ namespace vk
       : m_shaderModule(VK_NULL_HANDLE)
     {}
 
-#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    ShaderModule(VkShaderModule shaderModule)
+    VULKAN_HPP_TYPESAFE_EXPLICIT ShaderModule(VkShaderModule shaderModule)
        : m_shaderModule(shaderModule)
     {}
 
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     ShaderModule& operator=(VkShaderModule shaderModule)
     {
       m_shaderModule = shaderModule;
@@ -1531,10 +1519,7 @@ namespace vk
       return m_shaderModule < rhs.m_shaderModule;
     }
 
-#if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    explicit
-#endif
-    operator VkShaderModule() const
+    VULKAN_HPP_TYPESAFE_EXPLICIT operator VkShaderModule() const
     {
       return m_shaderModule;
     }
@@ -1565,11 +1550,11 @@ namespace vk
       : m_pipeline(VK_NULL_HANDLE)
     {}
 
-#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    Pipeline(VkPipeline pipeline)
+    VULKAN_HPP_TYPESAFE_EXPLICIT Pipeline(VkPipeline pipeline)
        : m_pipeline(pipeline)
     {}
 
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     Pipeline& operator=(VkPipeline pipeline)
     {
       m_pipeline = pipeline;
@@ -1598,10 +1583,7 @@ namespace vk
       return m_pipeline < rhs.m_pipeline;
     }
 
-#if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    explicit
-#endif
-    operator VkPipeline() const
+    VULKAN_HPP_TYPESAFE_EXPLICIT operator VkPipeline() const
     {
       return m_pipeline;
     }
@@ -1632,11 +1614,11 @@ namespace vk
       : m_pipelineLayout(VK_NULL_HANDLE)
     {}
 
-#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    PipelineLayout(VkPipelineLayout pipelineLayout)
+    VULKAN_HPP_TYPESAFE_EXPLICIT PipelineLayout(VkPipelineLayout pipelineLayout)
        : m_pipelineLayout(pipelineLayout)
     {}
 
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     PipelineLayout& operator=(VkPipelineLayout pipelineLayout)
     {
       m_pipelineLayout = pipelineLayout;
@@ -1665,10 +1647,7 @@ namespace vk
       return m_pipelineLayout < rhs.m_pipelineLayout;
     }
 
-#if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    explicit
-#endif
-    operator VkPipelineLayout() const
+    VULKAN_HPP_TYPESAFE_EXPLICIT operator VkPipelineLayout() const
     {
       return m_pipelineLayout;
     }
@@ -1699,11 +1678,11 @@ namespace vk
       : m_sampler(VK_NULL_HANDLE)
     {}
 
-#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    Sampler(VkSampler sampler)
+    VULKAN_HPP_TYPESAFE_EXPLICIT Sampler(VkSampler sampler)
        : m_sampler(sampler)
     {}
 
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     Sampler& operator=(VkSampler sampler)
     {
       m_sampler = sampler;
@@ -1732,10 +1711,7 @@ namespace vk
       return m_sampler < rhs.m_sampler;
     }
 
-#if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    explicit
-#endif
-    operator VkSampler() const
+    VULKAN_HPP_TYPESAFE_EXPLICIT operator VkSampler() const
     {
       return m_sampler;
     }
@@ -1766,11 +1742,11 @@ namespace vk
       : m_descriptorSet(VK_NULL_HANDLE)
     {}
 
-#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    DescriptorSet(VkDescriptorSet descriptorSet)
+    VULKAN_HPP_TYPESAFE_EXPLICIT DescriptorSet(VkDescriptorSet descriptorSet)
        : m_descriptorSet(descriptorSet)
     {}
 
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     DescriptorSet& operator=(VkDescriptorSet descriptorSet)
     {
       m_descriptorSet = descriptorSet;
@@ -1799,10 +1775,7 @@ namespace vk
       return m_descriptorSet < rhs.m_descriptorSet;
     }
 
-#if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    explicit
-#endif
-    operator VkDescriptorSet() const
+    VULKAN_HPP_TYPESAFE_EXPLICIT operator VkDescriptorSet() const
     {
       return m_descriptorSet;
     }
@@ -1833,11 +1806,11 @@ namespace vk
       : m_descriptorSetLayout(VK_NULL_HANDLE)
     {}
 
-#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    DescriptorSetLayout(VkDescriptorSetLayout descriptorSetLayout)
+    VULKAN_HPP_TYPESAFE_EXPLICIT DescriptorSetLayout(VkDescriptorSetLayout descriptorSetLayout)
        : m_descriptorSetLayout(descriptorSetLayout)
     {}
 
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     DescriptorSetLayout& operator=(VkDescriptorSetLayout descriptorSetLayout)
     {
       m_descriptorSetLayout = descriptorSetLayout;
@@ -1866,10 +1839,7 @@ namespace vk
       return m_descriptorSetLayout < rhs.m_descriptorSetLayout;
     }
 
-#if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    explicit
-#endif
-    operator VkDescriptorSetLayout() const
+    VULKAN_HPP_TYPESAFE_EXPLICIT operator VkDescriptorSetLayout() const
     {
       return m_descriptorSetLayout;
     }
@@ -1900,11 +1870,11 @@ namespace vk
       : m_descriptorPool(VK_NULL_HANDLE)
     {}
 
-#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    DescriptorPool(VkDescriptorPool descriptorPool)
+    VULKAN_HPP_TYPESAFE_EXPLICIT DescriptorPool(VkDescriptorPool descriptorPool)
        : m_descriptorPool(descriptorPool)
     {}
 
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     DescriptorPool& operator=(VkDescriptorPool descriptorPool)
     {
       m_descriptorPool = descriptorPool;
@@ -1933,10 +1903,7 @@ namespace vk
       return m_descriptorPool < rhs.m_descriptorPool;
     }
 
-#if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    explicit
-#endif
-    operator VkDescriptorPool() const
+    VULKAN_HPP_TYPESAFE_EXPLICIT operator VkDescriptorPool() const
     {
       return m_descriptorPool;
     }
@@ -1967,11 +1934,11 @@ namespace vk
       : m_fence(VK_NULL_HANDLE)
     {}
 
-#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    Fence(VkFence fence)
+    VULKAN_HPP_TYPESAFE_EXPLICIT Fence(VkFence fence)
        : m_fence(fence)
     {}
 
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     Fence& operator=(VkFence fence)
     {
       m_fence = fence;
@@ -2000,10 +1967,7 @@ namespace vk
       return m_fence < rhs.m_fence;
     }
 
-#if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    explicit
-#endif
-    operator VkFence() const
+    VULKAN_HPP_TYPESAFE_EXPLICIT operator VkFence() const
     {
       return m_fence;
     }
@@ -2034,11 +1998,11 @@ namespace vk
       : m_semaphore(VK_NULL_HANDLE)
     {}
 
-#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    Semaphore(VkSemaphore semaphore)
+    VULKAN_HPP_TYPESAFE_EXPLICIT Semaphore(VkSemaphore semaphore)
        : m_semaphore(semaphore)
     {}
 
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     Semaphore& operator=(VkSemaphore semaphore)
     {
       m_semaphore = semaphore;
@@ -2067,10 +2031,7 @@ namespace vk
       return m_semaphore < rhs.m_semaphore;
     }
 
-#if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    explicit
-#endif
-    operator VkSemaphore() const
+    VULKAN_HPP_TYPESAFE_EXPLICIT operator VkSemaphore() const
     {
       return m_semaphore;
     }
@@ -2101,11 +2062,11 @@ namespace vk
       : m_event(VK_NULL_HANDLE)
     {}
 
-#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    Event(VkEvent event)
+    VULKAN_HPP_TYPESAFE_EXPLICIT Event(VkEvent event)
        : m_event(event)
     {}
 
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     Event& operator=(VkEvent event)
     {
       m_event = event;
@@ -2134,10 +2095,7 @@ namespace vk
       return m_event < rhs.m_event;
     }
 
-#if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    explicit
-#endif
-    operator VkEvent() const
+    VULKAN_HPP_TYPESAFE_EXPLICIT operator VkEvent() const
     {
       return m_event;
     }
@@ -2168,11 +2126,11 @@ namespace vk
       : m_queryPool(VK_NULL_HANDLE)
     {}
 
-#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    QueryPool(VkQueryPool queryPool)
+    VULKAN_HPP_TYPESAFE_EXPLICIT QueryPool(VkQueryPool queryPool)
        : m_queryPool(queryPool)
     {}
 
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     QueryPool& operator=(VkQueryPool queryPool)
     {
       m_queryPool = queryPool;
@@ -2201,10 +2159,7 @@ namespace vk
       return m_queryPool < rhs.m_queryPool;
     }
 
-#if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    explicit
-#endif
-    operator VkQueryPool() const
+    VULKAN_HPP_TYPESAFE_EXPLICIT operator VkQueryPool() const
     {
       return m_queryPool;
     }
@@ -2235,11 +2190,11 @@ namespace vk
       : m_framebuffer(VK_NULL_HANDLE)
     {}
 
-#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    Framebuffer(VkFramebuffer framebuffer)
+    VULKAN_HPP_TYPESAFE_EXPLICIT Framebuffer(VkFramebuffer framebuffer)
        : m_framebuffer(framebuffer)
     {}
 
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     Framebuffer& operator=(VkFramebuffer framebuffer)
     {
       m_framebuffer = framebuffer;
@@ -2268,10 +2223,7 @@ namespace vk
       return m_framebuffer < rhs.m_framebuffer;
     }
 
-#if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    explicit
-#endif
-    operator VkFramebuffer() const
+    VULKAN_HPP_TYPESAFE_EXPLICIT operator VkFramebuffer() const
     {
       return m_framebuffer;
     }
@@ -2302,11 +2254,11 @@ namespace vk
       : m_renderPass(VK_NULL_HANDLE)
     {}
 
-#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    RenderPass(VkRenderPass renderPass)
+    VULKAN_HPP_TYPESAFE_EXPLICIT RenderPass(VkRenderPass renderPass)
        : m_renderPass(renderPass)
     {}
 
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     RenderPass& operator=(VkRenderPass renderPass)
     {
       m_renderPass = renderPass;
@@ -2335,10 +2287,7 @@ namespace vk
       return m_renderPass < rhs.m_renderPass;
     }
 
-#if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    explicit
-#endif
-    operator VkRenderPass() const
+    VULKAN_HPP_TYPESAFE_EXPLICIT operator VkRenderPass() const
     {
       return m_renderPass;
     }
@@ -2369,11 +2318,11 @@ namespace vk
       : m_pipelineCache(VK_NULL_HANDLE)
     {}
 
-#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    PipelineCache(VkPipelineCache pipelineCache)
+    VULKAN_HPP_TYPESAFE_EXPLICIT PipelineCache(VkPipelineCache pipelineCache)
        : m_pipelineCache(pipelineCache)
     {}
 
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     PipelineCache& operator=(VkPipelineCache pipelineCache)
     {
       m_pipelineCache = pipelineCache;
@@ -2402,10 +2351,7 @@ namespace vk
       return m_pipelineCache < rhs.m_pipelineCache;
     }
 
-#if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    explicit
-#endif
-    operator VkPipelineCache() const
+    VULKAN_HPP_TYPESAFE_EXPLICIT operator VkPipelineCache() const
     {
       return m_pipelineCache;
     }
@@ -2436,11 +2382,11 @@ namespace vk
       : m_objectTableNVX(VK_NULL_HANDLE)
     {}
 
-#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    ObjectTableNVX(VkObjectTableNVX objectTableNVX)
+    VULKAN_HPP_TYPESAFE_EXPLICIT ObjectTableNVX(VkObjectTableNVX objectTableNVX)
        : m_objectTableNVX(objectTableNVX)
     {}
 
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     ObjectTableNVX& operator=(VkObjectTableNVX objectTableNVX)
     {
       m_objectTableNVX = objectTableNVX;
@@ -2469,10 +2415,7 @@ namespace vk
       return m_objectTableNVX < rhs.m_objectTableNVX;
     }
 
-#if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    explicit
-#endif
-    operator VkObjectTableNVX() const
+    VULKAN_HPP_TYPESAFE_EXPLICIT operator VkObjectTableNVX() const
     {
       return m_objectTableNVX;
     }
@@ -2503,11 +2446,11 @@ namespace vk
       : m_indirectCommandsLayoutNVX(VK_NULL_HANDLE)
     {}
 
-#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    IndirectCommandsLayoutNVX(VkIndirectCommandsLayoutNVX indirectCommandsLayoutNVX)
+    VULKAN_HPP_TYPESAFE_EXPLICIT IndirectCommandsLayoutNVX(VkIndirectCommandsLayoutNVX indirectCommandsLayoutNVX)
        : m_indirectCommandsLayoutNVX(indirectCommandsLayoutNVX)
     {}
 
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     IndirectCommandsLayoutNVX& operator=(VkIndirectCommandsLayoutNVX indirectCommandsLayoutNVX)
     {
       m_indirectCommandsLayoutNVX = indirectCommandsLayoutNVX;
@@ -2536,10 +2479,7 @@ namespace vk
       return m_indirectCommandsLayoutNVX < rhs.m_indirectCommandsLayoutNVX;
     }
 
-#if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    explicit
-#endif
-    operator VkIndirectCommandsLayoutNVX() const
+    VULKAN_HPP_TYPESAFE_EXPLICIT operator VkIndirectCommandsLayoutNVX() const
     {
       return m_indirectCommandsLayoutNVX;
     }
@@ -2570,11 +2510,11 @@ namespace vk
       : m_displayKHR(VK_NULL_HANDLE)
     {}
 
-#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    DisplayKHR(VkDisplayKHR displayKHR)
+    VULKAN_HPP_TYPESAFE_EXPLICIT DisplayKHR(VkDisplayKHR displayKHR)
        : m_displayKHR(displayKHR)
     {}
 
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     DisplayKHR& operator=(VkDisplayKHR displayKHR)
     {
       m_displayKHR = displayKHR;
@@ -2603,10 +2543,7 @@ namespace vk
       return m_displayKHR < rhs.m_displayKHR;
     }
 
-#if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    explicit
-#endif
-    operator VkDisplayKHR() const
+    VULKAN_HPP_TYPESAFE_EXPLICIT operator VkDisplayKHR() const
     {
       return m_displayKHR;
     }
@@ -2637,11 +2574,11 @@ namespace vk
       : m_displayModeKHR(VK_NULL_HANDLE)
     {}
 
-#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    DisplayModeKHR(VkDisplayModeKHR displayModeKHR)
+    VULKAN_HPP_TYPESAFE_EXPLICIT DisplayModeKHR(VkDisplayModeKHR displayModeKHR)
        : m_displayModeKHR(displayModeKHR)
     {}
 
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     DisplayModeKHR& operator=(VkDisplayModeKHR displayModeKHR)
     {
       m_displayModeKHR = displayModeKHR;
@@ -2670,10 +2607,7 @@ namespace vk
       return m_displayModeKHR < rhs.m_displayModeKHR;
     }
 
-#if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    explicit
-#endif
-    operator VkDisplayModeKHR() const
+    VULKAN_HPP_TYPESAFE_EXPLICIT operator VkDisplayModeKHR() const
     {
       return m_displayModeKHR;
     }
@@ -2704,11 +2638,11 @@ namespace vk
       : m_surfaceKHR(VK_NULL_HANDLE)
     {}
 
-#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    SurfaceKHR(VkSurfaceKHR surfaceKHR)
+    VULKAN_HPP_TYPESAFE_EXPLICIT SurfaceKHR(VkSurfaceKHR surfaceKHR)
        : m_surfaceKHR(surfaceKHR)
     {}
 
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     SurfaceKHR& operator=(VkSurfaceKHR surfaceKHR)
     {
       m_surfaceKHR = surfaceKHR;
@@ -2737,10 +2671,7 @@ namespace vk
       return m_surfaceKHR < rhs.m_surfaceKHR;
     }
 
-#if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    explicit
-#endif
-    operator VkSurfaceKHR() const
+    VULKAN_HPP_TYPESAFE_EXPLICIT operator VkSurfaceKHR() const
     {
       return m_surfaceKHR;
     }
@@ -2771,11 +2702,11 @@ namespace vk
       : m_swapchainKHR(VK_NULL_HANDLE)
     {}
 
-#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    SwapchainKHR(VkSwapchainKHR swapchainKHR)
+    VULKAN_HPP_TYPESAFE_EXPLICIT SwapchainKHR(VkSwapchainKHR swapchainKHR)
        : m_swapchainKHR(swapchainKHR)
     {}
 
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     SwapchainKHR& operator=(VkSwapchainKHR swapchainKHR)
     {
       m_swapchainKHR = swapchainKHR;
@@ -2804,10 +2735,7 @@ namespace vk
       return m_swapchainKHR < rhs.m_swapchainKHR;
     }
 
-#if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    explicit
-#endif
-    operator VkSwapchainKHR() const
+    VULKAN_HPP_TYPESAFE_EXPLICIT operator VkSwapchainKHR() const
     {
       return m_swapchainKHR;
     }
@@ -2838,11 +2766,11 @@ namespace vk
       : m_debugReportCallbackEXT(VK_NULL_HANDLE)
     {}
 
-#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    DebugReportCallbackEXT(VkDebugReportCallbackEXT debugReportCallbackEXT)
+    VULKAN_HPP_TYPESAFE_EXPLICIT DebugReportCallbackEXT(VkDebugReportCallbackEXT debugReportCallbackEXT)
        : m_debugReportCallbackEXT(debugReportCallbackEXT)
     {}
 
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     DebugReportCallbackEXT& operator=(VkDebugReportCallbackEXT debugReportCallbackEXT)
     {
       m_debugReportCallbackEXT = debugReportCallbackEXT;
@@ -2871,10 +2799,7 @@ namespace vk
       return m_debugReportCallbackEXT < rhs.m_debugReportCallbackEXT;
     }
 
-#if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    explicit
-#endif
-    operator VkDebugReportCallbackEXT() const
+    VULKAN_HPP_TYPESAFE_EXPLICIT operator VkDebugReportCallbackEXT() const
     {
       return m_debugReportCallbackEXT;
     }
@@ -15087,19 +15012,7 @@ namespace vk
 
   enum class ColorSpaceKHR
   {
-    eSrgbNonlinear = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
-    eDisplayP3LinearEXT = VK_COLOR_SPACE_DISPLAY_P3_LINEAR_EXT,
-    eDisplayP3NonlinearEXT = VK_COLOR_SPACE_DISPLAY_P3_NONLINEAR_EXT,
-    eScrgbLinearEXT = VK_COLOR_SPACE_SCRGB_LINEAR_EXT,
-    eScrgbNonlinearEXT = VK_COLOR_SPACE_SCRGB_NONLINEAR_EXT,
-    eDciP3LinearEXT = VK_COLOR_SPACE_DCI_P3_LINEAR_EXT,
-    eDciP3NonlinearEXT = VK_COLOR_SPACE_DCI_P3_NONLINEAR_EXT,
-    eBt709LinearEXT = VK_COLOR_SPACE_BT709_LINEAR_EXT,
-    eBt709NonlinearEXT = VK_COLOR_SPACE_BT709_NONLINEAR_EXT,
-    eBt2020LinearEXT = VK_COLOR_SPACE_BT2020_LINEAR_EXT,
-    eBt2020NonlinearEXT = VK_COLOR_SPACE_BT2020_NONLINEAR_EXT,
-    eAdobergbLinearEXT = VK_COLOR_SPACE_ADOBERGB_LINEAR_EXT,
-    eAdobergbNonlinearEXT = VK_COLOR_SPACE_ADOBERGB_NONLINEAR_EXT
+    eSrgbNonlinear = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR
   };
 
   struct SurfaceFormatKHR
@@ -17563,11 +17476,11 @@ namespace vk
       : m_commandBuffer(VK_NULL_HANDLE)
     {}
 
-#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    CommandBuffer(VkCommandBuffer commandBuffer)
+    VULKAN_HPP_TYPESAFE_EXPLICIT CommandBuffer(VkCommandBuffer commandBuffer)
        : m_commandBuffer(commandBuffer)
     {}
 
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     CommandBuffer& operator=(VkCommandBuffer commandBuffer)
     {
       m_commandBuffer = commandBuffer;
@@ -17786,10 +17699,7 @@ namespace vk
     void reserveSpaceForCommandsNVX( const CmdReserveSpaceForCommandsInfoNVX & reserveSpaceInfo ) const;
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
 
-#if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    explicit
-#endif
-    operator VkCommandBuffer() const
+    VULKAN_HPP_TYPESAFE_EXPLICIT operator VkCommandBuffer() const
     {
       return m_commandBuffer;
     }
@@ -18376,11 +18286,11 @@ namespace vk
       : m_queue(VK_NULL_HANDLE)
     {}
 
-#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    Queue(VkQueue queue)
+    VULKAN_HPP_TYPESAFE_EXPLICIT Queue(VkQueue queue)
        : m_queue(queue)
     {}
 
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     Queue& operator=(VkQueue queue)
     {
       m_queue = queue;
@@ -18430,10 +18340,7 @@ namespace vk
     Result presentKHR( const PresentInfoKHR & presentInfo ) const;
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
 
-#if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    explicit
-#endif
-    operator VkQueue() const
+    VULKAN_HPP_TYPESAFE_EXPLICIT operator VkQueue() const
     {
       return m_queue;
     }
@@ -18563,11 +18470,11 @@ namespace vk
       : m_device(VK_NULL_HANDLE)
     {}
 
-#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    Device(VkDevice device)
+    VULKAN_HPP_TYPESAFE_EXPLICIT Device(VkDevice device)
        : m_device(device)
     {}
 
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     Device& operator=(VkDevice device)
     {
       m_device = device;
@@ -19149,10 +19056,7 @@ namespace vk
     ResultValue<uint64_t> getSwapchainCounterEXT( SwapchainKHR swapchain, SurfaceCounterFlagBitsEXT counter ) const;
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
 
-#if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    explicit
-#endif
-    operator VkDevice() const
+    VULKAN_HPP_TYPESAFE_EXPLICIT operator VkDevice() const
     {
       return m_device;
     }
@@ -21022,11 +20926,11 @@ namespace vk
       : m_physicalDevice(VK_NULL_HANDLE)
     {}
 
-#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    PhysicalDevice(VkPhysicalDevice physicalDevice)
+    VULKAN_HPP_TYPESAFE_EXPLICIT PhysicalDevice(VkPhysicalDevice physicalDevice)
        : m_physicalDevice(physicalDevice)
     {}
 
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     PhysicalDevice& operator=(VkPhysicalDevice physicalDevice)
     {
       m_physicalDevice = physicalDevice;
@@ -21272,10 +21176,7 @@ namespace vk
     ResultValueType<SurfaceCapabilities2EXT>::type getSurfaceCapabilities2EXT( SurfaceKHR surface ) const;
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
 
-#if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    explicit
-#endif
-    operator VkPhysicalDevice() const
+    VULKAN_HPP_TYPESAFE_EXPLICIT operator VkPhysicalDevice() const
     {
       return m_physicalDevice;
     }
@@ -21949,11 +21850,11 @@ namespace vk
       : m_instance(VK_NULL_HANDLE)
     {}
 
-#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    Instance(VkInstance instance)
+    VULKAN_HPP_TYPESAFE_EXPLICIT Instance(VkInstance instance)
        : m_instance(instance)
     {}
 
+#if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
     Instance& operator=(VkInstance instance)
     {
       m_instance = instance;
@@ -22099,10 +22000,7 @@ namespace vk
     void debugReportMessageEXT( DebugReportFlagsEXT flags, DebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const std::string & layerPrefix, const std::string & message ) const;
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
 
-#if !defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    explicit
-#endif
-    operator VkInstance() const
+    VULKAN_HPP_TYPESAFE_EXPLICIT operator VkInstance() const
     {
       return m_instance;
     }
@@ -24552,18 +24450,6 @@ namespace vk
     switch (value)
     {
     case ColorSpaceKHR::eSrgbNonlinear: return "SrgbNonlinear";
-    case ColorSpaceKHR::eDisplayP3LinearEXT: return "DisplayP3LinearEXT";
-    case ColorSpaceKHR::eDisplayP3NonlinearEXT: return "DisplayP3NonlinearEXT";
-    case ColorSpaceKHR::eScrgbLinearEXT: return "ScrgbLinearEXT";
-    case ColorSpaceKHR::eScrgbNonlinearEXT: return "ScrgbNonlinearEXT";
-    case ColorSpaceKHR::eDciP3LinearEXT: return "DciP3LinearEXT";
-    case ColorSpaceKHR::eDciP3NonlinearEXT: return "DciP3NonlinearEXT";
-    case ColorSpaceKHR::eBt709LinearEXT: return "Bt709LinearEXT";
-    case ColorSpaceKHR::eBt709NonlinearEXT: return "Bt709NonlinearEXT";
-    case ColorSpaceKHR::eBt2020LinearEXT: return "Bt2020LinearEXT";
-    case ColorSpaceKHR::eBt2020NonlinearEXT: return "Bt2020NonlinearEXT";
-    case ColorSpaceKHR::eAdobergbLinearEXT: return "AdobergbLinearEXT";
-    case ColorSpaceKHR::eAdobergbNonlinearEXT: return "AdobergbNonlinearEXT";
     default: return "invalid";
     }
   }

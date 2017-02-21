@@ -49,21 +49,6 @@ LOCAL_LDFLAGS   += -Wl,--exclude-libs,ALL
 include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
-LOCAL_MODULE := VkLayer_image
-LOCAL_SRC_FILES += $(LAYER_DIR)/layer-src/image/image.cpp
-LOCAL_SRC_FILES += $(LAYER_DIR)/common/vk_layer_table.cpp
-LOCAL_C_INCLUDES += $(SRC_DIR)/include \
-                    $(SRC_DIR)/layers \
-                    $(LAYER_DIR)/include \
-                    $(SRC_DIR)/loader
-LOCAL_STATIC_LIBRARIES += layer_utils
-LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR -fvisibility=hidden
-LOCAL_LDLIBS    := -llog
-LOCAL_LDFLAGS   += -Wl,-Bsymbolic
-LOCAL_LDFLAGS   += -Wl,--exclude-libs,ALL
-include $(BUILD_SHARED_LIBRARY)
-
-include $(CLEAR_VARS)
 LOCAL_MODULE := VkLayer_parameter_validation
 LOCAL_SRC_FILES += $(LAYER_DIR)/layer-src/parameter_validation/parameter_validation.cpp
 LOCAL_SRC_FILES += $(LAYER_DIR)/common/vk_layer_table.cpp

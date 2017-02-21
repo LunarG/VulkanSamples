@@ -8,5 +8,3 @@ google_threading.report_flags = error
 google_threading.debug_action = VK_DBG_LAYER_ACTION_LOG_MSG
 lunarg_swapchain.report_flags = error
 lunarg_swapchain.debug_action = VK_DBG_LAYER_ACTION_LOG_MSG
-lunarg_image.report_flags = error
-lunarg_image.debug_action = VK_DBG_LAYER_ACTION_LOG_MSG

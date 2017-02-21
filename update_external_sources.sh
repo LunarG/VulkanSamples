@@ -1,5 +1,5 @@
 #!/bin/bash
-# Update source for glslang, LunarGLASS, spirv-tools
+# Update source for glslang, spirv-tools
 
 set -e
 
@@ -14,11 +14,18 @@ echo CORE_COUNT=$CORE_COUNT
 
 REVISION_DIR="$CURRENT_DIR/external_revisions"
 
+GLSLANG_GITURL=$(cat "${REVISION_DIR}/glslang_giturl")
 GLSLANG_REVISION=$(cat "${REVISION_DIR}/glslang_revision")
+SPIRV_TOOLS_GITURL=$(cat "${REVISION_DIR}/spirv-tools_giturl")
 SPIRV_TOOLS_REVISION=$(cat "${REVISION_DIR}/spirv-tools_revision")
+SPIRV_HEADERS_GITURL=$(cat "${REVISION_DIR}/spirv-headers_giturl")
 SPIRV_HEADERS_REVISION=$(cat "${REVISION_DIR}/spirv-headers_revision")
+
+echo "GLSLANG_GITURL=${GLSLANG_GITURL}"
 echo "GLSLANG_REVISION=${GLSLANG_REVISION}"
+echo "SPIRV_TOOLS_GITURL=${SPIRV_TOOLS_GITURL}"
 echo "SPIRV_TOOLS_REVISION=${SPIRV_TOOLS_REVISION}"
+echo "SPIRV_HEADERS_GITURL=${SPIRV_HEADERS_GITURL}"
 echo "SPIRV_HEADERS_REVISION=${SPIRV_HEADERS_REVISION}"
 
 BUILDDIR=${CURRENT_DIR}
@@ -29,7 +36,7 @@ function create_glslang () {
    echo "Creating local glslang repository (${BASEDIR}/glslang)."
    mkdir -p "${BASEDIR}"/glslang
    cd "${BASEDIR}"/glslang
-   git clone https://github.com/KhronosGroup/glslang.git .
+   git clone ${GLSLANG_GITURL} .
    git checkout ${GLSLANG_REVISION}
 }
 
@@ -45,11 +52,11 @@ function create_spirv-tools () {
    echo "Creating local spirv-tools repository (${BASEDIR}/spirv-tools)."
    mkdir -p "${BASEDIR}"/spirv-tools
    cd "${BASEDIR}"/spirv-tools
-   git clone https://github.com/KhronosGroup/SPIRV-Tools.git .
+   git clone ${SPIRV_TOOLS_GITURL} .
    git checkout ${SPIRV_TOOLS_REVISION}
    mkdir -p "${BASEDIR}"/spirv-tools/external/spirv-headers
    cd "${BASEDIR}"/spirv-tools/external/spirv-headers
-   git clone https://github.com/KhronosGroup/SPIRV-Headers .
+   git clone ${SPIRV_HEADERS_GITURL} .
    git checkout ${SPIRV_HEADERS_REVISION}
 }
 
@@ -61,7 +68,7 @@ function update_spirv-tools () {
    if [ ! -d "${BASEDIR}/spirv-tools/external/spirv-headers" -o ! -d "${BASEDIR}/spirv-tools/external/spirv-headers/.git" ]; then
       mkdir -p "${BASEDIR}"/spirv-tools/external/spirv-headers
       cd "${BASEDIR}"/spirv-tools/external/spirv-headers
-      git clone https://github.com/KhronosGroup/SPIRV-Headers .
+      git clone ${SPIRV_HEADERS_GITURL} .
    else
       cd "${BASEDIR}"/spirv-tools/external/spirv-headers
       git fetch --all

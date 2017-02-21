@@ -86,7 +86,7 @@ echo "Back insertion test PASSED"
 # Check for insertion of wrap-objects layer in middle.
 output=$(VK_LAYER_PATH=$VK_LAYER_PATH:`pwd`/layers \
    LD_LIBRARY_PATH=$LD_LIBRARY_PATH:`pwd`/layers \
-   VK_INSTANCE_LAYERS=VK_LAYER_LUNARG_image:VK_LAYER_LUNARG_wrap_objects:VK_LAYER_LUNARG_parameter_validation \
+   VK_INSTANCE_LAYERS=VK_LAYER_LUNARG_core_validation:VK_LAYER_LUNARG_wrap_objects:VK_LAYER_LUNARG_parameter_validation \
    VK_LOADER_DEBUG=all \
    GTEST_FILTER=WrapObjects.Insert \
    ./vk_loader_validation_tests 2>&1)
