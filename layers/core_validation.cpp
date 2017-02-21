@@ -7883,13 +7883,48 @@ static bool PreCallValidateGetImageSubresourceLayout(layer_data *device_data, Vk
     bool skip = false;
     const VkImageAspectFlags sub_aspect = pSubresource->aspectMask;
 
-    IMAGE_STATE *imageEntry = GetImageState(device_data, image);
-    if (!imageEntry) {
+    // VU 00733: The aspectMask member of pSubresource must only have a single bit set
+    const int num_bits = sizeof(sub_aspect) * CHAR_BIT;
+    std::bitset<num_bits> aspect_mask_bits(sub_aspect);
+    if (aspect_mask_bits.count() != 1) {
+        skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                        __LINE__, VALIDATION_ERROR_00733, "IMAGE",
+                        "vkGetImageSubresourceLayout(): VkImageSubresource.aspectMask must have exactly 1 bit set. %s",
+                        validation_error_map[VALIDATION_ERROR_00733]);
+    }
+
+    IMAGE_STATE *image_entry = GetImageState(device_data, image);
+    if (!image_entry) {
         return skip;
     }
 
+    // VU 00732: image must have been created with tiling equal to VK_IMAGE_TILING_LINEAR
+    if (image_entry->createInfo.tiling != VK_IMAGE_TILING_LINEAR) {
+        skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                        (uint64_t)image, __LINE__, VALIDATION_ERROR_00732, "IMAGE",
+                        "vkGetImageSubresourceLayout(): Image must have tiling of VK_IMAGE_TILING_LINEAR. %s",
+                        validation_error_map[VALIDATION_ERROR_00732]);
+    }
+
+    // VU 00739: mipLevel must be less than the mipLevels specified in VkImageCreateInfo when the image was created
+    if (pSubresource->mipLevel >= image_entry->createInfo.mipLevels) {
+        skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                        (uint64_t)image, __LINE__, VALIDATION_ERROR_00739, "IMAGE",
+                        "vkGetImageSubresourceLayout(): pSubresource.mipLevel (%d) must be less than %d. %s",
+                        pSubresource->mipLevel, image_entry->createInfo.mipLevels, validation_error_map[VALIDATION_ERROR_00739]);
+    }
+
+    // VU 00740: arrayLayer must be less than the arrayLayers specified in VkImageCreateInfo when the image was created
+    if (pSubresource->arrayLayer >= image_entry->createInfo.arrayLayers) {
+        skip |=
+            log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, (uint64_t)image,
+                    __LINE__, VALIDATION_ERROR_00740, "IMAGE",
+                    "vkGetImageSubresourceLayout(): pSubresource.arrayLayer (%d) must be less than %d. %s",
+                    pSubresource->arrayLayer, image_entry->createInfo.arrayLayers, validation_error_map[VALIDATION_ERROR_00740]);
+    }
+
     // VU 00741: subresource's aspect must be compatible with image's format.
-    const VkFormat img_format = imageEntry->createInfo.format;
+    const VkFormat img_format = image_entry->createInfo.format;
     if (vk_format_is_color(img_format)) {
         if (sub_aspect != VK_IMAGE_ASPECT_COLOR_BIT) {
             skip |= log_msg(
