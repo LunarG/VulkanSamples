@@ -7878,40 +7878,44 @@ VKAPI_ATTR void VKAPI_CALL CmdResolveImage(VkCommandBuffer commandBuffer, VkImag
     }
 }
 
-VKAPI_ATTR void VKAPI_CALL GetImageSubresourceLayout(VkDevice device, VkImage image, const VkImageSubresource *pSubresource,
-    VkSubresourceLayout *pLayout) {
-    bool skipCall = false;
-    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-    VkFormat format;
+static bool PreCallValidateGetImageSubresourceLayout(layer_data *device_data, VkImage image,
+                                                     const VkImageSubresource *pSubresource) {
+    bool skip = false;
+    const VkImageAspectFlags sub_aspect = pSubresource->aspectMask;
 
-    auto imageEntry = GetImageState(device_data, image);
-
-    // Validate that image aspects match formats
-    if (imageEntry) {
-        format = imageEntry->createInfo.format;
-        if (vk_format_is_color(format)) {
-            if (pSubresource->aspectMask != VK_IMAGE_ASPECT_COLOR_BIT) {
-                std::stringstream ss;
-                ss << "vkGetImageSubresourceLayout: For color formats, the aspectMask field of VkImageSubresource must be "
-                    "VK_IMAGE_ASPECT_COLOR.";
-                skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                    (uint64_t)image, __LINE__, VALIDATION_ERROR_00741, "IMAGE", "%s. %s", ss.str().c_str(),
-                    validation_error_map[VALIDATION_ERROR_00741]);
-            }
-        } else if (vk_format_is_depth_or_stencil(format)) {
-            if ((pSubresource->aspectMask != VK_IMAGE_ASPECT_DEPTH_BIT) &&
-                (pSubresource->aspectMask != VK_IMAGE_ASPECT_STENCIL_BIT)) {
-                std::stringstream ss;
-                ss << "vkGetImageSubresourceLayout: For depth/stencil formats, the aspectMask selects either the depth or stencil "
-                    "image aspectMask.";
-                skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                    (uint64_t)image, __LINE__, VALIDATION_ERROR_00741, "IMAGE", "%s. %s", ss.str().c_str(),
-                    validation_error_map[VALIDATION_ERROR_00741]);
-            }
-        }
+    IMAGE_STATE *imageEntry = GetImageState(device_data, image);
+    if (!imageEntry) {
+        return skip;
     }
 
-    if (!skipCall) {
+    // VU 00741: subresource's aspect must be compatible with image's format.
+    const VkFormat img_format = imageEntry->createInfo.format;
+    if (vk_format_is_color(img_format)) {
+        if (sub_aspect != VK_IMAGE_ASPECT_COLOR_BIT) {
+            skip |= log_msg(
+                device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, (uint64_t)image,
+                __LINE__, VALIDATION_ERROR_00741, "IMAGE",
+                "vkGetImageSubresourceLayout(): For color formats, VkImageSubresource.aspectMask must be VK_IMAGE_ASPECT_COLOR. %s",
+                validation_error_map[VALIDATION_ERROR_00741]);
+        }
+    } else if (vk_format_is_depth_or_stencil(img_format)) {
+        if ((sub_aspect != VK_IMAGE_ASPECT_DEPTH_BIT) && (sub_aspect != VK_IMAGE_ASPECT_STENCIL_BIT)) {
+            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                            (uint64_t)image, __LINE__, VALIDATION_ERROR_00741, "IMAGE",
+                            "vkGetImageSubresourceLayout(): For depth/stencil formats, VkImageSubresource.aspectMask must be "
+                            "either VK_IMAGE_ASPECT_DEPTH_BIT or VK_IMAGE_ASPECT_STENCIL_BIT. %s",
+                            validation_error_map[VALIDATION_ERROR_00741]);
+        }
+    }
+    return skip;
+}
+
+VKAPI_ATTR void VKAPI_CALL GetImageSubresourceLayout(VkDevice device, VkImage image, const VkImageSubresource *pSubresource,
+                                                     VkSubresourceLayout *pLayout) {
+    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+
+    bool skip = PreCallValidateGetImageSubresourceLayout(device_data, image, pSubresource);
+    if (!skip) {
         device_data->dispatch_table.GetImageSubresourceLayout(device, image, pSubresource, pLayout);
     }
 }
