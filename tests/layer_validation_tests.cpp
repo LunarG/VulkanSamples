@@ -2389,6 +2389,45 @@ TEST_F(VkLayerTest, CreateUnknownObject) {
     m_errorMonitor->VerifyFound();
 }
 
+TEST_F(VkLayerTest, UseObjectWithWrongDevice) {
+    TEST_DESCRIPTION(
+        "Try to destroy a render pass object using a device other than the one it was created on. "
+        "This should generate a distinct error from the invalid handle error.");
+    // Create first device and renderpass
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    // Create second device
+    float priorities[] = {1.0f};
+    VkDeviceQueueCreateInfo queue_info{};
+    queue_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    queue_info.pNext = NULL;
+    queue_info.flags = 0;
+    queue_info.queueFamilyIndex = 0;
+    queue_info.queueCount = 1;
+    queue_info.pQueuePriorities = &priorities[0];
+
+    VkDeviceCreateInfo device_create_info = {};
+    auto features = m_device->phy().features();
+    device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    device_create_info.pNext = NULL;
+    device_create_info.queueCreateInfoCount = 1;
+    device_create_info.pQueueCreateInfos = &queue_info;
+    device_create_info.enabledLayerCount = 0;
+    device_create_info.ppEnabledLayerNames = NULL;
+    device_create_info.pEnabledFeatures = &features;
+
+    VkDevice second_device;
+    ASSERT_VK_SUCCESS(vkCreateDevice(gpu(), &device_create_info, NULL, &second_device));
+
+    // Try to destroy the renderpass from the first device using the second device
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00399);
+    vkDestroyRenderPass(second_device, m_renderPass, NULL);
+    m_errorMonitor->VerifyFound();
+
+    vkDestroyDevice(second_device, NULL);
+}
+
 TEST_F(VkLayerTest, PipelineNotBound) {
     VkResult err;
 
