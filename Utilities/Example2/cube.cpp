@@ -21,7 +21,7 @@
 #include "cube.h"
 
 #if defined(WIN32)
-#pragma warning(disable: 4996)
+#pragma warning(disable : 4996)
 #include <windows.h>
 #endif
 
@@ -94,7 +94,7 @@ struct texture_object {
 
 static char const *const tex_files[] = {"lunarg.ppm"};
 
-//static int validation_error = 0;
+// static int validation_error = 0;
 
 struct vkcube_vs_uniform {
     // Must start with MVP
@@ -669,8 +669,8 @@ struct Demo {
     }
 
     void init_vk() {
-        //extension_names[enabled_extension_count++] = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
-        //return;
+        // extension_names[enabled_extension_count++] = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
+        // return;
 
         vk::Result result;
 
@@ -727,9 +727,7 @@ struct Demo {
 
     //-----------------------------------------vk_physical_device----------------------------------------
 
-    void set_physical_device(VkPhysicalDevice physical_device) {
-        gpu = physical_device;
-    }
+    void set_physical_device(VkPhysicalDevice physical_device) { gpu = physical_device; }
 
     //-----------------------------------------vk_swapchain----------------------------------------
     void init_vk_swapchain(VkSurfaceKHR surface) {
@@ -1794,7 +1792,7 @@ struct Demo {
     bool use_xlib;
     bool separate_present_queue;
 
-//    vk::Instance inst;  // not used
+    //    vk::Instance inst;  // not used
     vk::PhysicalDevice gpu;
     vk::Device device;
     vk::Queue graphics_queue;
@@ -1882,35 +1880,24 @@ struct Demo {
 };
 
 //===================CCube==================
-CCube::CCube(){
-    demo = new Demo;
-}
+CCube::CCube() { demo = new Demo; }
 
-void CCube::InitDevice(VkPhysicalDevice physical_device){
-    demo->set_physical_device(physical_device);
-}
+void CCube::InitDevice(VkPhysicalDevice physical_device) { demo->set_physical_device(physical_device); }
 
-void CCube::InitSwapchain(VkSurfaceKHR surface){
-    demo->init(0,0);
+void CCube::InitSwapchain(VkSurfaceKHR surface) {
+    demo->init(0, 0);
     demo->init_vk_swapchain(surface);
     demo->prepare();
 }
 
-void CCube::Resize(){
-    demo->resize();
-}
+void CCube::Resize() { demo->resize(); }
 
-void CCube::Draw(){
+void CCube::Draw() {
     demo->update_data_buffer();
     demo->draw();
 }
 
-void CCube::Cleanup(){
-    demo->cleanup();
-}
+void CCube::Cleanup() { demo->cleanup(); }
 
-CCube::~CCube(){
-    delete demo;
-}
+CCube::~CCube() { delete demo; }
 //==========================================
-

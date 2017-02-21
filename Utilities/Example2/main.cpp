@@ -42,34 +42,30 @@ class MyWindow : public WSIWindow {
     void OnMoveEvent(int16_t x, int16_t y) { printf("Window Move: x=%d y=%d\n", x, y); }
     void OnFocusEvent(bool hasFocus) { printf("Focus: %s\n", hasFocus ? "True" : "False"); }
     void OnCloseEvent() { printf("Window Closing.\n"); }
-
-    void OnResizeEvent(uint16_t width, uint16_t height) {  //
-        cube.Resize();
-    }
+    void OnResizeEvent(uint16_t width, uint16_t height) { cube.Resize(); }
 };
 
-int main(int argc, char *argv[]){
+int main(int argc, char *argv[]) {
     setvbuf(stdout, NULL, _IONBF, 0);                       // Prevent printf buffering in QtCreator
-    CInstance instance;                                     // Create a Vulkan Instance
-    instance.DebugReport.SetFlags(14);
-
+    CInstance instance(true);                               // Create a Vulkan Instance
+    instance.DebugReport.SetFlags(14);                      // Error+Perf+Warning flags
     MyWindow Window;                                        // Create a Vulkan window
     Window.SetTitle("WSI-Window Example2: Jeremy's cube");  // Set the window title
     Window.SetWinSize(500, 500);                            // Set the window size (Desktop)
     Window.SetWinPos(0, 0);                                 // Set the window position to top-left
     CSurface surface = Window.GetSurface(instance);         // Create the Vulkan surface
-
     CPhysicalDevices gpus(surface);                         // Enumerate GPUs, and their properties
-    gpus.Print(true);
-    CPhysicalDevice* gpu = gpus.FindPresentable();          // Find first GPU, capable of presenting to the given surface.
-    if(!gpu){
-        LOGE("No devices can present to this suface.");
+    CPhysicalDevice *gpu = gpus.FindPresentable();          // Find first GPU, capable of presenting to the given surface.
+
+    gpus.Print();
+    if (!gpu) {
+        _LOGE("No devices can present to this suface.");
         return 0;
     }
 
-    cube.InitDevice(*gpu);                                  // Run cube on given GPU
-    cube.InitSwapchain(surface);                            // Attach cube demo to wsi-window's surface
-    while(Window.ProcessEvents()){                          // Main event loop, runs until window is closed.
+    cube.InitDevice(*gpu);            // Run cube on given GPU
+    cube.InitSwapchain(surface);      // Attach cube demo to wsi-window's surface
+    while (Window.ProcessEvents()) {  // Main event loop, runs until window is closed.
         cube.Draw();
     }
     cube.Cleanup();

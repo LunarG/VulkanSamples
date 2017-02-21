@@ -126,8 +126,8 @@ void CDeviceExtensions::Init(VkPhysicalDevice phy, const char* layer_name) {
             item_list.resize(count);                                                                   // Resize buffer
             result = vkEnumerateDeviceExtensionProperties(phy, layer_name, &count, item_list.data());  // Fetch list
         }
-    } while (result == VK_INCOMPLETE); // If list is incomplete, try again.
-    VKERRCHECK(result);                // report errors
+    } while (result == VK_INCOMPLETE);  // If list is incomplete, try again.
+    VKERRCHECK(result);                 // report errors
 }
 //----------------------------------------------------------------
 
@@ -142,8 +142,7 @@ CInstance::CInstance(const bool enable_validation, const char* app_name, const c
                      "VK_LAYER_LUNARG_object_tracker",
                      "VK_LAYER_LUNARG_core_validation",
                      "VK_LAYER_LUNARG_swapchain",
-                     "VK_LAYER_GOOGLE_unique_objects"
-                    });
+                     "VK_LAYER_GOOGLE_unique_objects"});
     }
     // clang-format on
     layers.Print();
