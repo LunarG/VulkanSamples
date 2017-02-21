@@ -3004,10 +3004,8 @@ TEST_F(VkLayerTest, CreatePipelineBadVertexAttributeFormat) {
 }
 
 TEST_F(VkLayerTest, ImageSampleCounts) {
-    TEST_DESCRIPTION(
-        "Use bad sample counts in image transfer calls to trigger "
-        "validation errors.");
-    ASSERT_NO_FATAL_FAILURE(InitState());
+    TEST_DESCRIPTION("Use bad sample counts in image transfer calls to trigger validation errors.");
+    ASSERT_NO_FATAL_FAILURE(InitState(nullptr, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT));
 
     VkMemoryPropertyFlags reqs = 0;
     VkImageCreateInfo image_create_info = {};
@@ -3044,12 +3042,10 @@ TEST_F(VkLayerTest, ImageSampleCounts) {
         image_create_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         vk_testing::Image dst_image;
         dst_image.init(*m_device, (const VkImageCreateInfo &)image_create_info, reqs);
-        m_errorMonitor->SetUnexpectedError("attempts to implicitly reset cmdBuffer created from command pool");
         m_commandBuffer->BeginCommandBuffer();
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                             "was created with a sample count "
-                                             "of VK_SAMPLE_COUNT_2_BIT but "
-                                             "must be VK_SAMPLE_COUNT_1_BIT");
+        m_errorMonitor->SetDesiredFailureMsg(
+            VK_DEBUG_REPORT_ERROR_BIT_EXT,
+            "was created with a sample count of VK_SAMPLE_COUNT_2_BIT but must be VK_SAMPLE_COUNT_1_BIT");
         vkCmdBlitImage(m_commandBuffer->GetBufferHandle(), src_image.handle(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                        dst_image.handle(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1, &blit_region, VK_FILTER_NEAREST);
         m_errorMonitor->VerifyFound();
@@ -3067,12 +3063,10 @@ TEST_F(VkLayerTest, ImageSampleCounts) {
         image_create_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         vk_testing::Image dst_image;
         dst_image.init(*m_device, (const VkImageCreateInfo &)image_create_info, reqs);
-        m_errorMonitor->SetUnexpectedError("attempts to implicitly reset cmdBuffer created from command pool");
         m_commandBuffer->BeginCommandBuffer();
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                             "was created with a sample count "
-                                             "of VK_SAMPLE_COUNT_4_BIT but "
-                                             "must be VK_SAMPLE_COUNT_1_BIT");
+        m_errorMonitor->SetDesiredFailureMsg(
+            VK_DEBUG_REPORT_ERROR_BIT_EXT,
+            "was created with a sample count of VK_SAMPLE_COUNT_4_BIT but must be VK_SAMPLE_COUNT_1_BIT");
         vkCmdBlitImage(m_commandBuffer->GetBufferHandle(), src_image.handle(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                        dst_image.handle(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1, &blit_region, VK_FILTER_NEAREST);
         m_errorMonitor->VerifyFound();
@@ -3097,14 +3091,10 @@ TEST_F(VkLayerTest, ImageSampleCounts) {
         image_create_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         vk_testing::Image dst_image;
         dst_image.init(*m_device, (const VkImageCreateInfo &)image_create_info, reqs);
-        m_errorMonitor->SetUnexpectedError(
-            "If commandBuffer was allocated from a VkCommandPool which did not have the "
-            "VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT flag set, commandBuffer must be in the initial state");
         m_commandBuffer->BeginCommandBuffer();
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                             "was created with a sample count "
-                                             "of VK_SAMPLE_COUNT_8_BIT but "
-                                             "must be VK_SAMPLE_COUNT_1_BIT");
+        m_errorMonitor->SetDesiredFailureMsg(
+            VK_DEBUG_REPORT_ERROR_BIT_EXT,
+            "was created with a sample count of VK_SAMPLE_COUNT_8_BIT but must be VK_SAMPLE_COUNT_1_BIT");
         vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), src_buffer.handle(), dst_image.handle(),
                                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region);
         m_errorMonitor->VerifyFound();
@@ -3120,12 +3110,10 @@ TEST_F(VkLayerTest, ImageSampleCounts) {
         image_create_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
         vk_testing::Image src_image;
         src_image.init(*m_device, (const VkImageCreateInfo &)image_create_info, reqs);
-        m_errorMonitor->SetUnexpectedError("attempts to implicitly reset cmdBuffer created from command pool");
         m_commandBuffer->BeginCommandBuffer();
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                             "was created with a sample count "
-                                             "of VK_SAMPLE_COUNT_2_BIT but "
-                                             "must be VK_SAMPLE_COUNT_1_BIT");
+        m_errorMonitor->SetDesiredFailureMsg(
+            VK_DEBUG_REPORT_ERROR_BIT_EXT,
+            "was created with a sample count of VK_SAMPLE_COUNT_2_BIT but must be VK_SAMPLE_COUNT_1_BIT");
         vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), src_image.handle(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                                dst_buffer.handle(), 1, &copy_region);
         m_errorMonitor->VerifyFound();
