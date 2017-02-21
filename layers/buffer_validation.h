@@ -226,4 +226,6 @@ bool PreCallValidateCmdCopyBufferToImage(layer_data *dev_data, VkImageLayout dst
 void PreCallRecordCmdCopyBufferToImage(layer_data *device_data, GLOBAL_CB_NODE *cb_node, BUFFER_STATE *src_buff_state,
                                        IMAGE_STATE *dst_image_state);
 
+bool PreCallValidateGetImageSubresourceLayout(layer_data *device_data, VkImage image, const VkImageSubresource *pSubresource);
+
 #endif  // CORE_VALIDATION_BUFFER_VALIDATION_H_
