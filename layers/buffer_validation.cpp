@@ -2685,6 +2685,27 @@ static inline bool ValidtateBufferBounds(const debug_report_data *report_data, I
         VkDeviceSize buffer_height = (0 == pRegions[i].bufferImageHeight ? copy_extent.height : pRegions[i].bufferImageHeight);
         VkDeviceSize unit_size = vk_format_get_size(image_state->createInfo.format);  // size (bytes) of texel or block
 
+        // Handle special buffer packing rules for specific depth/stencil formats
+        if (pRegions[i].imageSubresource.aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) {
+            unit_size = vk_format_get_size(VK_FORMAT_S8_UINT);
+        } else if (pRegions[i].imageSubresource.aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT) {
+            switch (image_state->createInfo.format) {
+                case VK_FORMAT_D16_UNORM_S8_UINT:
+                    unit_size = vk_format_get_size(VK_FORMAT_D16_UNORM);
+                    break;
+                case VK_FORMAT_D32_SFLOAT_S8_UINT:
+                    unit_size = vk_format_get_size(VK_FORMAT_D32_SFLOAT);
+                    break;
+                case VK_FORMAT_X8_D24_UNORM_PACK32:
+                    // Intentionally fall through
+                case VK_FORMAT_D24_UNORM_S8_UINT:
+                    unit_size = 4;
+                    break;
+                default:
+                    break;
+            }
+        }
+
         if (vk_format_is_compressed(image_state->createInfo.format)) {
             VkExtent2D texel_block_extent = vk_format_compressed_block_size(image_state->createInfo.format);
             buffer_width /= texel_block_extent.width;  // switch to texel block units
