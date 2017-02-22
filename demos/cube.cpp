@@ -1446,8 +1446,8 @@ struct Demo {
         depth.mem_alloc.setAllocationSize(mem_reqs.size);
         depth.mem_alloc.setMemoryTypeIndex(0);
 
-        auto const pass =
-            memory_type_from_properties(mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits(0), &depth.mem_alloc.memoryTypeIndex);
+        auto const pass = memory_type_from_properties(mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eDeviceLocal,
+                                                      &depth.mem_alloc.memoryTypeIndex);
         VERIFY(pass);
 
         result = device.allocateMemory(&depth.mem_alloc, nullptr, &depth.mem);

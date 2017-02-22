@@ -1093,7 +1093,7 @@ static void demo_prepare_depth(struct demo *demo) {
     demo->depth.mem_alloc.memoryTypeIndex = 0;
 
     pass = memory_type_from_properties(demo, mem_reqs.memoryTypeBits,
-                                       0, /* No requirements */
+                                       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                                        &demo->depth.mem_alloc.memoryTypeIndex);
     assert(pass);
 
