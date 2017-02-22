@@ -39,8 +39,7 @@
 
 #include "Validation.h"
 #include <assert.h>
-#include <string.h>
-#include <string>
+#include <string.h>  // for memset and strcmp
 #include <vector>
 //#include <vulkan/vulkan.h>
 

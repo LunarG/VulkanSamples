@@ -3,14 +3,11 @@
 
 #include "WSIWindow.h"
 
-struct Demo;
-
 class CCube {
-    Demo* demo;
-
    public:
-    CCube();                                            // Create cube demo
-    ~CCube();                                           // clean up
+    //CCube();                                            // Create cube demo
+    //~CCube();                                           // clean up
+    void Init();                                        //
     void InitDevice(VkPhysicalDevice physical_device);  // Set the selected physical device
     void InitSwapchain(VkSurfaceKHR surface);           // Attach demo to given surface
     void Resize();                                      // Resize the framebuffer
