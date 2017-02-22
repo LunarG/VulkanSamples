@@ -588,8 +588,8 @@ void init_depth_buffer(struct sample_info &info) {
 
     mem_alloc.allocationSize = mem_reqs.size;
     /* Use the memory properties to determine the type of memory required */
-    pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits, 0, /* No requirements */
-                                       &mem_alloc.memoryTypeIndex);
+    pass =
+        memory_type_from_properties(info, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &mem_alloc.memoryTypeIndex);
     assert(pass);
 
     /* Allocate memory */

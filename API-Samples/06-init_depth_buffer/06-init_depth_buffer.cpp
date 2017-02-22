@@ -122,8 +122,8 @@ int sample_main(int argc, char *argv[]) {
 
     mem_alloc.allocationSize = mem_reqs.size;
     /* Use the memory properties to determine the type of memory required */
-    pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits, 0, /* No Requirements */
-                                       &mem_alloc.memoryTypeIndex);
+    pass =
+        memory_type_from_properties(info, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &mem_alloc.memoryTypeIndex);
     assert(pass);
 
     /* Allocate memory */
