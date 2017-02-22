@@ -21,6 +21,7 @@
 * Author: Jon Ashburn <jon@lunarg.com>
 * Author: Gwan-gyeong Mun <elongbug@gmail.com>
 * Author: Tony Barbour <tony@LunarG.com>
+* Author: Rene Lindsay <rene@LunarG.com>
 */
 
 //#define _GNU_SOURCE
@@ -135,7 +136,7 @@ struct texture_object {
 
 static const char *tex_files[] = {"lunarg.ppm"};
 
-static int validation_error = 0;
+//static int validation_error = 0;
 
 struct vktexcube_vs_uniform {
     // Must start with MVP
@@ -280,6 +281,7 @@ typedef struct {
 } SwapchainImageResources;
 
 struct demo {
+/*
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
 #define APP_NAME_STR_LEN 80
     HINSTANCE connection;         // hInstance - Windows Instance
@@ -307,6 +309,7 @@ struct demo {
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
     ANativeWindow *window;
 #endif
+*/
     VkSurfaceKHR surface;
     bool prepared;
     bool use_staging_buffer;
@@ -400,7 +403,7 @@ struct demo {
     uint32_t current_buffer;
     uint32_t queue_family_count;
 };
-
+/*
 VKAPI_ATTR VkBool32 VKAPI_CALL dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType, uint64_t srcObject, size_t location,
                                        int32_t msgCode, const char *pLayerPrefix, const char *pMsg, void *pUserData) {
     // clang-format off
@@ -463,16 +466,15 @@ VKAPI_ATTR VkBool32 VKAPI_CALL dbgFunc(VkFlags msgFlags, VkDebugReportObjectType
 
     //clang-format on
 
-    /*
-    * false indicates that layer should not bail-out of an
-    * API call that had validation failures. This may mean that the
-    * app dies inside the driver due to invalid parameter(s).
-    * That's what would happen without validation layers, so we'll
-    * keep that behavior here.
-    */
+    // false indicates that layer should not bail-out of an
+    // API call that had validation failures. This may mean that the
+    // app dies inside the driver due to invalid parameter(s).
+    // That's what would happen without validation layers, so we'll
+    // keep that behavior here.
+
     return false;
 }
-
+*/
 // Forward declaration:
 static void demo_resize(struct demo *demo);
 
@@ -946,13 +948,15 @@ static void demo_prepare_buffers(struct demo *demo) {
         // Application must settle for fewer images than desired:
         desiredNumOfSwapchainImages = surfCapabilities.maxImageCount;
     }
-
-    VkSurfaceTransformFlagsKHR preTransform;
+/*
+    //VkSurfaceTransformFlagsKHR preTransform;
+    VkSurfaceTransformFlagBitsKHR preTransform;
     if (surfCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) {
         preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
     } else {
         preTransform = surfCapabilities.currentTransform;
     }
+*/
 /*
     VkSwapchainCreateInfoKHR swapchain_ci = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
@@ -977,6 +981,13 @@ static void demo_prepare_buffers(struct demo *demo) {
         .clipped = true,
     };
 */
+
+    //VkCompositeAlphaFlagsKHR& alphas = surfCapabilities.supportedCompositeAlpha;
+
+    VkCompositeAlphaFlagBitsKHR composite_alpha =
+        (surfCapabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR) ?
+        VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR : VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+
     VkSwapchainCreateInfoKHR swapchain_ci = {};
     swapchain_ci.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     swapchain_ci.pNext = NULL;
@@ -986,8 +997,14 @@ static void demo_prepare_buffers(struct demo *demo) {
     swapchain_ci.imageColorSpace = demo->color_space;
     swapchain_ci.imageExtent = swapchainExtent;
     swapchain_ci.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    swapchain_ci.preTransform = (VkSurfaceTransformFlagBitsKHR)preTransform;
-    swapchain_ci.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    //swapchain_ci.preTransform = preTransform;
+    swapchain_ci.preTransform =surfCapabilities.currentTransform;
+
+    //swapchain_ci.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    //swapchain_ci.compositeAlpha = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;
+    swapchain_ci.compositeAlpha = composite_alpha;
+    //swapchain_ci.compositeAlpha = (VkCompositeAlphaFlagBitsKHR) (alphas & (-alphas));  // select first available option
+
     swapchain_ci.imageArrayLayers = 1;
     swapchain_ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     swapchain_ci.queueFamilyIndexCount = 0;
@@ -995,7 +1012,6 @@ static void demo_prepare_buffers(struct demo *demo) {
     swapchain_ci.presentMode = swapchainPresentMode;
     swapchain_ci.oldSwapchain = oldSwapchain;
     swapchain_ci.clipped = true;
-
 
     uint32_t i;
     err = vkCreateSwapchainKHR(demo->device, &swapchain_ci, NULL, &demo->swapchain);
@@ -1633,7 +1649,7 @@ static void demo_prepare_render_pass(struct demo *demo) {
 }
 
 //TODO: Merge shader reading
-#ifndef __ANDROID__
+//#ifndef __ANDROID__
 static VkShaderModule
 demo_prepare_shader_module(struct demo *demo, const uint32_t *code, size_t size) {
     VkShaderModule module;
@@ -1675,7 +1691,7 @@ char *demo_read_spv(const char *filename, size_t *psize) {
     fclose(fp);
     return (char*)shader_code;
 }
-#endif
+//#endif
 
 static VkShaderModule demo_prepare_vs(struct demo *demo) {
 /*
@@ -2175,7 +2191,7 @@ static void demo_resize(struct demo *demo) {
 }
 
 // On MS-Windows, make this a global, so it's available to WndProc()
-struct demo demo;
+//struct demo demo;
 
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
 static void demo_run(struct demo *demo) {
@@ -3301,14 +3317,12 @@ static void demo_init_vk_swapchain(struct demo *demo) {
     //GET_DEVICE_PROC_ADDR(demo->device, AcquireNextImageKHR);
     //GET_DEVICE_PROC_ADDR(demo->device, QueuePresentKHR);
 
-    vkGetDeviceQueue(demo->device, demo->graphics_queue_family_index, 0,
-                     &demo->graphics_queue);
+    vkGetDeviceQueue(demo->device, demo->graphics_queue_family_index, 0, &demo->graphics_queue);
 
     if (!demo->separate_present_queue) {
         demo->present_queue = demo->graphics_queue;
     } else {
-        vkGetDeviceQueue(demo->device, demo->present_queue_family_index, 0,
-                         &demo->present_queue);
+        vkGetDeviceQueue(demo->device, demo->present_queue_family_index, 0, &demo->present_queue);
     }
 
     // Get the list of VkFormat's that are supported:
@@ -3442,7 +3456,7 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
 
     demo->presentMode = VK_PRESENT_MODE_FIFO_KHR;
     demo->frameCount = INT32_MAX;
-/*
+
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--use_staging") == 0) {
             demo->use_staging_buffer = true;
@@ -3458,6 +3472,7 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
             demo->use_break = true;
             continue;
         }
+/*
         if (strcmp(argv[i], "--validate") == 0) {
             demo->validate = true;
             continue;
@@ -3466,6 +3481,7 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
             fprintf(stderr, "--xlib is deprecated and no longer does anything");
             continue;
         }
+*/
         if (strcmp(argv[i], "--c") == 0 && demo->frameCount == INT32_MAX &&
             i < argc - 1 && sscanf(argv[i + 1], "%d", &demo->frameCount) == 1 &&
             demo->frameCount >= 0) {
@@ -3492,7 +3508,7 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
         exit(1);
 #endif
     }
-
+/*
     demo_init_connection(demo);
 
     demo_init_vk(demo);
@@ -3592,10 +3608,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 
     return (int)msg.wParam;
 }
+/*
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
 #include <android/log.h>
 #include <android_native_app_glue.h>
-#include "android_util.h"
+//#include "android_util.h"
 
 static bool initialized = false;
 static bool active = false;
@@ -3694,8 +3711,8 @@ void android_main(struct android_app *app)
 
 }
 #else
-/*
-int main2(int argc, char **argv) {
+
+int main(int argc, char **argv) {
     struct demo demo;
 
     demo_init(&demo, argc, argv);
@@ -3735,61 +3752,30 @@ int main2(int argc, char **argv) {
 //===================CCube==================
 struct demo app;
 
-//CCube::CCube() {
-//    Demo = new demo;
-//    app = new demo;
-//}
-
-void CCube::Init() {
-    demo_init(&app, 0, NULL);
+void CCube::Init(int argc, char *argv[]) {
+    demo_init(&app, argc, argv);
 }
 
 void CCube::InitDevice(VkPhysicalDevice physical_device) {
-//    demo->set_physical_device(physical_device);
-
     app.gpu = physical_device;
 }
 
 void CCube::InitSwapchain(VkSurfaceKHR surface) {
-//    demo->init(0, 0);
-//    demo->init_vk_swapchain(surface);
-//    demo->prepare();
-
-
-
-    //demo_init(&app, 0, NULL);
-
     app.surface = surface;
-
     demo_init_vk(&app);
-
     demo_init_vk_swapchain(&app);
     demo_prepare(&app);
-
 }
 
 void CCube::Resize() {
-//    demo->resize();
-
     demo_resize(&app);
 }
 
 void CCube::Draw() {
-//    demo->update_data_buffer();
-//    demo->draw();
-
-
-//    demo_prepare_buffers
-    //if (!app->prepared) return;
     demo_draw(&app);
 }
 
 void CCube::Cleanup() {
-//    demo->cleanup();
     demo_cleanup(&app);
 }
-
-//CCube::~CCube() {
-//    delete Demo;
-//}
 //==========================================
