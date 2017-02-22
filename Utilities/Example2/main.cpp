@@ -63,6 +63,7 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
+    cube.Init();
     cube.InitDevice(*gpu);            // Run cube on given GPU
     cube.InitSwapchain(surface);      // Attach cube demo to wsi-window's surface
     while (Window.ProcessEvents()) {  // Main event loop, runs until window is closed.

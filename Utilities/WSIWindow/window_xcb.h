@@ -32,6 +32,7 @@
 //#include <X11/Xlib.h>           // XLib only
 #include <X11/Xlib-xcb.h>         // Xlib + XCB
 #include <xkbcommon/xkbcommon.h>  // Keyboard
+#include <stdlib.h>               // for free()
 //-------------------------------------------------
 #ifdef ENABLE_MULTITOUCH
 #include <X11/extensions/XInput2.h>  // MultiTouch
