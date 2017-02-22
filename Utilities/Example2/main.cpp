@@ -19,9 +19,16 @@
 *
 *--------------------------------------------------------------------------
 *
-* This sample project demonstrates how to use SWIWindow to create a Vulkan window,
-* and add event handlers for window, keyboard, mouse and multi-touchscreen events.
-* It works on Windows, Linux and Android.
+* This example project is based on LunarG's cube.c, but uses WSI-Window.
+* cube.c was modified to compile in c++, and all the windowing code was removed.
+*
+* The CDevices.cpp/h unit enumerates your vulkan-capable GPUs (VkPhysicalDevice),
+* to find which one can present to the given Vulkan surface (VkSurfaceKHR),
+* rather than just picking the first one.
+* eg. Your PC may be running the desktop on either the integrated on discreet GPU,
+* if you have one.  Typically, only the active GPU can present to the window.
+*
+* This Example project runs on Windows, Linux and Android.
 *
 */
 
@@ -46,24 +53,30 @@ class MyWindow : public WSIWindow {
 };
 
 int main(int argc, char *argv[]) {
-    setvbuf(stdout, NULL, _IONBF, 0);                       // Prevent printf buffering in QtCreator
-    CInstance instance(true);                               // Create a Vulkan Instance
-    instance.DebugReport.SetFlags(14);                      // Error+Perf+Warning flags
-    MyWindow Window;                                        // Create a Vulkan window
-    Window.SetTitle("WSI-Window Example2: Jeremy's cube");  // Set the window title
-    Window.SetWinSize(500, 500);                            // Set the window size (Desktop)
-    Window.SetWinPos(0, 0);                                 // Set the window position to top-left
-    CSurface surface = Window.GetSurface(instance);         // Create the Vulkan surface
-    CPhysicalDevices gpus(surface);                         // Enumerate GPUs, and their properties
-    CPhysicalDevice *gpu = gpus.FindPresentable();          // Find first GPU, capable of presenting to the given surface.
+    bool validate = false;
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--validate") == 0)
+        validate = true;
+    }
 
+    setvbuf(stdout, NULL, _IONBF, 0);                  // Prevent printf buffering in QtCreator
+    CInstance instance(validate);                      // Create a Vulkan Instance
+    instance.DebugReport.SetFlags(validate ? 14 : 0);  // Error+Perf+Warning flags
+    MyWindow Window;                                   // Create a Vulkan window
+    Window.SetTitle("WSI-Window Example2: cube.c");    // Set the window title
+    Window.SetWinSize(500, 500);                       // Set the window size (Desktop)
+    Window.SetWinPos(0, 0);                            // Set the window position to top-left
+    CSurface surface = Window.GetSurface(instance);    // Create the Vulkan surface
+    CPhysicalDevices gpus(surface);                    // Enumerate GPUs, and their properties
+    CPhysicalDevice *gpu = gpus.FindPresentable();     // Find which GPU, can present to the given surface.
+                                                       // (HINT: Its the one running the desktop.)
     gpus.Print();
     if (!gpu) {
         _LOGE("No devices can present to this suface.");
         return 0;
     }
 
-    cube.Init();
+    cube.Init(argc, argv);
     cube.InitDevice(*gpu);            // Run cube on given GPU
     cube.InitSwapchain(surface);      // Attach cube demo to wsi-window's surface
     while (Window.ProcessEvents()) {  // Main event loop, runs until window is closed.
