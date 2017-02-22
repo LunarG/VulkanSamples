@@ -1589,15 +1589,18 @@ void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height,
     /* create image */
     init(width, height, m_depth_stencil_fmt, usage, VK_IMAGE_TILING_OPTIMAL);
 
-    VkImageAspectFlags aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
-    if (vk_format_is_depth_and_stencil(format)) aspect |= VK_IMAGE_ASPECT_STENCIL_BIT;
+    VkImageAspectFlags aspect = VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_DEPTH_BIT;
+    if (vk_format_is_depth_only(format))
+        aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+    else if (vk_format_is_stencil_only(format))
+        aspect = VK_IMAGE_ASPECT_STENCIL_BIT;
 
     SetLayout(aspect, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
     view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     view_info.pNext = NULL;
     view_info.image = VK_NULL_HANDLE;
-    view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    view_info.subresourceRange.aspectMask = aspect;
     view_info.subresourceRange.baseMipLevel = 0;
     view_info.subresourceRange.levelCount = 1;
     view_info.subresourceRange.baseArrayLayer = 0;
