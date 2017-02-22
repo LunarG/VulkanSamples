@@ -3814,9 +3814,9 @@ TEST_F(VkLayerTest, FramebufferCreateErrors) {
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "vkCreateFramebuffer(): VkFramebufferCreateInfo attachmentCount of 2 "
-                                         "does not match attachmentCount of 1 of ");
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "vkCreateFramebuffer(): VkFramebufferCreateInfo attachmentCount of 2 does not match attachmentCount of 1 of ");
 
     // Create a renderPass with a single color attachment
     VkAttachmentReference attach = {};
@@ -3909,9 +3909,7 @@ TEST_F(VkLayerTest, FramebufferCreateErrors) {
     // Cause error due to mis-matched sample count between rp & fb
     fb_info.renderPass = rp;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         " has VK_SAMPLE_COUNT_1_BIT samples "
-                                         "that do not match the "
-                                         "VK_SAMPLE_COUNT_4_BIT ");
+                                         " has VK_SAMPLE_COUNT_1_BIT samples that do not match the VK_SAMPLE_COUNT_4_BIT ");
     err = vkCreateFramebuffer(device(), &fb_info, NULL, &fb);
 
     m_errorMonitor->VerifyFound();
@@ -3959,9 +3957,7 @@ TEST_F(VkLayerTest, FramebufferCreateErrors) {
     fb_info.height = 1024;
     fb_info.width = 1024;
     fb_info.layers = 2;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         " Attachment dimensions must be at "
-                                         "least as large. ");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, " Attachment dimensions must be at least as large. ");
     err = vkCreateFramebuffer(device(), &fb_info, NULL, &fb);
 
     m_errorMonitor->VerifyFound();
@@ -3988,11 +3984,9 @@ TEST_F(VkLayerTest, FramebufferCreateErrors) {
     fb_info.height = 100;
     fb_info.width = 100;
     fb_info.layers = 1;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         " has non-identy swizzle. All "
-                                         "framebuffer attachments must have "
-                                         "been created with the identity "
-                                         "swizzle. ");
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        " has non-identy swizzle. All framebuffer attachments must have been created with the identity swizzle. ");
     err = vkCreateFramebuffer(device(), &fb_info, NULL, &fb);
 
     m_errorMonitor->VerifyFound();
@@ -4008,7 +4002,8 @@ TEST_F(VkLayerTest, FramebufferCreateErrors) {
     fb_info.height = 100;
     fb_info.layers = 1;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00413);
-    m_errorMonitor->SetUnexpectedError(
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "has dimensions smaller than the corresponding framebuffer dimensions. Attachment dimensions must be at least as large. "
         "Here are the respective dimensions for attachment");
 
@@ -4024,7 +4019,8 @@ TEST_F(VkLayerTest, FramebufferCreateErrors) {
     fb_info.height = m_device->props.limits.maxFramebufferHeight + 1;
     fb_info.layers = 1;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00414);
-    m_errorMonitor->SetUnexpectedError(
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "has dimensions smaller than the corresponding framebuffer dimensions. Attachment dimensions must be at least as large. "
         "Here are the respective dimensions for attachment");
     err = vkCreateFramebuffer(device(), &fb_info, NULL, &fb);
@@ -4039,7 +4035,8 @@ TEST_F(VkLayerTest, FramebufferCreateErrors) {
     fb_info.height = 100;
     fb_info.layers = m_device->props.limits.maxFramebufferLayers + 1;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00415);
-    m_errorMonitor->SetUnexpectedError(
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "has dimensions smaller than the corresponding framebuffer dimensions. Attachment dimensions must be at least as large. "
         "Here are the respective dimensions for attachment");
     err = vkCreateFramebuffer(device(), &fb_info, NULL, &fb);
