@@ -3520,9 +3520,9 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
     mat4x4_look_at(demo->view_matrix, eye, origin, up);
     mat4x4_identity(demo->model_matrix);
 
-    demo->projection_matrix[1][1]*=-1;  // Flip projection matrix from GL to Vulkan orientation.
+    demo->projection_matrix[1][1] *= -1;  // Flip projection matrix from GL to Vulkan orientation.
 }
-
+/*
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
 // Include header required for parsing the command line options.
 #include <shellapi.h>
@@ -3593,7 +3593,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
         {
             done = true; // if found, quit app
         } else {
-            /* Translate and dispatch to event queue*/
+            // Translate and dispatch to event queue
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
@@ -3604,7 +3604,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 
     return (int)msg.wParam;
 }
-/*
+
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
 #include <android/log.h>
 #include <android_native_app_glue.h>
@@ -3740,9 +3740,9 @@ int main(int argc, char **argv) {
 
     return validation_error;
 }
-*/
-#endif
 
+#endif
+*/
 
 
 //===================CCube==================
@@ -3763,14 +3763,13 @@ void CCube::InitSwapchain(VkSurfaceKHR surface) {
     demo_prepare(&app);
 }
 
-void CCube::Resize() {
-    float aspect = (float)app.width / (float)app.height;
+void CCube::Resize(uint16_t w, uint16_t h) {
+    float aspect = (float)w / (float)h;
 #ifdef ANDROID
     if(aspect > 1.f) aspect=1.f/aspect;
 #endif
     mat4x4_perspective(app.projection_matrix, (float)degreesToRadians(45.0f), aspect, 0.1f, 100.0f);
-    app.projection_matrix[1][1]*=-1;  // Flip projection matrix from GL to Vulkan orientation.
-
+    app.projection_matrix[1][1] *= -1;  // Flip projection matrix from GL to Vulkan orientation.
     demo_resize(&app);
 }
 
