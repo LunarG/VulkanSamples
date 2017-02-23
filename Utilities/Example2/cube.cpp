@@ -100,26 +100,7 @@ bool in_callback = false;
         exit(1);                     \
     } while (0)
 #endif
-/*
-#define GET_INSTANCE_PROC_ADDR(inst, entrypoint)                                                              \
-    {                                                                                                         \
-        demo->fp##entrypoint = (PFN_vk##entrypoint)vkGetInstanceProcAddr(inst, "vk" #entrypoint);             \
-        if (demo->fp##entrypoint == NULL) {                                                                   \
-            ERR_EXIT("vkGetInstanceProcAddr failed to find vk" #entrypoint, "vkGetInstanceProcAddr Failure"); \
-        }                                                                                                     \
-    }
 
-static PFN_vkGetDeviceProcAddr g_gdpa = NULL;
-
-#define GET_DEVICE_PROC_ADDR(dev, entrypoint)                                                                    \
-    {                                                                                                            \
-        if (!g_gdpa) g_gdpa = (PFN_vkGetDeviceProcAddr)vkGetInstanceProcAddr(demo->inst, "vkGetDeviceProcAddr"); \
-        demo->fp##entrypoint = (PFN_vk##entrypoint)g_gdpa(dev, "vk" #entrypoint);                                \
-        if (demo->fp##entrypoint == NULL) {                                                                      \
-            ERR_EXIT("vkGetDeviceProcAddr failed to find vk" #entrypoint, "vkGetDeviceProcAddr Failure");        \
-        }                                                                                                        \
-    }
-*/
 /*
  * structure to track all objects related to a texture.
  */
@@ -282,35 +263,6 @@ typedef struct {
 } SwapchainImageResources;
 
 struct demo {
-/*
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
-#define APP_NAME_STR_LEN 80
-    HINSTANCE connection;         // hInstance - Windows Instance
-    char name[APP_NAME_STR_LEN];  // Name to put on the window/icon
-    HWND window;                  // hWnd - window handle
-    POINT minsize;                // minimum window size
-#elif defined(VK_USE_PLATFORM_XLIB_KHR)
-    Display *display;
-    Window xlib_window;
-    Atom xlib_wm_delete_window;
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
-    Display *display;
-    xcb_connection_t *connection;
-    xcb_screen_t *screen;
-    xcb_window_t xcb_window;
-    xcb_intern_atom_reply_t *atom_wm_delete_window;
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-    struct wl_display *display;
-    struct wl_registry *registry;
-    struct wl_compositor *compositor;
-    struct wl_surface *window;
-    struct wl_shell *shell;
-    struct wl_shell_surface *shell_surface;
-#elif defined(VK_USE_PLATFORM_MIR_KHR)
-#elif defined(VK_USE_PLATFORM_ANDROID_KHR)
-    ANativeWindow *window;
-#endif
-*/
     VkSurfaceKHR surface;
     bool prepared;
     bool use_staging_buffer;
@@ -339,15 +291,6 @@ struct demo {
     VkFormat format;
     VkColorSpaceKHR color_space;
 
-//    PFN_vkGetPhysicalDeviceSurfaceSupportKHR fpGetPhysicalDeviceSurfaceSupportKHR;
-//    PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR fpGetPhysicalDeviceSurfaceCapabilitiesKHR;
-//    PFN_vkGetPhysicalDeviceSurfaceFormatsKHR fpGetPhysicalDeviceSurfaceFormatsKHR;
-//    PFN_vkGetPhysicalDeviceSurfacePresentModesKHR fpGetPhysicalDeviceSurfacePresentModesKHR;
-//    PFN_vkCreateSwapchainKHR fpCreateSwapchainKHR;
-//    PFN_vkDestroySwapchainKHR fpDestroySwapchainKHR;
-//    PFN_vkGetSwapchainImagesKHR fpGetSwapchainImagesKHR;
-//    PFN_vkAcquireNextImageKHR fpAcquireNextImageKHR;
-//    PFN_vkQueuePresentKHR fpQueuePresentKHR;
     uint32_t swapchainImageCount;
     VkSwapchainKHR swapchain;
     SwapchainImageResources *swapchain_image_resources;
@@ -404,78 +347,7 @@ struct demo {
     uint32_t current_buffer;
     uint32_t queue_family_count;
 };
-/*
-VKAPI_ATTR VkBool32 VKAPI_CALL dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType, uint64_t srcObject, size_t location,
-                                       int32_t msgCode, const char *pLayerPrefix, const char *pMsg, void *pUserData) {
-    // clang-format off
-    char *message = (char *)malloc(strlen(pMsg) + 100);
 
-    assert(message);
-
-    if (msgFlags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT) {
-        sprintf(message, "INFORMATION: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
-        validation_error = 1;
-    } else if (msgFlags & VK_DEBUG_REPORT_WARNING_BIT_EXT) {
-        sprintf(message, "WARNING: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
-        validation_error = 1;
-    } else if (msgFlags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT) {
-        sprintf(message, "PERFORMANCE WARNING: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
-        validation_error = 1;
-    } else if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
-        sprintf(message, "ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
-        validation_error = 1;
-    } else if (msgFlags & VK_DEBUG_REPORT_DEBUG_BIT_EXT) {
-        sprintf(message, "DEBUG: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
-        validation_error = 1;
-    } else {
-        sprintf(message, "INFORMATION: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
-        validation_error = 1;
-    }
-
-#ifdef _WIN32
-
-    in_callback = true;
-    struct demo *demo = (struct demo*) pUserData;
-    if (!demo->suppress_popups)
-        MessageBox(NULL, message, "Alert", MB_OK);
-    in_callback = false;
-
-#elif defined(ANDROID)
-
-    if (msgFlags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT) {
-        __android_log_print(ANDROID_LOG_INFO,  APP_SHORT_NAME, "%s", message);
-    } else if (msgFlags & VK_DEBUG_REPORT_WARNING_BIT_EXT) {
-        __android_log_print(ANDROID_LOG_WARN,  APP_SHORT_NAME, "%s", message);
-    } else if (msgFlags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT) {
-        __android_log_print(ANDROID_LOG_WARN,  APP_SHORT_NAME, "%s", message);
-    } else if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
-        __android_log_print(ANDROID_LOG_ERROR, APP_SHORT_NAME, "%s", message);
-    } else if (msgFlags & VK_DEBUG_REPORT_DEBUG_BIT_EXT) {
-        __android_log_print(ANDROID_LOG_DEBUG, APP_SHORT_NAME, "%s", message);
-    } else {
-        __android_log_print(ANDROID_LOG_INFO,  APP_SHORT_NAME, "%s", message);
-    }
-
-#else
-
-    printf("%s\n", message);
-    fflush(stdout);
-
-#endif
-
-    free(message);
-
-    //clang-format on
-
-    // false indicates that layer should not bail-out of an
-    // API call that had validation failures. This may mean that the
-    // app dies inside the driver due to invalid parameter(s).
-    // That's what would happen without validation layers, so we'll
-    // keep that behavior here.
-
-    return false;
-}
-*/
 // Forward declaration:
 static void demo_resize(struct demo *demo);
 
@@ -607,11 +479,6 @@ static void demo_draw_build_cmd(struct demo *demo, VkCommandBuffer cmd_buf) {
     cmd_buf_info.pNext = NULL;
     cmd_buf_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
     cmd_buf_info.pInheritanceInfo = NULL;
-
-    //const VkClearValue clear_values[2] = {
-    //        [0] = {.color.float32 = {0.2f, 0.2f, 0.2f, 0.2f}},
-    //        [1] = {.depthStencil = {1.0f, 0}},
-    //};
 
     VkClearValue clear_values[2]={};
     clear_values[0].color = (VkClearColorValue{0.2f, 0.2f, 0.2f, 0.2f});
@@ -949,41 +816,6 @@ static void demo_prepare_buffers(struct demo *demo) {
         // Application must settle for fewer images than desired:
         desiredNumOfSwapchainImages = surfCapabilities.maxImageCount;
     }
-/*
-    //VkSurfaceTransformFlagsKHR preTransform;
-    VkSurfaceTransformFlagBitsKHR preTransform;
-    if (surfCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) {
-        preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
-    } else {
-        preTransform = surfCapabilities.currentTransform;
-    }
-*/
-/*
-    VkSwapchainCreateInfoKHR swapchain_ci = {
-        .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-        .pNext = NULL,
-        .surface = demo->surface,
-        .minImageCount = desiredNumOfSwapchainImages,
-        .imageFormat = demo->format,
-        .imageColorSpace = demo->color_space,
-        .imageExtent =
-            {
-             .width = swapchainExtent.width, .height = swapchainExtent.height,
-            },
-        .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-        .preTransform = preTransform,
-        .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-        .imageArrayLayers = 1,
-        .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
-        .queueFamilyIndexCount = 0,
-        .pQueueFamilyIndices = NULL,
-        .presentMode = swapchainPresentMode,
-        .oldSwapchain = oldSwapchain,
-        .clipped = true,
-    };
-*/
-
-    //VkCompositeAlphaFlagsKHR& alphas = surfCapabilities.supportedCompositeAlpha;
 
     VkCompositeAlphaFlagBitsKHR composite_alpha =
         (surfCapabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR) ?
@@ -998,12 +830,10 @@ static void demo_prepare_buffers(struct demo *demo) {
     swapchain_ci.imageColorSpace = demo->color_space;
     swapchain_ci.imageExtent = swapchainExtent;
     swapchain_ci.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    //swapchain_ci.preTransform = preTransform;
     swapchain_ci.preTransform =surfCapabilities.currentTransform;
-
-    //swapchain_ci.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    //swapchain_ci.compositeAlpha = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;
     swapchain_ci.compositeAlpha = composite_alpha;
+
+    //VkCompositeAlphaFlagsKHR& alphas = surfCapabilities.supportedCompositeAlpha;
     //swapchain_ci.compositeAlpha = (VkCompositeAlphaFlagBitsKHR) (alphas & (-alphas));  // select first available option
 
     swapchain_ci.imageArrayLayers = 1;
@@ -1150,39 +980,6 @@ static void demo_prepare_depth(struct demo *demo) {
 /* Load a ppm file into memory */
 bool loadTexture(const char *filename, uint8_t *rgba_data,
                  VkSubresourceLayout *layout, uint32_t *width, uint32_t *height) {
-/*
-#ifdef __ANDROID__
-#include <lunarg.ppm.h>
-    char *cPtr;
-    cPtr = (char*)lunarg_ppm;
-    if ((unsigned char*)cPtr >= (lunarg_ppm + lunarg_ppm_len) || strncmp(cPtr, "P6\n", 3)) {
-        return false;
-    }
-    while(strncmp(cPtr++, "\n", 1));
-    sscanf(cPtr, "%u %u", width, height);
-    if (rgba_data == NULL) {
-        return true;
-    }
-    while(strncmp(cPtr++, "\n", 1));
-    if ((unsigned char*)cPtr >= (lunarg_ppm + lunarg_ppm_len) || strncmp(cPtr, "255\n", 4)) {
-        return false;
-    }
-    while(strncmp(cPtr++, "\n", 1));
-
-    for (int y = 0; y < *height; y++) {
-        uint8_t *rowPtr = rgba_data;
-        for (int x = 0; x < *width; x++) {
-            memcpy(rowPtr, cPtr, 3);
-            rowPtr[3] = 255; // Alpha of 1
-            rowPtr += 4;
-            cPtr += 3;
-        }
-        rgba_data += layout->rowPitch;
-    }
-
-    return true;
-#else
-*/
     FILE *fPtr = fopen(filename, "rb");
     char header[256], *cPtr, *tmp;
 
@@ -1227,7 +1024,6 @@ bool loadTexture(const char *filename, uint8_t *rgba_data,
     }
     fclose(fPtr);
     return true;
-//#endif
 }
 
 static void demo_prepare_texture_image(struct demo *demo, const char *filename,
@@ -1556,38 +1352,6 @@ static void demo_prepare_render_pass(struct demo *demo) {
     // the renderpass, the color attachment's layout will be transitioned to
     // LAYOUT_PRESENT_SRC_KHR to be ready to present.  This is all done as part of
     // the renderpass, no barriers are necessary.
-/*
-    const VkAttachmentDescription attachments[2] = {
-            [0] =
-                {
-                 .format = demo->format,
-                 .flags = 0,
-                 .samples = VK_SAMPLE_COUNT_1_BIT,
-                 .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-                 .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-                 .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                 .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                 .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-                 .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                },
-            [1] =
-                {
-                 .format = demo->depth.format,
-                 .flags = 0,
-                 .samples = VK_SAMPLE_COUNT_1_BIT,
-                 .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-                 .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                 .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                 .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                 .initialLayout =
-                     VK_IMAGE_LAYOUT_UNDEFINED,
-                 .finalLayout =
-                     VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                },
-    };
-
-*/
-
 
     VkAttachmentDescription attachments[2] = {};
     attachments[0].format = demo->format;
@@ -1645,10 +1409,7 @@ static void demo_prepare_render_pass(struct demo *demo) {
     assert(!err);
 }
 
-//TODO: Merge shader reading
-//#ifndef __ANDROID__
-static VkShaderModule
-demo_prepare_shader_module(struct demo *demo, const uint32_t *code, size_t size) {
+static VkShaderModule demo_prepare_shader_module(struct demo *demo, const uint32_t *code, size_t size) {
     VkShaderModule module;
     VkShaderModuleCreateInfo moduleCreateInfo;
     VkResult U_ASSERT_ONLY err;
@@ -1688,21 +1449,8 @@ char *demo_read_spv(const char *filename, size_t *psize) {
     fclose(fp);
     return (char*)shader_code;
 }
-//#endif
 
 static VkShaderModule demo_prepare_vs(struct demo *demo) {
-/*
-#ifdef __ANDROID__
-    VkShaderModuleCreateInfo sh_info = {};
-    sh_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-
-#include "cube.vert.h"
-    sh_info.codeSize = sizeof(cube_vert);
-    sh_info.pCode = cube_vert;
-    VkResult U_ASSERT_ONLY err = vkCreateShaderModule(demo->device, &sh_info, NULL, &demo->vert_shader_module);
-    assert(!err);
-#else
-*/
     void *vertShaderCode;
     size_t size;
 
@@ -1715,24 +1463,10 @@ static VkShaderModule demo_prepare_vs(struct demo *demo) {
         demo_prepare_shader_module(demo, (uint32_t*)vertShaderCode, size);
 
     free(vertShaderCode);
-//#endif
-
     return demo->vert_shader_module;
 }
 
 static VkShaderModule demo_prepare_fs(struct demo *demo) {
-/*
-#ifdef __ANDROID__
-    VkShaderModuleCreateInfo sh_info = {};
-    sh_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-
-#include "cube.frag.h"
-    sh_info.codeSize = sizeof(cube_frag);
-    sh_info.pCode = cube_frag;
-    VkResult U_ASSERT_ONLY err = vkCreateShaderModule(demo->device, &sh_info, NULL, &demo->frag_shader_module);
-    assert(!err);
-#else
-*/
     void *fragShaderCode;
     size_t size;
 
@@ -1745,8 +1479,6 @@ static VkShaderModule demo_prepare_fs(struct demo *demo) {
         demo_prepare_shader_module(demo, (uint32_t*)fragShaderCode, size);
 
     free(fragShaderCode);
-//#endif
-
     return demo->frag_shader_module;
 }
 
@@ -2105,31 +1837,6 @@ static void demo_cleanup(struct demo *demo) {
     }
     vkDeviceWaitIdle(demo->device);
     vkDestroyDevice(demo->device, NULL);
-
-/*
-    if (demo->validate) {
-        demo->DestroyDebugReportCallback(demo->inst, demo->msg_callback, NULL);
-    }
-    vkDestroySurfaceKHR(demo->inst, demo->surface, NULL);
-    vkDestroyInstance(demo->inst, NULL);
-
-#if defined(VK_USE_PLATFORM_XLIB_KHR)
-    XDestroyWindow(demo->display, demo->xlib_window);
-    XCloseDisplay(demo->display);
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
-    xcb_destroy_window(demo->connection, demo->xcb_window);
-    xcb_disconnect(demo->connection);
-    free(demo->atom_wm_delete_window);
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-    wl_shell_surface_destroy(demo->shell_surface);
-    wl_surface_destroy(demo->window);
-    wl_shell_destroy(demo->shell);
-    wl_compositor_destroy(demo->compositor);
-    wl_registry_destroy(demo->registry);
-    wl_display_disconnect(demo->display);
-#elif defined(VK_USE_PLATFORM_MIR_KHR)
-#endif
-*/
 }
 
 static void demo_resize(struct demo *demo) {
@@ -2187,919 +1894,6 @@ static void demo_resize(struct demo *demo) {
     demo_prepare(demo);
 }
 
-// On MS-Windows, make this a global, so it's available to WndProc()
-//struct demo demo;
-
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
-static void demo_run(struct demo *demo) {
-    if (!demo->prepared)
-        return;
-
-    demo_draw(demo);
-    demo->curFrame++;
-    if (demo->frameCount != INT_MAX && demo->curFrame == demo->frameCount) {
-        PostQuitMessage(validation_error);
-    }
-}
-
-// MS-Windows event handling function:
-LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    switch (uMsg) {
-    case WM_CLOSE:
-        PostQuitMessage(validation_error);
-        break;
-    case WM_PAINT:
-        // The validation callback calls MessageBox which can generate paint
-        // events - don't make more Vulkan calls if we got here from the
-        // callback
-        if (!in_callback) {
-            demo_run(&demo);
-        }
-        break;
-    case WM_GETMINMAXINFO:     // set window's minimum size
-        ((MINMAXINFO*)lParam)->ptMinTrackSize = demo.minsize;
-        return 0;
-    case WM_SIZE:
-        // Resize the application to the new window size, except when
-        // it was minimized. Vulkan doesn't support images or swapchains
-        // with width=0 and height=0.
-        if (wParam != SIZE_MINIMIZED) {
-            demo.width = lParam & 0xffff;
-            demo.height = (lParam & 0xffff0000) >> 16;
-            demo_resize(&demo);
-        }
-        break;
-    default:
-        break;
-    }
-    return (DefWindowProc(hWnd, uMsg, wParam, lParam));
-}
-
-static void demo_create_window(struct demo *demo) {
-    WNDCLASSEX win_class;
-
-    // Initialize the window class structure:
-    win_class.cbSize = sizeof(WNDCLASSEX);
-    win_class.style = CS_HREDRAW | CS_VREDRAW;
-    win_class.lpfnWndProc = WndProc;
-    win_class.cbClsExtra = 0;
-    win_class.cbWndExtra = 0;
-    win_class.hInstance = demo->connection; // hInstance
-    win_class.hIcon = LoadIcon(NULL, IDI_APPLICATION);
-    win_class.hCursor = LoadCursor(NULL, IDC_ARROW);
-    win_class.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
-    win_class.lpszMenuName = NULL;
-    win_class.lpszClassName = demo->name;
-    win_class.hIconSm = LoadIcon(NULL, IDI_WINLOGO);
-    // Register window class:
-    if (!RegisterClassEx(&win_class)) {
-        // It didn't work, so try to give a useful error:
-        printf("Unexpected error trying to start the application!\n");
-        fflush(stdout);
-        exit(1);
-    }
-    // Create window with the registered class:
-    RECT wr = {0, 0, demo->width, demo->height};
-    AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
-    demo->window = CreateWindowEx(0,
-                                  demo->name,           // class name
-                                  demo->name,           // app name
-                                  WS_OVERLAPPEDWINDOW | // window style
-                                      WS_VISIBLE | WS_SYSMENU,
-                                  100, 100,           // x/y coords
-                                  wr.right - wr.left, // width
-                                  wr.bottom - wr.top, // height
-                                  NULL,               // handle to parent
-                                  NULL,               // handle to menu
-                                  demo->connection,   // hInstance
-                                  NULL);              // no extra parameters
-    if (!demo->window) {
-        // It didn't work, so try to give a useful error:
-        printf("Cannot create a window in which to draw!\n");
-        fflush(stdout);
-        exit(1);
-    }
-    // Window client area size must be at least 1 pixel high, to prevent crash.
-    demo->minsize.x = GetSystemMetrics(SM_CXMINTRACK);
-    demo->minsize.y = GetSystemMetrics(SM_CYMINTRACK)+1;
-}
-#elif defined(VK_USE_PLATFORM_XLIB_KHR)
-static void demo_create_xlib_window(struct demo *demo) {
-
-    XInitThreads();
-    demo->display = XOpenDisplay(NULL);
-    long visualMask = VisualScreenMask;
-    int numberOfVisuals;
-    XVisualInfo vInfoTemplate={};
-    vInfoTemplate.screen = DefaultScreen(demo->display);
-    XVisualInfo *visualInfo = XGetVisualInfo(demo->display, visualMask,
-                                             &vInfoTemplate, &numberOfVisuals);
-
-    Colormap colormap = XCreateColormap(
-                demo->display, RootWindow(demo->display, vInfoTemplate.screen),
-                visualInfo->visual, AllocNone);
-
-    XSetWindowAttributes windowAttributes={};
-    windowAttributes.colormap = colormap;
-    windowAttributes.background_pixel = 0xFFFFFFFF;
-    windowAttributes.border_pixel = 0;
-    windowAttributes.event_mask =
-            KeyPressMask | KeyReleaseMask | StructureNotifyMask | ExposureMask;
-
-    demo->xlib_window = XCreateWindow(
-                demo->display, RootWindow(demo->display, vInfoTemplate.screen), 0, 0,
-                demo->width, demo->height, 0, visualInfo->depth, InputOutput,
-                visualInfo->visual,
-                CWBackPixel | CWBorderPixel | CWEventMask | CWColormap, &windowAttributes);
-
-    XSelectInput(demo->display, demo->xlib_window, ExposureMask | KeyPressMask);
-    XMapWindow(demo->display, demo->xlib_window);
-    XFlush(demo->display);
-    demo->xlib_wm_delete_window =
-            XInternAtom(demo->display, "WM_DELETE_WINDOW", False);
-}
-static void demo_handle_xlib_event(struct demo *demo, const XEvent *event) {
-    switch(event->type) {
-    case ClientMessage:
-        if ((Atom)event->xclient.data.l[0] == demo->xlib_wm_delete_window)
-            demo->quit = true;
-        break;
-    case KeyPress:
-        switch (event->xkey.keycode) {
-        case 0x9: // Escape
-            demo->quit = true;
-            break;
-        case 0x71: // left arrow key
-            demo->spin_angle -= demo->spin_increment;
-            break;
-        case 0x72: // right arrow key
-            demo->spin_angle += demo->spin_increment;
-            break;
-        case 0x41: // space bar
-            demo->pause = !demo->pause;
-            break;
-        }
-        break;
-    case ConfigureNotify:
-        if ((demo->width != event->xconfigure.width) ||
-            (demo->height != event->xconfigure.height)) {
-            demo->width = event->xconfigure.width;
-            demo->height = event->xconfigure.height;
-            demo_resize(demo);
-        }
-        break;
-    default:
-        break;
-    }
-
-}
-
-static void demo_run_xlib(struct demo *demo) {
-
-    while (!demo->quit) {
-        XEvent event;
-
-        if (demo->pause) {
-            XNextEvent(demo->display, &event);
-            demo_handle_xlib_event(demo, &event);
-        }
-        while (XPending(demo->display) > 0) {
-            XNextEvent(demo->display, &event);
-            demo_handle_xlib_event(demo, &event);
-        }
-
-        demo_draw(demo);
-        demo->curFrame++;
-        if (demo->frameCount != INT32_MAX && demo->curFrame == demo->frameCount)
-            demo->quit = true;
-    }
-}
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
-static void demo_handle_xcb_event(struct demo *demo,
-                              const xcb_generic_event_t *event) {
-    uint8_t event_code = event->response_type & 0x7f;
-    switch (event_code) {
-    case XCB_EXPOSE:
-        // TODO: Resize window
-        break;
-    case XCB_CLIENT_MESSAGE:
-        if ((*(xcb_client_message_event_t *)event).data.data32[0] ==
-            (*demo->atom_wm_delete_window).atom) {
-            demo->quit = true;
-        }
-        break;
-    case XCB_KEY_RELEASE: {
-        const xcb_key_release_event_t *key =
-            (const xcb_key_release_event_t *)event;
-
-        switch (key->detail) {
-        case 0x9: // Escape
-            demo->quit = true;
-            break;
-        case 0x71: // left arrow key
-            demo->spin_angle -= demo->spin_increment;
-            break;
-        case 0x72: // right arrow key
-            demo->spin_angle += demo->spin_increment;
-            break;
-        case 0x41: // space bar
-            demo->pause = !demo->pause;
-            break;
-        }
-    } break;
-    case XCB_CONFIGURE_NOTIFY: {
-        const xcb_configure_notify_event_t *cfg =
-            (const xcb_configure_notify_event_t *)event;
-        if ((demo->width != cfg->width) || (demo->height != cfg->height)) {
-            demo->width = cfg->width;
-            demo->height = cfg->height;
-            demo_resize(demo);
-        }
-    } break;
-    default:
-        break;
-    }
-}
-
-static void demo_run_xcb(struct demo *demo) {
-    xcb_flush(demo->connection);
-
-    while (!demo->quit) {
-        xcb_generic_event_t *event;
-
-        if (demo->pause) {
-            event = xcb_wait_for_event(demo->connection);
-        }
-        else {
-            event = xcb_poll_for_event(demo->connection);
-        }
-        while (event) {
-            demo_handle_xcb_event(demo, event);
-            free(event);
-            event = xcb_poll_for_event(demo->connection);
-        }
-
-        demo_draw(demo);
-        demo->curFrame++;
-        if (demo->frameCount != INT32_MAX && demo->curFrame == demo->frameCount)
-            demo->quit = true;
-    }
-}
-
-static void demo_create_xcb_window(struct demo *demo) {
-    uint32_t value_mask, value_list[32];
-
-    demo->xcb_window = xcb_generate_id(demo->connection);
-
-    value_mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
-    value_list[0] = demo->screen->black_pixel;
-    value_list[1] = XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_EXPOSURE |
-                    XCB_EVENT_MASK_STRUCTURE_NOTIFY;
-
-    xcb_create_window(demo->connection, XCB_COPY_FROM_PARENT, demo->xcb_window,
-                      demo->screen->root, 0, 0, demo->width, demo->height, 0,
-                      XCB_WINDOW_CLASS_INPUT_OUTPUT, demo->screen->root_visual,
-                      value_mask, value_list);
-
-    /* Magic code that will send notification when window is destroyed */
-    xcb_intern_atom_cookie_t cookie =
-        xcb_intern_atom(demo->connection, 1, 12, "WM_PROTOCOLS");
-    xcb_intern_atom_reply_t *reply =
-        xcb_intern_atom_reply(demo->connection, cookie, 0);
-
-    xcb_intern_atom_cookie_t cookie2 =
-        xcb_intern_atom(demo->connection, 0, 16, "WM_DELETE_WINDOW");
-    demo->atom_wm_delete_window =
-        xcb_intern_atom_reply(demo->connection, cookie2, 0);
-
-    xcb_change_property(demo->connection, XCB_PROP_MODE_REPLACE, demo->xcb_window,
-                        (*reply).atom, 4, 32, 1,
-                        &(*demo->atom_wm_delete_window).atom);
-    free(reply);
-
-    xcb_map_window(demo->connection, demo->xcb_window);
-
-    // Force the x/y coordinates to 100,100 results are identical in consecutive
-    // runs
-    const uint32_t coords[] = {100, 100};
-    xcb_configure_window(demo->connection, demo->xcb_window,
-                         XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y, coords);
-}
-// VK_USE_PLATFORM_XCB_KHR
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-static void demo_run(struct demo *demo) {
-    while (!demo->quit) {
-        demo_draw(demo);
-        demo->curFrame++;
-        if (demo->frameCount != INT32_MAX && demo->curFrame == demo->frameCount)
-            demo->quit = true;
-    }
-}
-
-static void handle_ping(void *data UNUSED,
-                        struct wl_shell_surface *shell_surface,
-                        uint32_t serial) {
-    wl_shell_surface_pong(shell_surface, serial);
-}
-
-static void handle_configure(void *data UNUSED,
-                             struct wl_shell_surface *shell_surface UNUSED,
-                             uint32_t edges UNUSED, int32_t width UNUSED,
-                             int32_t height UNUSED) {}
-
-static void handle_popup_done(void *data UNUSED,
-                              struct wl_shell_surface *shell_surface UNUSED) {}
-
-static const struct wl_shell_surface_listener shell_surface_listener = {
-    handle_ping, handle_configure, handle_popup_done};
-
-static void demo_create_window(struct demo *demo) {
-    demo->window = wl_compositor_create_surface(demo->compositor);
-    if (!demo->window) {
-        printf("Can not create wayland_surface from compositor!\n");
-        fflush(stdout);
-        exit(1);
-    }
-
-    demo->shell_surface = wl_shell_get_shell_surface(demo->shell, demo->window);
-    if (!demo->shell_surface) {
-        printf("Can not get shell_surface from wayland_surface!\n");
-        fflush(stdout);
-        exit(1);
-    }
-    wl_shell_surface_add_listener(demo->shell_surface, &shell_surface_listener,
-                                  demo);
-    wl_shell_surface_set_toplevel(demo->shell_surface);
-    wl_shell_surface_set_title(demo->shell_surface, APP_SHORT_NAME);
-}
-#elif defined(VK_USE_PLATFORM_ANDROID_KHR)
-static void demo_run(struct demo *demo) {
-    if (!demo->prepared)
-        return;
-
-    demo_draw(demo);
-    demo->curFrame++;
-}
-#elif defined(VK_USE_PLATFORM_MIR_KHR)
-#elif defined(VK_USE_PLATFORM_DISPLAY_KHR)
-static VkResult demo_create_display_surface(struct demo *demo) {
-    VkResult U_ASSERT_ONLY err;
-    uint32_t display_count;
-    uint32_t mode_count;
-    uint32_t plane_count;
-    VkDisplayPropertiesKHR display_props;
-    VkDisplayKHR display;
-    VkDisplayModePropertiesKHR mode_props;
-    VkDisplayPlanePropertiesKHR *plane_props;
-    VkBool32 found_plane = VK_FALSE;
-    uint32_t plane_index;
-    VkExtent2D image_extent;
-    VkDisplaySurfaceCreateInfoKHR create_info;
-
-    // Get the first display
-    err = vkGetPhysicalDeviceDisplayPropertiesKHR(demo->gpu, &display_count, NULL);
-    assert(!err);
-
-    if (display_count == 0) {
-        printf("Cannot find any display!\n");
-        fflush(stdout);
-        exit(1);
-    }
-
-    display_count = 1;
-    err = vkGetPhysicalDeviceDisplayPropertiesKHR(demo->gpu, &display_count, &display_props);
-    assert(!err || (err == VK_INCOMPLETE));
-
-    display = display_props.display;
-
-    // Get the first mode of the display
-    err = vkGetDisplayModePropertiesKHR(demo->gpu, display, &mode_count, NULL);
-    assert(!err);
-
-    if (mode_count == 0) {
-        printf("Cannot find any mode for the display!\n");
-        fflush(stdout);
-        exit(1);
-    }
-
-    mode_count = 1;
-    err = vkGetDisplayModePropertiesKHR(demo->gpu, display, &mode_count, &mode_props);
-    assert(!err || (err == VK_INCOMPLETE));
-
-    // Get the list of planes
-    err = vkGetPhysicalDeviceDisplayPlanePropertiesKHR(demo->gpu, &plane_count, NULL);
-    assert(!err);
-
-    if (plane_count == 0) {
-        printf("Cannot find any plane!\n");
-        fflush(stdout);
-        exit(1);
-    }
-
-    plane_props = malloc(sizeof(VkDisplayPlanePropertiesKHR) * plane_count);
-    assert(plane_props);
-
-    err = vkGetPhysicalDeviceDisplayPlanePropertiesKHR(demo->gpu, &plane_count, plane_props);
-    assert(!err);
-
-    // Find a plane compatible with the display
-    for (plane_index = 0; plane_index < plane_count; plane_index++) {
-        uint32_t supported_count;
-        VkDisplayKHR *supported_displays;
-
-        // Disqualify planes that are bound to a different display
-        if ((plane_props[plane_index].currentDisplay != VK_NULL_HANDLE) &&
-            (plane_props[plane_index].currentDisplay != display)) {
-            continue;
-        }
-
-        err = vkGetDisplayPlaneSupportedDisplaysKHR(demo->gpu, plane_index, &supported_count, NULL);
-        assert(!err);
-
-        if (supported_count == 0) {
-            continue;
-        }
-
-        supported_displays = malloc(sizeof(VkDisplayKHR) * supported_count);
-        assert(supported_displays);
-
-        err = vkGetDisplayPlaneSupportedDisplaysKHR(demo->gpu, plane_index, &supported_count, supported_displays);
-        assert(!err);
-
-        for (uint32_t i = 0; i < supported_count; i++) {
-            if (supported_displays[i] == display) {
-                found_plane = VK_TRUE;
-                break;
-            }
-        }
-
-        free(supported_displays);
-
-        if (found_plane) {
-            break;
-        }
-    }
-
-    if (!found_plane) {
-        printf("Cannot find a plane compatible with the display!\n");
-        fflush(stdout);
-        exit(1);
-    }
-
-    free(plane_props);
-
-    image_extent.width = mode_props.parameters.visibleRegion.width;
-    image_extent.height = mode_props.parameters.visibleRegion.height;
-
-    create_info.sType = VK_STRUCTURE_TYPE_DISPLAY_SURFACE_CREATE_INFO_KHR;
-    create_info.pNext = NULL;
-    create_info.flags = 0;
-    create_info.displayMode = mode_props.displayMode;
-    create_info.planeIndex = plane_index;
-    create_info.planeStackIndex = plane_props[plane_index].currentStackIndex;
-    create_info.transform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
-    create_info.alphaMode = VK_DISPLAY_PLANE_ALPHA_OPAQUE_BIT_KHR;
-    create_info.globalAlpha = 1.0f;
-    create_info.imageExtent = image_extent;
-
-    return vkCreateDisplayPlaneSurfaceKHR(demo->inst, &create_info, NULL, &demo->surface);
-}
-
-static void demo_run_display(struct demo *demo)
-{
-    while (!demo->quit) {
-        demo_draw(demo);
-        demo->curFrame++;
-
-        if (demo->frameCount != INT32_MAX && demo->curFrame == demo->frameCount) {
-            demo->quit = true;
-        }
-    }
-}
-#endif
-
-
- // Return 1 (true) if all layer names specified in check_names
- // can be found in given layer properties.
- /*
-static VkBool32 demo_check_layers(uint32_t check_count, const char **check_names,
-                                  uint32_t layer_count,
-                                  VkLayerProperties *layers) {
-    for (uint32_t i = 0; i < check_count; i++) {
-        VkBool32 found = 0;
-        for (uint32_t j = 0; j < layer_count; j++) {
-            if (!strcmp(check_names[i], layers[j].layerName)) {
-                found = 1;
-                break;
-            }
-        }
-        if (!found) {
-            fprintf(stderr, "Cannot find layer: %s\n", check_names[i]);
-            return 0;
-        }
-    }
-    return 1;
-}
-*/
-/*
-static void demo_init_vk(struct demo *demo) {
-    VkResult err;
-    uint32_t instance_extension_count = 0;
-    uint32_t instance_layer_count = 0;
-    uint32_t validation_layer_count = 0;
-    const char **instance_validation_layers = NULL;
-    demo->enabled_extension_count = 0;
-    demo->enabled_layer_count = 0;
-
-    const char *instance_validation_layers_alt1[] = {
-        "VK_LAYER_LUNARG_standard_validation"
-    };
-
-    const char *instance_validation_layers_alt2[] = {
-        "VK_LAYER_GOOGLE_threading",       "VK_LAYER_LUNARG_parameter_validation",
-        "VK_LAYER_LUNARG_object_tracker",  "VK_LAYER_LUNARG_image",
-        "VK_LAYER_LUNARG_core_validation", "VK_LAYER_LUNARG_swapchain",
-        "VK_LAYER_GOOGLE_unique_objects"
-    };
-
-    // Look for validation layers
-    VkBool32 validation_found = 0;
-    if (demo->validate) {
-
-        err = vkEnumerateInstanceLayerProperties(&instance_layer_count, NULL);
-        assert(!err);
-
-        instance_validation_layers = instance_validation_layers_alt1;
-        if (instance_layer_count > 0) {
-            VkLayerProperties *instance_layers =
-                    (VkLayerProperties*)malloc(sizeof (VkLayerProperties) * instance_layer_count);
-            err = vkEnumerateInstanceLayerProperties(&instance_layer_count,
-                    instance_layers);
-            assert(!err);
-
-
-            validation_found = demo_check_layers(
-                    ARRAY_SIZE(instance_validation_layers_alt1),
-                    instance_validation_layers, instance_layer_count,
-                    instance_layers);
-            if (validation_found) {
-                demo->enabled_layer_count = ARRAY_SIZE(instance_validation_layers_alt1);
-                demo->enabled_layers[0] = "VK_LAYER_LUNARG_standard_validation";
-                validation_layer_count = 1;
-            } else {
-                // use alternative set of validation layers
-                instance_validation_layers = instance_validation_layers_alt2;
-                demo->enabled_layer_count = ARRAY_SIZE(instance_validation_layers_alt2);
-                validation_found = demo_check_layers(
-                    ARRAY_SIZE(instance_validation_layers_alt2),
-                    instance_validation_layers, instance_layer_count,
-                    instance_layers);
-                validation_layer_count =
-                    ARRAY_SIZE(instance_validation_layers_alt2);
-                for (uint32_t i = 0; i < validation_layer_count; i++) {
-                    demo->enabled_layers[i] = instance_validation_layers[i];
-                }
-            }
-            free(instance_layers);
-        }
-
-        if (!validation_found) {
-            ERR_EXIT("vkEnumerateInstanceLayerProperties failed to find "
-                    "required validation layer.\n\n"
-                    "Please look at the Getting Started guide for additional "
-                    "information.\n",
-                    "vkCreateInstance Failure");
-        }
-    }
-
-    // Look for instance extensions
-    VkBool32 surfaceExtFound = 0;
-    VkBool32 platformSurfaceExtFound = 0;
-    memset(demo->extension_names, 0, sizeof(demo->extension_names));
-
-    err = vkEnumerateInstanceExtensionProperties(
-        NULL, &instance_extension_count, NULL);
-    assert(!err);
-
-    if (instance_extension_count > 0) {
-        VkExtensionProperties *instance_extensions =
-            (VkExtensionProperties*)malloc(sizeof(VkExtensionProperties) * instance_extension_count);
-        err = vkEnumerateInstanceExtensionProperties(
-            NULL, &instance_extension_count, instance_extensions);
-        assert(!err);
-        for (uint32_t i = 0; i < instance_extension_count; i++) {
-            if (!strcmp(VK_KHR_SURFACE_EXTENSION_NAME,
-                        instance_extensions[i].extensionName)) {
-                surfaceExtFound = 1;
-                demo->extension_names[demo->enabled_extension_count++] =
-                    VK_KHR_SURFACE_EXTENSION_NAME;
-            }
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
-            if (!strcmp(VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
-                        instance_extensions[i].extensionName)) {
-                platformSurfaceExtFound = 1;
-                demo->extension_names[demo->enabled_extension_count++] =
-                    VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
-            }
-#elif defined(VK_USE_PLATFORM_XLIB_KHR)
-            if (!strcmp(VK_KHR_XLIB_SURFACE_EXTENSION_NAME,
-                        instance_extensions[i].extensionName)) {
-                platformSurfaceExtFound = 1;
-                demo->extension_names[demo->enabled_extension_count++] =
-                    VK_KHR_XLIB_SURFACE_EXTENSION_NAME;
-            }
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
-            if (!strcmp(VK_KHR_XCB_SURFACE_EXTENSION_NAME,
-                        instance_extensions[i].extensionName)) {
-                platformSurfaceExtFound = 1;
-                demo->extension_names[demo->enabled_extension_count++] =
-                    VK_KHR_XCB_SURFACE_EXTENSION_NAME;
-            }
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-            if (!strcmp(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME,
-                        instance_extensions[i].extensionName)) {
-                platformSurfaceExtFound = 1;
-                demo->extension_names[demo->enabled_extension_count++] =
-                    VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME;
-            }
-#elif defined(VK_USE_PLATFORM_MIR_KHR)
-#elif defined(VK_USE_PLATFORM_DISPLAY_KHR)
-            if (!strcmp(VK_KHR_DISPLAY_EXTENSION_NAME,
-                        instance_extensions[i].extensionName)) {
-                platformSurfaceExtFound = 1;
-                demo->extension_names[demo->enabled_extension_count++] =
-                    VK_KHR_DISPLAY_EXTENSION_NAME;
-            }
-#elif defined(VK_USE_PLATFORM_ANDROID_KHR)
-            if (!strcmp(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME,
-                        instance_extensions[i].extensionName)) {
-                platformSurfaceExtFound = 1;
-                demo->extension_names[demo->enabled_extension_count++] =
-                    VK_KHR_ANDROID_SURFACE_EXTENSION_NAME;
-            }
-#endif
-            if (!strcmp(VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
-                        instance_extensions[i].extensionName)) {
-                if (demo->validate) {
-                    demo->extension_names[demo->enabled_extension_count++] =
-                        VK_EXT_DEBUG_REPORT_EXTENSION_NAME;
-                }
-            }
-            assert(demo->enabled_extension_count < 64);
-        }
-
-        free(instance_extensions);
-    }
-
-    if (!surfaceExtFound) {
-        ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
-                 "the " VK_KHR_SURFACE_EXTENSION_NAME
-                 " extension.\n\nDo you have a compatible "
-                 "Vulkan installable client driver (ICD) installed?\nPlease "
-                 "look at the Getting Started guide for additional "
-                 "information.\n",
-                 "vkCreateInstance Failure");
-    }
-    if (!platformSurfaceExtFound) {
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
-        ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
-                 "the " VK_KHR_WIN32_SURFACE_EXTENSION_NAME
-                 " extension.\n\nDo you have a compatible "
-                 "Vulkan installable client driver (ICD) installed?\nPlease "
-                 "look at the Getting Started guide for additional "
-                 "information.\n",
-                 "vkCreateInstance Failure");
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
-        ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
-                 "the " VK_KHR_XCB_SURFACE_EXTENSION_NAME
-                 " extension.\n\nDo you have a compatible "
-                 "Vulkan installable client driver (ICD) installed?\nPlease "
-                 "look at the Getting Started guide for additional "
-                 "information.\n",
-                 "vkCreateInstance Failure");
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-        ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
-                 "the " VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME
-                 " extension.\n\nDo you have a compatible "
-                 "Vulkan installable client driver (ICD) installed?\nPlease "
-                 "look at the Getting Started guide for additional "
-                 "information.\n",
-                 "vkCreateInstance Failure");
-#elif defined(VK_USE_PLATFORM_MIR_KHR)
-#elif defined(VK_USE_PLATFORM_DISPLAY_KHR)
-        ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
-                 "the " VK_KHR_DISPLAY_EXTENSION_NAME
-                 " extension.\n\nDo you have a compatible "
-                 "Vulkan installable client driver (ICD) installed?\nPlease "
-                 "look at the Getting Started guide for additional "
-                 "information.\n",
-                 "vkCreateInstance Failure");
-#elif defined(VK_USE_PLATFORM_ANDROID_KHR)
-        ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
-                 "the " VK_KHR_ANDROID_SURFACE_EXTENSION_NAME
-                 " extension.\n\nDo you have a compatible "
-                 "Vulkan installable client driver (ICD) installed?\nPlease "
-                 "look at the Getting Started guide for additional "
-                 "information.\n",
-                 "vkCreateInstance Failure");
-#elif defined(VK_USE_PLATFORM_XLIB_KHR)
-        ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
-                 "the " VK_KHR_XLIB_SURFACE_EXTENSION_NAME
-                 " extension.\n\nDo you have a compatible "
-                 "Vulkan installable client driver (ICD) installed?\nPlease "
-                 "look at the Getting Started guide for additional "
-                 "information.\n",
-                 "vkCreateInstance Failure");
-#endif
-    }
-    VkApplicationInfo app = {};
-    app.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    app.pNext = NULL;
-    app.pApplicationName = APP_SHORT_NAME;
-    app.applicationVersion = 0;
-    app.pEngineName = APP_SHORT_NAME;
-    app.engineVersion = 0;
-    app.apiVersion = VK_API_VERSION_1_0;
-
-    VkInstanceCreateInfo inst_info = {};
-    inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    inst_info.pNext = NULL;
-    inst_info.pApplicationInfo = &app;
-    inst_info.enabledLayerCount = demo->enabled_layer_count;
-    inst_info.ppEnabledLayerNames = (const char *const *)instance_validation_layers;
-    inst_info.enabledExtensionCount = demo->enabled_extension_count;
-    inst_info.ppEnabledExtensionNames = (const char *const *)demo->extension_names;
-
-
-    // This is info for a temp callback to use during CreateInstance.
-    // After the instance is created, we use the instance-based
-    // function to register the final callback.
-
-    VkDebugReportCallbackCreateInfoEXT dbgCreateInfoTemp;
-    if (demo->validate) {
-        dbgCreateInfoTemp.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
-        dbgCreateInfoTemp.pNext = NULL;
-        dbgCreateInfoTemp.pfnCallback = demo->use_break ? BreakCallback : dbgFunc;
-        dbgCreateInfoTemp.pUserData = demo;
-        dbgCreateInfoTemp.flags =
-            VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
-        inst_info.pNext = &dbgCreateInfoTemp;
-    }
-
-    uint32_t gpu_count;
-
-    err = vkCreateInstance(&inst_info, NULL, &demo->inst);
-    if (err == VK_ERROR_INCOMPATIBLE_DRIVER) {
-        ERR_EXIT("Cannot find a compatible Vulkan installable client driver "
-                 "(ICD).\n\nPlease look at the Getting Started guide for "
-                 "additional information.\n",
-                 "vkCreateInstance Failure");
-    } else if (err == VK_ERROR_EXTENSION_NOT_PRESENT) {
-        ERR_EXIT("Cannot find a specified extension library"
-                 ".\nMake sure your layers path is set appropriately.\n",
-                 "vkCreateInstance Failure");
-    } else if (err) {
-        ERR_EXIT("vkCreateInstance failed.\n\nDo you have a compatible Vulkan "
-                 "installable client driver (ICD) installed?\nPlease look at "
-                 "the Getting Started guide for additional information.\n",
-                 "vkCreateInstance Failure");
-    }
-
-    // Make initial call to query gpu_count, then second call for gpu info
-    err = vkEnumeratePhysicalDevices(demo->inst, &gpu_count, NULL);
-    assert(!err && gpu_count > 0);
-
-    if (gpu_count > 0) {
-        VkPhysicalDevice *physical_devices = (VkPhysicalDevice*)malloc(sizeof(VkPhysicalDevice) * gpu_count);
-        err = vkEnumeratePhysicalDevices(demo->inst, &gpu_count, physical_devices);
-        assert(!err);
-        // For cube demo we just grab the first physical device
-        demo->gpu = physical_devices[0];
-        free(physical_devices);
-    } else {
-        ERR_EXIT("vkEnumeratePhysicalDevices reported zero accessible devices.\n\n"
-                 "Do you have a compatible Vulkan installable client driver (ICD) "
-                 "installed?\nPlease look at the Getting Started guide for "
-                 "additional information.\n",
-                 "vkEnumeratePhysicalDevices Failure");
-    }
-
-    // Look for device extensions
-    uint32_t device_extension_count = 0;
-    VkBool32 swapchainExtFound = 0;
-    demo->enabled_extension_count = 0;
-    memset(demo->extension_names, 0, sizeof(demo->extension_names));
-
-    err = vkEnumerateDeviceExtensionProperties(demo->gpu, NULL,
-                                               &device_extension_count, NULL);
-    assert(!err);
-
-    if (device_extension_count > 0) {
-        VkExtensionProperties *device_extensions =
-            (VkExtensionProperties*)malloc(sizeof(VkExtensionProperties) * device_extension_count);
-        err = vkEnumerateDeviceExtensionProperties(
-            demo->gpu, NULL, &device_extension_count, device_extensions);
-        assert(!err);
-
-        for (uint32_t i = 0; i < device_extension_count; i++) {
-            if (!strcmp(VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-                        device_extensions[i].extensionName)) {
-                swapchainExtFound = 1;
-                demo->extension_names[demo->enabled_extension_count++] =
-                    VK_KHR_SWAPCHAIN_EXTENSION_NAME;
-            }
-            assert(demo->enabled_extension_count < 64);
-        }
-
-        free(device_extensions);
-    }
-
-    if (!swapchainExtFound) {
-        ERR_EXIT("vkEnumerateDeviceExtensionProperties failed to find "
-                 "the " VK_KHR_SWAPCHAIN_EXTENSION_NAME
-                 " extension.\n\nDo you have a compatible "
-                 "Vulkan installable client driver (ICD) installed?\nPlease "
-                 "look at the Getting Started guide for additional "
-                 "information.\n",
-                 "vkCreateInstance Failure");
-    }
-
-    if (demo->validate) {
-        demo->CreateDebugReportCallback =
-            (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(
-                demo->inst, "vkCreateDebugReportCallbackEXT");
-        demo->DestroyDebugReportCallback =
-            (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(
-                demo->inst, "vkDestroyDebugReportCallbackEXT");
-        if (!demo->CreateDebugReportCallback) {
-            ERR_EXIT(
-                "GetProcAddr: Unable to find vkCreateDebugReportCallbackEXT\n",
-                "vkGetProcAddr Failure");
-        }
-        if (!demo->DestroyDebugReportCallback) {
-            ERR_EXIT(
-                "GetProcAddr: Unable to find vkDestroyDebugReportCallbackEXT\n",
-                "vkGetProcAddr Failure");
-        }
-        demo->DebugReportMessage =
-            (PFN_vkDebugReportMessageEXT)vkGetInstanceProcAddr(
-                demo->inst, "vkDebugReportMessageEXT");
-        if (!demo->DebugReportMessage) {
-            ERR_EXIT("GetProcAddr: Unable to find vkDebugReportMessageEXT\n",
-                     "vkGetProcAddr Failure");
-        }
-
-        VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
-        PFN_vkDebugReportCallbackEXT callback;
-        callback = demo->use_break ? BreakCallback : dbgFunc;
-        dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
-        dbgCreateInfo.pNext = NULL;
-        dbgCreateInfo.pfnCallback = callback;
-        dbgCreateInfo.pUserData = demo;
-        dbgCreateInfo.flags =
-            VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
-        err = demo->CreateDebugReportCallback(demo->inst, &dbgCreateInfo, NULL,
-                                              &demo->msg_callback);
-        switch (err) {
-        case VK_SUCCESS:
-            break;
-        case VK_ERROR_OUT_OF_HOST_MEMORY:
-            ERR_EXIT("CreateDebugReportCallback: out of host memory\n",
-                     "CreateDebugReportCallback Failure");
-            break;
-        default:
-            ERR_EXIT("CreateDebugReportCallback: unknown failure\n",
-                     "CreateDebugReportCallback Failure");
-            break;
-        }
-    }
-    vkGetPhysicalDeviceProperties(demo->gpu, &demo->gpu_props);
-
-    // Call with NULL data to get count
-    vkGetPhysicalDeviceQueueFamilyProperties(demo->gpu,
-                                             &demo->queue_family_count, NULL);
-    assert(demo->queue_family_count >= 1);
-
-    demo->queue_props = (VkQueueFamilyProperties *)malloc(
-        demo->queue_family_count * sizeof(VkQueueFamilyProperties));
-    vkGetPhysicalDeviceQueueFamilyProperties(
-        demo->gpu, &demo->queue_family_count, demo->queue_props);
-
-    // Query fine-grained feature support for this device.
-    //  If app has specific feature requirements it should check supported
-    //  features based on this query
-    VkPhysicalDeviceFeatures physDevFeatures;
-    vkGetPhysicalDeviceFeatures(demo->gpu, &physDevFeatures);
-
-    GET_INSTANCE_PROC_ADDR(demo->inst, GetPhysicalDeviceSurfaceSupportKHR);
-    GET_INSTANCE_PROC_ADDR(demo->inst, GetPhysicalDeviceSurfaceCapabilitiesKHR);
-    GET_INSTANCE_PROC_ADDR(demo->inst, GetPhysicalDeviceSurfaceFormatsKHR);
-    GET_INSTANCE_PROC_ADDR(demo->inst, GetPhysicalDeviceSurfacePresentModesKHR);
-    GET_INSTANCE_PROC_ADDR(demo->inst, GetSwapchainImagesKHR);
-}
-*/
-
-
 static void demo_init_vk(struct demo *demo) {
     //--Device extensions--
     // Look for device extensions
@@ -3142,7 +1936,6 @@ static void demo_init_vk(struct demo *demo) {
     }
     //---------------------
 
-
     vkGetPhysicalDeviceProperties(demo->gpu, &demo->gpu_props);
 
     vkGetPhysicalDeviceQueueFamilyProperties(demo->gpu, &demo->queue_family_count, NULL);
@@ -3159,10 +1952,6 @@ static void demo_init_vk(struct demo *demo) {
     VkPhysicalDeviceFeatures physDevFeatures;
     vkGetPhysicalDeviceFeatures(demo->gpu, &physDevFeatures);
 }
-
-
-
-
 
 static void demo_create_device(struct demo *demo) {
     VkResult U_ASSERT_ONLY err;
@@ -3200,63 +1989,6 @@ static void demo_create_device(struct demo *demo) {
 }
 
 static void demo_init_vk_swapchain(struct demo *demo) {
-
-    VkResult err = VK_SUCCESS;
-/*
-// Create a WSI surface for the window:
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
-    VkWin32SurfaceCreateInfoKHR createInfo;
-    createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-    createInfo.pNext = NULL;
-    createInfo.flags = 0;
-    createInfo.hinstance = demo->connection;
-    createInfo.hwnd = demo->window;
-
-    err =
-        vkCreateWin32SurfaceKHR(demo->inst, &createInfo, NULL, &demo->surface);
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-    VkWaylandSurfaceCreateInfoKHR createInfo;
-    createInfo.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
-    createInfo.pNext = NULL;
-    createInfo.flags = 0;
-    createInfo.display = demo->display;
-    createInfo.surface = demo->window;
-
-    err = vkCreateWaylandSurfaceKHR(demo->inst, &createInfo, NULL,
-                                    &demo->surface);
-#elif defined(VK_USE_PLATFORM_MIR_KHR)
-#elif defined(VK_USE_PLATFORM_ANDROID_KHR)
-    VkAndroidSurfaceCreateInfoKHR createInfo;
-    createInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
-    createInfo.pNext = NULL;
-    createInfo.flags = 0;
-    createInfo.window = (ANativeWindow*)(demo->window);
-
-    err = vkCreateAndroidSurfaceKHR(demo->inst, &createInfo, NULL, &demo->surface);
-#elif defined(VK_USE_PLATFORM_XLIB_KHR)
-    VkXlibSurfaceCreateInfoKHR createInfo;
-    createInfo.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
-    createInfo.pNext = NULL;
-    createInfo.flags = 0;
-    createInfo.dpy = demo->display;
-    createInfo.window = demo->xlib_window;
-
-    err = vkCreateXlibSurfaceKHR(demo->inst, &createInfo, NULL,
-                                     &demo->surface);
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
-    VkXcbSurfaceCreateInfoKHR createInfo;
-    createInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
-    createInfo.pNext = NULL;
-    createInfo.flags = 0;
-    createInfo.connection = demo->connection;
-    createInfo.window = demo->xcb_window;
-
-    err = vkCreateXcbSurfaceKHR(demo->inst, &createInfo, NULL, &demo->surface);
-#elif defined(VK_USE_PLATFORM_DISPLAY_KHR)
-    err = demo_create_display_surface(demo);
-#endif
-    assert(!err);
-*/
     // Iterate over each queue to learn whether it supports presenting:
     VkBool32 *supportsPresent =
         (VkBool32 *)malloc(demo->queue_family_count * sizeof(VkBool32));
@@ -3308,12 +2040,6 @@ static void demo_init_vk_swapchain(struct demo *demo) {
 
     demo_create_device(demo);
 
-    //GET_DEVICE_PROC_ADDR(demo->device, CreateSwapchainKHR);
-    //GET_DEVICE_PROC_ADDR(demo->device, DestroySwapchainKHR);
-    //GET_DEVICE_PROC_ADDR(demo->device, GetSwapchainImagesKHR);
-    //GET_DEVICE_PROC_ADDR(demo->device, AcquireNextImageKHR);
-    //GET_DEVICE_PROC_ADDR(demo->device, QueuePresentKHR);
-
     vkGetDeviceQueue(demo->device, demo->graphics_queue_family_index, 0, &demo->graphics_queue);
 
     if (!demo->separate_present_queue) {
@@ -3324,7 +2050,7 @@ static void demo_init_vk_swapchain(struct demo *demo) {
 
     // Get the list of VkFormat's that are supported:
     uint32_t formatCount;
-    err = vkGetPhysicalDeviceSurfaceFormatsKHR(demo->gpu, demo->surface, &formatCount, NULL);
+    VkResult err = vkGetPhysicalDeviceSurfaceFormatsKHR(demo->gpu, demo->surface, &formatCount, NULL);
     assert(!err);
     VkSurfaceFormatKHR *surfFormats =
         (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
@@ -3382,67 +2108,6 @@ static void demo_init_vk_swapchain(struct demo *demo) {
     vkGetPhysicalDeviceMemoryProperties(demo->gpu, &demo->memory_properties);
 }
 
-#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
-static void registry_handle_global(void *data, struct wl_registry *registry,
-                                   uint32_t name, const char *interface,
-                                   uint32_t version UNUSED) {
-    struct demo *demo = data;
-    if (strcmp(interface, "wl_compositor") == 0) {
-        demo->compositor =
-            wl_registry_bind(registry, name, &wl_compositor_interface, 3);
-        /* Todo: When xdg_shell protocol has stablized, we should move wl_shell
-         * tp xdg_shell */
-    } else if (strcmp(interface, "wl_shell") == 0) {
-        demo->shell = wl_registry_bind(registry, name, &wl_shell_interface, 1);
-    }
-}
-
-static void registry_handle_global_remove(void *data UNUSED,
-                                          struct wl_registry *registry UNUSED,
-                                          uint32_t name UNUSED) {}
-
-static const struct wl_registry_listener registry_listener = {
-    registry_handle_global, registry_handle_global_remove};
-#elif defined(VK_USE_PLATFORM_MIR_KHR)
-#endif
-/*
-static void demo_init_connection(struct demo *demo) {
-#if defined(VK_USE_PLATFORM_XCB_KHR)
-    const xcb_setup_t *setup;
-    xcb_screen_iterator_t iter;
-    int scr;
-
-    demo->connection = xcb_connect(NULL, &scr);
-    if (xcb_connection_has_error(demo->connection) > 0) {
-        printf("Cannot find a compatible Vulkan installable client driver "
-               "(ICD).\nExiting ...\n");
-        fflush(stdout);
-        exit(1);
-    }
-
-    setup = xcb_get_setup(demo->connection);
-    iter = xcb_setup_roots_iterator(setup);
-    while (scr-- > 0)
-        xcb_screen_next(&iter);
-
-    demo->screen = iter.data;
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-    demo->display = wl_display_connect(NULL);
-
-    if (demo->display == NULL) {
-        printf("Cannot find a compatible Vulkan installable client driver "
-               "(ICD).\nExiting ...\n");
-        fflush(stdout);
-        exit(1);
-    }
-
-    demo->registry = wl_display_get_registry(demo->display);
-    wl_registry_add_listener(demo->registry, &registry_listener, demo);
-    wl_display_dispatch(demo->display);
-#elif defined(VK_USE_PLATFORM_MIR_KHR)
-#endif
-}
-*/
 static void demo_init(struct demo *demo, int argc, char **argv) {
     vec3 eye = {0.0f, 3.0f, 5.0f};
     vec3 origin = {0, 0, 0};
@@ -3468,16 +2133,7 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
             demo->use_break = true;
             continue;
         }
-/*
-        if (strcmp(argv[i], "--validate") == 0) {
-            demo->validate = true;
-            continue;
-        }
-        if (strcmp(argv[i], "--xlib") == 0) {
-            fprintf(stderr, "--xlib is deprecated and no longer does anything");
-            continue;
-        }
-*/
+
         if (strcmp(argv[i], "--c") == 0 && demo->frameCount == INT32_MAX &&
             i < argc - 1 && sscanf(argv[i + 1], "%d", &demo->frameCount) == 1 &&
             demo->frameCount >= 0) {
@@ -3504,11 +2160,7 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
         exit(1);
 #endif
     }
-/*
-    demo_init_connection(demo);
 
-    demo_init_vk(demo);
-*/
     demo->width = 500;
     demo->height = 500;
 
@@ -3522,228 +2174,6 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
 
     demo->projection_matrix[1][1] *= -1;  // Flip projection matrix from GL to Vulkan orientation.
 }
-/*
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
-// Include header required for parsing the command line options.
-#include <shellapi.h>
-
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
-                   int nCmdShow) {
-    MSG msg;   // message
-    bool done; // flag saying when app is complete
-    int argc;
-    char **argv;
-
-    // Use the CommandLine functions to get the command line arguments.
-    // Unfortunately, Microsoft outputs
-    // this information as wide characters for Unicode, and we simply want the
-    // Ascii version to be compatible
-    // with the non-Windows side.  So, we have to convert the information to
-    // Ascii character strings.
-    LPWSTR *commandLineArgs = CommandLineToArgvW(GetCommandLineW(), &argc);
-    if (NULL == commandLineArgs) {
-        argc = 0;
-    }
-
-    if (argc > 0) {
-        argv = (char **)malloc(sizeof(char *) * argc);
-        if (argv == NULL) {
-            argc = 0;
-        } else {
-            for (int iii = 0; iii < argc; iii++) {
-                size_t wideCharLen = wcslen(commandLineArgs[iii]);
-                size_t numConverted = 0;
-
-                argv[iii] = (char *)malloc(sizeof(char) * (wideCharLen + 1));
-                if (argv[iii] != NULL) {
-                    wcstombs_s(&numConverted, argv[iii], wideCharLen + 1,
-                               commandLineArgs[iii], wideCharLen + 1);
-                }
-            }
-        }
-    } else {
-        argv = NULL;
-    }
-
-    demo_init(&demo, argc, argv);
-
-    // Free up the items we had to allocate for the command line arguments.
-    if (argc > 0 && argv != NULL) {
-        for (int iii = 0; iii < argc; iii++) {
-            if (argv[iii] != NULL) {
-                free(argv[iii]);
-            }
-        }
-        free(argv);
-    }
-
-    demo.connection = hInstance;
-    strncpy(demo.name, "cube", APP_NAME_STR_LEN);
-    demo_create_window(&demo);
-    demo_init_vk_swapchain(&demo);
-
-    demo_prepare(&demo);
-
-    done = false; // initialize loop condition variable
-
-    // main message loop
-    while (!done) {
-        PeekMessage(&msg, NULL, 0, 0, PM_REMOVE);
-        if (msg.message == WM_QUIT) // check for a quit message
-        {
-            done = true; // if found, quit app
-        } else {
-            // Translate and dispatch to event queue
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-        RedrawWindow(demo.window, NULL, NULL, RDW_INTERNALPAINT);
-    }
-
-    demo_cleanup(&demo);
-
-    return (int)msg.wParam;
-}
-
-#elif defined(VK_USE_PLATFORM_ANDROID_KHR)
-#include <android/log.h>
-#include <android_native_app_glue.h>
-//#include "android_util.h"
-
-static bool initialized = false;
-static bool active = false;
-struct demo demo;
-
-static int32_t processInput(struct android_app* app, AInputEvent* event) {
-    return 0;
-}
-
-static void processCommand(struct android_app* app, int32_t cmd) {
-    switch(cmd) {
-        case APP_CMD_INIT_WINDOW: {
-            if (app->window) {
-                // We're getting a new window.  If the app is starting up, we
-                // need to initialize.  If the app has already been
-                // initialized, that means that we lost our previous window,
-                // which means that we have a lot of work to do.  At a minimum,
-                // we need to destroy the swapchain and surface associated with
-                // the old window, and create a new surface and swapchain.
-                // However, since there are a lot of other objects/state that
-                // is tied to the swapchain, it's easiest to simply cleanup and
-                // start over (i.e. use a brute-force approach of re-starting
-                // the app)
-                if (demo.prepared) {
-                    demo_cleanup(&demo);
-                }
-
-                // Parse Intents into argc, argv
-                // Use the following key to send arguments, i.e.
-                // --es args "--validate"
-                const char key[] = "args";
-                char* appTag = (char*) APP_SHORT_NAME;
-                int argc = 0;
-                char** argv = get_args(app, key, appTag, &argc);
-
-                __android_log_print(ANDROID_LOG_INFO, appTag, "argc = %i", argc);
-                for (int i = 0; i < argc; i++)
-                    __android_log_print(ANDROID_LOG_INFO, appTag, "argv[%i] = %s", i, argv[i]);
-
-                demo_init(&demo, argc, argv);
-
-                // Free the argv malloc'd by get_args
-                for (int i = 0; i < argc; i++)
-                    free(argv[i]);
-
-                demo.window = (void*)app->window;
-                demo_init_vk_swapchain(&demo);
-                demo_prepare(&demo);
-                initialized = true;
-            }
-            break;
-        }
-        case APP_CMD_GAINED_FOCUS: {
-            active = true;
-            break;
-        }
-        case APP_CMD_LOST_FOCUS: {
-            active = false;
-            break;
-        }
-    }
-}
-
-void android_main(struct android_app *app)
-{
-    app_dummy();
-
-#ifdef ANDROID
-    int vulkanSupport = InitVulkan();
-    if (vulkanSupport == 0)
-        return;
-#endif
-
-    demo.prepared = false;
-
-    app->onAppCmd = processCommand;
-    app->onInputEvent = processInput;
-
-    while(1) {
-        int events;
-        struct android_poll_source* source;
-        while (ALooper_pollAll(active ? 0 : -1, NULL, &events, (void**)&source) >= 0) {
-            if (source) {
-                source->process(app, source);
-            }
-
-            if (app->destroyRequested != 0) {
-                demo_cleanup(&demo);
-                return;
-            }
-        }
-        if (initialized && active) {
-            demo_run(&demo);
-        }
-    }
-
-}
-#else
-
-int main(int argc, char **argv) {
-    struct demo demo;
-
-    demo_init(&demo, argc, argv);
-#if defined(VK_USE_PLATFORM_XCB_KHR)
-    demo_create_xcb_window(&demo);
-#elif defined(VK_USE_PLATFORM_XLIB_KHR)
-    demo_create_xlib_window(&demo);
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-    demo_create_window(&demo);
-#elif defined(VK_USE_PLATFORM_MIR_KHR)
-#endif
-
-    demo_init_vk_swapchain(&demo);
-
-    demo_prepare(&demo);
-
-#if defined(VK_USE_PLATFORM_XCB_KHR)
-    demo_run_xcb(&demo);
-#elif defined(VK_USE_PLATFORM_XLIB_KHR)
-    demo_run_xlib(&demo);
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-    demo_run(&demo);
-#elif defined(VK_USE_PLATFORM_MIR_KHR)
-#elif defined(VK_USE_PLATFORM_DISPLAY_KHR)
-    demo_run_display(&demo);
-#endif
-
-    demo_cleanup(&demo);
-
-    return validation_error;
-}
-
-#endif
-*/
-
 
 //===================CCube==================
 struct demo app;
