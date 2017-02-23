@@ -188,7 +188,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/API-Samples/utils)
 if(WIN32)
     include_directories(${CMAKE_SOURCE_DIR}\\..\\Include)
 else()
-    include_directories("/usr/include/vulkan" "${CMAKE_SOURCE_DIR}/include")
+    include_directories("/usr/include/vulkan" "${CMAKE_SOURCE_DIR}/../x86_64/include/vulkan" "${CMAKE_SOURCE_DIR}/include")
 endif()
 
 if(WIN32)
