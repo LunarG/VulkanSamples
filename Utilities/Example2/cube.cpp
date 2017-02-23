@@ -36,6 +36,7 @@
 #endif
 
 #ifdef _WIN32
+#pragma warning(disable: 4996)
 #pragma comment(linker, "/subsystem:windows")
 #define APP_NAME_STR_LEN 80
 #endif  // _WIN32
@@ -509,22 +510,24 @@ static void demo_flush_init_cmd(struct demo *demo) {
     assert(!err);
 
     VkFence fence;
-    VkFenceCreateInfo fence_ci = {.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-                                  .pNext = NULL,
-                                  .flags = 0};
+    VkFenceCreateInfo fence_ci = {};
+    fence_ci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fence_ci.pNext = NULL;
+    fence_ci.flags = 0;
     err = vkCreateFence(demo->device, &fence_ci, NULL, &fence);
     assert(!err);
 
-    const VkCommandBuffer cmd_bufs[] = {demo->cmd};
-    VkSubmitInfo submit_info = {.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-                                .pNext = NULL,
-                                .waitSemaphoreCount = 0,
-                                .pWaitSemaphores = NULL,
-                                .pWaitDstStageMask = NULL,
-                                .commandBufferCount = 1,
-                                .pCommandBuffers = cmd_bufs,
-                                .signalSemaphoreCount = 0,
-                                .pSignalSemaphores = NULL};
+    const VkCommandBuffer cmd_bufs[] = {demo->cmd};   
+    VkSubmitInfo submit_info = {};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.pNext = NULL;
+    submit_info.waitSemaphoreCount = 0;
+    submit_info.pWaitSemaphores = NULL;
+    submit_info.pWaitDstStageMask = NULL;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = cmd_bufs;
+    submit_info.signalSemaphoreCount = 0;
+    submit_info.pSignalSemaphores = NULL;
 
     err = vkQueueSubmit(demo->graphics_queue, 1, &submit_info, fence);
     assert(!err);
@@ -599,12 +602,12 @@ static void demo_set_image_layout(struct demo *demo, VkImage image,
 }
 
 static void demo_draw_build_cmd(struct demo *demo, VkCommandBuffer cmd_buf) {
-    const VkCommandBufferBeginInfo cmd_buf_info = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-        .pNext = NULL,
-        .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
-        .pInheritanceInfo = NULL,
-    };
+    VkCommandBufferBeginInfo cmd_buf_info = {};
+    cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    cmd_buf_info.pNext = NULL;
+    cmd_buf_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+    cmd_buf_info.pInheritanceInfo = NULL;
+
     //const VkClearValue clear_values[2] = {
     //        [0] = {.color.float32 = {0.2f, 0.2f, 0.2f, 0.2f}},
     //        [1] = {.depthStencil = {1.0f, 0}},
@@ -662,17 +665,17 @@ static void demo_draw_build_cmd(struct demo *demo, VkCommandBuffer cmd_buf) {
         // to transfer from present queue family back to graphics queue family at
         // the start of the next frame because we don't care about the image's
         // contents at that point.
-        VkImageMemoryBarrier image_ownership_barrier = {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-            .pNext = NULL,
-            .srcAccessMask = 0,
-            .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-            .oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-            .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-            .srcQueueFamilyIndex = demo->graphics_queue_family_index,
-            .dstQueueFamilyIndex = demo->present_queue_family_index,
-            .image = demo->swapchain_image_resources[demo->current_buffer].image,
-            .subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}};
+        VkImageMemoryBarrier image_ownership_barrier = {};
+        image_ownership_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        image_ownership_barrier.pNext = NULL;
+        image_ownership_barrier.srcAccessMask = 0;
+        image_ownership_barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        image_ownership_barrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        image_ownership_barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        image_ownership_barrier.srcQueueFamilyIndex = demo->graphics_queue_family_index;
+        image_ownership_barrier.dstQueueFamilyIndex = demo->present_queue_family_index;
+        image_ownership_barrier.image = demo->swapchain_image_resources[demo->current_buffer].image;
+        image_ownership_barrier.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
 
         vkCmdPipelineBarrier(cmd_buf,
                              VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
@@ -686,27 +689,26 @@ static void demo_draw_build_cmd(struct demo *demo, VkCommandBuffer cmd_buf) {
 void demo_build_image_ownership_cmd(struct demo *demo, int i) {
     VkResult U_ASSERT_ONLY err;
 
-    const VkCommandBufferBeginInfo cmd_buf_info = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-        .pNext = NULL,
-        .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
-        .pInheritanceInfo = NULL,
-    };
-    err = vkBeginCommandBuffer(demo->swapchain_image_resources[i].graphics_to_present_cmd,
-                               &cmd_buf_info);
+    VkCommandBufferBeginInfo cmd_buf_info = {};
+    cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    cmd_buf_info.pNext = NULL;
+    cmd_buf_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+    cmd_buf_info.pInheritanceInfo = NULL;
+
+    err = vkBeginCommandBuffer(demo->swapchain_image_resources[i].graphics_to_present_cmd, &cmd_buf_info);
     assert(!err);
 
-    VkImageMemoryBarrier image_ownership_barrier = {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-        .pNext = NULL,
-        .srcAccessMask = 0,
-        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-        .oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-        .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-        .srcQueueFamilyIndex = demo->graphics_queue_family_index,
-        .dstQueueFamilyIndex = demo->present_queue_family_index,
-        .image = demo->swapchain_image_resources[i].image,
-        .subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}};
+    VkImageMemoryBarrier image_ownership_barrier = {};
+    image_ownership_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    image_ownership_barrier.pNext = NULL;
+    image_ownership_barrier.srcAccessMask = 0;
+    image_ownership_barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    image_ownership_barrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    image_ownership_barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    image_ownership_barrier.srcQueueFamilyIndex = demo->graphics_queue_family_index;
+    image_ownership_barrier.dstQueueFamilyIndex = demo->present_queue_family_index;
+    image_ownership_barrier.image = demo->swapchain_image_resources[i].image;
+    image_ownership_barrier.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
 
     vkCmdPipelineBarrier(demo->swapchain_image_resources[i].graphics_to_present_cmd,
                          VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
@@ -814,17 +816,16 @@ static void demo_draw(struct demo *demo) {
 
     // If we are using separate queues we have to wait for image ownership,
     // otherwise wait for draw complete
-    VkPresentInfoKHR present = {
-        .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-        .pNext = NULL,
-        .waitSemaphoreCount = 1,
-        .pWaitSemaphores = (demo->separate_present_queue)
+    VkPresentInfoKHR present = {};
+    present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    present.pNext = NULL;
+    present.waitSemaphoreCount = 1;
+    present.pWaitSemaphores = (demo->separate_present_queue)
                                ? &demo->image_ownership_semaphores[demo->frame_index]
-                               : &demo->draw_complete_semaphores[demo->frame_index],
-        .swapchainCount = 1,
-        .pSwapchains = &demo->swapchain,
-        .pImageIndices = &demo->current_buffer,
-    };
+                               : &demo->draw_complete_semaphores[demo->frame_index];
+    present.swapchainCount = 1;
+    present.pSwapchains = &demo->swapchain;
+    present.pImageIndices = &demo->current_buffer;
 
     err = vkQueuePresentKHR(demo->present_queue, &present);
     demo->frame_index += 1;
@@ -1040,11 +1041,10 @@ static void demo_prepare_buffers(struct demo *demo) {
                                                demo->swapchainImageCount);
     assert(demo->swapchain_image_resources);
 
-    VkFenceCreateInfo fence_ci = {
-        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-        .pNext = NULL,
-        .flags = VK_FENCE_CREATE_SIGNALED_BIT
-    };
+    VkFenceCreateInfo fence_ci = {};
+    fence_ci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fence_ci.pNext = NULL;
+    fence_ci.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
     for (i = 0; i < demo->swapchainImageCount; i++) {
         VkImageViewCreateInfo color_image_view = {};
@@ -1290,11 +1290,11 @@ static void demo_prepare_texture_image(struct demo *demo, const char *filename,
     assert(!err);
 
     if (required_props & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) {
-        const VkImageSubresource subres = {
-            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .mipLevel = 0,
-            .arrayLayer = 0,
-        };
+        VkImageSubresource subres = {};
+        subres.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        subres.mipLevel = 0;
+        subres.arrayLayer = 0;
+
         VkSubresourceLayout layout;
         //uint8_t *data;
         void *data;
@@ -1381,14 +1381,13 @@ static void demo_prepare_textures(struct demo *demo) {
                                   VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                                   VK_PIPELINE_STAGE_TRANSFER_BIT);
 
-            VkImageCopy copy_region = {
-                .srcSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1},
-                .srcOffset = {0, 0, 0},
-                .dstSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1},
-                .dstOffset = {0, 0, 0},
-                .extent = {demo->staging_texture.tex_width,
-                           demo->staging_texture.tex_height, 1},
-            };
+            VkImageCopy copy_region = {};
+            copy_region.srcSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+            copy_region.srcOffset = {0, 0, 0};
+            copy_region.dstSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+            copy_region.dstOffset = {0, 0, 0};
+            copy_region.extent = {demo->staging_texture.tex_width, demo->staging_texture.tex_height, 1};
+
             vkCmdCopyImage(
                 demo->cmd, demo->staging_texture.image,
                 VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, demo->textures[i].image,
@@ -1480,9 +1479,7 @@ void demo_prepare_cube_data_buffers(struct demo *demo) {
     buf_info.size = sizeof(data);
 
     for (unsigned int i = 0; i < demo->swapchainImageCount; i++) {
-        err =
-            vkCreateBuffer(demo->device, &buf_info, NULL,
-                           &demo->swapchain_image_resources[i].uniform_buffer);
+        err = vkCreateBuffer(demo->device, &buf_info, NULL, &demo->swapchain_image_resources[i].uniform_buffer);
         assert(!err);
 
         vkGetBufferMemoryRequirements(demo->device,
@@ -1894,12 +1891,12 @@ static void demo_prepare_descriptor_set(struct demo *demo) {
     VkWriteDescriptorSet writes[2];
     VkResult U_ASSERT_ONLY err;
 
-    VkDescriptorSetAllocateInfo alloc_info = {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-        .pNext = NULL,
-        .descriptorPool = demo->desc_pool,
-        .descriptorSetCount = 1,
-        .pSetLayouts = &demo->desc_layout};
+    VkDescriptorSetAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    alloc_info.pNext = NULL;
+    alloc_info.descriptorPool = demo->desc_pool;
+    alloc_info.descriptorSetCount = 1;
+    alloc_info.pSetLayouts = &demo->desc_layout;
 
     VkDescriptorBufferInfo buffer_info;
     buffer_info.offset = 0;
@@ -2013,13 +2010,13 @@ static void demo_prepare(struct demo *demo) {
 
         err = vkCreateCommandPool(demo->device, &present_cmd_pool_info, NULL, &demo->present_cmd_pool);
         assert(!err);
-        const VkCommandBufferAllocateInfo present_cmd_info = {
-            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-            .pNext = NULL,
-            .commandPool = demo->present_cmd_pool,
-            .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-            .commandBufferCount = 1,
-        };
+        VkCommandBufferAllocateInfo present_cmd_info = {};
+        present_cmd_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        present_cmd_info.pNext = NULL;
+        present_cmd_info.commandPool = demo->present_cmd_pool;
+        present_cmd_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        present_cmd_info.commandBufferCount = 1;
+
         for (uint32_t i = 0; i < demo->swapchainImageCount; i++) {
             err = vkAllocateCommandBuffers(
                 demo->device, &present_cmd_info, &demo->swapchain_image_resources[i].graphics_to_present_cmd);
@@ -3349,19 +3346,18 @@ static void demo_init_vk_swapchain(struct demo *demo) {
 
     // Create semaphores to synchronize acquiring presentable buffers before
     // rendering and waiting for drawing to be complete before presenting
-    VkSemaphoreCreateInfo semaphoreCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-        .pNext = NULL,
-        .flags = 0,
-    };
+    VkSemaphoreCreateInfo semaphoreCreateInfo = {};
+    semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    semaphoreCreateInfo.pNext = NULL;
+    semaphoreCreateInfo.flags = 0;
 
     // Create fences that we can use to throttle if we get too far
     // ahead of the image presents
-    VkFenceCreateInfo fence_ci = {
-        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-        .pNext = NULL,
-        .flags = VK_FENCE_CREATE_SIGNALED_BIT
-    };
+    VkFenceCreateInfo fence_ci = {};
+    fence_ci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fence_ci.pNext = NULL;
+    fence_ci.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
     for (uint32_t i = 0; i < FRAME_LAG; i++) {
         err = vkCreateFence(demo->device, &fence_ci, NULL, &demo->fences[i]);
         assert(!err);
@@ -3769,6 +3765,9 @@ void CCube::InitSwapchain(VkSurfaceKHR surface) {
 
 void CCube::Resize() {
     float aspect = (float)app.width / (float)app.height;
+#ifdef ANDROID
+    if(aspect > 1.f) aspect=1.f/aspect;
+#endif
     mat4x4_perspective(app.projection_matrix, (float)degreesToRadians(45.0f), aspect, 0.1f, 100.0f);
     app.projection_matrix[1][1]*=-1;  // Flip projection matrix from GL to Vulkan orientation.
 
