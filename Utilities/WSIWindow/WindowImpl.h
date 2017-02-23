@@ -140,12 +140,13 @@ class CMTouch {
 //===========================CSurface===========================
 class CSurface {  // Vulkan Surface
    protected:
+    friend class CPhysicalDevices;
     VkInstance instance = 0;
     VkSurfaceKHR surface = 0;
 
    public:
-    operator VkSurfaceKHR() const { return surface; }              // Use this class as a VkSurfaceKHR
-    bool CanPresent(VkPhysicalDevice gpu, uint32_t queue_family);  // Checks if this surface can present the given queue type.
+    operator VkSurfaceKHR() const { return surface; }                    // Use this class as a VkSurfaceKHR
+    bool CanPresent(VkPhysicalDevice gpu, uint32_t queue_family) const;  // Checks if this surface can present the given queue type.
 };
 //==============================================================
 //=====================WSIWindow base class=====================

@@ -39,17 +39,17 @@
 
 #include "Validation.h"
 #include <assert.h>
-#include <string.h>
-#include <string>
+#include <string.h>  // for memset and strcmp
 #include <vector>
 //#include <vulkan/vulkan.h>
 
 using namespace std;
 typedef unsigned int uint;
+#define repeat(COUNT) for (uint32_t i = 0; i < COUNT; ++i)
 
 //--------------------------CPickList-----------------------------
 // Used for picking items from an enumerated list.
-// ( See: CLayers / CExtensions )
+// ( See: CLayers / CExtensions / CDeviceExtensions )
 class CPickList {
   protected:
     vector<char*> pick_list;
@@ -87,6 +87,15 @@ struct CExtensions : public CPickList {
     char* Name(uint32_t inx) { return item_list[inx].extensionName; }
     uint32_t Count() { return (uint32_t)item_list.size(); }
     void Print() { CPickList::Print("Extensions"); }
+};
+//----------------------------------------------------------------
+//----------------------Device Extensions-------------------------
+struct CDeviceExtensions : public CPickList {
+    vector<VkExtensionProperties> item_list;
+    void Init(VkPhysicalDevice phy, const char* layerName = NULL);
+    char* Name(uint32_t inx) { return item_list[inx].extensionName; }
+    uint32_t Count() { return (uint32_t)item_list.size(); }
+    void Print() { CPickList::Print("Device-Extensions"); }
 };
 //----------------------------------------------------------------
 //---------------------------CInstance----------------------------

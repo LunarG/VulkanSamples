@@ -173,7 +173,7 @@ void color(eColor color);
 #endif
 //======================================================================================================
 
-void ShowVkResult(VkResult err);       // Print warnings and errors.
+void ShowVkResult(VkResult err);  // Print warnings and errors.
 
 //============================================ CDebugReport ============================================
 class CDebugReport {
