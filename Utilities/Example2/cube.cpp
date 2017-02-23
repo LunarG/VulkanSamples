@@ -3524,7 +3524,7 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
     mat4x4_look_at(demo->view_matrix, eye, origin, up);
     mat4x4_identity(demo->model_matrix);
 
-    demo->projection_matrix[1][1]*=-1;  //Flip projection matrix from GL to Vulkan orientation.
+    demo->projection_matrix[1][1]*=-1;  // Flip projection matrix from GL to Vulkan orientation.
 }
 
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
@@ -3768,6 +3768,10 @@ void CCube::InitSwapchain(VkSurfaceKHR surface) {
 }
 
 void CCube::Resize() {
+    float aspect = (float)app.width / (float)app.height;
+    mat4x4_perspective(app.projection_matrix, (float)degreesToRadians(45.0f), aspect, 0.1f, 100.0f);
+    app.projection_matrix[1][1]*=-1;  // Flip projection matrix from GL to Vulkan orientation.
+
     demo_resize(&app);
 }
 
