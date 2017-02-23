@@ -37,7 +37,6 @@
 
 #ifdef _WIN32
 #pragma warning(disable: 4996)
-#pragma comment(linker, "/subsystem:windows")
 #define APP_NAME_STR_LEN 80
 #endif  // _WIN32
 

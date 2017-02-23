@@ -1,10 +1,6 @@
 #ifndef CUBE_H
 #define CUBE_H
 
-#ifdef WIN32
-#pragma comment(linker, "/SUBSYSTEM:CONSOLE /ENTRY:mainCRTStartup")  // Use main rather than WinMain
-#endif
-
 #include "WSIWindow.h"
 
 class CCube {
