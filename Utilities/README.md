@@ -10,4 +10,4 @@ The three included demos show how to use WSIWindow:
 
  - Example1 creates a Vulkan window, and shows how to handle keyboard, mouse, touch and window events.
  - Example2 is based on cube.c, and adds the CDevices module, for selecting the active VkPhysicalDevice.
- - Teapots is a clone of the Hologram demo, ported to use the WSIWindow utility. (REMOVED)
+
