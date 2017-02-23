@@ -49,7 +49,7 @@ class MyWindow : public WSIWindow {
     void OnMoveEvent(int16_t x, int16_t y) { printf("Window Move: x=%d y=%d\n", x, y); }
     void OnFocusEvent(bool hasFocus) { printf("Focus: %s\n", hasFocus ? "True" : "False"); }
     void OnCloseEvent() { printf("Window Closing.\n"); }
-    void OnResizeEvent(uint16_t width, uint16_t height) { cube.Resize(); }
+    void OnResizeEvent(uint16_t width, uint16_t height) { cube.Resize(width, height); }
 };
 
 int main(int argc, char *argv[]) {
