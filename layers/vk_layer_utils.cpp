@@ -189,7 +189,7 @@ const std::map<VkFormat, VULKAN_FORMAT_INFO> vk_format_table = {
     {VK_FORMAT_ETC2_R8G8B8A1_UNORM_BLOCK,   {8, 4, VK_FORMAT_COMPATIBILITY_CLASS_ETC2_RGBA_BIT}},
     {VK_FORMAT_ETC2_R8G8B8A1_SRGB_BLOCK,    {8, 4, VK_FORMAT_COMPATIBILITY_CLASS_ETC2_RGBA_BIT}},
     {VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK,   {16, 4, VK_FORMAT_COMPATIBILITY_CLASS_ETC2_EAC_RGBA_BIT}},
-    {VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK,    {16, 4, VK_FORMAT_COMPATIBILITY_CLASS_ETC2_EAC_RGBA_BIT}},
+    {VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK,    {8, 4, VK_FORMAT_COMPATIBILITY_CLASS_ETC2_EAC_RGBA_BIT}},
     {VK_FORMAT_EAC_R11_UNORM_BLOCK,         {8, 1, VK_FORMAT_COMPATIBILITY_CLASS_EAC_R_BIT}},
     {VK_FORMAT_EAC_R11_SNORM_BLOCK,         {8, 1, VK_FORMAT_COMPATIBILITY_CLASS_EAC_R_BIT}},
     {VK_FORMAT_EAC_R11G11_UNORM_BLOCK,      {16, 2, VK_FORMAT_COMPATIBILITY_CLASS_EAC_RG_BIT}},
@@ -559,8 +559,8 @@ VK_LAYER_EXPORT bool vk_format_is_compressed(VkFormat format) {
     }
 }
 
-// Return compressed block sizes for block compressed formats
-VK_LAYER_EXPORT VkExtent2D vk_format_compressed_block_size(VkFormat format) {
+// Return compressed texel block sizes for block compressed formats
+VK_LAYER_EXPORT VkExtent2D vk_format_compressed_texel_block_extents(VkFormat format) {
     VkExtent2D block_size = {1, 1};
     switch (format) {
         case VK_FORMAT_BC1_RGB_UNORM_BLOCK:
