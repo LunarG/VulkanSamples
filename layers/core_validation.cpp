@@ -6526,7 +6526,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreatePipelineLayout(VkDevice device, const VkPip
                                                     const VkAllocationCallbacks *pAllocator, VkPipelineLayout *pPipelineLayout) {
     bool skip_call = false;
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-    // TODO : Add checks for VALIDATION_ERRORS 865-871
+    // TODO : Add checks for VALIDATION_ERRORS 865-870
     // Push Constant Range checks
     uint32_t i, j;
     for (i = 0; i < pCreateInfo->pushConstantRangeCount; ++i) {
@@ -6540,20 +6540,14 @@ VKAPI_ATTR VkResult VKAPI_CALL CreatePipelineLayout(VkDevice device, const VkPip
     }
     if (skip_call) return VK_ERROR_VALIDATION_FAILED_EXT;
 
-    // Each range has been validated.  Now check for overlap between ranges (if they are good).
-    // There's no explicit Valid Usage language against this, so issue a warning instead of an error.
+    // As of 1.0.28, there is a VU that states that a stage flag cannot appear more than once in the list of push constant ranges.
     for (i = 0; i < pCreateInfo->pushConstantRangeCount; ++i) {
         for (j = i + 1; j < pCreateInfo->pushConstantRangeCount; ++j) {
-            const uint32_t minA = pCreateInfo->pPushConstantRanges[i].offset;
-            const uint32_t maxA = minA + pCreateInfo->pPushConstantRanges[i].size;
-            const uint32_t minB = pCreateInfo->pPushConstantRanges[j].offset;
-            const uint32_t maxB = minB + pCreateInfo->pPushConstantRanges[j].size;
-            if ((minA <= minB && maxA > minB) || (minB <= minA && maxB > minA)) {
-                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
-                                     __LINE__, DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS",
-                                     "vkCreatePipelineLayout() call has push constants with "
-                                     "overlapping ranges: %u:[%u, %u), %u:[%u, %u)",
-                                     i, minA, maxA, j, minB, maxB);
+            if (0 != (pCreateInfo->pPushConstantRanges[i].stageFlags & pCreateInfo->pPushConstantRanges[j].stageFlags)) {
+                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
+                                     __LINE__, VALIDATION_ERROR_00871, "DS",
+                                     "vkCreatePipelineLayout() Duplicate stage flags found in ranges %d and %d. %s", i, j,
+                                     validation_error_map[VALIDATION_ERROR_00871]);
             }
         }
     }
@@ -8541,69 +8535,25 @@ VKAPI_ATTR void VKAPI_CALL CmdPushConstants(VkCommandBuffer commandBuffer, VkPip
                         validation_error_map[VALIDATION_ERROR_00996]);
     }
 
-    // Check if push constant update is within any of the ranges with the same stage flags specified in pipeline layout.
-    auto pipeline_layout = getPipelineLayout(dev_data, layout);
-    // Coalesce adjacent/overlapping pipeline ranges before checking to see if incoming range is
-    // contained in the pipeline ranges.
-    // Build a {start, end} span list for ranges with matching stage flags.
-    const auto &ranges = pipeline_layout->push_constant_ranges;
-    struct span {
-        uint32_t start;
-        uint32_t end;
-    };
-    std::vector<span> spans;
-    spans.reserve(ranges.size());
-    for (const auto &iter : ranges) {
-        if (iter.stageFlags == stageFlags) {
-            spans.push_back({iter.offset, iter.offset + iter.size});
-        }
-    }
-    if (spans.size() == 0) {
-        // There were no ranges that matched the stageFlags.
-        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                        VALIDATION_ERROR_00988, "DS", "vkCmdPushConstants() stageFlags = 0x%" PRIx32
-                                                      " do not match "
-                                                      "the stageFlags in any of the ranges in pipeline layout 0x%" PRIx64 ". %s",
-                        (uint32_t)stageFlags, (uint64_t)layout, validation_error_map[VALIDATION_ERROR_00988]);
-    } else {
-        // Sort span list by start value.
-        struct comparer {
-            bool operator()(struct span i, struct span j) { return i.start < j.start; }
-        } my_comparer;
-        std::sort(spans.begin(), spans.end(), my_comparer);
-
-        // Examine two spans at a time.
-        std::vector<span>::iterator current = spans.begin();
-        std::vector<span>::iterator next = current + 1;
-        while (next != spans.end()) {
-            if (current->end < next->start) {
-                // There is a gap; cannot coalesce. Move to the next two spans.
-                ++current;
-                ++next;
-            } else {
-                // Coalesce the two spans.  The start of the next span
-                // is within the current span, so pick the larger of
-                // the end values to extend the current span.
-                // Then delete the next span and set next to the span after it.
-                current->end = max(current->end, next->end);
-                next = spans.erase(next);
-            }
-        }
-
-        // Now we can check if the incoming range is within any of the spans.
-        bool contained_in_a_range = false;
-        for (uint32_t i = 0; i < spans.size(); ++i) {
-            if ((offset >= spans[i].start) && ((uint64_t)offset + (uint64_t)size <= (uint64_t)spans[i].end)) {
-                contained_in_a_range = true;
+    // Check if specified push constant range falls within a pipeline-defined range which has matching stageFlags.
+    // The spec doesn't seem to disallow having multiple push constant ranges with the
+    // same offset and size, but different stageFlags.  So we can't just check the
+    // stageFlags in the first range with matching offset and size.
+    if (!skip) {
+        const auto &ranges = getPipelineLayout(dev_data, layout)->push_constant_ranges;
+        bool found_matching_range = false;
+        for (const auto &range : ranges) {
+            if ((stageFlags == range.stageFlags) && (offset >= range.offset) && (offset + size <= range.offset + range.size)) {
+                found_matching_range = true;
                 break;
             }
         }
-        if (!contained_in_a_range) {
-            skip |= log_msg(
-                dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                VALIDATION_ERROR_00988, "DS", "vkCmdPushConstants() Push constant range [%d, %d) with stageFlags = 0x%" PRIx32
-                                              " not within flag-matching ranges in pipeline layout 0x%" PRIx64 ". %s",
-                offset, offset + size, (uint32_t)stageFlags, (uint64_t)layout, validation_error_map[VALIDATION_ERROR_00988]);
+        if (!found_matching_range) {
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                            VALIDATION_ERROR_00988, "DS", "vkCmdPushConstants() stageFlags = 0x%" PRIx32
+                                                          " do not match the stageFlags in any of the ranges with"
+                                                          " offset = %d and size = %d in pipeline layout 0x%" PRIx64 ". %s",
+                            (uint32_t)stageFlags, offset, size, (uint64_t)layout, validation_error_map[VALIDATION_ERROR_00988]);
         }
     }
     lock.unlock();

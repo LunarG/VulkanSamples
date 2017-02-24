@@ -6910,69 +6910,60 @@ TEST_F(VkLayerTest, InvalidPushConstants) {
         vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
     }
 
-    // Check for overlapping ranges
+    // Check for duplicate stage flags in a list of push constant ranges.
+    // A shader can only have one push constant block and that block is mapped
+    // to the push constant range that has that shader's stage flag set.
+    // The shader's stage flag can only appear once in all the ranges, so the
+    // implementation can find the one and only range to map it to.
     const uint32_t ranges_per_test = 5;
-    struct OverlappingRangeTestCase {
+    struct DuplicateStageFlagsTestCase {
         VkPushConstantRange const ranges[ranges_per_test];
         std::vector<char const *> const msg;
     };
-
-    const std::array<OverlappingRangeTestCase, 5> overlapping_range_tests = {
-        {{{{VK_SHADER_STAGE_VERTEX_BIT, 0, 4},
-           {VK_SHADER_STAGE_VERTEX_BIT, 0, 4},
-           {VK_SHADER_STAGE_VERTEX_BIT, 0, 4},
-           {VK_SHADER_STAGE_VERTEX_BIT, 0, 4},
-           {VK_SHADER_STAGE_VERTEX_BIT, 0, 4}},
-          {"vkCreatePipelineLayout() call has push constants with overlapping ranges: 0:[0, 4), 1:[0, 4)",
-           "vkCreatePipelineLayout() call has push constants with overlapping ranges: 0:[0, 4), 2:[0, 4)",
-           "vkCreatePipelineLayout() call has push constants with overlapping ranges: 0:[0, 4), 3:[0, 4)",
-           "vkCreatePipelineLayout() call has push constants with overlapping ranges: 0:[0, 4), 4:[0, 4)",
-           "vkCreatePipelineLayout() call has push constants with overlapping ranges: 1:[0, 4), 2:[0, 4)",
-           "vkCreatePipelineLayout() call has push constants with overlapping ranges: 1:[0, 4), 3:[0, 4)",
-           "vkCreatePipelineLayout() call has push constants with overlapping ranges: 1:[0, 4), 4:[0, 4)",
-           "vkCreatePipelineLayout() call has push constants with overlapping ranges: 2:[0, 4), 3:[0, 4)",
-           "vkCreatePipelineLayout() call has push constants with overlapping ranges: 2:[0, 4), 4:[0, 4)",
-           "vkCreatePipelineLayout() call has push constants with overlapping ranges: 3:[0, 4), 4:[0, 4)"}},
-         {
-             {{VK_SHADER_STAGE_VERTEX_BIT, 0, 4},
-              {VK_SHADER_STAGE_VERTEX_BIT, 4, 4},
-              {VK_SHADER_STAGE_VERTEX_BIT, 8, 4},
-              {VK_SHADER_STAGE_VERTEX_BIT, 12, 8},
-              {VK_SHADER_STAGE_VERTEX_BIT, 16, 4}},
-             {"vkCreatePipelineLayout() call has push constants with overlapping ranges: 3:[12, 20), 4:[16, 20)"},
-         },
-         {
-             {{VK_SHADER_STAGE_VERTEX_BIT, 16, 4},
-              {VK_SHADER_STAGE_VERTEX_BIT, 12, 8},
-              {VK_SHADER_STAGE_VERTEX_BIT, 8, 4},
-              {VK_SHADER_STAGE_VERTEX_BIT, 4, 4},
+    // Overlapping ranges are OK, but a stage flag can appear only once.
+    const std::array<DuplicateStageFlagsTestCase, 3> duplicate_stageFlags_tests = {
+        {
+            {{{VK_SHADER_STAGE_VERTEX_BIT, 0, 4},
+              {VK_SHADER_STAGE_VERTEX_BIT, 0, 4},
+              {VK_SHADER_STAGE_VERTEX_BIT, 0, 4},
+              {VK_SHADER_STAGE_VERTEX_BIT, 0, 4},
               {VK_SHADER_STAGE_VERTEX_BIT, 0, 4}},
-             {"vkCreatePipelineLayout() call has push constants with overlapping ranges: 0:[16, 20), 1:[12, 20)"},
-         },
-         {
-             {{VK_SHADER_STAGE_VERTEX_BIT, 16, 4},
-              {VK_SHADER_STAGE_VERTEX_BIT, 8, 4},
-              {VK_SHADER_STAGE_VERTEX_BIT, 4, 4},
-              {VK_SHADER_STAGE_VERTEX_BIT, 12, 8},
-              {VK_SHADER_STAGE_VERTEX_BIT, 0, 4}},
-             {"vkCreatePipelineLayout() call has push constants with overlapping ranges: 0:[16, 20), 3:[12, 20)"},
-         },
-         {
-             {{VK_SHADER_STAGE_VERTEX_BIT, 16, 4},
-              {VK_SHADER_STAGE_VERTEX_BIT, 32, 4},
-              {VK_SHADER_STAGE_VERTEX_BIT, 4, 96},
-              {VK_SHADER_STAGE_VERTEX_BIT, 40, 8},
-              {VK_SHADER_STAGE_VERTEX_BIT, 52, 4}},
-             {"vkCreatePipelineLayout() call has push constants with overlapping ranges: 0:[16, 20), 2:[4, 100)",
-              "vkCreatePipelineLayout() call has push constants with overlapping ranges: 1:[32, 36), 2:[4, 100)",
-              "vkCreatePipelineLayout() call has push constants with overlapping ranges: 2:[4, 100), 3:[40, 48)",
-              "vkCreatePipelineLayout() call has push constants with overlapping ranges: 2:[4, 100), 4:[52, 56)"},
-         }}};
+             {
+                 "vkCreatePipelineLayout() Duplicate stage flags found in ranges 0 and 1.",
+                 "vkCreatePipelineLayout() Duplicate stage flags found in ranges 0 and 2.",
+                 "vkCreatePipelineLayout() Duplicate stage flags found in ranges 0 and 3.",
+                 "vkCreatePipelineLayout() Duplicate stage flags found in ranges 0 and 4.",
+                 "vkCreatePipelineLayout() Duplicate stage flags found in ranges 1 and 2.",
+                 "vkCreatePipelineLayout() Duplicate stage flags found in ranges 1 and 3.",
+                 "vkCreatePipelineLayout() Duplicate stage flags found in ranges 1 and 4.",
+                 "vkCreatePipelineLayout() Duplicate stage flags found in ranges 2 and 3.",
+                 "vkCreatePipelineLayout() Duplicate stage flags found in ranges 2 and 4.",
+                 "vkCreatePipelineLayout() Duplicate stage flags found in ranges 3 and 4.",
+             }},
+            {{{VK_SHADER_STAGE_VERTEX_BIT, 0, 4},
+              {VK_SHADER_STAGE_GEOMETRY_BIT, 0, 4},
+              {VK_SHADER_STAGE_FRAGMENT_BIT, 0, 4},
+              {VK_SHADER_STAGE_VERTEX_BIT, 0, 4},
+              {VK_SHADER_STAGE_GEOMETRY_BIT, 0, 4}},
+             {
+                 "vkCreatePipelineLayout() Duplicate stage flags found in ranges 0 and 3.",
+                 "vkCreatePipelineLayout() Duplicate stage flags found in ranges 1 and 4.",
+             }},
+            {{{VK_SHADER_STAGE_FRAGMENT_BIT, 0, 4},
+              {VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, 0, 4},
+              {VK_SHADER_STAGE_VERTEX_BIT, 0, 4},
+              {VK_SHADER_STAGE_VERTEX_BIT, 0, 4},
+              {VK_SHADER_STAGE_GEOMETRY_BIT, 0, 4}},
+             {
+                 "vkCreatePipelineLayout() Duplicate stage flags found in ranges 2 and 3.",
+             }},
+        },
+    };
 
-    for (const auto &iter : overlapping_range_tests) {
+    for (const auto &iter : duplicate_stageFlags_tests) {
         pipeline_layout_ci.pPushConstantRanges = iter.ranges;
         pipeline_layout_ci.pushConstantRangeCount = ranges_per_test;
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT, iter.msg.begin(), iter.msg.end());
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, iter.msg.begin(), iter.msg.end());
         err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
         m_errorMonitor->VerifyFound();
         if (VK_SUCCESS == err) {
@@ -6983,98 +6974,51 @@ TEST_F(VkLayerTest, InvalidPushConstants) {
     //
     // CmdPushConstants tests
     //
-    const uint8_t dummy_values[100] = {};
 
-    // Check for invalid offset and size and if range is within layout range(s)
-    const std::array<PipelineLayoutTestCase, 11> cmd_range_tests = {{
-        {{VK_SHADER_STAGE_VERTEX_BIT, 0, 0}, "vkCmdPushConstants: parameter size must be greater than 0"},
-        {{VK_SHADER_STAGE_VERTEX_BIT, 0, 1},
-         "vkCmdPushConstants() call has push constants index 0 with size 1. "
-         "Size must be a multiple of 4."},
-        {{VK_SHADER_STAGE_VERTEX_BIT, 4, 1},
-         "vkCmdPushConstants() call has push constants index 0 with size 1. "
-         "Size must be a multiple of 4."},
-        {{VK_SHADER_STAGE_VERTEX_BIT, 1, 4},
-         "vkCmdPushConstants() call has push constants with offset 1. "
-         "Offset must be a multiple of 4."},
-        {{VK_SHADER_STAGE_VERTEX_BIT, 1, 4},
-         "vkCmdPushConstants() call has push constants with offset 1. "
-         "Offset must be a multiple of 4."},
-        {{VK_SHADER_STAGE_VERTEX_BIT, 0, 20},
-         "vkCmdPushConstants() Push constant range [0, 20) with stageFlags = "
-         "0x1 not within flag-matching ranges in pipeline layout"},
-        {{VK_SHADER_STAGE_VERTEX_BIT, 60, 8},
-         "vkCmdPushConstants() Push constant range [60, 68) with stageFlags = "
-         "0x1 not within flag-matching ranges in pipeline layout"},
-        {{VK_SHADER_STAGE_VERTEX_BIT, 76, 8},
-         "vkCmdPushConstants() Push constant range [76, 84) with stageFlags = "
-         "0x1 not within flag-matching ranges in pipeline layout"},
-        {{VK_SHADER_STAGE_VERTEX_BIT, 0, 80},
-         "vkCmdPushConstants() Push constant range [0, 80) with stageFlags = "
-         "0x1 not within flag-matching ranges in pipeline layout"},
-        {{VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, 0, 4},
-         "vkCmdPushConstants() stageFlags = 0x2 do not match the stageFlags in "
-         "any of the ranges in pipeline layout"},
-        {{VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, 0, 16},
-         "vkCmdPushConstants() stageFlags = 0x3 do not match the stageFlags in "
-         "any of the ranges in pipeline layout"},
-    }};
-
-    m_commandBuffer->BeginCommandBuffer();
-    m_commandBuffer->BeginRenderPass(m_renderPassBeginInfo);
-
-    // Setup ranges: [0,16) [64,80)
+    // Setup a pipeline layout with ranges: [0,16) [64,80)
     const VkPushConstantRange pc_range2[] = {
-        {VK_SHADER_STAGE_VERTEX_BIT, 64, 16}, {VK_SHADER_STAGE_VERTEX_BIT, 0, 16},
+        {VK_SHADER_STAGE_VERTEX_BIT, 64, 16}, {VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16},
     };
     pipeline_layout_ci.pushConstantRangeCount = sizeof(pc_range2) / sizeof(VkPushConstantRange);
     pipeline_layout_ci.pPushConstantRanges = pc_range2;
     err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
     ASSERT_VK_SUCCESS(err);
-    for (const auto &iter : cmd_range_tests) {
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, iter.msg);
-        vkCmdPushConstants(m_commandBuffer->GetBufferHandle(), pipeline_layout, iter.range.stageFlags, iter.range.offset,
-                           iter.range.size, dummy_values);
-        m_errorMonitor->VerifyFound();
-    }
+
+    const uint8_t dummy_values[100] = {};
+
+    m_commandBuffer->BeginCommandBuffer();
+    m_commandBuffer->BeginRenderPass(m_renderPassBeginInfo);
 
     // Check for invalid stage flag
+    // Note that VU 00996 isn't reached due to parameter validation
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "vkCmdPushConstants: value of stageFlags must not be 0");
     vkCmdPushConstants(m_commandBuffer->GetBufferHandle(), pipeline_layout, 0, 0, 16, dummy_values);
     m_errorMonitor->VerifyFound();
-    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
 
-    // overlapping range tests with cmd
-    const std::array<PipelineLayoutTestCase, 3> cmd_overlap_tests = {{
-        {{VK_SHADER_STAGE_VERTEX_BIT, 0, 20},
-         "vkCmdPushConstants() Push constant range [0, 20) with stageFlags = "
-         "0x1 not within flag-matching ranges in pipeline layout"},
-        {{VK_SHADER_STAGE_VERTEX_BIT, 16, 4},
-         "vkCmdPushConstants() Push constant range [16, 20) with stageFlags = "
-         "0x1 not within flag-matching ranges in pipeline layout"},
-        {{VK_SHADER_STAGE_VERTEX_BIT, 40, 16},
-         "vkCmdPushConstants() Push constant range [40, 56) with stageFlags = "
-         "0x1 not within flag-matching ranges in pipeline layout"},
+    m_errorMonitor->ExpectSuccess();
+    vkCmdPushConstants(m_commandBuffer->GetBufferHandle(), pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16, dummy_values);
+    m_errorMonitor->VerifyNotFound();
+    m_errorMonitor->ExpectSuccess();
+    vkCmdPushConstants(m_commandBuffer->GetBufferHandle(), pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 64, 16, dummy_values);
+    m_errorMonitor->VerifyNotFound();
+    const std::array<VkPushConstantRange, 6> cmd_range_tests = {{
+        {VK_SHADER_STAGE_FRAGMENT_BIT, 64, 16},
+        {VK_SHADER_STAGE_VERTEX_BIT, 0, 16},
+        {VK_SHADER_STAGE_GEOMETRY_BIT, 0, 16},
+        {VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16},
+        {VK_SHADER_STAGE_VERTEX_BIT, 24, 16},
+        {VK_SHADER_STAGE_VERTEX_BIT, 8, 4},
     }};
-    // Setup ranges:  [0,16), [20,36), [36,44), [44,52), [80,92)
-    const VkPushConstantRange pc_range3[] = {
-        {VK_SHADER_STAGE_VERTEX_BIT, 20, 16}, {VK_SHADER_STAGE_VERTEX_BIT, 0, 16}, {VK_SHADER_STAGE_VERTEX_BIT, 44, 8},
-        {VK_SHADER_STAGE_VERTEX_BIT, 80, 12}, {VK_SHADER_STAGE_VERTEX_BIT, 36, 8},
-    };
-    pipeline_layout_ci.pushConstantRangeCount = sizeof(pc_range3) / sizeof(VkPushConstantRange);
-    pipeline_layout_ci.pPushConstantRanges = pc_range3;
-    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
-    ASSERT_VK_SUCCESS(err);
-    for (const auto &iter : cmd_overlap_tests) {
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, iter.msg);
-        vkCmdPushConstants(m_commandBuffer->GetBufferHandle(), pipeline_layout, iter.range.stageFlags, iter.range.offset,
-                           iter.range.size, dummy_values);
+    for (const auto &iter : cmd_range_tests) {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00988);
+        vkCmdPushConstants(m_commandBuffer->GetBufferHandle(), pipeline_layout, iter.stageFlags, iter.offset, iter.size,
+                           dummy_values);
         m_errorMonitor->VerifyFound();
     }
-    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
 
     m_commandBuffer->EndRenderPass();
     m_commandBuffer->EndCommandBuffer();
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
 }
 
 TEST_F(VkLayerTest, DescriptorSetCompatibility) {
@@ -22224,93 +22168,6 @@ TEST_F(VkPositiveLayerTest, PSOPolygonModeValid) {
     m_errorMonitor->VerifyNotFound();
 
     vkDestroyPipelineLayout(test_device.device(), pipeline_layout, NULL);
-}
-
-TEST_F(VkPositiveLayerTest, ValidPushConstants) {
-    VkResult err;
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    ASSERT_NO_FATAL_FAILURE(InitViewport());
-    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-
-    VkPipelineLayout pipeline_layout;
-    VkPushConstantRange pc_range = {};
-    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
-    pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipeline_layout_ci.pushConstantRangeCount = 1;
-    pipeline_layout_ci.pPushConstantRanges = &pc_range;
-
-    //
-    // Check for invalid push constant ranges in pipeline layouts.
-    //
-    struct PipelineLayoutTestCase {
-        VkPushConstantRange const range;
-        char const *msg;
-    };
-
-    // Check for overlapping ranges
-    const uint32_t ranges_per_test = 5;
-    struct OverlappingRangeTestCase {
-        VkPushConstantRange const ranges[ranges_per_test];
-        char const *msg;
-    };
-
-    // Run some positive tests to make sure overlap checking in the layer is OK
-    const std::array<OverlappingRangeTestCase, 2> overlapping_range_tests_pos = {{{{{VK_SHADER_STAGE_VERTEX_BIT, 0, 4},
-                                                                                    {VK_SHADER_STAGE_VERTEX_BIT, 4, 4},
-                                                                                    {VK_SHADER_STAGE_VERTEX_BIT, 8, 4},
-                                                                                    {VK_SHADER_STAGE_VERTEX_BIT, 12, 4},
-                                                                                    {VK_SHADER_STAGE_VERTEX_BIT, 16, 4}},
-                                                                                   ""},
-                                                                                  {{{VK_SHADER_STAGE_VERTEX_BIT, 92, 24},
-                                                                                    {VK_SHADER_STAGE_VERTEX_BIT, 80, 4},
-                                                                                    {VK_SHADER_STAGE_VERTEX_BIT, 64, 8},
-                                                                                    {VK_SHADER_STAGE_VERTEX_BIT, 4, 16},
-                                                                                    {VK_SHADER_STAGE_VERTEX_BIT, 0, 4}},
-                                                                                   ""}}};
-    for (const auto &iter : overlapping_range_tests_pos) {
-        pipeline_layout_ci.pPushConstantRanges = iter.ranges;
-        m_errorMonitor->ExpectSuccess();
-        err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
-        m_errorMonitor->VerifyNotFound();
-        if (VK_SUCCESS == err) {
-            vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
-        }
-    }
-
-    //
-    // CmdPushConstants tests
-    //
-    const uint8_t dummy_values[100] = {};
-
-    m_commandBuffer->BeginCommandBuffer();
-
-    // positive overlapping range tests with cmd
-    const std::array<PipelineLayoutTestCase, 4> cmd_overlap_tests_pos = {{
-        {{VK_SHADER_STAGE_VERTEX_BIT, 0, 16}, ""},
-        {{VK_SHADER_STAGE_VERTEX_BIT, 0, 4}, ""},
-        {{VK_SHADER_STAGE_VERTEX_BIT, 20, 12}, ""},
-        {{VK_SHADER_STAGE_VERTEX_BIT, 56, 36}, ""},
-    }};
-
-    // Setup ranges: [0,16) [20,36) [36,44) [44,52) [56,80) [80,92)
-    const VkPushConstantRange pc_range4[] = {
-        {VK_SHADER_STAGE_VERTEX_BIT, 20, 16}, {VK_SHADER_STAGE_VERTEX_BIT, 0, 16}, {VK_SHADER_STAGE_VERTEX_BIT, 44, 8},
-        {VK_SHADER_STAGE_VERTEX_BIT, 80, 12}, {VK_SHADER_STAGE_VERTEX_BIT, 36, 8}, {VK_SHADER_STAGE_VERTEX_BIT, 56, 24},
-    };
-
-    pipeline_layout_ci.pushConstantRangeCount = sizeof(pc_range4) / sizeof(VkPushConstantRange);
-    pipeline_layout_ci.pPushConstantRanges = pc_range4;
-    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
-    ASSERT_VK_SUCCESS(err);
-    for (const auto &iter : cmd_overlap_tests_pos) {
-        m_errorMonitor->ExpectSuccess();
-        vkCmdPushConstants(m_commandBuffer->GetBufferHandle(), pipeline_layout, iter.range.stageFlags, iter.range.offset,
-                           iter.range.size, dummy_values);
-        m_errorMonitor->VerifyNotFound();
-    }
-    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
-
-    m_commandBuffer->EndCommandBuffer();
 }
 
 #if 0  // A few devices have issues with this test so disabling for now
