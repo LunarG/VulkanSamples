@@ -983,7 +983,7 @@ static inline VkExtent3D GetScaledItg(layer_data *device_data, const GLOBAL_CB_N
         granularity =
             GetPhysDevProperties(device_data)->queue_family_properties[pPool->queueFamilyIndex].minImageTransferGranularity;
         if (vk_format_is_compressed(img->createInfo.format)) {
-            auto block_size = vk_format_compressed_block_size(img->createInfo.format);
+            auto block_size = vk_format_compressed_texel_block_extents(img->createInfo.format);
             granularity.width *= block_size.width;
             granularity.height *= block_size.height;
         }
@@ -2572,7 +2572,7 @@ bool ValidateBufferImageCopyData(const debug_report_data *report_data, uint32_t 
             //       reserves a place for these compressed image checks.  This block of code could move there once the image
             //       stuff is moved into core validation.
             if (vk_format_is_compressed(image_state->createInfo.format)) {
-                VkExtent2D block_size = vk_format_compressed_block_size(image_state->createInfo.format);
+                VkExtent2D block_size = vk_format_compressed_texel_block_extents(image_state->createInfo.format);
 
                 //  BufferRowLength must be a multiple of block width
                 if (vk_safe_modulo(pRegions[i].bufferRowLength, block_size.width) != 0) {
@@ -2605,12 +2605,12 @@ bool ValidateBufferImageCopyData(const debug_report_data *report_data, uint32_t 
                 }
 
                 // bufferOffset must be a multiple of block size (linear bytes)
-                int block_size_in_bytes = block_size.width * block_size.height;
+                size_t block_size_in_bytes = vk_format_get_size(image_state->createInfo.format);
                 if (vk_safe_modulo(pRegions[i].bufferOffset, block_size_in_bytes) != 0) {
                     skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                                     reinterpret_cast<uint64_t &>(image_state->image), __LINE__, VALIDATION_ERROR_01274, "IMAGE",
                                     "%s(): pRegion[%d] bufferOffset (0x%" PRIxLEAST64 ") must be a multiple of the compressed image's texel block "
-                                    "size (0x%x). %s.",
+                                    "size (" PRINTF_SIZE_T_SPECIFIER "). %s.",
                                     function, i, pRegions[i].bufferOffset, block_size_in_bytes,
                                     validation_error_map[VALIDATION_ERROR_01274]);
                 }
@@ -2631,10 +2631,9 @@ static bool ValidateImageBounds(const debug_report_data *report_data, const VkIm
         VkOffset3D offset = pRegions[i].imageOffset;
         VkExtent3D image_extent = image_info->extent;
 
-        // for compressed images, the image createInfo.extent is in texel blocks
-        // convert to texels here
+        // for compressed images, the image createInfo.extent is in texel blocks convert to texels here
         if (vk_format_is_compressed(image_info->format)) {
-            VkExtent2D texel_block_extent = vk_format_compressed_block_size(image_info->format);
+            VkExtent2D texel_block_extent = vk_format_compressed_texel_block_extents(image_info->format);
             image_extent.width *= texel_block_extent.width;
             image_extent.height *= texel_block_extent.height;
         }
@@ -2709,7 +2708,7 @@ static inline bool ValidtateBufferBounds(const debug_report_data *report_data, I
         }
 
         if (vk_format_is_compressed(image_state->createInfo.format)) {
-            VkExtent2D texel_block_extent = vk_format_compressed_block_size(image_state->createInfo.format);
+            VkExtent2D texel_block_extent = vk_format_compressed_texel_block_extents(image_state->createInfo.format);
             buffer_width /= texel_block_extent.width;  // switch to texel block units
             buffer_height /= texel_block_extent.height;
             copy_extent.width /= texel_block_extent.width;
