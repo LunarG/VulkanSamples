@@ -114,11 +114,15 @@ static inline bool vk_format_has_stencil(VkFormat format) {
 }
 
 VK_LAYER_EXPORT bool vk_format_is_norm(VkFormat format);
+VK_LAYER_EXPORT bool vk_format_is_unorm(VkFormat format);
+VK_LAYER_EXPORT bool vk_format_is_snorm(VkFormat format);
 VK_LAYER_EXPORT bool vk_format_is_int(VkFormat format);
 VK_LAYER_EXPORT bool vk_format_is_sint(VkFormat format);
 VK_LAYER_EXPORT bool vk_format_is_uint(VkFormat format);
 VK_LAYER_EXPORT bool vk_format_is_float(VkFormat format);
 VK_LAYER_EXPORT bool vk_format_is_srgb(VkFormat format);
+VK_LAYER_EXPORT bool vk_format_is_uscaled(VkFormat format);
+VK_LAYER_EXPORT bool vk_format_is_sscaled(VkFormat format);
 VK_LAYER_EXPORT bool vk_format_is_compressed(VkFormat format);
 VK_LAYER_EXPORT VkExtent2D vk_format_compressed_texel_block_extents(VkFormat format);
 VK_LAYER_EXPORT size_t vk_format_get_size(VkFormat format);

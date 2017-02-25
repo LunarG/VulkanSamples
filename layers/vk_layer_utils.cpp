@@ -276,7 +276,7 @@ VK_LAYER_EXPORT bool vk_format_is_depth_only(VkFormat format) {
     return is_depth;
 }
 
-// Return true if format is of time UNORM
+// Return true if format is of type NORM
 VK_LAYER_EXPORT bool vk_format_is_norm(VkFormat format) {
     bool is_norm = false;
 
@@ -349,6 +349,95 @@ VK_LAYER_EXPORT bool vk_format_is_norm(VkFormat format) {
     }
 
     return is_norm;
+};
+
+// Return true if format is of type UNORM
+VK_LAYER_EXPORT bool vk_format_is_unorm(VkFormat format) {
+    bool is_unorm = false;
+
+    switch (format) {
+        case VK_FORMAT_R4G4_UNORM_PACK8:
+        case VK_FORMAT_R4G4B4A4_UNORM_PACK16:
+        case VK_FORMAT_R5G6B5_UNORM_PACK16:
+        case VK_FORMAT_R5G5B5A1_UNORM_PACK16:
+        case VK_FORMAT_A1R5G5B5_UNORM_PACK16:
+        case VK_FORMAT_R8_UNORM:
+        case VK_FORMAT_R8G8_UNORM:
+        case VK_FORMAT_R8G8B8_UNORM:
+        case VK_FORMAT_R8G8B8A8_UNORM:
+        case VK_FORMAT_A8B8G8R8_UNORM_PACK32:
+        case VK_FORMAT_A2B10G10R10_UNORM_PACK32:
+        case VK_FORMAT_R16_UNORM:
+        case VK_FORMAT_R16G16_UNORM:
+        case VK_FORMAT_R16G16B16_UNORM:
+        case VK_FORMAT_R16G16B16A16_UNORM:
+        case VK_FORMAT_BC1_RGB_UNORM_BLOCK:
+        case VK_FORMAT_BC2_UNORM_BLOCK:
+        case VK_FORMAT_BC3_UNORM_BLOCK:
+        case VK_FORMAT_BC4_UNORM_BLOCK:
+        case VK_FORMAT_BC5_UNORM_BLOCK:
+        case VK_FORMAT_BC7_UNORM_BLOCK:
+        case VK_FORMAT_ETC2_R8G8B8_UNORM_BLOCK:
+        case VK_FORMAT_ETC2_R8G8B8A1_UNORM_BLOCK:
+        case VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK:
+        case VK_FORMAT_EAC_R11_UNORM_BLOCK:
+        case VK_FORMAT_EAC_R11G11_UNORM_BLOCK:
+        case VK_FORMAT_ASTC_4x4_UNORM_BLOCK:
+        case VK_FORMAT_ASTC_5x4_UNORM_BLOCK:
+        case VK_FORMAT_ASTC_5x5_UNORM_BLOCK:
+        case VK_FORMAT_ASTC_6x5_UNORM_BLOCK:
+        case VK_FORMAT_ASTC_6x6_UNORM_BLOCK:
+        case VK_FORMAT_ASTC_8x5_UNORM_BLOCK:
+        case VK_FORMAT_ASTC_8x6_UNORM_BLOCK:
+        case VK_FORMAT_ASTC_8x8_UNORM_BLOCK:
+        case VK_FORMAT_ASTC_10x5_UNORM_BLOCK:
+        case VK_FORMAT_ASTC_10x6_UNORM_BLOCK:
+        case VK_FORMAT_ASTC_10x8_UNORM_BLOCK:
+        case VK_FORMAT_ASTC_10x10_UNORM_BLOCK:
+        case VK_FORMAT_ASTC_12x10_UNORM_BLOCK:
+        case VK_FORMAT_ASTC_12x12_UNORM_BLOCK:
+        case VK_FORMAT_B5G6R5_UNORM_PACK16:
+        case VK_FORMAT_B8G8R8_UNORM:
+        case VK_FORMAT_B8G8R8A8_UNORM:
+        case VK_FORMAT_A2R10G10B10_UNORM_PACK32:
+            is_unorm = true;
+            break;
+        default:
+            break;
+    }
+
+    return is_unorm;
+};
+
+// Return true if format is of type SNORM
+VK_LAYER_EXPORT bool vk_format_is_snorm(VkFormat format) {
+    bool is_snorm = false;
+
+    switch (format) {
+        case VK_FORMAT_R8_SNORM:
+        case VK_FORMAT_R8G8_SNORM:
+        case VK_FORMAT_R8G8B8_SNORM:
+        case VK_FORMAT_R8G8B8A8_SNORM:
+        case VK_FORMAT_A8B8G8R8_SNORM_PACK32:
+        case VK_FORMAT_A2B10G10R10_SNORM_PACK32:
+        case VK_FORMAT_R16_SNORM:
+        case VK_FORMAT_R16G16_SNORM:
+        case VK_FORMAT_R16G16B16_SNORM:
+        case VK_FORMAT_R16G16B16A16_SNORM:
+        case VK_FORMAT_BC4_SNORM_BLOCK:
+        case VK_FORMAT_BC5_SNORM_BLOCK:
+        case VK_FORMAT_EAC_R11_SNORM_BLOCK:
+        case VK_FORMAT_EAC_R11G11_SNORM_BLOCK:
+        case VK_FORMAT_B8G8R8_SNORM:
+        case VK_FORMAT_B8G8R8A8_SNORM:
+        case VK_FORMAT_A2R10G10B10_SNORM_PACK32:
+            is_snorm = true;
+            break;
+        default:
+            break;
+    }
+
+    return is_snorm;
 };
 
 // Return true if format is an integer format
@@ -494,6 +583,60 @@ VK_LAYER_EXPORT bool vk_format_is_srgb(VkFormat format) {
     }
 
     return is_srgb;
+}
+
+// Return true if format is in the USCALED colorspace
+VK_LAYER_EXPORT bool vk_format_is_uscaled(VkFormat format) {
+    bool is_uscaled = false;
+
+    switch (format) {
+        case VK_FORMAT_R8_USCALED:
+        case VK_FORMAT_R8G8_USCALED:
+        case VK_FORMAT_R8G8B8_USCALED:
+        case VK_FORMAT_B8G8R8_USCALED:
+        case VK_FORMAT_R8G8B8A8_USCALED:
+        case VK_FORMAT_B8G8R8A8_USCALED:
+        case VK_FORMAT_A8B8G8R8_USCALED_PACK32:
+        case VK_FORMAT_A2R10G10B10_USCALED_PACK32:
+        case VK_FORMAT_A2B10G10R10_USCALED_PACK32:
+        case VK_FORMAT_R16_USCALED:
+        case VK_FORMAT_R16G16_USCALED:
+        case VK_FORMAT_R16G16B16_USCALED:
+        case VK_FORMAT_R16G16B16A16_USCALED:
+            is_uscaled = true;
+            break;
+        default:
+            break;
+    }
+
+    return is_uscaled;
+}
+
+// Return true if format is in the SSCALED colorspace
+VK_LAYER_EXPORT bool vk_format_is_sscaled(VkFormat format) {
+    bool is_sscaled = false;
+
+    switch (format) {
+        case VK_FORMAT_R8_SSCALED:
+        case VK_FORMAT_R8G8_SSCALED:
+        case VK_FORMAT_R8G8B8_SSCALED:
+        case VK_FORMAT_B8G8R8_SSCALED:
+        case VK_FORMAT_R8G8B8A8_SSCALED:
+        case VK_FORMAT_B8G8R8A8_SSCALED:
+        case VK_FORMAT_A8B8G8R8_SSCALED_PACK32:
+        case VK_FORMAT_A2R10G10B10_SSCALED_PACK32:
+        case VK_FORMAT_A2B10G10R10_SSCALED_PACK32:
+        case VK_FORMAT_R16_SSCALED:
+        case VK_FORMAT_R16G16_SSCALED:
+        case VK_FORMAT_R16G16B16_SSCALED:
+        case VK_FORMAT_R16G16B16A16_SSCALED:
+            is_sscaled = true;
+            break;
+        default:
+            break;
+    }
+
+    return is_sscaled;
 }
 
 // Return true if format is compressed
