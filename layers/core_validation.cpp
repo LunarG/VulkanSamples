@@ -8298,6 +8298,26 @@ VKAPI_ATTR void VKAPI_CALL CmdWaitEvents(VkCommandBuffer commandBuffer, uint32_t
                                                imageMemoryBarrierCount, pImageMemoryBarriers);
 }
 
+static bool PreCallValidateCmdPipelineBarrier(layer_data *device_data, GLOBAL_CB_NODE *cb_state, VkCommandBuffer commandBuffer,
+                                              VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask,
+                                              uint32_t memoryBarrierCount, const VkMemoryBarrier *pMemoryBarriers,
+                                              uint32_t bufferMemoryBarrierCount, const VkBufferMemoryBarrier *pBufferMemoryBarriers,
+                                              uint32_t imageMemoryBarrierCount, const VkImageMemoryBarrier *pImageMemoryBarriers) {
+    bool skip = false;
+    skip |= ValidateStageMasksAgainstQueueCapabilities(device_data, cb_state, srcStageMask, dstStageMask, "vkCmdPipelineBarrier",
+                                                       VALIDATION_ERROR_02513);
+    skip |= ValidateCmd(device_data, cb_state, CMD_PIPELINEBARRIER, "vkCmdPipelineBarrier()");
+    skip |= ValidateStageMaskGsTsEnables(device_data, srcStageMask, "vkCmdPipelineBarrier()", VALIDATION_ERROR_00265,
+                                         VALIDATION_ERROR_00267);
+    skip |= ValidateStageMaskGsTsEnables(device_data, dstStageMask, "vkCmdPipelineBarrier()", VALIDATION_ERROR_00266,
+                                         VALIDATION_ERROR_00268);
+    UpdateCmdBufferLastCmd(cb_state, CMD_PIPELINEBARRIER);
+    skip |= TransitionImageLayouts(device_data, commandBuffer, imageMemoryBarrierCount, pImageMemoryBarriers);
+    skip |= ValidateBarriers("vkCmdPipelineBarrier()", commandBuffer, memoryBarrierCount, pMemoryBarriers, bufferMemoryBarrierCount,
+                             pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
+    return skip;
+}
+
 VKAPI_ATTR void VKAPI_CALL CmdPipelineBarrier(VkCommandBuffer commandBuffer, VkPipelineStageFlags srcStageMask,
                                               VkPipelineStageFlags dstStageMask, VkDependencyFlags dependencyFlags,
                                               uint32_t memoryBarrierCount, const VkMemoryBarrier *pMemoryBarriers,
@@ -8308,17 +8328,9 @@ VKAPI_ATTR void VKAPI_CALL CmdPipelineBarrier(VkCommandBuffer commandBuffer, VkP
     std::unique_lock<std::mutex> lock(global_lock);
     GLOBAL_CB_NODE *cb_state = GetCBNode(dev_data, commandBuffer);
     if (cb_state) {
-        skip |= ValidateStageMasksAgainstQueueCapabilities(dev_data, cb_state, srcStageMask, dstStageMask, "vkCmdPipelineBarrier",
-                                                           VALIDATION_ERROR_02513);
-        skip |= ValidateCmd(dev_data, cb_state, CMD_PIPELINEBARRIER, "vkCmdPipelineBarrier()");
-        skip |= ValidateStageMaskGsTsEnables(dev_data, srcStageMask, "vkCmdPipelineBarrier()", VALIDATION_ERROR_00265,
-                                             VALIDATION_ERROR_00267);
-        skip |= ValidateStageMaskGsTsEnables(dev_data, dstStageMask, "vkCmdPipelineBarrier()", VALIDATION_ERROR_00266,
-                                             VALIDATION_ERROR_00268);
-        UpdateCmdBufferLastCmd(cb_state, CMD_PIPELINEBARRIER);
-        skip |= TransitionImageLayouts(dev_data, commandBuffer, imageMemoryBarrierCount, pImageMemoryBarriers);
-        skip |= ValidateBarriers("vkCmdPipelineBarrier()", commandBuffer, memoryBarrierCount, pMemoryBarriers,
-                                 bufferMemoryBarrierCount, pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
+        skip |= PreCallValidateCmdPipelineBarrier(dev_data, cb_state, commandBuffer, srcStageMask, dstStageMask,
+                                                  memoryBarrierCount, pMemoryBarriers, bufferMemoryBarrierCount,
+                                                  pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
     }
     lock.unlock();
     if (!skip)
