@@ -4050,97 +4050,75 @@ static bool ValidateStageMaskGsTsEnables(layer_data *dev_data, VkPipelineStageFl
     return skip;
 }
 
-// Loop through bound objects and increment their in_use counts if increment parameter is true
-// or flag an error if unknown objects are found
-static bool ValidateOrIncrementBoundObjects(layer_data *dev_data, GLOBAL_CB_NODE const *cb_node, bool increment) {
-    bool skip = false;
-    DRAW_STATE_ERROR error_code = DRAWSTATE_NONE;
+// Loop through bound objects and increment their in_use counts.
+static void IncrementBoundObjects(layer_data *dev_data, GLOBAL_CB_NODE const *cb_node) {
     BASE_NODE *base_obj = nullptr;
     for (auto obj : cb_node->object_bindings) {
         switch (obj.type) {
             case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT: {
                 base_obj = GetSetNode(dev_data, reinterpret_cast<VkDescriptorSet &>(obj.handle));
-                error_code = DRAWSTATE_INVALID_DESCRIPTOR_SET;
                 break;
             }
             case VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT: {
                 base_obj = GetSamplerState(dev_data, reinterpret_cast<VkSampler &>(obj.handle));
-                error_code = DRAWSTATE_INVALID_SAMPLER;
                 break;
             }
             case VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT: {
                 base_obj = GetQueryPoolNode(dev_data, reinterpret_cast<VkQueryPool &>(obj.handle));
-                error_code = DRAWSTATE_INVALID_QUERY_POOL;
                 break;
             }
             case VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT: {
                 base_obj = getPipelineState(dev_data, reinterpret_cast<VkPipeline &>(obj.handle));
-                error_code = DRAWSTATE_INVALID_PIPELINE;
                 break;
             }
             case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT: {
                 base_obj = GetBufferState(dev_data, reinterpret_cast<VkBuffer &>(obj.handle));
-                error_code = DRAWSTATE_INVALID_BUFFER;
                 break;
             }
             case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT: {
                 base_obj = GetBufferViewState(dev_data, reinterpret_cast<VkBufferView &>(obj.handle));
-                error_code = DRAWSTATE_INVALID_BUFFER_VIEW;
                 break;
             }
             case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT: {
                 base_obj = GetImageState(dev_data, reinterpret_cast<VkImage &>(obj.handle));
-                error_code = DRAWSTATE_INVALID_IMAGE;
                 break;
             }
             case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT: {
                 base_obj = GetImageViewState(dev_data, reinterpret_cast<VkImageView &>(obj.handle));
-                error_code = DRAWSTATE_INVALID_IMAGE_VIEW;
                 break;
             }
             case VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT: {
                 base_obj = GetEventNode(dev_data, reinterpret_cast<VkEvent &>(obj.handle));
-                error_code = DRAWSTATE_INVALID_EVENT;
                 break;
             }
             case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT: {
                 base_obj = GetDescriptorPoolState(dev_data, reinterpret_cast<VkDescriptorPool &>(obj.handle));
-                error_code = DRAWSTATE_INVALID_DESCRIPTOR_POOL;
                 break;
             }
             case VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT: {
                 base_obj = GetCommandPoolNode(dev_data, reinterpret_cast<VkCommandPool &>(obj.handle));
-                error_code = DRAWSTATE_INVALID_COMMAND_POOL;
                 break;
             }
             case VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT: {
                 base_obj = GetFramebufferState(dev_data, reinterpret_cast<VkFramebuffer &>(obj.handle));
-                error_code = DRAWSTATE_INVALID_FRAMEBUFFER;
                 break;
             }
             case VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT: {
                 base_obj = GetRenderPassState(dev_data, reinterpret_cast<VkRenderPass &>(obj.handle));
-                error_code = DRAWSTATE_INVALID_RENDERPASS;
                 break;
             }
             case VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT: {
                 base_obj = GetMemObjInfo(dev_data, reinterpret_cast<VkDeviceMemory &>(obj.handle));
-                error_code = DRAWSTATE_INVALID_DEVICE_MEMORY;
                 break;
             }
             default:
                 // TODO : Merge handling of other objects types into this code
                 break;
         }
-        if (base_obj && increment) {
+        if (base_obj) {
             base_obj->in_use.fetch_add(1);
-        } else if (!base_obj && !increment) {
-            skip |=
-                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, obj.type, obj.handle, __LINE__, error_code, "DS",
-                        "Cannot submit cmd buffer using deleted %s 0x%" PRIx64 ".", object_type_to_string(obj.type), obj.handle);
         }
     }
-    return skip;
 }
 // Track which resources are in-flight by atomically incrementing their "in_use" count
 static void incrementResources(layer_data *dev_data, GLOBAL_CB_NODE *cb_node) {
@@ -4149,7 +4127,7 @@ static void incrementResources(layer_data *dev_data, GLOBAL_CB_NODE *cb_node) {
     dev_data->globalInFlightCmdBuffers.insert(cb_node->commandBuffer);
 
     // First Increment for all "generic" objects bound to cmd buffer, followed by special-case objects below
-    ValidateOrIncrementBoundObjects(dev_data, cb_node, true);
+    IncrementBoundObjects(dev_data, cb_node);
     // TODO : We should be able to remove the NULL look-up checks from the code below as long as
     //  all the corresponding cases are verified to cause CB_INVALID state and the CB_INVALID state
     //  should then be flagged prior to calling this function
@@ -4356,7 +4334,6 @@ static bool validateCommandBufferState(layer_data *dev_data, GLOBAL_CB_NODE *cb_
 static bool validateResources(layer_data *dev_data, GLOBAL_CB_NODE *cb_node) {
     bool skip_call = false;
 
-    skip_call |= ValidateOrIncrementBoundObjects(dev_data, cb_node, false);
     // TODO : We should be able to remove the NULL look-up checks from the code below as long as
     //  all the corresponding cases are verified to cause CB_INVALID state and the CB_INVALID state
     //  should then be flagged prior to calling this function
