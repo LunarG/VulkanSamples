@@ -8287,7 +8287,11 @@ VKAPI_ATTR void VKAPI_CALL CmdWaitEvents(VkCommandBuffer commandBuffer, uint32_t
         cb_state->eventUpdates.push_back(event_update);
         skip |= ValidateCmd(dev_data, cb_state, CMD_WAITEVENTS, "vkCmdWaitEvents()");
         UpdateCmdBufferLastCmd(cb_state, CMD_WAITEVENTS);
-        skip |= TransitionImageLayouts(dev_data, commandBuffer, imageMemoryBarrierCount, pImageMemoryBarriers);
+        skip |= ValidateImageLayouts(dev_data, commandBuffer, imageMemoryBarrierCount, pImageMemoryBarriers);
+        if (!skip) {
+            TransitionImageLayouts(dev_data, commandBuffer, imageMemoryBarrierCount, pImageMemoryBarriers);
+        }
+
         skip |= ValidateBarriers("vkCmdWaitEvents()", commandBuffer, memoryBarrierCount, pMemoryBarriers, bufferMemoryBarrierCount,
                                  pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
     }
@@ -8312,7 +8316,10 @@ static bool PreCallValidateCmdPipelineBarrier(layer_data *device_data, GLOBAL_CB
     skip |= ValidateStageMaskGsTsEnables(device_data, dstStageMask, "vkCmdPipelineBarrier()", VALIDATION_ERROR_00266,
                                          VALIDATION_ERROR_00268);
     UpdateCmdBufferLastCmd(cb_state, CMD_PIPELINEBARRIER);
-    skip |= TransitionImageLayouts(device_data, commandBuffer, imageMemoryBarrierCount, pImageMemoryBarriers);
+    skip |= ValidateImageLayouts(device_data, commandBuffer, imageMemoryBarrierCount, pImageMemoryBarriers);
+    if (!skip) {
+        TransitionImageLayouts(device_data, commandBuffer, imageMemoryBarrierCount, pImageMemoryBarriers);
+    }
     skip |= ValidateBarriers("vkCmdPipelineBarrier()", commandBuffer, memoryBarrierCount, pMemoryBarriers, bufferMemoryBarrierCount,
                              pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
     return skip;

@@ -334,16 +334,14 @@ void TransitionSubpassLayouts(layer_data *device_data, GLOBAL_CB_NODE *pCB, cons
     }
 }
 
-bool TransitionImageAspectLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, const VkImageMemoryBarrier *mem_barrier,
-                                 uint32_t level, uint32_t layer, VkImageAspectFlags aspect) {
+bool ValidateImageAspectLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, const VkImageMemoryBarrier *mem_barrier,
+                               uint32_t level, uint32_t layer, VkImageAspectFlags aspect) {
     if (!(mem_barrier->subresourceRange.aspectMask & aspect)) {
         return false;
     }
     VkImageSubresource sub = {aspect, level, layer};
     IMAGE_CMD_BUF_LAYOUT_NODE node;
     if (!FindCmdBufLayout(device_data, pCB, mem_barrier->image, sub, node)) {
-        SetLayout(device_data, pCB, mem_barrier->image, sub,
-                  IMAGE_CMD_BUF_LAYOUT_NODE(mem_barrier->oldLayout, mem_barrier->newLayout));
         return false;
     }
     bool skip = false;
@@ -355,13 +353,29 @@ bool TransitionImageAspectLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, c
                         "You cannot transition the layout of aspect %d from %s when current layout is %s.", aspect,
                         string_VkImageLayout(mem_barrier->oldLayout), string_VkImageLayout(node.layout));
     }
-    SetLayout(device_data, pCB, mem_barrier->image, sub, mem_barrier->newLayout);
     return skip;
 }
 
-// TODO: Separate validation and layout state updates
-bool TransitionImageLayouts(layer_data *device_data, VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
-                            const VkImageMemoryBarrier *pImgMemBarriers) {
+void TransitionImageAspectLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, const VkImageMemoryBarrier *mem_barrier,
+                                 uint32_t level, uint32_t layer, VkImageAspectFlags aspect) {
+    if (!(mem_barrier->subresourceRange.aspectMask & aspect)) {
+        return;
+    }
+    VkImageSubresource sub = {aspect, level, layer};
+    IMAGE_CMD_BUF_LAYOUT_NODE node;
+    if (!FindCmdBufLayout(device_data, pCB, mem_barrier->image, sub, node)) {
+        SetLayout(device_data, pCB, mem_barrier->image, sub,
+                  IMAGE_CMD_BUF_LAYOUT_NODE(mem_barrier->oldLayout, mem_barrier->newLayout));
+        return;
+    }
+    if (mem_barrier->oldLayout == VK_IMAGE_LAYOUT_UNDEFINED) {
+        // TODO: Set memory invalid
+    }
+    SetLayout(device_data, pCB, mem_barrier->image, sub, mem_barrier->newLayout);
+}
+
+bool ValidateImageLayouts(layer_data *device_data, VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
+    const VkImageMemoryBarrier *pImgMemBarriers) {
     GLOBAL_CB_NODE *pCB = GetCBNode(device_data, cmdBuffer);
     bool skip = false;
     uint32_t levelCount = 0;
@@ -378,14 +392,40 @@ bool TransitionImageLayouts(layer_data *device_data, VkCommandBuffer cmdBuffer, 
             uint32_t level = mem_barrier->subresourceRange.baseMipLevel + j;
             for (uint32_t k = 0; k < layerCount; k++) {
                 uint32_t layer = mem_barrier->subresourceRange.baseArrayLayer + k;
-                skip |= TransitionImageAspectLayout(device_data, pCB, mem_barrier, level, layer, VK_IMAGE_ASPECT_COLOR_BIT);
-                skip |= TransitionImageAspectLayout(device_data, pCB, mem_barrier, level, layer, VK_IMAGE_ASPECT_DEPTH_BIT);
-                skip |= TransitionImageAspectLayout(device_data, pCB, mem_barrier, level, layer, VK_IMAGE_ASPECT_STENCIL_BIT);
-                skip |= TransitionImageAspectLayout(device_data, pCB, mem_barrier, level, layer, VK_IMAGE_ASPECT_METADATA_BIT);
+                skip |= ValidateImageAspectLayout(device_data, pCB, mem_barrier, level, layer, VK_IMAGE_ASPECT_COLOR_BIT);
+                skip |= ValidateImageAspectLayout(device_data, pCB, mem_barrier, level, layer, VK_IMAGE_ASPECT_DEPTH_BIT);
+                skip |= ValidateImageAspectLayout(device_data, pCB, mem_barrier, level, layer, VK_IMAGE_ASPECT_STENCIL_BIT);
+                skip |= ValidateImageAspectLayout(device_data, pCB, mem_barrier, level, layer, VK_IMAGE_ASPECT_METADATA_BIT);
             }
         }
     }
     return skip;
+}
+
+void TransitionImageLayouts(layer_data *device_data, VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
+                            const VkImageMemoryBarrier *pImgMemBarriers) {
+    GLOBAL_CB_NODE *pCB = GetCBNode(device_data, cmdBuffer);
+    uint32_t levelCount = 0;
+    uint32_t layerCount = 0;
+
+    for (uint32_t i = 0; i < memBarrierCount; ++i) {
+        auto mem_barrier = &pImgMemBarriers[i];
+        if (!mem_barrier) continue;
+        // TODO: Do not iterate over every possibility - consolidate where possible
+        ResolveRemainingLevelsLayers(device_data, &levelCount, &layerCount, mem_barrier->subresourceRange,
+                                     GetImageState(device_data, mem_barrier->image));
+
+        for (uint32_t j = 0; j < levelCount; j++) {
+            uint32_t level = mem_barrier->subresourceRange.baseMipLevel + j;
+            for (uint32_t k = 0; k < layerCount; k++) {
+                uint32_t layer = mem_barrier->subresourceRange.baseArrayLayer + k;
+                TransitionImageAspectLayout(device_data, pCB, mem_barrier, level, layer, VK_IMAGE_ASPECT_COLOR_BIT);
+                TransitionImageAspectLayout(device_data, pCB, mem_barrier, level, layer, VK_IMAGE_ASPECT_DEPTH_BIT);
+                TransitionImageAspectLayout(device_data, pCB, mem_barrier, level, layer, VK_IMAGE_ASPECT_STENCIL_BIT);
+                TransitionImageAspectLayout(device_data, pCB, mem_barrier, level, layer, VK_IMAGE_ASPECT_METADATA_BIT);
+            }
+        }
+    }
 }
 
 bool VerifySourceImageLayout(layer_data *device_data, GLOBAL_CB_NODE *cb_node, VkImage srcImage, VkImageSubresourceLayers subLayers,

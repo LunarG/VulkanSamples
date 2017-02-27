@@ -105,10 +105,16 @@ void TransitionAttachmentRefLayout(layer_data *dev_data, GLOBAL_CB_NODE *pCB, FR
 void TransitionSubpassLayouts(layer_data *dev_data, GLOBAL_CB_NODE *pCB, const VkRenderPassBeginInfo *pRenderPassBegin,
                               const int subpass_index, FRAMEBUFFER_STATE *framebuffer_state);
 
-bool TransitionImageAspectLayout(layer_data *dev_data, GLOBAL_CB_NODE *pCB, const VkImageMemoryBarrier *mem_barrier, uint32_t level,
+bool ValidateImageAspectLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, const VkImageMemoryBarrier *mem_barrier,
+                               uint32_t level, uint32_t layer, VkImageAspectFlags aspect);
+
+void TransitionImageAspectLayout(layer_data *dev_data, GLOBAL_CB_NODE *pCB, const VkImageMemoryBarrier *mem_barrier, uint32_t level,
                                  uint32_t layer, VkImageAspectFlags aspect);
 
-bool TransitionImageLayouts(layer_data *device_data, VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
+bool ValidateImageLayouts(layer_data *device_data, VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
+                          const VkImageMemoryBarrier *pImgMemBarriers);
+
+void TransitionImageLayouts(layer_data *device_data, VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
                             const VkImageMemoryBarrier *pImgMemBarriers);
 
 bool VerifySourceImageLayout(layer_data *dev_data, GLOBAL_CB_NODE *cb_node, VkImage srcImage, VkImageSubresourceLayers subLayers,
