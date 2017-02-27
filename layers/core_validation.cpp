@@ -4571,8 +4571,8 @@ static bool PreCallValidateQueueSubmit(layer_data *dev_data, VkQueue queue, uint
         }
         for (uint32_t i = 0; i < submit->commandBufferCount; i++) {
             auto cb_node = GetCBNode(dev_data, submit->pCommandBuffers[i]);
-            skip_call |= ValidateCmdBufImageLayouts(dev_data, cb_node, localImageLayoutMap);
             if (cb_node) {
+                skip_call |= ValidateCmdBufImageLayouts(dev_data, cb_node, localImageLayoutMap);
                 current_cmds.push_back(submit->pCommandBuffers[i]);
                 skip_call |= validatePrimaryCommandBufferState(
                     dev_data, cb_node, (int)std::count(current_cmds.begin(), current_cmds.end(), submit->pCommandBuffers[i]));
