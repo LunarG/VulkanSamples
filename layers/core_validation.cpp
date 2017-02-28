@@ -6253,6 +6253,32 @@ void set_pipeline_state(PIPELINE_STATE *pPipe) {
     }
 }
 
+bool validate_dual_src_blend_feature(layer_data *device_data, PIPELINE_STATE *pipe_state) {
+    bool skip = false;
+    if (pipe_state->graphicsPipelineCI.pColorBlendState) {
+        for (size_t i = 0; i < pipe_state->attachments.size(); ++i) {
+            if (!device_data->enabled_features.dualSrcBlend) {
+                if ((pipe_state->attachments[i].dstAlphaBlendFactor == VK_BLEND_FACTOR_SRC1_COLOR) ||
+                    (pipe_state->attachments[i].dstAlphaBlendFactor == VK_BLEND_FACTOR_ONE_MINUS_SRC1_COLOR) ||
+                    (pipe_state->attachments[i].dstAlphaBlendFactor == VK_BLEND_FACTOR_SRC1_ALPHA) ||
+                    (pipe_state->attachments[i].dstAlphaBlendFactor == VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA) ||
+                    (pipe_state->attachments[i].srcAlphaBlendFactor == VK_BLEND_FACTOR_SRC1_COLOR) ||
+                    (pipe_state->attachments[i].srcAlphaBlendFactor == VK_BLEND_FACTOR_ONE_MINUS_SRC1_COLOR) ||
+                    (pipe_state->attachments[i].srcAlphaBlendFactor == VK_BLEND_FACTOR_SRC1_ALPHA) ||
+                    (pipe_state->attachments[i].srcAlphaBlendFactor == VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA)) {
+                    skip |=
+                        log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
+                                reinterpret_cast<uint64_t &>(pipe_state->pipeline), __LINE__, DRAWSTATE_INVALID_FEATURE, "DS",
+                                "CmdBindPipeline: vkPipeline (0x%" PRIxLEAST64 ") attachment[" PRINTF_SIZE_T_SPECIFIER
+                                "] has a dual-source blend factor but this device feature is not enabled.",
+                                reinterpret_cast<uint64_t &>(pipe_state->pipeline), i);
+                }
+            }
+        }
+    }
+    return skip;
+}
+
 static bool PreCallCreateGraphicsPipelines(layer_data *device_data, uint32_t count,
                                            const VkGraphicsPipelineCreateInfo *create_infos, vector<PIPELINE_STATE *> &pipe_state) {
     bool skip = false;
@@ -7015,6 +7041,7 @@ VKAPI_ATTR void VKAPI_CALL CmdBindPipeline(VkCommandBuffer commandBuffer, VkPipe
             cb_state->lastBound[pipelineBindPoint].pipeline_state = pipe_state;
             set_cb_pso_status(cb_state, pipe_state);
             set_pipeline_state(pipe_state);
+            skip |= validate_dual_src_blend_feature(dev_data, pipe_state);
         } else {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
                             (uint64_t)pipeline, __LINE__, VALIDATION_ERROR_00600, "DS",
