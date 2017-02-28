@@ -9265,14 +9265,12 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
 
         // TODO: Maybe fill list and then copy instead of locking
         std::unordered_map<uint32_t, bool> &attachment_first_read = render_pass->attachment_first_read;
-        std::unordered_map<uint32_t, VkImageLayout> &attachment_first_layout = render_pass->attachment_first_layout;
         for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
             const VkSubpassDescription &subpass = pCreateInfo->pSubpasses[i];
             for (uint32_t j = 0; j < subpass.colorAttachmentCount; ++j) {
                 uint32_t attachment = subpass.pColorAttachments[j].attachment;
                 if (!attachment_first_read.count(attachment)) {
                     attachment_first_read.insert(std::make_pair(attachment, false));
-                    attachment_first_layout.insert(std::make_pair(attachment, subpass.pColorAttachments[j].layout));
                 }
 
                 if (subpass.pResolveAttachments && subpass.pResolveAttachments[j].attachment != VK_ATTACHMENT_UNUSED) {
@@ -9280,7 +9278,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
                     attachment = subpass.pResolveAttachments[j].attachment;
                     if (!attachment_first_read.count(attachment)) {
                         attachment_first_read.insert(std::make_pair(attachment, false));
-                        attachment_first_layout.insert(std::make_pair(attachment, subpass.pResolveAttachments[j].layout));
                     }
                 }
             }
@@ -9288,14 +9285,12 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
                 uint32_t attachment = subpass.pDepthStencilAttachment->attachment;
                 if (!attachment_first_read.count(attachment)) {
                     attachment_first_read.insert(std::make_pair(attachment, false));
-                    attachment_first_layout.insert(std::make_pair(attachment, subpass.pDepthStencilAttachment->layout));
                 }
             }
             for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
                 uint32_t attachment = subpass.pInputAttachments[j].attachment;
                 if (!attachment_first_read.count(attachment)) {
                     attachment_first_read.insert(std::make_pair(attachment, true));
-                    attachment_first_layout.insert(std::make_pair(attachment, subpass.pInputAttachments[j].layout));
                 }
             }
         }

@@ -360,7 +360,6 @@ struct RENDER_PASS_STATE : public BASE_NODE {
     std::vector<bool> hasSelfDependency;
     std::vector<DAGNode> subpassToNode;
     std::unordered_map<uint32_t, bool> attachment_first_read;
-    std::unordered_map<uint32_t, VkImageLayout> attachment_first_layout;
 
     RENDER_PASS_STATE(VkRenderPassCreateInfo const *pCreateInfo) : createInfo(pCreateInfo) {}
 };
