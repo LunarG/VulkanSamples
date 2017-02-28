@@ -9273,11 +9273,13 @@ TEST_F(VkLayerTest, InvalidQueueFamilyIndex) {
     VkBufferCreateInfo buffCI = {};
     buffCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     buffCI.size = 1024;
-    buffCI.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+    buffCI.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     buffCI.queueFamilyIndexCount = 1;
     // Introduce failure by specifying invalid queue_family_index
-    uint32_t qfi = 777;
-    buffCI.pQueueFamilyIndices = &qfi;
+    uint32_t qfi[2];
+    qfi[0] = 777;
+
+    buffCI.pQueueFamilyIndices = qfi;
     buffCI.sharingMode = VK_SHARING_MODE_CONCURRENT;  // qfi only matters in CONCURRENT mode
 
     VkBuffer ib;
@@ -9286,6 +9288,38 @@ TEST_F(VkLayerTest, InvalidQueueFamilyIndex) {
     vkCreateBuffer(m_device->device(), &buffCI, NULL, &ib);
 
     m_errorMonitor->VerifyFound();
+
+    if (m_device->queue_props.size() > 2) {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "which was not created allowing concurrent");
+
+        // Create buffer shared to queue families 1 and 2, but submitted on queue family 0
+        buffCI.queueFamilyIndexCount = 2;
+        qfi[0] = 1;
+        qfi[1] = 2;
+        vkCreateBuffer(m_device->device(), &buffCI, NULL, &ib);
+        VkDeviceMemory mem;
+        VkMemoryRequirements mem_reqs;
+        vkGetBufferMemoryRequirements(m_device->device(), ib, &mem_reqs);
+
+        VkMemoryAllocateInfo alloc_info = {};
+        alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        alloc_info.allocationSize = 1024;
+        bool pass = false;
+        pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &alloc_info, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        if (!pass) {
+            vkDestroyBuffer(m_device->device(), ib, NULL);
+            return;
+        }
+        vkAllocateMemory(m_device->device(), &alloc_info, NULL, &mem);
+        vkBindBufferMemory(m_device->device(), ib, mem, 0);
+
+        m_commandBuffer->begin();
+        vkCmdFillBuffer(m_commandBuffer->handle(), ib, 0, 16, 5);
+        m_commandBuffer->end();
+        QueueCommandBuffer(false);
+        m_errorMonitor->VerifyFound();
+    }
+
     vkDestroyBuffer(m_device->device(), ib, NULL);
 }
 
