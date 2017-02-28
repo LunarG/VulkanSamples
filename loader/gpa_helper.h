@@ -22,7 +22,6 @@
 #include <string.h>
 #include "debug_report.h"
 #include "wsi.h"
-#include "extensions.h"
 
 static inline void *trampolineGetProcAddr(struct loader_instance *inst, const char *funcName) {
     // Don't include or check global functions

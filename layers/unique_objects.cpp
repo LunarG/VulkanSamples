@@ -273,6 +273,9 @@ static inline PFN_vkVoidFunction layer_intercept_proc(const char *name) {
     if (0 == strcmp(name, "vk_layerGetPhysicalDeviceProcAddr")) {
         return (PFN_vkVoidFunction)GetPhysicalDeviceProcAddr;
     }
+    if (0 == strcmp(name, "vk_layerGetPhysicalDeviceProcAddr")) {
+        return (PFN_vkVoidFunction)GetPhysicalDeviceProcAddr;
+    }
     return NULL;
 }
 

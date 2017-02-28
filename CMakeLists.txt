@@ -38,7 +38,6 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 
     if (BUILD_WSI_WAYLAND_SUPPORT)
         find_package(Wayland REQUIRED)
-        include_directories(${WAYLAND_CLIENT_INCLUDE_DIR})
     endif()
 
     if (BUILD_WSI_MIR_SUPPORT)
@@ -272,21 +271,27 @@ endmacro()
 
 # Custom target for generated vulkan helper file dependencies
 add_custom_target(generate_helper_files DEPENDS
-    vk_dispatch_table_helper.h
     vk_enum_string_helper.h
     vk_struct_size_helper.h
     vk_struct_size_helper.c
     vk_safe_struct.h
     vk_safe_struct.cpp
+    vk_layer_dispatch_table.h
+    vk_dispatch_table_helper.h
+    vk_loader_extensions.h
+    vk_loader_extensions.c
     )
 
 # Rules to build generated helper files
+run_vk_xml_generate(loader_extension_generator.py vk_loader_extensions.c)
+run_vk_xml_generate(loader_extension_generator.py vk_loader_extensions.h)
+run_vk_xml_generate(loader_extension_generator.py vk_layer_dispatch_table.h)
+run_vk_xml_generate(dispatch_table_helper_generator.py vk_dispatch_table_helper.h)
 run_vk_xml_generate(helper_file_generator.py vk_safe_struct.h)
 run_vk_xml_generate(helper_file_generator.py vk_safe_struct.cpp)
 run_vk_xml_generate(helper_file_generator.py vk_struct_size_helper.h)
 run_vk_xml_generate(helper_file_generator.py vk_struct_size_helper.c)
 run_vk_xml_generate(helper_file_generator.py vk_enum_string_helper.h)
-run_vk_xml_generate(dispatch_table_generator.py vk_dispatch_table_helper.h)
 
 if(NOT WIN32)
     include(GNUInstallDirs)

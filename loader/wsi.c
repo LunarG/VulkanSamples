@@ -155,8 +155,8 @@ VKAPI_ATTR void VKAPI_CALL terminator_DestroySurfaceKHR(VkInstance instance, VkS
             uint32_t i = 0;
             for (struct loader_icd_term *icd_term = ptr_instance->icd_terms; icd_term != NULL; icd_term = icd_term->next, i++) {
                 if (icd_term->scanned_icd->interface_version >= ICD_VER_SUPPORTS_ICD_SURFACE_KHR) {
-                    if (NULL != icd_term->DestroySurfaceKHR && (VkSurfaceKHR)NULL != icd_surface->real_icd_surfaces[i]) {
-                        icd_term->DestroySurfaceKHR(icd_term->instance, icd_surface->real_icd_surfaces[i], pAllocator);
+                    if (NULL != icd_term->dispatch.DestroySurfaceKHR && (VkSurfaceKHR)NULL != icd_surface->real_icd_surfaces[i]) {
+                        icd_term->dispatch.DestroySurfaceKHR(icd_term->instance, icd_surface->real_icd_surfaces[i], pAllocator);
                         icd_surface->real_icd_surfaces[i] = (VkSurfaceKHR)NULL;
                     }
                 } else {
@@ -195,24 +195,30 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_GetPhysicalDeviceSurfaceSupportKHR(VkP
     struct loader_instance *ptr_instance = (struct loader_instance *)icd_term->this_instance;
     if (!ptr_instance->wsi_surface_enabled) {
         loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "VK_KHR_VK_KHR_surface extension not enabled.  "
-                   "vkGetPhysicalDeviceSurfaceSupportKHR not executed!\n");
+                   "VK_KHR_surface extension not enabled.  vkGetPhysicalDeviceSurfaceSupportKHR not executed!\n");
         return VK_SUCCESS;
     }
 
-    // Next, if so, proceed with the implementation of this function:
-    assert(pSupported && "GetPhysicalDeviceSurfaceSupportKHR: Error, null pSupported");
+    if (NULL == pSupported) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "NULL pointer passed into vkGetPhysicalDeviceSurfaceSupportKHR for pSupported!\n");
+        assert(false && "GetPhysicalDeviceSurfaceSupportKHR: Error, null pSupported");
+    }
     *pSupported = false;
 
-    assert(icd_term->GetPhysicalDeviceSurfaceSupportKHR && "loader: null GetPhysicalDeviceSurfaceSupportKHR ICD pointer");
+    if (NULL == icd_term->dispatch.GetPhysicalDeviceSurfaceSupportKHR) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "ICD for selected physical device is not exporting vkGetPhysicalDeviceSurfaceSupportKHR!\n");
+        assert(false && "loader: null GetPhysicalDeviceSurfaceSupportKHR ICD pointer");
+    }
 
     VkIcdSurface *icd_surface = (VkIcdSurface *)(uintptr_t)surface;
     if (NULL != icd_surface->real_icd_surfaces && (VkSurfaceKHR)NULL != icd_surface->real_icd_surfaces[phys_dev_term->icd_index]) {
-        return icd_term->GetPhysicalDeviceSurfaceSupportKHR(phys_dev_term->phys_dev, queueFamilyIndex,
-                                                            icd_surface->real_icd_surfaces[phys_dev_term->icd_index], pSupported);
+        return icd_term->dispatch.GetPhysicalDeviceSurfaceSupportKHR(
+            phys_dev_term->phys_dev, queueFamilyIndex, icd_surface->real_icd_surfaces[phys_dev_term->icd_index], pSupported);
     }
 
-    return icd_term->GetPhysicalDeviceSurfaceSupportKHR(phys_dev_term->phys_dev, queueFamilyIndex, surface, pSupported);
+    return icd_term->dispatch.GetPhysicalDeviceSurfaceSupportKHR(phys_dev_term->phys_dev, queueFamilyIndex, surface, pSupported);
 }
 
 // This is the trampoline entrypoint for GetPhysicalDeviceSurfaceCapabilitiesKHR
@@ -236,25 +242,29 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_GetPhysicalDeviceSurfaceCapabilitiesKH
     struct loader_instance *ptr_instance = (struct loader_instance *)icd_term->this_instance;
     if (!ptr_instance->wsi_surface_enabled) {
         loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "VK_KHR_surface extension not enabled.  "
-                   "vkGetPhysicalDeviceSurfaceCapabilitiesKHR not executed!\n");
+                   "VK_KHR_surface extension not enabled.  vkGetPhysicalDeviceSurfaceCapabilitiesKHR not executed!\n");
         return VK_SUCCESS;
     }
 
-    // Next, if so, proceed with the implementation of this function:
-    assert(pSurfaceCapabilities &&
-           "GetPhysicalDeviceSurfaceCapabilitiesKHR: "
-           "Error, null pSurfaceCapabilities");
+    if (NULL == pSurfaceCapabilities) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "NULL pointer passed into vkGetPhysicalDeviceSurfaceCapabilitiesKHR for pSurfaceCapabilities!\n");
+        assert(false && "GetPhysicalDeviceSurfaceCapabilitiesKHR: Error, null pSurfaceCapabilities");
+    }
 
-    assert(icd_term->GetPhysicalDeviceSurfaceCapabilitiesKHR && "loader: null GetPhysicalDeviceSurfaceCapabilitiesKHR ICD pointer");
+    if (NULL == icd_term->dispatch.GetPhysicalDeviceSurfaceCapabilitiesKHR) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "ICD for selected physical device is not exporting vkGetPhysicalDeviceSurfaceCapabilitiesKHR!\n");
+        assert(false && "loader: null GetPhysicalDeviceSurfaceCapabilitiesKHR ICD pointer");
+    }
 
     VkIcdSurface *icd_surface = (VkIcdSurface *)(uintptr_t)surface;
     if (NULL != icd_surface->real_icd_surfaces && (VkSurfaceKHR)NULL != icd_surface->real_icd_surfaces[phys_dev_term->icd_index]) {
-        return icd_term->GetPhysicalDeviceSurfaceCapabilitiesKHR(
+        return icd_term->dispatch.GetPhysicalDeviceSurfaceCapabilitiesKHR(
             phys_dev_term->phys_dev, icd_surface->real_icd_surfaces[phys_dev_term->icd_index], pSurfaceCapabilities);
     }
 
-    return icd_term->GetPhysicalDeviceSurfaceCapabilitiesKHR(phys_dev_term->phys_dev, surface, pSurfaceCapabilities);
+    return icd_term->dispatch.GetPhysicalDeviceSurfaceCapabilitiesKHR(phys_dev_term->phys_dev, surface, pSurfaceCapabilities);
 }
 
 // This is the trampoline entrypoint for GetPhysicalDeviceSurfaceFormatsKHR
@@ -280,24 +290,31 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_GetPhysicalDeviceSurfaceFormatsKHR(VkP
     struct loader_instance *ptr_instance = (struct loader_instance *)icd_term->this_instance;
     if (!ptr_instance->wsi_surface_enabled) {
         loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "VK_KHR_surface extension not enabled.  "
-                   "vkGetPhysicalDeviceSurfaceFormatsKHR not executed!\n");
+                   "VK_KHR_surface extension not enabled.  vkGetPhysicalDeviceSurfaceFormatsKHR not executed!\n");
         return VK_SUCCESS;
     }
 
-    // Next, if so, proceed with the implementation of this function:
-    assert(pSurfaceFormatCount && "GetPhysicalDeviceSurfaceFormatsKHR: Error, null pSurfaceFormatCount");
+    if (NULL == pSurfaceFormatCount) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "NULL pointer passed into vkGetPhysicalDeviceSurfaceFormatsKHR for pSurfaceFormatCount!\n");
+        assert(false && "GetPhysicalDeviceSurfaceFormatsKHR(: Error, null pSurfaceFormatCount");
+    }
 
-    assert(icd_term->GetPhysicalDeviceSurfaceFormatsKHR && "loader: null GetPhysicalDeviceSurfaceFormatsKHR ICD pointer");
+    if (NULL == icd_term->dispatch.GetPhysicalDeviceSurfaceFormatsKHR) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "ICD for selected physical device is not exporting vkGetPhysicalDeviceSurfaceCapabilitiesKHR!\n");
+        assert(false && "loader: null GetPhysicalDeviceSurfaceFormatsKHR ICD pointer");
+    }
 
     VkIcdSurface *icd_surface = (VkIcdSurface *)(uintptr_t)surface;
     if (NULL != icd_surface->real_icd_surfaces && (VkSurfaceKHR)NULL != icd_surface->real_icd_surfaces[phys_dev_term->icd_index]) {
-        return icd_term->GetPhysicalDeviceSurfaceFormatsKHR(phys_dev_term->phys_dev,
-                                                            icd_surface->real_icd_surfaces[phys_dev_term->icd_index],
-                                                            pSurfaceFormatCount, pSurfaceFormats);
+        return icd_term->dispatch.GetPhysicalDeviceSurfaceFormatsKHR(phys_dev_term->phys_dev,
+                                                                     icd_surface->real_icd_surfaces[phys_dev_term->icd_index],
+                                                                     pSurfaceFormatCount, pSurfaceFormats);
     }
 
-    return icd_term->GetPhysicalDeviceSurfaceFormatsKHR(phys_dev_term->phys_dev, surface, pSurfaceFormatCount, pSurfaceFormats);
+    return icd_term->dispatch.GetPhysicalDeviceSurfaceFormatsKHR(phys_dev_term->phys_dev, surface, pSurfaceFormatCount,
+                                                                 pSurfaceFormats);
 }
 
 // This is the trampoline entrypoint for GetPhysicalDeviceSurfacePresentModesKHR
@@ -323,25 +340,30 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_GetPhysicalDeviceSurfacePresentModesKH
     struct loader_instance *ptr_instance = (struct loader_instance *)icd_term->this_instance;
     if (!ptr_instance->wsi_surface_enabled) {
         loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "VK_KHR_surface extension not enabled.  "
-                   "vkGetPhysicalDeviceSurfacePresentModesKHR not executed!\n");
+                   "VK_KHR_surface extension not enabled.  vkGetPhysicalDeviceSurfacePresentModesKHR not executed!\n");
         return VK_SUCCESS;
     }
 
-    // Next, if so, proceed with the implementation of this function:
-    assert(pPresentModeCount &&
-           "GetPhysicalDeviceSurfacePresentModesKHR: "
-           "Error, null pPresentModeCount");
+    if (NULL == pPresentModeCount) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "NULL pointer passed into vkGetPhysicalDeviceSurfacePresentModesKHR for pPresentModeCount!\n");
+        assert(false && "GetPhysicalDeviceSurfacePresentModesKHR(: Error, null pPresentModeCount");
+    }
 
-    assert(icd_term->GetPhysicalDeviceSurfacePresentModesKHR && "loader: null GetPhysicalDeviceSurfacePresentModesKHR ICD pointer");
+    if (NULL == icd_term->dispatch.GetPhysicalDeviceSurfacePresentModesKHR) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "ICD for selected physical device is not exporting vkGetPhysicalDeviceSurfacePresentModesKHR!\n");
+        assert(false && "loader: null GetPhysicalDeviceSurfacePresentModesKHR ICD pointer");
+    }
 
     VkIcdSurface *icd_surface = (VkIcdSurface *)(uintptr_t)surface;
     if (NULL != icd_surface->real_icd_surfaces && (VkSurfaceKHR)NULL != icd_surface->real_icd_surfaces[phys_dev_term->icd_index]) {
-        return icd_term->GetPhysicalDeviceSurfacePresentModesKHR(
+        return icd_term->dispatch.GetPhysicalDeviceSurfacePresentModesKHR(
             phys_dev_term->phys_dev, icd_surface->real_icd_surfaces[phys_dev_term->icd_index], pPresentModeCount, pPresentModes);
     }
 
-    return icd_term->GetPhysicalDeviceSurfacePresentModesKHR(phys_dev_term->phys_dev, surface, pPresentModeCount, pPresentModes);
+    return icd_term->dispatch.GetPhysicalDeviceSurfacePresentModesKHR(phys_dev_term->phys_dev, surface, pPresentModeCount,
+                                                                      pPresentModes);
 }
 
 // Functions for the VK_KHR_swapchain extension:
@@ -355,13 +377,13 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(VkDevice devic
     return disp->CreateSwapchainKHR(device, pCreateInfo, pAllocator, pSwapchain);
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL terminator_vkCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateInfoKHR *pCreateInfo,
-                                                               const VkAllocationCallbacks *pAllocator,
-                                                               VkSwapchainKHR *pSwapchain) {
+VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateSwapchainKHR(VkDevice device, const VkSwapchainCreateInfoKHR *pCreateInfo,
+                                                             const VkAllocationCallbacks *pAllocator,
+                                                             VkSwapchainKHR *pSwapchain) {
     uint32_t icd_index = 0;
     struct loader_device *dev;
     struct loader_icd_term *icd_term = loader_get_icd_and_device(device, &dev, &icd_index);
-    if (NULL != icd_term && NULL != icd_term->CreateSwapchainKHR) {
+    if (NULL != icd_term && NULL != icd_term->dispatch.CreateSwapchainKHR) {
         VkIcdSurface *icd_surface = (VkIcdSurface *)(uintptr_t)pCreateInfo->surface;
         if (NULL != icd_surface->real_icd_surfaces) {
             if ((VkSurfaceKHR)NULL != icd_surface->real_icd_surfaces[icd_index]) {
@@ -374,10 +396,10 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_vkCreateSwapchainKHR(VkDevice device, 
                 }
                 memcpy(pCreateCopy, pCreateInfo, sizeof(VkSwapchainCreateInfoKHR));
                 pCreateCopy->surface = icd_surface->real_icd_surfaces[icd_index];
-                return icd_term->CreateSwapchainKHR(device, pCreateCopy, pAllocator, pSwapchain);
+                return icd_term->dispatch.CreateSwapchainKHR(device, pCreateCopy, pAllocator, pSwapchain);
             }
         }
-        return icd_term->CreateSwapchainKHR(device, pCreateInfo, pAllocator, pSwapchain);
+        return icd_term->dispatch.CreateSwapchainKHR(device, pCreateInfo, pAllocator, pSwapchain);
     }
     return VK_SUCCESS;
 }
@@ -390,10 +412,7 @@ LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySwapchainKHR(VkDevice device, 
     disp->DestroySwapchainKHR(device, swapchain, pAllocator);
 }
 
-/*
- * This is the trampoline entrypoint
- * for GetSwapchainImagesKHR
- */
+// This is the trampoline entrypoint for GetSwapchainImagesKHR
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain,
                                                                      uint32_t *pSwapchainImageCount, VkImage *pSwapchainImages) {
     const VkLayerDispatchTable *disp;
@@ -401,10 +420,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(VkDevice de
     return disp->GetSwapchainImagesKHR(device, swapchain, pSwapchainImageCount, pSwapchainImages);
 }
 
-/*
- * This is the trampoline entrypoint
- * for AcquireNextImageKHR
- */
+// This is the trampoline entrypoint for AcquireNextImageKHR
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(VkDevice device, VkSwapchainKHR swapchain, uint64_t timeout,
                                                                    VkSemaphore semaphore, VkFence fence, uint32_t *pImageIndex) {
     const VkLayerDispatchTable *disp;
@@ -472,8 +488,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateWin32SurfaceKHR(VkInstance insta
     struct loader_instance *ptr_instance = loader_get_instance(instance);
     if (!ptr_instance->wsi_win32_surface_enabled) {
         loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "VK_KHR_win32_surface extension not enabled.  "
-                   "vkCreateWin32SurfaceKHR not executed!\n");
+                   "VK_KHR_win32_surface extension not enabled.  vkCreateWin32SurfaceKHR not executed!\n");
         vkRes = VK_ERROR_EXTENSION_NOT_PRESENT;
         goto out;
     }
@@ -492,9 +507,9 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateWin32SurfaceKHR(VkInstance insta
     // Loop through each ICD and determine if they need to create a surface
     for (struct loader_icd_term *icd_term = ptr_instance->icd_terms; icd_term != NULL; icd_term = icd_term->next, i++) {
         if (icd_term->scanned_icd->interface_version >= ICD_VER_SUPPORTS_ICD_SURFACE_KHR) {
-            if (NULL != icd_term->CreateWin32SurfaceKHR) {
-                vkRes = icd_term->CreateWin32SurfaceKHR(icd_term->instance, pCreateInfo, pAllocator,
-                                                        &pIcdSurface->real_icd_surfaces[i]);
+            if (NULL != icd_term->dispatch.CreateWin32SurfaceKHR) {
+                vkRes = icd_term->dispatch.CreateWin32SurfaceKHR(icd_term->instance, pCreateInfo, pAllocator,
+                                                                 &pIcdSurface->real_icd_surfaces[i]);
                 if (VK_SUCCESS != vkRes) {
                     goto out;
                 }
@@ -510,8 +525,8 @@ out:
         if (NULL != pIcdSurface->real_icd_surfaces) {
             i = 0;
             for (struct loader_icd_term *icd_term = ptr_instance->icd_terms; icd_term != NULL; icd_term = icd_term->next, i++) {
-                if ((VkSurfaceKHR)NULL != pIcdSurface->real_icd_surfaces[i] && NULL != icd_term->DestroySurfaceKHR) {
-                    icd_term->DestroySurfaceKHR(icd_term->instance, pIcdSurface->real_icd_surfaces[i], pAllocator);
+                if ((VkSurfaceKHR)NULL != pIcdSurface->real_icd_surfaces[i] && NULL != icd_term->dispatch.DestroySurfaceKHR) {
+                    icd_term->dispatch.DestroySurfaceKHR(icd_term->instance, pIcdSurface->real_icd_surfaces[i], pAllocator);
                 }
             }
             loader_instance_heap_free(ptr_instance, pIcdSurface->real_icd_surfaces);
@@ -543,17 +558,17 @@ VKAPI_ATTR VkBool32 VKAPI_CALL terminator_GetPhysicalDeviceWin32PresentationSupp
     struct loader_instance *ptr_instance = (struct loader_instance *)icd_term->this_instance;
     if (!ptr_instance->wsi_win32_surface_enabled) {
         loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "VK_KHR_win32_surface extension not enabled.  "
-                   "vkGetPhysicalDeviceWin32PresentationSupportKHR not executed!\n");
+                   "VK_KHR_win32_surface extension not enabled.  vkGetPhysicalDeviceWin32PresentationSupportKHR not executed!\n");
         return VK_SUCCESS;
     }
 
-    // Next, if so, proceed with the implementation of this function:
-    assert(icd_term->GetPhysicalDeviceWin32PresentationSupportKHR &&
-           "loader: null GetPhysicalDeviceWin32PresentationSupportKHR ICD "
-           "pointer");
+    if (NULL == icd_term->dispatch.GetPhysicalDeviceWin32PresentationSupportKHR) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "ICD for selected physical device is not exporting vkGetPhysicalDeviceWin32PresentationSupportKHR!\n");
+        assert(false && "loader: null GetPhysicalDeviceWin32PresentationSupportKHR ICD pointer");
+    }
 
-    return icd_term->GetPhysicalDeviceWin32PresentationSupportKHR(phys_dev_term->phys_dev, queueFamilyIndex);
+    return icd_term->dispatch.GetPhysicalDeviceWin32PresentationSupportKHR(phys_dev_term->phys_dev, queueFamilyIndex);
 }
 #endif  // VK_USE_PLATFORM_WIN32_KHR
 
@@ -585,8 +600,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateMirSurfaceKHR(VkInstance instanc
     struct loader_instance *ptr_instance = loader_get_instance(instance);
     if (!ptr_instance->wsi_mir_surface_enabled) {
         loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "VK_KHR_mir_surface extension not enabled.  "
-                   "vkCreateMirSurfaceKHR not executed!\n");
+                   "VK_KHR_mir_surface extension not enabled.  vkCreateMirSurfaceKHR not executed!\n");
         vkRes = VK_ERROR_EXTENSION_NOT_PRESENT;
         goto out;
     }
@@ -605,9 +619,9 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateMirSurfaceKHR(VkInstance instanc
     // Loop through each ICD and determine if they need to create a surface
     for (struct loader_icd_term *icd_term = ptr_instance->icd_terms; icd_term != NULL; icd_term = icd_term->next, i++) {
         if (icd_term->scanned_icd->interface_version >= ICD_VER_SUPPORTS_ICD_SURFACE_KHR) {
-            if (NULL != icd_term->CreateMirSurfaceKHR) {
-                vkRes =
-                    icd_term->CreateMirSurfaceKHR(icd_term->instance, pCreateInfo, pAllocator, &pIcdSurface->real_icd_surfaces[i]);
+            if (NULL != icd_term->dispatch.CreateMirSurfaceKHR) {
+                vkRes = icd_term->dispatch.CreateMirSurfaceKHR(icd_term->instance, pCreateInfo, pAllocator,
+                                                               &pIcdSurface->real_icd_surfaces[i]);
                 if (VK_SUCCESS != vkRes) {
                     goto out;
                 }
@@ -623,8 +637,8 @@ out:
         if (NULL != pIcdSurface->real_icd_surfaces) {
             i = 0;
             for (struct loader_icd_term *icd_term = ptr_instance->icd_terms; icd_term != NULL; icd_term = icd_term->next, i++) {
-                if ((VkSurfaceKHR)NULL != pIcdSurface->real_icd_surfaces[i] && NULL != icd_term->DestroySurfaceKHR) {
-                    icd_term->DestroySurfaceKHR(icd_term->instance, pIcdSurface->real_icd_surfaces[i], pAllocator);
+                if ((VkSurfaceKHR)NULL != pIcdSurface->real_icd_surfaces[i] && NULL != icd_term->dispatch.DestroySurfaceKHR) {
+                    icd_term->dispatch.DestroySurfaceKHR(icd_term->instance, pIcdSurface->real_icd_surfaces[i], pAllocator);
                 }
             }
             loader_instance_heap_free(ptr_instance, pIcdSurface->real_icd_surfaces);
@@ -658,25 +672,23 @@ VKAPI_ATTR VkBool32 VKAPI_CALL terminator_GetPhysicalDeviceMirPresentationSuppor
     struct loader_instance *ptr_instance = (struct loader_instance *)icd_term->this_instance;
     if (!ptr_instance->wsi_mir_surface_enabled) {
         loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "VK_KHR_mir_surface extension not enabled.  "
-                   "vkGetPhysicalDeviceMirPresentationSupportKHR not executed!\n");
+                   "VK_KHR_mir_surface extension not enabled.  vkGetPhysicalDeviceMirPresentationSupportKHR not executed!\n");
         return VK_SUCCESS;
     }
 
-    // Next, if so, proceed with the implementation of this function:
-    assert(icd_term->GetPhysicalDeviceMirPresentationSupportKHR &&
-           "loader: null GetPhysicalDeviceMirPresentationSupportKHR ICD pointer");
+    if (NULL == icd_term->dispatch.GetPhysicalDeviceMirPresentationSupportKHR) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "ICD for selected physical device is not exporting vkGetPhysicalDeviceMirPresentationSupportKHR!\n");
+        assert(false && "loader: null GetPhysicalDeviceMirPresentationSupportKHR ICD pointer");
+    }
 
-    return icd_term->GetPhysicalDeviceMirPresentationSupportKHR(phys_dev_term->phys_dev, queueFamilyIndex, connection);
+    return icd_term->dispatch.GetPhysicalDeviceMirPresentationSupportKHR(phys_dev_term->phys_dev, queueFamilyIndex, connection);
 }
 #endif  // VK_USE_PLATFORM_MIR_KHR
 
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
 
-/*
- * This is the trampoline entrypoint
- * for CreateWaylandSurfaceKHR
- */
+// This is the trampoline entrypoint for CreateWaylandSurfaceKHR
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWaylandSurfaceKHR(VkInstance instance,
                                                                        const VkWaylandSurfaceCreateInfoKHR *pCreateInfo,
                                                                        const VkAllocationCallbacks *pAllocator,
@@ -701,8 +713,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateWaylandSurfaceKHR(VkInstance ins
     struct loader_instance *ptr_instance = loader_get_instance(instance);
     if (!ptr_instance->wsi_wayland_surface_enabled) {
         loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "VK_KHR_wayland_surface extension not enabled.  "
-                   "vkCreateWaylandSurfaceKHR not executed!\n");
+                   "VK_KHR_wayland_surface extension not enabled.  vkCreateWaylandSurfaceKHR not executed!\n");
         vkRes = VK_ERROR_EXTENSION_NOT_PRESENT;
         goto out;
     }
@@ -721,9 +732,9 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateWaylandSurfaceKHR(VkInstance ins
     // Loop through each ICD and determine if they need to create a surface
     for (struct loader_icd_term *icd_term = ptr_instance->icd_terms; icd_term != NULL; icd_term = icd_term->next, i++) {
         if (icd_term->scanned_icd->interface_version >= ICD_VER_SUPPORTS_ICD_SURFACE_KHR) {
-            if (NULL != icd_term->CreateWaylandSurfaceKHR) {
-                vkRes = icd_term->CreateWaylandSurfaceKHR(icd_term->instance, pCreateInfo, pAllocator,
-                                                          &pIcdSurface->real_icd_surfaces[i]);
+            if (NULL != icd_term->dispatch.CreateWaylandSurfaceKHR) {
+                vkRes = icd_term->dispatch.CreateWaylandSurfaceKHR(icd_term->instance, pCreateInfo, pAllocator,
+                                                                   &pIcdSurface->real_icd_surfaces[i]);
                 if (VK_SUCCESS != vkRes) {
                     goto out;
                 }
@@ -739,8 +750,8 @@ out:
         if (NULL != pIcdSurface->real_icd_surfaces) {
             i = 0;
             for (struct loader_icd_term *icd_term = ptr_instance->icd_terms; icd_term != NULL; icd_term = icd_term->next, i++) {
-                if ((VkSurfaceKHR)NULL != pIcdSurface->real_icd_surfaces[i] && NULL != icd_term->DestroySurfaceKHR) {
-                    icd_term->DestroySurfaceKHR(icd_term->instance, pIcdSurface->real_icd_surfaces[i], pAllocator);
+                if ((VkSurfaceKHR)NULL != pIcdSurface->real_icd_surfaces[i] && NULL != icd_term->dispatch.DestroySurfaceKHR) {
+                    icd_term->dispatch.DestroySurfaceKHR(icd_term->instance, pIcdSurface->real_icd_surfaces[i], pAllocator);
                 }
             }
             loader_instance_heap_free(ptr_instance, pIcdSurface->real_icd_surfaces);
@@ -773,18 +784,19 @@ VKAPI_ATTR VkBool32 VKAPI_CALL terminator_GetPhysicalDeviceWaylandPresentationSu
     struct loader_icd_term *icd_term = phys_dev_term->this_icd_term;
     struct loader_instance *ptr_instance = (struct loader_instance *)icd_term->this_instance;
     if (!ptr_instance->wsi_wayland_surface_enabled) {
-        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "VK_KHR_wayland_surface extension not enabled.  "
-                   "vkGetPhysicalDeviceWaylandPresentationSupportKHR not executed!\n");
+        loader_log(
+            ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+            "VK_KHR_wayland_surface extension not enabled.  vkGetPhysicalDeviceWaylandPresentationSupportKHR not executed!\n");
         return VK_SUCCESS;
     }
 
-    // Next, if so, proceed with the implementation of this function:
-    assert(icd_term->GetPhysicalDeviceWaylandPresentationSupportKHR &&
-           "loader: null GetPhysicalDeviceWaylandPresentationSupportKHR ICD "
-           "pointer");
+    if (NULL == icd_term->dispatch.GetPhysicalDeviceWaylandPresentationSupportKHR) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "ICD for selected physical device is not exporting vkGetPhysicalDeviceWaylandPresentationSupportKHR!\n");
+        assert(false && "loader: null GetPhysicalDeviceWaylandPresentationSupportKHR ICD pointer");
+    }
 
-    return icd_term->GetPhysicalDeviceWaylandPresentationSupportKHR(phys_dev_term->phys_dev, queueFamilyIndex, display);
+    return icd_term->dispatch.GetPhysicalDeviceWaylandPresentationSupportKHR(phys_dev_term->phys_dev, queueFamilyIndex, display);
 }
 #endif  // VK_USE_PLATFORM_WAYLAND_KHR
 
@@ -816,8 +828,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateXcbSurfaceKHR(VkInstance instanc
     struct loader_instance *ptr_instance = loader_get_instance(instance);
     if (!ptr_instance->wsi_xcb_surface_enabled) {
         loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "VK_KHR_xcb_surface extension not enabled.  "
-                   "vkCreateXcbSurfaceKHR not executed!\n");
+                   "VK_KHR_xcb_surface extension not enabled.  vkCreateXcbSurfaceKHR not executed!\n");
         vkRes = VK_ERROR_EXTENSION_NOT_PRESENT;
         goto out;
     }
@@ -836,9 +847,9 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateXcbSurfaceKHR(VkInstance instanc
     // Loop through each ICD and determine if they need to create a surface
     for (struct loader_icd_term *icd_term = ptr_instance->icd_terms; icd_term != NULL; icd_term = icd_term->next, i++) {
         if (icd_term->scanned_icd->interface_version >= ICD_VER_SUPPORTS_ICD_SURFACE_KHR) {
-            if (NULL != icd_term->CreateXcbSurfaceKHR) {
-                vkRes =
-                    icd_term->CreateXcbSurfaceKHR(icd_term->instance, pCreateInfo, pAllocator, &pIcdSurface->real_icd_surfaces[i]);
+            if (NULL != icd_term->dispatch.CreateXcbSurfaceKHR) {
+                vkRes = icd_term->dispatch.CreateXcbSurfaceKHR(icd_term->instance, pCreateInfo, pAllocator,
+                                                               &pIcdSurface->real_icd_surfaces[i]);
                 if (VK_SUCCESS != vkRes) {
                     goto out;
                 }
@@ -854,8 +865,8 @@ out:
         if (NULL != pIcdSurface->real_icd_surfaces) {
             i = 0;
             for (struct loader_icd_term *icd_term = ptr_instance->icd_terms; icd_term != NULL; icd_term = icd_term->next, i++) {
-                if ((VkSurfaceKHR)NULL != pIcdSurface->real_icd_surfaces[i] && NULL != icd_term->DestroySurfaceKHR) {
-                    icd_term->DestroySurfaceKHR(icd_term->instance, pIcdSurface->real_icd_surfaces[i], pAllocator);
+                if ((VkSurfaceKHR)NULL != pIcdSurface->real_icd_surfaces[i] && NULL != icd_term->dispatch.DestroySurfaceKHR) {
+                    icd_term->dispatch.DestroySurfaceKHR(icd_term->instance, pIcdSurface->real_icd_surfaces[i], pAllocator);
                 }
             }
             loader_instance_heap_free(ptr_instance, pIcdSurface->real_icd_surfaces);
@@ -891,16 +902,18 @@ VKAPI_ATTR VkBool32 VKAPI_CALL terminator_GetPhysicalDeviceXcbPresentationSuppor
     struct loader_instance *ptr_instance = (struct loader_instance *)icd_term->this_instance;
     if (!ptr_instance->wsi_xcb_surface_enabled) {
         loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "VK_KHR_xcb_surface extension not enabled.  "
-                   "vkGetPhysicalDeviceXcbPresentationSupportKHR not executed!\n");
+                   "VK_KHR_xcb_surface extension not enabled.  vkGetPhysicalDeviceXcbPresentationSupportKHR not executed!\n");
         return VK_SUCCESS;
     }
 
-    // Next, if so, proceed with the implementation of this function:
-    assert(icd_term->GetPhysicalDeviceXcbPresentationSupportKHR &&
-           "loader: null GetPhysicalDeviceXcbPresentationSupportKHR ICD pointer");
+    if (NULL == icd_term->dispatch.GetPhysicalDeviceXcbPresentationSupportKHR) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "ICD for selected physical device is not exporting vkGetPhysicalDeviceXcbPresentationSupportKHR!\n");
+        assert(false && "loader: null GetPhysicalDeviceXcbPresentationSupportKHR ICD pointer");
+    }
 
-    return icd_term->GetPhysicalDeviceXcbPresentationSupportKHR(phys_dev_term->phys_dev, queueFamilyIndex, connection, visual_id);
+    return icd_term->dispatch.GetPhysicalDeviceXcbPresentationSupportKHR(phys_dev_term->phys_dev, queueFamilyIndex, connection,
+                                                                         visual_id);
 }
 #endif  // VK_USE_PLATFORM_XCB_KHR
 
@@ -932,8 +945,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateXlibSurfaceKHR(VkInstance instan
     struct loader_instance *ptr_instance = loader_get_instance(instance);
     if (!ptr_instance->wsi_xlib_surface_enabled) {
         loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "VK_KHR_xlib_surface extension not enabled.  "
-                   "vkCreateXlibSurfaceKHR not executed!\n");
+                   "VK_KHR_xlib_surface extension not enabled.  vkCreateXlibSurfaceKHR not executed!\n");
         vkRes = VK_ERROR_EXTENSION_NOT_PRESENT;
         goto out;
     }
@@ -952,9 +964,9 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateXlibSurfaceKHR(VkInstance instan
     // Loop through each ICD and determine if they need to create a surface
     for (struct loader_icd_term *icd_term = ptr_instance->icd_terms; icd_term != NULL; icd_term = icd_term->next, i++) {
         if (icd_term->scanned_icd->interface_version >= ICD_VER_SUPPORTS_ICD_SURFACE_KHR) {
-            if (NULL != icd_term->CreateXlibSurfaceKHR) {
-                vkRes =
-                    icd_term->CreateXlibSurfaceKHR(icd_term->instance, pCreateInfo, pAllocator, &pIcdSurface->real_icd_surfaces[i]);
+            if (NULL != icd_term->dispatch.CreateXlibSurfaceKHR) {
+                vkRes = icd_term->dispatch.CreateXlibSurfaceKHR(icd_term->instance, pCreateInfo, pAllocator,
+                                                                &pIcdSurface->real_icd_surfaces[i]);
                 if (VK_SUCCESS != vkRes) {
                     goto out;
                 }
@@ -970,8 +982,8 @@ out:
         if (NULL != pIcdSurface->real_icd_surfaces) {
             i = 0;
             for (struct loader_icd_term *icd_term = ptr_instance->icd_terms; icd_term != NULL; icd_term = icd_term->next, i++) {
-                if ((VkSurfaceKHR)NULL != pIcdSurface->real_icd_surfaces[i] && NULL != icd_term->DestroySurfaceKHR) {
-                    icd_term->DestroySurfaceKHR(icd_term->instance, pIcdSurface->real_icd_surfaces[i], pAllocator);
+                if ((VkSurfaceKHR)NULL != pIcdSurface->real_icd_surfaces[i] && NULL != icd_term->dispatch.DestroySurfaceKHR) {
+                    icd_term->dispatch.DestroySurfaceKHR(icd_term->instance, pIcdSurface->real_icd_surfaces[i], pAllocator);
                 }
             }
             loader_instance_heap_free(ptr_instance, pIcdSurface->real_icd_surfaces);
@@ -1005,16 +1017,17 @@ VKAPI_ATTR VkBool32 VKAPI_CALL terminator_GetPhysicalDeviceXlibPresentationSuppo
     struct loader_instance *ptr_instance = (struct loader_instance *)icd_term->this_instance;
     if (!ptr_instance->wsi_xlib_surface_enabled) {
         loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "VK_KHR_xlib_surface extension not enabled.  "
-                   "vkGetPhysicalDeviceXlibPresentationSupportKHR not executed!\n");
+                   "VK_KHR_xlib_surface extension not enabled.  vkGetPhysicalDeviceXlibPresentationSupportKHR not executed!\n");
         return VK_SUCCESS;
     }
 
-    // Next, if so, proceed with the implementation of this function:
-    assert(icd_term->GetPhysicalDeviceXlibPresentationSupportKHR &&
-           "loader: null GetPhysicalDeviceXlibPresentationSupportKHR ICD pointer");
+    if (NULL == icd_term->dispatch.GetPhysicalDeviceXlibPresentationSupportKHR) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "ICD for selected physical device is not exporting vkGetPhysicalDeviceXlibPresentationSupportKHR!\n");
+        assert(false && "loader: null GetPhysicalDeviceXlibPresentationSupportKHR ICD pointer");
+    }
 
-    return icd_term->GetPhysicalDeviceXlibPresentationSupportKHR(phys_dev_term->phys_dev, queueFamilyIndex, dpy, visualID);
+    return icd_term->dispatch.GetPhysicalDeviceXlibPresentationSupportKHR(phys_dev_term->phys_dev, queueFamilyIndex, dpy, visualID);
 }
 #endif  // VK_USE_PLATFORM_XLIB_KHR
 
@@ -1041,8 +1054,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateAndroidSurfaceKHR(VkInstance ins
     struct loader_instance *ptr_instance = loader_get_instance(instance);
     if (!ptr_instance->wsi_display_enabled) {
         loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "VK_KHR_display extension not enabled.  "
-                   "vkCreateAndroidSurfaceKHR not executed!\n");
+                   "VK_KHR_display extension not enabled.  vkCreateAndroidSurfaceKHR not executed!\n");
         return VK_ERROR_EXTENSION_NOT_PRESENT;
     }
 
@@ -1084,15 +1096,17 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_GetPhysicalDeviceDisplayPropertiesKHR(
     struct loader_instance *ptr_instance = (struct loader_instance *)icd_term->this_instance;
     if (!ptr_instance->wsi_display_enabled) {
         loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "VK_KHR_display extension not enabled.  "
-                   "vkGetPhysicalDeviceDisplayPropertiesKHR not executed!\n");
+                   "VK_KHR_display extension not enabled.  vkGetPhysicalDeviceDisplayPropertiesKHR not executed!\n");
         return VK_SUCCESS;
     }
 
-    // Next, if so, proceed with the implementation of this function:
-    assert(icd_term->GetPhysicalDeviceDisplayPropertiesKHR && "loader: null GetPhysicalDeviceDisplayPropertiesKHR ICD pointer");
+    if (NULL == icd_term->dispatch.GetPhysicalDeviceDisplayPropertiesKHR) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "ICD for selected physical device is not exporting vkGetPhysicalDeviceDisplayPropertiesKHR!\n");
+        assert(false && "loader: null GetPhysicalDeviceDisplayPropertiesKHR ICD pointer");
+    }
 
-    return icd_term->GetPhysicalDeviceDisplayPropertiesKHR(phys_dev_term->phys_dev, pPropertyCount, pProperties);
+    return icd_term->dispatch.GetPhysicalDeviceDisplayPropertiesKHR(phys_dev_term->phys_dev, pPropertyCount, pProperties);
 }
 
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceDisplayPlanePropertiesKHR(
@@ -1113,16 +1127,17 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_GetPhysicalDeviceDisplayPlanePropertie
     struct loader_instance *ptr_instance = (struct loader_instance *)icd_term->this_instance;
     if (!ptr_instance->wsi_display_enabled) {
         loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "VK_KHR_display extension not enabled.  "
-                   "vkGetPhysicalDeviceDisplayPlanePropertiesKHR not executed!\n");
+                   "VK_KHR_display extension not enabled.  vkGetPhysicalDeviceDisplayPlanePropertiesKHR not executed!\n");
         return VK_SUCCESS;
     }
 
-    // Next, if so, proceed with the implementation of this function:
-    assert(icd_term->GetPhysicalDeviceDisplayPlanePropertiesKHR &&
-           "loader: null GetPhysicalDeviceDisplayPlanePropertiesKHR ICD pointer");
+    if (NULL == icd_term->dispatch.GetPhysicalDeviceDisplayPlanePropertiesKHR) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "ICD for selected physical device is not exporting vkGetPhysicalDeviceDisplayPlanePropertiesKHR!\n");
+        assert(false && "loader: null GetPhysicalDeviceDisplayPlanePropertiesKHR ICD pointer");
+    }
 
-    return icd_term->GetPhysicalDeviceDisplayPlanePropertiesKHR(phys_dev_term->phys_dev, pPropertyCount, pProperties);
+    return icd_term->dispatch.GetPhysicalDeviceDisplayPlanePropertiesKHR(phys_dev_term->phys_dev, pPropertyCount, pProperties);
 }
 
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetDisplayPlaneSupportedDisplaysKHR(VkPhysicalDevice physicalDevice,
@@ -1143,15 +1158,17 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_GetDisplayPlaneSupportedDisplaysKHR(Vk
     struct loader_instance *ptr_instance = (struct loader_instance *)icd_term->this_instance;
     if (!ptr_instance->wsi_display_enabled) {
         loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "VK_KHR_display extension not enabled.  "
-                   "vkGetDisplayPlaneSupportedDisplaysKHR not executed!\n");
+                   "VK_KHR_display extension not enabled.  vkGetDisplayPlaneSupportedDisplaysKHR not executed!\n");
         return VK_SUCCESS;
     }
 
-    // Next, if so, proceed with the implementation of this function:
-    assert(icd_term->GetDisplayPlaneSupportedDisplaysKHR && "loader: null GetDisplayPlaneSupportedDisplaysKHR ICD pointer");
+    if (NULL == icd_term->dispatch.GetDisplayPlaneSupportedDisplaysKHR) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "ICD for selected physical device is not exporting vkGetDisplayPlaneSupportedDisplaysKHR!\n");
+        assert(false && "loader: null GetDisplayPlaneSupportedDisplaysKHR ICD pointer");
+    }
 
-    return icd_term->GetDisplayPlaneSupportedDisplaysKHR(phys_dev_term->phys_dev, planeIndex, pDisplayCount, pDisplays);
+    return icd_term->dispatch.GetDisplayPlaneSupportedDisplaysKHR(phys_dev_term->phys_dev, planeIndex, pDisplayCount, pDisplays);
 }
 
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetDisplayModePropertiesKHR(VkPhysicalDevice physicalDevice, VkDisplayKHR display,
@@ -1173,15 +1190,17 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_GetDisplayModePropertiesKHR(VkPhysical
     struct loader_instance *ptr_instance = (struct loader_instance *)icd_term->this_instance;
     if (!ptr_instance->wsi_display_enabled) {
         loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "VK_KHR_display extension not enabled.  "
-                   "vkGetDisplayModePropertiesKHR not executed!\n");
+                   "VK_KHR_display extension not enabled.  vkGetDisplayModePropertiesKHR not executed!\n");
         return VK_SUCCESS;
     }
 
-    // Next, if so, proceed with the implementation of this function:
-    assert(icd_term->GetDisplayModePropertiesKHR && "loader: null GetDisplayModePropertiesKHR ICD pointer");
+    if (NULL == icd_term->dispatch.GetDisplayModePropertiesKHR) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "ICD for selected physical device is not exporting vkGetDisplayModePropertiesKHR!\n");
+        assert(false && "loader: null GetDisplayModePropertiesKHR ICD pointer");
+    }
 
-    return icd_term->GetDisplayModePropertiesKHR(phys_dev_term->phys_dev, display, pPropertyCount, pProperties);
+    return icd_term->dispatch.GetDisplayModePropertiesKHR(phys_dev_term->phys_dev, display, pPropertyCount, pProperties);
 }
 
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDisplayModeKHR(VkPhysicalDevice physicalDevice, VkDisplayKHR display,
@@ -1204,15 +1223,17 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDisplayModeKHR(VkPhysicalDevice 
     struct loader_instance *ptr_instance = (struct loader_instance *)icd_term->this_instance;
     if (!ptr_instance->wsi_display_enabled) {
         loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "VK_KHR_display extension not enabled.  "
-                   "vkCreateDisplayModeKHR not executed!\n");
+                   "VK_KHR_display extension not enabled.  vkCreateDisplayModeKHR not executed!\n");
         return VK_ERROR_EXTENSION_NOT_PRESENT;
     }
 
-    // Next, if so, proceed with the implementation of this function:
-    assert(icd_term->CreateDisplayModeKHR && "loader: null CreateDisplayModeKHR ICD pointer");
+    if (NULL == icd_term->dispatch.CreateDisplayModeKHR) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "ICD for selected physical device is not exporting vkCreateDisplayModeKHR!\n");
+        assert(false && "loader: null CreateDisplayModeKHR ICD pointer");
+    }
 
-    return icd_term->CreateDisplayModeKHR(phys_dev_term->phys_dev, display, pCreateInfo, pAllocator, pMode);
+    return icd_term->dispatch.CreateDisplayModeKHR(phys_dev_term->phys_dev, display, pCreateInfo, pAllocator, pMode);
 }
 
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetDisplayPlaneCapabilitiesKHR(VkPhysicalDevice physicalDevice,
@@ -1234,15 +1255,17 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_GetDisplayPlaneCapabilitiesKHR(VkPhysi
     struct loader_instance *ptr_instance = (struct loader_instance *)icd_term->this_instance;
     if (!ptr_instance->wsi_display_enabled) {
         loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "VK_KHR_display extension not enabled.  "
-                   "vkGetDisplayPlaneCapabilitiesKHR not executed!\n");
+                   "VK_KHR_display extension not enabled.  vkGetDisplayPlaneCapabilitiesKHR not executed!\n");
         return VK_SUCCESS;
     }
 
-    // Next, if so, proceed with the implementation of this function:
-    assert(icd_term->GetDisplayPlaneCapabilitiesKHR && "loader: null GetDisplayPlaneCapabilitiesKHR ICD pointer");
+    if (NULL == icd_term->dispatch.GetDisplayPlaneCapabilitiesKHR) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "ICD for selected physical device is not exporting vkGetDisplayPlaneCapabilitiesKHR!\n");
+        assert(false && "loader: null GetDisplayPlaneCapabilitiesKHR ICD pointer");
+    }
 
-    return icd_term->GetDisplayPlaneCapabilitiesKHR(phys_dev_term->phys_dev, mode, planeIndex, pCapabilities);
+    return icd_term->dispatch.GetDisplayPlaneCapabilitiesKHR(phys_dev_term->phys_dev, mode, planeIndex, pCapabilities);
 }
 
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDisplayPlaneSurfaceKHR(VkInstance instance,
@@ -1268,8 +1291,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDisplayPlaneSurfaceKHR(VkInstanc
 
     if (!inst->wsi_display_enabled) {
         loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "VK_KHR_surface extension not enabled.  "
-                   "vkCreateDisplayPlaneSurfaceKHR not executed!\n");
+                   "VK_KHR_surface extension not enabled.  vkCreateDisplayPlaneSurfaceKHR not executed!\n");
         vkRes = VK_ERROR_EXTENSION_NOT_PRESENT;
         goto out;
     }
@@ -1293,9 +1315,9 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDisplayPlaneSurfaceKHR(VkInstanc
     // Loop through each ICD and determine if they need to create a surface
     for (struct loader_icd_term *icd_term = inst->icd_terms; icd_term != NULL; icd_term = icd_term->next, i++) {
         if (icd_term->scanned_icd->interface_version >= ICD_VER_SUPPORTS_ICD_SURFACE_KHR) {
-            if (NULL != icd_term->CreateDisplayPlaneSurfaceKHR) {
-                vkRes = icd_term->CreateDisplayPlaneSurfaceKHR(icd_term->instance, pCreateInfo, pAllocator,
-                                                               &pIcdSurface->real_icd_surfaces[i]);
+            if (NULL != icd_term->dispatch.CreateDisplayPlaneSurfaceKHR) {
+                vkRes = icd_term->dispatch.CreateDisplayPlaneSurfaceKHR(icd_term->instance, pCreateInfo, pAllocator,
+                                                                        &pIcdSurface->real_icd_surfaces[i]);
                 if (VK_SUCCESS != vkRes) {
                     goto out;
                 }
@@ -1311,8 +1333,8 @@ out:
         if (NULL != pIcdSurface->real_icd_surfaces) {
             i = 0;
             for (struct loader_icd_term *icd_term = inst->icd_terms; icd_term != NULL; icd_term = icd_term->next, i++) {
-                if ((VkSurfaceKHR)NULL != pIcdSurface->real_icd_surfaces[i] && NULL != icd_term->DestroySurfaceKHR) {
-                    icd_term->DestroySurfaceKHR(icd_term->instance, pIcdSurface->real_icd_surfaces[i], pAllocator);
+                if ((VkSurfaceKHR)NULL != pIcdSurface->real_icd_surfaces[i] && NULL != icd_term->dispatch.DestroySurfaceKHR) {
+                    icd_term->dispatch.DestroySurfaceKHR(icd_term->instance, pIcdSurface->real_icd_surfaces[i], pAllocator);
                 }
             }
             loader_instance_heap_free(inst, pIcdSurface->real_icd_surfaces);
@@ -1334,14 +1356,14 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSharedSwapchainsKHR(VkDevic
     return disp->CreateSharedSwapchainsKHR(device, swapchainCount, pCreateInfos, pAllocator, pSwapchains);
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL terminator_vkCreateSharedSwapchainsKHR(VkDevice device, uint32_t swapchainCount,
-                                                                      const VkSwapchainCreateInfoKHR *pCreateInfos,
-                                                                      const VkAllocationCallbacks *pAllocator,
-                                                                      VkSwapchainKHR *pSwapchains) {
+VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateSharedSwapchainsKHR(VkDevice device, uint32_t swapchainCount,
+                                                                    const VkSwapchainCreateInfoKHR *pCreateInfos,
+                                                                    const VkAllocationCallbacks *pAllocator,
+                                                                    VkSwapchainKHR *pSwapchains) {
     uint32_t icd_index = 0;
     struct loader_device *dev;
     struct loader_icd_term *icd_term = loader_get_icd_and_device(device, &dev, &icd_index);
-    if (NULL != icd_term && NULL != icd_term->CreateSharedSwapchainsKHR) {
+    if (NULL != icd_term && NULL != icd_term->dispatch.CreateSharedSwapchainsKHR) {
         VkIcdSurface *icd_surface = (VkIcdSurface *)(uintptr_t)pCreateInfos->surface;
         if (NULL != icd_surface->real_icd_surfaces) {
             if ((VkSurfaceKHR)NULL != icd_surface->real_icd_surfaces[icd_index]) {
@@ -1356,10 +1378,10 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_vkCreateSharedSwapchainsKHR(VkDevice d
                 for (uint32_t sc = 0; sc < swapchainCount; sc++) {
                     pCreateCopy[sc].surface = icd_surface->real_icd_surfaces[icd_index];
                 }
-                return icd_term->CreateSharedSwapchainsKHR(device, swapchainCount, pCreateCopy, pAllocator, pSwapchains);
+                return icd_term->dispatch.CreateSharedSwapchainsKHR(device, swapchainCount, pCreateCopy, pAllocator, pSwapchains);
             }
         }
-        return icd_term->CreateSharedSwapchainsKHR(device, swapchainCount, pCreateInfos, pAllocator, pSwapchains);
+        return icd_term->dispatch.CreateSharedSwapchainsKHR(device, swapchainCount, pCreateInfos, pAllocator, pSwapchains);
     }
     return VK_SUCCESS;
 }
