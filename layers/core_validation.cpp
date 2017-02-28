@@ -9274,6 +9274,15 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
                     attachment_first_read.insert(std::make_pair(attachment, false));
                     attachment_first_layout.insert(std::make_pair(attachment, subpass.pColorAttachments[j].layout));
                 }
+
+                if (subpass.pResolveAttachments && subpass.pResolveAttachments[j].attachment != VK_ATTACHMENT_UNUSED) {
+                    // resolve attachments are considered to be written
+                    attachment = subpass.pResolveAttachments[j].attachment;
+                    if (!attachment_first_read.count(attachment)) {
+                        attachment_first_read.insert(std::make_pair(attachment, false));
+                        attachment_first_layout.insert(std::make_pair(attachment, subpass.pResolveAttachments[j].layout));
+                    }
+                }
             }
             if (subpass.pDepthStencilAttachment && subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
                 uint32_t attachment = subpass.pDepthStencilAttachment->attachment;
