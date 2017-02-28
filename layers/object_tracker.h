@@ -1,7 +1,7 @@
-/* Copyright (c) 2015-2016 The Khronos Group Inc.
- * Copyright (c) 2015-2016 Valve Corporation
- * Copyright (c) 2015-2016 LunarG, Inc.
- * Copyright (C) 2015-2016 Google Inc.
+/* Copyright (c) 2015-2017 The Khronos Group Inc.
+ * Copyright (c) 2015-2017 Valve Corporation
+ * Copyright (c) 2015-2017 LunarG, Inc.
+ * Copyright (C) 2015-2017 Google Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -94,12 +94,32 @@ struct layer_data {
 
     debug_report_data *report_data;
     std::vector<VkDebugReportCallbackEXT> logging_callback;
-    bool wsi_enabled;
-    bool wsi_display_swapchain_enabled;
-    bool wsi_display_extension_enabled;
-    bool objtrack_extensions_enabled;
-    bool nvx_device_generated_commands_enabled;
-    bool ext_display_control_enabled;
+
+    union device_extension_enables {
+        struct {
+            bool wsi : 1;
+            bool wsi_display_swapchain : 1;
+            bool wsi_display_extension : 1;
+            bool objtrack_extensions : 1;
+            bool khr_descriptor_update_template : 1;
+            bool khr_maintenance1 : 1;
+            bool khr_push_descriptor : 1;
+            bool khx_device_group : 1;
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+            bool khx_external_memory_win32 : 1;
+#endif // VK_USE_PLATFORM_WIN32_KHR
+            bool khx_external_memory_fd : 1;
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+            bool khx_external_semaphore_win32 : 1;
+#endif // VK_USE_PLATFORM_WIN32_KHR
+            bool khx_external_semaphore_fd : 1;
+            bool ext_display_control : 1;
+            bool ext_discard_rectangles : 1;
+            bool nv_clip_space_w_scaling : 1;
+            bool nvx_device_generated_commands : 1;
+        };
+        uint64_t padding[4];
+    } enables;
 
     // The following are for keeping track of the temporary callbacks that can
     // be used in vkCreateInstance and vkDestroyInstance:
@@ -124,16 +144,13 @@ struct layer_data {
           num_objects{},
           num_total_objects(0),
           report_data(nullptr),
-          wsi_enabled(false),
-          wsi_display_swapchain_enabled(false),
-          wsi_display_extension_enabled(false),
-          objtrack_extensions_enabled(false),
           num_tmp_callbacks(0),
           tmp_dbg_create_infos(nullptr),
           tmp_callbacks(nullptr),
           object_map{},
           dispatch_table{} {
         object_map.resize(VK_DEBUG_REPORT_OBJECT_TYPE_RANGE_SIZE_EXT + 1);
+        memset(enables.padding, 0, sizeof(uint64_t) * 4);
     }
 };
 

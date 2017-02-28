@@ -1,9 +1,9 @@
 #!/usr/bin/python3 -i
 #
-# Copyright (c) 2015-2016 The Khronos Group Inc.
-# Copyright (c) 2015-2016 Valve Corporation
-# Copyright (c) 2015-2016 LunarG, Inc.
-# Copyright (c) 2015-2016 Google Inc.
+# Copyright (c) 2015-2017 The Khronos Group Inc.
+# Copyright (c) 2015-2017 Valve Corporation
+# Copyright (c) 2015-2017 LunarG, Inc.
+# Copyright (c) 2015-2017 Google Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,8 +25,8 @@ from generator import *
 from collections import namedtuple
 
 #
-# DispatchTableOutputGeneratorOptions - subclass of GeneratorOptions.
-class DispatchTableOutputGeneratorOptions(GeneratorOptions):
+# DispatchTableHelperOutputGeneratorOptions - subclass of GeneratorOptions.
+class DispatchTableHelperOutputGeneratorOptions(GeneratorOptions):
     def __init__(self,
                  filename = None,
                  directory = '.',
@@ -63,9 +63,9 @@ class DispatchTableOutputGeneratorOptions(GeneratorOptions):
         self.apientryp       = apientryp
         self.alignFuncParam  = alignFuncParam
 #
-# DispatchTableOutputGenerator - subclass of OutputGenerator.
+# DispatchTableHelperOutputGenerator - subclass of OutputGenerator.
 # Generates dispatch table helper header files for LVL
-class DispatchTableOutputGenerator(OutputGenerator):
+class DispatchTableHelperOutputGenerator(OutputGenerator):
     """Generate dispatch table helper header based on XML element attributes"""
     def __init__(self,
                  errFile = sys.stderr,
@@ -85,13 +85,13 @@ class DispatchTableOutputGenerator(OutputGenerator):
                 write(s, file=self.outFile)
         # File Comment
         file_comment = '// *** THIS FILE IS GENERATED - DO NOT EDIT ***\n'
-        file_comment += '// See dispatch_table_generator.py for modifications\n'
+        file_comment += '// See dispatch_helper_generator.py for modifications\n'
         write(file_comment, file=self.outFile)
         # Copyright Notice
         copyright =  '/*\n'
-        copyright += ' * Copyright (c) 2015-2016 The Khronos Group Inc.\n'
-        copyright += ' * Copyright (c) 2015-2016 Valve Corporation\n'
-        copyright += ' * Copyright (c) 2015-2016 LunarG, Inc.\n'
+        copyright += ' * Copyright (c) 2015-2017 The Khronos Group Inc.\n'
+        copyright += ' * Copyright (c) 2015-2017 Valve Corporation\n'
+        copyright += ' * Copyright (c) 2015-2017 LunarG, Inc.\n'
         copyright += ' *\n'
         copyright += ' * Licensed under the Apache License, Version 2.0 (the "License");\n'
         copyright += ' * you may not use this file except in compliance with the License.\n'
@@ -123,8 +123,8 @@ class DispatchTableOutputGenerator(OutputGenerator):
         device_table = ''
         instance_table = ''
 
-        device_table += self.OutputDispatchTable('device')
-        instance_table += self.OutputDispatchTable('instance')
+        device_table += self.OutputDispatchTableHelper('device')
+        instance_table += self.OutputDispatchTableHelper('instance')
 
         write(device_table, file=self.outFile);
         write("\n", file=self.outFile)
@@ -170,7 +170,7 @@ class DispatchTableOutputGenerator(OutputGenerator):
         return (type, name)
     #
     # Create a dispatch table from the appropriate list and return it as a string
-    def OutputDispatchTable(self, table_type):
+    def OutputDispatchTableHelper(self, table_type):
         entries = []
         table = ''
         if table_type == 'device':

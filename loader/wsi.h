@@ -56,8 +56,8 @@ bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance, const char
 void wsi_create_instance(struct loader_instance *ptr_instance, const VkInstanceCreateInfo *pCreateInfo);
 bool wsi_unsupported_instance_extension(const VkExtensionProperties *ext_prop);
 
-VKAPI_ATTR VkResult VKAPI_CALL terminator_vkCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateInfoKHR *pCreateInfo,
-                                                               const VkAllocationCallbacks *pAllocator, VkSwapchainKHR *pSwapchain);
+VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateSwapchainKHR(VkDevice device, const VkSwapchainCreateInfoKHR *pCreateInfo,
+                                                             const VkAllocationCallbacks *pAllocator, VkSwapchainKHR *pSwapchain);
 
 VKAPI_ATTR void VKAPI_CALL terminator_DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface,
                                                         const VkAllocationCallbacks *pAllocator);
@@ -137,9 +137,9 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDisplayPlaneSurfaceKHR(VkInstanc
                                                                        const VkAllocationCallbacks *pAllocator,
                                                                        VkSurfaceKHR *pSurface);
 
-VKAPI_ATTR VkResult VKAPI_CALL terminator_vkCreateSharedSwapchainsKHR(VkDevice device, uint32_t swapchainCount,
-                                                                      const VkSwapchainCreateInfoKHR *pCreateInfos,
-                                                                      const VkAllocationCallbacks *pAllocator,
-                                                                      VkSwapchainKHR *pSwapchains);
+VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateSharedSwapchainsKHR(VkDevice device, uint32_t swapchainCount,
+                                                                    const VkSwapchainCreateInfoKHR *pCreateInfos,
+                                                                    const VkAllocationCallbacks *pAllocator,
+                                                                    VkSwapchainKHR *pSwapchains);
 
-#endif /* WSI_H */
+#endif // WSI_H

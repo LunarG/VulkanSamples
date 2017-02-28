@@ -212,7 +212,7 @@ class HelperFileOutputGenerator(OutputGenerator):
             decoratedName = '{}/{}'.format(*match.group(2, 3))
         else:
             # Matches expressions similar to 'latexmath : [dataSize \over 4]'
-            match = re.match(r'latexmath\s*\:\s*\[\s*\s*(\w+)\s*\\over\s*(\d+)\s*\s*\]', source)
+            match = re.match(r'latexmath\s*\:\s*\[\s*(\w+)\s*\\over\s*(\d+)\s*\]', source)
             name = match.group(1)
             decoratedName = '{}/{}'.format(*match.group(1, 2))
         return name, decoratedName
