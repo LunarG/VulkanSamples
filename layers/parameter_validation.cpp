@@ -4436,6 +4436,11 @@ VKAPI_ATTR void VKAPI_CALL CmdDrawIndirect(VkCommandBuffer commandBuffer, VkBuff
     layer_data *my_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     assert(my_data != NULL);
 
+    if (!my_data->physical_device_features.multiDrawIndirect && ((count > 1))) {
+        skip = log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                       DEVICE_FEATURE, LayerName,
+                       "CmdDrawIndirect(): Device feature multiDrawIndirect disabled: count must be 0 or 1 but is %d", count);
+    }
     skip |= parameter_validation_vkCmdDrawIndirect(my_data->report_data, buffer, offset, count, stride);
 
     if (!skip) {
@@ -4448,7 +4453,12 @@ VKAPI_ATTR void VKAPI_CALL CmdDrawIndexedIndirect(VkCommandBuffer commandBuffer,
     bool skip = false;
     layer_data *my_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     assert(my_data != NULL);
-
+    if (!my_data->physical_device_features.multiDrawIndirect && ((count > 1))) {
+        skip =
+            log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                    DEVICE_FEATURE, LayerName,
+                    "CmdDrawIndexedIndirect(): Device feature multiDrawIndirect disabled: count must be 0 or 1 but is %d", count);
+    }
     skip |= parameter_validation_vkCmdDrawIndexedIndirect(my_data->report_data, buffer, offset, count, stride);
 
     if (!skip) {
