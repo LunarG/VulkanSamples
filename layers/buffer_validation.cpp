@@ -1443,6 +1443,14 @@ bool PreCallValidateCmdCopyImage(layer_data *device_data, GLOBAL_CB_NODE *cb_nod
         }
     }
 
+    // Source and dest image sample counts must match
+    if (src_image_state->createInfo.samples != dst_image_state->createInfo.samples) {
+        char const str[] = "vkCmdCopyImage() called on image pair with non-identical sample counts.";
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+            reinterpret_cast<uint64_t &>(command_buffer), __LINE__, VALIDATION_ERROR_01185, "IMAGE", "%s %s", str,
+            validation_error_map[VALIDATION_ERROR_01185]);
+    }
+
     skip |= ValidateMemoryIsBoundToImage(device_data, src_image_state, "vkCmdCopyImage()", VALIDATION_ERROR_02533);
     skip |= ValidateMemoryIsBoundToImage(device_data, dst_image_state, "vkCmdCopyImage()", VALIDATION_ERROR_02534);
     // Validate that SRC & DST images have correct usage flags set

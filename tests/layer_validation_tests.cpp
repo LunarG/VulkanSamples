@@ -17139,6 +17139,93 @@ TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch) {
     vkFreeMemory(m_device->device(), destMem, NULL);
 }
 
+TEST_F(VkLayerTest, CopyImageMiscAttributesMismatch) {
+    TEST_DESCRIPTION("Image copies with various attribute mis-matches");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkImageFormatProperties image_format_properties;
+    vkGetPhysicalDeviceImageFormatProperties(gpu(), VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL,
+                                             VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0,
+                                             &image_format_properties);
+
+    if ((0 == (VK_SAMPLE_COUNT_2_BIT & image_format_properties.sampleCounts)) ||
+        (0 == (VK_SAMPLE_COUNT_4_BIT & image_format_properties.sampleCounts))) {
+        printf("             Image multi-sample support not found; skipped.\n");
+        return;
+    }
+
+    VkImageCreateInfo ci;
+    ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    ci.pNext = NULL;
+    ci.flags = 0;
+    ci.imageType = VK_IMAGE_TYPE_2D;
+    ci.format = VK_FORMAT_R8G8B8A8_UNORM;
+    ci.extent = {128, 128, 1};
+    ci.mipLevels = 1;
+    ci.arrayLayers = 1;
+    ci.samples = VK_SAMPLE_COUNT_1_BIT;
+    ci.tiling = VK_IMAGE_TILING_OPTIMAL;
+    ci.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    ci.queueFamilyIndexCount = 0;
+    ci.pQueueFamilyIndices = NULL;
+    ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    VkImageObj image1(m_device);
+    image1.init(&ci);
+    ASSERT_TRUE(image1.initialized());
+
+    ci.samples = VK_SAMPLE_COUNT_2_BIT;
+    VkImageObj image2(m_device);
+    image2.init(&ci);
+    ASSERT_TRUE(image2.initialized());
+
+    ci.samples = VK_SAMPLE_COUNT_4_BIT;
+    VkImageObj image4(m_device);
+    image4.init(&ci);
+    ASSERT_TRUE(image4.initialized());
+
+    m_commandBuffer->BeginCommandBuffer();
+
+    VkImageCopy copyRegion;
+    copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copyRegion.srcSubresource.mipLevel = 0;
+    copyRegion.srcSubresource.baseArrayLayer = 0;
+    copyRegion.srcSubresource.layerCount = 1;
+    copyRegion.srcOffset = {0, 0, 0};
+    copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copyRegion.dstSubresource.mipLevel = 0;
+    copyRegion.dstSubresource.baseArrayLayer = 0;
+    copyRegion.dstSubresource.layerCount = 1;
+    copyRegion.dstOffset = {0, 0, 0};
+    copyRegion.extent = {128, 128, 1};
+
+    // Copy a single sample image to/from a multi-sample image
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01185);
+    vkCmdCopyImage(m_commandBuffer->GetBufferHandle(), image1.handle(), VK_IMAGE_LAYOUT_GENERAL, image4.handle(),
+                   VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
+    m_errorMonitor->VerifyFound();
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01185);
+    vkCmdCopyImage(m_commandBuffer->GetBufferHandle(), image2.handle(), VK_IMAGE_LAYOUT_GENERAL, image1.handle(),
+                   VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
+    m_errorMonitor->VerifyFound();
+
+    // Copy between multi-sample images with different sample counts
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01185);
+    vkCmdCopyImage(m_commandBuffer->GetBufferHandle(), image2.handle(), VK_IMAGE_LAYOUT_GENERAL, image4.handle(),
+                   VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
+    m_errorMonitor->VerifyFound();
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01185);
+    vkCmdCopyImage(m_commandBuffer->GetBufferHandle(), image4.handle(), VK_IMAGE_LAYOUT_GENERAL, image2.handle(),
+                   VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
+    m_errorMonitor->VerifyFound();
+
+    m_commandBuffer->EndCommandBuffer();
+}
+
 TEST_F(VkLayerTest, ResolveImageLowSampleCount) {
     VkResult err;
     bool pass;
