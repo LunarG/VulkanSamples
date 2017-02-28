@@ -9225,6 +9225,16 @@ static bool ValidateRenderpassAttachmentUsage(layer_data *dev_data, const VkRend
     return skip_call;
 }
 
+static void MarkAttachmentFirstUse(RENDER_PASS_STATE *render_pass,
+                                   uint32_t index,
+                                   bool is_read) {
+    if (index == VK_ATTACHMENT_UNUSED)
+        return;
+
+    if (!render_pass->attachment_first_read.count(index))
+        render_pass->attachment_first_read[index] = is_read;
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderPassCreateInfo *pCreateInfo,
                                                 const VkAllocationCallbacks *pAllocator, VkRenderPass *pRenderPass) {
     bool skip_call = false;
@@ -9263,35 +9273,21 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
         render_pass->hasSelfDependency = has_self_dependency;
         render_pass->subpassToNode = subpass_to_node;
 
-        // TODO: Maybe fill list and then copy instead of locking
-        std::unordered_map<uint32_t, bool> &attachment_first_read = render_pass->attachment_first_read;
         for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
             const VkSubpassDescription &subpass = pCreateInfo->pSubpasses[i];
             for (uint32_t j = 0; j < subpass.colorAttachmentCount; ++j) {
-                uint32_t attachment = subpass.pColorAttachments[j].attachment;
-                if (!attachment_first_read.count(attachment)) {
-                    attachment_first_read.insert(std::make_pair(attachment, false));
-                }
+                MarkAttachmentFirstUse(render_pass.get(), subpass.pColorAttachments[j].attachment, false);
 
-                if (subpass.pResolveAttachments && subpass.pResolveAttachments[j].attachment != VK_ATTACHMENT_UNUSED) {
-                    // resolve attachments are considered to be written
-                    attachment = subpass.pResolveAttachments[j].attachment;
-                    if (!attachment_first_read.count(attachment)) {
-                        attachment_first_read.insert(std::make_pair(attachment, false));
-                    }
+                // resolve attachments are considered to be written
+                if (subpass.pResolveAttachments) {
+                    MarkAttachmentFirstUse(render_pass.get(), subpass.pResolveAttachments[j].attachment, false);
                 }
             }
-            if (subpass.pDepthStencilAttachment && subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
-                uint32_t attachment = subpass.pDepthStencilAttachment->attachment;
-                if (!attachment_first_read.count(attachment)) {
-                    attachment_first_read.insert(std::make_pair(attachment, false));
-                }
+            if (subpass.pDepthStencilAttachment) {
+                MarkAttachmentFirstUse(render_pass.get(), subpass.pDepthStencilAttachment->attachment, false);
             }
             for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
-                uint32_t attachment = subpass.pInputAttachments[j].attachment;
-                if (!attachment_first_read.count(attachment)) {
-                    attachment_first_read.insert(std::make_pair(attachment, true));
-                }
+                MarkAttachmentFirstUse(render_pass.get(), subpass.pInputAttachments[j].attachment, true);
             }
         }
 
