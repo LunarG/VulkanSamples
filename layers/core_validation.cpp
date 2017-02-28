@@ -4373,6 +4373,33 @@ static bool validateResources(layer_data *dev_data, GLOBAL_CB_NODE *cb_node) {
     return skip_call;
 }
 
+// Check that the queue family index of 'queue' matches one of the entries in pQueueFamilyIndices
+bool ValidImageBufferQueue(layer_data *dev_data, GLOBAL_CB_NODE *cb_node, const VK_OBJECT *object, VkQueue queue, uint32_t count,
+                           const uint32_t *indices) {
+    bool found = false;
+    bool skip = false;
+    auto queue_state = GetQueueState(dev_data, queue);
+    if (queue_state) {
+        for (uint32_t i = 0; i < count; i++) {
+            if (indices[i] == queue_state->queueFamilyIndex) {
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            auto type_string = (object->type == VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT ? "image" : "buffer");
+            skip = log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, object->type, object->handle, __LINE__,
+                           DRAWSTATE_INVALID_QUEUE_FAMILY, "DS",
+                           "vkQueueSubmit: Command buffer 0x%" PRIxLEAST64 " contains %s 0x%" PRIxLEAST64
+                           " which was not created allowing concurrent access to this queue family %d.",
+                           reinterpret_cast<uint64_t>(cb_node->commandBuffer), type_string, object->handle,
+                           queue_state->queueFamilyIndex);
+        }
+    }
+    return skip;
+}
+
 // Validate that queueFamilyIndices of primary command buffers match this queue
 // Secondary command buffers were previously validated in vkCmdExecuteCommands().
 static bool validateQueueFamilyIndices(layer_data *dev_data, GLOBAL_CB_NODE *pCB, VkQueue queue) {
@@ -4380,13 +4407,34 @@ static bool validateQueueFamilyIndices(layer_data *dev_data, GLOBAL_CB_NODE *pCB
     auto pPool = GetCommandPoolNode(dev_data, pCB->createInfo.commandPool);
     auto queue_state = GetQueueState(dev_data, queue);
 
-    if (pPool && queue_state && (pPool->queueFamilyIndex != queue_state->queueFamilyIndex)) {
-        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                             reinterpret_cast<uint64_t>(pCB->commandBuffer), __LINE__, VALIDATION_ERROR_00139, "DS",
-                             "vkQueueSubmit: Primary command buffer 0x%p created in queue family %d is being submitted on queue "
-                             "0x%p from queue family %d. %s",
-                             pCB->commandBuffer, pPool->queueFamilyIndex, queue, queue_state->queueFamilyIndex,
-                             validation_error_map[VALIDATION_ERROR_00139]);
+    if (pPool && queue_state) {
+        if (pPool->queueFamilyIndex != queue_state->queueFamilyIndex) {
+            skip_call |=
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                        reinterpret_cast<uint64_t>(pCB->commandBuffer), __LINE__, VALIDATION_ERROR_00139, "DS",
+                        "vkQueueSubmit: Primary command buffer 0x%p created in queue family %d is being submitted on queue "
+                        "0x%p from queue family %d. %s",
+                        pCB->commandBuffer, pPool->queueFamilyIndex, queue, queue_state->queueFamilyIndex,
+                        validation_error_map[VALIDATION_ERROR_00139]);
+        }
+
+        // Ensure that any bound images or buffers created with SHARING_MODE_CONCURRENT have access to the current queue family
+        for (auto object : pCB->object_bindings) {
+            if (object.type == VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT) {
+                auto image_state = GetImageState(dev_data, reinterpret_cast<VkImage &>(object.handle));
+                if (image_state && image_state->createInfo.sharingMode == VK_SHARING_MODE_CONCURRENT) {
+                    skip_call |= ValidImageBufferQueue(dev_data, pCB, &object, queue, image_state->createInfo.queueFamilyIndexCount,
+                                                       image_state->createInfo.pQueueFamilyIndices);
+                }
+            } else if (object.type == VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT) {
+                auto buffer_state = GetBufferState(dev_data, reinterpret_cast<VkBuffer &>(object.handle));
+                if (buffer_state && buffer_state->createInfo.sharingMode == VK_SHARING_MODE_CONCURRENT) {
+                    skip_call |=
+                        ValidImageBufferQueue(dev_data, pCB, &object, queue, buffer_state->createInfo.queueFamilyIndexCount,
+                                              buffer_state->createInfo.pQueueFamilyIndices);
+                }
+            }
+        }
     }
 
     return skip_call;
