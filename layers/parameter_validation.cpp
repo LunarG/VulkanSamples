@@ -2805,6 +2805,10 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImageView(VkDevice device, const VkImageVie
                             "vkCreateImageView: if pCreateInfo->viewType is VK_IMAGE_TYPE_CUBE_ARRAY, "
                             "pCreateInfo->subresourceRange.layerCount must be a multiple of 6");
             }
+            if (!my_data->physical_device_features.imageCubeArray) {
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                                LayerName, "vkCreateImageView: Device feature imageCubeArray not enabled.");
+            }
         } else if (pCreateInfo->viewType == VK_IMAGE_VIEW_TYPE_3D) {
             if (pCreateInfo->subresourceRange.baseArrayLayer != 0) {
                 skip |=
