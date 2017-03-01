@@ -16037,7 +16037,7 @@ TEST_F(VkLayerTest, ImageBufferCopyTests) {
                            &region);
     m_errorMonitor->VerifyNotFound();
 
-    // image/buffer too small (extent) on copy to image
+    // image/buffer too small (extent too large) on copy to image
     region.imageExtent = {65, 64, 1};
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01227);  // buffer too small
     vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer_16k.handle(), image_64k.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
@@ -16082,6 +16082,13 @@ TEST_F(VkLayerTest, ImageBufferCopyTests) {
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01246);
     region.imageExtent = {64, 64, 1};
     region.bufferRowLength = 68;
+    vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image_16k.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16k.handle(), 1,
+                           &region);
+    m_errorMonitor->VerifyFound();
+
+    // An extent with zero area should produce a warning, but no error
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT, "} has zero area");
+    region.imageExtent.width = 0;
     vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image_16k.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16k.handle(), 1,
                            &region);
     m_errorMonitor->VerifyFound();
@@ -16209,13 +16216,13 @@ TEST_F(VkLayerTest, ImageBufferCopyTests) {
     } else {
         VkImageObj image_16k_4x4comp(m_device);  // 128^2 texels as 32^2 compressed (4x4) blocks, 16k
         if (device_features.textureCompressionBC) {
-            image_16k_4x4comp.init(32, 32, VK_FORMAT_BC5_UNORM_BLOCK, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
+            image_16k_4x4comp.init(128, 128, VK_FORMAT_BC3_SRGB_BLOCK, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
         } else if (device_features.textureCompressionETC2) {
-            image_16k_4x4comp.init(32, 32, VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK, VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+            image_16k_4x4comp.init(128, 128, VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK, VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
                                    VK_IMAGE_TILING_OPTIMAL, 0);
         } else {
-            image_16k_4x4comp.init(32, 32, VK_FORMAT_ASTC_4x4_UNORM_BLOCK, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_TILING_OPTIMAL,
-                                   0);
+            image_16k_4x4comp.init(128, 128, VK_FORMAT_ASTC_4x4_UNORM_BLOCK, VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+                                   VK_IMAGE_TILING_OPTIMAL, 0);
         }
         ASSERT_TRUE(image_16k_4x4comp.initialized());
 
@@ -16232,6 +16239,13 @@ TEST_F(VkLayerTest, ImageBufferCopyTests) {
         vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image_16k_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL,
                                buffer_16k.handle(), 1, &region);
         m_errorMonitor->VerifyFound();
+
+        // but, should work with a small extent
+        m_errorMonitor->ExpectSuccess();
+        region.imageExtent.height = 2;
+        vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image_16k_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL,
+                               buffer_16k.handle(), 1, &region);
+        m_errorMonitor->VerifyNotFound();
 
         // buffer offset must be a multiple of texel block size (16)
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01274);
@@ -16259,7 +16273,7 @@ TEST_F(VkLayerTest, ImageBufferCopyTests) {
                                buffer_64k.handle(), 1, &region);
         m_errorMonitor->VerifyFound();
 
-        // image extents must be multiple of block dimensions (4x4)
+        // image offsets must be multiple of block dimensions (4x4)
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01273);
         region.bufferImageHeight = 0;
         region.imageOffset = {4, 6, 0};
@@ -16328,8 +16342,10 @@ TEST_F(VkLayerTest, MiscImageLayerTests) {
 
     // Image must have offset.z of 0 and extent.depth of 1
     // Introduce failure by setting imageOffset.z to 4
+    // Note: Also (unavoidably) triggers 'region exceeds image' #1228
     region.imageOffset.z = 4;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01747);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01228);
     vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer.handle(), image.handle(),
                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
     m_errorMonitor->VerifyFound();
@@ -18462,7 +18478,7 @@ TEST_F(VkPositiveLayerTest, TestAliasedMemoryTracking) {
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     alloc_info.pNext = NULL;
     alloc_info.memoryTypeIndex = 0;
-    
+
     // Ensure memory is big enough for both bindings
     alloc_info.allocationSize = 0x10000;
 
@@ -18522,8 +18538,8 @@ TEST_F(VkPositiveLayerTest, TestAliasedMemoryTracking) {
     image_create_info.flags = 0;
 
     /* Create a mappable image.  It will be the texture if linear images are ok
-    * to be textures or it will be the staging image if they are not.
-    */
+     * to be textures or it will be the staging image if they are not.
+     */
     err = vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
     ASSERT_VK_SUCCESS(err);
 

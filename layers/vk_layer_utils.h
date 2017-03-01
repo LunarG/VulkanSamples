@@ -124,7 +124,7 @@ VK_LAYER_EXPORT bool vk_format_is_srgb(VkFormat format);
 VK_LAYER_EXPORT bool vk_format_is_uscaled(VkFormat format);
 VK_LAYER_EXPORT bool vk_format_is_sscaled(VkFormat format);
 VK_LAYER_EXPORT bool vk_format_is_compressed(VkFormat format);
-VK_LAYER_EXPORT VkExtent2D vk_format_compressed_texel_block_extents(VkFormat format);
+VK_LAYER_EXPORT VkExtent3D vk_format_compressed_texel_block_extents(VkFormat format);
 VK_LAYER_EXPORT size_t vk_format_get_size(VkFormat format);
 VK_LAYER_EXPORT unsigned int vk_format_get_channel_count(VkFormat format);
 VK_LAYER_EXPORT VkFormatCompatibilityClass vk_format_get_compatibility_class(VkFormat format);
