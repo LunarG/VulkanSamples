@@ -4052,69 +4052,8 @@ static bool ValidateStageMaskGsTsEnables(layer_data *dev_data, VkPipelineStageFl
 
 // Loop through bound objects and increment their in_use counts.
 static void IncrementBoundObjects(layer_data *dev_data, GLOBAL_CB_NODE const *cb_node) {
-    BASE_NODE *base_obj = nullptr;
     for (auto obj : cb_node->object_bindings) {
-        switch (obj.type) {
-            case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT: {
-                base_obj = GetSetNode(dev_data, reinterpret_cast<VkDescriptorSet &>(obj.handle));
-                break;
-            }
-            case VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT: {
-                base_obj = GetSamplerState(dev_data, reinterpret_cast<VkSampler &>(obj.handle));
-                break;
-            }
-            case VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT: {
-                base_obj = GetQueryPoolNode(dev_data, reinterpret_cast<VkQueryPool &>(obj.handle));
-                break;
-            }
-            case VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT: {
-                base_obj = getPipelineState(dev_data, reinterpret_cast<VkPipeline &>(obj.handle));
-                break;
-            }
-            case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT: {
-                base_obj = GetBufferState(dev_data, reinterpret_cast<VkBuffer &>(obj.handle));
-                break;
-            }
-            case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT: {
-                base_obj = GetBufferViewState(dev_data, reinterpret_cast<VkBufferView &>(obj.handle));
-                break;
-            }
-            case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT: {
-                base_obj = GetImageState(dev_data, reinterpret_cast<VkImage &>(obj.handle));
-                break;
-            }
-            case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT: {
-                base_obj = GetImageViewState(dev_data, reinterpret_cast<VkImageView &>(obj.handle));
-                break;
-            }
-            case VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT: {
-                base_obj = GetEventNode(dev_data, reinterpret_cast<VkEvent &>(obj.handle));
-                break;
-            }
-            case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT: {
-                base_obj = GetDescriptorPoolState(dev_data, reinterpret_cast<VkDescriptorPool &>(obj.handle));
-                break;
-            }
-            case VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT: {
-                base_obj = GetCommandPoolNode(dev_data, reinterpret_cast<VkCommandPool &>(obj.handle));
-                break;
-            }
-            case VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT: {
-                base_obj = GetFramebufferState(dev_data, reinterpret_cast<VkFramebuffer &>(obj.handle));
-                break;
-            }
-            case VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT: {
-                base_obj = GetRenderPassState(dev_data, reinterpret_cast<VkRenderPass &>(obj.handle));
-                break;
-            }
-            case VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT: {
-                base_obj = GetMemObjInfo(dev_data, reinterpret_cast<VkDeviceMemory &>(obj.handle));
-                break;
-            }
-            default:
-                // TODO : Merge handling of other objects types into this code
-                break;
-        }
+        auto base_obj = GetStateStructPtrFromObject(dev_data, obj);
         if (base_obj) {
             base_obj->in_use.fetch_add(1);
         }
