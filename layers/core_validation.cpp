@@ -7566,6 +7566,8 @@ static bool PreCallValidateCmdDrawIndirect(layer_data *dev_data, VkCommandBuffer
                                     VALIDATION_ERROR_01381, VALIDATION_ERROR_02234);
     *buffer_state = GetBufferState(dev_data, buffer);
     skip |= ValidateMemoryIsBoundToBuffer(dev_data, *buffer_state, caller, VALIDATION_ERROR_02544);
+    // TODO: If the drawIndirectFirstInstance feature is not enabled, all the firstInstance members of the
+    // VkDrawIndirectCommand structures accessed by this command must be 0, which will require access to the contents of 'buffer'.
     return skip;
 }
 
@@ -7599,6 +7601,9 @@ static bool PreCallValidateCmdDrawIndexedIndirect(layer_data *dev_data, VkComman
                                     VALIDATION_ERROR_01393, VALIDATION_ERROR_02272);
     *buffer_state = GetBufferState(dev_data, buffer);
     skip |= ValidateMemoryIsBoundToBuffer(dev_data, *buffer_state, caller, VALIDATION_ERROR_02545);
+    // TODO: If the drawIndirectFirstInstance feature is not enabled, all the firstInstance members of the
+    // VkDrawIndexedIndirectCommand structures accessed by this command must be 0, which will require access to the contents of
+    // 'buffer'.
     return skip;
 }
 
