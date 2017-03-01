@@ -3240,6 +3240,15 @@ static bool verifyPipelineCreateState(layer_data *dev_data, std::vector<PIPELINE
                                          pPipeline->graphicsPipelineCI.pRasterizationState->lineWidth);
         }
 
+        if ((pPipeline->graphicsPipelineCI.pRasterizationState->depthClampEnable == VK_TRUE) &&
+            (!dev_data->enabled_features.depthClamp)) {
+            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                 __LINE__, VALIDATION_ERROR_01455, "DS",
+                                 "vkCreateGraphicsPipelines(): the depthClamp device feature is disabled: the depthClampEnable "
+                                 "member of the VkPipelineRasterizationStateCreateInfo structure must be set to VK_FALSE. %s",
+                                 validation_error_map[VALIDATION_ERROR_01455]);
+        }
+
         // If rasterization is enabled...
         if (pPipeline->graphicsPipelineCI.pRasterizationState->rasterizerDiscardEnable == VK_FALSE) {
             auto subpass_desc = renderPass ? &renderPass->createInfo.pSubpasses[pPipeline->graphicsPipelineCI.subpass] : nullptr;
