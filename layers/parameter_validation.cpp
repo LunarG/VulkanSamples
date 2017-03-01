@@ -3529,8 +3529,16 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSampler(VkDevice device, const VkSamplerCre
 
     skip |= parameter_validation_vkCreateSampler(report_data, pCreateInfo, pAllocator, pSampler);
 
-    // Validation for parameters excluded from the generated validation code due to a 'noautovalidity' tag in vk.xml
     if (pCreateInfo != nullptr) {
+
+        if ((device_data->physical_device_features.samplerAnisotropy == false) && (pCreateInfo->maxAnisotropy != 1.0)) {
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                            DEVICE_FEATURE, LayerName,
+                            "vkCreateSampler(): The samplerAnisotropy feature is not enabled, so the maxAnisotropy member of the "
+                            "VkSamplerCreateInfo structure must be 1.0 but is %f.",
+                            pCreateInfo->maxAnisotropy);
+        }
+
         // If compareEnable is VK_TRUE, compareOp must be a valid VkCompareOp value
         if (pCreateInfo->compareEnable == VK_TRUE) {
             skip |= validate_ranged_enum(report_data, "vkCreateSampler", "pCreateInfo->compareOp", "VkCompareOp",
