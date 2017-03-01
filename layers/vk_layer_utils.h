@@ -113,6 +113,9 @@ static inline bool vk_format_has_stencil(VkFormat format) {
     return (vk_format_is_stencil_only(format) || vk_format_is_depth_and_stencil(format));
 }
 
+VK_LAYER_EXPORT bool vk_format_is_compressed_ETC2_EAC(VkFormat format);
+VK_LAYER_EXPORT bool vk_format_is_compressed_ASTC_LDR(VkFormat format);
+VK_LAYER_EXPORT bool vk_format_is_compressed_BC(VkFormat format);
 VK_LAYER_EXPORT bool vk_format_is_norm(VkFormat format);
 VK_LAYER_EXPORT bool vk_format_is_unorm(VkFormat format);
 VK_LAYER_EXPORT bool vk_format_is_snorm(VkFormat format);

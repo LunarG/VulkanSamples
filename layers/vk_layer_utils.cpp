@@ -235,6 +235,99 @@ const std::map<VkFormat, VULKAN_FORMAT_INFO> vk_format_table = {
 // Renable formatting
 // clang-format on
 
+// Return true if format is an ETC2 or EAC compressed texture format
+VK_LAYER_EXPORT bool vk_format_is_compressed_ETC2_EAC(VkFormat format) {
+    bool found = false;
+
+    switch (format) {
+        case VK_FORMAT_ETC2_R8G8B8_UNORM_BLOCK:
+        case VK_FORMAT_ETC2_R8G8B8_SRGB_BLOCK:
+        case VK_FORMAT_ETC2_R8G8B8A1_UNORM_BLOCK:
+        case VK_FORMAT_ETC2_R8G8B8A1_SRGB_BLOCK:
+        case VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK:
+        case VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK:
+        case VK_FORMAT_EAC_R11_UNORM_BLOCK:
+        case VK_FORMAT_EAC_R11_SNORM_BLOCK:
+        case VK_FORMAT_EAC_R11G11_UNORM_BLOCK:
+        case VK_FORMAT_EAC_R11G11_SNORM_BLOCK:
+            found = true;
+            break;
+        default:
+            break;
+    }
+    return found;
+}
+
+// Return true if format is an ETC2 or EAC compressed texture format
+VK_LAYER_EXPORT bool vk_format_is_compressed_ASTC_LDR(VkFormat format) {
+    bool found = false;
+
+    switch (format) {
+        case VK_FORMAT_ASTC_4x4_UNORM_BLOCK:
+        case VK_FORMAT_ASTC_4x4_SRGB_BLOCK:
+        case VK_FORMAT_ASTC_5x4_UNORM_BLOCK:
+        case VK_FORMAT_ASTC_5x4_SRGB_BLOCK:
+        case VK_FORMAT_ASTC_5x5_UNORM_BLOCK:
+        case VK_FORMAT_ASTC_5x5_SRGB_BLOCK:
+        case VK_FORMAT_ASTC_6x5_UNORM_BLOCK:
+        case VK_FORMAT_ASTC_6x5_SRGB_BLOCK:
+        case VK_FORMAT_ASTC_6x6_UNORM_BLOCK:
+        case VK_FORMAT_ASTC_6x6_SRGB_BLOCK:
+        case VK_FORMAT_ASTC_8x5_UNORM_BLOCK:
+        case VK_FORMAT_ASTC_8x5_SRGB_BLOCK:
+        case VK_FORMAT_ASTC_8x6_UNORM_BLOCK:
+        case VK_FORMAT_ASTC_8x6_SRGB_BLOCK:
+        case VK_FORMAT_ASTC_8x8_UNORM_BLOCK:
+        case VK_FORMAT_ASTC_8x8_SRGB_BLOCK:
+        case VK_FORMAT_ASTC_10x5_UNORM_BLOCK:
+        case VK_FORMAT_ASTC_10x5_SRGB_BLOCK:
+        case VK_FORMAT_ASTC_10x6_UNORM_BLOCK:
+        case VK_FORMAT_ASTC_10x6_SRGB_BLOCK:
+        case VK_FORMAT_ASTC_10x8_UNORM_BLOCK:
+        case VK_FORMAT_ASTC_10x8_SRGB_BLOCK:
+        case VK_FORMAT_ASTC_10x10_UNORM_BLOCK:
+        case VK_FORMAT_ASTC_10x10_SRGB_BLOCK:
+        case VK_FORMAT_ASTC_12x10_UNORM_BLOCK:
+        case VK_FORMAT_ASTC_12x10_SRGB_BLOCK:
+        case VK_FORMAT_ASTC_12x12_UNORM_BLOCK:
+        case VK_FORMAT_ASTC_12x12_SRGB_BLOCK:
+            found = true;
+            break;
+        default:
+            break;
+    }
+    return found;
+}
+
+// Return true if format is a BC compressed texture format
+VK_LAYER_EXPORT bool vk_format_is_compressed_BC(VkFormat format) {
+    bool found = false;
+
+    switch (format) {
+        case VK_FORMAT_BC1_RGB_UNORM_BLOCK:
+        case VK_FORMAT_BC1_RGB_SRGB_BLOCK:
+        case VK_FORMAT_BC1_RGBA_UNORM_BLOCK:
+        case VK_FORMAT_BC1_RGBA_SRGB_BLOCK:
+        case VK_FORMAT_BC2_UNORM_BLOCK:
+        case VK_FORMAT_BC2_SRGB_BLOCK:
+        case VK_FORMAT_BC3_UNORM_BLOCK:
+        case VK_FORMAT_BC3_SRGB_BLOCK:
+        case VK_FORMAT_BC4_UNORM_BLOCK:
+        case VK_FORMAT_BC4_SNORM_BLOCK:
+        case VK_FORMAT_BC5_UNORM_BLOCK:
+        case VK_FORMAT_BC5_SNORM_BLOCK:
+        case VK_FORMAT_BC6H_UFLOAT_BLOCK:
+        case VK_FORMAT_BC6H_SFLOAT_BLOCK:
+        case VK_FORMAT_BC7_UNORM_BLOCK:
+        case VK_FORMAT_BC7_SRGB_BLOCK:
+            found = true;
+            break;
+        default:
+            break;
+    }
+    return found;
+}
+
 // Return true if format is a depth or stencil format
 VK_LAYER_EXPORT bool vk_format_is_depth_or_stencil(VkFormat format) {
     return (vk_format_is_depth_and_stencil(format) || vk_format_is_depth_only(format) || vk_format_is_stencil_only(format));
