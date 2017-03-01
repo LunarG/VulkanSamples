@@ -2541,6 +2541,16 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateI
     skip |= parameter_validation_vkCreateImage(report_data, pCreateInfo, pAllocator, pImage);
 
     if (pCreateInfo != nullptr) {
+
+        if ((device_data->physical_device_features.textureCompressionETC2 == false) &&
+            vk_format_is_compressed_ETC2_EAC(pCreateInfo->format)) {
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                            DEVICE_FEATURE, LayerName,
+                            "vkCreateImage(): Attempting to create VkImage with format %s. The textureCompressionETC2 feature is "
+                            "not enabled: neither ETC2 nor EAC formats can be used to create images.",
+                            string_VkFormat(pCreateInfo->format));
+        }
+
         // Validation for parameters excluded from the generated validation code due to a 'noautovalidity' tag in vk.xml
         if (pCreateInfo->sharingMode == VK_SHARING_MODE_CONCURRENT) {
             // If sharingMode is VK_SHARING_MODE_CONCURRENT, queueFamilyIndexCount must be greater than 1
