@@ -3262,6 +3262,14 @@ static bool verifyPipelineCreateState(layer_data *dev_data, std::vector<PIPELINE
                                          "Invalid Pipeline CreateInfo State: pDepthStencilState is NULL when rasterization is "
                                          "enabled and subpass uses a depth/stencil attachment. %s",
                                          validation_error_map[VALIDATION_ERROR_02115]);
+
+                } else if ((pPipeline->graphicsPipelineCI.pDepthStencilState->depthBoundsTestEnable == VK_TRUE) &&
+                           (!dev_data->enabled_features.depthBounds)) {
+                    skip_call |= log_msg(
+                        dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        DRAWSTATE_INVALID_FEATURE, "DS",
+                        "vkCreateGraphicsPipelines(): the depthBounds device feature is disabled: the depthBoundsTestEnable "
+                        "member of the VkPipelineDepthStencilStateCreateInfo structure must be set to VK_FALSE.");
                 }
             }
 
