@@ -164,6 +164,9 @@ static inline void loader_platform_thread_cond_broadcast(loader_platform_thread_
 #define PATH_SEPARATOR ';'
 #define DIRECTORY_SYMBOL '\\'
 #define DEFAULT_VK_REGISTRY_HIVE HKEY_LOCAL_MACHINE
+#define DEFAULT_VK_REGISTRY_HIVE_STR "HKEY_LOCAL_MACHINE"
+#define SECONDARY_VK_REGISTRY_HIVE HKEY_CURRENT_USER
+#define SECONDARY_VK_REGISTRY_HIVE_STR "HKEY_CURRENT_USER"
 #define DEFAULT_VK_DRIVERS_INFO "SOFTWARE\\Khronos\\" API_NAME "\\Drivers"
 #define DEFAULT_VK_DRIVERS_PATH ""
 #define DEFAULT_VK_ELAYERS_INFO "SOFTWARE\\Khronos\\" API_NAME "\\ExplicitLayers"
