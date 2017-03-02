@@ -184,7 +184,7 @@ void VkRenderFramework::InitFramework(std::vector<const char *> instance_layer_n
 
 void VkRenderFramework::ShutdownFramework() {
     delete m_commandBuffer;
-    if (m_commandPool) vkDestroyCommandPool(device(), m_commandPool, NULL);
+    delete m_commandPool;
     if (m_framebuffer) vkDestroyFramebuffer(device(), m_framebuffer, NULL);
     if (m_renderPass) vkDestroyRenderPass(device(), m_renderPass, NULL);
 
@@ -216,8 +216,6 @@ void VkRenderFramework::GetPhysicalDeviceFeatures(VkPhysicalDeviceFeatures *feat
 }
 
 void VkRenderFramework::InitState(VkPhysicalDeviceFeatures *features, const VkCommandPoolCreateFlags flags) {
-    VkResult U_ASSERT_ONLY err;
-
     m_device = new VkDeviceObj(0, objs[0], device_extension_names, features);
     m_device->get_device_queue();
 
@@ -243,12 +241,7 @@ void VkRenderFramework::InitState(VkPhysicalDeviceFeatures *features, const VkCo
     m_writeMask = 0xff;
     m_reference = 0;
 
-    VkCommandPoolCreateInfo cmd_pool_info;
-    cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, cmd_pool_info.pNext = NULL,
-    cmd_pool_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
-    cmd_pool_info.flags = flags;
-    err = vkCreateCommandPool(device(), &cmd_pool_info, NULL, &m_commandPool);
-    assert(!err);
+    m_commandPool = new VkCommandPoolObj(m_device, m_device->graphics_queue_node_index_, flags);
 
     m_commandBuffer = new VkCommandBufferObj(m_device, m_commandPool);
 }
@@ -421,10 +414,23 @@ VkDeviceObj::VkDeviceObj(uint32_t id, VkPhysicalDevice obj, std::vector<const ch
     queue_props = phy().queue_properties();
 }
 
+uint32_t VkDeviceObj::QueueFamilyWithoutCapabilities(VkQueueFlags capabilities)
+{
+    // Find a queue family without desired capabilities
+    for (uint32_t i = 0; i < queue_props.size(); i++) {
+        if ((queue_props[i].queueFlags & capabilities) == 0) {
+            return i;
+        }
+    }
+    return UINT32_MAX;
+}
+
+
 void VkDeviceObj::get_device_queue() {
     ASSERT_NE(true, graphics_queues().empty());
     m_queue = graphics_queues()[0]->handle();
 }
+
 
 VkDescriptorSetObj::VkDescriptorSetObj(VkDeviceObj *device) : m_device(device), m_nextSlot(0) {}
 
@@ -681,13 +687,8 @@ void VkImageObj::SetLayout(VkImageAspectFlags aspect, VkImageLayout image_layout
         return;
     }
 
-    VkCommandPoolCreateInfo cmd_pool_info = {};
-    cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    cmd_pool_info.pNext = NULL;
-    cmd_pool_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
-    cmd_pool_info.flags = 0;
-    vk_testing::CommandPool pool(*m_device, cmd_pool_info);
-    VkCommandBufferObj cmd_buf(m_device, pool.handle());
+    VkCommandPoolObj pool(m_device, m_device->graphics_queue_node_index_);
+    VkCommandBufferObj cmd_buf(m_device, &pool);
 
     /* Build command buffer to set image layout in the driver */
     err = cmd_buf.BeginCommandBuffer();
@@ -809,13 +810,8 @@ VkResult VkImageObj::CopyImage(VkImageObj &src_image) {
     VkResult U_ASSERT_ONLY err;
     VkImageLayout src_image_layout, dest_image_layout;
 
-    VkCommandPoolCreateInfo cmd_pool_info = {};
-    cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    cmd_pool_info.pNext = NULL;
-    cmd_pool_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
-    cmd_pool_info.flags = 0;
-    vk_testing::CommandPool pool(*m_device, cmd_pool_info);
-    VkCommandBufferObj cmd_buf(m_device, pool.handle());
+    VkCommandPoolObj pool(m_device, m_device->graphics_queue_node_index_);
+    VkCommandBufferObj cmd_buf(m_device, &pool);
 
     /* Build command buffer to copy staging texture to usable texture */
     err = cmd_buf.BeginCommandBuffer();
@@ -1016,13 +1012,8 @@ void VkConstantBufferObj::BufferMemoryBarrier(VkFlags srcAccessMask /*=
 
     if (!m_commandBuffer) {
         m_fence.init(*m_device, vk_testing::Fence::create_info());
-        VkCommandPoolCreateInfo cmd_pool_info = {};
-        cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        cmd_pool_info.pNext = NULL;
-        cmd_pool_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
-        cmd_pool_info.flags = 0;
-        m_commandPool = new vk_testing::CommandPool(*m_device, cmd_pool_info);
-        m_commandBuffer = new VkCommandBufferObj(m_device, m_commandPool->handle());
+        m_commandPool = new VkCommandPoolObj(m_device, m_device->graphics_queue_node_index_);
+        m_commandBuffer = new VkCommandBufferObj(m_device, m_commandPool);
     } else {
         m_device->wait(m_fence);
     }
@@ -1358,10 +1349,10 @@ VkResult VkPipelineObj::CreateVKPipeline(VkPipelineLayout layout, VkRenderPass r
     return init_try(*m_device, *gp_ci);
 }
 
-VkCommandBufferObj::VkCommandBufferObj(VkDeviceObj *device, VkCommandPool pool) {
+VkCommandBufferObj::VkCommandBufferObj(VkDeviceObj *device, VkCommandPoolObj *pool) {
     m_device = device;
 
-    init(*device, vk_testing::CommandBuffer::create_info(pool));
+    init(*device, vk_testing::CommandBuffer::create_info(pool->handle()));
 }
 
 VkCommandBuffer VkCommandBufferObj::GetBufferHandle() { return handle(); }
@@ -1618,6 +1609,10 @@ void VkCommandBufferObj::BindIndexBuffer(VkIndexBufferObj *indexBuffer, VkDevice
 
 void VkCommandBufferObj::BindVertexBuffer(VkConstantBufferObj *vertexBuffer, VkDeviceSize offset, uint32_t binding) {
     vkCmdBindVertexBuffers(handle(), binding, 1, &vertexBuffer->handle(), &offset);
+}
+
+VkCommandPoolObj::VkCommandPoolObj(VkDeviceObj *device, uint32_t queue_family_index, VkCommandPoolCreateFlags flags) {
+    init(*device, vk_testing::CommandPool::create_info(queue_family_index, flags));
 }
 
 bool VkDepthStencilObj::Initialized() { return m_initialized; }

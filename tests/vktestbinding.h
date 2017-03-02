@@ -161,6 +161,7 @@ class Device : public internal::Handle<VkDevice> {
     const std::vector<Queue *> &graphics_queues() const { return queues_[GRAPHICS]; }
     const std::vector<Queue *> &compute_queues() { return queues_[COMPUTE]; }
     const std::vector<Queue *> &dma_queues() { return queues_[DMA]; }
+    uint32_t queue_family_without_capabilities( VkQueueFlags capabilities );
     uint32_t graphics_queue_node_index_;
 
     struct Format {
@@ -568,14 +569,14 @@ class CommandPool : public internal::NonDispHandle<VkCommandPool> {
 
     void init(const Device &dev, const VkCommandPoolCreateInfo &info);
 
-    static VkCommandPoolCreateInfo create_info(uint32_t queue_family_index);
+    static VkCommandPoolCreateInfo create_info(uint32_t queue_family_index, VkCommandPoolCreateFlags flags);
 };
 
-inline VkCommandPoolCreateInfo CommandPool::create_info(uint32_t queue_family_index) {
+inline VkCommandPoolCreateInfo CommandPool::create_info(uint32_t queue_family_index, VkCommandPoolCreateFlags flags) {
     VkCommandPoolCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     info.queueFamilyIndex = queue_family_index;
-    info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    info.flags = flags;
     return info;
 }
 
