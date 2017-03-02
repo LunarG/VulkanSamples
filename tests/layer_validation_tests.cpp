@@ -9920,7 +9920,7 @@ TEST_F(VkLayerTest, DSAspectBitsErrors) {
     image_ci.mipLevels = 1;
     image_ci.arrayLayers = 1;
     image_ci.samples = VK_SAMPLE_COUNT_1_BIT;
-    image_ci.tiling = VK_IMAGE_TILING_LINEAR;
+    image_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
     image_ci.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
     image_ci.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
     image_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
