@@ -806,7 +806,9 @@ values in the following Windows registry keys:
 
 ```
    HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\Vulkan\ExplicitLayers
+   HKEY_CURRENT_USER\SOFTWARE\Khronos\Vulkan\ExplicitLayers
    HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\Vulkan\ImplicitLayers
+   HKEY_CURRENT_USER\SOFTWARE\Khronos\Vulkan\ImplicitLayers
 ```
 
 For each value in these keys which has DWORD data set to 0, the loader opens
