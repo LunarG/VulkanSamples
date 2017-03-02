@@ -252,6 +252,10 @@ int sample_main(int argc, char *argv[]) {
     res = vkEndCommandBuffer(threadCmdBufs[3]);
     assert(res == VK_SUCCESS);
 
+    VkSemaphore presentSemaphore;
+
+    res = vkCreateSemaphore(info.device, &imageAcquiredSemaphoreCreateInfo, NULL, &presentSemaphore);
+    assert(res == VK_SUCCESS);
     pipe_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
     submit_info[0].pNext = NULL;
     submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -260,8 +264,8 @@ int sample_main(int argc, char *argv[]) {
     submit_info[0].pWaitDstStageMask = &pipe_stage_flags;
     submit_info[0].commandBufferCount = 4; /* 3 from threads + prePresentBarrier */
     submit_info[0].pCommandBuffers = threadCmdBufs;
-    submit_info[0].signalSemaphoreCount = 0;
-    submit_info[0].pSignalSemaphores = NULL;
+    submit_info[0].signalSemaphoreCount = 1;
+    submit_info[0].pSignalSemaphores = &presentSemaphore;
 
     /* Wait for all of the threads to finish */
     for (int i = 0; i < 3; i++) {
@@ -285,7 +289,18 @@ int sample_main(int argc, char *argv[]) {
     } while (res == VK_TIMEOUT);
     assert(res == VK_SUCCESS);
 
-    execute_present_image(info);
+    // execute_present_image(info);
+    VkPresentInfoKHR present;
+    present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    present.pNext = NULL;
+    present.swapchainCount = 1;
+    present.pSwapchains = &info.swap_chain;
+    present.pImageIndices = &info.current_buffer;
+    present.pWaitSemaphores = &presentSemaphore;
+    present.waitSemaphoreCount = 1;
+    present.pResults = NULL;
+
+    res = vkQueuePresentKHR(info.present_queue, &present);
 
     wait_seconds(1);
     /* VULKAN_KEY_END */
