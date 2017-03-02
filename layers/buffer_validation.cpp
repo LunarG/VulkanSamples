@@ -28,7 +28,6 @@
 #include "vk_layer_utils.h"
 #include "vk_layer_logging.h"
 
-
 #include "buffer_validation.h"
 
 void SetLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair, const VkImageLayout &layout) {
@@ -375,7 +374,7 @@ void TransitionImageAspectLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, c
 }
 
 bool ValidateImageLayouts(layer_data *device_data, VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
-    const VkImageMemoryBarrier *pImgMemBarriers) {
+                          const VkImageMemoryBarrier *pImgMemBarriers) {
     GLOBAL_CB_NODE *pCB = GetCBNode(device_data, cmdBuffer);
     bool skip = false;
     uint32_t levelCount = 0;
@@ -1384,9 +1383,7 @@ void PreCallRecordCmdCopyImage(layer_data *device_data, GLOBAL_CB_NODE *cb_node,
     // Update bindings between images and cmd buffer
     AddCommandBufferBindingImage(device_data, cb_node, src_image_state);
     AddCommandBufferBindingImage(device_data, cb_node, dst_image_state);
-    std::function<bool()> function = [=]() {
-        return ValidateImageMemoryIsValid(device_data, src_image_state, "vkCmdCopyImage()");
-    };
+    std::function<bool()> function = [=]() { return ValidateImageMemoryIsValid(device_data, src_image_state, "vkCmdCopyImage()"); };
     cb_node->validate_functions.push_back(function);
     function = [=]() {
         SetImageMemoryValid(device_data, dst_image_state, true);
@@ -1644,7 +1641,6 @@ bool PreCallValidateCmdBlitImage(layer_data *device_data, GLOBAL_CB_NODE *cb_nod
         skip |= insideRenderPass(device_data, cb_node, "vkCmdBlitImage()", VALIDATION_ERROR_01300);
 
         for (uint32_t i = 0; i < regionCount; i++) {
-
             // Warn for zero-sized regions
             if ((pRegions[i].srcOffsets[0].x == pRegions[i].srcOffsets[1].x) ||
                 (pRegions[i].srcOffsets[0].y == pRegions[i].srcOffsets[1].y) ||
@@ -1667,14 +1663,14 @@ bool PreCallValidateCmdBlitImage(layer_data *device_data, GLOBAL_CB_NODE *cb_nod
             if (pRegions[i].srcSubresource.layerCount == 0) {
                 char const str[] = "vkCmdBlitImage: number of layers in source subresource is zero";
                 skip |= log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                    reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, DRAWSTATE_MISMATCHED_IMAGE_ASPECT,
-                    "IMAGE", str);
+                                reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, DRAWSTATE_MISMATCHED_IMAGE_ASPECT,
+                                "IMAGE", str);
             }
             if (pRegions[i].dstSubresource.layerCount == 0) {
                 char const str[] = "vkCmdBlitImage: number of layers in destination subresource is zero";
                 skip |= log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                    reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, DRAWSTATE_MISMATCHED_IMAGE_ASPECT,
-                    "IMAGE", str);
+                                reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, DRAWSTATE_MISMATCHED_IMAGE_ASPECT,
+                                "IMAGE", str);
             }
 
             // Check that src/dst layercounts match
@@ -1721,7 +1717,6 @@ bool PreCallValidateCmdBlitImage(layer_data *device_data, GLOBAL_CB_NODE *cb_nod
 
         // Validate aspect bits and formats for depth/stencil images
         if (vk_format_is_depth_or_stencil(src_format) || vk_format_is_depth_or_stencil(dst_format)) {
-
             if (src_format != dst_format) {
                 std::stringstream ss;
                 ss << "vkCmdBlitImage: If one of srcImage and dstImage images has a format of depth, stencil or depth "
@@ -1814,23 +1809,24 @@ bool ValidateCmdBufImageLayouts(layer_data *device_data, GLOBAL_CB_NODE *pCB,
                 // TODO: Set memory invalid which is in mem_tracker currently
             } else if (imageLayout != cb_image_data.second.initialLayout) {
                 if (cb_image_data.first.hasSubresource) {
-                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                                    reinterpret_cast<uint64_t &>(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT,
-                                    "DS", "Cannot submit cmd buffer using image (0x%" PRIx64
-                                          ") [sub-resource: aspectMask 0x%X array layer %u, mip level %u], "
-                                          "with layout %s when first use is %s.",
-                                    reinterpret_cast<const uint64_t &>(cb_image_data.first.image),
-                                    cb_image_data.first.subresource.aspectMask, cb_image_data.first.subresource.arrayLayer,
-                                    cb_image_data.first.subresource.mipLevel, string_VkImageLayout(imageLayout),
-                                    string_VkImageLayout(cb_image_data.second.initialLayout));
+                    skip |= log_msg(
+                        report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                        reinterpret_cast<uint64_t &>(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                        "Cannot submit cmd buffer using image (0x%" PRIx64
+                        ") [sub-resource: aspectMask 0x%X array layer %u, mip level %u], "
+                        "with layout %s when first use is %s.",
+                        reinterpret_cast<const uint64_t &>(cb_image_data.first.image), cb_image_data.first.subresource.aspectMask,
+                        cb_image_data.first.subresource.arrayLayer, cb_image_data.first.subresource.mipLevel,
+                        string_VkImageLayout(imageLayout), string_VkImageLayout(cb_image_data.second.initialLayout));
                 } else {
-                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                                    reinterpret_cast<uint64_t &>(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT,
-                                    "DS", "Cannot submit cmd buffer using image (0x%" PRIx64
-                                          ") with layout %s when "
-                                          "first use is %s.",
-                                    reinterpret_cast<const uint64_t &>(cb_image_data.first.image),
-                                    string_VkImageLayout(imageLayout), string_VkImageLayout(cb_image_data.second.initialLayout));
+                    skip |=
+                        log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                reinterpret_cast<uint64_t &>(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                                "Cannot submit cmd buffer using image (0x%" PRIx64
+                                ") with layout %s when "
+                                "first use is %s.",
+                                reinterpret_cast<const uint64_t &>(cb_image_data.first.image), string_VkImageLayout(imageLayout),
+                                string_VkImageLayout(cb_image_data.second.initialLayout));
                 }
             }
             SetLayout(imageLayoutMap, cb_image_data.first, cb_image_data.second.layout);
@@ -2106,8 +2102,8 @@ bool ValidateMapImageLayouts(core_validation::layer_data *device_data, VkDevice 
                 if (FindLayouts(device_data, VkImage(image_handle), layouts)) {
                     for (auto layout : layouts) {
                         if (layout != VK_IMAGE_LAYOUT_PREINITIALIZED && layout != VK_IMAGE_LAYOUT_GENERAL) {
-                            skip |= log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                                            DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                            skip |= log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
+                                            __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
                                             "Mapping an image with layout %s can result in undefined behavior if this memory is "
                                             "used by the device. Only GENERAL or PREINITIALIZED should be used.",
                                             string_VkImageLayout(layout));
@@ -2137,10 +2133,10 @@ static bool validate_usage_flags(layer_data *device_data, VkFlags actual, VkFlag
     if (!correct_usage) {
         if (msgCode == -1) {
             // TODO: Fix callers with msgCode == -1 to use correct validation checks.
-            skip = log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, obj_type, obj_handle, __LINE__, MEMTRACK_INVALID_USAGE_FLAG,
-                           "MEM", "Invalid usage flag for %s 0x%" PRIxLEAST64
-                                  " used by %s. In this case, %s should have %s set during creation.",
-                           ty_str, obj_handle, func_name, ty_str, usage_str);
+            skip = log_msg(
+                report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, obj_type, obj_handle, __LINE__, MEMTRACK_INVALID_USAGE_FLAG, "MEM",
+                "Invalid usage flag for %s 0x%" PRIxLEAST64 " used by %s. In this case, %s should have %s set during creation.",
+                ty_str, obj_handle, func_name, ty_str, usage_str);
         } else {
             const char *valid_usage = (msgCode == -1) ? "" : validation_error_map[msgCode];
             skip = log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, obj_type, obj_handle, __LINE__, msgCode, "MEM",
