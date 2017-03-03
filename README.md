@@ -30,7 +30,7 @@ The following components are available in this repository:
 
 If you intend to contribute, the preferred work flow is for you to develop your contribution
 in a fork of this repo in your GitHub account and then submit a pull request.
-Please see the [CONTRIBUTING](CONTRIBUTING.md) file in this respository for more details
+Please see the [CONTRIBUTING](CONTRIBUTING.md) file in this repository for more details
 
 ## How to Build and Run
 
