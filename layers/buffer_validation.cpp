@@ -2647,6 +2647,42 @@ bool ValidateBufferImageCopyData(const debug_report_data *report_data, uint32_t 
                                 function, i, pRegions[i].bufferOffset, block_size_in_bytes,
                                 validation_error_map[VALIDATION_ERROR_01274]);
             }
+
+            // imageExtent width must be a multiple of block width, or extent+offset width must equal subresource width
+            if ((vk_safe_modulo(pRegions[i].imageExtent.width, block_size.width) != 0) &&
+                (pRegions[i].imageExtent.width + pRegions[i].imageOffset.x != image_state->createInfo.extent.width)) {
+                skip |=
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                            reinterpret_cast<uint64_t &>(image_state->image), __LINE__, VALIDATION_ERROR_01275, "IMAGE",
+                            "%s(): pRegion[%d] extent width (%d) must be a multiple of the compressed texture block width (%d), or "
+                            "when added to offset.x (%d) must equal the image subresource width (%d). %s.",
+                            function, i, pRegions[i].imageExtent.width, block_size.width, pRegions[i].imageOffset.x,
+                            image_state->createInfo.extent.width, validation_error_map[VALIDATION_ERROR_01275]);
+            }
+
+            // imageExtent height must be a multiple of block height, or extent+offset height must equal subresource height
+            if ((vk_safe_modulo(pRegions[i].imageExtent.height, block_size.height) != 0) &&
+                (pRegions[i].imageExtent.height + pRegions[i].imageOffset.y != image_state->createInfo.extent.height)) {
+                skip |= log_msg(
+                    report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                    reinterpret_cast<uint64_t &>(image_state->image), __LINE__, VALIDATION_ERROR_01276, "IMAGE",
+                    "%s(): pRegion[%d] extent height (%d) must be a multiple of the compressed texture block height (%d), or "
+                    "when added to offset.y (%d) must equal the image subresource height (%d). %s.",
+                    function, i, pRegions[i].imageExtent.height, block_size.height, pRegions[i].imageOffset.y,
+                    image_state->createInfo.extent.height, validation_error_map[VALIDATION_ERROR_01276]);
+            }
+
+            // imageExtent depth must be a multiple of block depth, or extent+offset depth must equal subresource depth
+            if ((vk_safe_modulo(pRegions[i].imageExtent.depth, block_size.depth) != 0) &&
+                (pRegions[i].imageExtent.depth + pRegions[i].imageOffset.z != image_state->createInfo.extent.depth)) {
+                skip |=
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                            reinterpret_cast<uint64_t &>(image_state->image), __LINE__, VALIDATION_ERROR_01277, "IMAGE",
+                            "%s(): pRegion[%d] extent width (%d) must be a multiple of the compressed texture block depth (%d), or "
+                            "when added to offset.z (%d) must equal the image subresource depth (%d). %s.",
+                            function, i, pRegions[i].imageExtent.depth, block_size.depth, pRegions[i].imageOffset.z,
+                            image_state->createInfo.extent.depth, validation_error_map[VALIDATION_ERROR_01277]);
+            }
         }
     }
 

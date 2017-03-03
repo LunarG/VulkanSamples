@@ -16214,15 +16214,22 @@ TEST_F(VkLayerTest, ImageBufferCopyTests) {
           device_features.textureCompressionASTC_LDR)) {
         printf("             No compressed formats supported - block compression tests skipped.\n");
     } else {
-        VkImageObj image_16k_4x4comp(m_device);  // 128^2 texels as 32^2 compressed (4x4) blocks, 16k
+        VkImageObj image_16k_4x4comp(m_device);   // 128^2 texels as 32^2 compressed (4x4) blocks, 16k
+        VkImageObj image_NPOT_4x4comp(m_device);  // 130^2 texels as 33^2 compressed (4x4) blocks
         if (device_features.textureCompressionBC) {
             image_16k_4x4comp.init(128, 128, VK_FORMAT_BC3_SRGB_BLOCK, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
+            image_NPOT_4x4comp.init(130, 130, VK_FORMAT_BC3_SRGB_BLOCK, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_TILING_OPTIMAL,
+                                    0);
         } else if (device_features.textureCompressionETC2) {
             image_16k_4x4comp.init(128, 128, VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK, VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
                                    VK_IMAGE_TILING_OPTIMAL, 0);
+            image_NPOT_4x4comp.init(130, 130, VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK, VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+                                    VK_IMAGE_TILING_OPTIMAL, 0);
         } else {
             image_16k_4x4comp.init(128, 128, VK_FORMAT_ASTC_4x4_UNORM_BLOCK, VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
                                    VK_IMAGE_TILING_OPTIMAL, 0);
+            image_NPOT_4x4comp.init(130, 130, VK_FORMAT_ASTC_4x4_UNORM_BLOCK, VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+                                    VK_IMAGE_TILING_OPTIMAL, 0);
         }
         ASSERT_TRUE(image_16k_4x4comp.initialized());
 
@@ -16239,13 +16246,39 @@ TEST_F(VkLayerTest, ImageBufferCopyTests) {
         vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image_16k_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL,
                                buffer_16k.handle(), 1, &region);
         m_errorMonitor->VerifyFound();
+        region.bufferOffset = 0;
 
-        // but, should work with a small extent
-        m_errorMonitor->ExpectSuccess();
+        // extents that are not a multiple of compressed block size
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01275);
+        region.imageExtent.width = 66;
+        vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image_NPOT_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL,
+                               buffer_16k.handle(), 1, &region);
+        m_errorMonitor->VerifyFound();
+        region.imageExtent.width = 128;
+
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01276);
         region.imageExtent.height = 2;
-        vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image_16k_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL,
+        vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image_NPOT_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL,
+                               buffer_16k.handle(), 1, &region);
+        m_errorMonitor->VerifyFound();
+        region.imageExtent.height = 128;
+
+        // TODO: All available compressed formats are 2D, with block depth of 1. Unable to provoke VU_01277.
+
+        // non-multiple extents are allowed if at the far edge of a non-block-multiple image - these should pass
+        m_errorMonitor->ExpectSuccess();
+        region.imageExtent.width = 66;
+        region.imageOffset.x = 64;
+        vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image_NPOT_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL,
+                               buffer_16k.handle(), 1, &region);
+        region.imageExtent.width = 16;
+        region.imageOffset.x = 0;
+        region.imageExtent.height = 2;
+        region.imageOffset.y = 128;
+        vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image_NPOT_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL,
                                buffer_16k.handle(), 1, &region);
         m_errorMonitor->VerifyNotFound();
+        region.imageOffset = {0, 0, 0};
 
         // buffer offset must be a multiple of texel block size (16)
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01274);
