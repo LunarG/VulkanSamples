@@ -199,6 +199,7 @@ out:
 
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(uint32_t *pPropertyCount,
                                                                                 VkLayerProperties *pProperties) {
+    VkResult result = VK_SUCCESS;
     struct loader_layer_list instance_layer_list;
     tls_instance = NULL;
 
@@ -212,8 +213,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(
 
     if (pProperties == NULL) {
         *pPropertyCount = instance_layer_list.count;
-        loader_destroy_layer_list(NULL, NULL, &instance_layer_list);
-        return VK_SUCCESS;
+        goto out;
     }
 
     copy_size = (*pPropertyCount < instance_layer_list.count) ? *pPropertyCount : instance_layer_list.count;
@@ -224,13 +224,14 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(
     *pPropertyCount = copy_size;
 
     if (copy_size < instance_layer_list.count) {
-        loader_destroy_layer_list(NULL, NULL, &instance_layer_list);
-        return VK_INCOMPLETE;
+        result = VK_INCOMPLETE;
+        goto out;
     }
 
-    loader_destroy_layer_list(NULL, NULL, &instance_layer_list);
+out:
 
-    return VK_SUCCESS;
+    loader_delete_layer_properties(NULL, &instance_layer_list);
+    return result;
 }
 
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo,
@@ -718,6 +719,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionPropertie
                         loader_add_to_dev_ext_list(NULL, &local_ext_list, &ext_list->list[j].props, 0, NULL);
                     }
                 }
+                loader_destroy_layer_list(NULL, NULL, &local_list);
                 dev_ext_list = &local_ext_list;
 
             } else {
