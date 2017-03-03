@@ -5023,9 +5023,10 @@ TEST_F(VkLayerTest, InvalidCmdBufferFramebufferImageDestroyed) {
 
     // Just use default renderpass with our framebuffer
     m_renderPassBeginInfo.framebuffer = fb;
+    m_renderPassBeginInfo.renderArea.extent.width = 32;
+    m_renderPassBeginInfo.renderArea.extent.height = 32;
     // Create Null cmd buffer for submit
     m_commandBuffer->BeginCommandBuffer();
-    m_errorMonitor->SetUnexpectedError("Cannot execute a render pass with renderArea not within the bound of the framebuffer.");
     m_commandBuffer->BeginRenderPass(m_renderPassBeginInfo);
     m_commandBuffer->EndRenderPass();
     m_commandBuffer->EndCommandBuffer();
