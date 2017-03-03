@@ -33,6 +33,14 @@ namespace unique_objects {
 // All increments must be guarded by global_lock
 static uint64_t global_unique_id = 1;
 
+struct TEMPLATE_STATE {
+    VkDescriptorUpdateTemplateKHR desc_update_template;
+    safe_VkDescriptorUpdateTemplateCreateInfoKHR create_info;
+
+    TEMPLATE_STATE(VkDescriptorUpdateTemplateKHR update_template, safe_VkDescriptorUpdateTemplateCreateInfoKHR *pCreateInfo)
+        : desc_update_template(update_template), create_info(*pCreateInfo) {}
+};
+
 struct layer_data {
     VkInstance instance;
 
@@ -46,6 +54,8 @@ struct layer_data {
     uint32_t num_tmp_callbacks;
     VkDebugReportCallbackCreateInfoEXT *tmp_dbg_create_infos;
     VkDebugReportCallbackEXT *tmp_callbacks;
+
+    std::unordered_map<uint64_t, std::unique_ptr<TEMPLATE_STATE>> desc_template_map;
 
     bool wsi_enabled;
     std::unordered_map<uint64_t, uint64_t> unique_id_mapping;  // Map uniqueID to actual object handle
