@@ -278,13 +278,9 @@ add_custom_target(generate_helper_files DEPENDS
     vk_safe_struct.cpp
     vk_layer_dispatch_table.h
     vk_dispatch_table_helper.h
-    vk_loader_extensions.h
-    vk_loader_extensions.c
     )
 
 # Rules to build generated helper files
-run_vk_xml_generate(loader_extension_generator.py vk_loader_extensions.c)
-run_vk_xml_generate(loader_extension_generator.py vk_loader_extensions.h)
 run_vk_xml_generate(loader_extension_generator.py vk_layer_dispatch_table.h)
 run_vk_xml_generate(dispatch_table_helper_generator.py vk_dispatch_table_helper.h)
 run_vk_xml_generate(helper_file_generator.py vk_safe_struct.h)
