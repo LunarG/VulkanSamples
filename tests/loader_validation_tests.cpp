@@ -977,9 +977,7 @@ TEST(Allocation, GetInstanceProcAddr) {
 
     void *pfnCreateDevice = (void *)vkGetInstanceProcAddr(instance, "vkCreateDevice");
     void *pfnDestroyDevice = (void *)vkGetInstanceProcAddr(instance, "vkDestroyDevice");
-    if (NULL == pfnCreateDevice || NULL == pfnDestroyDevice) {
-        ASSERT_EQ(false, true);
-    }
+    ASSERT_TRUE(pfnCreateDevice != NULL && pfnDestroyDevice != NULL);
 
     alloc_callbacks.pUserData = (void *)0x00000011;
     vkDestroyInstance(instance, &alloc_callbacks);
