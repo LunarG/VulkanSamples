@@ -525,8 +525,17 @@ class HelperFileOutputGenerator(OutputGenerator):
     # safe_struct source -- create bodies of safe struct helper functions
     def GenerateSafeStructSource(self):
         safe_struct_body = []
+        wsi_structs = ['VkXlibSurfaceCreateInfoKHR',
+                       'VkXcbSurfaceCreateInfoKHR',
+                       'VkWaylandSurfaceCreateInfoKHR',
+                       'VkMirSurfaceCreateInfoKHR',
+                       'VkAndroidSurfaceCreateInfoKHR',
+                       'VkWin32SurfaceCreateInfoKHR'
+                       ]
         for item in self.structMembers:
             if self.NeedSafeStruct(item) == False:
+                continue
+            if item.name in wsi_structs:
                 continue
             if item.ifdef_protect != None:
                 safe_struct_body.append("#ifdef %s\n" % item.ifdef_protect)
@@ -583,7 +592,7 @@ class HelperFileOutputGenerator(OutputGenerator):
                         m_type = 'safe_%s' % member.type
                 if member.ispointer and 'safe_' not in m_type and self.TypeContainsObjectHandle(member.type, False) == False:
                     # Ptr types w/o a safe_struct, for non-null case need to allocate new ptr and copy data in
-                    if 'KHR' in ss_name or m_type in ['void', 'char']:
+                    if m_type in ['void', 'char']:
                         # For these exceptions just copy initial value over for now
                         init_list += '\n    %s(in_struct->%s),' % (member.name, member.name)
                         init_func_txt += '    %s = in_struct->%s;\n' % (member.name, member.name)
