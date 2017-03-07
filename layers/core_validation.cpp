@@ -106,6 +106,7 @@ struct devExts {
     bool wsi_enabled;
     bool wsi_display_swapchain_enabled;
     bool nv_glsl_shader_enabled;
+    bool khr_descriptor_update_template_enabled;
     unordered_map<VkSwapchainKHR, unique_ptr<SWAPCHAIN_NODE>> swapchainMap;
     unordered_map<VkImage, VkSwapchainKHR> imageToSwapchainMap;
 };
@@ -171,6 +172,7 @@ struct layer_data {
     unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> imageLayoutMap;
     unordered_map<VkRenderPass, unique_ptr<RENDER_PASS_STATE>> renderPassMap;
     unordered_map<VkShaderModule, unique_ptr<shader_module>> shaderModuleMap;
+    unordered_map<VkDescriptorUpdateTemplateKHR, unique_ptr<TEMPLATE_STATE>> desc_template_map;
 
     VkDevice device = VK_NULL_HANDLE;
     VkPhysicalDevice physical_device = VK_NULL_HANDLE;
@@ -3827,6 +3829,7 @@ static void checkDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo,
     dev_data->device_extensions.wsi_enabled = false;
     dev_data->device_extensions.wsi_display_swapchain_enabled = false;
     dev_data->device_extensions.nv_glsl_shader_enabled = false;
+    dev_data->device_extensions.khr_descriptor_update_template_enabled = false;
 
     for (i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
@@ -3837,6 +3840,9 @@ static void checkDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo,
         }
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_NV_GLSL_SHADER_EXTENSION_NAME) == 0) {
             dev_data->device_extensions.nv_glsl_shader_enabled = true;
+        }
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME) == 0) {
+            dev_data->device_extensions.khr_descriptor_update_template_enabled = true;
         }
     }
 }
@@ -11417,9 +11423,58 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumeratePhysicalDeviceGroupsKHX(
     return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
+VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorUpdateTemplateKHR(VkDevice device,
+                                                                 const VkDescriptorUpdateTemplateCreateInfoKHR *pCreateInfo,
+                                                                 const VkAllocationCallbacks *pAllocator,
+                                                                 VkDescriptorUpdateTemplateKHR *pDescriptorUpdateTemplate) {
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    safe_VkDescriptorUpdateTemplateCreateInfoKHR *local_create_info = NULL;
+    {
+        std::lock_guard<std::mutex> lock(global_lock);
+        if (pCreateInfo) {
+            local_create_info = new safe_VkDescriptorUpdateTemplateCreateInfoKHR(pCreateInfo);
+        }
+    }
+    VkResult result = dev_data->dispatch_table.CreateDescriptorUpdateTemplateKHR(
+        device, (const VkDescriptorUpdateTemplateCreateInfoKHR *)local_create_info, pAllocator, pDescriptorUpdateTemplate);
+    if (VK_SUCCESS == result) {
+        std::lock_guard<std::mutex> lock(global_lock);
+        // Shadow template createInfo for later updates
+        std::unique_ptr<TEMPLATE_STATE> template_state(new TEMPLATE_STATE(*pDescriptorUpdateTemplate, local_create_info));
+        dev_data->desc_template_map[*pDescriptorUpdateTemplate] = std::move(template_state);
+    }
+    return result;
+}
+
+VKAPI_ATTR void VKAPI_CALL DestroyDescriptorUpdateTemplateKHR(VkDevice device,
+                                                              VkDescriptorUpdateTemplateKHR descriptorUpdateTemplate,
+                                                              const VkAllocationCallbacks *pAllocator) {
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    std::unique_lock<std::mutex> lock(global_lock);
+    dev_data->desc_template_map.erase(descriptorUpdateTemplate);
+    lock.unlock();
+    dev_data->dispatch_table.DestroyDescriptorUpdateTemplateKHR(device, descriptorUpdateTemplate, pAllocator);
+}
+
+VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSetWithTemplateKHR(VkDevice device, VkDescriptorSet descriptorSet,
+                                                              VkDescriptorUpdateTemplateKHR descriptorUpdateTemplate,
+                                                              const void *pData) {
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    dev_data->dispatch_table.UpdateDescriptorSetWithTemplateKHR(device, descriptorSet, descriptorUpdateTemplate, pData);
+}
+
+VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetWithTemplateKHR(VkCommandBuffer commandBuffer,
+                                                               VkDescriptorUpdateTemplateKHR descriptorUpdateTemplate,
+                                                               VkPipelineLayout layout, uint32_t set, const void *pData) {
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
+    dev_data->dispatch_table.CmdPushDescriptorSetWithTemplateKHR(commandBuffer, descriptorUpdateTemplate, layout, set, pData);
+}
+
 static PFN_vkVoidFunction intercept_core_instance_command(const char *name);
 
 static PFN_vkVoidFunction intercept_core_device_command(const char *name);
+
+static PFN_vkVoidFunction intercept_device_extension_command(const char *name, VkDevice device);
 
 static PFN_vkVoidFunction intercept_khr_swapchain_command(const char *name, VkDevice dev);
 
@@ -11429,16 +11484,14 @@ static PFN_vkVoidFunction
 intercept_extension_instance_commands(const char *name, VkInstance instance);
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice dev, const char *funcName) {
-    PFN_vkVoidFunction proc = intercept_core_device_command(funcName);
-    if (proc) return proc;
-
     assert(dev);
 
-    proc = intercept_khr_swapchain_command(funcName, dev);
+    PFN_vkVoidFunction proc = intercept_core_device_command(funcName);
+    if (!proc) proc = intercept_device_extension_command(funcName, dev);
+    if (!proc) proc = intercept_khr_swapchain_command(funcName, dev);
     if (proc) return proc;
 
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(dev), layer_data_map);
-
     auto &table = dev_data->dispatch_table;
     if (!table.GetDeviceProcAddr) return nullptr;
     return table.GetDeviceProcAddr(dev, funcName);
@@ -11627,6 +11680,34 @@ static PFN_vkVoidFunction intercept_core_device_command(const char *name) {
 
     for (size_t i = 0; i < ARRAY_SIZE(core_device_commands); i++) {
         if (!strcmp(core_device_commands[i].name, name)) return core_device_commands[i].proc;
+    }
+
+    return nullptr;
+}
+
+static PFN_vkVoidFunction intercept_device_extension_command(const char *name, VkDevice device) {
+    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+
+    const struct {
+        const char *name;
+        PFN_vkVoidFunction proc;
+        bool enabled;
+    } device_extension_commands[] = {
+        {"vkCreateDescriptorUpdateTemplateKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateDescriptorUpdateTemplateKHR),
+         device_data->device_extensions.khr_descriptor_update_template_enabled},
+        {"vkDestroyDescriptorUpdateTemplateKHR", reinterpret_cast<PFN_vkVoidFunction>(DestroyDescriptorUpdateTemplateKHR),
+         device_data->device_extensions.khr_descriptor_update_template_enabled},
+        {"vkUpdateDescriptorSetWithTemplateKHR", reinterpret_cast<PFN_vkVoidFunction>(UpdateDescriptorSetWithTemplateKHR),
+         device_data->device_extensions.khr_descriptor_update_template_enabled},
+        {"vkCmdPushDescriptorSetWithTemplateKHR", reinterpret_cast<PFN_vkVoidFunction>(CmdPushDescriptorSetWithTemplateKHR),
+         device_data->device_extensions.khr_descriptor_update_template_enabled},
+    };
+
+    if (!device_data || !device_data->device_extensions.khr_descriptor_update_template_enabled) return nullptr;
+
+    for (size_t i = 0; i < ARRAY_SIZE(device_extension_commands); i++) {
+        if (!strcmp(device_extension_commands[i].name, name) && device_extension_commands[i].enabled)
+            return device_extension_commands[i].proc;
     }
 
     return nullptr;
