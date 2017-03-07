@@ -17946,6 +17946,33 @@ TEST_F(VkLayerTest, ClearImageErrors) {
     m_errorMonitor->VerifyFound();
 }
 
+TEST_F(VkLayerTest, CommandQueueFlags) {
+    TEST_DESCRIPTION(
+        "Allocate a command buffer on a queue that does not support graphics and try to issue a "
+        "graphics-only command");
+
+    ASSERT_NO_FATAL_FAILURE(Init());
+
+    uint32_t queueFamilyIndex = m_device->QueueFamilyWithoutCapabilities(VK_QUEUE_GRAPHICS_BIT);
+    if(queueFamilyIndex == UINT32_MAX) {
+        printf("             Non-graphics queue family not found; skipped.\n");
+        return;
+    } else {
+        // Create command pool on a non-graphics queue
+        VkCommandPoolObj command_pool(m_device, queueFamilyIndex);
+
+        // Setup command buffer on pool
+        VkCommandBufferObj command_buffer(m_device, &command_pool);
+        command_buffer.BeginCommandBuffer();
+
+        // Issue a graphics only command
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01446);
+        VkViewport viewport = {0, 0, 16, 16, 0, 1};
+        command_buffer.SetViewport(0, 1, &viewport);
+        m_errorMonitor->VerifyFound();
+    }
+}
+
 // WSI Enabled Tests
 //
 #if 0
