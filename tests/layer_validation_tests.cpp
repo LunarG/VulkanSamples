@@ -15914,6 +15914,190 @@ TEST_F(VkLayerTest, ImageLayerViewTests) {
     vkDestroyImage(m_device->handle(), mutImage, NULL);
 }
 
+TEST_F(VkLayerTest, CompressedImageMipCopyTests) {
+    TEST_DESCRIPTION("Image/Buffer copies for higher mip levels");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkPhysicalDeviceFeatures device_features;
+    ASSERT_NO_FATAL_FAILURE(GetPhysicalDeviceFeatures(&device_features));
+    VkFormat compressed_format = VK_FORMAT_UNDEFINED;
+    if (device_features.textureCompressionBC) {
+        compressed_format = VK_FORMAT_BC3_SRGB_BLOCK;
+    } else if (device_features.textureCompressionETC2) {
+        compressed_format = VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK;
+    } else if (device_features.textureCompressionASTC_LDR) {
+        compressed_format = VK_FORMAT_ASTC_4x4_UNORM_BLOCK;
+    } else {
+        printf("             No compressed formats supported - CompressedImageMipCopyTests skipped.\n");
+        return;
+    }
+
+    VkImageCreateInfo ci;
+    ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    ci.pNext = NULL;
+    ci.flags = 0;
+    ci.imageType = VK_IMAGE_TYPE_2D;
+    ci.format = compressed_format;
+    ci.extent = {32, 32, 1};
+    ci.mipLevels = 6;
+    ci.arrayLayers = 1;
+    ci.samples = VK_SAMPLE_COUNT_1_BIT;
+    ci.tiling = VK_IMAGE_TILING_OPTIMAL;
+    ci.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    ci.queueFamilyIndexCount = 0;
+    ci.pQueueFamilyIndices = NULL;
+    ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    VkImageObj image(m_device);
+    image.init(&ci);
+    ASSERT_TRUE(image.initialized());
+
+    VkImageObj odd_image(m_device);
+    ci.extent = {31, 32, 1};  // Mips are [31,32] [15,16] [7,8] [3,4], [1,2] [1,1]
+    odd_image.init(&ci);
+    ASSERT_TRUE(odd_image.initialized());
+
+    // Allocate buffers
+    VkMemoryPropertyFlags reqs = 0;
+    vk_testing::Buffer buffer_1024, buffer_64, buffer_16, buffer_8;
+    buffer_1024.init_as_src_and_dst(*m_device, 1024, reqs);
+    buffer_64.init_as_src_and_dst(*m_device, 64, reqs);
+    buffer_16.init_as_src_and_dst(*m_device, 16, reqs);
+    buffer_8.init_as_src_and_dst(*m_device, 8, reqs);
+
+    VkBufferImageCopy region = {};
+    region.bufferRowLength = 0;
+    region.bufferImageHeight = 0;
+    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.imageSubresource.layerCount = 1;
+    region.imageOffset = {0, 0, 0};
+    region.bufferOffset = 0;
+
+    // start recording
+    m_commandBuffer->BeginCommandBuffer();
+
+    // Mip level copies that work - 5 levels
+    m_errorMonitor->ExpectSuccess();
+
+    // Mip 0 should fit in 1k buffer - 1k texels @ 1b each
+    region.imageExtent = {32, 32, 1};
+    region.imageSubresource.mipLevel = 0;
+    vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_1024.handle(), 1,
+                           &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer_1024.handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                           &region);
+
+    // Mip 2 should fit in 64b buffer - 64 texels @ 1b each
+    region.imageExtent = {8, 8, 1};
+    region.imageSubresource.mipLevel = 2;
+    vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_64.handle(), 1,
+                           &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer_64.handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                           &region);
+
+    // Mip 3 should fit in 16b buffer - 16 texels @ 1b each
+    region.imageExtent = {4, 4, 1};
+    region.imageSubresource.mipLevel = 3;
+    vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16.handle(), 1,
+                           &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer_16.handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                           &region);
+
+    // Mip 4&5 should fit in 16b buffer with no complaint - 4 & 1 texels @ 1b each
+    region.imageExtent = {2, 2, 1};
+    region.imageSubresource.mipLevel = 4;
+    vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16.handle(), 1,
+                           &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer_16.handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                           &region);
+
+    region.imageExtent = {1, 1, 1};
+    region.imageSubresource.mipLevel = 5;
+    vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16.handle(), 1,
+                           &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer_16.handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                           &region);
+    m_errorMonitor->VerifyNotFound();
+
+    // Buffer must accomodate a full compressed block, regardless of texel count
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01246);
+    vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_8.handle(), 1,
+                           &region);
+    m_errorMonitor->VerifyFound();
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01227);
+    vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer_8.handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                           &region);
+    m_errorMonitor->VerifyFound();
+
+    // Copy width < compressed block size, but not the full mip width
+    region.imageExtent = {1, 2, 1};
+    region.imageSubresource.mipLevel = 4;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01275);
+    vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16.handle(), 1,
+                           &region);
+    m_errorMonitor->VerifyFound();
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01275);
+    vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer_16.handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                           &region);
+    m_errorMonitor->VerifyFound();
+
+    // Copy height < compressed block size but not the full mip height
+    region.imageExtent = {2, 1, 1};
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01276);
+    vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16.handle(), 1,
+                           &region);
+    m_errorMonitor->VerifyFound();
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01276);
+    vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer_16.handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                           &region);
+    m_errorMonitor->VerifyFound();
+
+    // Offsets must be multiple of compressed block size
+    region.imageOffset = {1, 1, 0};
+    region.imageExtent = {1, 1, 1};
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01273);
+    vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16.handle(), 1,
+                           &region);
+    m_errorMonitor->VerifyFound();
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01273);
+    vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer_16.handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                           &region);
+    m_errorMonitor->VerifyFound();
+
+    // Offset + extent width = mip width - should succeed
+    region.imageOffset = {4, 4, 0};
+    region.imageExtent = {3, 4, 1};
+    region.imageSubresource.mipLevel = 2;
+    m_errorMonitor->ExpectSuccess();
+    vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), odd_image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16.handle(), 1,
+                           &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer_16.handle(), odd_image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                           &region);
+    m_errorMonitor->VerifyNotFound();
+
+    // Offset + extent width > mip width, but still within the final compressed block - should succeed
+    region.imageExtent = {4, 4, 1};
+    m_errorMonitor->ExpectSuccess();
+    vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), odd_image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16.handle(), 1,
+                           &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer_16.handle(), odd_image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                           &region);
+    m_errorMonitor->VerifyNotFound();
+
+    // Offset + extent width < mip width and not a multiple of block width - should fail
+    region.imageExtent = {3, 3, 1};
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01276);
+    vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), odd_image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16.handle(), 1,
+                           &region);
+    m_errorMonitor->VerifyFound();
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01276);
+    vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer_16.handle(), odd_image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                           &region);
+    m_errorMonitor->VerifyFound();
+}
+
 TEST_F(VkLayerTest, ImageBufferCopyTests) {
     TEST_DESCRIPTION("Image to buffer and buffer to image tests");
 
@@ -16302,20 +16486,6 @@ TEST_F(VkLayerTest, ImageBufferCopyTests) {
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01272);
         region.bufferRowLength = 0;
         region.bufferImageHeight = 130;
-        vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image_16k_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL,
-                               buffer_64k.handle(), 1, &region);
-        m_errorMonitor->VerifyFound();
-
-        // image offsets must be multiple of block dimensions (4x4)
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01273);
-        region.bufferImageHeight = 0;
-        region.imageOffset = {4, 6, 0};
-        vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image_16k_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL,
-                               buffer_64k.handle(), 1, &region);
-        m_errorMonitor->VerifyFound();
-
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01273);
-        region.imageOffset = {22, 0, 0};
         vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), image_16k_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL,
                                buffer_64k.handle(), 1, &region);
         m_errorMonitor->VerifyFound();

@@ -258,6 +258,8 @@ class VkImageObj : public vk_testing::Image {
     void init(uint32_t w, uint32_t h, VkFormat fmt, VkFlags usage, VkImageTiling tiling = VK_IMAGE_TILING_LINEAR,
               VkMemoryPropertyFlags reqs = 0);
 
+    void init(const VkImageCreateInfo *create_info);
+
     void init_no_layout(uint32_t w, uint32_t h, VkFormat fmt, VkFlags usage, VkImageTiling tiling = VK_IMAGE_TILING_LINEAR,
                         VkMemoryPropertyFlags reqs = 0);
 

@@ -759,6 +759,41 @@ void VkImageObj::init(uint32_t w, uint32_t h, VkFormat fmt, VkFlags usage, VkIma
     SetLayout(image_aspect, newLayout);
 }
 
+void VkImageObj::init(const VkImageCreateInfo *create_info) {
+    VkFormatProperties image_fmt;
+    vkGetPhysicalDeviceFormatProperties(m_device->phy().handle(), create_info->format, &image_fmt);
+
+    switch (create_info->tiling) {
+        case VK_IMAGE_TILING_OPTIMAL:
+            if (!IsCompatible(create_info->usage, image_fmt.optimalTilingFeatures)) {
+                ASSERT_TRUE(false) << "VkImageObj::init() error: unsupported tiling configuration";
+            }
+            break;
+        case VK_IMAGE_TILING_LINEAR:
+            if (!IsCompatible(create_info->usage, image_fmt.optimalTilingFeatures)) {
+                ASSERT_TRUE(false) << "VkImageObj::init() error: unsupported tiling configuration";
+            }
+            break;
+        default:
+            break;
+    }
+    layout(create_info->initialLayout);
+
+    vk_testing::Image::init(*m_device, *create_info, 0);
+
+    VkImageAspectFlags image_aspect = 0;
+    if (vk_format_is_depth_and_stencil(create_info->format)) {
+        image_aspect = VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_DEPTH_BIT;
+    } else if (vk_format_is_depth_only(create_info->format)) {
+        image_aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+    } else if (vk_format_is_stencil_only(create_info->format)) {
+        image_aspect = VK_IMAGE_ASPECT_STENCIL_BIT;
+    } else {  // color
+        image_aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+    }
+    SetLayout(image_aspect, VK_IMAGE_LAYOUT_GENERAL);
+}
+
 VkResult VkImageObj::CopyImage(VkImageObj &src_image) {
     VkResult U_ASSERT_ONLY err;
     VkImageLayout src_image_layout, dest_image_layout;
