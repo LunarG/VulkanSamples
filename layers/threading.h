@@ -252,6 +252,7 @@ struct layer_data {
     counter<VkDisplayModeKHR> c_VkDisplayModeKHR;
     counter<VkSurfaceKHR> c_VkSurfaceKHR;
     counter<VkSwapchainKHR> c_VkSwapchainKHR;
+    counter<VkDescriptorUpdateTemplateKHR> c_VkDescriptorUpdateTemplateKHR;
 #else   // DISTINCT_NONDISPATCHABLE_HANDLES
     counter<uint64_t> c_uint64_t;
 #endif  // DISTINCT_NONDISPATCHABLE_HANDLES
@@ -292,7 +293,9 @@ struct layer_data {
           c_VkDisplayKHR("VkDisplayKHR", VK_DEBUG_REPORT_OBJECT_TYPE_DISPLAY_KHR_EXT),
           c_VkDisplayModeKHR("VkDisplayModeKHR", VK_DEBUG_REPORT_OBJECT_TYPE_DISPLAY_MODE_KHR_EXT),
           c_VkSurfaceKHR("VkSurfaceKHR", VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT),
-          c_VkSwapchainKHR("VkSwapchainKHR", VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT)
+          c_VkSwapchainKHR("VkSwapchainKHR", VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT),
+          // TODO: Add proper structure for VkDescriptorUpdateTemplateKHR
+          c_VkDescriptorUpdateTemplateKHR("VkDescriptorUpdateTemplateKHR", VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT)
 #else   // DISTINCT_NONDISPATCHABLE_HANDLES
           c_uint64_t("NON_DISPATCHABLE_HANDLE", VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT)
 #endif  // DISTINCT_NONDISPATCHABLE_HANDLES
@@ -340,6 +343,7 @@ WRAPPER(VkDisplayKHR)
 WRAPPER(VkDisplayModeKHR)
 WRAPPER(VkSurfaceKHR)
 WRAPPER(VkSwapchainKHR)
+WRAPPER(VkDescriptorUpdateTemplateKHR)
 #else   // DISTINCT_NONDISPATCHABLE_HANDLES
 WRAPPER(uint64_t)
 #endif  // DISTINCT_NONDISPATCHABLE_HANDLES

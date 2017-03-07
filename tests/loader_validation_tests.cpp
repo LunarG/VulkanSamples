@@ -26,6 +26,10 @@
  * Author: Mark Young <marky@lunarG.com>
  */
 
+#ifdef _WIN32
+#include <inttypes.h>  //Needed for PRIxLEAST64
+#endif
+
 #include <algorithm>
 #include <iostream>
 #include <memory>
@@ -257,6 +261,129 @@ struct EnumerateInstanceLayerProperties : public CommandLine {};
 struct EnumerateInstanceExtensionProperties : public CommandLine {};
 struct ImplicitLayer : public CommandLine {};
 
+// Allocation tracking utilities
+struct AllocTrack {
+    bool active;
+    bool was_allocated;
+    void *aligned_start_addr;
+    char *actual_start_addr;
+    size_t requested_size_bytes;
+    size_t actual_size_bytes;
+    VkSystemAllocationScope alloc_scope;
+    uint64_t user_data;
+
+    AllocTrack()
+        : active(false),
+          was_allocated(false),
+          aligned_start_addr(nullptr),
+          actual_start_addr(nullptr),
+          requested_size_bytes(0),
+          actual_size_bytes(0),
+          alloc_scope(VK_SYSTEM_ALLOCATION_SCOPE_COMMAND),
+          user_data(0) {}
+};
+
+// Global vector to track allocations.  This will be resized before each test and emptied after.
+// However, we have to globally define it so the allocation callback functions work properly.
+std::vector<AllocTrack> g_allocated_vector;
+
+void FreeAllocTracker() { g_allocated_vector.clear(); }
+
+void InitAllocTracker(size_t size) {
+    if (g_allocated_vector.size() > 0) {
+        FreeAllocTracker();
+    }
+    g_allocated_vector.resize(size);
+}
+
+bool IsAllocTrackerEmpty() {
+    bool success = true;
+    bool was_allocated = false;
+    char print_command[1024];
+    sprintf(print_command, "\t%%04d\t%%p (%%p) : 0x%%%s (0x%%%s) : scope %%d : user_data 0x%%%s\n", PRIxLEAST64, PRIxLEAST64,
+            PRIxLEAST64);
+    for (uint32_t iii = 0; iii < g_allocated_vector.size(); iii++) {
+        if (g_allocated_vector[iii].active) {
+            if (success) {
+                printf("ERROR: Allocations still remain!\n");
+            }
+            printf(print_command, iii, g_allocated_vector[iii].aligned_start_addr, g_allocated_vector[iii].actual_start_addr,
+                   g_allocated_vector[iii].requested_size_bytes, g_allocated_vector[iii].actual_size_bytes,
+                   g_allocated_vector[iii].alloc_scope, g_allocated_vector[iii].user_data);
+            success = false;
+        } else if (!was_allocated && g_allocated_vector[iii].was_allocated) {
+            was_allocated = true;
+        }
+    }
+    if (!was_allocated) {
+        printf("No allocations ever generated!");
+        success = false;
+    }
+    return success;
+}
+
+VKAPI_ATTR void *VKAPI_CALL AllocCallbackFunc(void *pUserData, size_t size, size_t alignment,
+                                              VkSystemAllocationScope allocationScope) {
+    for (uint32_t iii = 0; iii < g_allocated_vector.size(); iii++) {
+        if (!g_allocated_vector[iii].active) {
+            g_allocated_vector[iii].requested_size_bytes = size;
+            g_allocated_vector[iii].actual_size_bytes = size + (alignment - 1);
+            g_allocated_vector[iii].aligned_start_addr = NULL;
+            g_allocated_vector[iii].actual_start_addr = new char[g_allocated_vector[iii].actual_size_bytes];
+            if (g_allocated_vector[iii].actual_start_addr != NULL) {
+                uint64_t addr = (uint64_t)g_allocated_vector[iii].actual_start_addr;
+                addr += (alignment - 1);
+                addr &= ~(alignment - 1);
+                g_allocated_vector[iii].aligned_start_addr = (void *)addr;
+                g_allocated_vector[iii].alloc_scope = allocationScope;
+                g_allocated_vector[iii].user_data = (uint64_t)pUserData;
+                g_allocated_vector[iii].active = true;
+                g_allocated_vector[iii].was_allocated = true;
+            }
+            return g_allocated_vector[iii].aligned_start_addr;
+        }
+    }
+    return nullptr;
+}
+
+VKAPI_ATTR void VKAPI_CALL FreeCallbackFunc(void *pUserData, void *pMemory) {
+    for (uint32_t iii = 0; iii < g_allocated_vector.size(); iii++) {
+        if (g_allocated_vector[iii].active && g_allocated_vector[iii].aligned_start_addr == pMemory) {
+            delete[] g_allocated_vector[iii].actual_start_addr;
+            g_allocated_vector[iii].active = false;
+            break;
+        }
+    }
+}
+
+VKAPI_ATTR void *VKAPI_CALL ReallocCallbackFunc(void *pUserData, void *pOriginal, size_t size, size_t alignment,
+                                                VkSystemAllocationScope allocationScope) {
+    if (pOriginal != NULL) {
+        for (uint32_t iii = 0; iii < g_allocated_vector.size(); iii++) {
+            if (g_allocated_vector[iii].active && g_allocated_vector[iii].aligned_start_addr == pOriginal) {
+                if (size == 0) {
+                    FreeCallbackFunc(pUserData, pOriginal);
+                    return nullptr;
+                } else if (size < g_allocated_vector[iii].requested_size_bytes) {
+                    return pOriginal;
+                } else {
+                    void *pNew = AllocCallbackFunc(pUserData, size, alignment, allocationScope);
+                    size_t copy_size = size;
+                    if (g_allocated_vector[iii].requested_size_bytes < size) {
+                        copy_size = g_allocated_vector[iii].requested_size_bytes;
+                    }
+                    memcpy(pNew, pOriginal, copy_size);
+                    FreeCallbackFunc(pUserData, pOriginal);
+                    return pNew;
+                }
+            }
+        }
+        return nullptr;
+    } else {
+        return AllocCallbackFunc(pUserData, size, alignment, allocationScope);
+    }
+}
+
 // Test groups:
 // LX = lunar exchange
 // LVLGH = loader and validation github
@@ -419,12 +546,10 @@ TEST(CreateDevice, ExtensionNotPresent) {
     for (uint32_t p = 0; p < physicalCount; ++p) {
         uint32_t familyCount = 0;
         vkGetPhysicalDeviceQueueFamilyProperties(physical[p], &familyCount, nullptr);
-        ASSERT_EQ(result, VK_SUCCESS);
         ASSERT_GT(familyCount, 0u);
 
         std::unique_ptr<VkQueueFamilyProperties[]> family(new VkQueueFamilyProperties[familyCount]);
         vkGetPhysicalDeviceQueueFamilyProperties(physical[p], &familyCount, family.get());
-        ASSERT_EQ(result, VK_SUCCESS);
         ASSERT_GT(familyCount, 0u);
 
         for (uint32_t q = 0; q < familyCount; ++q) {
@@ -808,6 +933,285 @@ TEST(WrapObjects, Insert) {
     }
 
     vkDestroyInstance(instance, nullptr);
+}
+
+// Test making sure the allocation functions are called to allocate and cleanup everything during
+// a CreateInstance/DestroyInstance call pair.
+TEST(Allocation, Instance) {
+    auto const info = VK::InstanceCreateInfo();
+    VkInstance instance = VK_NULL_HANDLE;
+    VkAllocationCallbacks alloc_callbacks = {};
+    alloc_callbacks.pUserData = (void *)0x00000001;
+    alloc_callbacks.pfnAllocation = AllocCallbackFunc;
+    alloc_callbacks.pfnReallocation = ReallocCallbackFunc;
+    alloc_callbacks.pfnFree = FreeCallbackFunc;
+
+    InitAllocTracker(2048);
+
+    VkResult result = vkCreateInstance(info, &alloc_callbacks, &instance);
+    ASSERT_EQ(result, VK_SUCCESS);
+
+    alloc_callbacks.pUserData = (void *)0x00000002;
+    vkDestroyInstance(instance, &alloc_callbacks);
+
+    // Make sure everything's been freed
+    ASSERT_EQ(true, IsAllocTrackerEmpty());
+    FreeAllocTracker();
+}
+
+// Test making sure the allocation functions are called to allocate and cleanup everything during
+// a CreateInstance/DestroyInstance call pair with a call to GetInstanceProcAddr.
+TEST(Allocation, GetInstanceProcAddr) {
+    auto const info = VK::InstanceCreateInfo();
+    VkInstance instance = VK_NULL_HANDLE;
+    VkAllocationCallbacks alloc_callbacks = {};
+    alloc_callbacks.pUserData = (void *)0x00000010;
+    alloc_callbacks.pfnAllocation = AllocCallbackFunc;
+    alloc_callbacks.pfnReallocation = ReallocCallbackFunc;
+    alloc_callbacks.pfnFree = FreeCallbackFunc;
+
+    InitAllocTracker(2048);
+
+    VkResult result = vkCreateInstance(info, &alloc_callbacks, &instance);
+    ASSERT_EQ(result, VK_SUCCESS);
+
+    void *pfnCreateDevice = (void *)vkGetInstanceProcAddr(instance, "vkCreateDevice");
+    void *pfnDestroyDevice = (void *)vkGetInstanceProcAddr(instance, "vkDestroyDevice");
+    ASSERT_TRUE(pfnCreateDevice != NULL && pfnDestroyDevice != NULL);
+
+    alloc_callbacks.pUserData = (void *)0x00000011;
+    vkDestroyInstance(instance, &alloc_callbacks);
+
+    // Make sure everything's been freed
+    ASSERT_EQ(true, IsAllocTrackerEmpty());
+    FreeAllocTracker();
+}
+
+// Test making sure the allocation functions are called to allocate and cleanup everything during
+// a vkEnumeratePhysicalDevices call pair.
+TEST(Allocation, EnumeratePhysicalDevices) {
+    auto const info = VK::InstanceCreateInfo();
+    VkInstance instance = VK_NULL_HANDLE;
+    VkAllocationCallbacks alloc_callbacks = {};
+    alloc_callbacks.pUserData = (void *)0x00000021;
+    alloc_callbacks.pfnAllocation = AllocCallbackFunc;
+    alloc_callbacks.pfnReallocation = ReallocCallbackFunc;
+    alloc_callbacks.pfnFree = FreeCallbackFunc;
+
+    InitAllocTracker(2048);
+
+    VkResult result = vkCreateInstance(info, &alloc_callbacks, &instance);
+    ASSERT_EQ(result, VK_SUCCESS);
+
+    uint32_t physicalCount = 0;
+    alloc_callbacks.pUserData = (void *)0x00000022;
+    result = vkEnumeratePhysicalDevices(instance, &physicalCount, nullptr);
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(physicalCount, 0u);
+
+    std::unique_ptr<VkPhysicalDevice[]> physical(new VkPhysicalDevice[physicalCount]);
+    alloc_callbacks.pUserData = (void *)0x00000023;
+    result = vkEnumeratePhysicalDevices(instance, &physicalCount, physical.get());
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(physicalCount, 0u);
+
+    alloc_callbacks.pUserData = (void *)0x00000024;
+    vkDestroyInstance(instance, &alloc_callbacks);
+
+    // Make sure everything's been freed
+    ASSERT_EQ(true, IsAllocTrackerEmpty());
+    FreeAllocTracker();
+}
+
+// Test making sure the allocation functions are called to allocate and cleanup everything from
+// vkCreateInstance, to vkCreateDevicce, and then through their destructors.  With special
+// allocators used on both the instance and device.
+TEST(Allocation, InstanceAndDevice) {
+    auto const info = VK::InstanceCreateInfo();
+    VkInstance instance = VK_NULL_HANDLE;
+    VkAllocationCallbacks alloc_callbacks = {};
+    alloc_callbacks.pUserData = (void *)0x00000031;
+    alloc_callbacks.pfnAllocation = AllocCallbackFunc;
+    alloc_callbacks.pfnReallocation = ReallocCallbackFunc;
+    alloc_callbacks.pfnFree = FreeCallbackFunc;
+
+    InitAllocTracker(2048);
+
+    VkResult result = vkCreateInstance(info, &alloc_callbacks, &instance);
+    ASSERT_EQ(result, VK_SUCCESS);
+
+    uint32_t physicalCount = 0;
+    result = vkEnumeratePhysicalDevices(instance, &physicalCount, nullptr);
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(physicalCount, 0u);
+
+    std::unique_ptr<VkPhysicalDevice[]> physical(new VkPhysicalDevice[physicalCount]);
+    result = vkEnumeratePhysicalDevices(instance, &physicalCount, physical.get());
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(physicalCount, 0u);
+
+    for (uint32_t p = 0; p < physicalCount; ++p) {
+        uint32_t familyCount = 0;
+        vkGetPhysicalDeviceQueueFamilyProperties(physical[p], &familyCount, nullptr);
+        ASSERT_GT(familyCount, 0u);
+
+        std::unique_ptr<VkQueueFamilyProperties[]> family(new VkQueueFamilyProperties[familyCount]);
+        vkGetPhysicalDeviceQueueFamilyProperties(physical[p], &familyCount, family.get());
+        ASSERT_GT(familyCount, 0u);
+
+        for (uint32_t q = 0; q < familyCount; ++q) {
+            if (~family[q].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+                continue;
+            }
+
+            float const priorities[] = {0.0f};  // Temporary required due to MSVC bug.
+            VkDeviceQueueCreateInfo const queueInfo[1]{
+                VK::DeviceQueueCreateInfo().queueFamilyIndex(q).queueCount(1).pQueuePriorities(priorities)};
+
+            auto const deviceInfo = VK::DeviceCreateInfo().queueCreateInfoCount(1).pQueueCreateInfos(queueInfo);
+
+            VkDevice device;
+            alloc_callbacks.pUserData = (void *)0x00000032;
+            result = vkCreateDevice(physical[p], deviceInfo, &alloc_callbacks, &device);
+            ASSERT_EQ(result, VK_SUCCESS);
+
+            alloc_callbacks.pUserData = (void *)0x00000033;
+            vkDestroyDevice(device, &alloc_callbacks);
+        }
+    }
+
+    alloc_callbacks.pUserData = (void *)0x00000034;
+    vkDestroyInstance(instance, &alloc_callbacks);
+
+    // Make sure everything's been freed
+    ASSERT_EQ(true, IsAllocTrackerEmpty());
+    FreeAllocTracker();
+}
+
+// Test making sure the allocation functions are called to allocate and cleanup everything from
+// vkCreateInstance, to vkCreateDevicce, and then through their destructors.  With special
+// allocators used on only the instance and not the device.
+TEST(Allocation, InstanceButNotDevice) {
+    auto const info = VK::InstanceCreateInfo();
+    VkInstance instance = VK_NULL_HANDLE;
+    VkAllocationCallbacks alloc_callbacks = {};
+    alloc_callbacks.pUserData = (void *)0x00000041;
+    alloc_callbacks.pfnAllocation = AllocCallbackFunc;
+    alloc_callbacks.pfnReallocation = ReallocCallbackFunc;
+    alloc_callbacks.pfnFree = FreeCallbackFunc;
+
+    InitAllocTracker(2048);
+
+    VkResult result = vkCreateInstance(info, &alloc_callbacks, &instance);
+    ASSERT_EQ(result, VK_SUCCESS);
+
+    uint32_t physicalCount = 0;
+    result = vkEnumeratePhysicalDevices(instance, &physicalCount, nullptr);
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(physicalCount, 0u);
+
+    std::unique_ptr<VkPhysicalDevice[]> physical(new VkPhysicalDevice[physicalCount]);
+    result = vkEnumeratePhysicalDevices(instance, &physicalCount, physical.get());
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(physicalCount, 0u);
+
+    for (uint32_t p = 0; p < physicalCount; ++p) {
+        uint32_t familyCount = 0;
+        vkGetPhysicalDeviceQueueFamilyProperties(physical[p], &familyCount, nullptr);
+        ASSERT_GT(familyCount, 0u);
+
+        std::unique_ptr<VkQueueFamilyProperties[]> family(new VkQueueFamilyProperties[familyCount]);
+        vkGetPhysicalDeviceQueueFamilyProperties(physical[p], &familyCount, family.get());
+        ASSERT_GT(familyCount, 0u);
+
+        for (uint32_t q = 0; q < familyCount; ++q) {
+            if (~family[q].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+                continue;
+            }
+
+            float const priorities[] = {0.0f};  // Temporary required due to MSVC bug.
+            VkDeviceQueueCreateInfo const queueInfo[1]{
+                VK::DeviceQueueCreateInfo().queueFamilyIndex(q).queueCount(1).pQueuePriorities(priorities)};
+
+            auto const deviceInfo = VK::DeviceCreateInfo().queueCreateInfoCount(1).pQueueCreateInfos(queueInfo);
+
+            VkDevice device;
+            result = vkCreateDevice(physical[p], deviceInfo, NULL, &device);
+            ASSERT_EQ(result, VK_SUCCESS);
+
+            vkDestroyDevice(device, NULL);
+        }
+    }
+
+    alloc_callbacks.pUserData = (void *)0x00000042;
+    vkDestroyInstance(instance, &alloc_callbacks);
+
+    // Make sure everything's been freed
+    ASSERT_EQ(true, IsAllocTrackerEmpty());
+    FreeAllocTracker();
+}
+
+// Test making sure the allocation functions are called to allocate and cleanup everything from
+// vkCreateInstance, to vkCreateDevicce, and then through their destructors.  With special
+// allocators used on only the device and not the instance.
+TEST(Allocation, DeviceButNotInstance) {
+    auto const info = VK::InstanceCreateInfo();
+    VkInstance instance = VK_NULL_HANDLE;
+    VkAllocationCallbacks alloc_callbacks = {};
+    alloc_callbacks.pfnAllocation = AllocCallbackFunc;
+    alloc_callbacks.pfnReallocation = ReallocCallbackFunc;
+    alloc_callbacks.pfnFree = FreeCallbackFunc;
+
+    InitAllocTracker(2048);
+
+    VkResult result = vkCreateInstance(info, NULL, &instance);
+    ASSERT_EQ(result, VK_SUCCESS);
+
+    uint32_t physicalCount = 0;
+    result = vkEnumeratePhysicalDevices(instance, &physicalCount, nullptr);
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(physicalCount, 0u);
+
+    std::unique_ptr<VkPhysicalDevice[]> physical(new VkPhysicalDevice[physicalCount]);
+    result = vkEnumeratePhysicalDevices(instance, &physicalCount, physical.get());
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(physicalCount, 0u);
+
+    for (uint32_t p = 0; p < physicalCount; ++p) {
+        uint32_t familyCount = 0;
+        vkGetPhysicalDeviceQueueFamilyProperties(physical[p], &familyCount, nullptr);
+        ASSERT_GT(familyCount, 0u);
+
+        std::unique_ptr<VkQueueFamilyProperties[]> family(new VkQueueFamilyProperties[familyCount]);
+        vkGetPhysicalDeviceQueueFamilyProperties(physical[p], &familyCount, family.get());
+        ASSERT_GT(familyCount, 0u);
+
+        for (uint32_t q = 0; q < familyCount; ++q) {
+            if (~family[q].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+                continue;
+            }
+
+            float const priorities[] = {0.0f};  // Temporary required due to MSVC bug.
+            VkDeviceQueueCreateInfo const queueInfo[1]{
+                VK::DeviceQueueCreateInfo().queueFamilyIndex(q).queueCount(1).pQueuePriorities(priorities)};
+
+            auto const deviceInfo = VK::DeviceCreateInfo().queueCreateInfoCount(1).pQueueCreateInfos(queueInfo);
+
+            VkDevice device;
+            alloc_callbacks.pUserData = (void *)0x00000051;
+            result = vkCreateDevice(physical[p], deviceInfo, &alloc_callbacks, &device);
+            ASSERT_EQ(result, VK_SUCCESS);
+
+            alloc_callbacks.pUserData = (void *)0x00000052;
+            vkDestroyDevice(device, &alloc_callbacks);
+        }
+    }
+
+    vkDestroyInstance(instance, NULL);
+
+    // Make sure everything's been freed
+    ASSERT_EQ(true, IsAllocTrackerEmpty());
+    FreeAllocTracker();
 }
 
 int main(int argc, char **argv) {

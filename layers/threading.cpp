@@ -171,6 +171,27 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
     layer_data_map.erase(key);
 }
 
+VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pSwapchainImageCount,
+                                                     VkImage *pSwapchainImages) {
+    dispatch_key key = get_dispatch_key(device);
+    layer_data *my_data = GetLayerDataPtr(key, layer_data_map);
+    VkLayerDispatchTable *pTable = my_data->device_dispatch_table;
+    VkResult result;
+    bool threadChecks = startMultiThread();
+    if (threadChecks) {
+        startReadObject(my_data, device);
+        startReadObject(my_data, swapchain);
+    }
+    result = pTable->GetSwapchainImagesKHR(device, swapchain, pSwapchainImageCount, pSwapchainImages);
+    if (threadChecks) {
+        finishReadObject(my_data, device);
+        finishReadObject(my_data, swapchain);
+    } else {
+        finishMultiThread();
+    }
+    return result;
+}
+
 static const VkExtensionProperties threading_extensions[] = {
     {VK_EXT_DEBUG_REPORT_EXTENSION_NAME, VK_EXT_DEBUG_REPORT_SPEC_VERSION}};
 

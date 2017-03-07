@@ -24,6 +24,7 @@ LOCAL_SRC_FILES += $(LAYER_DIR)/common/vk_layer_config.cpp
 LOCAL_SRC_FILES += $(LAYER_DIR)/common/vk_layer_extension_utils.cpp
 LOCAL_SRC_FILES += $(LAYER_DIR)/common/vk_layer_utils.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include \
+                    $(LAYER_DIR)/include \
                     $(SRC_DIR)/layers \
                     $(SRC_DIR)/loader
 LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR -fvisibility=hidden
@@ -177,6 +178,7 @@ LOCAL_SRC_FILES += $(SRC_DIR)/tests/layer_validation_tests.cpp \
                    $(SRC_DIR)/tests/vkrenderframework.cpp \
                    $(SRC_DIR)/common/vulkan_wrapper.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include \
+                    $(LAYER_DIR)/include \
                     $(SRC_DIR)/layers \
                     $(SRC_DIR)/libs \
                     $(SRC_DIR)/common \
@@ -199,6 +201,7 @@ LOCAL_SRC_FILES += $(SRC_DIR)/tests/layer_validation_tests.cpp \
                    $(SRC_DIR)/tests/vkrenderframework.cpp \
                    $(SRC_DIR)/common/vulkan_wrapper.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include \
+                    $(LAYER_DIR)/include \
                     $(SRC_DIR)/layers \
                     $(SRC_DIR)/libs \
                     $(SRC_DIR)/common \
