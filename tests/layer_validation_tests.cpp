@@ -8731,14 +8731,13 @@ TEST_F(VkLayerTest, ClearColorImageWithinRenderPass) {
     image_create_info.arrayLayers = 1;
     image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
     image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
-    image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+    image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
     vk_testing::Image dstImage;
     dstImage.init(*m_device, (const VkImageCreateInfo &)image_create_info, reqs);
 
     const VkImageSubresourceRange range = vk_testing::Image::subresource_range(image_create_info, VK_IMAGE_ASPECT_COLOR_BIT);
 
-    m_errorMonitor->SetUnexpectedError("image must have been created with VK_IMAGE_USAGE_TRANSFER_DST_BIT usage flag");
     vkCmdClearColorImage(m_commandBuffer->GetBufferHandle(), dstImage.handle(), VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1, &range);
 
     m_errorMonitor->VerifyFound();
