@@ -10609,6 +10609,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchai
             image_ci.format = swapchain_node->createInfo.imageFormat;
             image_ci.extent.width = swapchain_node->createInfo.imageExtent.width;
             image_ci.extent.height = swapchain_node->createInfo.imageExtent.height;
+            image_ci.extent.depth = 1;
             image_ci.mipLevels = 1;
             image_ci.arrayLayers = swapchain_node->createInfo.imageArrayLayers;
             image_ci.samples = VK_SAMPLE_COUNT_1_BIT;
