@@ -409,7 +409,7 @@ class Image : public internal::NonDispHandle<VkImage> {
     VkExtent3D extent() const { return create_info_.extent; }
     VkExtent3D extent(uint32_t mip_level) const { return extent(create_info_.extent, mip_level); }
     VkFormat format() const { return create_info_.format; }
-
+    VkImageUsageFlags usage() const { return create_info_.usage; }
     VkImageMemoryBarrier image_memory_barrier(VkFlags output_mask, VkFlags input_mask, VkImageLayout old_layout,
                                               VkImageLayout new_layout, const VkImageSubresourceRange &range) const {
         VkImageMemoryBarrier barrier = {};

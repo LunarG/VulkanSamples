@@ -9121,6 +9121,102 @@ TEST_F(VkLayerTest, InvalidBarriers) {
                          nullptr, 0, nullptr, 1, &img_barrier);
     m_errorMonitor->VerifyFound();
 
+    // A barrier's new and old VkImageLayout must be compatible with an image's VkImageUsageFlags.
+    {
+        VkImageObj img_color(m_device);
+        img_color.init(128, 128, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL);
+        ASSERT_TRUE(img_color.initialized());
+
+        VkImageObj img_ds(m_device);
+        img_ds.init(128, 128, VK_FORMAT_D24_UNORM_S8_UINT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL);
+        ASSERT_TRUE(img_ds.initialized());
+
+        VkImageObj img_xfer_src(m_device);
+        img_xfer_src.init(128, 128, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_TILING_OPTIMAL);
+        ASSERT_TRUE(img_xfer_src.initialized());
+
+        VkImageObj img_xfer_dst(m_device);
+        img_xfer_dst.init(128, 128, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_IMAGE_TILING_OPTIMAL);
+        ASSERT_TRUE(img_xfer_dst.initialized());
+
+        VkImageObj img_sampled(m_device);
+        img_sampled.init(32, 32, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_TILING_OPTIMAL);
+        ASSERT_TRUE(img_sampled.initialized());
+
+        VkImageObj img_input(m_device);
+        img_input.init(128, 128, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL);
+        ASSERT_TRUE(img_input.initialized());
+
+        const struct {
+            VkImageObj &image_obj;
+            VkImageLayout bad_layout;
+            UNIQUE_VALIDATION_ERROR_CODE msg_code;
+        } bad_buffer_layouts[] = {
+            // clang-format off
+            // images _without_ VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
+            {img_ds,       VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,         VALIDATION_ERROR_00303},
+            {img_xfer_src, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,         VALIDATION_ERROR_00303},
+            {img_xfer_dst, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,         VALIDATION_ERROR_00303},
+            {img_sampled,  VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,         VALIDATION_ERROR_00303},
+            {img_input,    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,         VALIDATION_ERROR_00303},
+            // images _without_ VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT
+            {img_color,    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VALIDATION_ERROR_00304},
+            {img_xfer_src, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VALIDATION_ERROR_00304},
+            {img_xfer_dst, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VALIDATION_ERROR_00304},
+            {img_sampled,  VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VALIDATION_ERROR_00304},
+            {img_input,    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VALIDATION_ERROR_00304},
+            {img_color,    VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,  VALIDATION_ERROR_00305},
+            {img_xfer_src, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,  VALIDATION_ERROR_00305},
+            {img_xfer_dst, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,  VALIDATION_ERROR_00305},
+            {img_sampled,  VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,  VALIDATION_ERROR_00305},
+            {img_input,    VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,  VALIDATION_ERROR_00305},
+            // images _without_ VK_IMAGE_USAGE_SAMPLED_BIT or VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT
+            {img_color,    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,         VALIDATION_ERROR_00306},
+            {img_ds,       VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,         VALIDATION_ERROR_00306},
+            {img_xfer_src, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,         VALIDATION_ERROR_00306},
+            {img_xfer_dst, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,         VALIDATION_ERROR_00306},
+            // images _without_ VK_IMAGE_USAGE_TRANSFER_SRC_BIT
+            {img_color,    VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,             VALIDATION_ERROR_00307},
+            {img_ds,       VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,             VALIDATION_ERROR_00307},
+            {img_xfer_dst, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,             VALIDATION_ERROR_00307},
+            {img_sampled,  VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,             VALIDATION_ERROR_00307},
+            {img_input,    VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,             VALIDATION_ERROR_00307},
+            // images _without_ VK_IMAGE_USAGE_TRANSFER_DST_BIT
+            {img_color,    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,             VALIDATION_ERROR_00308},
+            {img_ds,       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,             VALIDATION_ERROR_00308},
+            {img_xfer_src, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,             VALIDATION_ERROR_00308},
+            {img_sampled,  VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,             VALIDATION_ERROR_00308},
+            {img_input,    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,             VALIDATION_ERROR_00308},
+            // clang-format on
+        };
+        const uint32_t layout_count = sizeof(bad_buffer_layouts) / sizeof(bad_buffer_layouts[0]);
+
+        for (uint32_t i = 0; i < layout_count; ++i) {
+            img_barrier.image = bad_buffer_layouts[i].image_obj.handle();
+            const VkImageUsageFlags usage = bad_buffer_layouts[i].image_obj.usage();
+            img_barrier.subresourceRange.aspectMask = (usage == VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
+                                                          ? (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)
+                                                          : VK_IMAGE_ASPECT_COLOR_BIT;
+
+            img_barrier.oldLayout = bad_buffer_layouts[i].bad_layout;
+            img_barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, bad_buffer_layouts[i].msg_code);
+            vkCmdPipelineBarrier(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_STAGE_HOST_BIT,
+                                 VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &img_barrier);
+            m_errorMonitor->VerifyFound();
+
+            img_barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+            img_barrier.newLayout = bad_buffer_layouts[i].bad_layout;
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, bad_buffer_layouts[i].msg_code);
+            vkCmdPipelineBarrier(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_STAGE_HOST_BIT,
+                                 VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &img_barrier);
+            m_errorMonitor->VerifyFound();
+        }
+
+        img_barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+        img_barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+    }
+
     // Attempt to mismatch barriers/waitEvents calls with incompatible queues
 
     // Create command pool with incompatible queueflags
@@ -9134,7 +9230,7 @@ TEST_F(VkLayerTest, InvalidBarriers) {
     }
     if (queue_family_index == UINT32_MAX) {
         printf("             No non-compute queue found; skipped.\n");
-        return;
+        return;  // NOTE: this exits the test function!
     }
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02513);
 
@@ -9167,7 +9263,7 @@ TEST_F(VkLayerTest, InvalidBarriers) {
         vkEndCommandBuffer(bad_command_buffer);
         vkDestroyCommandPool(m_device->device(), command_pool, NULL);
         printf("             The non-compute queue does not support graphics; skipped.\n");
-        return;
+        return;  // NOTE: this exits the test function!
     }
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02510);
     VkEvent event;
