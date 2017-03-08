@@ -47,12 +47,6 @@
 #include "cJSON.h"
 #include "murmurhash.h"
 
-#if defined(__GNUC__)
-#if (__GLIBC__ < 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ < 17))
-#define secure_getenv __secure_getenv
-#endif
-#endif
-
 // Generated file containing all the extension data
 #include "vk_loader_extensions.c"
 
@@ -204,8 +198,23 @@ static inline char *loader_getenv(const char *name, const struct loader_instance
     // No allocation of memory necessary for Linux, but we should at least touch
     // the inst pointer to get rid of compiler warnings.
     (void)inst;
+
+#if defined(__GNUC__)
+
+// Before GLIBC 2.17, the function was __secure_getenv not secure_getenv
+#if (__GLIBC__ < 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ < 17))
+    return __secure_getenv(name);
+#else
+    return secure_getenv(name);
+#endif
+
+// Other compilers don't support secure_getenv
+#else
     return getenv(name);
+#endif
+
 }
+
 static inline void loader_free_getenv(char *val, const struct loader_instance *inst) {
     // No freeing of memory necessary for Linux, but we should at least touch
     // the val and inst pointers to get rid of compiler warnings.
@@ -2360,8 +2369,8 @@ static VkResult loader_get_manifest_files(const struct loader_instance *inst, co
     if (override == NULL) {
         size_t loc_size = 0;
 #if !defined(_WIN32)
-        const char *xdgconfdirs = secure_getenv("XDG_CONFIG_DIRS");
-        const char *xdgdatadirs = secure_getenv("XDG_DATA_DIRS");
+        const char *xdgconfdirs = loader_getenv("XDG_CONFIG_DIRS", inst);
+        const char *xdgdatadirs = loader_getenv("XDG_DATA_DIRS", inst);
         if (xdgconfdirs == NULL || xdgconfdirs[0] == '\0')
             xdgconfdirs = FALLBACK_CONFIG_DIRS;
         if (xdgdatadirs == NULL || xdgdatadirs[0] == '\0')
@@ -2597,7 +2606,7 @@ static VkResult loader_get_manifest_files(const struct loader_instance *inst, co
         file = next_file;
 #if !defined(_WIN32)
         if (relative_location != NULL && (next_file == NULL || *next_file == '\0') && override == NULL) {
-            char *xdgdatahome = secure_getenv("XDG_DATA_HOME");
+            char *xdgdatahome = loader_getenv("XDG_DATA_HOME", inst);
             size_t len;
             if (xdgdatahome != NULL) {
                 size_t alloc_len = strlen(xdgdatahome) + 2 + strlen(relative_location);
@@ -2626,7 +2635,7 @@ static VkResult loader_get_manifest_files(const struct loader_instance *inst, co
                 list_is_dirs = true;
 
             } else {
-                char *home = secure_getenv("HOME");
+                char *home = loader_getenv("HOME", inst);
                 if (home != NULL) {
                     size_t alloc_len = strlen(home) + 16 + strlen(relative_location);
                     char *home_loc = loader_stack_alloc(alloc_len);
