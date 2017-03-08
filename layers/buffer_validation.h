@@ -111,8 +111,11 @@ bool ValidateImageAspectLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, con
 void TransitionImageAspectLayout(layer_data *dev_data, GLOBAL_CB_NODE *pCB, const VkImageMemoryBarrier *mem_barrier, uint32_t level,
                                  uint32_t layer, VkImageAspectFlags aspect);
 
-bool ValidateImageLayouts(layer_data *device_data, VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
-                          const VkImageMemoryBarrier *pImgMemBarriers);
+bool ValidateBarrierLayoutToImageUsage(layer_data *device_data, const VkImageMemoryBarrier *img_barrier, bool new_not_old,
+                                       VkImageUsageFlags usage, const char *func_name);
+
+bool ValidateBarriersToImages(layer_data *device_data, VkCommandBuffer cmdBuffer, uint32_t imageMemoryBarrierCount,
+                              const VkImageMemoryBarrier *pImageMemoryBarriers, const char *func_name);
 
 void TransitionImageLayouts(layer_data *device_data, VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
                             const VkImageMemoryBarrier *pImgMemBarriers);

@@ -373,29 +373,92 @@ void TransitionImageAspectLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, c
     SetLayout(device_data, pCB, mem_barrier->image, sub, mem_barrier->newLayout);
 }
 
-bool ValidateImageLayouts(layer_data *device_data, VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
-                          const VkImageMemoryBarrier *pImgMemBarriers) {
+// Verify an ImageMemoryBarrier's old/new ImageLayouts are compatible with the Image's ImageUsageFlags.
+bool ValidateBarrierLayoutToImageUsage(layer_data *device_data, const VkImageMemoryBarrier *img_barrier, bool new_not_old,
+                                       VkImageUsageFlags usage_flags, const char *func_name) {
+    const auto report_data = core_validation::GetReportData(device_data);
+    bool skip = false;
+    const VkImageLayout layout = (new_not_old) ? img_barrier->newLayout : img_barrier->oldLayout;
+    UNIQUE_VALIDATION_ERROR_CODE msg_code = VALIDATION_ERROR_UNDEFINED;  // sentinel value meaning "no error"
+
+    switch (layout) {
+        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+            if ((usage_flags & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) == 0) {
+                msg_code = VALIDATION_ERROR_00303;
+            }
+            break;
+        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+            if ((usage_flags & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) == 0) {
+                msg_code = VALIDATION_ERROR_00304;
+            }
+            break;
+        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+            if ((usage_flags & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) == 0) {
+                msg_code = VALIDATION_ERROR_00305;
+            }
+            break;
+        case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+            if ((usage_flags & (VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)) == 0) {
+                msg_code = VALIDATION_ERROR_00306;
+            }
+            break;
+        case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+            if ((usage_flags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) == 0) {
+                msg_code = VALIDATION_ERROR_00307;
+            }
+            break;
+        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+            if ((usage_flags & VK_IMAGE_USAGE_TRANSFER_DST_BIT) == 0) {
+                msg_code = VALIDATION_ERROR_00308;
+            }
+            break;
+        default:
+            // Other VkImageLayout values do not have VUs defined in this context.
+            break;
+    }
+
+    if (msg_code != VALIDATION_ERROR_UNDEFINED) {
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, msg_code,
+                        "DS", "%s: Image barrier 0x%p %sLayout=%s is not compatible with image 0x%" PRIx64 " usage flags 0x%" PRIx32
+                              ". %s",
+                        func_name, img_barrier, ((new_not_old) ? "new" : "old"), string_VkImageLayout(layout),
+                        (uint64_t)(img_barrier->image), usage_flags, validation_error_map[msg_code]);
+    }
+    return skip;
+}
+
+// Verify image barriers are compatible with the images they reference.
+bool ValidateBarriersToImages(layer_data *device_data, VkCommandBuffer cmdBuffer, uint32_t imageMemoryBarrierCount,
+                              const VkImageMemoryBarrier *pImageMemoryBarriers, const char *func_name) {
     GLOBAL_CB_NODE *pCB = GetCBNode(device_data, cmdBuffer);
     bool skip = false;
-    uint32_t levelCount = 0;
-    uint32_t layerCount = 0;
+    uint32_t level_count = 0;
+    uint32_t layer_count = 0;
 
-    for (uint32_t i = 0; i < memBarrierCount; ++i) {
-        auto mem_barrier = &pImgMemBarriers[i];
-        if (!mem_barrier) continue;
+    for (uint32_t i = 0; i < imageMemoryBarrierCount; ++i) {
+        auto img_barrier = &pImageMemoryBarriers[i];
+        if (!img_barrier) continue;
+
         // TODO: Do not iterate over every possibility - consolidate where possible
-        ResolveRemainingLevelsLayers(device_data, &levelCount, &layerCount, mem_barrier->subresourceRange,
-                                     GetImageState(device_data, mem_barrier->image));
+        ResolveRemainingLevelsLayers(device_data, &level_count, &layer_count, img_barrier->subresourceRange,
+                                     GetImageState(device_data, img_barrier->image));
 
-        for (uint32_t j = 0; j < levelCount; j++) {
-            uint32_t level = mem_barrier->subresourceRange.baseMipLevel + j;
-            for (uint32_t k = 0; k < layerCount; k++) {
-                uint32_t layer = mem_barrier->subresourceRange.baseArrayLayer + k;
-                skip |= ValidateImageAspectLayout(device_data, pCB, mem_barrier, level, layer, VK_IMAGE_ASPECT_COLOR_BIT);
-                skip |= ValidateImageAspectLayout(device_data, pCB, mem_barrier, level, layer, VK_IMAGE_ASPECT_DEPTH_BIT);
-                skip |= ValidateImageAspectLayout(device_data, pCB, mem_barrier, level, layer, VK_IMAGE_ASPECT_STENCIL_BIT);
-                skip |= ValidateImageAspectLayout(device_data, pCB, mem_barrier, level, layer, VK_IMAGE_ASPECT_METADATA_BIT);
+        for (uint32_t j = 0; j < level_count; j++) {
+            uint32_t level = img_barrier->subresourceRange.baseMipLevel + j;
+            for (uint32_t k = 0; k < layer_count; k++) {
+                uint32_t layer = img_barrier->subresourceRange.baseArrayLayer + k;
+                skip |= ValidateImageAspectLayout(device_data, pCB, img_barrier, level, layer, VK_IMAGE_ASPECT_COLOR_BIT);
+                skip |= ValidateImageAspectLayout(device_data, pCB, img_barrier, level, layer, VK_IMAGE_ASPECT_DEPTH_BIT);
+                skip |= ValidateImageAspectLayout(device_data, pCB, img_barrier, level, layer, VK_IMAGE_ASPECT_STENCIL_BIT);
+                skip |= ValidateImageAspectLayout(device_data, pCB, img_barrier, level, layer, VK_IMAGE_ASPECT_METADATA_BIT);
             }
+        }
+
+        IMAGE_STATE *image_state = GetImageState(device_data, img_barrier->image);
+        if (image_state) {
+            VkImageUsageFlags usage_flags = image_state->createInfo.usage;
+            skip |= ValidateBarrierLayoutToImageUsage(device_data, img_barrier, false, usage_flags, func_name);
+            skip |= ValidateBarrierLayoutToImageUsage(device_data, img_barrier, true, usage_flags, func_name);
         }
     }
     return skip;
