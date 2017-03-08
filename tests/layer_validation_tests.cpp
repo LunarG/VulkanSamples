@@ -9212,36 +9212,51 @@ TEST_F(VkLayerTest, LayoutFromPresentWithoutAccessMemoryRead) {
 
 TEST_F(VkLayerTest, IdxBufferAlignmentError) {
     // Bind a BeginRenderPass within an active RenderPass
-    VkResult err;
-
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "vkCmdBindIndexBuffer() offset (0x7) does not fall on ");
-
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    uint32_t qfi = 0;
-    VkBufferCreateInfo buffCI = {};
-    buffCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    buffCI.size = 1024;
-    buffCI.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-    buffCI.queueFamilyIndexCount = 1;
-    buffCI.pQueueFamilyIndices = &qfi;
 
-    VkBuffer ib;
-    err = vkCreateBuffer(m_device->device(), &buffCI, NULL, &ib);
+    uint32_t const indices[] = {0};
+    VkBufferCreateInfo buf_info = {};
+    buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buf_info.size = 1024;
+    buf_info.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+    buf_info.queueFamilyIndexCount = 1;
+    buf_info.pQueueFamilyIndices = indices;
+
+    VkBuffer buffer;
+    VkResult err = vkCreateBuffer(m_device->device(), &buf_info, NULL, &buffer);
+    ASSERT_VK_SUCCESS(err);
+
+    VkMemoryRequirements requirements;
+    vkGetBufferMemoryRequirements(m_device->device(), buffer, &requirements);
+
+    VkMemoryAllocateInfo alloc_info{};
+    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    alloc_info.pNext = NULL;
+    alloc_info.memoryTypeIndex = 0;
+    alloc_info.allocationSize = requirements.size;
+    bool pass = m_device->phy().set_memory_type(requirements.memoryTypeBits, &alloc_info, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    ASSERT_TRUE(pass);
+
+    VkDeviceMemory memory;
+    err = vkAllocateMemory(m_device->device(), &alloc_info, NULL, &memory);
+    ASSERT_VK_SUCCESS(err);
+
+    err = vkBindBufferMemory(m_device->device(), buffer, memory, 0);
     ASSERT_VK_SUCCESS(err);
 
     m_commandBuffer->BeginCommandBuffer();
     ASSERT_VK_SUCCESS(err);
+
     // vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(),
     // VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
     // Should error before calling to driver so don't care about actual data
-    m_errorMonitor->SetUnexpectedError(
-        "If buffer is non-sparse then it must be bound completely and contiguously to a single VkDeviceMemory object");
-    vkCmdBindIndexBuffer(m_commandBuffer->GetBufferHandle(), ib, 7, VK_INDEX_TYPE_UINT16);
-
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "vkCmdBindIndexBuffer() offset (0x7) does not fall on ");
+    vkCmdBindIndexBuffer(m_commandBuffer->GetBufferHandle(), buffer, 7, VK_INDEX_TYPE_UINT16);
     m_errorMonitor->VerifyFound();
 
-    vkDestroyBuffer(m_device->device(), ib, NULL);
+    vkFreeMemory(m_device->device(), memory, NULL);
+    vkDestroyBuffer(m_device->device(), buffer, NULL);
 }
 
 TEST_F(VkLayerTest, InvalidQueueFamilyIndex) {
