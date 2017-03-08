@@ -291,9 +291,6 @@ static void loader_platform_thread_cond_wait(loader_platform_thread_cond *pCond,
 }
 static void loader_platform_thread_cond_broadcast(loader_platform_thread_cond *pCond) { WakeAllConditionVariable(pCond); }
 
-// Windows Registry:
-char *loader_get_registry_string(const HKEY hive, const LPCTSTR sub_key, const char *value);
-
 #define loader_stack_alloc(size) _alloca(size)
 #else  // defined(_WIN32)
 

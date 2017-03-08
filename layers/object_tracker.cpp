@@ -308,7 +308,7 @@ static void DestroyObject(T1 dispatchable_object, T2 object, VkDebugReportObject
 
             auto allocated_with_custom = (pNode->status & OBJSTATUS_CUSTOM_ALLOCATOR) ? true : false;
             if (allocated_with_custom && !custom_allocator && expected_custom_allocator_code != VALIDATION_ERROR_UNDEFINED) {
-                // This check only verifies that custom allocation callabacks were provided to both Create and Destroy calls,
+                // This check only verifies that custom allocation callbacks were provided to both Create and Destroy calls,
                 // it cannot verify that these allocation callbacks are compatible with each other.
                 log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, object_type, object_handle, __LINE__,
                         expected_custom_allocator_code, LayerName,

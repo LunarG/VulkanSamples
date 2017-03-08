@@ -478,7 +478,7 @@ out:
 
 // Combine path elements, separating each element with the platform-specific
 // directory separator, and save the combined string to a destination buffer,
-// not exceeding the given length. Path elements are given as variadic args,
+// not exceeding the given length. Path elements are given as variable args,
 // with a NULL element terminating the list.
 //
 // \returns the total length of the combined string, not including an ASCII
@@ -616,7 +616,7 @@ static struct loader_layer_properties *loader_get_next_layer_property(const stru
     return &(layer_list->list[layer_list->count - 1]);
 }
 
-// Remove all layer properties entrys from the list
+// Remove all layer properties entries from the list
 void loader_delete_layer_properties(const struct loader_instance *inst, struct loader_layer_list *layer_list) {
     uint32_t i, j;
     struct loader_device_extension_list *dev_ext_list;
@@ -845,7 +845,7 @@ VkResult loader_add_to_ext_list(const struct loader_instance *inst, struct loade
     return VK_SUCCESS;
 }
 
-// Append one extension property defined in props with entrypoints defined in entrys to the given
+// Append one extension property defined in props with entrypoints defined in entries to the given
 // ext_list. Do not append if a duplicate.
 // Return - Vk_SUCCESS on success
 VkResult loader_add_to_dev_ext_list(const struct loader_instance *inst, struct loader_device_extension_list *ext_list,
@@ -1369,7 +1369,7 @@ static VkResult loader_scanned_icd_add(const struct loader_instance *inst, struc
         fp_get_proc_addr = loader_platform_get_proc_address(handle, "vkGetInstanceProcAddr");
         if (NULL == fp_get_proc_addr) {
             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                       "loader_scanned_icd_add: Attempt to retreive either "
+                       "loader_scanned_icd_add: Attempt to retrieve either "
                        "\'vkGetInstanceProcAddr\' or "
                        "\'vk_icdGetInstanceProcAddr\' from ICD %s failed.",
                        filename);
@@ -1855,7 +1855,7 @@ static void loader_add_layer_property_meta(const struct loader_instance *inst, u
 }
 
 // This structure is used to store the json file version
-// in a more managable way.
+// in a more manageable way.
 typedef struct {
     uint16_t major;
     uint16_t minor;
@@ -2188,7 +2188,7 @@ static void loader_add_layer_properties(const struct loader_instance *inst, stru
     // The following Fields in layer manifest file that are required:
     //   - “file_format_version”
     //   - If more than one "layer" object are used, then the "layers" array is
-    //     requred
+    //     required
 
     cJSON *item, *layers_node, *layer_node;
     layer_json_version json_version;
@@ -3369,7 +3369,7 @@ void *loader_dev_ext_gpa(struct loader_instance *inst, const char *funcName) {
 
     if (loader_add_dev_ext_table(inst, &idx, funcName)) {
         // successfully added new table entry
-        // init any dev dispatch table entrys as needed
+        // init any dev dispatch table entries as needed
         loader_init_dispatch_dev_ext_entry(inst, NULL, idx, funcName);
         return loader_get_dev_ext_trampoline(idx);
     }
@@ -3463,7 +3463,7 @@ static bool loader_add_phys_dev_ext_table(struct loader_instance *inst, uint32_t
                 (char *)loader_instance_heap_alloc(inst, strlen(funcName) + 1, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
             if (inst->phys_dev_ext_disp_hash[i].func_name == NULL) {
                 loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                           "loader_add_dev_ext_table() can't rallocate "
+                           "loader_add_dev_ext_table() can't reallocate "
                            "func_name memory");
                 return false;
             }
@@ -3860,7 +3860,7 @@ VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo, c
                     VkNegotiateLayerInterface interface_struct;
 
                     if (loader_get_layer_interface_version(negotiate_interface, &interface_struct)) {
-                        // Go ahead and set the properites version to the
+                        // Go ahead and set the properties version to the
                         // correct value.
                         layer_prop->interface_version = interface_struct.loaderLayerInterfaceVersion;
 
@@ -4055,7 +4055,7 @@ VkResult loader_create_device_chain(const struct loader_physical_device_tramp *p
                     VkNegotiateLayerInterface interface_struct;
 
                     if (loader_get_layer_interface_version(negotiate_interface, &interface_struct)) {
-                        // Go ahead and set the properites version to the correct value.
+                        // Go ahead and set the properties version to the correct value.
                         layer_prop->interface_version = interface_struct.loaderLayerInterfaceVersion;
 
                         // If the interface is 2 or newer, we have access to the new GetPhysicalDeviceProcAddr
