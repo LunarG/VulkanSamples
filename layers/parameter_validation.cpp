@@ -4239,7 +4239,7 @@ static bool preCmdSetViewport(layer_data *my_data, uint32_t first_viewport, uint
             }
 
             bool invalid_height = (viewport.height <= 0 || viewport.height > limits.maxViewportDimensions[1]);
-            if (my_data->enables.amd_negative_viewport_height && (viewport.height < 0)) {
+            if ((my_data->enables.amd_negative_viewport_height || my_data->enables.khr_maintenance1) && (viewport.height < 0)) {
                 // VALIDATION_ERROR_01790
                 invalid_height = false;
             }
