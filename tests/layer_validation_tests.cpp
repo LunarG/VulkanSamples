@@ -9261,30 +9261,26 @@ TEST_F(VkLayerTest, IdxBufferAlignmentError) {
 
 TEST_F(VkLayerTest, InvalidQueueFamilyIndex) {
     // Create an out-of-range queueFamilyIndex
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "vkCreateBuffer: pCreateInfo->pQueueFamilyIndices[0] (777) must be one "
-                                         "of the indices specified when the device was created, via the "
-                                         "VkDeviceQueueCreateInfo structure.");
-
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     VkBufferCreateInfo buffCI = {};
     buffCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     buffCI.size = 1024;
     buffCI.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-    buffCI.queueFamilyIndexCount = 1;
+    buffCI.queueFamilyIndexCount = 2;
     // Introduce failure by specifying invalid queue_family_index
     uint32_t qfi[2];
     qfi[0] = 777;
+    qfi[1] = 0;
 
     buffCI.pQueueFamilyIndices = qfi;
     buffCI.sharingMode = VK_SHARING_MODE_CONCURRENT;  // qfi only matters in CONCURRENT mode
 
     VkBuffer ib;
-    m_errorMonitor->SetUnexpectedError(
-        "If sharingMode is VK_SHARING_MODE_CONCURRENT, queueFamilyIndexCount must be greater than 1");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "vkCreateBuffer: pCreateInfo->pQueueFamilyIndices[0] (777) must be one of the indices "
+                                         "specified when the device was created, via the VkDeviceQueueCreateInfo structure.");
     vkCreateBuffer(m_device->device(), &buffCI, NULL, &ib);
-
     m_errorMonitor->VerifyFound();
 
     if (m_device->queue_props.size() > 2) {
