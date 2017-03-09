@@ -3585,6 +3585,7 @@ TEST_F(VkLayerTest, DisabledIndependentBlend) {
     // Create a renderPass with two color attachments
     VkAttachmentReference attachments[2] = {};
     attachments[0].layout = VK_IMAGE_LAYOUT_GENERAL;
+    attachments[1].attachment = 1;
     attachments[1].layout = VK_IMAGE_LAYOUT_GENERAL;
 
     VkSubpassDescription subpass = {};
@@ -3594,15 +3595,19 @@ TEST_F(VkLayerTest, DisabledIndependentBlend) {
     VkRenderPassCreateInfo rpci = {};
     rpci.subpassCount = 1;
     rpci.pSubpasses = &subpass;
-    rpci.attachmentCount = 1;
+    rpci.attachmentCount = 2;
 
-    VkAttachmentDescription attach_desc = {};
-    attach_desc.format = VK_FORMAT_B8G8R8A8_UNORM;
-    attach_desc.samples = VK_SAMPLE_COUNT_1_BIT;
-    attach_desc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    attach_desc.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+    VkAttachmentDescription attach_desc[2] = {};
+    attach_desc[0].format = VK_FORMAT_B8G8R8A8_UNORM;
+    attach_desc[0].samples = VK_SAMPLE_COUNT_1_BIT;
+    attach_desc[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attach_desc[0].finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+    attach_desc[1].format = VK_FORMAT_B8G8R8A8_UNORM;
+    attach_desc[1].samples = VK_SAMPLE_COUNT_1_BIT;
+    attach_desc[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attach_desc[1].finalLayout = VK_IMAGE_LAYOUT_GENERAL;
 
-    rpci.pAttachments = &attach_desc;
+    rpci.pAttachments = attach_desc;
     rpci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 
     VkRenderPass renderpass;
