@@ -9273,16 +9273,17 @@ TEST_F(VkLayerTest, InvalidQueueFamilyIndex) {
     m_errorMonitor->VerifyFound();
 
     if (m_device->queue_props.size() > 2) {
+        VkBuffer ib2;
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "which was not created allowing concurrent");
 
         // Create buffer shared to queue families 1 and 2, but submitted on queue family 0
         buffCI.queueFamilyIndexCount = 2;
         qfi[0] = 1;
         qfi[1] = 2;
-        vkCreateBuffer(m_device->device(), &buffCI, NULL, &ib);
+        vkCreateBuffer(m_device->device(), &buffCI, NULL, &ib2);
         VkDeviceMemory mem;
         VkMemoryRequirements mem_reqs;
-        vkGetBufferMemoryRequirements(m_device->device(), ib, &mem_reqs);
+        vkGetBufferMemoryRequirements(m_device->device(), ib2, &mem_reqs);
 
         VkMemoryAllocateInfo alloc_info = {};
         alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -9290,17 +9291,19 @@ TEST_F(VkLayerTest, InvalidQueueFamilyIndex) {
         bool pass = false;
         pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &alloc_info, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         if (!pass) {
-            vkDestroyBuffer(m_device->device(), ib, NULL);
+            vkDestroyBuffer(m_device->device(), ib2, NULL);
             return;
         }
         vkAllocateMemory(m_device->device(), &alloc_info, NULL, &mem);
-        vkBindBufferMemory(m_device->device(), ib, mem, 0);
+        vkBindBufferMemory(m_device->device(), ib2, mem, 0);
 
         m_commandBuffer->begin();
-        vkCmdFillBuffer(m_commandBuffer->handle(), ib, 0, 16, 5);
+        vkCmdFillBuffer(m_commandBuffer->handle(), ib2, 0, 16, 5);
         m_commandBuffer->end();
         QueueCommandBuffer(false);
         m_errorMonitor->VerifyFound();
+        vkDestroyBuffer(m_device->device(), ib2, NULL);
+        vkFreeMemory(m_device->device(), mem, NULL);
     }
 
     vkDestroyBuffer(m_device->device(), ib, NULL);
