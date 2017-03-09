@@ -11453,78 +11453,16 @@ VKAPI_ATTR void VKAPI_CALL DestroyDescriptorUpdateTemplateKHR(VkDevice device,
     dev_data->dispatch_table.DestroyDescriptorUpdateTemplateKHR(device, descriptorUpdateTemplate, pAllocator);
 }
 
-void PostCallRecordUpdateDescriptorSetWithTemplateKHR(layer_data *device_data, VkDescriptorSet descriptorSet,
-                                                      VkDescriptorUpdateTemplateKHR descriptorUpdateTemplate, const void *pData) {
+// PostCallRecord* handles recording state updates following call down chain to UpdateDescriptorSetsWithTemplate()
+static void PostCallRecordUpdateDescriptorSetWithTemplateKHR(layer_data *device_data, VkDescriptorSet descriptorSet,
+                                                             VkDescriptorUpdateTemplateKHR descriptorUpdateTemplate,
+                                                             const void *pData) {
     auto const template_map_entry = device_data->desc_template_map.find(descriptorUpdateTemplate);
     if (template_map_entry == device_data->desc_template_map.end()) {
         assert(0);
     }
 
-    auto const &create_info = template_map_entry->second->create_info;
-
-    // Create a vector of write structs
-    std::vector<VkWriteDescriptorSet> desc_writes;
-    auto layout_obj = GetDescriptorSetLayout(device_data, create_info.descriptorSetLayout);
-
-    // Create a WriteDescriptorSet struct for each template update entry
-    for (uint32_t i = 0; i < create_info.descriptorUpdateEntryCount; i++) {
-        auto binding_count = layout_obj->GetDescriptorCountFromBinding(create_info.pDescriptorUpdateEntries[i].dstBinding);
-        auto binding_being_updated = create_info.pDescriptorUpdateEntries[i].dstBinding;
-        auto dst_array_element = create_info.pDescriptorUpdateEntries[i].dstArrayElement;
-
-        for (uint32_t j = 0; j < create_info.pDescriptorUpdateEntries[i].descriptorCount; j++) {
-            desc_writes.emplace_back();
-            auto &write_entry = desc_writes.back();
-
-            size_t offset = create_info.pDescriptorUpdateEntries[i].offset + j * create_info.pDescriptorUpdateEntries[i].stride;
-            char *update_entry = (char *)(pData) + offset;
-
-            if (dst_array_element >= binding_count) {
-                dst_array_element = 0;
-                // Move to next binding having a non-zero binding count
-                do {
-                    binding_being_updated++;
-                    binding_count = layout_obj->GetDescriptorCountFromBinding(binding_being_updated);
-                } while (binding_count == 0);
-            }
-
-            write_entry.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            write_entry.pNext = NULL;
-            write_entry.dstSet = descriptorSet;
-            write_entry.dstBinding = binding_being_updated;
-            write_entry.dstArrayElement = dst_array_element;
-            write_entry.descriptorCount = 1;
-            write_entry.descriptorType = create_info.pDescriptorUpdateEntries[i].descriptorType;
-
-            switch (create_info.pDescriptorUpdateEntries[i].descriptorType) {
-                case VK_DESCRIPTOR_TYPE_SAMPLER:
-                case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-                case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
-                case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-                case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
-                    write_entry.pImageInfo = reinterpret_cast<VkDescriptorImageInfo *>(update_entry);
-                    break;
-
-                case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
-                case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-                case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-                case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-                    write_entry.pBufferInfo = reinterpret_cast<VkDescriptorBufferInfo *>(update_entry);
-                    break;
-
-                case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
-                case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
-                    write_entry.pTexelBufferView = reinterpret_cast<VkBufferView *>(update_entry);
-                    break;
-                default:
-                    assert(0);
-                    break;
-            }
-            dst_array_element++;
-        }
-    }
-    cvdescriptorset::PerformUpdateDescriptorSets(device_data, static_cast<uint32_t>(desc_writes.size()), desc_writes.data(), 0,
-                                                 NULL);
+    cvdescriptorset::PerformUpdateDescriptorSetsWithTemplateKHR(device_data, descriptorSet, template_map_entry->second, pData);
 }
 
 VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSetWithTemplateKHR(VkDevice device, VkDescriptorSet descriptorSet,
@@ -11534,7 +11472,6 @@ VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSetWithTemplateKHR(VkDevice device, V
     device_data->dispatch_table.UpdateDescriptorSetWithTemplateKHR(device, descriptorSet, descriptorUpdateTemplate, pData);
 
     PostCallRecordUpdateDescriptorSetWithTemplateKHR(device_data, descriptorSet, descriptorUpdateTemplate, pData);
-
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetWithTemplateKHR(VkCommandBuffer commandBuffer,

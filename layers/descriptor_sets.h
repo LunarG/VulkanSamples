@@ -285,6 +285,9 @@ bool ValidateUpdateDescriptorSets(const debug_report_data *, const core_validati
 // "Perform" does the update with the assumption that ValidateUpdateDescriptorSets() has passed for the given update
 void PerformUpdateDescriptorSets(const core_validation::layer_data *, uint32_t, const VkWriteDescriptorSet *, uint32_t,
                                  const VkCopyDescriptorSet *);
+// Similar to PerformUpdateDescriptorSets, this function will do the same for updating via templates
+void PerformUpdateDescriptorSetsWithTemplateKHR(layer_data *, VkDescriptorSet, std::unique_ptr<TEMPLATE_STATE> const &,
+                                                const void *);
 // Validate that Allocation state is ok
 bool ValidateAllocateDescriptorSets(const debug_report_data *, const VkDescriptorSetAllocateInfo *,
                                     const core_validation::layer_data *, AllocateDescriptorSetsData *);
