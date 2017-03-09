@@ -16709,12 +16709,17 @@ TEST_F(VkLayerTest, ImageFormatLimits) {
     m_errorMonitor->VerifyFound();
     image_create_info.extent.width = 1;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "exceeds allowable maximum supported by format of");
-    image_create_info.mipLevels = imgFmtProps.maxMipLevels + 1;
-    // Expect INVALID_FORMAT_LIMITS_VIOLATION
-    vkCreateImage(m_device->handle(), &image_create_info, NULL, &nullImg);
-    m_errorMonitor->VerifyFound();
-    image_create_info.mipLevels = 1;
+    uint32_t maxDim =
+        std::max(std::max(image_create_info.extent.width, image_create_info.extent.height), image_create_info.extent.depth);
+    // If max mip levels exceeds image extents, skip the max mip levels test
+    if ((imgFmtProps.maxMipLevels + 1) <= (floor(log2(maxDim)) + 1)) {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "exceeds allowable maximum supported by format of");
+        image_create_info.mipLevels = imgFmtProps.maxMipLevels + 1;
+        // Expect INVALID_FORMAT_LIMITS_VIOLATION
+        vkCreateImage(m_device->handle(), &image_create_info, NULL, &nullImg);
+        m_errorMonitor->VerifyFound();
+        image_create_info.mipLevels = 1;
+    }
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "exceeds allowable maximum supported by format of");
     image_create_info.arrayLayers = imgFmtProps.maxArrayLayers + 1;
