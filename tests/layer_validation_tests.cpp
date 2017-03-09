@@ -11132,10 +11132,8 @@ TEST_F(VkLayerTest, CmdClearAttachmentTests) {
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
+    pipe.AddColorAttachment();
     pipe.SetMSAA(&pipe_ms_state_ci);
-    m_errorMonitor->SetUnexpectedError(
-        "If pColorBlendState is not NULL, The attachmentCount member of pColorBlendState must be equal to the colorAttachmentCount "
-        "used to create subpass");
     pipe.CreateVKPipeline(pipeline_layout, renderPass());
 
     m_commandBuffer->BeginCommandBuffer();
