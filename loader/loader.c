@@ -47,6 +47,11 @@
 #include "cJSON.h"
 #include "murmurhash.h"
 
+// This is a CMake generated file with #defines for any functions/includes
+// that it found present.  This is currently necessary to properly determine
+// if secure_getenv or __secure_getenv are present
+#include "loader_cmake_config.h"
+
 // Generated file containing all the extension data
 #include "vk_loader_extensions.c"
 
@@ -199,20 +204,15 @@ static inline char *loader_getenv(const char *name, const struct loader_instance
     // the inst pointer to get rid of compiler warnings.
     (void)inst;
 
-#if defined(__GNUC__)
-
-// Before GLIBC 2.17, the function was __secure_getenv not secure_getenv
-#if (__GLIBC__ < 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ < 17))
+#ifdef HAVE_SECURE_GETENV
+    return secure_getenv(name);
+#elif defined(HAVE___SECURE_GETENV)
     return __secure_getenv(name);
 #else
-    return secure_getenv(name);
-#endif
-
-// Other compilers don't support secure_getenv
-#else
+#pragma message("Warning:  Falling back to non-secure getenv for environmental lookups!  Consider" \
+                " updating to a different libc.")
     return getenv(name);
 #endif
-
 }
 
 static inline void loader_free_getenv(char *val, const struct loader_instance *inst) {

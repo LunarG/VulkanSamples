@@ -5,6 +5,12 @@ include_directories(
     ${CMAKE_BINARY_DIR}
 )
 
+# Check for the existance of the secure_getenv or __secure_getenv commands
+include(CheckFunctionExists)
+CHECK_FUNCTION_EXISTS(secure_getenv HAVE_SECURE_GETENV)
+CHECK_FUNCTION_EXISTS(__secure_getenv HAVE___SECURE_GETENV)
+CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/loader_cmake_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/loader_cmake_config.h)
+
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     add_definitions(-DVK_USE_PLATFORM_WIN32_KHR -DWIN32_LEAN_AND_MEAN)
     set(DisplayServer Win32)
