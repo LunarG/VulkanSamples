@@ -10150,9 +10150,11 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds) {
     err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
+    VkBufferTest buffer_test(m_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+
     // Correctly update descriptor to avoid "NOT_UPDATED" error
     VkDescriptorBufferInfo buff_info = {};
-    buff_info.buffer = VkBuffer(0);  // Don't care about buffer handle for this test
+    buff_info.buffer = buffer_test.GetBuffer();
     buff_info.offset = 0;
     buff_info.range = 1024;
 
@@ -10165,7 +10167,6 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds) {
     descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     descriptor_write.pBufferInfo = &buff_info;
 
-    m_errorMonitor->SetUnexpectedError("required parameter pDescriptorWrites");
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
 
     m_errorMonitor->VerifyFound();
