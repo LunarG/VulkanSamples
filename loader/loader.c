@@ -203,6 +203,14 @@ static inline char *loader_getenv(const char *name, const struct loader_instance
     // No allocation of memory necessary for Linux, but we should at least touch
     // the inst pointer to get rid of compiler warnings.
     (void)inst;
+    return getenv(name);
+}
+
+
+static inline char *loader_secure_getenv(const char *name, const struct loader_instance *inst) {
+    // No allocation of memory necessary for Linux, but we should at least touch
+    // the inst pointer to get rid of compiler warnings.
+    (void)inst;
 
 #ifdef HAVE_SECURE_GETENV
     return secure_getenv(name);
@@ -211,7 +219,7 @@ static inline char *loader_getenv(const char *name, const struct loader_instance
 #else
 #pragma message("Warning:  Falling back to non-secure getenv for environmental lookups!  Consider" \
                 " updating to a different libc.")
-    return getenv(name);
+    return loader_getenv(name, inst);
 #endif
 }
 
@@ -247,6 +255,11 @@ static inline char *loader_getenv(const char *name, const struct loader_instance
     }
 
     return retVal;
+}
+
+static inline char *loader_secure_getenv(const char *name, const struct loader_instance *inst) {
+    // No secure version for Winddows as far as I know
+    return loader_getenv(name, inst);
 }
 
 static inline void loader_free_getenv(char *val, const struct loader_instance *inst) {
@@ -2341,7 +2354,7 @@ static VkResult loader_get_manifest_files(const struct loader_instance *inst, co
         }
 #endif
         if (env_override != NULL) {
-            override = override_getenv = loader_getenv(env_override, inst);
+            override = override_getenv = loader_secure_getenv(env_override, inst);
         }
     }
 
@@ -2369,8 +2382,8 @@ static VkResult loader_get_manifest_files(const struct loader_instance *inst, co
     if (override == NULL) {
         size_t loc_size = 0;
 #if !defined(_WIN32)
-        const char *xdgconfdirs = loader_getenv("XDG_CONFIG_DIRS", inst);
-        const char *xdgdatadirs = loader_getenv("XDG_DATA_DIRS", inst);
+        const char *xdgconfdirs = loader_secure_getenv("XDG_CONFIG_DIRS", inst);
+        const char *xdgdatadirs = loader_secure_getenv("XDG_DATA_DIRS", inst);
         if (xdgconfdirs == NULL || xdgconfdirs[0] == '\0')
             xdgconfdirs = FALLBACK_CONFIG_DIRS;
         if (xdgdatadirs == NULL || xdgdatadirs[0] == '\0')
@@ -2606,7 +2619,7 @@ static VkResult loader_get_manifest_files(const struct loader_instance *inst, co
         file = next_file;
 #if !defined(_WIN32)
         if (relative_location != NULL && (next_file == NULL || *next_file == '\0') && override == NULL) {
-            char *xdgdatahome = loader_getenv("XDG_DATA_HOME", inst);
+            char *xdgdatahome = loader_secure_getenv("XDG_DATA_HOME", inst);
             size_t len;
             if (xdgdatahome != NULL) {
                 size_t alloc_len = strlen(xdgdatahome) + 2 + strlen(relative_location);
@@ -2635,7 +2648,7 @@ static VkResult loader_get_manifest_files(const struct loader_instance *inst, co
                 list_is_dirs = true;
 
             } else {
-                char *home = loader_getenv("HOME", inst);
+                char *home = loader_secure_getenv("HOME", inst);
                 if (home != NULL) {
                     size_t alloc_len = strlen(home) + 16 + strlen(relative_location);
                     char *home_loc = loader_stack_alloc(alloc_len);
@@ -3665,7 +3678,7 @@ static void loader_add_layer_implicit(const struct loader_instance *inst, const 
             if (prop->enable_env_var.name[0] == 0) {
                 enable = true;
             } else {
-                env_value = loader_getenv(prop->enable_env_var.name, inst);
+                env_value = loader_secure_getenv(prop->enable_env_var.name, inst);
                 if (env_value && !strcmp(prop->enable_env_var.value, env_value)) enable = true;
                 loader_free_getenv(env_value, inst);
             }
@@ -3674,7 +3687,7 @@ static void loader_add_layer_implicit(const struct loader_instance *inst, const 
             // environment variables are set, the layer is disabled. Implicit
             // layers
             // are required to have a disable_environment variables
-            env_value = loader_getenv(prop->disable_env_var.name, inst);
+            env_value = loader_secure_getenv(prop->disable_env_var.name, inst);
             if (env_value) {
                 enable = false;
             }
@@ -3695,7 +3708,7 @@ static void loader_add_layer_env(struct loader_instance *inst, const enum layer_
     char *layerEnv;
     char *next, *name;
 
-    layerEnv = loader_getenv(env_name, inst);
+    layerEnv = loader_secure_getenv(env_name, inst);
     if (layerEnv == NULL) {
         return;
     }
