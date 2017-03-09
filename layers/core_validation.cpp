@@ -11430,18 +11430,13 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorUpdateTemplateKHR(VkDevice device
                                                                  const VkAllocationCallbacks *pAllocator,
                                                                  VkDescriptorUpdateTemplateKHR *pDescriptorUpdateTemplate) {
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-    safe_VkDescriptorUpdateTemplateCreateInfoKHR *local_create_info = NULL;
-    {
-        std::lock_guard<std::mutex> lock(global_lock);
-        if (pCreateInfo) {
-            local_create_info = new safe_VkDescriptorUpdateTemplateCreateInfoKHR(pCreateInfo);
-        }
-    }
-    VkResult result = dev_data->dispatch_table.CreateDescriptorUpdateTemplateKHR(
-        device, (const VkDescriptorUpdateTemplateCreateInfoKHR *)local_create_info, pAllocator, pDescriptorUpdateTemplate);
+    VkResult result =
+        dev_data->dispatch_table.CreateDescriptorUpdateTemplateKHR(device, pCreateInfo, pAllocator, pDescriptorUpdateTemplate);
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
         // Shadow template createInfo for later updates
+        safe_VkDescriptorUpdateTemplateCreateInfoKHR *local_create_info =
+            new safe_VkDescriptorUpdateTemplateCreateInfoKHR(pCreateInfo);
         std::unique_ptr<TEMPLATE_STATE> template_state(new TEMPLATE_STATE(*pDescriptorUpdateTemplate, local_create_info));
         dev_data->desc_template_map[*pDescriptorUpdateTemplate] = std::move(template_state);
     }
