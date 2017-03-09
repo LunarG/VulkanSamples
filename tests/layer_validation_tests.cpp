@@ -2163,7 +2163,11 @@ TEST_F(VkLayerTest, InvalidUsageBits) {
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
-    auto format = VK_FORMAT_D24_UNORM_S8_UINT;
+    auto format = find_depth_stencil_format(m_device);
+    if (!format) {
+        printf("             No Depth + Stencil format found. Skipped.\n");
+        return;
+    }
 
     VkImageObj image(m_device);
     // Initialize image with USAGE_TRANSIENT_ATTACHMENT
@@ -8742,6 +8746,12 @@ TEST_F(VkLayerTest, ClearDepthStencilImageWithinRenderPass) {
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
+    auto depth_format = find_depth_stencil_format(m_device);
+    if (!depth_format) {
+        printf("             No Depth + Stencil format found. Skipped.\n");
+        return;
+    }
+
     m_commandBuffer->BeginCommandBuffer();
     m_commandBuffer->BeginRenderPass(m_renderPassBeginInfo);
 
@@ -8749,7 +8759,7 @@ TEST_F(VkLayerTest, ClearDepthStencilImageWithinRenderPass) {
     VkMemoryPropertyFlags reqs = 0;
     VkImageCreateInfo image_create_info = vk_testing::Image::create_info();
     image_create_info.imageType = VK_IMAGE_TYPE_2D;
-    image_create_info.format = VK_FORMAT_D24_UNORM_S8_UINT;
+    image_create_info.format = depth_format;
     image_create_info.extent.width = 64;
     image_create_info.extent.height = 64;
     image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
@@ -8887,6 +8897,11 @@ TEST_F(VkLayerTest, InvalidBarriers) {
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Barriers cannot be set during subpass");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
+    auto depth_format = find_depth_stencil_format(m_device);
+    if (!depth_format) {
+        printf("             No Depth + Stencil format found. Skipped.\n");
+        return;
+    }
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     VkMemoryBarrier mem_barrier = {};
@@ -9000,7 +9015,7 @@ TEST_F(VkLayerTest, InvalidBarriers) {
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "Depth/stencil image formats must have at least one of VK_IMAGE_ASPECT_DEPTH_BIT and VK_IMAGE_ASPECT_STENCIL_BIT set.");
     VkDepthStencilObj ds_image(m_device);
-    ds_image.Init(m_device, 128, 128, VK_FORMAT_D24_UNORM_S8_UINT);
+    ds_image.Init(m_device, 128, 128, depth_format);
     ASSERT_TRUE(ds_image.initialized());
     img_barrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     img_barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -9856,6 +9871,11 @@ TEST_F(VkLayerTest, DSAspectBitsErrors) {
     VkResult err;
 
     ASSERT_NO_FATAL_FAILURE(InitState());
+    auto depth_format = find_depth_stencil_format(m_device);
+    if (!depth_format) {
+        printf("             No Depth + Stencil format found. Skipped.\n");
+        return;
+    }
     VkDescriptorPoolSize ds_type_count = {};
     ds_type_count.type = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
     ds_type_count.descriptorCount = 1;
@@ -9900,7 +9920,7 @@ TEST_F(VkLayerTest, DSAspectBitsErrors) {
     VkImageCreateInfo image_ci = {};
     image_ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     image_ci.imageType = VK_IMAGE_TYPE_2D;
-    image_ci.format = VK_FORMAT_D24_UNORM_S8_UINT;
+    image_ci.format = depth_format;
     image_ci.extent.width = 64;
     image_ci.extent.height = 64;
     image_ci.extent.depth = 1;
@@ -9935,7 +9955,7 @@ TEST_F(VkLayerTest, DSAspectBitsErrors) {
     VkImageViewCreateInfo image_view_ci = {};
     image_view_ci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     image_view_ci.image = image;
-    image_view_ci.format = VK_FORMAT_D24_UNORM_S8_UINT;
+    image_view_ci.format = depth_format;
     image_view_ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
     image_view_ci.subresourceRange.layerCount = 1;
     image_view_ci.subresourceRange.baseArrayLayer = 0;
@@ -11589,6 +11609,11 @@ TEST_F(VkLayerTest, InvalidImageLayout) {
     // *  -3 Cmd buf submit of image w/ layout not matching first use w/o subresource
 
     ASSERT_NO_FATAL_FAILURE(InitState());
+    auto depth_format = find_depth_stencil_format(m_device);
+    if (!depth_format) {
+        printf("             No Depth + Stencil format found. Skipped.\n");
+        return;
+    }
     // Create src & dst images to use for copy operations
     VkImage src_image;
     VkImage dst_image;
@@ -11860,7 +11885,7 @@ TEST_F(VkLayerTest, InvalidImageLayout) {
     // For this error we need a valid renderpass so create default one
     attach.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
     attach.attachment = 0;
-    attach_desc.format = VK_FORMAT_D24_UNORM_S8_UINT;
+    attach_desc.format = depth_format;
     attach_desc.samples = VK_SAMPLE_COUNT_1_BIT;
     attach_desc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     attach_desc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -15822,6 +15847,10 @@ TEST_F(VkLayerTest, ImageLayerViewTests) {
     TEST_DESCRIPTION("Passing bad parameters to CreateImageView");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
+    auto depth_format = find_depth_stencil_format(m_device);
+    if (!depth_format) {
+        return;
+    }
 
     VkImageObj image(m_device);
     image.init(128, 128, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
@@ -15876,7 +15905,7 @@ TEST_F(VkLayerTest, ImageLayerViewTests) {
                                          "VK_IMAGE_CREATE_MUTABLE_FORMAT BIT "
                                          "was set on image creation.");
     // Can't use depth format for view into color image - Expect INVALID_FORMAT
-    imgViewInfo.format = VK_FORMAT_D24_UNORM_S8_UINT;
+    imgViewInfo.format = depth_format;
     vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
     m_errorMonitor->VerifyFound();
     imgViewInfo.format = VK_FORMAT_B8G8R8A8_UNORM;
@@ -16102,6 +16131,11 @@ TEST_F(VkLayerTest, ImageBufferCopyTests) {
     TEST_DESCRIPTION("Image to buffer and buffer to image tests");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
+    VkFormatProperties format_props = m_device->format_properties(VK_FORMAT_D24_UNORM_S8_UINT);
+    if (!(format_props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
+        printf("             VK_FORMAT_D24_UNORM_S8_UINT not supported. Skipped.\n");
+        return;
+    }
 
     // Bail if any dimension of transfer granularity is 0.
     auto index = m_device->graphics_queue_node_index_;
@@ -16880,6 +16914,10 @@ TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch) {
                                          "vkCmdCopyImage called with unmatched source and dest image depth");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
+    auto depth_format = find_depth_stencil_format(m_device);
+    if (!depth_format) {
+        return;
+    }
 
     // Create two images of different types and try to copy between them
     VkImage srcImage;
@@ -16910,7 +16948,7 @@ TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch) {
 
     // Introduce failure by creating second image with a depth/stencil format
     image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-    image_create_info.format = VK_FORMAT_D24_UNORM_S8_UINT;
+    image_create_info.format = depth_format;
     image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
     err = vkCreateImage(m_device->device(), &image_create_info, NULL, &dstImage);
@@ -17393,6 +17431,10 @@ TEST_F(VkLayerTest, DepthStencilImageViewWithColorAspectBitError) {
                                          "Combination depth/stencil image formats can have only the ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
+    auto depth_format = find_depth_stencil_format(m_device);
+    if (!depth_format) {
+        return;
+    }
 
     VkDescriptorPoolSize ds_type_count = {};
     ds_type_count.type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
@@ -17437,7 +17479,7 @@ TEST_F(VkLayerTest, DepthStencilImageViewWithColorAspectBitError) {
     VkImage image_bad;
     VkImage image_good;
     // One bad format and one good format for Color attachment
-    const VkFormat tex_format_bad = VK_FORMAT_D24_UNORM_S8_UINT;
+    const VkFormat tex_format_bad = depth_format;
     const VkFormat tex_format_good = VK_FORMAT_B8G8R8A8_UNORM;
     const int32_t tex_width = 32;
     const int32_t tex_height = 32;
@@ -17512,6 +17554,10 @@ TEST_F(VkLayerTest, ClearImageErrors) {
         "ClearDepthStencilImage with a color image.");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
+    auto depth_format = find_depth_stencil_format(m_device);
+    if (!depth_format) {
+        return;
+    }
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     m_commandBuffer->BeginCommandBuffer();
@@ -17547,7 +17593,7 @@ TEST_F(VkLayerTest, ClearImageErrors) {
     reqs = 0;  // don't need HOST_VISIBLE DS image
     VkImageCreateInfo ds_image_create_info = vk_testing::Image::create_info();
     ds_image_create_info.imageType = VK_IMAGE_TYPE_2D;
-    ds_image_create_info.format = VK_FORMAT_D24_UNORM_S8_UINT;
+    ds_image_create_info.format = depth_format;
     ds_image_create_info.extent.width = 64;
     ds_image_create_info.extent.height = 64;
     ds_image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
@@ -17972,6 +18018,10 @@ TEST_F(VkPositiveLayerTest, SecondaryCommandBufferImageLayoutTransitions) {
     VkResult err;
     m_errorMonitor->ExpectSuccess();
     ASSERT_NO_FATAL_FAILURE(InitState());
+    auto depth_format = find_depth_stencil_format(m_device);
+    if (!depth_format) {
+        return;
+    }
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     // Allocate a secondary and primary cmd buffer
     VkCommandBufferAllocateInfo command_buffer_allocate_info = {};
@@ -17995,7 +18045,7 @@ TEST_F(VkPositiveLayerTest, SecondaryCommandBufferImageLayoutTransitions) {
     err = vkBeginCommandBuffer(secondary_command_buffer, &command_buffer_begin_info);
     ASSERT_VK_SUCCESS(err);
     VkImageObj image(m_device);
-    image.init(128, 128, VK_FORMAT_D24_UNORM_S8_UINT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
+    image.init(128, 128, depth_format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
     ASSERT_TRUE(image.initialized());
     VkImageMemoryBarrier img_barrier = {};
     img_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -19912,16 +19962,21 @@ TEST_F(VkPositiveLayerTest, StencilLoadOp) {
         "Create a stencil-only attachment with a LOAD_OP set to "
         "CLEAR. stencil[Load|Store]Op used to be ignored.");
     VkResult result = VK_SUCCESS;
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    auto depth_format = find_depth_stencil_format(m_device);
+    if (!depth_format) {
+        printf("             No Depth + Stencil format found. Skipped.\n");
+        return;
+    }
     VkImageFormatProperties formatProps;
-    vkGetPhysicalDeviceImageFormatProperties(gpu(), VK_FORMAT_D24_UNORM_S8_UINT, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL,
+    vkGetPhysicalDeviceImageFormatProperties(gpu(), depth_format, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL,
                                              VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, 0,
                                              &formatProps);
     if (formatProps.maxExtent.width < 100 || formatProps.maxExtent.height < 100) {
         return;
     }
 
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    VkFormat depth_stencil_fmt = VK_FORMAT_D24_UNORM_S8_UINT;
+    VkFormat depth_stencil_fmt = depth_format;
     m_depthStencil->Init(m_device, 100, 100, depth_stencil_fmt,
                          VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
     VkAttachmentDescription att = {};
@@ -21388,6 +21443,11 @@ TEST_F(VkPositiveLayerTest, ValidRenderPassAttachmentLayoutWithLoadOp) {
         "valid *READ_ONLY* layout.");
     m_errorMonitor->ExpectSuccess();
     ASSERT_NO_FATAL_FAILURE(InitState());
+    auto depth_format = find_depth_stencil_format(m_device);
+    if (!depth_format) {
+        printf("             No Depth + Stencil format found. Skipped.\n");
+        return;
+    }
 
     VkAttachmentReference attach[2] = {};
     attach[0].attachment = 0;
@@ -21401,7 +21461,7 @@ TEST_F(VkPositiveLayerTest, ValidRenderPassAttachmentLayoutWithLoadOp) {
     subpasses[1].inputAttachmentCount = 1;
     subpasses[1].pInputAttachments = &attach[1];
     VkAttachmentDescription attach_desc = {};
-    attach_desc.format = VK_FORMAT_D24_UNORM_S8_UINT;
+    attach_desc.format = depth_format;
     attach_desc.samples = VK_SAMPLE_COUNT_1_BIT;
     attach_desc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     attach_desc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -21430,22 +21490,26 @@ TEST_F(VkPositiveLayerTest, RenderPassDepthStencilLayoutTransition) {
         "from UNDEFINED TO DS_READ_ONLY_OPTIMAL is set by render pass and verify that "
         "transition has correctly occurred at queue submit time with no validation errors.");
 
-    VkFormat ds_format = VK_FORMAT_D24_UNORM_S8_UINT;
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    auto depth_format = find_depth_stencil_format(m_device);
+    if (!depth_format) {
+        printf("             No Depth + Stencil format found. Skipped.\n");
+        return;
+    }
     VkImageFormatProperties format_props;
-    vkGetPhysicalDeviceImageFormatProperties(gpu(), ds_format, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL,
+    vkGetPhysicalDeviceImageFormatProperties(gpu(), depth_format, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL,
                                              VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 0, &format_props);
     if (format_props.maxExtent.width < 32 || format_props.maxExtent.height < 32) {
-        printf("DS format VK_FORMAT_D24_UNORM_S8_UINT not supported, RenderPassDepthStencilLayoutTransition skipped.\n");
+        printf("Depth extent too small, RenderPassDepthStencilLayoutTransition skipped.\n");
         return;
     }
 
     m_errorMonitor->ExpectSuccess();
-    ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     // A renderpass with one depth/stencil attachment.
     VkAttachmentDescription attachment = {0,
-                                          ds_format,
+                                          depth_format,
                                           VK_SAMPLE_COUNT_1_BIT,
                                           VK_ATTACHMENT_LOAD_OP_DONT_CARE,
                                           VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -21465,7 +21529,7 @@ TEST_F(VkPositiveLayerTest, RenderPassDepthStencilLayoutTransition) {
     ASSERT_VK_SUCCESS(err);
     // A compatible ds image.
     VkImageObj image(m_device);
-    image.init(32, 32, ds_format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
+    image.init(32, 32, depth_format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
     ASSERT_TRUE(image.initialized());
 
     VkImageViewCreateInfo ivci = {
@@ -21474,7 +21538,7 @@ TEST_F(VkPositiveLayerTest, RenderPassDepthStencilLayoutTransition) {
         0,
         image.handle(),
         VK_IMAGE_VIEW_TYPE_2D,
-        ds_format,
+        depth_format,
         {VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
          VK_COMPONENT_SWIZZLE_IDENTITY},
         {VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1},

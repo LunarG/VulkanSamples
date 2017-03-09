@@ -66,6 +66,17 @@ bool vk_format_is_depth_only(VkFormat format) {
     return is_depth;
 }
 
+VkFormat find_depth_stencil_format(VkDeviceObj *device) {
+    VkFormat ds_formats[] = {VK_FORMAT_D16_UNORM_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT_S8_UINT};
+    for (uint32_t i = 0; i < sizeof(ds_formats); i++) {
+        VkFormatProperties format_props = device->format_properties(ds_formats[i]);
+        if (format_props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+            return ds_formats[i];
+        }
+    }
+    return (VkFormat)0;
+}
+
 VkRenderFramework::VkRenderFramework()
     : inst(VK_NULL_HANDLE),
       m_device(NULL),

@@ -437,4 +437,5 @@ class VkPipelineObj : public vk_testing::Pipeline {
     vector<VkPipelineColorBlendAttachmentState> m_colorAttachments;
     int m_vertexBufferCount;
 };
+VkFormat find_depth_stencil_format(VkDeviceObj *device);
 #endif  // VKRENDERFRAMEWORK_H
