@@ -9587,7 +9587,7 @@ TEST_F(VkLayerTest, DSBufferInfoErrors) {
     TEST_DESCRIPTION(
         "Attempt to update buffer descriptor set that has incorrect "
         "parameters in VkDescriptorBufferInfo struct. This includes:\n"
-        "1. offset value greater than buffer size\n"
+        "1. offset value greater than or equal to buffer size\n"
         "2. range value of 0\n"
         "3. range value greater than buffer (size - offset)");
     VkResult err;
@@ -9600,6 +9600,7 @@ TEST_F(VkLayerTest, DSBufferInfoErrors) {
     VkDescriptorPoolCreateInfo ds_pool_ci = {};
     ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     ds_pool_ci.pNext = NULL;
+    ds_pool_ci.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
     ds_pool_ci.maxSets = 1;
     ds_pool_ci.poolSizeCount = 1;
     ds_pool_ci.pPoolSizes = &ds_type_count;
@@ -9638,16 +9639,17 @@ TEST_F(VkLayerTest, DSBufferInfoErrors) {
     VkBufferCreateInfo buff_ci = {};
     buff_ci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     buff_ci.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-    buff_ci.size = 256;
+    buff_ci.size = m_device->props.limits.minUniformBufferOffsetAlignment;
     buff_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     VkBuffer buffer;
     err = vkCreateBuffer(m_device->device(), &buff_ci, NULL, &buffer);
     ASSERT_VK_SUCCESS(err);
+
     // Have to bind memory to buffer before descriptor update
     VkMemoryAllocateInfo mem_alloc = {};
     mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     mem_alloc.pNext = NULL;
-    mem_alloc.allocationSize = 256;
+    mem_alloc.allocationSize = buff_ci.size;
     mem_alloc.memoryTypeIndex = 0;
 
     VkMemoryRequirements mem_reqs;
@@ -9666,8 +9668,8 @@ TEST_F(VkLayerTest, DSBufferInfoErrors) {
 
     VkDescriptorBufferInfo buff_info = {};
     buff_info.buffer = buffer;
-    // First make offset 1 larger than buffer size
-    buff_info.offset = 257;
+    // Cause error due to offset out of range
+    buff_info.offset = buff_ci.size;
     buff_info.range = VK_WHOLE_SIZE;
     VkWriteDescriptorSet descriptor_write = {};
     descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -9681,9 +9683,6 @@ TEST_F(VkLayerTest, DSBufferInfoErrors) {
     descriptor_write.dstSet = descriptor_set;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00959);
 
-    m_errorMonitor->SetUnexpectedError(
-        "If descriptorType is VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER or VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, the offset member of "
-        "any given element of pBufferInfo must be a multiple of VkPhysicalDeviceLimits::minUniformBufferOffsetAlignment");
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
 
     m_errorMonitor->VerifyFound();
@@ -9696,21 +9695,16 @@ TEST_F(VkLayerTest, DSBufferInfoErrors) {
 
     m_errorMonitor->VerifyFound();
     // Now cause error due to range exceeding buffer size - offset
-    buff_info.offset = 128;
-    buff_info.range = 200;
+    buff_info.offset = 0;
+    buff_info.range = buff_ci.size + 1;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00961);
 
-    m_errorMonitor->SetUnexpectedError(
-        "If descriptorType is VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER or VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, the offset member of "
-        "any given element of pBufferInfo must be a multiple of VkPhysicalDeviceLimits::minUniformBufferOffsetAlignment");
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
 
     m_errorMonitor->VerifyFound();
     vkFreeMemory(m_device->device(), mem, NULL);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
     vkDestroyBuffer(m_device->device(), buffer, NULL);
-    m_errorMonitor->SetUnexpectedError(
-        "descriptorPool must have been created with the VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT flag");
     vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptor_set);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }

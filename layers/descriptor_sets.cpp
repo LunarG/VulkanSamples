@@ -1352,11 +1352,11 @@ bool cvdescriptorset::DescriptorSet::ValidateBufferUpdate(VkDescriptorBufferInfo
         return false;
     }
     // offset must be less than buffer size
-    if (buffer_info->offset > buffer_node->createInfo.size) {
+    if (buffer_info->offset >= buffer_node->createInfo.size) {
         *error_code = VALIDATION_ERROR_00959;
         std::stringstream error_str;
-        error_str << "VkDescriptorBufferInfo offset of " << buffer_info->offset << " is greater than buffer " << buffer_node->buffer
-                  << " size of " << buffer_node->createInfo.size;
+        error_str << "VkDescriptorBufferInfo offset of " << buffer_info->offset << " is greater than or equal to buffer "
+                  << buffer_node->buffer << " size of " << buffer_node->createInfo.size;
         *error_msg = error_str.str();
         return false;
     }
