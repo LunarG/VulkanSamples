@@ -4516,17 +4516,18 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDevice(VkPhysicalDevice physical
     memcpy(&localCreateInfo, pCreateInfo, sizeof(localCreateInfo));
 
     // NOTE: Need to filter the extensions to only those supported by the ICD.
-    //       No ICD will advertise support for layers. An ICD library could
-    //       support a layer, but it would be independent of the actual ICD,
-    //       just in the same library.
+    //       No ICD will advertise support for layers. An ICD library could support a layer,
+    //       but it would be independent of the actual ICD, just in the same library.
     char **filtered_extension_names = NULL;
-    filtered_extension_names = loader_stack_alloc(pCreateInfo->enabledExtensionCount * sizeof(char *));
-    if (NULL == filtered_extension_names) {
-        loader_log(icd_term->this_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "terminator_CreateDevice: Failed to create extension name "
-                   "storage for %d extensions %d",
-                   pCreateInfo->enabledExtensionCount);
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
+    if (0 < pCreateInfo->enabledExtensionCount) {
+        filtered_extension_names = loader_stack_alloc(pCreateInfo->enabledExtensionCount * sizeof(char *));
+        if (NULL == filtered_extension_names) {
+            loader_log(icd_term->this_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                       "terminator_CreateDevice: Failed to create extension name "
+                       "storage for %d extensions %d",
+                       pCreateInfo->enabledExtensionCount);
+            return VK_ERROR_OUT_OF_HOST_MEMORY;
+        }
     }
 
     localCreateInfo.enabledLayerCount = 0;
