@@ -15597,15 +15597,9 @@ TEST_F(VkLayerTest, AttachmentDescriptionUndefinedFormat) {
 }
 
 TEST_F(VkLayerTest, InvalidImageView) {
-    VkResult err;
-
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00768);
-
     ASSERT_NO_FATAL_FAILURE(InitState());
 
     // Create an image and try to create a view with bad baseMipLevel
-    VkImage image;
-
     const VkFormat tex_format = VK_FORMAT_B8G8R8A8_UNORM;
     const int32_t tex_width = 32;
     const int32_t tex_height = 32;
@@ -15625,8 +15619,26 @@ TEST_F(VkLayerTest, InvalidImageView) {
     image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
     image_create_info.flags = 0;
 
-    err = vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
+    VkImage image;
+    VkResult err = vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
     ASSERT_VK_SUCCESS(err);
+
+    VkMemoryRequirements requirements;
+    vkGetImageMemoryRequirements(m_device->device(), image, &requirements);
+
+    VkMemoryAllocateInfo alloc_info{};
+    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    alloc_info.pNext = NULL;
+    alloc_info.memoryTypeIndex = 0;
+    alloc_info.allocationSize = requirements.size;
+    bool pass = m_device->phy().set_memory_type(requirements.memoryTypeBits, &alloc_info, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    ASSERT_TRUE(pass);
+
+    VkDeviceMemory memory;
+    err = vkAllocateMemory(m_device->device(), &alloc_info, NULL, &memory);
+    ASSERT_VK_SUCCESS(err);
+
+    err = vkBindImageMemory(m_device->device(), image, memory, 0);
 
     VkImageViewCreateInfo image_view_create_info = {};
     image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -15639,11 +15651,11 @@ TEST_F(VkLayerTest, InvalidImageView) {
     image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
     VkImageView view;
-    m_errorMonitor->SetUnexpectedError(
-        "If image is non-sparse then it must be bound completely and contiguously to a single VkDeviceMemory object");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00768);
     err = vkCreateImageView(m_device->device(), &image_view_create_info, NULL, &view);
-
     m_errorMonitor->VerifyFound();
+
+    vkFreeMemory(m_device->device(), memory, NULL);
     vkDestroyImage(m_device->device(), image, NULL);
 }
 
