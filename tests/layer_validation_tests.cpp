@@ -14257,7 +14257,6 @@ TEST_F(VkLayerTest, CreatePipelineVsFsMismatchByLocation) {
     descriptorSet.AppendDummy();
     descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
 
-    m_errorMonitor->SetUnexpectedError("Vertex shader consumes input at location 1 but not provided");
     pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
 
     m_errorMonitor->VerifyFound();
