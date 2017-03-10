@@ -2391,6 +2391,20 @@ static bool require_feature(debug_report_data *report_data, VkBool32 feature, ch
     return true;
 }
 
+static bool require_extension(debug_report_data *report_data, VkBool32 extension, char const *extension_name) {
+    if (!extension) {
+        if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__,
+                    SHADER_CHECKER_FEATURE_NOT_ENABLED, "SC",
+                    "Shader requires extension %s but is not "
+                    "enabled on the device",
+                    extension_name)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 static bool validate_shader_capabilities(layer_data *dev_data, shader_module const *src) {
     bool pass = true;
 
@@ -2517,6 +2531,11 @@ static bool validate_shader_capabilities(layer_data *dev_data, shader_module con
 
                 case spv::CapabilityMultiViewport:
                     pass &= require_feature(report_data, enabledFeatures.multiViewport, "multiViewport");
+                    break;
+
+                case spv::CapabilityDrawParameters:
+                    pass &= require_extension(report_data, dev_data->device_extensions.khr_shader_draw_parameters_enabled,
+                                              VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME);
                     break;
 
                 default:
