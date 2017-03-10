@@ -107,6 +107,7 @@ struct devExts {
     bool wsi_display_swapchain_enabled;
     bool nv_glsl_shader_enabled;
     bool khr_descriptor_update_template_enabled;
+    bool khr_shader_draw_parameters_enabled;
     unordered_map<VkSwapchainKHR, unique_ptr<SWAPCHAIN_NODE>> swapchainMap;
     unordered_map<VkImage, VkSwapchainKHR> imageToSwapchainMap;
 };
@@ -3891,6 +3892,7 @@ static void checkDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo,
     dev_data->device_extensions.wsi_display_swapchain_enabled = false;
     dev_data->device_extensions.nv_glsl_shader_enabled = false;
     dev_data->device_extensions.khr_descriptor_update_template_enabled = false;
+    dev_data->device_extensions.khr_shader_draw_parameters_enabled = false;
 
     for (i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
@@ -3904,6 +3906,9 @@ static void checkDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo,
         }
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME) == 0) {
             dev_data->device_extensions.khr_descriptor_update_template_enabled = true;
+        }
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME) == 0) {
+            dev_data->device_extensions.khr_shader_draw_parameters_enabled = true;
         }
     }
 }
