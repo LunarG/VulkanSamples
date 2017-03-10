@@ -1613,16 +1613,15 @@ static bool validate_interface_between_stages(debug_report_data *report_data, sh
 }
 
 enum FORMAT_TYPE {
-    FORMAT_TYPE_UNDEFINED,
-    FORMAT_TYPE_FLOAT,  // UNORM, SNORM, FLOAT, USCALED, SSCALED, SRGB -- anything we consider float in the shader
-    FORMAT_TYPE_SINT,
-    FORMAT_TYPE_UINT,
+    FORMAT_TYPE_FLOAT = 1,  // UNORM, SNORM, FLOAT, USCALED, SSCALED, SRGB -- anything we consider float in the shader
+    FORMAT_TYPE_SINT = 2,
+    FORMAT_TYPE_UINT = 4,
 };
 
 static unsigned get_format_type(VkFormat fmt) {
     switch (fmt) {
         case VK_FORMAT_UNDEFINED:
-            return FORMAT_TYPE_UNDEFINED;
+            return 0;
         case VK_FORMAT_R8_SINT:
         case VK_FORMAT_R8G8_SINT:
         case VK_FORMAT_R8G8B8_SINT:
@@ -1694,7 +1693,7 @@ static unsigned get_fundamental_type(shader_module const *src, unsigned type) {
             return get_fundamental_type(src, insn.word(2));
 
         default:
-            return FORMAT_TYPE_UNDEFINED;
+            return 0;
     }
 }
 
@@ -1773,7 +1772,7 @@ static bool validate_vi_against_vs_inputs(debug_report_data *report_data, VkPipe
             unsigned input_type = get_fundamental_type(vs, it_b->second.type_id);
 
             // Type checking
-            if (attrib_type != FORMAT_TYPE_UNDEFINED && input_type != FORMAT_TYPE_UNDEFINED && attrib_type != input_type) {
+            if (!(attrib_type & input_type)) {
                 if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__,
                             SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
                             "Attribute type of `%s` at location %d does not match vertex shader input type of `%s`",
@@ -1837,7 +1836,7 @@ static bool validate_fs_outputs_against_render_pass(debug_report_data *report_da
             unsigned att_type = get_format_type(it_b->second);
 
             // Type checking
-            if (att_type != FORMAT_TYPE_UNDEFINED && output_type != FORMAT_TYPE_UNDEFINED && att_type != output_type) {
+            if (!(output_type & att_type)) {
                 if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__,
                             SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
                             "Attachment %d of type `%s` does not match fragment shader output type of `%s`", it_b->first,
@@ -2691,7 +2690,7 @@ static bool validate_pipeline_shader_stage(
                             "Shader consumes input attachment index %d but not provided in subpass", use.first)) {
                     pass = false;
                 }
-            } else if (get_format_type(rpci->pAttachments[index].format) != get_fundamental_type(module, use.second.type_id)) {
+            } else if (!(get_format_type(rpci->pAttachments[index].format) & get_fundamental_type(module, use.second.type_id))) {
                 if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__,
                             SHADER_CHECKER_INPUT_ATTACHMENT_TYPE_MISMATCH, "SC",
                             "Subpass input attachment %u format of %s does not match type used in shader `%s`", use.first,
