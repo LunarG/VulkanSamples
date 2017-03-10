@@ -1666,6 +1666,10 @@ static unsigned get_format_type(VkFormat fmt) {
         case VK_FORMAT_A2B10G10R10_UINT_PACK32:
         case VK_FORMAT_A2R10G10B10_UINT_PACK32:
             return FORMAT_TYPE_UINT;
+        case VK_FORMAT_D16_UNORM_S8_UINT:
+        case VK_FORMAT_D24_UNORM_S8_UINT:
+        case VK_FORMAT_D32_SFLOAT_S8_UINT:
+            return FORMAT_TYPE_FLOAT | FORMAT_TYPE_UINT;
         default:
             return FORMAT_TYPE_FLOAT;
     }
