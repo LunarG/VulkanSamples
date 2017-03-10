@@ -193,6 +193,14 @@ VkSampler const *cvdescriptorset::DescriptorSetLayout::GetImmutableSamplerPtrFro
     }
     return nullptr;
 }
+// Move to next valid binding having a non-zero binding count
+uint32_t cvdescriptorset::DescriptorSetLayout::GetNextValidBinding(const uint32_t binding) const {
+    uint32_t new_binding = binding;
+    do {
+        new_binding++;
+    } while (GetDescriptorCountFromBinding(new_binding) == 0);
+    return new_binding;
+}
 // For given index, return ptr to ImmutableSampler array
 VkSampler const *cvdescriptorset::DescriptorSetLayout::GetImmutableSamplerPtrFromIndex(const uint32_t index) const {
     assert(index < bindings_.size());
@@ -1162,11 +1170,7 @@ void cvdescriptorset::PerformUpdateDescriptorSetsWithTemplateKHR(layer_data *dev
 
             if (dst_array_element >= binding_count) {
                 dst_array_element = 0;
-                // Move to next binding having a non-zero binding count
-                do {
-                    binding_being_updated++;
-                    binding_count = layout_obj->GetDescriptorCountFromBinding(binding_being_updated);
-                } while (binding_count == 0);
+                binding_being_updated = layout_obj->GetNextValidBinding(binding_being_updated);
             }
 
             write_entry.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

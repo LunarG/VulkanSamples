@@ -137,6 +137,8 @@ class DescriptorSetLayout {
     //  These calls should be guarded by a call to "HasBinding(binding)" to verify that the given binding exists
     uint32_t GetGlobalStartIndexFromBinding(const uint32_t) const;
     uint32_t GetGlobalEndIndexFromBinding(const uint32_t) const;
+    // Helper function to get the next valid binding for a descriptor
+    uint32_t GetNextValidBinding(const uint32_t) const;
     // For a particular binding starting at offset and having update_count descriptors
     //  updated, verify that for any binding boundaries crossed, the update is consistent
     bool VerifyUpdateConsistency(uint32_t, uint32_t, uint32_t, const char *, const VkDescriptorSet, std::string *) const;
