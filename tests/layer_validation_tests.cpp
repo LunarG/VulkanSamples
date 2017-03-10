@@ -13548,6 +13548,7 @@ TEST_F(VkLayerTest, CreatePipelineCheckShaderDescriptorTypeMismatch) {
     descriptorset_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     descriptorset_layout_binding.descriptorCount = 1;
     descriptorset_layout_binding.stageFlags = VK_SHADER_STAGE_ALL;
+    descriptorset_layout_binding.pImmutableSamplers = nullptr;
 
     VkDescriptorSetLayoutCreateInfo descriptorset_layout_create_info = {};
     descriptorset_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -13643,6 +13644,7 @@ TEST_F(VkLayerTest, CreatePipelineCheckShaderDescriptorNotAccessible) {
     descriptorset_layout_binding.descriptorCount = 1;
     // Intentionally make the uniform buffer inaccessible to the vertex shader to challenge core_validation
     descriptorset_layout_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    descriptorset_layout_binding.pImmutableSamplers = nullptr;
 
     VkDescriptorSetLayoutCreateInfo descriptorset_layout_create_info = {};
     descriptorset_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
