@@ -11384,12 +11384,6 @@ TEST_F(VkLayerTest, MismatchCountQueueCreateRequestedFeature) {
         "Use invalid Queue Family Index in vkCreateDevice");
     ASSERT_NO_FATAL_FAILURE(InitState());
 
-    const char *invalid_queueFamilyIndex_message =
-        "Invalid queue create request in vkCreateDevice(). Invalid "
-        "queueFamilyIndex ";
-
-    const char *unavailable_feature_message = "While calling vkCreateDevice(), requesting feature #";
-
     // The following test fails with recent NVidia drivers.
     // By the time core_validation is reached, the NVidia
     // driver has sanitized the invalid condition and core_validation
@@ -11400,9 +11394,7 @@ TEST_F(VkLayerTest, MismatchCountQueueCreateRequestedFeature) {
     //    vkEnumeratePhysicalDevices(instance(), &count, &physical_device);
     //    m_errorMonitor->VerifyFound();
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, invalid_queueFamilyIndex_message);
     float queue_priority = 0.0;
-
     VkDeviceQueueCreateInfo queue_create_info = {};
     queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
     queue_create_info.queueCount = 1;
@@ -11416,7 +11408,10 @@ TEST_F(VkLayerTest, MismatchCountQueueCreateRequestedFeature) {
     device_create_info.queueCreateInfoCount = 1;
     device_create_info.pQueueCreateInfos = &queue_create_info;
     device_create_info.pEnabledFeatures = &features;
-    m_errorMonitor->SetUnexpectedError("Failed to create device chain.");
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "Invalid queue create request in vkCreateDevice(). Invalid queueFamilyIndex ");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Failed to create device chain.");
     vkCreateDevice(gpu(), &device_create_info, nullptr, &testDevice);
     m_errorMonitor->VerifyFound();
 
@@ -11427,12 +11422,13 @@ TEST_F(VkLayerTest, MismatchCountQueueCreateRequestedFeature) {
     for (unsigned i = 0; i < feature_count; i++) {
         if (VK_FALSE == feature_array[i]) {
             feature_array[i] = VK_TRUE;
-            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, unavailable_feature_message);
             device_create_info.pEnabledFeatures = &features;
-            m_errorMonitor->SetUnexpectedError(
-                "You requested features that are unavailable on this device. You should first query feature availability by "
-                "calling vkGetPhysicalDeviceFeatures().");
-            m_errorMonitor->SetUnexpectedError("Failed to create device chain.");
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                                 "While calling vkCreateDevice(), requesting feature #");
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Failed to create device chain.");
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                                 "You requested features that are unavailable on this device. You should first "
+                                                 "query feature availability by calling vkGetPhysicalDeviceFeatures().");
             vkCreateDevice(gpu(), &device_create_info, nullptr, &testDevice);
             m_errorMonitor->VerifyFound();
             break;
