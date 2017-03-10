@@ -249,31 +249,36 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
     layer_data_map.erase(key);
 }
 
-VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceQueueFamilyProperties(VkPhysicalDevice physicalDevice,
-                                                                  uint32_t *pQueueFamilyPropertyCount,
-                                                                  VkQueueFamilyProperties *pQueueFamilyProperties) {
-    layer_data *my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), layer_data_map);
-
-    // Call down the call chain:
-    my_data->instance_dispatch_table->GetPhysicalDeviceQueueFamilyProperties(physicalDevice, pQueueFamilyPropertyCount,
-                                                                             pQueueFamilyProperties);
-
+static void PostCallRecordGetPhysicalDeviceQueueFamilyProperties(layer_data *dev_data, VkPhysicalDevice physical_device,
+                                                                 uint32_t *qfp_count, VkQueueFamilyProperties *qfp) {
     // Record the result of this query:
     std::lock_guard<std::mutex> lock(global_lock);
-    SwpPhysicalDevice *pPhysicalDevice = NULL;
+    SwpPhysicalDevice *phy_data = NULL;
     {
-        auto it = my_data->physicalDeviceMap.find(physicalDevice);
-        pPhysicalDevice = (it == my_data->physicalDeviceMap.end()) ? NULL : &it->second;
+        auto it = dev_data->physicalDeviceMap.find(physical_device);
+        phy_data = (it == dev_data->physicalDeviceMap.end()) ? NULL : &it->second;
     }
     // Note: for poorly-written applications (e.g. that don't call this command
     // twice, the first time with pQueueFamilyProperties set to NULL, and the
     // second time with a non-NULL pQueueFamilyProperties and with the same
     // count as returned the first time), record the count when
-    // pQueueFamilyProperties is non-NULL:
-    if (pPhysicalDevice && pQueueFamilyPropertyCount && pQueueFamilyProperties) {
-        pPhysicalDevice->gotQueueFamilyPropertyCount = true;
-        pPhysicalDevice->numOfQueueFamilies = *pQueueFamilyPropertyCount;
+    // queue family property data pointer is non-NULL:
+    if (phy_data && qfp && qfp_count) {
+        phy_data->gotQueueFamilyPropertyCount = true;
+        phy_data->numOfQueueFamilies = *qfp_count;
     }
+}
+
+VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceQueueFamilyProperties(VkPhysicalDevice physicalDevice,
+                                                                  uint32_t *pQueueFamilyPropertyCount,
+                                                                  VkQueueFamilyProperties *pQueueFamilyProperties) {
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), layer_data_map);
+
+    // Call down the call chain:
+    dev_data->instance_dispatch_table->GetPhysicalDeviceQueueFamilyProperties(physicalDevice, pQueueFamilyPropertyCount,
+                                                                              pQueueFamilyProperties);
+    PostCallRecordGetPhysicalDeviceQueueFamilyProperties(dev_data, physicalDevice, pQueueFamilyPropertyCount,
+                                                         pQueueFamilyProperties);
 }
 
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
