@@ -132,6 +132,12 @@ else()
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wpointer-arith -Wno-unused-function -Wno-sign-compare")
 endif()
 
+if (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "mips64")
+    if("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
+        set_source_files_properties(core_validation.cpp PROPERTIES COMPILE_FLAGS -mxgot)
+    endif()
+endif()
+
 run_vk_xml_generate(threading_generator.py thread_check.h)
 run_vk_xml_generate(parameter_validation_generator.py parameter_validation.h)
 run_vk_xml_generate(unique_objects_generator.py unique_objects_wrappers.h)
