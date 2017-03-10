@@ -2391,9 +2391,11 @@ static bool require_feature(debug_report_data *report_data, VkBool32 feature, ch
     return true;
 }
 
-static bool validate_shader_capabilities(debug_report_data *report_data, shader_module const *src,
-                                         VkPhysicalDeviceFeatures const *enabledFeatures) {
+static bool validate_shader_capabilities(layer_data *dev_data, shader_module const *src) {
     bool pass = true;
+
+    auto report_data = dev_data->report_data;
+    auto const & enabledFeatures = dev_data->enabled_features;
 
     for (auto insn : *src) {
         if (insn.opcode() == spv::OpCapability) {
@@ -2411,110 +2413,110 @@ static bool validate_shader_capabilities(debug_report_data *report_data, shader_
                     break;
 
                 case spv::CapabilityGeometry:
-                    pass &= require_feature(report_data, enabledFeatures->geometryShader, "geometryShader");
+                    pass &= require_feature(report_data, enabledFeatures.geometryShader, "geometryShader");
                     break;
 
                 case spv::CapabilityTessellation:
-                    pass &= require_feature(report_data, enabledFeatures->tessellationShader, "tessellationShader");
+                    pass &= require_feature(report_data, enabledFeatures.tessellationShader, "tessellationShader");
                     break;
 
                 case spv::CapabilityFloat64:
-                    pass &= require_feature(report_data, enabledFeatures->shaderFloat64, "shaderFloat64");
+                    pass &= require_feature(report_data, enabledFeatures.shaderFloat64, "shaderFloat64");
                     break;
 
                 case spv::CapabilityInt64:
-                    pass &= require_feature(report_data, enabledFeatures->shaderInt64, "shaderInt64");
+                    pass &= require_feature(report_data, enabledFeatures.shaderInt64, "shaderInt64");
                     break;
 
                 case spv::CapabilityTessellationPointSize:
                 case spv::CapabilityGeometryPointSize:
-                    pass &= require_feature(report_data, enabledFeatures->shaderTessellationAndGeometryPointSize,
+                    pass &= require_feature(report_data, enabledFeatures.shaderTessellationAndGeometryPointSize,
                                             "shaderTessellationAndGeometryPointSize");
                     break;
 
                 case spv::CapabilityImageGatherExtended:
-                    pass &= require_feature(report_data, enabledFeatures->shaderImageGatherExtended, "shaderImageGatherExtended");
+                    pass &= require_feature(report_data, enabledFeatures.shaderImageGatherExtended, "shaderImageGatherExtended");
                     break;
 
                 case spv::CapabilityStorageImageMultisample:
-                    pass &= require_feature(report_data, enabledFeatures->shaderStorageImageMultisample,
+                    pass &= require_feature(report_data, enabledFeatures.shaderStorageImageMultisample,
                                             "shaderStorageImageMultisample");
                     break;
 
                 case spv::CapabilityUniformBufferArrayDynamicIndexing:
-                    pass &= require_feature(report_data, enabledFeatures->shaderUniformBufferArrayDynamicIndexing,
+                    pass &= require_feature(report_data, enabledFeatures.shaderUniformBufferArrayDynamicIndexing,
                                             "shaderUniformBufferArrayDynamicIndexing");
                     break;
 
                 case spv::CapabilitySampledImageArrayDynamicIndexing:
-                    pass &= require_feature(report_data, enabledFeatures->shaderSampledImageArrayDynamicIndexing,
+                    pass &= require_feature(report_data, enabledFeatures.shaderSampledImageArrayDynamicIndexing,
                                             "shaderSampledImageArrayDynamicIndexing");
                     break;
 
                 case spv::CapabilityStorageBufferArrayDynamicIndexing:
-                    pass &= require_feature(report_data, enabledFeatures->shaderStorageBufferArrayDynamicIndexing,
+                    pass &= require_feature(report_data, enabledFeatures.shaderStorageBufferArrayDynamicIndexing,
                                             "shaderStorageBufferArrayDynamicIndexing");
                     break;
 
                 case spv::CapabilityStorageImageArrayDynamicIndexing:
-                    pass &= require_feature(report_data, enabledFeatures->shaderStorageImageArrayDynamicIndexing,
+                    pass &= require_feature(report_data, enabledFeatures.shaderStorageImageArrayDynamicIndexing,
                                             "shaderStorageImageArrayDynamicIndexing");
                     break;
 
                 case spv::CapabilityClipDistance:
-                    pass &= require_feature(report_data, enabledFeatures->shaderClipDistance, "shaderClipDistance");
+                    pass &= require_feature(report_data, enabledFeatures.shaderClipDistance, "shaderClipDistance");
                     break;
 
                 case spv::CapabilityCullDistance:
-                    pass &= require_feature(report_data, enabledFeatures->shaderCullDistance, "shaderCullDistance");
+                    pass &= require_feature(report_data, enabledFeatures.shaderCullDistance, "shaderCullDistance");
                     break;
 
                 case spv::CapabilityImageCubeArray:
-                    pass &= require_feature(report_data, enabledFeatures->imageCubeArray, "imageCubeArray");
+                    pass &= require_feature(report_data, enabledFeatures.imageCubeArray, "imageCubeArray");
                     break;
 
                 case spv::CapabilitySampleRateShading:
-                    pass &= require_feature(report_data, enabledFeatures->sampleRateShading, "sampleRateShading");
+                    pass &= require_feature(report_data, enabledFeatures.sampleRateShading, "sampleRateShading");
                     break;
 
                 case spv::CapabilitySparseResidency:
-                    pass &= require_feature(report_data, enabledFeatures->shaderResourceResidency, "shaderResourceResidency");
+                    pass &= require_feature(report_data, enabledFeatures.shaderResourceResidency, "shaderResourceResidency");
                     break;
 
                 case spv::CapabilityMinLod:
-                    pass &= require_feature(report_data, enabledFeatures->shaderResourceMinLod, "shaderResourceMinLod");
+                    pass &= require_feature(report_data, enabledFeatures.shaderResourceMinLod, "shaderResourceMinLod");
                     break;
 
                 case spv::CapabilitySampledCubeArray:
-                    pass &= require_feature(report_data, enabledFeatures->imageCubeArray, "imageCubeArray");
+                    pass &= require_feature(report_data, enabledFeatures.imageCubeArray, "imageCubeArray");
                     break;
 
                 case spv::CapabilityImageMSArray:
-                    pass &= require_feature(report_data, enabledFeatures->shaderStorageImageMultisample,
+                    pass &= require_feature(report_data, enabledFeatures.shaderStorageImageMultisample,
                                             "shaderStorageImageMultisample");
                     break;
 
                 case spv::CapabilityStorageImageExtendedFormats:
-                    pass &= require_feature(report_data, enabledFeatures->shaderStorageImageExtendedFormats,
+                    pass &= require_feature(report_data, enabledFeatures.shaderStorageImageExtendedFormats,
                                             "shaderStorageImageExtendedFormats");
                     break;
 
                 case spv::CapabilityInterpolationFunction:
-                    pass &= require_feature(report_data, enabledFeatures->sampleRateShading, "sampleRateShading");
+                    pass &= require_feature(report_data, enabledFeatures.sampleRateShading, "sampleRateShading");
                     break;
 
                 case spv::CapabilityStorageImageReadWithoutFormat:
-                    pass &= require_feature(report_data, enabledFeatures->shaderStorageImageReadWithoutFormat,
+                    pass &= require_feature(report_data, enabledFeatures.shaderStorageImageReadWithoutFormat,
                                             "shaderStorageImageReadWithoutFormat");
                     break;
 
                 case spv::CapabilityStorageImageWriteWithoutFormat:
-                    pass &= require_feature(report_data, enabledFeatures->shaderStorageImageWriteWithoutFormat,
+                    pass &= require_feature(report_data, enabledFeatures.shaderStorageImageWriteWithoutFormat,
                                             "shaderStorageImageWriteWithoutFormat");
                     break;
 
                 case spv::CapabilityMultiViewport:
-                    pass &= require_feature(report_data, enabledFeatures->multiViewport, "multiViewport");
+                    pass &= require_feature(report_data, enabledFeatures.multiViewport, "multiViewport");
                     break;
 
                 default:
@@ -2570,19 +2572,19 @@ static uint32_t descriptor_type_to_reqs(shader_module const *module, uint32_t ty
 }
 
 static bool validate_pipeline_shader_stage(
-    debug_report_data *report_data, VkPipelineShaderStageCreateInfo const *pStage, PIPELINE_STATE *pipeline,
-    shader_module **out_module, spirv_inst_iter *out_entrypoint, VkPhysicalDeviceFeatures const *enabledFeatures,
-    std::unordered_map<VkShaderModule, std::unique_ptr<shader_module>> const &shaderModuleMap) {
+    layer_data *dev_data, VkPipelineShaderStageCreateInfo const *pStage, PIPELINE_STATE *pipeline,
+    shader_module **out_module, spirv_inst_iter *out_entrypoint) {
     bool pass = true;
-    auto module_it = shaderModuleMap.find(pStage->module);
+    auto module_it = dev_data->shaderModuleMap.find(pStage->module);
     auto module = *out_module = module_it->second.get();
+    auto report_data = dev_data->report_data;
 
     if (!module->has_valid_spirv) return pass;
 
     // Find the entrypoint
     auto entrypoint = *out_entrypoint = find_entrypoint(module, pStage->pName, pStage->stage);
     if (entrypoint == module->end()) {
-        if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__, VALIDATION_ERROR_00510,
+        if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__, VALIDATION_ERROR_00510,
                     "SC", "No entrypoint found named `%s` for stage %s. %s.", pStage->pName,
                     string_VkShaderStageFlagBits(pStage->stage), validation_error_map[VALIDATION_ERROR_00510])) {
             return false;  // no point continuing beyond here, any analysis is just going to be garbage.
@@ -2590,7 +2592,7 @@ static bool validate_pipeline_shader_stage(
     }
 
     // Validate shader capabilities against enabled device features
-    pass &= validate_shader_capabilities(report_data, module, enabledFeatures);
+    pass &= validate_shader_capabilities(dev_data, module);
 
     // Mark accessible ids
     auto accessible_ids = mark_accessible_ids(module, entrypoint);
@@ -2686,9 +2688,7 @@ static bool validate_pipeline_shader_stage(
 
 // Validate that the shaders used by the given pipeline and store the active_slots
 //  that are actually used by the pipeline into pPipeline->active_slots
-static bool validate_and_capture_pipeline_shader_state(
-    debug_report_data *report_data, PIPELINE_STATE *pPipeline, VkPhysicalDeviceFeatures const *enabledFeatures,
-    std::unordered_map<VkShaderModule, unique_ptr<shader_module>> const &shaderModuleMap) {
+static bool validate_and_capture_pipeline_shader_state(layer_data *dev_data, PIPELINE_STATE *pPipeline) {
     auto pCreateInfo = pPipeline->graphicsPipelineCI.ptr();
     int vertex_stage = get_shader_stage_id(VK_SHADER_STAGE_VERTEX_BIT);
     int fragment_stage = get_shader_stage_id(VK_SHADER_STAGE_FRAGMENT_BIT);
@@ -2697,27 +2697,25 @@ static bool validate_and_capture_pipeline_shader_state(
     memset(shaders, 0, sizeof(shaders));
     spirv_inst_iter entrypoints[5];
     memset(entrypoints, 0, sizeof(entrypoints));
-    VkPipelineVertexInputStateCreateInfo const *vi = 0;
     bool pass = true;
 
     for (uint32_t i = 0; i < pCreateInfo->stageCount; i++) {
         auto pStage = &pCreateInfo->pStages[i];
         auto stage_id = get_shader_stage_id(pStage->stage);
-        pass &= validate_pipeline_shader_stage(report_data, pStage, pPipeline, &shaders[stage_id], &entrypoints[stage_id],
-                                               enabledFeatures, shaderModuleMap);
+        pass &= validate_pipeline_shader_stage(dev_data, pStage, pPipeline, &shaders[stage_id], &entrypoints[stage_id]);
     }
 
     // if the shader stages are no good individually, cross-stage validation is pointless.
     if (!pass) return false;
 
-    vi = pCreateInfo->pVertexInputState;
+    auto vi = pCreateInfo->pVertexInputState;
 
     if (vi) {
-        pass &= validate_vi_consistency(report_data, vi);
+        pass &= validate_vi_consistency(dev_data->report_data, vi);
     }
 
     if (shaders[vertex_stage] && shaders[vertex_stage]->has_valid_spirv) {
-        pass &= validate_vi_against_vs_inputs(report_data, vi, shaders[vertex_stage], entrypoints[vertex_stage]);
+        pass &= validate_vi_against_vs_inputs(dev_data->report_data, vi, shaders[vertex_stage], entrypoints[vertex_stage]);
     }
 
     int producer = get_shader_stage_id(VK_SHADER_STAGE_VERTEX_BIT);
@@ -2731,7 +2729,7 @@ static bool validate_and_capture_pipeline_shader_state(
     for (; producer != fragment_stage && consumer <= fragment_stage; consumer++) {
         assert(shaders[producer]);
         if (shaders[consumer] && shaders[consumer]->has_valid_spirv && shaders[producer]->has_valid_spirv) {
-            pass &= validate_interface_between_stages(report_data, shaders[producer], entrypoints[producer],
+            pass &= validate_interface_between_stages(dev_data->report_data, shaders[producer], entrypoints[producer],
                                                       &shader_stage_attribs[producer], shaders[consumer], entrypoints[consumer],
                                                       &shader_stage_attribs[consumer]);
 
@@ -2740,23 +2738,20 @@ static bool validate_and_capture_pipeline_shader_state(
     }
 
     if (shaders[fragment_stage] && shaders[fragment_stage]->has_valid_spirv) {
-        pass &= validate_fs_outputs_against_render_pass(report_data, shaders[fragment_stage], entrypoints[fragment_stage],
+        pass &= validate_fs_outputs_against_render_pass(dev_data->report_data, shaders[fragment_stage], entrypoints[fragment_stage],
                                                         pPipeline->render_pass_ci.ptr(), pCreateInfo->subpass);
     }
 
     return pass;
 }
 
-static bool validate_compute_pipeline(debug_report_data *report_data, PIPELINE_STATE *pPipeline,
-                                      VkPhysicalDeviceFeatures const *enabledFeatures,
-                                      std::unordered_map<VkShaderModule, unique_ptr<shader_module>> const &shaderModuleMap) {
+static bool validate_compute_pipeline(layer_data *dev_data, PIPELINE_STATE *pPipeline) {
     auto pCreateInfo = pPipeline->computePipelineCI.ptr();
 
     shader_module *module;
     spirv_inst_iter entrypoint;
 
-    return validate_pipeline_shader_stage(report_data, &pCreateInfo->stage, pPipeline, &module, &entrypoint, enabledFeatures,
-                                          shaderModuleMap);
+    return validate_pipeline_shader_stage(dev_data, &pCreateInfo->stage, pPipeline, &module, &entrypoint);
 }
 // Return Set node ptr for specified set or else NULL
 cvdescriptorset::DescriptorSet *GetSetNode(const layer_data *dev_data, VkDescriptorSet set) {
@@ -3149,8 +3144,7 @@ static bool verifyPipelineCreateState(layer_data *dev_data, std::vector<PIPELINE
     }
 
     if (!GetDisables(dev_data)->shader_validation &&
-        !validate_and_capture_pipeline_shader_state(dev_data->report_data, pPipeline, &dev_data->enabled_features,
-                                                    dev_data->shaderModuleMap)) {
+        !validate_and_capture_pipeline_shader_state(dev_data, pPipeline)) {
         skip_call = true;
     }
     // Each shader's stage must be unique
@@ -6445,8 +6439,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateComputePipelines(VkDevice device, VkPipelin
         pPipeState[i]->pipeline_layout = *getPipelineLayout(dev_data, pCreateInfos[i].layout);
 
         // TODO: Add Compute Pipeline Verification
-        skip |= !validate_compute_pipeline(dev_data->report_data, pPipeState[i], &dev_data->enabled_features,
-                                           dev_data->shaderModuleMap);
+        skip |= !validate_compute_pipeline(dev_data, pPipeState[i]);
         // skip |= verifyPipelineCreateState(dev_data, pPipeState[i]);
     }
 
