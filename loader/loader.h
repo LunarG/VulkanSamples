@@ -223,11 +223,22 @@ struct loader_instance_dispatch_table {
 struct loader_instance {
     struct loader_instance_dispatch_table *disp;  // must be first entry in structure
 
+    // We need to manually track physical devices over time.  If the user
+    // re-queries the information, we don't want to delete old data or
+    // create new data unless necessary.
     uint32_t total_gpu_count;
     uint32_t phys_dev_count_term;
     struct loader_physical_device_term **phys_devs_term;
     uint32_t phys_dev_count_tramp;
     struct loader_physical_device_tramp **phys_devs_tramp;
+
+    // We also need to manually track physical device groups, but we don't need
+    // loader specific structures since we have that content in the physical
+    // device stored internal to the public structures.
+    uint32_t phys_dev_group_count_term;
+    struct VkPhysicalDeviceGroupPropertiesKHX **phys_dev_groups_term;
+    uint32_t phys_dev_group_count_tramp;
+    struct VkPhysicalDeviceGroupPropertiesKHX **phys_dev_groups_tramp;
 
     struct loader_instance *next;
 

@@ -58,6 +58,7 @@ set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DDEBUG")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
 
 set(NORMAL_LOADER_SRCS
+    extension_manual.c
     loader.c
     loader.h
     vk_loader_platform.h

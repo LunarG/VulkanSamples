@@ -447,6 +447,13 @@ LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance, 
         loader_instance_heap_free(ptr_instance, ptr_instance->phys_devs_tramp);
     }
 
+    if (ptr_instance->phys_dev_groups_tramp) {
+        for (uint32_t i = 0; i < ptr_instance->phys_dev_group_count_tramp; i++) {
+            loader_instance_heap_free(ptr_instance, ptr_instance->phys_dev_groups_tramp[i]);
+        }
+        loader_instance_heap_free(ptr_instance, ptr_instance->phys_dev_groups_tramp);
+    }
+
     if (callback_setup) {
         util_DestroyDebugReportCallbacks(ptr_instance, pAllocator, ptr_instance->num_tmp_callbacks, ptr_instance->tmp_callbacks);
         util_FreeDebugReportCreateInfos(pAllocator, ptr_instance->tmp_dbg_create_infos, ptr_instance->tmp_callbacks);
@@ -458,11 +465,10 @@ LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance, 
 
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysicalDeviceCount,
                                                                         VkPhysicalDevice *pPhysicalDevices) {
-    const VkLayerInstanceDispatchTable *disp;
     VkResult res = VK_SUCCESS;
-    uint32_t count, i;
+    uint32_t count;
+    uint32_t i;
     struct loader_instance *inst;
-    disp = loader_get_instance_layer_dispatch(instance);
 
     loader_platform_thread_lock_mutex(&loader_lock);
 
@@ -472,43 +478,40 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDevices(VkInstan
         goto out;
     }
 
-    if (NULL == pPhysicalDevices || 0 == inst->total_gpu_count) {
-        // Call down.  At the lower levels, this will setup the terminator structures in the loader.
-        res = disp->EnumeratePhysicalDevices(instance, pPhysicalDeviceCount, pPhysicalDevices);
-        if (VK_SUCCESS != res) {
-            loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                       "vkEnumeratePhysicalDevices: Failed in dispatch call"
-                       " used to determine number of available GPUs");
-        }
-    }
-
-    if (NULL == pPhysicalDevices) {
-        // Goto out, even on success since we don't need to fill in the rest.
+    if (NULL == pPhysicalDeviceCount) {
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "vkEnumeratePhysicalDevices: Received NULL pointer for physical device count return value.");
+        res = VK_ERROR_INITIALIZATION_FAILED;
         goto out;
     }
 
+    // Setup the trampoline loader physical devices.  This will actually
+    // call down and setup the terminator loader physical devices during the
+    // process.
     VkResult setup_res = setupLoaderTrampPhysDevs(instance);
     if (setup_res != VK_SUCCESS && setup_res != VK_INCOMPLETE) {
         res = setup_res;
         goto out;
     }
 
+    count = inst->phys_dev_count_tramp;
+
     // Wrap the PhysDev object for loader usage, return wrapped objects
-    if (inst->phys_dev_count_tramp > *pPhysicalDeviceCount) {
-        loader_log(inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
-                   "vkEnumeratePhysicalDevices: Trimming device count down"
-                   " by application request from %d to %d physical devices",
-                   inst->phys_dev_count_tramp, *pPhysicalDeviceCount);
-        count = *pPhysicalDeviceCount;
-        res = VK_INCOMPLETE;
-    } else {
-        count = inst->phys_dev_count_tramp;
-        *pPhysicalDeviceCount = count;
+    if (NULL != pPhysicalDevices) {
+        if (inst->phys_dev_count_tramp > *pPhysicalDeviceCount) {
+            loader_log(inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
+                       "vkEnumeratePhysicalDevices: Trimming device count down"
+                       " by application request from %d to %d physical devices",
+                       inst->phys_dev_count_tramp, *pPhysicalDeviceCount);
+            count = *pPhysicalDeviceCount;
+            res = VK_INCOMPLETE;
+        }
+        for (i = 0; i < count; i++) {
+            pPhysicalDevices[i] = (VkPhysicalDevice)inst->phys_devs_tramp[i];
+        }
     }
 
-    for (i = 0; i < count; i++) {
-        pPhysicalDevices[i] = (VkPhysicalDevice)inst->phys_devs_tramp[i];
-    }
+    *pPhysicalDeviceCount = count;
 
 out:
 

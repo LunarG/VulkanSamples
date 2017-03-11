@@ -2761,10 +2761,16 @@ VkResult loader_icd_scan(const struct loader_instance *inst, struct loader_icd_t
         }
 
         res = loader_get_json(inst, file_str, &json);
-        if (VK_ERROR_OUT_OF_HOST_MEMORY == res) {
-            break;
-        } else if (VK_SUCCESS != res || NULL == json) {
-            continue;
+        if (NULL == json || res != VK_SUCCESS) {
+            if (NULL != json) {
+                cJSON_Delete(json);
+                json = NULL;
+            }
+            if (res == VK_ERROR_OUT_OF_HOST_MEMORY) {
+                break;
+            } else {
+                continue;
+            }
         }
 
         cJSON *item, *itemICD;
@@ -2781,10 +2787,10 @@ VkResult loader_icd_scan(const struct loader_instance *inst, struct loader_icd_t
             json = NULL;
             continue;
         }
+
         char *file_vers = cJSON_Print(item);
         if (NULL == file_vers) {
-            // Only reason the print can fail is if there was an allocation
-            // issue
+            // Only reason the print can fail is if there was an allocation issue
             if (num_good_icds == 0) {
                 res = VK_ERROR_OUT_OF_HOST_MEMORY;
             }
@@ -2797,6 +2803,7 @@ VkResult loader_icd_scan(const struct loader_instance *inst, struct loader_icd_t
             continue;
         }
         loader_log(inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0, "Found ICD manifest file %s, version %s", file_str, file_vers);
+
         // Get the major/minor/and patch as integers for easier comparison
         vers_tok = strtok(file_vers, ".\"\n\r");
         if (NULL != vers_tok) {
@@ -2810,11 +2817,14 @@ VkResult loader_icd_scan(const struct loader_instance *inst, struct loader_icd_t
                 }
             }
         }
-        if (file_major_vers != 1 || file_minor_vers != 0 || file_patch_vers > 1)
+
+        if (file_major_vers != 1 || file_minor_vers != 0 || file_patch_vers > 1) {
             loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                        "loader_icd_scan: Unexpected manifest file version "
                        "(expected 1.0.0 or 1.0.1), may cause errors");
+        }
         cJSON_Free(file_vers);
+
         itemICD = cJSON_GetObjectItem(json, "ICD");
         if (itemICD != NULL) {
             item = cJSON_GetObjectItem(itemICD, "library_path");
@@ -2911,6 +2921,8 @@ VkResult loader_icd_scan(const struct loader_instance *inst, struct loader_icd_t
                                "loader_icd_scan: Failed to add ICD JSON %s. "
                                " Skipping ICD JSON.",
                                fullpath);
+                    cJSON_Delete(json);
+                    json = NULL;
                     continue;
                 }
                 num_good_icds++;
@@ -2936,6 +2948,7 @@ out:
     if (NULL != json) {
         cJSON_Delete(json);
     }
+
     if (NULL != manifest_files.filename_list) {
         for (uint32_t i = 0; i < manifest_files.count; i++) {
             if (NULL != manifest_files.filename_list[i]) {
@@ -2947,6 +2960,7 @@ out:
     if (lockedMutex) {
         loader_platform_thread_unlock_mutex(&loader_json_lock);
     }
+
     return res;
 }
 
@@ -4484,6 +4498,12 @@ VKAPI_ATTR void VKAPI_CALL terminator_DestroyInstance(VkInstance instance, const
         }
         loader_instance_heap_free(ptr_instance, ptr_instance->phys_devs_term);
     }
+    if (NULL != ptr_instance->phys_dev_groups_term) {
+        for (uint32_t i = 0; i < ptr_instance->phys_dev_group_count_term; i++) {
+            loader_instance_heap_free(ptr_instance, ptr_instance->phys_dev_groups_term[i]);
+        }
+        loader_instance_heap_free(ptr_instance, ptr_instance->phys_dev_groups_term);
+    }
     loader_free_dev_ext_table(ptr_instance);
     loader_free_phys_dev_ext_table(ptr_instance);
 }
@@ -4639,6 +4659,19 @@ VkResult setupLoaderTrampPhysDevs(VkInstance instance) {
         res = VK_ERROR_INITIALIZATION_FAILED;
         goto out;
     }
+
+    // Query how many gpus there
+    res = inst->disp->layer_inst_disp.EnumeratePhysicalDevices(instance, &total_count, NULL);
+    if (res != VK_SUCCESS) {
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "setupLoaderTrampPhysDevs:  Failed during dispatch call "
+                   "of \'vkEnumeratePhysicalDevices\' to lower layers or "
+                   "loader to get count.");
+        goto out;
+    }
+
+    // Really use what the total GPU count is since Optimus and other layers may mess
+    // the count up.
     total_count = inst->total_gpu_count;
 
     // Create an array for the new physical devices, which will be stored
@@ -4673,7 +4706,7 @@ VkResult setupLoaderTrampPhysDevs(VkInstance instance) {
         loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                    "setupLoaderTrampPhysDevs:  Failed during dispatch call "
                    "of \'vkEnumeratePhysicalDevices\' to lower layers or "
-                   "loader.");
+                   "loader to get content.");
         goto out;
     }
 
@@ -4868,9 +4901,6 @@ out:
             }
             loader_instance_heap_free(inst, new_phys_devs);
         }
-        if (NULL != inst->phys_devs_term) {
-            loader_instance_heap_free(inst, inst->phys_devs_term);
-        }
         inst->total_gpu_count = 0;
     } else {
         // Free everything that didn't carry over to the new array of
@@ -4905,13 +4935,11 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_EnumeratePhysicalDevices(VkInstance in
     struct loader_instance *inst = (struct loader_instance *)instance;
     VkResult res = VK_SUCCESS;
 
-    // Only do the setup if we're re-querying the number of devices, or
-    // our count is currently 0.
-    if (NULL == pPhysicalDevices || 0 == inst->total_gpu_count) {
-        res = setupLoaderTermPhysDevs(inst);
-        if (VK_SUCCESS != res) {
-            goto out;
-        }
+    // Always call the setup loader terminator physical devices because they may
+    // have changed at any point.
+    res = setupLoaderTermPhysDevs(inst);
+    if (VK_SUCCESS != res) {
+        goto out;
     }
 
     uint32_t copy_count = inst->total_gpu_count;
