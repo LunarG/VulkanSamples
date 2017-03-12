@@ -2353,7 +2353,7 @@ void PostCallRecordCreateImageView(layer_data *device_data, const VkImageViewCre
     (*image_view_map)[view] = std::unique_ptr<IMAGE_VIEW_STATE>(new IMAGE_VIEW_STATE(view, create_info));
 
     auto image_state = GetImageState(device_data, create_info->image);
-    auto sub_res_range = (*image_view_map)[view].get()->create_info.subresourceRange;
+    auto& sub_res_range = (*image_view_map)[view].get()->create_info.subresourceRange;
     ResolveRemainingLevelsLayers(device_data, &sub_res_range, image_state);
 }
 
