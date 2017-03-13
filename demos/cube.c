@@ -1118,9 +1118,9 @@ bool loadTexture(const char *filename, uint8_t *rgba_data,
                  VkSubresourceLayout *layout, int32_t *width, int32_t *height) {
 
 #if (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
-	filename =[[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent: @(filename)].UTF8String;
+    filename =[[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent: @(filename)].UTF8String;
 #endif
-	
+
 #ifdef __ANDROID__
 #include <lunarg.ppm.h>
     char *cPtr;
@@ -1635,9 +1635,9 @@ char *demo_read_spv(const char *filename, size_t *psize) {
     void *shader_code;
 
 #if (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
-	filename =[[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent: @(filename)].UTF8String;
+    filename =[[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent: @(filename)].UTF8String;
 #endif
-	
+
     FILE *fp = fopen(filename, "rb");
     if (!fp)
         return NULL;
@@ -2851,19 +2851,19 @@ static void demo_init_vk(struct demo *demo) {
                  "information.\n",
                  "vkCreateInstance Failure");
 #elif defined(VK_USE_PLATFORM_IOS_MVK)
-		ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find the "
-				 VK_MVK_IOS_SURFACE_EXTENSION_NAME" extension.\n\nDo you have a compatible "
-				 "Vulkan installable client driver (ICD) installed?\nPlease "
-				 "look at the Getting Started guide for additional "
-				 "information.\n",
-				 "vkCreateInstance Failure");
+        ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find the "
+                 VK_MVK_IOS_SURFACE_EXTENSION_NAME" extension.\n\nDo you have a compatible "
+                 "Vulkan installable client driver (ICD) installed?\nPlease "
+                 "look at the Getting Started guide for additional "
+                 "information.\n",
+                 "vkCreateInstance Failure");
 #elif defined(VK_USE_PLATFORM_MACOS_MVK)
-		ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find the "
-				 VK_MVK_MACOS_SURFACE_EXTENSION_NAME" extension.\n\nDo you have a compatible "
-				 "Vulkan installable client driver (ICD) installed?\nPlease "
-				 "look at the Getting Started guide for additional "
-				 "information.\n",
-				 "vkCreateInstance Failure");
+        ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find the "
+                 VK_MVK_MACOS_SURFACE_EXTENSION_NAME" extension.\n\nDo you have a compatible "
+                 "Vulkan installable client driver (ICD) installed?\nPlease "
+                 "look at the Getting Started guide for additional "
+                 "information.\n",
+                 "vkCreateInstance Failure");
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
         ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
                  "the " VK_KHR_XCB_SURFACE_EXTENSION_NAME
@@ -3557,22 +3557,22 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 
 #elif defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK)
 static void demo_main(struct demo *demo, void* view) {
-	const char* argv[] = { "CubeSample" };
-	int argc = sizeof(argv) / sizeof(char*);
+        const char* argv[] = { "CubeSample" };
+    int argc = sizeof(argv) / sizeof(char*);
 
-	demo_init(demo, argc, (char**)argv);
-	demo->window = view;
-	demo_init_vk_swapchain(demo);
-	demo_prepare(demo);
-	demo->spin_angle = 0.4f;
+    demo_init(demo, argc, (char**)argv);
+    demo->window = view;
+    demo_init_vk_swapchain(demo);
+    demo_prepare(demo);
+    demo->spin_angle = 0.4f;
 }
 
 static void demo_update_and_draw(struct demo *demo) {
-	// Wait for work to finish before updating MVP.
-	vkDeviceWaitIdle(demo->device);
-	demo_update_data_buffer(demo);
+    // Wait for work to finish before updating MVP.
+    vkDeviceWaitIdle(demo->device);
+    demo_update_data_buffer(demo);
 
-	demo_draw(demo);
+    demo_draw(demo);
 }
 
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
