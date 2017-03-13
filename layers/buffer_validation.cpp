@@ -2190,6 +2190,14 @@ bool PreCallValidateCreateBuffer(layer_data *device_data, const VkBufferCreateIn
                         "VK_BUFFER_CREATE_SPARSE_BINDING_BIT set. %s",
                         validation_error_map[VALIDATION_ERROR_00666]);
     }
+
+    if ((pCreateInfo->flags & VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT) && (!GetEnabledFeatures(device_data)->sparseResidencyBuffer)) {
+        skip |=
+            log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                    DRAWSTATE_INVALID_FEATURE, "DS",
+                    "vkCreateBuffer(): the sparseResidencyBuffer device feature is disabled: Buffers cannot be created with the "
+                    "VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT set.");
+    }
     return skip;
 }
 
