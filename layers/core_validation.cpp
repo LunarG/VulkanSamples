@@ -3249,6 +3249,16 @@ static bool verifyPipelineCreateState(layer_data *dev_data, std::vector<PIPELINE
                                  validation_error_map[VALIDATION_ERROR_01455]);
         }
 
+        if (!isDynamic(pPipeline, VK_DYNAMIC_STATE_DEPTH_BIAS) &&
+            (pPipeline->graphicsPipelineCI.pRasterizationState->depthBiasClamp != 0.0) &&
+            (!dev_data->enabled_features.depthBiasClamp)) {
+            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                 __LINE__, DRAWSTATE_INVALID_FEATURE, "DS",
+                                 "vkCreateGraphicsPipelines(): the depthBiasClamp device feature is disabled: the depthBiasClamp "
+                                 "member of the VkPipelineRasterizationStateCreateInfo structure must be set to 0.0 unless the "
+                                 "VK_DYNAMIC_STATE_DEPTH_BIAS dynamic state is enabled");
+        }
+
         // If rasterization is enabled...
         if (pPipeline->graphicsPipelineCI.pRasterizationState->rasterizerDiscardEnable == VK_FALSE) {
             auto subpass_desc = renderPass ? &renderPass->createInfo.pSubpasses[pPipeline->graphicsPipelineCI.subpass] : nullptr;
@@ -7157,8 +7167,17 @@ VKAPI_ATTR void VKAPI_CALL CmdSetDepthBias(VkCommandBuffer commandBuffer, float 
     GLOBAL_CB_NODE *pCB = GetCBNode(dev_data, commandBuffer);
     if (pCB) {
         skip_call |= ValidateCmd(dev_data, pCB, CMD_SETDEPTHBIASSTATE, "vkCmdSetDepthBias()");
-        UpdateCmdBufferLastCmd(pCB, CMD_SETDEPTHBIASSTATE);
-        pCB->status |= CBSTATUS_DEPTH_BIAS_SET;
+        if ((depthBiasClamp != 0.0) && (!dev_data->enabled_features.depthBiasClamp)) {
+            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                 __LINE__, VALIDATION_ERROR_01482, "DS",
+                                 "vkCmdSetDepthBias(): the depthBiasClamp device feature is disabled: the depthBiasClamp "
+                                 "parameter must be set to 0.0. %s",
+                                 validation_error_map[VALIDATION_ERROR_01482]);
+        }
+        if (!skip_call) {
+            UpdateCmdBufferLastCmd(pCB, CMD_SETDEPTHBIASSTATE);
+            pCB->status |= CBSTATUS_DEPTH_BIAS_SET;
+        }
     }
     lock.unlock();
     if (!skip_call)
