@@ -675,6 +675,14 @@ bool PreCallValidateCreateImage(layer_data *device_data, const VkImageCreateInfo
                              validation_error_map[VALIDATION_ERROR_02143]);
     }
 
+    if ((pCreateInfo->flags & VK_IMAGE_CREATE_SPARSE_ALIASED_BIT) && (!GetEnabledFeatures(device_data)->sparseResidencyAliased)) {
+        skip_call |=
+            log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                    DRAWSTATE_INVALID_FEATURE, "DS",
+                    "vkCreateImage(): the sparseResidencyAliased device feature is disabled: Images cannot be created with the "
+                    "VK_IMAGE_CREATE_SPARSE_ALIASED_BIT set.");
+    }
+
     return skip_call;
 }
 
@@ -2197,6 +2205,14 @@ bool PreCallValidateCreateBuffer(layer_data *device_data, const VkBufferCreateIn
                     DRAWSTATE_INVALID_FEATURE, "DS",
                     "vkCreateBuffer(): the sparseResidencyBuffer device feature is disabled: Buffers cannot be created with the "
                     "VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT set.");
+    }
+
+    if ((pCreateInfo->flags & VK_BUFFER_CREATE_SPARSE_ALIASED_BIT) && (!GetEnabledFeatures(device_data)->sparseResidencyAliased)) {
+        skip |=
+            log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                    DRAWSTATE_INVALID_FEATURE, "DS",
+                    "vkCreateBuffer(): the sparseResidencyAliased device feature is disabled: Buffers cannot be created with the "
+                    "VK_BUFFER_CREATE_SPARSE_ALIASED_BIT set.");
     }
     return skip;
 }
