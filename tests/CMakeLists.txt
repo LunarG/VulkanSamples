@@ -36,6 +36,7 @@ if (WIN32)
    else ()
       set (BUILDTGT_DIR build32)
    endif()
+   file(COPY vk_layer_validation_tests.vcxproj.user DESTINATION ${CMAKE_BINARY_DIR}/tests)
 endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
