@@ -667,6 +667,14 @@ bool PreCallValidateCreateImage(layer_data *device_data, const VkImageCreateInfo
                              validation_error_map[VALIDATION_ERROR_00731]);
     }
 
+    if ((pCreateInfo->flags & VK_IMAGE_CREATE_SPARSE_BINDING_BIT) && (!GetEnabledFeatures(device_data)->sparseBinding)) {
+        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                             VALIDATION_ERROR_02143, "DS",
+                             "vkCreateImage(): the sparseBinding device feature is disabled: Images cannot be created with the "
+                             "VK_IMAGE_CREATE_SPARSE_BINDING_BIT set. %s",
+                             validation_error_map[VALIDATION_ERROR_02143]);
+    }
+
     return skip_call;
 }
 
@@ -2168,11 +2176,20 @@ bool ValidateBufferUsageFlags(layer_data *device_data, BUFFER_STATE const *buffe
 
 bool PreCallValidateCreateBuffer(layer_data *device_data, const VkBufferCreateInfo *pCreateInfo) {
     bool skip = false;
+    const debug_report_data *report_data = core_validation::GetReportData(device_data);
+
     // TODO: Add check for VALIDATION_ERROR_00658
-    // TODO: Add check for VALIDATION_ERROR_00666
     // TODO: Add check for VALIDATION_ERROR_00667
     // TODO: Add check for VALIDATION_ERROR_00668
     // TODO: Add check for VALIDATION_ERROR_00669
+
+    if ((pCreateInfo->flags & VK_BUFFER_CREATE_SPARSE_BINDING_BIT) && (!GetEnabledFeatures(device_data)->sparseBinding)) {
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_00666, "DS",
+                        "vkCreateBuffer(): the sparseBinding device feature is disabled: Buffers cannot be created with the "
+                        "VK_BUFFER_CREATE_SPARSE_BINDING_BIT set. %s",
+                        validation_error_map[VALIDATION_ERROR_00666]);
+    }
     return skip;
 }
 
