@@ -6184,6 +6184,10 @@ const PHYS_DEV_PROPERTIES_NODE *GetPhysDevProperties(const layer_data *device_da
     return &device_data->phys_dev_properties;
 }
 
+const VkPhysicalDeviceFeatures *GetEnabledFeatures(const layer_data *device_data) {
+    return &device_data->enabled_features;
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo,
                                            const VkAllocationCallbacks *pAllocator, VkImage *pImage) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
