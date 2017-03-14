@@ -2204,7 +2204,7 @@ static void loader_add_layer_properties(const struct loader_instance *inst, stru
     //     required
 
     cJSON *item, *layers_node, *layer_node;
-    layer_json_version json_version;
+    layer_json_version json_version = {0, 0, 0};
     char *vers_tok;
     cJSON *disable_environment = NULL;
     item = cJSON_GetObjectItem(json, "file_format_version");
