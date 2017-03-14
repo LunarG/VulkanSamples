@@ -950,6 +950,21 @@ static void demo_prepare_buffers(struct demo *demo) {
         preTransform = surfCapabilities.currentTransform;
     }
 
+    // Find a supported composite alpha mode - one of these is guaranteed to be set
+    VkCompositeAlphaFlagBitsKHR compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    VkCompositeAlphaFlagBitsKHR compositeAlphaFlags[4] = {
+        VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+        VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR,
+        VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
+        VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR,
+    };
+    for (uint32_t i = 0; i < sizeof(compositeAlphaFlags); i++) {
+        if (surfCapabilities.supportedCompositeAlpha & compositeAlphaFlags[i]) {
+            compositeAlpha = compositeAlphaFlags[i];
+            break;
+        }
+    }
+
     VkSwapchainCreateInfoKHR swapchain_ci = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .pNext = NULL,
@@ -963,7 +978,7 @@ static void demo_prepare_buffers(struct demo *demo) {
             },
         .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
         .preTransform = preTransform,
-        .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+        .compositeAlpha = compositeAlpha,
         .imageArrayLayers = 1,
         .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
         .queueFamilyIndexCount = 0,
@@ -2622,6 +2637,22 @@ static VkResult demo_create_display_surface(struct demo *demo) {
 
     free(plane_props);
 
+    VkDisplayPlaneCapabilitiesKHR planeCaps;
+    vkGetDisplayPlaneCapabilitiesKHR(demo->gpu, mode_props.displayMode, plane_index, &planeCaps);
+    // Find a supported alpha mode
+    VkCompositeAlphaFlagBitsKHR alphaMode = VK_DISPLAY_PLANE_ALPHA_OPAQUE_BIT_KHR;
+    VkCompositeAlphaFlagBitsKHR alphaModes[4] = {
+        VK_DISPLAY_PLANE_ALPHA_OPAQUE_BIT_KHR,
+        VK_DISPLAY_PLANE_ALPHA_GLOBAL_BIT_KHR,
+        VK_DISPLAY_PLANE_ALPHA_PER_PIXEL_BIT_KHR,
+        VK_DISPLAY_PLANE_ALPHA_PER_PIXEL_PREMULTIPLIED_BIT_KHR,
+    };
+    for (uint32_t i = 0; i < sizeof(alphaModes); i++) {
+        if (planeCaps.supportedAlpha & alphaModes[i]) {
+            alphaMode = alphaModes[i];
+            break;
+        }
+    }
     image_extent.width = mode_props.parameters.visibleRegion.width;
     image_extent.height = mode_props.parameters.visibleRegion.height;
 
@@ -2632,7 +2663,7 @@ static VkResult demo_create_display_surface(struct demo *demo) {
     create_info.planeIndex = plane_index;
     create_info.planeStackIndex = plane_props[plane_index].currentStackIndex;
     create_info.transform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
-    create_info.alphaMode = VK_DISPLAY_PLANE_ALPHA_OPAQUE_BIT_KHR;
+    create_info.alphaMode = alphaMode;
     create_info.globalAlpha = 1.0f;
     create_info.imageExtent = image_extent;
 
