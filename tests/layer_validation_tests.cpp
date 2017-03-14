@@ -355,6 +355,7 @@ class VkLayerTest : public VkRenderFramework {
    protected:
     ErrorMonitor *m_errorMonitor;
     bool m_enableWSI;
+    bool m_enable_maintenance1_ext;
 
     virtual void SetUp() {
         std::vector<const char *> instance_layer_names;
@@ -398,6 +399,9 @@ class VkLayerTest : public VkRenderFramework {
 #elif defined(VK_USE_PLATFORM_XLIB_KHR)
             instance_extension_names.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
 #endif  // VK_USE_PLATFORM_XLIB_KHR
+        }
+        if (m_enable_maintenance1_ext) {
+            device_extension_names.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
         }
 
         this->app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -581,6 +585,12 @@ void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *commandBuffer, VkPi
     commandBuffer->BindPipeline(pipelineobj);
     commandBuffer->BindDescriptorSet(descriptorSet);
 }
+
+class VkMaintenance1LayerTest : public VkLayerTest {
+   public:
+   protected:
+       VkMaintenance1LayerTest(){ m_enable_maintenance1_ext = true; }
+};
 
 class VkPositiveLayerTest : public VkLayerTest {
    public:
@@ -22339,6 +22349,59 @@ TEST_F(VkPositiveLayerTest, CreateComputePipelineCombinedImageSamplerConsumedAsB
 
     vkDestroyPipelineLayout(m_device->device(), pl, nullptr);
     vkDestroyDescriptorSetLayout(m_device->device(), dsl, nullptr);
+}
+
+// This test class enables the Maintenance1 extension for related validation tests
+TEST_F(VkMaintenance1LayerTest, Maintenance1Tests) {
+    TEST_DESCRIPTION("Validate various special cases for the Maintenance1_KHR extension");
+
+    // Ensure that extension is available and enabled.
+    uint32_t extension_count = 0;
+    bool supports_maintenance1_extension = false;
+    VkResult err = vkEnumerateDeviceExtensionProperties(gpu(), nullptr, &extension_count, nullptr);
+    ASSERT_VK_SUCCESS(err);
+    if (extension_count > 0) {
+        std::vector<VkExtensionProperties> available_extensions(extension_count);
+
+        err = vkEnumerateDeviceExtensionProperties(gpu(), nullptr, &extension_count, &available_extensions[0]);
+        ASSERT_VK_SUCCESS(err);
+        for (const auto &extension_props : available_extensions) {
+            if (strcmp(extension_props.extensionName, VK_KHR_MAINTENANCE1_EXTENSION_NAME) == 0) {
+                supports_maintenance1_extension = true;
+            }
+        }
+    }
+
+    // Proceed if extension is supported by hardware
+    if (!supports_maintenance1_extension) {
+        printf("             Maintenance1 Extension not supported, skipping tests\n");
+        return;
+    }
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    m_errorMonitor->ExpectSuccess();
+
+    VkCommandBuffer cmd_buf;
+    VkCommandBufferAllocateInfo alloc_info;
+    alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    alloc_info.pNext = NULL;
+    alloc_info.commandBufferCount = 1;
+    alloc_info.commandPool = m_commandPool;
+    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    vkAllocateCommandBuffers(m_device->device(), &alloc_info, &cmd_buf);
+
+    VkCommandBufferBeginInfo cb_binfo;
+    cb_binfo.pNext = NULL;
+    cb_binfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    cb_binfo.pInheritanceInfo = VK_NULL_HANDLE;
+    cb_binfo.flags = 0;
+    vkBeginCommandBuffer(cmd_buf, &cb_binfo);
+    // Set Negative height, should give error if Maintenance 1 is not enabled
+    VkViewport viewport = {0, 0, 16, -16, 0, 1};
+    vkCmdSetViewport(cmd_buf, 0, 1, &viewport);
+    vkEndCommandBuffer(cmd_buf);
+
+    m_errorMonitor->VerifyNotFound();
 }
 
 TEST_F(VkPositiveLayerTest, ValidStructPNext) {
