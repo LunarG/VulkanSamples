@@ -3809,6 +3809,20 @@ static void checkInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateI
     }
 }
 
+// For the given ValidationCheck enum, set all relevant instance disabled flags to true
+void SetDisabledFlags(instance_layer_data *instance_data, VkValidationFlagsEXT *val_flags_struct) {
+    for (uint32_t i = 0; i < val_flags_struct->disabledValidationCheckCount; ++i) {
+        switch (val_flags_struct->pDisabledValidationChecks[i]) {
+            case VK_VALIDATION_CHECK_ALL_EXT:
+                // Set all disabled flags to true
+                instance_data->disabled.SetAll(true);
+                break;
+            default:
+                break;
+        }
+    }
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL CreateInstance(const VkInstanceCreateInfo *pCreateInfo, const VkAllocationCallbacks *pAllocator,
                                               VkInstance *pInstance) {
     VkLayerInstanceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
@@ -3833,6 +3847,17 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateInstance(const VkInstanceCreateInfo *pCreat
     init_core_validation(instance_data, pAllocator);
 
     ValidateLayerOrdering(*pCreateInfo);
+    // Parse any pNext chains
+    if (pCreateInfo->pNext) {
+        GENERIC_HEADER *struct_header = (GENERIC_HEADER *)pCreateInfo->pNext;
+        while (struct_header) {
+            // Check for VkValidationFlagsExt
+            if (VK_STRUCTURE_TYPE_VALIDATION_FLAGS_EXT == struct_header->sType) {
+                SetDisabledFlags(instance_data, (VkValidationFlagsEXT *)struct_header);
+            }
+            struct_header = (GENERIC_HEADER *)struct_header->pNext;
+        }
+    }
 
     return result;
 }
@@ -6158,7 +6183,7 @@ const VkImageFormatProperties *GetImageFormatProperties(core_validation::layer_d
     return image_format_properties;
 }
 
-const debug_report_data *GetReportData(core_validation::layer_data *device_data) { return device_data->report_data; }
+const debug_report_data *GetReportData(const core_validation::layer_data *device_data) { return device_data->report_data; }
 
 const VkPhysicalDeviceProperties *GetPhysicalDeviceProperties(core_validation::layer_data *device_data) {
     return &device_data->phys_dev_props;
@@ -6682,9 +6707,11 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetDescriptorPool(VkDevice device, VkDescriptor
 // as well as DescriptorSetLayout ptrs used for later update.
 static bool PreCallValidateAllocateDescriptorSets(layer_data *dev_data, const VkDescriptorSetAllocateInfo *pAllocateInfo,
                                                   cvdescriptorset::AllocateDescriptorSetsData *common_data) {
+    // Always update common data
+    cvdescriptorset::UpdateAllocateDescriptorSetsData(dev_data, pAllocateInfo, common_data);
     if (dev_data->instance_data->disabled.allocate_descriptor_sets) return false;
     // All state checks for AllocateDescriptorSets is done in single function
-    return cvdescriptorset::ValidateAllocateDescriptorSets(dev_data->report_data, pAllocateInfo, dev_data, common_data);
+    return cvdescriptorset::ValidateAllocateDescriptorSets(dev_data, pAllocateInfo, common_data);
 }
 // Allocation state was good and call down chain was made so update state based on allocating descriptor sets
 static void PostCallRecordAllocateDescriptorSets(layer_data *dev_data, const VkDescriptorSetAllocateInfo *pAllocateInfo,

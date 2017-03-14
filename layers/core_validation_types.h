@@ -729,6 +729,8 @@ struct CHECK_DISABLED {
     bool get_query_pool_results;
     bool destroy_buffer;
     bool shader_validation;         // Skip validation for shaders
+
+    void SetAll(bool value) { std::fill(&command_buffer_state, &shader_validation + 1, value); }
 };
 
 struct MT_FB_ATTACHMENT_INFO {
@@ -804,7 +806,7 @@ const VkFormatProperties *GetFormatProperties(core_validation::layer_data *devic
 const VkImageFormatProperties *GetImageFormatProperties(core_validation::layer_data *device_data, VkFormat format,
                                                         VkImageType image_type, VkImageTiling tiling, VkImageUsageFlags usage,
                                                         VkImageCreateFlags flags);
-const debug_report_data *GetReportData(layer_data *);
+const debug_report_data *GetReportData(const layer_data *);
 const VkPhysicalDeviceProperties *GetPhysicalDeviceProperties(layer_data *);
 const CHECK_DISABLED *GetDisables(layer_data *);
 std::unordered_map<VkImage, std::unique_ptr<IMAGE_STATE>> *GetImageMap(core_validation::layer_data *);

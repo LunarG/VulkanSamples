@@ -1608,11 +1608,29 @@ bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescri
     // All checks passed so update contents are good
     return true;
 }
+// Update the common AllocateDescriptorSetsData
+void cvdescriptorset::UpdateAllocateDescriptorSetsData(const layer_data *dev_data, const VkDescriptorSetAllocateInfo *p_alloc_info,
+                                                       AllocateDescriptorSetsData *ds_data) {
+    for (uint32_t i = 0; i < p_alloc_info->descriptorSetCount; i++) {
+        auto layout = GetDescriptorSetLayout(dev_data, p_alloc_info->pSetLayouts[i]);
+        if (layout) {
+            ds_data->layout_nodes[i] = layout;
+            // Count total descriptors required per type
+            for (uint32_t j = 0; j < layout->GetBindingCount(); ++j) {
+                const auto &binding_layout = layout->GetDescriptorSetLayoutBindingPtrFromIndex(j);
+                uint32_t typeIndex = static_cast<uint32_t>(binding_layout->descriptorType);
+                ds_data->required_descriptors_by_type[typeIndex] += binding_layout->descriptorCount;
+            }
+        }
+        // Any unknown layouts will be flagged as errors during ValidateAllocateDescriptorSets() call
+    }
+};
 // Verify that the state at allocate time is correct, but don't actually allocate the sets yet
-bool cvdescriptorset::ValidateAllocateDescriptorSets(const debug_report_data *report_data,
-                                                     const VkDescriptorSetAllocateInfo *p_alloc_info, const layer_data *dev_data,
-                                                     AllocateDescriptorSetsData *ds_data) {
+bool cvdescriptorset::ValidateAllocateDescriptorSets(const core_validation::layer_data *dev_data,
+                                                     const VkDescriptorSetAllocateInfo *p_alloc_info,
+                                                     const AllocateDescriptorSetsData *ds_data) {
     bool skip_call = false;
+    auto report_data = core_validation::GetReportData(dev_data);
 
     for (uint32_t i = 0; i < p_alloc_info->descriptorSetCount; i++) {
         auto layout = GetDescriptorSetLayout(dev_data, p_alloc_info->pSetLayouts[i]);
@@ -1622,14 +1640,6 @@ bool cvdescriptorset::ValidateAllocateDescriptorSets(const debug_report_data *re
                         reinterpret_cast<const uint64_t &>(p_alloc_info->pSetLayouts[i]), __LINE__, DRAWSTATE_INVALID_LAYOUT, "DS",
                         "Unable to find set layout node for layout 0x%" PRIxLEAST64 " specified in vkAllocateDescriptorSets() call",
                         reinterpret_cast<const uint64_t &>(p_alloc_info->pSetLayouts[i]));
-        } else {
-            ds_data->layout_nodes[i] = layout;
-            // Count total descriptors required per type
-            for (uint32_t j = 0; j < layout->GetBindingCount(); ++j) {
-                const auto &binding_layout = layout->GetDescriptorSetLayoutBindingPtrFromIndex(j);
-                uint32_t typeIndex = static_cast<uint32_t>(binding_layout->descriptorType);
-                ds_data->required_descriptors_by_type[typeIndex] += binding_layout->descriptorCount;
-            }
         }
     }
     auto pool_state = GetDescriptorPoolState(dev_data, p_alloc_info->descriptorPool);

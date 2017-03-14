@@ -290,9 +290,12 @@ void PerformUpdateDescriptorSets(const core_validation::layer_data *, uint32_t, 
 // Similar to PerformUpdateDescriptorSets, this function will do the same for updating via templates
 void PerformUpdateDescriptorSetsWithTemplateKHR(layer_data *, VkDescriptorSet, std::unique_ptr<TEMPLATE_STATE> const &,
                                                 const void *);
+// Update the common AllocateDescriptorSetsData struct which can then be shared between Validate* and Perform* funcs below
+void UpdateAllocateDescriptorSetsData(const layer_data *dev_data, const VkDescriptorSetAllocateInfo *,
+                                      AllocateDescriptorSetsData *);
 // Validate that Allocation state is ok
-bool ValidateAllocateDescriptorSets(const debug_report_data *, const VkDescriptorSetAllocateInfo *,
-                                    const core_validation::layer_data *, AllocateDescriptorSetsData *);
+bool ValidateAllocateDescriptorSets(const core_validation::layer_data *, const VkDescriptorSetAllocateInfo *,
+                                    const AllocateDescriptorSetsData *);
 // Update state based on allocating new descriptorsets
 void PerformAllocateDescriptorSets(const VkDescriptorSetAllocateInfo *, const VkDescriptorSet *, const AllocateDescriptorSetsData *,
                                    std::unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_STATE *> *,
