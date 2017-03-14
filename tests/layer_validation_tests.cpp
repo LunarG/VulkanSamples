@@ -15912,10 +15912,6 @@ TEST_F(VkLayerTest, ImageLayerUnsupportedFormat) {
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    VkImageObj image(m_device);
-    image.init(128, 128, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-               VK_IMAGE_TILING_OPTIMAL, 0);
-    ASSERT_TRUE(image.initialized());
 
     // Create image with unsupported format - Expect FORMAT_UNSUPPORTED
     VkImageCreateInfo image_create_info = {};
@@ -15934,16 +15930,12 @@ TEST_F(VkLayerTest, ImageLayerUnsupportedFormat) {
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "vkCreateImage: VkFormat for image must not be VK_FORMAT_UNDEFINED");
 
-    VkImage localImage;
-    m_errorMonitor->SetUnexpectedError("CreateImage extents exceed allowable limits for format");
-    m_errorMonitor->SetUnexpectedError("CreateImage mipLevels=1 exceeds allowable maximum supported by format of 0");
-    m_errorMonitor->SetUnexpectedError("arrayLayers must be less than or equal to VkImageFormatProperties::maxArrayLayers");
-    m_errorMonitor->SetUnexpectedError("samples must be a bit value that is set in VkImageFormatProperties::sampleCounts");
-    vkCreateImage(m_device->handle(), &image_create_info, NULL, &localImage);
+    VkImage image;
+    vkCreateImage(m_device->handle(), &image_create_info, NULL, &image);
     m_errorMonitor->VerifyFound();
 
-    VkFormat unsupported = VK_FORMAT_UNDEFINED;
     // Look for a format that is COMPLETELY unsupported with this hardware
+    VkFormat unsupported = VK_FORMAT_UNDEFINED;
     for (int f = VK_FORMAT_BEGIN_RANGE; f <= VK_FORMAT_END_RANGE; f++) {
         VkFormat format = static_cast<VkFormat>(f);
         VkFormatProperties fProps = m_device->format_properties(format);
@@ -15957,15 +15949,7 @@ TEST_F(VkLayerTest, ImageLayerUnsupportedFormat) {
         image_create_info.format = unsupported;
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "is an unsupported format");
 
-        m_errorMonitor->SetUnexpectedError("CreateImage extents exceed allowable limits for format");
-        m_errorMonitor->SetUnexpectedError("CreateImage resource size exceeds allowable maximum Image resource size");
-        m_errorMonitor->SetUnexpectedError("CreateImage mipLevels=1 exceeds allowable maximum supported by format of 0");
-        m_errorMonitor->SetUnexpectedError("arrayLayers must be less than or equal to VkImageFormatProperties::maxArrayLayers");
-        m_errorMonitor->SetUnexpectedError(
-            "samples must be a bit value that is set in VkImageFormatProperties::sampleCounts returned by "
-            "vkGetPhysicalDeviceImageFormatProperties with format, type, tiling, usage, and flags equal to those in this "
-            "structure");
-        vkCreateImage(m_device->handle(), &image_create_info, NULL, &localImage);
+        vkCreateImage(m_device->handle(), &image_create_info, NULL, &image);
         m_errorMonitor->VerifyFound();
     }
 }
