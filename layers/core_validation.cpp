@@ -8891,14 +8891,14 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateFramebuffer(VkDevice device, const VkFrameb
     return result;
 }
 
-static bool FindDependency(const int index, const int dependent, const std::vector<DAGNode> &subpass_to_node,
+static bool FindDependency(const uint32_t index, const uint32_t dependent, const std::vector<DAGNode> &subpass_to_node,
                            std::unordered_set<uint32_t> &processed_nodes) {
     // If we have already checked this node we have not found a dependency path so return false.
     if (processed_nodes.count(index)) return false;
     processed_nodes.insert(index);
     const DAGNode &node = subpass_to_node[index];
     // Look for a dependency path. If one exists return true else recurse on the previous nodes.
-    if (std::find(node.prev.begin(), node.prev.end(), static_cast<uint32_t>(dependent)) == node.prev.end()) {
+    if (std::find(node.prev.begin(), node.prev.end(), dependent) == node.prev.end()) {
         for (auto elem : node.prev) {
             if (FindDependency(elem, dependent, subpass_to_node, processed_nodes)) return true;
         }
@@ -8908,7 +8908,8 @@ static bool FindDependency(const int index, const int dependent, const std::vect
     return false;
 }
 
-static bool CheckDependencyExists(const layer_data *dev_data, const int subpass, const std::vector<uint32_t> &dependent_subpasses,
+static bool CheckDependencyExists(const layer_data *dev_data, const uint32_t subpass,
+                                  const std::vector<uint32_t> &dependent_subpasses,
                                   const std::vector<DAGNode> &subpass_to_node, bool &skip_call) {
     bool result = true;
     // Loop through all subpasses that share the same attachment and make sure a dependency exists
