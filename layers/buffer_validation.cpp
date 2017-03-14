@@ -16,6 +16,7 @@
  * limitations under the License.
  *
  * Author: Mark Lobodzinski <mark@lunarg.com>
+ * Author: Dave Houlton <daveh@lunarg.com>
  */
 
 // Allow use of STL min and max functions in Windows
@@ -371,6 +372,20 @@ void TransitionImageAspectLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, c
         // TODO: Set memory invalid
     }
     SetLayout(device_data, pCB, mem_barrier->image, sub, mem_barrier->newLayout);
+}
+
+    bool VerifyAspectsPresent(VkImageAspectFlags aspect_mask, VkFormat format) {
+    // TBD: anything to do for metadata bit? or no bits set?
+    if ((aspect_mask & VK_IMAGE_ASPECT_COLOR_BIT) != 0) {
+        if (!vk_format_is_color(format)) return false;
+    }
+    if ((aspect_mask & VK_IMAGE_ASPECT_DEPTH_BIT) != 0) {
+        if (!vk_format_has_depth(format)) return false;
+    }
+    if ((aspect_mask & VK_IMAGE_ASPECT_STENCIL_BIT) != 0) {
+        if (!vk_format_has_stencil(format)) return false;
+    }
+    return true;
 }
 
 // Verify an ImageMemoryBarrier's old/new ImageLayouts are compatible with the Image's ImageUsageFlags.
@@ -1313,6 +1328,25 @@ bool PreCallValidateCmdCopyImage(layer_data *device_data, GLOBAL_CB_NODE *cb_nod
                             validation_error_map[VALIDATION_ERROR_01197]);
         }
 
+        // For each region, the aspectMask member of srcSubresource must be present in the source image
+        if (!VerifyAspectsPresent(regions[i].srcSubresource.aspectMask, src_image_state->createInfo.format)) {
+            std::stringstream ss;
+            ss << "vkCmdCopyImage: pRegion[" << i
+               << "] srcSubresource.aspectMask cannot specify aspects not present in source image";
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            reinterpret_cast<uint64_t &>(command_buffer), __LINE__, VALIDATION_ERROR_01200, "IMAGE", "%s. %s",
+                            ss.str().c_str(), validation_error_map[VALIDATION_ERROR_01200]);
+        }
+
+        // For each region, the aspectMask member of dstSubresource must be present in the destination image
+        if (!VerifyAspectsPresent(regions[i].dstSubresource.aspectMask, dst_image_state->createInfo.format)) {
+            std::stringstream ss;
+            ss << "vkCmdCopyImage: pRegion[" << i << "] dstSubresource.aspectMask cannot specify aspects not present in dest image";
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            reinterpret_cast<uint64_t &>(command_buffer), __LINE__, VALIDATION_ERROR_01201, "IMAGE", "%s. %s",
+                            ss.str().c_str(), validation_error_map[VALIDATION_ERROR_01201]);
+        }
+
         // AspectMask must not contain VK_IMAGE_ASPECT_METADATA_BIT
         if ((regions[i].srcSubresource.aspectMask & VK_IMAGE_ASPECT_METADATA_BIT) ||
             (regions[i].dstSubresource.aspectMask & VK_IMAGE_ASPECT_METADATA_BIT)) {
@@ -1447,8 +1481,8 @@ bool PreCallValidateCmdCopyImage(layer_data *device_data, GLOBAL_CB_NODE *cb_nod
     if (src_image_state->createInfo.samples != dst_image_state->createInfo.samples) {
         char const str[] = "vkCmdCopyImage() called on image pair with non-identical sample counts.";
         skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-            reinterpret_cast<uint64_t &>(command_buffer), __LINE__, VALIDATION_ERROR_01185, "IMAGE", "%s %s", str,
-            validation_error_map[VALIDATION_ERROR_01185]);
+                        reinterpret_cast<uint64_t &>(command_buffer), __LINE__, VALIDATION_ERROR_01185, "IMAGE", "%s %s", str,
+                        validation_error_map[VALIDATION_ERROR_01185]);
     }
 
     skip |= ValidateMemoryIsBoundToImage(device_data, src_image_state, "vkCmdCopyImage()", VALIDATION_ERROR_02533);
@@ -2472,7 +2506,7 @@ void PostCallRecordCreateImageView(layer_data *device_data, const VkImageViewCre
     (*image_view_map)[view] = std::unique_ptr<IMAGE_VIEW_STATE>(new IMAGE_VIEW_STATE(view, create_info));
 
     auto image_state = GetImageState(device_data, create_info->image);
-    auto& sub_res_range = (*image_view_map)[view].get()->create_info.subresourceRange;
+    auto &sub_res_range = (*image_view_map)[view].get()->create_info.subresourceRange;
     ResolveRemainingLevelsLayers(device_data, &sub_res_range, image_state);
 }
 
@@ -2700,12 +2734,7 @@ bool ValidateBufferImageCopyData(const debug_report_data *report_data, uint32_t 
         }
 
         // image subresource aspect bit must match format
-        if (((0 != (pRegions[i].imageSubresource.aspectMask & VK_IMAGE_ASPECT_COLOR_BIT)) &&
-             (!vk_format_is_color(image_state->createInfo.format))) ||
-            ((0 != (pRegions[i].imageSubresource.aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT)) &&
-             (!vk_format_has_depth(image_state->createInfo.format))) ||
-            ((0 != (pRegions[i].imageSubresource.aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT)) &&
-             (!vk_format_has_stencil(image_state->createInfo.format)))) {
+        if (!VerifyAspectsPresent(pRegions[i].imageSubresource.aspectMask, image_state->createInfo.format)) {
             skip |= log_msg(
                 report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                 reinterpret_cast<uint64_t &>(image_state->image), __LINE__, VALIDATION_ERROR_01279, "IMAGE",
