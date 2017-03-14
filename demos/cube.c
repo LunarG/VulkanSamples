@@ -391,6 +391,7 @@ struct demo {
     int32_t curFrame;
     int32_t frameCount;
     bool validate;
+    bool validate_checks_disabled;
     bool use_break;
     bool suppress_popups;
     PFN_vkCreateDebugReportCallbackEXT CreateDebugReportCallback;
@@ -2932,6 +2933,7 @@ static void demo_init_vk(struct demo *demo) {
      * function to register the final callback.
      */
     VkDebugReportCallbackCreateInfoEXT dbgCreateInfoTemp;
+    VkValidationFlagsEXT val_flags;
     if (demo->validate) {
         dbgCreateInfoTemp.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
         dbgCreateInfoTemp.pNext = NULL;
@@ -2939,6 +2941,14 @@ static void demo_init_vk(struct demo *demo) {
         dbgCreateInfoTemp.pUserData = demo;
         dbgCreateInfoTemp.flags =
             VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
+        if (demo->validate_checks_disabled) {
+            val_flags.sType = VK_STRUCTURE_TYPE_VALIDATION_FLAGS_EXT;
+            val_flags.pNext = NULL;
+            val_flags.disabledValidationCheckCount = 1;
+            VkValidationCheckEXT disabled_check = VK_VALIDATION_CHECK_ALL_EXT;
+            val_flags.pDisabledValidationChecks = &disabled_check;
+            dbgCreateInfoTemp.pNext = (void*)&val_flags;
+        }
         inst_info.pNext = &dbgCreateInfoTemp;
     }
 
@@ -3423,6 +3433,11 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
             demo->validate = true;
             continue;
         }
+        if (strcmp(argv[i], "--validate-checks-disabled") == 0) {
+            demo->validate = true;
+            demo->validate_checks_disabled = true;
+            continue;
+        }
         if (strcmp(argv[i], "--xlib") == 0) {
             fprintf(stderr, "--xlib is deprecated and no longer does anything");
             continue;
@@ -3441,7 +3456,7 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
 #if defined(ANDROID)
         ERR_EXIT("Usage: cube [--validate]\n", "Usage");
 #else
-        fprintf(stderr, "Usage:\n  %s [--use_staging] [--validate] [--break] "
+        fprintf(stderr, "Usage:\n  %s [--use_staging] [--validate] [--validate-checks-disabled] [--break] "
                         "[--c <framecount>] [--suppress_popups] [--present_mode <present mode enum>]\n"
                         "VK_PRESENT_MODE_IMMEDIATE_KHR = %d\n"
                         "VK_PRESENT_MODE_MAILBOX_KHR = %d\n"
