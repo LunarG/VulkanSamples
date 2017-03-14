@@ -3268,7 +3268,7 @@ static bool verifyPipelineCreateState(layer_data *dev_data, std::vector<PIPELINE
                 skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT,
                                      0, __LINE__, VALIDATION_ERROR_01464, "DS",
                                      "vkCreateGraphicsPipelines(): the alphaToOne device feature is disabled: the alphaToOneEnable "
-                                     "member of the VkPipelineMultisampleStateCreateInfo structure must be set to VK_FALSE.",
+                                     "member of the VkPipelineMultisampleStateCreateInfo structure must be set to VK_FALSE. %s",
                                      validation_error_map[VALIDATION_ERROR_01464]);
             }
 
