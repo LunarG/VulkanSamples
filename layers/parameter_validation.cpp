@@ -6921,6 +6921,46 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceGeneratedCommandsPropertiesNVX(VkPhy
     }
 }
 
+VKAPI_ATTR VkResult VKAPI_CALL GetPastPresentationTimingGOOGLE(VkDevice device, VkSwapchainKHR swapchain,
+                                                               uint32_t *pPresentationTimingCount,
+                                                               VkPastPresentationTimingGOOGLE *pPresentationTimings) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skip = false;
+    auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+    skip |= parameter_validation_vkGetPastPresentationTimingGOOGLE(my_data->report_data, swapchain, pPresentationTimingCount,
+                                                                   pPresentationTimings);
+    if (!skip) {
+        result = my_data->dispatch_table.GetPastPresentationTimingGOOGLE(device, swapchain, pPresentationTimingCount,
+                                                                         pPresentationTimings);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL GetRefreshCycleDurationGOOGLE(VkDevice device, VkSwapchainKHR swapchain,
+                                                             VkRefreshCycleDurationGOOGLE *pDisplayTimingProperties) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skip = false;
+    auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+    skip |= parameter_validation_vkGetRefreshCycleDurationGOOGLE(my_data->report_data, swapchain, pDisplayTimingProperties);
+    if (!skip) {
+        result = my_data->dispatch_table.GetRefreshCycleDurationGOOGLE(device, swapchain, pDisplayTimingProperties);
+    }
+    return result;
+}
+
+VKAPI_ATTR void VKAPI_CALL SetHdrMetadataEXT(VkDevice device, uint32_t swapchainCount, const VkSwapchainKHR *pSwapchains,
+                                             const VkHdrMetadataEXT *pMetadata) {
+    bool skip = false;
+    auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+    skip |= parameter_validation_vkSetHdrMetadataEXT(my_data->report_data, swapchainCount, pSwapchains, pMetadata);
+    if (!skip) {
+        my_data->dispatch_table.SetHdrMetadataEXT(device, swapchainCount, pSwapchains, pMetadata);
+    }
+}
+
 static inline PFN_vkVoidFunction layer_intercept_proc(const char *name) {
     for (unsigned int i = 0; i < sizeof(procmap) / sizeof(procmap[0]); i++) {
         if (!strcmp(name, procmap[i].name)) return procmap[i].pFunc;

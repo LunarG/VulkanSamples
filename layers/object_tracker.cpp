@@ -5146,6 +5146,64 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceGeneratedCommandsPropertiesNVX(VkPhy
     }
 }
 
+VKAPI_ATTR VkResult VKAPI_CALL GetPastPresentationTimingGOOGLE(VkDevice device, VkSwapchainKHR swapchain,
+                                                               uint32_t *pPresentationTimingCount,
+                                                               VkPastPresentationTimingGOOGLE *pPresentationTimings) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skip = false;
+    {
+        std::unique_lock<std::mutex> lock(global_lock);
+        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_UNDEFINED,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, swapchain, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, false, VALIDATION_ERROR_UNDEFINED,
+                               VALIDATION_ERROR_UNDEFINED);
+    }
+
+    if (!skip) {
+        result = get_dispatch_table(ot_device_table_map, device)
+                     ->GetPastPresentationTimingGOOGLE(device, swapchain, pPresentationTimingCount, pPresentationTimings);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL GetRefreshCycleDurationGOOGLE(VkDevice device, VkSwapchainKHR swapchain,
+                                                             VkRefreshCycleDurationGOOGLE *pDisplayTimingProperties) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skip = false;
+    {
+        std::unique_lock<std::mutex> lock(global_lock);
+        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_UNDEFINED,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, swapchain, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, false, VALIDATION_ERROR_UNDEFINED,
+                               VALIDATION_ERROR_UNDEFINED);
+    }
+
+    if (!skip) {
+        result = get_dispatch_table(ot_device_table_map, device)
+                     ->GetRefreshCycleDurationGOOGLE(device, swapchain, pDisplayTimingProperties);
+    }
+    return result;
+}
+
+VKAPI_ATTR void VKAPI_CALL SetHdrMetadataEXT(VkDevice device, uint32_t swapchainCount, const VkSwapchainKHR *pSwapchains,
+                                             const VkHdrMetadataEXT *pMetadata) {
+    bool skip = false;
+    {
+        std::lock_guard<std::mutex> lock(global_lock);
+        if (pSwapchains) {
+            for (uint32_t idx0 = 0; idx0 < swapchainCount; ++idx0) {
+                skip |= ValidateObject(device, pSwapchains[idx0], VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, false,
+                                       VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+            }
+        }
+        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_UNDEFINED,
+                               VALIDATION_ERROR_UNDEFINED);
+    }
+    if (!skip) {
+        get_dispatch_table(ot_device_table_map, device)->SetHdrMetadataEXT(device, swapchainCount, pSwapchains, pMetadata);
+    }
+}
+
 static inline PFN_vkVoidFunction InterceptCoreDeviceCommand(const char *name) {
     if (!name || name[0] != 'v' || name[1] != 'k') return NULL;
 
@@ -5281,6 +5339,9 @@ static inline PFN_vkVoidFunction InterceptCoreDeviceCommand(const char *name) {
 #endif  // VK_USE_PLATFORM_WIN32_KHR
     if (!strcmp(name, "CmdDrawIndirectCountAMD")) return (PFN_vkVoidFunction)CmdDrawIndirectCountAMD;
     if (!strcmp(name, "CmdDrawIndexedIndirectCountAMD")) return (PFN_vkVoidFunction)CmdDrawIndexedIndirectCountAMD;
+    if (!strcmp(name, "GetPastPresentationTimingGOOGLE")) return (PFN_vkVoidFunction)GetPastPresentationTimingGOOGLE;
+    if (!strcmp(name, "GetRefreshCycleDurationGOOGLE")) return (PFN_vkVoidFunction)GetRefreshCycleDurationGOOGLE;
+    if (!strcmp(name, "SetHdrMetadataEXT")) return (PFN_vkVoidFunction)SetHdrMetadataEXT;
 
     return NULL;
 }

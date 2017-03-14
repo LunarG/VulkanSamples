@@ -132,7 +132,7 @@ else()
 
     add_library(${API_LOWERCASE} SHARED ${NORMAL_LOADER_SRCS} ${OPT_LOADER_SRCS})
     add_dependencies(${API_LOWERCASE} generate_helper_files loader_gen_files)
-    set_target_properties(${API_LOWERCASE} PROPERTIES SOVERSION "1" VERSION "1.0.42")
+    set_target_properties(${API_LOWERCASE} PROPERTIES SOVERSION "1" VERSION "1.0.43")
     target_link_libraries(${API_LOWERCASE} -ldl -lpthread -lm)
 
     install(TARGETS ${API_LOWERCASE} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
