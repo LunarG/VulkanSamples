@@ -15955,7 +15955,6 @@ TEST_F(VkLayerTest, ImageLayerUnsupportedFormat) {
 }
 
 TEST_F(VkLayerTest, ImageLayerViewTests) {
-    VkResult ret;
     TEST_DESCRIPTION("Passing bad parameters to CreateImageView");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -15980,57 +15979,53 @@ TEST_F(VkLayerTest, ImageLayerViewTests) {
     imgViewInfo.subresourceRange.levelCount = 1;
     imgViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00768);
-    // View can't have baseMipLevel >= image's mipLevels - Expect
-    // VIEW_CREATE_ERROR
+    // View can't have baseMipLevel >= image's mipLevels - Expect VIEW_CREATE_ERROR
     imgViewInfo.subresourceRange.baseMipLevel = 1;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00768);
     vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
     m_errorMonitor->VerifyFound();
     imgViewInfo.subresourceRange.baseMipLevel = 0;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00769);
-    // View can't have baseArrayLayer >= image's arraySize - Expect
-    // VIEW_CREATE_ERROR
+    // View can't have baseArrayLayer >= image's arraySize - Expect VIEW_CREATE_ERROR
     imgViewInfo.subresourceRange.baseArrayLayer = 1;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00769);
     vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
     m_errorMonitor->VerifyFound();
     imgViewInfo.subresourceRange.baseArrayLayer = 0;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00768);
     // View's levelCount can't be 0 - Expect VIEW_CREATE_ERROR
     imgViewInfo.subresourceRange.levelCount = 0;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00768);
     vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
     m_errorMonitor->VerifyFound();
     imgViewInfo.subresourceRange.levelCount = 1;
 
+    // View's layerCount can't be 0 - Expect VIEW_CREATE_ERROR
+    imgViewInfo.subresourceRange.layerCount = 0;
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "if pCreateInfo->viewType is VK_IMAGE_TYPE_2D, pCreateInfo->subresourceRange.layerCount must be 1");
-    // View's layerCount can't be 0 - Expect VIEW_CREATE_ERROR
-    imgViewInfo.subresourceRange.layerCount = 0;
     vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
     m_errorMonitor->VerifyFound();
     imgViewInfo.subresourceRange.layerCount = 1;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "Formats MUST be IDENTICAL unless "
-                                         "VK_IMAGE_CREATE_MUTABLE_FORMAT BIT "
-                                         "was set on image creation.");
     // Can't use depth format for view into color image - Expect INVALID_FORMAT
     imgViewInfo.format = depth_format;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "Formats MUST be IDENTICAL unless VK_IMAGE_CREATE_MUTABLE_FORMAT BIT was set on image creation.");
     vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
     m_errorMonitor->VerifyFound();
     imgViewInfo.format = VK_FORMAT_B8G8R8A8_UNORM;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02172);
     // Same compatibility class but no MUTABLE_FORMAT bit - Expect
     // VIEW_CREATE_ERROR
     imgViewInfo.format = VK_FORMAT_B8G8R8A8_UINT;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02172);
     vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
     m_errorMonitor->VerifyFound();
     imgViewInfo.format = VK_FORMAT_B8G8R8A8_UNORM;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02171);
     // TODO: Update framework to easily passing mutable flag into ImageObj init
     //   For now just allowing image for this one test to not have memory bound
     // TODO: The following line is preventing the intended validation from occurring because of the way the error monitor works.
@@ -16044,14 +16039,34 @@ TEST_F(VkLayerTest, ImageLayerViewTests) {
     assert(m_device->format_properties(VK_FORMAT_R8_UINT).optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT);
     mutImgInfo.flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
     mutImgInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    ret = vkCreateImage(m_device->handle(), &mutImgInfo, NULL, &mutImage);
+    VkResult ret = vkCreateImage(m_device->handle(), &mutImgInfo, NULL, &mutImage);
     ASSERT_VK_SUCCESS(ret);
+
+    VkMemoryRequirements requirements;
+    vkGetImageMemoryRequirements(m_device->device(), mutImage, &requirements);
+
+    VkMemoryAllocateInfo alloc_info{};
+    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    alloc_info.pNext = NULL;
+    alloc_info.memoryTypeIndex = 0;
+    alloc_info.allocationSize = requirements.size;
+    bool pass = m_device->phy().set_memory_type(requirements.memoryTypeBits, &alloc_info, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    ASSERT_TRUE(pass);
+
+    VkDeviceMemory memory;
+    ret = vkAllocateMemory(m_device->device(), &alloc_info, NULL, &memory);
+    ASSERT_VK_SUCCESS(ret);
+
+    ret = vkBindImageMemory(m_device->device(), mutImage, memory, 0);
+    ASSERT_VK_SUCCESS(ret);
+
     imgViewInfo.image = mutImage;
-    m_errorMonitor->SetUnexpectedError(
-        "If image is non-sparse then it must be bound completely and contiguously to a single VkDeviceMemory object");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02171);
     vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
     m_errorMonitor->VerifyFound();
     imgViewInfo.image = image.handle();
+
+    vkFreeMemory(m_device->device(), memory, NULL);
     vkDestroyImage(m_device->handle(), mutImage, NULL);
 }
 
