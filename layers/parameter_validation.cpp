@@ -6228,39 +6228,6 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceExternalBufferPropertiesKHX(
     }
 }
 
-VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceProperties2KHX(VkPhysicalDevice physicalDevice,
-                                                           VkPhysicalDeviceProperties2KHX *pProperties) {
-    auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
-    assert(my_data != NULL);
-    bool skip = false;
-    skip |= require_instance_extension(physicalDevice, &instance_extension_enables::khx_external_memory_capabilities_enabled,
-                                       "vkGetPhysicalDeviceProperties2KHX", VK_KHX_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME);
-    skip |= parameter_validation_vkGetPhysicalDeviceProperties2KHX(my_data->report_data, pProperties);
-    if (!skip) {
-        my_data->dispatch_table.GetPhysicalDeviceProperties2KHX(physicalDevice, pProperties);
-    }
-}
-
-VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceImageFormatProperties2KHX(
-    VkPhysicalDevice physicalDevice, const VkPhysicalDeviceImageFormatInfo2KHX *pImageFormatInfo,
-    VkImageFormatProperties2KHX *pImageFormatProperties) {
-    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
-    auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
-    assert(my_data != NULL);
-    bool skip = false;
-    skip |= require_instance_extension(physicalDevice, &instance_extension_enables::khx_external_memory_capabilities_enabled,
-                                       "vkGetPhysicalDeviceImageFormatProperties2KHX",
-                                       VK_KHX_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME);
-    skip |= parameter_validation_vkGetPhysicalDeviceImageFormatProperties2KHX(my_data->report_data, pImageFormatInfo,
-                                                                              pImageFormatProperties);
-    if (!skip) {
-        result = my_data->dispatch_table.GetPhysicalDeviceImageFormatProperties2KHX(physicalDevice, pImageFormatInfo,
-                                                                                    pImageFormatProperties);
-        validate_result(my_data->report_data, "vkGetPhysicalDeviceImageFormatProperties2KHX", result);
-    }
-    return result;
-}
-
 // Definitions for the VK_KHX_external_memory_fd extension
 
 VKAPI_ATTR VkResult VKAPI_CALL GetMemoryFdKHX(VkDevice device, VkDeviceMemory memory,

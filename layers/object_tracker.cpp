@@ -4498,38 +4498,6 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceExternalBufferPropertiesKHX(
     }
 }
 
-VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceProperties2KHX(VkPhysicalDevice physicalDevice,
-                                                           VkPhysicalDeviceProperties2KHX *pProperties) {
-    bool skip = false;
-    {
-        std::unique_lock<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
-    }
-    if (!skip) {
-        get_dispatch_table(ot_instance_table_map, physicalDevice)->GetPhysicalDeviceProperties2KHX(physicalDevice, pProperties);
-    }
-}
-
-VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceImageFormatProperties2KHX(
-    VkPhysicalDevice physicalDevice, const VkPhysicalDeviceImageFormatInfo2KHX *pImageFormatInfo,
-    VkImageFormatProperties2KHX *pImageFormatProperties) {
-    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
-    bool skip = false;
-    {
-        std::unique_lock<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
-    }
-    if (skip) {
-        return VK_ERROR_VALIDATION_FAILED_EXT;
-    }
-    result = get_dispatch_table(ot_instance_table_map, physicalDevice)
-                 ->GetPhysicalDeviceImageFormatProperties2KHX(physicalDevice, pImageFormatInfo, pImageFormatProperties);
-
-    return result;
-}
-
 // VK_KHX_external_memory_fd Extension
 VKAPI_ATTR VkResult VKAPI_CALL GetMemoryFdKHX(VkDevice device, VkDeviceMemory memory,
                                               VkExternalMemoryHandleTypeFlagBitsKHX handleType, int *pFd) {
@@ -5364,9 +5332,6 @@ static inline PFN_vkVoidFunction InterceptInstanceExtensionCommand(const char *n
     // VK_KHX_external_memory_capabilities Extension
     if (!strcmp(name, "GetPhysicalDeviceExternalBufferPropertiesKHX"))
         return (PFN_vkVoidFunction)GetPhysicalDeviceExternalBufferPropertiesKHX;
-    if (!strcmp(name, "GetPhysicalDeviceProperties2KHX")) return (PFN_vkVoidFunction)GetPhysicalDeviceProperties2KHX;
-    if (!strcmp(name, "GetPhysicalDeviceImageFormatProperties2KHX"))
-        return (PFN_vkVoidFunction)GetPhysicalDeviceImageFormatProperties2KHX;
     // VK_KHX_external_semaphore_capabilities Extension
     if (!strcmp(name, "GetPhysicalDeviceExternalSemaphorePropertiesKHX"))
         return (PFN_vkVoidFunction)GetPhysicalDeviceExternalSemaphorePropertiesKHX;
