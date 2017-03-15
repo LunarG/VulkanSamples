@@ -229,7 +229,6 @@ class ErrorMonitor {
             }
 
             if (!found_expected) {
-                printf("Unexpected: %s\n", msgString);
                 other_messages_.push_back(errorString);
             }
         }
@@ -237,8 +236,6 @@ class ErrorMonitor {
         test_platform_thread_unlock_mutex(&mutex_);
         return result;
     }
-
-    vector<string> GetOtherFailureMsgs(void) const { return other_messages_; }
 
     VkDebugReportFlagsEXT GetMessageFlags(void) const { return message_flags_; }
 
@@ -248,12 +245,11 @@ class ErrorMonitor {
 
     void SetBailout(bool *bailout) { bailout_ = bailout; }
 
-    void DumpFailureMsgs(void) const {
-        vector<string> otherMsgs = GetOtherFailureMsgs();
-        if (otherMsgs.size()) {
-            cout << "Other error messages logged for this test were:" << endl;
-            for (auto iter = otherMsgs.begin(); iter != otherMsgs.end(); iter++) {
-                cout << "     " << *iter << endl;
+    void ReportUnexpectedErrors(void) const {
+        if (other_messages_.size() > 0) {
+            cout << "Unexpected error messages logged for this test are:" << endl;
+            for (auto const &msg : other_messages_) {
+                ADD_FAILURE() << "     " << msg;
             }
         }
     }
@@ -270,7 +266,6 @@ class ErrorMonitor {
     void VerifyFound() {
         // Not seeing the desired message is a failure. /Before/ throwing, dump any other messages.
         if (!AllDesiredMsgsFound()) {
-            DumpFailureMsgs();
             for (auto desired_msg : desired_message_strings_) {
                 ADD_FAILURE() << "Did not receive expected error '" << desired_msg << "'";
             }
@@ -278,17 +273,22 @@ class ErrorMonitor {
                 ADD_FAILURE() << "Did not receive expected error ENUM '" << desired_id << "'";
             }
         }
+
+        ReportUnexpectedErrors();
+
         Reset();
     }
 
     void VerifyNotFound() {
         // ExpectSuccess() configured us to match anything. Any error is a failure.
         if (AnyDesiredMsgFound()) {
-            DumpFailureMsgs();
             for (auto msg : failure_message_strings_) {
                 ADD_FAILURE() << "Expected to succeed but got error: " << msg;
             }
         }
+
+        ReportUnexpectedErrors();
+
         Reset();
     }
 
@@ -419,6 +419,11 @@ class VkLayerTest : public VkRenderFramework {
     virtual void TearDown() {
         // Clean up resources before we reset
         ShutdownFramework();
+
+        // Shutting down the framework may have triggered some unexpected errors. Let's check one last time before we destroy the
+        // error monitor.
+        m_errorMonitor->ReportUnexpectedErrors();
+
         delete m_errorMonitor;
     }
 
