@@ -697,19 +697,18 @@ void *BuildUnwrappedUpdateTemplateBuffer(layer_data *dev_data, uint64_t descript
                     allocation_size = std::max(allocation_size, offset + sizeof(VkDescriptorBufferInfo));
 
                     VkDescriptorBufferInfo *wrapped_entry = new VkDescriptorBufferInfo(*buffer_entry);
-                    wrapped_entry->buffer =
-                        reinterpret_cast<VkBuffer &>(dev_data->unique_id_mapping[reinterpret_cast<uint64_t &>(buffer_entry->buffer)]);
+                    wrapped_entry->buffer = reinterpret_cast<VkBuffer &>(
+                        dev_data->unique_id_mapping[reinterpret_cast<uint64_t &>(buffer_entry->buffer)]);
                     template_entries.emplace_back(offset, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
                                                   reinterpret_cast<void *>(wrapped_entry));
                 } break;
 
                 case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
                 case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER: {
+                    auto buffer_view_handle = reinterpret_cast<uint64_t *>(update_entry);
                     allocation_size = std::max(allocation_size, offset + sizeof(VkBufferView));
 
-                    VkBufferView *wrapped_entry = new VkBufferView;
-                    *wrapped_entry =
-                        reinterpret_cast<VkBufferView &>(dev_data->unique_id_mapping[reinterpret_cast<uint64_t &>(update_entry)]);
+                    uint64_t wrapped_entry = dev_data->unique_id_mapping[reinterpret_cast<uint64_t &>(*buffer_view_handle)];
                     template_entries.emplace_back(offset, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT,
                                                   reinterpret_cast<void *>(wrapped_entry));
                 } break;
@@ -736,8 +735,7 @@ void *BuildUnwrappedUpdateTemplateBuffer(layer_data *dev_data, uint64_t descript
                 delete reinterpret_cast<VkDescriptorBufferInfo *>(source);
                 break;
             case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT:
-                *(reinterpret_cast<VkBufferView *>(destination)) = *(reinterpret_cast<VkBufferView *>(source));
-                delete reinterpret_cast<VkBufferView *>(source);
+                *(reinterpret_cast<VkBufferView *>(destination)) = reinterpret_cast<VkBufferView>(source);
                 break;
             default:
                 assert(0);
