@@ -2678,6 +2678,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
     int argc;
     char **argv;
 
+    // Ensure wParam is initialized.
+    msg.wParam = 0;
+
     // Use the CommandLine functions to get the command line arguments.
     // Unfortunately, Microsoft outputs
     // this information as wide characters for Unicode, and we simply want the

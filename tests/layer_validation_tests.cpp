@@ -1355,7 +1355,7 @@ TEST_F(VkLayerTest, SparseResidencyImageCreateUnsupportedTypes) {
     TEST_DESCRIPTION("Create images with sparse residency with unsupported types");
 
     // Determine which device feature are available
-    VkPhysicalDeviceFeatures available_features;
+    VkPhysicalDeviceFeatures available_features = {};
     ASSERT_NO_FATAL_FAILURE(GetPhysicalDeviceFeatures(&available_features));
 
     // Mask out device features we don't want
@@ -1421,7 +1421,7 @@ TEST_F(VkLayerTest, SparseResidencyImageCreateUnsupportedSamples) {
     TEST_DESCRIPTION("Create images with sparse residency with unsupported tiling or sample counts");
 
     // Determine which device feature are available
-    VkPhysicalDeviceFeatures available_features;
+    VkPhysicalDeviceFeatures available_features = {};
     ASSERT_NO_FATAL_FAILURE(GetPhysicalDeviceFeatures(&available_features));
 
     // These tests all require that the device support sparse residency for 2D images
@@ -16069,7 +16069,7 @@ TEST_F(VkLayerTest, CompressedImageMipCopyTests) {
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
-    VkPhysicalDeviceFeatures device_features;
+    VkPhysicalDeviceFeatures device_features = {};
     ASSERT_NO_FATAL_FAILURE(GetPhysicalDeviceFeatures(&device_features));
     VkFormat compressed_format = VK_FORMAT_UNDEFINED;
     if (device_features.textureCompressionBC) {
@@ -16547,7 +16547,7 @@ TEST_F(VkLayerTest, ImageBufferCopyTests) {
     }
 
     // Test compressed formats, if supported
-    VkPhysicalDeviceFeatures device_features;
+    VkPhysicalDeviceFeatures device_features = {};
     ASSERT_NO_FATAL_FAILURE(GetPhysicalDeviceFeatures(&device_features));
     if (!(device_features.textureCompressionBC || device_features.textureCompressionETC2 ||
           device_features.textureCompressionASTC_LDR)) {

@@ -68,6 +68,9 @@ if(WIN32)
     add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/GR->")
     # Warn about nested declarations
     add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/w34456>")
+    # Warn about potentially uninitialized variables
+    add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/w34701>")
+    add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/w34703>")
 endif()
 
 if(NOT WIN32)
