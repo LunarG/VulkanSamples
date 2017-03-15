@@ -228,28 +228,45 @@ void SetLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, ImageSubresourcePai
         pCB->imageSubresourceMap[imgpair.image].push_back(imgpair);
     }
 }
-
-void SetImageViewLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, VkImageView imageView, const VkImageLayout &layout) {
-    auto view_state = GetImageViewState(device_data, imageView);
-    assert(view_state);
-    auto image = view_state->create_info.image;
-    const VkImageSubresourceRange &subRange = view_state->create_info.subresourceRange;
-    // TODO: Do not iterate over every possibility - consolidate where possible
-    for (uint32_t j = 0; j < subRange.levelCount; j++) {
-        uint32_t level = subRange.baseMipLevel + j;
-        for (uint32_t k = 0; k < subRange.layerCount; k++) {
-            uint32_t layer = subRange.baseArrayLayer + k;
-            VkImageSubresource sub = {subRange.aspectMask, level, layer};
+// Set image layout for given VkImageSubresourceRange struct
+void SetImageLayout(layer_data *device_data, GLOBAL_CB_NODE *cb_node, const IMAGE_STATE *image_state,
+                    VkImageSubresourceRange image_subresource_range, const VkImageLayout &layout) {
+    assert(image_state);
+    for (uint32_t level_index = 0; level_index < image_subresource_range.levelCount; ++level_index) {
+        uint32_t level = image_subresource_range.baseMipLevel + level_index;
+        for (uint32_t layer_index = 0; layer_index < image_subresource_range.layerCount; layer_index++) {
+            uint32_t layer = image_subresource_range.baseArrayLayer + layer_index;
+            VkImageSubresource sub = {image_subresource_range.aspectMask, level, layer};
             // TODO: If ImageView was created with depth or stencil, transition both layouts as the aspectMask is ignored and both
             // are used. Verify that the extra implicit layout is OK for descriptor set layout validation
-            if (subRange.aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) {
-                if (vk_format_is_depth_and_stencil(view_state->create_info.format)) {
+            if (image_subresource_range.aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) {
+                if (vk_format_is_depth_and_stencil(image_state->createInfo.format)) {
                     sub.aspectMask |= (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
                 }
             }
-            SetLayout(device_data, pCB, image, sub, layout);
+            SetLayout(device_data, cb_node, image_state->image, sub, layout);
         }
     }
+}
+// Set image layout for given VkImageSubresourceLayers struct
+void SetImageLayout(layer_data *device_data, GLOBAL_CB_NODE *cb_node, const IMAGE_STATE *image_state,
+                    VkImageSubresourceLayers image_subresource_layers, const VkImageLayout &layout) {
+    // Transfer VkImageSubresourceLayers into VkImageSubresourceRange struct
+    VkImageSubresourceRange image_subresource_range;
+    image_subresource_range.aspectMask = image_subresource_layers.aspectMask;
+    image_subresource_range.baseArrayLayer = image_subresource_layers.baseArrayLayer;
+    image_subresource_range.layerCount = image_subresource_layers.layerCount;
+    image_subresource_range.baseMipLevel = image_subresource_layers.mipLevel;
+    image_subresource_range.levelCount = 1;
+    SetImageLayout(device_data, cb_node, image_state, image_subresource_range, layout);
+}
+// Set image layout for all slices of an image view
+void SetImageViewLayout(layer_data *device_data, GLOBAL_CB_NODE *cb_node, VkImageView imageView, const VkImageLayout &layout) {
+    auto view_state = GetImageViewState(device_data, imageView);
+    assert(view_state);
+
+    SetImageLayout(device_data, cb_node, GetImageState(device_data, view_state->create_info.image),
+                   view_state->create_info.subresourceRange, layout);
 }
 
 bool VerifyFramebufferAndRenderPassLayouts(layer_data *device_data, GLOBAL_CB_NODE *pCB,
@@ -506,7 +523,7 @@ void TransitionImageLayouts(layer_data *device_data, VkCommandBuffer cmdBuffer, 
 
 bool VerifyImageLayout(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *image_state,
                        VkImageSubresourceLayers subLayers, VkImageLayout explicit_layout, VkImageLayout optimal_layout,
-                       const char *caller, UNIQUE_VALIDATION_ERROR_CODE msgCode) {
+                       const char *caller, UNIQUE_VALIDATION_ERROR_CODE msg_code) {
     const auto report_data = core_validation::GetReportData(device_data);
     const auto image = image_state->image;
     bool skip_call = false;
@@ -515,17 +532,15 @@ bool VerifyImageLayout(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_S
         uint32_t layer = i + subLayers.baseArrayLayer;
         VkImageSubresource sub = {subLayers.aspectMask, subLayers.mipLevel, layer};
         IMAGE_CMD_BUF_LAYOUT_NODE node;
-        if (!FindCmdBufLayout(device_data, cb_node, image, sub, node)) {
-            SetLayout(device_data, cb_node, image, sub, IMAGE_CMD_BUF_LAYOUT_NODE(explicit_layout, explicit_layout));
-            continue;
-        }
-        if (node.layout != explicit_layout) {
-            // TODO: Improve log message in the next pass
-            skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0,
-                                 __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                                 "%s: Cannot use an image with specific layout %s "
-                                 "that doesn't match the actual current layout %s.",
-                                 caller, string_VkImageLayout(explicit_layout), string_VkImageLayout(node.layout));
+        if (FindCmdBufLayout(device_data, cb_node, image, sub, node)) {
+            if (node.layout != explicit_layout) {
+                // TODO: Improve log message in the next pass
+                skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0,
+                                     __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                                     "%s: Cannot use an image with specific layout %s "
+                                     "that doesn't match the actual current layout %s.",
+                                     caller, string_VkImageLayout(explicit_layout), string_VkImageLayout(node.layout));
+            }
         }
     }
     // If optimal_layout is not UNDEFINED, check that layout matches optimal for this case
@@ -539,10 +554,10 @@ bool VerifyImageLayout(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_S
                                      string_VkImageLayout(optimal_layout));
             }
         } else {
-            skip_call |=
-                log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, msgCode, "DS",
-                        "%s: Layout for image is %s but can only be %s or VK_IMAGE_LAYOUT_GENERAL. %s", caller,
-                        string_VkImageLayout(explicit_layout), string_VkImageLayout(optimal_layout), validation_error_map[msgCode]);
+            skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, msg_code,
+                                 "DS", "%s: Layout for image is %s but can only be %s or VK_IMAGE_LAYOUT_GENERAL. %s", caller,
+                                 string_VkImageLayout(explicit_layout), string_VkImageLayout(optimal_layout),
+                                 validation_error_map[msg_code]);
         }
     }
     return skip_call;
@@ -1470,7 +1485,13 @@ bool PreCallValidateCmdCopyImage(layer_data *device_data, GLOBAL_CB_NODE *cb_nod
 }
 
 void PreCallRecordCmdCopyImage(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
-                               IMAGE_STATE *dst_image_state) {
+                               IMAGE_STATE *dst_image_state, uint32_t region_count, const VkImageCopy *regions,
+                               VkImageLayout src_image_layout, VkImageLayout dst_image_layout) {
+    // Make sure that all image slices are updated to correct layout
+    for (uint32_t i = 0; i < region_count; ++i) {
+        SetImageLayout(device_data, cb_node, src_image_state, regions[i].srcSubresource, src_image_layout);
+        SetImageLayout(device_data, cb_node, dst_image_state, regions[i].dstSubresource, dst_image_layout);
+    }
     // Update bindings between images and cmd buffer
     AddCommandBufferBindingImage(device_data, cb_node, src_image_state);
     AddCommandBufferBindingImage(device_data, cb_node, dst_image_state);
@@ -2959,7 +2980,12 @@ bool PreCallValidateCmdCopyImageToBuffer(layer_data *device_data, VkImageLayout 
 }
 
 void PreCallRecordCmdCopyImageToBuffer(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
-                                       BUFFER_STATE *dst_buffer_state) {
+                                       BUFFER_STATE *dst_buffer_state, uint32_t region_count, const VkBufferImageCopy *regions,
+                                       VkImageLayout src_image_layout) {
+    // Make sure that all image slices are updated to correct layout
+    for (uint32_t i = 0; i < region_count; ++i) {
+        SetImageLayout(device_data, cb_node, src_image_state, regions[i].imageSubresource, src_image_layout);
+    }
     // Update bindings between buffer/image and cmd buffer
     AddCommandBufferBindingImage(device_data, cb_node, src_image_state);
     AddCommandBufferBindingBuffer(device_data, cb_node, dst_buffer_state);
@@ -3026,7 +3052,12 @@ bool PreCallValidateCmdCopyBufferToImage(layer_data *device_data, VkImageLayout 
 }
 
 void PreCallRecordCmdCopyBufferToImage(layer_data *device_data, GLOBAL_CB_NODE *cb_node, BUFFER_STATE *src_buffer_state,
-                                       IMAGE_STATE *dst_image_state) {
+                                       IMAGE_STATE *dst_image_state, uint32_t region_count, const VkBufferImageCopy *regions,
+                                       VkImageLayout dst_image_layout) {
+    // Make sure that all image slices are updated to correct layout
+    for (uint32_t i = 0; i < region_count; ++i) {
+        SetImageLayout(device_data, cb_node, dst_image_state, regions[i].imageSubresource, dst_image_layout);
+    }
     AddCommandBufferBindingBuffer(device_data, cb_node, src_buffer_state);
     AddCommandBufferBindingImage(device_data, cb_node, dst_image_state);
     std::function<bool()> function = [=]() {

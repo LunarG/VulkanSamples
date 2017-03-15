@@ -11827,6 +11827,13 @@ TEST_F(VkLayerTest, InvalidImageLayout) {
 
     m_commandBuffer->CopyImage(src_image, VK_IMAGE_LAYOUT_GENERAL, dst_image, VK_IMAGE_LAYOUT_GENERAL, 1, &copy_region);
     m_errorMonitor->VerifyFound();
+    // The first call hits the expected WARNING and skips the call down the chain, so call a second time to call down chain and
+    // update layer state
+    m_errorMonitor->SetUnexpectedError(
+        "For optimal performance image layout should be VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL instead of GENERAL.");
+    m_errorMonitor->SetUnexpectedError(
+        "For optimal performance image layout should be VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL instead of GENERAL.");
+    m_commandBuffer->CopyImage(src_image, VK_IMAGE_LAYOUT_GENERAL, dst_image, VK_IMAGE_LAYOUT_GENERAL, 1, &copy_region);
     // Now cause error due to src image layout changing
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "Cannot use an image with specific layout VK_IMAGE_LAYOUT_UNDEFINED that doesn't match "
