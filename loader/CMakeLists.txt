@@ -156,6 +156,6 @@ else()
         endforeach()
         configure_file("vulkan.pc.in" "vulkan.pc" @ONLY)
         install(FILES       "${CMAKE_CURRENT_BINARY_DIR}/vulkan.pc"
-                DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig")
+                DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
     endif()
 endif()
