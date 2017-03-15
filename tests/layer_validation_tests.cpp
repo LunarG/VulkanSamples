@@ -360,7 +360,6 @@ class VkLayerTest : public VkRenderFramework {
    protected:
     ErrorMonitor *m_errorMonitor;
     bool m_enableWSI;
-    bool m_enable_maintenance1_ext = false;
     std::vector<const char *> instance_layer_names;
     std::vector<const char *> instance_extension_names;
     std::vector<const char *> device_extension_names;
@@ -403,9 +402,6 @@ class VkLayerTest : public VkRenderFramework {
 #elif defined(VK_USE_PLATFORM_XLIB_KHR)
             instance_extension_names.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
 #endif  // VK_USE_PLATFORM_XLIB_KHR
-        }
-        if (m_enable_maintenance1_ext) {
-            device_extension_names.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
         }
 
         this->app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -593,12 +589,6 @@ void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *commandBuffer, VkPi
     commandBuffer->BindPipeline(pipelineobj);
     commandBuffer->BindDescriptorSet(descriptorSet);
 }
-
-class VkMaintenance1LayerTest : public VkLayerTest {
-   public:
-   protected:
-       VkMaintenance1LayerTest(){ m_enable_maintenance1_ext = true; }
-};
 
 class VkPositiveLayerTest : public VkLayerTest {
    public:
@@ -22564,11 +22554,12 @@ TEST_F(VkPositiveLayerTest, CreateComputePipelineCombinedImageSamplerConsumedAsB
     vkDestroyDescriptorSetLayout(m_device->device(), dsl, nullptr);
 }
 
-// This test class enables the Maintenance1 extension for related validation tests
-TEST_F(VkMaintenance1LayerTest, Maintenance1Tests) {
+TEST_F(VkPositiveLayerTest, Maintenance1Tests) {
     TEST_DESCRIPTION("Validate various special cases for the Maintenance1_KHR extension");
 
+    device_extension_names.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
     ASSERT_NO_FATAL_FAILURE(Init());
+
     // Ensure that extension is available and enabled.
     uint32_t extension_count = 0;
     bool supports_maintenance1_extension = false;
