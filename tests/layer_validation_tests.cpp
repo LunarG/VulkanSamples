@@ -355,7 +355,7 @@ class VkLayerTest : public VkRenderFramework {
    protected:
     ErrorMonitor *m_errorMonitor;
     bool m_enableWSI;
-    bool m_enable_maintenance1_ext;
+    bool m_enable_maintenance1_ext = false;
 
     virtual void SetUp() {
         std::vector<const char *> instance_layer_names;
