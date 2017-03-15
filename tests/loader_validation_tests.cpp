@@ -29,6 +29,7 @@
 #ifdef _WIN32
 #include <inttypes.h>  //Needed for PRIxLEAST64
 #endif
+#include <stdint.h> // For UINT32_MAX
 
 #include <algorithm>
 #include <iostream>
@@ -286,14 +287,26 @@ struct AllocTrack {
 // Global vector to track allocations.  This will be resized before each test and emptied after.
 // However, we have to globally define it so the allocation callback functions work properly.
 std::vector<AllocTrack> g_allocated_vector;
+bool g_intentional_fail_enabled = false;
+uint32_t g_intenional_fail_index = 0;
+uint32_t g_intenional_fail_count = 0;
 
 void FreeAllocTracker() { g_allocated_vector.clear(); }
 
-void InitAllocTracker(size_t size) {
+void InitAllocTracker(size_t size, uint32_t intentional_fail_index = UINT32_MAX) {
     if (g_allocated_vector.size() > 0) {
         FreeAllocTracker();
     }
     g_allocated_vector.resize(size);
+    if (intentional_fail_index != UINT32_MAX) {
+        g_intentional_fail_enabled = true;
+        g_intenional_fail_index = intentional_fail_index;
+        g_intenional_fail_count = 0;
+    } else {
+        g_intentional_fail_enabled = false;
+        g_intenional_fail_index = 0;
+        g_intenional_fail_count = 0;
+    }
 }
 
 bool IsAllocTrackerEmpty() {
@@ -315,7 +328,7 @@ bool IsAllocTrackerEmpty() {
             was_allocated = true;
         }
     }
-    if (!was_allocated) {
+    if (!g_intentional_fail_enabled && !was_allocated) {
         printf("No allocations ever generated!");
         success = false;
     }
@@ -324,6 +337,11 @@ bool IsAllocTrackerEmpty() {
 
 VKAPI_ATTR void *VKAPI_CALL AllocCallbackFunc(void *pUserData, size_t size, size_t alignment,
                                               VkSystemAllocationScope allocationScope) {
+    if (g_intentional_fail_enabled) {
+        if (++g_intenional_fail_count >= g_intenional_fail_index) {
+            return nullptr;
+        }
+    }
     for (uint32_t iii = 0; iii < g_allocated_vector.size(); iii++) {
         if (!g_allocated_vector[iii].active) {
             g_allocated_vector[iii].requested_size_bytes = size;
@@ -1212,6 +1230,200 @@ TEST(Allocation, DeviceButNotInstance) {
     // Make sure everything's been freed
     ASSERT_EQ(true, IsAllocTrackerEmpty());
     FreeAllocTracker();
+}
+
+// Test failure during vkCreateInstance to make sure we don't leak memory if
+// one of the out-of-memory conditions trigger.
+TEST(Allocation, CreateInstanceItentionalAllocFail) {
+    auto const info = VK::InstanceCreateInfo();
+    VkInstance instance = VK_NULL_HANDLE;
+    VkAllocationCallbacks alloc_callbacks = {};
+    alloc_callbacks.pfnAllocation = AllocCallbackFunc;
+    alloc_callbacks.pfnReallocation = ReallocCallbackFunc;
+    alloc_callbacks.pfnFree = FreeCallbackFunc;
+
+    VkResult result;
+    uint32_t fail_index = 1;
+    do {
+        InitAllocTracker(9999, fail_index);
+
+        result = vkCreateInstance(info, &alloc_callbacks, &instance);
+        if (result == VK_ERROR_OUT_OF_HOST_MEMORY) {
+            if (!IsAllocTrackerEmpty()) {
+                std::cout << "Failed on index " << fail_index << '\n';
+                ASSERT_EQ(true, IsAllocTrackerEmpty());
+            }
+        }
+        fail_index++;
+        // Make sure we don't overrun the memory
+        ASSERT_LT(fail_index, 9999u);
+
+        FreeAllocTracker();
+    } while (result == VK_ERROR_OUT_OF_HOST_MEMORY);
+
+    vkDestroyInstance(instance, NULL);
+}
+
+// Test failure during vkCreateDevice to make sure we don't leak memory if
+// one of the out-of-memory conditions trigger.
+TEST(Allocation, CreateDeviceItentionalAllocFail) {
+    auto const info = VK::InstanceCreateInfo();
+    VkInstance instance = VK_NULL_HANDLE;
+    VkDevice device = VK_NULL_HANDLE;
+    VkAllocationCallbacks alloc_callbacks = {};
+    alloc_callbacks.pfnAllocation = AllocCallbackFunc;
+    alloc_callbacks.pfnReallocation = ReallocCallbackFunc;
+    alloc_callbacks.pfnFree = FreeCallbackFunc;
+
+    VkResult result = vkCreateInstance(info, NULL, &instance);
+    ASSERT_EQ(result, VK_SUCCESS);
+
+    uint32_t physicalCount = 0;
+    result = vkEnumeratePhysicalDevices(instance, &physicalCount, nullptr);
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(physicalCount, 0u);
+
+    std::unique_ptr<VkPhysicalDevice[]> physical(new VkPhysicalDevice[physicalCount]);
+    result = vkEnumeratePhysicalDevices(instance, &physicalCount, physical.get());
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(physicalCount, 0u);
+
+    for (uint32_t p = 0; p < physicalCount; ++p) {
+        uint32_t familyCount = 0;
+        vkGetPhysicalDeviceQueueFamilyProperties(physical[p], &familyCount, nullptr);
+        ASSERT_GT(familyCount, 0u);
+
+        std::unique_ptr<VkQueueFamilyProperties[]> family(new VkQueueFamilyProperties[familyCount]);
+        vkGetPhysicalDeviceQueueFamilyProperties(physical[p], &familyCount, family.get());
+        ASSERT_GT(familyCount, 0u);
+
+        for (uint32_t q = 0; q < familyCount; ++q) {
+            if (~family[q].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+                continue;
+            }
+
+            float const priorities[] = {0.0f};  // Temporary required due to MSVC bug.
+            VkDeviceQueueCreateInfo const queueInfo[1]{
+                VK::DeviceQueueCreateInfo().queueFamilyIndex(q).queueCount(1).pQueuePriorities(priorities)};
+
+            auto const deviceInfo = VK::DeviceCreateInfo().queueCreateInfoCount(1).pQueueCreateInfos(queueInfo);
+
+            uint32_t fail_index = 1;
+            do {
+                InitAllocTracker(9999, fail_index);
+
+                result = vkCreateDevice(physical[p], deviceInfo, &alloc_callbacks, &device);
+                if (result == VK_ERROR_OUT_OF_HOST_MEMORY) {
+                    if (!IsAllocTrackerEmpty()) {
+                        std::cout << "Failed on index " << fail_index << '\n';
+                        ASSERT_EQ(true, IsAllocTrackerEmpty());
+                    }
+                }
+                fail_index++;
+                // Make sure we don't overrun the memory
+                ASSERT_LT(fail_index, 9999u);
+
+                FreeAllocTracker();
+            } while (result == VK_ERROR_OUT_OF_HOST_MEMORY);
+            vkDestroyDevice(device, &alloc_callbacks);
+            break;
+        }
+    }
+
+    vkDestroyInstance(instance, NULL);
+}
+
+// Test failure during vkCreateInstance and vkCreateDevice to make sure we don't
+// leak memory if one of the out-of-memory conditions trigger.
+TEST(Allocation, CreateInstanceDeviceItentionalAllocFail) {
+    auto const info = VK::InstanceCreateInfo();
+    VkInstance instance = VK_NULL_HANDLE;
+    VkDevice device = VK_NULL_HANDLE;
+    VkAllocationCallbacks alloc_callbacks = {};
+    alloc_callbacks.pfnAllocation = AllocCallbackFunc;
+    alloc_callbacks.pfnReallocation = ReallocCallbackFunc;
+    alloc_callbacks.pfnFree = FreeCallbackFunc;
+
+    VkResult result = VK_ERROR_OUT_OF_HOST_MEMORY;
+    uint32_t fail_index = 0;
+    uint32_t physicalCount = 0;
+    while (result == VK_ERROR_OUT_OF_HOST_MEMORY) {
+        InitAllocTracker(9999, ++fail_index);
+        ASSERT_LT(fail_index, 9999u);
+
+        result = vkCreateInstance(info, &alloc_callbacks, &instance);
+        if (result == VK_ERROR_OUT_OF_HOST_MEMORY) {
+            if (!IsAllocTrackerEmpty()) {
+                std::cout << "Failed on index " << fail_index << '\n';
+                ASSERT_EQ(true, IsAllocTrackerEmpty());
+            }
+            FreeAllocTracker();
+            continue;
+        }
+        ASSERT_EQ(result, VK_SUCCESS);
+
+        physicalCount = 0;
+        result = vkEnumeratePhysicalDevices(instance, &physicalCount, nullptr);
+        if (result == VK_ERROR_OUT_OF_HOST_MEMORY) {
+            vkDestroyInstance(instance, NULL);
+            if (!IsAllocTrackerEmpty()) {
+                std::cout << "Failed on index " << fail_index << '\n';
+                ASSERT_EQ(true, IsAllocTrackerEmpty());
+            }
+            FreeAllocTracker();
+            continue;
+        }
+        ASSERT_EQ(result, VK_SUCCESS);
+
+        std::unique_ptr<VkPhysicalDevice[]> physical(new VkPhysicalDevice[physicalCount]);
+        result = vkEnumeratePhysicalDevices(instance, &physicalCount, physical.get());
+        if (result == VK_ERROR_OUT_OF_HOST_MEMORY) {
+            vkDestroyInstance(instance, NULL);
+            if (!IsAllocTrackerEmpty()) {
+                std::cout << "Failed on index " << fail_index << '\n';
+                ASSERT_EQ(true, IsAllocTrackerEmpty());
+            }
+            FreeAllocTracker();
+            continue;
+        }
+        ASSERT_EQ(result, VK_SUCCESS);
+
+        uint32_t familyCount = 0;
+        vkGetPhysicalDeviceQueueFamilyProperties(physical[0], &familyCount, nullptr);
+        ASSERT_GT(familyCount, 0u);
+
+        std::unique_ptr<VkQueueFamilyProperties[]> family(new VkQueueFamilyProperties[familyCount]);
+        vkGetPhysicalDeviceQueueFamilyProperties(physical[0], &familyCount, family.get());
+        ASSERT_GT(familyCount, 0u);
+
+        uint32_t queue_index = 0;
+        for (uint32_t q = 0; q < familyCount; ++q) {
+            if (family[q].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+                queue_index = q;
+                break;
+            }
+        }
+
+        float const priorities[] = {0.0f};  // Temporary required due to MSVC bug.
+        VkDeviceQueueCreateInfo const queueInfo[1]{
+            VK::DeviceQueueCreateInfo().queueFamilyIndex(queue_index).queueCount(1).pQueuePriorities(priorities)};
+
+        auto const deviceInfo = VK::DeviceCreateInfo().queueCreateInfoCount(1).pQueueCreateInfos(queueInfo);
+
+        result = vkCreateDevice(physical[0], deviceInfo, &alloc_callbacks, &device);
+        if (result == VK_ERROR_OUT_OF_HOST_MEMORY) {
+            vkDestroyInstance(instance, NULL);
+            if (!IsAllocTrackerEmpty()) {
+                std::cout << "Failed on index " << fail_index << '\n';
+                ASSERT_EQ(true, IsAllocTrackerEmpty());
+            }
+            FreeAllocTracker();
+            continue;
+        }
+        vkDestroyDevice(device, &alloc_callbacks);
+        vkDestroyInstance(instance, NULL);
+        FreeAllocTracker();
+    }
 }
 
 int main(int argc, char **argv) {
