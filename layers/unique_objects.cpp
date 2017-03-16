@@ -889,6 +889,36 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneCapabilitiesKHR(VkPhysicalDevice p
 }
 #endif
 
+VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectTagEXT(VkDevice device, VkDebugMarkerObjectTagInfoEXT *pTagInfo) {
+    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    auto local_tag_info = new safe_VkDebugMarkerObjectTagInfoEXT(pTagInfo);
+    {
+        std::lock_guard<std::mutex> lock(global_lock);
+        auto it = device_data->unique_id_mapping.find(reinterpret_cast<uint64_t &>(local_tag_info->object));
+        if (it != device_data->unique_id_mapping.end()) {
+            local_tag_info->object = it->second;
+        }
+    }
+    VkResult result = device_data->device_dispatch_table->DebugMarkerSetObjectTagEXT(
+        device, reinterpret_cast<VkDebugMarkerObjectTagInfoEXT *>(local_tag_info));
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectNameEXT(VkDevice device, VkDebugMarkerObjectNameInfoEXT *pNameInfo) {
+    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    auto local_name_info = new safe_VkDebugMarkerObjectNameInfoEXT(pNameInfo);
+    {
+        std::lock_guard<std::mutex> lock(global_lock);
+        auto it = device_data->unique_id_mapping.find(reinterpret_cast<uint64_t &>(local_name_info->object));
+        if (it != device_data->unique_id_mapping.end()) {
+            local_name_info->object = it->second;
+        }
+    }
+    VkResult result = device_data->device_dispatch_table->DebugMarkerSetObjectNameEXT(
+        device, reinterpret_cast<VkDebugMarkerObjectNameInfoEXT *>(local_name_info));
+    return result;
+}
+
 }  // namespace unique_objects
 
 // vk_layer_logging.h expects these to be defined

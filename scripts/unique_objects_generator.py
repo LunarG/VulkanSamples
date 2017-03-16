@@ -144,6 +144,8 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
             'vkDestroyDescriptorUpdateTemplateKHR',
             'vkUpdateDescriptorSetWithTemplateKHR',
             'vkCmdPushDescriptorSetWithTemplateKHR',
+            'vkDebugMarkerSetObjectTagEXT',
+            'vkDebugMarkerSetObjectNameEXT',
             ]
         # Commands shadowed by interface functions and are not implemented
         self.interface_functions = [
