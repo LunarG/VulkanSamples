@@ -22553,7 +22553,7 @@ TEST_F(VkPositiveLayerTest, Maintenance1Tests) {
     TEST_DESCRIPTION("Validate various special cases for the Maintenance1_KHR extension");
 
     device_extension_names.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
-    ASSERT_NO_FATAL_FAILURE(Init());
+    InitFramework(instance_layer_names, instance_extension_names, device_extension_names, myDbgFunc, m_errorMonitor);
 
     // Ensure that extension is available and enabled.
     uint32_t extension_count = 0;
@@ -22579,7 +22579,7 @@ TEST_F(VkPositiveLayerTest, Maintenance1Tests) {
     }
 
     m_errorMonitor->ExpectSuccess();
-
+    ASSERT_NO_FATAL_FAILURE(InitState());
     VkCommandBuffer cmd_buf;
     VkCommandBufferAllocateInfo alloc_info;
     alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
