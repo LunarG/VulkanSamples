@@ -374,8 +374,7 @@ void TransitionImageAspectLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, c
     SetLayout(device_data, pCB, mem_barrier->image, sub, mem_barrier->newLayout);
 }
 
-    bool VerifyAspectsPresent(VkImageAspectFlags aspect_mask, VkFormat format) {
-    // TBD: anything to do for metadata bit? or no bits set?
+bool VerifyAspectsPresent(VkImageAspectFlags aspect_mask, VkFormat format) {
     if ((aspect_mask & VK_IMAGE_ASPECT_COLOR_BIT) != 0) {
         if (!vk_format_is_color(format)) return false;
     }
