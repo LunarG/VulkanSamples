@@ -11406,7 +11406,9 @@ TEST_F(VkLayerTest, MismatchCountQueueCreateRequestedFeature) {
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "Invalid queue create request in vkCreateDevice(). Invalid queueFamilyIndex ");
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Failed to create device chain.");
+    // The following unexpected error is coming from the LunarG loader. Do not make it a desired message because platforms that do
+    // not use the LunarG loader (e.g. Android) will not see the message and the test will fail.
+    m_errorMonitor->SetUnexpectedError("Failed to create device chain.");
     vkCreateDevice(gpu(), &device_create_info, nullptr, &testDevice);
     m_errorMonitor->VerifyFound();
 
@@ -11420,7 +11422,9 @@ TEST_F(VkLayerTest, MismatchCountQueueCreateRequestedFeature) {
             device_create_info.pEnabledFeatures = &features;
             m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                                  "While calling vkCreateDevice(), requesting feature #");
-            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Failed to create device chain.");
+            // The following unexpected error is coming from the LunarG loader. Do not make it a desired message because platforms
+            // that do not use the LunarG loader (e.g. Android) will not see the message and the test will fail.
+            m_errorMonitor->SetUnexpectedError("Failed to create device chain.");
             m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                                  "You requested features that are unavailable on this device. You should first "
                                                  "query feature availability by calling vkGetPhysicalDeviceFeatures().");
