@@ -3604,7 +3604,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueueBindSparse(VkQueue queue, uint32_t bindInfoC
     ValidateQueueFlags(queue, "QueueBindSparse");
 
     ValidateObject(queue, queue, VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT, false, VALIDATION_ERROR_01648, VALIDATION_ERROR_UNDEFINED);
-    ValidateObject(queue, fence, VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT, true, VALIDATION_ERROR_01650, VALIDATION_ERROR_01652);
+    ValidateObject(queue, fence, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, true, VALIDATION_ERROR_01650, VALIDATION_ERROR_01652);
 
     for (uint32_t i = 0; i < bindInfoCount; i++) {
         for (uint32_t j = 0; j < pBindInfo[i].bufferBindCount; j++) {
