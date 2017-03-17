@@ -1356,7 +1356,7 @@ TEST_F(VkLayerTest, SparseResidencyImageCreateUnsupportedTypes) {
     VkPhysicalDeviceFeatures desired_features = available_features;
     desired_features.sparseResidencyImage2D = VK_FALSE;
     desired_features.sparseResidencyImage3D = VK_FALSE;
-    ASSERT_NO_FATAL_FAILURE(InitState(&desired_features));
+    ASSERT_NO_FATAL_FAILURE(Init(&desired_features));
 
     VkImage image = VK_NULL_HANDLE;
     VkResult result = VK_RESULT_MAX_ENUM;
@@ -1430,7 +1430,7 @@ TEST_F(VkLayerTest, SparseResidencyImageCreateUnsupportedSamples) {
     desired_features.sparseResidency4Samples = VK_FALSE;
     desired_features.sparseResidency8Samples = VK_FALSE;
     desired_features.sparseResidency16Samples = VK_FALSE;
-    ASSERT_NO_FATAL_FAILURE(InitState(&desired_features));
+    ASSERT_NO_FATAL_FAILURE(Init(&desired_features));
 
     VkImage image = VK_NULL_HANDLE;
     VkResult result = VK_RESULT_MAX_ENUM;
@@ -17142,7 +17142,7 @@ TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch) {
 TEST_F(VkLayerTest, CopyImageSampleCountMismatch) {
     TEST_DESCRIPTION("Image copies with sample count mis-matches");
 
-    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(Init());
 
     VkImageFormatProperties image_format_properties;
     vkGetPhysicalDeviceImageFormatProperties(gpu(), VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL,
@@ -17228,7 +17228,7 @@ TEST_F(VkLayerTest, CopyImageSampleCountMismatch) {
 
 TEST_F(VkLayerTest, CopyImageAspectMismatch) {
     TEST_DESCRIPTION("Image copies with aspect mask errors");
-    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(Init());
 
     VkImageObj color_image(m_device), ds_image(m_device), depth_image(m_device);
     color_image.init(128, 128, VK_FORMAT_R32_SFLOAT, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
@@ -22746,7 +22746,7 @@ TEST_F(VkPositiveLayerTest, Maintenance1Tests) {
     }
 
     m_errorMonitor->ExpectSuccess();
-    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(Init());
     VkCommandBuffer cmd_buf;
     VkCommandBufferAllocateInfo alloc_info;
     alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
