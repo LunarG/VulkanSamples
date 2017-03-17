@@ -10297,7 +10297,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueueBindSparse(VkQueue queue, uint32_t bindInfoC
     skip_call |= ValidateFenceForSubmit(dev_data, pFence);
 
     if (pFence) {
-        SubmitFence(pQueue, pFence, bindInfoCount);
+        SubmitFence(pQueue, pFence, std::max(1u, bindInfoCount));
     }
 
     for (uint32_t bindIdx = 0; bindIdx < bindInfoCount; ++bindIdx) {
