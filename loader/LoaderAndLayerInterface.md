@@ -503,7 +503,7 @@ Developers may need to use special, pre-production layers, without modifying the
 system-installed layers. You can direct the loader to look for layers in a
 specific folder by defining the "VK\_LAYER\_PATH" environment variable.  This
 will override the mechanism used for finding system-installed layers. Because
-layers of interest may exist in several disinct folders on on a system, this
+layers of interest may exist in several disinct folders on a system, this
 environment variable can containis several paths seperated by the operating
 specific path separator.  On Windows, each separate folder should be separated
 in the list using a semi-colon.  On Linux, each folder name should be separated
@@ -775,7 +775,7 @@ follow, especially with regards to interacting with the loader and other layers.
 
 ##### Layer Manifest File Usage
 
-On Windows and Linux systems, JSON formated manifest files are used to store
+On Windows and Linux systems, JSON formatted manifest files are used to store
 layer information.  In order to find system-installed layers, the Vulkan loader
 will read the JSON files to identify the names and attributes of layers and
 their extensions. The use of manifest files allows the loader to avoid loading
@@ -1041,7 +1041,7 @@ chain_info->u.pLayerInfo->pfnNextGetPhysicalDeviceProcAddr
 
 This support is optional and should not be considered a requirement.  This is
 only required if a layer intends to support some functionality not directly
-supported by loaders released in the public.  If a layer does implent this
+supported by loaders released in the public.  If a layer does implement this
 support, it should return the address of its `vk_layerGetPhysicalDeviceProcAddr`
 function in the "pfnGetPhysicalDeviceProcAddr" member of the
 `VkNegotiateLayerInterface` structure during
@@ -1374,7 +1374,7 @@ object handles for all core functions.  If a new extension is created which has
 functions that take `VkImage` objects as parameters, and if the layer does not
 support those new functions, an application that uses both the layer and the new
 extension will have undefined behavior when those new functions are called (e.g.
-the application may crash).  This is becaues the lower-level layers and ICD
+the application may crash).  This is because the lower-level layers and ICD
 won't receive the handle that they generated.  Instead, they will receive a
 handle that is only known by the layer that is wrapping the object.
 
@@ -1411,7 +1411,7 @@ the loader *trampoline* will not do so.  Common cases where a layer (or ICD) may
 create a dispatchable object without loader *trampoline* code is as follows:
 - layers that wrap dispatchable objects
 - layers which add extensions that create dispatchable objects
-- layers which insert extra Vulkan funnctions in the stream of functions they
+- layers which insert extra Vulkan functions in the stream of functions they
 intercept from the application
 - ICDs which add extensions that create dispatchable objects
 
@@ -1729,7 +1729,7 @@ details are listed below.
 
 #### ICD Manifest File Usage
 
-As with layers, on Windows and Linux systems, JSON formated manifest files are
+As with layers, on Windows and Linux systems, JSON formatted manifest files are
 used to store ICD information.  In order to find system-installed drivers, the
 Vulkan loader will read the JSON files to identify the names and attributes of
 each driver.  One thing you will notice is that ICD Manifest files are much
@@ -1774,7 +1774,7 @@ For example, let us assume the registry contains the following data:
 
 In this case, the loader will step through each entry, and check the value.  If
 the value is 0, then the loader will attempt to load the file.  In this case,
-the loader will will open the first and last listings, but not the middle.  This
+the loader will open the first and last listings, but not the middle.  This
 is because the value of 1 for vendorb_vk.json disables the driver.
 
 The Vulkan loader will open each enabled manifest file found to obtain the name
@@ -1984,7 +1984,7 @@ then the value of NULL should be returned.
 This support is optional and should not be considered a requirement.  This is
 only required if an ICD intends to support some functionality not directly
 supported by a significant population of loaders in the public.  If an ICD
-does implent this support, it should return the address of its
+does implement this support, it should return the address of its
 `vk_icdGetPhysicalDeviceProcAddr` function through the `vkGetInstanceProcAddr`
 function.
 
