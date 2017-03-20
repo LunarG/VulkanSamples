@@ -26,9 +26,7 @@
  * Author: Mark Young <marky@lunarG.com>
  */
 
-#ifdef _WIN32
 #include <inttypes.h>  //Needed for PRIxLEAST64
-#endif
 #include <stdint.h> // For UINT32_MAX
 
 #include <algorithm>
