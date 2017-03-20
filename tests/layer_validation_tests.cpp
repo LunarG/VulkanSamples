@@ -15492,71 +15492,81 @@ TEST_F(VkLayerTest, DrawTimeImageMultisampleMismatchWithPipeline) {
 }
 
 TEST_F(VkLayerTest, CreateImageLimitsViolationMaxWidth) {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "CreateImage extents exceed allowable limits for format");
-
     ASSERT_NO_FATAL_FAILURE(Init());
 
-    // Create an image
-    VkImage image;
+    VkFormat const format = VK_FORMAT_B8G8R8A8_UNORM;
+    {
+        VkFormatProperties properties;
+        vkGetPhysicalDeviceFormatProperties(m_device->phy().handle(), format, &properties);
+        if (properties.optimalTilingFeatures == 0) {
+            printf("             Image format not supported; skipped.\n");
+            return;
+        }
+    }
 
-    const VkFormat tex_format = VK_FORMAT_B8G8R8A8_UNORM;
-    const int32_t tex_width = 32;
-    const int32_t tex_height = 32;
-
-    VkImageCreateInfo image_create_info = {};
-    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    image_create_info.pNext = NULL;
-    image_create_info.imageType = VK_IMAGE_TYPE_2D;
-    image_create_info.format = tex_format;
-    image_create_info.extent.width = tex_width;
-    image_create_info.extent.height = tex_height;
-    image_create_info.extent.depth = 1;
-    image_create_info.mipLevels = 1;
-    image_create_info.arrayLayers = 1;
-    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
-    image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
-    image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
-    image_create_info.flags = 0;
+    VkImageCreateInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    info.pNext = NULL;
+    info.imageType = VK_IMAGE_TYPE_2D;
+    info.format = format;
+    info.extent.height = 32;
+    info.extent.depth = 1;
+    info.mipLevels = 1;
+    info.arrayLayers = 1;
+    info.samples = VK_SAMPLE_COUNT_1_BIT;
+    info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+    info.flags = 0;
 
     // Introduce error by sending down a bogus width extent
-    image_create_info.extent.width = 65536;
-    vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
+    {
+        VkImageFormatProperties properties;
+        auto const result = vkGetPhysicalDeviceImageFormatProperties(m_device->phy().handle(), info.format, info.imageType,
+                                                                     info.tiling, info.usage, info.flags, &properties);
+        ASSERT_VK_SUCCESS(result);
+        info.extent.width = properties.maxExtent.width + 1;
+    }
 
+    VkImage image;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "CreateImage extents exceed allowable limits for format");
+    vkCreateImage(m_device->device(), &info, NULL, &image);
     m_errorMonitor->VerifyFound();
 }
 
 TEST_F(VkLayerTest, CreateImageLimitsViolationMinWidth) {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00716);
-
     ASSERT_NO_FATAL_FAILURE(Init());
 
-    // Create an image
-    VkImage image;
+    VkFormat const format = VK_FORMAT_B8G8R8A8_UNORM;
+    {
+        VkFormatProperties properties;
+        vkGetPhysicalDeviceFormatProperties(m_device->phy().handle(), format, &properties);
+        if (properties.optimalTilingFeatures == 0) {
+            printf("             Image format not supported; skipped.\n");
+            return;
+        }
+    }
 
-    const VkFormat tex_format = VK_FORMAT_B8G8R8A8_UNORM;
-    const int32_t tex_width = 32;
-    const int32_t tex_height = 32;
-
-    VkImageCreateInfo image_create_info = {};
-    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    image_create_info.pNext = NULL;
-    image_create_info.imageType = VK_IMAGE_TYPE_2D;
-    image_create_info.format = tex_format;
-    image_create_info.extent.width = tex_width;
-    image_create_info.extent.height = tex_height;
-    image_create_info.extent.depth = 1;
-    image_create_info.mipLevels = 1;
-    image_create_info.arrayLayers = 1;
-    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
-    image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
-    image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
-    image_create_info.flags = 0;
+    VkImageCreateInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    info.pNext = NULL;
+    info.imageType = VK_IMAGE_TYPE_2D;
+    info.format = format;
+    info.extent.height = 32;
+    info.extent.depth = 1;
+    info.mipLevels = 1;
+    info.arrayLayers = 1;
+    info.samples = VK_SAMPLE_COUNT_1_BIT;
+    info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+    info.flags = 0;
 
     // Introduce error by sending down a bogus width extent
-    image_create_info.extent.width = 0;
-    m_errorMonitor->SetUnexpectedError("parameter pCreateInfo->extent.width must be greater than 0");
-    vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
+    info.extent.width = 0;
 
+    VkImage image;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00716);
+    m_errorMonitor->SetUnexpectedError("parameter pCreateInfo->extent.width must be greater than 0");
+    vkCreateImage(m_device->device(), &info, NULL, &image);
     m_errorMonitor->VerifyFound();
 }
 
@@ -16802,12 +16812,23 @@ TEST_F(VkLayerTest, ImageFormatLimits) {
     TEST_DESCRIPTION("Exceed the limits of image format ");
 
     ASSERT_NO_FATAL_FAILURE(Init());
+
+    VkFormat const format = VK_FORMAT_B8G8R8A8_UNORM;
+    {
+        VkFormatProperties properties;
+        vkGetPhysicalDeviceFormatProperties(m_device->phy().handle(), format, &properties);
+        if (properties.linearTilingFeatures == 0) {
+            printf("             Image format not supported; skipped.\n");
+            return;
+        }
+    }
+
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "CreateImage extents exceed allowable limits for format");
     VkImageCreateInfo image_create_info = {};
     image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     image_create_info.pNext = NULL;
     image_create_info.imageType = VK_IMAGE_TYPE_2D;
-    image_create_info.format = VK_FORMAT_B8G8R8A8_UNORM;
+    image_create_info.format = format;
     image_create_info.extent.width = 32;
     image_create_info.extent.height = 32;
     image_create_info.extent.depth = 1;
