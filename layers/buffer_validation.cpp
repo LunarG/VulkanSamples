@@ -1295,13 +1295,16 @@ bool PreCallValidateCmdCopyImage(layer_data *device_data, GLOBAL_CB_NODE *cb_nod
                             ss.str().c_str());
         }
 
-        // For each region the layerCount member of srcSubresource and dstSubresource must match
-        if (regions[i].srcSubresource.layerCount != regions[i].dstSubresource.layerCount) {
-            std::stringstream ss;
-            ss << "vkCmdCopyImage: number of layers in source and destination subresources for pRegions[" << i << "] do not match";
-            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            reinterpret_cast<uint64_t &>(command_buffer), __LINE__, VALIDATION_ERROR_01198, "IMAGE", "%s. %s",
-                            ss.str().c_str(), validation_error_map[VALIDATION_ERROR_01198]);
+        if (!GetDeviceExtensions(device_data)->khr_maintenance1_enabled) {
+            // For each region the layerCount member of srcSubresource and dstSubresource must match
+            if (regions[i].srcSubresource.layerCount != regions[i].dstSubresource.layerCount) {
+                std::stringstream ss;
+                ss << "vkCmdCopyImage: number of layers in source and destination subresources for pRegions[" << i
+                   << "] do not match";
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                reinterpret_cast<uint64_t &>(command_buffer), __LINE__, VALIDATION_ERROR_01198, "IMAGE", "%s. %s",
+                                ss.str().c_str(), validation_error_map[VALIDATION_ERROR_01198]);
+            }
         }
 
         // For each region, the aspectMask member of srcSubresource and dstSubresource must match
@@ -1351,18 +1354,20 @@ bool PreCallValidateCmdCopyImage(layer_data *device_data, GLOBAL_CB_NODE *cb_nod
                             validation_error_map[VALIDATION_ERROR_01221]);
         }
 
-        // If either of the calling command's src_image or dst_image parameters are of VkImageType VK_IMAGE_TYPE_3D,
-        // the baseArrayLayer and layerCount members of both srcSubresource and dstSubresource must be 0 and 1, respectively
-        if (((src_image_state->createInfo.imageType == VK_IMAGE_TYPE_3D) ||
-             (dst_image_state->createInfo.imageType == VK_IMAGE_TYPE_3D)) &&
-            ((regions[i].srcSubresource.baseArrayLayer != 0) || (regions[i].srcSubresource.layerCount != 1) ||
-             (regions[i].dstSubresource.baseArrayLayer != 0) || (regions[i].dstSubresource.layerCount != 1))) {
-            std::stringstream ss;
-            ss << "vkCmdCopyImage: src or dstImage type was IMAGE_TYPE_3D, but in subRegion[" << i
-               << "] baseArrayLayer was not zero or layerCount was not 1.";
-            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            reinterpret_cast<uint64_t &>(command_buffer), __LINE__, VALIDATION_ERROR_01199, "IMAGE", "%s. %s",
-                            ss.str().c_str(), validation_error_map[VALIDATION_ERROR_01199]);
+        if (!GetDeviceExtensions(device_data)->khr_maintenance1_enabled) {
+            // If either of the calling command's src_image or dst_image parameters are of VkImageType VK_IMAGE_TYPE_3D,
+            // the baseArrayLayer and layerCount members of both srcSubresource and dstSubresource must be 0 and 1, respectively
+            if (((src_image_state->createInfo.imageType == VK_IMAGE_TYPE_3D) ||
+                 (dst_image_state->createInfo.imageType == VK_IMAGE_TYPE_3D)) &&
+                ((regions[i].srcSubresource.baseArrayLayer != 0) || (regions[i].srcSubresource.layerCount != 1) ||
+                 (regions[i].dstSubresource.baseArrayLayer != 0) || (regions[i].dstSubresource.layerCount != 1))) {
+                std::stringstream ss;
+                ss << "vkCmdCopyImage: src or dstImage type was IMAGE_TYPE_3D, but in subRegion[" << i
+                   << "] baseArrayLayer was not zero or layerCount was not 1.";
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                reinterpret_cast<uint64_t &>(command_buffer), __LINE__, VALIDATION_ERROR_01199, "IMAGE", "%s. %s",
+                                ss.str().c_str(), validation_error_map[VALIDATION_ERROR_01199]);
+            }
         }
 
         // MipLevel must be less than the mipLevels specified in VkImageCreateInfo when the image was created
@@ -1406,22 +1411,25 @@ bool PreCallValidateCmdCopyImage(layer_data *device_data, GLOBAL_CB_NODE *cb_nod
                             ss.str().c_str(), validation_error_map[VALIDATION_ERROR_01224]);
         }
 
-        // The source region specified by a given element of regions must be a region that is contained within srcImage
-        if (ExceedsBounds(&regions[i].srcOffset, &regions[i].extent, &(src_image_state->createInfo.extent))) {
-            std::stringstream ss;
-            ss << "vkCmdCopyImage: srcSubResource in pRegions[" << i << "] exceeds extents srcImage was created with";
-            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            reinterpret_cast<uint64_t &>(command_buffer), __LINE__, VALIDATION_ERROR_01175, "IMAGE", "%s. %s",
-                            ss.str().c_str(), validation_error_map[VALIDATION_ERROR_01175]);
-        }
+        // Check region extents for 1D-1D, 2D-2D, and 3D-3D copies
+        if (src_image_state->createInfo.imageType == dst_image_state->createInfo.imageType) {
+            // The source region specified by a given element of regions must be a region that is contained within srcImage
+            if (ExceedsBounds(&regions[i].srcOffset, &regions[i].extent, &(src_image_state->createInfo.extent))) {
+                std::stringstream ss;
+                ss << "vkCmdCopyImage: srcSubResource in pRegions[" << i << "] exceeds extents srcImage was created with";
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                reinterpret_cast<uint64_t &>(command_buffer), __LINE__, VALIDATION_ERROR_01175, "IMAGE", "%s. %s",
+                                ss.str().c_str(), validation_error_map[VALIDATION_ERROR_01175]);
+            }
 
-        // The destination region specified by a given element of regions must be a region that is contained within dst_image
-        if (ExceedsBounds(&regions[i].dstOffset, &regions[i].extent, &(dst_image_state->createInfo.extent))) {
-            std::stringstream ss;
-            ss << "vkCmdCopyImage: dstSubResource in pRegions[" << i << "] exceeds extents dstImage was created with";
-            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            reinterpret_cast<uint64_t &>(command_buffer), __LINE__, VALIDATION_ERROR_01176, "IMAGE", "%s. %s",
-                            ss.str().c_str(), validation_error_map[VALIDATION_ERROR_01176]);
+            // The destination region specified by a given element of regions must be a region that is contained within dst_image
+            if (ExceedsBounds(&regions[i].dstOffset, &regions[i].extent, &(dst_image_state->createInfo.extent))) {
+                std::stringstream ss;
+                ss << "vkCmdCopyImage: dstSubResource in pRegions[" << i << "] exceeds extents dstImage was created with";
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                reinterpret_cast<uint64_t &>(command_buffer), __LINE__, VALIDATION_ERROR_01176, "IMAGE", "%s. %s",
+                                ss.str().c_str(), validation_error_map[VALIDATION_ERROR_01176]);
+            }
         }
 
         // The union of all source regions, and the union of all destination regions, specified by the elements of regions,
@@ -2450,13 +2458,16 @@ bool PreCallValidateCreateImageView(layer_data *device_data, const VkImageViewCr
                 log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                         VALIDATION_ERROR_00768, "IMAGE", "%s %s", ss.str().c_str(), validation_error_map[VALIDATION_ERROR_00768]);
         }
-        if (create_info->subresourceRange.baseArrayLayer >= image_state->createInfo.arrayLayers) {
-            std::stringstream ss;
-            ss << "vkCreateImageView called with baseArrayLayer " << create_info->subresourceRange.baseArrayLayer << " for image "
-               << create_info->image << " that only has " << image_state->createInfo.arrayLayers << " array layers.";
-            skip |=
-                log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                        VALIDATION_ERROR_00769, "IMAGE", "%s %s", ss.str().c_str(), validation_error_map[VALIDATION_ERROR_00769]);
+        if (!GetDeviceExtensions(device_data)->khr_maintenance1_enabled) {
+            if (create_info->subresourceRange.baseArrayLayer >= image_state->createInfo.arrayLayers) {
+                std::stringstream ss;
+                ss << "vkCreateImageView called with baseArrayLayer " << create_info->subresourceRange.baseArrayLayer
+                   << " for image " << create_info->image << " that only has " << image_state->createInfo.arrayLayers
+                   << " array layers.";
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                                VALIDATION_ERROR_00769, "IMAGE", "%s %s", ss.str().c_str(),
+                                validation_error_map[VALIDATION_ERROR_00769]);
+            }
         }
         // TODO: Need new valid usage language for levelCount == 0 & layerCount == 0
         skip |= ValidateImageSubrangeLevelLayerCounts(device_data, create_info->subresourceRange, "vkCreateImageView()");
