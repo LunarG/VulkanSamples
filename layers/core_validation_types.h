@@ -783,6 +783,18 @@ public:
 // Fwd declarations of layer_data and helpers to look-up/validate state from layer_data maps
 namespace core_validation {
 struct layer_data;
+
+struct devExts {
+    bool wsi_enabled;
+    bool wsi_display_swapchain_enabled;
+    bool nv_glsl_shader_enabled;
+    bool khr_descriptor_update_template_enabled;
+    bool khr_shader_draw_parameters_enabled;
+    bool khr_maintenance1_enabled;
+    std::unordered_map<VkSwapchainKHR, std::unique_ptr<SWAPCHAIN_NODE>> swapchainMap;
+    std::unordered_map<VkImage, VkSwapchainKHR> imageToSwapchainMap;
+};
+
 cvdescriptorset::DescriptorSet *GetSetNode(const layer_data *, VkDescriptorSet);
 cvdescriptorset::DescriptorSetLayout const *GetDescriptorSetLayout(layer_data const *, VkDescriptorSetLayout);
 DESCRIPTOR_POOL_STATE *GetDescriptorPoolState(const layer_data *, const VkDescriptorPool);
@@ -847,6 +859,7 @@ std::unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> *GetImageLayoutMap(l
 std::unordered_map<VkBuffer, std::unique_ptr<BUFFER_STATE>> *GetBufferMap(layer_data *device_data);
 std::unordered_map<VkBufferView, std::unique_ptr<BUFFER_VIEW_STATE>> *GetBufferViewMap(layer_data *device_data);
 std::unordered_map<VkImageView, std::unique_ptr<IMAGE_VIEW_STATE>> *GetImageViewMap(layer_data *device_data);
+const devExts *GetDeviceExtensions(const layer_data *);
 }
 
 #endif  // CORE_VALIDATION_TYPES_H_
