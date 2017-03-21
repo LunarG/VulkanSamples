@@ -50,7 +50,9 @@
 // This is a CMake generated file with #defines for any functions/includes
 // that it found present.  This is currently necessary to properly determine
 // if secure_getenv or __secure_getenv are present
+#if !defined(VULKAN_NON_CMAKE_BUILD)
 #include "loader_cmake_config.h"
+#endif  // !defined(VULKAN_NON_CMAKE_BUILD)
 
 // Generated file containing all the extension data
 #include "vk_loader_extensions.c"
