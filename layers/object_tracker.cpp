@@ -4532,7 +4532,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetMemoryFdPropertiesKHX(VkDevice device, VkExter
 }
 
 // VK_KHX_external_memory_win32 Extension
-#ifdef VK_USE_PLATFORM_WIN32_KHR
+#ifdef VK_USE_PLATFORM_WIN32_KHX
 VKAPI_ATTR VkResult VKAPI_CALL GetMemoryWin32HandleKHX(VkDevice device, VkDeviceMemory memory,
                                                        VkExternalMemoryHandleTypeFlagBitsKHX handleType, HANDLE *pHandle) {
     bool skip_call = false;
@@ -4566,7 +4566,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetMemoryWin32HandlePropertiesKHX(VkDevice device
                  ->GetMemoryWin32HandlePropertiesKHX(device, handleType, handle, pMemoryWin32HandleProperties);
     return result;
 }
-#endif  // VK_USE_PLATFORM_WIN32_KHR
+#endif  // VK_USE_PLATFORM_WIN32_KHX
 
 // VK_KHX_external_semaphore_capabilities Extension
 VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceExternalSemaphorePropertiesKHX(
@@ -4615,7 +4615,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSemaphoreFdKHX(VkDevice device, VkSemaphore se
 }
 
 // VK_KHX_external_semaphore_win32 Extension
-#ifdef VK_USE_PLATFORM_WIN32_KHR
+#ifdef VK_USE_PLATFORM_WIN32_KHX
 VKAPI_ATTR VkResult VKAPI_CALL
 ImportSemaphoreWin32HandleKHX(VkDevice device, const VkImportSemaphoreWin32HandleInfoKHX *pImportSemaphoreWin32HandleInfo) {
     bool skip_call = false;
@@ -4646,7 +4646,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSemaphoreWin32HandleKHX(VkDevice device, VkSem
     result = get_dispatch_table(ot_device_table_map, device)->GetSemaphoreWin32HandleKHX(device, semaphore, handleType, pHandle);
     return result;
 }
-#endif  // VK_USE_PLATFORM_WIN32_KHR
+#endif  // VK_USE_PLATFORM_WIN32_KHX
 
 // VK_EXT_acquire_xlib_display Extension
 #ifdef VK_USE_PLATFORM_XLIB_XRANDR_EXT
@@ -5450,22 +5450,22 @@ static inline PFN_vkVoidFunction InterceptDeviceExtensionCommand(const char *nam
             if (!strcmp(name, "AcquireNextImage2KHX")) return (PFN_vkVoidFunction)AcquireNextImage2KHX;
             if (!strcmp(name, "CmdDispatchBaseKHX")) return (PFN_vkVoidFunction)CmdDispatchBaseKHX;
         }
-#ifdef VK_USE_PLATFORM_WIN32_KHR
+#ifdef VK_USE_PLATFORM_WIN32_KHX
         if (device_data->enables.khx_external_memory_win32) {
             if (!strcmp(name, "GetMemoryWin32HandleKHX")) return (PFN_vkVoidFunction)GetMemoryWin32HandleKHX;
             if (!strcmp(name, "GetMemoryWin32HandlePropertiesKHX")) return (PFN_vkVoidFunction)GetMemoryWin32HandlePropertiesKHX;
         }
-#endif  // VK_USE_PLATFORM_WIN32_KHR
+#endif  // VK_USE_PLATFORM_WIN32_KHX
         if (device_data->enables.khx_external_memory_fd) {
             if (!strcmp(name, "GetMemoryFdKHX")) return (PFN_vkVoidFunction)GetMemoryFdKHX;
             if (!strcmp(name, "GetMemoryFdPropertiesKHX")) return (PFN_vkVoidFunction)GetMemoryFdPropertiesKHX;
         }
-#ifdef VK_USE_PLATFORM_WIN32_KHR
+#ifdef VK_USE_PLATFORM_WIN32_KHX
         if (device_data->enables.khx_external_semaphore_win32) {
             if (!strcmp(name, "ImportSemaphoreWin32HandleKHX")) return (PFN_vkVoidFunction)ImportSemaphoreWin32HandleKHX;
             if (!strcmp(name, "GetSemaphoreWin32HandleKHX")) return (PFN_vkVoidFunction)GetSemaphoreWin32HandleKHX;
         }
-#endif  // VK_USE_PLATFORM_WIN32_KHR
+#endif  // VK_USE_PLATFORM_WIN32_KHX
         if (device_data->enables.khx_external_semaphore_fd) {
             if (!strcmp(name, "ImportSemaphoreFdKHX")) return (PFN_vkVoidFunction)ImportSemaphoreFdKHX;
             if (!strcmp(name, "GetSemaphoreFdKHX")) return (PFN_vkVoidFunction)GetSemaphoreFdKHX;
