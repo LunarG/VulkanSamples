@@ -366,11 +366,13 @@ bool ValidateImageAspectLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, con
     if (mem_barrier->oldLayout == VK_IMAGE_LAYOUT_UNDEFINED) {
         // TODO: Set memory invalid which is in mem_tracker currently
     } else if (node.layout != mem_barrier->oldLayout) {
-        skip |= log_msg(core_validation::GetReportData(device_data), VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                        VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t>(pCB->commandBuffer), __LINE__,
-                        DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                        "You cannot transition the layout of aspect %d from %s when current layout is %s.", aspect,
-                        string_VkImageLayout(mem_barrier->oldLayout), string_VkImageLayout(node.layout));
+        skip |=
+            log_msg(core_validation::GetReportData(device_data), VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                    VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t>(pCB->commandBuffer), __LINE__,
+                    DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                    "For image 0x%" PRIxLEAST64 " you cannot transition the layout of aspect %d from %s when current layout is %s.",
+                    reinterpret_cast<const uint64_t &>(mem_barrier->image), aspect, string_VkImageLayout(mem_barrier->oldLayout),
+                    string_VkImageLayout(node.layout));
     }
     return skip;
 }
@@ -541,9 +543,10 @@ bool VerifyImageLayout(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_S
                 skip_call |=
                     log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                            "%s: Cannot use an image with specific layout %s "
-                            "that doesn't match the actual current layout %s.",
-                            caller, string_VkImageLayout(explicit_layout), string_VkImageLayout(node.layout));
+                            "%s: Cannot use image 0x%" PRIxLEAST64
+                            " with specific layout %s that doesn't match the actual current layout %s.",
+                            caller, reinterpret_cast<const uint64_t &>(image), string_VkImageLayout(explicit_layout),
+                            string_VkImageLayout(node.layout));
             }
         }
     }
@@ -552,18 +555,18 @@ bool VerifyImageLayout(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_S
         if (VK_IMAGE_LAYOUT_GENERAL == explicit_layout) {
             if (image_state->createInfo.tiling != VK_IMAGE_TILING_LINEAR) {
                 // LAYOUT_GENERAL is allowed, but may not be performance optimal, flag as perf warning.
-                skip_call |= log_msg(report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
-                                     VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                                     reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT,
-                                     "DS", "%s: For optimal performance image layout should be %s instead of GENERAL.", caller,
-                                     string_VkImageLayout(optimal_layout));
+                skip_call |= log_msg(
+                    report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                    reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                    "%s: For optimal performance image 0x%" PRIxLEAST64 " layout should be %s instead of GENERAL.", caller,
+                    reinterpret_cast<const uint64_t &>(image), string_VkImageLayout(optimal_layout));
             }
         } else {
             skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                                  reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, msg_code, "DS",
-                                 "%s: Layout for image is %s but can only be %s or VK_IMAGE_LAYOUT_GENERAL. %s", caller,
-                                 string_VkImageLayout(explicit_layout), string_VkImageLayout(optimal_layout),
-                                 validation_error_map[msg_code]);
+                                 "%s: Layout for image 0x%" PRIxLEAST64 " is %s but can only be %s or VK_IMAGE_LAYOUT_GENERAL. %s",
+                                 caller, reinterpret_cast<const uint64_t &>(image), string_VkImageLayout(explicit_layout),
+                                 string_VkImageLayout(optimal_layout), validation_error_map[msg_code]);
         }
     }
     return skip_call;
