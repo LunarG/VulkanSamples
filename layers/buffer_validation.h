@@ -44,10 +44,9 @@ bool PreCallValidateDestroyImage(layer_data *device_data, VkImage image, IMAGE_S
 
 bool ValidateImageAttributes(layer_data *device_data, IMAGE_STATE *image_state, VkImageSubresourceRange range);
 
-void ResolveRemainingLevelsLayers(layer_data *dev_data, VkImageSubresourceRange *range, IMAGE_STATE *image_state);
+uint32_t ResolveRemainingLevels(const VkImageSubresourceRange *range, uint32_t mip_levels);
 
-void ResolveRemainingLevelsLayers(layer_data *dev_data, uint32_t *levels, uint32_t *layers, VkImageSubresourceRange range,
-                                  IMAGE_STATE *image_state);
+uint32_t ResolveRemainingLayers(const VkImageSubresourceRange *range, uint32_t layers);
 
 bool VerifyClearImageLayout(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *image_state,
                             VkImageSubresourceRange range, VkImageLayout dest_image_layout, const char *func_name);

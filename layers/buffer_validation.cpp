@@ -468,16 +468,14 @@ bool ValidateBarriersToImages(layer_data *device_data, VkCommandBuffer cmdBuffer
                               const VkImageMemoryBarrier *pImageMemoryBarriers, const char *func_name) {
     GLOBAL_CB_NODE *pCB = GetCBNode(device_data, cmdBuffer);
     bool skip = false;
-    uint32_t level_count = 0;
-    uint32_t layer_count = 0;
 
     for (uint32_t i = 0; i < imageMemoryBarrierCount; ++i) {
         auto img_barrier = &pImageMemoryBarriers[i];
         if (!img_barrier) continue;
 
-        // TODO: Do not iterate over every possibility - consolidate where possible
-        ResolveRemainingLevelsLayers(device_data, &level_count, &layer_count, img_barrier->subresourceRange,
-                                     GetImageState(device_data, img_barrier->image));
+        VkImageCreateInfo *image_create_info = &(GetImageState(device_data, img_barrier->image)->createInfo);
+        uint32_t level_count = ResolveRemainingLevels(&img_barrier->subresourceRange, image_create_info->mipLevels);
+        uint32_t layer_count = ResolveRemainingLayers(&img_barrier->subresourceRange, image_create_info->arrayLayers);
 
         for (uint32_t j = 0; j < level_count; j++) {
             uint32_t level = img_barrier->subresourceRange.baseMipLevel + j;
@@ -503,19 +501,18 @@ bool ValidateBarriersToImages(layer_data *device_data, VkCommandBuffer cmdBuffer
 void TransitionImageLayouts(layer_data *device_data, VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
                             const VkImageMemoryBarrier *pImgMemBarriers) {
     GLOBAL_CB_NODE *pCB = GetCBNode(device_data, cmdBuffer);
-    uint32_t levelCount = 0;
-    uint32_t layerCount = 0;
 
     for (uint32_t i = 0; i < memBarrierCount; ++i) {
         auto mem_barrier = &pImgMemBarriers[i];
         if (!mem_barrier) continue;
-        // TODO: Do not iterate over every possibility - consolidate where possible
-        ResolveRemainingLevelsLayers(device_data, &levelCount, &layerCount, mem_barrier->subresourceRange,
-                                     GetImageState(device_data, mem_barrier->image));
 
-        for (uint32_t j = 0; j < levelCount; j++) {
+        VkImageCreateInfo *image_create_info = &(GetImageState(device_data, mem_barrier->image)->createInfo);
+        uint32_t level_count = ResolveRemainingLevels(&mem_barrier->subresourceRange, image_create_info->mipLevels);
+        uint32_t layer_count = ResolveRemainingLayers(&mem_barrier->subresourceRange, image_create_info->arrayLayers);
+
+        for (uint32_t j = 0; j < level_count; j++) {
             uint32_t level = mem_barrier->subresourceRange.baseMipLevel + j;
-            for (uint32_t k = 0; k < layerCount; k++) {
+            for (uint32_t k = 0; k < layer_count; k++) {
                 uint32_t layer = mem_barrier->subresourceRange.baseArrayLayer + k;
                 TransitionImageAspectLayout(device_data, pCB, mem_barrier, level, layer, VK_IMAGE_ASPECT_COLOR_BIT);
                 TransitionImageAspectLayout(device_data, pCB, mem_barrier, level, layer, VK_IMAGE_ASPECT_DEPTH_BIT);
@@ -835,29 +832,22 @@ bool ValidateImageAttributes(layer_data *device_data, IMAGE_STATE *image_state, 
     return skip;
 }
 
-void ResolveRemainingLevelsLayers(layer_data *dev_data, VkImageSubresourceRange *range, IMAGE_STATE *image_state) {
-    // If the caller used the special values VK_REMAINING_MIP_LEVELS and VK_REMAINING_ARRAY_LAYERS, resolve them now in our
-    // internal state to the actual values.
+uint32_t ResolveRemainingLevels(const VkImageSubresourceRange *range, uint32_t mip_levels) {
+    // Return correct number of mip levels taking into account VK_REMAINING_MIP_LEVELS
+    uint32_t mip_level_count = range->levelCount;
     if (range->levelCount == VK_REMAINING_MIP_LEVELS) {
-        range->levelCount = image_state->createInfo.mipLevels - range->baseMipLevel;
+        mip_level_count = mip_levels - range->baseMipLevel;
     }
-
-    if (range->layerCount == VK_REMAINING_ARRAY_LAYERS) {
-        range->layerCount = image_state->createInfo.arrayLayers - range->baseArrayLayer;
-    }
+    return mip_level_count;
 }
 
-// Return the correct layer/level counts if the caller used the special values VK_REMAINING_MIP_LEVELS or VK_REMAINING_ARRAY_LAYERS.
-void ResolveRemainingLevelsLayers(layer_data *dev_data, uint32_t *levels, uint32_t *layers, VkImageSubresourceRange range,
-                                  IMAGE_STATE *image_state) {
-    *levels = range.levelCount;
-    *layers = range.layerCount;
-    if (range.levelCount == VK_REMAINING_MIP_LEVELS) {
-        *levels = image_state->createInfo.mipLevels - range.baseMipLevel;
+uint32_t ResolveRemainingLayers(const VkImageSubresourceRange *range, uint32_t layers) {
+    // Return correct number of layers taking into account VK_REMAINING_ARRAY_LAYERS
+    uint32_t array_layer_count = range->layerCount;
+    if (range->layerCount == VK_REMAINING_ARRAY_LAYERS) {
+        array_layer_count = layers - range->baseArrayLayer;
     }
-    if (range.layerCount == VK_REMAINING_ARRAY_LAYERS) {
-        *layers = image_state->createInfo.arrayLayers - range.baseArrayLayer;
-    }
+    return array_layer_count;
 }
 
 bool VerifyClearImageLayout(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *image_state,
@@ -865,8 +855,8 @@ bool VerifyClearImageLayout(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IM
     bool skip = false;
     const debug_report_data *report_data = core_validation::GetReportData(device_data);
 
-    VkImageSubresourceRange resolved_range = range;
-    ResolveRemainingLevelsLayers(device_data, &resolved_range, image_state);
+    uint32_t level_count = ResolveRemainingLevels(&range, image_state->createInfo.mipLevels);
+    uint32_t layer_count = ResolveRemainingLayers(&range, image_state->createInfo.arrayLayers);
 
     if (dest_image_layout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
         if (dest_image_layout == VK_IMAGE_LAYOUT_GENERAL) {
@@ -891,11 +881,11 @@ bool VerifyClearImageLayout(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IM
         }
     }
 
-    for (uint32_t level_index = 0; level_index < resolved_range.levelCount; ++level_index) {
-        uint32_t level = level_index + resolved_range.baseMipLevel;
-        for (uint32_t layer_index = 0; layer_index < resolved_range.layerCount; ++layer_index) {
-            uint32_t layer = layer_index + resolved_range.baseArrayLayer;
-            VkImageSubresource sub = {resolved_range.aspectMask, level, layer};
+    for (uint32_t level_index = 0; level_index < level_count; ++level_index) {
+        uint32_t level = level_index + range.baseMipLevel;
+        for (uint32_t layer_index = 0; layer_index < layer_count; ++layer_index) {
+            uint32_t layer = layer_index + range.baseArrayLayer;
+            VkImageSubresource sub = {range.aspectMask, level, layer};
             IMAGE_CMD_BUF_LAYOUT_NODE node;
             if (FindCmdBufLayout(device_data, cb_node, image_state->image, sub, node)) {
                 if (node.layout != dest_image_layout) {
@@ -921,14 +911,15 @@ bool VerifyClearImageLayout(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IM
 
 void RecordClearImageLayout(layer_data *device_data, GLOBAL_CB_NODE *cb_node, VkImage image, VkImageSubresourceRange range,
                             VkImageLayout dest_image_layout) {
-    VkImageSubresourceRange resolved_range = range;
-    ResolveRemainingLevelsLayers(device_data, &resolved_range, GetImageState(device_data, image));
+    VkImageCreateInfo *image_create_info = &(GetImageState(device_data, image)->createInfo);
+    uint32_t level_count = ResolveRemainingLevels(&range, image_create_info->mipLevels);
+    uint32_t layer_count = ResolveRemainingLayers(&range, image_create_info->arrayLayers);
 
-    for (uint32_t level_index = 0; level_index < resolved_range.levelCount; ++level_index) {
-        uint32_t level = level_index + resolved_range.baseMipLevel;
-        for (uint32_t layer_index = 0; layer_index < resolved_range.layerCount; ++layer_index) {
-            uint32_t layer = layer_index + resolved_range.baseArrayLayer;
-            VkImageSubresource sub = {resolved_range.aspectMask, level, layer};
+    for (uint32_t level_index = 0; level_index < level_count; ++level_index) {
+        uint32_t level = level_index + range.baseMipLevel;
+        for (uint32_t layer_index = 0; layer_index < layer_count; ++layer_index) {
+            uint32_t layer = layer_index + range.baseArrayLayer;
+            VkImageSubresource sub = {range.aspectMask, level, layer};
             IMAGE_CMD_BUF_LAYOUT_NODE node;
             if (!FindCmdBufLayout(device_data, cb_node, image, sub, node)) {
                 SetLayout(device_data, cb_node, image, sub, IMAGE_CMD_BUF_LAYOUT_NODE(dest_image_layout, dest_image_layout));
@@ -2513,7 +2504,8 @@ void PostCallRecordCreateImageView(layer_data *device_data, const VkImageViewCre
 
     auto image_state = GetImageState(device_data, create_info->image);
     auto &sub_res_range = (*image_view_map)[view].get()->create_info.subresourceRange;
-    ResolveRemainingLevelsLayers(device_data, &sub_res_range, image_state);
+    sub_res_range.levelCount = ResolveRemainingLevels(&sub_res_range, image_state->createInfo.mipLevels);
+    sub_res_range.layerCount = ResolveRemainingLayers(&sub_res_range, image_state->createInfo.arrayLayers);
 }
 
 bool PreCallValidateCmdCopyBuffer(layer_data *device_data, GLOBAL_CB_NODE *cb_node, BUFFER_STATE *src_buffer_state,
