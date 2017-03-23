@@ -5191,6 +5191,7 @@ TEST_F(VkLayerTest, RenderPassInUseDestroyedSignaled) {
     VkAttachmentReference attach = {};
     attach.layout = VK_IMAGE_LAYOUT_GENERAL;
     VkSubpassDescription subpass = {};
+    subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments = &attach;
     VkRenderPassCreateInfo rpci = {};
     rpci.subpassCount = 1;
@@ -5268,16 +5269,15 @@ TEST_F(VkLayerTest, RenderPassInUseDestroyedSignaled) {
     VkPipelineCacheCreateInfo pc_ci = {};
     pc_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
 
+    m_errorMonitor->ExpectSuccess();
     VkPipeline pipeline;
     VkPipelineCache pipe_cache;
     err = vkCreatePipelineCache(m_device->device(), &pc_ci, NULL, &pipe_cache);
     ASSERT_VK_SUCCESS(err);
 
-    m_errorMonitor->SetUnexpectedError(
-        "If pColorBlendState is not NULL, The attachmentCount member of pColorBlendState must be equal to the colorAttachmentCount "
-        "used to create subpass");
     err = vkCreateGraphicsPipelines(m_device->device(), pipe_cache, 1, &gp_ci, NULL, &pipeline);
     ASSERT_VK_SUCCESS(err);
+
     // Bind pipeline to cmd buffer, will also bind renderpass
     m_commandBuffer->BeginCommandBuffer();
     vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
@@ -5288,6 +5288,7 @@ TEST_F(VkLayerTest, RenderPassInUseDestroyedSignaled) {
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &m_commandBuffer->handle();
     vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
+    m_errorMonitor->VerifyNotFound();
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00393);
     vkDestroyRenderPass(m_device->device(), rp, nullptr);
