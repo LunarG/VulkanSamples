@@ -791,6 +791,7 @@ struct devExts {
     bool khr_descriptor_update_template_enabled;
     bool khr_shader_draw_parameters_enabled;
     bool khr_maintenance1_enabled;
+    bool nv_geometry_shader_passthrough_enabled;
     std::unordered_map<VkSwapchainKHR, std::unique_ptr<SWAPCHAIN_NODE>> swapchainMap;
     std::unordered_map<VkImage, VkSwapchainKHR> imageToSwapchainMap;
 };

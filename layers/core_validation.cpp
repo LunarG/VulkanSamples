@@ -2531,6 +2531,11 @@ static bool validate_shader_capabilities(layer_data *dev_data, shader_module con
                                               VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME);
                     break;
 
+                case spv::CapabilityGeometryShaderPassthroughNV:
+                    pass &= require_extension(report_data, dev_data->device_extensions.nv_geometry_shader_passthrough_enabled,
+                                              VK_NV_GEOMETRY_SHADER_PASSTHROUGH_EXTENSION_NAME);
+                    break;
+
                 default:
                     // Spirv-validator should catch these errors
                     break;
@@ -3842,6 +3847,7 @@ static void checkDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo,
     dev_data->device_extensions.khr_descriptor_update_template_enabled = false;
     dev_data->device_extensions.khr_shader_draw_parameters_enabled = false;
     dev_data->device_extensions.khr_maintenance1_enabled = false;
+    dev_data->device_extensions.nv_geometry_shader_passthrough_enabled = false;
 
     for (i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
@@ -3861,6 +3867,9 @@ static void checkDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo,
         }
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_MAINTENANCE1_EXTENSION_NAME) == 0) {
             dev_data->device_extensions.khr_maintenance1_enabled = true;
+        }
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_NV_GEOMETRY_SHADER_PASSTHROUGH_EXTENSION_NAME) == 0) {
+            dev_data->device_extensions.nv_geometry_shader_passthrough_enabled = true;
         }
     }
 }
