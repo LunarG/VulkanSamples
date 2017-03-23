@@ -997,6 +997,9 @@ static void demo_prepare_buffers(struct demo *demo) {
     // Note: destroying the swapchain also cleans up all its associated
     // presentable images once the platform is done with them.
     if (oldSwapchain != VK_NULL_HANDLE) {
+        // AMD driver times out waiting on fences used in AcquireNextImage on
+        // a swapchain that is subsequently destroyed before the wait.
+        vkWaitForFences(demo->device, FRAME_LAG, demo->fences, VK_TRUE, UINT64_MAX);
         demo->fpDestroySwapchainKHR(demo->device, oldSwapchain, NULL);
     }
 
