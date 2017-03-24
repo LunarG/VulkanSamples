@@ -19811,6 +19811,7 @@ TEST_F(VkPositiveLayerTest, BindSparse) {
 
     auto index = m_device->graphics_queue_node_index_;
     if (!(m_device->queue_props[index].queueFlags & VK_QUEUE_SPARSE_BINDING_BIT)) return;
+    if (!m_device->phy().features().sparseBinding) return;
 
     m_errorMonitor->ExpectSuccess();
 
