@@ -2542,10 +2542,7 @@ static bool validate_shader_capabilities(layer_data *dev_data, shader_module con
                     break;
 
                 default:
-                    if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__,
-                                SHADER_CHECKER_BAD_CAPABILITY, "SC", "Shader declares capability %u, not supported in Vulkan.",
-                                insn.word(1)))
-                        pass = false;
+                    // Spirv-validator should catch these errors
                     break;
             }
         }
