@@ -241,4 +241,5 @@ add_definitions(-DAPI_NAME="${API_NAME}")
 
 add_subdirectory(API-Samples)
 add_subdirectory(Sample-Programs/Hologram)
+add_subdirectory(Sample-Programs/LunarGravity)
 add_subdirectory(Layer-Samples/Overlay)

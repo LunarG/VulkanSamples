@@ -1,0 +1,25 @@
+{
+  "file_format_version": "1.0.0",
+  "application": {
+    "name": "Lunar Gravity Demo",
+    "version": { "major" : "0", "minor" : "0", "patch" : "1" },
+    "starting scene": "gravitysplash.json"
+  },
+  "engine": {
+    "name": "LunarG Gravity Engine",
+    "version": { "major" : "0", "minor" : "0", "patch" : "5" },
+    "debug": "on",
+    "loglevel": "warnings",
+    "swap" : {
+      "number buffers": "2",
+      "flip type": "Fifo",
+      "format": "B8G8R8A8"
+    },
+    "depthbuffer": "D24_S8"
+  },
+  "window": {
+    "width": "500",
+    "height": "500",
+    "fullscreen": "false"
+  }
+}

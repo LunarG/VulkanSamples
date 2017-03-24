@@ -17,9 +17,11 @@ REVISION_DIR="$CURRENT_DIR/external_revisions"
 
 GLSLANG_GITURL=$(cat "${REVISION_DIR}/glslang_giturl")
 GLSLANG_REVISION=$(cat "${REVISION_DIR}/glslang_revision")
+JSONCPP_REVISION=$(cat "${REVISION_DIR}/jsoncpp_revision")
 
 echo "GLSLANG_GITURL=${GLSLANG_GITURL}"
 echo "GLSLANG_REVISION=${GLSLANG_REVISION}"
+echo "JSONCPP_REVISION=${JSONCPP_REVISION}"
 
 BUILDDIR=${CURRENT_DIR}
 BASEDIR="$BUILDDIR/external"
@@ -42,6 +44,22 @@ function update_glslang () {
    ./update_glslang_sources.py
 }
 
+function create_jsoncpp () {
+   rm -rf ${BASEDIR}/jsoncpp
+   echo "Creating local jsoncpp repository (${BASEDIR}/jsoncpp)."
+   mkdir -p ${BASEDIR}/jsoncpp
+   cd ${BASEDIR}/jsoncpp
+   git clone https://github.com/open-source-parsers/jsoncpp.git .
+   git checkout ${JSONCPP_REVISION}
+}
+
+function update_jsoncpp () {
+   echo "Updating ${BASEDIR}/jsoncpp"
+   cd ${BASEDIR}/jsoncpp
+   git fetch --all
+   git checkout ${JSONCPP_REVISION}
+}
+
 function build_glslang () {
    echo "Building ${BASEDIR}/glslang"
    cd "${BASEDIR}"/glslang
@@ -52,7 +70,14 @@ function build_glslang () {
    make install
 }
 
+function build_jsoncpp () {
+   echo "Building ${BASEDIR}/jsoncpp"
+   cd ${BASEDIR}/jsoncpp
+   python amalgamate.py
+}
+
 INCLUDE_GLSLANG=false
+INCLUDE_JSONCPP=false
 NO_SYNC=false
 NO_BUILD=false
 USE_IMPLICIT_COMPONENT_LIST=true
@@ -69,9 +94,11 @@ do
       USE_IMPLICIT_COMPONENT_LIST=false
       echo "Building glslang ($option)"
       ;;
-      # options to specify build of spirv-tools components
-      -s|--spirv-tools)
-      echo "($option) is deprecated and is no longer necessary"
+      # options to specify build of jsoncpp components
+      -j|--jsoncpp)
+      INCLUDE_JSONCPP=true
+      USE_IMPLICIT_COMPONENT_LIST=false
+      echo "Building jsoncpp ($option)"
       ;;
       # option to specify skipping sync from git
       --no-sync)
@@ -88,6 +115,7 @@ do
       echo "Usage: update_external_sources.sh [options]"
       echo "  Available options:"
       echo "    -g | --glslang      # enable glslang component"
+      echo "    -j | --jsoncpp      # enable jsoncpp"
       echo "    --no-sync           # skip sync from git"
       echo "    --no-build          # skip build"
       echo "  If any component enables are provided, only those components are enabled."
@@ -103,6 +131,7 @@ done
 if [ ${USE_IMPLICIT_COMPONENT_LIST} == "true" ]; then
   echo "Building glslang"
   INCLUDE_GLSLANG=true
+  INCLUDE_JSONCPP=true
 fi
 
 if [ ${INCLUDE_GLSLANG} == "true" ]; then
@@ -114,5 +143,17 @@ if [ ${INCLUDE_GLSLANG} == "true" ]; then
   fi
   if [ ${NO_BUILD} == "false" ]; then
     build_glslang
+  fi
+fi
+
+if [ ${INCLUDE_JSONCPP} == "true" ]; then
+  if [ ${NO_SYNC} == "false" ]; then
+    if [ ! -d "${BASEDIR}/jsoncpp" -o ! -d "${BASEDIR}/jsoncpp/.git" ]; then
+       create_jsoncpp
+    fi
+    update_jsoncpp
+  fi
+  if [ ${NO_BUILD} == "false" ]; then
+    build_jsoncpp
   fi
 fi

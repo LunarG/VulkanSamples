@@ -1,0 +1,31 @@
+{
+  "file_format_version": "1.0.0",
+  "scene": {
+    "name": "Gravity Splash Scene",
+    "class": "gravityscenesplash",
+    "version": "1",
+    "data" : {
+      "clear color" : [ 0.0, 0.0, 0.0, 1.0 ],
+      "texture" : {
+        "index" : 0,
+        "name" : "LunarG Logo Texture",
+        "file" : "lunarg.ppm"
+      },
+      "shader" : {
+        "name" : "Splash Shader Group",
+        "prefix" : "splash_shader"
+      },
+      "vertices" : {
+        "vertex components" : 3,
+        "texture coord groups" : 1,
+        "texture coord components" : 2,
+        "data" : [
+          -1.0, -1.0, 0.0, 0.0, 1.0,
+          -1.0,  1.0, 0.0, 0.0, 0.0,
+          1.0,  1.0, 0.0, 1.0, 0.0,
+          1.0, -1.0, 0.0, 1.0, 1.0
+        ]
+      }
+    }
+  }
+}
