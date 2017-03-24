@@ -9124,7 +9124,7 @@ TEST_F(VkLayerTest, InvalidBarriers) {
         ASSERT_TRUE(img_color.initialized());
 
         VkImageObj img_ds(m_device);
-        img_ds.init(128, 128, VK_FORMAT_D24_UNORM_S8_UINT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL);
+        img_ds.init(128, 128, depth_format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL);
         ASSERT_TRUE(img_ds.initialized());
 
         VkImageObj img_xfer_src(m_device);
@@ -17249,11 +17249,16 @@ TEST_F(VkLayerTest, CopyImageSampleCountMismatch) {
 TEST_F(VkLayerTest, CopyImageAspectMismatch) {
     TEST_DESCRIPTION("Image copies with aspect mask errors");
     ASSERT_NO_FATAL_FAILURE(Init());
+    auto ds_format = find_depth_stencil_format(m_device);
+    if (!ds_format) {
+        return;
+    }
 
     VkImageObj color_image(m_device), ds_image(m_device), depth_image(m_device);
     color_image.init(128, 128, VK_FORMAT_R32_SFLOAT, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
     depth_image.init(128, 128, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
-    ds_image.init(128, 128, VK_FORMAT_D24_UNORM_S8_UINT, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+    ds_image.init(128, 128, ds_format, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_IMAGE_TILING_OPTIMAL,
+                  0);
     ASSERT_TRUE(color_image.initialized());
     ASSERT_TRUE(depth_image.initialized());
     ASSERT_TRUE(ds_image.initialized());
@@ -20482,6 +20487,11 @@ TEST_F(VkPositiveLayerTest, BarrierLayoutToImageUsage) {
     m_errorMonitor->ExpectSuccess();
 
     ASSERT_NO_FATAL_FAILURE(Init());
+    auto depth_format = find_depth_stencil_format(m_device);
+    if (!depth_format) {
+        printf("             No Depth + Stencil format found. Skipped.\n");
+        return;
+    }
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     VkImageMemoryBarrier img_barrier = {};
@@ -20505,11 +20515,11 @@ TEST_F(VkPositiveLayerTest, BarrierLayoutToImageUsage) {
         ASSERT_TRUE(img_color.initialized());
 
         VkImageObj img_ds1(m_device);
-        img_ds1.init(128, 128, VK_FORMAT_D24_UNORM_S8_UINT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL);
+        img_ds1.init(128, 128, depth_format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL);
         ASSERT_TRUE(img_ds1.initialized());
 
         VkImageObj img_ds2(m_device);
-        img_ds2.init(128, 128, VK_FORMAT_D24_UNORM_S8_UINT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL);
+        img_ds2.init(128, 128, depth_format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL);
         ASSERT_TRUE(img_ds2.initialized());
 
         VkImageObj img_xfer_src(m_device);
