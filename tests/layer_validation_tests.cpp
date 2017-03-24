@@ -13933,13 +13933,12 @@ TEST_F(VkLayerTest, CreatePipelineCheckShaderNotEnabled) {
     vkDestroyPipelineLayout(test_device.device(), pipeline_layout, nullptr);
 }
 
-TEST_F(VkLayerTest, CreatePipelineCheckShaderBadCapability) {
-    TEST_DESCRIPTION("Create a graphics pipeline in which a capability declared by the shader is not supported by Vulkan shaders.");
+TEST_F(VkLayerTest, CreateShaderModuleCheckBadCapability) {
+    TEST_DESCRIPTION("Create a shader in which a capability declared by the shader is not supported.");
+    // Note that this failure message comes from spirv-tools, specifically the validator.
 
     ASSERT_NO_FATAL_FAILURE(Init());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-
-    // const char *bad_capability_message = "Shader declares capability 53, not supported in Vulkan.";
 
     char const *vsSource =
         "#version 450\n"
@@ -13951,33 +13950,22 @@ TEST_F(VkLayerTest, CreatePipelineCheckShaderBadCapability) {
         "void main(){\n"
         "   gl_Position = vec4(1);\n"
         "}\n";
-    char const *fsSource =
-        "#version 450\n"
-        "\n"
-        "layout(location=0) out vec4 color;\n"
-        "void main(){\n"
-        "   dvec4 green = vec4(0.0, 1.0, 0.0, 1.0);\n"
-        "   color = vec4(green);\n"
-        "}\n";
 
-    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
-    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Capability value 53 is not allowed by Vulkan");
 
-    VkPipelineObj pipe(m_device);
-    pipe.AddColorAttachment();
-    pipe.AddShader(&vs);
-    pipe.AddShader(&fs);
+    std::vector<unsigned int> spv;
+    VkShaderModuleCreateInfo module_create_info;
+    VkShaderModule shader_module;
+    module_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    module_create_info.pNext = NULL;
+    this->GLSLtoSPV(VK_SHADER_STAGE_VERTEX_BIT, vsSource, spv);
+    module_create_info.pCode = spv.data();
+    module_create_info.codeSize = spv.size() * sizeof(unsigned int);
+    module_create_info.flags = 0;
 
-    VkPipelineLayoutCreateInfo pipeline_layout_create_info = {};
-    pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    VkPipelineLayout pipeline_layout;
-    ASSERT_VK_SUCCESS(vkCreatePipelineLayout(m_device->device(), &pipeline_layout_create_info, nullptr, &pipeline_layout));
+    vkCreateShaderModule(m_device->handle(), &module_create_info, NULL, &shader_module);
 
-    // m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, bad_capability_message);
-    // pipe.CreateVKPipeline(pipeline_layout, renderPass());
-    // m_errorMonitor->VerifyFound();
-
-    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, nullptr);
+    m_errorMonitor->VerifyFound();
 }
 
 TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvided) {
