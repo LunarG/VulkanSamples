@@ -2777,7 +2777,7 @@ TEST_F(VkLayerTest, BindInvalidMemory) {
         // the resource.
         {
             VkDeviceSize image_offset = (image_mem_reqs.size - 1) & ~(image_mem_reqs.alignment - 1);
-            if (image_offset > 0) {
+            if ((image_offset > 0) && (image_mem_reqs.size < (image_alloc_info.allocationSize - image_mem_reqs.alignment))) {
                 m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02179);
                 err = vkBindImageMemory(device(), image, image_mem, image_offset);
                 (void)err;  // This may very well return an error.
@@ -9936,10 +9936,11 @@ TEST_F(VkLayerTest, DSBufferLimitErrors) {
 
     descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     descriptor_write.dstSet = descriptor_set;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00948);
-    vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
-    m_errorMonitor->VerifyFound();
-
+    if (max_ub_range != UINT32_MAX) {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00948);
+        vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
+        m_errorMonitor->VerifyFound();
+    }
     // Reduce size of range to acceptable limit & cause offset error
     buff_info.range = max_ub_range;
     buff_info.offset = min_ub_align - 1;
@@ -9954,9 +9955,11 @@ TEST_F(VkLayerTest, DSBufferLimitErrors) {
 
     descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     descriptor_write.dstBinding = 1;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00949);
-    vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
-    m_errorMonitor->VerifyFound();
+    if (max_ub_range != UINT32_MAX) {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00949);
+        vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
+        m_errorMonitor->VerifyFound();
+    }
 
     // Reduce size of range to acceptable limit & cause offset error
     buff_info.range = max_sb_range;
