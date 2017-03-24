@@ -2,10 +2,10 @@
   - This repository is a collection of Vulkan C++ sample applications.
   - Run the following script to obtain a short description of all or a 
     specific sample:
-    `$ src/get-short-descripts.sh`
+    `$ API-Samples/get-short-descripts.sh`
   - Run the following script to obtain a more detailed description of all
     samples with a long description set:
-    `$ src/get-descripts.sh`
+    `$ API-Samples/get-descripts.sh`
 
 ## CI Build Status
 | Platform | Build Status |
