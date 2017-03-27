@@ -42,7 +42,7 @@
 # include <vector>
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
 
-static_assert( VK_HEADER_VERSION ==  44 , "Wrong VK_HEADER_VERSION!" );
+static_assert( VK_HEADER_VERSION ==  45 , "Wrong VK_HEADER_VERSION!" );
 
 // 32-bit vulkan is not typesafe for handles, so don't allow copy constructors on this platform by default.
 // To enable this feature on 32-bit platforms please define VULKAN_HPP_TYPESAFE_CONVERSION
@@ -6229,6 +6229,9 @@ namespace vk
     ePhysicalDeviceExternalBufferInfoKHX = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_BUFFER_INFO_KHX,
     eExternalBufferPropertiesKHX = VK_STRUCTURE_TYPE_EXTERNAL_BUFFER_PROPERTIES_KHX,
     ePhysicalDeviceIdPropertiesKHX = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ID_PROPERTIES_KHX,
+    ePhysicalDeviceProperties2KHX = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHX,
+    eImageFormatProperties2KHX = VK_STRUCTURE_TYPE_IMAGE_FORMAT_PROPERTIES_2_KHX,
+    ePhysicalDeviceImageFormatInfo2KHX = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_FORMAT_INFO_2_KHX,
     eExternalMemoryBufferCreateInfoKHX = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_BUFFER_CREATE_INFO_KHX,
     eExternalMemoryImageCreateInfoKHX = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO_KHX,
     eExportMemoryAllocateInfoKHX = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO_KHX,
@@ -17280,7 +17283,20 @@ namespace vk
 
   enum class ColorSpaceKHR
   {
-    eSrgbNonlinear = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR
+    eSrgbNonlinear = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
+    eDisplayP3NonlinearEXT = VK_COLOR_SPACE_DISPLAY_P3_NONLINEAR_EXT,
+    eExtendedSrgbLinearEXT = VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT,
+    eDciP3LinearEXT = VK_COLOR_SPACE_DCI_P3_LINEAR_EXT,
+    eDciP3NonlinearEXT = VK_COLOR_SPACE_DCI_P3_NONLINEAR_EXT,
+    eBt709LinearEXT = VK_COLOR_SPACE_BT709_LINEAR_EXT,
+    eBt709NonlinearEXT = VK_COLOR_SPACE_BT709_NONLINEAR_EXT,
+    eBt2020LinearEXT = VK_COLOR_SPACE_BT2020_LINEAR_EXT,
+    eHdr10St2084EXT = VK_COLOR_SPACE_HDR10_ST2084_EXT,
+    eDolbyvisionEXT = VK_COLOR_SPACE_DOLBYVISION_EXT,
+    eHdr10HlgEXT = VK_COLOR_SPACE_HDR10_HLG_EXT,
+    eAdobergbLinearEXT = VK_COLOR_SPACE_ADOBERGB_LINEAR_EXT,
+    eAdobergbNonlinearEXT = VK_COLOR_SPACE_ADOBERGB_NONLINEAR_EXT,
+    ePassThroughEXT = VK_COLOR_SPACE_PASS_THROUGH_EXT
   };
 
   struct SurfaceFormatKHR
@@ -26695,7 +26711,7 @@ namespace vk
     StructureType sType;
 
   public:
-    const void* pNext;
+    void* pNext;
     uint32_t physicalDeviceCount;
     PhysicalDevice physicalDevices[VK_MAX_DEVICE_GROUP_SIZE_KHX];
     Bool32 subsetAllocation;
@@ -28605,6 +28621,9 @@ namespace vk
     case StructureType::ePhysicalDeviceExternalBufferInfoKHX: return "PhysicalDeviceExternalBufferInfoKHX";
     case StructureType::eExternalBufferPropertiesKHX: return "ExternalBufferPropertiesKHX";
     case StructureType::ePhysicalDeviceIdPropertiesKHX: return "PhysicalDeviceIdPropertiesKHX";
+    case StructureType::ePhysicalDeviceProperties2KHX: return "PhysicalDeviceProperties2KHX";
+    case StructureType::eImageFormatProperties2KHX: return "ImageFormatProperties2KHX";
+    case StructureType::ePhysicalDeviceImageFormatInfo2KHX: return "PhysicalDeviceImageFormatInfo2KHX";
     case StructureType::eExternalMemoryBufferCreateInfoKHX: return "ExternalMemoryBufferCreateInfoKHX";
     case StructureType::eExternalMemoryImageCreateInfoKHX: return "ExternalMemoryImageCreateInfoKHX";
     case StructureType::eExportMemoryAllocateInfoKHX: return "ExportMemoryAllocateInfoKHX";
@@ -29448,6 +29467,19 @@ namespace vk
     switch (value)
     {
     case ColorSpaceKHR::eSrgbNonlinear: return "SrgbNonlinear";
+    case ColorSpaceKHR::eDisplayP3NonlinearEXT: return "DisplayP3NonlinearEXT";
+    case ColorSpaceKHR::eExtendedSrgbLinearEXT: return "ExtendedSrgbLinearEXT";
+    case ColorSpaceKHR::eDciP3LinearEXT: return "DciP3LinearEXT";
+    case ColorSpaceKHR::eDciP3NonlinearEXT: return "DciP3NonlinearEXT";
+    case ColorSpaceKHR::eBt709LinearEXT: return "Bt709LinearEXT";
+    case ColorSpaceKHR::eBt709NonlinearEXT: return "Bt709NonlinearEXT";
+    case ColorSpaceKHR::eBt2020LinearEXT: return "Bt2020LinearEXT";
+    case ColorSpaceKHR::eHdr10St2084EXT: return "Hdr10St2084EXT";
+    case ColorSpaceKHR::eDolbyvisionEXT: return "DolbyvisionEXT";
+    case ColorSpaceKHR::eHdr10HlgEXT: return "Hdr10HlgEXT";
+    case ColorSpaceKHR::eAdobergbLinearEXT: return "AdobergbLinearEXT";
+    case ColorSpaceKHR::eAdobergbNonlinearEXT: return "AdobergbNonlinearEXT";
+    case ColorSpaceKHR::ePassThroughEXT: return "PassThroughEXT";
     default: return "invalid";
     }
   }
