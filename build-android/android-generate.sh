@@ -37,6 +37,7 @@ mkdir -p generated/include generated/common
 cp -f ../layers/vk_layer_config.cpp   generated/common/
 cp -f ../layers/vk_layer_extension_utils.cpp  generated/common/
 cp -f ../layers/vk_layer_utils.cpp    generated/common/
+cp -f ../layers/vk_format_utils.cpp   generated/common/
 cp -f ../layers/vk_layer_table.cpp    generated/common/
 cp -f ../layers/descriptor_sets.cpp   generated/common/
 cp -f ../layers/buffer_validation.cpp generated/common/

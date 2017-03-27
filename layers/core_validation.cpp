@@ -4845,7 +4845,7 @@ static void initializeAndTrackMemory(layer_data *dev_data, VkDeviceMemory mem, V
                 size = mem_info->alloc_info.allocationSize - offset;
             }
             mem_info->shadow_pad_size = dev_data->phys_dev_properties.properties.limits.minMemoryMapAlignment;
-            assert(vk_safe_modulo(mem_info->shadow_pad_size,
+            assert(VkSafeModulo(mem_info->shadow_pad_size,
                                   dev_data->phys_dev_properties.properties.limits.minMemoryMapAlignment) == 0);
             // Ensure start of mapped region reflects hardware alignment constraints
             uint64_t map_alignment = dev_data->phys_dev_properties.properties.limits.minMemoryMapAlignment;
@@ -4860,7 +4860,7 @@ static void initializeAndTrackMemory(layer_data *dev_data, VkDeviceMemory mem, V
                 reinterpret_cast<char *>((reinterpret_cast<uintptr_t>(mem_info->shadow_copy_base) + map_alignment) &
                                          ~(map_alignment - 1)) +
                 start_offset;
-            assert(vk_safe_modulo(reinterpret_cast<uintptr_t>(mem_info->shadow_copy) + mem_info->shadow_pad_size - start_offset,
+            assert(VkSafeModulo(reinterpret_cast<uintptr_t>(mem_info->shadow_copy) + mem_info->shadow_pad_size - start_offset,
                                   map_alignment) == 0);
 
             memset(mem_info->shadow_copy, NoncoherentMemoryFillValue, static_cast<size_t>(2 * mem_info->shadow_pad_size + size));
@@ -5558,7 +5558,7 @@ static bool PreCallValidateBindBufferMemory(layer_data *dev_data, VkBuffer buffe
         }
 
         // Validate memory requirements alignment
-        if (vk_safe_modulo(memoryOffset, buffer_state->requirements.alignment) != 0) {
+        if (VkSafeModulo(memoryOffset, buffer_state->requirements.alignment) != 0) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
                             buffer_handle, __LINE__, VALIDATION_ERROR_02174, "DS",
                             "vkBindBufferMemory(): memoryOffset is 0x%" PRIxLEAST64
@@ -5603,7 +5603,7 @@ static bool PreCallValidateBindBufferMemory(layer_data *dev_data, VkBuffer buffe
 
         for (int i = 0; i < 3; i++) {
             if (usage & usage_list[i]) {
-                if (vk_safe_modulo(memoryOffset, offset_requirement[i]) != 0) {
+                if (VkSafeModulo(memoryOffset, offset_requirement[i]) != 0) {
                     skip |= log_msg(
                         dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, buffer_handle,
                         __LINE__, msgCode[i], "DS", "vkBindBufferMemory(): %s memoryOffset is 0x%" PRIxLEAST64
@@ -7376,7 +7376,7 @@ VKAPI_ATTR void VKAPI_CALL CmdBindDescriptorSets(VkCommandBuffer commandBuffer, 
                         uint32_t cur_dyn_offset = total_dynamic_descriptors;
                         for (uint32_t d = 0; d < descriptor_set->GetTotalDescriptorCount(); d++) {
                             if (descriptor_set->GetTypeFromGlobalIndex(d) == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) {
-                                if (vk_safe_modulo(
+                                if (VkSafeModulo(
                                         pDynamicOffsets[cur_dyn_offset],
                                         dev_data->phys_dev_properties.properties.limits.minUniformBufferOffsetAlignment) != 0) {
                                     skip |= log_msg(
@@ -7390,7 +7390,7 @@ VKAPI_ATTR void VKAPI_CALL CmdBindDescriptorSets(VkCommandBuffer commandBuffer, 
                                 }
                                 cur_dyn_offset++;
                             } else if (descriptor_set->GetTypeFromGlobalIndex(d) == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
-                                if (vk_safe_modulo(
+                                if (VkSafeModulo(
                                         pDynamicOffsets[cur_dyn_offset],
                                         dev_data->phys_dev_properties.properties.limits.minStorageBufferOffsetAlignment) != 0) {
                                     skip |= log_msg(
@@ -9486,8 +9486,8 @@ static bool FormatSpecificLoadAndStoreOpSettings(VkFormat format, T color_depth_
     if (color_depth_op != op && stencil_op != op) {
         return false;
     }
-    bool check_color_depth_load_op = !vk_format_is_stencil_only(format);
-    bool check_stencil_load_op = vk_format_is_depth_and_stencil(format) || !check_color_depth_load_op;
+    bool check_color_depth_load_op = !VkFormatIsStencilOnly(format);
+    bool check_stencil_load_op = VkFormatIsDepthAndStencil(format) || !check_color_depth_load_op;
 
     return (((check_color_depth_load_op == true) && (color_depth_op == op)) ||
             ((check_stencil_load_op == true) && (stencil_op == op)));
@@ -10153,14 +10153,14 @@ static bool ValidateMappedMemoryRangeDeviceLimits(layer_data *dev_data, const ch
     bool skip = false;
     for (uint32_t i = 0; i < mem_range_count; ++i) {
         uint64_t atom_size = dev_data->phys_dev_properties.properties.limits.nonCoherentAtomSize;
-        if (vk_safe_modulo(mem_ranges[i].offset, atom_size) != 0) {
+        if (VkSafeModulo(mem_ranges[i].offset, atom_size) != 0) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
                             reinterpret_cast<const uint64_t &>(mem_ranges->memory), __LINE__, VALIDATION_ERROR_00644, "MEM",
                             "%s: Offset in pMemRanges[%d] is 0x%" PRIxLEAST64
                             ", which is not a multiple of VkPhysicalDeviceLimits::nonCoherentAtomSize (0x%" PRIxLEAST64 "). %s",
                             func_name, i, mem_ranges[i].offset, atom_size, validation_error_map[VALIDATION_ERROR_00644]);
         }
-        if ((mem_ranges[i].size != VK_WHOLE_SIZE) && (vk_safe_modulo(mem_ranges[i].size, atom_size) != 0)) {
+        if ((mem_ranges[i].size != VK_WHOLE_SIZE) && (VkSafeModulo(mem_ranges[i].size, atom_size) != 0)) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
                             reinterpret_cast<const uint64_t &>(mem_ranges->memory), __LINE__, VALIDATION_ERROR_00645, "MEM",
                             "%s: Size in pMemRanges[%d] is 0x%" PRIxLEAST64
@@ -10253,7 +10253,7 @@ static bool PreCallValidateBindImageMemory(layer_data *dev_data, VkImage image, 
         }
 
         // Validate memory requirements alignment
-        if (vk_safe_modulo(memoryOffset, image_state->requirements.alignment) != 0) {
+        if (VkSafeModulo(memoryOffset, image_state->requirements.alignment) != 0) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                             image_handle, __LINE__, VALIDATION_ERROR_02178, "DS",
                             "vkBindImageMemory(): memoryOffset is 0x%" PRIxLEAST64

@@ -21,6 +21,7 @@
  */
 
 #include "vkrenderframework.h"
+#include "vk_format_utils.h"
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 #define GET_DEVICE_PROC_ADDR(dev, entrypoint)                                            \
@@ -29,47 +30,13 @@
         assert(fp##entrypoint != NULL);                                                  \
     }
 
-// TODO : These functions are duplicated is vk_layer_utils.cpp, share code
-// Return true if format contains depth and stencil information
-bool vk_format_is_depth_and_stencil(VkFormat format) {
-    bool is_ds = false;
-
-    switch (format) {
-        case VK_FORMAT_D16_UNORM_S8_UINT:
-        case VK_FORMAT_D24_UNORM_S8_UINT:
-        case VK_FORMAT_D32_SFLOAT_S8_UINT:
-            is_ds = true;
-            break;
-        default:
-            break;
-    }
-    return is_ds;
-}
-
-// Return true if format is a stencil-only format
-bool vk_format_is_stencil_only(VkFormat format) { return (format == VK_FORMAT_S8_UINT); }
-
-// Return true if format is a depth-only format
-bool vk_format_is_depth_only(VkFormat format) {
-    bool is_depth = false;
-
-    switch (format) {
-        case VK_FORMAT_D16_UNORM:
-        case VK_FORMAT_X8_D24_UNORM_PACK32:
-        case VK_FORMAT_D32_SFLOAT:
-            is_depth = true;
-            break;
-        default:
-            break;
-    }
-
-    return is_depth;
-}
-
-VkFormat find_depth_stencil_format(VkDeviceObj *device) {
+// Format search helpers
+VkFormat FindDepthStencilFormat(VkPhysicalDevice phy) {
     VkFormat ds_formats[] = {VK_FORMAT_D16_UNORM_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT_S8_UINT};
     for (uint32_t i = 0; i < sizeof(ds_formats); i++) {
-        VkFormatProperties format_props = device->format_properties(ds_formats[i]);
+        VkFormatProperties format_props;
+        vkGetPhysicalDeviceFormatProperties(phy, ds_formats[i], &format_props);
+
         if (format_props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
             return ds_formats[i];
         }
@@ -414,8 +381,7 @@ VkDeviceObj::VkDeviceObj(uint32_t id, VkPhysicalDevice obj, std::vector<const ch
     queue_props = phy().queue_properties();
 }
 
-uint32_t VkDeviceObj::QueueFamilyWithoutCapabilities(VkQueueFlags capabilities)
-{
+uint32_t VkDeviceObj::QueueFamilyWithoutCapabilities(VkQueueFlags capabilities) {
     // Find a queue family without desired capabilities
     for (uint32_t i = 0; i < queue_props.size(); i++) {
         if ((queue_props[i].queueFlags & capabilities) == 0) {
@@ -425,12 +391,10 @@ uint32_t VkDeviceObj::QueueFamilyWithoutCapabilities(VkQueueFlags capabilities)
     return UINT32_MAX;
 }
 
-
 void VkDeviceObj::get_device_queue() {
     ASSERT_NE(true, graphics_queues().empty());
     m_queue = graphics_queues()[0]->handle();
 }
-
 
 VkDescriptorSetObj::VkDescriptorSetObj(VkDeviceObj *device) : m_device(device), m_nextSlot(0) {}
 
@@ -601,7 +565,8 @@ void VkImageObj::ImageMemoryBarrier(VkCommandBufferObj *cmd_buf, VkImageAspectFl
             VK_ACCESS_SHADER_READ_BIT |
             VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
-            VK_MEMORY_INPUT_COPY_BIT*/, VkImageLayout image_layout) {
+            VK_MEMORY_INPUT_COPY_BIT*/,
+                                    VkImageLayout image_layout) {
     const VkImageSubresourceRange subresourceRange = subresource_range(aspect, 0, 1, 0, 1);
     VkImageMemoryBarrier barrier;
     barrier = image_memory_barrier(output_mask, input_mask, layout(), image_layout, subresourceRange);
@@ -759,11 +724,11 @@ void VkImageObj::init(uint32_t w, uint32_t h, VkFormat fmt, VkFlags usage, VkIma
         newLayout = m_descriptorImageInfo.imageLayout;
 
     VkImageAspectFlags image_aspect = 0;
-    if (vk_format_is_depth_and_stencil(fmt)) {
+    if (VkFormatIsDepthAndStencil(fmt)) {
         image_aspect = VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_DEPTH_BIT;
-    } else if (vk_format_is_depth_only(fmt)) {
+    } else if (VkFormatIsDepthOnly(fmt)) {
         image_aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
-    } else if (vk_format_is_stencil_only(fmt)) {
+    } else if (VkFormatIsStencilOnly(fmt)) {
         image_aspect = VK_IMAGE_ASPECT_STENCIL_BIT;
     } else {  // color
         image_aspect = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -794,11 +759,11 @@ void VkImageObj::init(const VkImageCreateInfo *create_info) {
     vk_testing::Image::init(*m_device, *create_info, 0);
 
     VkImageAspectFlags image_aspect = 0;
-    if (vk_format_is_depth_and_stencil(create_info->format)) {
+    if (VkFormatIsDepthAndStencil(create_info->format)) {
         image_aspect = VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_DEPTH_BIT;
-    } else if (vk_format_is_depth_only(create_info->format)) {
+    } else if (VkFormatIsDepthOnly(create_info->format)) {
         image_aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
-    } else if (vk_format_is_stencil_only(create_info->format)) {
+    } else if (VkFormatIsStencilOnly(create_info->format)) {
         image_aspect = VK_IMAGE_ASPECT_STENCIL_BIT;
     } else {  // color
         image_aspect = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -998,7 +963,8 @@ void VkConstantBufferObj::BufferMemoryBarrier(VkFlags srcAccessMask /*=
             VK_ACCESS_SHADER_WRITE_BIT |
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
-            VK_MEMORY_OUTPUT_COPY_BIT*/, VkFlags dstAccessMask /*=
+            VK_MEMORY_OUTPUT_COPY_BIT*/,
+                                              VkFlags dstAccessMask /*=
             VK_ACCESS_HOST_READ_BIT |
             VK_ACCESS_INDIRECT_COMMAND_READ_BIT |
             VK_ACCESS_INDEX_READ_BIT |
@@ -1333,8 +1299,7 @@ void VkPipelineObj::InitGraphicsPipelineCreateInfo(VkGraphicsPipelineCreateInfo 
     }
 }
 
-VkResult VkPipelineObj::CreateVKPipeline(VkPipelineLayout layout, VkRenderPass render_pass,
-                                         VkGraphicsPipelineCreateInfo *gp_ci) {
+VkResult VkPipelineObj::CreateVKPipeline(VkPipelineLayout layout, VkRenderPass render_pass, VkGraphicsPipelineCreateInfo *gp_ci) {
     VkGraphicsPipelineCreateInfo info = {};
 
     // if not given a CreateInfo, create and initialize a local one.
@@ -1631,9 +1596,9 @@ void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height,
     init(width, height, m_depth_stencil_fmt, usage, VK_IMAGE_TILING_OPTIMAL);
 
     VkImageAspectFlags aspect = VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_DEPTH_BIT;
-    if (vk_format_is_depth_only(format))
+    if (VkFormatIsDepthOnly(format))
         aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
-    else if (vk_format_is_stencil_only(format))
+    else if (VkFormatIsStencilOnly(format))
         aspect = VK_IMAGE_ASPECT_STENCIL_BIT;
 
     SetLayout(aspect, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);

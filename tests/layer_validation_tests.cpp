@@ -35,6 +35,7 @@
 #include "icd-spv.h"
 #include "test_common.h"
 #include "vk_layer_config.h"
+#include "vk_format_utils.h"
 #include "vk_validation_error_messages.h"
 #include "vkrenderframework.h"
 
@@ -355,7 +356,6 @@ class VkLayerTest : public VkRenderFramework {
         InitFramework(instance_layer_names, instance_extension_names, device_extension_names, myDbgFunc, m_errorMonitor);
         InitState(features, flags);
     }
-
 
    protected:
     ErrorMonitor *m_errorMonitor;
@@ -1346,7 +1346,8 @@ TEST_F(VkLayerTest, SparseBindingImageBufferCreate) {
 
 TEST_F(VkLayerTest, SparseResidencyImageCreateUnsupportedTypes) {
     TEST_DESCRIPTION("Create images with sparse residency with unsupported types");
-    ASSERT_NO_FATAL_FAILURE(InitFramework(instance_layer_names, instance_extension_names, device_extension_names, myDbgFunc, m_errorMonitor));
+    ASSERT_NO_FATAL_FAILURE(
+        InitFramework(instance_layer_names, instance_extension_names, device_extension_names, myDbgFunc, m_errorMonitor));
 
     // Determine which device feature are available
     VkPhysicalDeviceFeatures available_features = {};
@@ -1413,7 +1414,8 @@ TEST_F(VkLayerTest, SparseResidencyImageCreateUnsupportedTypes) {
 
 TEST_F(VkLayerTest, SparseResidencyImageCreateUnsupportedSamples) {
     TEST_DESCRIPTION("Create images with sparse residency with unsupported tiling or sample counts");
-    ASSERT_NO_FATAL_FAILURE(InitFramework(instance_layer_names, instance_extension_names, device_extension_names, myDbgFunc, m_errorMonitor));
+    ASSERT_NO_FATAL_FAILURE(
+        InitFramework(instance_layer_names, instance_extension_names, device_extension_names, myDbgFunc, m_errorMonitor));
 
     // Determine which device feature are available
     VkPhysicalDeviceFeatures available_features = {};
@@ -2167,8 +2169,7 @@ TEST_F(VkLayerTest, InvalidUsageBits) {
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Invalid usage flag for image ");
 
     ASSERT_NO_FATAL_FAILURE(Init());
-
-    auto format = find_depth_stencil_format(m_device);
+    auto format = FindDepthStencilFormat(gpu());
     if (!format) {
         printf("             No Depth + Stencil format found. Skipped.\n");
         return;
@@ -8757,7 +8758,7 @@ TEST_F(VkLayerTest, ClearDepthStencilImageWithinRenderPass) {
     ASSERT_NO_FATAL_FAILURE(Init());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
-    auto depth_format = find_depth_stencil_format(m_device);
+    auto depth_format = FindDepthStencilFormat(gpu());
     if (!depth_format) {
         printf("             No Depth + Stencil format found. Skipped.\n");
         return;
@@ -8908,7 +8909,7 @@ TEST_F(VkLayerTest, InvalidBarriers) {
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Barriers cannot be set during subpass");
 
     ASSERT_NO_FATAL_FAILURE(Init());
-    auto depth_format = find_depth_stencil_format(m_device);
+    auto depth_format = FindDepthStencilFormat(gpu());
     if (!depth_format) {
         printf("             No Depth + Stencil format found. Skipped.\n");
         return;
@@ -9984,7 +9985,7 @@ TEST_F(VkLayerTest, DSAspectBitsErrors) {
     VkResult err;
 
     ASSERT_NO_FATAL_FAILURE(Init());
-    auto depth_format = find_depth_stencil_format(m_device);
+    auto depth_format = FindDepthStencilFormat(gpu());
     if (!depth_format) {
         printf("             No Depth + Stencil format found. Skipped.\n");
         return;
@@ -11720,7 +11721,7 @@ TEST_F(VkLayerTest, InvalidImageLayout) {
     // *  -3 Cmd buf submit of image w/ layout not matching first use w/o subresource
 
     ASSERT_NO_FATAL_FAILURE(Init());
-    auto depth_format = find_depth_stencil_format(m_device);
+    auto depth_format = FindDepthStencilFormat(gpu());
     if (!depth_format) {
         printf("             No Depth + Stencil format found. Skipped.\n");
         return;
@@ -15953,7 +15954,7 @@ TEST_F(VkLayerTest, ImageLayerViewTests) {
     TEST_DESCRIPTION("Passing bad parameters to CreateImageView");
 
     ASSERT_NO_FATAL_FAILURE(Init());
-    auto depth_format = find_depth_stencil_format(m_device);
+    auto depth_format = FindDepthStencilFormat(gpu());
     if (!depth_format) {
         return;
     }
@@ -17054,7 +17055,7 @@ TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch) {
                                          "vkCmdCopyImage called with unmatched source and dest image depth");
 
     ASSERT_NO_FATAL_FAILURE(Init());
-    auto depth_format = find_depth_stencil_format(m_device);
+    auto depth_format = FindDepthStencilFormat(gpu());
     if (!depth_format) {
         return;
     }
@@ -17240,7 +17241,7 @@ TEST_F(VkLayerTest, CopyImageSampleCountMismatch) {
 TEST_F(VkLayerTest, CopyImageAspectMismatch) {
     TEST_DESCRIPTION("Image copies with aspect mask errors");
     ASSERT_NO_FATAL_FAILURE(Init());
-    auto ds_format = find_depth_stencil_format(m_device);
+    auto ds_format = FindDepthStencilFormat(gpu());
     if (!ds_format) {
         return;
     }
@@ -17268,8 +17269,10 @@ TEST_F(VkLayerTest, CopyImageAspectMismatch) {
     copyRegion.extent = {64, 128, 1};
 
     // Submitting command before command buffer is in recording state
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "You must call vkBeginCommandBuffer");// VALIDATION_ERROR_01192);
-    vkCmdCopyImage(m_commandBuffer->GetBufferHandle(), depth_image.handle(), VK_IMAGE_LAYOUT_GENERAL, depth_image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "You must call vkBeginCommandBuffer");  // VALIDATION_ERROR_01192);
+    vkCmdCopyImage(m_commandBuffer->GetBufferHandle(), depth_image.handle(), VK_IMAGE_LAYOUT_GENERAL, depth_image.handle(),
+                   VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
     m_errorMonitor->VerifyFound();
 
     m_commandBuffer->BeginCommandBuffer();
@@ -17277,25 +17280,28 @@ TEST_F(VkLayerTest, CopyImageAspectMismatch) {
     // Src and dest aspect masks don't match
     copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_STENCIL_BIT;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01197);
-    vkCmdCopyImage(m_commandBuffer->GetBufferHandle(), ds_image.handle(), VK_IMAGE_LAYOUT_GENERAL, ds_image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
+    vkCmdCopyImage(m_commandBuffer->GetBufferHandle(), ds_image.handle(), VK_IMAGE_LAYOUT_GENERAL, ds_image.handle(),
+                   VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
     m_errorMonitor->VerifyFound();
     copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 
     // Illegal combinations of aspect bits - VU 01221
-    copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT; // color must be alone
+    copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT;  // color must be alone
     copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01221);
     // These aspect/format mismatches are redundant but unavoidable here
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01200);
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01201);
-    vkCmdCopyImage(m_commandBuffer->GetBufferHandle(), color_image.handle(), VK_IMAGE_LAYOUT_GENERAL, color_image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
+    vkCmdCopyImage(m_commandBuffer->GetBufferHandle(), color_image.handle(), VK_IMAGE_LAYOUT_GENERAL, color_image.handle(),
+                   VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
     m_errorMonitor->VerifyFound();
     // Metadata aspect is illegal - VU 01222
     copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_METADATA_BIT;
     copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_METADATA_BIT;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01222);
     // These aspect/format mismatches are redundant but unavoidable here
-    vkCmdCopyImage(m_commandBuffer->GetBufferHandle(), color_image.handle(), VK_IMAGE_LAYOUT_GENERAL, color_image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
+    vkCmdCopyImage(m_commandBuffer->GetBufferHandle(), color_image.handle(), VK_IMAGE_LAYOUT_GENERAL, color_image.handle(),
+                   VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
     m_errorMonitor->VerifyFound();
 
     copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
@@ -17743,7 +17749,7 @@ TEST_F(VkLayerTest, DepthStencilImageViewWithColorAspectBitError) {
                                          "Combination depth/stencil image formats can have only the ");
 
     ASSERT_NO_FATAL_FAILURE(Init());
-    auto depth_format = find_depth_stencil_format(m_device);
+    auto depth_format = FindDepthStencilFormat(gpu());
     if (!depth_format) {
         return;
     }
@@ -17866,7 +17872,7 @@ TEST_F(VkLayerTest, ClearImageErrors) {
         "ClearDepthStencilImage with a color image.");
 
     ASSERT_NO_FATAL_FAILURE(Init());
-    auto depth_format = find_depth_stencil_format(m_device);
+    auto depth_format = FindDepthStencilFormat(gpu());
     if (!depth_format) {
         return;
     }
@@ -17951,7 +17957,7 @@ TEST_F(VkLayerTest, CommandQueueFlags) {
     ASSERT_NO_FATAL_FAILURE(Init());
 
     uint32_t queueFamilyIndex = m_device->QueueFamilyWithoutCapabilities(VK_QUEUE_GRAPHICS_BIT);
-    if(queueFamilyIndex == UINT32_MAX) {
+    if (queueFamilyIndex == UINT32_MAX) {
         printf("             Non-graphics queue family not found; skipped.\n");
         return;
     } else {
@@ -18357,7 +18363,7 @@ TEST_F(VkPositiveLayerTest, SecondaryCommandBufferImageLayoutTransitions) {
     VkResult err;
     m_errorMonitor->ExpectSuccess();
     ASSERT_NO_FATAL_FAILURE(Init());
-    auto depth_format = find_depth_stencil_format(m_device);
+    auto depth_format = FindDepthStencilFormat(gpu());
     if (!depth_format) {
         return;
     }
@@ -20304,7 +20310,7 @@ TEST_F(VkPositiveLayerTest, StencilLoadOp) {
         "CLEAR. stencil[Load|Store]Op used to be ignored.");
     VkResult result = VK_SUCCESS;
     ASSERT_NO_FATAL_FAILURE(Init());
-    auto depth_format = find_depth_stencil_format(m_device);
+    auto depth_format = FindDepthStencilFormat(gpu());
     if (!depth_format) {
         printf("             No Depth + Stencil format found. Skipped.\n");
         return;
@@ -20478,7 +20484,7 @@ TEST_F(VkPositiveLayerTest, BarrierLayoutToImageUsage) {
     m_errorMonitor->ExpectSuccess();
 
     ASSERT_NO_FATAL_FAILURE(Init());
-    auto depth_format = find_depth_stencil_format(m_device);
+    auto depth_format = FindDepthStencilFormat(gpu());
     if (!depth_format) {
         printf("             No Depth + Stencil format found. Skipped.\n");
         return;
@@ -21885,7 +21891,7 @@ TEST_F(VkPositiveLayerTest, ValidRenderPassAttachmentLayoutWithLoadOp) {
         "valid *READ_ONLY* layout.");
     m_errorMonitor->ExpectSuccess();
     ASSERT_NO_FATAL_FAILURE(Init());
-    auto depth_format = find_depth_stencil_format(m_device);
+    auto depth_format = FindDepthStencilFormat(gpu());
     if (!depth_format) {
         printf("             No Depth + Stencil format found. Skipped.\n");
         return;
@@ -21933,7 +21939,7 @@ TEST_F(VkPositiveLayerTest, RenderPassDepthStencilLayoutTransition) {
         "transition has correctly occurred at queue submit time with no validation errors.");
 
     ASSERT_NO_FATAL_FAILURE(Init());
-    auto depth_format = find_depth_stencil_format(m_device);
+    auto depth_format = FindDepthStencilFormat(gpu());
     if (!depth_format) {
         printf("             No Depth + Stencil format found. Skipped.\n");
         return;
