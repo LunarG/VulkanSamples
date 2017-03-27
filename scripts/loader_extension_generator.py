@@ -103,7 +103,7 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
         self.CommandParam = namedtuple('CommandParam', ['type', 'name', 'cdecl'])
         self.CommandData = namedtuple('CommandData', ['name', 'ext_name', 'ext_type', 'protect', 'return_type', 'handle_type', 'params', 'cdecl'])
         self.instanceExtensions = []
-        self.ExtensionData = namedtuple('ExtensionData', ['name', 'type', 'protect', 'num_commands'])
+        self.ExtensionData = namedtuple('ExtensionData', ['name', 'type', 'protect', 'define', 'num_commands'])
 
     #
     # Called once at the beginning of each run
@@ -204,10 +204,17 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
         # Start processing in superclass
         OutputGenerator.beginFeature(self, interface, emit)
 
+        enums = interface[0].findall('enum')
         self.currentExtension = ''
+        self.name_definition = ''
+
+        for item in enums:
+            name_definition = item.get('name')
+            if 'EXTENSION_NAME' in name_definition:
+                self.name_definition = name_definition
+
         self.type = interface.get('type')
         self.num_commands = 0
-
         name = interface.get('name')
         self.currentExtension = name 
 
@@ -231,6 +238,7 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
             self.instanceExtensions.append(self.ExtensionData(name=self.currentExtension,
                                                               type=self.type,
                                                               protect=self.featureExtraProtect,
+                                                              define=self.name_definition,
                                                               num_commands=self.num_commands))
 
         # Finish processing in superclass
@@ -1150,12 +1158,7 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
             else:
                 create_func += '        } else if (0 == strcmp(pCreateInfo->ppEnabledExtensionNames[i], '
 
-            if 'VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES2' == ext.name.upper():
-                create_func += 'VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME)) {\n'
-            else:
-                create_func += ext.name.upper()
-                create_func += '_EXTENSION_NAME)) {\n'
-
+            create_func += ext.define + ')) {\n'
             create_func += '            ptr_instance->enabled_known_extensions.'
             create_func += ext.name[3:].lower()
             create_func += ' = 1;\n'
@@ -1283,12 +1286,7 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
             if ext.protect is not None:
                 table += '#ifdef %s\n' % ext.protect
             table += '                                                  '
-
-            if 'VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES2' == ext.name.upper():
-                table += 'VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,\n'
-            else:
-                table += ext.name.upper()
-                table += '_EXTENSION_NAME,\n'
+            table += ext.define + ',\n'
 
             if ext.protect is not None:
                 table += '#endif // %s\n' % ext.protect
