@@ -826,19 +826,15 @@ void DemoUpdateTargetIPD(struct demo *demo) {
     VkResult U_ASSERT_ONLY err;
     VkPastPresentationTimingGOOGLE* past = NULL;
     uint32_t count = 0;
-    DbgMsg("%s(): about to call vkGetPastPresentationTimingGOOGLE\n", __FUNCTION__);
 
     err = demo->fpGetPastPresentationTimingGOOGLE(demo->device,
                                                   demo->swapchain,
                                                   &count,
                                                   NULL);
     assert(!err);
-    DbgMsg("%s(): vkGetPastPresentationTimingGOOGLE returned count of %d\n",
-           __FUNCTION__, count);
     if (count) {
         past = (VkPastPresentationTimingGOOGLE*) malloc(sizeof(VkPastPresentationTimingGOOGLE) * count);
         assert(past);
-        DbgMsg("%s(): about to call vkGetPastPresentationTimingGOOGLE again\n", __FUNCTION__);
         err = demo->fpGetPastPresentationTimingGOOGLE(demo->device,
                                                       demo->swapchain,
                                                       &count,
@@ -848,56 +844,7 @@ void DemoUpdateTargetIPD(struct demo *demo) {
         bool early = false;
         bool late = false;
         bool calibrate_next = false;
-        static VkPastPresentationTimingGOOGLE prior = {0xffffffff, 0, 0, 0, 0};
         for (uint32_t i = 0 ; i < count ; i++) {
-            DbgMsg("%s():\n", __FUNCTION__);
-            DbgMsg("%s():\t  presentID, desiredPresentTime, actualPresentTime, earliestPresentTime, presentMargin\n", __FUNCTION__);
-            if (prior.presentID != 0xffffffff) {
-                DbgMsg("%s(): prior: %8d,  %17"PRId64",  %16"PRId64",  %18"PRId64",  %12"PRId64"\n", __FUNCTION__,
-                       prior.presentID,
-                       prior.desiredPresentTime,
-                       prior.actualPresentTime,
-                       prior.earliestPresentTime,
-                       prior.presentMargin);
-            }
-            DbgMsg("%s(): cur:   %8d,  %17"PRId64",  %16"PRId64",  %18"PRId64",  %12"PRId64"\n", __FUNCTION__,
-                   past[i].presentID,
-                   past[i].desiredPresentTime,
-                   past[i].actualPresentTime,
-                   past[i].earliestPresentTime,
-                   past[i].presentMargin);
-            if (prior.presentID != 0xffffffff) {
-                int64_t diff_desiredPresentTime = past[i].desiredPresentTime - prior.desiredPresentTime;
-                int64_t diff_actualPresentTime = past[i].actualPresentTime - prior.actualPresentTime;
-                int64_t diff_earliestPresentTime = past[i].earliestPresentTime - prior.earliestPresentTime;
-                int64_t diff_presentMargin = past[i].presentMargin - prior.presentMargin;
-                DbgMsg("%s():\t  ====================================================================================\n", __FUNCTION__);
-                DbgMsg("%s(): diff:\t      %17"PRId64",  %16"PRId64",  %18"PRId64",  %12"PRId64"\n", __FUNCTION__,
-                        diff_desiredPresentTime,
-                        diff_actualPresentTime,
-                        diff_earliestPresentTime,
-                        diff_presentMargin);
-            }
-            DbgMsg("%s():\n", __FUNCTION__);
-
-
-            DbgMsg("%s(): actualPresentTime= %16"PRId64",   actualPresentTime = %16"PRId64", PRIORactualPresentTime= %16"PRId64"\n",
-                    __FUNCTION__, past[i].actualPresentTime, past[i].actualPresentTime, prior.actualPresentTime);
-            DbgMsg("%s():desiredPresentTime= %16"PRId64", earliestPresentTime = %16"PRId64",  earliestPresentTime  = %16"PRId64"\n",
-                    __FUNCTION__, past[i].desiredPresentTime, past[i].earliestPresentTime, past[i].earliestPresentTime);
-            int64_t diffDesireVsActual = past[i].actualPresentTime - past[i].desiredPresentTime;
-            uint64_t diffEarlyVsActual = past[i].actualPresentTime - past[i].earliestPresentTime;
-            uint64_t diffEarlyVsPriorActual = past[i].earliestPresentTime - prior.actualPresentTime;
-            DbgMsg("%s():\t\t\t ================================================================================================\n", __FUNCTION__);
-            DbgMsg("%s():    Amt late (-early) = %12"PRId64", Amt could have been early = %10"PRId64", Sanity check earliest = %16"PRId64"\n",
-                    __FUNCTION__, diffDesireVsActual, diffEarlyVsActual, diffEarlyVsPriorActual);
-            DbgMsg("%s(): demo->target_IPD  =         %"PRId64"\n", __FUNCTION__, demo->target_IPD);
-            DbgMsg("%s(): demo->next_present_id:  %d\n", __FUNCTION__, demo->next_present_id);
-            prior.presentID = past[i].presentID;
-            prior.desiredPresentTime = past[i].desiredPresentTime;
-            prior.actualPresentTime = past[i].actualPresentTime;
-            prior.earliestPresentTime = past[i].earliestPresentTime;
-            prior.presentMargin = past[i].presentMargin;
             if (!demo->syncd_with_actual_presents) {
                 // This is the first time that we've received an
                 // actualPresentTime for this swapchain.  In order to not
@@ -905,23 +852,11 @@ void DemoUpdateTargetIPD(struct demo *demo) {
                 // our future desiredPresentTime's with the
                 // actualPresentTime(s) that we're receiving now.
                 calibrate_next = true;
-                DbgMsg("%s():\n", __FUNCTION__);
-                DbgMsg("%s(): FIRST TIME GETTING BACK ACTUAL TIME(S)\n", __FUNCTION__);
-                DbgMsg("%s(): Number of TimingInfo's we received was %d\n", __FUNCTION__, count);
-                if (count > 1) {
-                    DbgMsg("%s(): past[%d].actualPresentTime      = %"PRId64"\n", __FUNCTION__, (count-1), past[count-1].actualPresentTime);
-                    DbgMsg("%s(): Last presentID is:    %d\n", __FUNCTION__, past[count-1].presentID);
-                }
-                DbgMsg("%s(): demo->prev_desired_present_time= %"PRId64"\n", __FUNCTION__, demo->prev_desired_present_time);
 
-                DbgMsg("%s():\n", __FUNCTION__);
-                DbgMsg("%s():\n", __FUNCTION__);
                 // So that we don't suspect any pending presents as late,
                 // record them all as suspected-late presents:
                 demo->last_late_id = demo->next_present_id - 1;
                 demo->last_early_id = 0;
-                DbgMsg("%s(): Skip past presentID:  %d\n", __FUNCTION__, demo->last_late_id);
-
                 demo->syncd_with_actual_presents = true;
                 break;
             } else if (CanPresentEarlier(past[i].earliestPresentTime,
@@ -996,7 +931,6 @@ void DemoUpdateTargetIPD(struct demo *demo) {
             }
             demo->target_IPD =
                 demo->refresh_duration * demo->refresh_duration_multiplier;
-            DbgMsg("\t INCREASING FRAME RATE!  NEW VALUE OF target_IPD = %"PRId64"\n", demo->target_IPD);
         }
         if (late) {
             // Since we found a new instance of a late present, we want to
@@ -1007,7 +941,6 @@ void DemoUpdateTargetIPD(struct demo *demo) {
             demo->refresh_duration_multiplier++;
             demo->target_IPD =
                 demo->refresh_duration * demo->refresh_duration_multiplier;
-            DbgMsg("\t DECREASING FRAME RATE!  NEW VALUE OF target_IPD = %"PRId64"\n", demo->target_IPD);
         }
 
         if (calibrate_next) {
@@ -1015,15 +948,8 @@ void DemoUpdateTargetIPD(struct demo *demo) {
             demo->prev_desired_present_time =
                 (past[count-1].actualPresentTime +
                  (multiple * demo->target_IPD));
-            DbgMsg("%s():\n", __FUNCTION__);
-            DbgMsg("%s(): CALIBRATING!!!\n", __FUNCTION__);
-            DbgMsg("%s(): multiple                        = %"PRId64"\n", __FUNCTION__, multiple);
-            DbgMsg("%s(): demo->prev_desired_present_time= %"PRId64"\n", __FUNCTION__, demo->prev_desired_present_time);
-            int64_t next_time = demo->prev_desired_present_time + demo->target_IPD;
-            DbgMsg("%s(): past[%d].desiredPresentTime     = %"PRId64"\n", __FUNCTION__, demo->next_present_id, next_time);
         }
     }
-    DbgMsg("\t\t\t    NEW VALUE OF target_IPD = %"PRId64"\n", demo->target_IPD);
 }
 
 static void demo_draw(struct demo *demo) {
@@ -1136,8 +1062,6 @@ static void demo_draw(struct demo *demo) {
                 // desiredPresentTime:
                 ptime.desiredPresentTime = 0;
             } else {
-                DbgMsg("Current time (e.g. CLOCK_MONOTONIC) in nanoseconds: %"PRId64"\n",
-                        curtime);
                 ptime.desiredPresentTime = curtime + (demo->target_IPD >> 1);
             }
         } else {
@@ -1146,9 +1070,6 @@ static void demo_draw(struct demo *demo) {
         }
         ptime.presentID = demo->next_present_id++;
         demo->prev_desired_present_time = ptime.desiredPresentTime;
-        DbgMsg("presentID = %d, desiredPresentTime = %"PRId64"\n",
-                ptime.presentID,
-                ptime.desiredPresentTime);
 
         VkPresentTimesInfoGOOGLE present_time = {
             .sType = VK_STRUCTURE_TYPE_PRESENT_TIMES_INFO_GOOGLE,
@@ -1158,10 +1079,6 @@ static void demo_draw(struct demo *demo) {
         };
         if (demo->VK_GOOGLE_display_timing_enabled) {
             present.pNext = &present_time;
-            DbgMsg("present.pNext = %p, present_time = %p, present_time.pNext = %p\n",
-                    present.pNext,
-                    &present_time,
-                    present_time.pNext);
         }
     }
 
@@ -1418,9 +1335,6 @@ static void demo_prepare_buffers(struct demo *demo) {
         demo->refresh_duration_multiplier = 1;
         demo->prev_desired_present_time = 0;
         demo->next_present_id = 1;
-
-        DbgMsg("refresh_duration = %"PRId64"\n", demo->refresh_duration);
-        DbgMsg("\t\t\tINITIAL VALUE OF target_IPD = %"PRId64"\n", demo->target_IPD);
     }
 
     if (NULL != presentModes) {
@@ -3428,12 +3342,12 @@ static void demo_init_vk(struct demo *demo) {
                     demo->extension_names[demo->enabled_extension_count++] =
                         VK_GOOGLE_DISPLAY_TIMING_EXTENSION_NAME;
                     demo->VK_GOOGLE_display_timing_enabled = true;
-                    DbgMsg("VK_GOOGLE_display_timing enabled\n");
+                    DbgMsg("VK_GOOGLE_display_timing extension enabled\n");
                 }
                 assert(demo->enabled_extension_count < 64);
             }
             if (!demo->VK_GOOGLE_display_timing_enabled) {
-                DbgMsg("VK_GOOGLE_display_timing NOT ENABLED\n");
+                DbgMsg("VK_GOOGLE_display_timing extension NOT AVAILABLE\n");
             }
         }
 
