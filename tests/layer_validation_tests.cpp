@@ -22819,6 +22819,51 @@ TEST_F(VkPositiveLayerTest, Maintenance1Tests) {
     m_errorMonitor->VerifyNotFound();
 }
 
+TEST_F(VkLayerTest, DuplicateValidPNextStructures) {
+    TEST_DESCRIPTION("Create a pNext chain containing valid strutures, but with a duplicate structure type");
+
+    ASSERT_NO_FATAL_FAILURE(Init());
+
+    uint32_t extension_count = 0;
+    VkResult err = vkEnumerateDeviceExtensionProperties(gpu(), nullptr, &extension_count, nullptr);
+    ASSERT_VK_SUCCESS(err);
+
+    if (extension_count > 0) {
+        std::vector<VkExtensionProperties> available_extensions(extension_count);
+        err = vkEnumerateDeviceExtensionProperties(gpu(), nullptr, &extension_count, &available_extensions[0]);
+        ASSERT_VK_SUCCESS(err);
+
+        for (const auto &extension_props : available_extensions) {
+            if (strcmp(extension_props.extensionName, VK_NV_DEDICATED_ALLOCATION_EXTENSION_NAME) == 0) {
+                // Create two pNext structures which by themselves would be valid
+                VkDedicatedAllocationBufferCreateInfoNV dedicated_buffer_create_info = {};
+                VkDedicatedAllocationBufferCreateInfoNV dedicated_buffer_create_info_2 = {};
+                dedicated_buffer_create_info.sType = VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_BUFFER_CREATE_INFO_NV;
+                dedicated_buffer_create_info.pNext = &dedicated_buffer_create_info_2;
+                dedicated_buffer_create_info.dedicatedAllocation = VK_TRUE;
+
+                dedicated_buffer_create_info_2.sType = VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_BUFFER_CREATE_INFO_NV;
+                dedicated_buffer_create_info_2.pNext = nullptr;
+                dedicated_buffer_create_info_2.dedicatedAllocation = VK_TRUE;
+
+                uint32_t queue_family_index = 0;
+                VkBufferCreateInfo buffer_create_info = {};
+                buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+                buffer_create_info.pNext = &dedicated_buffer_create_info;
+                buffer_create_info.size = 1024;
+                buffer_create_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+                buffer_create_info.queueFamilyIndexCount = 1;
+                buffer_create_info.pQueueFamilyIndices = &queue_family_index;
+
+                m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "chain contains duplicate structure types");
+                VkBuffer buffer;
+                err = vkCreateBuffer(m_device->device(), &buffer_create_info, NULL, &buffer);
+                m_errorMonitor->VerifyFound();
+            }
+        }
+    }
+}
+
 TEST_F(VkPositiveLayerTest, ValidStructPNext) {
     TEST_DESCRIPTION("Verify that a valid pNext value is handled correctly");
 
