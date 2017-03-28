@@ -581,6 +581,45 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device, const VkSwapc
     return result;
 }
 
+VKAPI_ATTR VkResult VKAPI_CALL CreateSharedSwapchainsKHR(VkDevice device, uint32_t swapchainCount,
+                                                         const VkSwapchainCreateInfoKHR *pCreateInfos,
+                                                         const VkAllocationCallbacks *pAllocator, VkSwapchainKHR *pSwapchains) {
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    safe_VkSwapchainCreateInfoKHR *local_pCreateInfos = NULL;
+    {
+        std::lock_guard<std::mutex> lock(global_lock);
+        if (pCreateInfos) {
+            // Need to pull surface mapping from the instance-level map
+            layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(dev_data->gpu), layer_data_map);
+            local_pCreateInfos = new safe_VkSwapchainCreateInfoKHR[swapchainCount];
+            for (uint32_t i = 0; i < swapchainCount; ++i) {
+                local_pCreateInfos[i].initialize(&pCreateInfos[i]);
+                if (pCreateInfos[i].surface) {
+                    local_pCreateInfos[i].surface =
+                        (VkSurfaceKHR)instance_data->unique_id_mapping[reinterpret_cast<const uint64_t &>(pCreateInfos[i].surface)];
+                }
+                if (pCreateInfos[i].oldSwapchain) {
+                    local_pCreateInfos[i].oldSwapchain =
+                        (VkSwapchainKHR)
+                            dev_data->unique_id_mapping[reinterpret_cast<const uint64_t &>(pCreateInfos[i].oldSwapchain)];
+                }
+            }
+        }
+    }
+    VkResult result = dev_data->device_dispatch_table->CreateSharedSwapchainsKHR(
+        device, swapchainCount, (const VkSwapchainCreateInfoKHR *)local_pCreateInfos, pAllocator, pSwapchains);
+    if (local_pCreateInfos) delete[] local_pCreateInfos;
+    if (VK_SUCCESS == result) {
+        std::lock_guard<std::mutex> lock(global_lock);
+        for (uint32_t i = 0; i < swapchainCount; i++) {
+            uint64_t unique_id = global_unique_id++;
+            dev_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t &>(pSwapchains[i]);
+            pSwapchains[i] = reinterpret_cast<VkSwapchainKHR &>(unique_id);
+        }
+    }
+    return result;
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pSwapchainImageCount,
                                                      VkImage *pSwapchainImages) {
     layer_data *my_device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);

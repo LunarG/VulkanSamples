@@ -238,7 +238,6 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         self.structTypes = dict()
         self.commands = []
         self.structMembers = []
-        self.validatedStructs = dict()
         self.newFlags = set()
     def endFeature(self):
         # C-specific
