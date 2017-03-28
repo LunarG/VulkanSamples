@@ -1075,19 +1075,6 @@ static void demo_draw(struct demo *demo) {
             .pRegions = &region,
         };
         present.pNext = &regions;
-        DbgMsg("present = %p, present.pNext = %p, regions = %p, regions.pNext = %p\n",
-               &present,
-               present.pNext,
-               &regions,
-               regions.pNext);
-        DbgMsg("Present Rectangle has offset: (%d, %d) and extent: (%d, %d)\n",
-               regions.pRegions->pRectangles->offset.x,
-               regions.pRegions->pRectangles->offset.y,
-               regions.pRegions->pRectangles->extent.width,
-               regions.pRegions->pRectangles->extent.height);
-        DbgMsg("regions = %p, regions.pRegions = %p, "
-               "regions.pRegions->pRectangles = %p\n",
-               &regions, regions.pRegions, regions.pRegions->pRectangles);
     }
 
     if (demo->VK_GOOGLE_display_timing_enabled) {
