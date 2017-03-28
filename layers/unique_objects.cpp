@@ -802,14 +802,16 @@ VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetWithTemplateKHR(VkCommandBuffer c
                                                                VkDescriptorUpdateTemplateKHR descriptorUpdateTemplate,
                                                                VkPipelineLayout layout, uint32_t set, const void *pData) {
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
+    uint64_t template_handle = reinterpret_cast<uint64_t &>(descriptorUpdateTemplate);
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        descriptorUpdateTemplate =
-            (VkDescriptorUpdateTemplateKHR)dev_data->unique_id_mapping[reinterpret_cast<uint64_t &>(descriptorUpdateTemplate)];
+        descriptorUpdateTemplate = (VkDescriptorUpdateTemplateKHR)dev_data->unique_id_mapping[template_handle];
         layout = (VkPipelineLayout)dev_data->unique_id_mapping[reinterpret_cast<uint64_t &>(layout)];
     }
+    void *unwrapped_buffer = BuildUnwrappedUpdateTemplateBuffer(dev_data, template_handle, pData);
     dev_data->device_dispatch_table->CmdPushDescriptorSetWithTemplateKHR(commandBuffer, descriptorUpdateTemplate, layout, set,
-                                                                         pData);
+                                                                         unwrapped_buffer);
+    free(unwrapped_buffer);
 }
 
 #ifndef __ANDROID__
