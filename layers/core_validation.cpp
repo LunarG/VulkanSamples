@@ -2552,6 +2552,11 @@ static bool validate_shader_capabilities(layer_data *dev_data, shader_module con
                                               VK_EXT_SHADER_SUBGROUP_BALLOT_EXTENSION_NAME);
                     break;
 
+                case spv::CapabilitySubgroupVoteKHR:
+                    pass &= require_extension(report_data, dev_data->device_extensions.khr_subgroup_vote_enabled,
+                                              VK_EXT_SHADER_SUBGROUP_VOTE_EXTENSION_NAME);
+                    break;
+
                 default:
                     // Spirv-validator should catch these errors
                     break;
@@ -3867,7 +3872,7 @@ static void checkDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo,
     dev_data->device_extensions.nv_sample_mask_override_coverage_enabled = false;
     dev_data->device_extensions.nv_viewport_array2_enabled = false;
     dev_data->device_extensions.khr_subgroup_ballot_enabled = false;
-
+    dev_data->device_extensions.khr_subgroup_vote_enabled = false;
 
     for (i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
@@ -3900,6 +3905,10 @@ static void checkDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo,
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_SHADER_SUBGROUP_BALLOT_EXTENSION_NAME) == 0) {
             dev_data->device_extensions.khr_subgroup_ballot_enabled = true;
         }
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_SHADER_SUBGROUP_VOTE_EXTENSION_NAME) == 0) {
+            dev_data->device_extensions.khr_subgroup_vote_enabled = true;
+        }
+
     }
 }
 
