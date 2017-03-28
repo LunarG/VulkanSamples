@@ -794,6 +794,7 @@ struct devExts {
     bool nv_geometry_shader_passthrough_enabled;
     bool nv_sample_mask_override_coverage_enabled;
     bool nv_viewport_array2_enabled;
+    bool khr_subgroup_ballot_enabled;
     std::unordered_map<VkSwapchainKHR, std::unique_ptr<SWAPCHAIN_NODE>> swapchainMap;
     std::unordered_map<VkImage, VkSwapchainKHR> imageToSwapchainMap;
 };
