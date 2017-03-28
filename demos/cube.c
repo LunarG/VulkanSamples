@@ -347,6 +347,8 @@ struct demo {
     bool use_staging_buffer;
     bool separate_present_queue;
 
+    bool VK_KHR_incremental_present_enabled;
+
     bool VK_GOOGLE_display_timing_enabled;
     bool syncd_with_actual_presents;
     uint64_t refresh_duration;
@@ -1045,6 +1047,48 @@ static void demo_draw(struct demo *demo) {
         .pSwapchains = &demo->swapchain,
         .pImageIndices = &demo->current_buffer,
     };
+
+    if (demo->VK_KHR_incremental_present_enabled) {
+        // If using VK_KHR_incremental_present, we provide a hint of the region
+        // that contains changed content relative to the previously-presented
+        // image.  The implementation can use this hint in order to save
+        // work/power (by only copying the region in the hint).  The
+        // implementation is free to ignore the hint though, and so we must
+        // ensure that the entire image has the correctly-drawn content.
+        uint32_t eighthOfWidth = demo->width / 8;
+        uint32_t eighthOfHeight = demo->height / 8;
+        VkRectLayerKHR rect = {
+            .offset.x = eighthOfWidth,
+            .offset.y = eighthOfHeight,
+            .extent.width = eighthOfWidth * 6,
+            .extent.height = eighthOfHeight * 6,
+            .layer = 0,
+        };
+        VkPresentRegionKHR region = {
+            .rectangleCount = 1,
+            .pRectangles = &rect,
+        };
+        VkPresentRegionsKHR regions = {
+            .sType = VK_STRUCTURE_TYPE_PRESENT_REGIONS_KHR,
+            .pNext = present.pNext,
+            .swapchainCount = present.swapchainCount,
+            .pRegions = &region,
+        };
+        present.pNext = &regions;
+        DbgMsg("present = %p, present.pNext = %p, regions = %p, regions.pNext = %p\n",
+               &present,
+               present.pNext,
+               &regions,
+               regions.pNext);
+        DbgMsg("Present Rectangle has offset: (%d, %d) and extent: (%d, %d)\n",
+               regions.pRegions->pRectangles->offset.x,
+               regions.pRegions->pRectangles->offset.y,
+               regions.pRegions->pRectangles->extent.width,
+               regions.pRegions->pRectangles->extent.height);
+        DbgMsg("regions = %p, regions.pRegions = %p, "
+               "regions.pRegions->pRectangles = %p\n",
+               &regions, regions.pRegions, regions.pRegions->pRectangles);
+    }
 
     if (demo->VK_GOOGLE_display_timing_enabled) {
         VkPresentTimeGOOGLE ptime;
@@ -3330,6 +3374,27 @@ static void demo_init_vk(struct demo *demo) {
             assert(demo->enabled_extension_count < 64);
         }
 
+        if (demo->VK_KHR_incremental_present_enabled) {
+            // Even though the user "enabled" the extension via the command
+            // line, we must make sure that it's enumerated for use with the
+            // device.  Therefore, disable it here, and re-enable it again if
+            // enumerated.
+            demo->VK_KHR_incremental_present_enabled = false;
+            for (uint32_t i = 0; i < device_extension_count; i++) {
+                if (!strcmp(VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME,
+                            device_extensions[i].extensionName)) {
+                    demo->extension_names[demo->enabled_extension_count++] =
+                        VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME;
+                    demo->VK_KHR_incremental_present_enabled = true;
+                    DbgMsg("VK_KHR_incremental_present extension enabled\n");
+                }
+                assert(demo->enabled_extension_count < 64);
+            }
+            if (!demo->VK_KHR_incremental_present_enabled) {
+                DbgMsg("VK_KHR_incremental_present extension NOT AVAILABLE\n");
+            }
+        }
+
         if (demo->VK_GOOGLE_display_timing_enabled) {
             // Even though the user "enabled" the extension via the command
             // line, we must make sure that it's enumerated for use with the
@@ -3794,12 +3859,16 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
             demo->VK_GOOGLE_display_timing_enabled = true;
             continue;
         }
+        if (strcmp(argv[i], "--incremental_present") == 0) {
+            demo->VK_KHR_incremental_present_enabled = true;
+            continue;
+        }
 
 #if defined(ANDROID)
         ERR_EXIT("Usage: cube [--validate]\n", "Usage");
 #else
         fprintf(stderr, "Usage:\n  %s [--use_staging] [--validate] [--validate-checks-disabled] [--break] "
-                        "[--c <framecount>] [--suppress_popups] [--display_timing] [--present_mode <present mode enum>]\n"
+                        "[--c <framecount>] [--suppress_popups] [--incremental_present] [--display_timing] [--present_mode <present mode enum>]\n"
                         "VK_PRESENT_MODE_IMMEDIATE_KHR = %d\n"
                         "VK_PRESENT_MODE_MAILBOX_KHR = %d\n"
                         "VK_PRESENT_MODE_FIFO_KHR = %d\n"
