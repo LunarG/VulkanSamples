@@ -1,5 +1,5 @@
 {
-    "file_format_version" : "1.0.0",
+    "file_format_version" : "1.1.0",
     "layer" : {
         "name": "VK_LAYER_LUNARG_core_validation",
         "type": "GLOBAL",

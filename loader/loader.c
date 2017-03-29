@@ -3786,8 +3786,7 @@ VkResult loader_enable_instance_layers(struct loader_instance *inst, const VkIns
 bool loader_get_layer_interface_version(PFN_vkNegotiateLoaderLayerInterfaceVersion fp_negotiate_layer_version,
                                         VkNegotiateLayerInterface *interface_struct) {
     memset(interface_struct, 0, sizeof(VkNegotiateLayerInterface));
-
-    // Base assumption is that all layers are version 1 at least.
+    interface_struct->sType = LAYER_NEGOTIATE_INTERFACE_STRUCT;
     interface_struct->loaderLayerInterfaceVersion = 1;
 
     if (fp_negotiate_layer_version != NULL) {

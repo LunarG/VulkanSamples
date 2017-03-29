@@ -132,3 +132,12 @@ typedef struct {
     } u;
 } VkLayerDeviceCreateInfo;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+VKAPI_ATTR VkResult VKAPI_CALL vkNegotiateLoaderLayerInterfaceVersion(VkNegotiateLayerInterface *pVersionStruct);
+
+#ifdef __cplusplus
+}
+#endif
