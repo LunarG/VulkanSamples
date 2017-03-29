@@ -30,20 +30,6 @@
         assert(fp##entrypoint != NULL);                                                  \
     }
 
-// Format search helpers
-VkFormat FindDepthStencilFormat(VkPhysicalDevice phy) {
-    VkFormat ds_formats[] = {VK_FORMAT_D16_UNORM_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT_S8_UINT};
-    for (uint32_t i = 0; i < sizeof(ds_formats); i++) {
-        VkFormatProperties format_props;
-        vkGetPhysicalDeviceFormatProperties(phy, ds_formats[i], &format_props);
-
-        if (format_props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
-            return ds_formats[i];
-        }
-    }
-    return (VkFormat)0;
-}
-
 VkRenderFramework::VkRenderFramework()
     : inst(VK_NULL_HANDLE),
       m_device(NULL),
@@ -724,11 +710,11 @@ void VkImageObj::init(uint32_t w, uint32_t h, VkFormat fmt, VkFlags usage, VkIma
         newLayout = m_descriptorImageInfo.imageLayout;
 
     VkImageAspectFlags image_aspect = 0;
-    if (VkFormatIsDepthAndStencil(fmt)) {
+    if (FormatIsDepthAndStencil(fmt)) {
         image_aspect = VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_DEPTH_BIT;
-    } else if (VkFormatIsDepthOnly(fmt)) {
+    } else if (FormatIsDepthOnly(fmt)) {
         image_aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
-    } else if (VkFormatIsStencilOnly(fmt)) {
+    } else if (FormatIsStencilOnly(fmt)) {
         image_aspect = VK_IMAGE_ASPECT_STENCIL_BIT;
     } else {  // color
         image_aspect = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -759,11 +745,11 @@ void VkImageObj::init(const VkImageCreateInfo *create_info) {
     vk_testing::Image::init(*m_device, *create_info, 0);
 
     VkImageAspectFlags image_aspect = 0;
-    if (VkFormatIsDepthAndStencil(create_info->format)) {
+    if (FormatIsDepthAndStencil(create_info->format)) {
         image_aspect = VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_DEPTH_BIT;
-    } else if (VkFormatIsDepthOnly(create_info->format)) {
+    } else if (FormatIsDepthOnly(create_info->format)) {
         image_aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
-    } else if (VkFormatIsStencilOnly(create_info->format)) {
+    } else if (FormatIsStencilOnly(create_info->format)) {
         image_aspect = VK_IMAGE_ASPECT_STENCIL_BIT;
     } else {  // color
         image_aspect = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -1596,9 +1582,9 @@ void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height,
     init(width, height, m_depth_stencil_fmt, usage, VK_IMAGE_TILING_OPTIMAL);
 
     VkImageAspectFlags aspect = VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_DEPTH_BIT;
-    if (VkFormatIsDepthOnly(format))
+    if (FormatIsDepthOnly(format))
         aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
-    else if (VkFormatIsStencilOnly(format))
+    else if (FormatIsStencilOnly(format))
         aspect = VK_IMAGE_ASPECT_STENCIL_BIT;
 
     SetLayout(aspect, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);

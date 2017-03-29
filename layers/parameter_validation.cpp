@@ -2543,7 +2543,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateI
     if (pCreateInfo != nullptr) {
 
         if ((device_data->physical_device_features.textureCompressionETC2 == false) &&
-            VkFormatIsCompressed_ETC2_EAC(pCreateInfo->format)) {
+            FormatIsCompressed_ETC2_EAC(pCreateInfo->format)) {
             skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                             DEVICE_FEATURE, LayerName,
                             "vkCreateImage(): Attempting to create VkImage with format %s. The textureCompressionETC2 feature is "
@@ -2552,7 +2552,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateI
         }
 
         if ((device_data->physical_device_features.textureCompressionASTC_LDR == false) &&
-            VkFormatIsCompressed_ASTC_LDR(pCreateInfo->format)) {
+            FormatIsCompressed_ASTC_LDR(pCreateInfo->format)) {
             skip |=
                 log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                         DEVICE_FEATURE, LayerName,
@@ -2562,7 +2562,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateI
         }
 
         if ((device_data->physical_device_features.textureCompressionBC == false) &&
-            VkFormatIsCompressed_BC(pCreateInfo->format)) {
+            FormatIsCompressed_BC(pCreateInfo->format)) {
             skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                             DEVICE_FEATURE, LayerName,
                             "vkCreateImage(): Attempting to create VkImage with format %s. The textureCompressionBC feature is "
@@ -3875,7 +3875,7 @@ VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSets(VkDevice device, uint32_t descri
                 VkDeviceSize uniformAlignment = device_data->device_limits.minUniformBufferOffsetAlignment;
                 for (uint32_t j = 0; j < pDescriptorWrites[i].descriptorCount; j++) {
                     if (pDescriptorWrites[i].pBufferInfo != NULL) {
-                        if (VkSafeModulo(pDescriptorWrites[i].pBufferInfo[j].offset, uniformAlignment) != 0) {
+                        if (SafeModulo(pDescriptorWrites[i].pBufferInfo[j].offset, uniformAlignment) != 0) {
                             skip |= log_msg(
                                 device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                 VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, VALIDATION_ERROR_00944, LayerName,
@@ -3891,7 +3891,7 @@ VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSets(VkDevice device, uint32_t descri
                 VkDeviceSize storageAlignment = device_data->device_limits.minStorageBufferOffsetAlignment;
                 for (uint32_t j = 0; j < pDescriptorWrites[i].descriptorCount; j++) {
                     if (pDescriptorWrites[i].pBufferInfo != NULL) {
-                        if (VkSafeModulo(pDescriptorWrites[i].pBufferInfo[j].offset, storageAlignment) != 0) {
+                        if (SafeModulo(pDescriptorWrites[i].pBufferInfo[j].offset, storageAlignment) != 0) {
                             skip |= log_msg(
                                 device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                 VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, VALIDATION_ERROR_00945, LayerName,

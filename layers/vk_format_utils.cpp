@@ -236,7 +236,7 @@ const std::map<VkFormat, VULKAN_FORMAT_INFO> vk_format_table = {
 // clang-format on
 
 // Return true if format is an ETC2 or EAC compressed texture format
-VK_LAYER_EXPORT bool VkFormatIsCompressed_ETC2_EAC(VkFormat format) {
+VK_LAYER_EXPORT bool FormatIsCompressed_ETC2_EAC(VkFormat format) {
     bool found = false;
 
     switch (format) {
@@ -259,7 +259,7 @@ VK_LAYER_EXPORT bool VkFormatIsCompressed_ETC2_EAC(VkFormat format) {
 }
 
 // Return true if format is an ETC2 or EAC compressed texture format
-VK_LAYER_EXPORT bool VkFormatIsCompressed_ASTC_LDR(VkFormat format) {
+VK_LAYER_EXPORT bool FormatIsCompressed_ASTC_LDR(VkFormat format) {
     bool found = false;
 
     switch (format) {
@@ -300,7 +300,7 @@ VK_LAYER_EXPORT bool VkFormatIsCompressed_ASTC_LDR(VkFormat format) {
 }
 
 // Return true if format is a BC compressed texture format
-VK_LAYER_EXPORT bool VkFormatIsCompressed_BC(VkFormat format) {
+VK_LAYER_EXPORT bool FormatIsCompressed_BC(VkFormat format) {
     bool found = false;
 
     switch (format) {
@@ -329,12 +329,12 @@ VK_LAYER_EXPORT bool VkFormatIsCompressed_BC(VkFormat format) {
 }
 
 // Return true if format is a depth or stencil format
-VK_LAYER_EXPORT bool VkFormatIsDepthOrStencil(VkFormat format) {
-    return (VkFormatIsDepthAndStencil(format) || VkFormatIsDepthOnly(format) || VkFormatIsStencilOnly(format));
+VK_LAYER_EXPORT bool FormatIsDepthOrStencil(VkFormat format) {
+    return (FormatIsDepthAndStencil(format) || FormatIsDepthOnly(format) || FormatIsStencilOnly(format));
 }
 
 // Return true if format contains depth and stencil information
-VK_LAYER_EXPORT bool VkFormatIsDepthAndStencil(VkFormat format) {
+VK_LAYER_EXPORT bool FormatIsDepthAndStencil(VkFormat format) {
     bool is_ds = false;
 
     switch (format) {
@@ -350,10 +350,10 @@ VK_LAYER_EXPORT bool VkFormatIsDepthAndStencil(VkFormat format) {
 }
 
 // Return true if format is a stencil-only format
-VK_LAYER_EXPORT bool VkFormatIsStencilOnly(VkFormat format) { return (format == VK_FORMAT_S8_UINT); }
+VK_LAYER_EXPORT bool FormatIsStencilOnly(VkFormat format) { return (format == VK_FORMAT_S8_UINT); }
 
 // Return true if format is a depth-only format
-VK_LAYER_EXPORT bool VkFormatIsDepthOnly(VkFormat format) {
+VK_LAYER_EXPORT bool FormatIsDepthOnly(VkFormat format) {
     bool is_depth = false;
 
     switch (format) {
@@ -370,7 +370,7 @@ VK_LAYER_EXPORT bool VkFormatIsDepthOnly(VkFormat format) {
 }
 
 // Return true if format is of type NORM
-VK_LAYER_EXPORT bool VkFormatIsNorm(VkFormat format) {
+VK_LAYER_EXPORT bool FormatIsNorm(VkFormat format) {
     bool is_norm = false;
 
     switch (format) {
@@ -445,7 +445,7 @@ VK_LAYER_EXPORT bool VkFormatIsNorm(VkFormat format) {
 };
 
 // Return true if format is of type UNORM
-VK_LAYER_EXPORT bool VkFormatIsUNorm(VkFormat format) {
+VK_LAYER_EXPORT bool FormatIsUNorm(VkFormat format) {
     bool is_unorm = false;
 
     switch (format) {
@@ -503,7 +503,7 @@ VK_LAYER_EXPORT bool VkFormatIsUNorm(VkFormat format) {
 };
 
 // Return true if format is of type SNORM
-VK_LAYER_EXPORT bool VkFormatIsSNorm(VkFormat format) {
+VK_LAYER_EXPORT bool FormatIsSNorm(VkFormat format) {
     bool is_snorm = false;
 
     switch (format) {
@@ -534,10 +534,10 @@ VK_LAYER_EXPORT bool VkFormatIsSNorm(VkFormat format) {
 };
 
 // Return true if format is an integer format
-VK_LAYER_EXPORT bool VkFormatIsInt(VkFormat format) { return (VkFormatIsSInt(format) || VkFormatIsUInt(format)); }
+VK_LAYER_EXPORT bool FormatIsInt(VkFormat format) { return (FormatIsSInt(format) || FormatIsUInt(format)); }
 
 // Return true if format is an unsigned integer format
-VK_LAYER_EXPORT bool VkFormatIsUInt(VkFormat format) {
+VK_LAYER_EXPORT bool FormatIsUInt(VkFormat format) {
     bool is_uint = false;
 
     switch (format) {
@@ -572,7 +572,7 @@ VK_LAYER_EXPORT bool VkFormatIsUInt(VkFormat format) {
 }
 
 // Return true if format is a signed integer format
-VK_LAYER_EXPORT bool VkFormatIsSInt(VkFormat format) {
+VK_LAYER_EXPORT bool FormatIsSInt(VkFormat format) {
     bool is_sint = false;
 
     switch (format) {
@@ -607,7 +607,7 @@ VK_LAYER_EXPORT bool VkFormatIsSInt(VkFormat format) {
 }
 
 // Return true if format is a floating-point format
-VK_LAYER_EXPORT bool VkFormatIsFloat(VkFormat format) {
+VK_LAYER_EXPORT bool FormatIsFloat(VkFormat format) {
     bool is_float = false;
 
     switch (format) {
@@ -637,7 +637,7 @@ VK_LAYER_EXPORT bool VkFormatIsFloat(VkFormat format) {
 }
 
 // Return true if format is in the SRGB colorspace
-VK_LAYER_EXPORT bool VkFormatIsSRGB(VkFormat format) {
+VK_LAYER_EXPORT bool FormatIsSRGB(VkFormat format) {
     bool is_srgb = false;
 
     switch (format) {
@@ -679,7 +679,7 @@ VK_LAYER_EXPORT bool VkFormatIsSRGB(VkFormat format) {
 }
 
 // Return true if format is in the USCALED colorspace
-VK_LAYER_EXPORT bool VkFormatIsUScaled(VkFormat format) {
+VK_LAYER_EXPORT bool FormatIsUScaled(VkFormat format) {
     bool is_uscaled = false;
 
     switch (format) {
@@ -706,7 +706,7 @@ VK_LAYER_EXPORT bool VkFormatIsUScaled(VkFormat format) {
 }
 
 // Return true if format is in the SSCALED colorspace
-VK_LAYER_EXPORT bool VkFormatIsSScaled(VkFormat format) {
+VK_LAYER_EXPORT bool FormatIsSScaled(VkFormat format) {
     bool is_sscaled = false;
 
     switch (format) {
@@ -733,7 +733,7 @@ VK_LAYER_EXPORT bool VkFormatIsSScaled(VkFormat format) {
 }
 
 // Return true if format is compressed
-VK_LAYER_EXPORT bool VkFormatIsCompressed(VkFormat format) {
+VK_LAYER_EXPORT bool FormatIsCompressed(VkFormat format) {
     switch (format) {
         case VK_FORMAT_BC1_RGB_UNORM_BLOCK:
         case VK_FORMAT_BC1_RGB_SRGB_BLOCK:
@@ -796,7 +796,7 @@ VK_LAYER_EXPORT bool VkFormatIsCompressed(VkFormat format) {
 }
 
 // Return compressed texel block sizes for block compressed formats
-VK_LAYER_EXPORT VkExtent3D VkFormatCompressedTexelBlockExtent(VkFormat format) {
+VK_LAYER_EXPORT VkExtent3D FormatCompressedTexelBlockExtent(VkFormat format) {
     VkExtent3D block_size = {1, 1, 1};
     switch (format) {
         case VK_FORMAT_BC1_RGB_UNORM_BLOCK:
@@ -888,7 +888,7 @@ VK_LAYER_EXPORT VkExtent3D VkFormatCompressedTexelBlockExtent(VkFormat format) {
 }
 
 // Return format class of the specified format
-VK_LAYER_EXPORT VkFormatCompatibilityClass VkFormatGetCompatibilityClass(VkFormat format) {
+VK_LAYER_EXPORT VkFormatCompatibilityClass FormatCompatibilityClass(VkFormat format) {
     auto item = vk_format_table.find(format);
     if (item != vk_format_table.end()) {
         return item->second.format_class;
@@ -897,7 +897,7 @@ VK_LAYER_EXPORT VkFormatCompatibilityClass VkFormatGetCompatibilityClass(VkForma
 }
 
 // Return size, in bytes, of a pixel of the specified format
-VK_LAYER_EXPORT size_t VkFormatGetSize(VkFormat format) {
+VK_LAYER_EXPORT size_t FormatSize(VkFormat format) {
     auto item = vk_format_table.find(format);
     if (item != vk_format_table.end()) {
         return item->second.size;
@@ -906,7 +906,7 @@ VK_LAYER_EXPORT size_t VkFormatGetSize(VkFormat format) {
 }
 
 // Return the number of channels for a given format
-unsigned int VkFormatGetChannelCount(VkFormat format) {
+unsigned int FormatChannelCount(VkFormat format) {
     auto item = vk_format_table.find(format);
     if (item != vk_format_table.end()) {
         return item->second.channel_count;
@@ -915,7 +915,7 @@ unsigned int VkFormatGetChannelCount(VkFormat format) {
 }
 
 // Perform a zero-tolerant modulo operation
-VK_LAYER_EXPORT VkDeviceSize VkSafeModulo(VkDeviceSize dividend, VkDeviceSize divisor) {
+VK_LAYER_EXPORT VkDeviceSize SafeModulo(VkDeviceSize dividend, VkDeviceSize divisor) {
     VkDeviceSize result = 0;
     if (divisor != 0) {
         result = dividend % divisor;

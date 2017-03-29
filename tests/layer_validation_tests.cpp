@@ -100,6 +100,21 @@ static const char bindStateFragShaderText[] =
     "   uFragColor = vec4(0,1,0,1);\n"
     "}\n";
 
+// Format search helper
+VkFormat FindSupportedDepthStencilFormat(VkPhysicalDevice phy) {
+    VkFormat ds_formats[] = { VK_FORMAT_D16_UNORM_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT_S8_UINT };
+    for (uint32_t i = 0; i < sizeof(ds_formats); i++) {
+        VkFormatProperties format_props;
+        vkGetPhysicalDeviceFormatProperties(phy, ds_formats[i], &format_props);
+
+        if (format_props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+            return ds_formats[i];
+        }
+    }
+    return (VkFormat)0;
+}
+
+// Validation report callback prototype
 static VKAPI_ATTR VkBool32 VKAPI_CALL myDbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType, uint64_t srcObject,
                                                 size_t location, int32_t msgCode, const char *pLayerPrefix, const char *pMsg,
                                                 void *pUserData);
@@ -2169,7 +2184,7 @@ TEST_F(VkLayerTest, InvalidUsageBits) {
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Invalid usage flag for image ");
 
     ASSERT_NO_FATAL_FAILURE(Init());
-    auto format = FindDepthStencilFormat(gpu());
+    auto format = FindSupportedDepthStencilFormat(gpu());
     if (!format) {
         printf("             No Depth + Stencil format found. Skipped.\n");
         return;
@@ -8758,7 +8773,7 @@ TEST_F(VkLayerTest, ClearDepthStencilImageWithinRenderPass) {
     ASSERT_NO_FATAL_FAILURE(Init());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
-    auto depth_format = FindDepthStencilFormat(gpu());
+    auto depth_format = FindSupportedDepthStencilFormat(gpu());
     if (!depth_format) {
         printf("             No Depth + Stencil format found. Skipped.\n");
         return;
@@ -8909,7 +8924,7 @@ TEST_F(VkLayerTest, InvalidBarriers) {
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Barriers cannot be set during subpass");
 
     ASSERT_NO_FATAL_FAILURE(Init());
-    auto depth_format = FindDepthStencilFormat(gpu());
+    auto depth_format = FindSupportedDepthStencilFormat(gpu());
     if (!depth_format) {
         printf("             No Depth + Stencil format found. Skipped.\n");
         return;
@@ -9985,7 +10000,7 @@ TEST_F(VkLayerTest, DSAspectBitsErrors) {
     VkResult err;
 
     ASSERT_NO_FATAL_FAILURE(Init());
-    auto depth_format = FindDepthStencilFormat(gpu());
+    auto depth_format = FindSupportedDepthStencilFormat(gpu());
     if (!depth_format) {
         printf("             No Depth + Stencil format found. Skipped.\n");
         return;
@@ -11721,7 +11736,7 @@ TEST_F(VkLayerTest, InvalidImageLayout) {
     // *  -3 Cmd buf submit of image w/ layout not matching first use w/o subresource
 
     ASSERT_NO_FATAL_FAILURE(Init());
-    auto depth_format = FindDepthStencilFormat(gpu());
+    auto depth_format = FindSupportedDepthStencilFormat(gpu());
     if (!depth_format) {
         printf("             No Depth + Stencil format found. Skipped.\n");
         return;
@@ -15954,7 +15969,7 @@ TEST_F(VkLayerTest, ImageLayerViewTests) {
     TEST_DESCRIPTION("Passing bad parameters to CreateImageView");
 
     ASSERT_NO_FATAL_FAILURE(Init());
-    auto depth_format = FindDepthStencilFormat(gpu());
+    auto depth_format = FindSupportedDepthStencilFormat(gpu());
     if (!depth_format) {
         return;
     }
@@ -17055,7 +17070,7 @@ TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch) {
                                          "vkCmdCopyImage called with unmatched source and dest image depth");
 
     ASSERT_NO_FATAL_FAILURE(Init());
-    auto depth_format = FindDepthStencilFormat(gpu());
+    auto depth_format = FindSupportedDepthStencilFormat(gpu());
     if (!depth_format) {
         return;
     }
@@ -17241,7 +17256,7 @@ TEST_F(VkLayerTest, CopyImageSampleCountMismatch) {
 TEST_F(VkLayerTest, CopyImageAspectMismatch) {
     TEST_DESCRIPTION("Image copies with aspect mask errors");
     ASSERT_NO_FATAL_FAILURE(Init());
-    auto ds_format = FindDepthStencilFormat(gpu());
+    auto ds_format = FindSupportedDepthStencilFormat(gpu());
     if (!ds_format) {
         return;
     }
@@ -17749,7 +17764,7 @@ TEST_F(VkLayerTest, DepthStencilImageViewWithColorAspectBitError) {
                                          "Combination depth/stencil image formats can have only the ");
 
     ASSERT_NO_FATAL_FAILURE(Init());
-    auto depth_format = FindDepthStencilFormat(gpu());
+    auto depth_format = FindSupportedDepthStencilFormat(gpu());
     if (!depth_format) {
         return;
     }
@@ -17872,7 +17887,7 @@ TEST_F(VkLayerTest, ClearImageErrors) {
         "ClearDepthStencilImage with a color image.");
 
     ASSERT_NO_FATAL_FAILURE(Init());
-    auto depth_format = FindDepthStencilFormat(gpu());
+    auto depth_format = FindSupportedDepthStencilFormat(gpu());
     if (!depth_format) {
         return;
     }
@@ -18363,7 +18378,7 @@ TEST_F(VkPositiveLayerTest, SecondaryCommandBufferImageLayoutTransitions) {
     VkResult err;
     m_errorMonitor->ExpectSuccess();
     ASSERT_NO_FATAL_FAILURE(Init());
-    auto depth_format = FindDepthStencilFormat(gpu());
+    auto depth_format = FindSupportedDepthStencilFormat(gpu());
     if (!depth_format) {
         return;
     }
@@ -20310,7 +20325,7 @@ TEST_F(VkPositiveLayerTest, StencilLoadOp) {
         "CLEAR. stencil[Load|Store]Op used to be ignored.");
     VkResult result = VK_SUCCESS;
     ASSERT_NO_FATAL_FAILURE(Init());
-    auto depth_format = FindDepthStencilFormat(gpu());
+    auto depth_format = FindSupportedDepthStencilFormat(gpu());
     if (!depth_format) {
         printf("             No Depth + Stencil format found. Skipped.\n");
         return;
@@ -20484,7 +20499,7 @@ TEST_F(VkPositiveLayerTest, BarrierLayoutToImageUsage) {
     m_errorMonitor->ExpectSuccess();
 
     ASSERT_NO_FATAL_FAILURE(Init());
-    auto depth_format = FindDepthStencilFormat(gpu());
+    auto depth_format = FindSupportedDepthStencilFormat(gpu());
     if (!depth_format) {
         printf("             No Depth + Stencil format found. Skipped.\n");
         return;
@@ -21891,7 +21906,7 @@ TEST_F(VkPositiveLayerTest, ValidRenderPassAttachmentLayoutWithLoadOp) {
         "valid *READ_ONLY* layout.");
     m_errorMonitor->ExpectSuccess();
     ASSERT_NO_FATAL_FAILURE(Init());
-    auto depth_format = FindDepthStencilFormat(gpu());
+    auto depth_format = FindSupportedDepthStencilFormat(gpu());
     if (!depth_format) {
         printf("             No Depth + Stencil format found. Skipped.\n");
         return;
@@ -21939,7 +21954,7 @@ TEST_F(VkPositiveLayerTest, RenderPassDepthStencilLayoutTransition) {
         "transition has correctly occurred at queue submit time with no validation errors.");
 
     ASSERT_NO_FATAL_FAILURE(Init());
-    auto depth_format = FindDepthStencilFormat(gpu());
+    auto depth_format = FindSupportedDepthStencilFormat(gpu());
     if (!depth_format) {
         printf("             No Depth + Stencil format found. Skipped.\n");
         return;

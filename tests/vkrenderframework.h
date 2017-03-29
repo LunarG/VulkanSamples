@@ -446,6 +446,4 @@ class VkPipelineObj : public vk_testing::Pipeline {
     int m_vertexBufferCount;
 };
 
-VkFormat FindDepthStencilFormat(VkPhysicalDevice);
-
 #endif  // VKRENDERFRAMEWORK_H
