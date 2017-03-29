@@ -3143,6 +3143,72 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateAndroidSurfaceKHR(VkInstance instance, cons
 }
 #endif  // VK_USE_PLATFORM_ANDROID_KHR
 
+#ifdef VK_USE_PLATFORM_IOS_MVK
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateIOSSurfaceMVK(VkInstance instance, const VkIOSSurfaceCreateInfoMVK *pCreateInfo,
+                                                     const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
+    bool skip = false;
+    {
+        std::lock_guard<std::mutex> lock(global_lock);
+        skip |= ValidateObject(instance, instance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, false, VALIDATION_ERROR_UNDEFINED,
+                               VALIDATION_ERROR_UNDEFINED);
+    }
+    if (skip) {
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+    }
+    VkResult result =
+        get_dispatch_table(ot_instance_table_map, instance)->CreateIOSSurfaceMVK(instance, pCreateInfo, pAllocator, pSurface);
+    if (result == VK_SUCCESS) {
+        std::lock_guard<std::mutex> lock(global_lock);
+        CreateObject(instance, *pSurface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, pAllocator);
+    }
+    return result;
+}
+#endif  // VK_USE_PLATFORM_IOS_MVK
+
+#ifdef VK_USE_PLATFORM_MACOS_MVK
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateMacOSSurfaceMVK(VkInstance instance, const VkMacOSSurfaceCreateInfoMVK *pCreateInfo,
+                                                       const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
+    bool skip = false;
+    {
+        std::lock_guard<std::mutex> lock(global_lock);
+        skip |= ValidateObject(instance, instance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, false, VALIDATION_ERROR_UNDEFINED,
+                               VALIDATION_ERROR_UNDEFINED);
+    }
+    if (skip) {
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+    }
+    VkResult result =
+        get_dispatch_table(ot_instance_table_map, instance)->CreateMacOSSurfaceMVK(instance, pCreateInfo, pAllocator, pSurface);
+    if (result == VK_SUCCESS) {
+        std::lock_guard<std::mutex> lock(global_lock);
+        CreateObject(instance, *pSurface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, pAllocator);
+    }
+    return result;
+}
+#endif  // VK_USE_PLATFORM_MACOS_MVK
+
+#ifdef VK_USE_PLATFORM_VI_NN
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateViSurfaceNN(VkInstance instance, const VkViSurfaceCreateInfoNN *pCreateInfo,
+                                                   const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
+    bool skip = false;
+    {
+        std::lock_guard<std::mutex> lock(global_lock);
+        skip |= ValidateObject(instance, instance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, false, VALIDATION_ERROR_UNDEFINED,
+                               VALIDATION_ERROR_UNDEFINED);
+    }
+    if (skip) {
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+    }
+    VkResult result =
+        get_dispatch_table(ot_instance_table_map, instance)->CreateViSurfaceNN(instance, pCreateInfo, pAllocator, pSurface);
+    if (result == VK_SUCCESS) {
+        std::lock_guard<std::mutex> lock(global_lock);
+        CreateObject(instance, *pSurface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, pAllocator);
+    }
+    return result;
+}
+#endif  // VK_USE_PLATFORM_VI_NN
+
 VKAPI_ATTR VkResult VKAPI_CALL CreateSharedSwapchainsKHR(VkDevice device, uint32_t swapchainCount,
                                                          const VkSwapchainCreateInfoKHR *pCreateInfos,
                                                          const VkAllocationCallbacks *pAllocator, VkSwapchainKHR *pSwapchains) {
