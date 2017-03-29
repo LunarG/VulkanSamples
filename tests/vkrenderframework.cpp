@@ -80,6 +80,9 @@ void VkRenderFramework::InitFramework(std::vector<const char *> instance_layer_n
                                       std::vector<const char *> instance_extension_names,
                                       std::vector<const char *> device_extension_names, PFN_vkDebugReportCallbackEXT dbgFunction,
                                       void *userData) {
+    // Assert not already initialized
+    ASSERT_EQ((VkInstance)0, inst);
+
     VkInstanceCreateInfo instInfo = {};
     std::vector<VkExtensionProperties> instance_extensions;
     std::vector<VkExtensionProperties> device_extensions;
@@ -136,6 +139,9 @@ void VkRenderFramework::InitFramework(std::vector<const char *> instance_layer_n
 }
 
 void VkRenderFramework::ShutdownFramework() {
+    // Nothing to shut down without a VkInstance
+    if (!this->inst) return;
+
     delete m_commandBuffer;
     delete m_commandPool;
     if (m_framebuffer) vkDestroyFramebuffer(device(), m_framebuffer, NULL);
@@ -156,6 +162,7 @@ void VkRenderFramework::ShutdownFramework() {
     // reset the driver
     delete m_device;
     if (this->inst) vkDestroyInstance(this->inst, NULL);
+    this->inst = (VkInstance)0; // In case we want to re-initialize
 }
 
 void VkRenderFramework::GetPhysicalDeviceFeatures(VkPhysicalDeviceFeatures *features) {

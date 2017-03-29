@@ -1361,18 +1361,19 @@ TEST_F(VkLayerTest, SparseBindingImageBufferCreate) {
 
 TEST_F(VkLayerTest, SparseResidencyImageCreateUnsupportedTypes) {
     TEST_DESCRIPTION("Create images with sparse residency with unsupported types");
-    ASSERT_NO_FATAL_FAILURE(
-        InitFramework(instance_layer_names, instance_extension_names, device_extension_names, myDbgFunc, m_errorMonitor));
 
     // Determine which device feature are available
-    VkPhysicalDeviceFeatures available_features = {};
-    ASSERT_NO_FATAL_FAILURE(GetPhysicalDeviceFeatures(&available_features));
+    VkPhysicalDeviceFeatures device_features = {};
+    ASSERT_NO_FATAL_FAILURE(Init());
+    ASSERT_NO_FATAL_FAILURE(GetPhysicalDeviceFeatures(&device_features));
 
-    // Mask out device features we don't want
-    VkPhysicalDeviceFeatures desired_features = available_features;
-    desired_features.sparseResidencyImage2D = VK_FALSE;
-    desired_features.sparseResidencyImage3D = VK_FALSE;
-    ASSERT_NO_FATAL_FAILURE(Init(&desired_features));
+    // Destroy the first instance
+    ShutdownFramework();
+
+    // Mask out device features we don't want and create a new instance
+    device_features.sparseResidencyImage2D = VK_FALSE;
+    device_features.sparseResidencyImage3D = VK_FALSE;
+    ASSERT_NO_FATAL_FAILURE(Init(&device_features));
 
     VkImage image = VK_NULL_HANDLE;
     VkResult result = VK_RESULT_MAX_ENUM;
@@ -1429,25 +1430,27 @@ TEST_F(VkLayerTest, SparseResidencyImageCreateUnsupportedTypes) {
 
 TEST_F(VkLayerTest, SparseResidencyImageCreateUnsupportedSamples) {
     TEST_DESCRIPTION("Create images with sparse residency with unsupported tiling or sample counts");
-    ASSERT_NO_FATAL_FAILURE(
-        InitFramework(instance_layer_names, instance_extension_names, device_extension_names, myDbgFunc, m_errorMonitor));
 
     // Determine which device feature are available
-    VkPhysicalDeviceFeatures available_features = {};
-    ASSERT_NO_FATAL_FAILURE(GetPhysicalDeviceFeatures(&available_features));
+    VkPhysicalDeviceFeatures device_features = {};
+    ASSERT_NO_FATAL_FAILURE(Init());
+    ASSERT_NO_FATAL_FAILURE(GetPhysicalDeviceFeatures(&device_features));
 
-    // These tests all require that the device support sparse residency for 2D images
-    if (VK_TRUE != available_features.sparseResidencyImage2D) {
+    // Destroy the first instance
+    ShutdownFramework();
+
+    // These tests require that the device support sparse residency for 2D images
+    if (VK_TRUE != device_features.sparseResidencyImage2D) {
+        printf("             Test requires unsupported SparseResidencyImage2D feature. Skipped.\n");
         return;
     }
 
-    // Mask out device features we don't want
-    VkPhysicalDeviceFeatures desired_features = available_features;
-    desired_features.sparseResidency2Samples = VK_FALSE;
-    desired_features.sparseResidency4Samples = VK_FALSE;
-    desired_features.sparseResidency8Samples = VK_FALSE;
-    desired_features.sparseResidency16Samples = VK_FALSE;
-    ASSERT_NO_FATAL_FAILURE(Init(&desired_features));
+    // Mask out device features we don't want and create a new instance
+    device_features.sparseResidency2Samples = VK_FALSE;
+    device_features.sparseResidency4Samples = VK_FALSE;
+    device_features.sparseResidency8Samples = VK_FALSE;
+    device_features.sparseResidency16Samples = VK_FALSE;
+    ASSERT_NO_FATAL_FAILURE(Init(&device_features));
 
     VkImage image = VK_NULL_HANDLE;
     VkResult result = VK_RESULT_MAX_ENUM;
@@ -3424,8 +3427,6 @@ TEST_F(VkLayerTest, MismatchedQueueFamiliesOnSubmit) {
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, " is being submitted on queue ");
     // Get safe index of another queue family
     uint32_t other_queue_family = (m_device->graphics_queue_node_index_ == 0) ? 1 : 0;
-    ASSERT_NO_FATAL_FAILURE(Init());
-    // Create a second queue using a different queue family
     VkQueue other_queue;
     vkGetDeviceQueue(m_device->device(), other_queue_family, 0, &other_queue);
 
@@ -21393,7 +21394,6 @@ TEST_F(VkPositiveLayerTest, TwoQueueSubmitsSeparateQueuesWithSemaphoreAndOneFenc
 
     m_errorMonitor->ExpectSuccess();
 
-    ASSERT_NO_FATAL_FAILURE(Init());
     VkFence fence;
     VkFenceCreateInfo fence_create_info{};
     fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -22808,6 +22808,9 @@ TEST_F(VkPositiveLayerTest, Maintenance1Tests) {
             }
         }
     }
+
+    // Destroy the first instance
+    ShutdownFramework();
 
     // Proceed if extension is supported by hardware
     if (!supports_maintenance1_extension) {
