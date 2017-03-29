@@ -791,8 +791,7 @@ VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSetWithTemplateKHR(VkDevice device, V
         descriptorSet = (VkDescriptorSet)dev_data->unique_id_mapping[reinterpret_cast<uint64_t &>(descriptorSet)];
         descriptorUpdateTemplate = (VkDescriptorUpdateTemplateKHR)dev_data->unique_id_mapping[template_handle];
     }
-    void *unwrapped_buffer = nullptr;
-    unwrapped_buffer = BuildUnwrappedUpdateTemplateBuffer(dev_data, template_handle, pData);
+    void *unwrapped_buffer = BuildUnwrappedUpdateTemplateBuffer(dev_data, template_handle, pData);
     dev_data->device_dispatch_table->UpdateDescriptorSetWithTemplateKHR(device, descriptorSet, descriptorUpdateTemplate,
                                                                         unwrapped_buffer);
     free(unwrapped_buffer);
