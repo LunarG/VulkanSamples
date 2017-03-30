@@ -1364,16 +1364,14 @@ TEST_F(VkLayerTest, SparseResidencyImageCreateUnsupportedTypes) {
 
     // Determine which device feature are available
     VkPhysicalDeviceFeatures device_features = {};
-    ASSERT_NO_FATAL_FAILURE(Init());
+    ASSERT_NO_FATAL_FAILURE(
+        InitFramework(instance_layer_names, instance_extension_names, device_extension_names, myDbgFunc, m_errorMonitor));
     ASSERT_NO_FATAL_FAILURE(GetPhysicalDeviceFeatures(&device_features));
 
-    // Destroy the first instance
-    ShutdownFramework();
-
-    // Mask out device features we don't want and create a new instance
+    // Mask out device features we don't want and initialize device state
     device_features.sparseResidencyImage2D = VK_FALSE;
     device_features.sparseResidencyImage3D = VK_FALSE;
-    ASSERT_NO_FATAL_FAILURE(Init(&device_features));
+    ASSERT_NO_FATAL_FAILURE(InitState(&device_features));
 
     VkImage image = VK_NULL_HANDLE;
     VkResult result = VK_RESULT_MAX_ENUM;
@@ -1433,11 +1431,9 @@ TEST_F(VkLayerTest, SparseResidencyImageCreateUnsupportedSamples) {
 
     // Determine which device feature are available
     VkPhysicalDeviceFeatures device_features = {};
-    ASSERT_NO_FATAL_FAILURE(Init());
+    ASSERT_NO_FATAL_FAILURE(
+        InitFramework(instance_layer_names, instance_extension_names, device_extension_names, myDbgFunc, m_errorMonitor));
     ASSERT_NO_FATAL_FAILURE(GetPhysicalDeviceFeatures(&device_features));
-
-    // Destroy the first instance
-    ShutdownFramework();
 
     // These tests require that the device support sparse residency for 2D images
     if (VK_TRUE != device_features.sparseResidencyImage2D) {
@@ -1445,12 +1441,12 @@ TEST_F(VkLayerTest, SparseResidencyImageCreateUnsupportedSamples) {
         return;
     }
 
-    // Mask out device features we don't want and create a new instance
+    // Mask out device features we don't want and initialize device state
     device_features.sparseResidency2Samples = VK_FALSE;
     device_features.sparseResidency4Samples = VK_FALSE;
     device_features.sparseResidency8Samples = VK_FALSE;
     device_features.sparseResidency16Samples = VK_FALSE;
-    ASSERT_NO_FATAL_FAILURE(Init(&device_features));
+    ASSERT_NO_FATAL_FAILURE(InitState(&device_features));
 
     VkImage image = VK_NULL_HANDLE;
     VkResult result = VK_RESULT_MAX_ENUM;
@@ -22809,9 +22805,6 @@ TEST_F(VkPositiveLayerTest, Maintenance1Tests) {
         }
     }
 
-    // Destroy the first instance
-    ShutdownFramework();
-
     // Proceed if extension is supported by hardware
     if (!supports_maintenance1_extension) {
         printf("             Maintenance1 Extension not supported, skipping tests\n");
@@ -22819,7 +22812,7 @@ TEST_F(VkPositiveLayerTest, Maintenance1Tests) {
     }
 
     m_errorMonitor->ExpectSuccess();
-    ASSERT_NO_FATAL_FAILURE(Init());
+    ASSERT_NO_FATAL_FAILURE(InitState());
     VkCommandBuffer cmd_buf;
     VkCommandBufferAllocateInfo alloc_info;
     alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
