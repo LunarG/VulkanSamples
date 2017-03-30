@@ -102,7 +102,7 @@ static const char bindStateFragShaderText[] =
 
 // Format search helper
 VkFormat FindSupportedDepthStencilFormat(VkPhysicalDevice phy) {
-    VkFormat ds_formats[] = { VK_FORMAT_D16_UNORM_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT_S8_UINT };
+    VkFormat ds_formats[] = {VK_FORMAT_D16_UNORM_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT_S8_UINT};
     for (uint32_t i = 0; i < sizeof(ds_formats); i++) {
         VkFormatProperties format_props;
         vkGetPhysicalDeviceFormatProperties(phy, ds_formats[i], &format_props);

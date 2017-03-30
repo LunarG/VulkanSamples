@@ -162,7 +162,7 @@ void VkRenderFramework::ShutdownFramework() {
     // reset the driver
     delete m_device;
     if (this->inst) vkDestroyInstance(this->inst, NULL);
-    this->inst = (VkInstance)0; // In case we want to re-initialize
+    this->inst = (VkInstance)0;  // In case we want to re-initialize
 }
 
 void VkRenderFramework::GetPhysicalDeviceFeatures(VkPhysicalDeviceFeatures *features) {
