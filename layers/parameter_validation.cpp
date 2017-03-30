@@ -3792,6 +3792,11 @@ VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSets(VkDevice device, uint32_t descri
                             i, validation_error_map[VALIDATION_ERROR_00957]);
             }
 
+            // dstSet must be a valid VkDescriptorSet handle
+            skip |= validate_required_handle(report_data, "vkUpdateDescriptorSets",
+                                             ParameterName("pDescriptorWrites[%i].dstSet", ParameterName::IndexVector{i}),
+                                             pDescriptorWrites[i].dstSet);
+
             if ((pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER) ||
                 (pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) ||
                 (pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE) ||
