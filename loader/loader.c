@@ -1159,8 +1159,8 @@ out:
 
 struct loader_icd_term *loader_get_icd_and_device(const VkDevice device, struct loader_device **found_dev, uint32_t *icd_index) {
     *found_dev = NULL;
-    uint32_t index = 0;
     for (struct loader_instance *inst = loader.instances; inst; inst = inst->next) {
+        uint32_t index = 0;
         for (struct loader_icd_term *icd_term = inst->icd_terms; icd_term; icd_term = icd_term->next) {
             for (struct loader_device *dev = icd_term->logical_device_list; dev; dev = dev->next)
                 // Value comparison of device prevents object wrapping by layers
