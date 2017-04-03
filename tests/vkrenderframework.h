@@ -40,6 +40,8 @@ class VkDeviceObj : public vk_testing::Device {
     VkDeviceObj(uint32_t id, VkPhysicalDevice obj, std::vector<const char *> &extension_names,
                 VkPhysicalDeviceFeatures *features = nullptr);
 
+    uint32_t QueueFamilyWithoutCapabilities(VkQueueFlags capabilities);
+
     VkDevice device() { return handle(); }
     void get_device_queue();
 
@@ -50,6 +52,7 @@ class VkDeviceObj : public vk_testing::Device {
     VkQueue m_queue;
 };
 
+class VkCommandPoolObj;
 class VkCommandBufferObj;
 class VkDepthStencilObj;
 
@@ -86,7 +89,7 @@ class VkRenderFramework : public VkTestFramework {
     VkPhysicalDevice objs[16];
     uint32_t gpu_count;
     VkDeviceObj *m_device;
-    VkCommandPool m_commandPool;
+    VkCommandPoolObj *m_commandPool;
     VkCommandBufferObj *m_commandBuffer;
     VkRenderPass m_renderPass;
     VkFramebuffer m_framebuffer;
@@ -145,9 +148,14 @@ class VkConstantBufferObj;
 class VkPipelineObj;
 class VkDescriptorSetObj;
 
+class VkCommandPoolObj : public vk_testing::CommandPool {
+   public:
+    VkCommandPoolObj(VkDeviceObj *device, uint32_t queue_family_index, VkCommandPoolCreateFlags flags = 0);
+};
+
 class VkCommandBufferObj : public vk_testing::CommandBuffer {
    public:
-    VkCommandBufferObj(VkDeviceObj *device, VkCommandPool pool);
+    VkCommandBufferObj(VkDeviceObj *device, VkCommandPoolObj *pool);
     VkCommandBuffer GetBufferHandle();
     VkResult BeginCommandBuffer();
     VkResult BeginCommandBuffer(VkCommandBufferBeginInfo *pInfo);
@@ -222,7 +230,7 @@ class VkConstantBufferObj : public vk_testing::Buffer {
     vk_testing::BufferView m_bufferView;
     int m_numVertices;
     int m_stride;
-    vk_testing::CommandPool *m_commandPool;
+    VkCommandPoolObj *m_commandPool;
     VkCommandBufferObj *m_commandBuffer;
     vk_testing::Fence m_fence;
 };
@@ -437,4 +445,5 @@ class VkPipelineObj : public vk_testing::Pipeline {
     vector<VkPipelineColorBlendAttachmentState> m_colorAttachments;
     int m_vertexBufferCount;
 };
+
 #endif  // VKRENDERFRAMEWORK_H

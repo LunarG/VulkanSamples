@@ -35,6 +35,7 @@ cd ../..
 copy /Y ..\layers\vk_layer_config.cpp   generated\common\
 copy /Y ..\layers\vk_layer_extension_utils.cpp  generated\common\
 copy /Y ..\layers\vk_layer_utils.cpp    generated\common\
+copy /Y ..\layers\vk_format_utils.cpp   generated\common\
 copy /Y ..\layers\vk_layer_table.cpp    generated\common\
 copy /Y ..\layers\descriptor_sets.cpp   generated\common\
 copy /Y ..\layers\buffer_validation.cpp generated\common\

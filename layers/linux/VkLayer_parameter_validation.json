@@ -4,7 +4,7 @@
         "name": "VK_LAYER_LUNARG_parameter_validation",
         "type": "GLOBAL",
         "library_path": "./libVkLayer_parameter_validation.so",
-        "api_version": "1.0.42",
+        "api_version": "1.0.46",
         "implementation_version": "1",
         "description": "LunarG Validation Layer",
         "instance_extensions": [

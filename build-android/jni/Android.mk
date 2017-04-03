@@ -23,6 +23,7 @@ LOCAL_MODULE := layer_utils
 LOCAL_SRC_FILES += $(LAYER_DIR)/common/vk_layer_config.cpp
 LOCAL_SRC_FILES += $(LAYER_DIR)/common/vk_layer_extension_utils.cpp
 LOCAL_SRC_FILES += $(LAYER_DIR)/common/vk_layer_utils.cpp
+LOCAL_SRC_FILES += $(LAYER_DIR)/common/vk_format_utils.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include \
                     $(LAYER_DIR)/include \
                     $(SRC_DIR)/layers \

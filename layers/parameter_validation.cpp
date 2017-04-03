@@ -98,6 +98,7 @@ struct layer_data {
             bool nv_external_memory : 1;
             bool nv_external_memory_win32 : 1;
             bool nvx_device_generated_commands : 1;
+            bool incremental_present : 1;
         };
         uint64_t padding[4];
     } enables;
@@ -1649,7 +1650,7 @@ static void CheckDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo,
             device_data->enables.khx_external_memory_fd = true;
         } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHX_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME) == 0) {
             device_data->enables.khx_external_semaphore_fd = true;
-#ifdef VK_USE_PLATFORM_WIN32_KHR
+#ifdef VK_USE_PLATFORM_WIN32_KHX
         } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHX_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME) == 0) {
             device_data->enables.khx_external_memory_win32 = true;
         } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHX_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME) == 0) {
@@ -1675,6 +1676,8 @@ static void CheckDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo,
 #endif
         } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_NVX_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME) == 0) {
             device_data->enables.nvx_device_generated_commands = true;
+        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME) == 0) {
+            device_data->enables.incremental_present = true;
         }
     }
 }
@@ -2541,6 +2544,35 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateI
     skip |= parameter_validation_vkCreateImage(report_data, pCreateInfo, pAllocator, pImage);
 
     if (pCreateInfo != nullptr) {
+
+        if ((device_data->physical_device_features.textureCompressionETC2 == false) &&
+            FormatIsCompressed_ETC2_EAC(pCreateInfo->format)) {
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                            DEVICE_FEATURE, LayerName,
+                            "vkCreateImage(): Attempting to create VkImage with format %s. The textureCompressionETC2 feature is "
+                            "not enabled: neither ETC2 nor EAC formats can be used to create images.",
+                            string_VkFormat(pCreateInfo->format));
+        }
+
+        if ((device_data->physical_device_features.textureCompressionASTC_LDR == false) &&
+            FormatIsCompressed_ASTC_LDR(pCreateInfo->format)) {
+            skip |=
+                log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        DEVICE_FEATURE, LayerName,
+                        "vkCreateImage(): Attempting to create VkImage with format %s. The textureCompressionASTC_LDR feature is "
+                        "not enabled: ASTC formats cannot be used to create images.",
+                        string_VkFormat(pCreateInfo->format));
+        }
+
+        if ((device_data->physical_device_features.textureCompressionBC == false) &&
+            FormatIsCompressed_BC(pCreateInfo->format)) {
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                            DEVICE_FEATURE, LayerName,
+                            "vkCreateImage(): Attempting to create VkImage with format %s. The textureCompressionBC feature is "
+                            "not enabled: BC compressed formats cannot be used to create images.",
+                            string_VkFormat(pCreateInfo->format));
+        }
+
         // Validation for parameters excluded from the generated validation code due to a 'noautovalidity' tag in vk.xml
         if (pCreateInfo->sharingMode == VK_SHARING_MODE_CONCURRENT) {
             // If sharingMode is VK_SHARING_MODE_CONCURRENT, queueFamilyIndexCount must be greater than 1
@@ -2804,6 +2836,10 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImageView(VkDevice device, const VkImageVie
                     log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, LayerName,
                             "vkCreateImageView: if pCreateInfo->viewType is VK_IMAGE_TYPE_CUBE_ARRAY, "
                             "pCreateInfo->subresourceRange.layerCount must be a multiple of 6");
+            }
+            if (!my_data->physical_device_features.imageCubeArray) {
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                                LayerName, "vkCreateImageView: Device feature imageCubeArray not enabled.");
             }
         } else if (pCreateInfo->viewType == VK_IMAGE_VIEW_TYPE_3D) {
             if (pCreateInfo->subresourceRange.baseArrayLayer != 0) {
@@ -3525,8 +3561,16 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSampler(VkDevice device, const VkSamplerCre
 
     skip |= parameter_validation_vkCreateSampler(report_data, pCreateInfo, pAllocator, pSampler);
 
-    // Validation for parameters excluded from the generated validation code due to a 'noautovalidity' tag in vk.xml
     if (pCreateInfo != nullptr) {
+
+        if ((device_data->physical_device_features.samplerAnisotropy == false) && (pCreateInfo->maxAnisotropy != 1.0)) {
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                            DEVICE_FEATURE, LayerName,
+                            "vkCreateSampler(): The samplerAnisotropy feature is not enabled, so the maxAnisotropy member of the "
+                            "VkSamplerCreateInfo structure must be 1.0 but is %f.",
+                            pCreateInfo->maxAnisotropy);
+        }
+
         // If compareEnable is VK_TRUE, compareOp must be a valid VkCompareOp value
         if (pCreateInfo->compareEnable == VK_TRUE) {
             skip |= validate_ranged_enum(report_data, "vkCreateSampler", "pCreateInfo->compareOp", "VkCompareOp",
@@ -3751,6 +3795,11 @@ VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSets(VkDevice device, uint32_t descri
                             i, validation_error_map[VALIDATION_ERROR_00957]);
             }
 
+            // dstSet must be a valid VkDescriptorSet handle
+            skip |= validate_required_handle(report_data, "vkUpdateDescriptorSets",
+                                             ParameterName("pDescriptorWrites[%i].dstSet", ParameterName::IndexVector{i}),
+                                             pDescriptorWrites[i].dstSet);
+
             if ((pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER) ||
                 (pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) ||
                 (pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE) ||
@@ -3834,7 +3883,7 @@ VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSets(VkDevice device, uint32_t descri
                 VkDeviceSize uniformAlignment = device_data->device_limits.minUniformBufferOffsetAlignment;
                 for (uint32_t j = 0; j < pDescriptorWrites[i].descriptorCount; j++) {
                     if (pDescriptorWrites[i].pBufferInfo != NULL) {
-                        if (vk_safe_modulo(pDescriptorWrites[i].pBufferInfo[j].offset, uniformAlignment) != 0) {
+                        if (SafeModulo(pDescriptorWrites[i].pBufferInfo[j].offset, uniformAlignment) != 0) {
                             skip |= log_msg(
                                 device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                 VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, VALIDATION_ERROR_00944, LayerName,
@@ -3850,7 +3899,7 @@ VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSets(VkDevice device, uint32_t descri
                 VkDeviceSize storageAlignment = device_data->device_limits.minStorageBufferOffsetAlignment;
                 for (uint32_t j = 0; j < pDescriptorWrites[i].descriptorCount; j++) {
                     if (pDescriptorWrites[i].pBufferInfo != NULL) {
-                        if (vk_safe_modulo(pDescriptorWrites[i].pBufferInfo[j].offset, storageAlignment) != 0) {
+                        if (SafeModulo(pDescriptorWrites[i].pBufferInfo[j].offset, storageAlignment) != 0) {
                             skip |= log_msg(
                                 device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                 VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, VALIDATION_ERROR_00945, LayerName,
@@ -4162,7 +4211,7 @@ VKAPI_ATTR void VKAPI_CALL CmdBindPipeline(VkCommandBuffer commandBuffer, VkPipe
     }
 }
 
-static bool preCmdSetViewport(layer_data *my_data, uint32_t viewport_count, const VkViewport *viewports) {
+static bool preCmdSetViewport(layer_data *my_data, uint32_t first_viewport, uint32_t viewport_count, const VkViewport *viewports) {
     debug_report_data *report_data = my_data->report_data;
 
     bool skip =
@@ -4173,6 +4222,23 @@ static bool preCmdSetViewport(layer_data *my_data, uint32_t viewport_count, cons
         for (uint32_t viewportIndex = 0; viewportIndex < viewport_count; ++viewportIndex) {
             const VkViewport &viewport = viewports[viewportIndex];
 
+            if (my_data->physical_device_features.multiViewport == false) {
+                if (viewport_count != 1) {
+                    skip |= log_msg(
+                        report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        DEVICE_FEATURE, LayerName,
+                        "vkCmdSetViewport(): The multiViewport feature is not enabled, so viewportCount must be 1 but is %d.",
+                        viewport_count);
+                }
+                if (first_viewport != 0) {
+                    skip |= log_msg(
+                        report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        DEVICE_FEATURE, LayerName,
+                        "vkCmdSetViewport(): The multiViewport feature is not enabled, so firstViewport must be 0 but is %d.",
+                        first_viewport);
+                }
+            }
+
             if (viewport.width <= 0 || viewport.width > limits.maxViewportDimensions[0]) {
                 skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                                 VALIDATION_ERROR_01448, LayerName,
@@ -4181,7 +4247,7 @@ static bool preCmdSetViewport(layer_data *my_data, uint32_t viewport_count, cons
             }
 
             bool invalid_height = (viewport.height <= 0 || viewport.height > limits.maxViewportDimensions[1]);
-            if (my_data->enables.amd_negative_viewport_height && (viewport.height < 0)) {
+            if ((my_data->enables.amd_negative_viewport_height || my_data->enables.khr_maintenance1) && (viewport.height < 0)) {
                 // VALIDATION_ERROR_01790
                 invalid_height = false;
             }
@@ -4235,7 +4301,7 @@ VKAPI_ATTR void VKAPI_CALL CmdSetViewport(VkCommandBuffer commandBuffer, uint32_
     layer_data *my_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     assert(my_data != NULL);
 
-    skip |= preCmdSetViewport(my_data, viewportCount, pViewports);
+    skip |= preCmdSetViewport(my_data, firstViewport, viewportCount, pViewports);
 
     if (!skip) {
         my_data->dispatch_table.CmdSetViewport(commandBuffer, firstViewport, viewportCount, pViewports);
@@ -4250,6 +4316,21 @@ VKAPI_ATTR void VKAPI_CALL CmdSetScissor(VkCommandBuffer commandBuffer, uint32_t
     debug_report_data *report_data = my_data->report_data;
 
     skip |= parameter_validation_vkCmdSetScissor(my_data->report_data, firstScissor, scissorCount, pScissors);
+
+    if (my_data->physical_device_features.multiViewport == false) {
+        if (scissorCount != 1) {
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                            DEVICE_FEATURE, LayerName,
+                            "vkCmdSetScissor(): The multiViewport feature is not enabled, so scissorCount must be 1 but is %d.",
+                            scissorCount);
+        }
+        if (firstScissor != 0) {
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                            DEVICE_FEATURE, LayerName,
+                            "vkCmdSetScissor(): The multiViewport feature is not enabled, so firstScissor must be 0 but is %d.",
+                            firstScissor);
+        }
+    }
 
     for (uint32_t scissorIndex = 0; scissorIndex < scissorCount; ++scissorIndex) {
         const VkRect2D &pScissor = pScissors[scissorIndex];
@@ -4432,6 +4513,11 @@ VKAPI_ATTR void VKAPI_CALL CmdDrawIndirect(VkCommandBuffer commandBuffer, VkBuff
     layer_data *my_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     assert(my_data != NULL);
 
+    if (!my_data->physical_device_features.multiDrawIndirect && ((count > 1))) {
+        skip = log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                       DEVICE_FEATURE, LayerName,
+                       "CmdDrawIndirect(): Device feature multiDrawIndirect disabled: count must be 0 or 1 but is %d", count);
+    }
     skip |= parameter_validation_vkCmdDrawIndirect(my_data->report_data, buffer, offset, count, stride);
 
     if (!skip) {
@@ -4444,7 +4530,12 @@ VKAPI_ATTR void VKAPI_CALL CmdDrawIndexedIndirect(VkCommandBuffer commandBuffer,
     bool skip = false;
     layer_data *my_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     assert(my_data != NULL);
-
+    if (!my_data->physical_device_features.multiDrawIndirect && ((count > 1))) {
+        skip =
+            log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                    DEVICE_FEATURE, LayerName,
+                    "CmdDrawIndexedIndirect(): Device feature multiDrawIndirect disabled: count must be 0 or 1 but is %d", count);
+    }
     skip |= parameter_validation_vkCmdDrawIndexedIndirect(my_data->report_data, buffer, offset, count, stride);
 
     if (!skip) {
@@ -5092,6 +5183,42 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
                                      VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
     skip |= parameter_validation_vkQueuePresentKHR(my_data->report_data, pPresentInfo);
+
+    if (pPresentInfo && pPresentInfo->pNext) {
+        // Verify ext struct
+        struct std_header {
+            VkStructureType sType;
+            const void *pNext;
+        };
+        std_header *pnext = (std_header *)pPresentInfo->pNext;
+        while (pnext) {
+            if (VK_STRUCTURE_TYPE_PRESENT_REGIONS_KHR == pnext->sType) {
+                skip |= require_device_extension(my_data, my_data->enables.incremental_present, "vkQueuePresentKHR",
+                                                 VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME);
+                VkPresentRegionsKHR *present_regions = (VkPresentRegionsKHR *)pnext;
+                if (present_regions->swapchainCount != pPresentInfo->swapchainCount) {
+                    skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                    __LINE__, INVALID_USAGE, LayerName,
+                                    "QueuePresentKHR(): pPresentInfo->swapchainCount has a value of %i"
+                                    " but VkPresentRegionsKHR extension swapchainCount is %i. These values must be equal.",
+                                    pPresentInfo->swapchainCount, present_regions->swapchainCount);
+                }
+                skip |= validate_struct_pnext(my_data->report_data, "QueuePresentKHR", "pCreateInfo->pNext->pNext", NULL,
+                                              present_regions->pNext, 0, NULL, GeneratedHeaderVersion);
+                skip |= validate_array(my_data->report_data, "QueuePresentKHR", "pCreateInfo->pNext->swapchainCount",
+                                       "pCreateInfo->pNext->pRegions", present_regions->swapchainCount, present_regions->pRegions,
+                                       true, false);
+                for (uint32_t i = 0; i < present_regions->swapchainCount; ++i) {
+                    skip |=
+                        validate_array(my_data->report_data, "QueuePresentKHR", "pCreateInfo->pNext->pRegions[].rectangleCount",
+                                       "pCreateInfo->pNext->pRegions[].pRectangles", present_regions->pRegions[i].rectangleCount,
+                                       present_regions->pRegions[i].pRectangles, true, false);
+                }
+            }
+            pnext = (std_header *)pnext->pNext;
+        }
+    }
+
     if (!skip) {
         result = my_data->dispatch_table.QueuePresentKHR(queue, pPresentInfo);
 
@@ -6145,39 +6272,6 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceExternalBufferPropertiesKHX(
     }
 }
 
-VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceProperties2KHX(VkPhysicalDevice physicalDevice,
-                                                           VkPhysicalDeviceProperties2KHX *pProperties) {
-    auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
-    assert(my_data != NULL);
-    bool skip = false;
-    skip |= require_instance_extension(physicalDevice, &instance_extension_enables::khx_external_memory_capabilities_enabled,
-                                       "vkGetPhysicalDeviceProperties2KHX", VK_KHX_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME);
-    skip |= parameter_validation_vkGetPhysicalDeviceProperties2KHX(my_data->report_data, pProperties);
-    if (!skip) {
-        my_data->dispatch_table.GetPhysicalDeviceProperties2KHX(physicalDevice, pProperties);
-    }
-}
-
-VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceImageFormatProperties2KHX(
-    VkPhysicalDevice physicalDevice, const VkPhysicalDeviceImageFormatInfo2KHX *pImageFormatInfo,
-    VkImageFormatProperties2KHX *pImageFormatProperties) {
-    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
-    auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
-    assert(my_data != NULL);
-    bool skip = false;
-    skip |= require_instance_extension(physicalDevice, &instance_extension_enables::khx_external_memory_capabilities_enabled,
-                                       "vkGetPhysicalDeviceImageFormatProperties2KHX",
-                                       VK_KHX_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME);
-    skip |= parameter_validation_vkGetPhysicalDeviceImageFormatProperties2KHX(my_data->report_data, pImageFormatInfo,
-                                                                              pImageFormatProperties);
-    if (!skip) {
-        result = my_data->dispatch_table.GetPhysicalDeviceImageFormatProperties2KHX(physicalDevice, pImageFormatInfo,
-                                                                                    pImageFormatProperties);
-        validate_result(my_data->report_data, "vkGetPhysicalDeviceImageFormatProperties2KHX", result);
-    }
-    return result;
-}
-
 // Definitions for the VK_KHX_external_memory_fd extension
 
 VKAPI_ATTR VkResult VKAPI_CALL GetMemoryFdKHX(VkDevice device, VkDeviceMemory memory,
@@ -6868,6 +6962,46 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceGeneratedCommandsPropertiesNVX(VkPhy
     skip |= parameter_validation_vkGetPhysicalDeviceGeneratedCommandsPropertiesNVX(my_data->report_data, pFeatures, pLimits);
     if (!skip) {
         my_data->dispatch_table.GetPhysicalDeviceGeneratedCommandsPropertiesNVX(physicalDevice, pFeatures, pLimits);
+    }
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL GetPastPresentationTimingGOOGLE(VkDevice device, VkSwapchainKHR swapchain,
+                                                               uint32_t *pPresentationTimingCount,
+                                                               VkPastPresentationTimingGOOGLE *pPresentationTimings) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skip = false;
+    auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+    skip |= parameter_validation_vkGetPastPresentationTimingGOOGLE(my_data->report_data, swapchain, pPresentationTimingCount,
+                                                                   pPresentationTimings);
+    if (!skip) {
+        result = my_data->dispatch_table.GetPastPresentationTimingGOOGLE(device, swapchain, pPresentationTimingCount,
+                                                                         pPresentationTimings);
+    }
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL GetRefreshCycleDurationGOOGLE(VkDevice device, VkSwapchainKHR swapchain,
+                                                             VkRefreshCycleDurationGOOGLE *pDisplayTimingProperties) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skip = false;
+    auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+    skip |= parameter_validation_vkGetRefreshCycleDurationGOOGLE(my_data->report_data, swapchain, pDisplayTimingProperties);
+    if (!skip) {
+        result = my_data->dispatch_table.GetRefreshCycleDurationGOOGLE(device, swapchain, pDisplayTimingProperties);
+    }
+    return result;
+}
+
+VKAPI_ATTR void VKAPI_CALL SetHdrMetadataEXT(VkDevice device, uint32_t swapchainCount, const VkSwapchainKHR *pSwapchains,
+                                             const VkHdrMetadataEXT *pMetadata) {
+    bool skip = false;
+    auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+    skip |= parameter_validation_vkSetHdrMetadataEXT(my_data->report_data, swapchainCount, pSwapchains, pMetadata);
+    if (!skip) {
+        my_data->dispatch_table.SetHdrMetadataEXT(device, swapchainCount, pSwapchains, pMetadata);
     }
 }
 

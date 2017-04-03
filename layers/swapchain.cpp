@@ -249,31 +249,46 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
     layer_data_map.erase(key);
 }
 
-VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceQueueFamilyProperties(VkPhysicalDevice physicalDevice,
-                                                                  uint32_t *pQueueFamilyPropertyCount,
-                                                                  VkQueueFamilyProperties *pQueueFamilyProperties) {
-    layer_data *my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), layer_data_map);
-
-    // Call down the call chain:
-    my_data->instance_dispatch_table->GetPhysicalDeviceQueueFamilyProperties(physicalDevice, pQueueFamilyPropertyCount,
-                                                                             pQueueFamilyProperties);
-
+static void PostCallRecordGetPhysicalDeviceQueueFamilyProperties(layer_data *dev_data, VkPhysicalDevice physical_device,
+                                                                 uint32_t *qfp_count, bool qfp_is_null) {
     // Record the result of this query:
     std::lock_guard<std::mutex> lock(global_lock);
-    SwpPhysicalDevice *pPhysicalDevice = NULL;
+    SwpPhysicalDevice *phy_data = NULL;
     {
-        auto it = my_data->physicalDeviceMap.find(physicalDevice);
-        pPhysicalDevice = (it == my_data->physicalDeviceMap.end()) ? NULL : &it->second;
+        auto it = dev_data->physicalDeviceMap.find(physical_device);
+        phy_data = (it == dev_data->physicalDeviceMap.end()) ? NULL : &it->second;
     }
     // Note: for poorly-written applications (e.g. that don't call this command
     // twice, the first time with pQueueFamilyProperties set to NULL, and the
     // second time with a non-NULL pQueueFamilyProperties and with the same
     // count as returned the first time), record the count when
-    // pQueueFamilyProperties is non-NULL:
-    if (pPhysicalDevice && pQueueFamilyPropertyCount && pQueueFamilyProperties) {
-        pPhysicalDevice->gotQueueFamilyPropertyCount = true;
-        pPhysicalDevice->numOfQueueFamilies = *pQueueFamilyPropertyCount;
+    // queue family property data pointer is non-NULL:
+    if (phy_data && qfp_count && !qfp_is_null) {
+        phy_data->gotQueueFamilyPropertyCount = true;
+        phy_data->numOfQueueFamilies = *qfp_count;
     }
+}
+
+VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceQueueFamilyProperties(VkPhysicalDevice physicalDevice,
+                                                                  uint32_t *pQueueFamilyPropertyCount,
+                                                                  VkQueueFamilyProperties *pQueueFamilyProperties) {
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), layer_data_map);
+
+    // Call down the call chain:
+    dev_data->instance_dispatch_table->GetPhysicalDeviceQueueFamilyProperties(physicalDevice, pQueueFamilyPropertyCount,
+                                                                              pQueueFamilyProperties);
+    PostCallRecordGetPhysicalDeviceQueueFamilyProperties(dev_data, physicalDevice, pQueueFamilyPropertyCount,
+                                                         pQueueFamilyProperties == NULL);
+}
+
+VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceQueueFamilyProperties2KHR(VkPhysicalDevice physicalDevice,
+                                                                      uint32_t *pQueueFamilyPropertyCount,
+                                                                      VkQueueFamilyProperties2KHR *pQueueFamilyProperties) {
+    auto dev_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), layer_data_map);
+    dev_data->instance_dispatch_table->GetPhysicalDeviceQueueFamilyProperties2KHR(physicalDevice, pQueueFamilyPropertyCount,
+                                                                                  pQueueFamilyProperties);
+    PostCallRecordGetPhysicalDeviceQueueFamilyProperties(dev_data, physicalDevice, pQueueFamilyPropertyCount,
+                                                         pQueueFamilyProperties == NULL);
 }
 
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
@@ -1310,6 +1325,8 @@ static PFN_vkVoidFunction intercept_core_instance_command(const char *name);
 
 static PFN_vkVoidFunction intercept_khr_surface_command(const char *name, VkInstance instance);
 
+static PFN_vkVoidFunction intercept_extension_instance_commands(const char *name);
+
 static PFN_vkVoidFunction intercept_core_device_command(const char *name);
 
 static PFN_vkVoidFunction intercept_khr_swapchain_command(const char *name, VkDevice dev);
@@ -1346,6 +1363,7 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance
 
     proc = debug_report_get_instance_proc_addr(my_data->report_data, funcName);
     if (!proc) proc = intercept_khr_surface_command(funcName, instance);
+    if (!proc) proc = intercept_extension_instance_commands(funcName);
     if (proc) return proc;
 
     if (pTable->GetInstanceProcAddr == NULL) return NULL;
@@ -1436,6 +1454,23 @@ static PFN_vkVoidFunction intercept_khr_surface_command(const char *name, VkInst
         if (!strcmp(khr_surface_commands[i].name, name)) return khr_surface_commands[i].proc;
     }
 
+    return nullptr;
+}
+
+static PFN_vkVoidFunction intercept_extension_instance_commands(const char *name) {
+    static const struct {
+        const char *name;
+        PFN_vkVoidFunction proc;
+    } instance_extension_commands[] = {
+        {"vkGetPhysicalDeviceQueueFamilyProperties2KHR",
+         reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceQueueFamilyProperties2KHR)},
+    };
+
+    for (size_t i = 0; i < ARRAY_SIZE(instance_extension_commands); i++) {
+        if (!strcmp(instance_extension_commands[i].name, name)) {
+            return instance_extension_commands[i].proc;
+        }
+    }
     return nullptr;
 }
 

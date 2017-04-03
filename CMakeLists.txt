@@ -68,6 +68,9 @@ if(WIN32)
     add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/GR->")
     # Warn about nested declarations
     add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/w34456>")
+    # Warn about potentially uninitialized variables
+    add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/w34701>")
+    add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/w34703>")
 endif()
 
 if(NOT WIN32)
@@ -305,6 +308,15 @@ endif()
 
 if(UNIX)
     install(DIRECTORY "${PROJECT_SOURCE_DIR}/include/vulkan" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+# uninstall target
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+    IMMEDIATE @ONLY)
+
+add_custom_target(uninstall
+    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 endif()
 
 # loader: Generic VULKAN ICD loader

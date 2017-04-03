@@ -136,6 +136,7 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
             'vkCreateComputePipelines',
             'vkCreateGraphicsPipelines',
             'vkCreateSwapchainKHR',
+            'vkCreateSharedSwapchainsKHR',
             'vkGetSwapchainImagesKHR',
             'vkEnumerateInstanceLayerProperties',
             'vkEnumerateDeviceLayerProperties',
@@ -144,6 +145,8 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
             'vkDestroyDescriptorUpdateTemplateKHR',
             'vkUpdateDescriptorSetWithTemplateKHR',
             'vkCmdPushDescriptorSetWithTemplateKHR',
+            'vkDebugMarkerSetObjectTagEXT',
+            'vkDebugMarkerSetObjectNameEXT',
             ]
         # Commands shadowed by interface functions and are not implemented
         self.interface_functions = [
@@ -160,16 +163,9 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
         self.headerVersion = None
         # Internal state - accumulators for different inner block text
         self.sections = dict([(section, []) for section in self.ALL_SECTIONS])
-        self.structNames = []                             # List of Vulkan struct typenames
-        self.structTypes = dict()                         # Map of Vulkan struct typename to required VkStructureType
-        self.handleTypes = set()                          # Set of handle type names
-        self.commands = []                                # List of CommandData records for all Vulkan commands
         self.structMembers = []                           # List of StructMemberData records for all Vulkan structs
-        self.flags = set()                                # Map of flags typenames
         # Named tuples to store struct and command data
-        self.StructType = namedtuple('StructType', ['name', 'value'])
         self.CommandParam = namedtuple('CommandParam', ['type', 'name', 'ispointer', 'isconst', 'iscount', 'len', 'extstructs', 'cdecl', 'islocal', 'iscreate', 'isdestroy'])
-        self.CommandData = namedtuple('CommandData', ['name', 'return_type', 'params', 'cdecl'])
         self.StructMemberData = namedtuple('StructMemberData', ['name', 'members'])
     #
     def incIndent(self, indent):
@@ -234,14 +230,7 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
         OutputGenerator.beginFeature(self, interface, emit)
         self.headerVersion = None
         self.sections = dict([(section, []) for section in self.ALL_SECTIONS])
-        self.structNames = []
-        self.structTypes = dict()
-        self.handleTypes = set()
-        self.commands = []
-        self.structMembers = []
         self.cmdMembers = []
-        self.flags = set()
-        self.StructMemberData = namedtuple('StructMemberData', ['name', 'members'])
         self.CmdMemberData = namedtuple('CmdMemberData', ['name', 'members'])
         if self.featureName != 'VK_VERSION_1_0':
             white_list_entry = []
@@ -282,7 +271,6 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
         # Otherwise, emit the tag text.
         category = typeElem.get('category')
         if (category == 'struct' or category == 'union'):
-            self.structNames.append(name)
             self.genStruct(typeinfo, name)
     #
     # Append a definition to the specified section
@@ -381,8 +369,6 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
                     value = result.group(0)
                 else:
                     value = self.genVkStructureType(typeName)
-                # Store the required type value
-                self.structTypes[typeName] = self.StructType(name=name, value=value)
             # Store pointer/array/string info
             membersInfo.append(self.CommandParam(type=type,
                                                  name=name,

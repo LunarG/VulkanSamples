@@ -21,6 +21,7 @@
  */
 
 #include "vkrenderframework.h"
+#include "vk_format_utils.h"
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 #define GET_DEVICE_PROC_ADDR(dev, entrypoint)                                            \
@@ -28,43 +29,6 @@
         fp##entrypoint = (PFN_vk##entrypoint)vkGetDeviceProcAddr(dev, "vk" #entrypoint); \
         assert(fp##entrypoint != NULL);                                                  \
     }
-
-// TODO : These functions are duplicated is vk_layer_utils.cpp, share code
-// Return true if format contains depth and stencil information
-bool vk_format_is_depth_and_stencil(VkFormat format) {
-    bool is_ds = false;
-
-    switch (format) {
-        case VK_FORMAT_D16_UNORM_S8_UINT:
-        case VK_FORMAT_D24_UNORM_S8_UINT:
-        case VK_FORMAT_D32_SFLOAT_S8_UINT:
-            is_ds = true;
-            break;
-        default:
-            break;
-    }
-    return is_ds;
-}
-
-// Return true if format is a stencil-only format
-bool vk_format_is_stencil_only(VkFormat format) { return (format == VK_FORMAT_S8_UINT); }
-
-// Return true if format is a depth-only format
-bool vk_format_is_depth_only(VkFormat format) {
-    bool is_depth = false;
-
-    switch (format) {
-        case VK_FORMAT_D16_UNORM:
-        case VK_FORMAT_X8_D24_UNORM_PACK32:
-        case VK_FORMAT_D32_SFLOAT:
-            is_depth = true;
-            break;
-        default:
-            break;
-    }
-
-    return is_depth;
-}
 
 VkRenderFramework::VkRenderFramework()
     : inst(VK_NULL_HANDLE),
@@ -116,6 +80,9 @@ void VkRenderFramework::InitFramework(std::vector<const char *> instance_layer_n
                                       std::vector<const char *> instance_extension_names,
                                       std::vector<const char *> device_extension_names, PFN_vkDebugReportCallbackEXT dbgFunction,
                                       void *userData) {
+    // Assert not already initialized
+    ASSERT_EQ((VkInstance)0, inst);
+
     VkInstanceCreateInfo instInfo = {};
     std::vector<VkExtensionProperties> instance_extensions;
     std::vector<VkExtensionProperties> device_extensions;
@@ -172,8 +139,11 @@ void VkRenderFramework::InitFramework(std::vector<const char *> instance_layer_n
 }
 
 void VkRenderFramework::ShutdownFramework() {
+    // Nothing to shut down without a VkInstance
+    if (!this->inst) return;
+
     delete m_commandBuffer;
-    if (m_commandPool) vkDestroyCommandPool(device(), m_commandPool, NULL);
+    delete m_commandPool;
     if (m_framebuffer) vkDestroyFramebuffer(device(), m_framebuffer, NULL);
     if (m_renderPass) vkDestroyRenderPass(device(), m_renderPass, NULL);
 
@@ -192,6 +162,7 @@ void VkRenderFramework::ShutdownFramework() {
     // reset the driver
     delete m_device;
     if (this->inst) vkDestroyInstance(this->inst, NULL);
+    this->inst = (VkInstance)0;  // In case we want to re-initialize
 }
 
 void VkRenderFramework::GetPhysicalDeviceFeatures(VkPhysicalDeviceFeatures *features) {
@@ -205,8 +176,6 @@ void VkRenderFramework::GetPhysicalDeviceFeatures(VkPhysicalDeviceFeatures *feat
 }
 
 void VkRenderFramework::InitState(VkPhysicalDeviceFeatures *features, const VkCommandPoolCreateFlags flags) {
-    VkResult U_ASSERT_ONLY err;
-
     m_device = new VkDeviceObj(0, objs[0], device_extension_names, features);
     m_device->get_device_queue();
 
@@ -232,12 +201,7 @@ void VkRenderFramework::InitState(VkPhysicalDeviceFeatures *features, const VkCo
     m_writeMask = 0xff;
     m_reference = 0;
 
-    VkCommandPoolCreateInfo cmd_pool_info;
-    cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, cmd_pool_info.pNext = NULL,
-    cmd_pool_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
-    cmd_pool_info.flags = flags;
-    err = vkCreateCommandPool(device(), &cmd_pool_info, NULL, &m_commandPool);
-    assert(!err);
+    m_commandPool = new VkCommandPoolObj(m_device, m_device->graphics_queue_node_index_, flags);
 
     m_commandBuffer = new VkCommandBufferObj(m_device, m_commandPool);
 }
@@ -408,6 +372,16 @@ VkDeviceObj::VkDeviceObj(uint32_t id, VkPhysicalDevice obj, std::vector<const ch
 
     props = phy().properties();
     queue_props = phy().queue_properties();
+}
+
+uint32_t VkDeviceObj::QueueFamilyWithoutCapabilities(VkQueueFlags capabilities) {
+    // Find a queue family without desired capabilities
+    for (uint32_t i = 0; i < queue_props.size(); i++) {
+        if ((queue_props[i].queueFlags & capabilities) == 0) {
+            return i;
+        }
+    }
+    return UINT32_MAX;
 }
 
 void VkDeviceObj::get_device_queue() {
@@ -584,7 +558,8 @@ void VkImageObj::ImageMemoryBarrier(VkCommandBufferObj *cmd_buf, VkImageAspectFl
             VK_ACCESS_SHADER_READ_BIT |
             VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
-            VK_MEMORY_INPUT_COPY_BIT*/, VkImageLayout image_layout) {
+            VK_MEMORY_INPUT_COPY_BIT*/,
+                                    VkImageLayout image_layout) {
     const VkImageSubresourceRange subresourceRange = subresource_range(aspect, 0, 1, 0, 1);
     VkImageMemoryBarrier barrier;
     barrier = image_memory_barrier(output_mask, input_mask, layout(), image_layout, subresourceRange);
@@ -670,13 +645,8 @@ void VkImageObj::SetLayout(VkImageAspectFlags aspect, VkImageLayout image_layout
         return;
     }
 
-    VkCommandPoolCreateInfo cmd_pool_info = {};
-    cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    cmd_pool_info.pNext = NULL;
-    cmd_pool_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
-    cmd_pool_info.flags = 0;
-    vk_testing::CommandPool pool(*m_device, cmd_pool_info);
-    VkCommandBufferObj cmd_buf(m_device, pool.handle());
+    VkCommandPoolObj pool(m_device, m_device->graphics_queue_node_index_);
+    VkCommandBufferObj cmd_buf(m_device, &pool);
 
     /* Build command buffer to set image layout in the driver */
     err = cmd_buf.BeginCommandBuffer();
@@ -747,11 +717,11 @@ void VkImageObj::init(uint32_t w, uint32_t h, VkFormat fmt, VkFlags usage, VkIma
         newLayout = m_descriptorImageInfo.imageLayout;
 
     VkImageAspectFlags image_aspect = 0;
-    if (vk_format_is_depth_and_stencil(fmt)) {
+    if (FormatIsDepthAndStencil(fmt)) {
         image_aspect = VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_DEPTH_BIT;
-    } else if (vk_format_is_depth_only(fmt)) {
+    } else if (FormatIsDepthOnly(fmt)) {
         image_aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
-    } else if (vk_format_is_stencil_only(fmt)) {
+    } else if (FormatIsStencilOnly(fmt)) {
         image_aspect = VK_IMAGE_ASPECT_STENCIL_BIT;
     } else {  // color
         image_aspect = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -782,11 +752,11 @@ void VkImageObj::init(const VkImageCreateInfo *create_info) {
     vk_testing::Image::init(*m_device, *create_info, 0);
 
     VkImageAspectFlags image_aspect = 0;
-    if (vk_format_is_depth_and_stencil(create_info->format)) {
+    if (FormatIsDepthAndStencil(create_info->format)) {
         image_aspect = VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_DEPTH_BIT;
-    } else if (vk_format_is_depth_only(create_info->format)) {
+    } else if (FormatIsDepthOnly(create_info->format)) {
         image_aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
-    } else if (vk_format_is_stencil_only(create_info->format)) {
+    } else if (FormatIsStencilOnly(create_info->format)) {
         image_aspect = VK_IMAGE_ASPECT_STENCIL_BIT;
     } else {  // color
         image_aspect = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -798,13 +768,8 @@ VkResult VkImageObj::CopyImage(VkImageObj &src_image) {
     VkResult U_ASSERT_ONLY err;
     VkImageLayout src_image_layout, dest_image_layout;
 
-    VkCommandPoolCreateInfo cmd_pool_info = {};
-    cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    cmd_pool_info.pNext = NULL;
-    cmd_pool_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
-    cmd_pool_info.flags = 0;
-    vk_testing::CommandPool pool(*m_device, cmd_pool_info);
-    VkCommandBufferObj cmd_buf(m_device, pool.handle());
+    VkCommandPoolObj pool(m_device, m_device->graphics_queue_node_index_);
+    VkCommandBufferObj cmd_buf(m_device, &pool);
 
     /* Build command buffer to copy staging texture to usable texture */
     err = cmd_buf.BeginCommandBuffer();
@@ -991,7 +956,8 @@ void VkConstantBufferObj::BufferMemoryBarrier(VkFlags srcAccessMask /*=
             VK_ACCESS_SHADER_WRITE_BIT |
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
-            VK_MEMORY_OUTPUT_COPY_BIT*/, VkFlags dstAccessMask /*=
+            VK_MEMORY_OUTPUT_COPY_BIT*/,
+                                              VkFlags dstAccessMask /*=
             VK_ACCESS_HOST_READ_BIT |
             VK_ACCESS_INDIRECT_COMMAND_READ_BIT |
             VK_ACCESS_INDEX_READ_BIT |
@@ -1005,13 +971,8 @@ void VkConstantBufferObj::BufferMemoryBarrier(VkFlags srcAccessMask /*=
 
     if (!m_commandBuffer) {
         m_fence.init(*m_device, vk_testing::Fence::create_info());
-        VkCommandPoolCreateInfo cmd_pool_info = {};
-        cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        cmd_pool_info.pNext = NULL;
-        cmd_pool_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
-        cmd_pool_info.flags = 0;
-        m_commandPool = new vk_testing::CommandPool(*m_device, cmd_pool_info);
-        m_commandBuffer = new VkCommandBufferObj(m_device, m_commandPool->handle());
+        m_commandPool = new VkCommandPoolObj(m_device, m_device->graphics_queue_node_index_);
+        m_commandBuffer = new VkCommandBufferObj(m_device, m_commandPool);
     } else {
         m_device->wait(m_fence);
     }
@@ -1175,7 +1136,7 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device) {
     m_rs_state.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     m_rs_state.pNext = VK_NULL_HANDLE;
     m_rs_state.flags = 0;
-    m_rs_state.depthClampEnable = VK_TRUE;
+    m_rs_state.depthClampEnable = VK_FALSE;
     m_rs_state.rasterizerDiscardEnable = VK_FALSE;
     m_rs_state.polygonMode = VK_POLYGON_MODE_FILL;
     m_rs_state.cullMode = VK_CULL_MODE_BACK_BIT;
@@ -1331,8 +1292,7 @@ void VkPipelineObj::InitGraphicsPipelineCreateInfo(VkGraphicsPipelineCreateInfo 
     }
 }
 
-VkResult VkPipelineObj::CreateVKPipeline(VkPipelineLayout layout, VkRenderPass render_pass,
-                                         VkGraphicsPipelineCreateInfo *gp_ci) {
+VkResult VkPipelineObj::CreateVKPipeline(VkPipelineLayout layout, VkRenderPass render_pass, VkGraphicsPipelineCreateInfo *gp_ci) {
     VkGraphicsPipelineCreateInfo info = {};
 
     // if not given a CreateInfo, create and initialize a local one.
@@ -1347,10 +1307,10 @@ VkResult VkPipelineObj::CreateVKPipeline(VkPipelineLayout layout, VkRenderPass r
     return init_try(*m_device, *gp_ci);
 }
 
-VkCommandBufferObj::VkCommandBufferObj(VkDeviceObj *device, VkCommandPool pool) {
+VkCommandBufferObj::VkCommandBufferObj(VkDeviceObj *device, VkCommandPoolObj *pool) {
     m_device = device;
 
-    init(*device, vk_testing::CommandBuffer::create_info(pool));
+    init(*device, vk_testing::CommandBuffer::create_info(pool->handle()));
 }
 
 VkCommandBuffer VkCommandBufferObj::GetBufferHandle() { return handle(); }
@@ -1609,6 +1569,10 @@ void VkCommandBufferObj::BindVertexBuffer(VkConstantBufferObj *vertexBuffer, VkD
     vkCmdBindVertexBuffers(handle(), binding, 1, &vertexBuffer->handle(), &offset);
 }
 
+VkCommandPoolObj::VkCommandPoolObj(VkDeviceObj *device, uint32_t queue_family_index, VkCommandPoolCreateFlags flags) {
+    init(*device, vk_testing::CommandPool::create_info(queue_family_index, flags));
+}
+
 bool VkDepthStencilObj::Initialized() { return m_initialized; }
 VkDepthStencilObj::VkDepthStencilObj(VkDeviceObj *device) : VkImageObj(device) { m_initialized = false; }
 
@@ -1625,9 +1589,9 @@ void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height,
     init(width, height, m_depth_stencil_fmt, usage, VK_IMAGE_TILING_OPTIMAL);
 
     VkImageAspectFlags aspect = VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_DEPTH_BIT;
-    if (vk_format_is_depth_only(format))
+    if (FormatIsDepthOnly(format))
         aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
-    else if (vk_format_is_stencil_only(format))
+    else if (FormatIsStencilOnly(format))
         aspect = VK_IMAGE_ASPECT_STENCIL_BIT;
 
     SetLayout(aspect, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);

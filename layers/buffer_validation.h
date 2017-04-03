@@ -44,13 +44,16 @@ bool PreCallValidateDestroyImage(layer_data *device_data, VkImage image, IMAGE_S
 
 bool ValidateImageAttributes(layer_data *device_data, IMAGE_STATE *image_state, VkImageSubresourceRange range);
 
-void ResolveRemainingLevelsLayers(layer_data *dev_data, VkImageSubresourceRange *range, IMAGE_STATE *image_state);
+uint32_t ResolveRemainingLevels(const VkImageSubresourceRange *range, uint32_t mip_levels);
 
-void ResolveRemainingLevelsLayers(layer_data *dev_data, uint32_t *levels, uint32_t *layers, VkImageSubresourceRange range,
-                                  IMAGE_STATE *image_state);
+uint32_t ResolveRemainingLayers(const VkImageSubresourceRange *range, uint32_t layers);
 
 bool VerifyClearImageLayout(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *image_state,
                             VkImageSubresourceRange range, VkImageLayout dest_image_layout, const char *func_name);
+
+bool VerifyImageLayout(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *image_state,
+                       VkImageSubresourceLayers subLayers, VkImageLayout explicit_layout, VkImageLayout optimal_layout,
+                       const char *caller, UNIQUE_VALIDATION_ERROR_CODE msg_code);
 
 void RecordClearImageLayout(layer_data *dev_data, GLOBAL_CB_NODE *cb_node, VkImage image, VkImageSubresourceRange range,
                             VkImageLayout dest_image_layout);
@@ -111,8 +114,11 @@ bool ValidateImageAspectLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, con
 void TransitionImageAspectLayout(layer_data *dev_data, GLOBAL_CB_NODE *pCB, const VkImageMemoryBarrier *mem_barrier, uint32_t level,
                                  uint32_t layer, VkImageAspectFlags aspect);
 
-bool ValidateImageLayouts(layer_data *device_data, VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
-                          const VkImageMemoryBarrier *pImgMemBarriers);
+bool ValidateBarrierLayoutToImageUsage(layer_data *device_data, const VkImageMemoryBarrier *img_barrier, bool new_not_old,
+                                       VkImageUsageFlags usage, const char *func_name);
+
+bool ValidateBarriersToImages(layer_data *device_data, VkCommandBuffer cmdBuffer, uint32_t imageMemoryBarrierCount,
+                              const VkImageMemoryBarrier *pImageMemoryBarriers, const char *func_name);
 
 void TransitionImageLayouts(layer_data *device_data, VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
                             const VkImageMemoryBarrier *pImgMemBarriers);
@@ -190,7 +196,8 @@ bool ValidateCopyBufferImageTransferGranularityRequirements(layer_data *device_d
                                                             const uint32_t i, const char *function);
 
 void PreCallRecordCmdCopyImage(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
-                               IMAGE_STATE *dst_image_state);
+                               IMAGE_STATE *dst_image_state, uint32_t region_count, const VkImageCopy *regions,
+                               VkImageLayout src_image_layout, VkImageLayout dst_image_layout);
 
 bool PreCallValidateCmdCopyBuffer(layer_data *device_data, GLOBAL_CB_NODE *cb_node, BUFFER_STATE *src_buffer_state,
                                   BUFFER_STATE *dst_buffer_state);
@@ -223,14 +230,16 @@ bool PreCallValidateCmdCopyImageToBuffer(layer_data *device_data, VkImageLayout 
                                          const VkBufferImageCopy *pRegions, const char *func_name);
 
 void PreCallRecordCmdCopyImageToBuffer(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *src_image_state,
-                                       BUFFER_STATE *dst_buff_state);
+                                       BUFFER_STATE *dst_buff_state, uint32_t region_count, const VkBufferImageCopy *regions,
+                                       VkImageLayout src_image_layout);
 
 bool PreCallValidateCmdCopyBufferToImage(layer_data *dev_data, VkImageLayout dstImageLayout, GLOBAL_CB_NODE *cb_node,
                                          BUFFER_STATE *src_buff_state, IMAGE_STATE *dst_image_state, uint32_t regionCount,
                                          const VkBufferImageCopy *pRegions, const char *func_name);
 
 void PreCallRecordCmdCopyBufferToImage(layer_data *device_data, GLOBAL_CB_NODE *cb_node, BUFFER_STATE *src_buff_state,
-                                       IMAGE_STATE *dst_image_state);
+                                       IMAGE_STATE *dst_image_state, uint32_t region_count, const VkBufferImageCopy *regions,
+                                       VkImageLayout dst_image_layout);
 
 bool PreCallValidateGetImageSubresourceLayout(layer_data *device_data, VkImage image, const VkImageSubresource *pSubresource);
 

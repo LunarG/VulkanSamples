@@ -137,6 +137,8 @@ class DescriptorSetLayout {
     //  These calls should be guarded by a call to "HasBinding(binding)" to verify that the given binding exists
     uint32_t GetGlobalStartIndexFromBinding(const uint32_t) const;
     uint32_t GetGlobalEndIndexFromBinding(const uint32_t) const;
+    // Helper function to get the next valid binding for a descriptor
+    uint32_t GetNextValidBinding(const uint32_t) const;
     // For a particular binding starting at offset and having update_count descriptors
     //  updated, verify that for any binding boundaries crossed, the update is consistent
     bool VerifyUpdateConsistency(uint32_t, uint32_t, uint32_t, const char *, const VkDescriptorSet, std::string *) const;
@@ -285,9 +287,15 @@ bool ValidateUpdateDescriptorSets(const debug_report_data *, const core_validati
 // "Perform" does the update with the assumption that ValidateUpdateDescriptorSets() has passed for the given update
 void PerformUpdateDescriptorSets(const core_validation::layer_data *, uint32_t, const VkWriteDescriptorSet *, uint32_t,
                                  const VkCopyDescriptorSet *);
+// Similar to PerformUpdateDescriptorSets, this function will do the same for updating via templates
+void PerformUpdateDescriptorSetsWithTemplateKHR(layer_data *, VkDescriptorSet, std::unique_ptr<TEMPLATE_STATE> const &,
+                                                const void *);
+// Update the common AllocateDescriptorSetsData struct which can then be shared between Validate* and Perform* funcs below
+void UpdateAllocateDescriptorSetsData(const layer_data *dev_data, const VkDescriptorSetAllocateInfo *,
+                                      AllocateDescriptorSetsData *);
 // Validate that Allocation state is ok
-bool ValidateAllocateDescriptorSets(const debug_report_data *, const VkDescriptorSetAllocateInfo *,
-                                    const core_validation::layer_data *, AllocateDescriptorSetsData *);
+bool ValidateAllocateDescriptorSets(const core_validation::layer_data *, const VkDescriptorSetAllocateInfo *,
+                                    const AllocateDescriptorSetsData *);
 // Update state based on allocating new descriptorsets
 void PerformAllocateDescriptorSets(const VkDescriptorSetAllocateInfo *, const VkDescriptorSet *, const AllocateDescriptorSetsData *,
                                    std::unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_STATE *> *,

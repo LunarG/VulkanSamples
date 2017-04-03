@@ -209,7 +209,15 @@ class HelperFileOutputGenerator(OutputGenerator):
             if not match or match.group(1) != match.group(4):
                 raise 'Unrecognized latexmath expression'
             name = match.group(2)
-            decoratedName = '{}/{}'.format(*match.group(2, 3))
+            # Need to add 1 for ceiling function; otherwise, the allocated packet
+            # size will be less than needed during capture for some title which use
+            # this in VkPipelineMultisampleStateCreateInfo. based on ceiling function
+            # definition,it is '{0}%{1}?{0}/{1} + 1:{0}/{1}'.format(*match.group(2, 3)),
+            # its value <= '{}/{} + 1'.
+            if match.group(1) == 'ceil':
+                decoratedName = '{}/{} + 1'.format(*match.group(2, 3))
+            else:
+                decoratedName = '{}/{}'.format(*match.group(2, 3))
         else:
             # Matches expressions similar to 'latexmath : [dataSize \over 4]'
             match = re.match(r'latexmath\s*\:\s*\[\s*(\w+)\s*\\over\s*(\d+)\s*\]', source)
@@ -437,7 +445,7 @@ class HelperFileOutputGenerator(OutputGenerator):
                                 checked_type = member.type
                                 if checked_type == 'void':
                                     checked_type = 'void*'
-                                struct_size_body += '        struct_size += struct_ptr->%s * sizeof(%s);\n' % (member.len, checked_type)
+                                struct_size_body += '        struct_size += (struct_ptr->%s ) * sizeof(%s);\n' % (member.len, checked_type)
             struct_size_body += '    }\n'
             struct_size_body += '    return struct_size;\n'
             struct_size_body += '}\n'

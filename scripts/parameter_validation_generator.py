@@ -136,6 +136,8 @@ class ParamCheckerOutputGenerator(OutputGenerator):
             'vkEnumerateDeviceExtensionsProperties',
             'vkCreateDebugReportCallbackEXT',
             'vkDebugReportMessageEXT']
+        # Structure fields to ignore
+        self.structMemberBlacklist = { 'VkWriteDescriptorSet' : ['dstSet'] }
         # Validation conditions for some special case struct members that are conditionally validated
         self.structMemberValidationConditions = { 'VkPipelineColorBlendStateCreateInfo' : { 'logicOp' : '{}logicOpEnable == VK_TRUE' } }
         # Header version
@@ -238,7 +240,6 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         self.structTypes = dict()
         self.commands = []
         self.structMembers = []
-        self.validatedStructs = dict()
         self.newFlags = set()
     def endFeature(self):
         # C-specific
@@ -361,6 +362,10 @@ class ParamCheckerOutputGenerator(OutputGenerator):
             isoptional = False
             if self.paramIsOptional(member) or (name == 'pNext') or (isstaticarray):
                 isoptional = True
+            # Determine if value should be ignored by code generation.
+            noautovalidity = False
+            if (member.attrib.get('noautovalidity') is not None) or ((typeName in self.structMemberBlacklist) and (name in self.structMemberBlacklist[typeName])):
+                noautovalidity = True
             membersInfo.append(self.CommandParam(type=type, name=name,
                                                 ispointer=self.paramIsPointer(member),
                                                 isstaticarray=isstaticarray,
@@ -369,7 +374,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                                                 isconst=True if 'const' in cdecl else False,
                                                 isoptional=isoptional,
                                                 iscount=iscount,
-                                                noautovalidity=True if member.attrib.get('noautovalidity') is not None else False,
+                                                noautovalidity=noautovalidity,
                                                 len=self.getLen(member),
                                                 extstructs=member.attrib.get('validextensionstructs') if name == 'pNext' else None,
                                                 condition=conditions[name] if conditions and name in conditions else None,

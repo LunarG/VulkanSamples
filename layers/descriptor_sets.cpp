@@ -193,6 +193,14 @@ VkSampler const *cvdescriptorset::DescriptorSetLayout::GetImmutableSamplerPtrFro
     }
     return nullptr;
 }
+// Move to next valid binding having a non-zero binding count
+uint32_t cvdescriptorset::DescriptorSetLayout::GetNextValidBinding(const uint32_t binding) const {
+    uint32_t new_binding = binding;
+    do {
+        new_binding++;
+    } while (GetDescriptorCountFromBinding(new_binding) == 0);
+    return new_binding;
+}
 // For given index, return ptr to ImmutableSampler array
 VkSampler const *cvdescriptorset::DescriptorSetLayout::GetImmutableSamplerPtrFromIndex(const uint32_t index) const {
     assert(index < bindings_.size());
@@ -777,7 +785,7 @@ bool cvdescriptorset::ValidateImageUpdate(VkImageView image_view, VkImageLayout 
     }
     // TODO : The various image aspect and format checks here are based on general spec language in 11.5 Image Views section under
     // vkCreateImageView(). What's the best way to create unique id for these cases?
-    bool ds = vk_format_is_depth_or_stencil(format);
+    bool ds = FormatIsDepthOrStencil(format);
     switch (image_layout) {
         case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
             // Only Color bit must be set
@@ -1136,6 +1144,72 @@ void cvdescriptorset::PerformUpdateDescriptorSets(const layer_data *dev_data, ui
         }
     }
 }
+// This helper function carries out the state updates for descriptor updates peformed via update templates. It basically collects
+// data and leverages the PerformUpdateDescriptor helper functions to do this.
+void cvdescriptorset::PerformUpdateDescriptorSetsWithTemplateKHR(layer_data *device_data, VkDescriptorSet descriptorSet,
+                                                                 std::unique_ptr<TEMPLATE_STATE> const &template_state,
+                                                                 const void *pData) {
+    auto const &create_info = template_state->create_info;
+
+    // Create a vector of write structs
+    std::vector<VkWriteDescriptorSet> desc_writes;
+    auto layout_obj = GetDescriptorSetLayout(device_data, create_info.descriptorSetLayout);
+
+    // Create a WriteDescriptorSet struct for each template update entry
+    for (uint32_t i = 0; i < create_info.descriptorUpdateEntryCount; i++) {
+        auto binding_count = layout_obj->GetDescriptorCountFromBinding(create_info.pDescriptorUpdateEntries[i].dstBinding);
+        auto binding_being_updated = create_info.pDescriptorUpdateEntries[i].dstBinding;
+        auto dst_array_element = create_info.pDescriptorUpdateEntries[i].dstArrayElement;
+
+        for (uint32_t j = 0; j < create_info.pDescriptorUpdateEntries[i].descriptorCount; j++) {
+            desc_writes.emplace_back();
+            auto &write_entry = desc_writes.back();
+
+            size_t offset = create_info.pDescriptorUpdateEntries[i].offset + j * create_info.pDescriptorUpdateEntries[i].stride;
+            char *update_entry = (char *)(pData) + offset;
+
+            if (dst_array_element >= binding_count) {
+                dst_array_element = 0;
+                binding_being_updated = layout_obj->GetNextValidBinding(binding_being_updated);
+            }
+
+            write_entry.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write_entry.pNext = NULL;
+            write_entry.dstSet = descriptorSet;
+            write_entry.dstBinding = binding_being_updated;
+            write_entry.dstArrayElement = dst_array_element;
+            write_entry.descriptorCount = 1;
+            write_entry.descriptorType = create_info.pDescriptorUpdateEntries[i].descriptorType;
+
+            switch (create_info.pDescriptorUpdateEntries[i].descriptorType) {
+                case VK_DESCRIPTOR_TYPE_SAMPLER:
+                case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+                case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+                case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+                case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
+                    write_entry.pImageInfo = reinterpret_cast<VkDescriptorImageInfo *>(update_entry);
+                    break;
+
+                case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+                case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+                case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+                case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+                    write_entry.pBufferInfo = reinterpret_cast<VkDescriptorBufferInfo *>(update_entry);
+                    break;
+
+                case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+                case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+                    write_entry.pTexelBufferView = reinterpret_cast<VkBufferView *>(update_entry);
+                    break;
+                default:
+                    assert(0);
+                    break;
+            }
+            dst_array_element++;
+        }
+    }
+    PerformUpdateDescriptorSets(device_data, static_cast<uint32_t>(desc_writes.size()), desc_writes.data(), 0, NULL);
+}
 // Validate the state for a given write update but don't actually perform the update
 //  If an error would occur for this update, return false and fill in details in error_msg string
 bool cvdescriptorset::DescriptorSet::ValidateWriteUpdate(const debug_report_data *report_data, const VkWriteDescriptorSet *update,
@@ -1278,11 +1352,11 @@ bool cvdescriptorset::DescriptorSet::ValidateBufferUpdate(VkDescriptorBufferInfo
         return false;
     }
     // offset must be less than buffer size
-    if (buffer_info->offset > buffer_node->createInfo.size) {
+    if (buffer_info->offset >= buffer_node->createInfo.size) {
         *error_code = VALIDATION_ERROR_00959;
         std::stringstream error_str;
-        error_str << "VkDescriptorBufferInfo offset of " << buffer_info->offset << " is greater than buffer " << buffer_node->buffer
-                  << " size of " << buffer_node->createInfo.size;
+        error_str << "VkDescriptorBufferInfo offset of " << buffer_info->offset << " is greater than or equal to buffer "
+                  << buffer_node->buffer << " size of " << buffer_node->createInfo.size;
         *error_msg = error_str.str();
         return false;
     }
@@ -1534,11 +1608,29 @@ bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescri
     // All checks passed so update contents are good
     return true;
 }
+// Update the common AllocateDescriptorSetsData
+void cvdescriptorset::UpdateAllocateDescriptorSetsData(const layer_data *dev_data, const VkDescriptorSetAllocateInfo *p_alloc_info,
+                                                       AllocateDescriptorSetsData *ds_data) {
+    for (uint32_t i = 0; i < p_alloc_info->descriptorSetCount; i++) {
+        auto layout = GetDescriptorSetLayout(dev_data, p_alloc_info->pSetLayouts[i]);
+        if (layout) {
+            ds_data->layout_nodes[i] = layout;
+            // Count total descriptors required per type
+            for (uint32_t j = 0; j < layout->GetBindingCount(); ++j) {
+                const auto &binding_layout = layout->GetDescriptorSetLayoutBindingPtrFromIndex(j);
+                uint32_t typeIndex = static_cast<uint32_t>(binding_layout->descriptorType);
+                ds_data->required_descriptors_by_type[typeIndex] += binding_layout->descriptorCount;
+            }
+        }
+        // Any unknown layouts will be flagged as errors during ValidateAllocateDescriptorSets() call
+    }
+};
 // Verify that the state at allocate time is correct, but don't actually allocate the sets yet
-bool cvdescriptorset::ValidateAllocateDescriptorSets(const debug_report_data *report_data,
-                                                     const VkDescriptorSetAllocateInfo *p_alloc_info, const layer_data *dev_data,
-                                                     AllocateDescriptorSetsData *ds_data) {
+bool cvdescriptorset::ValidateAllocateDescriptorSets(const core_validation::layer_data *dev_data,
+                                                     const VkDescriptorSetAllocateInfo *p_alloc_info,
+                                                     const AllocateDescriptorSetsData *ds_data) {
     bool skip_call = false;
+    auto report_data = core_validation::GetReportData(dev_data);
 
     for (uint32_t i = 0; i < p_alloc_info->descriptorSetCount; i++) {
         auto layout = GetDescriptorSetLayout(dev_data, p_alloc_info->pSetLayouts[i]);
@@ -1548,36 +1640,30 @@ bool cvdescriptorset::ValidateAllocateDescriptorSets(const debug_report_data *re
                         reinterpret_cast<const uint64_t &>(p_alloc_info->pSetLayouts[i]), __LINE__, DRAWSTATE_INVALID_LAYOUT, "DS",
                         "Unable to find set layout node for layout 0x%" PRIxLEAST64 " specified in vkAllocateDescriptorSets() call",
                         reinterpret_cast<const uint64_t &>(p_alloc_info->pSetLayouts[i]));
-        } else {
-            ds_data->layout_nodes[i] = layout;
-            // Count total descriptors required per type
-            for (uint32_t j = 0; j < layout->GetBindingCount(); ++j) {
-                const auto &binding_layout = layout->GetDescriptorSetLayoutBindingPtrFromIndex(j);
-                uint32_t typeIndex = static_cast<uint32_t>(binding_layout->descriptorType);
-                ds_data->required_descriptors_by_type[typeIndex] += binding_layout->descriptorCount;
-            }
         }
     }
-    auto pool_state = GetDescriptorPoolState(dev_data, p_alloc_info->descriptorPool);
-    // Track number of descriptorSets allowable in this pool
-    if (pool_state->availableSets < p_alloc_info->descriptorSetCount) {
-        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT,
-                             reinterpret_cast<uint64_t &>(pool_state->pool), __LINE__, VALIDATION_ERROR_00911, "DS",
-                             "Unable to allocate %u descriptorSets from pool 0x%" PRIxLEAST64
-                             ". This pool only has %d descriptorSets remaining. %s",
-                             p_alloc_info->descriptorSetCount, reinterpret_cast<uint64_t &>(pool_state->pool),
-                             pool_state->availableSets, validation_error_map[VALIDATION_ERROR_00911]);
-    }
-    // Determine whether descriptor counts are satisfiable
-    for (uint32_t i = 0; i < VK_DESCRIPTOR_TYPE_RANGE_SIZE; i++) {
-        if (ds_data->required_descriptors_by_type[i] > pool_state->availableDescriptorTypeCount[i]) {
+    if (!GetDeviceExtensions(dev_data)->khr_maintenance1_enabled) {
+        auto pool_state = GetDescriptorPoolState(dev_data, p_alloc_info->descriptorPool);
+        // Track number of descriptorSets allowable in this pool
+        if (pool_state->availableSets < p_alloc_info->descriptorSetCount) {
             skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT,
-                                 reinterpret_cast<const uint64_t &>(pool_state->pool), __LINE__, VALIDATION_ERROR_00912, "DS",
-                                 "Unable to allocate %u descriptors of type %s from pool 0x%" PRIxLEAST64
-                                 ". This pool only has %d descriptors of this type remaining. %s",
-                                 ds_data->required_descriptors_by_type[i], string_VkDescriptorType(VkDescriptorType(i)),
-                                 reinterpret_cast<uint64_t &>(pool_state->pool), pool_state->availableDescriptorTypeCount[i],
-                                 validation_error_map[VALIDATION_ERROR_00912]);
+                                 reinterpret_cast<uint64_t &>(pool_state->pool), __LINE__, VALIDATION_ERROR_00911, "DS",
+                                 "Unable to allocate %u descriptorSets from pool 0x%" PRIxLEAST64
+                                 ". This pool only has %d descriptorSets remaining. %s",
+                                 p_alloc_info->descriptorSetCount, reinterpret_cast<uint64_t &>(pool_state->pool),
+                                 pool_state->availableSets, validation_error_map[VALIDATION_ERROR_00911]);
+        }
+        // Determine whether descriptor counts are satisfiable
+        for (uint32_t i = 0; i < VK_DESCRIPTOR_TYPE_RANGE_SIZE; i++) {
+            if (ds_data->required_descriptors_by_type[i] > pool_state->availableDescriptorTypeCount[i]) {
+                skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT,
+                                     reinterpret_cast<const uint64_t &>(pool_state->pool), __LINE__, VALIDATION_ERROR_00912, "DS",
+                                     "Unable to allocate %u descriptors of type %s from pool 0x%" PRIxLEAST64
+                                     ". This pool only has %d descriptors of this type remaining. %s",
+                                     ds_data->required_descriptors_by_type[i], string_VkDescriptorType(VkDescriptorType(i)),
+                                     reinterpret_cast<uint64_t &>(pool_state->pool), pool_state->availableDescriptorTypeCount[i],
+                                     validation_error_map[VALIDATION_ERROR_00912]);
+            }
         }
     }
 

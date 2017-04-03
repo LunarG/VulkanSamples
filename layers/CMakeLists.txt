@@ -132,6 +132,12 @@ else()
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wpointer-arith -Wno-unused-function -Wno-sign-compare")
 endif()
 
+if (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "mips64")
+    if("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
+        set_source_files_properties(core_validation.cpp PROPERTIES COMPILE_FLAGS -mxgot)
+    endif()
+endif()
+
 run_vk_xml_generate(threading_generator.py thread_check.h)
 run_vk_xml_generate(parameter_validation_generator.py parameter_validation.h)
 run_vk_xml_generate(unique_objects_generator.py unique_objects_wrappers.h)
@@ -141,9 +147,9 @@ run_vk_xml_generate(dispatch_table_helper_generator.py vk_dispatch_table_helper.
 # For Windows, we use a static lib because the Windows loader has a fairly restrictive loader search
 # path that can't be easily modified to point it to the same directory that contains the layers.
 if (WIN32)
-    add_library(VkLayer_utils STATIC vk_layer_config.cpp vk_layer_extension_utils.cpp vk_layer_utils.cpp)
+    add_library(VkLayer_utils STATIC vk_layer_config.cpp vk_layer_extension_utils.cpp vk_layer_utils.cpp vk_format_utils.cpp)
 else()
-    add_library(VkLayer_utils SHARED vk_layer_config.cpp vk_layer_extension_utils.cpp vk_layer_utils.cpp)
+    add_library(VkLayer_utils SHARED vk_layer_config.cpp vk_layer_extension_utils.cpp vk_layer_utils.cpp vk_format_utils.cpp)
     install(TARGETS VkLayer_utils DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()
 add_dependencies(VkLayer_utils generate_helper_files)

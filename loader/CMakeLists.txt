@@ -5,6 +5,21 @@ include_directories(
     ${CMAKE_BINARY_DIR}
 )
 
+# Check for the existance of the secure_getenv or __secure_getenv commands
+include(CheckFunctionExists)
+CHECK_FUNCTION_EXISTS(secure_getenv HAVE_SECURE_GETENV)
+CHECK_FUNCTION_EXISTS(__secure_getenv HAVE___SECURE_GETENV)
+CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/loader_cmake_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/loader_cmake_config.h)
+
+# Fetch header version from vulkan.h
+file(STRINGS "../include/vulkan/vulkan.h" lines REGEX "^#define VK_HEADER_VERSION [0-9]+")
+list(LENGTH lines len)
+if(${len} EQUAL 1)
+    string(REGEX MATCHALL "[0-9]+" vk_header_version ${lines})
+else()
+    MESSAGE(FATAL_ERROR "Unable to fetch version from vulkan.h")
+endif()
+
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     add_definitions(-DVK_USE_PLATFORM_WIN32_KHR -DWIN32_LEAN_AND_MEAN)
     set(DisplayServer Win32)
@@ -43,6 +58,7 @@ set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DDEBUG")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
 
 set(NORMAL_LOADER_SRCS
+    extension_manual.c
     loader.c
     loader.h
     vk_loader_platform.h
@@ -126,8 +142,20 @@ else()
 
     add_library(${API_LOWERCASE} SHARED ${NORMAL_LOADER_SRCS} ${OPT_LOADER_SRCS})
     add_dependencies(${API_LOWERCASE} generate_helper_files loader_gen_files)
-    set_target_properties(${API_LOWERCASE} PROPERTIES SOVERSION "1" VERSION "1.0.42")
+    set_target_properties(${API_LOWERCASE} PROPERTIES SOVERSION "1" VERSION "1.0.${vk_header_version}")
     target_link_libraries(${API_LOWERCASE} -ldl -lpthread -lm)
 
     install(TARGETS ${API_LOWERCASE} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+
+    # Generate pkg-config file.
+    include(FindPkgConfig QUIET)
+    if(PKG_CONFIG_FOUND)
+        set(VK_API_VERSION "1.0.${vk_header_version}")
+        foreach(LIB ${CMAKE_CXX_IMPLICIT_LINK_LIBRARIES} ${PLATFORM_LIBS})
+            set(PRIVATE_LIBS "${PRIVATE_LIBS} -l${LIB}")
+        endforeach()
+        configure_file("vulkan.pc.in" "vulkan.pc" @ONLY)
+        install(FILES       "${CMAKE_CURRENT_BINARY_DIR}/vulkan.pc"
+                DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
+    endif()
 endif()

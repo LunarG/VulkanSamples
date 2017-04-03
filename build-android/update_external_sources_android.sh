@@ -29,10 +29,21 @@ SHADERC_REVISION=$(cat $ANDROIDBUILDDIR/shaderc_revision_android)
 
 echo "GLSLANG_REVISION=$GLSLANG_REVISION"
 echo "SPIRV_TOOLS_REVISION=$SPIRV_TOOLS_REVISION"
+echo "SPIRV_HEADERS_REVISION=$SPIRV_HEADERS_REVISION"
 echo "SHADERC_REVISION=$SHADERC_REVISION"
 
+GLSLANG_URL=$(cat $ANDROIDBUILDDIR/glslang_url_android)
+SPIRV_TOOLS_URL=$(cat $ANDROIDBUILDDIR/spirv-tools_url_android)
+SPIRV_HEADERS_URL=$(cat $ANDROIDBUILDDIR/spirv-headers_url_android)
+SHADERC_URL=$(cat $ANDROIDBUILDDIR/shaderc_url_android)
+
+echo "GLSLANG_URL=$GLSLANG_URL"
+echo "SPIRV_TOOL_URLS_=$SPIRV_TOOLS_URL"
+echo "SPIRV_HEADERS_URL=$SPIRV_HEADERS_URL"
+echo "SHADERC_URL=$SHADERC_URL"
+
 if [[ $(uname) == "Linux" ]]; then
-    cores=$(ncpus || echo 4)
+    cores="$(nproc || echo 4)"
 elif [[ $(uname) == "Darwin" ]]; then
     cores=$(sysctl -n hw.ncpu)
 fi
@@ -42,13 +53,18 @@ function create_glslang () {
    echo "Creating local glslang repository ($BASEDIR/glslang)."
    mkdir -p $BASEDIR/glslang
    cd $BASEDIR/glslang
-   git clone https://android.googlesource.com/platform/external/shaderc/glslang .
+   git clone $GLSLANG_URL .
    git checkout $GLSLANG_REVISION
 }
 
 function update_glslang () {
    echo "Updating $BASEDIR/glslang"
    cd $BASEDIR/glslang
+   if [[ $(git config --get remote.origin.url) != $GLSLANG_URL ]]; then
+      echo "glslang URL mismatch, recreating local repo"
+      create_glslang
+      return
+   fi
    git fetch --all
    git checkout $GLSLANG_REVISION
 }
@@ -58,13 +74,18 @@ function create_spirv-tools () {
    echo "Creating local spirv-tools repository ($BASEDIR/spirv-tools)."
    mkdir -p $BASEDIR/spirv-tools
    cd $BASEDIR/spirv-tools
-   git clone https://android.googlesource.com/platform/external/shaderc/spirv-tools .
+   git clone $SPIRV_TOOLS_URL .
    git checkout $SPIRV_TOOLS_REVISION
 }
 
 function update_spirv-tools () {
    echo "Updating $BASEDIR/spirv-tools"
    cd $BASEDIR/spirv-tools
+   if [[ $(git config --get remote.origin.url) != $SPIRV_TOOLS_URL ]]; then
+      echo "spirv-tools URL mismatch, recreating local repo"
+      create_spirv-tools
+      return
+   fi
    git fetch --all
    git checkout $SPIRV_TOOLS_REVISION
 }
@@ -74,13 +95,18 @@ function create_spirv-headers () {
    echo "Creating local spirv-headers repository ($BASEDIR/spirv-tools/external/spirv-headers)."
    mkdir -p $BASEDIR/spirv-tools/external/spirv-headers
    cd $BASEDIR/spirv-tools/external/spirv-headers
-   git clone https://android.googlesource.com/platform/external/shaderc/spirv-headers .
+   git clone $SPIRV_HEADERS_URL .
    git checkout $SPIRV_HEADERS_REVISION
 }
 
 function update_spirv-headers () {
    echo "Updating $BASEDIR/spirv-tools/external/spirv-headers"
    cd $BASEDIR/spirv-tools/external/spirv-headers
+   if [[ $(git config --get remote.origin.url) != $SPIRV_HEADERS_URL ]]; then
+      echo "spirv-headers URL mismatch, recreating local repo"
+      create_spirv-headers
+      return
+   fi
    git fetch --all
    git checkout $SPIRV_HEADERS_REVISION
 }
@@ -89,7 +115,7 @@ function create_shaderc () {
    rm -rf $BASEDIR/shaderc
    echo "Creating local shaderc repository ($BASEDIR/shaderc)."
    cd $BASEDIR
-   git clone https://android.googlesource.com/platform/external/shaderc/shaderc
+   git clone $SHADERC_URL
    cd shaderc
    git checkout $SHADERC_REVISION
 }
@@ -97,6 +123,11 @@ function create_shaderc () {
 function update_shaderc () {
    echo "Updating $BASEDIR/shaderc"
    cd $BASEDIR/shaderc
+   if [[ $(git config --get remote.origin.url) != $SHADERC_URL ]]; then
+      echo "shaderc URL mismatch, recreating local repo"
+      create_shaderc
+      return
+   fi
    git fetch --all
    git checkout $SHADERC_REVISION
 }
@@ -110,7 +141,7 @@ function build_shaderc () {
 if [ ! -d "$BASEDIR/glslang" -o ! -d "$BASEDIR/glslang/.git" -o -d "$BASEDIR/glslang/.svn" ]; then
    create_glslang
 fi
- update_glslang
+update_glslang
 
 
 if [ ! -d "$BASEDIR/spirv-tools" -o ! -d "$BASEDIR/spirv-tools/.git" ]; then

@@ -1,31 +1,33 @@
 /*
-* Copyright (c) 2015-2016 The Khronos Group Inc.
-* Copyright (c) 2015-2016 Valve Corporation
-* Copyright (c) 2015-2016 LunarG, Inc.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*
-* Author: Chia-I Wu <olv@lunarg.com>
-* Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
-* Author: Ian Elliott <ian@LunarG.com>
-* Author: Jon Ashburn <jon@lunarg.com>
-* Author: Gwan-gyeong Mun <elongbug@gmail.com>
-* Author: Tony Barbour <tony@LunarG.com>
-* Author: Bill Hollings <bill.hollings@brenwill.com>
-*/
+ * Copyright (c) 2015-2016 The Khronos Group Inc.
+ * Copyright (c) 2015-2016 Valve Corporation
+ * Copyright (c) 2015-2016 LunarG, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Author: Chia-I Wu <olv@lunarg.com>
+ * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
+ * Author: Ian Elliott <ian@LunarG.com>
+ * Author: Ian Elliott <ianelliott@google.com>
+ * Author: Jon Ashburn <jon@lunarg.com>
+ * Author: Gwan-gyeong Mun <elongbug@gmail.com>
+ * Author: Tony Barbour <tony@LunarG.com>
+ * Author: Bill Hollings <bill.hollings@brenwill.com>
+ */
 
 #define _GNU_SOURCE
 #include <stdio.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
@@ -52,6 +54,11 @@
 
 #include <vulkan/vk_sdk_platform.h>
 #include "linmath.h"
+
+#include "gettime.h"
+#include "inttypes.h"
+#define MILLION 1000000L
+#define BILLION 1000000000L
 
 #define DEMO_TEXTURE_COUNT 1
 #define APP_SHORT_NAME "cube"
@@ -81,6 +88,13 @@ bool in_callback = false;
         if (!demo->suppress_popups) MessageBox(NULL, err_msg, err_class, MB_OK); \
         exit(1);                                                                 \
     } while (0)
+void DbgMsg(char *fmt, ...) {
+    va_list va;
+    va_start(va, fmt);
+    printf(fmt, va);
+    fflush(stdout);
+    va_end(va);
+}
 
 #elif defined __ANDROID__
 #include <android/log.h>
@@ -89,6 +103,19 @@ bool in_callback = false;
         ((void)__android_log_print(ANDROID_LOG_INFO, "Cube", err_msg)); \
         exit(1);                                                        \
     } while (0)
+#ifdef VARARGS_WORKS_ON_ANDROID
+void DbgMsg(const char *fmt, ...) {
+    va_list va;
+    va_start(va, fmt);
+    __android_log_print(ANDROID_LOG_INFO, "Cube", fmt, va);
+    va_end(va);
+}
+#else  // VARARGS_WORKS_ON_ANDROID
+#define DbgMsg(fmt, ...)                                                           \
+    do {                                                                           \
+        ((void)__android_log_print(ANDROID_LOG_INFO, "Cube", fmt, ##__VA_ARGS__)); \
+    } while (0)
+#endif  // VARARGS_WORKS_ON_ANDROID
 #else
 #define ERR_EXIT(err_msg, err_class) \
     do {                             \
@@ -96,6 +123,13 @@ bool in_callback = false;
         fflush(stdout);              \
         exit(1);                     \
     } while (0)
+void DbgMsg(char *fmt, ...) {
+    va_list va;
+    va_start(va, fmt);
+    printf(fmt, va);
+    fflush(stdout);
+    va_end(va);
+}
 #endif
 
 #define GET_INSTANCE_PROC_ADDR(inst, entrypoint)                                                              \
@@ -313,6 +347,18 @@ struct demo {
     bool use_staging_buffer;
     bool separate_present_queue;
 
+    bool VK_KHR_incremental_present_enabled;
+
+    bool VK_GOOGLE_display_timing_enabled;
+    bool syncd_with_actual_presents;
+    uint64_t refresh_duration;
+    uint64_t refresh_duration_multiplier;
+    uint64_t target_IPD;  // image present duration (inverse of frame rate)
+    uint64_t prev_desired_present_time;
+    uint32_t next_present_id;
+    uint32_t last_early_id;  // 0 if no early images
+    uint32_t last_late_id;   // 0 if no late images
+
     VkInstance inst;
     VkPhysicalDevice gpu;
     VkDevice device;
@@ -345,6 +391,8 @@ struct demo {
     PFN_vkGetSwapchainImagesKHR fpGetSwapchainImagesKHR;
     PFN_vkAcquireNextImageKHR fpAcquireNextImageKHR;
     PFN_vkQueuePresentKHR fpQueuePresentKHR;
+    PFN_vkGetRefreshCycleDurationGOOGLE fpGetRefreshCycleDurationGOOGLE;
+    PFN_vkGetPastPresentationTimingGOOGLE fpGetPastPresentationTimingGOOGLE;
     uint32_t swapchainImageCount;
     VkSwapchainKHR swapchain;
     SwapchainImageResources *swapchain_image_resources;
@@ -391,6 +439,7 @@ struct demo {
     int32_t curFrame;
     int32_t frameCount;
     bool validate;
+    bool validate_checks_disabled;
     bool use_break;
     bool suppress_popups;
     PFN_vkCreateDebugReportCallbackEXT CreateDebugReportCallback;
@@ -471,6 +520,43 @@ VKAPI_ATTR VkBool32 VKAPI_CALL dbgFunc(VkFlags msgFlags, VkDebugReportObjectType
     * That's what would happen without validation layers, so we'll
     * keep that behavior here.
     */
+    return false;
+}
+
+bool ActualTimeLate(uint64_t desired, uint64_t actual, uint64_t rdur) {
+    // The desired time was the earliest time that the present should have
+    // occured.  In almost every case, the actual time should be later than the
+    // desired time.  We should only consider the actual time "late" if it is
+    // after "desired + rdur".
+    if (actual <= desired) {
+        // The actual time was before or equal to the desired time.  This will
+        // probably never happen, but in case it does, return false since the
+        // present was obviously NOT late.
+        return false;
+    }
+    uint64_t deadline = actual + rdur;
+    if (actual > deadline) {
+        return true;
+    } else {
+        return false;
+    }
+}
+bool CanPresentEarlier(uint64_t earliest,
+                       uint64_t actual,
+                       uint64_t margin,
+                       uint64_t rdur) {
+    if (earliest < actual) {
+        // Consider whether this present could have occured earlier.  Make sure
+        // that earliest time was at least 2msec earlier than actual time, and
+        // that the margin was at least 2msec:
+        uint64_t diff = actual - earliest;
+        if ((diff >= (2 * MILLION)) && (margin >= (2 * MILLION))) {
+            // This present could have occured earlier because both: 1) the
+            // earliest time was at least 2 msec before actual time, and 2) the
+            // margin was at least 2msec.
+            return true;
+        }
+    }
     return false;
 }
 
@@ -736,6 +822,138 @@ void demo_update_data_buffer(struct demo *demo) {
     vkUnmapMemory(demo->device, demo->swapchain_image_resources[demo->current_buffer].uniform_memory);
 }
 
+void DemoUpdateTargetIPD(struct demo *demo) {
+    // Look at what happened to previous presents, and make appropriate
+    // adjustments in timing:
+    VkResult U_ASSERT_ONLY err;
+    VkPastPresentationTimingGOOGLE* past = NULL;
+    uint32_t count = 0;
+
+    err = demo->fpGetPastPresentationTimingGOOGLE(demo->device,
+                                                  demo->swapchain,
+                                                  &count,
+                                                  NULL);
+    assert(!err);
+    if (count) {
+        past = (VkPastPresentationTimingGOOGLE*) malloc(sizeof(VkPastPresentationTimingGOOGLE) * count);
+        assert(past);
+        err = demo->fpGetPastPresentationTimingGOOGLE(demo->device,
+                                                      demo->swapchain,
+                                                      &count,
+                                                      past);
+        assert(!err);
+
+        bool early = false;
+        bool late = false;
+        bool calibrate_next = false;
+        for (uint32_t i = 0 ; i < count ; i++) {
+            if (!demo->syncd_with_actual_presents) {
+                // This is the first time that we've received an
+                // actualPresentTime for this swapchain.  In order to not
+                // perceive these early frames as "late", we need to sync-up
+                // our future desiredPresentTime's with the
+                // actualPresentTime(s) that we're receiving now.
+                calibrate_next = true;
+
+                // So that we don't suspect any pending presents as late,
+                // record them all as suspected-late presents:
+                demo->last_late_id = demo->next_present_id - 1;
+                demo->last_early_id = 0;
+                demo->syncd_with_actual_presents = true;
+                break;
+            } else if (CanPresentEarlier(past[i].earliestPresentTime,
+                                         past[i].actualPresentTime,
+                                         past[i].presentMargin,
+                                         demo->refresh_duration)) {
+                // This image could have been presented earlier.  We don't want
+                // to decrease the target_IPD until we've seen early presents
+                // for at least two seconds.
+                if (demo->last_early_id == past[i].presentID) {
+                    // We've now seen two seconds worth of early presents.
+                    // Flag it as such, and reset the counter:
+                    early = true;
+                    demo->last_early_id = 0;
+                } else if (demo->last_early_id == 0) {
+                    // This is the first early present we've seen.
+                    // Calculate the presentID for two seconds from now.
+                    uint64_t lastEarlyTime =
+                        past[i].actualPresentTime + (2 * BILLION);
+                    uint32_t howManyPresents =
+                        (uint32_t)((lastEarlyTime - past[i].actualPresentTime) / demo->target_IPD);
+                    demo->last_early_id = past[i].presentID + howManyPresents;
+                } else {
+                    // We are in the midst of a set of early images,
+                    // and so we won't do anything.
+                }
+                late = false;
+                demo->last_late_id = 0;
+            } else if (ActualTimeLate(past[i].desiredPresentTime,
+                                      past[i].actualPresentTime,
+                                      demo->refresh_duration)) {
+                // This image was presented after its desired time.  Since
+                // there's a delay between calling vkQueuePresentKHR and when
+                // we get the timing data, several presents may have been late.
+                // Thus, we need to threat all of the outstanding presents as
+                // being likely late, so that we only increase the target_IPD
+                // once for all of those presents.
+                if ((demo->last_late_id == 0) ||
+                    (demo->last_late_id < past[i].presentID)) {
+                    late = true;
+                    // Record the last suspected-late present:
+                    demo->last_late_id = demo->next_present_id - 1;
+                } else {
+                    // We are in the midst of a set of likely-late images,
+                    // and so we won't do anything.
+                }
+                early = false;
+                demo->last_early_id = 0;
+            } else {
+                // Since this image was not presented early or late, reset
+                // any sets of early or late presentIDs:
+                early = false;
+                late = false;
+                calibrate_next = true;
+                demo->last_early_id = 0;
+                demo->last_late_id = 0;
+            }
+        }
+
+        if (early) {
+            // Since we've seen at least two-seconds worth of presnts that
+            // could have occured earlier than desired, let's decrease the
+            // target_IPD (i.e. increase the frame rate):
+            //
+            // TODO(ianelliott): Try to calculate a better target_IPD based
+            // on the most recently-seen present (this is overly-simplistic).
+            demo->refresh_duration_multiplier--;
+            if (demo->refresh_duration_multiplier == 0) {
+                // This should never happen, but in case it does, don't
+                // try to go faster.
+                demo->refresh_duration_multiplier = 1;
+            }
+            demo->target_IPD =
+                demo->refresh_duration * demo->refresh_duration_multiplier;
+        }
+        if (late) {
+            // Since we found a new instance of a late present, we want to
+            // increase the target_IPD (i.e. decrease the frame rate):
+            //
+            // TODO(ianelliott): Try to calculate a better target_IPD based
+            // on the most recently-seen present (this is overly-simplistic).
+            demo->refresh_duration_multiplier++;
+            demo->target_IPD =
+                demo->refresh_duration * demo->refresh_duration_multiplier;
+        }
+
+        if (calibrate_next) {
+            int64_t multiple = demo->next_present_id - past[count-1].presentID;
+            demo->prev_desired_present_time =
+                (past[count-1].actualPresentTime +
+                 (multiple * demo->target_IPD));
+        }
+    }
+}
+
 static void demo_draw(struct demo *demo) {
     VkResult U_ASSERT_ONLY err;
 
@@ -766,6 +984,18 @@ static void demo_draw(struct demo *demo) {
     } else {
         assert(!err);
     }
+    if (demo->VK_GOOGLE_display_timing_enabled) {
+        // Look at what happened to previous presents, and make appropriate
+        // adjustments in timing:
+        DemoUpdateTargetIPD(demo);
+
+        // Note: a real application would position its geometry to that it's in
+        // the correct locatoin for when the next image is presented.  It might
+        // also wait, so that there's less latency between any input and when
+        // the next image is rendered/presented.  This demo program is so
+        // simple that it doesn't do either of those.
+    }
+
     // Wait for the image acquired semaphore to be signaled to ensure
     // that the image won't be rendered to until the presentation
     // engine has fully released ownership to the application, and it is
@@ -817,6 +1047,71 @@ static void demo_draw(struct demo *demo) {
         .pSwapchains = &demo->swapchain,
         .pImageIndices = &demo->current_buffer,
     };
+
+    if (demo->VK_KHR_incremental_present_enabled) {
+        // If using VK_KHR_incremental_present, we provide a hint of the region
+        // that contains changed content relative to the previously-presented
+        // image.  The implementation can use this hint in order to save
+        // work/power (by only copying the region in the hint).  The
+        // implementation is free to ignore the hint though, and so we must
+        // ensure that the entire image has the correctly-drawn content.
+        uint32_t eighthOfWidth = demo->width / 8;
+        uint32_t eighthOfHeight = demo->height / 8;
+        VkRectLayerKHR rect = {
+            .offset.x = eighthOfWidth,
+            .offset.y = eighthOfHeight,
+            .extent.width = eighthOfWidth * 6,
+            .extent.height = eighthOfHeight * 6,
+            .layer = 0,
+        };
+        VkPresentRegionKHR region = {
+            .rectangleCount = 1,
+            .pRectangles = &rect,
+        };
+        VkPresentRegionsKHR regions = {
+            .sType = VK_STRUCTURE_TYPE_PRESENT_REGIONS_KHR,
+            .pNext = present.pNext,
+            .swapchainCount = present.swapchainCount,
+            .pRegions = &region,
+        };
+        present.pNext = &regions;
+    }
+
+    if (demo->VK_GOOGLE_display_timing_enabled) {
+        VkPresentTimeGOOGLE ptime;
+        if (demo->prev_desired_present_time == 0) {
+            // This must be the first present for this swapchain.
+            //
+            // We don't know where we are relative to the presentation engine's
+            // display's refresh cycle.  We also don't know how long rendering
+            // takes.  Let's make a grossly-simplified assumption that the
+            // desiredPresentTime should be half way between now and
+            // now+target_IPD.  We will adjust over time.
+            uint64_t curtime = getTimeInNanoseconds();
+            if (curtime == 0) {
+                // Since we didn't find out the current time, don't give a
+                // desiredPresentTime:
+                ptime.desiredPresentTime = 0;
+            } else {
+                ptime.desiredPresentTime = curtime + (demo->target_IPD >> 1);
+            }
+        } else {
+            ptime.desiredPresentTime = (demo->prev_desired_present_time +
+                                        demo->target_IPD);            
+        }
+        ptime.presentID = demo->next_present_id++;
+        demo->prev_desired_present_time = ptime.desiredPresentTime;
+
+        VkPresentTimesInfoGOOGLE present_time = {
+            .sType = VK_STRUCTURE_TYPE_PRESENT_TIMES_INFO_GOOGLE,
+            .pNext = present.pNext,
+            .swapchainCount = present.swapchainCount,
+            .pTimes = &ptime,
+        };
+        if (demo->VK_GOOGLE_display_timing_enabled) {
+            present.pNext = &present_time;
+        }
+    }
 
     err = demo->fpQueuePresentKHR(demo->present_queue, &present);
     demo->frame_index += 1;
@@ -949,6 +1244,21 @@ static void demo_prepare_buffers(struct demo *demo) {
         preTransform = surfCapabilities.currentTransform;
     }
 
+    // Find a supported composite alpha mode - one of these is guaranteed to be set
+    VkCompositeAlphaFlagBitsKHR compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    VkCompositeAlphaFlagBitsKHR compositeAlphaFlags[4] = {
+        VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+        VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR,
+        VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
+        VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR,
+    };
+    for (uint32_t i = 0; i < sizeof(compositeAlphaFlags); i++) {
+        if (surfCapabilities.supportedCompositeAlpha & compositeAlphaFlags[i]) {
+            compositeAlpha = compositeAlphaFlags[i];
+            break;
+        }
+    }
+
     VkSwapchainCreateInfoKHR swapchain_ci = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .pNext = NULL,
@@ -962,7 +1272,7 @@ static void demo_prepare_buffers(struct demo *demo) {
             },
         .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
         .preTransform = preTransform,
-        .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+        .compositeAlpha = compositeAlpha,
         .imageArrayLayers = 1,
         .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
         .queueFamilyIndexCount = 0,
@@ -981,6 +1291,9 @@ static void demo_prepare_buffers(struct demo *demo) {
     // Note: destroying the swapchain also cleans up all its associated
     // presentable images once the platform is done with them.
     if (oldSwapchain != VK_NULL_HANDLE) {
+        // AMD driver times out waiting on fences used in AcquireNextImage on
+        // a swapchain that is subsequently destroyed before the wait.
+        vkWaitForFences(demo->device, FRAME_LAG, demo->fences, VK_TRUE, UINT64_MAX);
         demo->fpDestroySwapchainKHR(demo->device, oldSwapchain, NULL);
     }
 
@@ -1037,6 +1350,22 @@ static void demo_prepare_buffers(struct demo *demo) {
 
         err = vkCreateFence(demo->device, &fence_ci, NULL, &demo->swapchain_image_resources[i].fence);
         assert(!err);
+    }
+
+    if (demo->VK_GOOGLE_display_timing_enabled) {
+        VkRefreshCycleDurationGOOGLE rc_dur;
+        err = demo->fpGetRefreshCycleDurationGOOGLE(demo->device,
+                                                    demo->swapchain,
+                                                    &rc_dur);
+        assert(!err);
+        demo->refresh_duration = rc_dur.refreshDuration;
+
+        demo->syncd_with_actual_presents = false;
+        // Initially target 1X the refresh duration:
+        demo->target_IPD = demo->refresh_duration;
+        demo->refresh_duration_multiplier = 1;
+        demo->prev_desired_present_time = 0;
+        demo->next_present_id = 1;
     }
 
     if (NULL != presentModes) {
@@ -1118,9 +1447,9 @@ bool loadTexture(const char *filename, uint8_t *rgba_data,
                  VkSubresourceLayout *layout, int32_t *width, int32_t *height) {
 
 #if (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
-	filename =[[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent: @(filename)].UTF8String;
+    filename =[[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent: @(filename)].UTF8String;
 #endif
-	
+
 #ifdef __ANDROID__
 #include <lunarg.ppm.h>
     char *cPtr;
@@ -1635,9 +1964,9 @@ char *demo_read_spv(const char *filename, size_t *psize) {
     void *shader_code;
 
 #if (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
-	filename =[[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent: @(filename)].UTF8String;
+    filename =[[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent: @(filename)].UTF8String;
 #endif
-	
+
     FILE *fp = fopen(filename, "rb");
     if (!fp)
         return NULL;
@@ -2621,6 +2950,22 @@ static VkResult demo_create_display_surface(struct demo *demo) {
 
     free(plane_props);
 
+    VkDisplayPlaneCapabilitiesKHR planeCaps;
+    vkGetDisplayPlaneCapabilitiesKHR(demo->gpu, mode_props.displayMode, plane_index, &planeCaps);
+    // Find a supported alpha mode
+    VkCompositeAlphaFlagBitsKHR alphaMode = VK_DISPLAY_PLANE_ALPHA_OPAQUE_BIT_KHR;
+    VkCompositeAlphaFlagBitsKHR alphaModes[4] = {
+        VK_DISPLAY_PLANE_ALPHA_OPAQUE_BIT_KHR,
+        VK_DISPLAY_PLANE_ALPHA_GLOBAL_BIT_KHR,
+        VK_DISPLAY_PLANE_ALPHA_PER_PIXEL_BIT_KHR,
+        VK_DISPLAY_PLANE_ALPHA_PER_PIXEL_PREMULTIPLIED_BIT_KHR,
+    };
+    for (uint32_t i = 0; i < sizeof(alphaModes); i++) {
+        if (planeCaps.supportedAlpha & alphaModes[i]) {
+            alphaMode = alphaModes[i];
+            break;
+        }
+    }
     image_extent.width = mode_props.parameters.visibleRegion.width;
     image_extent.height = mode_props.parameters.visibleRegion.height;
 
@@ -2631,7 +2976,7 @@ static VkResult demo_create_display_surface(struct demo *demo) {
     create_info.planeIndex = plane_index;
     create_info.planeStackIndex = plane_props[plane_index].currentStackIndex;
     create_info.transform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
-    create_info.alphaMode = VK_DISPLAY_PLANE_ALPHA_OPAQUE_BIT_KHR;
+    create_info.alphaMode = alphaMode;
     create_info.globalAlpha = 1.0f;
     create_info.imageExtent = image_extent;
 
@@ -2851,19 +3196,19 @@ static void demo_init_vk(struct demo *demo) {
                  "information.\n",
                  "vkCreateInstance Failure");
 #elif defined(VK_USE_PLATFORM_IOS_MVK)
-		ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find the "
-				 VK_MVK_IOS_SURFACE_EXTENSION_NAME" extension.\n\nDo you have a compatible "
-				 "Vulkan installable client driver (ICD) installed?\nPlease "
-				 "look at the Getting Started guide for additional "
-				 "information.\n",
-				 "vkCreateInstance Failure");
+        ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find the "
+                 VK_MVK_IOS_SURFACE_EXTENSION_NAME" extension.\n\nDo you have a compatible "
+                 "Vulkan installable client driver (ICD) installed?\nPlease "
+                 "look at the Getting Started guide for additional "
+                 "information.\n",
+                 "vkCreateInstance Failure");
 #elif defined(VK_USE_PLATFORM_MACOS_MVK)
-		ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find the "
-				 VK_MVK_MACOS_SURFACE_EXTENSION_NAME" extension.\n\nDo you have a compatible "
-				 "Vulkan installable client driver (ICD) installed?\nPlease "
-				 "look at the Getting Started guide for additional "
-				 "information.\n",
-				 "vkCreateInstance Failure");
+        ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find the "
+                 VK_MVK_MACOS_SURFACE_EXTENSION_NAME" extension.\n\nDo you have a compatible "
+                 "Vulkan installable client driver (ICD) installed?\nPlease "
+                 "look at the Getting Started guide for additional "
+                 "information.\n",
+                 "vkCreateInstance Failure");
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
         ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
                  "the " VK_KHR_XCB_SURFACE_EXTENSION_NAME
@@ -2932,6 +3277,7 @@ static void demo_init_vk(struct demo *demo) {
      * function to register the final callback.
      */
     VkDebugReportCallbackCreateInfoEXT dbgCreateInfoTemp;
+    VkValidationFlagsEXT val_flags;
     if (demo->validate) {
         dbgCreateInfoTemp.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
         dbgCreateInfoTemp.pNext = NULL;
@@ -2939,6 +3285,14 @@ static void demo_init_vk(struct demo *demo) {
         dbgCreateInfoTemp.pUserData = demo;
         dbgCreateInfoTemp.flags =
             VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
+        if (demo->validate_checks_disabled) {
+            val_flags.sType = VK_STRUCTURE_TYPE_VALIDATION_FLAGS_EXT;
+            val_flags.pNext = NULL;
+            val_flags.disabledValidationCheckCount = 1;
+            VkValidationCheckEXT disabled_check = VK_VALIDATION_CHECK_ALL_EXT;
+            val_flags.pDisabledValidationChecks = &disabled_check;
+            dbgCreateInfoTemp.pNext = (void*)&val_flags;
+        }
         inst_info.pNext = &dbgCreateInfoTemp;
     }
 
@@ -3005,6 +3359,48 @@ static void demo_init_vk(struct demo *demo) {
                     VK_KHR_SWAPCHAIN_EXTENSION_NAME;
             }
             assert(demo->enabled_extension_count < 64);
+        }
+
+        if (demo->VK_KHR_incremental_present_enabled) {
+            // Even though the user "enabled" the extension via the command
+            // line, we must make sure that it's enumerated for use with the
+            // device.  Therefore, disable it here, and re-enable it again if
+            // enumerated.
+            demo->VK_KHR_incremental_present_enabled = false;
+            for (uint32_t i = 0; i < device_extension_count; i++) {
+                if (!strcmp(VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME,
+                            device_extensions[i].extensionName)) {
+                    demo->extension_names[demo->enabled_extension_count++] =
+                        VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME;
+                    demo->VK_KHR_incremental_present_enabled = true;
+                    DbgMsg("VK_KHR_incremental_present extension enabled\n");
+                }
+                assert(demo->enabled_extension_count < 64);
+            }
+            if (!demo->VK_KHR_incremental_present_enabled) {
+                DbgMsg("VK_KHR_incremental_present extension NOT AVAILABLE\n");
+            }
+        }
+
+        if (demo->VK_GOOGLE_display_timing_enabled) {
+            // Even though the user "enabled" the extension via the command
+            // line, we must make sure that it's enumerated for use with the
+            // device.  Therefore, disable it here, and re-enable it again if
+            // enumerated.
+            demo->VK_GOOGLE_display_timing_enabled = false;
+            for (uint32_t i = 0; i < device_extension_count; i++) {
+                if (!strcmp(VK_GOOGLE_DISPLAY_TIMING_EXTENSION_NAME,
+                            device_extensions[i].extensionName)) {
+                    demo->extension_names[demo->enabled_extension_count++] =
+                        VK_GOOGLE_DISPLAY_TIMING_EXTENSION_NAME;
+                    demo->VK_GOOGLE_display_timing_enabled = true;
+                    DbgMsg("VK_GOOGLE_display_timing extension enabled\n");
+                }
+                assert(demo->enabled_extension_count < 64);
+            }
+            if (!demo->VK_GOOGLE_display_timing_enabled) {
+                DbgMsg("VK_GOOGLE_display_timing extension NOT AVAILABLE\n");
+            }
         }
 
         free(device_extensions);
@@ -3260,6 +3656,10 @@ static void demo_init_vk_swapchain(struct demo *demo) {
     GET_DEVICE_PROC_ADDR(demo->device, GetSwapchainImagesKHR);
     GET_DEVICE_PROC_ADDR(demo->device, AcquireNextImageKHR);
     GET_DEVICE_PROC_ADDR(demo->device, QueuePresentKHR);
+    if (demo->VK_GOOGLE_display_timing_enabled) {
+        GET_DEVICE_PROC_ADDR(demo->device, GetRefreshCycleDurationGOOGLE);
+        GET_DEVICE_PROC_ADDR(demo->device, GetPastPresentationTimingGOOGLE);
+    }
 
     vkGetDeviceQueue(demo->device, demo->graphics_queue_family_index, 0,
                      &demo->graphics_queue);
@@ -3423,6 +3823,11 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
             demo->validate = true;
             continue;
         }
+        if (strcmp(argv[i], "--validate-checks-disabled") == 0) {
+            demo->validate = true;
+            demo->validate_checks_disabled = true;
+            continue;
+        }
         if (strcmp(argv[i], "--xlib") == 0) {
             fprintf(stderr, "--xlib is deprecated and no longer does anything");
             continue;
@@ -3437,12 +3842,20 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
             demo->suppress_popups = true;
             continue;
         }
+        if (strcmp(argv[i], "--display_timing") == 0) {
+            demo->VK_GOOGLE_display_timing_enabled = true;
+            continue;
+        }
+        if (strcmp(argv[i], "--incremental_present") == 0) {
+            demo->VK_KHR_incremental_present_enabled = true;
+            continue;
+        }
 
 #if defined(ANDROID)
         ERR_EXIT("Usage: cube [--validate]\n", "Usage");
 #else
-        fprintf(stderr, "Usage:\n  %s [--use_staging] [--validate] [--break] "
-                        "[--c <framecount>] [--suppress_popups] [--present_mode <present mode enum>]\n"
+        fprintf(stderr, "Usage:\n  %s [--use_staging] [--validate] [--validate-checks-disabled] [--break] "
+                        "[--c <framecount>] [--suppress_popups] [--incremental_present] [--display_timing] [--present_mode <present mode enum>]\n"
                         "VK_PRESENT_MODE_IMMEDIATE_KHR = %d\n"
                         "VK_PRESENT_MODE_MAILBOX_KHR = %d\n"
                         "VK_PRESENT_MODE_FIFO_KHR = %d\n"
@@ -3483,6 +3896,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
     bool done; // flag saying when app is complete
     int argc;
     char **argv;
+
+    // Ensure wParam is initialized.
+    msg.wParam = 0;
 
     // Use the CommandLine functions to get the command line arguments.
     // Unfortunately, Microsoft outputs
@@ -3557,22 +3973,22 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 
 #elif defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK)
 static void demo_main(struct demo *demo, void* view) {
-	const char* argv[] = { "CubeSample" };
-	int argc = sizeof(argv) / sizeof(char*);
+        const char* argv[] = { "CubeSample" };
+    int argc = sizeof(argv) / sizeof(char*);
 
-	demo_init(demo, argc, (char**)argv);
-	demo->window = view;
-	demo_init_vk_swapchain(demo);
-	demo_prepare(demo);
-	demo->spin_angle = 0.4f;
+    demo_init(demo, argc, (char**)argv);
+    demo->window = view;
+    demo_init_vk_swapchain(demo);
+    demo_prepare(demo);
+    demo->spin_angle = 0.4f;
 }
 
 static void demo_update_and_draw(struct demo *demo) {
-	// Wait for work to finish before updating MVP.
-	vkDeviceWaitIdle(demo->device);
-	demo_update_data_buffer(demo);
+    // Wait for work to finish before updating MVP.
+    vkDeviceWaitIdle(demo->device);
+    demo_update_data_buffer(demo);
 
-	demo_draw(demo);
+    demo_draw(demo);
 }
 
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)

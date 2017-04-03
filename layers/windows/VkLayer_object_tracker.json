@@ -4,7 +4,7 @@
         "name": "VK_LAYER_LUNARG_object_tracker",
         "type": "GLOBAL",
         "library_path": ".\\VkLayer_object_tracker.dll",
-        "api_version": "1.0.42",
+        "api_version": "1.0.46",
         "implementation_version": "1",
         "description": "LunarG Validation Layer",
         "instance_extensions": [

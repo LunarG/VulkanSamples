@@ -26,9 +26,8 @@
  * Author: Mark Young <marky@lunarG.com>
  */
 
-#ifdef _WIN32
 #include <inttypes.h>  //Needed for PRIxLEAST64
-#endif
+#include <stdint.h> // For UINT32_MAX
 
 #include <algorithm>
 #include <iostream>
@@ -286,14 +285,26 @@ struct AllocTrack {
 // Global vector to track allocations.  This will be resized before each test and emptied after.
 // However, we have to globally define it so the allocation callback functions work properly.
 std::vector<AllocTrack> g_allocated_vector;
+bool g_intentional_fail_enabled = false;
+uint32_t g_intenional_fail_index = 0;
+uint32_t g_intenional_fail_count = 0;
 
 void FreeAllocTracker() { g_allocated_vector.clear(); }
 
-void InitAllocTracker(size_t size) {
+void InitAllocTracker(size_t size, uint32_t intentional_fail_index = UINT32_MAX) {
     if (g_allocated_vector.size() > 0) {
         FreeAllocTracker();
     }
     g_allocated_vector.resize(size);
+    if (intentional_fail_index != UINT32_MAX) {
+        g_intentional_fail_enabled = true;
+        g_intenional_fail_index = intentional_fail_index;
+        g_intenional_fail_count = 0;
+    } else {
+        g_intentional_fail_enabled = false;
+        g_intenional_fail_index = 0;
+        g_intenional_fail_count = 0;
+    }
 }
 
 bool IsAllocTrackerEmpty() {
@@ -315,7 +326,7 @@ bool IsAllocTrackerEmpty() {
             was_allocated = true;
         }
     }
-    if (!was_allocated) {
+    if (!g_intentional_fail_enabled && !was_allocated) {
         printf("No allocations ever generated!");
         success = false;
     }
@@ -324,6 +335,11 @@ bool IsAllocTrackerEmpty() {
 
 VKAPI_ATTR void *VKAPI_CALL AllocCallbackFunc(void *pUserData, size_t size, size_t alignment,
                                               VkSystemAllocationScope allocationScope) {
+    if (g_intentional_fail_enabled) {
+        if (++g_intenional_fail_count >= g_intenional_fail_index) {
+            return nullptr;
+        }
+    }
     for (uint32_t iii = 0; iii < g_allocated_vector.size(); iii++) {
         if (!g_allocated_vector[iii].active) {
             g_allocated_vector[iii].requested_size_bytes = size;
@@ -439,7 +455,7 @@ TEST(CreateInstance, LayerPresent) {
 
 // Used by run_loader_tests.sh to test that calling vkEnumeratePhysicalDevices without first querying
 // the count, works.
-TEST(EnumeratePhysicalDevicces, OneCall) {
+TEST(EnumeratePhysicalDevices, OneCall) {
     VkInstance instance = VK_NULL_HANDLE;
     VkResult result = vkCreateInstance(VK::InstanceCreateInfo(), VK_NULL_HANDLE, &instance);
     ASSERT_EQ(result, VK_SUCCESS);
@@ -454,7 +470,7 @@ TEST(EnumeratePhysicalDevicces, OneCall) {
 }
 
 // Used by run_loader_tests.sh to test for the expected usage of the vkEnumeratePhysicalDevices call.
-TEST(EnumeratePhysicalDevicces, TwoCall) {
+TEST(EnumeratePhysicalDevices, TwoCall) {
     VkInstance instance = VK_NULL_HANDLE;
     VkResult result = vkCreateInstance(VK::InstanceCreateInfo(), VK_NULL_HANDLE, &instance);
     ASSERT_EQ(result, VK_SUCCESS);
@@ -474,7 +490,7 @@ TEST(EnumeratePhysicalDevicces, TwoCall) {
 
 // Used by run_loader_tests.sh to test that calling vkEnumeratePhysicalDevices without first querying
 // the count, matches the count from the standard call.
-TEST(EnumeratePhysicalDevicces, MatchOneAndTwoCallNumbers) {
+TEST(EnumeratePhysicalDevices, MatchOneAndTwoCallNumbers) {
     VkInstance instance_one = VK_NULL_HANDLE;
     VkResult result = vkCreateInstance(VK::InstanceCreateInfo(), VK_NULL_HANDLE, &instance_one);
     ASSERT_EQ(result, VK_SUCCESS);
@@ -507,7 +523,7 @@ TEST(EnumeratePhysicalDevicces, MatchOneAndTwoCallNumbers) {
 
 // Used by run_loader_tests.sh to test for the expected usage of the vkEnumeratePhysicalDevices
 // call if not enough numbers are provided for the final list.
-TEST(EnumeratePhysicalDevicces, TwoCallIncomplete) {
+TEST(EnumeratePhysicalDevices, TwoCallIncomplete) {
     VkInstance instance = VK_NULL_HANDLE;
     VkResult result = vkCreateInstance(VK::InstanceCreateInfo(), VK_NULL_HANDLE, &instance);
     ASSERT_EQ(result, VK_SUCCESS);
@@ -1212,6 +1228,413 @@ TEST(Allocation, DeviceButNotInstance) {
     // Make sure everything's been freed
     ASSERT_EQ(true, IsAllocTrackerEmpty());
     FreeAllocTracker();
+}
+
+// Test failure during vkCreateInstance to make sure we don't leak memory if
+// one of the out-of-memory conditions trigger.
+TEST(Allocation, CreateInstanceItentionalAllocFail) {
+    auto const info = VK::InstanceCreateInfo();
+    VkInstance instance = VK_NULL_HANDLE;
+    VkAllocationCallbacks alloc_callbacks = {};
+    alloc_callbacks.pfnAllocation = AllocCallbackFunc;
+    alloc_callbacks.pfnReallocation = ReallocCallbackFunc;
+    alloc_callbacks.pfnFree = FreeCallbackFunc;
+
+    VkResult result;
+    uint32_t fail_index = 1;
+    do {
+        InitAllocTracker(9999, fail_index);
+
+        result = vkCreateInstance(info, &alloc_callbacks, &instance);
+        if (result == VK_ERROR_OUT_OF_HOST_MEMORY) {
+            if (!IsAllocTrackerEmpty()) {
+                std::cout << "Failed on index " << fail_index << '\n';
+                ASSERT_EQ(true, IsAllocTrackerEmpty());
+            }
+        }
+        fail_index++;
+        // Make sure we don't overrun the memory
+        ASSERT_LT(fail_index, 9999u);
+
+        FreeAllocTracker();
+    } while (result == VK_ERROR_OUT_OF_HOST_MEMORY);
+
+    vkDestroyInstance(instance, NULL);
+}
+
+// Test failure during vkCreateDevice to make sure we don't leak memory if
+// one of the out-of-memory conditions trigger.
+TEST(Allocation, CreateDeviceItentionalAllocFail) {
+    auto const info = VK::InstanceCreateInfo();
+    VkInstance instance = VK_NULL_HANDLE;
+    VkDevice device = VK_NULL_HANDLE;
+    VkAllocationCallbacks alloc_callbacks = {};
+    alloc_callbacks.pfnAllocation = AllocCallbackFunc;
+    alloc_callbacks.pfnReallocation = ReallocCallbackFunc;
+    alloc_callbacks.pfnFree = FreeCallbackFunc;
+
+    VkResult result = vkCreateInstance(info, NULL, &instance);
+    ASSERT_EQ(result, VK_SUCCESS);
+
+    uint32_t physicalCount = 0;
+    result = vkEnumeratePhysicalDevices(instance, &physicalCount, nullptr);
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(physicalCount, 0u);
+
+    std::unique_ptr<VkPhysicalDevice[]> physical(new VkPhysicalDevice[physicalCount]);
+    result = vkEnumeratePhysicalDevices(instance, &physicalCount, physical.get());
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(physicalCount, 0u);
+
+    for (uint32_t p = 0; p < physicalCount; ++p) {
+        uint32_t familyCount = 0;
+        vkGetPhysicalDeviceQueueFamilyProperties(physical[p], &familyCount, nullptr);
+        ASSERT_GT(familyCount, 0u);
+
+        std::unique_ptr<VkQueueFamilyProperties[]> family(new VkQueueFamilyProperties[familyCount]);
+        vkGetPhysicalDeviceQueueFamilyProperties(physical[p], &familyCount, family.get());
+        ASSERT_GT(familyCount, 0u);
+
+        for (uint32_t q = 0; q < familyCount; ++q) {
+            if (~family[q].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+                continue;
+            }
+
+            float const priorities[] = {0.0f};  // Temporary required due to MSVC bug.
+            VkDeviceQueueCreateInfo const queueInfo[1]{
+                VK::DeviceQueueCreateInfo().queueFamilyIndex(q).queueCount(1).pQueuePriorities(priorities)};
+
+            auto const deviceInfo = VK::DeviceCreateInfo().queueCreateInfoCount(1).pQueueCreateInfos(queueInfo);
+
+            uint32_t fail_index = 1;
+            do {
+                InitAllocTracker(9999, fail_index);
+
+                result = vkCreateDevice(physical[p], deviceInfo, &alloc_callbacks, &device);
+                if (result == VK_ERROR_OUT_OF_HOST_MEMORY) {
+                    if (!IsAllocTrackerEmpty()) {
+                        std::cout << "Failed on index " << fail_index << '\n';
+                        ASSERT_EQ(true, IsAllocTrackerEmpty());
+                    }
+                }
+                fail_index++;
+                // Make sure we don't overrun the memory
+                ASSERT_LT(fail_index, 9999u);
+
+                FreeAllocTracker();
+            } while (result == VK_ERROR_OUT_OF_HOST_MEMORY);
+            vkDestroyDevice(device, &alloc_callbacks);
+            break;
+        }
+    }
+
+    vkDestroyInstance(instance, NULL);
+}
+
+// Test failure during vkCreateInstance and vkCreateDevice to make sure we don't
+// leak memory if one of the out-of-memory conditions trigger.
+TEST(Allocation, CreateInstanceDeviceItentionalAllocFail) {
+    auto const info = VK::InstanceCreateInfo();
+    VkInstance instance = VK_NULL_HANDLE;
+    VkDevice device = VK_NULL_HANDLE;
+    VkAllocationCallbacks alloc_callbacks = {};
+    alloc_callbacks.pfnAllocation = AllocCallbackFunc;
+    alloc_callbacks.pfnReallocation = ReallocCallbackFunc;
+    alloc_callbacks.pfnFree = FreeCallbackFunc;
+
+    VkResult result = VK_ERROR_OUT_OF_HOST_MEMORY;
+    uint32_t fail_index = 0;
+    uint32_t physicalCount = 0;
+    while (result == VK_ERROR_OUT_OF_HOST_MEMORY) {
+        InitAllocTracker(9999, ++fail_index);
+        ASSERT_LT(fail_index, 9999u);
+
+        result = vkCreateInstance(info, &alloc_callbacks, &instance);
+        if (result == VK_ERROR_OUT_OF_HOST_MEMORY) {
+            if (!IsAllocTrackerEmpty()) {
+                std::cout << "Failed on index " << fail_index << '\n';
+                ASSERT_EQ(true, IsAllocTrackerEmpty());
+            }
+            FreeAllocTracker();
+            continue;
+        }
+        ASSERT_EQ(result, VK_SUCCESS);
+
+        physicalCount = 0;
+        result = vkEnumeratePhysicalDevices(instance, &physicalCount, nullptr);
+        if (result == VK_ERROR_OUT_OF_HOST_MEMORY) {
+            vkDestroyInstance(instance, NULL);
+            if (!IsAllocTrackerEmpty()) {
+                std::cout << "Failed on index " << fail_index << '\n';
+                ASSERT_EQ(true, IsAllocTrackerEmpty());
+            }
+            FreeAllocTracker();
+            continue;
+        }
+        ASSERT_EQ(result, VK_SUCCESS);
+
+        std::unique_ptr<VkPhysicalDevice[]> physical(new VkPhysicalDevice[physicalCount]);
+        result = vkEnumeratePhysicalDevices(instance, &physicalCount, physical.get());
+        if (result == VK_ERROR_OUT_OF_HOST_MEMORY) {
+            vkDestroyInstance(instance, NULL);
+            if (!IsAllocTrackerEmpty()) {
+                std::cout << "Failed on index " << fail_index << '\n';
+                ASSERT_EQ(true, IsAllocTrackerEmpty());
+            }
+            FreeAllocTracker();
+            continue;
+        }
+        ASSERT_EQ(result, VK_SUCCESS);
+
+        uint32_t familyCount = 0;
+        vkGetPhysicalDeviceQueueFamilyProperties(physical[0], &familyCount, nullptr);
+        ASSERT_GT(familyCount, 0u);
+
+        std::unique_ptr<VkQueueFamilyProperties[]> family(new VkQueueFamilyProperties[familyCount]);
+        vkGetPhysicalDeviceQueueFamilyProperties(physical[0], &familyCount, family.get());
+        ASSERT_GT(familyCount, 0u);
+
+        uint32_t queue_index = 0;
+        for (uint32_t q = 0; q < familyCount; ++q) {
+            if (family[q].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+                queue_index = q;
+                break;
+            }
+        }
+
+        float const priorities[] = {0.0f};  // Temporary required due to MSVC bug.
+        VkDeviceQueueCreateInfo const queueInfo[1]{
+            VK::DeviceQueueCreateInfo().queueFamilyIndex(queue_index).queueCount(1).pQueuePriorities(priorities)};
+
+        auto const deviceInfo = VK::DeviceCreateInfo().queueCreateInfoCount(1).pQueueCreateInfos(queueInfo);
+
+        result = vkCreateDevice(physical[0], deviceInfo, &alloc_callbacks, &device);
+        if (result == VK_ERROR_OUT_OF_HOST_MEMORY) {
+            vkDestroyInstance(instance, NULL);
+            if (!IsAllocTrackerEmpty()) {
+                std::cout << "Failed on index " << fail_index << '\n';
+                ASSERT_EQ(true, IsAllocTrackerEmpty());
+            }
+            FreeAllocTracker();
+            continue;
+        }
+        vkDestroyDevice(device, &alloc_callbacks);
+        vkDestroyInstance(instance, NULL);
+        FreeAllocTracker();
+    }
+}
+
+// Used by run_loader_tests.sh to test that calling vkEnumeratePhysicalDeviceGroupsKHX without first querying
+// the count, works.  And, that it also returns only physical devices made available by the standard
+// enumerate call
+TEST(EnumeratePhysicalDeviceGroupsKHX, OneCall) {
+    VkInstance instance = VK_NULL_HANDLE;
+    char const *const names[] = {VK_KHX_DEVICE_GROUP_CREATION_EXTENSION_NAME};
+    auto const info = VK::InstanceCreateInfo().enabledExtensionCount(1).ppEnabledExtensionNames(names);
+    uint32_t group;
+    uint32_t dev;
+    std::vector<std::pair<VkPhysicalDevice, bool>> phys_dev_normal_found;
+    std::vector<std::pair<VkPhysicalDevice, bool>> phys_dev_group_found;
+
+    VkResult result = vkCreateInstance(info, VK_NULL_HANDLE, &instance);
+    if (result == VK_ERROR_EXTENSION_NOT_PRESENT) {
+        // Extension isn't present, just skip this test
+        ASSERT_EQ(result, VK_ERROR_EXTENSION_NOT_PRESENT);
+        std::cout << "Skipping EnumeratePhysicalDeviceGroupsKHX : OneCall due to Instance lacking support"
+                  << " for " << VK_KHX_DEVICE_GROUP_CREATION_EXTENSION_NAME << " extension\n";
+        return;
+    }
+
+    uint32_t phys_dev_count = 500;
+    std::unique_ptr<VkPhysicalDevice[]> phys_devs(new VkPhysicalDevice[phys_dev_count]);
+    result = vkEnumeratePhysicalDevices(instance, &phys_dev_count, phys_devs.get());
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(phys_dev_count, 0u);
+
+    // Initialize the normal physical device boolean pair array
+    for (dev = 0; dev < phys_dev_count; dev++) {
+        phys_dev_normal_found.push_back(std::make_pair(phys_devs[dev], false));
+    }
+
+    // Get a pointer to the new vkEnumeratePhysicalDeviceGroupsKHX call
+    PFN_vkEnumeratePhysicalDeviceGroupsKHX p_vkEnumeratePhysicalDeviceGroupsKHX =
+        (PFN_vkEnumeratePhysicalDeviceGroupsKHX)vkGetInstanceProcAddr(instance, "vkEnumeratePhysicalDeviceGroupsKHX");
+
+    // Setup the group information in preparation for the call
+    uint32_t group_count = 30;
+    std::unique_ptr<VkPhysicalDeviceGroupPropertiesKHX[]> phys_dev_groups(new VkPhysicalDeviceGroupPropertiesKHX[group_count]);
+    for (group = 0; group < group_count; group++) {
+        phys_dev_groups[group].sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_GROUP_PROPERTIES_KHX;
+        phys_dev_groups[group].pNext = nullptr;
+        phys_dev_groups[group].physicalDeviceCount = 0;
+        memset(phys_dev_groups[group].physicalDevices, 0, sizeof(VkPhysicalDevice) * VK_MAX_DEVICE_GROUP_SIZE_KHX);
+        phys_dev_groups[group].subsetAllocation = VK_FALSE;
+    }
+
+    result = p_vkEnumeratePhysicalDeviceGroupsKHX(instance, &group_count, phys_dev_groups.get());
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(group_count, 0u);
+
+    // Initialize the group physical device boolean pair array
+    for (group = 0; group < group_count; group++) {
+        for (dev = 0; dev < phys_dev_groups[group].physicalDeviceCount; dev++) {
+            phys_dev_group_found.push_back(std::make_pair(phys_dev_groups[group].physicalDevices[dev], false));
+        }
+    }
+
+    // Now, make sure we can find each normal and group item in the other list
+    for (dev = 0; dev < phys_dev_count; dev++) {
+        for (group = 0; group < phys_dev_group_found.size(); group++) {
+            if (phys_dev_normal_found[dev].first == phys_dev_group_found[group].first) {
+                phys_dev_normal_found[dev].second = true;
+                phys_dev_group_found[group].second = true;
+                break;
+            }
+        }
+    }
+
+    for (dev = 0; dev < phys_dev_count; dev++) {
+        ASSERT_EQ(phys_dev_normal_found[dev].second, true);
+    }
+    for (dev = 0; dev < phys_dev_group_found.size(); dev++) {
+        ASSERT_EQ(phys_dev_group_found[dev].second, true);
+    }
+
+    vkDestroyInstance(instance, nullptr);
+}
+
+// Used by run_loader_tests.sh to test for the expected usage of the
+// vkEnumeratePhysicalDeviceGroupsKHX call in a two call fasion (once with NULL data
+// to get count, and then again with data).
+TEST(EnumeratePhysicalDeviceGroupsKHX, TwoCall) {
+    VkInstance instance = VK_NULL_HANDLE;
+    char const *const names[] = {VK_KHX_DEVICE_GROUP_CREATION_EXTENSION_NAME};
+    auto const info = VK::InstanceCreateInfo().enabledExtensionCount(1).ppEnabledExtensionNames(names);
+    uint32_t group;
+    uint32_t group_count;
+    uint32_t dev;
+    std::vector<std::pair<VkPhysicalDevice, bool>> phys_dev_normal_found;
+    std::vector<std::pair<VkPhysicalDevice, bool>> phys_dev_group_found;
+
+    VkResult result = vkCreateInstance(info, VK_NULL_HANDLE, &instance);
+    if (result == VK_ERROR_EXTENSION_NOT_PRESENT) {
+        // Extension isn't present, just skip this test
+        ASSERT_EQ(result, VK_ERROR_EXTENSION_NOT_PRESENT);
+        std::cout << "Skipping EnumeratePhysicalDeviceGroupsKHX : TwoCall due to Instance lacking support"
+                  << " for " << VK_KHX_DEVICE_GROUP_CREATION_EXTENSION_NAME << " extension\n";
+        return;
+    }
+
+    // Get a pointer to the new vkEnumeratePhysicalDeviceGroupsKHX call
+    PFN_vkEnumeratePhysicalDeviceGroupsKHX p_vkEnumeratePhysicalDeviceGroupsKHX =
+        (PFN_vkEnumeratePhysicalDeviceGroupsKHX)vkGetInstanceProcAddr(instance, "vkEnumeratePhysicalDeviceGroupsKHX");
+
+    // Setup the group information in preparation for the call
+    uint32_t array_group_count = 30;
+    std::unique_ptr<VkPhysicalDeviceGroupPropertiesKHX[]> phys_dev_groups(
+        new VkPhysicalDeviceGroupPropertiesKHX[array_group_count]);
+    for (group = 0; group < array_group_count; group++) {
+        phys_dev_groups[group].sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_GROUP_PROPERTIES_KHX;
+        phys_dev_groups[group].pNext = nullptr;
+        phys_dev_groups[group].physicalDeviceCount = 0;
+        memset(phys_dev_groups[group].physicalDevices, 0, sizeof(VkPhysicalDevice) * VK_MAX_DEVICE_GROUP_SIZE_KHX);
+        phys_dev_groups[group].subsetAllocation = VK_FALSE;
+    }
+
+    result = p_vkEnumeratePhysicalDeviceGroupsKHX(instance, &group_count, nullptr);
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(group_count, 0u);
+    ASSERT_LT(group_count, array_group_count);
+
+    result = p_vkEnumeratePhysicalDeviceGroupsKHX(instance, &group_count, phys_dev_groups.get());
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(group_count, 0u);
+    ASSERT_LT(group_count, array_group_count);
+
+    // Initialize the group physical device boolean pair array
+    for (group = 0; group < group_count; group++) {
+        for (dev = 0; dev < phys_dev_groups[group].physicalDeviceCount; dev++) {
+            phys_dev_group_found.push_back(std::make_pair(phys_dev_groups[group].physicalDevices[dev], false));
+        }
+    }
+
+    uint32_t phys_dev_count = 500;
+    std::unique_ptr<VkPhysicalDevice[]> phys_devs(new VkPhysicalDevice[phys_dev_count]);
+    result = vkEnumeratePhysicalDevices(instance, &phys_dev_count, phys_devs.get());
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(phys_dev_count, 0u);
+
+    // Initialize the normal physical device boolean pair array
+    for (dev = 0; dev < phys_dev_count; dev++) {
+        phys_dev_normal_found.push_back(std::make_pair(phys_devs[dev], false));
+    }
+
+    // Now, make sure we can find each normal and group item in the other list
+    for (dev = 0; dev < phys_dev_count; dev++) {
+        for (group = 0; group < phys_dev_group_found.size(); group++) {
+            if (phys_dev_normal_found[dev].first == phys_dev_group_found[group].first) {
+                phys_dev_normal_found[dev].second = true;
+                phys_dev_group_found[group].second = true;
+                break;
+            }
+        }
+    }
+
+    for (dev = 0; dev < phys_dev_count; dev++) {
+        ASSERT_EQ(phys_dev_normal_found[dev].second, true);
+    }
+    for (dev = 0; dev < phys_dev_group_found.size(); dev++) {
+        ASSERT_EQ(phys_dev_group_found[dev].second, true);
+    }
+
+    vkDestroyInstance(instance, nullptr);
+}
+
+// Used by run_loader_tests.sh to test for the expected usage of the EnumeratePhysicalDeviceGroupsKHX
+// call if not enough numbers are provided for the final list.
+TEST(EnumeratePhysicalDeviceGroupsKHX, TwoCallIncomplete) {
+    VkInstance instance = VK_NULL_HANDLE;
+    char const *const names[] = {VK_KHX_DEVICE_GROUP_CREATION_EXTENSION_NAME};
+    auto const info = VK::InstanceCreateInfo().enabledExtensionCount(1).ppEnabledExtensionNames(names);
+    uint32_t group;
+    uint32_t group_count;
+
+    VkResult result = vkCreateInstance(info, VK_NULL_HANDLE, &instance);
+    if (result == VK_ERROR_EXTENSION_NOT_PRESENT) {
+        // Extension isn't present, just skip this test
+        ASSERT_EQ(result, VK_ERROR_EXTENSION_NOT_PRESENT);
+        std::cout << "Skipping EnumeratePhysicalDeviceGroupsKHX : TwoCallIncomplete due to Instance lacking support"
+                  << " for " << VK_KHX_DEVICE_GROUP_CREATION_EXTENSION_NAME << " extension\n";
+        return;
+    }
+
+    // Get a pointer to the new vkEnumeratePhysicalDeviceGroupsKHX call
+    PFN_vkEnumeratePhysicalDeviceGroupsKHX p_vkEnumeratePhysicalDeviceGroupsKHX =
+        (PFN_vkEnumeratePhysicalDeviceGroupsKHX)vkGetInstanceProcAddr(instance, "vkEnumeratePhysicalDeviceGroupsKHX");
+
+    // Setup the group information in preparation for the call
+    uint32_t array_group_count = 30;
+    std::unique_ptr<VkPhysicalDeviceGroupPropertiesKHX[]> phys_dev_groups(
+        new VkPhysicalDeviceGroupPropertiesKHX[array_group_count]);
+    for (group = 0; group < array_group_count; group++) {
+        phys_dev_groups[group].sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_GROUP_PROPERTIES_KHX;
+        phys_dev_groups[group].pNext = nullptr;
+        phys_dev_groups[group].physicalDeviceCount = 0;
+        memset(phys_dev_groups[group].physicalDevices, 0, sizeof(VkPhysicalDevice) * VK_MAX_DEVICE_GROUP_SIZE_KHX);
+        phys_dev_groups[group].subsetAllocation = VK_FALSE;
+    }
+
+    result = p_vkEnumeratePhysicalDeviceGroupsKHX(instance, &group_count, nullptr);
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(group_count, 0u);
+    ASSERT_LT(group_count, array_group_count);
+
+    group_count -= 1;
+
+    result = p_vkEnumeratePhysicalDeviceGroupsKHX(instance, &group_count, phys_dev_groups.get());
+    ASSERT_EQ(result, VK_INCOMPLETE);
+
+    vkDestroyInstance(instance, nullptr);
 }
 
 int main(int argc, char **argv) {

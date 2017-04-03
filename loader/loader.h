@@ -223,11 +223,22 @@ struct loader_instance_dispatch_table {
 struct loader_instance {
     struct loader_instance_dispatch_table *disp;  // must be first entry in structure
 
+    // We need to manually track physical devices over time.  If the user
+    // re-queries the information, we don't want to delete old data or
+    // create new data unless necessary.
     uint32_t total_gpu_count;
     uint32_t phys_dev_count_term;
     struct loader_physical_device_term **phys_devs_term;
     uint32_t phys_dev_count_tramp;
     struct loader_physical_device_tramp **phys_devs_tramp;
+
+    // We also need to manually track physical device groups, but we don't need
+    // loader specific structures since we have that content in the physical
+    // device stored internal to the public structures.
+    uint32_t phys_dev_group_count_term;
+    struct VkPhysicalDeviceGroupPropertiesKHX **phys_dev_groups_term;
+    uint32_t phys_dev_group_count_tramp;
+    struct VkPhysicalDeviceGroupPropertiesKHX **phys_dev_groups_tramp;
 
     struct loader_instance *next;
 
@@ -414,8 +425,6 @@ VkResult loader_expand_layer_names(struct loader_instance *inst, const char *key
                                    const char expand_names[][VK_MAX_EXTENSION_NAME_SIZE], uint32_t *layer_count,
                                    char const *const **ppp_layer_names);
 void loader_init_std_validation_props(struct loader_layer_properties *props);
-void loader_delete_shadow_dev_layer_names(const struct loader_instance *inst, const VkDeviceCreateInfo *orig,
-                                          VkDeviceCreateInfo *ours);
 void loader_delete_shadow_inst_layer_names(const struct loader_instance *inst, const VkInstanceCreateInfo *orig,
                                            VkInstanceCreateInfo *ours);
 VkResult loader_add_to_layer_list(const struct loader_instance *inst, struct loader_layer_list *list, uint32_t prop_list_count,
@@ -443,21 +452,18 @@ void loader_add_logical_device(const struct loader_instance *inst, struct loader
                                struct loader_device *found_dev);
 void loader_remove_logical_device(const struct loader_instance *inst, struct loader_icd_term *icd_term,
                                   struct loader_device *found_dev, const VkAllocationCallbacks *pAllocator);
-// NOTE: Outside of loader, this entry-point is only proivided for error
+// NOTE: Outside of loader, this entry-point is only provided for error
 // cleanup.
 void loader_destroy_logical_device(const struct loader_instance *inst, struct loader_device *dev,
                                    const VkAllocationCallbacks *pAllocator);
 
 VkResult loader_enable_instance_layers(struct loader_instance *inst, const VkInstanceCreateInfo *pCreateInfo,
                                        const struct loader_layer_list *instance_layers);
-void loader_deactivate_instance_layers(struct loader_instance *instance);
 
 VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo, const VkAllocationCallbacks *pAllocator,
                                       struct loader_instance *inst, VkInstance *created_instance);
 
 void loader_activate_instance_layer_extensions(struct loader_instance *inst, VkInstance created_inst);
-VkResult loader_enable_device_layers(const struct loader_instance *inst, struct loader_layer_list *activated_layer_list,
-                                     const VkDeviceCreateInfo *pCreateInfo, const struct loader_layer_list *device_layers);
 
 VkResult loader_create_device_chain(const struct loader_physical_device_tramp *pd, const VkDeviceCreateInfo *pCreateInfo,
                                     const VkAllocationCallbacks *pAllocator, const struct loader_instance *inst,

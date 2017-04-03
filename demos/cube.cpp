@@ -1339,6 +1339,9 @@ struct Demo {
         // Note: destroying the swapchain also cleans up all its associated
         // presentable images once the platform is done with them.
         if (oldSwapchain) {
+            // AMD driver times out waiting on fences used in AcquireNextImage on
+            // a swapchain that is subsequently destroyed before the wait.
+            device.waitForFences(FRAME_LAG, fences, VK_TRUE, UINT64_MAX);
             device.destroySwapchainKHR(oldSwapchain, nullptr);
         }
 
@@ -2677,6 +2680,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
     bool done;  // flag saying when app is complete
     int argc;
     char **argv;
+
+    // Ensure wParam is initialized.
+    msg.wParam = 0;
 
     // Use the CommandLine functions to get the command line arguments.
     // Unfortunately, Microsoft outputs
