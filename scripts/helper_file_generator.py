@@ -83,6 +83,7 @@ class HelperFileOutputGenerator(OutputGenerator):
         self.structNames = []                             # List of Vulkan struct typenames
         self.structTypes = dict()                         # Map of Vulkan struct typename to required VkStructureType
         self.structMembers = []                           # List of StructMemberData records for all Vulkan structs
+        self.object_types = []                            # List of all handle types
         # Named tuples to store struct and command data
         self.StructType = namedtuple('StructType', ['name', 'value'])
         self.CommandParam = namedtuple('CommandParam', ['type', 'name', 'ispointer', 'isstaticarray', 'isconst', 'iscount', 'len', 'extstructs', 'cdecl'])
@@ -159,7 +160,9 @@ class HelperFileOutputGenerator(OutputGenerator):
         # If the type is a struct type, traverse the imbedded <member> tags generating a structure.
         # Otherwise, emit the tag text.
         category = typeElem.get('category')
-        if (category == 'struct' or category == 'union'):
+        if category == 'handle':
+            self.object_types.append(name)
+        elif (category == 'struct' or category == 'union'):
             self.structNames.append(name)
             self.genStruct(typeinfo, name)
     #
@@ -511,6 +514,31 @@ class HelperFileOutputGenerator(OutputGenerator):
                     safe_struct_header += '#endif // %s\n' % item.ifdef_protect
         return safe_struct_header
     #
+    # Combine object types helper header file preamble with body text and return
+    def GenerateObjectTypesHelperHeader(self):
+        object_types_helper_header = '\n'
+        object_types_helper_header += '#pragma once\n'
+        object_types_helper_header += '\n'
+        object_types_helper_header += self.GenerateObjectTypesHeader()
+        return object_types_helper_header
+    #
+    # Object types header: create object enum type header file
+    def GenerateObjectTypesHeader(self):
+        object_types_header = ''
+        object_types_header += 'typedef enum VulkanObjectType {\n'
+        object_types_header += '    kVulkanObjectTypeUnknown = 0,\n'
+        enum_num = 1
+
+        for item in self.object_types:
+            fixup_name = item[2:]
+            object_types_header += '    kVulkanObjectType%s' % fixup_name
+            object_types_header += ' = %d,\n' % enum_num
+            enum_num += 1
+        object_types_header += '    kVulkanObjectTypeMax = %d,\n' % enum_num
+        object_types_header += '} VulkanObjectType;\n'
+
+        return object_types_header
+    #
     # Determine if a structure needs a safe_struct helper function
     # That is, it has an sType or one of its members is a pointer
     def NeedSafeStruct(self, structure):
@@ -699,6 +727,8 @@ class HelperFileOutputGenerator(OutputGenerator):
             return self.GenerateSafeStructHelperHeader()
         elif self.helper_file_type == 'safe_struct_source':
             return self.GenerateSafeStructHelperSource()
+        elif self.helper_file_type == 'object_types_header':
+            return self.GenerateObjectTypesHelperHeader()
         else:
             return 'Bad Helper File Generator Option %s' % self.helper_file_type
 
