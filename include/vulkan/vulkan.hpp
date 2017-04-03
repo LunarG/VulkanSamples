@@ -42,7 +42,7 @@
 # include <vector>
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
 
-static_assert( VK_HEADER_VERSION ==  45 , "Wrong VK_HEADER_VERSION!" );
+static_assert( VK_HEADER_VERSION ==  46 , "Wrong VK_HEADER_VERSION!" );
 
 // 32-bit vulkan is not typesafe for handles, so don't allow copy constructors on this platform by default.
 // To enable this feature on 32-bit platforms please define VULKAN_HPP_TYPESAFE_CONVERSION
@@ -4788,6 +4788,119 @@ namespace vk
   };
   static_assert( sizeof( DisplayModePropertiesKHR ) == sizeof( VkDisplayModePropertiesKHR ), "struct and wrapper have different size!" );
 
+  struct RectLayerKHR
+  {
+    RectLayerKHR( Offset2D offset_ = Offset2D(), Extent2D extent_ = Extent2D(), uint32_t layer_ = 0 )
+      : offset( offset_ )
+      , extent( extent_ )
+      , layer( layer_ )
+    {
+    }
+
+    RectLayerKHR( VkRectLayerKHR const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(RectLayerKHR) );
+    }
+
+    RectLayerKHR& operator=( VkRectLayerKHR const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(RectLayerKHR) );
+      return *this;
+    }
+
+    RectLayerKHR& setOffset( Offset2D offset_ )
+    {
+      offset = offset_;
+      return *this;
+    }
+
+    RectLayerKHR& setExtent( Extent2D extent_ )
+    {
+      extent = extent_;
+      return *this;
+    }
+
+    RectLayerKHR& setLayer( uint32_t layer_ )
+    {
+      layer = layer_;
+      return *this;
+    }
+
+    operator const VkRectLayerKHR&() const
+    {
+      return *reinterpret_cast<const VkRectLayerKHR*>(this);
+    }
+
+    bool operator==( RectLayerKHR const& rhs ) const
+    {
+      return ( offset == rhs.offset )
+          && ( extent == rhs.extent )
+          && ( layer == rhs.layer );
+    }
+
+    bool operator!=( RectLayerKHR const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+    Offset2D offset;
+    Extent2D extent;
+    uint32_t layer;
+  };
+  static_assert( sizeof( RectLayerKHR ) == sizeof( VkRectLayerKHR ), "struct and wrapper have different size!" );
+
+  struct PresentRegionKHR
+  {
+    PresentRegionKHR( uint32_t rectangleCount_ = 0, const RectLayerKHR* pRectangles_ = nullptr )
+      : rectangleCount( rectangleCount_ )
+      , pRectangles( pRectangles_ )
+    {
+    }
+
+    PresentRegionKHR( VkPresentRegionKHR const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(PresentRegionKHR) );
+    }
+
+    PresentRegionKHR& operator=( VkPresentRegionKHR const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(PresentRegionKHR) );
+      return *this;
+    }
+
+    PresentRegionKHR& setRectangleCount( uint32_t rectangleCount_ )
+    {
+      rectangleCount = rectangleCount_;
+      return *this;
+    }
+
+    PresentRegionKHR& setPRectangles( const RectLayerKHR* pRectangles_ )
+    {
+      pRectangles = pRectangles_;
+      return *this;
+    }
+
+    operator const VkPresentRegionKHR&() const
+    {
+      return *reinterpret_cast<const VkPresentRegionKHR*>(this);
+    }
+
+    bool operator==( PresentRegionKHR const& rhs ) const
+    {
+      return ( rectangleCount == rhs.rectangleCount )
+          && ( pRectangles == rhs.pRectangles );
+    }
+
+    bool operator!=( PresentRegionKHR const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+    uint32_t rectangleCount;
+    const RectLayerKHR* pRectangles;
+  };
+  static_assert( sizeof( PresentRegionKHR ) == sizeof( VkPresentRegionKHR ), "struct and wrapper have different size!" );
+
   struct XYColorEXT
   {
     XYColorEXT( float x_ = 0, float y_ = 0 )
@@ -6249,6 +6362,7 @@ namespace vk
     eD3D12FenceSubmitInfoKHX = VK_STRUCTURE_TYPE_D3D12_FENCE_SUBMIT_INFO_KHX,
     eImportSemaphoreFdInfoKHX = VK_STRUCTURE_TYPE_IMPORT_SEMAPHORE_FD_INFO_KHX,
     ePhysicalDevicePushDescriptorPropertiesKHR = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PUSH_DESCRIPTOR_PROPERTIES_KHR,
+    ePresentRegionsKHR = VK_STRUCTURE_TYPE_PRESENT_REGIONS_KHR,
     eDescriptorUpdateTemplateCreateInfoKHR = VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO_KHR,
     eObjectTableCreateInfoNVX = VK_STRUCTURE_TYPE_OBJECT_TABLE_CREATE_INFO_NVX,
     eIndirectCommandsLayoutCreateInfoNVX = VK_STRUCTURE_TYPE_INDIRECT_COMMANDS_LAYOUT_CREATE_INFO_NVX,
@@ -10030,6 +10144,73 @@ namespace vk
   };
   static_assert( sizeof( PhysicalDevicePushDescriptorPropertiesKHR ) == sizeof( VkPhysicalDevicePushDescriptorPropertiesKHR ), "struct and wrapper have different size!" );
 
+  struct PresentRegionsKHR
+  {
+    PresentRegionsKHR( uint32_t swapchainCount_ = 0, const PresentRegionKHR* pRegions_ = nullptr )
+      : sType( StructureType::ePresentRegionsKHR )
+      , pNext( nullptr )
+      , swapchainCount( swapchainCount_ )
+      , pRegions( pRegions_ )
+    {
+    }
+
+    PresentRegionsKHR( VkPresentRegionsKHR const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(PresentRegionsKHR) );
+    }
+
+    PresentRegionsKHR& operator=( VkPresentRegionsKHR const & rhs )
+    {
+      memcpy( this, &rhs, sizeof(PresentRegionsKHR) );
+      return *this;
+    }
+
+    PresentRegionsKHR& setPNext( const void* pNext_ )
+    {
+      pNext = pNext_;
+      return *this;
+    }
+
+    PresentRegionsKHR& setSwapchainCount( uint32_t swapchainCount_ )
+    {
+      swapchainCount = swapchainCount_;
+      return *this;
+    }
+
+    PresentRegionsKHR& setPRegions( const PresentRegionKHR* pRegions_ )
+    {
+      pRegions = pRegions_;
+      return *this;
+    }
+
+    operator const VkPresentRegionsKHR&() const
+    {
+      return *reinterpret_cast<const VkPresentRegionsKHR*>(this);
+    }
+
+    bool operator==( PresentRegionsKHR const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( swapchainCount == rhs.swapchainCount )
+          && ( pRegions == rhs.pRegions );
+    }
+
+    bool operator!=( PresentRegionsKHR const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    const void* pNext;
+    uint32_t swapchainCount;
+    const PresentRegionKHR* pRegions;
+  };
+  static_assert( sizeof( PresentRegionsKHR ) == sizeof( VkPresentRegionsKHR ), "struct and wrapper have different size!" );
+
   struct PhysicalDeviceIDPropertiesKHX
   {
     operator const VkPhysicalDeviceIDPropertiesKHX&() const
@@ -10064,7 +10245,7 @@ namespace vk
   };
   static_assert( sizeof( PhysicalDeviceIDPropertiesKHX ) == sizeof( VkPhysicalDeviceIDPropertiesKHX ), "struct and wrapper have different size!" );
 
-#ifdef VK_USE_PLATFORM_WIN32_KHR
+#ifdef VK_USE_PLATFORM_WIN32_KHX
   struct ExportMemoryWin32HandleInfoKHX
   {
     ExportMemoryWin32HandleInfoKHX( const SECURITY_ATTRIBUTES* pAttributes_ = nullptr, DWORD dwAccess_ = 0, LPCWSTR name_ = 0 )
@@ -10140,9 +10321,9 @@ namespace vk
     LPCWSTR name;
   };
   static_assert( sizeof( ExportMemoryWin32HandleInfoKHX ) == sizeof( VkExportMemoryWin32HandleInfoKHX ), "struct and wrapper have different size!" );
-#endif /*VK_USE_PLATFORM_WIN32_KHR*/
+#endif /*VK_USE_PLATFORM_WIN32_KHX*/
 
-#ifdef VK_USE_PLATFORM_WIN32_KHR
+#ifdef VK_USE_PLATFORM_WIN32_KHX
   struct MemoryWin32HandlePropertiesKHX
   {
     operator const VkMemoryWin32HandlePropertiesKHX&() const
@@ -10170,7 +10351,7 @@ namespace vk
     uint32_t memoryTypeBits;
   };
   static_assert( sizeof( MemoryWin32HandlePropertiesKHX ) == sizeof( VkMemoryWin32HandlePropertiesKHX ), "struct and wrapper have different size!" );
-#endif /*VK_USE_PLATFORM_WIN32_KHR*/
+#endif /*VK_USE_PLATFORM_WIN32_KHX*/
 
   struct MemoryFdPropertiesKHX
   {
@@ -11839,7 +12020,7 @@ namespace vk
       return *this;
     }
 
-    PhysicalDeviceDiscardRectanglePropertiesEXT& setPNext( const void* pNext_ )
+    PhysicalDeviceDiscardRectanglePropertiesEXT& setPNext( void* pNext_ )
     {
       pNext = pNext_;
       return *this;
@@ -11872,7 +12053,7 @@ namespace vk
     StructureType sType;
 
   public:
-    const void* pNext;
+    void* pNext;
     uint32_t maxDiscardRectangles;
   };
   static_assert( sizeof( PhysicalDeviceDiscardRectanglePropertiesEXT ) == sizeof( VkPhysicalDeviceDiscardRectanglePropertiesEXT ), "struct and wrapper have different size!" );
@@ -17780,7 +17961,8 @@ namespace vk
     eDisplayKhr = VK_DEBUG_REPORT_OBJECT_TYPE_DISPLAY_KHR_EXT,
     eDisplayModeKhr = VK_DEBUG_REPORT_OBJECT_TYPE_DISPLAY_MODE_KHR_EXT,
     eObjectTableNvx = VK_DEBUG_REPORT_OBJECT_TYPE_OBJECT_TABLE_NVX_EXT,
-    eIndirectCommandsLayoutNvx = VK_DEBUG_REPORT_OBJECT_TYPE_INDIRECT_COMMANDS_LAYOUT_NVX_EXT
+    eIndirectCommandsLayoutNvx = VK_DEBUG_REPORT_OBJECT_TYPE_INDIRECT_COMMANDS_LAYOUT_NVX_EXT,
+    eDescriptorUpdateTemplateKhrKHR = VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_KHR_EXT
   };
 
   struct DebugMarkerObjectNameInfoEXT
@@ -19607,7 +19789,7 @@ namespace vk
   };
   static_assert( sizeof( ExportMemoryAllocateInfoKHX ) == sizeof( VkExportMemoryAllocateInfoKHX ), "struct and wrapper have different size!" );
 
-#ifdef VK_USE_PLATFORM_WIN32_KHR
+#ifdef VK_USE_PLATFORM_WIN32_KHX
   struct ImportMemoryWin32HandleInfoKHX
   {
     ImportMemoryWin32HandleInfoKHX( ExternalMemoryHandleTypeFlagBitsKHX handleType_ = ExternalMemoryHandleTypeFlagBitsKHX::eOpaqueFd, HANDLE handle_ = 0 )
@@ -19674,7 +19856,7 @@ namespace vk
     HANDLE handle;
   };
   static_assert( sizeof( ImportMemoryWin32HandleInfoKHX ) == sizeof( VkImportMemoryWin32HandleInfoKHX ), "struct and wrapper have different size!" );
-#endif /*VK_USE_PLATFORM_WIN32_KHR*/
+#endif /*VK_USE_PLATFORM_WIN32_KHX*/
 
   struct ImportMemoryFdInfoKHX
   {
@@ -23280,19 +23462,19 @@ namespace vk
     void trimCommandPoolKHR( CommandPool commandPool, CommandPoolTrimFlagsKHR flags = CommandPoolTrimFlagsKHR() ) const;
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
 
-#ifdef VK_USE_PLATFORM_WIN32_KHR
+#ifdef VK_USE_PLATFORM_WIN32_KHX
     Result getMemoryWin32HandleKHX( DeviceMemory memory, ExternalMemoryHandleTypeFlagBitsKHX handleType, HANDLE* pHandle ) const;
 #ifndef VULKAN_HPP_DISABLE_ENHANCED_MODE
     ResultValueType<HANDLE>::type getMemoryWin32HandleKHX( DeviceMemory memory, ExternalMemoryHandleTypeFlagBitsKHX handleType ) const;
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
-#endif /*VK_USE_PLATFORM_WIN32_KHR*/
+#endif /*VK_USE_PLATFORM_WIN32_KHX*/
 
-#ifdef VK_USE_PLATFORM_WIN32_KHR
+#ifdef VK_USE_PLATFORM_WIN32_KHX
     Result getMemoryWin32HandlePropertiesKHX( ExternalMemoryHandleTypeFlagBitsKHX handleType, HANDLE handle, MemoryWin32HandlePropertiesKHX* pMemoryWin32HandleProperties ) const;
 #ifndef VULKAN_HPP_DISABLE_ENHANCED_MODE
     ResultValueType<MemoryWin32HandlePropertiesKHX>::type getMemoryWin32HandlePropertiesKHX( ExternalMemoryHandleTypeFlagBitsKHX handleType, HANDLE handle ) const;
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
-#endif /*VK_USE_PLATFORM_WIN32_KHR*/
+#endif /*VK_USE_PLATFORM_WIN32_KHX*/
 
     Result getMemoryFdKHX( DeviceMemory memory, ExternalMemoryHandleTypeFlagBitsKHX handleType, int* pFd ) const;
 #ifndef VULKAN_HPP_DISABLE_ENHANCED_MODE
@@ -25231,7 +25413,7 @@ namespace vk
     vkTrimCommandPoolKHR( m_device, static_cast<VkCommandPool>( commandPool ), static_cast<VkCommandPoolTrimFlagsKHR>( flags ) );
   }
 
-#ifdef VK_USE_PLATFORM_WIN32_KHR
+#ifdef VK_USE_PLATFORM_WIN32_KHX
   VULKAN_HPP_INLINE Result Device::getMemoryWin32HandleKHX( DeviceMemory memory, ExternalMemoryHandleTypeFlagBitsKHX handleType, HANDLE* pHandle ) const
   {
     return static_cast<Result>( vkGetMemoryWin32HandleKHX( m_device, static_cast<VkDeviceMemory>( memory ), static_cast<VkExternalMemoryHandleTypeFlagBitsKHX>( handleType ), pHandle ) );
@@ -25244,9 +25426,9 @@ namespace vk
     return createResultValue( result, handle, "vk::Device::getMemoryWin32HandleKHX" );
   }
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
-#endif /*VK_USE_PLATFORM_WIN32_KHR*/
+#endif /*VK_USE_PLATFORM_WIN32_KHX*/
 
-#ifdef VK_USE_PLATFORM_WIN32_KHR
+#ifdef VK_USE_PLATFORM_WIN32_KHX
   VULKAN_HPP_INLINE Result Device::getMemoryWin32HandlePropertiesKHX( ExternalMemoryHandleTypeFlagBitsKHX handleType, HANDLE handle, MemoryWin32HandlePropertiesKHX* pMemoryWin32HandleProperties ) const
   {
     return static_cast<Result>( vkGetMemoryWin32HandlePropertiesKHX( m_device, static_cast<VkExternalMemoryHandleTypeFlagBitsKHX>( handleType ), handle, reinterpret_cast<VkMemoryWin32HandlePropertiesKHX*>( pMemoryWin32HandleProperties ) ) );
@@ -25259,7 +25441,7 @@ namespace vk
     return createResultValue( result, memoryWin32HandleProperties, "vk::Device::getMemoryWin32HandlePropertiesKHX" );
   }
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
-#endif /*VK_USE_PLATFORM_WIN32_KHR*/
+#endif /*VK_USE_PLATFORM_WIN32_KHX*/
 
   VULKAN_HPP_INLINE Result Device::getMemoryFdKHX( DeviceMemory memory, ExternalMemoryHandleTypeFlagBitsKHX handleType, int* pFd ) const
   {
@@ -28641,6 +28823,7 @@ namespace vk
     case StructureType::eD3D12FenceSubmitInfoKHX: return "D3D12FenceSubmitInfoKHX";
     case StructureType::eImportSemaphoreFdInfoKHX: return "ImportSemaphoreFdInfoKHX";
     case StructureType::ePhysicalDevicePushDescriptorPropertiesKHR: return "PhysicalDevicePushDescriptorPropertiesKHR";
+    case StructureType::ePresentRegionsKHR: return "PresentRegionsKHR";
     case StructureType::eDescriptorUpdateTemplateCreateInfoKHR: return "DescriptorUpdateTemplateCreateInfoKHR";
     case StructureType::eObjectTableCreateInfoNVX: return "ObjectTableCreateInfoNVX";
     case StructureType::eIndirectCommandsLayoutCreateInfoNVX: return "IndirectCommandsLayoutCreateInfoNVX";
@@ -29625,6 +29808,7 @@ namespace vk
     case DebugReportObjectTypeEXT::eDisplayModeKhr: return "DisplayModeKhr";
     case DebugReportObjectTypeEXT::eObjectTableNvx: return "ObjectTableNvx";
     case DebugReportObjectTypeEXT::eIndirectCommandsLayoutNvx: return "IndirectCommandsLayoutNvx";
+    case DebugReportObjectTypeEXT::eDescriptorUpdateTemplateKhrKHR: return "DescriptorUpdateTemplateKhrKHR";
     default: return "invalid";
     }
   }
