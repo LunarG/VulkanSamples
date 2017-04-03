@@ -4285,11 +4285,9 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorUpdateTemplateKHR(VkDevice device
     }
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     VkResult result = VK_SUCCESS;
-    if (dev_data->dispatch_table.CreateDescriptorUpdateTemplateKHR) {
         result =
             dev_data->dispatch_table.CreateDescriptorUpdateTemplateKHR(device, pCreateInfo, pAllocator, pDescriptorUpdateTemplate);
         // TODO: Add tracking of VkDescriptorUpdateTemplateKHR
-    }
     return result;
 }
 
@@ -4304,9 +4302,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyDescriptorUpdateTemplateKHR(VkDevice device,
     lock.unlock();
     if (!skip_call) {
         layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-        if (dev_data->dispatch_table.DestroyDescriptorUpdateTemplateKHR) {
-            dev_data->dispatch_table.DestroyDescriptorUpdateTemplateKHR(device, descriptorUpdateTemplate, pAllocator);
-        }
+        dev_data->dispatch_table.DestroyDescriptorUpdateTemplateKHR(device, descriptorUpdateTemplate, pAllocator);
     }
 }
 
@@ -4324,9 +4320,7 @@ VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSetWithTemplateKHR(VkDevice device, V
     lock.unlock();
     if (!skip_call) {
         layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-        if (dev_data->dispatch_table.UpdateDescriptorSetWithTemplateKHR) {
-            dev_data->dispatch_table.UpdateDescriptorSetWithTemplateKHR(device, descriptorSet, descriptorUpdateTemplate, pData);
-        }
+        dev_data->dispatch_table.UpdateDescriptorSetWithTemplateKHR(device, descriptorSet, descriptorUpdateTemplate, pData);
     }
 }
 
@@ -4344,10 +4338,7 @@ VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetWithTemplateKHR(VkCommandBuffer c
     lock.unlock();
     if (!skip_call) {
         layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
-        if (dev_data->dispatch_table.CmdPushDescriptorSetWithTemplateKHR) {
-            dev_data->dispatch_table.CmdPushDescriptorSetWithTemplateKHR(commandBuffer, descriptorUpdateTemplate, layout, set,
-                                                                         pData);
-        }
+        dev_data->dispatch_table.CmdPushDescriptorSetWithTemplateKHR(commandBuffer, descriptorUpdateTemplate, layout, set, pData);
     }
 }
 
@@ -4363,9 +4354,7 @@ VKAPI_ATTR void VKAPI_CALL TrimCommandPoolKHR(VkDevice device, VkCommandPool com
     lock.unlock();
     if (!skip_call) {
         layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-        if (dev_data->dispatch_table.TrimCommandPoolKHR) {
-            dev_data->dispatch_table.TrimCommandPoolKHR(device, commandPool, flags);
-        }
+        dev_data->dispatch_table.TrimCommandPoolKHR(device, commandPool, flags);
     }
 }
 
@@ -4769,10 +4758,7 @@ VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectTagEXT(VkDevice device, VkDeb
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-    VkResult result = VK_SUCCESS;
-    if (dev_data->dispatch_table.DebugMarkerSetObjectTagEXT) {
-        result = dev_data->dispatch_table.DebugMarkerSetObjectTagEXT(device, pTagInfo);
-    }
+    VkResult result = dev_data->dispatch_table.DebugMarkerSetObjectTagEXT(device, pTagInfo);
     return result;
 }
 
@@ -4786,10 +4772,7 @@ VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectNameEXT(VkDevice device, VkDe
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-    VkResult result = VK_SUCCESS;
-    if (dev_data->dispatch_table.DebugMarkerSetObjectNameEXT) {
-        result = dev_data->dispatch_table.DebugMarkerSetObjectNameEXT(device, pNameInfo);
-    }
+    VkResult result = dev_data->dispatch_table.DebugMarkerSetObjectNameEXT(device, pNameInfo);
     return result;
 }
 
@@ -4877,10 +4860,7 @@ VKAPI_ATTR VkResult VKAPI_CALL DisplayPowerControlEXT(VkDevice device, VkDisplay
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-    VkResult result = VK_SUCCESS;
-    if (dev_data->dispatch_table.DisplayPowerControlEXT) {
-        result = dev_data->dispatch_table.DisplayPowerControlEXT(device, display, pDisplayPowerInfo);
-    }
+    VkResult result = dev_data->dispatch_table.DisplayPowerControlEXT(device, display, pDisplayPowerInfo);
     return result;
 }
 
@@ -4895,13 +4875,10 @@ VKAPI_ATTR VkResult VKAPI_CALL RegisterDeviceEventEXT(VkDevice device, const VkD
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-    VkResult result = VK_SUCCESS;
-    if (dev_data->dispatch_table.RegisterDeviceEventEXT) {
-        result = dev_data->dispatch_table.RegisterDeviceEventEXT(device, pDeviceEventInfo, pAllocator, pFence);
-        if (result == VK_SUCCESS && pFence != NULL) {
-            std::lock_guard<std::mutex> create_lock(global_lock);
-            CreateObject(device, *pFence, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, pAllocator);
-        }
+    VkResult result = dev_data->dispatch_table.RegisterDeviceEventEXT(device, pDeviceEventInfo, pAllocator, pFence);
+    if (result == VK_SUCCESS && pFence != NULL) {
+        std::lock_guard<std::mutex> create_lock(global_lock);
+        CreateObject(device, *pFence, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, pAllocator);
     }
     return result;
 }
@@ -4918,13 +4895,10 @@ VKAPI_ATTR VkResult VKAPI_CALL RegisterDisplayEventEXT(VkDevice device, VkDispla
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-    VkResult result = VK_SUCCESS;
-    if (dev_data->dispatch_table.RegisterDisplayEventEXT) {
-        result = dev_data->dispatch_table.RegisterDisplayEventEXT(device, display, pDisplayEventInfo, pAllocator, pFence);
-        if (result == VK_SUCCESS && pFence != NULL) {
-            std::lock_guard<std::mutex> create_lock(global_lock);
-            CreateObject(device, *pFence, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, pAllocator);
-        }
+    VkResult result = dev_data->dispatch_table.RegisterDisplayEventEXT(device, display, pDisplayEventInfo, pAllocator, pFence);
+    if (result == VK_SUCCESS && pFence != NULL) {
+        std::lock_guard<std::mutex> create_lock(global_lock);
+        CreateObject(device, *pFence, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, pAllocator);
     }
     return result;
 }
@@ -4943,10 +4917,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainCounterEXT(VkDevice device, VkSwapcha
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-    VkResult result = VK_SUCCESS;
-    if (dev_data->dispatch_table.GetSwapchainCounterEXT) {
-        result = dev_data->dispatch_table.GetSwapchainCounterEXT(device, swapchain, counter, pCounterValue);
-    }
+    VkResult result = dev_data->dispatch_table.GetSwapchainCounterEXT(device, swapchain, counter, pCounterValue);
     return result;
 }
 
@@ -5104,10 +5075,8 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateIndirectCommandsLayoutNVX(VkDevice device,
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-    VkResult result = VK_SUCCESS;
-    if (dev_data->dispatch_table.CreateIndirectCommandsLayoutNVX) {
-        result = dev_data->dispatch_table.CreateIndirectCommandsLayoutNVX(device, pCreateInfo, pAllocator, pIndirectCommandsLayout);
-    }
+    VkResult result =
+        dev_data->dispatch_table.CreateIndirectCommandsLayoutNVX(device, pCreateInfo, pAllocator, pIndirectCommandsLayout);
     return result;
 }
 
@@ -5120,9 +5089,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyIndirectCommandsLayoutNVX(VkDevice device, VkI
     lock.unlock();
     if (!skip_call) {
         layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-        if (dev_data->dispatch_table.DestroyIndirectCommandsLayoutNVX) {
-            dev_data->dispatch_table.DestroyIndirectCommandsLayoutNVX(device, indirectCommandsLayout, pAllocator);
-        }
+        dev_data->dispatch_table.DestroyIndirectCommandsLayoutNVX(device, indirectCommandsLayout, pAllocator);
     }
 }
 
@@ -5137,10 +5104,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateObjectTableNVX(VkDevice device, const VkObj
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-    VkResult result = VK_SUCCESS;
-    if (dev_data->dispatch_table.CreateObjectTableNVX) {
-        result = dev_data->dispatch_table.CreateObjectTableNVX(device, pCreateInfo, pAllocator, pObjectTable);
-    }
+    VkResult result = dev_data->dispatch_table.CreateObjectTableNVX(device, pCreateInfo, pAllocator, pObjectTable);
     return result;
 }
 
@@ -5153,9 +5117,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyObjectTableNVX(VkDevice device, VkObjectTableN
     lock.unlock();
     if (!skip_call) {
         layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-        if (dev_data->dispatch_table.DestroyObjectTableNVX) {
-            dev_data->dispatch_table.DestroyObjectTableNVX(device, objectTable, pAllocator);
-        }
+        dev_data->dispatch_table.DestroyObjectTableNVX(device, objectTable, pAllocator);
     }
 }
 
@@ -5171,11 +5133,8 @@ VKAPI_ATTR VkResult VKAPI_CALL RegisterObjectsNVX(VkDevice device, VkObjectTable
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-    VkResult result = VK_SUCCESS;
-    if (dev_data->dispatch_table.RegisterObjectsNVX) {
-        result =
-            dev_data->dispatch_table.RegisterObjectsNVX(device, objectTable, objectCount, ppObjectTableEntries, pObjectIndices);
-    }
+    VkResult result =
+        dev_data->dispatch_table.RegisterObjectsNVX(device, objectTable, objectCount, ppObjectTableEntries, pObjectIndices);
     return result;
 }
 
@@ -5190,10 +5149,8 @@ VKAPI_ATTR VkResult VKAPI_CALL UnregisterObjectsNVX(VkDevice device, VkObjectTab
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-    VkResult result = VK_SUCCESS;
-    if (dev_data->dispatch_table.UnregisterObjectsNVX) {
-        result = dev_data->dispatch_table.UnregisterObjectsNVX(device, objectTable, objectCount, pObjectEntryTypes, pObjectIndices);
-    }
+    VkResult result =
+        dev_data->dispatch_table.UnregisterObjectsNVX(device, objectTable, objectCount, pObjectEntryTypes, pObjectIndices);
     return result;
 }
 
