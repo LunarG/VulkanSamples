@@ -89,7 +89,7 @@ void ShellWin32::create_window() {
 PFN_vkGetInstanceProcAddr ShellWin32::load_vk() {
     const char filename[] = "vulkan-1.dll";
     HMODULE mod;
-    PFN_vkGetInstanceProcAddr get_proc;
+    PFN_vkGetInstanceProcAddr get_proc = nullptr;
 
     mod = LoadLibrary(filename);
     if (mod) {
