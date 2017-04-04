@@ -1067,14 +1067,7 @@ void VkIndexBufferObj::Bind(VkCommandBuffer commandBuffer, VkDeviceSize offset) 
 VkIndexType VkIndexBufferObj::GetIndexType() { return m_indexType; }
 
 VkPipelineShaderStageCreateInfo VkShaderObj::GetStageCreateInfo() const {
-    VkPipelineShaderStageCreateInfo stageInfo = {};
-
-    stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    stageInfo.stage = m_stage;
-    stageInfo.module = handle();
-    stageInfo.pName = m_name;
-
-    return stageInfo;
+    return m_stage_info;
 }
 
 VkShaderObj::VkShaderObj(VkDeviceObj *device, const char *shader_code, VkShaderStageFlagBits stage, VkRenderFramework *framework,
@@ -1083,12 +1076,17 @@ VkShaderObj::VkShaderObj(VkDeviceObj *device, const char *shader_code, VkShaderS
     std::vector<unsigned int> spv;
     VkShaderModuleCreateInfo moduleCreateInfo;
 
-    m_stage = stage;
     m_device = device;
-    m_name = name;
+    m_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    m_stage_info.pNext = nullptr;
+    m_stage_info.flags = 0;
+    m_stage_info.stage = stage;
+    m_stage_info.module = VK_NULL_HANDLE;
+    m_stage_info.pName = name;
+    m_stage_info.pSpecializationInfo = nullptr;
 
     moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    moduleCreateInfo.pNext = NULL;
+    moduleCreateInfo.pNext = nullptr;
 
     framework->GLSLtoSPV(stage, shader_code, spv);
     moduleCreateInfo.pCode = spv.data();
@@ -1096,6 +1094,7 @@ VkShaderObj::VkShaderObj(VkDeviceObj *device, const char *shader_code, VkShaderS
     moduleCreateInfo.flags = 0;
 
     err = init_try(*m_device, moduleCreateInfo);
+    m_stage_info.module = handle();
     assert(VK_SUCCESS == err);
 }
 

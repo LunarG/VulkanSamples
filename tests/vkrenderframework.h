@@ -392,9 +392,7 @@ class VkShaderObj : public vk_testing::ShaderModule {
     VkPipelineShaderStageCreateInfo GetStageCreateInfo() const;
 
    protected:
-    VkPipelineShaderStageCreateInfo stage_info;
-    VkShaderStageFlagBits m_stage;
-    char const *m_name;
+    VkPipelineShaderStageCreateInfo m_stage_info;
     VkDeviceObj *m_device;
 };
 
