@@ -438,7 +438,7 @@ class VkPipelineObj : public vk_testing::Pipeline {
     vector<VkViewport> m_viewports;
     vector<VkRect2D> m_scissors;
     VkDeviceObj *m_device;
-    vector<VkShaderObj *> m_shaderObjs;
+    vector<VkPipelineShaderStageCreateInfo> m_shaderStages;
     vector<int> m_vertexBufferBindings;
     vector<VkPipelineColorBlendAttachmentState> m_colorAttachments;
     int m_vertexBufferCount;

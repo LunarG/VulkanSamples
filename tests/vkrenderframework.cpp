@@ -1162,7 +1162,9 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device) {
     memset(&m_pd_state, 0, sizeof(m_pd_state));
 };
 
-void VkPipelineObj::AddShader(VkShaderObj *shader) { m_shaderObjs.push_back(shader); }
+void VkPipelineObj::AddShader(VkShaderObj *shader) {
+    m_shaderStages.push_back(shader->GetStageCreateInfo());
+}
 
 void VkPipelineObj::AddVertexInputAttribs(VkVertexInputAttributeDescription *vi_attrib, uint32_t count) {
     m_vi_state.pVertexAttributeDescriptions = vi_attrib;
@@ -1218,12 +1220,8 @@ void VkPipelineObj::SetRasterization(const VkPipelineRasterizationStateCreateInf
 void VkPipelineObj::SetTessellation(const VkPipelineTessellationStateCreateInfo *te_state) { m_te_state = *te_state; }
 
 void VkPipelineObj::InitGraphicsPipelineCreateInfo(VkGraphicsPipelineCreateInfo *gp_ci) {
-    gp_ci->stageCount = m_shaderObjs.size();
-    gp_ci->pStages = new VkPipelineShaderStageCreateInfo[gp_ci->stageCount];
-
-    for (size_t i = 0; i < m_shaderObjs.size(); i++) {
-        ((VkPipelineShaderStageCreateInfo *)gp_ci->pStages)[i] = m_shaderObjs[i]->GetStageCreateInfo();
-    }
+    gp_ci->stageCount = m_shaderStages.size();
+    gp_ci->pStages = m_shaderStages.size() ? &m_shaderStages[0] : nullptr;
 
     m_vi_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     gp_ci->pVertexInputState = &m_vi_state;
