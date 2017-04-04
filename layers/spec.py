@@ -36,7 +36,7 @@ gen_db = False # set to True when '-gendb <filename>' option provided
 spec_compare = False # set to True with '-compare <db_filename>' option
 # This is the root spec link that is used in error messages to point users to spec sections
 #old_spec_url = "https://www.khronos.org/registry/vulkan/specs/1.0/xhtml/vkspec.html"
-spec_url = "https://www.khronos.org/registry/vulkan/specs/1.0-extensions/xhtml/vkspec.html"
+spec_url = "https://www.khronos.org/registry/vulkan/specs/1.0-extensions/html/vkspec.html"
 # After the custom validation error message, this is the prefix for the standard message that includes the
 #  spec valid usage language as well as the link to nearest section of spec to that language
 error_msg_prefix = "For more information refer to Vulkan Spec Section "
@@ -66,6 +66,12 @@ class Specification:
         self.error_db_dict = {} # dict of previous error values read in from database file
         self.delimiter = '~^~' # delimiter for db file
         self.implicit_count = 0
+        # Global dicts used for tracking spec updates from old to new VUs
+        self.orig_full_msg_dict = {} # Original full error msg to ID mapping
+        self.orig_no_link_msg_dict = {} # Pair of API,Original msg w/o spec link to ID list mapping
+        self.orig_core_msg_dict = {} # Pair of API,Original core msg (no link or section) to ID list mapping
+        self.last_mapped_id = -10 # start as negative so we don't hit an accidental sequence
+        self.orig_test_imp_enums = set() # Track old enums w/ tests and/or implementation to flag any that aren't carried fwd
         self.copyright = """/* THIS FILE IS GENERATED.  DO NOT EDIT. */
 
 /*
@@ -145,6 +151,11 @@ class Specification:
                 if len(code_text_list) > 1 and code_text_list[1].startswith('vk'):
                     api_function = code_text_list[1].strip('(')
                     print "Found API function: %s" % (api_function)
+                    prev_link = api_function
+                    print "Updated prev link to %s" % (prev_link)
+                elif tag.get('id') != None:
+                    prev_link = tag.get('id')
+                    print "Updated prev link to %s" % (prev_link)
             #elif tag.tag == '{http://www.w3.org/1999/xhtml}div' and tag.get('class') == 'sidebar':
             elif tag.tag == 'div' and tag.get('class') == 'content':
                 # parse down sidebar to check for valid usage cases
@@ -158,7 +169,7 @@ class Specification:
                         else:
                             implicit = False
                     elif valid_usage and elem.tag == 'li': # grab actual valid usage requirements
-                        error_msg_str = "%s '%s' which states '%s' (%s#%s)" % (error_msg_prefix, prev_heading, "".join(elem.itertext()).replace('\n', ''), spec_url, prev_link)
+                        error_msg_str = "%s '%s' which states '%s' (%s#%s)" % (error_msg_prefix, prev_heading, "".join(elem.itertext()).replace('\n', ' ').strip(), spec_url, prev_link)
                         # Some txt has multiple spaces so split on whitespace and join w/ single space
                         error_msg_str = " ".join(error_msg_str.split())
                         if error_msg_str in error_strings:
@@ -296,26 +307,101 @@ class Specification:
                 if unique_id > max_id:
                     max_id = unique_id
         return (db_dict, max_id)
+    # This is a helper function to do bookkeeping on data structs when comparing original
+    #   error ids to current error ids
+    # It tracks all updated enums in mapped_enums and removes those enums from any lists
+    #  in the no_link and core dicts
+    def _updateMappedEnum(self, mapped_enums, enum):
+        mapped_enums.add(enum)
+        # When looking for ID to map, we favor sequences so track last ID mapped
+        self.last_mapped_id = int(enum.split('_')[-1])
+        for msg in self.orig_no_link_msg_dict:
+            if enum in self.orig_no_link_msg_dict[msg]:
+                self.orig_no_link_msg_dict[msg].remove(enum)
+        for msg in self.orig_core_msg_dict:
+            if enum in self.orig_core_msg_dict[msg]:
+                self.orig_core_msg_dict[msg].remove(enum)
+        return mapped_enums
+    # Check all ids in given id list to see if one is in sequence from last mapped id
+    def findSeqID(self, id_list):
+        next_seq_id = self.last_mapped_id + 1
+        for map_id in id_list:
+            id_num = int(map_id.split('_')[-1])
+            if id_num == next_seq_id:
+                return True
+        return False
+    # Use the next ID in sequence. This should only be called if findSeqID() just returned True
+    def useSeqID(self, id_list, mapped_enums):
+        next_seq_id = self.last_mapped_id + 1
+        mapped_id = ''
+        for map_id in id_list:
+            id_num = int(map_id.split('_')[-1])
+            if id_num == next_seq_id:
+                mapped_id = map_id
+                self._updateMappedEnum(mapped_enums, mapped_id)
+                return (mapped_enums, mapped_id)
+        return (mapped_enums, mapped_id)
     # Compare unique ids from original database to data generated from updated spec
-    # 1. If a new id and error code exactly match original, great
-    # 2. If new id is not in original, but exact error code is, need to use original error code
-    # 3. If new id and new error are not in original, make sure new id picks up from end of original list
-    # 4. If new id in original, but error strings don't match then:
-    #   4a. If error string has exact match in original, update new to use original
-    #   4b. If error string not in original, may be updated error message, manually address
+    # First, make 3 separate mappings of original error messages:
+    #  1. Map the full error message to its id. There should only be 1 ID per full message (orig_full_msg_dict)
+    #  2. Map the intial portion of the message w/o link to list of IDs. There May be a little aliasing here (orig_no_link_msg_dict)
+    #  3. Map the core spec message w/o link or section info to list of IDs. There will be lots of aliasing here (orig_core_msg_dict)
+    # Also store a set of all IDs that have been mapped to that will serve 2 purposes:
+    #  1. Pull IDs out of the above dicts as they're remapped since we know they won't be used
+    #  2. Make sure that we don't re-use an ID
+    # The general algorithm for remapping from new IDs to old IDs is:
+    # 1. If there is a user-specified remapping, use that above all else
+    # 2. Elif the new error message hits in orig_full_msg_dict then use that ID
+    # 3. Elif the new error message hits orig_no_link_msg_dict then
+    #   a. If only a single ID, use it
+    #   b. Elif multiple IDs & one matches last used ID in sequence, use it
+    #   c. Else assign a new ID and flag for manual remapping
+    # 4. Elif the new error message hits orig_core_msg_dict then
+    #   a. If only a single ID, use it
+    #   b. Elif multiple IDs & one matches last used ID in sequence, use it
+    #   c. Else assign a new ID and flag for manual remapping
+    # 5. Else - No matches use a new ID
     def compareDB(self, orig_error_msg_dict, max_id):
         """Compare orig database dict to new dict, report out findings, and return potential new dict for parsed spec"""
         # First create reverse dicts of err_strings to IDs
         next_id = max_id + 1
-        orig_err_to_id_dict = {}
+        ids_parsed = 0
+        mapped_enums = set() # store all enums that have been mapped to avoid re-use
         # Create an updated dict in-place that will be assigned to self.val_error_dict when done
         updated_val_error_dict = {}
+        # Create a few separate mappings of error msg formats to associated ID(s)
         for enum in orig_error_msg_dict:
-            orig_err_to_id_dict[orig_error_msg_dict[enum]] = enum
-        new_err_to_id_dict = {}
-        for enum in self.val_error_dict:
-            new_err_to_id_dict[self.val_error_dict[enum]['error_msg']] = enum
-        ids_parsed = 0
+            api = self.error_db_dict[enum]['api']
+            original_full_msg = orig_error_msg_dict[enum]
+            orig_no_link_msg = "%s,%s" % (api, original_full_msg.split('(https', 1)[0])
+            orig_core_msg = "%s,%s" % (api, orig_no_link_msg.split(' which states ', 1)[-1])
+            orig_core_msg_period = "%s.' " % (orig_core_msg[:-2])
+            print "Orig core msg:%s\nOrig cw/o per:%s" % (orig_core_msg, orig_core_msg_period)
+            
+            # First store mapping of full error msg to ID, shouldn't have duplicates
+            if original_full_msg in self.orig_full_msg_dict:
+                print "ERROR: Found duplicate full msg in original full error messages: %s" % (original_full_msg)
+            self.orig_full_msg_dict[original_full_msg] = enum
+            # Now map API,no_link_msg to list of IDs
+            if orig_no_link_msg in self.orig_no_link_msg_dict:
+                self.orig_no_link_msg_dict[orig_no_link_msg].append(enum)
+            else:
+                self.orig_no_link_msg_dict[orig_no_link_msg] = [enum]
+            # Finally map API,core_msg to list of IDs
+            if orig_core_msg in self.orig_core_msg_dict:
+                self.orig_core_msg_dict[orig_core_msg].append(enum)
+            else:
+                self.orig_core_msg_dict[orig_core_msg] = [enum]
+            if orig_core_msg_period in self.orig_core_msg_dict:
+                self.orig_core_msg_dict[orig_core_msg_period].append(enum)
+                print "Added msg '%s' w/ enum %s to orig_core_msg_dict" % (orig_core_msg_period, enum)
+            else:
+                print "Added msg '%s' w/ enum %s to orig_core_msg_dict" % (orig_core_msg_period, enum)
+                self.orig_core_msg_dict[orig_core_msg_period] = [enum]
+            # Also capture all enums that have a test and/or implementation
+            if self.error_db_dict[enum]['check_implemented'] == 'Y' or self.error_db_dict[enum]['testname'] not in ['None','Unknown']:
+                print "Recording %s with implemented value %s and testname %s" % (enum, self.error_db_dict[enum]['check_implemented'], self.error_db_dict[enum]['testname'])
+                self.orig_test_imp_enums.add(enum)
         # Values to be used for the update dict
         update_enum = ''
         update_msg = ''
@@ -329,68 +415,72 @@ class Specification:
             update_msg = self.val_error_dict[enum]['error_msg']
             update_api = self.val_error_dict[enum]['api']
             implicit = self.val_error_dict[enum]['implicit']
+            new_full_msg = update_msg
+            new_no_link_msg = "%s,%s" % (update_api, new_full_msg.split('(https', 1)[0])
+            new_core_msg = "%s,%s" % (update_api, new_no_link_msg.split(' which states ', 1)[-1])
             # Any user-forced remap takes precendence
             if enum_list[-1] in remap_dict:
                 enum_list[-1] = remap_dict[enum_list[-1]]
+                self.last_mapped_id = int(enum_list[-1])
                 new_enum = "_".join(enum_list)
                 print "NOTE: Using user-supplied remap to force %s to be %s" % (enum, new_enum)
                 update_enum = new_enum
-            elif enum in orig_error_msg_dict:
-                if self.val_error_dict[enum]['error_msg'] == orig_error_msg_dict[enum]:
-                    print "Exact match for enum %s" % (enum)
-                    # Nothing to see here
-                    if enum in updated_val_error_dict:
-                        print "ERROR: About to overwrite entry for %s" % (enum)
-                elif self.val_error_dict[enum]['error_msg'] in orig_err_to_id_dict:
-                    # Same value w/ different error id, need to anchor to original id
-                    print "Need to switch new id %s to original id %s" % (enum, orig_err_to_id_dict[self.val_error_dict[enum]['error_msg']])
-                    # Update id at end of new enum to be same id from original enum
-                    enum_list[-1] = orig_err_to_id_dict[self.val_error_dict[enum]['error_msg']].split('_')[-1]
-                    new_enum = "_".join(enum_list)
-                    if new_enum in updated_val_error_dict:
-                        print "ERROR: About to overwrite entry for %s" % (new_enum)
-                    update_enum = new_enum
+            elif new_full_msg in self.orig_full_msg_dict:
+                orig_enum = self.orig_full_msg_dict[new_full_msg]
+                print "Found exact match for full error msg so switching new ID %s to original ID %s" % (enum, orig_enum)
+                mapped_enums = self._updateMappedEnum(mapped_enums, orig_enum)
+                update_enum = orig_enum
+            elif new_no_link_msg in self.orig_no_link_msg_dict:
+                # Try to get single ID to map to from no_link matches
+                if len(self.orig_no_link_msg_dict[new_no_link_msg]) == 1: # Only 1 id, use it!
+                    orig_enum = self.orig_no_link_msg_dict[new_no_link_msg][0]
+                    print "Found no-link err msg match w/ only 1 ID match so switching new ID %s to original ID %s" % (enum, orig_enum)
+                    mapped_enums = self._updateMappedEnum(mapped_enums, orig_enum)
+                    update_enum = orig_enum
                 else:
-                    # No error match:
-                    #  First check if only link has changed, in which case keep ID but update message
-                    orig_msg_list = orig_error_msg_dict[enum].split('(', 1)
-                    new_msg_list = self.val_error_dict[enum]['error_msg'].split('(', 1)
-                    if orig_msg_list[0] == new_msg_list[0]: # Msg is same bug link has changed, keep enum & update msg
-                        print "NOTE: Found that only spec link changed for %s so keeping same id w/ new link" % (enum)
-                    #  This seems to be a new error so need to pick it up from end of original unique ids & flag for review
+                    if self.findSeqID(self.orig_no_link_msg_dict[new_no_link_msg]): # If we have an id in sequence, use it!
+                        (mapped_enums, update_enum) = self.useSeqID(self.orig_no_link_msg_dict[new_no_link_msg], mapped_enums)
+                        print "Found no-link err msg match w/ seq ID match so switching new ID %s to original ID %s" % (enum, update_enum)
                     else:
                         enum_list[-1] = "%05d" % (next_id)
                         new_enum = "_".join(enum_list)
                         next_id = next_id + 1
-                        print "MANUALLY VERIFY: Updated new enum %s to be unique %s. Make sure new error msg is actually unique and not just changed" % (enum, new_enum)
-                        print "   New error string: %s" % (self.val_error_dict[enum]['error_msg'])
-                        if new_enum in updated_val_error_dict:
-                            print "ERROR: About to overwrite entry for %s" % (new_enum)
+                        print "Found no-link msg match but have multiple matched IDs w/o a sequence ID, updating ID %s to unique ID %s for msg %s" % (enum, new_enum, new_no_link_msg)
                         update_enum = new_enum
-            else: # new enum is not in orig db
-                if self.val_error_dict[enum]['error_msg'] in orig_err_to_id_dict:
-                    print "New enum %s not in orig dict, but exact error message matches original unique id %s" % (enum, orig_err_to_id_dict[self.val_error_dict[enum]['error_msg']])
-                    # Update new unique_id to use original
-                    enum_list[-1] = orig_err_to_id_dict[self.val_error_dict[enum]['error_msg']].split('_')[-1]
-                    new_enum = "_".join(enum_list)
-                    if new_enum in updated_val_error_dict:
-                        print "ERROR: About to overwrite entry for %s" % (new_enum)
-                    update_enum = new_enum
+            elif new_core_msg in self.orig_core_msg_dict:
+                # Do similar stuff here
+                if len(self.orig_core_msg_dict[new_core_msg]) == 1:
+                    orig_enum = self.orig_core_msg_dict[new_core_msg][0]
+                    print "Found core err msg match w/ only 1 ID match so switching new ID %s to original ID %s" % (enum, orig_enum)
+                    mapped_enums = self._updateMappedEnum(mapped_enums, orig_enum)
+                    update_enum = orig_enum
                 else:
-                    enum_list[-1] = "%05d" % (next_id)
-                    new_enum = "_".join(enum_list)
-                    next_id = next_id + 1
-                    print "Completely new id and error code, update new id from %s to unique %s" % (enum, new_enum)
-                    if new_enum in updated_val_error_dict:
-                        print "ERROR: About to overwrite entry for %s" % (new_enum)
-                    update_enum = new_enum
+                    if self.findSeqID(self.orig_core_msg_dict[new_core_msg]):
+                        (mapped_enums, update_enum) = self.useSeqID(self.orig_core_msg_dict[new_core_msg], mapped_enums)
+                        print "Found core err msg match w/ seq ID match so switching new ID %s to original ID %s" % (enum, update_enum)
+                    else:
+                        enum_list[-1] = "%05d" % (next_id)
+                        new_enum = "_".join(enum_list)
+                        next_id = next_id + 1
+                        print "Found core msg match but have multiple matched IDs w/o a sequence ID, updating ID %s to unique ID %s for msg %s" % (enum, new_enum, new_no_link_msg)
+                        update_enum = new_enum
+            #  This seems to be a new error so need to pick it up from end of original unique ids & flag for review
+            else:
+                enum_list[-1] = "%05d" % (next_id)
+                new_enum = "_".join(enum_list)
+                next_id = next_id + 1
+                print "Completely new id and error code, update new id from %s to unique %s for core message:%s" % (enum, new_enum, new_core_msg)
+                if new_enum in updated_val_error_dict:
+                    print "ERROR: About to overwrite entry for %s" % (new_enum)
+                update_enum = new_enum
             updated_val_error_dict[update_enum] = {}
             updated_val_error_dict[update_enum]['error_msg'] = update_msg
             updated_val_error_dict[update_enum]['api'] = update_api
             updated_val_error_dict[update_enum]['implicit'] = implicit
-        # Assign parsed dict to be the udpated dict based on db compare
+        # Assign parsed dict to be the updated dict based on db compare
         print "In compareDB parsed %d entries" % (ids_parsed)
         return updated_val_error_dict
+
     def validateUpdateDict(self, update_dict):
         """Compare original dict vs. update dict and make sure that all of the checks are still there"""
         # Currently just make sure that the same # of checks as the original checks are there
@@ -402,6 +492,14 @@ class Specification:
             print "Original dict had %d unique_ids, but updated dict has %d!" % (orig_id_count, update_id_count)
             return False
         print "Original dict and updated dict both have %d unique_ids. Great!" % (orig_id_count)
+        # Now flag any original dict enums that had tests and/or checks that are missing from updated
+        for enum in update_dict:
+            if enum in self.orig_test_imp_enums:
+                self.orig_test_imp_enums.remove(enum)
+        if len(self.orig_test_imp_enums) > 0:
+            print "TODO: Have some enums with tests and/or checks implemented that are missing in update:"
+            for enum in sorted(self.orig_test_imp_enums):
+                print "\t%s" % enum
         return True
         # TODO : include some more analysis
 

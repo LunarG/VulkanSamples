@@ -15563,7 +15563,7 @@ TEST_F(VkLayerTest, CreateImageLimitsViolationMinWidth) {
     info.extent.width = 0;
 
     VkImage image;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00716);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02917);
     m_errorMonitor->SetUnexpectedError("parameter pCreateInfo->extent.width must be greater than 0");
     vkCreateImage(m_device->device(), &info, NULL, &image);
     m_errorMonitor->VerifyFound();

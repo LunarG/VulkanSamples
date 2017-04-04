@@ -6909,10 +6909,10 @@ VKAPI_ATTR VkResult VKAPI_CALL BeginCommandBuffer(VkCommandBuffer commandBuffer,
         if (dev_data->globalInFlightCmdBuffers.count(commandBuffer)) {
             skip_call |=
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                        (uint64_t)commandBuffer, __LINE__, VALIDATION_ERROR_00104, "MEM",
+                        (uint64_t)commandBuffer, __LINE__, VALIDATION_ERROR_00103, "MEM",
                         "Calling vkBeginCommandBuffer() on active command buffer 0x%p before it has completed. "
                         "You must check command buffer fence before this call. %s",
-                        commandBuffer, validation_error_map[VALIDATION_ERROR_00104]);
+                        commandBuffer, validation_error_map[VALIDATION_ERROR_00103]);
         }
         clear_cmd_buf_and_mem_references(dev_data, cb_node);
         if (cb_node->createInfo.level != VK_COMMAND_BUFFER_LEVEL_PRIMARY) {
@@ -9915,10 +9915,10 @@ VKAPI_ATTR void VKAPI_CALL CmdExecuteCommands(VkCommandBuffer commandBuffer, uin
             if (VK_COMMAND_BUFFER_LEVEL_PRIMARY == pSubCB->createInfo.level) {
                 skip_call |=
                     log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            reinterpret_cast<uint64_t>(pCommandBuffers[i]), __LINE__, VALIDATION_ERROR_00153, "DS",
+                            reinterpret_cast<uint64_t>(pCommandBuffers[i]), __LINE__, VALIDATION_ERROR_00156, "DS",
                             "vkCmdExecuteCommands() called w/ Primary Cmd Buffer 0x%p in element %u of pCommandBuffers "
                             "array. All cmd buffers in pCommandBuffers array must be secondary. %s",
-                            pCommandBuffers[i], i, validation_error_map[VALIDATION_ERROR_00153]);
+                            pCommandBuffers[i], i, validation_error_map[VALIDATION_ERROR_00156]);
             } else if (pCB->activeRenderPass) {  // Secondary CB w/i RenderPass must have *CONTINUE_BIT set
                 auto secondary_rp_state = GetRenderPassState(dev_data, pSubCB->beginInfo.pInheritanceInfo->renderPass);
                 if (!(pSubCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT)) {
