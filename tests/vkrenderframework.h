@@ -389,7 +389,7 @@ class VkShaderObj : public vk_testing::ShaderModule {
    public:
     VkShaderObj(VkDeviceObj *device, const char *shaderText, VkShaderStageFlagBits stage, VkRenderFramework *framework,
                 char const *name = "main");
-    VkPipelineShaderStageCreateInfo GetStageCreateInfo() const;
+    VkPipelineShaderStageCreateInfo const & GetStageCreateInfo() const;
 
    protected:
     VkPipelineShaderStageCreateInfo m_stage_info;

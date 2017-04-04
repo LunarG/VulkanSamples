@@ -1066,7 +1066,7 @@ void VkIndexBufferObj::Bind(VkCommandBuffer commandBuffer, VkDeviceSize offset) 
 
 VkIndexType VkIndexBufferObj::GetIndexType() { return m_indexType; }
 
-VkPipelineShaderStageCreateInfo VkShaderObj::GetStageCreateInfo() const {
+VkPipelineShaderStageCreateInfo const & VkShaderObj::GetStageCreateInfo() const {
     return m_stage_info;
 }
 
