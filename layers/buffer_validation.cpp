@@ -2450,7 +2450,8 @@ bool PreCallValidateCreateImageView(layer_data *device_data, const VkImageViewCr
         // If this isn't a sparse image, it needs to have memory backing it at CreateImageView time
         skip |= ValidateMemoryIsBoundToImage(device_data, image_state, "vkCreateImageView()", VALIDATION_ERROR_02524);
         // Checks imported from image layer
-        if (create_info->subresourceRange.baseMipLevel >= image_state->createInfo.mipLevels) {
+        if ((create_info->subresourceRange.baseMipLevel + create_info->subresourceRange.levelCount) >
+            image_state->createInfo.mipLevels) {
             std::stringstream ss;
             ss << "vkCreateImageView called with baseMipLevel " << create_info->subresourceRange.baseMipLevel << " for image "
                << create_info->image << " that only has " << image_state->createInfo.mipLevels << " mip levels.";
