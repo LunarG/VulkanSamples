@@ -44,8 +44,6 @@ class VkTestFramework : public ::testing::Test {
 
     VkFormat GetFormat(VkInstance instance, vk_testing::Device *device);
     bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std::vector<unsigned int> &spv);
-
-    static bool m_use_glsl;
 };
 
 class TestEnvironment : public ::testing::Environment {

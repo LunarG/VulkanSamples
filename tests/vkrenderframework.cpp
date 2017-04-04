@@ -1082,7 +1082,6 @@ VkShaderObj::VkShaderObj(VkDeviceObj *device, const char *shader_code, VkShaderS
     VkResult U_ASSERT_ONLY err = VK_SUCCESS;
     std::vector<unsigned int> spv;
     VkShaderModuleCreateInfo moduleCreateInfo;
-    size_t shader_len;
 
     m_stage = stage;
     m_device = device;
@@ -1091,25 +1090,10 @@ VkShaderObj::VkShaderObj(VkDeviceObj *device, const char *shader_code, VkShaderS
     moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     moduleCreateInfo.pNext = NULL;
 
-    if (framework->m_use_glsl) {
-        shader_len = strlen(shader_code);
-        moduleCreateInfo.codeSize = 3 * sizeof(uint32_t) + shader_len + 1;
-        moduleCreateInfo.pCode = (uint32_t *)malloc(moduleCreateInfo.codeSize);
-        moduleCreateInfo.flags = 0;
-
-        /* try version 0 first: VkShaderStage followed by GLSL */
-        ((uint32_t *)moduleCreateInfo.pCode)[0] = ICD_SPV_MAGIC;
-        ((uint32_t *)moduleCreateInfo.pCode)[1] = 0;
-        ((uint32_t *)moduleCreateInfo.pCode)[2] = stage;
-        memcpy(((uint32_t *)moduleCreateInfo.pCode + 3), shader_code, shader_len + 1);
-
-    } else {
-        // Use Reference GLSL to SPV compiler
-        framework->GLSLtoSPV(stage, shader_code, spv);
-        moduleCreateInfo.pCode = spv.data();
-        moduleCreateInfo.codeSize = spv.size() * sizeof(unsigned int);
-        moduleCreateInfo.flags = 0;
-    }
+    framework->GLSLtoSPV(stage, shader_code, spv);
+    moduleCreateInfo.pCode = spv.data();
+    moduleCreateInfo.codeSize = spv.size() * sizeof(unsigned int);
+    moduleCreateInfo.flags = 0;
 
     err = init_try(*m_device, moduleCreateInfo);
     assert(VK_SUCCESS == err);
