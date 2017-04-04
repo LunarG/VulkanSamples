@@ -279,6 +279,7 @@ add_custom_target(generate_helper_files DEPENDS
     vk_struct_size_helper.c
     vk_safe_struct.h
     vk_safe_struct.cpp
+    vk_object_types.h
     vk_layer_dispatch_table.h
     vk_dispatch_table_helper.h
     )
@@ -291,6 +292,7 @@ run_vk_xml_generate(helper_file_generator.py vk_safe_struct.cpp)
 run_vk_xml_generate(helper_file_generator.py vk_struct_size_helper.h)
 run_vk_xml_generate(helper_file_generator.py vk_struct_size_helper.c)
 run_vk_xml_generate(helper_file_generator.py vk_enum_string_helper.h)
+run_vk_xml_generate(helper_file_generator.py vk_object_types.h)
 
 if(NOT WIN32)
     include(GNUInstallDirs)
