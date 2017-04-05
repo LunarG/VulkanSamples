@@ -9468,7 +9468,7 @@ TEST_F(VkLayerTest, ExecuteCommandsPrimaryCB) {
     vkCmdExecuteCommands(m_commandBuffer->handle(), 1, &handle);
     m_errorMonitor->VerifyFound();
 
-    m_errorMonitor->SetUnexpectedError("All elements of pCommandBuffers must not be pending execution");
+    m_errorMonitor->SetUnexpectedError("All elements of pCommandBuffers must not be in the pending state");
 }
 
 TEST_F(VkLayerTest, DSUsageBitsErrors) {
@@ -11862,8 +11862,7 @@ TEST_F(VkLayerTest, InvalidImageLayout) {
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "with specific layout VK_IMAGE_LAYOUT_UNDEFINED that "
                                          "doesn't match the actual current layout VK_IMAGE_LAYOUT_GENERAL.");
-    m_errorMonitor->SetUnexpectedError(
-        "srcImageLayout must be either of VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL or VK_IMAGE_LAYOUT_GENERAL");
+    m_errorMonitor->SetUnexpectedError("srcImageLayout must be VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL or VK_IMAGE_LAYOUT_GENERAL");
     m_commandBuffer->CopyImage(src_image, VK_IMAGE_LAYOUT_UNDEFINED, dst_image, VK_IMAGE_LAYOUT_GENERAL, 1, &copy_region);
     m_errorMonitor->VerifyFound();
     // Final src error is due to bad layout type
@@ -12203,7 +12202,7 @@ TEST_F(VkLayerTest, SimultaneousUse) {
     m_errorMonitor->VerifyNotFound();
 
     command_buffer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-    m_errorMonitor->SetUnexpectedError("commandBuffer must not currently be pending execution");
+    m_errorMonitor->SetUnexpectedError("commandBuffer must not be in the recording or pending state.");
     m_errorMonitor->SetUnexpectedError(
         "If commandBuffer was allocated from a VkCommandPool which did not have the "
         "VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT flag set, commandBuffer must be in the initial state");
@@ -12218,7 +12217,7 @@ TEST_F(VkLayerTest, SimultaneousUse) {
 
     vkQueueWaitIdle(m_device->m_queue);
 
-    m_errorMonitor->SetUnexpectedError("All elements of pCommandBuffers must not be pending execution");
+    m_errorMonitor->SetUnexpectedError("All elements of pCommandBuffers must not be in the pending state");
 }
 
 TEST_F(VkLayerTest, SimultaneousUseOneShot) {
@@ -17021,6 +17020,12 @@ TEST_F(VkLayerTest, CopyImageFormatSizeMismatch) {
     image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     // Introduce failure by creating second image with a different-sized format.
     image_create_info.format = VK_FORMAT_R5G5B5A1_UNORM_PACK16;
+    VkFormatProperties properties;
+    vkGetPhysicalDeviceFormatProperties(m_device->phy().handle(), image_create_info.format, &properties);
+    if (properties.optimalTilingFeatures == 0) {
+        printf("             Image format not supported; skipped.\n");
+        return;
+    }
 
     err = vkCreateImage(m_device->device(), &image_create_info, NULL, &dstImage);
     ASSERT_VK_SUCCESS(err);
@@ -17116,6 +17121,12 @@ TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch) {
     image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
     image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     image_create_info.flags = 0;
+    VkFormatProperties properties;
+    vkGetPhysicalDeviceFormatProperties(m_device->phy().handle(), image_create_info.format, &properties);
+    if (properties.optimalTilingFeatures == 0) {
+        printf("             Image format not supported; skipped.\n");
+        return;
+    }
 
     err = vkCreateImage(m_device->device(), &image_create_info, NULL, &srcImage);
     ASSERT_VK_SUCCESS(err);
@@ -17281,6 +17292,12 @@ TEST_F(VkLayerTest, CopyImageAspectMismatch) {
         return;
     }
 
+    VkFormatProperties properties;
+    vkGetPhysicalDeviceFormatProperties(m_device->phy().handle(), VK_FORMAT_D32_SFLOAT, &properties);
+    if (properties.optimalTilingFeatures == 0) {
+        printf("             Image format VK_FORMAT_D32_SFLOAT not supported; skipped.\n");
+        return;
+    }
     VkImageObj color_image(m_device), ds_image(m_device), depth_image(m_device);
     color_image.Init(128, 128, 1, VK_FORMAT_R32_SFLOAT, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
     depth_image.Init(128, 128, 1, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
