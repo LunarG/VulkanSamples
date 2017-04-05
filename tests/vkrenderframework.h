@@ -400,6 +400,7 @@ class VkPipelineObj : public vk_testing::Pipeline {
    public:
     VkPipelineObj(VkDeviceObj *device);
     void AddShader(VkShaderObj *shaderObj);
+    void AddShader(VkPipelineShaderStageCreateInfo const & createInfo);
     void AddVertexInputAttribs(VkVertexInputAttributeDescription *vi_attrib, uint32_t count);
     void AddVertexInputBindings(VkVertexInputBindingDescription *vi_binding, uint32_t count);
     void AddColorAttachment(uint32_t binding, const VkPipelineColorBlendAttachmentState *att);

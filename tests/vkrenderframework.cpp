@@ -1166,6 +1166,10 @@ void VkPipelineObj::AddShader(VkShaderObj *shader) {
     m_shaderStages.push_back(shader->GetStageCreateInfo());
 }
 
+void VkPipelineObj::AddShader(VkPipelineShaderStageCreateInfo const & createInfo) {
+    m_shaderStages.push_back(createInfo);
+}
+
 void VkPipelineObj::AddVertexInputAttribs(VkVertexInputAttributeDescription *vi_attrib, uint32_t count) {
     m_vi_state.pVertexAttributeDescriptions = vi_attrib;
     m_vi_state.vertexAttributeDescriptionCount = count;
