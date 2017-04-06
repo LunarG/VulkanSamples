@@ -163,15 +163,21 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
         self.headerVersion = None
         # Internal state - accumulators for different inner block text
         self.sections = dict([(section, []) for section in self.ALL_SECTIONS])
+
         self.cmdMembers = []
         self.cmd_feature_protect = []  # Save ifdef's for each command
-        self.cmd_info_data = []     # Save the cmdinfo data for wrapping the handles when processing is complete
-        self.structMembers = []     # List of StructMemberData records for all Vulkan structs
+        self.cmd_info_data = []        # Save the cmdinfo data for wrapping the handles when processing is complete
+        self.structMembers = []        # List of StructMemberData records for all Vulkan structs
+        self.extension_structs = []    # List of all structs or sister-structs containing handles
+                                       # A sister-struct may contain no handles but shares <validextensionstructs> with one that does
+        self.structTypes = dict()    # Map of Vulkan struct typename to required VkStructureType
         # Named tuples to store struct and command data
+        self.StructType = namedtuple('StructType', ['name', 'value'])
         self.CmdMemberData = namedtuple('CmdMemberData', ['name', 'members'])
         self.CmdInfoData = namedtuple('CmdInfoData', ['name', 'cmdinfo'])
         self.CmdExtraProtect = namedtuple('CmdExtraProtect', ['name', 'extra_protect'])
-        self.CommandParam = namedtuple('CommandParam', ['type', 'name', 'ispointer', 'isconst', 'iscount', 'len', 'extstructs', 'cdecl', 'islocal', 'iscreate', 'isdestroy'])
+
+        self.CommandParam = namedtuple('CommandParam', ['type', 'name', 'ispointer', 'isconst', 'iscount', 'len', 'extstructs', 'cdecl', 'islocal', 'iscreate', 'isdestroy', 'feature_protect'])
         self.StructMemberData = namedtuple('StructMemberData', ['name', 'members'])
     #
     def incIndent(self, indent):
@@ -207,6 +213,12 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
 
         # Write out wrapping/unwrapping functions
         self.WrapCommands()
+
+        # Build and write out pNext processing function
+        extension_proc = self.build_extension_processing_func()
+        self.newline()
+        write('// Unique Objects pNext extension handling function', file=self.outFile)
+        write('%s' % extension_proc, file=self.outFile)
 
         # Actually write the interface to the output file.
         if (self.emit):
@@ -378,19 +390,24 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
                     value = result.group(0)
                 else:
                     value = self.genVkStructureType(typeName)
+                # Store the required type value
+                self.structTypes[typeName] = self.StructType(name=name, value=value)
             # Store pointer/array/string info
+            extstructs = member.attrib.get('validextensionstructs') if name == 'pNext' else None
             membersInfo.append(self.CommandParam(type=type,
                                                  name=name,
                                                  ispointer=self.paramIsPointer(member),
                                                  isconst=True if 'const' in cdecl else False,
                                                  iscount=True if name in lens else False,
                                                  len=self.getLen(member),
-                                                 extstructs=member.attrib.get('validextensionstructs') if name == 'pNext' else None,
+                                                 extstructs=extstructs,
                                                  cdecl=cdecl,
                                                  islocal=False,
                                                  iscreate=False,
-                                                 isdestroy=False))
+                                                 isdestroy=False,
+                                                 feature_protect=self.featureExtraProtect))
         self.structMembers.append(self.StructMemberData(name=typeName, members=membersInfo))
+
     #
     # Insert a lock_guard line
     def lock_guard(self, indent):
@@ -432,6 +449,76 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
             if self.isHandleTypeNonDispatchable(paramtype.text):
                 ndo_list.add(item)
         return ndo_list
+    #
+    # Generate pNext handling function
+    def build_extension_processing_func(self):
+
+        # Construct list of extension structs containing handles, or extension structs that share a <validextensionstructs>
+        # tag WITH an extension struct containing handles. All extension structs in any pNext chain will have to be copied.
+        for struct in self.structMembers:
+            if (len(struct.members) > 1) and struct.members[1].extstructs is not None:
+                found = False;
+                for item in struct.members[1].extstructs.split(','):
+                    if item != '' and self.struct_contains_ndo(item) == True:
+                        found = True
+                if found == True:
+                    for item in struct.members[1].extstructs.split(','):
+                        if item != '' and item not in self.extension_structs:
+                            self.extension_structs.append(item)
+        # Construct helper functions to build and free pNext extension chains
+        pnext_proc = ''
+        pnext_proc += 'void *CreateUnwrappedExtensionStructs(layer_data *dev_data, const void *pNext) {\n'
+        pnext_proc += '    void *cur_pnext = const_cast<void *>(pNext);\n'
+        pnext_proc += '    void *head_pnext = NULL;\n'
+        pnext_proc += '    void *prev_ext_struct = NULL;\n'
+        pnext_proc += '    void *cur_ext_struct = NULL;\n\n'
+        pnext_proc += '    while (cur_pnext != NULL) {\n'
+        pnext_proc += '        GenericHeader *header = reinterpret_cast<GenericHeader *>(cur_pnext);\n\n'
+        pnext_proc += '        switch (header->sType) {\n'
+        for item in self.extension_structs:
+            struct_member_dict = dict(self.structMembers)
+            struct_info = struct_member_dict[item]
+            if struct_info[0].feature_protect is not None:
+                pnext_proc += '#ifdef %s \n' % struct_info[0].feature_protect
+            pnext_proc += '            case %s: {\n' % self.structTypes[item].value
+            pnext_proc += '                    safe_%s *safe_struct = reinterpret_cast<safe_%s *>(new safe_%s);\n' % (item, item, item)
+            pnext_proc += '                    safe_struct->initialize(reinterpret_cast<const %s *>(cur_pnext));\n' % item
+            # Generate code to unwrap the handles
+            indent = '                '
+            (tmp_decl, tmp_pre, tmp_post) = self.uniquify_members(struct_info, indent, 'safe_struct->', 0, False, False, False, False)
+            pnext_proc += tmp_pre
+            pnext_proc += '                    cur_ext_struct = reinterpret_cast<void *>(safe_struct);\n'
+            pnext_proc += '                } break;\n'
+            if struct_info[0].feature_protect is not None:
+                pnext_proc += '#endif // %s \n' % struct_info[0].feature_protect
+            pnext_proc += '\n'
+        pnext_proc += '            default:\n'
+        pnext_proc += '                break;\n'
+        pnext_proc += '        }\n\n'
+        pnext_proc += '        // Save pointer to the first structure in the pNext chain\n'
+        pnext_proc += '        head_pnext = (head_pnext ? head_pnext : cur_ext_struct);\n\n'
+        pnext_proc += '        // For any extension structure but the first, link the last struct\'s pNext to the current ext struct\n'
+        pnext_proc += '        if (prev_ext_struct) {\n'
+        pnext_proc += '            (reinterpret_cast<GenericHeader *>(prev_ext_struct))->pNext = cur_ext_struct;\n'
+        pnext_proc += '        }\n'
+        pnext_proc += '        prev_ext_struct = cur_ext_struct;\n\n'
+        pnext_proc += '        // Process the next structure in the chain\n'
+        pnext_proc += '        cur_pnext = const_cast<void *>(header->pNext);\n'
+        pnext_proc += '    }\n'
+        pnext_proc += '    return head_pnext;\n'
+        pnext_proc += '}\n\n'
+        pnext_proc += '// Free a pNext extension chain\n'
+        pnext_proc += 'void FreeUnwrappedExtensionStructs(void *head) {\n'
+        pnext_proc += '    void * curr_ptr = head;\n'
+        pnext_proc += '    while (curr_ptr) {\n'
+        pnext_proc += '        GenericHeader *header = reinterpret_cast<GenericHeader *>(curr_ptr);\n'
+        pnext_proc += '        void *temp = curr_ptr;\n'
+        pnext_proc += '        curr_ptr = header->pNext;\n'
+        pnext_proc += '        free(temp);\n'
+        pnext_proc += '    }\n'
+        pnext_proc += '}\n'
+        return pnext_proc
+
     #
     # Generate source for creating a non-dispatchable object
     def generate_create_ndo_code(self, indent, proto, params, cmd_info):
@@ -716,7 +803,8 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
                                                  cdecl=cdecl,
                                                  islocal=islocal,
                                                  iscreate=iscreate,
-                                                 isdestroy=isdestroy))
+                                                 isdestroy=isdestroy,
+                                                 feature_protect=self.featureExtraProtect))
         self.cmdMembers.append(self.CmdMemberData(name=cmdname, members=membersInfo))
         self.cmd_info_data.append(self.CmdInfoData(name=cmdname, cmdinfo=cmdinfo))
         self.cmd_feature_protect.append(self.CmdExtraProtect(name=cmdname, extra_protect=self.featureExtraProtect))
