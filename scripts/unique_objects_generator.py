@@ -163,8 +163,14 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
         self.headerVersion = None
         # Internal state - accumulators for different inner block text
         self.sections = dict([(section, []) for section in self.ALL_SECTIONS])
-        self.structMembers = []                           # List of StructMemberData records for all Vulkan structs
+        self.cmdMembers = []
+        self.cmd_feature_protect = []  # Save ifdef's for each command
+        self.cmd_info_data = []     # Save the cmdinfo data for wrapping the handles when processing is complete
+        self.structMembers = []     # List of StructMemberData records for all Vulkan structs
         # Named tuples to store struct and command data
+        self.CmdMemberData = namedtuple('CmdMemberData', ['name', 'members'])
+        self.CmdInfoData = namedtuple('CmdInfoData', ['name', 'cmdinfo'])
+        self.CmdExtraProtect = namedtuple('CmdExtraProtect', ['name', 'extra_protect'])
         self.CommandParam = namedtuple('CommandParam', ['type', 'name', 'ispointer', 'isconst', 'iscount', 'len', 'extstructs', 'cdecl', 'islocal', 'iscreate', 'isdestroy'])
         self.StructMemberData = namedtuple('StructMemberData', ['name', 'members'])
     #
@@ -198,6 +204,26 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
         write('namespace unique_objects {', file = self.outFile)
     #
     def endFile(self):
+
+        # Write out wrapping/unwrapping functions
+        self.WrapCommands()
+
+        # Actually write the interface to the output file.
+        if (self.emit):
+            self.newline()
+            if (self.featureExtraProtect != None):
+                write('#ifdef', self.featureExtraProtect, file=self.outFile)
+            # Write the unique_objects code to the file
+            if (self.sections['command']):
+                if (self.genOpts.protectProto):
+                    write(self.genOpts.protectProto,
+                          self.genOpts.protectProtoStr, file=self.outFile)
+                write('\n'.join(self.sections['command']), end=u'', file=self.outFile)
+            if (self.featureExtraProtect != None):
+                write('\n#endif //', self.featureExtraProtect, file=self.outFile)
+            else:
+                self.newline()
+
         # Write out device extension white list
         self.newline()
         write('// Layer Device Extension Whitelist', file=self.outFile)
@@ -229,9 +255,7 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
         # Start processing in superclass
         OutputGenerator.beginFeature(self, interface, emit)
         self.headerVersion = None
-        self.sections = dict([(section, []) for section in self.ALL_SECTIONS])
-        self.cmdMembers = []
-        self.CmdMemberData = namedtuple('CmdMemberData', ['name', 'members'])
+
         if self.featureName != 'VK_VERSION_1_0':
             white_list_entry = []
             if (self.featureExtraProtect != None):
@@ -246,21 +270,6 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
                 self.device_extensions += white_list_entry
     #
     def endFeature(self):
-        # Actually write the interface to the output file.
-        if (self.emit):
-            self.newline()
-            if (self.featureExtraProtect != None):
-                write('#ifdef', self.featureExtraProtect, file=self.outFile)
-            # Write the unique_objects code to the file
-            if (self.sections['command']):
-                if (self.genOpts.protectProto):
-                    write(self.genOpts.protectProto,
-                          self.genOpts.protectProtoStr, file=self.outFile)
-                write('\n'.join(self.sections['command']), end=u'', file=self.outFile)
-            if (self.featureExtraProtect != None):
-                write('\n#endif //', self.featureExtraProtect, file=self.outFile)
-            else:
-                self.newline()
         # Finish processing in superclass
         OutputGenerator.endFeature(self)
     #
@@ -526,7 +535,7 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
                 post_call_code += '%sdelete[] local_%s;\n' % (indent, ndo_name)
         else:
             if top_level == True:
-                if (destroy_func == False) or (destroy_array == True):       #### LUGMAL This line needs to be skipped for destroy_ndo and not destroy_array
+                if (destroy_func == False) or (destroy_array == True):
                     pre_call_code += '%s    %s = (%s)dev_data->unique_id_mapping[reinterpret_cast<uint64_t &>(%s)];\n' % (indent, ndo_name, ndo_type, ndo_name)
             else:
                 # Make temp copy of this var with the 'local' removed. It may be better to not pass in 'local_'
@@ -660,15 +669,7 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
     #
     # Capture command parameter info needed to wrap NDOs as well as handling some boilerplate code
     def genCmd(self, cmdinfo, cmdname):
-        if cmdname in self.interface_functions:
-            return
-        if cmdname in self.no_autogen_list:
-            decls = self.makeCDecls(cmdinfo.elem)
-            self.appendSection('command', '')
-            self.appendSection('command', '// Declare only')
-            self.appendSection('command', decls[0])
-            self.intercepts += [ '    {"%s", reinterpret_cast<PFN_vkVoidFunction>(%s)},' % (cmdname,cmdname[2:]) ]
-            return
+
         # Add struct-member type information to command parameter information
         OutputGenerator.genCmd(self, cmdinfo, cmdname)
         members = cmdinfo.elem.findall('.//param')
@@ -717,63 +718,87 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
                                                  iscreate=iscreate,
                                                  isdestroy=isdestroy))
         self.cmdMembers.append(self.CmdMemberData(name=cmdname, members=membersInfo))
-        # Generate NDO wrapping/unwrapping code for all parameters
-        (api_decls, api_pre, api_post) = self.generate_wrapping_code(cmdinfo.elem)
-        # If API doesn't contain an NDO's, don't fool with it
-        if not api_decls and not api_pre and not api_post:
-            return
-        # Record that the function will be intercepted
-        if (self.featureExtraProtect != None):
-            self.intercepts += [ '#ifdef %s' % self.featureExtraProtect ]
-        self.intercepts += [ '    {"%s", reinterpret_cast<PFN_vkVoidFunction>(%s)},' % (cmdname,cmdname[2:]) ]
-        if (self.featureExtraProtect != None):
-            self.intercepts += [ '#endif' ]
-        decls = self.makeCDecls(cmdinfo.elem)
-        self.appendSection('command', '')
-        self.appendSection('command', decls[0][:-1])
-        self.appendSection('command', '{')
-        # Setup common to call wrappers, first parameter is always dispatchable
-        dispatchable_type = cmdinfo.elem.find('param/type').text
-        dispatchable_name = cmdinfo.elem.find('param/name').text
-        # Generate local instance/pdev/device data lookup
-        self.appendSection('command', '    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key('+dispatchable_name+'), layer_data_map);')
-        # Handle return values, if any
-        resulttype = cmdinfo.elem.find('proto/type')
-        if (resulttype != None and resulttype.text == 'void'):
-          resulttype = None
-        if (resulttype != None):
-            assignresult = resulttype.text + ' result = '
-        else:
-            assignresult = ''
-        # Pre-pend declarations and pre-api-call codegen
-        if api_decls:
-            self.appendSection('command', "\n".join(str(api_decls).rstrip().split("\n")))
-        if api_pre:
-            self.appendSection('command', "\n".join(str(api_pre).rstrip().split("\n")))
-        # Generate the API call itself
-        # Gather the parameter items
-        params = cmdinfo.elem.findall('param/name')
-        # Pull out the text for each of the parameters, separate them by commas in a list
-        paramstext = ', '.join([str(param.text) for param in params])
-        # If any of these paramters has been replaced by a local var, fix up the list
+        self.cmd_info_data.append(self.CmdInfoData(name=cmdname, cmdinfo=cmdinfo))
+        self.cmd_feature_protect.append(self.CmdExtraProtect(name=cmdname, extra_protect=self.featureExtraProtect))
+    #
+    # Create code to wrap NDOs as well as handling some boilerplate code
+    def WrapCommands(self):
         cmd_member_dict = dict(self.cmdMembers)
-        params = cmd_member_dict[cmdname]
-        for param in params:
-            if param.islocal == True:
-                if param.ispointer == True:
-                    paramstext = paramstext.replace(param.name, '(%s %s*)local_%s' % ('const', param.type, param.name))
-                else:
-                    paramstext = paramstext.replace(param.name, '(%s %s)local_%s' % ('const', param.type, param.name))
-        # Use correct dispatch table
-        if dispatchable_type in ["VkPhysicalDevice", "VkInstance"]:
-            API = cmdinfo.elem.attrib.get('name').replace('vk','dev_data->instance_dispatch_table->',1)
-        else:
-            API = cmdinfo.elem.attrib.get('name').replace('vk','dev_data->device_dispatch_table->',1)
-        # Put all this together for the final down-chain call
-        self.appendSection('command', '    ' + assignresult + API + '(' + paramstext + ');')
-        # And add the post-API-call codegen
-        self.appendSection('command', "\n".join(str(api_post).rstrip().split("\n")))
-        # Handle the return result variable, if any
-        if (resulttype != None):
-            self.appendSection('command', '    return result;')
-        self.appendSection('command', '}')
+        cmd_info_dict = dict(self.cmd_info_data)
+        cmd_protect_dict = dict(self.cmd_feature_protect)
+
+        for api_call in self.cmdMembers:
+            cmdname = api_call.name
+            cmdinfo = cmd_info_dict[api_call.name]
+            if cmdname in self.interface_functions:
+                continue
+            if cmdname in self.no_autogen_list:
+                decls = self.makeCDecls(cmdinfo.elem)
+                self.appendSection('command', '')
+                self.appendSection('command', '// Declare only')
+                self.appendSection('command', decls[0])
+                self.intercepts += [ '    {"%s", reinterpret_cast<PFN_vkVoidFunction>(%s)},' % (cmdname,cmdname[2:]) ]
+                continue
+            # Generate NDO wrapping/unwrapping code for all parameters
+            (api_decls, api_pre, api_post) = self.generate_wrapping_code(cmdinfo.elem)
+            # If API doesn't contain an NDO's, don't fool with it
+            if not api_decls and not api_pre and not api_post:
+                continue
+            feature_extra_protect = cmd_protect_dict[api_call.name]
+            if (feature_extra_protect != None):
+                self.appendSection('command', '')
+                self.appendSection('command', '#ifdef '+ feature_extra_protect)
+                self.intercepts += [ '#ifdef %s' % feature_extra_protect ]
+            # Add intercept to procmap
+            self.intercepts += [ '    {"%s", reinterpret_cast<PFN_vkVoidFunction>(%s)},' % (cmdname,cmdname[2:]) ]
+            decls = self.makeCDecls(cmdinfo.elem)
+            self.appendSection('command', '')
+            self.appendSection('command', decls[0][:-1])
+            self.appendSection('command', '{')
+            # Setup common to call wrappers, first parameter is always dispatchable
+            dispatchable_type = cmdinfo.elem.find('param/type').text
+            dispatchable_name = cmdinfo.elem.find('param/name').text
+            # Generate local instance/pdev/device data lookup
+            self.appendSection('command', '    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key('+dispatchable_name+'), layer_data_map);')
+            # Handle return values, if any
+            resulttype = cmdinfo.elem.find('proto/type')
+            if (resulttype != None and resulttype.text == 'void'):
+              resulttype = None
+            if (resulttype != None):
+                assignresult = resulttype.text + ' result = '
+            else:
+                assignresult = ''
+            # Pre-pend declarations and pre-api-call codegen
+            if api_decls:
+                self.appendSection('command', "\n".join(str(api_decls).rstrip().split("\n")))
+            if api_pre:
+                self.appendSection('command', "\n".join(str(api_pre).rstrip().split("\n")))
+            # Generate the API call itself
+            # Gather the parameter items
+            params = cmdinfo.elem.findall('param/name')
+            # Pull out the text for each of the parameters, separate them by commas in a list
+            paramstext = ', '.join([str(param.text) for param in params])
+            # If any of these paramters has been replaced by a local var, fix up the list
+            params = cmd_member_dict[cmdname]
+            for param in params:
+                if param.islocal == True:
+                    if param.ispointer == True:
+                        paramstext = paramstext.replace(param.name, '(%s %s*)local_%s' % ('const', param.type, param.name))
+                    else:
+                        paramstext = paramstext.replace(param.name, '(%s %s)local_%s' % ('const', param.type, param.name))
+            # Use correct dispatch table
+            if dispatchable_type in ["VkPhysicalDevice", "VkInstance"]:
+                API = cmdinfo.elem.attrib.get('name').replace('vk','dev_data->instance_dispatch_table->',1)
+            else:
+                API = cmdinfo.elem.attrib.get('name').replace('vk','dev_data->device_dispatch_table->',1)
+            # Put all this together for the final down-chain call
+            self.appendSection('command', '    ' + assignresult + API + '(' + paramstext + ');')
+            # And add the post-API-call codegen
+            self.appendSection('command', "\n".join(str(api_post).rstrip().split("\n")))
+            # Handle the return result variable, if any
+            if (resulttype != None):
+                self.appendSection('command', '    return result;')
+            self.appendSection('command', '}')
+            if (feature_extra_protect != None):
+                self.appendSection('command', '#endif // '+ feature_extra_protect)
+                self.intercepts += [ '#endif' ]
