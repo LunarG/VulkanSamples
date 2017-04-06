@@ -23262,6 +23262,50 @@ TEST_F(VkPositiveLayerTest, PSOPolygonModeValid) {
     vkDestroyPipelineLayout(test_device.device(), pipeline_layout, NULL);
 }
 
+TEST_F(VkPositiveLayerTest, LongSemaphoreChain)
+{
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(Init());
+    VkResult err;
+
+    std::vector<VkSemaphore> semaphores;
+
+    const int chainLength = 32768;
+    VkPipelineStageFlags flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+
+    for (int i = 0; i < chainLength; i++) {
+        VkSemaphoreCreateInfo sci = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, nullptr, 0 };
+        VkSemaphore semaphore;
+        err = vkCreateSemaphore(m_device->device(), &sci, nullptr, &semaphore);
+        ASSERT_VK_SUCCESS(err);
+
+        semaphores.push_back(semaphore);
+
+        VkSubmitInfo si = { VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, semaphores.size() > 1 ? 1u : 0u, &semaphores[semaphores.size() - 2], &flags,
+            0, nullptr, 1, &semaphores[semaphores.size() - 1] };
+        err = vkQueueSubmit(m_device->m_queue, 1, &si, VK_NULL_HANDLE);
+        ASSERT_VK_SUCCESS(err);
+    }
+
+    VkFenceCreateInfo fci = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, nullptr, 0 };
+    VkFence fence;
+    err = vkCreateFence(m_device->device(), &fci, nullptr, &fence);
+    ASSERT_VK_SUCCESS(err);
+    VkSubmitInfo si = { VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 1, &semaphores.back(), &flags, 0, nullptr, 0, nullptr };
+    err = vkQueueSubmit(m_device->m_queue, 1, &si, fence);
+    ASSERT_VK_SUCCESS(err);
+
+    vkWaitForFences(m_device->device(), 1, &fence, VK_TRUE, UINT64_MAX);
+
+    for (auto semaphore : semaphores)
+        vkDestroySemaphore(m_device->device(), semaphore, nullptr);
+
+    vkDestroyFence(m_device->device(), fence, nullptr);
+
+    m_errorMonitor->VerifyNotFound();
+}
+
 #if 0  // A few devices have issues with this test so disabling for now
 TEST_F(VkPositiveLayerTest, LongFenceChain)
 {
