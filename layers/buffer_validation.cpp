@@ -68,7 +68,7 @@ void SetLayout(std::unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> &imag
     imageLayoutMap[imgpair].layout = layout;
 }
 
-bool FindLayoutVerifyNode(layer_data *device_data, GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair,
+bool FindLayoutVerifyNode(layer_data const *device_data, GLOBAL_CB_NODE const *pCB, ImageSubresourcePair imgpair,
                           IMAGE_CMD_BUF_LAYOUT_NODE &node, const VkImageAspectFlags aspectMask) {
     const debug_report_data *report_data = core_validation::GetReportData(device_data);
 
@@ -100,7 +100,7 @@ bool FindLayoutVerifyNode(layer_data *device_data, GLOBAL_CB_NODE *pCB, ImageSub
     return true;
 }
 
-bool FindLayoutVerifyLayout(layer_data *device_data, ImageSubresourcePair imgpair, VkImageLayout &layout,
+bool FindLayoutVerifyLayout(layer_data const *device_data, ImageSubresourcePair imgpair, VkImageLayout &layout,
                             const VkImageAspectFlags aspectMask) {
     if (!(imgpair.subresource.aspectMask & aspectMask)) {
         return false;
@@ -124,7 +124,7 @@ bool FindLayoutVerifyLayout(layer_data *device_data, ImageSubresourcePair imgpai
 }
 
 // Find layout(s) on the command buffer level
-bool FindCmdBufLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, VkImage image, VkImageSubresource range,
+bool FindCmdBufLayout(layer_data const *device_data, GLOBAL_CB_NODE const *pCB, VkImage image, VkImageSubresource range,
                       IMAGE_CMD_BUF_LAYOUT_NODE &node) {
     ImageSubresourcePair imgpair = {image, true, range};
     node = IMAGE_CMD_BUF_LAYOUT_NODE(VK_IMAGE_LAYOUT_MAX_ENUM, VK_IMAGE_LAYOUT_MAX_ENUM);
@@ -528,9 +528,9 @@ void TransitionImageLayouts(layer_data *device_data, VkCommandBuffer cmdBuffer, 
     }
 }
 
-bool VerifyImageLayout(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *image_state,
+bool VerifyImageLayout(layer_data const *device_data, GLOBAL_CB_NODE const *cb_node, IMAGE_STATE *image_state,
                        VkImageSubresourceLayers subLayers, VkImageLayout explicit_layout, VkImageLayout optimal_layout,
-                       const char *caller, UNIQUE_VALIDATION_ERROR_CODE msg_code) {
+                       const char *caller, UNIQUE_VALIDATION_ERROR_CODE msg_code, bool *error) {
     const auto report_data = core_validation::GetReportData(device_data);
     const auto image = image_state->image;
     bool skip_call = false;
@@ -541,6 +541,7 @@ bool VerifyImageLayout(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_S
         IMAGE_CMD_BUF_LAYOUT_NODE node;
         if (FindCmdBufLayout(device_data, cb_node, image, sub, node)) {
             if (node.layout != explicit_layout) {
+                *error = true;
                 // TODO: Improve log message in the next pass
                 skip_call |=
                     log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
@@ -564,6 +565,7 @@ bool VerifyImageLayout(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_S
                     reinterpret_cast<const uint64_t &>(image), string_VkImageLayout(optimal_layout));
             }
         } else {
+            *error = true;
             skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                                  reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, msg_code, "DS",
                                  "%s: Layout for image 0x%" PRIxLEAST64 " is %s but can only be %s or VK_IMAGE_LAYOUT_GENERAL. %s",
@@ -1493,11 +1495,12 @@ bool PreCallValidateCmdCopyImage(layer_data *device_data, GLOBAL_CB_NODE *cb_nod
                                   VK_QUEUE_TRANSFER_BIT | VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT, VALIDATION_ERROR_01193);
     skip |= ValidateCmd(device_data, cb_node, CMD_COPYIMAGE, "vkCmdCopyImage()");
     skip |= insideRenderPass(device_data, cb_node, "vkCmdCopyImage()", VALIDATION_ERROR_01194);
+    bool hit_error = false;
     for (uint32_t i = 0; i < region_count; ++i) {
         skip |= VerifyImageLayout(device_data, cb_node, src_image_state, regions[i].srcSubresource, src_image_layout,
-                                  VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, "vkCmdCopyImage()", VALIDATION_ERROR_01180);
+                                  VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, "vkCmdCopyImage()", VALIDATION_ERROR_01180, &hit_error);
         skip |= VerifyImageLayout(device_data, cb_node, dst_image_state, regions[i].dstSubresource, dst_image_layout,
-                                  VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, "vkCmdCopyImage()", VALIDATION_ERROR_01183);
+                                  VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, "vkCmdCopyImage()", VALIDATION_ERROR_01183, &hit_error);
         skip |= ValidateCopyImageTransferGranularityRequirements(device_data, cb_node, dst_image_state, &regions[i], i,
                                                                  "vkCmdCopyImage()");
     }
@@ -3005,9 +3008,11 @@ bool PreCallValidateCmdCopyImageToBuffer(layer_data *device_data, VkImageLayout 
     skip |= ValidateBufferUsageFlags(device_data, dst_buffer_state, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true, VALIDATION_ERROR_01252,
                                      "vkCmdCopyImageToBuffer()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
     skip |= insideRenderPass(device_data, cb_node, "vkCmdCopyImageToBuffer()", VALIDATION_ERROR_01260);
+    bool hit_error = false;
     for (uint32_t i = 0; i < regionCount; ++i) {
-        skip |= VerifyImageLayout(device_data, cb_node, src_image_state, pRegions[i].imageSubresource, srcImageLayout,
-                                  VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, "vkCmdCopyImageToBuffer()", VALIDATION_ERROR_01251);
+        skip |=
+            VerifyImageLayout(device_data, cb_node, src_image_state, pRegions[i].imageSubresource, srcImageLayout,
+                              VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, "vkCmdCopyImageToBuffer()", VALIDATION_ERROR_01251, &hit_error);
         skip |= ValidateCopyBufferImageTransferGranularityRequirements(device_data, cb_node, src_image_state, &pRegions[i], i,
                                                                        "vkCmdCopyImageToBuffer()");
     }
@@ -3077,9 +3082,11 @@ bool PreCallValidateCmdCopyBufferToImage(layer_data *device_data, VkImageLayout 
     skip |= ValidateImageUsageFlags(device_data, dst_image_state, VK_IMAGE_USAGE_TRANSFER_DST_BIT, true, VALIDATION_ERROR_01231,
                                     "vkCmdCopyBufferToImage()", "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
     skip |= insideRenderPass(device_data, cb_node, "vkCmdCopyBufferToImage()", VALIDATION_ERROR_01242);
+    bool hit_error = false;
     for (uint32_t i = 0; i < regionCount; ++i) {
-        skip |= VerifyImageLayout(device_data, cb_node, dst_image_state, pRegions[i].imageSubresource, dstImageLayout,
-                                  VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, "vkCmdCopyBufferToImage()", VALIDATION_ERROR_01234);
+        skip |=
+            VerifyImageLayout(device_data, cb_node, dst_image_state, pRegions[i].imageSubresource, dstImageLayout,
+                              VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, "vkCmdCopyBufferToImage()", VALIDATION_ERROR_01234, &hit_error);
         skip |= ValidateCopyBufferImageTransferGranularityRequirements(device_data, cb_node, dst_image_state, &pRegions[i], i,
                                                                        "vkCmdCopyBufferToImage()");
     }

@@ -51,9 +51,9 @@ uint32_t ResolveRemainingLayers(const VkImageSubresourceRange *range, uint32_t l
 bool VerifyClearImageLayout(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *image_state,
                             VkImageSubresourceRange range, VkImageLayout dest_image_layout, const char *func_name);
 
-bool VerifyImageLayout(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IMAGE_STATE *image_state,
+bool VerifyImageLayout(layer_data const *device_data, GLOBAL_CB_NODE const *cb_node, IMAGE_STATE *image_state,
                        VkImageSubresourceLayers subLayers, VkImageLayout explicit_layout, VkImageLayout optimal_layout,
-                       const char *caller, UNIQUE_VALIDATION_ERROR_CODE msg_code);
+                       const char *caller, UNIQUE_VALIDATION_ERROR_CODE msg_code, bool *error);
 
 void RecordClearImageLayout(layer_data *dev_data, GLOBAL_CB_NODE *cb_node, VkImage image, VkImageSubresourceRange range,
                             VkImageLayout dest_image_layout);
@@ -68,13 +68,13 @@ bool PreCallValidateCmdClearDepthStencilImage(layer_data *dev_data, VkCommandBuf
                                               VkImageLayout imageLayout, uint32_t rangeCount,
                                               const VkImageSubresourceRange *pRanges);
 
-bool FindLayoutVerifyNode(layer_data *device_data, GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair,
+bool FindLayoutVerifyNode(layer_data const *device_data, GLOBAL_CB_NODE const *pCB, ImageSubresourcePair imgpair,
                           IMAGE_CMD_BUF_LAYOUT_NODE &node, const VkImageAspectFlags aspectMask);
 
-bool FindLayoutVerifyLayout(layer_data *device_data, ImageSubresourcePair imgpair, VkImageLayout &layout,
+bool FindLayoutVerifyLayout(layer_data const *device_data, ImageSubresourcePair imgpair, VkImageLayout &layout,
                             const VkImageAspectFlags aspectMask);
 
-bool FindCmdBufLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, VkImage image, VkImageSubresource range,
+bool FindCmdBufLayout(layer_data const *device_data, GLOBAL_CB_NODE const *pCB, VkImage image, VkImageSubresource range,
                       IMAGE_CMD_BUF_LAYOUT_NODE &node);
 
 bool FindGlobalLayout(layer_data *device_data, ImageSubresourcePair imgpair, VkImageLayout &layout);

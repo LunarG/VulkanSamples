@@ -3022,13 +3022,14 @@ static bool ValidateDrawState(layer_data *dev_data, GLOBAL_CB_NODE *cb_node, con
                 }
                 // Validate the draw-time state for this descriptor set
                 std::string err_str;
-                if (!descriptor_set->ValidateDrawState(set_binding_pair.second, state.dynamicOffsets[setIndex], &err_str)) {
+                if (!descriptor_set->ValidateDrawState(set_binding_pair.second, state.dynamicOffsets[setIndex], cb_node, function,
+                                                       &err_str)) {
                     auto set = descriptor_set->GetSet();
-                    result |= log_msg(
-                        dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
-                        reinterpret_cast<const uint64_t &>(set), __LINE__, DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED, "DS",
-                        "Descriptor set 0x%" PRIxLEAST64 " encountered the following validation error at %s() time: %s",
-                        reinterpret_cast<const uint64_t &>(set), function, err_str.c_str());
+                    result |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                      VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, reinterpret_cast<const uint64_t &>(set),
+                                      __LINE__, DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED, "DS",
+                                      "Descriptor set 0x%" PRIxLEAST64 " encountered the following validation error at %s time: %s",
+                                      reinterpret_cast<const uint64_t &>(set), function, err_str.c_str());
                 }
             }
         }
@@ -6204,6 +6205,10 @@ std::unordered_map<VkImage, std::vector<ImageSubresourcePair>> *GetImageSubresou
 }
 
 std::unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> *GetImageLayoutMap(layer_data *device_data) {
+    return &device_data->imageLayoutMap;
+}
+
+std::unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> const *GetImageLayoutMap(layer_data const *device_data) {
     return &device_data->imageLayoutMap;
 }
 
