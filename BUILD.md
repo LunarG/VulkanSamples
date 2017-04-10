@@ -225,30 +225,42 @@ This specification describes both how ICDs and layers should be properly
 packaged, and how developers can point to ICDs and layers within their builds.
 
 ## Android Build
-Install the required tools for Linux and Windows covered above, then add the
-following.
+Install the required tools for Linux and Windows covered above, then add the following.
 ### Android Studio
-- Install [Android Studio 2.1](http://tools.android.com/download/studio/canary), latest Preview (tested with 4):
+- Install [Android Studio 2.3](https://developer.android.com/studio/index.html) or later.
 - From the "Welcome to Android Studio" splash screen, add the following components using Configure > SDK Manager:
-  - SDK Platforms > Android N Preview
+  - SDK Platforms > Android 6.0 and newer
+  - SDK Tools > Android SDK Build-Tools
+  - SDK Tools > Android SDK Platform-Tools
+  - SDK Tools > Android SDK Tools
   - SDK Tools > Android NDK
 
-#### Add NDK to path
+#### Add Android specifics to environment
 
 On Linux:
 ```
-export PATH=$HOME/Android/sdk/ndk-bundle:$PATH
+export ANDROID_SDK_HOME=$HOME/Android/sdk
+export ANDROID_NDK_HOME=$HOME/Android/sdk/ndk-bundle
+export PATH=$ANDROID_SDK_HOME:$PATH
+export PATH=$ANDROID_NDK_HOME:$PATH
+export PATH=$ANDROID_SDK_HOME/build-tools/23.0.3:$PATH
 ```
 On Windows:
 ```
+set ANDROID_SDK_HOME=%LOCALAPPDATA%\Android\sdk
+set ANDROID_NDK_HOME=%LOCALAPPDATA%\Android\sdk\ndk-bundle
 set PATH=%LOCALAPPDATA%\Android\sdk\ndk-bundle;%PATH%
 ```
 On OSX:
 ```
-export PATH=$HOME/Library/Android/sdk/ndk-bundle:$PATH
+export ANDROID_SDK_HOME=$HOME/Library/Android/sdk
+export ANDROID_NDK_HOME=$HOME/Library/Android/sdk/ndk-bundle
+export PATH=$ANDROID_NDK_PATH:$PATH
+export PATH=$ANDROID_SDK_HOME/build-tools/23.0.3:$PATH
 ```
+Note: If jarsigner is missing from your platform, you can find it in the Android Studio install.
 ### Additional OSX System Requirements
-Tested on OSX version 10.11.4
+Tested on OSX version 10.12.4
 
  Setup Homebrew and components
 - Follow instructions on [brew.sh](http://brew.sh) to get homebrew installed.
@@ -264,7 +276,18 @@ export PATH=/usr/local/bin:$PATH
 brew install cmake python python3 git
 ```
 ### Build steps for Android
-Use the following to ensure the Android build works.
+Use the following script to build everything in the repo for Android, including validation layers, tests, demos, and APK packaging:
+```
+cd build-android
+./build_all.sh
+```
+Resulting validation layer binaries will be in build-android/libs.
+Test and demo APKs can be installed on production devices with:
+```
+./install_all.sh -s <serial number>
+```
+Note that there are no equivalent scripts on Windows yet, that work needs to be completed.
+The following per platform commands can be used for layer only builds:
 #### Linux and OSX
 Follow the setup steps for Linux or OSX above, then from your terminal:
 ```
@@ -281,23 +304,32 @@ update_external_sources_android.bat
 android-generate.bat
 ndk-build
 ```
-#### Android demos
-Use the following steps to build, install, and run Cube and Tri for Android:
+#### Android tests
+Use the following steps to build, install, and run the layer validation tests for Android:
 ```
-cd demos/android
-android update project -s -p . -t "android-23"
-ndk-build
-ant -buildfile cube debug
-adb install ./cube/bin/NativeActivity-debug.apk
+cd build-android
+./build_all.sh
+adb install -r bin/VulkanLayerValidationTests.apk
+adb shell am start com.example.VulkanLayerValidationTests/android.app.NativeActivity
+
+Alternatively, you can use the test_APK script to install and run the layer validation tests:
+```
+test_APK.sh -s <serial number> -p <plaform name> -f <gtest_filter>
+```
+#### Android demos
+Use the following steps to build, install, and run Cube and Smoke for Android:
+```
+cd build-android
+./build_all.sh
+adb install -r ../demos/android/cube/bin/cube.apk
 adb shell am start com.example.Cube/android.app.NativeActivity
 ```
 To build, install, and run Cube with validation layers, first build layers using steps above, then run:
 ```
-cd demos/android
-android update project -s -p . -t "android-23"
-ndk-build -j
-ant -buildfile cube-with-layers debug
-adb install ./cube-with-layers/bin/NativeActivity-debug.apk
+cd build-android
+./build_all.sh
+adb install -r ../demos/android/cube-with-layers/bin/cube-with-layers.apk
+adb shell am start com.example.CubeWithLayers/android.app.NativeActivity
 adb shell am start -a android.intent.action.MAIN -c android-intent.category.LAUNCH -n com.example.CubeWithLayers/android.app.NativeActivity --es args "--validate"
 ```
 
