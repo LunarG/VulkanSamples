@@ -547,10 +547,19 @@ class HelperFileOutputGenerator(OutputGenerator):
             enum_num += 1
             type_list.append(enum_entry)
         object_types_header += '    kVulkanObjectTypeMax = %d,\n' % enum_num
-        object_types_header += '} VulkanObjectType;\n'
+        object_types_header += '} VulkanObjectType;\n\n'
+
+        # Output name string helper
+        object_types_header += '// Array of object name strings for OBJECT_TYPE enum conversion\n'
+        object_types_header += 'static const char *object_string[kVulkanObjectTypeMax] = {\n'
+        object_types_header += '    "Unknown",\n'
+        for item in self.object_types:
+            fixup_name = item[2:]
+            object_types_header += '    "%s",\n' % fixup_name
+        object_types_header += '};\n'
 
         # Output a conversion routine from the layer object definitions to the debug report definitions
-        object_types_header += '\n\n'
+        object_types_header += '\n'
         object_types_header += '// Helper function to get Official Vulkan object type enum from the internal layers version\n'
         object_types_header += 'VkDebugReportObjectTypeEXT GetDebugReportEnum(VulkanObjectType object_type) {\n\n'
         object_types_header += '    switch (object_type) {\n'
@@ -569,6 +578,9 @@ class HelperFileOutputGenerator(OutputGenerator):
                     done = True
                     break
             if done == False:
+                if object_type == 'kVulkanObjectTypeDebugReportCallbackEXT':
+                    object_types_header += '            return VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT;\n\n'
+                else:
                     object_types_header += '            return VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT;\n\n'
         object_types_header += '        default:\n'
         object_types_header += '            return VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT;\n\n'
