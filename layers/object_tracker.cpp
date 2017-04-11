@@ -117,16 +117,16 @@ static void ValidateQueueFlags(VkQueue queue, const char *function) {
 }
 
 static void AllocateCommandBuffer(VkDevice device, const VkCommandPool command_pool, const VkCommandBuffer command_buffer,
-                                  VkDebugReportObjectTypeEXT object_type, VkCommandBufferLevel level) {
+                                  VkCommandBufferLevel level) {
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
 
-    log_msg(device_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, object_type,
+    log_msg(device_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
             reinterpret_cast<const uint64_t>(command_buffer), __LINE__, OBJTRACK_NONE, LayerName,
             "OBJ[0x%" PRIxLEAST64 "] : CREATE %s object 0x%" PRIxLEAST64, object_track_index++,
-            string_VkDebugReportObjectTypeEXT(object_type), reinterpret_cast<const uint64_t>(command_buffer));
+            "VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT", reinterpret_cast<const uint64_t>(command_buffer));
 
     OBJTRACK_NODE *pNewObjNode = new OBJTRACK_NODE;
-    pNewObjNode->object_type = object_type;
+    pNewObjNode->object_type = VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT;
     pNewObjNode->handle = reinterpret_cast<const uint64_t>(command_buffer);
     pNewObjNode->parent_object = reinterpret_cast<const uint64_t &>(command_pool);
     if (level == VK_COMMAND_BUFFER_LEVEL_SECONDARY) {
@@ -134,8 +134,9 @@ static void AllocateCommandBuffer(VkDevice device, const VkCommandPool command_p
     } else {
         pNewObjNode->status = OBJSTATUS_NONE;
     }
-    device_data->object_map[object_type][reinterpret_cast<const uint64_t>(command_buffer)] = pNewObjNode;
-    device_data->num_objects[object_type]++;
+    device_data->object_map[VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT][reinterpret_cast<const uint64_t>(command_buffer)] =
+        pNewObjNode;
+    device_data->num_objects[VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT]++;
     device_data->num_total_objects++;
 }
 
@@ -165,23 +166,22 @@ static bool ValidateCommandBuffer(VkDevice device, VkCommandPool command_pool, V
     return skip;
 }
 
-static void AllocateDescriptorSet(VkDevice device, VkDescriptorPool descriptor_pool, VkDescriptorSet descriptor_set,
-                                  VkDebugReportObjectTypeEXT object_type) {
+static void AllocateDescriptorSet(VkDevice device, VkDescriptorPool descriptor_pool, VkDescriptorSet descriptor_set) {
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
 
-    log_msg(device_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, object_type,
+    log_msg(device_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
             reinterpret_cast<uint64_t &>(descriptor_set), __LINE__, OBJTRACK_NONE, LayerName,
-            "OBJ[0x%" PRIxLEAST64 "] : CREATE %s object 0x%" PRIxLEAST64, object_track_index++, object_name[object_type],
-            reinterpret_cast<uint64_t &>(descriptor_set));
+            "OBJ[0x%" PRIxLEAST64 "] : CREATE %s object 0x%" PRIxLEAST64, object_track_index++,
+            "VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT", reinterpret_cast<uint64_t &>(descriptor_set));
 
     OBJTRACK_NODE *pNewObjNode = new OBJTRACK_NODE;
-    pNewObjNode->object_type = object_type;
+    pNewObjNode->object_type = VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT;
     pNewObjNode->status = OBJSTATUS_NONE;
     pNewObjNode->handle = reinterpret_cast<uint64_t &>(descriptor_set);
     pNewObjNode->parent_object = reinterpret_cast<uint64_t &>(descriptor_pool);
     device_data->object_map[VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT][reinterpret_cast<uint64_t &>(descriptor_set)] =
         pNewObjNode;
-    device_data->num_objects[object_type]++;
+    device_data->num_objects[VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT]++;
     device_data->num_total_objects++;
 }
 
@@ -210,24 +210,25 @@ static bool ValidateDescriptorSet(VkDevice device, VkDescriptorPool descriptor_p
     return skip;
 }
 
-static void CreateQueue(VkDevice device, VkQueue vkObj, VkDebugReportObjectTypeEXT object_type) {
+static void CreateQueue(VkDevice device, VkQueue vkObj) {
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
 
-    log_msg(device_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, object_type, reinterpret_cast<uint64_t>(vkObj), __LINE__,
-            OBJTRACK_NONE, LayerName, "OBJ[0x%" PRIxLEAST64 "] : CREATE %s object 0x%" PRIxLEAST64, object_track_index++,
-            object_name[object_type], reinterpret_cast<uint64_t>(vkObj));
+    log_msg(device_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT,
+            reinterpret_cast<uint64_t>(vkObj), __LINE__, OBJTRACK_NONE, LayerName,
+            "OBJ[0x%" PRIxLEAST64 "] : CREATE %s object 0x%" PRIxLEAST64, object_track_index++,
+            "VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT", reinterpret_cast<uint64_t>(vkObj));
 
     OBJTRACK_NODE *p_obj_node = NULL;
     auto queue_item = device_data->object_map[VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT].find(reinterpret_cast<uint64_t>(vkObj));
     if (queue_item == device_data->object_map[VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT].end()) {
         p_obj_node = new OBJTRACK_NODE;
         device_data->object_map[VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT][reinterpret_cast<uint64_t>(vkObj)] = p_obj_node;
-        device_data->num_objects[object_type]++;
+        device_data->num_objects[VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT]++;
         device_data->num_total_objects++;
     } else {
         p_obj_node = queue_item->second;
     }
-    p_obj_node->object_type = object_type;
+    p_obj_node->object_type = VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT;
     p_obj_node->status = OBJSTATUS_NONE;
     p_obj_node->handle = reinterpret_cast<uint64_t>(vkObj);
 }
@@ -3603,7 +3604,7 @@ VKAPI_ATTR void VKAPI_CALL GetDeviceQueue(VkDevice device, uint32_t queueFamilyI
 
     lock.lock();
 
-    CreateQueue(device, *pQueue, VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT);
+    CreateQueue(device, *pQueue);
     AddQueueInfo(device, queueFamilyIndex, *pQueue);
 }
 
@@ -3709,8 +3710,7 @@ VKAPI_ATTR VkResult VKAPI_CALL AllocateCommandBuffers(VkDevice device, const VkC
 
     lock.lock();
     for (uint32_t i = 0; i < pAllocateInfo->commandBufferCount; i++) {
-        AllocateCommandBuffer(device, pAllocateInfo->commandPool, pCommandBuffers[i],
-                              VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, pAllocateInfo->level);
+        AllocateCommandBuffer(device, pAllocateInfo->commandPool, pCommandBuffers[i], pAllocateInfo->level);
     }
     lock.unlock();
 
@@ -3740,8 +3740,7 @@ VKAPI_ATTR VkResult VKAPI_CALL AllocateDescriptorSets(VkDevice device, const VkD
     if (VK_SUCCESS == result) {
         lock.lock();
         for (uint32_t i = 0; i < pAllocateInfo->descriptorSetCount; i++) {
-            AllocateDescriptorSet(device, pAllocateInfo->descriptorPool, pDescriptorSets[i],
-                                  VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT);
+            AllocateDescriptorSet(device, pAllocateInfo->descriptorPool, pDescriptorSets[i]);
         }
         lock.unlock();
     }
