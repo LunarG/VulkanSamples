@@ -160,38 +160,6 @@ static instance_table_map ot_instance_table_map;
 static std::mutex global_lock;
 static uint64_t object_track_index = 0;
 
-// Array of object name strings for OBJECT_TYPE enum conversion
-static const char *object_name[VK_DEBUG_REPORT_OBJECT_TYPE_RANGE_SIZE_EXT] = {
-    "Unknown",                // VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN
-    "Instance",               // VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT
-    "Physical Device",        // VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT
-    "Device",                 // VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT
-    "Queue",                  // VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT
-    "Semaphore",              // VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT
-    "Command Buffer",         // VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT
-    "Fence",                  // VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT
-    "Device Memory",          // VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT
-    "Buffer",                 // VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT
-    "Image",                  // VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT
-    "Event",                  // VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT
-    "Query Pool",             // VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT
-    "Buffer View",            // VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT
-    "Image View",             // VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT
-    "Shader Module",          // VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT
-    "Pipeline Cache",         // VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT
-    "Pipeline Layout",        // VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT
-    "Render Pass",            // VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT
-    "Pipeline",               // VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT
-    "Descriptor Set Layout",  // VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT
-    "Sampler",                // VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT
-    "Descriptor Pool",        // VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT
-    "Descriptor Set",         // VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT
-    "Framebuffer",            // VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT
-    "Command Pool",           // VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT
-    "SurfaceKHR",             // VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT
-    "SwapchainKHR",           // VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT
-    "Debug Report"};          // VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT
-
 #include "vk_dispatch_table_helper.h"
 
 }  // namespace object_tracker

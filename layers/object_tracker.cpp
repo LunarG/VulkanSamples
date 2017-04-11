@@ -159,8 +159,7 @@ static bool ValidateCommandBuffer(VkDevice device, VkCommandPool command_pool, V
     } else {
         skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                         object_handle, __LINE__, VALIDATION_ERROR_00097, LayerName, "Invalid %s Object 0x%" PRIxLEAST64 ". %s",
-                        object_name[VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT], object_handle,
-                        validation_error_map[VALIDATION_ERROR_00097]);
+                        object_string[kVulkanObjectTypeCommandBuffer], object_handle, validation_error_map[VALIDATION_ERROR_00097]);
     }
     return skip;
 }
@@ -202,8 +201,7 @@ static bool ValidateDescriptorSet(VkDevice device, VkDescriptorPool descriptor_p
     } else {
         skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                         object_handle, __LINE__, VALIDATION_ERROR_00920, LayerName, "Invalid %s Object 0x%" PRIxLEAST64 ". %s",
-                        object_name[VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT], object_handle,
-                        validation_error_map[VALIDATION_ERROR_00920]);
+                        object_string[kVulkanObjectTypeDescriptorSet], object_handle, validation_error_map[VALIDATION_ERROR_00920]);
     }
     return skip;
 }
@@ -266,7 +264,7 @@ static void CreateObject(T1 dispatchable_object, T2 object, VulkanObjectType obj
         VkDebugReportObjectTypeEXT debug_object_type = GetDebugReportEnum(object_type);
         log_msg(instance_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, debug_object_type, object_handle, __LINE__,
                 OBJTRACK_NONE, LayerName, "OBJ[0x%" PRIxLEAST64 "] : CREATE %s object 0x%" PRIxLEAST64, object_track_index++,
-                object_name[debug_object_type], object_handle);
+                object_string[object_type], object_handle);
 
         OBJTRACK_NODE *pNewObjNode = new OBJTRACK_NODE;
         pNewObjNode->object_type = object_type;
@@ -301,8 +299,8 @@ static void DestroyObject(T1 dispatchable_object, T2 object, VulkanObjectType ob
             log_msg(device_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, debug_object_type, object_handle, __LINE__,
                     OBJTRACK_NONE, LayerName,
                     "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%" PRIu64 " total objs remain & %" PRIu64 " %s objs).",
-                    object_name[debug_object_type], reinterpret_cast<uint64_t &>(object), device_data->num_total_objects,
-                    device_data->num_objects[pNode->object_type], object_name[debug_object_type]);
+                    object_string[object_type], reinterpret_cast<uint64_t &>(object), device_data->num_total_objects,
+                    device_data->num_objects[pNode->object_type], object_string[object_type]);
 
             auto allocated_with_custom = (pNode->status & OBJSTATUS_CUSTOM_ALLOCATOR) ? true : false;
             if (allocated_with_custom && !custom_allocator && expected_custom_allocator_code != VALIDATION_ERROR_UNDEFINED) {
@@ -311,13 +309,13 @@ static void DestroyObject(T1 dispatchable_object, T2 object, VulkanObjectType ob
                 log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, debug_object_type, object_handle, __LINE__,
                         expected_custom_allocator_code, LayerName,
                         "Custom allocator not specified while destroying %s obj 0x%" PRIxLEAST64 " but specified at creation. %s",
-                        object_name[debug_object_type], object_handle, validation_error_map[expected_custom_allocator_code]);
+                        object_string[object_type], object_handle, validation_error_map[expected_custom_allocator_code]);
             } else if (!allocated_with_custom && custom_allocator &&
                        expected_default_allocator_code != VALIDATION_ERROR_UNDEFINED) {
                 log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, debug_object_type, object_handle, __LINE__,
                         expected_default_allocator_code, LayerName,
                         "Custom allocator specified while destroying %s obj 0x%" PRIxLEAST64 " but not specified at creation. %s",
-                        object_name[debug_object_type], object_handle, validation_error_map[expected_default_allocator_code]);
+                        object_string[object_type], object_handle, validation_error_map[expected_default_allocator_code]);
             }
 
             delete pNode;
@@ -326,7 +324,7 @@ static void DestroyObject(T1 dispatchable_object, T2 object, VulkanObjectType ob
             log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, object_handle,
                     __LINE__, OBJTRACK_UNKNOWN_OBJECT, LayerName,
                     "Unable to remove %s obj 0x%" PRIxLEAST64 ". Was it created? Has it already been destroyed?",
-                    object_name[debug_object_type], object_handle);
+                    object_string[object_type], object_handle);
         }
     }
 }
@@ -370,7 +368,7 @@ static bool ValidateObject(T1 dispatchable_object, T2 object, VulkanObjectType o
             // Report an error if object was not found anywhere
             return log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, debug_object_type, object_handle, __LINE__,
                            invalid_handle_code, LayerName, "Invalid %s Object 0x%" PRIxLEAST64 ". %s",
-                           object_name[debug_object_type], object_handle, validation_error_map[invalid_handle_code]);
+                           object_string[object_type], object_handle, validation_error_map[invalid_handle_code]);
         }
     }
     return false;
@@ -379,13 +377,12 @@ static bool ValidateObject(T1 dispatchable_object, T2 object, VulkanObjectType o
 static void DeviceReportUndestroyedObjects(VkDevice device, VulkanObjectType object_type,
                                            enum UNIQUE_VALIDATION_ERROR_CODE error_code) {
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-    VkDebugReportObjectTypeEXT debug_object_type = GetDebugReportEnum(object_type);
     for (auto item = device_data->object_map[object_type].begin(); item != device_data->object_map[object_type].end();) {
         OBJTRACK_NODE *object_info = item->second;
-        log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, debug_object_type, object_info->handle, __LINE__,
-                error_code, LayerName,
+        log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, GetDebugReportEnum(object_type), object_info->handle,
+                __LINE__, error_code, LayerName,
                 "OBJ ERROR : For device 0x%" PRIxLEAST64 ", %s object 0x%" PRIxLEAST64 " has not been destroyed. %s",
-                reinterpret_cast<uint64_t>(device), object_name[debug_object_type], object_info->handle,
+                reinterpret_cast<uint64_t>(device), object_string[object_type], object_info->handle,
                 validation_error_map[error_code]);
         item = device_data->object_map[object_type].erase(item);
     }

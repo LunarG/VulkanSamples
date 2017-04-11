@@ -5327,7 +5327,7 @@ TEST_F(VkLayerTest, RenderPassInUseDestroyedSignaled) {
     // Wait for queue to complete so we can safely destroy everything
     vkQueueWaitIdle(m_device->m_queue);
     m_errorMonitor->SetUnexpectedError("If renderPass is not VK_NULL_HANDLE, renderPass must be a valid VkRenderPass handle");
-    m_errorMonitor->SetUnexpectedError("Unable to remove Render Pass obj");
+    m_errorMonitor->SetUnexpectedError("Unable to remove RenderPass obj");
     vkDestroyRenderPass(m_device->device(), rp, nullptr);
     vkDestroyPipeline(m_device->device(), pipeline, nullptr);
     vkDestroyPipelineCache(m_device->device(), pipe_cache, nullptr);
@@ -6048,7 +6048,7 @@ TEST_F(VkLayerTest, InvalidCmdBufferDescriptorSetImageSamplerDestroyed) {
     m_errorMonitor->SetUnexpectedError(
         "pDescriptorSets must be a pointer to an array of descriptorSetCount VkDescriptorSet handles, each element of which must "
         "either be a valid handle or VK_NULL_HANDLE");
-    m_errorMonitor->SetUnexpectedError("Unable to remove Descriptor Set obj");
+    m_errorMonitor->SetUnexpectedError("Unable to remove DescriptorSet obj");
     vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
 
     // Attempt to submit cmd buffer containing the freed descriptor set
@@ -6229,7 +6229,7 @@ TEST_F(VkLayerTest, DescriptorPoolInUseDestroyedSignaled) {
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
     m_errorMonitor->SetUnexpectedError(
         "If descriptorPool is not VK_NULL_HANDLE, descriptorPool must be a valid VkDescriptorPool handle");
-    m_errorMonitor->SetUnexpectedError("Unable to remove Descriptor Pool obj");
+    m_errorMonitor->SetUnexpectedError("Unable to remove DescriptorPool obj");
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
     // TODO : It seems Validation layers think ds_pool was already destroyed, even though it wasn't?
 }
@@ -12510,7 +12510,7 @@ TEST_F(VkLayerTest, QueryPoolInUseDestroyedSignaled) {
     vkQueueWaitIdle(m_device->m_queue);
     // Now that cmd buffer done we can safely destroy query_pool
     m_errorMonitor->SetUnexpectedError("If queryPool is not VK_NULL_HANDLE, queryPool must be a valid VkQueryPool handle");
-    m_errorMonitor->SetUnexpectedError("Unable to remove Query Pool obj");
+    m_errorMonitor->SetUnexpectedError("Unable to remove QueryPool obj");
     vkDestroyQueryPool(m_device->handle(), query_pool, NULL);
 }
 
@@ -12732,7 +12732,7 @@ TEST_F(VkLayerTest, ImageViewInUseDestroyedSignaled) {
     vkQueueWaitIdle(m_device->m_queue);
     // Now we can actually destroy imageView
     m_errorMonitor->SetUnexpectedError("If imageView is not VK_NULL_HANDLE, imageView must be a valid VkImageView handle");
-    m_errorMonitor->SetUnexpectedError("Unable to remove Image View obj");
+    m_errorMonitor->SetUnexpectedError("Unable to remove ImageView obj");
     vkDestroyImageView(m_device->device(), view, NULL);
     vkDestroySampler(m_device->device(), sampler, nullptr);
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
@@ -12897,7 +12897,7 @@ TEST_F(VkLayerTest, BufferViewInUseDestroyedSignaled) {
     vkQueueWaitIdle(m_device->m_queue);
     // Now we can actually destroy bufferView
     m_errorMonitor->SetUnexpectedError("If bufferView is not VK_NULL_HANDLE, bufferView must be a valid VkBufferView handle");
-    m_errorMonitor->SetUnexpectedError("Unable to remove Buffer View obj");
+    m_errorMonitor->SetUnexpectedError("Unable to remove BufferView obj");
     vkDestroyBufferView(m_device->device(), view, NULL);
     vkDestroyBuffer(m_device->device(), buffer, NULL);
     vkFreeMemory(m_device->device(), buffer_memory, NULL);
