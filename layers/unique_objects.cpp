@@ -357,65 +357,6 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance in
     return disp_table->GetPhysicalDeviceProcAddr(instance, funcName);
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL AllocateMemory(VkDevice device, const VkMemoryAllocateInfo *pAllocateInfo,
-                                              const VkAllocationCallbacks *pAllocator, VkDeviceMemory *pMemory) {
-    const VkMemoryAllocateInfo *input_allocate_info = pAllocateInfo;
-    std::unique_ptr<safe_VkMemoryAllocateInfo> safe_allocate_info;
-    std::unique_ptr<safe_VkDedicatedAllocationMemoryAllocateInfoNV> safe_dedicated_allocate_info;
-    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-
-    if ((pAllocateInfo != nullptr) &&
-        ContainsExtStruct(pAllocateInfo, VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_MEMORY_ALLOCATE_INFO_NV)) {
-        // Assuming there is only one extension struct of this type in the list for now
-        safe_dedicated_allocate_info =
-            std::unique_ptr<safe_VkDedicatedAllocationMemoryAllocateInfoNV>(new safe_VkDedicatedAllocationMemoryAllocateInfoNV);
-        safe_allocate_info = std::unique_ptr<safe_VkMemoryAllocateInfo>(new safe_VkMemoryAllocateInfo(pAllocateInfo));
-        input_allocate_info = reinterpret_cast<const VkMemoryAllocateInfo *>(safe_allocate_info.get());
-
-        const GenericHeader *orig_pnext = reinterpret_cast<const GenericHeader *>(pAllocateInfo->pNext);
-        GenericHeader *input_pnext = reinterpret_cast<GenericHeader *>(safe_allocate_info.get());
-        while (orig_pnext != nullptr) {
-            if (orig_pnext->sType == VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_MEMORY_ALLOCATE_INFO_NV) {
-                safe_dedicated_allocate_info->initialize(
-                    reinterpret_cast<const VkDedicatedAllocationMemoryAllocateInfoNV *>(orig_pnext));
-
-                std::unique_lock<std::mutex> lock(global_lock);
-
-                if (safe_dedicated_allocate_info->buffer != VK_NULL_HANDLE) {
-                    uint64_t local_buffer = reinterpret_cast<uint64_t &>(safe_dedicated_allocate_info->buffer);
-                    safe_dedicated_allocate_info->buffer =
-                        reinterpret_cast<VkBuffer &>(device_data->unique_id_mapping[local_buffer]);
-                }
-
-                if (safe_dedicated_allocate_info->image != VK_NULL_HANDLE) {
-                    uint64_t local_image = reinterpret_cast<uint64_t &>(safe_dedicated_allocate_info->image);
-                    safe_dedicated_allocate_info->image = reinterpret_cast<VkImage &>(device_data->unique_id_mapping[local_image]);
-                }
-
-                lock.unlock();
-
-                input_pnext->pNext = reinterpret_cast<GenericHeader *>(safe_dedicated_allocate_info.get());
-                input_pnext = reinterpret_cast<GenericHeader *>(input_pnext->pNext);
-            } else {
-                // TODO: generic handling of pNext copies
-            }
-
-            orig_pnext = reinterpret_cast<const GenericHeader *>(orig_pnext->pNext);
-        }
-    }
-
-    VkResult result = device_data->device_dispatch_table->AllocateMemory(device, input_allocate_info, pAllocator, pMemory);
-
-    if (VK_SUCCESS == result) {
-        std::lock_guard<std::mutex> lock(global_lock);
-        uint64_t unique_id = global_unique_id++;
-        device_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t &>(*pMemory);
-        *pMemory = reinterpret_cast<VkDeviceMemory &>(unique_id);
-    }
-
-    return result;
-}
-
 VKAPI_ATTR VkResult VKAPI_CALL CreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t createInfoCount,
                                                       const VkComputePipelineCreateInfo *pCreateInfos,
                                                       const VkAllocationCallbacks *pAllocator, VkPipeline *pPipelines) {

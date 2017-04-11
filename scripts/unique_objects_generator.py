@@ -132,7 +132,6 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
             'vkDestroyInstance',
             'vkCreateDevice',
             'vkDestroyDevice',
-            'vkAllocateMemory',
             'vkCreateComputePipelines',
             'vkCreateGraphicsPipelines',
             'vkCreateSwapchainKHR',
