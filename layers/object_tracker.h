@@ -59,7 +59,7 @@ enum ObjectStatusFlagBits {
 // Object and state information structure
 struct OBJTRACK_NODE {
     uint64_t handle;                         // Object handle (new)
-    VkDebugReportObjectTypeEXT object_type;  // Object type identifier
+    VulkanObjectType object_type;            // Object type identifier
     ObjectStatusFlags status;                // Object state
     uint64_t parent_object;                  // Parent object
 };
@@ -113,7 +113,7 @@ struct layer_data {
     VkInstance instance;
     VkPhysicalDevice physical_device;
 
-    uint64_t num_objects[VK_DEBUG_REPORT_OBJECT_TYPE_RANGE_SIZE_EXT + 1];
+    uint64_t num_objects[kVulkanObjectTypeMax + 1];
     uint64_t num_total_objects;
 
     debug_report_data *report_data;
@@ -148,7 +148,7 @@ struct layer_data {
           tmp_callbacks(nullptr),
           object_map{},
           dispatch_table{} {
-        object_map.resize(VK_DEBUG_REPORT_OBJECT_TYPE_RANGE_SIZE_EXT + 1);
+        object_map.resize(kVulkanObjectTypeMax + 1);
         memset(&enables, 0, sizeof(enables));
     }
 };

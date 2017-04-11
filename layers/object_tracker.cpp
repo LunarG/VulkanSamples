@@ -38,6 +38,7 @@
 #include "vk_layer_data.h"
 #include "vk_layer_logging.h"
 #include "vk_layer_table.h"
+#include "vk_object_types.h"
 #include "vulkan/vk_layer.h"
 
 #include "object_tracker.h"
@@ -81,19 +82,19 @@ static void DestroyQueueDataStructures(VkDevice device) {
     device_data->queue_info_map.clear();
 
     // Destroy the items in the queue map
-    auto queue = device_data->object_map[VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT].begin();
-    while (queue != device_data->object_map[VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT].end()) {
+    auto queue = device_data->object_map[kVulkanObjectTypeQueue].begin();
+    while (queue != device_data->object_map[kVulkanObjectTypeQueue].end()) {
         uint32_t obj_index = queue->second->object_type;
         assert(device_data->num_total_objects > 0);
         device_data->num_total_objects--;
         assert(device_data->num_objects[obj_index] > 0);
         device_data->num_objects[obj_index]--;
-        log_msg(device_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, queue->second->object_type, queue->second->handle,
-                __LINE__, OBJTRACK_NONE, LayerName,
+        log_msg(device_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT,
+                queue->second->handle, __LINE__, OBJTRACK_NONE, LayerName,
                 "OBJ_STAT Destroy Queue obj 0x%" PRIxLEAST64 " (%" PRIu64 " total objs remain & %" PRIu64 " Queue objs).",
                 queue->second->handle, device_data->num_total_objects, device_data->num_objects[obj_index]);
         delete queue->second;
-        queue = device_data->object_map[VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT].erase(queue);
+        queue = device_data->object_map[kVulkanObjectTypeQueue].erase(queue);
     }
 }
 
@@ -126,7 +127,7 @@ static void AllocateCommandBuffer(VkDevice device, const VkCommandPool command_p
             "VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT", reinterpret_cast<const uint64_t>(command_buffer));
 
     OBJTRACK_NODE *pNewObjNode = new OBJTRACK_NODE;
-    pNewObjNode->object_type = VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT;
+    pNewObjNode->object_type = kVulkanObjectTypeCommandBuffer;
     pNewObjNode->handle = reinterpret_cast<const uint64_t>(command_buffer);
     pNewObjNode->parent_object = reinterpret_cast<const uint64_t &>(command_pool);
     if (level == VK_COMMAND_BUFFER_LEVEL_SECONDARY) {
@@ -134,9 +135,8 @@ static void AllocateCommandBuffer(VkDevice device, const VkCommandPool command_p
     } else {
         pNewObjNode->status = OBJSTATUS_NONE;
     }
-    device_data->object_map[VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT][reinterpret_cast<const uint64_t>(command_buffer)] =
-        pNewObjNode;
-    device_data->num_objects[VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT]++;
+    device_data->object_map[kVulkanObjectTypeCommandBuffer][reinterpret_cast<const uint64_t>(command_buffer)] = pNewObjNode;
+    device_data->num_objects[kVulkanObjectTypeCommandBuffer]++;
     device_data->num_total_objects++;
 }
 
@@ -144,14 +144,13 @@ static bool ValidateCommandBuffer(VkDevice device, VkCommandPool command_pool, V
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     bool skip = false;
     uint64_t object_handle = reinterpret_cast<uint64_t>(command_buffer);
-    if (device_data->object_map[VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT].find(object_handle) !=
-        device_data->object_map[VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT].end()) {
-        OBJTRACK_NODE *pNode =
-            device_data->object_map[VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT][reinterpret_cast<uint64_t>(command_buffer)];
+    if (device_data->object_map[kVulkanObjectTypeCommandBuffer].find(object_handle) !=
+        device_data->object_map[kVulkanObjectTypeCommandBuffer].end()) {
+        OBJTRACK_NODE *pNode = device_data->object_map[kVulkanObjectTypeCommandBuffer][reinterpret_cast<uint64_t>(command_buffer)];
 
         if (pNode->parent_object != reinterpret_cast<uint64_t &>(command_pool)) {
-            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, pNode->object_type, object_handle, __LINE__,
-                            VALIDATION_ERROR_00102, LayerName,
+            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            object_handle, __LINE__, VALIDATION_ERROR_00102, LayerName,
                             "FreeCommandBuffers is attempting to free Command Buffer 0x%" PRIxLEAST64
                             " belonging to Command Pool 0x%" PRIxLEAST64 " from pool 0x%" PRIxLEAST64 "). %s",
                             reinterpret_cast<uint64_t>(command_buffer), pNode->parent_object,
@@ -175,13 +174,12 @@ static void AllocateDescriptorSet(VkDevice device, VkDescriptorPool descriptor_p
             "VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT", reinterpret_cast<uint64_t &>(descriptor_set));
 
     OBJTRACK_NODE *pNewObjNode = new OBJTRACK_NODE;
-    pNewObjNode->object_type = VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT;
+    pNewObjNode->object_type = kVulkanObjectTypeDescriptorSet;
     pNewObjNode->status = OBJSTATUS_NONE;
     pNewObjNode->handle = reinterpret_cast<uint64_t &>(descriptor_set);
     pNewObjNode->parent_object = reinterpret_cast<uint64_t &>(descriptor_pool);
-    device_data->object_map[VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT][reinterpret_cast<uint64_t &>(descriptor_set)] =
-        pNewObjNode;
-    device_data->num_objects[VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT]++;
+    device_data->object_map[kVulkanObjectTypeDescriptorSet][reinterpret_cast<uint64_t &>(descriptor_set)] = pNewObjNode;
+    device_data->num_objects[kVulkanObjectTypeDescriptorSet]++;
     device_data->num_total_objects++;
 }
 
@@ -189,13 +187,13 @@ static bool ValidateDescriptorSet(VkDevice device, VkDescriptorPool descriptor_p
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     bool skip = false;
     uint64_t object_handle = reinterpret_cast<uint64_t &>(descriptor_set);
-    auto dsItem = device_data->object_map[VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT].find(object_handle);
-    if (dsItem != device_data->object_map[VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT].end()) {
+    auto dsItem = device_data->object_map[kVulkanObjectTypeDescriptorSet].find(object_handle);
+    if (dsItem != device_data->object_map[kVulkanObjectTypeDescriptorSet].end()) {
         OBJTRACK_NODE *pNode = dsItem->second;
 
         if (pNode->parent_object != reinterpret_cast<uint64_t &>(descriptor_pool)) {
-            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, pNode->object_type, object_handle, __LINE__,
-                            VALIDATION_ERROR_00927, LayerName,
+            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
+                            object_handle, __LINE__, VALIDATION_ERROR_00927, LayerName,
                             "FreeDescriptorSets is attempting to free descriptorSet 0x%" PRIxLEAST64
                             " belonging to Descriptor Pool 0x%" PRIxLEAST64 " from pool 0x%" PRIxLEAST64 "). %s",
                             reinterpret_cast<uint64_t &>(descriptor_set), pNode->parent_object,
@@ -219,16 +217,16 @@ static void CreateQueue(VkDevice device, VkQueue vkObj) {
             "VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT", reinterpret_cast<uint64_t>(vkObj));
 
     OBJTRACK_NODE *p_obj_node = NULL;
-    auto queue_item = device_data->object_map[VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT].find(reinterpret_cast<uint64_t>(vkObj));
-    if (queue_item == device_data->object_map[VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT].end()) {
+    auto queue_item = device_data->object_map[kVulkanObjectTypeQueue].find(reinterpret_cast<uint64_t>(vkObj));
+    if (queue_item == device_data->object_map[kVulkanObjectTypeQueue].end()) {
         p_obj_node = new OBJTRACK_NODE;
-        device_data->object_map[VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT][reinterpret_cast<uint64_t>(vkObj)] = p_obj_node;
-        device_data->num_objects[VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT]++;
+        device_data->object_map[kVulkanObjectTypeQueue][reinterpret_cast<uint64_t>(vkObj)] = p_obj_node;
+        device_data->num_objects[kVulkanObjectTypeQueue]++;
         device_data->num_total_objects++;
     } else {
         p_obj_node = queue_item->second;
     }
-    p_obj_node->object_type = VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT;
+    p_obj_node->object_type = kVulkanObjectTypeQueue;
     p_obj_node->status = OBJSTATUS_NONE;
     p_obj_node->handle = reinterpret_cast<uint64_t>(vkObj);
 }
@@ -241,7 +239,7 @@ static void CreateSwapchainImageObject(VkDevice dispatchable_object, VkImage swa
             reinterpret_cast<uint64_t &>(swapchain_image));
 
     OBJTRACK_NODE *pNewObjNode = new OBJTRACK_NODE;
-    pNewObjNode->object_type = VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT;
+    pNewObjNode->object_type = kVulkanObjectTypeImage;
     pNewObjNode->status = OBJSTATUS_NONE;
     pNewObjNode->handle = reinterpret_cast<uint64_t &>(swapchain_image);
     pNewObjNode->parent_object = reinterpret_cast<uint64_t &>(swapchain);
@@ -258,17 +256,17 @@ uint64_t handle_value(T *handle) {
 }
 
 template <typename T1, typename T2>
-static void CreateObject(T1 dispatchable_object, T2 object, VkDebugReportObjectTypeEXT object_type,
-                         const VkAllocationCallbacks *pAllocator) {
+static void CreateObject(T1 dispatchable_object, T2 object, VulkanObjectType object_type, const VkAllocationCallbacks *pAllocator) {
     layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(dispatchable_object), layer_data_map);
 
     auto object_handle = handle_value(object);
     bool custom_allocator = pAllocator != nullptr;
 
     if (!instance_data->object_map[object_type].count(object_handle)) {
-        log_msg(instance_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, object_type, object_handle, __LINE__,
+        VkDebugReportObjectTypeEXT debug_object_type = GetDebugReportEnum(object_type);
+        log_msg(instance_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, debug_object_type, object_handle, __LINE__,
                 OBJTRACK_NONE, LayerName, "OBJ[0x%" PRIxLEAST64 "] : CREATE %s object 0x%" PRIxLEAST64, object_track_index++,
-                object_name[object_type], object_handle);
+                object_name[debug_object_type], object_handle);
 
         OBJTRACK_NODE *pNewObjNode = new OBJTRACK_NODE;
         pNewObjNode->object_type = object_type;
@@ -282,13 +280,14 @@ static void CreateObject(T1 dispatchable_object, T2 object, VkDebugReportObjectT
 }
 
 template <typename T1, typename T2>
-static void DestroyObject(T1 dispatchable_object, T2 object, VkDebugReportObjectTypeEXT object_type,
-                          const VkAllocationCallbacks *pAllocator, enum UNIQUE_VALIDATION_ERROR_CODE expected_custom_allocator_code,
+static void DestroyObject(T1 dispatchable_object, T2 object, VulkanObjectType object_type, const VkAllocationCallbacks *pAllocator,
+                          enum UNIQUE_VALIDATION_ERROR_CODE expected_custom_allocator_code,
                           enum UNIQUE_VALIDATION_ERROR_CODE expected_default_allocator_code) {
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(dispatchable_object), layer_data_map);
 
     auto object_handle = handle_value(object);
     bool custom_allocator = pAllocator != nullptr;
+    VkDebugReportObjectTypeEXT debug_object_type = GetDebugReportEnum(object_type);
 
     if (object_handle != VK_NULL_HANDLE) {
         auto item = device_data->object_map[object_type].find(object_handle);
@@ -299,66 +298,66 @@ static void DestroyObject(T1 dispatchable_object, T2 object, VkDebugReportObject
             assert(device_data->num_objects[pNode->object_type] > 0);
             device_data->num_objects[pNode->object_type]--;
 
-            log_msg(device_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, pNode->object_type, object_handle, __LINE__,
+            log_msg(device_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, debug_object_type, object_handle, __LINE__,
                     OBJTRACK_NONE, LayerName,
                     "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%" PRIu64 " total objs remain & %" PRIu64 " %s objs).",
-                    object_name[pNode->object_type], reinterpret_cast<uint64_t &>(object), device_data->num_total_objects,
-                    device_data->num_objects[pNode->object_type], object_name[pNode->object_type]);
+                    object_name[debug_object_type], reinterpret_cast<uint64_t &>(object), device_data->num_total_objects,
+                    device_data->num_objects[pNode->object_type], object_name[debug_object_type]);
 
             auto allocated_with_custom = (pNode->status & OBJSTATUS_CUSTOM_ALLOCATOR) ? true : false;
             if (allocated_with_custom && !custom_allocator && expected_custom_allocator_code != VALIDATION_ERROR_UNDEFINED) {
                 // This check only verifies that custom allocation callbacks were provided to both Create and Destroy calls,
                 // it cannot verify that these allocation callbacks are compatible with each other.
-                log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, object_type, object_handle, __LINE__,
+                log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, debug_object_type, object_handle, __LINE__,
                         expected_custom_allocator_code, LayerName,
                         "Custom allocator not specified while destroying %s obj 0x%" PRIxLEAST64 " but specified at creation. %s",
-                        object_name[object_type], object_handle, validation_error_map[expected_custom_allocator_code]);
+                        object_name[debug_object_type], object_handle, validation_error_map[expected_custom_allocator_code]);
             } else if (!allocated_with_custom && custom_allocator &&
                        expected_default_allocator_code != VALIDATION_ERROR_UNDEFINED) {
-                log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, object_type, object_handle, __LINE__,
+                log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, debug_object_type, object_handle, __LINE__,
                         expected_default_allocator_code, LayerName,
                         "Custom allocator specified while destroying %s obj 0x%" PRIxLEAST64 " but not specified at creation. %s",
-                        object_name[object_type], object_handle, validation_error_map[expected_default_allocator_code]);
+                        object_name[debug_object_type], object_handle, validation_error_map[expected_default_allocator_code]);
             }
 
             delete pNode;
             device_data->object_map[object_type].erase(item);
         } else {
-            log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, object_handle, __LINE__,
-                    OBJTRACK_UNKNOWN_OBJECT, LayerName,
+            log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, object_handle,
+                    __LINE__, OBJTRACK_UNKNOWN_OBJECT, LayerName,
                     "Unable to remove %s obj 0x%" PRIxLEAST64 ". Was it created? Has it already been destroyed?",
-                    object_name[object_type], object_handle);
+                    object_name[debug_object_type], object_handle);
         }
     }
 }
 
 template <typename T1, typename T2>
-static bool ValidateObject(T1 dispatchable_object, T2 object, VkDebugReportObjectTypeEXT object_type, bool null_allowed,
+static bool ValidateObject(T1 dispatchable_object, T2 object, VulkanObjectType object_type, bool null_allowed,
                            enum UNIQUE_VALIDATION_ERROR_CODE invalid_handle_code,
                            enum UNIQUE_VALIDATION_ERROR_CODE wrong_device_code) {
     if (null_allowed && (object == VK_NULL_HANDLE)) {
         return false;
     }
     auto object_handle = handle_value(object);
+    VkDebugReportObjectTypeEXT debug_object_type = GetDebugReportEnum(object_type);
 
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(dispatchable_object), layer_data_map);
     // Look for object in device object map
     if (device_data->object_map[object_type].find(object_handle) == device_data->object_map[object_type].end()) {
         // If object is an image, also look for it in the swapchain image map
-        if ((object_type != VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT) ||
+        if ((object_type != kVulkanObjectTypeImage) ||
             (device_data->swapchainImageMap.find(object_handle) == device_data->swapchainImageMap.end())) {
             // Object not found, look for it in other device object maps
             for (auto other_device_data : layer_data_map) {
                 if (other_device_data.second != device_data) {
                     if (other_device_data.second->object_map[object_type].find(object_handle) !=
                             other_device_data.second->object_map[object_type].end() ||
-                        (object_type == VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT &&
-                         other_device_data.second->swapchainImageMap.find(object_handle) !=
-                             other_device_data.second->swapchainImageMap.end())) {
+                        (object_type == kVulkanObjectTypeImage && other_device_data.second->swapchainImageMap.find(object_handle) !=
+                                                                      other_device_data.second->swapchainImageMap.end())) {
                         // Object found on other device, report an error if object has a device parent error code
                         if (wrong_device_code != VALIDATION_ERROR_UNDEFINED) {
-                            return log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, object_type, object_handle,
-                                           __LINE__, wrong_device_code, LayerName,
+                            return log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, debug_object_type,
+                                           object_handle, __LINE__, wrong_device_code, LayerName,
                                            "Object 0x%" PRIxLEAST64
                                            " was not created, allocated or retrieved from the correct device. %s",
                                            object_handle, validation_error_map[wrong_device_code]);
@@ -369,23 +368,24 @@ static bool ValidateObject(T1 dispatchable_object, T2 object, VkDebugReportObjec
                 }
             }
             // Report an error if object was not found anywhere
-            return log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, object_type, object_handle, __LINE__,
-                           invalid_handle_code, LayerName, "Invalid %s Object 0x%" PRIxLEAST64 ". %s", object_name[object_type],
-                           object_handle, validation_error_map[invalid_handle_code]);
+            return log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, debug_object_type, object_handle, __LINE__,
+                           invalid_handle_code, LayerName, "Invalid %s Object 0x%" PRIxLEAST64 ". %s",
+                           object_name[debug_object_type], object_handle, validation_error_map[invalid_handle_code]);
         }
     }
     return false;
 }
 
-static void DeviceReportUndestroyedObjects(VkDevice device, VkDebugReportObjectTypeEXT object_type,
+static void DeviceReportUndestroyedObjects(VkDevice device, VulkanObjectType object_type,
                                            enum UNIQUE_VALIDATION_ERROR_CODE error_code) {
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    VkDebugReportObjectTypeEXT debug_object_type = GetDebugReportEnum(object_type);
     for (auto item = device_data->object_map[object_type].begin(); item != device_data->object_map[object_type].end();) {
         OBJTRACK_NODE *object_info = item->second;
-        log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, object_info->object_type, object_info->handle, __LINE__,
+        log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, debug_object_type, object_info->handle, __LINE__,
                 error_code, LayerName,
                 "OBJ ERROR : For device 0x%" PRIxLEAST64 ", %s object 0x%" PRIxLEAST64 " has not been destroyed. %s",
-                reinterpret_cast<uint64_t>(device), object_name[object_type], object_info->handle,
+                reinterpret_cast<uint64_t>(device), object_name[debug_object_type], object_info->handle,
                 validation_error_map[error_code]);
         item = device_data->object_map[object_type].erase(item);
     }
@@ -407,48 +407,52 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
     }
 
     // TODO: The instance handle can not be validated here. The loader will likely have to validate it.
-    ValidateObject(instance, instance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, true, VALIDATION_ERROR_00021,
-                   VALIDATION_ERROR_UNDEFINED);
+    ValidateObject(instance, instance, kVulkanObjectTypeInstance, true, VALIDATION_ERROR_00021, VALIDATION_ERROR_UNDEFINED);
 
-    DestroyObject(instance, instance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pAllocator, VALIDATION_ERROR_00019,
-                  VALIDATION_ERROR_00020);
+    DestroyObject(instance, instance, kVulkanObjectTypeInstance, pAllocator, VALIDATION_ERROR_00019, VALIDATION_ERROR_00020);
     // Report any remaining objects in LL
 
-    for (auto iit = instance_data->object_map[VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT].begin();
-         iit != instance_data->object_map[VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT].end();) {
+    for (auto iit = instance_data->object_map[kVulkanObjectTypeDevice].begin();
+         iit != instance_data->object_map[kVulkanObjectTypeDevice].end();) {
         OBJTRACK_NODE *pNode = iit->second;
 
         VkDevice device = reinterpret_cast<VkDevice>(pNode->handle);
+        VkDebugReportObjectTypeEXT debug_object_type = GetDebugReportEnum(pNode->object_type);
 
-        log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, pNode->object_type, pNode->handle, __LINE__,
+        log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, debug_object_type, pNode->handle, __LINE__,
                 OBJTRACK_OBJECT_LEAK, LayerName, "OBJ ERROR : %s object 0x%" PRIxLEAST64 " has not been destroyed.",
-                string_VkDebugReportObjectTypeEXT(pNode->object_type), pNode->handle);
-        // Semaphore:
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, VALIDATION_ERROR_00018);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT, VALIDATION_ERROR_00018);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, VALIDATION_ERROR_00018);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, VALIDATION_ERROR_00018);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, VALIDATION_ERROR_00018);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, VALIDATION_ERROR_00018);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT, VALIDATION_ERROR_00018);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, VALIDATION_ERROR_00018);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT, VALIDATION_ERROR_00018);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT, VALIDATION_ERROR_00018);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT, VALIDATION_ERROR_00018);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT, VALIDATION_ERROR_00018);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT, VALIDATION_ERROR_00018);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, VALIDATION_ERROR_00018);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, VALIDATION_ERROR_00018);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT, VALIDATION_ERROR_00018);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT, VALIDATION_ERROR_00018);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT, VALIDATION_ERROR_00018);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, VALIDATION_ERROR_00018);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT, VALIDATION_ERROR_00018);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT, VALIDATION_ERROR_00018);
-        DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, VALIDATION_ERROR_00018);
-        // DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT);
+                string_VkDebugReportObjectTypeEXT(debug_object_type), pNode->handle);
+        DeviceReportUndestroyedObjects(device, kVulkanObjectTypeCommandBuffer, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, kVulkanObjectTypeSemaphore, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, kVulkanObjectTypeFence, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, kVulkanObjectTypeDeviceMemory, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, kVulkanObjectTypeBuffer, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, kVulkanObjectTypeImage, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, kVulkanObjectTypeEvent, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, kVulkanObjectTypeQueryPool, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, kVulkanObjectTypeBufferView, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, kVulkanObjectTypeImageView, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, kVulkanObjectTypeShaderModule, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, kVulkanObjectTypePipelineCache, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, kVulkanObjectTypePipelineLayout, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, kVulkanObjectTypeRenderPass, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, kVulkanObjectTypePipeline, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, kVulkanObjectTypeDescriptorSetLayout, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, kVulkanObjectTypeSampler, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, kVulkanObjectTypeDescriptorPool, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, kVulkanObjectTypeDescriptorSet, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, kVulkanObjectTypeFramebuffer, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, kVulkanObjectTypeCommandPool, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, kVulkanObjectTypeSurfaceKHR, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, kVulkanObjectTypeSwapchainKHR, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, kVulkanObjectTypeDisplayKHR, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, kVulkanObjectTypeDisplayModeKHR, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, kVulkanObjectTypeDescriptorUpdateTemplateKHR, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, kVulkanObjectTypeDebugReportCallbackEXT, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, kVulkanObjectTypeObjectTableNVX, VALIDATION_ERROR_00018);
+        DeviceReportUndestroyedObjects(device, kVulkanObjectTypeIndirectCommandsLayoutNVX, VALIDATION_ERROR_00018);
     }
-    instance_data->object_map[VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT].clear();
+    instance_data->object_map[kVulkanObjectTypeDevice].clear();
 
     VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(ot_instance_table_map, instance);
     pInstanceTable->DestroyInstance(instance, pAllocator);
@@ -479,35 +483,38 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
 
 VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCallbacks *pAllocator) {
     std::unique_lock<std::mutex> lock(global_lock);
-    ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, true, VALIDATION_ERROR_00052,
-                   VALIDATION_ERROR_UNDEFINED);
-    DestroyObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, pAllocator, VALIDATION_ERROR_00050,
-                  VALIDATION_ERROR_00051);
+    ValidateObject(device, device, kVulkanObjectTypeDevice, true, VALIDATION_ERROR_00052, VALIDATION_ERROR_UNDEFINED);
+    DestroyObject(device, device, kVulkanObjectTypeDevice, pAllocator, VALIDATION_ERROR_00050, VALIDATION_ERROR_00051);
 
     // Report any remaining objects associated with this VkDevice object in LL
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT, VALIDATION_ERROR_00049);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, VALIDATION_ERROR_00049);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, VALIDATION_ERROR_00049);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, VALIDATION_ERROR_00049);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, VALIDATION_ERROR_00049);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT, VALIDATION_ERROR_00049);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, VALIDATION_ERROR_00049);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT, VALIDATION_ERROR_00049);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT, VALIDATION_ERROR_00049);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT, VALIDATION_ERROR_00049);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT, VALIDATION_ERROR_00049);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT, VALIDATION_ERROR_00049);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, VALIDATION_ERROR_00049);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, VALIDATION_ERROR_00049);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT, VALIDATION_ERROR_00049);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT, VALIDATION_ERROR_00049);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT, VALIDATION_ERROR_00049);
-    // DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT, VALIDATION_ERROR_00049);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT, VALIDATION_ERROR_00049);
-    // DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT);
-    DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, VALIDATION_ERROR_00049);
-    // DeviceReportUndestroyedObjects(device, VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT);
+    DeviceReportUndestroyedObjects(device, kVulkanObjectTypeSemaphore, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, kVulkanObjectTypeFence, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, kVulkanObjectTypeDeviceMemory, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, kVulkanObjectTypeBuffer, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, kVulkanObjectTypeImage, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, kVulkanObjectTypeEvent, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, kVulkanObjectTypeQueryPool, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, kVulkanObjectTypeBufferView, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, kVulkanObjectTypeImageView, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, kVulkanObjectTypeShaderModule, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, kVulkanObjectTypePipelineCache, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, kVulkanObjectTypePipelineLayout, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, kVulkanObjectTypeRenderPass, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, kVulkanObjectTypePipeline, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, kVulkanObjectTypeDescriptorSetLayout, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, kVulkanObjectTypeSampler, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, kVulkanObjectTypeDescriptorPool, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, kVulkanObjectTypeDescriptorSet, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, kVulkanObjectTypeFramebuffer, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, kVulkanObjectTypeCommandPool, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, kVulkanObjectTypeSurfaceKHR, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, kVulkanObjectTypeSwapchainKHR, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, kVulkanObjectTypeDisplayKHR, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, kVulkanObjectTypeDisplayModeKHR, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, kVulkanObjectTypeDescriptorUpdateTemplateKHR, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, kVulkanObjectTypeDebugReportCallbackEXT, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, kVulkanObjectTypeObjectTableNVX, VALIDATION_ERROR_00049);
+    DeviceReportUndestroyedObjects(device, kVulkanObjectTypeIndirectCommandsLayoutNVX, VALIDATION_ERROR_00049);
 
     // Clean up Queue's MemRef Linked Lists
     DestroyQueueDataStructures(device);
@@ -524,8 +531,8 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceFeatures(VkPhysicalDevice physicalDe
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_01679, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_01679,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return;
@@ -538,8 +545,8 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceFormatProperties(VkPhysicalDevice ph
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_01683, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_01683,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return;
@@ -555,8 +562,8 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceImageFormatProperties(VkPhysical
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_01686, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_01686,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -571,8 +578,8 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceProperties(VkPhysicalDevice physical
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_00026, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_00026,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return;
@@ -585,8 +592,8 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceMemoryProperties(VkPhysicalDevice ph
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_00609, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_00609,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return;
@@ -612,36 +619,31 @@ VKAPI_ATTR VkResult VKAPI_CALL QueueSubmit(VkQueue queue, uint32_t submitCount, 
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(queue, fence, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, true, VALIDATION_ERROR_00130,
-                               VALIDATION_ERROR_00131);
+        skip |= ValidateObject(queue, fence, kVulkanObjectTypeFence, true, VALIDATION_ERROR_00130, VALIDATION_ERROR_00131);
         if (pSubmits) {
             for (uint32_t idx0 = 0; idx0 < submitCount; ++idx0) {
                 if (pSubmits[idx0].pCommandBuffers) {
                     for (uint32_t idx1 = 0; idx1 < pSubmits[idx0].commandBufferCount; ++idx1) {
-                        skip |= ValidateObject(queue, pSubmits[idx0].pCommandBuffers[idx1],
-                                               VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false, VALIDATION_ERROR_00149,
-                                               VALIDATION_ERROR_00151);
+                        skip |= ValidateObject(queue, pSubmits[idx0].pCommandBuffers[idx1], kVulkanObjectTypeCommandBuffer, false,
+                                               VALIDATION_ERROR_00149, VALIDATION_ERROR_00151);
                     }
                 }
                 if (pSubmits[idx0].pSignalSemaphores) {
                     for (uint32_t idx2 = 0; idx2 < pSubmits[idx0].signalSemaphoreCount; ++idx2) {
-                        skip |=
-                            ValidateObject(queue, pSubmits[idx0].pSignalSemaphores[idx2], VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
-                                           false, VALIDATION_ERROR_00150, VALIDATION_ERROR_00151);
+                        skip |= ValidateObject(queue, pSubmits[idx0].pSignalSemaphores[idx2], kVulkanObjectTypeSemaphore, false,
+                                               VALIDATION_ERROR_00150, VALIDATION_ERROR_00151);
                     }
                 }
                 if (pSubmits[idx0].pWaitSemaphores) {
                     for (uint32_t idx3 = 0; idx3 < pSubmits[idx0].waitSemaphoreCount; ++idx3) {
-                        skip |=
-                            ValidateObject(queue, pSubmits[idx0].pWaitSemaphores[idx3], VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
-                                           false, VALIDATION_ERROR_00146, VALIDATION_ERROR_00151);
+                        skip |= ValidateObject(queue, pSubmits[idx0].pWaitSemaphores[idx3], kVulkanObjectTypeSemaphore, false,
+                                               VALIDATION_ERROR_00146, VALIDATION_ERROR_00151);
                     }
                 }
             }
         }
         if (queue) {
-            skip |= ValidateObject(queue, queue, VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT, false, VALIDATION_ERROR_00128,
-                                   VALIDATION_ERROR_00131);
+            skip |= ValidateObject(queue, queue, kVulkanObjectTypeQueue, false, VALIDATION_ERROR_00128, VALIDATION_ERROR_00131);
         }
     }
     if (skip) {
@@ -655,8 +657,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueueWaitIdle(VkQueue queue) {
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(queue, queue, VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT, false, VALIDATION_ERROR_00317,
-                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(queue, queue, kVulkanObjectTypeQueue, false, VALIDATION_ERROR_00317, VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -669,8 +670,7 @@ VKAPI_ATTR VkResult VKAPI_CALL DeviceWaitIdle(VkDevice device) {
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00318,
-                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00318, VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -684,8 +684,7 @@ VKAPI_ATTR VkResult VKAPI_CALL AllocateMemory(VkDevice device, const VkMemoryAll
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00612,
-                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00612, VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -694,7 +693,7 @@ VKAPI_ATTR VkResult VKAPI_CALL AllocateMemory(VkDevice device, const VkMemoryAll
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateObject(device, *pMemory, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, pAllocator);
+            CreateObject(device, *pMemory, kVulkanObjectTypeDeviceMemory, pAllocator);
         }
     }
     return result;
@@ -705,12 +704,11 @@ VKAPI_ATTR VkResult VKAPI_CALL FlushMappedMemoryRanges(VkDevice device, uint32_t
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00635,
-                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00635, VALIDATION_ERROR_UNDEFINED);
         if (pMemoryRanges) {
             for (uint32_t idx0 = 0; idx0 < memoryRangeCount; ++idx0) {
                 if (pMemoryRanges[idx0].memory) {
-                    skip |= ValidateObject(device, pMemoryRanges[idx0].memory, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, false,
+                    skip |= ValidateObject(device, pMemoryRanges[idx0].memory, kVulkanObjectTypeDeviceMemory, false,
                                            VALIDATION_ERROR_00648, VALIDATION_ERROR_UNDEFINED);
                 }
             }
@@ -729,12 +727,11 @@ VKAPI_ATTR VkResult VKAPI_CALL InvalidateMappedMemoryRanges(VkDevice device, uin
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00638,
-                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00638, VALIDATION_ERROR_UNDEFINED);
         if (pMemoryRanges) {
             for (uint32_t idx0 = 0; idx0 < memoryRangeCount; ++idx0) {
                 if (pMemoryRanges[idx0].memory) {
-                    skip |= ValidateObject(device, pMemoryRanges[idx0].memory, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, false,
+                    skip |= ValidateObject(device, pMemoryRanges[idx0].memory, kVulkanObjectTypeDeviceMemory, false,
                                            VALIDATION_ERROR_00648, VALIDATION_ERROR_UNDEFINED);
                 }
             }
@@ -753,10 +750,9 @@ VKAPI_ATTR void VKAPI_CALL GetDeviceMemoryCommitment(VkDevice device, VkDeviceMe
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00654,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, memory, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, false, VALIDATION_ERROR_00655,
-                               VALIDATION_ERROR_00657);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00654, VALIDATION_ERROR_UNDEFINED);
+        skip |=
+            ValidateObject(device, memory, kVulkanObjectTypeDeviceMemory, false, VALIDATION_ERROR_00655, VALIDATION_ERROR_00657);
     }
     if (skip) {
         return;
@@ -769,12 +765,10 @@ VKAPI_ATTR VkResult VKAPI_CALL BindBufferMemory(VkDevice device, VkBuffer buffer
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00798,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, false, VALIDATION_ERROR_00799,
-                               VALIDATION_ERROR_00801);
-        skip |= ValidateObject(device, memory, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, false, VALIDATION_ERROR_00800,
-                               VALIDATION_ERROR_00802);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00798, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, buffer, kVulkanObjectTypeBuffer, false, VALIDATION_ERROR_00799, VALIDATION_ERROR_00801);
+        skip |=
+            ValidateObject(device, memory, kVulkanObjectTypeDeviceMemory, false, VALIDATION_ERROR_00800, VALIDATION_ERROR_00802);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -787,12 +781,10 @@ VKAPI_ATTR VkResult VKAPI_CALL BindImageMemory(VkDevice device, VkImage image, V
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00807,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, false, VALIDATION_ERROR_00808,
-                               VALIDATION_ERROR_00810);
-        skip |= ValidateObject(device, memory, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, false, VALIDATION_ERROR_00809,
-                               VALIDATION_ERROR_00811);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00807, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, image, kVulkanObjectTypeImage, false, VALIDATION_ERROR_00808, VALIDATION_ERROR_00810);
+        skip |=
+            ValidateObject(device, memory, kVulkanObjectTypeDeviceMemory, false, VALIDATION_ERROR_00809, VALIDATION_ERROR_00811);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -806,10 +798,8 @@ VKAPI_ATTR void VKAPI_CALL GetBufferMemoryRequirements(VkDevice device, VkBuffer
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00783,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, false, VALIDATION_ERROR_00784,
-                               VALIDATION_ERROR_00786);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00783, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, buffer, kVulkanObjectTypeBuffer, false, VALIDATION_ERROR_00784, VALIDATION_ERROR_00786);
     }
     if (skip) {
         return;
@@ -821,10 +811,8 @@ VKAPI_ATTR void VKAPI_CALL GetImageMemoryRequirements(VkDevice device, VkImage i
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00787,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, false, VALIDATION_ERROR_00788,
-                               VALIDATION_ERROR_00790);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00787, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, image, kVulkanObjectTypeImage, false, VALIDATION_ERROR_00788, VALIDATION_ERROR_00790);
     }
     if (skip) {
         return;
@@ -837,10 +825,8 @@ VKAPI_ATTR void VKAPI_CALL GetImageSparseMemoryRequirements(VkDevice device, VkI
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_01610,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, false, VALIDATION_ERROR_01611,
-                               VALIDATION_ERROR_01614);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_01610, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, image, kVulkanObjectTypeImage, false, VALIDATION_ERROR_01611, VALIDATION_ERROR_01614);
     }
     if (skip) {
         return;
@@ -857,8 +843,8 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceSparseImageFormatProperties(VkPhysic
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_01601, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_01601,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return;
@@ -873,8 +859,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateFence(VkDevice device, const VkFenceCreateI
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00166,
-                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00166, VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -883,7 +868,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateFence(VkDevice device, const VkFenceCreateI
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateObject(device, *pFence, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, pAllocator);
+            CreateObject(device, *pFence, kVulkanObjectTypeFence, pAllocator);
         }
     }
     return result;
@@ -893,18 +878,15 @@ VKAPI_ATTR void VKAPI_CALL DestroyFence(VkDevice device, VkFence fence, const Vk
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00176,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, fence, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, true, VALIDATION_ERROR_00177,
-                               VALIDATION_ERROR_00179);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00176, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, fence, kVulkanObjectTypeFence, true, VALIDATION_ERROR_00177, VALIDATION_ERROR_00179);
     }
     if (skip) {
         return;
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyObject(device, fence, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, pAllocator, VALIDATION_ERROR_00174,
-                      VALIDATION_ERROR_00175);
+        DestroyObject(device, fence, kVulkanObjectTypeFence, pAllocator, VALIDATION_ERROR_00174, VALIDATION_ERROR_00175);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyFence(device, fence, pAllocator);
 }
@@ -913,11 +895,10 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetFences(VkDevice device, uint32_t fenceCount,
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00184,
-                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00184, VALIDATION_ERROR_UNDEFINED);
         if (pFences) {
             for (uint32_t idx0 = 0; idx0 < fenceCount; ++idx0) {
-                skip |= ValidateObject(device, pFences[idx0], VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, false, VALIDATION_ERROR_00185,
+                skip |= ValidateObject(device, pFences[idx0], kVulkanObjectTypeFence, false, VALIDATION_ERROR_00185,
                                        VALIDATION_ERROR_00187);
             }
         }
@@ -933,10 +914,8 @@ VKAPI_ATTR VkResult VKAPI_CALL GetFenceStatus(VkDevice device, VkFence fence) {
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00180,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, fence, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, false, VALIDATION_ERROR_00181,
-                               VALIDATION_ERROR_00182);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00180, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, fence, kVulkanObjectTypeFence, false, VALIDATION_ERROR_00181, VALIDATION_ERROR_00182);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -950,11 +929,10 @@ VKAPI_ATTR VkResult VKAPI_CALL WaitForFences(VkDevice device, uint32_t fenceCoun
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00188,
-                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00188, VALIDATION_ERROR_UNDEFINED);
         if (pFences) {
             for (uint32_t idx0 = 0; idx0 < fenceCount; ++idx0) {
-                skip |= ValidateObject(device, pFences[idx0], VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, false, VALIDATION_ERROR_00189,
+                skip |= ValidateObject(device, pFences[idx0], kVulkanObjectTypeFence, false, VALIDATION_ERROR_00189,
                                        VALIDATION_ERROR_00191);
             }
         }
@@ -971,8 +949,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSemaphore(VkDevice device, const VkSemaphor
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00192,
-                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00192, VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -981,7 +958,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSemaphore(VkDevice device, const VkSemaphor
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateObject(device, *pSemaphore, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT, pAllocator);
+            CreateObject(device, *pSemaphore, kVulkanObjectTypeSemaphore, pAllocator);
         }
     }
     return result;
@@ -991,18 +968,15 @@ VKAPI_ATTR void VKAPI_CALL DestroySemaphore(VkDevice device, VkSemaphore semapho
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00202,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, semaphore, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT, true, VALIDATION_ERROR_00203,
-                               VALIDATION_ERROR_00205);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00202, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, semaphore, kVulkanObjectTypeSemaphore, true, VALIDATION_ERROR_00203, VALIDATION_ERROR_00205);
     }
     if (skip) {
         return;
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyObject(device, semaphore, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT, pAllocator, VALIDATION_ERROR_00200,
-                      VALIDATION_ERROR_00201);
+        DestroyObject(device, semaphore, kVulkanObjectTypeSemaphore, pAllocator, VALIDATION_ERROR_00200, VALIDATION_ERROR_00201);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroySemaphore(device, semaphore, pAllocator);
 }
@@ -1012,8 +986,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateEvent(VkDevice device, const VkEventCreateI
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00206,
-                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00206, VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -1022,7 +995,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateEvent(VkDevice device, const VkEventCreateI
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateObject(device, *pEvent, VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT, pAllocator);
+            CreateObject(device, *pEvent, kVulkanObjectTypeEvent, pAllocator);
         }
     }
     return result;
@@ -1032,18 +1005,15 @@ VKAPI_ATTR void VKAPI_CALL DestroyEvent(VkDevice device, VkEvent event, const Vk
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00216,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, event, VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT, true, VALIDATION_ERROR_00217,
-                               VALIDATION_ERROR_00219);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00216, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, event, kVulkanObjectTypeEvent, true, VALIDATION_ERROR_00217, VALIDATION_ERROR_00219);
     }
     if (skip) {
         return;
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyObject(device, event, VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT, pAllocator, VALIDATION_ERROR_00214,
-                      VALIDATION_ERROR_00215);
+        DestroyObject(device, event, kVulkanObjectTypeEvent, pAllocator, VALIDATION_ERROR_00214, VALIDATION_ERROR_00215);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyEvent(device, event, pAllocator);
 }
@@ -1052,10 +1022,8 @@ VKAPI_ATTR VkResult VKAPI_CALL GetEventStatus(VkDevice device, VkEvent event) {
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00220,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, event, VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT, false, VALIDATION_ERROR_00221,
-                               VALIDATION_ERROR_00222);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00220, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, event, kVulkanObjectTypeEvent, false, VALIDATION_ERROR_00221, VALIDATION_ERROR_00222);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -1068,10 +1036,8 @@ VKAPI_ATTR VkResult VKAPI_CALL SetEvent(VkDevice device, VkEvent event) {
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00223,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, event, VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT, false, VALIDATION_ERROR_00224,
-                               VALIDATION_ERROR_00225);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00223, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, event, kVulkanObjectTypeEvent, false, VALIDATION_ERROR_00224, VALIDATION_ERROR_00225);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -1084,10 +1050,8 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetEvent(VkDevice device, VkEvent event) {
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00227,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, event, VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT, false, VALIDATION_ERROR_00228,
-                               VALIDATION_ERROR_00229);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00227, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, event, kVulkanObjectTypeEvent, false, VALIDATION_ERROR_00228, VALIDATION_ERROR_00229);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -1101,8 +1065,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateQueryPool(VkDevice device, const VkQueryPoo
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_01002,
-                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_01002, VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -1111,7 +1074,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateQueryPool(VkDevice device, const VkQueryPoo
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateObject(device, *pQueryPool, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, pAllocator);
+            CreateObject(device, *pQueryPool, kVulkanObjectTypeQueryPool, pAllocator);
         }
     }
     return result;
@@ -1121,18 +1084,15 @@ VKAPI_ATTR void VKAPI_CALL DestroyQueryPool(VkDevice device, VkQueryPool queryPo
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_01015,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, queryPool, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, true, VALIDATION_ERROR_01016,
-                               VALIDATION_ERROR_01018);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_01015, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, queryPool, kVulkanObjectTypeQueryPool, true, VALIDATION_ERROR_01016, VALIDATION_ERROR_01018);
     }
     if (skip) {
         return;
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyObject(device, queryPool, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, pAllocator, VALIDATION_ERROR_01013,
-                      VALIDATION_ERROR_01014);
+        DestroyObject(device, queryPool, kVulkanObjectTypeQueryPool, pAllocator, VALIDATION_ERROR_01013, VALIDATION_ERROR_01014);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyQueryPool(device, queryPool, pAllocator);
 }
@@ -1142,10 +1102,9 @@ VKAPI_ATTR VkResult VKAPI_CALL GetQueryPoolResults(VkDevice device, VkQueryPool 
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_01054,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, queryPool, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, false, VALIDATION_ERROR_01055,
-                               VALIDATION_ERROR_01059);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_01054, VALIDATION_ERROR_UNDEFINED);
+        skip |=
+            ValidateObject(device, queryPool, kVulkanObjectTypeQueryPool, false, VALIDATION_ERROR_01055, VALIDATION_ERROR_01059);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -1160,8 +1119,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateBuffer(VkDevice device, const VkBufferCreat
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00659,
-                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00659, VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -1170,7 +1128,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateBuffer(VkDevice device, const VkBufferCreat
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateObject(device, *pBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, pAllocator);
+            CreateObject(device, *pBuffer, kVulkanObjectTypeBuffer, pAllocator);
         }
     }
     return result;
@@ -1180,18 +1138,15 @@ VKAPI_ATTR void VKAPI_CALL DestroyBuffer(VkDevice device, VkBuffer buffer, const
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00679,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, true, VALIDATION_ERROR_00680,
-                               VALIDATION_ERROR_00682);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00679, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, buffer, kVulkanObjectTypeBuffer, true, VALIDATION_ERROR_00680, VALIDATION_ERROR_00682);
     }
     if (skip) {
         return;
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyObject(device, buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, pAllocator, VALIDATION_ERROR_00677,
-                      VALIDATION_ERROR_00678);
+        DestroyObject(device, buffer, kVulkanObjectTypeBuffer, pAllocator, VALIDATION_ERROR_00677, VALIDATION_ERROR_00678);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyBuffer(device, buffer, pAllocator);
 }
@@ -1201,11 +1156,10 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateBufferView(VkDevice device, const VkBufferV
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00683,
-                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00683, VALIDATION_ERROR_UNDEFINED);
         if (pCreateInfo) {
-            skip |= ValidateObject(device, pCreateInfo->buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, false,
-                                   VALIDATION_ERROR_00699, VALIDATION_ERROR_UNDEFINED);
+            skip |= ValidateObject(device, pCreateInfo->buffer, kVulkanObjectTypeBuffer, false, VALIDATION_ERROR_00699,
+                                   VALIDATION_ERROR_UNDEFINED);
         }
     }
     if (skip) {
@@ -1215,7 +1169,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateBufferView(VkDevice device, const VkBufferV
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateObject(device, *pView, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT, pAllocator);
+            CreateObject(device, *pView, kVulkanObjectTypeBufferView, pAllocator);
         }
     }
     return result;
@@ -1225,18 +1179,16 @@ VKAPI_ATTR void VKAPI_CALL DestroyBufferView(VkDevice device, VkBufferView buffe
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00704,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, bufferView, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT, true, VALIDATION_ERROR_00705,
-                               VALIDATION_ERROR_00707);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00704, VALIDATION_ERROR_UNDEFINED);
+        skip |=
+            ValidateObject(device, bufferView, kVulkanObjectTypeBufferView, true, VALIDATION_ERROR_00705, VALIDATION_ERROR_00707);
     }
     if (skip) {
         return;
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyObject(device, bufferView, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT, pAllocator, VALIDATION_ERROR_00702,
-                      VALIDATION_ERROR_00703);
+        DestroyObject(device, bufferView, kVulkanObjectTypeBufferView, pAllocator, VALIDATION_ERROR_00702, VALIDATION_ERROR_00703);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyBufferView(device, bufferView, pAllocator);
 }
@@ -1246,8 +1198,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateI
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00709,
-                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00709, VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -1256,7 +1207,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateI
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateObject(device, *pImage, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, pAllocator);
+            CreateObject(device, *pImage, kVulkanObjectTypeImage, pAllocator);
         }
     }
     return result;
@@ -1266,18 +1217,15 @@ VKAPI_ATTR void VKAPI_CALL DestroyImage(VkDevice device, VkImage image, const Vk
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00746,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, true, VALIDATION_ERROR_00747,
-                               VALIDATION_ERROR_00749);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00746, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, image, kVulkanObjectTypeImage, true, VALIDATION_ERROR_00747, VALIDATION_ERROR_00749);
     }
     if (skip) {
         return;
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyObject(device, image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, pAllocator, VALIDATION_ERROR_00744,
-                      VALIDATION_ERROR_00745);
+        DestroyObject(device, image, kVulkanObjectTypeImage, pAllocator, VALIDATION_ERROR_00744, VALIDATION_ERROR_00745);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyImage(device, image, pAllocator);
 }
@@ -1287,10 +1235,8 @@ VKAPI_ATTR void VKAPI_CALL GetImageSubresourceLayout(VkDevice device, VkImage im
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00734,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, false, VALIDATION_ERROR_00735,
-                               VALIDATION_ERROR_00738);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00734, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, image, kVulkanObjectTypeImage, false, VALIDATION_ERROR_00735, VALIDATION_ERROR_00738);
     }
     if (skip) {
         return;
@@ -1303,10 +1249,9 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImageView(VkDevice device, const VkImageVie
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00750,
-                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00750, VALIDATION_ERROR_UNDEFINED);
         if (pCreateInfo) {
-            skip |= ValidateObject(device, pCreateInfo->image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, false, VALIDATION_ERROR_00763,
+            skip |= ValidateObject(device, pCreateInfo->image, kVulkanObjectTypeImage, false, VALIDATION_ERROR_00763,
                                    VALIDATION_ERROR_UNDEFINED);
         }
     }
@@ -1317,7 +1262,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImageView(VkDevice device, const VkImageVie
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateObject(device, *pView, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT, pAllocator);
+            CreateObject(device, *pView, kVulkanObjectTypeImageView, pAllocator);
         }
     }
     return result;
@@ -1327,18 +1272,15 @@ VKAPI_ATTR void VKAPI_CALL DestroyImageView(VkDevice device, VkImageView imageVi
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00779,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, imageView, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT, true, VALIDATION_ERROR_00780,
-                               VALIDATION_ERROR_00782);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00779, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, imageView, kVulkanObjectTypeImageView, true, VALIDATION_ERROR_00780, VALIDATION_ERROR_00782);
     }
     if (skip) {
         return;
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyObject(device, imageView, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT, pAllocator, VALIDATION_ERROR_00777,
-                      VALIDATION_ERROR_00778);
+        DestroyObject(device, imageView, kVulkanObjectTypeImageView, pAllocator, VALIDATION_ERROR_00777, VALIDATION_ERROR_00778);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyImageView(device, imageView, pAllocator);
 }
@@ -1348,8 +1290,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateShaderModule(VkDevice device, const VkShade
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00466,
-                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00466, VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -1359,7 +1300,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateShaderModule(VkDevice device, const VkShade
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateObject(device, *pShaderModule, VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT, pAllocator);
+            CreateObject(device, *pShaderModule, kVulkanObjectTypeShaderModule, pAllocator);
         }
     }
     return result;
@@ -1370,9 +1311,8 @@ VKAPI_ATTR void VKAPI_CALL DestroyShaderModule(VkDevice device, VkShaderModule s
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00481,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, shaderModule, VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT, true, VALIDATION_ERROR_00482,
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00481, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, shaderModule, kVulkanObjectTypeShaderModule, true, VALIDATION_ERROR_00482,
                                VALIDATION_ERROR_00484);
     }
     if (skip) {
@@ -1380,7 +1320,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyShaderModule(VkDevice device, VkShaderModule s
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyObject(device, shaderModule, VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT, pAllocator, VALIDATION_ERROR_00479,
+        DestroyObject(device, shaderModule, kVulkanObjectTypeShaderModule, pAllocator, VALIDATION_ERROR_00479,
                       VALIDATION_ERROR_00480);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyShaderModule(device, shaderModule, pAllocator);
@@ -1391,8 +1331,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreatePipelineCache(VkDevice device, const VkPipe
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00562,
-                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00562, VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -1402,7 +1341,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreatePipelineCache(VkDevice device, const VkPipe
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateObject(device, *pPipelineCache, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT, pAllocator);
+            CreateObject(device, *pPipelineCache, kVulkanObjectTypePipelineCache, pAllocator);
         }
     }
     return result;
@@ -1413,9 +1352,8 @@ VKAPI_ATTR void VKAPI_CALL DestroyPipelineCache(VkDevice device, VkPipelineCache
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00585,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, pipelineCache, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT, true, VALIDATION_ERROR_00586,
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00585, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, pipelineCache, kVulkanObjectTypePipelineCache, true, VALIDATION_ERROR_00586,
                                VALIDATION_ERROR_00588);
     }
     if (skip) {
@@ -1423,7 +1361,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyPipelineCache(VkDevice device, VkPipelineCache
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyObject(device, pipelineCache, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT, pAllocator, VALIDATION_ERROR_00583,
+        DestroyObject(device, pipelineCache, kVulkanObjectTypePipelineCache, pAllocator, VALIDATION_ERROR_00583,
                       VALIDATION_ERROR_00584);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyPipelineCache(device, pipelineCache, pAllocator);
@@ -1434,9 +1372,8 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPipelineCacheData(VkDevice device, VkPipelineC
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00578,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, pipelineCache, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT, false, VALIDATION_ERROR_00579,
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00578, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, pipelineCache, kVulkanObjectTypePipelineCache, false, VALIDATION_ERROR_00579,
                                VALIDATION_ERROR_00582);
     }
     if (skip) {
@@ -1452,14 +1389,13 @@ VKAPI_ATTR VkResult VKAPI_CALL MergePipelineCaches(VkDevice device, VkPipelineCa
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00572,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, dstCache, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT, false, VALIDATION_ERROR_00573,
-                               VALIDATION_ERROR_00576);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00572, VALIDATION_ERROR_UNDEFINED);
+        skip |=
+            ValidateObject(device, dstCache, kVulkanObjectTypePipelineCache, false, VALIDATION_ERROR_00573, VALIDATION_ERROR_00576);
         if (pSrcCaches) {
             for (uint32_t idx0 = 0; idx0 < srcCacheCount; ++idx0) {
-                skip |= ValidateObject(device, pSrcCaches[idx0], VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT, false,
-                                       VALIDATION_ERROR_00574, VALIDATION_ERROR_00577);
+                skip |= ValidateObject(device, pSrcCaches[idx0], kVulkanObjectTypePipelineCache, false, VALIDATION_ERROR_00574,
+                                       VALIDATION_ERROR_00577);
             }
         }
     }
@@ -1475,18 +1411,15 @@ VKAPI_ATTR void VKAPI_CALL DestroyPipeline(VkDevice device, VkPipeline pipeline,
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00558,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, pipeline, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, true, VALIDATION_ERROR_00559,
-                               VALIDATION_ERROR_00561);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00558, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, pipeline, kVulkanObjectTypePipeline, true, VALIDATION_ERROR_00559, VALIDATION_ERROR_00561);
     }
     if (skip) {
         return;
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyObject(device, pipeline, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, pAllocator, VALIDATION_ERROR_00556,
-                      VALIDATION_ERROR_00557);
+        DestroyObject(device, pipeline, kVulkanObjectTypePipeline, pAllocator, VALIDATION_ERROR_00556, VALIDATION_ERROR_00557);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyPipeline(device, pipeline, pAllocator);
 }
@@ -1496,14 +1429,12 @@ VKAPI_ATTR VkResult VKAPI_CALL CreatePipelineLayout(VkDevice device, const VkPip
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00861,
-                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00861, VALIDATION_ERROR_UNDEFINED);
         if (pCreateInfo) {
             if (pCreateInfo->pSetLayouts) {
                 for (uint32_t idx0 = 0; idx0 < pCreateInfo->setLayoutCount; ++idx0) {
-                    skip |= ValidateObject(device, pCreateInfo->pSetLayouts[idx0],
-                                           VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT, false, VALIDATION_ERROR_00875,
-                                           VALIDATION_ERROR_UNDEFINED);
+                    skip |= ValidateObject(device, pCreateInfo->pSetLayouts[idx0], kVulkanObjectTypeDescriptorSetLayout, false,
+                                           VALIDATION_ERROR_00875, VALIDATION_ERROR_UNDEFINED);
                 }
             }
         }
@@ -1516,7 +1447,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreatePipelineLayout(VkDevice device, const VkPip
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateObject(device, *pPipelineLayout, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT, pAllocator);
+            CreateObject(device, *pPipelineLayout, kVulkanObjectTypePipelineLayout, pAllocator);
         }
     }
     return result;
@@ -1527,17 +1458,16 @@ VKAPI_ATTR void VKAPI_CALL DestroyPipelineLayout(VkDevice device, VkPipelineLayo
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00885,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, pipelineLayout, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT, true,
-                               VALIDATION_ERROR_00886, VALIDATION_ERROR_00888);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00885, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, pipelineLayout, kVulkanObjectTypePipelineLayout, true, VALIDATION_ERROR_00886,
+                               VALIDATION_ERROR_00888);
     }
     if (skip) {
         return;
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyObject(device, pipelineLayout, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT, pAllocator, VALIDATION_ERROR_00883,
+        DestroyObject(device, pipelineLayout, kVulkanObjectTypePipelineLayout, pAllocator, VALIDATION_ERROR_00883,
                       VALIDATION_ERROR_00884);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyPipelineLayout(device, pipelineLayout, pAllocator);
@@ -1548,8 +1478,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSampler(VkDevice device, const VkSamplerCre
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00812,
-                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00812, VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -1558,7 +1487,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSampler(VkDevice device, const VkSamplerCre
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateObject(device, *pSampler, VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT, pAllocator);
+            CreateObject(device, *pSampler, kVulkanObjectTypeSampler, pAllocator);
         }
     }
     return result;
@@ -1568,18 +1497,15 @@ VKAPI_ATTR void VKAPI_CALL DestroySampler(VkDevice device, VkSampler sampler, co
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00840,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, sampler, VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT, true, VALIDATION_ERROR_00841,
-                               VALIDATION_ERROR_00843);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00840, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, sampler, kVulkanObjectTypeSampler, true, VALIDATION_ERROR_00841, VALIDATION_ERROR_00843);
     }
     if (skip) {
         return;
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyObject(device, sampler, VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT, pAllocator, VALIDATION_ERROR_00838,
-                      VALIDATION_ERROR_00839);
+        DestroyObject(device, sampler, kVulkanObjectTypeSampler, pAllocator, VALIDATION_ERROR_00838, VALIDATION_ERROR_00839);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroySampler(device, sampler, pAllocator);
 }
@@ -1590,8 +1516,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorSetLayout(VkDevice device, const 
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00844,
-                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00844, VALIDATION_ERROR_UNDEFINED);
         if (pCreateInfo) {
             if (pCreateInfo->pBindings) {
                 for (uint32_t idx0 = 0; idx0 < pCreateInfo->bindingCount; ++idx0) {
@@ -1600,7 +1525,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorSetLayout(VkDevice device, const 
                         if (pCreateInfo->pBindings[idx0].pImmutableSamplers) {
                             for (uint32_t idx1 = 0; idx1 < pCreateInfo->pBindings[idx0].descriptorCount; ++idx1) {
                                 skip |= ValidateObject(device, pCreateInfo->pBindings[idx0].pImmutableSamplers[idx1],
-                                                       VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT, false, VALIDATION_ERROR_00852,
+                                                       kVulkanObjectTypeSampler, false, VALIDATION_ERROR_00852,
                                                        VALIDATION_ERROR_UNDEFINED);
                             }
                         }
@@ -1617,7 +1542,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorSetLayout(VkDevice device, const 
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateObject(device, *pSetLayout, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT, pAllocator);
+            CreateObject(device, *pSetLayout, kVulkanObjectTypeDescriptorSetLayout, pAllocator);
         }
     }
     return result;
@@ -1628,18 +1553,17 @@ VKAPI_ATTR void VKAPI_CALL DestroyDescriptorSetLayout(VkDevice device, VkDescrip
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00857,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, descriptorSetLayout, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT, true,
-                               VALIDATION_ERROR_00858, VALIDATION_ERROR_00860);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00857, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, descriptorSetLayout, kVulkanObjectTypeDescriptorSetLayout, true, VALIDATION_ERROR_00858,
+                               VALIDATION_ERROR_00860);
     }
     if (skip) {
         return;
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyObject(device, descriptorSetLayout, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT, pAllocator,
-                      VALIDATION_ERROR_00855, VALIDATION_ERROR_00856);
+        DestroyObject(device, descriptorSetLayout, kVulkanObjectTypeDescriptorSetLayout, pAllocator, VALIDATION_ERROR_00855,
+                      VALIDATION_ERROR_00856);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyDescriptorSetLayout(device, descriptorSetLayout, pAllocator);
 }
@@ -1649,8 +1573,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorPool(VkDevice device, const VkDes
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00889,
-                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00889, VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -1660,7 +1583,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorPool(VkDevice device, const VkDes
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateObject(device, *pDescriptorPool, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT, pAllocator);
+            CreateObject(device, *pDescriptorPool, kVulkanObjectTypeDescriptorPool, pAllocator);
         }
     }
     return result;
@@ -1671,21 +1594,20 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetDescriptorPool(VkDevice device, VkDescriptor
     bool skip = false;
     std::unique_lock<std::mutex> lock(global_lock);
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00929,
-                           VALIDATION_ERROR_UNDEFINED);
-    skip |= ValidateObject(device, descriptorPool, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT, false, VALIDATION_ERROR_00930,
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00929, VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, descriptorPool, kVulkanObjectTypeDescriptorPool, false, VALIDATION_ERROR_00930,
                            VALIDATION_ERROR_00932);
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
     // A DescriptorPool's descriptor sets are implicitly deleted when the pool is reset.
     // Remove this pool's descriptor sets from our descriptorSet map.
-    auto itr = device_data->object_map[VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT].begin();
-    while (itr != device_data->object_map[VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT].end()) {
+    auto itr = device_data->object_map[kVulkanObjectTypeDescriptorSet].begin();
+    while (itr != device_data->object_map[kVulkanObjectTypeDescriptorSet].end()) {
         OBJTRACK_NODE *pNode = (*itr).second;
         auto del_itr = itr++;
         if (pNode->parent_object == reinterpret_cast<uint64_t &>(descriptorPool)) {
-            DestroyObject(device, (VkDescriptorSet)((*del_itr).first), VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, nullptr,
+            DestroyObject(device, (VkDescriptorSet)((*del_itr).first), kVulkanObjectTypeDescriptorSet, nullptr,
                           VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
         }
     }
@@ -1700,32 +1622,30 @@ VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSets(VkDevice device, uint32_t descri
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00933,
-                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00933, VALIDATION_ERROR_UNDEFINED);
         if (pDescriptorCopies) {
             for (uint32_t idx0 = 0; idx0 < descriptorCopyCount; ++idx0) {
                 if (pDescriptorCopies[idx0].dstSet) {
-                    skip |= ValidateObject(device, pDescriptorCopies[idx0].dstSet, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
-                                           false, VALIDATION_ERROR_00972, VALIDATION_ERROR_00973);
+                    skip |= ValidateObject(device, pDescriptorCopies[idx0].dstSet, kVulkanObjectTypeDescriptorSet, false,
+                                           VALIDATION_ERROR_00972, VALIDATION_ERROR_00973);
                 }
                 if (pDescriptorCopies[idx0].srcSet) {
-                    skip |= ValidateObject(device, pDescriptorCopies[idx0].srcSet, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
-                                           false, VALIDATION_ERROR_00971, VALIDATION_ERROR_00973);
+                    skip |= ValidateObject(device, pDescriptorCopies[idx0].srcSet, kVulkanObjectTypeDescriptorSet, false,
+                                           VALIDATION_ERROR_00971, VALIDATION_ERROR_00973);
                 }
             }
         }
         if (pDescriptorWrites) {
             for (uint32_t idx1 = 0; idx1 < descriptorWriteCount; ++idx1) {
                 if (pDescriptorWrites[idx1].dstSet) {
-                    skip |= ValidateObject(device, pDescriptorWrites[idx1].dstSet, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
-                                           false, VALIDATION_ERROR_00955, VALIDATION_ERROR_00958);
+                    skip |= ValidateObject(device, pDescriptorWrites[idx1].dstSet, kVulkanObjectTypeDescriptorSet, false,
+                                           VALIDATION_ERROR_00955, VALIDATION_ERROR_00958);
                 }
                 if ((pDescriptorWrites[idx1].descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) ||
                     (pDescriptorWrites[idx1].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER)) {
                     for (uint32_t idx2 = 0; idx2 < pDescriptorWrites[idx1].descriptorCount; ++idx2) {
-                        skip |= ValidateObject(device, pDescriptorWrites[idx1].pTexelBufferView[idx2],
-                                               VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT, false, VALIDATION_ERROR_00940,
-                                               VALIDATION_ERROR_00958);
+                        skip |= ValidateObject(device, pDescriptorWrites[idx1].pTexelBufferView[idx2], kVulkanObjectTypeBufferView,
+                                               false, VALIDATION_ERROR_00940, VALIDATION_ERROR_00958);
                     }
                 }
                 if ((pDescriptorWrites[idx1].descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) ||
@@ -1734,8 +1654,7 @@ VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSets(VkDevice device, uint32_t descri
                     (pDescriptorWrites[idx1].descriptorType == VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT)) {
                     for (uint32_t idx3 = 0; idx3 < pDescriptorWrites[idx1].descriptorCount; ++idx3) {
                         skip |= ValidateObject(device, pDescriptorWrites[idx1].pImageInfo[idx3].imageView,
-                                               VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT, false, VALIDATION_ERROR_00943,
-                                               VALIDATION_ERROR_00963);
+                                               kVulkanObjectTypeImageView, false, VALIDATION_ERROR_00943, VALIDATION_ERROR_00963);
                     }
                 }
                 if ((pDescriptorWrites[idx1].descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) ||
@@ -1744,9 +1663,9 @@ VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSets(VkDevice device, uint32_t descri
                     (pDescriptorWrites[idx1].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) {
                     for (uint32_t idx4 = 0; idx4 < pDescriptorWrites[idx1].descriptorCount; ++idx4) {
                         if (pDescriptorWrites[idx1].pBufferInfo[idx4].buffer) {
-                            skip |= ValidateObject(device, pDescriptorWrites[idx1].pBufferInfo[idx4].buffer,
-                                                   VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, false, VALIDATION_ERROR_00962,
-                                                   VALIDATION_ERROR_UNDEFINED);
+                            skip |=
+                                ValidateObject(device, pDescriptorWrites[idx1].pBufferInfo[idx4].buffer, kVulkanObjectTypeBuffer,
+                                               false, VALIDATION_ERROR_00962, VALIDATION_ERROR_UNDEFINED);
                         }
                     }
                 }
@@ -1765,18 +1684,17 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateFramebuffer(VkDevice device, const VkFrameb
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00400,
-                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00400, VALIDATION_ERROR_UNDEFINED);
         if (pCreateInfo) {
             if (pCreateInfo->pAttachments) {
                 for (uint32_t idx0 = 0; idx0 < pCreateInfo->attachmentCount; ++idx0) {
-                    skip |= ValidateObject(device, pCreateInfo->pAttachments[idx0], VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT,
-                                           false, VALIDATION_ERROR_00420, VALIDATION_ERROR_00421);
+                    skip |= ValidateObject(device, pCreateInfo->pAttachments[idx0], kVulkanObjectTypeImageView, false,
+                                           VALIDATION_ERROR_00420, VALIDATION_ERROR_00421);
                 }
             }
             if (pCreateInfo->renderPass) {
-                skip |= ValidateObject(device, pCreateInfo->renderPass, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, false,
-                                       VALIDATION_ERROR_00419, VALIDATION_ERROR_00421);
+                skip |= ValidateObject(device, pCreateInfo->renderPass, kVulkanObjectTypeRenderPass, false, VALIDATION_ERROR_00419,
+                                       VALIDATION_ERROR_00421);
             }
         }
     }
@@ -1788,7 +1706,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateFramebuffer(VkDevice device, const VkFrameb
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateObject(device, *pFramebuffer, VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT, pAllocator);
+            CreateObject(device, *pFramebuffer, kVulkanObjectTypeFramebuffer, pAllocator);
         }
     }
     return result;
@@ -1798,17 +1716,16 @@ VKAPI_ATTR void VKAPI_CALL DestroyFramebuffer(VkDevice device, VkFramebuffer fra
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00425,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, framebuffer, VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT, true, VALIDATION_ERROR_00426,
-                               VALIDATION_ERROR_00428);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00425, VALIDATION_ERROR_UNDEFINED);
+        skip |=
+            ValidateObject(device, framebuffer, kVulkanObjectTypeFramebuffer, true, VALIDATION_ERROR_00426, VALIDATION_ERROR_00428);
     }
     if (skip) {
         return;
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyObject(device, framebuffer, VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT, pAllocator, VALIDATION_ERROR_00423,
+        DestroyObject(device, framebuffer, kVulkanObjectTypeFramebuffer, pAllocator, VALIDATION_ERROR_00423,
                       VALIDATION_ERROR_00424);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyFramebuffer(device, framebuffer, pAllocator);
@@ -1819,8 +1736,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00319,
-                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00319, VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -1830,7 +1746,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateObject(device, *pRenderPass, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, pAllocator);
+            CreateObject(device, *pRenderPass, kVulkanObjectTypeRenderPass, pAllocator);
         }
     }
     return result;
@@ -1840,18 +1756,16 @@ VKAPI_ATTR void VKAPI_CALL DestroyRenderPass(VkDevice device, VkRenderPass rende
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00396,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, renderPass, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, true, VALIDATION_ERROR_00397,
-                               VALIDATION_ERROR_00399);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00396, VALIDATION_ERROR_UNDEFINED);
+        skip |=
+            ValidateObject(device, renderPass, kVulkanObjectTypeRenderPass, true, VALIDATION_ERROR_00397, VALIDATION_ERROR_00399);
     }
     if (skip) {
         return;
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyObject(device, renderPass, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, pAllocator, VALIDATION_ERROR_00394,
-                      VALIDATION_ERROR_00395);
+        DestroyObject(device, renderPass, kVulkanObjectTypeRenderPass, pAllocator, VALIDATION_ERROR_00394, VALIDATION_ERROR_00395);
     }
     get_dispatch_table(ot_device_table_map, device)->DestroyRenderPass(device, renderPass, pAllocator);
 }
@@ -1860,10 +1774,9 @@ VKAPI_ATTR void VKAPI_CALL GetRenderAreaGranularity(VkDevice device, VkRenderPas
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00449,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, renderPass, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, false, VALIDATION_ERROR_00450,
-                               VALIDATION_ERROR_00452);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00449, VALIDATION_ERROR_UNDEFINED);
+        skip |=
+            ValidateObject(device, renderPass, kVulkanObjectTypeRenderPass, false, VALIDATION_ERROR_00450, VALIDATION_ERROR_00452);
     }
     if (skip) {
         return;
@@ -1876,8 +1789,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateCommandPool(VkDevice device, const VkComman
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00064,
-                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00064, VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -1887,7 +1799,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateCommandPool(VkDevice device, const VkComman
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateObject(device, *pCommandPool, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT, pAllocator);
+            CreateObject(device, *pCommandPool, kVulkanObjectTypeCommandPool, pAllocator);
         }
     }
     return result;
@@ -1897,9 +1809,8 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetCommandPool(VkDevice device, VkCommandPool c
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00073,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, commandPool, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT, false, VALIDATION_ERROR_00074,
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00073, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, commandPool, kVulkanObjectTypeCommandPool, false, VALIDATION_ERROR_00074,
                                VALIDATION_ERROR_00076);
     }
     if (skip) {
@@ -1914,20 +1825,17 @@ VKAPI_ATTR VkResult VKAPI_CALL BeginCommandBuffer(VkCommandBuffer command_buffer
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(command_buffer, command_buffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_00108, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(command_buffer, command_buffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_00108,
+                               VALIDATION_ERROR_UNDEFINED);
         if (begin_info) {
             OBJTRACK_NODE *pNode =
-                device_data
-                    ->object_map[VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT][reinterpret_cast<const uint64_t>(command_buffer)];
+                device_data->object_map[kVulkanObjectTypeCommandBuffer][reinterpret_cast<const uint64_t>(command_buffer)];
             if ((begin_info->pInheritanceInfo) && (pNode->status & OBJSTATUS_COMMAND_BUFFER_SECONDARY) &&
                 (begin_info->flags & VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT)) {
-                skip |= ValidateObject(command_buffer, begin_info->pInheritanceInfo->framebuffer,
-                                       VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT, true, VALIDATION_ERROR_00112,
-                                       VALIDATION_ERROR_00121);
-                skip |= ValidateObject(command_buffer, begin_info->pInheritanceInfo->renderPass,
-                                       VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, false, VALIDATION_ERROR_00110,
-                                       VALIDATION_ERROR_00121);
+                skip |= ValidateObject(command_buffer, begin_info->pInheritanceInfo->framebuffer, kVulkanObjectTypeFramebuffer,
+                                       true, VALIDATION_ERROR_00112, VALIDATION_ERROR_00121);
+                skip |= ValidateObject(command_buffer, begin_info->pInheritanceInfo->renderPass, kVulkanObjectTypeRenderPass, false,
+                                       VALIDATION_ERROR_00110, VALIDATION_ERROR_00121);
             }
         }
     }
@@ -1942,8 +1850,8 @@ VKAPI_ATTR VkResult VKAPI_CALL EndCommandBuffer(VkCommandBuffer commandBuffer) {
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_00125, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_00125,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -1956,8 +1864,8 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetCommandBuffer(VkCommandBuffer commandBuffer,
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_00094, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_00094,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -1971,9 +1879,9 @@ VKAPI_ATTR void VKAPI_CALL CmdBindPipeline(VkCommandBuffer commandBuffer, VkPipe
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_00599, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(commandBuffer, pipeline, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, false, VALIDATION_ERROR_00601,
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_00599,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, pipeline, kVulkanObjectTypePipeline, false, VALIDATION_ERROR_00601,
                                VALIDATION_ERROR_00604);
     }
     if (skip) {
@@ -1987,8 +1895,8 @@ VKAPI_ATTR void VKAPI_CALL CmdSetViewport(VkCommandBuffer commandBuffer, uint32_
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_01443, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01443,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return;
@@ -2001,8 +1909,8 @@ VKAPI_ATTR void VKAPI_CALL CmdSetScissor(VkCommandBuffer commandBuffer, uint32_t
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_01492, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01492,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return;
@@ -2014,8 +1922,8 @@ VKAPI_ATTR void VKAPI_CALL CmdSetLineWidth(VkCommandBuffer commandBuffer, float 
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_01478, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01478,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return;
@@ -2028,8 +1936,8 @@ VKAPI_ATTR void VKAPI_CALL CmdSetDepthBias(VkCommandBuffer commandBuffer, float 
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_01483, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01483,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return;
@@ -2042,8 +1950,8 @@ VKAPI_ATTR void VKAPI_CALL CmdSetBlendConstants(VkCommandBuffer commandBuffer, c
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_01551, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01551,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return;
@@ -2055,8 +1963,8 @@ VKAPI_ATTR void VKAPI_CALL CmdSetDepthBounds(VkCommandBuffer commandBuffer, floa
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_01507, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01507,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return;
@@ -2069,8 +1977,8 @@ VKAPI_ATTR void VKAPI_CALL CmdSetStencilCompareMask(VkCommandBuffer commandBuffe
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_01515, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01515,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return;
@@ -2082,8 +1990,8 @@ VKAPI_ATTR void VKAPI_CALL CmdSetStencilWriteMask(VkCommandBuffer commandBuffer,
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_01521, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01521,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return;
@@ -2095,8 +2003,8 @@ VKAPI_ATTR void VKAPI_CALL CmdSetStencilReference(VkCommandBuffer commandBuffer,
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_01527, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01527,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return;
@@ -2111,13 +2019,13 @@ VKAPI_ATTR void VKAPI_CALL CmdBindDescriptorSets(VkCommandBuffer commandBuffer, 
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_00979, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(commandBuffer, layout, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT, false,
-                               VALIDATION_ERROR_00981, VALIDATION_ERROR_00987);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_00979,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, layout, kVulkanObjectTypePipelineLayout, false, VALIDATION_ERROR_00981,
+                               VALIDATION_ERROR_00987);
         if (pDescriptorSets) {
             for (uint32_t idx0 = 0; idx0 < descriptorSetCount; ++idx0) {
-                skip |= ValidateObject(commandBuffer, pDescriptorSets[idx0], VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, false,
+                skip |= ValidateObject(commandBuffer, pDescriptorSets[idx0], kVulkanObjectTypeDescriptorSet, false,
                                        VALIDATION_ERROR_00982, VALIDATION_ERROR_00987);
             }
         }
@@ -2135,10 +2043,10 @@ VKAPI_ATTR void VKAPI_CALL CmdBindIndexBuffer(VkCommandBuffer commandBuffer, VkB
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_01353, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(commandBuffer, buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, false, VALIDATION_ERROR_01354,
-                               VALIDATION_ERROR_01358);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01353,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |=
+            ValidateObject(commandBuffer, buffer, kVulkanObjectTypeBuffer, false, VALIDATION_ERROR_01354, VALIDATION_ERROR_01358);
     }
     if (skip) {
         return;
@@ -2151,12 +2059,12 @@ VKAPI_ATTR void VKAPI_CALL CmdBindVertexBuffers(VkCommandBuffer commandBuffer, u
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_01419, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01419,
+                               VALIDATION_ERROR_UNDEFINED);
         if (pBuffers) {
             for (uint32_t idx0 = 0; idx0 < bindingCount; ++idx0) {
-                skip |= ValidateObject(commandBuffer, pBuffers[idx0], VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, false,
-                                       VALIDATION_ERROR_01420, VALIDATION_ERROR_01425);
+                skip |= ValidateObject(commandBuffer, pBuffers[idx0], kVulkanObjectTypeBuffer, false, VALIDATION_ERROR_01420,
+                                       VALIDATION_ERROR_01425);
             }
         }
     }
@@ -2172,8 +2080,8 @@ VKAPI_ATTR void VKAPI_CALL CmdDraw(VkCommandBuffer commandBuffer, uint32_t verte
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_01362, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01362,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return;
@@ -2187,8 +2095,8 @@ VKAPI_ATTR void VKAPI_CALL CmdDrawIndexed(VkCommandBuffer commandBuffer, uint32_
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_01369, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01369,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return;
@@ -2202,10 +2110,10 @@ VKAPI_ATTR void VKAPI_CALL CmdDrawIndirect(VkCommandBuffer commandBuffer, VkBuff
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_01377, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(commandBuffer, buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, false, VALIDATION_ERROR_01378,
-                               VALIDATION_ERROR_01382);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01377,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |=
+            ValidateObject(commandBuffer, buffer, kVulkanObjectTypeBuffer, false, VALIDATION_ERROR_01378, VALIDATION_ERROR_01382);
     }
     if (skip) {
         return;
@@ -2218,10 +2126,10 @@ VKAPI_ATTR void VKAPI_CALL CmdDrawIndexedIndirect(VkCommandBuffer commandBuffer,
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_01389, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(commandBuffer, buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, false, VALIDATION_ERROR_01390,
-                               VALIDATION_ERROR_01394);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01389,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |=
+            ValidateObject(commandBuffer, buffer, kVulkanObjectTypeBuffer, false, VALIDATION_ERROR_01390, VALIDATION_ERROR_01394);
     }
     if (skip) {
         return;
@@ -2234,8 +2142,8 @@ VKAPI_ATTR void VKAPI_CALL CmdDispatch(VkCommandBuffer commandBuffer, uint32_t x
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_01559, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01559,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return;
@@ -2247,10 +2155,10 @@ VKAPI_ATTR void VKAPI_CALL CmdDispatchIndirect(VkCommandBuffer commandBuffer, Vk
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, false, VALIDATION_ERROR_01566,
-                               VALIDATION_ERROR_01570);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_01565, VALIDATION_ERROR_UNDEFINED);
+        skip |=
+            ValidateObject(commandBuffer, buffer, kVulkanObjectTypeBuffer, false, VALIDATION_ERROR_01566, VALIDATION_ERROR_01570);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01565,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return;
@@ -2263,11 +2171,11 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_01166, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(commandBuffer, dstBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, false, VALIDATION_ERROR_01168,
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01166,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, dstBuffer, kVulkanObjectTypeBuffer, false, VALIDATION_ERROR_01168,
                                VALIDATION_ERROR_01174);
-        skip |= ValidateObject(commandBuffer, srcBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, false, VALIDATION_ERROR_01167,
+        skip |= ValidateObject(commandBuffer, srcBuffer, kVulkanObjectTypeBuffer, false, VALIDATION_ERROR_01167,
                                VALIDATION_ERROR_01174);
     }
     if (skip) {
@@ -2283,12 +2191,12 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyImage(VkCommandBuffer commandBuffer, VkImage s
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_01186, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(commandBuffer, dstImage, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, false, VALIDATION_ERROR_01189,
-                               VALIDATION_ERROR_01196);
-        skip |= ValidateObject(commandBuffer, srcImage, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, false, VALIDATION_ERROR_01187,
-                               VALIDATION_ERROR_01196);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01186,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |=
+            ValidateObject(commandBuffer, dstImage, kVulkanObjectTypeImage, false, VALIDATION_ERROR_01189, VALIDATION_ERROR_01196);
+        skip |=
+            ValidateObject(commandBuffer, srcImage, kVulkanObjectTypeImage, false, VALIDATION_ERROR_01187, VALIDATION_ERROR_01196);
     }
     if (skip) {
         return;
@@ -2303,12 +2211,12 @@ VKAPI_ATTR void VKAPI_CALL CmdBlitImage(VkCommandBuffer commandBuffer, VkImage s
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_01291, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(commandBuffer, dstImage, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, false, VALIDATION_ERROR_01294,
-                               VALIDATION_ERROR_01302);
-        skip |= ValidateObject(commandBuffer, srcImage, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, false, VALIDATION_ERROR_01292,
-                               VALIDATION_ERROR_01302);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01291,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |=
+            ValidateObject(commandBuffer, dstImage, kVulkanObjectTypeImage, false, VALIDATION_ERROR_01294, VALIDATION_ERROR_01302);
+        skip |=
+            ValidateObject(commandBuffer, srcImage, kVulkanObjectTypeImage, false, VALIDATION_ERROR_01292, VALIDATION_ERROR_01302);
     }
     if (skip) {
         return;
@@ -2323,11 +2231,11 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBufferToImage(VkCommandBuffer commandBuffer, V
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_01235, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(commandBuffer, dstImage, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, false, VALIDATION_ERROR_01237,
-                               VALIDATION_ERROR_01244);
-        skip |= ValidateObject(commandBuffer, srcBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, false, VALIDATION_ERROR_01236,
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01235,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |=
+            ValidateObject(commandBuffer, dstImage, kVulkanObjectTypeImage, false, VALIDATION_ERROR_01237, VALIDATION_ERROR_01244);
+        skip |= ValidateObject(commandBuffer, srcBuffer, kVulkanObjectTypeBuffer, false, VALIDATION_ERROR_01236,
                                VALIDATION_ERROR_01244);
     }
     if (skip) {
@@ -2342,12 +2250,12 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyImageToBuffer(VkCommandBuffer commandBuffer, V
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_01253, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(commandBuffer, dstBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, false, VALIDATION_ERROR_01256,
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01253,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, dstBuffer, kVulkanObjectTypeBuffer, false, VALIDATION_ERROR_01256,
                                VALIDATION_ERROR_01262);
-        skip |= ValidateObject(commandBuffer, srcImage, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, false, VALIDATION_ERROR_01254,
-                               VALIDATION_ERROR_01262);
+        skip |=
+            ValidateObject(commandBuffer, srcImage, kVulkanObjectTypeImage, false, VALIDATION_ERROR_01254, VALIDATION_ERROR_01262);
     }
     if (skip) {
         return;
@@ -2361,9 +2269,9 @@ VKAPI_ATTR void VKAPI_CALL CmdUpdateBuffer(VkCommandBuffer commandBuffer, VkBuff
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_01150, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(commandBuffer, dstBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, false, VALIDATION_ERROR_01151,
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01150,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, dstBuffer, kVulkanObjectTypeBuffer, false, VALIDATION_ERROR_01151,
                                VALIDATION_ERROR_01157);
     }
     if (skip) {
@@ -2377,9 +2285,9 @@ VKAPI_ATTR void VKAPI_CALL CmdFillBuffer(VkCommandBuffer commandBuffer, VkBuffer
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_01138, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(commandBuffer, dstBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, false, VALIDATION_ERROR_01139,
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01138,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, dstBuffer, kVulkanObjectTypeBuffer, false, VALIDATION_ERROR_01139,
                                VALIDATION_ERROR_01143);
     }
     if (skip) {
@@ -2394,10 +2302,9 @@ VKAPI_ATTR void VKAPI_CALL CmdClearColorImage(VkCommandBuffer commandBuffer, VkI
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_01089, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(commandBuffer, image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, false, VALIDATION_ERROR_01090,
-                               VALIDATION_ERROR_01098);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01089,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, image, kVulkanObjectTypeImage, false, VALIDATION_ERROR_01090, VALIDATION_ERROR_01098);
     }
     if (skip) {
         return;
@@ -2412,10 +2319,9 @@ VKAPI_ATTR void VKAPI_CALL CmdClearDepthStencilImage(VkCommandBuffer commandBuff
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_01104, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(commandBuffer, image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, false, VALIDATION_ERROR_01105,
-                               VALIDATION_ERROR_01113);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01104,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, image, kVulkanObjectTypeImage, false, VALIDATION_ERROR_01105, VALIDATION_ERROR_01113);
     }
     if (skip) {
         return;
@@ -2430,8 +2336,8 @@ VKAPI_ATTR void VKAPI_CALL CmdClearAttachments(VkCommandBuffer commandBuffer, ui
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_01117, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01117,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return;
@@ -2446,12 +2352,12 @@ VKAPI_ATTR void VKAPI_CALL CmdResolveImage(VkCommandBuffer commandBuffer, VkImag
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_01327, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(commandBuffer, dstImage, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, false, VALIDATION_ERROR_01330,
-                               VALIDATION_ERROR_01337);
-        skip |= ValidateObject(commandBuffer, srcImage, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, false, VALIDATION_ERROR_01328,
-                               VALIDATION_ERROR_01337);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01327,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |=
+            ValidateObject(commandBuffer, dstImage, kVulkanObjectTypeImage, false, VALIDATION_ERROR_01330, VALIDATION_ERROR_01337);
+        skip |=
+            ValidateObject(commandBuffer, srcImage, kVulkanObjectTypeImage, false, VALIDATION_ERROR_01328, VALIDATION_ERROR_01337);
     }
     if (skip) {
         return;
@@ -2464,10 +2370,9 @@ VKAPI_ATTR void VKAPI_CALL CmdSetEvent(VkCommandBuffer commandBuffer, VkEvent ev
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_00232, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(commandBuffer, event, VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT, false, VALIDATION_ERROR_00233,
-                               VALIDATION_ERROR_00239);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_00232,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, event, kVulkanObjectTypeEvent, false, VALIDATION_ERROR_00233, VALIDATION_ERROR_00239);
     }
     if (skip) {
         return;
@@ -2479,10 +2384,9 @@ VKAPI_ATTR void VKAPI_CALL CmdResetEvent(VkCommandBuffer commandBuffer, VkEvent 
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_00243, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(commandBuffer, event, VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT, false, VALIDATION_ERROR_00244,
-                               VALIDATION_ERROR_00250);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_00243,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, event, kVulkanObjectTypeEvent, false, VALIDATION_ERROR_00244, VALIDATION_ERROR_00250);
     }
     if (skip) {
         return;
@@ -2498,28 +2402,27 @@ VKAPI_ATTR void VKAPI_CALL CmdWaitEvents(VkCommandBuffer commandBuffer, uint32_t
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_00252, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_00252,
+                               VALIDATION_ERROR_UNDEFINED);
         if (pBufferMemoryBarriers) {
             for (uint32_t idx0 = 0; idx0 < bufferMemoryBarrierCount; ++idx0) {
                 if (pBufferMemoryBarriers[idx0].buffer) {
-                    skip |=
-                        ValidateObject(commandBuffer, pBufferMemoryBarriers[idx0].buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
-                                       false, VALIDATION_ERROR_00259, VALIDATION_ERROR_UNDEFINED);
+                    skip |= ValidateObject(commandBuffer, pBufferMemoryBarriers[idx0].buffer, kVulkanObjectTypeBuffer, false,
+                                           VALIDATION_ERROR_00259, VALIDATION_ERROR_UNDEFINED);
                 }
             }
         }
         if (pEvents) {
             for (uint32_t idx1 = 0; idx1 < eventCount; ++idx1) {
-                skip |= ValidateObject(commandBuffer, pEvents[idx1], VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT, false,
-                                       VALIDATION_ERROR_00253, VALIDATION_ERROR_00264);
+                skip |= ValidateObject(commandBuffer, pEvents[idx1], kVulkanObjectTypeEvent, false, VALIDATION_ERROR_00253,
+                                       VALIDATION_ERROR_00264);
             }
         }
         if (pImageMemoryBarriers) {
             for (uint32_t idx2 = 0; idx2 < imageMemoryBarrierCount; ++idx2) {
                 if (pImageMemoryBarriers[idx2].image) {
-                    skip |= ValidateObject(commandBuffer, pImageMemoryBarriers[idx2].image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                                           false, VALIDATION_ERROR_00260, VALIDATION_ERROR_UNDEFINED);
+                    skip |= ValidateObject(commandBuffer, pImageMemoryBarriers[idx2].image, kVulkanObjectTypeImage, false,
+                                           VALIDATION_ERROR_00260, VALIDATION_ERROR_UNDEFINED);
                 }
             }
         }
@@ -2540,22 +2443,21 @@ VKAPI_ATTR void VKAPI_CALL CmdPipelineBarrier(VkCommandBuffer commandBuffer, VkP
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_00270, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_00270,
+                               VALIDATION_ERROR_UNDEFINED);
         if (pBufferMemoryBarriers) {
             for (uint32_t idx0 = 0; idx0 < bufferMemoryBarrierCount; ++idx0) {
                 if (pBufferMemoryBarriers[idx0].buffer) {
-                    skip |=
-                        ValidateObject(commandBuffer, pBufferMemoryBarriers[idx0].buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
-                                       false, VALIDATION_ERROR_00277, VALIDATION_ERROR_UNDEFINED);
+                    skip |= ValidateObject(commandBuffer, pBufferMemoryBarriers[idx0].buffer, kVulkanObjectTypeBuffer, false,
+                                           VALIDATION_ERROR_00277, VALIDATION_ERROR_UNDEFINED);
                 }
             }
         }
         if (pImageMemoryBarriers) {
             for (uint32_t idx1 = 0; idx1 < imageMemoryBarrierCount; ++idx1) {
                 if (pImageMemoryBarriers[idx1].image) {
-                    skip |= ValidateObject(commandBuffer, pImageMemoryBarriers[idx1].image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                                           false, VALIDATION_ERROR_00278, VALIDATION_ERROR_UNDEFINED);
+                    skip |= ValidateObject(commandBuffer, pImageMemoryBarriers[idx1].image, kVulkanObjectTypeImage, false,
+                                           VALIDATION_ERROR_00278, VALIDATION_ERROR_UNDEFINED);
                 }
             }
         }
@@ -2573,9 +2475,9 @@ VKAPI_ATTR void VKAPI_CALL CmdBeginQuery(VkCommandBuffer commandBuffer, VkQueryP
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_01035, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(commandBuffer, queryPool, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, false, VALIDATION_ERROR_01036,
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01035,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, queryPool, kVulkanObjectTypeQueryPool, false, VALIDATION_ERROR_01036,
                                VALIDATION_ERROR_01040);
     }
     if (skip) {
@@ -2588,9 +2490,9 @@ VKAPI_ATTR void VKAPI_CALL CmdEndQuery(VkCommandBuffer commandBuffer, VkQueryPoo
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_01043, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(commandBuffer, queryPool, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, false, VALIDATION_ERROR_01044,
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01043,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, queryPool, kVulkanObjectTypeQueryPool, false, VALIDATION_ERROR_01044,
                                VALIDATION_ERROR_01047);
     }
     if (skip) {
@@ -2604,9 +2506,9 @@ VKAPI_ATTR void VKAPI_CALL CmdResetQueryPool(VkCommandBuffer commandBuffer, VkQu
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_01021, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(commandBuffer, queryPool, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, false, VALIDATION_ERROR_01022,
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01021,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, queryPool, kVulkanObjectTypeQueryPool, false, VALIDATION_ERROR_01022,
                                VALIDATION_ERROR_01026);
     }
     if (skip) {
@@ -2620,9 +2522,9 @@ VKAPI_ATTR void VKAPI_CALL CmdWriteTimestamp(VkCommandBuffer commandBuffer, VkPi
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_01078, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(commandBuffer, queryPool, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, false, VALIDATION_ERROR_01080,
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01078,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, queryPool, kVulkanObjectTypeQueryPool, false, VALIDATION_ERROR_01080,
                                VALIDATION_ERROR_01083);
     }
     if (skip) {
@@ -2637,11 +2539,11 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyQueryPoolResults(VkCommandBuffer commandBuffer
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_01068, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(commandBuffer, dstBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, false, VALIDATION_ERROR_01070,
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01068,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, dstBuffer, kVulkanObjectTypeBuffer, false, VALIDATION_ERROR_01070,
                                VALIDATION_ERROR_01075);
-        skip |= ValidateObject(commandBuffer, queryPool, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, false, VALIDATION_ERROR_01069,
+        skip |= ValidateObject(commandBuffer, queryPool, kVulkanObjectTypeQueryPool, false, VALIDATION_ERROR_01069,
                                VALIDATION_ERROR_01075);
     }
     if (skip) {
@@ -2656,10 +2558,10 @@ VKAPI_ATTR void VKAPI_CALL CmdPushConstants(VkCommandBuffer commandBuffer, VkPip
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_00993, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(commandBuffer, layout, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT, false,
-                               VALIDATION_ERROR_00994, VALIDATION_ERROR_01001);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_00993,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, layout, kVulkanObjectTypePipelineLayout, false, VALIDATION_ERROR_00994,
+                               VALIDATION_ERROR_01001);
     }
     if (skip) {
         return;
@@ -2673,12 +2575,12 @@ VKAPI_ATTR void VKAPI_CALL CmdBeginRenderPass(VkCommandBuffer commandBuffer, con
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_00435, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_00435,
+                               VALIDATION_ERROR_UNDEFINED);
         if (pRenderPassBegin) {
-            skip |= ValidateObject(commandBuffer, pRenderPassBegin->framebuffer, VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT, false,
+            skip |= ValidateObject(commandBuffer, pRenderPassBegin->framebuffer, kVulkanObjectTypeFramebuffer, false,
                                    VALIDATION_ERROR_00446, VALIDATION_ERROR_00448);
-            skip |= ValidateObject(commandBuffer, pRenderPassBegin->renderPass, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, false,
+            skip |= ValidateObject(commandBuffer, pRenderPassBegin->renderPass, kVulkanObjectTypeRenderPass, false,
                                    VALIDATION_ERROR_00445, VALIDATION_ERROR_00448);
         }
     }
@@ -2692,8 +2594,8 @@ VKAPI_ATTR void VKAPI_CALL CmdNextSubpass(VkCommandBuffer commandBuffer, VkSubpa
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_00454, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_00454,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return;
@@ -2705,8 +2607,8 @@ VKAPI_ATTR void VKAPI_CALL CmdEndRenderPass(VkCommandBuffer commandBuffer) {
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_00461, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_00461,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return;
@@ -2719,11 +2621,11 @@ VKAPI_ATTR void VKAPI_CALL CmdExecuteCommands(VkCommandBuffer commandBuffer, uin
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                               VALIDATION_ERROR_00159, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_00159,
+                               VALIDATION_ERROR_UNDEFINED);
         if (pCommandBuffers) {
             for (uint32_t idx0 = 0; idx0 < commandBufferCount; ++idx0) {
-                skip |= ValidateObject(commandBuffer, pCommandBuffers[idx0], VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
+                skip |= ValidateObject(commandBuffer, pCommandBuffers[idx0], kVulkanObjectTypeCommandBuffer, false,
                                        VALIDATION_ERROR_00160, VALIDATION_ERROR_00165);
             }
         }
@@ -2738,9 +2640,9 @@ VKAPI_ATTR void VKAPI_CALL DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR s
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(instance, instance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, false, VALIDATION_ERROR_01847,
+        skip |= ValidateObject(instance, instance, kVulkanObjectTypeInstance, false, VALIDATION_ERROR_01847,
                                VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(instance, surface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, true, VALIDATION_ERROR_01848,
+        skip |= ValidateObject(instance, surface, kVulkanObjectTypeSurfaceKHR, true, VALIDATION_ERROR_01848,
                                VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
@@ -2748,8 +2650,7 @@ VKAPI_ATTR void VKAPI_CALL DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR s
     }
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        DestroyObject(instance, surface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, pAllocator, VALIDATION_ERROR_01845,
-                      VALIDATION_ERROR_01846);
+        DestroyObject(instance, surface, kVulkanObjectTypeSurfaceKHR, pAllocator, VALIDATION_ERROR_01845, VALIDATION_ERROR_01846);
     }
     get_dispatch_table(ot_instance_table_map, instance)->DestroySurfaceKHR(instance, surface, pAllocator);
 }
@@ -2759,9 +2660,9 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevi
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_01890, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(physicalDevice, surface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, false, VALIDATION_ERROR_01891,
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_01890,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, surface, kVulkanObjectTypeSurfaceKHR, false, VALIDATION_ERROR_01891,
                                VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
@@ -2777,9 +2678,9 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilitiesKHR(VkPhysica
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_01907, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(physicalDevice, surface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, false, VALIDATION_ERROR_01908,
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_01907,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, surface, kVulkanObjectTypeSurfaceKHR, false, VALIDATION_ERROR_01908,
                                VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
@@ -2796,9 +2697,9 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevi
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_01910, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(physicalDevice, surface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, false, VALIDATION_ERROR_01911,
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_01910,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, surface, kVulkanObjectTypeSurfaceKHR, false, VALIDATION_ERROR_01911,
                                VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
@@ -2815,9 +2716,9 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfacePresentModesKHR(VkPhysica
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_01914, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(physicalDevice, surface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, false, VALIDATION_ERROR_01915,
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_01914,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, surface, kVulkanObjectTypeSurfaceKHR, false, VALIDATION_ERROR_01915,
                                VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
@@ -2833,14 +2734,13 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device, const VkSwapc
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_01918,
-                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_01918, VALIDATION_ERROR_UNDEFINED);
         if (pCreateInfo) {
-            skip |= ValidateObject(device, pCreateInfo->oldSwapchain, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, true,
-                                   VALIDATION_ERROR_01935, VALIDATION_ERROR_UNDEFINED);
+            skip |= ValidateObject(device, pCreateInfo->oldSwapchain, kVulkanObjectTypeSwapchainKHR, true, VALIDATION_ERROR_01935,
+                                   VALIDATION_ERROR_UNDEFINED);
             layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-            skip |= ValidateObject(device_data->physical_device, pCreateInfo->surface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT,
-                                   false, VALIDATION_ERROR_01926, VALIDATION_ERROR_UNDEFINED);
+            skip |= ValidateObject(device_data->physical_device, pCreateInfo->surface, kVulkanObjectTypeSurfaceKHR, false,
+                                   VALIDATION_ERROR_01926, VALIDATION_ERROR_UNDEFINED);
         }
     }
     if (skip) {
@@ -2851,7 +2751,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device, const VkSwapc
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateObject(device, *pSwapchain, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, pAllocator);
+            CreateObject(device, *pSwapchain, kVulkanObjectTypeSwapchainKHR, pAllocator);
         }
     }
     return result;
@@ -2862,13 +2762,10 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_01954,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, fence, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, true, VALIDATION_ERROR_01957,
-                               VALIDATION_ERROR_01960);
-        skip |= ValidateObject(device, semaphore, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT, true, VALIDATION_ERROR_01956,
-                               VALIDATION_ERROR_01959);
-        skip |= ValidateObject(device, swapchain, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, false, VALIDATION_ERROR_01955,
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_01954, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, fence, kVulkanObjectTypeFence, true, VALIDATION_ERROR_01957, VALIDATION_ERROR_01960);
+        skip |= ValidateObject(device, semaphore, kVulkanObjectTypeSemaphore, true, VALIDATION_ERROR_01956, VALIDATION_ERROR_01959);
+        skip |= ValidateObject(device, swapchain, kVulkanObjectTypeSwapchainKHR, false, VALIDATION_ERROR_01955,
                                VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
@@ -2886,19 +2783,18 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
         if (pPresentInfo) {
             if (pPresentInfo->pSwapchains) {
                 for (uint32_t idx0 = 0; idx0 < pPresentInfo->swapchainCount; ++idx0) {
-                    skip |= ValidateObject(queue, pPresentInfo->pSwapchains[idx0], VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
-                                           false, VALIDATION_ERROR_01969, VALIDATION_ERROR_UNDEFINED);
+                    skip |= ValidateObject(queue, pPresentInfo->pSwapchains[idx0], kVulkanObjectTypeSwapchainKHR, false,
+                                           VALIDATION_ERROR_01969, VALIDATION_ERROR_UNDEFINED);
                 }
             }
             if (pPresentInfo->pWaitSemaphores) {
                 for (uint32_t idx1 = 0; idx1 < pPresentInfo->waitSemaphoreCount; ++idx1) {
-                    skip |= ValidateObject(queue, pPresentInfo->pWaitSemaphores[idx1], VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
-                                           false, VALIDATION_ERROR_01968, VALIDATION_ERROR_UNDEFINED);
+                    skip |= ValidateObject(queue, pPresentInfo->pWaitSemaphores[idx1], kVulkanObjectTypeSemaphore, false,
+                                           VALIDATION_ERROR_01968, VALIDATION_ERROR_UNDEFINED);
                 }
             }
         }
-        skip |= ValidateObject(queue, queue, VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT, false, VALIDATION_ERROR_01962,
-                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(queue, queue, kVulkanObjectTypeQueue, false, VALIDATION_ERROR_01962, VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -2913,7 +2809,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateWin32SurfaceKHR(VkInstance instance, const 
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(instance, instance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, false, VALIDATION_ERROR_01820,
+        skip |= ValidateObject(instance, instance, kVulkanObjectTypeInstance, false, VALIDATION_ERROR_01820,
                                VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
@@ -2924,7 +2820,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateWin32SurfaceKHR(VkInstance instance, const 
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateObject(instance, *pSurface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, pAllocator);
+            CreateObject(instance, *pSurface, kVulkanObjectTypeSurfaceKHR, pAllocator);
         }
     }
     return result;
@@ -2935,8 +2831,8 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceWin32PresentationSupportKHR(VkPh
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_01900, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_01900,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return VK_FALSE;
@@ -2953,7 +2849,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateXcbSurfaceKHR(VkInstance instance, const Vk
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(instance, instance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, false, VALIDATION_ERROR_01827,
+        skip |= ValidateObject(instance, instance, kVulkanObjectTypeInstance, false, VALIDATION_ERROR_01827,
                                VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
@@ -2964,7 +2860,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateXcbSurfaceKHR(VkInstance instance, const Vk
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateObject(instance, *pSurface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, pAllocator);
+            CreateObject(instance, *pSurface, kVulkanObjectTypeSurfaceKHR, pAllocator);
         }
     }
     return result;
@@ -2976,8 +2872,8 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceXcbPresentationSupportKHR(VkPhys
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_01902, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_01902,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return VK_FALSE;
@@ -2994,7 +2890,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateXlibSurfaceKHR(VkInstance instance, const V
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(instance, instance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, false, VALIDATION_ERROR_01836,
+        skip |= ValidateObject(instance, instance, kVulkanObjectTypeInstance, false, VALIDATION_ERROR_01836,
                                VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
@@ -3005,7 +2901,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateXlibSurfaceKHR(VkInstance instance, const V
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateObject(instance, *pSurface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, pAllocator);
+            CreateObject(instance, *pSurface, kVulkanObjectTypeSurfaceKHR, pAllocator);
         }
     }
     return result;
@@ -3017,8 +2913,8 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceXlibPresentationSupportKHR(VkPhy
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_01905, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_01905,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return VK_FALSE;
@@ -3035,7 +2931,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateMirSurfaceKHR(VkInstance instance, const Vk
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(instance, instance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, false, VALIDATION_ERROR_01802,
+        skip |= ValidateObject(instance, instance, kVulkanObjectTypeInstance, false, VALIDATION_ERROR_01802,
                                VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
@@ -3046,7 +2942,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateMirSurfaceKHR(VkInstance instance, const Vk
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateObject(instance, *pSurface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, pAllocator);
+            CreateObject(instance, *pSurface, kVulkanObjectTypeSurfaceKHR, pAllocator);
         }
     }
     return result;
@@ -3057,8 +2953,8 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceMirPresentationSupportKHR(VkPhys
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_01894, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_01894,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return VK_FALSE;
@@ -3075,7 +2971,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateWaylandSurfaceKHR(VkInstance instance, cons
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(instance, instance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, false, VALIDATION_ERROR_01811,
+        skip |= ValidateObject(instance, instance, kVulkanObjectTypeInstance, false, VALIDATION_ERROR_01811,
                                VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
@@ -3086,7 +2982,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateWaylandSurfaceKHR(VkInstance instance, cons
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateObject(instance, *pSurface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, pAllocator);
+            CreateObject(instance, *pSurface, kVulkanObjectTypeSurfaceKHR, pAllocator);
         }
     }
     return result;
@@ -3098,8 +2994,8 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceWaylandPresentationSupportKHR(Vk
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_01897, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_01897,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return VK_FALSE;
@@ -3116,7 +3012,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateAndroidSurfaceKHR(VkInstance instance, cons
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(instance, instance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, false, VALIDATION_ERROR_01794,
+        skip |= ValidateObject(instance, instance, kVulkanObjectTypeInstance, false, VALIDATION_ERROR_01794,
                                VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
@@ -3127,7 +3023,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateAndroidSurfaceKHR(VkInstance instance, cons
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateObject(instance, *pSurface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, pAllocator);
+            CreateObject(instance, *pSurface, kVulkanObjectTypeSurfaceKHR, pAllocator);
         }
     }
     return result;
@@ -3140,7 +3036,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateIOSSurfaceMVK(VkInstance instance, const 
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(instance, instance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, false, VALIDATION_ERROR_UNDEFINED,
+        skip |= ValidateObject(instance, instance, kVulkanObjectTypeInstance, false, VALIDATION_ERROR_UNDEFINED,
                                VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
@@ -3150,7 +3046,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateIOSSurfaceMVK(VkInstance instance, const 
         get_dispatch_table(ot_instance_table_map, instance)->CreateIOSSurfaceMVK(instance, pCreateInfo, pAllocator, pSurface);
     if (result == VK_SUCCESS) {
         std::lock_guard<std::mutex> lock(global_lock);
-        CreateObject(instance, *pSurface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, pAllocator);
+        CreateObject(instance, *pSurface, kVulkanObjectTypeSurfaceKHR, pAllocator);
     }
     return result;
 }
@@ -3162,7 +3058,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateMacOSSurfaceMVK(VkInstance instance, cons
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(instance, instance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, false, VALIDATION_ERROR_UNDEFINED,
+        skip |= ValidateObject(instance, instance, kVulkanObjectTypeInstance, false, VALIDATION_ERROR_UNDEFINED,
                                VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
@@ -3172,7 +3068,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateMacOSSurfaceMVK(VkInstance instance, cons
         get_dispatch_table(ot_instance_table_map, instance)->CreateMacOSSurfaceMVK(instance, pCreateInfo, pAllocator, pSurface);
     if (result == VK_SUCCESS) {
         std::lock_guard<std::mutex> lock(global_lock);
-        CreateObject(instance, *pSurface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, pAllocator);
+        CreateObject(instance, *pSurface, kVulkanObjectTypeSurfaceKHR, pAllocator);
     }
     return result;
 }
@@ -3184,7 +3080,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateViSurfaceNN(VkInstance instance, const Vk
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(instance, instance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, false, VALIDATION_ERROR_UNDEFINED,
+        skip |= ValidateObject(instance, instance, kVulkanObjectTypeInstance, false, VALIDATION_ERROR_UNDEFINED,
                                VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
@@ -3194,7 +3090,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateViSurfaceNN(VkInstance instance, const Vk
         get_dispatch_table(ot_instance_table_map, instance)->CreateViSurfaceNN(instance, pCreateInfo, pAllocator, pSurface);
     if (result == VK_SUCCESS) {
         std::lock_guard<std::mutex> lock(global_lock);
-        CreateObject(instance, *pSurface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, pAllocator);
+        CreateObject(instance, *pSurface, kVulkanObjectTypeSurfaceKHR, pAllocator);
     }
     return result;
 }
@@ -3207,16 +3103,14 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSharedSwapchainsKHR(VkDevice device, uint32
     uint32_t i = 0;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_01943,
-                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_01943, VALIDATION_ERROR_UNDEFINED);
         if (NULL != pCreateInfos) {
             for (i = 0; i < swapchainCount; i++) {
-                skip |= ValidateObject(device, pCreateInfos[i].oldSwapchain, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, true,
+                skip |= ValidateObject(device, pCreateInfos[i].oldSwapchain, kVulkanObjectTypeSwapchainKHR, true,
                                        VALIDATION_ERROR_01935, VALIDATION_ERROR_UNDEFINED);
                 layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-                skip |= ValidateObject(device_data->physical_device, pCreateInfos[i].surface,
-                                       VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, false, VALIDATION_ERROR_01926,
-                                       VALIDATION_ERROR_UNDEFINED);
+                skip |= ValidateObject(device_data->physical_device, pCreateInfos[i].surface, kVulkanObjectTypeSurfaceKHR, false,
+                                       VALIDATION_ERROR_01926, VALIDATION_ERROR_UNDEFINED);
             }
         }
     }
@@ -3229,7 +3123,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSharedSwapchainsKHR(VkDevice device, uint32
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
             for (i = 0; i < swapchainCount; i++) {
-                CreateObject(device, pSwapchains[i], VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, pAllocator);
+                CreateObject(device, pSwapchains[i], kVulkanObjectTypeSwapchainKHR, pAllocator);
             }
         }
     }
@@ -3245,7 +3139,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDebugReportCallbackEXT(VkInstance instance,
     if (VK_SUCCESS == result) {
         layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(instance), layer_data_map);
         result = layer_create_msg_callback(instance_data->report_data, false, pCreateInfo, pAllocator, pCallback);
-        CreateObject(instance, *pCallback, VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT, pAllocator);
+        CreateObject(instance, *pCallback, kVulkanObjectTypeDebugReportCallbackEXT, pAllocator);
     }
     return result;
 }
@@ -3256,7 +3150,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyDebugReportCallbackEXT(VkInstance instance, Vk
     pInstanceTable->DestroyDebugReportCallbackEXT(instance, msgCallback, pAllocator);
     layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(instance), layer_data_map);
     layer_destroy_msg_callback(instance_data->report_data, msgCallback, pAllocator);
-    DestroyObject(instance, msgCallback, VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT, pAllocator, VALIDATION_ERROR_02049,
+    DestroyObject(instance, msgCallback, kVulkanObjectTypeDebugReportCallbackEXT, pAllocator, VALIDATION_ERROR_02049,
                   VALIDATION_ERROR_02050);
 }
 
@@ -3499,7 +3393,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physicalDevice, con
     initDeviceTable(*pDevice, fpGetDeviceProcAddr, ot_device_table_map);
 
     CheckDeviceRegisterExtensions(pCreateInfo, *pDevice);
-    CreateObject(*pDevice, *pDevice, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, pAllocator);
+    CreateObject(*pDevice, *pDevice, kVulkanObjectTypeDevice, pAllocator);
 
     return result;
 }
@@ -3510,8 +3404,8 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceQueueFamilyProperties(VkPhysicalDevi
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_00028, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_00028,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return;
@@ -3565,7 +3459,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateInstance(const VkInstanceCreateInfo *pCreat
     InitObjectTracker(instance_data, pAllocator);
     CheckInstanceRegisterExtensions(pCreateInfo, *pInstance);
 
-    CreateObject(*pInstance, *pInstance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pAllocator);
+    CreateObject(*pInstance, *pInstance, kVulkanObjectTypeInstance, pAllocator);
 
     return result;
 }
@@ -3574,8 +3468,8 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumeratePhysicalDevices(VkInstance instance, uin
                                                         VkPhysicalDevice *pPhysicalDevices) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(instance, instance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, false, VALIDATION_ERROR_00023,
-                           VALIDATION_ERROR_UNDEFINED);
+    skip |=
+        ValidateObject(instance, instance, kVulkanObjectTypeInstance, false, VALIDATION_ERROR_00023, VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -3586,7 +3480,7 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumeratePhysicalDevices(VkInstance instance, uin
     if (result == VK_SUCCESS) {
         if (pPhysicalDevices) {
             for (uint32_t i = 0; i < *pPhysicalDeviceCount; i++) {
-                CreateObject(instance, pPhysicalDevices[i], VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, nullptr);
+                CreateObject(instance, pPhysicalDevices[i], kVulkanObjectTypePhysicalDevice, nullptr);
             }
         }
     }
@@ -3596,8 +3490,7 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumeratePhysicalDevices(VkInstance instance, uin
 
 VKAPI_ATTR void VKAPI_CALL GetDeviceQueue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue *pQueue) {
     std::unique_lock<std::mutex> lock(global_lock);
-    ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00062,
-                   VALIDATION_ERROR_UNDEFINED);
+    ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00062, VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
 
     get_dispatch_table(ot_device_table_map, device)->GetDeviceQueue(device, queueFamilyIndex, queueIndex, pQueue);
@@ -3611,16 +3504,14 @@ VKAPI_ATTR void VKAPI_CALL GetDeviceQueue(VkDevice device, uint32_t queueFamilyI
 VKAPI_ATTR void VKAPI_CALL FreeMemory(VkDevice device, VkDeviceMemory memory, const VkAllocationCallbacks *pAllocator) {
     bool skip = false;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00621,
-                           VALIDATION_ERROR_UNDEFINED);
-    skip |= ValidateObject(device, memory, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, true, VALIDATION_ERROR_00622,
-                           VALIDATION_ERROR_00624);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00621, VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, memory, kVulkanObjectTypeDeviceMemory, true, VALIDATION_ERROR_00622, VALIDATION_ERROR_00624);
     lock.unlock();
     if (!skip) {
         get_dispatch_table(ot_device_table_map, device)->FreeMemory(device, memory, pAllocator);
 
         lock.lock();
-        DestroyObject(device, memory, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, pAllocator, VALIDATION_ERROR_UNDEFINED,
+        DestroyObject(device, memory, kVulkanObjectTypeDeviceMemory, pAllocator, VALIDATION_ERROR_UNDEFINED,
                       VALIDATION_ERROR_UNDEFINED);
     }
 }
@@ -3629,10 +3520,8 @@ VKAPI_ATTR VkResult VKAPI_CALL MapMemory(VkDevice device, VkDeviceMemory memory,
                                          VkMemoryMapFlags flags, void **ppData) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00630,
-                           VALIDATION_ERROR_UNDEFINED);
-    skip |= ValidateObject(device, memory, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, false, VALIDATION_ERROR_00631,
-                           VALIDATION_ERROR_00634);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00630, VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, memory, kVulkanObjectTypeDeviceMemory, false, VALIDATION_ERROR_00631, VALIDATION_ERROR_00634);
     lock.unlock();
     if (skip == VK_TRUE) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -3644,10 +3533,8 @@ VKAPI_ATTR VkResult VKAPI_CALL MapMemory(VkDevice device, VkDeviceMemory memory,
 VKAPI_ATTR void VKAPI_CALL UnmapMemory(VkDevice device, VkDeviceMemory memory) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00650,
-                           VALIDATION_ERROR_UNDEFINED);
-    skip |= ValidateObject(device, memory, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, false, VALIDATION_ERROR_00651,
-                           VALIDATION_ERROR_00652);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00650, VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, memory, kVulkanObjectTypeDeviceMemory, false, VALIDATION_ERROR_00651, VALIDATION_ERROR_00652);
     lock.unlock();
     if (skip == VK_TRUE) {
         return;
@@ -3660,29 +3547,29 @@ VKAPI_ATTR VkResult VKAPI_CALL QueueBindSparse(VkQueue queue, uint32_t bindInfoC
     std::unique_lock<std::mutex> lock(global_lock);
     ValidateQueueFlags(queue, "QueueBindSparse");
 
-    ValidateObject(queue, queue, VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT, false, VALIDATION_ERROR_01648, VALIDATION_ERROR_UNDEFINED);
-    ValidateObject(queue, fence, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, true, VALIDATION_ERROR_01650, VALIDATION_ERROR_01652);
+    ValidateObject(queue, queue, kVulkanObjectTypeQueue, false, VALIDATION_ERROR_01648, VALIDATION_ERROR_UNDEFINED);
+    ValidateObject(queue, fence, kVulkanObjectTypeFence, true, VALIDATION_ERROR_01650, VALIDATION_ERROR_01652);
 
     for (uint32_t i = 0; i < bindInfoCount; i++) {
         for (uint32_t j = 0; j < pBindInfo[i].bufferBindCount; j++) {
-            ValidateObject(queue, pBindInfo[i].pBufferBinds[j].buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, false,
-                           VALIDATION_ERROR_01656, VALIDATION_ERROR_UNDEFINED);
+            ValidateObject(queue, pBindInfo[i].pBufferBinds[j].buffer, kVulkanObjectTypeBuffer, false, VALIDATION_ERROR_01656,
+                           VALIDATION_ERROR_UNDEFINED);
         }
         for (uint32_t j = 0; j < pBindInfo[i].imageOpaqueBindCount; j++) {
-            ValidateObject(queue, pBindInfo[i].pImageOpaqueBinds[j].image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, false,
-                           VALIDATION_ERROR_01657, VALIDATION_ERROR_UNDEFINED);
+            ValidateObject(queue, pBindInfo[i].pImageOpaqueBinds[j].image, kVulkanObjectTypeImage, false, VALIDATION_ERROR_01657,
+                           VALIDATION_ERROR_UNDEFINED);
         }
         for (uint32_t j = 0; j < pBindInfo[i].imageBindCount; j++) {
-            ValidateObject(queue, pBindInfo[i].pImageBinds[j].image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, false,
-                           VALIDATION_ERROR_01658, VALIDATION_ERROR_UNDEFINED);
+            ValidateObject(queue, pBindInfo[i].pImageBinds[j].image, kVulkanObjectTypeImage, false, VALIDATION_ERROR_01658,
+                           VALIDATION_ERROR_UNDEFINED);
         }
         for (uint32_t j = 0; j < pBindInfo[i].waitSemaphoreCount; j++) {
-            ValidateObject(queue, pBindInfo[i].pWaitSemaphores[j], VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT, false,
-                           VALIDATION_ERROR_01655, VALIDATION_ERROR_01660);
+            ValidateObject(queue, pBindInfo[i].pWaitSemaphores[j], kVulkanObjectTypeSemaphore, false, VALIDATION_ERROR_01655,
+                           VALIDATION_ERROR_01660);
         }
         for (uint32_t j = 0; j < pBindInfo[i].signalSemaphoreCount; j++) {
-            ValidateObject(queue, pBindInfo[i].pSignalSemaphores[j], VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT, false,
-                           VALIDATION_ERROR_01659, VALIDATION_ERROR_01660);
+            ValidateObject(queue, pBindInfo[i].pSignalSemaphores[j], kVulkanObjectTypeSemaphore, false, VALIDATION_ERROR_01659,
+                           VALIDATION_ERROR_01660);
         }
     }
     lock.unlock();
@@ -3695,10 +3582,9 @@ VKAPI_ATTR VkResult VKAPI_CALL AllocateCommandBuffers(VkDevice device, const VkC
                                                       VkCommandBuffer *pCommandBuffers) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00084,
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00084, VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, pAllocateInfo->commandPool, kVulkanObjectTypeCommandPool, false, VALIDATION_ERROR_00090,
                            VALIDATION_ERROR_UNDEFINED);
-    skip |= ValidateObject(device, pAllocateInfo->commandPool, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT, false,
-                           VALIDATION_ERROR_00090, VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
 
     if (skip) {
@@ -3721,12 +3607,11 @@ VKAPI_ATTR VkResult VKAPI_CALL AllocateDescriptorSets(VkDevice device, const VkD
                                                       VkDescriptorSet *pDescriptorSets) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00908,
-                           VALIDATION_ERROR_UNDEFINED);
-    skip |= ValidateObject(device, pAllocateInfo->descriptorPool, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT, false,
-                           VALIDATION_ERROR_00915, VALIDATION_ERROR_00918);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00908, VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, pAllocateInfo->descriptorPool, kVulkanObjectTypeDescriptorPool, false, VALIDATION_ERROR_00915,
+                           VALIDATION_ERROR_00918);
     for (uint32_t i = 0; i < pAllocateInfo->descriptorSetCount; i++) {
-        skip |= ValidateObject(device, pAllocateInfo->pSetLayouts[i], VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT, false,
+        skip |= ValidateObject(device, pAllocateInfo->pSetLayouts[i], kVulkanObjectTypeDescriptorSetLayout, false,
                                VALIDATION_ERROR_00916, VALIDATION_ERROR_00918);
     }
     lock.unlock();
@@ -3752,10 +3637,8 @@ VKAPI_ATTR void VKAPI_CALL FreeCommandBuffers(VkDevice device, VkCommandPool com
                                               const VkCommandBuffer *pCommandBuffers) {
     bool skip = false;
     std::unique_lock<std::mutex> lock(global_lock);
-    ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00098,
-                   VALIDATION_ERROR_UNDEFINED);
-    ValidateObject(device, commandPool, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT, false, VALIDATION_ERROR_00099,
-                   VALIDATION_ERROR_00101);
+    ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00098, VALIDATION_ERROR_UNDEFINED);
+    ValidateObject(device, commandPool, kVulkanObjectTypeCommandPool, false, VALIDATION_ERROR_00099, VALIDATION_ERROR_00101);
     for (uint32_t i = 0; i < commandBufferCount; i++) {
         if (pCommandBuffers[i] != VK_NULL_HANDLE) {
             skip |= ValidateCommandBuffer(device, commandPool, pCommandBuffers[i]);
@@ -3763,8 +3646,8 @@ VKAPI_ATTR void VKAPI_CALL FreeCommandBuffers(VkDevice device, VkCommandPool com
     }
 
     for (uint32_t i = 0; i < commandBufferCount; i++) {
-        DestroyObject(device, pCommandBuffers[i], VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, nullptr,
-                      VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+        DestroyObject(device, pCommandBuffers[i], kVulkanObjectTypeCommandBuffer, nullptr, VALIDATION_ERROR_UNDEFINED,
+                      VALIDATION_ERROR_UNDEFINED);
     }
 
     lock.unlock();
@@ -3789,8 +3672,7 @@ VKAPI_ATTR void VKAPI_CALL DestroySwapchainKHR(VkDevice device, VkSwapchainKHR s
             ++itr;
         }
     }
-    DestroyObject(device, swapchain, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, pAllocator, VALIDATION_ERROR_01938,
-                  VALIDATION_ERROR_01939);
+    DestroyObject(device, swapchain, kVulkanObjectTypeSwapchainKHR, pAllocator, VALIDATION_ERROR_01938, VALIDATION_ERROR_01939);
     lock.unlock();
 
     get_dispatch_table(ot_device_table_map, device)->DestroySwapchainKHR(device, swapchain, pAllocator);
@@ -3801,9 +3683,8 @@ VKAPI_ATTR VkResult VKAPI_CALL FreeDescriptorSets(VkDevice device, VkDescriptorP
     bool skip = false;
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00923,
-                           VALIDATION_ERROR_UNDEFINED);
-    skip |= ValidateObject(device, descriptorPool, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT, false, VALIDATION_ERROR_00924,
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00923, VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, descriptorPool, kVulkanObjectTypeDescriptorPool, false, VALIDATION_ERROR_00924,
                            VALIDATION_ERROR_00926);
     for (uint32_t i = 0; i < descriptorSetCount; i++) {
         if (pDescriptorSets[i] != VK_NULL_HANDLE) {
@@ -3812,8 +3693,8 @@ VKAPI_ATTR VkResult VKAPI_CALL FreeDescriptorSets(VkDevice device, VkDescriptorP
     }
 
     for (uint32_t i = 0; i < descriptorSetCount; i++) {
-        DestroyObject(device, pDescriptorSets[i], VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, nullptr,
-                      VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+        DestroyObject(device, pDescriptorSets[i], kVulkanObjectTypeDescriptorSet, nullptr, VALIDATION_ERROR_UNDEFINED,
+                      VALIDATION_ERROR_UNDEFINED);
     }
 
     lock.unlock();
@@ -3829,9 +3710,8 @@ VKAPI_ATTR void VKAPI_CALL DestroyDescriptorPool(VkDevice device, VkDescriptorPo
     bool skip = VK_FALSE;
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00904,
-                           VALIDATION_ERROR_UNDEFINED);
-    skip |= ValidateObject(device, descriptorPool, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT, true, VALIDATION_ERROR_00905,
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00904, VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, descriptorPool, kVulkanObjectTypeDescriptorPool, true, VALIDATION_ERROR_00905,
                            VALIDATION_ERROR_00907);
     lock.unlock();
     if (skip) {
@@ -3840,17 +3720,16 @@ VKAPI_ATTR void VKAPI_CALL DestroyDescriptorPool(VkDevice device, VkDescriptorPo
     // A DescriptorPool's descriptor sets are implicitly deleted when the pool is deleted.
     // Remove this pool's descriptor sets from our descriptorSet map.
     lock.lock();
-    std::unordered_map<uint64_t, OBJTRACK_NODE *>::iterator itr =
-        device_data->object_map[VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT].begin();
-    while (itr != device_data->object_map[VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT].end()) {
+    std::unordered_map<uint64_t, OBJTRACK_NODE *>::iterator itr = device_data->object_map[kVulkanObjectTypeDescriptorSet].begin();
+    while (itr != device_data->object_map[kVulkanObjectTypeDescriptorSet].end()) {
         OBJTRACK_NODE *pNode = (*itr).second;
         auto del_itr = itr++;
         if (pNode->parent_object == reinterpret_cast<uint64_t &>(descriptorPool)) {
-            DestroyObject(device, (VkDescriptorSet)((*del_itr).first), VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, nullptr,
+            DestroyObject(device, (VkDescriptorSet)((*del_itr).first), kVulkanObjectTypeDescriptorSet, nullptr,
                           VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
         }
     }
-    DestroyObject(device, descriptorPool, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT, pAllocator, VALIDATION_ERROR_00902,
+    DestroyObject(device, descriptorPool, kVulkanObjectTypeDescriptorPool, pAllocator, VALIDATION_ERROR_00902,
                   VALIDATION_ERROR_00903);
     lock.unlock();
     get_dispatch_table(ot_device_table_map, device)->DestroyDescriptorPool(device, descriptorPool, pAllocator);
@@ -3860,10 +3739,8 @@ VKAPI_ATTR void VKAPI_CALL DestroyCommandPool(VkDevice device, VkCommandPool com
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     bool skip = false;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00080,
-                           VALIDATION_ERROR_UNDEFINED);
-    skip |= ValidateObject(device, commandPool, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT, true, VALIDATION_ERROR_00081,
-                           VALIDATION_ERROR_00083);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00080, VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, commandPool, kVulkanObjectTypeCommandPool, true, VALIDATION_ERROR_00081, VALIDATION_ERROR_00083);
     lock.unlock();
     if (skip) {
         return;
@@ -3871,20 +3748,18 @@ VKAPI_ATTR void VKAPI_CALL DestroyCommandPool(VkDevice device, VkCommandPool com
     lock.lock();
     // A CommandPool's command buffers are implicitly deleted when the pool is deleted.
     // Remove this pool's cmdBuffers from our cmd buffer map.
-    auto itr = device_data->object_map[VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT].begin();
+    auto itr = device_data->object_map[kVulkanObjectTypeCommandBuffer].begin();
     auto del_itr = itr;
-    while (itr != device_data->object_map[VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT].end()) {
+    while (itr != device_data->object_map[kVulkanObjectTypeCommandBuffer].end()) {
         OBJTRACK_NODE *pNode = (*itr).second;
         del_itr = itr++;
         if (pNode->parent_object == reinterpret_cast<uint64_t &>(commandPool)) {
             skip |= ValidateCommandBuffer(device, commandPool, reinterpret_cast<VkCommandBuffer>((*del_itr).first));
-            DestroyObject(device, reinterpret_cast<VkCommandBuffer>((*del_itr).first),
-                          VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, nullptr, VALIDATION_ERROR_UNDEFINED,
-                          VALIDATION_ERROR_UNDEFINED);
+            DestroyObject(device, reinterpret_cast<VkCommandBuffer>((*del_itr).first), kVulkanObjectTypeCommandBuffer, nullptr,
+                          VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
         }
     }
-    DestroyObject(device, commandPool, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT, pAllocator, VALIDATION_ERROR_00078,
-                  VALIDATION_ERROR_00079);
+    DestroyObject(device, commandPool, kVulkanObjectTypeCommandPool, pAllocator, VALIDATION_ERROR_00078, VALIDATION_ERROR_00079);
     lock.unlock();
     get_dispatch_table(ot_device_table_map, device)->DestroyCommandPool(device, commandPool, pAllocator);
 }
@@ -3893,8 +3768,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchai
                                                      VkImage *pSwapchainImages) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_01948,
-                           VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_01948, VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -3916,35 +3790,33 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
                                                        const VkAllocationCallbacks *pAllocator, VkPipeline *pPipelines) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00519,
-                           VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00519, VALIDATION_ERROR_UNDEFINED);
     if (pCreateInfos) {
         for (uint32_t idx0 = 0; idx0 < createInfoCount; ++idx0) {
             if (pCreateInfos[idx0].basePipelineHandle) {
-                skip |= ValidateObject(device, pCreateInfos[idx0].basePipelineHandle, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
-                                       true, VALIDATION_ERROR_00529, VALIDATION_ERROR_00549);
+                skip |= ValidateObject(device, pCreateInfos[idx0].basePipelineHandle, kVulkanObjectTypePipeline, true,
+                                       VALIDATION_ERROR_00529, VALIDATION_ERROR_00549);
             }
             if (pCreateInfos[idx0].layout) {
-                skip |= ValidateObject(device, pCreateInfos[idx0].layout, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT, false,
+                skip |= ValidateObject(device, pCreateInfos[idx0].layout, kVulkanObjectTypePipelineLayout, false,
                                        VALIDATION_ERROR_00546, VALIDATION_ERROR_00549);
             }
             if (pCreateInfos[idx0].pStages) {
                 for (uint32_t idx1 = 0; idx1 < pCreateInfos[idx0].stageCount; ++idx1) {
                     if (pCreateInfos[idx0].pStages[idx1].module) {
-                        skip |= ValidateObject(device, pCreateInfos[idx0].pStages[idx1].module,
-                                               VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT, false, VALIDATION_ERROR_00515,
-                                               VALIDATION_ERROR_UNDEFINED);
+                        skip |= ValidateObject(device, pCreateInfos[idx0].pStages[idx1].module, kVulkanObjectTypeShaderModule,
+                                               false, VALIDATION_ERROR_00515, VALIDATION_ERROR_UNDEFINED);
                     }
                 }
             }
             if (pCreateInfos[idx0].renderPass) {
-                skip |= ValidateObject(device, pCreateInfos[idx0].renderPass, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, false,
+                skip |= ValidateObject(device, pCreateInfos[idx0].renderPass, kVulkanObjectTypeRenderPass, false,
                                        VALIDATION_ERROR_00547, VALIDATION_ERROR_00549);
             }
         }
     }
     if (pipelineCache) {
-        skip |= ValidateObject(device, pipelineCache, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT, true, VALIDATION_ERROR_00520,
+        skip |= ValidateObject(device, pipelineCache, kVulkanObjectTypePipelineCache, true, VALIDATION_ERROR_00520,
                                VALIDATION_ERROR_00525);
     }
     lock.unlock();
@@ -3959,7 +3831,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
     lock.lock();
     for (uint32_t idx2 = 0; idx2 < createInfoCount; ++idx2) {
         if (pPipelines[idx2] != VK_NULL_HANDLE) {
-            CreateObject(device, pPipelines[idx2], VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, pAllocator);
+            CreateObject(device, pPipelines[idx2], kVulkanObjectTypePipeline, pAllocator);
         }
     }
     lock.unlock();
@@ -3971,26 +3843,25 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateComputePipelines(VkDevice device, VkPipelin
                                                       const VkAllocationCallbacks *pAllocator, VkPipeline *pPipelines) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_00486,
-                           VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_00486, VALIDATION_ERROR_UNDEFINED);
     if (pCreateInfos) {
         for (uint32_t idx0 = 0; idx0 < createInfoCount; ++idx0) {
             if (pCreateInfos[idx0].basePipelineHandle) {
-                skip |= ValidateObject(device, pCreateInfos[idx0].basePipelineHandle, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
-                                       true, VALIDATION_ERROR_00496, VALIDATION_ERROR_00506);
+                skip |= ValidateObject(device, pCreateInfos[idx0].basePipelineHandle, kVulkanObjectTypePipeline, true,
+                                       VALIDATION_ERROR_00496, VALIDATION_ERROR_00506);
             }
             if (pCreateInfos[idx0].layout) {
-                skip |= ValidateObject(device, pCreateInfos[idx0].layout, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT, false,
+                skip |= ValidateObject(device, pCreateInfos[idx0].layout, kVulkanObjectTypePipelineLayout, false,
                                        VALIDATION_ERROR_00505, VALIDATION_ERROR_00506);
             }
             if (pCreateInfos[idx0].stage.module) {
-                skip |= ValidateObject(device, pCreateInfos[idx0].stage.module, VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT,
-                                       false, VALIDATION_ERROR_00515, VALIDATION_ERROR_UNDEFINED);
+                skip |= ValidateObject(device, pCreateInfos[idx0].stage.module, kVulkanObjectTypeShaderModule, false,
+                                       VALIDATION_ERROR_00515, VALIDATION_ERROR_UNDEFINED);
             }
         }
     }
     if (pipelineCache) {
-        skip |= ValidateObject(device, pipelineCache, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT, true, VALIDATION_ERROR_00487,
+        skip |= ValidateObject(device, pipelineCache, kVulkanObjectTypePipelineCache, true, VALIDATION_ERROR_00487,
                                VALIDATION_ERROR_00492);
     }
     lock.unlock();
@@ -4005,7 +3876,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateComputePipelines(VkDevice device, VkPipelin
     lock.lock();
     for (uint32_t idx1 = 0; idx1 < createInfoCount; ++idx1) {
         if (pPipelines[idx1] != VK_NULL_HANDLE) {
-            CreateObject(device, pPipelines[idx1], VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, pAllocator);
+            CreateObject(device, pPipelines[idx1], kVulkanObjectTypePipeline, pAllocator);
         }
     }
     lock.unlock();
@@ -4019,8 +3890,8 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceDisplayPropertiesKHR(VkPhysicalD
     bool skip = false;
     {
         std::unique_lock<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_01851, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_01851,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (!skip) {
         result = get_dispatch_table(ot_instance_table_map, physicalDevice)
@@ -4035,8 +3906,8 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceDisplayPlanePropertiesKHR(VkPhys
     bool skip = false;
     {
         std::unique_lock<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_01854, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_01854,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (!skip) {
         result = get_dispatch_table(ot_instance_table_map, physicalDevice)
@@ -4051,15 +3922,15 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneSupportedDisplaysKHR(VkPhysicalDev
     bool skip = false;
     {
         std::unique_lock<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_01858, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_01858,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     result = get_dispatch_table(ot_instance_table_map, physicalDevice)
                  ->GetDisplayPlaneSupportedDisplaysKHR(physicalDevice, planeIndex, pDisplayCount, pDisplays);
     if (((result == VK_SUCCESS) || (result == VK_INCOMPLETE)) && (pDisplays != NULL)) {
         std::lock_guard<std::mutex> lock(global_lock);
         for (uint32_t displays = 0; displays < *pDisplayCount; displays++) {
-            CreateObject(physicalDevice, pDisplays[displays], VK_DEBUG_REPORT_OBJECT_TYPE_DISPLAY_KHR_EXT, nullptr);
+            CreateObject(physicalDevice, pDisplays[displays], kVulkanObjectTypeDisplayKHR, nullptr);
         }
     }
     return result;
@@ -4071,9 +3942,9 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayModePropertiesKHR(VkPhysicalDevice phys
     bool skip = false;
     {
         std::unique_lock<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_01861, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(physicalDevice, display, VK_DEBUG_REPORT_OBJECT_TYPE_DISPLAY_KHR_EXT, false, VALIDATION_ERROR_01862,
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_01861,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, display, kVulkanObjectTypeDisplayKHR, false, VALIDATION_ERROR_01862,
                                VALIDATION_ERROR_UNDEFINED);
     }
     result = get_dispatch_table(ot_instance_table_map, physicalDevice)
@@ -4089,9 +3960,9 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDisplayModeKHR(VkPhysicalDevice physicalDev
     bool skip = false;
     {
         std::unique_lock<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_01865, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(physicalDevice, display, VK_DEBUG_REPORT_OBJECT_TYPE_DISPLAY_KHR_EXT, false, VALIDATION_ERROR_01866,
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_01865,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, display, kVulkanObjectTypeDisplayKHR, false, VALIDATION_ERROR_01866,
                                VALIDATION_ERROR_UNDEFINED);
     }
     result = get_dispatch_table(ot_instance_table_map, physicalDevice)
@@ -4099,7 +3970,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDisplayModeKHR(VkPhysicalDevice physicalDev
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateObject(physicalDevice, *pMode, VK_DEBUG_REPORT_OBJECT_TYPE_DISPLAY_MODE_KHR_EXT, pAllocator);
+            CreateObject(physicalDevice, *pMode, kVulkanObjectTypeDisplayModeKHR, pAllocator);
         }
     }
     return result;
@@ -4111,10 +3982,10 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneCapabilitiesKHR(VkPhysicalDevice p
     bool skip = false;
     {
         std::unique_lock<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_01875, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(physicalDevice, mode, VK_DEBUG_REPORT_OBJECT_TYPE_DISPLAY_MODE_KHR_EXT, false,
-                               VALIDATION_ERROR_01876, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_01875,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, mode, kVulkanObjectTypeDisplayModeKHR, false, VALIDATION_ERROR_01876,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     result = get_dispatch_table(ot_instance_table_map, physicalDevice)
                  ->GetDisplayPlaneCapabilitiesKHR(physicalDevice, mode, planeIndex, pCapabilities);
@@ -4127,10 +3998,10 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDisplayPlaneSurfaceKHR(VkInstance instance,
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(instance, instance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, false, VALIDATION_ERROR_01878,
+        skip |= ValidateObject(instance, instance, kVulkanObjectTypeInstance, false, VALIDATION_ERROR_01878,
                                VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(instance, pCreateInfo->displayMode, VK_DEBUG_REPORT_OBJECT_TYPE_DISPLAY_MODE_KHR_EXT, false,
-                               VALIDATION_ERROR_01886, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(instance, pCreateInfo->displayMode, kVulkanObjectTypeDisplayModeKHR, false, VALIDATION_ERROR_01886,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -4140,7 +4011,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDisplayPlaneSurfaceKHR(VkInstance instance,
     {
         std::lock_guard<std::mutex> lock(global_lock);
         if (result == VK_SUCCESS) {
-            CreateObject(instance, *pSurface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, pAllocator);
+            CreateObject(instance, *pSurface, kVulkanObjectTypeSurfaceKHR, pAllocator);
         }
     }
     return result;
@@ -4151,8 +4022,8 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceFeatures2KHR(VkPhysicalDevice physic
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_UNDEFINED,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (!skip) {
         get_dispatch_table(ot_instance_table_map, physicalDevice)->GetPhysicalDeviceFeatures2KHR(physicalDevice, pFeatures);
@@ -4164,8 +4035,8 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceProperties2KHR(VkPhysicalDevice phys
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_UNDEFINED,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (!skip) {
         get_dispatch_table(ot_instance_table_map, physicalDevice)->GetPhysicalDeviceProperties2KHR(physicalDevice, pProperties);
@@ -4177,8 +4048,8 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceFormatProperties2KHR(VkPhysicalDevic
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_UNDEFINED,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (!skip) {
         get_dispatch_table(ot_instance_table_map, physicalDevice)
@@ -4192,8 +4063,8 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceImageFormatProperties2KHR(
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_UNDEFINED,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -4210,8 +4081,8 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceQueueFamilyProperties2KHR(VkPhysical
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_UNDEFINED,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return;
@@ -4235,8 +4106,8 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceMemoryProperties2KHR(VkPhysicalDevic
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_UNDEFINED,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (!skip) {
         get_dispatch_table(ot_instance_table_map, physicalDevice)
@@ -4250,8 +4121,8 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceSparseImageFormatProperties2KHR(
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_UNDEFINED,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (!skip) {
         get_dispatch_table(ot_instance_table_map, physicalDevice)
@@ -4266,8 +4137,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorUpdateTemplateKHR(VkDevice device
                                                                  VkDescriptorUpdateTemplateKHR *pDescriptorUpdateTemplate) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_UNDEFINED,
-                           VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -4284,8 +4154,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyDescriptorUpdateTemplateKHR(VkDevice device,
                                                               const VkAllocationCallbacks *pAllocator) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_UNDEFINED,
-                           VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
     // TODO: Add tracking of VkDescriptorUpdateTemplateKHR
     lock.unlock();
     if (!skip) {
@@ -4299,9 +4168,8 @@ VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSetWithTemplateKHR(VkDevice device, V
                                                               const void *pData) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_UNDEFINED,
-                           VALIDATION_ERROR_UNDEFINED);
-    skip |= ValidateObject(device, descriptorSet, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, false, VALIDATION_ERROR_UNDEFINED,
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, descriptorSet, kVulkanObjectTypeDescriptorSet, false, VALIDATION_ERROR_UNDEFINED,
                            VALIDATION_ERROR_UNDEFINED);
     // TODO: Add tracking of VkDescriptorUpdateTemplateKHR
     lock.unlock();
@@ -4316,10 +4184,10 @@ VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetWithTemplateKHR(VkCommandBuffer c
                                                                VkPipelineLayout layout, uint32_t set, const void *pData) {
     bool skip = false;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                           VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
-    skip |= ValidateObject(commandBuffer, layout, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT, false,
-                           VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_UNDEFINED,
+                           VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(commandBuffer, layout, kVulkanObjectTypePipelineLayout, false, VALIDATION_ERROR_UNDEFINED,
+                           VALIDATION_ERROR_UNDEFINED);
     // TODO: Add tracking of VkDescriptorUpdateTemplateKHR
     lock.unlock();
     if (!skip) {
@@ -4332,9 +4200,8 @@ VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetWithTemplateKHR(VkCommandBuffer c
 VKAPI_ATTR void VKAPI_CALL TrimCommandPoolKHR(VkDevice device, VkCommandPool commandPool, VkCommandPoolTrimFlagsKHR flags) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_UNDEFINED,
-                           VALIDATION_ERROR_UNDEFINED);
-    skip |= ValidateObject(device, commandPool, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT, false, VALIDATION_ERROR_UNDEFINED,
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, commandPool, kVulkanObjectTypeCommandPool, false, VALIDATION_ERROR_UNDEFINED,
                            VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (!skip) {
@@ -4349,10 +4216,10 @@ VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetKHR(VkCommandBuffer commandBuffer
                                                    const VkWriteDescriptorSet *pDescriptorWrites) {
     bool skip = false;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                           VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
-    skip |= ValidateObject(commandBuffer, layout, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT, false,
-                           VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_UNDEFINED,
+                           VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(commandBuffer, layout, kVulkanObjectTypePipelineLayout, false, VALIDATION_ERROR_UNDEFINED,
+                           VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (!skip) {
         get_dispatch_table(ot_device_table_map, commandBuffer)
@@ -4366,8 +4233,7 @@ VKAPI_ATTR void VKAPI_CALL GetDeviceGroupPeerMemoryFeaturesKHX(VkDevice device, 
                                                                VkPeerMemoryFeatureFlagsKHX *pPeerMemoryFeatures) {
     bool skip = false;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_UNDEFINED,
-                           VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (!skip) {
         get_dispatch_table(ot_device_table_map, device)
@@ -4379,8 +4245,7 @@ VKAPI_ATTR VkResult VKAPI_CALL BindBufferMemory2KHX(VkDevice device, uint32_t bi
                                                     const VkBindBufferMemoryInfoKHX *pBindInfos) {
     bool skip = false;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_UNDEFINED,
-                           VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -4394,8 +4259,7 @@ VKAPI_ATTR VkResult VKAPI_CALL BindImageMemory2KHX(VkDevice device, uint32_t bin
                                                    const VkBindImageMemoryInfoKHX *pBindInfos) {
     bool skip = false;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_UNDEFINED,
-                           VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -4408,8 +4272,8 @@ VKAPI_ATTR VkResult VKAPI_CALL BindImageMemory2KHX(VkDevice device, uint32_t bin
 VKAPI_ATTR void VKAPI_CALL CmdSetDeviceMaskKHX(VkCommandBuffer commandBuffer, uint32_t deviceMask) {
     bool skip = false;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                           VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_UNDEFINED,
+                           VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (!skip) {
         get_dispatch_table(ot_device_table_map, commandBuffer)->CmdSetDeviceMaskKHX(commandBuffer, deviceMask);
@@ -4420,8 +4284,7 @@ VKAPI_ATTR VkResult VKAPI_CALL
 GetDeviceGroupPresentCapabilitiesKHX(VkDevice device, VkDeviceGroupPresentCapabilitiesKHX *pDeviceGroupPresentCapabilities) {
     bool skip = false;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_UNDEFINED,
-                           VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -4436,8 +4299,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDeviceGroupSurfacePresentModesKHX(VkDevice dev
                                                                     VkDeviceGroupPresentModeFlagsKHX *pModes) {
     bool skip = false;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_UNDEFINED,
-                           VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -4451,8 +4313,7 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImage2KHX(VkDevice device, const VkAcq
                                                     uint32_t *pImageIndex) {
     bool skip = false;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_UNDEFINED,
-                           VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -4467,8 +4328,8 @@ VKAPI_ATTR void VKAPI_CALL CmdDispatchBaseKHX(VkCommandBuffer commandBuffer, uin
                                               uint32_t groupCountZ) {
     bool skip = false;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                           VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_UNDEFINED,
+                           VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (!skip) {
         get_dispatch_table(ot_device_table_map, commandBuffer)
@@ -4481,8 +4342,8 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDevicePresentRectanglesKHX(VkPhysicalDevic
     bool skip = false;
     {
         std::unique_lock<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_UNDEFINED,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (!skip) {
         get_dispatch_table(ot_instance_table_map, physicalDevice)
@@ -4495,7 +4356,7 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumeratePhysicalDeviceGroupsKHX(
     VkInstance instance, uint32_t *pPhysicalDeviceGroupCount, VkPhysicalDeviceGroupPropertiesKHX *pPhysicalDeviceGroupProperties) {
     bool skip = false;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(instance, instance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, false, VALIDATION_ERROR_UNDEFINED,
+    skip |= ValidateObject(instance, instance, kVulkanObjectTypeInstance, false, VALIDATION_ERROR_UNDEFINED,
                            VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (skip) {
@@ -4511,7 +4372,7 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumeratePhysicalDeviceGroupsKHX(
                 for (uint32_t i = 0; i < *pPhysicalDeviceGroupCount; i++) {
                     for (uint32_t j = 0; j < pPhysicalDeviceGroupProperties[i].physicalDeviceCount; j++) {
                         CreateObject(instance, pPhysicalDeviceGroupProperties[i].physicalDevices[j],
-                                     VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, nullptr);
+                                     kVulkanObjectTypePhysicalDevice, nullptr);
                     }
                 }
             }
@@ -4528,8 +4389,8 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceExternalBufferPropertiesKHX(
     bool skip = false;
     {
         std::unique_lock<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_UNDEFINED,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (!skip) {
         get_dispatch_table(ot_instance_table_map, physicalDevice)
@@ -4542,9 +4403,8 @@ VKAPI_ATTR VkResult VKAPI_CALL GetMemoryFdKHX(VkDevice device, VkDeviceMemory me
                                               VkExternalMemoryHandleTypeFlagBitsKHX handleType, int *pFd) {
     bool skip = false;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_UNDEFINED,
-                           VALIDATION_ERROR_UNDEFINED);
-    skip |= ValidateObject(device, memory, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, false, VALIDATION_ERROR_UNDEFINED,
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, memory, kVulkanObjectTypeDeviceMemory, false, VALIDATION_ERROR_UNDEFINED,
                            VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (skip) {
@@ -4559,8 +4419,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetMemoryFdPropertiesKHX(VkDevice device, VkExter
                                                         VkMemoryFdPropertiesKHX *pMemoryFdProperties) {
     bool skip = false;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_UNDEFINED,
-                           VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -4576,9 +4435,8 @@ VKAPI_ATTR VkResult VKAPI_CALL GetMemoryWin32HandleKHX(VkDevice device, VkDevice
                                                        VkExternalMemoryHandleTypeFlagBitsKHX handleType, HANDLE *pHandle) {
     bool skip = false;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_UNDEFINED,
-                           VALIDATION_ERROR_UNDEFINED);
-    skip |= ValidateObject(device, memory, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, false, VALIDATION_ERROR_UNDEFINED,
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, memory, kVulkanObjectTypeDeviceMemory, false, VALIDATION_ERROR_UNDEFINED,
                            VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (skip) {
@@ -4594,8 +4452,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetMemoryWin32HandlePropertiesKHX(VkDevice device
                                                                  VkMemoryWin32HandlePropertiesKHX *pMemoryWin32HandleProperties) {
     bool skip = false;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_UNDEFINED,
-                           VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -4614,8 +4471,8 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceExternalSemaphorePropertiesKHX(
     bool skip = false;
     {
         std::unique_lock<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_UNDEFINED,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (!skip) {
         get_dispatch_table(ot_instance_table_map, physicalDevice)
@@ -4627,8 +4484,7 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceExternalSemaphorePropertiesKHX(
 VKAPI_ATTR VkResult VKAPI_CALL ImportSemaphoreFdKHX(VkDevice device, const VkImportSemaphoreFdInfoKHX *pImportSemaphoreFdInfo) {
     bool skip = false;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_UNDEFINED,
-                           VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -4642,8 +4498,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSemaphoreFdKHX(VkDevice device, VkSemaphore se
                                                  VkExternalSemaphoreHandleTypeFlagBitsKHX handleType, int *pFd) {
     bool skip = false;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_UNDEFINED,
-                           VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -4659,8 +4514,7 @@ VKAPI_ATTR VkResult VKAPI_CALL
 ImportSemaphoreWin32HandleKHX(VkDevice device, const VkImportSemaphoreWin32HandleInfoKHX *pImportSemaphoreWin32HandleInfo) {
     bool skip = false;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_UNDEFINED,
-                           VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -4675,8 +4529,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSemaphoreWin32HandleKHX(VkDevice device, VkSem
                                                           VkExternalSemaphoreHandleTypeFlagBitsKHX handleType, HANDLE *pHandle) {
     bool skip = false;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_UNDEFINED,
-                           VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -4694,10 +4547,10 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireXlibDisplayEXT(VkPhysicalDevice physicalDe
     bool skip = false;
     {
         std::unique_lock<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(physicalDevice, display, VK_DEBUG_REPORT_OBJECT_TYPE_DISPLAY_KHR_EXT, false,
-                               VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_UNDEFINED,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, display, kVulkanObjectTypeDisplayKHR, false, VALIDATION_ERROR_UNDEFINED,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -4713,8 +4566,8 @@ VKAPI_ATTR VkResult VKAPI_CALL GetRandROutputDisplayEXT(VkPhysicalDevice physica
     bool skip = false;
     {
         std::unique_lock<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_UNDEFINED,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -4723,7 +4576,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetRandROutputDisplayEXT(VkPhysicalDevice physica
                  ->GetRandROutputDisplayEXT(physicalDevice, dpy, rrOutput, pDisplay);
     if (result == VK_SUCCESS && pDisplay != NULL) {
         std::lock_guard<std::mutex> lock(global_lock);
-        CreateObject(physicalDevice, pDisplay, VK_DEBUG_REPORT_OBJECT_TYPE_DISPLAY_KHR_EXT, nullptr);
+        CreateObject(physicalDevice, pDisplay, kVulkanObjectTypeDisplayKHR, nullptr);
     }
 
     return result;
@@ -4734,8 +4587,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetRandROutputDisplayEXT(VkPhysicalDevice physica
 VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectTagEXT(VkDevice device, VkDebugMarkerObjectTagInfoEXT *pTagInfo) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_02007,
-                           VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_02007, VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -4748,8 +4600,7 @@ VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectTagEXT(VkDevice device, VkDeb
 VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectNameEXT(VkDevice device, VkDebugMarkerObjectNameInfoEXT *pNameInfo) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_01999,
-                           VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_01999, VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -4762,8 +4613,8 @@ VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectNameEXT(VkDevice device, VkDe
 VKAPI_ATTR void VKAPI_CALL CmdDebugMarkerBeginEXT(VkCommandBuffer commandBuffer, VkDebugMarkerMarkerInfoEXT *pMarkerInfo) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                           VALIDATION_ERROR_02014, VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_02014,
+                           VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     if (!skip && dev_data->dispatch_table.CmdDebugMarkerBeginEXT) {
@@ -4774,8 +4625,8 @@ VKAPI_ATTR void VKAPI_CALL CmdDebugMarkerBeginEXT(VkCommandBuffer commandBuffer,
 VKAPI_ATTR void VKAPI_CALL CmdDebugMarkerEndEXT(VkCommandBuffer commandBuffer) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                           VALIDATION_ERROR_02022, VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_02022,
+                           VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     if (!skip && dev_data->dispatch_table.CmdDebugMarkerEndEXT) {
@@ -4786,8 +4637,8 @@ VKAPI_ATTR void VKAPI_CALL CmdDebugMarkerEndEXT(VkCommandBuffer commandBuffer) {
 VKAPI_ATTR void VKAPI_CALL CmdDebugMarkerInsertEXT(VkCommandBuffer commandBuffer, VkDebugMarkerMarkerInfoEXT *pMarkerInfo) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                           VALIDATION_ERROR_02025, VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_02025,
+                           VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     if (!skip && dev_data->dispatch_table.CmdDebugMarkerInsertEXT) {
@@ -4801,10 +4652,10 @@ VKAPI_ATTR VkResult VKAPI_CALL ReleaseDisplayEXT(VkPhysicalDevice physicalDevice
     bool skip = false;
     {
         std::unique_lock<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(physicalDevice, display, VK_DEBUG_REPORT_OBJECT_TYPE_DISPLAY_KHR_EXT, false,
-                               VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_UNDEFINED,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, display, kVulkanObjectTypeDisplayKHR, false, VALIDATION_ERROR_UNDEFINED,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -4819,8 +4670,8 @@ VKAPI_ATTR void VKAPI_CALL CmdSetDiscardRectangleEXT(VkCommandBuffer commandBuff
                                                      uint32_t discardRectangleCount, const VkRect2D *pDiscardRectangles) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                           VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_UNDEFINED,
+                           VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     if (!skip && dev_data->dispatch_table.CmdSetDiscardRectangleEXT) {
@@ -4834,8 +4685,7 @@ VKAPI_ATTR VkResult VKAPI_CALL DisplayPowerControlEXT(VkDevice device, VkDisplay
                                                       const VkDisplayPowerInfoEXT *pDisplayPowerInfo) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_UNDEFINED,
-                           VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -4849,8 +4699,7 @@ VKAPI_ATTR VkResult VKAPI_CALL RegisterDeviceEventEXT(VkDevice device, const VkD
                                                       const VkAllocationCallbacks *pAllocator, VkFence *pFence) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_UNDEFINED,
-                           VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -4859,7 +4708,7 @@ VKAPI_ATTR VkResult VKAPI_CALL RegisterDeviceEventEXT(VkDevice device, const VkD
     VkResult result = dev_data->dispatch_table.RegisterDeviceEventEXT(device, pDeviceEventInfo, pAllocator, pFence);
     if (result == VK_SUCCESS && pFence != NULL) {
         std::lock_guard<std::mutex> create_lock(global_lock);
-        CreateObject(device, *pFence, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, pAllocator);
+        CreateObject(device, *pFence, kVulkanObjectTypeFence, pAllocator);
     }
     return result;
 }
@@ -4869,8 +4718,7 @@ VKAPI_ATTR VkResult VKAPI_CALL RegisterDisplayEventEXT(VkDevice device, VkDispla
                                                        const VkAllocationCallbacks *pAllocator, VkFence *pFence) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_UNDEFINED,
-                           VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -4879,7 +4727,7 @@ VKAPI_ATTR VkResult VKAPI_CALL RegisterDisplayEventEXT(VkDevice device, VkDispla
     VkResult result = dev_data->dispatch_table.RegisterDisplayEventEXT(device, display, pDisplayEventInfo, pAllocator, pFence);
     if (result == VK_SUCCESS && pFence != NULL) {
         std::lock_guard<std::mutex> create_lock(global_lock);
-        CreateObject(device, *pFence, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, pAllocator);
+        CreateObject(device, *pFence, kVulkanObjectTypeFence, pAllocator);
     }
     return result;
 }
@@ -4888,9 +4736,8 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainCounterEXT(VkDevice device, VkSwapcha
                                                       VkSurfaceCounterFlagBitsEXT counter, uint64_t *pCounterValue) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_UNDEFINED,
-                           VALIDATION_ERROR_UNDEFINED);
-    skip |= ValidateObject(device, swapchain, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, false, VALIDATION_ERROR_UNDEFINED,
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, swapchain, kVulkanObjectTypeSwapchainKHR, false, VALIDATION_ERROR_UNDEFINED,
                            VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (skip) {
@@ -4908,8 +4755,8 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilities2EXT(VkPhysic
     bool skip = false;
     {
         std::unique_lock<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_UNDEFINED,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -4926,13 +4773,12 @@ VKAPI_ATTR void VKAPI_CALL CmdDrawIndirectCountAMD(VkCommandBuffer commandBuffer
                                                    uint32_t stride) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                           VALIDATION_ERROR_01771, VALIDATION_ERROR_UNDEFINED);
-    skip |= ValidateObject(commandBuffer, buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, false, VALIDATION_ERROR_01772,
-                           VALIDATION_ERROR_01777);
-    skip |= ValidateObject(commandBuffer, countBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, false, VALIDATION_ERROR_01773,
-                           VALIDATION_ERROR_01777);
-    skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, false, VALIDATION_ERROR_01774,
+    skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01771,
+                           VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(commandBuffer, buffer, kVulkanObjectTypeBuffer, false, VALIDATION_ERROR_01772, VALIDATION_ERROR_01777);
+    skip |=
+        ValidateObject(commandBuffer, countBuffer, kVulkanObjectTypeBuffer, false, VALIDATION_ERROR_01773, VALIDATION_ERROR_01777);
+    skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeBuffer, false, VALIDATION_ERROR_01774,
                            VALIDATION_ERROR_01777);
     lock.unlock();
     if (!skip) {
@@ -4946,13 +4792,12 @@ VKAPI_ATTR void VKAPI_CALL CmdDrawIndexedIndirectCountAMD(VkCommandBuffer comman
                                                           uint32_t maxDrawCount, uint32_t stride) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                           VALIDATION_ERROR_01783, VALIDATION_ERROR_UNDEFINED);
-    skip |= ValidateObject(commandBuffer, buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, false, VALIDATION_ERROR_01784,
-                           VALIDATION_ERROR_01789);
-    skip |= ValidateObject(commandBuffer, countBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, false, VALIDATION_ERROR_01785,
-                           VALIDATION_ERROR_01789);
-    skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, false, VALIDATION_ERROR_01786,
+    skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_01783,
+                           VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(commandBuffer, buffer, kVulkanObjectTypeBuffer, false, VALIDATION_ERROR_01784, VALIDATION_ERROR_01789);
+    skip |=
+        ValidateObject(commandBuffer, countBuffer, kVulkanObjectTypeBuffer, false, VALIDATION_ERROR_01785, VALIDATION_ERROR_01789);
+    skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeBuffer, false, VALIDATION_ERROR_01786,
                            VALIDATION_ERROR_01789);
     lock.unlock();
     if (!skip) {
@@ -4966,8 +4811,8 @@ VKAPI_ATTR void VKAPI_CALL CmdSetViewportWScalingNV(VkCommandBuffer commandBuffe
                                                     const VkViewportWScalingNV *pViewportWScalings) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                           VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_UNDEFINED,
+                           VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     if (!skip && dev_data->dispatch_table.CmdSetViewportWScalingNV) {
@@ -4983,8 +4828,8 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceExternalImageFormatPropertiesNV(
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_01980, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_01980,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -5001,10 +4846,8 @@ VKAPI_ATTR VkResult VKAPI_CALL GetMemoryWin32HandleNV(VkDevice device, VkDeviceM
                                                       VkExternalMemoryHandleTypeFlagsNV handleType, HANDLE *pHandle) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_01725,
-                           VALIDATION_ERROR_UNDEFINED);
-    skip |= ValidateObject(device, memory, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, false, VALIDATION_ERROR_01726,
-                           VALIDATION_ERROR_01730);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_01725, VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, memory, kVulkanObjectTypeDeviceMemory, false, VALIDATION_ERROR_01726, VALIDATION_ERROR_01730);
     lock.unlock();
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -5019,8 +4862,8 @@ VKAPI_ATTR void VKAPI_CALL CmdProcessCommandsNVX(VkCommandBuffer commandBuffer,
                                                  const VkCmdProcessCommandsInfoNVX *pProcessCommandsInfo) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                           VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_UNDEFINED,
+                           VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     if (!skip && dev_data->dispatch_table.CmdProcessCommandsNVX) {
@@ -5032,8 +4875,8 @@ VKAPI_ATTR void VKAPI_CALL CmdReserveSpaceForCommandsNVX(VkCommandBuffer command
                                                          const VkCmdReserveSpaceForCommandsInfoNVX *pReserveSpaceInfo) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(commandBuffer, commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, false,
-                           VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_UNDEFINED,
+                           VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     if (!skip && dev_data->dispatch_table.CmdReserveSpaceForCommandsNVX) {
@@ -5047,8 +4890,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateIndirectCommandsLayoutNVX(VkDevice device,
                                                                VkIndirectCommandsLayoutNVX *pIndirectCommandsLayout) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_UNDEFINED,
-                           VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -5063,8 +4905,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyIndirectCommandsLayoutNVX(VkDevice device, VkI
                                                             const VkAllocationCallbacks *pAllocator) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_UNDEFINED,
-                           VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (!skip) {
         layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
@@ -5076,8 +4917,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateObjectTableNVX(VkDevice device, const VkObj
                                                     const VkAllocationCallbacks *pAllocator, VkObjectTableNVX *pObjectTable) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_UNDEFINED,
-                           VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -5091,8 +4931,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyObjectTableNVX(VkDevice device, VkObjectTableN
                                                  const VkAllocationCallbacks *pAllocator) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_UNDEFINED,
-                           VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (!skip) {
         layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
@@ -5105,8 +4944,7 @@ VKAPI_ATTR VkResult VKAPI_CALL RegisterObjectsNVX(VkDevice device, VkObjectTable
                                                   const uint32_t *pObjectIndices) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_UNDEFINED,
-                           VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -5121,8 +4959,7 @@ VKAPI_ATTR VkResult VKAPI_CALL UnregisterObjectsNVX(VkDevice device, VkObjectTab
                                                     const VkObjectEntryTypeNVX *pObjectEntryTypes, const uint32_t *pObjectIndices) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_UNDEFINED,
-                           VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -5139,8 +4976,8 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceGeneratedCommandsPropertiesNVX(VkPhy
     bool skip = false;
     {
         std::unique_lock<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false,
-                               VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_UNDEFINED,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         get_dispatch_table(ot_instance_table_map, physicalDevice)
@@ -5155,9 +4992,9 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPastPresentationTimingGOOGLE(VkDevice device, 
     bool skip = false;
     {
         std::unique_lock<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_UNDEFINED,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, swapchain, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, false, VALIDATION_ERROR_UNDEFINED,
+        skip |=
+            ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, swapchain, kVulkanObjectTypeSwapchainKHR, false, VALIDATION_ERROR_UNDEFINED,
                                VALIDATION_ERROR_UNDEFINED);
     }
 
@@ -5174,9 +5011,9 @@ VKAPI_ATTR VkResult VKAPI_CALL GetRefreshCycleDurationGOOGLE(VkDevice device, Vk
     bool skip = false;
     {
         std::unique_lock<std::mutex> lock(global_lock);
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_UNDEFINED,
-                               VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, swapchain, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, false, VALIDATION_ERROR_UNDEFINED,
+        skip |=
+            ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, swapchain, kVulkanObjectTypeSwapchainKHR, false, VALIDATION_ERROR_UNDEFINED,
                                VALIDATION_ERROR_UNDEFINED);
     }
 
@@ -5194,12 +5031,12 @@ VKAPI_ATTR void VKAPI_CALL SetHdrMetadataEXT(VkDevice device, uint32_t swapchain
         std::lock_guard<std::mutex> lock(global_lock);
         if (pSwapchains) {
             for (uint32_t idx0 = 0; idx0 < swapchainCount; ++idx0) {
-                skip |= ValidateObject(device, pSwapchains[idx0], VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, false,
-                                       VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+                skip |= ValidateObject(device, pSwapchains[idx0], kVulkanObjectTypeSwapchainKHR, false, VALIDATION_ERROR_UNDEFINED,
+                                       VALIDATION_ERROR_UNDEFINED);
             }
         }
-        skip |= ValidateObject(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false, VALIDATION_ERROR_UNDEFINED,
-                               VALIDATION_ERROR_UNDEFINED);
+        skip |=
+            ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
     }
     if (!skip) {
         get_dispatch_table(ot_device_table_map, device)->SetHdrMetadataEXT(device, swapchainCount, pSwapchains, pMetadata);
