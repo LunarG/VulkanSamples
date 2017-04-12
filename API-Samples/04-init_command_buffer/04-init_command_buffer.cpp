@@ -32,7 +32,8 @@ int sample_main(int argc, char *argv[]) {
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
     char sample_title[] = "Command Buffer Sample";
-
+    
+    init_global_layer_properties(info);
     init_instance(info, sample_title);
     init_enumerate_device(info);
     init_device(info);

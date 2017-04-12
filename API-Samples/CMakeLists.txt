@@ -104,7 +104,7 @@ function(sampleWithSingleFile)
 
             # Include resource files.
             set (SAMPLE_WITH_RESOURCES
-             draw_textured_cube init_texture immutable_sampler multiple_sets pipeline_cache
+             draw_textured_cube init_texture immutable_sampler memory_barriers multiple_sets pipeline_cache
              pipeline_derivative secondary_command_buffer separate_image_sampler spirv_assembly
              spirv_specialization template)
             if (";${SAMPLE_WITH_RESOURCES};" MATCHES ";${SAMPLE_NAME};")
