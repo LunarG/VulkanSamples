@@ -69,6 +69,29 @@ struct instance_layer_data {
     VkLayerInstanceDispatchTable dispatch_table = {};
 };
 
+struct device_extension_enables {
+    bool khr_swapchain_enabled;
+    bool khr_display_swapchain_enabled;
+    bool khr_maintenance1;
+    bool khr_push_descriptor;
+    bool khr_descriptor_update_template;
+    bool khx_device_group;
+    bool khx_external_memory_fd;
+    bool khx_external_memory_win32;
+    bool khx_external_semaphore_fd;
+    bool khx_external_semaphore_win32;
+    bool ext_debug_marker;
+    bool ext_discard_rectangles;
+    bool ext_display_control;
+    bool amd_draw_indirect_count;
+    bool amd_negative_viewport_height;
+    bool nv_clip_space_w_scaling;
+    bool nv_external_memory;
+    bool nv_external_memory_win32;
+    bool nvx_device_generated_commands;
+    bool incremental_present;
+};
+
 struct layer_data {
     debug_report_data *report_data = nullptr;
     // Map for queue family index to queue count
@@ -76,34 +99,9 @@ struct layer_data {
     VkPhysicalDeviceLimits device_limits = {};
     VkPhysicalDeviceFeatures physical_device_features = {};
     VkPhysicalDevice physical_device = VK_NULL_HANDLE;
+    device_extension_enables enables;
 
-    union loader_device_extension_enables {
-        struct {
-            bool khr_swapchain_enabled : 1;
-            bool khr_display_swapchain_enabled : 1;
-            bool khr_maintenance1 : 1;
-            bool khr_push_descriptor : 1;
-            bool khr_descriptor_update_template : 1;
-            bool khx_device_group : 1;
-            bool khx_external_memory_fd : 1;
-            bool khx_external_memory_win32 : 1;
-            bool khx_external_semaphore_fd : 1;
-            bool khx_external_semaphore_win32 : 1;
-            bool ext_debug_marker : 1;
-            bool ext_discard_rectangles : 1;
-            bool ext_display_control : 1;
-            bool amd_draw_indirect_count : 1;
-            bool amd_negative_viewport_height : 1;
-            bool nv_clip_space_w_scaling : 1;
-            bool nv_external_memory : 1;
-            bool nv_external_memory_win32 : 1;
-            bool nvx_device_generated_commands : 1;
-            bool incremental_present : 1;
-        };
-        uint64_t padding[4];
-    } enables;
-
-    layer_data() { memset(enables.padding, 0, sizeof(uint64_t) * 4); }
+    layer_data() { memset(&enables, 0, sizeof(device_extension_enables)); }
 
     VkLayerDispatchTable dispatch_table = {};
 };
