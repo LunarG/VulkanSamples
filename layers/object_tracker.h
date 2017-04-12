@@ -84,7 +84,31 @@ struct instance_extension_enables {
     bool display_enabled;
 };
 
+struct device_extension_enables{
+    bool wsi;
+    bool wsi_display_swapchain;
+    bool wsi_display_extension;
+    bool objtrack_extensions;
+    bool khr_descriptor_update_template;
+    bool khr_maintenance1;
+    bool khr_push_descriptor;
+    bool khx_device_group;
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+    bool khx_external_memory_win32;
+#endif // VK_USE_PLATFORM_WIN32_KHR
+    bool khx_external_memory_fd;
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+    bool khx_external_semaphore_win32;
+#endif // VK_USE_PLATFORM_WIN32_KHR
+    bool khx_external_semaphore_fd;
+    bool ext_display_control;
+    bool ext_discard_rectangles;
+    bool nv_clip_space_w_scaling;
+    bool nvx_device_generated_commands;
+};
+
 typedef std::unordered_map<uint64_t, OBJTRACK_NODE *> object_map_type;
+
 struct layer_data {
     VkInstance instance;
     VkPhysicalDevice physical_device;
@@ -94,38 +118,13 @@ struct layer_data {
 
     debug_report_data *report_data;
     std::vector<VkDebugReportCallbackEXT> logging_callback;
-
-    union device_extension_enables {
-        struct {
-            bool wsi : 1;
-            bool wsi_display_swapchain : 1;
-            bool wsi_display_extension : 1;
-            bool objtrack_extensions : 1;
-            bool khr_descriptor_update_template : 1;
-            bool khr_maintenance1 : 1;
-            bool khr_push_descriptor : 1;
-            bool khx_device_group : 1;
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-            bool khx_external_memory_win32 : 1;
-#endif // VK_USE_PLATFORM_WIN32_KHR
-            bool khx_external_memory_fd : 1;
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-            bool khx_external_semaphore_win32 : 1;
-#endif // VK_USE_PLATFORM_WIN32_KHR
-            bool khx_external_semaphore_fd : 1;
-            bool ext_display_control : 1;
-            bool ext_discard_rectangles : 1;
-            bool nv_clip_space_w_scaling : 1;
-            bool nvx_device_generated_commands : 1;
-        };
-        uint64_t padding[4];
-    } enables;
-
     // The following are for keeping track of the temporary callbacks that can
     // be used in vkCreateInstance and vkDestroyInstance:
     uint32_t num_tmp_callbacks;
     VkDebugReportCallbackCreateInfoEXT *tmp_dbg_create_infos;
     VkDebugReportCallbackEXT *tmp_callbacks;
+
+    device_extension_enables enables;
 
     std::vector<VkQueueFamilyProperties> queue_family_properties;
 
@@ -150,7 +149,7 @@ struct layer_data {
           object_map{},
           dispatch_table{} {
         object_map.resize(VK_DEBUG_REPORT_OBJECT_TYPE_RANGE_SIZE_EXT + 1);
-        memset(enables.padding, 0, sizeof(uint64_t) * 4);
+        memset(&enables, 0, sizeof(enables));
     }
 };
 
