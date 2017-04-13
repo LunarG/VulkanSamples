@@ -135,8 +135,9 @@ bool ValidateGreaterThan(debug_report_data *report_data, const char *api_name, c
     bool skip_call = false;
 
     if (value <= lower_bound) {
-        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, LayerName,
-                             "%s: parameter %s must be greater than %d", api_name, parameter_name.get_name().c_str(), lower_bound);
+        skip_call |=
+            log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, 1, LayerName,
+                    "%s: parameter %s must be greater than %d", api_name, parameter_name.get_name().c_str(), lower_bound);
     }
 
     return skip_call;
