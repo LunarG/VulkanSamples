@@ -50,6 +50,7 @@
 #include "vulkan/vulkan.h"
 #include "vk_validation_error_messages.h"
 #include "vk_layer_logging.h"
+#include "vk_object_types.h"
 #include <atomic>
 #include <functional>
 #include <map>
@@ -92,7 +93,7 @@ struct COMMAND_POOL_NODE : public BASE_NODE {
 // Generic wrapper for vulkan objects
 struct VK_OBJECT {
     uint64_t handle;
-    VkDebugReportObjectTypeEXT type;
+    VulkanObjectType type;
 };
 
 inline bool operator==(VK_OBJECT a, VK_OBJECT b) NOEXCEPT { return a.handle == b.handle && a.type == b.type; }
@@ -813,7 +814,7 @@ bool ValidateObjectNotInUse(const layer_data *dev_data, BASE_NODE *obj_node, VK_
 void invalidateCommandBuffers(const layer_data *dev_data, std::unordered_set<GLOBAL_CB_NODE *> const &cb_nodes, VK_OBJECT obj);
 void RemoveImageMemoryRange(uint64_t handle, DEVICE_MEM_INFO *mem_info);
 void RemoveBufferMemoryRange(uint64_t handle, DEVICE_MEM_INFO *mem_info);
-bool ClearMemoryObjectBindings(layer_data *dev_data, uint64_t handle, VkDebugReportObjectTypeEXT type);
+bool ClearMemoryObjectBindings(layer_data *dev_data, uint64_t handle, VulkanObjectType type);
 bool ValidateCmdQueueFlags(layer_data *dev_data, GLOBAL_CB_NODE *cb_node, const char *caller_name, VkQueueFlags flags,
                            UNIQUE_VALIDATION_ERROR_CODE error_code);
 bool ValidateCmd(layer_data *my_data, GLOBAL_CB_NODE *pCB, const CMD_TYPE cmd, const char *caller_name);

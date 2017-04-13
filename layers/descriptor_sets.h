@@ -50,6 +50,7 @@
 #include "vk_layer_utils.h"
 #include "vk_safe_struct.h"
 #include "vulkan/vk_layer.h"
+#include "vk_object_types.h"
 #include <map>
 #include <memory>
 #include <unordered_map>

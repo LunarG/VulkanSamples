@@ -775,7 +775,7 @@ void PostCallRecordCreateImage(layer_data *device_data, const VkImageCreateInfo 
 bool PreCallValidateDestroyImage(layer_data *device_data, VkImage image, IMAGE_STATE **image_state, VK_OBJECT *obj_struct) {
     const CHECK_DISABLED *disabled = core_validation::GetDisables(device_data);
     *image_state = core_validation::GetImageState(device_data, image);
-    *obj_struct = {reinterpret_cast<uint64_t &>(image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT};
+    *obj_struct = {reinterpret_cast<uint64_t &>(image), kVulkanObjectTypeImage };
     if (disabled->destroy_image) return false;
     bool skip = false;
     if (*image_state) {
@@ -793,7 +793,7 @@ void PostCallRecordDestroyImage(layer_data *device_data, VkImage image, IMAGE_ST
             core_validation::RemoveImageMemoryRange(obj_struct.handle, mem_info);
         }
     }
-    core_validation::ClearMemoryObjectBindings(device_data, obj_struct.handle, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT);
+    core_validation::ClearMemoryObjectBindings(device_data, obj_struct.handle, kVulkanObjectTypeImage);
     // Remove image from imageMap
     core_validation::GetImageMap(device_data)->erase(image);
     std::unordered_map<VkImage, std::vector<ImageSubresourcePair>> *imageSubresourceMap =
@@ -2248,12 +2248,12 @@ bool ValidateMapImageLayouts(core_validation::layer_data *device_data, VkDevice 
 // Helper function to validate correct usage bits set for buffers or images. Verify that (actual & desired) flags != 0 or, if strict
 // is true, verify that (actual & desired) flags == desired
 static bool validate_usage_flags(layer_data *device_data, VkFlags actual, VkFlags desired, VkBool32 strict, uint64_t obj_handle,
-                                 VkDebugReportObjectTypeEXT obj_type, int32_t const msgCode, char const *ty_str,
-                                 char const *func_name, char const *usage_str) {
+                                 VulkanObjectType obj_type, int32_t const msgCode, char const *func_name, char const *usage_str) {
     const debug_report_data *report_data = core_validation::GetReportData(device_data);
 
     bool correct_usage = false;
     bool skip = false;
+    const char *type_str = object_string[obj_type];
     if (strict) {
         correct_usage = ((actual & desired) == desired);
     } else {
@@ -2262,16 +2262,17 @@ static bool validate_usage_flags(layer_data *device_data, VkFlags actual, VkFlag
     if (!correct_usage) {
         if (msgCode == -1) {
             // TODO: Fix callers with msgCode == -1 to use correct validation checks.
-            skip = log_msg(
-                report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, obj_type, obj_handle, __LINE__, MEMTRACK_INVALID_USAGE_FLAG, "MEM",
-                "Invalid usage flag for %s 0x%" PRIxLEAST64 " used by %s. In this case, %s should have %s set during creation.",
-                ty_str, obj_handle, func_name, ty_str, usage_str);
+            skip = log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, GetDebugReportEnum[obj_type], obj_handle, __LINE__,
+                           MEMTRACK_INVALID_USAGE_FLAG, "MEM",
+                           "Invalid usage flag for %s 0x%" PRIxLEAST64
+                           " used by %s. In this case, %s should have %s set during creation.",
+                           type_str, obj_handle, func_name, type_str, usage_str);
         } else {
             const char *valid_usage = (msgCode == -1) ? "" : validation_error_map[msgCode];
-            skip = log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, obj_type, obj_handle, __LINE__, msgCode, "MEM",
-                           "Invalid usage flag for %s 0x%" PRIxLEAST64
-                           " used by %s. In this case, %s should have %s set during creation. %s",
-                           ty_str, obj_handle, func_name, ty_str, usage_str, valid_usage);
+            skip = log_msg(
+                report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, GetDebugReportEnum[obj_type], obj_handle, __LINE__, msgCode, "MEM",
+                "Invalid usage flag for %s 0x%" PRIxLEAST64 " used by %s. In this case, %s should have %s set during creation. %s",
+                type_str, obj_handle, func_name, type_str, usage_str, valid_usage);
         }
     }
     return skip;
@@ -2282,8 +2283,8 @@ static bool validate_usage_flags(layer_data *device_data, VkFlags actual, VkFlag
 bool ValidateImageUsageFlags(layer_data *device_data, IMAGE_STATE const *image_state, VkFlags desired, VkBool32 strict,
                              int32_t const msgCode, char const *func_name, char const *usage_string) {
     return validate_usage_flags(device_data, image_state->createInfo.usage, desired, strict,
-                                reinterpret_cast<const uint64_t &>(image_state->image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                                msgCode, "image", func_name, usage_string);
+                                reinterpret_cast<const uint64_t &>(image_state->image), kVulkanObjectTypeImage, msgCode, func_name,
+                                usage_string);
 }
 
 // Helper function to validate usage flags for buffers. For given buffer_state send actual vs. desired usage off to helper above
@@ -2291,8 +2292,8 @@ bool ValidateImageUsageFlags(layer_data *device_data, IMAGE_STATE const *image_s
 bool ValidateBufferUsageFlags(layer_data *device_data, BUFFER_STATE const *buffer_state, VkFlags desired, VkBool32 strict,
                               int32_t const msgCode, char const *func_name, char const *usage_string) {
     return validate_usage_flags(device_data, buffer_state->createInfo.usage, desired, strict,
-                                reinterpret_cast<const uint64_t &>(buffer_state->buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
-                                msgCode, "buffer", func_name, usage_string);
+                                reinterpret_cast<const uint64_t &>(buffer_state->buffer), kVulkanObjectTypeBuffer, msgCode,
+                                func_name, usage_string);
 }
 
 bool PreCallValidateCreateBuffer(layer_data *device_data, const VkBufferCreateInfo *pCreateInfo) {
@@ -2573,7 +2574,7 @@ static bool validateIdleBuffer(layer_data *device_data, VkBuffer buffer) {
 bool PreCallValidateDestroyImageView(layer_data *device_data, VkImageView image_view, IMAGE_VIEW_STATE **image_view_state,
                                      VK_OBJECT *obj_struct) {
     *image_view_state = GetImageViewState(device_data, image_view);
-    *obj_struct = {reinterpret_cast<uint64_t &>(image_view), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT};
+    *obj_struct = {reinterpret_cast<uint64_t &>(image_view), kVulkanObjectTypeImageView};
     if (GetDisables(device_data)->destroy_image_view) return false;
     bool skip = false;
     if (*image_view_state) {
@@ -2591,7 +2592,7 @@ void PostCallRecordDestroyImageView(layer_data *device_data, VkImageView image_v
 
 bool PreCallValidateDestroyBuffer(layer_data *device_data, VkBuffer buffer, BUFFER_STATE **buffer_state, VK_OBJECT *obj_struct) {
     *buffer_state = GetBufferState(device_data, buffer);
-    *obj_struct = {reinterpret_cast<uint64_t &>(buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT};
+    *obj_struct = {reinterpret_cast<uint64_t &>(buffer), kVulkanObjectTypeBuffer };
     if (GetDisables(device_data)->destroy_buffer) return false;
     bool skip = false;
     if (*buffer_state) {
@@ -2608,14 +2609,14 @@ void PostCallRecordDestroyBuffer(layer_data *device_data, VkBuffer buffer, BUFFE
             core_validation::RemoveBufferMemoryRange(reinterpret_cast<uint64_t &>(buffer), mem_info);
         }
     }
-    ClearMemoryObjectBindings(device_data, reinterpret_cast<uint64_t &>(buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT);
+    ClearMemoryObjectBindings(device_data, reinterpret_cast<uint64_t &>(buffer), kVulkanObjectTypeBuffer);
     GetBufferMap(device_data)->erase(buffer_state->buffer);
 }
 
 bool PreCallValidateDestroyBufferView(layer_data *device_data, VkBufferView buffer_view, BUFFER_VIEW_STATE **buffer_view_state,
                                       VK_OBJECT *obj_struct) {
     *buffer_view_state = GetBufferViewState(device_data, buffer_view);
-    *obj_struct = {reinterpret_cast<uint64_t &>(buffer_view), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT};
+    *obj_struct = {reinterpret_cast<uint64_t &>(buffer_view), kVulkanObjectTypeBufferView };
     if (GetDisables(device_data)->destroy_buffer_view) return false;
     bool skip = false;
     if (*buffer_view_state) {

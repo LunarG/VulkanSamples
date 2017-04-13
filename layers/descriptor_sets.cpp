@@ -594,7 +594,7 @@ uint32_t cvdescriptorset::DescriptorSet::GetStorageUpdates(const std::map<uint32
 // Set is being deleted or updates so invalidate all bound cmd buffers
 void cvdescriptorset::DescriptorSet::InvalidateBoundCmdBuffers() {
     core_validation::invalidateCommandBuffers(device_data_, cb_bindings,
-                                              {reinterpret_cast<uint64_t &>(set_), VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT});
+                                              {reinterpret_cast<uint64_t &>(set_), kVulkanObjectTypeDescriptorSet });
 }
 // Perform write update in given update struct
 void cvdescriptorset::DescriptorSet::PerformWriteUpdate(const VkWriteDescriptorSet *update) {
@@ -730,10 +730,10 @@ void cvdescriptorset::DescriptorSet::BindCommandBuffer(GLOBAL_CB_NODE *cb_node,
     // bind cb to this descriptor set
     cb_bindings.insert(cb_node);
     // Add bindings for descriptor set, the set's pool, and individual objects in the set
-    cb_node->object_bindings.insert({reinterpret_cast<uint64_t &>(set_), VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT});
+    cb_node->object_bindings.insert({reinterpret_cast<uint64_t &>(set_), kVulkanObjectTypeDescriptorSet });
     pool_state_->cb_bindings.insert(cb_node);
     cb_node->object_bindings.insert(
-        {reinterpret_cast<uint64_t &>(pool_state_->pool), VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT});
+        {reinterpret_cast<uint64_t &>(pool_state_->pool), kVulkanObjectTypeDescriptorPool });
     // For the active slots, use set# to look up descriptorSet from boundDescriptorSets, and bind all of that descriptor set's
     // resources
     for (auto binding_req_pair : binding_req_map) {
