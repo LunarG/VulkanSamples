@@ -561,7 +561,7 @@ class HelperFileOutputGenerator(OutputGenerator):
         # Output a conversion routine from the layer object definitions to the debug report definitions
         object_types_header += '\n'
         object_types_header += '// Helper array to get Official Vulkan object type enum from the internal layers version\n'
-        object_types_header += 'const VkDebugReportObjectTypeEXT GetDebugReportEnum[] = {\n'
+        object_types_header += 'const VkDebugReportObjectTypeEXT get_debug_report_enum[] = {\n'
         for object_type in type_list:
             done = False
             search_type = object_type.replace("kVulkanObjectType", "").lower()

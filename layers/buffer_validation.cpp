@@ -2262,7 +2262,7 @@ static bool validate_usage_flags(layer_data *device_data, VkFlags actual, VkFlag
     if (!correct_usage) {
         if (msgCode == -1) {
             // TODO: Fix callers with msgCode == -1 to use correct validation checks.
-            skip = log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, GetDebugReportEnum[obj_type], obj_handle, __LINE__,
+            skip = log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, get_debug_report_enum[obj_type], obj_handle, __LINE__,
                            MEMTRACK_INVALID_USAGE_FLAG, "MEM",
                            "Invalid usage flag for %s 0x%" PRIxLEAST64
                            " used by %s. In this case, %s should have %s set during creation.",
@@ -2270,7 +2270,7 @@ static bool validate_usage_flags(layer_data *device_data, VkFlags actual, VkFlag
         } else {
             const char *valid_usage = (msgCode == -1) ? "" : validation_error_map[msgCode];
             skip = log_msg(
-                report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, GetDebugReportEnum[obj_type], obj_handle, __LINE__, msgCode, "MEM",
+                report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, get_debug_report_enum[obj_type], obj_handle, __LINE__, msgCode, "MEM",
                 "Invalid usage flag for %s 0x%" PRIxLEAST64 " used by %s. In this case, %s should have %s set during creation. %s",
                 type_str, obj_handle, func_name, type_str, usage_str, valid_usage);
         }

@@ -261,7 +261,7 @@ static void CreateObject(T1 dispatchable_object, T2 object, VulkanObjectType obj
     bool custom_allocator = pAllocator != nullptr;
 
     if (!instance_data->object_map[object_type].count(object_handle)) {
-        VkDebugReportObjectTypeEXT debug_object_type = GetDebugReportEnum[object_type];
+        VkDebugReportObjectTypeEXT debug_object_type = get_debug_report_enum[object_type];
         log_msg(instance_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, debug_object_type, object_handle, __LINE__,
                 OBJTRACK_NONE, LayerName, "OBJ[0x%" PRIxLEAST64 "] : CREATE %s object 0x%" PRIxLEAST64, object_track_index++,
                 object_string[object_type], object_handle);
@@ -285,7 +285,7 @@ static void DestroyObject(T1 dispatchable_object, T2 object, VulkanObjectType ob
 
     auto object_handle = handle_value(object);
     bool custom_allocator = pAllocator != nullptr;
-    VkDebugReportObjectTypeEXT debug_object_type = GetDebugReportEnum[object_type];
+    VkDebugReportObjectTypeEXT debug_object_type = get_debug_report_enum[object_type];
 
     if (object_handle != VK_NULL_HANDLE) {
         auto item = device_data->object_map[object_type].find(object_handle);
@@ -337,7 +337,7 @@ static bool ValidateObject(T1 dispatchable_object, T2 object, VulkanObjectType o
         return false;
     }
     auto object_handle = handle_value(object);
-    VkDebugReportObjectTypeEXT debug_object_type = GetDebugReportEnum[object_type];
+    VkDebugReportObjectTypeEXT debug_object_type = get_debug_report_enum[object_type];
 
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(dispatchable_object), layer_data_map);
     // Look for object in device object map
@@ -379,7 +379,7 @@ static void DeviceReportUndestroyedObjects(VkDevice device, VulkanObjectType obj
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     for (auto item = device_data->object_map[object_type].begin(); item != device_data->object_map[object_type].end();) {
         OBJTRACK_NODE *object_info = item->second;
-        log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, GetDebugReportEnum[object_type], object_info->handle,
+        log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, get_debug_report_enum[object_type], object_info->handle,
                 __LINE__, error_code, LayerName,
                 "OBJ ERROR : For device 0x%" PRIxLEAST64 ", %s object 0x%" PRIxLEAST64 " has not been destroyed. %s",
                 reinterpret_cast<uint64_t>(device), object_string[object_type], object_info->handle,
@@ -414,7 +414,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
         OBJTRACK_NODE *pNode = iit->second;
 
         VkDevice device = reinterpret_cast<VkDevice>(pNode->handle);
-        VkDebugReportObjectTypeEXT debug_object_type = GetDebugReportEnum[pNode->object_type];
+        VkDebugReportObjectTypeEXT debug_object_type = get_debug_report_enum[pNode->object_type];
 
         log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, debug_object_type, pNode->handle, __LINE__,
                 OBJTRACK_OBJECT_LEAK, LayerName, "OBJ ERROR : %s object 0x%" PRIxLEAST64 " has not been destroyed.",
