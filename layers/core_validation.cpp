@@ -438,47 +438,6 @@ static void add_mem_obj_info(layer_data *dev_data, void *object, const VkDeviceM
     dev_data->memObjMap[mem] = unique_ptr<DEVICE_MEM_INFO>(new DEVICE_MEM_INFO(object, mem, pAllocateInfo));
 }
 
-// Helper function to print lowercase string of object type
-//  TODO: Unify string helper functions, this should really come out of a string helper if not there already
-static const char *object_type_to_string(VkDebugReportObjectTypeEXT type) {
-    switch (type) {
-        case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT:
-            return "image";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT:
-            return "buffer";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT:
-            return "image view";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT:
-            return "buffer view";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT:
-            return "swapchain";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT:
-            return "descriptor set";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT:
-            return "framebuffer";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT:
-            return "event";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT:
-            return "query pool";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT:
-            return "descriptor pool";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT:
-            return "command pool";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT:
-            return "pipeline";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT:
-            return "sampler";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT:
-            return "renderpass";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT:
-            return "device memory";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT:
-            return "semaphore";
-        default:
-            return "unknown";
-    }
-}
-
 // For given bound_object_handle, bound to given mem allocation, verify that the range for the bound object is valid
 static bool ValidateMemoryIsValid(layer_data *dev_data, VkDeviceMemory mem, uint64_t bound_object_handle, VulkanObjectType type,
                                   const char *functionName) {
