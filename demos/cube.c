@@ -309,7 +309,6 @@ typedef struct {
     VkDeviceMemory uniform_memory;
     VkFramebuffer framebuffer;
     VkDescriptorSet descriptor_set;
-    VkFence fence;
 } SwapchainImageResources;
 
 struct demo {
@@ -809,9 +808,6 @@ void demo_update_data_buffer(struct demo *demo) {
                   (float)degreesToRadians(demo->spin_angle));
     mat4x4_mul(MVP, VP, demo->model_matrix);
 
-    vkWaitForFences(demo->device, 1, &demo->swapchain_image_resources[demo->current_buffer].fence,
-                    VK_TRUE, UINT64_MAX);
-
     err = vkMapMemory(demo->device,
                       demo->swapchain_image_resources[demo->current_buffer].uniform_memory, 0,
                       VK_WHOLE_SIZE, 0, (void **)&pData);
@@ -957,15 +953,14 @@ void DemoUpdateTargetIPD(struct demo *demo) {
 static void demo_draw(struct demo *demo) {
     VkResult U_ASSERT_ONLY err;
 
-    // Ensure no more than FRAME_LAG presentations are outstanding
+    // Ensure no more than FRAME_LAG renderings are outstanding
     vkWaitForFences(demo->device, 1, &demo->fences[demo->frame_index], VK_TRUE, UINT64_MAX);
     vkResetFences(demo->device, 1, &demo->fences[demo->frame_index]);
 
     // Get the index of the next available swapchain image:
     err = demo->fpAcquireNextImageKHR(demo->device, demo->swapchain, UINT64_MAX,
                                       demo->image_acquired_semaphores[demo->frame_index],
-                                      demo->fences[demo->frame_index],
-                                      &demo->current_buffer);
+                                      VK_NULL_HANDLE, &demo->current_buffer);
 
     demo_update_data_buffer(demo);
 
@@ -1012,9 +1007,8 @@ static void demo_draw(struct demo *demo) {
     submit_info.pCommandBuffers = &demo->swapchain_image_resources[demo->current_buffer].cmd;
     submit_info.signalSemaphoreCount = 1;
     submit_info.pSignalSemaphores = &demo->draw_complete_semaphores[demo->frame_index];
-    vkResetFences(demo->device, 1, &demo->swapchain_image_resources[demo->current_buffer].fence);
     err = vkQueueSubmit(demo->graphics_queue, 1, &submit_info,
-                        demo->swapchain_image_resources[demo->current_buffer].fence);
+                        demo->fences[demo->frame_index]);
     assert(!err);
 
     if (demo->separate_present_queue) {
@@ -1313,12 +1307,6 @@ static void demo_prepare_buffers(struct demo *demo) {
                                                demo->swapchainImageCount);
     assert(demo->swapchain_image_resources);
 
-    VkFenceCreateInfo fence_ci = {
-        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-        .pNext = NULL,
-        .flags = VK_FENCE_CREATE_SIGNALED_BIT
-    };
-
     for (i = 0; i < demo->swapchainImageCount; i++) {
         VkImageViewCreateInfo color_image_view = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -1346,9 +1334,6 @@ static void demo_prepare_buffers(struct demo *demo) {
 
         err = vkCreateImageView(demo->device, &color_image_view, NULL,
                                 &demo->swapchain_image_resources[i].view);
-        assert(!err);
-
-        err = vkCreateFence(demo->device, &fence_ci, NULL, &demo->swapchain_image_resources[i].fence);
         assert(!err);
     }
 
@@ -2399,7 +2384,6 @@ static void demo_cleanup(struct demo *demo) {
                              &demo->swapchain_image_resources[i].cmd);
         vkDestroyBuffer(demo->device, demo->swapchain_image_resources[i].uniform_buffer, NULL);
         vkFreeMemory(demo->device, demo->swapchain_image_resources[i].uniform_memory, NULL);
-        vkDestroyFence(demo->device, demo->swapchain_image_resources[i].fence, NULL);
     }
     free(demo->swapchain_image_resources);
     free(demo->queue_props);
@@ -2476,7 +2460,6 @@ static void demo_resize(struct demo *demo) {
                              &demo->swapchain_image_resources[i].cmd);
         vkDestroyBuffer(demo->device, demo->swapchain_image_resources[i].uniform_buffer, NULL);
         vkFreeMemory(demo->device, demo->swapchain_image_resources[i].uniform_memory, NULL);
-        vkDestroyFence(demo->device, demo->swapchain_image_resources[i].fence, NULL);
     }
     vkDestroyCommandPool(demo->device, demo->cmd_pool, NULL);
     if (demo->separate_present_queue) {
