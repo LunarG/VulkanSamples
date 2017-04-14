@@ -209,7 +209,7 @@ Once the structures are populated, the sample app creates the instance:
 
 In the code above, the application makes a quick check for the mostly likely error
 and reports it, or some other error, according to the result.
-Note that a success (`VK_ERROR_SUCCESS`) has a value of zero,
+Note that a success (`VK_SUCCESS`) has a value of zero,
 so many applications take the shortcut of interpreting
 a non-zero result as an error, which is the case here.
 
