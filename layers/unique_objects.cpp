@@ -585,6 +585,43 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchai
     return result;
 }
 
+VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInfoKHR *pPresentInfo) {
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(queue), layer_data_map);
+    safe_VkPresentInfoKHR *local_pPresentInfo = NULL;
+    {
+        std::lock_guard<std::mutex> lock(global_lock);
+        if (pPresentInfo) {
+            local_pPresentInfo = new safe_VkPresentInfoKHR(pPresentInfo);
+            if (local_pPresentInfo->pWaitSemaphores) {
+                for (uint32_t index1 = 0; index1 < local_pPresentInfo->waitSemaphoreCount; ++index1) {
+                    local_pPresentInfo->pWaitSemaphores[index1] =
+                        (VkSemaphore)dev_data
+                            ->unique_id_mapping[reinterpret_cast<const uint64_t &>(local_pPresentInfo->pWaitSemaphores[index1])];
+                }
+            }
+            if (local_pPresentInfo->pSwapchains) {
+                for (uint32_t index1 = 0; index1 < local_pPresentInfo->swapchainCount; ++index1) {
+                    local_pPresentInfo->pSwapchains[index1] =
+                        (VkSwapchainKHR)dev_data
+                            ->unique_id_mapping[reinterpret_cast<const uint64_t &>(local_pPresentInfo->pSwapchains[index1])];
+                }
+            }
+        }
+    }
+    VkResult result = dev_data->device_dispatch_table->QueuePresentKHR(queue, (const VkPresentInfoKHR *)local_pPresentInfo);
+
+    // pResults is an output array embedded in a structure. The code generator neglects to copy back from the safe_* version,
+    // so handle it as a special case here:
+    if (pPresentInfo && pPresentInfo->pResults) {
+        for (uint32_t i = 0; i < pPresentInfo->swapchainCount; i++) {
+            pPresentInfo->pResults[i] = local_pPresentInfo->pResults[i];
+        }
+    }
+
+    if (local_pPresentInfo) delete local_pPresentInfo;
+    return result;
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorUpdateTemplateKHR(VkDevice device,
                                                                  const VkDescriptorUpdateTemplateCreateInfoKHR *pCreateInfo,
                                                                  const VkAllocationCallbacks *pAllocator,
