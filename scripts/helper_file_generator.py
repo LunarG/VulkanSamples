@@ -551,7 +551,7 @@ class HelperFileOutputGenerator(OutputGenerator):
 
         # Output name string helper
         object_types_header += '// Array of object name strings for OBJECT_TYPE enum conversion\n'
-        object_types_header += 'static const char *object_string[kVulkanObjectTypeMax] = {\n'
+        object_types_header += 'static const char * const object_string[kVulkanObjectTypeMax] = {\n'
         object_types_header += '    "Unknown",\n'
         for item in self.object_types:
             fixup_name = item[2:]
