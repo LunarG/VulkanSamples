@@ -716,8 +716,8 @@ static VkResult loader_add_instance_extensions(const struct loader_instance *ins
 
         bool ext_unsupported = wsi_unsupported_instance_extension(&ext_props[i]);
         if (!ext_unsupported) {
-            (void)snprintf(spec_version, sizeof(spec_version), "%d.%d.%d", VK_MAJOR(ext_props[i].specVersion),
-                           VK_MINOR(ext_props[i].specVersion), VK_PATCH(ext_props[i].specVersion));
+            (void)snprintf(spec_version, sizeof(spec_version), "%d.%d.%d", VK_VERSION_MAJOR(ext_props[i].specVersion),
+                           VK_VERSION_MINOR(ext_props[i].specVersion), VK_VERSION_PATCH(ext_props[i].specVersion));
             loader_log(inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0, "Instance Extension: %s (%s) version %s", ext_props[i].extensionName,
                        lib_name, spec_version);
 
@@ -751,9 +751,8 @@ static VkResult loader_init_device_extensions(const struct loader_instance *inst
 
     for (i = 0; i < count; i++) {
         char spec_version[64];
-
-        (void)snprintf(spec_version, sizeof(spec_version), "%d.%d.%d", VK_MAJOR(ext_props[i].specVersion),
-                       VK_MINOR(ext_props[i].specVersion), VK_PATCH(ext_props[i].specVersion));
+        (void)snprintf(spec_version, sizeof(spec_version), "%d.%d.%d", VK_VERSION_MAJOR(ext_props[i].specVersion),
+                       VK_VERSION_MINOR(ext_props[i].specVersion), VK_VERSION_PATCH(ext_props[i].specVersion));
         loader_log(inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0, "Device Extension: %s (%s) version %s", ext_props[i].extensionName,
                    phys_dev_term->this_icd_term->scanned_icd->lib_name, spec_version);
         res = loader_add_to_ext_list(inst, ext_list, 1, &ext_props[i]);
@@ -786,9 +785,8 @@ VkResult loader_add_device_extensions(const struct loader_instance *inst,
         }
         for (i = 0; i < count; i++) {
             char spec_version[64];
-
-            (void)snprintf(spec_version, sizeof(spec_version), "%d.%d.%d", VK_MAJOR(ext_props[i].specVersion),
-                           VK_MINOR(ext_props[i].specVersion), VK_PATCH(ext_props[i].specVersion));
+            (void)snprintf(spec_version, sizeof(spec_version), "%d.%d.%d", VK_VERSION_MAJOR(ext_props[i].specVersion),
+                           VK_VERSION_MINOR(ext_props[i].specVersion), VK_VERSION_PATCH(ext_props[i].specVersion));
             loader_log(inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0, "Device Extension: %s (%s) version %s", ext_props[i].extensionName,
                        lib_name, spec_version);
             res = loader_add_to_ext_list(inst, ext_list, 1, &ext_props[i]);

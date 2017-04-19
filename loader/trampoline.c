@@ -227,6 +227,22 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(const VkInstanceCr
 
     loader_platform_thread_once(&once_init, loader_initialize);
 
+    // Fail if the requested Vulkan apiVersion is > 1.0 since the loader only supports 1.0.
+    // Having pCreateInfo == NULL, pCreateInfo->pApplication == NULL, or
+    // pCreateInfo->pApplicationInfo->apiVersion == 0 all indicate that the application is
+    // only requesting a 1.0 instance, which this loader will always support.
+    uint32_t loader_major_version = 1;
+    uint32_t loader_minor_version = 0;
+    if (NULL != pCreateInfo && NULL != pCreateInfo->pApplicationInfo &&
+        pCreateInfo->pApplicationInfo->apiVersion >= VK_MAKE_VERSION(loader_major_version, loader_minor_version + 1, 0)) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "vkCreateInstance:  Called with invalid API version %d.%d.  Loader only supports %d.%d",
+                   VK_VERSION_MAJOR(pCreateInfo->pApplicationInfo->apiVersion),
+                   VK_VERSION_MINOR(pCreateInfo->pApplicationInfo->apiVersion), loader_major_version, loader_minor_version);
+        res = VK_ERROR_INCOMPATIBLE_DRIVER;
+        goto out;
+    }
+
 #if (DEBUG_DISABLE_APP_ALLOCATORS == 1)
     {
 #else
