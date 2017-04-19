@@ -1,5 +1,11 @@
 cmake_minimum_required(VERSION 2.8.11)
 
+# If ANDROID is ON, turn on cross-compiling for it
+if(ANDROID)
+    set(CMAKE_SYSTEM_NAME "Android")
+    set(CMAKE_SYSTEM_VERSION "7")
+endif()
+
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     add_definitions(-DVK_USE_PLATFORM_WIN32_KHR -DWIN32_LEAN_AND_MEAN)
     set(DisplayServer Win32)
