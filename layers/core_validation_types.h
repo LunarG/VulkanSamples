@@ -357,16 +357,6 @@ class SWAPCHAIN_NODE {
         : createInfo(pCreateInfo), swapchain(swapchain) {}
 };
 
-enum DRAW_TYPE {
-    DRAW = 0,
-    DRAW_INDEXED = 1,
-    DRAW_INDIRECT = 2,
-    DRAW_INDEXED_INDIRECT = 3,
-    DRAW_BEGIN_RANGE = DRAW,
-    DRAW_END_RANGE = DRAW_INDEXED_INDIRECT,
-    NUM_DRAW_TYPES = (DRAW_END_RANGE - DRAW_BEGIN_RANGE + 1),
-};
-
 class IMAGE_CMD_BUF_LAYOUT_NODE {
    public:
     IMAGE_CMD_BUF_LAYOUT_NODE() = default;
@@ -652,7 +642,7 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     VkCommandBufferInheritanceInfo inheritanceInfo;
     VkDevice device;                     // device this CB belongs to
     uint64_t numCmds;                    // number of cmds in this CB
-    uint64_t drawCount[NUM_DRAW_TYPES];  // Count of each type of draw in this CB
+    bool hasDrawCmd;
     CB_STATE state;                      // Track cmd buffer update state
     uint64_t submitCount;                // Number of times CB has been submitted
     CBStatusFlags status;                // Track status of various bindings on cmd buffer

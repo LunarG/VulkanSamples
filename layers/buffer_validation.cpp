@@ -1529,17 +1529,6 @@ void PreCallRecordCmdCopyImage(layer_data *device_data, GLOBAL_CB_NODE *cb_node,
     core_validation::UpdateCmdBufferLastCmd(cb_node, CMD_COPYIMAGE);
 }
 
-// TODO : Should be tracking lastBound per commandBuffer and when draws occur, report based on that cmd buffer lastBound
-//   Then need to synchronize the accesses based on cmd buffer so that if I'm reading state on one cmd buffer, updates
-//   to that same cmd buffer by separate thread are not changing state from underneath us
-// Track the last cmd buffer touched by this thread
-static bool hasDrawCmd(GLOBAL_CB_NODE *pCB) {
-    for (uint32_t i = 0; i < NUM_DRAW_TYPES; i++) {
-        if (pCB->drawCount[i]) return true;
-    }
-    return false;
-}
-
 // Returns true if sub_rect is entirely contained within rect
 static inline bool ContainsRect(VkRect2D rect, VkRect2D sub_rect) {
     if ((sub_rect.offset.x < rect.offset.x) || (sub_rect.offset.x + sub_rect.extent.width > rect.offset.x + rect.extent.width) ||
@@ -1560,7 +1549,7 @@ bool PreCallValidateCmdClearAttachments(layer_data *device_data, VkCommandBuffer
         skip |= ValidateCmd(device_data, cb_node, CMD_CLEARATTACHMENTS, "vkCmdClearAttachments()");
         core_validation::UpdateCmdBufferLastCmd(cb_node, CMD_CLEARATTACHMENTS);
         // Warn if this is issued prior to Draw Cmd and clearing the entire attachment
-        if (!hasDrawCmd(cb_node) && (cb_node->activeRenderPassBeginInfo.renderArea.extent.width == pRects[0].rect.extent.width) &&
+        if (!cb_node->hasDrawCmd && (cb_node->activeRenderPassBeginInfo.renderArea.extent.width == pRects[0].rect.extent.width) &&
             (cb_node->activeRenderPassBeginInfo.renderArea.extent.height == pRects[0].rect.extent.height)) {
             // There are times where app needs to use ClearAttachments (generally when reusing a buffer inside of a render pass)
             // This warning should be made more specific. It'd be best to avoid triggering this test if it's a use that must call

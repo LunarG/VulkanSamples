@@ -3622,7 +3622,7 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
         memset(&pCB->beginInfo, 0, sizeof(VkCommandBufferBeginInfo));
         memset(&pCB->inheritanceInfo, 0, sizeof(VkCommandBufferInheritanceInfo));
         pCB->numCmds = 0;
-        memset(pCB->drawCount, 0, NUM_DRAW_TYPES * sizeof(uint64_t));
+        pCB->hasDrawCmd = false;
         pCB->state = CB_NEW;
         pCB->submitCount = 0;
         pCB->status = 0;
@@ -7581,10 +7581,10 @@ static void UpdateStateCmdDrawDispatchType(layer_data *dev_data, GLOBAL_CB_NODE 
 
 // Generic function to handle state update for all CmdDraw* type functions
 static void UpdateStateCmdDrawType(layer_data *dev_data, GLOBAL_CB_NODE *cb_state, VkPipelineBindPoint bind_point,
-                                   CMD_TYPE cmd_type, DRAW_TYPE draw_type) {
+                                   CMD_TYPE cmd_type) {
     UpdateStateCmdDrawDispatchType(dev_data, cb_state, bind_point, cmd_type);
     updateResourceTrackingOnDraw(cb_state);
-    cb_state->drawCount[draw_type]++;
+    cb_state->hasDrawCmd = true;
 }
 
 static bool PreCallValidateCmdDraw(layer_data *dev_data, VkCommandBuffer cmd_buffer, bool indexed, VkPipelineBindPoint bind_point,
@@ -7594,7 +7594,7 @@ static bool PreCallValidateCmdDraw(layer_data *dev_data, VkCommandBuffer cmd_buf
 }
 
 static void PostCallRecordCmdDraw(layer_data *dev_data, GLOBAL_CB_NODE *cb_state, VkPipelineBindPoint bind_point) {
-    UpdateStateCmdDrawType(dev_data, cb_state, bind_point, CMD_DRAW, DRAW);
+    UpdateStateCmdDrawType(dev_data, cb_state, bind_point, CMD_DRAW);
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdDraw(VkCommandBuffer commandBuffer, uint32_t vertexCount, uint32_t instanceCount,
@@ -7619,7 +7619,7 @@ static bool PreCallValidateCmdDrawIndexed(layer_data *dev_data, VkCommandBuffer 
 }
 
 static void PostCallRecordCmdDrawIndexed(layer_data *dev_data, GLOBAL_CB_NODE *cb_state, VkPipelineBindPoint bind_point) {
-    UpdateStateCmdDrawType(dev_data, cb_state, bind_point, CMD_DRAWINDEXED, DRAW_INDEXED);
+    UpdateStateCmdDrawType(dev_data, cb_state, bind_point, CMD_DRAWINDEXED);
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdDrawIndexed(VkCommandBuffer commandBuffer, uint32_t indexCount, uint32_t instanceCount,
@@ -7652,7 +7652,7 @@ static bool PreCallValidateCmdDrawIndirect(layer_data *dev_data, VkCommandBuffer
 
 static void PostCallRecordCmdDrawIndirect(layer_data *dev_data, GLOBAL_CB_NODE *cb_state, VkPipelineBindPoint bind_point,
                                           BUFFER_STATE *buffer_state) {
-    UpdateStateCmdDrawType(dev_data, cb_state, bind_point, CMD_DRAWINDIRECT, DRAW_INDIRECT);
+    UpdateStateCmdDrawType(dev_data, cb_state, bind_point, CMD_DRAWINDIRECT);
     AddCommandBufferBindingBuffer(dev_data, cb_state, buffer_state);
 }
 
@@ -7688,7 +7688,7 @@ static bool PreCallValidateCmdDrawIndexedIndirect(layer_data *dev_data, VkComman
 
 static void PostCallRecordCmdDrawIndexedIndirect(layer_data *dev_data, GLOBAL_CB_NODE *cb_state, VkPipelineBindPoint bind_point,
                                                  BUFFER_STATE *buffer_state) {
-    UpdateStateCmdDrawType(dev_data, cb_state, bind_point, CMD_DRAWINDEXEDINDIRECT, DRAW_INDEXED_INDIRECT);
+    UpdateStateCmdDrawType(dev_data, cb_state, bind_point, CMD_DRAWINDEXEDINDIRECT);
     AddCommandBufferBindingBuffer(dev_data, cb_state, buffer_state);
 }
 
