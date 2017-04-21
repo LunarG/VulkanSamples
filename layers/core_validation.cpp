@@ -3859,57 +3859,29 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
     layer_data_map.erase(key);
 }
 
-static void checkDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo, VkDevice device) {
-    uint32_t i;
-    // TBD: Need any locking, in case this function is called at the same time by more than one thread?
-    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-    dev_data->device_extensions.wsi_enabled = false;
-    dev_data->device_extensions.wsi_display_swapchain_enabled = false;
-    dev_data->device_extensions.nv_glsl_shader_enabled = false;
-    dev_data->device_extensions.khr_descriptor_update_template_enabled = false;
-    dev_data->device_extensions.khr_shader_draw_parameters_enabled = false;
-    dev_data->device_extensions.khr_maintenance1_enabled = false;
-    dev_data->device_extensions.nv_geometry_shader_passthrough_enabled = false;
-    dev_data->device_extensions.nv_sample_mask_override_coverage_enabled = false;
-    dev_data->device_extensions.nv_viewport_array2_enabled = false;
-    dev_data->device_extensions.khr_subgroup_ballot_enabled = false;
-    dev_data->device_extensions.khr_subgroup_vote_enabled = false;
+static void checkDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo, devExts *exts) {
 
-    for (i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
-            dev_data->device_extensions.wsi_enabled = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME) == 0) {
-            dev_data->device_extensions.wsi_display_swapchain_enabled = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_NV_GLSL_SHADER_EXTENSION_NAME) == 0) {
-            dev_data->device_extensions.nv_glsl_shader_enabled = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME) == 0) {
-            dev_data->device_extensions.khr_descriptor_update_template_enabled = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME) == 0) {
-            dev_data->device_extensions.khr_shader_draw_parameters_enabled = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_MAINTENANCE1_EXTENSION_NAME) == 0) {
-            dev_data->device_extensions.khr_maintenance1_enabled = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_NV_GEOMETRY_SHADER_PASSTHROUGH_EXTENSION_NAME) == 0) {
-            dev_data->device_extensions.nv_geometry_shader_passthrough_enabled = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_NV_SAMPLE_MASK_OVERRIDE_COVERAGE_EXTENSION_NAME) == 0) {
-            dev_data->device_extensions.nv_sample_mask_override_coverage_enabled = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_NV_VIEWPORT_ARRAY2_EXTENSION_NAME) == 0) {
-            dev_data->device_extensions.nv_viewport_array2_enabled = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_SHADER_SUBGROUP_BALLOT_EXTENSION_NAME) == 0) {
-            dev_data->device_extensions.khr_subgroup_ballot_enabled = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_SHADER_SUBGROUP_VOTE_EXTENSION_NAME) == 0) {
-            dev_data->device_extensions.khr_subgroup_vote_enabled = true;
-        }
+    static const std::pair<char const *, bool devExts::*> known_extensions[] {
+        {VK_KHR_SWAPCHAIN_EXTENSION_NAME, &devExts::wsi_enabled},
+        {VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME, &devExts::wsi_display_swapchain_enabled},
+        {VK_NV_GLSL_SHADER_EXTENSION_NAME, &devExts::nv_glsl_shader_enabled},
+        {VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME, &devExts::khr_descriptor_update_template_enabled},
+        {VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME, &devExts::khr_shader_draw_parameters_enabled},
+        {VK_KHR_MAINTENANCE1_EXTENSION_NAME, &devExts::khr_maintenance1_enabled},
+        {VK_NV_GEOMETRY_SHADER_PASSTHROUGH_EXTENSION_NAME, &devExts::nv_geometry_shader_passthrough_enabled},
+        {VK_NV_SAMPLE_MASK_OVERRIDE_COVERAGE_EXTENSION_NAME, &devExts::nv_sample_mask_override_coverage_enabled},
+        {VK_NV_VIEWPORT_ARRAY2_EXTENSION_NAME, &devExts::nv_viewport_array2_enabled},
+        {VK_EXT_SHADER_SUBGROUP_BALLOT_EXTENSION_NAME, &devExts::khr_subgroup_ballot_enabled},
+        {VK_EXT_SHADER_SUBGROUP_VOTE_EXTENSION_NAME, &devExts::khr_subgroup_vote_enabled},
+    };
 
+    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
+        for (auto ext : known_extensions) {
+            if (!strcmp(ext.first, pCreateInfo->ppEnabledExtensionNames[i])) {
+                exts->*(ext.second) = true;
+                break;
+            }
+        }
     }
 }
 
@@ -4032,7 +4004,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu, const VkDevice
     device_data->physical_device = gpu;
 
     device_data->report_data = layer_debug_report_create_device(instance_data->report_data, *pDevice);
-    checkDeviceRegisterExtensions(pCreateInfo, *pDevice);
+    checkDeviceRegisterExtensions(pCreateInfo, &device_data->device_extensions);
     // Get physical device limits for this device
     instance_data->dispatch_table.GetPhysicalDeviceProperties(gpu, &(device_data->phys_dev_properties.properties));
     uint32_t count;
