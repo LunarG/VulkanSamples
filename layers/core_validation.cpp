@@ -3510,19 +3510,18 @@ static bool ReportInvalidCommandBuffer(layer_data *dev_data, GLOBAL_CB_NODE *cb_
 // Validate the given command being added to the specified cmd buffer, flagging errors if CB is not in the recording state or if
 // there's an issue with the Cmd ordering
 bool ValidateCmd(layer_data *dev_data, GLOBAL_CB_NODE *cb_state, const CMD_TYPE cmd, const char *caller_name) {
-    bool skip = false;
-    if (cb_state->state != CB_RECORDING) {
-        if (cb_state->state == CB_INVALID) {
-            skip |= ReportInvalidCommandBuffer(dev_data, cb_state, caller_name);
-        } else {
-            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            reinterpret_cast<uint64_t &>(cb_state->commandBuffer), __LINE__, DRAWSTATE_NO_BEGIN_COMMAND_BUFFER,
-                            "DS", "You must call vkBeginCommandBuffer() before this call to %s", caller_name);
-        }
-    } else {
-        skip |= ValidateCmdSubpassState(dev_data, cb_state, cmd);
+    switch (cb_state->state) {
+        case CB_RECORDING:
+            return ValidateCmdSubpassState(dev_data, cb_state, cmd);
+
+        case CB_INVALID:
+            return ReportInvalidCommandBuffer(dev_data, cb_state, caller_name);
+
+        default:
+            return log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                           reinterpret_cast<uint64_t &>(cb_state->commandBuffer), __LINE__, DRAWSTATE_NO_BEGIN_COMMAND_BUFFER, "DS",
+                           "You must call vkBeginCommandBuffer() before this call to %s", caller_name);
     }
-    return skip;
 }
 
 void UpdateCmdBufferLastCmd(GLOBAL_CB_NODE *cb_state, const CMD_TYPE cmd) {

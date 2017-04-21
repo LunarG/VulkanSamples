@@ -25,7 +25,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     option(BUILD_WSI_XCB_SUPPORT "Build XCB WSI support" ON)
     option(BUILD_WSI_XLIB_SUPPORT "Build Xlib WSI support" ON)
     option(BUILD_WSI_WAYLAND_SUPPORT "Build Wayland WSI support" ON)
-    option(BUILD_WSI_MIR_SUPPORT "Build Mir WSI support" ON)
+    option(BUILD_WSI_MIR_SUPPORT "Build Mir WSI support" OFF)
     set(DEMOS_WSI_SELECTION "XCB" CACHE STRING "Select WSI target for demos (XCB, XLIB, WAYLAND, MIR, DISPLAY)")
 
     if (BUILD_WSI_XCB_SUPPORT)
