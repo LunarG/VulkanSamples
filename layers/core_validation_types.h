@@ -549,7 +549,6 @@ class PIPELINE_STATE : public BASE_NODE {
     std::unordered_map<uint32_t, std::map<uint32_t, descriptor_req>> active_slots;
     // Vtx input info (if any)
     std::vector<VkVertexInputBindingDescription> vertexBindingDescriptions;
-    std::vector<VkVertexInputAttributeDescription> vertexAttributeDescriptions;
     std::vector<VkPipelineColorBlendAttachmentState> attachments;
     bool blendConstantsEnabled;  // Blend constants enabled for any attachments
     // Store RPCI b/c renderPass may be destroyed after Pipeline creation
@@ -565,7 +564,6 @@ class PIPELINE_STATE : public BASE_NODE {
           duplicate_shaders(0),
           active_slots(),
           vertexBindingDescriptions(),
-          vertexAttributeDescriptions(),
           attachments(),
           blendConstantsEnabled(false),
           render_pass_ci(),
@@ -586,11 +584,6 @@ class PIPELINE_STATE : public BASE_NODE {
             if (pVICI->vertexBindingDescriptionCount) {
                 this->vertexBindingDescriptions = std::vector<VkVertexInputBindingDescription>(
                     pVICI->pVertexBindingDescriptions, pVICI->pVertexBindingDescriptions + pVICI->vertexBindingDescriptionCount);
-            }
-            if (pVICI->vertexAttributeDescriptionCount) {
-                this->vertexAttributeDescriptions = std::vector<VkVertexInputAttributeDescription>(
-                    pVICI->pVertexAttributeDescriptions,
-                    pVICI->pVertexAttributeDescriptions + pVICI->vertexAttributeDescriptionCount);
             }
         }
         if (pCreateInfo->pColorBlendState) {
