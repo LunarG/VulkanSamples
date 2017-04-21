@@ -785,8 +785,8 @@ namespace core_validation {
 struct layer_data;
 
 struct devExts {
-    bool wsi_enabled;
-    bool wsi_display_swapchain_enabled;
+    bool khr_swapchain_enabled;
+    bool khr_display_swapchain_enabled;
     bool nv_glsl_shader_enabled;
     bool khr_descriptor_update_template_enabled;
     bool khr_shader_draw_parameters_enabled;

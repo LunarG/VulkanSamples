@@ -3862,8 +3862,8 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
 static void checkDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo, devExts *exts) {
 
     static const std::pair<char const *, bool devExts::*> known_extensions[] {
-        {VK_KHR_SWAPCHAIN_EXTENSION_NAME, &devExts::wsi_enabled},
-        {VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME, &devExts::wsi_display_swapchain_enabled},
+        {VK_KHR_SWAPCHAIN_EXTENSION_NAME, &devExts::khr_swapchain_enabled},
+        {VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME, &devExts::khr_display_swapchain_enabled},
         {VK_NV_GLSL_SHADER_EXTENSION_NAME, &devExts::nv_glsl_shader_enabled},
         {VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME, &devExts::khr_descriptor_update_template_enabled},
         {VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME, &devExts::khr_shader_draw_parameters_enabled},
@@ -8190,7 +8190,7 @@ static bool ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, ui
                 arrayLayers = image_data->createInfo.arrayLayers;
                 mipLevels = image_data->createInfo.mipLevels;
                 imageFound = true;
-            } else if (dev_data->device_extensions.wsi_enabled) {
+            } else if (dev_data->device_extensions.khr_swapchain_enabled) {
                 auto imageswap_data = GetSwapchainFromImage(dev_data, mem_barrier->image);
                 if (imageswap_data) {
                     auto swapchain_data = GetSwapchainNode(dev_data, imageswap_data);
@@ -11951,7 +11951,7 @@ static PFN_vkVoidFunction intercept_khr_swapchain_command(const char *name, VkDe
 
     if (dev) {
         dev_data = GetLayerDataPtr(get_dispatch_key(dev), layer_data_map);
-        if (!dev_data->device_extensions.wsi_enabled) return nullptr;
+        if (!dev_data->device_extensions.khr_swapchain_enabled) return nullptr;
     }
 
     for (size_t i = 0; i < ARRAY_SIZE(khr_swapchain_commands); i++) {
@@ -11959,7 +11959,7 @@ static PFN_vkVoidFunction intercept_khr_swapchain_command(const char *name, VkDe
     }
 
     if (dev_data) {
-        if (!dev_data->device_extensions.wsi_display_swapchain_enabled) return nullptr;
+        if (!dev_data->device_extensions.khr_display_swapchain_enabled) return nullptr;
     }
 
     if (!strcmp("vkCreateSharedSwapchainsKHR", name)) return reinterpret_cast<PFN_vkVoidFunction>(CreateSharedSwapchainsKHR);
