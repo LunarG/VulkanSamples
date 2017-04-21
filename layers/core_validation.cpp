@@ -3621,7 +3621,6 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
         pCB->commandBuffer = cb;
         memset(&pCB->beginInfo, 0, sizeof(VkCommandBufferBeginInfo));
         memset(&pCB->inheritanceInfo, 0, sizeof(VkCommandBufferInheritanceInfo));
-        pCB->numCmds = 0;
         pCB->hasDrawCmd = false;
         pCB->state = CB_NEW;
         pCB->submitCount = 0;

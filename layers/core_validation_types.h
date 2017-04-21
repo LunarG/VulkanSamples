@@ -641,7 +641,6 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     VkCommandBufferBeginInfo beginInfo;
     VkCommandBufferInheritanceInfo inheritanceInfo;
     VkDevice device;                     // device this CB belongs to
-    uint64_t numCmds;                    // number of cmds in this CB
     bool hasDrawCmd;
     CB_STATE state;                      // Track cmd buffer update state
     uint64_t submitCount;                // Number of times CB has been submitted
