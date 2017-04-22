@@ -116,6 +116,21 @@ CExtensions::CExtensions(const char* layer_name) {
 }
 //----------------------------------------------------------------
 
+//----------------------Device Extensions-------------------------
+void CDeviceExtensions::Init(VkPhysicalDevice phy, const char* layer_name) {
+    VkResult result;
+    do {
+        uint count = 0;
+        result = vkEnumerateDeviceExtensionProperties(phy, layer_name, &count, NULL);                  // Get list size
+        if (result == VK_SUCCESS && count > 0) {                                                       //
+            item_list.resize(count);                                                                   // Resize buffer
+            result = vkEnumerateDeviceExtensionProperties(phy, layer_name, &count, item_list.data());  // Fetch list
+        }
+    } while (result == VK_INCOMPLETE);  // If list is incomplete, try again.
+    VKERRCHECK(result);                 // report errors
+}
+//----------------------------------------------------------------
+
 //---------------------------CInstance----------------------------
 CInstance::CInstance(const bool enable_validation, const char* app_name, const char* engine_name) {
     CLayers layers;
@@ -136,20 +151,15 @@ CInstance::CInstance(const bool enable_validation, const char* app_name, const c
     if (extensions.Pick(VK_KHR_SURFACE_EXTENSION_NAME)) {
 #ifdef VK_USE_PLATFORM_WIN32_KHR
         extensions.Pick(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-#endif
-#ifdef VK_USE_PLATFORM_ANDROID_KHR
+#elif VK_USE_PLATFORM_ANDROID_KHR
         extensions.Pick(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
-#endif
-#ifdef VK_USE_PLATFORM_XCB_KHR
+#elif VK_USE_PLATFORM_XCB_KHR
         extensions.Pick(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
-#endif
-#ifdef VK_USE_PLATFORM_XLIB_KHR
+#elif VK_USE_PLATFORM_XLIB_KHR
         extensions.Pick(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
-#endif
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+#elif VK_USE_PLATFORM_WAYLAND_KHR
         extensions.Pick(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
-#endif
-#ifdef VK_USE_PLATFORM_MIR_KHR
+#elif VK_USE_PLATFORM_MIR_KHR
         extensions.Pick(VK_KHR_MIR_SURFACE_EXTENSION_NAME);
 #endif
     } else

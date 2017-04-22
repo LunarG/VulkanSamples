@@ -49,7 +49,7 @@ Install the Vulkan SDK, CMake and Visual Studio.
 Use cmake-gui to load the CMakeLists.txt file.  
 Configure CMake settings if needed, and generate the Visual Studio project.  
 Use Visual Studio to open the generated solution.  
-Set WSIWindow_Sample1 as the Startup project.  
+Set Sample1 as the Startup project.  
 Compile and run the sample project.
 
 ### Linux

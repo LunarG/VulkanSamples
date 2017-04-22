@@ -19,7 +19,7 @@
 *
 *--------------------------------------------------------------------------
 *
-* This sample project demonstrates how to use SWIWindow to create a Vulkan window,
+* This sample project demonstrates how to use WSI-Window to create a Vulkan window,
 * and add event handlers for window, keyboard, mouse and multi-touchscreen events.
 * It works on Windows, Linux and Android.
 *
