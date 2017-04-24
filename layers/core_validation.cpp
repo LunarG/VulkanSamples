@@ -3020,13 +3020,14 @@ static void UpdateDrawState(layer_data *dev_data, GLOBAL_CB_NODE *cb_state, cons
 }
 
 // Validate HW line width capabilities prior to setting requested line width.
-static bool verifyLineWidth(layer_data *dev_data, DRAW_STATE_ERROR dsError, VkDebugReportObjectTypeEXT object_type,
-                            const uint64_t &target, float lineWidth) {
+static bool verifyLineWidth(layer_data *dev_data, DRAW_STATE_ERROR dsError, VulkanObjectType object_type, const uint64_t &target,
+                            float lineWidth) {
     bool skip_call = false;
 
     // First check to see if the physical device supports wide lines.
     if ((VK_FALSE == dev_data->enabled_features.wideLines) && (1.0f != lineWidth)) {
-        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, object_type, target, __LINE__, dsError, "DS",
+        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, get_debug_report_enum[object_type], target,
+                             __LINE__, dsError, "DS",
                              "Attempt to set lineWidth to %f but physical device wideLines feature "
                              "not supported/enabled so lineWidth must be 1.0f!",
                              lineWidth);
@@ -3034,7 +3035,8 @@ static bool verifyLineWidth(layer_data *dev_data, DRAW_STATE_ERROR dsError, VkDe
         // Otherwise, make sure the width falls in the valid range.
         if ((dev_data->phys_dev_properties.properties.limits.lineWidthRange[0] > lineWidth) ||
             (dev_data->phys_dev_properties.properties.limits.lineWidthRange[1] < lineWidth)) {
-            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, object_type, target, __LINE__, dsError, "DS",
+            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, get_debug_report_enum[object_type], target,
+                                 __LINE__, dsError, "DS",
                                  "Attempt to set lineWidth to %f but physical device limits line width "
                                  "to between [%f, %f]!",
                                  lineWidth, dev_data->phys_dev_properties.properties.limits.lineWidthRange[0],
@@ -3230,7 +3232,7 @@ static bool verifyPipelineCreateState(layer_data *dev_data, std::vector<PIPELINE
         if (!isDynamic(pPipeline, VK_DYNAMIC_STATE_LINE_WIDTH)) {
             skip_call |=
                 verifyLineWidth(dev_data, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE,
-                                VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, reinterpret_cast<uint64_t const &>(pPipeline->pipeline),
+                                kVulkanObjectTypePipeline, reinterpret_cast<uint64_t const &>(pPipeline->pipeline),
                                 pPipeline->graphicsPipelineCI.pRasterizationState->lineWidth);
         }
 
@@ -7121,7 +7123,7 @@ VKAPI_ATTR void VKAPI_CALL CmdSetLineWidth(VkCommandBuffer commandBuffer, float 
                         "flag.  This is undefined behavior and could be ignored. %s",
                         validation_error_map[VALIDATION_ERROR_01476]);
         } else {
-            skip_call |= verifyLineWidth(dev_data, DRAWSTATE_INVALID_SET, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+            skip_call |= verifyLineWidth(dev_data, DRAWSTATE_INVALID_SET, kVulkanObjectTypeCommandBuffer,
                                          reinterpret_cast<uint64_t &>(commandBuffer), lineWidth);
         }
     }

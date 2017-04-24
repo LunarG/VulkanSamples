@@ -45,6 +45,7 @@
 #include "vk_layer_utils.h"
 #include "vk_enum_string_helper.h"
 #include "vk_validation_error_messages.h"
+#include "vk_object_types.h"
 #include "vulkan/vk_layer.h"
 
 // This intentionally includes a cpp file
@@ -678,7 +679,7 @@ void *BuildUnwrappedUpdateTemplateBuffer(layer_data *dev_data, uint64_t descript
     }
     auto const &create_info = template_map_entry->second->create_info;
     size_t allocation_size = 0;
-    std::vector<std::tuple<size_t, VkDebugReportObjectTypeEXT, void *>> template_entries;
+    std::vector<std::tuple<size_t, VulkanObjectType, void *>> template_entries;
 
     for (uint32_t i = 0; i < create_info.descriptorUpdateEntryCount; i++) {
         for (uint32_t j = 0; j < create_info.pDescriptorUpdateEntries[i].descriptorCount; j++) {
@@ -699,8 +700,7 @@ void *BuildUnwrappedUpdateTemplateBuffer(layer_data *dev_data, uint64_t descript
                         dev_data->unique_id_mapping[reinterpret_cast<uint64_t &>(image_entry->sampler)]);
                     wrapped_entry->imageView = reinterpret_cast<VkImageView &>(
                         dev_data->unique_id_mapping[reinterpret_cast<uint64_t &>(image_entry->imageView)]);
-                    template_entries.emplace_back(offset, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                                                  reinterpret_cast<void *>(wrapped_entry));
+                    template_entries.emplace_back(offset, kVulkanObjectTypeImage, reinterpret_cast<void *>(wrapped_entry));
                 } break;
 
                 case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
@@ -713,8 +713,7 @@ void *BuildUnwrappedUpdateTemplateBuffer(layer_data *dev_data, uint64_t descript
                     VkDescriptorBufferInfo *wrapped_entry = new VkDescriptorBufferInfo(*buffer_entry);
                     wrapped_entry->buffer = reinterpret_cast<VkBuffer &>(
                         dev_data->unique_id_mapping[reinterpret_cast<uint64_t &>(buffer_entry->buffer)]);
-                    template_entries.emplace_back(offset, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
-                                                  reinterpret_cast<void *>(wrapped_entry));
+                    template_entries.emplace_back(offset, kVulkanObjectTypeBuffer, reinterpret_cast<void *>(wrapped_entry));
                 } break;
 
                 case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
@@ -723,8 +722,7 @@ void *BuildUnwrappedUpdateTemplateBuffer(layer_data *dev_data, uint64_t descript
                     allocation_size = std::max(allocation_size, offset + sizeof(VkBufferView));
 
                     uint64_t wrapped_entry = dev_data->unique_id_mapping[reinterpret_cast<uint64_t &>(*buffer_view_handle)];
-                    template_entries.emplace_back(offset, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT,
-                                                  reinterpret_cast<void *>(wrapped_entry));
+                    template_entries.emplace_back(offset, kVulkanObjectTypeBufferView, reinterpret_cast<void *>(wrapped_entry));
                 } break;
                 default:
                     assert(0);
@@ -735,20 +733,20 @@ void *BuildUnwrappedUpdateTemplateBuffer(layer_data *dev_data, uint64_t descript
     // Allocate required buffer size and populate with source/unwrapped data
     void *unwrapped_data = malloc(allocation_size);
     for (auto &this_entry : template_entries) {
-        VkDebugReportObjectTypeEXT type = std::get<1>(this_entry);
+        VulkanObjectType type = std::get<1>(this_entry);
         void *destination = (char *)unwrapped_data + std::get<0>(this_entry);
         void *source = (char *)std::get<2>(this_entry);
 
         switch (type) {
-            case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT:
+            case kVulkanObjectTypeImage:
                 *(reinterpret_cast<VkDescriptorImageInfo *>(destination)) = *(reinterpret_cast<VkDescriptorImageInfo *>(source));
                 delete reinterpret_cast<VkDescriptorImageInfo *>(source);
                 break;
-            case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT:
+            case kVulkanObjectTypeBuffer:
                 *(reinterpret_cast<VkDescriptorBufferInfo *>(destination)) = *(reinterpret_cast<VkDescriptorBufferInfo *>(source));
                 delete reinterpret_cast<VkDescriptorBufferInfo *>(source);
                 break;
-            case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT:
+            case kVulkanObjectTypeBufferView:
                 *(reinterpret_cast<VkBufferView *>(destination)) = reinterpret_cast<VkBufferView>(source);
                 break;
             default:
