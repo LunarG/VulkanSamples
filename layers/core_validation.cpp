@@ -3380,59 +3380,59 @@ void UpdateCmdBufferLastCmd(GLOBAL_CB_NODE *cb_state, const CMD_TYPE cmd) {
 BASE_NODE *GetStateStructPtrFromObject(layer_data *dev_data, VK_OBJECT object_struct) {
     BASE_NODE *base_ptr = nullptr;
     switch (object_struct.type) {
-        case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT: {
+        case kVulkanObjectTypeDescriptorSet: {
             base_ptr = GetSetNode(dev_data, reinterpret_cast<VkDescriptorSet &>(object_struct.handle));
             break;
         }
-        case VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT: {
+        case kVulkanObjectTypeSampler: {
             base_ptr = GetSamplerState(dev_data, reinterpret_cast<VkSampler &>(object_struct.handle));
             break;
         }
-        case VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT: {
+        case kVulkanObjectTypeQueryPool: {
             base_ptr = GetQueryPoolNode(dev_data, reinterpret_cast<VkQueryPool &>(object_struct.handle));
             break;
         }
-        case VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT: {
+        case kVulkanObjectTypePipeline: {
             base_ptr = getPipelineState(dev_data, reinterpret_cast<VkPipeline &>(object_struct.handle));
             break;
         }
-        case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT: {
+        case kVulkanObjectTypeBuffer: {
             base_ptr = GetBufferState(dev_data, reinterpret_cast<VkBuffer &>(object_struct.handle));
             break;
         }
-        case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT: {
+        case kVulkanObjectTypeBufferView: {
             base_ptr = GetBufferViewState(dev_data, reinterpret_cast<VkBufferView &>(object_struct.handle));
             break;
         }
-        case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT: {
+        case kVulkanObjectTypeImage: {
             base_ptr = GetImageState(dev_data, reinterpret_cast<VkImage &>(object_struct.handle));
             break;
         }
-        case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT: {
+        case kVulkanObjectTypeImageView: {
             base_ptr = GetImageViewState(dev_data, reinterpret_cast<VkImageView &>(object_struct.handle));
             break;
         }
-        case VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT: {
+        case kVulkanObjectTypeEvent: {
             base_ptr = GetEventNode(dev_data, reinterpret_cast<VkEvent &>(object_struct.handle));
             break;
         }
-        case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT: {
+        case kVulkanObjectTypeDescriptorPool: {
             base_ptr = GetDescriptorPoolState(dev_data, reinterpret_cast<VkDescriptorPool &>(object_struct.handle));
             break;
         }
-        case VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT: {
+        case kVulkanObjectTypeCommandPool: {
             base_ptr = GetCommandPoolNode(dev_data, reinterpret_cast<VkCommandPool &>(object_struct.handle));
             break;
         }
-        case VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT: {
+        case kVulkanObjectTypeFramebuffer: {
             base_ptr = GetFramebufferState(dev_data, reinterpret_cast<VkFramebuffer &>(object_struct.handle));
             break;
         }
-        case VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT: {
+        case kVulkanObjectTypeRenderPass: {
             base_ptr = GetRenderPassState(dev_data, reinterpret_cast<VkRenderPass &>(object_struct.handle));
             break;
         }
-        case VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT: {
+        case kVulkanObjectTypeDeviceMemory: {
             base_ptr = GetMemObjInfo(dev_data, reinterpret_cast<VkDeviceMemory &>(object_struct.handle));
             break;
         }
