@@ -105,6 +105,7 @@ struct device_extension_enables{
     bool ext_discard_rectangles;
     bool nv_clip_space_w_scaling;
     bool nvx_device_generated_commands;
+    bool google_display_timing;
 };
 
 typedef std::unordered_map<uint64_t, OBJTRACK_NODE *> object_map_type;

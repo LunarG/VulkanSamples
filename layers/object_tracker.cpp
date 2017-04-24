@@ -3310,6 +3310,9 @@ static void CheckDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo,
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_NVX_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME) == 0) {
             device_data->enables.nvx_device_generated_commands = true;
         }
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_GOOGLE_DISPLAY_TIMING_EXTENSION_NAME) == 0) {
+            device_data->enables.google_display_timing = true;
+        }
     }
 }
 
@@ -4989,9 +4992,8 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPastPresentationTimingGOOGLE(VkDevice device, 
     bool skip = false;
     {
         std::unique_lock<std::mutex> lock(global_lock);
-        skip |=
-            ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, swapchain, kVulkanObjectTypeSwapchainKHR, false, VALIDATION_ERROR_UNDEFINED,
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_03181, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, swapchain, kVulkanObjectTypeSwapchainKHR, false, VALIDATION_ERROR_03182,
                                VALIDATION_ERROR_UNDEFINED);
     }
 
@@ -5008,9 +5010,8 @@ VKAPI_ATTR VkResult VKAPI_CALL GetRefreshCycleDurationGOOGLE(VkDevice device, Vk
     bool skip = false;
     {
         std::unique_lock<std::mutex> lock(global_lock);
-        skip |=
-            ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, swapchain, kVulkanObjectTypeSwapchainKHR, false, VALIDATION_ERROR_UNDEFINED,
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_03178, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, swapchain, kVulkanObjectTypeSwapchainKHR, false, VALIDATION_ERROR_03179,
                                VALIDATION_ERROR_UNDEFINED);
     }
 
@@ -5175,8 +5176,6 @@ static inline PFN_vkVoidFunction InterceptCoreDeviceCommand(const char *name) {
 #endif  // VK_USE_PLATFORM_WIN32_KHR
     if (!strcmp(name, "CmdDrawIndirectCountAMD")) return (PFN_vkVoidFunction)CmdDrawIndirectCountAMD;
     if (!strcmp(name, "CmdDrawIndexedIndirectCountAMD")) return (PFN_vkVoidFunction)CmdDrawIndexedIndirectCountAMD;
-    if (!strcmp(name, "GetPastPresentationTimingGOOGLE")) return (PFN_vkVoidFunction)GetPastPresentationTimingGOOGLE;
-    if (!strcmp(name, "GetRefreshCycleDurationGOOGLE")) return (PFN_vkVoidFunction)GetRefreshCycleDurationGOOGLE;
     if (!strcmp(name, "SetHdrMetadataEXT")) return (PFN_vkVoidFunction)SetHdrMetadataEXT;
 
     return NULL;
@@ -5324,6 +5323,10 @@ static inline PFN_vkVoidFunction InterceptDeviceExtensionCommand(const char *nam
             if (!strcmp(name, "DestroyObjectTableNVX")) return (PFN_vkVoidFunction)DestroyObjectTableNVX;
             if (!strcmp(name, "RegisterObjectsNVX")) return (PFN_vkVoidFunction)RegisterObjectsNVX;
             if (!strcmp(name, "UnregisterObjectsNVX")) return (PFN_vkVoidFunction)UnregisterObjectsNVX;
+        }
+        if (device_data->enables.google_display_timing) {
+            if (!strcmp(name, "GetPastPresentationTimingGOOGLE")) return (PFN_vkVoidFunction)GetPastPresentationTimingGOOGLE;
+            if (!strcmp(name, "GetRefreshCycleDurationGOOGLE")) return (PFN_vkVoidFunction)GetRefreshCycleDurationGOOGLE;
         }
     }
 
