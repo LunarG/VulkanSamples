@@ -602,10 +602,6 @@ static void clear_cmd_buf_and_mem_references(layer_data *dev_data, GLOBAL_CB_NOD
         cb_node->validate_functions.clear();
     }
 }
-// Overloaded call to above function when GLOBAL_CB_NODE has not already been looked-up
-static void clear_cmd_buf_and_mem_references(layer_data *dev_data, const VkCommandBuffer cb) {
-    clear_cmd_buf_and_mem_references(dev_data, GetCBNode(dev_data, cb));
-}
 
 // Clear a single object binding from given memory object, or report error if binding is missing
 static bool ClearMemoryObjectBinding(layer_data *dev_data, uint64_t handle, VulkanObjectType type, VkDeviceMemory mem) {
@@ -5778,8 +5774,8 @@ static void PostCallRecordDestroyCommandPool(layer_data *dev_data, VkCommandPool
     // Must remove cmdpool from cmdpoolmap, after removing all cmdbuffers in its list from the commandBufferMap
     clearCommandBuffersInFlight(dev_data, cp_state);
     for (auto cb : cp_state->commandBuffers) {
-        clear_cmd_buf_and_mem_references(dev_data, cb);
         auto cb_node = GetCBNode(dev_data, cb);
+        clear_cmd_buf_and_mem_references(dev_data, cb_node);
         // Remove references to this cb_node prior to delete
         // TODO : Need better solution here, resetCB?
         for (auto obj : cb_node->object_bindings) {
