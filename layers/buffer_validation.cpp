@@ -272,15 +272,15 @@ void SetImageViewLayout(layer_data *device_data, GLOBAL_CB_NODE *cb_node, VkImag
 bool VerifyFramebufferAndRenderPassLayouts(layer_data *device_data, GLOBAL_CB_NODE *pCB,
                                            const VkRenderPassBeginInfo *pRenderPassBegin,
                                            const FRAMEBUFFER_STATE *framebuffer_state) {
-    bool skip_call = false;
+    bool skip = false;
     auto const pRenderPassInfo = GetRenderPassState(device_data, pRenderPassBegin->renderPass)->createInfo.ptr();
     auto const &framebufferInfo = framebuffer_state->createInfo;
     const auto report_data = core_validation::GetReportData(device_data);
     if (pRenderPassInfo->attachmentCount != framebufferInfo.attachmentCount) {
-        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                             reinterpret_cast<uint64_t>(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
-                             "You cannot start a render pass using a framebuffer "
-                             "with a different number of attachments.");
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                        reinterpret_cast<uint64_t>(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
+                        "You cannot start a render pass using a framebuffer "
+                        "with a different number of attachments.");
     }
     for (uint32_t i = 0; i < pRenderPassInfo->attachmentCount; ++i) {
         const VkImageView &image_view = framebufferInfo.pAttachments[i];
@@ -301,19 +301,19 @@ bool VerifyFramebufferAndRenderPassLayouts(layer_data *device_data, GLOBAL_CB_NO
                     continue;
                 }
                 if (initial_layout != VK_IMAGE_LAYOUT_UNDEFINED && initial_layout != node.layout) {
-                    skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                         __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
-                                         "You cannot start a render pass using attachment %u "
-                                         "where the render pass initial layout is %s and the previous "
-                                         "known layout of the attachment is %s. The layouts must match, or "
-                                         "the render pass initial layout for the attachment must be "
-                                         "VK_IMAGE_LAYOUT_UNDEFINED",
-                                         i, string_VkImageLayout(initial_layout), string_VkImageLayout(node.layout));
+                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                    __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
+                                    "You cannot start a render pass using attachment %u "
+                                    "where the render pass initial layout is %s and the previous "
+                                    "known layout of the attachment is %s. The layouts must match, or "
+                                    "the render pass initial layout for the attachment must be "
+                                    "VK_IMAGE_LAYOUT_UNDEFINED",
+                                    i, string_VkImageLayout(initial_layout), string_VkImageLayout(node.layout));
                 }
             }
         }
     }
-    return skip_call;
+    return skip;
 }
 
 void TransitionAttachmentRefLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, FRAMEBUFFER_STATE *pFramebuffer,
@@ -533,7 +533,7 @@ bool VerifyImageLayout(layer_data const *device_data, GLOBAL_CB_NODE const *cb_n
                        const char *caller, UNIQUE_VALIDATION_ERROR_CODE msg_code, bool *error) {
     const auto report_data = core_validation::GetReportData(device_data);
     const auto image = image_state->image;
-    bool skip_call = false;
+    bool skip = false;
 
     for (uint32_t i = 0; i < subLayers.layerCount; ++i) {
         uint32_t layer = i + subLayers.baseArrayLayer;
@@ -543,13 +543,12 @@ bool VerifyImageLayout(layer_data const *device_data, GLOBAL_CB_NODE const *cb_n
             if (node.layout != explicit_layout) {
                 *error = true;
                 // TODO: Improve log message in the next pass
-                skip_call |=
-                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                            "%s: Cannot use image 0x%" PRIxLEAST64
-                            " with specific layout %s that doesn't match the actual current layout %s.",
-                            caller, reinterpret_cast<const uint64_t &>(image), string_VkImageLayout(explicit_layout),
-                            string_VkImageLayout(node.layout));
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                                "%s: Cannot use image 0x%" PRIxLEAST64
+                                " with specific layout %s that doesn't match the actual current layout %s.",
+                                caller, reinterpret_cast<const uint64_t &>(image), string_VkImageLayout(explicit_layout),
+                                string_VkImageLayout(node.layout));
             }
         }
     }
@@ -558,22 +557,22 @@ bool VerifyImageLayout(layer_data const *device_data, GLOBAL_CB_NODE const *cb_n
         if (VK_IMAGE_LAYOUT_GENERAL == explicit_layout) {
             if (image_state->createInfo.tiling != VK_IMAGE_TILING_LINEAR) {
                 // LAYOUT_GENERAL is allowed, but may not be performance optimal, flag as perf warning.
-                skip_call |= log_msg(
-                    report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                    reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                    "%s: For optimal performance image 0x%" PRIxLEAST64 " layout should be %s instead of GENERAL.", caller,
-                    reinterpret_cast<const uint64_t &>(image), string_VkImageLayout(optimal_layout));
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
+                                VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t>(cb_node->commandBuffer),
+                                __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                                "%s: For optimal performance image 0x%" PRIxLEAST64 " layout should be %s instead of GENERAL.",
+                                caller, reinterpret_cast<const uint64_t &>(image), string_VkImageLayout(optimal_layout));
             }
         } else {
             *error = true;
-            skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                                 reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, msg_code, "DS",
-                                 "%s: Layout for image 0x%" PRIxLEAST64 " is %s but can only be %s or VK_IMAGE_LAYOUT_GENERAL. %s",
-                                 caller, reinterpret_cast<const uint64_t &>(image), string_VkImageLayout(explicit_layout),
-                                 string_VkImageLayout(optimal_layout), validation_error_map[msg_code]);
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, msg_code, "DS",
+                            "%s: Layout for image 0x%" PRIxLEAST64 " is %s but can only be %s or VK_IMAGE_LAYOUT_GENERAL. %s",
+                            caller, reinterpret_cast<const uint64_t &>(image), string_VkImageLayout(explicit_layout),
+                            string_VkImageLayout(optimal_layout), validation_error_map[msg_code]);
         }
     }
-    return skip_call;
+    return skip;
 }
 
 void TransitionFinalSubpassLayouts(layer_data *device_data, GLOBAL_CB_NODE *pCB, const VkRenderPassBeginInfo *pRenderPassBegin,
@@ -592,16 +591,15 @@ void TransitionFinalSubpassLayouts(layer_data *device_data, GLOBAL_CB_NODE *pCB,
 
 bool PreCallValidateCreateImage(layer_data *device_data, const VkImageCreateInfo *pCreateInfo,
                                 const VkAllocationCallbacks *pAllocator, VkImage *pImage) {
-    bool skip_call = false;
+    bool skip = false;
     const debug_report_data *report_data = core_validation::GetReportData(device_data);
 
     if (pCreateInfo->format == VK_FORMAT_UNDEFINED) {
-        skip_call |=
-            log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                    VALIDATION_ERROR_00715, "IMAGE", "vkCreateImage: VkFormat for image must not be VK_FORMAT_UNDEFINED. %s",
-                    validation_error_map[VALIDATION_ERROR_00715]);
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_00715, "IMAGE", "vkCreateImage: VkFormat for image must not be VK_FORMAT_UNDEFINED. %s",
+                        validation_error_map[VALIDATION_ERROR_00715]);
 
-        return skip_call;
+        return skip;
     }
 
     const VkFormatProperties *properties = GetFormatProperties(device_data, pCreateInfo->format);
@@ -609,21 +607,19 @@ bool PreCallValidateCreateImage(layer_data *device_data, const VkImageCreateInfo
     if ((pCreateInfo->tiling == VK_IMAGE_TILING_LINEAR) && (properties->linearTilingFeatures == 0)) {
         std::stringstream ss;
         ss << "vkCreateImage format parameter (" << string_VkFormat(pCreateInfo->format) << ") is an unsupported format";
-        skip_call |=
-            log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                    VALIDATION_ERROR_02150, "IMAGE", "%s. %s", ss.str().c_str(), validation_error_map[VALIDATION_ERROR_02150]);
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_02150, "IMAGE", "%s. %s", ss.str().c_str(), validation_error_map[VALIDATION_ERROR_02150]);
 
-        return skip_call;
+        return skip;
     }
 
     if ((pCreateInfo->tiling == VK_IMAGE_TILING_OPTIMAL) && (properties->optimalTilingFeatures == 0)) {
         std::stringstream ss;
         ss << "vkCreateImage format parameter (" << string_VkFormat(pCreateInfo->format) << ") is an unsupported format";
-        skip_call |=
-            log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                    VALIDATION_ERROR_02155, "IMAGE", "%s. %s", ss.str().c_str(), validation_error_map[VALIDATION_ERROR_02155]);
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_02155, "IMAGE", "%s. %s", ss.str().c_str(), validation_error_map[VALIDATION_ERROR_02155]);
 
-        return skip_call;
+        return skip;
     }
 
     // Validate that format supports usage as color attachment
@@ -633,7 +629,7 @@ bool PreCallValidateCreateImage(layer_data *device_data, const VkImageCreateInfo
             std::stringstream ss;
             ss << "vkCreateImage: VkFormat for TILING_OPTIMAL image (" << string_VkFormat(pCreateInfo->format)
                << ") does not support requested Image usage type VK_IMAGE_USAGE_COLOR_ATTACHMENT";
-            skip_call |=
+            skip |=
                 log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                         VALIDATION_ERROR_02158, "IMAGE", "%s. %s", ss.str().c_str(), validation_error_map[VALIDATION_ERROR_02158]);
         }
@@ -642,7 +638,7 @@ bool PreCallValidateCreateImage(layer_data *device_data, const VkImageCreateInfo
             std::stringstream ss;
             ss << "vkCreateImage: VkFormat for TILING_LINEAR image (" << string_VkFormat(pCreateInfo->format)
                << ") does not support requested Image usage type VK_IMAGE_USAGE_COLOR_ATTACHMENT";
-            skip_call |=
+            skip |=
                 log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                         VALIDATION_ERROR_02153, "IMAGE", "%s. %s", ss.str().c_str(), validation_error_map[VALIDATION_ERROR_02153]);
         }
@@ -655,7 +651,7 @@ bool PreCallValidateCreateImage(layer_data *device_data, const VkImageCreateInfo
             std::stringstream ss;
             ss << "vkCreateImage: VkFormat for TILING_OPTIMAL image (" << string_VkFormat(pCreateInfo->format)
                << ") does not support requested Image usage type VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT";
-            skip_call |=
+            skip |=
                 log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                         VALIDATION_ERROR_02159, "IMAGE", "%s. %s", ss.str().c_str(), validation_error_map[VALIDATION_ERROR_02159]);
         }
@@ -664,7 +660,7 @@ bool PreCallValidateCreateImage(layer_data *device_data, const VkImageCreateInfo
             std::stringstream ss;
             ss << "vkCreateImage: VkFormat for TILING_LINEAR image (" << string_VkFormat(pCreateInfo->format)
                << ") does not support requested Image usage type VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT";
-            skip_call |=
+            skip |=
                 log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                         VALIDATION_ERROR_02154, "IMAGE", "%s. %s", ss.str().c_str(), validation_error_map[VALIDATION_ERROR_02154]);
         }
@@ -677,12 +673,12 @@ bool PreCallValidateCreateImage(layer_data *device_data, const VkImageCreateInfo
     imageGranularity = imageGranularity == 1 ? 0 : imageGranularity;
     // TODO : This is also covering 2918 & 2919. Break out into separate checks
     if ((pCreateInfo->extent.width <= 0) || (pCreateInfo->extent.height <= 0) || (pCreateInfo->extent.depth <= 0)) {
-        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, 0, __LINE__,
-                             VALIDATION_ERROR_02917, "Image",
-                             "CreateImage extent is 0 for at least one required dimension for image: "
-                             "Width = %d Height = %d Depth = %d. %s",
-                             pCreateInfo->extent.width, pCreateInfo->extent.height, pCreateInfo->extent.depth,
-                             validation_error_map[VALIDATION_ERROR_02917]);
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_02917, "Image",
+                        "CreateImage extent is 0 for at least one required dimension for image: "
+                        "Width = %d Height = %d Depth = %d. %s",
+                        pCreateInfo->extent.width, pCreateInfo->extent.height, pCreateInfo->extent.depth,
+                        validation_error_map[VALIDATION_ERROR_02917]);
     }
 
     // TODO: VALIDATION_ERROR_02125 VALIDATION_ERROR_02126 VALIDATION_ERROR_02128 VALIDATION_ERROR_00720
@@ -690,13 +686,13 @@ bool PreCallValidateCreateImage(layer_data *device_data, const VkImageCreateInfo
     if ((pCreateInfo->extent.depth > ImageFormatProperties->maxExtent.depth) ||
         (pCreateInfo->extent.width > ImageFormatProperties->maxExtent.width) ||
         (pCreateInfo->extent.height > ImageFormatProperties->maxExtent.height)) {
-        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, 0, __LINE__,
-                             IMAGE_INVALID_FORMAT_LIMITS_VIOLATION, "Image",
-                             "CreateImage extents exceed allowable limits for format: "
-                             "Width = %d Height = %d Depth = %d:  Limits for Width = %d Height = %d Depth = %d for format %s.",
-                             pCreateInfo->extent.width, pCreateInfo->extent.height, pCreateInfo->extent.depth,
-                             ImageFormatProperties->maxExtent.width, ImageFormatProperties->maxExtent.height,
-                             ImageFormatProperties->maxExtent.depth, string_VkFormat(pCreateInfo->format));
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, 0, __LINE__,
+                        IMAGE_INVALID_FORMAT_LIMITS_VIOLATION, "Image",
+                        "CreateImage extents exceed allowable limits for format: "
+                        "Width = %d Height = %d Depth = %d:  Limits for Width = %d Height = %d Depth = %d for format %s.",
+                        pCreateInfo->extent.width, pCreateInfo->extent.height, pCreateInfo->extent.depth,
+                        ImageFormatProperties->maxExtent.width, ImageFormatProperties->maxExtent.height,
+                        ImageFormatProperties->maxExtent.depth, string_VkFormat(pCreateInfo->format));
     }
 
     uint64_t totalSize = ((uint64_t)pCreateInfo->extent.width * (uint64_t)pCreateInfo->extent.height *
@@ -706,60 +702,59 @@ bool PreCallValidateCreateImage(layer_data *device_data, const VkImageCreateInfo
                          ~(uint64_t)imageGranularity;
 
     if (totalSize > ImageFormatProperties->maxResourceSize) {
-        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, 0, __LINE__,
-                             IMAGE_INVALID_FORMAT_LIMITS_VIOLATION, "Image",
-                             "CreateImage resource size exceeds allowable maximum "
-                             "Image resource size = 0x%" PRIxLEAST64 ", maximum resource size = 0x%" PRIxLEAST64 " ",
-                             totalSize, ImageFormatProperties->maxResourceSize);
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, 0, __LINE__,
+                        IMAGE_INVALID_FORMAT_LIMITS_VIOLATION, "Image",
+                        "CreateImage resource size exceeds allowable maximum "
+                        "Image resource size = 0x%" PRIxLEAST64 ", maximum resource size = 0x%" PRIxLEAST64 " ",
+                        totalSize, ImageFormatProperties->maxResourceSize);
     }
 
     // TODO: VALIDATION_ERROR_02132
     if (pCreateInfo->mipLevels > ImageFormatProperties->maxMipLevels) {
-        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, 0, __LINE__,
-                             IMAGE_INVALID_FORMAT_LIMITS_VIOLATION, "Image",
-                             "CreateImage mipLevels=%d exceeds allowable maximum supported by format of %d", pCreateInfo->mipLevels,
-                             ImageFormatProperties->maxMipLevels);
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, 0, __LINE__,
+                        IMAGE_INVALID_FORMAT_LIMITS_VIOLATION, "Image",
+                        "CreateImage mipLevels=%d exceeds allowable maximum supported by format of %d", pCreateInfo->mipLevels,
+                        ImageFormatProperties->maxMipLevels);
     }
 
     if (pCreateInfo->arrayLayers > ImageFormatProperties->maxArrayLayers) {
-        skip_call |= log_msg(
+        skip |= log_msg(
             report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, 0, __LINE__, VALIDATION_ERROR_02133,
             "Image", "CreateImage arrayLayers=%d exceeds allowable maximum supported by format of %d. %s", pCreateInfo->arrayLayers,
             ImageFormatProperties->maxArrayLayers, validation_error_map[VALIDATION_ERROR_02133]);
     }
 
     if ((pCreateInfo->samples & ImageFormatProperties->sampleCounts) == 0) {
-        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, 0, __LINE__,
-                             VALIDATION_ERROR_02138, "Image", "CreateImage samples %s is not supported by format 0x%.8X. %s",
-                             string_VkSampleCountFlagBits(pCreateInfo->samples), ImageFormatProperties->sampleCounts,
-                             validation_error_map[VALIDATION_ERROR_02138]);
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_02138, "Image", "CreateImage samples %s is not supported by format 0x%.8X. %s",
+                        string_VkSampleCountFlagBits(pCreateInfo->samples), ImageFormatProperties->sampleCounts,
+                        validation_error_map[VALIDATION_ERROR_02138]);
     }
 
     if (pCreateInfo->initialLayout != VK_IMAGE_LAYOUT_UNDEFINED && pCreateInfo->initialLayout != VK_IMAGE_LAYOUT_PREINITIALIZED) {
-        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, 0, __LINE__,
-                             VALIDATION_ERROR_00731, "Image",
-                             "vkCreateImage parameter, pCreateInfo->initialLayout, must be VK_IMAGE_LAYOUT_UNDEFINED or "
-                             "VK_IMAGE_LAYOUT_PREINITIALIZED. %s",
-                             validation_error_map[VALIDATION_ERROR_00731]);
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_00731, "Image",
+                        "vkCreateImage parameter, pCreateInfo->initialLayout, must be VK_IMAGE_LAYOUT_UNDEFINED or "
+                        "VK_IMAGE_LAYOUT_PREINITIALIZED. %s",
+                        validation_error_map[VALIDATION_ERROR_00731]);
     }
 
     if ((pCreateInfo->flags & VK_IMAGE_CREATE_SPARSE_BINDING_BIT) && (!GetEnabledFeatures(device_data)->sparseBinding)) {
-        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                             VALIDATION_ERROR_02143, "DS",
-                             "vkCreateImage(): the sparseBinding device feature is disabled: Images cannot be created with the "
-                             "VK_IMAGE_CREATE_SPARSE_BINDING_BIT set. %s",
-                             validation_error_map[VALIDATION_ERROR_02143]);
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_02143, "DS",
+                        "vkCreateImage(): the sparseBinding device feature is disabled: Images cannot be created with the "
+                        "VK_IMAGE_CREATE_SPARSE_BINDING_BIT set. %s",
+                        validation_error_map[VALIDATION_ERROR_02143]);
     }
 
     if ((pCreateInfo->flags & VK_IMAGE_CREATE_SPARSE_ALIASED_BIT) && (!GetEnabledFeatures(device_data)->sparseResidencyAliased)) {
-        skip_call |=
-            log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                    DRAWSTATE_INVALID_FEATURE, "DS",
-                    "vkCreateImage(): the sparseResidencyAliased device feature is disabled: Images cannot be created with the "
-                    "VK_IMAGE_CREATE_SPARSE_ALIASED_BIT set.");
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        DRAWSTATE_INVALID_FEATURE, "DS",
+                        "vkCreateImage(): the sparseResidencyAliased device feature is disabled: Images cannot be created with the "
+                        "VK_IMAGE_CREATE_SPARSE_ALIASED_BIT set.");
     }
 
-    return skip_call;
+    return skip;
 }
 
 void PostCallRecordCreateImage(layer_data *device_data, const VkImageCreateInfo *pCreateInfo, VkImage *pImage) {

@@ -1100,13 +1100,13 @@ void cvdescriptorset::TexelDescriptor::BindCommandBuffer(const layer_data *dev_d
 bool cvdescriptorset::ValidateUpdateDescriptorSets(const debug_report_data *report_data, const layer_data *dev_data,
                                                    uint32_t write_count, const VkWriteDescriptorSet *p_wds, uint32_t copy_count,
                                                    const VkCopyDescriptorSet *p_cds) {
-    bool skip_call = false;
+    bool skip = false;
     // Validate Write updates
     for (uint32_t i = 0; i < write_count; i++) {
         auto dest_set = p_wds[i].dstSet;
         auto set_node = core_validation::GetSetNode(dev_data, dest_set);
         if (!set_node) {
-            skip_call |=
+            skip |=
                 log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                         reinterpret_cast<uint64_t &>(dest_set), __LINE__, DRAWSTATE_INVALID_DESCRIPTOR_SET, "DS",
                         "Cannot call vkUpdateDescriptorSets() on descriptor set 0x%" PRIxLEAST64 " that has not been allocated.",
@@ -1115,11 +1115,11 @@ bool cvdescriptorset::ValidateUpdateDescriptorSets(const debug_report_data *repo
             UNIQUE_VALIDATION_ERROR_CODE error_code;
             std::string error_str;
             if (!set_node->ValidateWriteUpdate(report_data, &p_wds[i], &error_code, &error_str)) {
-                skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
-                                     reinterpret_cast<uint64_t &>(dest_set), __LINE__, error_code, "DS",
-                                     "vkUpdateDescriptorsSets() failed write update validation for Descriptor Set 0x%" PRIx64
-                                     " with error: %s. %s",
-                                     reinterpret_cast<uint64_t &>(dest_set), error_str.c_str(), validation_error_map[error_code]);
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
+                                reinterpret_cast<uint64_t &>(dest_set), __LINE__, error_code, "DS",
+                                "vkUpdateDescriptorsSets() failed write update validation for Descriptor Set 0x%" PRIx64
+                                " with error: %s. %s",
+                                reinterpret_cast<uint64_t &>(dest_set), error_str.c_str(), validation_error_map[error_code]);
             }
         }
     }
@@ -1135,15 +1135,15 @@ bool cvdescriptorset::ValidateUpdateDescriptorSets(const debug_report_data *repo
         UNIQUE_VALIDATION_ERROR_CODE error_code;
         std::string error_str;
         if (!dst_node->ValidateCopyUpdate(report_data, &p_cds[i], src_node, &error_code, &error_str)) {
-            skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
-                                 reinterpret_cast<uint64_t &>(dst_set), __LINE__, error_code, "DS",
-                                 "vkUpdateDescriptorsSets() failed copy update from Descriptor Set 0x%" PRIx64
-                                 " to Descriptor Set 0x%" PRIx64 " with error: %s. %s",
-                                 reinterpret_cast<uint64_t &>(src_set), reinterpret_cast<uint64_t &>(dst_set), error_str.c_str(),
-                                 validation_error_map[error_code]);
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
+                            reinterpret_cast<uint64_t &>(dst_set), __LINE__, error_code, "DS",
+                            "vkUpdateDescriptorsSets() failed copy update from Descriptor Set 0x%" PRIx64
+                            " to Descriptor Set 0x%" PRIx64 " with error: %s. %s",
+                            reinterpret_cast<uint64_t &>(src_set), reinterpret_cast<uint64_t &>(dst_set), error_str.c_str(),
+                            validation_error_map[error_code]);
         }
     }
-    return skip_call;
+    return skip;
 }
 // This is a helper function that iterates over a set of Write and Copy updates, pulls the DescriptorSet* for updated
 //  sets, and then calls their respective Perform[Write|Copy]Update functions.
@@ -1659,13 +1659,13 @@ void cvdescriptorset::UpdateAllocateDescriptorSetsData(const layer_data *dev_dat
 bool cvdescriptorset::ValidateAllocateDescriptorSets(const core_validation::layer_data *dev_data,
                                                      const VkDescriptorSetAllocateInfo *p_alloc_info,
                                                      const AllocateDescriptorSetsData *ds_data) {
-    bool skip_call = false;
+    bool skip = false;
     auto report_data = core_validation::GetReportData(dev_data);
 
     for (uint32_t i = 0; i < p_alloc_info->descriptorSetCount; i++) {
         auto layout = GetDescriptorSetLayout(dev_data, p_alloc_info->pSetLayouts[i]);
         if (!layout) {
-            skip_call |=
+            skip |=
                 log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT,
                         reinterpret_cast<const uint64_t &>(p_alloc_info->pSetLayouts[i]), __LINE__, DRAWSTATE_INVALID_LAYOUT, "DS",
                         "Unable to find set layout node for layout 0x%" PRIxLEAST64 " specified in vkAllocateDescriptorSets() call",
@@ -1676,28 +1676,28 @@ bool cvdescriptorset::ValidateAllocateDescriptorSets(const core_validation::laye
         auto pool_state = GetDescriptorPoolState(dev_data, p_alloc_info->descriptorPool);
         // Track number of descriptorSets allowable in this pool
         if (pool_state->availableSets < p_alloc_info->descriptorSetCount) {
-            skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT,
-                                 reinterpret_cast<uint64_t &>(pool_state->pool), __LINE__, VALIDATION_ERROR_00911, "DS",
-                                 "Unable to allocate %u descriptorSets from pool 0x%" PRIxLEAST64
-                                 ". This pool only has %d descriptorSets remaining. %s",
-                                 p_alloc_info->descriptorSetCount, reinterpret_cast<uint64_t &>(pool_state->pool),
-                                 pool_state->availableSets, validation_error_map[VALIDATION_ERROR_00911]);
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT,
+                            reinterpret_cast<uint64_t &>(pool_state->pool), __LINE__, VALIDATION_ERROR_00911, "DS",
+                            "Unable to allocate %u descriptorSets from pool 0x%" PRIxLEAST64
+                            ". This pool only has %d descriptorSets remaining. %s",
+                            p_alloc_info->descriptorSetCount, reinterpret_cast<uint64_t &>(pool_state->pool),
+                            pool_state->availableSets, validation_error_map[VALIDATION_ERROR_00911]);
         }
         // Determine whether descriptor counts are satisfiable
         for (uint32_t i = 0; i < VK_DESCRIPTOR_TYPE_RANGE_SIZE; i++) {
             if (ds_data->required_descriptors_by_type[i] > pool_state->availableDescriptorTypeCount[i]) {
-                skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT,
-                                     reinterpret_cast<const uint64_t &>(pool_state->pool), __LINE__, VALIDATION_ERROR_00912, "DS",
-                                     "Unable to allocate %u descriptors of type %s from pool 0x%" PRIxLEAST64
-                                     ". This pool only has %d descriptors of this type remaining. %s",
-                                     ds_data->required_descriptors_by_type[i], string_VkDescriptorType(VkDescriptorType(i)),
-                                     reinterpret_cast<uint64_t &>(pool_state->pool), pool_state->availableDescriptorTypeCount[i],
-                                     validation_error_map[VALIDATION_ERROR_00912]);
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT,
+                                reinterpret_cast<const uint64_t &>(pool_state->pool), __LINE__, VALIDATION_ERROR_00912, "DS",
+                                "Unable to allocate %u descriptors of type %s from pool 0x%" PRIxLEAST64
+                                ". This pool only has %d descriptors of this type remaining. %s",
+                                ds_data->required_descriptors_by_type[i], string_VkDescriptorType(VkDescriptorType(i)),
+                                reinterpret_cast<uint64_t &>(pool_state->pool), pool_state->availableDescriptorTypeCount[i],
+                                validation_error_map[VALIDATION_ERROR_00912]);
             }
         }
     }
 
-    return skip_call;
+    return skip;
 }
 // Decrement allocated sets from the pool and insert new sets into set_map
 void cvdescriptorset::PerformAllocateDescriptorSets(const VkDescriptorSetAllocateInfo *p_alloc_info,
