@@ -496,28 +496,6 @@ void SetImageMemoryValid(layer_data *dev_data, IMAGE_STATE *image_state, bool va
 void SetBufferMemoryValid(layer_data *dev_data, BUFFER_STATE *buffer_state, bool valid) {
     SetMemoryValid(dev_data, buffer_state->binding.mem, reinterpret_cast<uint64_t &>(buffer_state->buffer), valid);
 }
-// Find CB Info and add mem reference to list container
-// Find Mem Obj Info and add CB reference to list container
-static bool update_cmd_buf_and_mem_references(layer_data *dev_data, const VkCommandBuffer cb, const VkDeviceMemory mem,
-                                              const char *apiName) {
-    bool skip = false;
-
-    // Skip validation if this image was created through WSI
-    if (mem != MEMTRACKER_SWAP_CHAIN_IMAGE_KEY) {
-        // First update CB binding in MemObj mini CB list
-        DEVICE_MEM_INFO *pMemInfo = GetMemObjInfo(dev_data, mem);
-        if (pMemInfo) {
-            // Now update CBInfo's Mem reference list
-            GLOBAL_CB_NODE *cb_node = GetCBNode(dev_data, cb);
-            pMemInfo->cb_bindings.insert(cb_node);
-            // TODO: keep track of all destroyed CBs so we know if this is a stale or simply invalid object
-            if (cb_node) {
-                cb_node->memObjs.insert(mem);
-            }
-        }
-    }
-    return skip;
-}
 
 // Create binding link between given sampler and command buffer node
 void AddCommandBufferBindingSampler(GLOBAL_CB_NODE *cb_node, SAMPLER_STATE *sampler_state) {
