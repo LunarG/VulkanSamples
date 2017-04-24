@@ -3834,6 +3834,10 @@ static void checkDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo,
         {VK_EXT_SHADER_SUBGROUP_VOTE_EXTENSION_NAME, &devExts::khr_subgroup_vote_enabled},
     };
 
+    for (auto ext : known_extensions) {
+        exts->*(ext.second) = false;
+    }
+
     for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         for (auto ext : known_extensions) {
             if (!strcmp(ext.first, pCreateInfo->ppEnabledExtensionNames[i])) {
