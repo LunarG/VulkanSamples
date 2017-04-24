@@ -10744,6 +10744,20 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
                         }
                     }
                 }
+            } else if (VK_STRUCTURE_TYPE_PRESENT_TIMES_INFO_GOOGLE == pnext->sType) {
+                VkPresentTimesInfoGOOGLE *present_times_info = (VkPresentTimesInfoGOOGLE *)pnext;
+                if (pPresentInfo->swapchainCount != present_times_info->swapchainCount) {
+                    skip |=
+                        log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
+                                reinterpret_cast<uint64_t const &>(pPresentInfo->pSwapchains[0]), __LINE__,
+
+                                VALIDATION_ERROR_03214, "DS",
+                                "vkQueuePresentKHR(): VkPresentTimesInfoGOOGLE.swapchainCount is %i but "
+                                "pPresentInfo->swapchainCount is %i. For VkPresentTimesInfoGOOGLE down pNext "
+                                "chain of VkPresentInfoKHR, VkPresentTimesInfoGOOGLE.swapchainCount "
+                                "must equal VkPresentInfoKHR.swapchainCount.",
+                                present_times_info->swapchainCount, pPresentInfo->swapchainCount);
+                }
             }
             pnext = (std_header *)pnext->pNext;
         }
