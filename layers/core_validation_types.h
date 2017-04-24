@@ -134,7 +134,7 @@ struct DESCRIPTOR_POOL_STATE : BASE_NODE {
     uint32_t maxSets;        // Max descriptor sets allowed in this pool
     uint32_t availableSets;  // Available descriptor sets in this pool
 
-    VkDescriptorPoolCreateInfo createInfo;
+    safe_VkDescriptorPoolCreateInfo createInfo;
     std::unordered_set<cvdescriptorset::DescriptorSet *> sets;  // Collection of all sets in this pool
     std::vector<uint32_t> maxDescriptorTypeCount;               // Max # of descriptors of each type in this pool
     std::vector<uint32_t> availableDescriptorTypeCount;         // Available # of descriptors of each type in this pool
@@ -143,29 +143,16 @@ struct DESCRIPTOR_POOL_STATE : BASE_NODE {
         : pool(pool),
           maxSets(pCreateInfo->maxSets),
           availableSets(pCreateInfo->maxSets),
-          createInfo(*pCreateInfo),
+          createInfo(pCreateInfo),
           maxDescriptorTypeCount(VK_DESCRIPTOR_TYPE_RANGE_SIZE, 0),
           availableDescriptorTypeCount(VK_DESCRIPTOR_TYPE_RANGE_SIZE, 0) {
-        if (createInfo.poolSizeCount) {  // Shadow type struct from ptr into local struct
-            size_t poolSizeCountSize = createInfo.poolSizeCount * sizeof(VkDescriptorPoolSize);
-            createInfo.pPoolSizes = new VkDescriptorPoolSize[poolSizeCountSize];
-            memcpy((void *)createInfo.pPoolSizes, pCreateInfo->pPoolSizes, poolSizeCountSize);
-            // Now set max counts for each descriptor type based on count of that type times maxSets
-            uint32_t i = 0;
-            for (i = 0; i < createInfo.poolSizeCount; ++i) {
-                uint32_t typeIndex = static_cast<uint32_t>(createInfo.pPoolSizes[i].type);
-                // Same descriptor types can appear several times
-                maxDescriptorTypeCount[typeIndex] += createInfo.pPoolSizes[i].descriptorCount;
-                availableDescriptorTypeCount[typeIndex] = maxDescriptorTypeCount[typeIndex];
-            }
-        } else {
-            createInfo.pPoolSizes = NULL;  // Make sure this is NULL so we don't try to clean it up
+        // Collect maximums per descriptor type.
+        for (uint32_t i = 0; i < createInfo.poolSizeCount; ++i) {
+            uint32_t typeIndex = static_cast<uint32_t>(createInfo.pPoolSizes[i].type);
+            // Same descriptor types can appear several times
+            maxDescriptorTypeCount[typeIndex] += createInfo.pPoolSizes[i].descriptorCount;
+            availableDescriptorTypeCount[typeIndex] = maxDescriptorTypeCount[typeIndex];
         }
-    }
-    ~DESCRIPTOR_POOL_STATE() {
-        delete[] createInfo.pPoolSizes;
-        // TODO : pSets are currently freed in deletePools function which uses freeShadowUpdateTree function
-        //  need to migrate that struct to smart ptrs for auto-cleanup
     }
 };
 
