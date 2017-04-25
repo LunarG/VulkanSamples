@@ -8928,7 +8928,7 @@ static bool ValidateDependencies(const layer_data *dev_data, FRAMEBUFFER_STATE c
     return skip;
 }
 
-static bool CreatePassDAG(const layer_data *dev_data, VkDevice device, const VkRenderPassCreateInfo *pCreateInfo,
+static bool CreatePassDAG(const layer_data *dev_data, const VkRenderPassCreateInfo *pCreateInfo,
                           std::vector<DAGNode> &subpass_to_node, std::vector<bool> &has_self_dependency) {
     bool skip = false;
     for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
@@ -9135,7 +9135,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
 
         std::vector<bool> has_self_dependency(pCreateInfo->subpassCount);
         std::vector<DAGNode> subpass_to_node(pCreateInfo->subpassCount);
-        skip |= CreatePassDAG(dev_data, device, pCreateInfo, subpass_to_node, has_self_dependency);
+        skip |= CreatePassDAG(dev_data, pCreateInfo, subpass_to_node, has_self_dependency);
 
         auto render_pass = unique_ptr<RENDER_PASS_STATE>(new RENDER_PASS_STATE(pCreateInfo));
         render_pass->renderPass = *pRenderPass;
