@@ -678,7 +678,7 @@ VK_LAYER_EXPORT bool FormatIsSRGB(VkFormat format) {
     return is_srgb;
 }
 
-// Return true if format is in the USCALED colorspace
+// Return true if format is a USCALED format
 VK_LAYER_EXPORT bool FormatIsUScaled(VkFormat format) {
     bool is_uscaled = false;
 
@@ -705,7 +705,7 @@ VK_LAYER_EXPORT bool FormatIsUScaled(VkFormat format) {
     return is_uscaled;
 }
 
-// Return true if format is in the SSCALED colorspace
+// Return true if format is a SSCALED format
 VK_LAYER_EXPORT bool FormatIsSScaled(VkFormat format) {
     bool is_sscaled = false;
 
