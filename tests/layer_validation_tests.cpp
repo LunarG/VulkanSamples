@@ -338,7 +338,13 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL myDbgFunc(VkFlags msgFlags, VkDebugReportO
                                                 void *pUserData) {
     ErrorMonitor *errMonitor = (ErrorMonitor *)pUserData;
     if (msgFlags & errMonitor->GetMessageFlags()) {
+#ifdef _DEBUG
+        char embedded_code_string[2048];
+        snprintf(embedded_code_string, 2048, "%s [%05d]", pMsg, msgCode);
+        return errMonitor->CheckForDesiredMsg(msgCode, embedded_code_string);
+#else
         return errMonitor->CheckForDesiredMsg(msgCode, pMsg);
+#endif
     }
     return false;
 }
