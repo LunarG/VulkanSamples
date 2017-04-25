@@ -3221,17 +3221,6 @@ GLOBAL_CB_NODE *GetCBNode(layer_data const *dev_data, const VkCommandBuffer cb) 
     }
     return it->second;
 }
-// Free all CB Nodes
-// NOTE : Calls to this function should be wrapped in mutex
-static void deleteCommandBuffers(layer_data *dev_data) {
-    if (dev_data->commandBufferMap.empty()) {
-        return;
-    }
-    for (auto ii = dev_data->commandBufferMap.begin(); ii != dev_data->commandBufferMap.end(); ++ii) {
-        delete (*ii).second;
-    }
-    dev_data->commandBufferMap.clear();
-}
 
 // If a renderpass is active, verify that the given command type is appropriate for current subpass state
 bool ValidateCmdSubpassState(const layer_data *dev_data, const GLOBAL_CB_NODE *pCB, const CMD_TYPE cmd_type) {
@@ -3820,7 +3809,10 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
     std::unique_lock<std::mutex> lock(global_lock);
     deletePipelines(dev_data);
     dev_data->renderPassMap.clear();
-    deleteCommandBuffers(dev_data);
+    for (auto ii = dev_data->commandBufferMap.begin(); ii != dev_data->commandBufferMap.end(); ++ii) {
+        delete (*ii).second;
+    }
+    dev_data->commandBufferMap.clear();
     // This will also delete all sets in the pool & remove them from setMap
     deletePools(dev_data);
     // All sets should be removed
