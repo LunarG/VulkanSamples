@@ -1,0 +1,39 @@
+apply plugin: 'com.android.library'
+
+android {
+    /*
+     * we are interested in only the debug version of layers, so ONLY publish debug version
+     * library, which will enforce building ONLY debug version, and packing only the debug
+     * version of layers. The document is at:
+     *     https://developer.android.com/studio/build/build-variants.html
+     *     http://tools.android.com/tech-docs/new-build-system/user-guide#TOC-Library-Publication
+     */
+    publishNonDefault  true
+
+    compileSdkVersion 25
+    buildToolsVersion "25.0.2"
+
+    defaultConfig {
+        minSdkVersion 24
+        targetSdkVersion 24
+        versionCode 1
+        versionName "1.0"
+        ndk.abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+        externalNativeBuild {
+            cmake.arguments '-DANDROID_TOOLCHAIN=clang',
+                            '-DANDROID_STL=gnustl_static',
+                            '-DANDROID_PLATFORM=android-24'
+        }
+    }
+    externalNativeBuild {
+        cmake.path 'CMakeLists.txt'
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'),
+                    'proguard-rules.pro'
+        }
+    }
+}
+
