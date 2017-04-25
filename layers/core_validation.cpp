@@ -1441,60 +1441,16 @@ enum FORMAT_TYPE {
 };
 
 static unsigned get_format_type(VkFormat fmt) {
-    switch (fmt) {
-        case VK_FORMAT_UNDEFINED:
-            return 0;
-        case VK_FORMAT_R8_SINT:
-        case VK_FORMAT_R8G8_SINT:
-        case VK_FORMAT_R8G8B8_SINT:
-        case VK_FORMAT_R8G8B8A8_SINT:
-        case VK_FORMAT_R16_SINT:
-        case VK_FORMAT_R16G16_SINT:
-        case VK_FORMAT_R16G16B16_SINT:
-        case VK_FORMAT_R16G16B16A16_SINT:
-        case VK_FORMAT_R32_SINT:
-        case VK_FORMAT_R32G32_SINT:
-        case VK_FORMAT_R32G32B32_SINT:
-        case VK_FORMAT_R32G32B32A32_SINT:
-        case VK_FORMAT_R64_SINT:
-        case VK_FORMAT_R64G64_SINT:
-        case VK_FORMAT_R64G64B64_SINT:
-        case VK_FORMAT_R64G64B64A64_SINT:
-        case VK_FORMAT_B8G8R8_SINT:
-        case VK_FORMAT_B8G8R8A8_SINT:
-        case VK_FORMAT_A8B8G8R8_SINT_PACK32:
-        case VK_FORMAT_A2B10G10R10_SINT_PACK32:
-        case VK_FORMAT_A2R10G10B10_SINT_PACK32:
-            return FORMAT_TYPE_SINT;
-        case VK_FORMAT_R8_UINT:
-        case VK_FORMAT_R8G8_UINT:
-        case VK_FORMAT_R8G8B8_UINT:
-        case VK_FORMAT_R8G8B8A8_UINT:
-        case VK_FORMAT_R16_UINT:
-        case VK_FORMAT_R16G16_UINT:
-        case VK_FORMAT_R16G16B16_UINT:
-        case VK_FORMAT_R16G16B16A16_UINT:
-        case VK_FORMAT_R32_UINT:
-        case VK_FORMAT_R32G32_UINT:
-        case VK_FORMAT_R32G32B32_UINT:
-        case VK_FORMAT_R32G32B32A32_UINT:
-        case VK_FORMAT_R64_UINT:
-        case VK_FORMAT_R64G64_UINT:
-        case VK_FORMAT_R64G64B64_UINT:
-        case VK_FORMAT_R64G64B64A64_UINT:
-        case VK_FORMAT_B8G8R8_UINT:
-        case VK_FORMAT_B8G8R8A8_UINT:
-        case VK_FORMAT_A8B8G8R8_UINT_PACK32:
-        case VK_FORMAT_A2B10G10R10_UINT_PACK32:
-        case VK_FORMAT_A2R10G10B10_UINT_PACK32:
-            return FORMAT_TYPE_UINT;
-        case VK_FORMAT_D16_UNORM_S8_UINT:
-        case VK_FORMAT_D24_UNORM_S8_UINT:
-        case VK_FORMAT_D32_SFLOAT_S8_UINT:
-            return FORMAT_TYPE_FLOAT | FORMAT_TYPE_UINT;
-        default:
-            return FORMAT_TYPE_FLOAT;
-    }
+    if (FormatIsSInt(fmt))
+        return FORMAT_TYPE_SINT;
+    if (FormatIsUInt(fmt))
+        return FORMAT_TYPE_UINT;
+    if (FormatIsDepthAndStencil(fmt))
+        return FORMAT_TYPE_FLOAT | FORMAT_TYPE_UINT;
+    if (fmt == VK_FORMAT_UNDEFINED)
+        return 0;
+    // everything else -- UNORM/SNORM/FLOAT/USCALED/SSCALED is all float in the shader.
+    return FORMAT_TYPE_FLOAT;
 }
 
 // characterizes a SPIR-V type appearing in an interface to a FF stage, for comparison to a VkFormat's characterization above.
