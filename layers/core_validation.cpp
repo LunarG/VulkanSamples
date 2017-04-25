@@ -9164,13 +9164,13 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
     return result;
 }
 
-static bool validatePrimaryCommandBuffer(const layer_data *dev_data, const GLOBAL_CB_NODE *pCB, const std::string &cmd_name,
+static bool validatePrimaryCommandBuffer(const layer_data *dev_data, const GLOBAL_CB_NODE *pCB, char const *cmd_name,
                                          UNIQUE_VALIDATION_ERROR_CODE error_code) {
     bool skip = false;
     if (pCB->createInfo.level != VK_COMMAND_BUFFER_LEVEL_PRIMARY) {
         skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                         reinterpret_cast<uint64_t>(pCB->commandBuffer), __LINE__, error_code, "DS",
-                        "Cannot execute command %s on a secondary command buffer. %s", cmd_name.c_str(),
+                        "Cannot execute command %s on a secondary command buffer. %s", cmd_name,
                         validation_error_map[error_code]);
     }
     return skip;
@@ -9286,7 +9286,7 @@ VKAPI_ATTR void VKAPI_CALL CmdBeginRenderPass(VkCommandBuffer commandBuffer, con
                                                           GetFramebufferState(dev_data, pRenderPassBegin->framebuffer));
             skip |= insideRenderPass(dev_data, cb_node, "vkCmdBeginRenderPass()", VALIDATION_ERROR_00440);
             skip |= ValidateDependencies(dev_data, framebuffer, render_pass_state);
-            skip |= validatePrimaryCommandBuffer(dev_data, cb_node, "vkCmdBeginRenderPass", VALIDATION_ERROR_00441);
+            skip |= validatePrimaryCommandBuffer(dev_data, cb_node, "vkCmdBeginRenderPass()", VALIDATION_ERROR_00441);
             skip |=
                 ValidateCmdQueueFlags(dev_data, cb_node, "vkCmdBeginRenderPass()", VK_QUEUE_GRAPHICS_BIT, VALIDATION_ERROR_00439);
             skip |= ValidateCmd(dev_data, cb_node, CMD_BEGINRENDERPASS, "vkCmdBeginRenderPass()");
@@ -9315,7 +9315,7 @@ VKAPI_ATTR void VKAPI_CALL CmdNextSubpass(VkCommandBuffer commandBuffer, VkSubpa
     std::unique_lock<std::mutex> lock(global_lock);
     GLOBAL_CB_NODE *pCB = GetCBNode(dev_data, commandBuffer);
     if (pCB) {
-        skip |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdNextSubpass", VALIDATION_ERROR_00459);
+        skip |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdNextSubpass()", VALIDATION_ERROR_00459);
         skip |= ValidateCmdQueueFlags(dev_data, pCB, "vkCmdNextSubpass()", VK_QUEUE_GRAPHICS_BIT, VALIDATION_ERROR_00457);
         skip |= ValidateCmd(dev_data, pCB, CMD_NEXTSUBPASS, "vkCmdNextSubpass()");
         UpdateCmdBufferLastCmd(pCB, CMD_NEXTSUBPASS);
@@ -9382,7 +9382,7 @@ VKAPI_ATTR void VKAPI_CALL CmdEndRenderPass(VkCommandBuffer commandBuffer) {
             }
         }
         skip |= outsideRenderPass(dev_data, pCB, "vkCmdEndRenderpass()", VALIDATION_ERROR_00464);
-        skip |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdEndRenderPass", VALIDATION_ERROR_00465);
+        skip |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdEndRenderPass()", VALIDATION_ERROR_00465);
         skip |= ValidateCmdQueueFlags(dev_data, pCB, "vkCmdEndRenderPass()", VK_QUEUE_GRAPHICS_BIT, VALIDATION_ERROR_00463);
         skip |= ValidateCmd(dev_data, pCB, CMD_ENDRENDERPASS, "vkCmdEndRenderPass()");
         UpdateCmdBufferLastCmd(pCB, CMD_ENDRENDERPASS);
@@ -9717,7 +9717,7 @@ VKAPI_ATTR void VKAPI_CALL CmdExecuteCommands(VkCommandBuffer commandBuffer, uin
                 pCB->queryUpdates.push_back(function);
             }
         }
-        skip |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdExecuteCommands", VALIDATION_ERROR_00163);
+        skip |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdExecuteCommands()", VALIDATION_ERROR_00163);
         skip |= ValidateCmdQueueFlags(dev_data, pCB, "vkCmdExecuteCommands()",
                                       VK_QUEUE_TRANSFER_BIT | VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT, VALIDATION_ERROR_00162);
         skip |= ValidateCmd(dev_data, pCB, CMD_EXECUTECOMMANDS, "vkCmdExecuteCommands()");
