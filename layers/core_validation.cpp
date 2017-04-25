@@ -1480,7 +1480,7 @@ static unsigned get_fundamental_type(shader_module const *src, unsigned type) {
 }
 
 static uint32_t get_shader_stage_id(VkShaderStageFlagBits stage) {
-    uint32_t bit_pos = u_ffs(stage);
+    uint32_t bit_pos = uint32_t(u_ffs(stage));
     return bit_pos - 1;
 }
 
