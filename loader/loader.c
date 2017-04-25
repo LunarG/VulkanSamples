@@ -2762,18 +2762,24 @@ VkResult loader_icd_scan(const struct loader_instance *inst, struct loader_icd_t
             continue;
         }
 
-        res = loader_get_json(inst, file_str, &json);
-        if (NULL == json || res != VK_SUCCESS) {
+        VkResult temp_res = loader_get_json(inst, file_str, &json);
+        if (NULL == json || temp_res != VK_SUCCESS) {
             if (NULL != json) {
                 cJSON_Delete(json);
                 json = NULL;
             }
-            if (res == VK_ERROR_OUT_OF_HOST_MEMORY) {
+            // If we haven't already found an ICD, copy this result to
+            // the returned result.
+            if (num_good_icds == 0) {
+                res = temp_res;
+            }
+            if (temp_res == VK_ERROR_OUT_OF_HOST_MEMORY) {
                 break;
             } else {
                 continue;
             }
         }
+        res = temp_res;
 
         cJSON *item, *itemICD;
         item = cJSON_GetObjectItem(json, "file_format_version");
