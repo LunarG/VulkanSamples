@@ -1976,7 +1976,7 @@ static bool attachment_references_compatible(const uint32_t index, const VkAttac
     return false;
 }
 // TODO : Scrub verify_renderpass_compatibility() and validateRenderPassCompatibility() and unify them and/or share code
-// For given primary RenderPass object and secondry RenderPassCreateInfo, verify that they're compatible
+// For given primary RenderPass object and secondary RenderPassCreateInfo, verify that they're compatible
 static bool verify_renderpass_compatibility(const layer_data *dev_data, const VkRenderPassCreateInfo *primaryRPCI,
                                             const VkRenderPassCreateInfo *secondaryRPCI, string &errorMsg) {
     if (primaryRPCI->subpassCount != secondaryRPCI->subpassCount) {
