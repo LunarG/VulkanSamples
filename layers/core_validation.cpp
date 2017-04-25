@@ -740,8 +740,7 @@ static bool ValidateSetMemBinding(layer_data *dev_data, VkDeviceMemory mem, uint
 //  Add reference from objectInfo to memoryInfo
 //  Add reference off of object's binding info
 // Return VK_TRUE if addition is successful, VK_FALSE otherwise
-static bool SetSparseMemBinding(layer_data *dev_data, MEM_BINDING binding, uint64_t handle, VulkanObjectType type,
-                                const char *apiName) {
+static bool SetSparseMemBinding(layer_data *dev_data, MEM_BINDING binding, uint64_t handle, VulkanObjectType type) {
     bool skip = VK_FALSE;
     // Handle NULL case separately, just clear previous binding & decrement reference
     if (binding.mem == VK_NULL_HANDLE) {
@@ -10082,7 +10081,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueueBindSparse(VkQueue queue, uint32_t bindInfoC
             for (uint32_t k = 0; k < bindInfo.pBufferBinds[j].bindCount; k++) {
                 auto sparse_binding = bindInfo.pBufferBinds[j].pBinds[k];
                 if (SetSparseMemBinding(dev_data, {sparse_binding.memory, sparse_binding.memoryOffset, sparse_binding.size},
-                                        (uint64_t)bindInfo.pBufferBinds[j].buffer, kVulkanObjectTypeBuffer, "vkQueueBindSparse"))
+                                        (uint64_t)bindInfo.pBufferBinds[j].buffer, kVulkanObjectTypeBuffer))
                     skip = true;
             }
         }
@@ -10090,7 +10089,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueueBindSparse(VkQueue queue, uint32_t bindInfoC
             for (uint32_t k = 0; k < bindInfo.pImageOpaqueBinds[j].bindCount; k++) {
                 auto sparse_binding = bindInfo.pImageOpaqueBinds[j].pBinds[k];
                 if (SetSparseMemBinding(dev_data, {sparse_binding.memory, sparse_binding.memoryOffset, sparse_binding.size},
-                                        (uint64_t)bindInfo.pImageOpaqueBinds[j].image, kVulkanObjectTypeImage, "vkQueueBindSparse"))
+                                        (uint64_t)bindInfo.pImageOpaqueBinds[j].image, kVulkanObjectTypeImage))
                     skip = true;
             }
         }
@@ -10100,7 +10099,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueueBindSparse(VkQueue queue, uint32_t bindInfoC
                 // TODO: This size is broken for non-opaque bindings, need to update to comprehend full sparse binding data
                 VkDeviceSize size = sparse_binding.extent.depth * sparse_binding.extent.height * sparse_binding.extent.width * 4;
                 if (SetSparseMemBinding(dev_data, {sparse_binding.memory, sparse_binding.memoryOffset, size},
-                                        (uint64_t)bindInfo.pImageBinds[j].image, kVulkanObjectTypeImage, "vkQueueBindSparse"))
+                                        (uint64_t)bindInfo.pImageBinds[j].image, kVulkanObjectTypeImage))
                     skip = true;
             }
         }
