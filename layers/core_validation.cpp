@@ -1035,7 +1035,7 @@ static bool types_match(shader_module const *a, shader_module const *b, unsigned
     }
 }
 
-static int value_or_default(std::unordered_map<unsigned, unsigned> const &map, unsigned id, int def) {
+static unsigned value_or_default(std::unordered_map<unsigned, unsigned> const &map, unsigned id, unsigned def) {
     auto it = map.find(id);
     if (it == map.end())
         return def;
