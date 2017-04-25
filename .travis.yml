@@ -62,5 +62,6 @@ notifications:
       - karl@lunarg.com
       - cnorthrop@google.com
       - tobine@google.com
+      - chrisforbes@google.com
     on_success: change
     on_failure: always
