@@ -16548,14 +16548,16 @@ TEST_F(VkLayerTest, ImageBufferCopyTests) {
             VK_IMAGE_TILING_OPTIMAL, 0);
         ASSERT_TRUE(ds_image_3D_1S.initialized());
 
-        ds_image_2D.Init(256, 256, 1, VK_FORMAT_D16_UNORM, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
-                                                               VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-                         VK_IMAGE_TILING_OPTIMAL, 0);
+        ds_image_2D.Init(
+            256, 256, 1, VK_FORMAT_D16_UNORM,
+            VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+            VK_IMAGE_TILING_OPTIMAL, 0);
         ASSERT_TRUE(ds_image_2D.initialized());
 
-        ds_image_1S.Init(256, 256, 1, VK_FORMAT_S8_UINT, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
-                                                             VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-                         VK_IMAGE_TILING_OPTIMAL, 0);
+        ds_image_1S.Init(
+            256, 256, 1, VK_FORMAT_S8_UINT,
+            VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+            VK_IMAGE_TILING_OPTIMAL, 0);
         ASSERT_TRUE(ds_image_1S.initialized());
     }
 
@@ -17499,7 +17501,7 @@ TEST_F(VkLayerTest, CopyImageAspectMismatch) {
     VkImageObj color_image(m_device), ds_image(m_device), depth_image(m_device);
     color_image.Init(128, 128, 1, VK_FORMAT_R32_SFLOAT, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
     depth_image.Init(128, 128, 1, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-                  VK_IMAGE_TILING_OPTIMAL, 0);
+                     VK_IMAGE_TILING_OPTIMAL, 0);
     ds_image.Init(128, 128, 1, ds_format, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
                   VK_IMAGE_TILING_OPTIMAL, 0);
     ASSERT_TRUE(color_image.initialized());
@@ -23332,16 +23334,15 @@ std::vector<std::string> get_args(android_app &app, const char *intent_extra_dat
     return args;
 }
 
-void addFullTestCommentIfPresent(const ::testing::TestInfo& test_info, std::string& error_message) {
-    const char* const type_param = test_info.type_param();
-    const char* const value_param = test_info.value_param();
+void addFullTestCommentIfPresent(const ::testing::TestInfo &test_info, std::string &error_message) {
+    const char *const type_param = test_info.type_param();
+    const char *const value_param = test_info.value_param();
 
     if (type_param != NULL || value_param != NULL) {
         error_message.append(", where ");
         if (type_param != NULL) {
-           error_message.append("TypeParam = ").append(type_param);
-           if (value_param != NULL)
-               error_message.append(" and ");
+            error_message.append("TypeParam = ").append(type_param);
+            if (value_param != NULL) error_message.append(" and ");
         }
         if (value_param != NULL) {
             error_message.append("GetParam() = ").append(value_param);
@@ -23352,26 +23353,21 @@ void addFullTestCommentIfPresent(const ::testing::TestInfo& test_info, std::stri
 // Inspired by https://github.com/google/googletest/blob/master/googletest/docs/AdvancedGuide.md
 class LogcatPrinter : public ::testing::EmptyTestEventListener {
     // Called before a test starts.
-    virtual void OnTestStart(const ::testing::TestInfo& test_info) {
+    virtual void OnTestStart(const ::testing::TestInfo &test_info) {
         __android_log_print(ANDROID_LOG_INFO, appTag, "[ RUN      ] %s.%s", test_info.test_case_name(), test_info.name());
     }
 
     // Called after a failed assertion or a SUCCEED() invocation.
-    virtual void OnTestPartResult(const ::testing::TestPartResult& result) {
-
+    virtual void OnTestPartResult(const ::testing::TestPartResult &result) {
         // If the test part succeeded, we don't need to do anything.
-        if (result.type() == ::testing::TestPartResult::kSuccess)
-            return;
+        if (result.type() == ::testing::TestPartResult::kSuccess) return;
 
-        __android_log_print(ANDROID_LOG_INFO, appTag, "%s in %s:%d %s",
-             result.failed() ? "*** Failure" : "Success",
-             result.file_name(),
-             result.line_number(),
-             result.summary());
+        __android_log_print(ANDROID_LOG_INFO, appTag, "%s in %s:%d %s", result.failed() ? "*** Failure" : "Success",
+                            result.file_name(), result.line_number(), result.summary());
     }
 
     // Called after a test ends.
-    virtual void OnTestEnd(const ::testing::TestInfo& info) {
+    virtual void OnTestEnd(const ::testing::TestInfo &info) {
         std::string result;
         if (info.result()->Passed()) {
             result.append("[       OK ]");
@@ -23379,8 +23375,7 @@ class LogcatPrinter : public ::testing::EmptyTestEventListener {
             result.append("[  FAILED  ]");
         }
         result.append(info.test_case_name()).append(".").append(info.name());
-        if (info.result()->Failed())
-            addFullTestCommentIfPresent(info, result);
+        if (info.result()->Failed()) addFullTestCommentIfPresent(info, result);
 
         if (::testing::GTEST_FLAG(print_time)) {
             std::ostringstream os;
@@ -23415,7 +23410,6 @@ static void processCommand(struct android_app *app, int32_t cmd) {
 
 void android_main(struct android_app *app) {
     app_dummy();
-
 
     int vulkanSupport = InitVulkan();
     if (vulkanSupport == 0) {
@@ -23464,7 +23458,7 @@ void android_main(struct android_app *app) {
 
             ::testing::InitGoogleTest(&argc, argv);
 
-            ::testing::TestEventListeners& listeners = ::testing::UnitTest::GetInstance()->listeners();
+            ::testing::TestEventListeners &listeners = ::testing::UnitTest::GetInstance()->listeners();
             listeners.Append(new LogcatPrinter);
 
             VkTestFramework::InitArgs(&argc, argv);
