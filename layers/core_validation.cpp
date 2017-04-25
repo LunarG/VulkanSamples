@@ -9718,10 +9718,10 @@ VKAPI_ATTR void VKAPI_CALL CmdExecuteCommands(VkCommandBuffer commandBuffer, uin
                 pCB->queryUpdates.push_back(function);
             }
         }
-        skip |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdExecuteComands", VALIDATION_ERROR_00163);
-        skip |= ValidateCmdQueueFlags(dev_data, pCB, "vkCmdExecuteComands()",
+        skip |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdExecuteCommands", VALIDATION_ERROR_00163);
+        skip |= ValidateCmdQueueFlags(dev_data, pCB, "vkCmdExecuteCommands()",
                                       VK_QUEUE_TRANSFER_BIT | VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT, VALIDATION_ERROR_00162);
-        skip |= ValidateCmd(dev_data, pCB, CMD_EXECUTECOMMANDS, "vkCmdExecuteComands()");
+        skip |= ValidateCmd(dev_data, pCB, CMD_EXECUTECOMMANDS, "vkCmdExecuteCommands()");
         UpdateCmdBufferLastCmd(pCB, CMD_EXECUTECOMMANDS);
     }
     lock.unlock();
