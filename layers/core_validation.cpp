@@ -6762,7 +6762,6 @@ VKAPI_ATTR VkResult VKAPI_CALL BeginCommandBuffer(VkCommandBuffer commandBuffer,
 
 VKAPI_ATTR VkResult VKAPI_CALL EndCommandBuffer(VkCommandBuffer commandBuffer) {
     bool skip = false;
-    VkResult result = VK_SUCCESS;
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
     GLOBAL_CB_NODE *pCB = GetCBNode(dev_data, commandBuffer);
@@ -6784,18 +6783,15 @@ VKAPI_ATTR VkResult VKAPI_CALL EndCommandBuffer(VkCommandBuffer commandBuffer) {
     }
     if (!skip) {
         lock.unlock();
-        result = dev_data->dispatch_table.EndCommandBuffer(commandBuffer);
+        auto result = dev_data->dispatch_table.EndCommandBuffer(commandBuffer);
         lock.lock();
         if (VK_SUCCESS == result) {
             pCB->state = CB_RECORDED;
-            // Reset CB status flags
-            pCB->status = 0;
         }
+        return result;
     } else {
-        result = VK_ERROR_VALIDATION_FAILED_EXT;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
     }
-    lock.unlock();
-    return result;
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL ResetCommandBuffer(VkCommandBuffer commandBuffer, VkCommandBufferResetFlags flags) {
@@ -9212,8 +9208,8 @@ static bool FormatSpecificLoadAndStoreOpSettings(VkFormat format, T color_depth_
     bool check_color_depth_load_op = !FormatIsStencilOnly(format);
     bool check_stencil_load_op = FormatIsDepthAndStencil(format) || !check_color_depth_load_op;
 
-    return (((check_color_depth_load_op == true) && (color_depth_op == op)) ||
-            ((check_stencil_load_op == true) && (stencil_op == op)));
+    return ((check_color_depth_load_op && (color_depth_op == op)) ||
+            (check_stencil_load_op && (stencil_op == op)));
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *pRenderPassBegin,
