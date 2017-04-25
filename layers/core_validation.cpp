@@ -2172,7 +2172,7 @@ static bool require_feature(debug_report_data *report_data, VkBool32 feature, ch
     return true;
 }
 
-static bool require_extension(debug_report_data *report_data, VkBool32 extension, char const *extension_name) {
+static bool require_extension(debug_report_data *report_data, bool extension, char const *extension_name) {
     if (!extension) {
         if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                     SHADER_CHECKER_FEATURE_NOT_ENABLED, "SC",
