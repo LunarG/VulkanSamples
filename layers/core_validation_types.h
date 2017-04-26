@@ -209,7 +209,7 @@ class BUFFER_STATE : public BINDABLE {
     VkBuffer buffer;
     VkBufferCreateInfo createInfo;
     BUFFER_STATE(VkBuffer buff, const VkBufferCreateInfo *pCreateInfo) : buffer(buff), createInfo(*pCreateInfo) {
-        if (createInfo.queueFamilyIndexCount > 0) {
+        if ((createInfo.sharingMode == VK_SHARING_MODE_CONCURRENT) && (createInfo.queueFamilyIndexCount > 0)) {
             uint32_t *pQueueFamilyIndices = new uint32_t[createInfo.queueFamilyIndexCount];
             for (uint32_t i = 0; i < createInfo.queueFamilyIndexCount; i++) {
                 pQueueFamilyIndices[i] = pCreateInfo->pQueueFamilyIndices[i];
@@ -225,7 +225,7 @@ class BUFFER_STATE : public BINDABLE {
     BUFFER_STATE(BUFFER_STATE const &rh_obj) = delete;
 
     ~BUFFER_STATE() {
-        if (createInfo.queueFamilyIndexCount > 0) {
+        if ((createInfo.sharingMode == VK_SHARING_MODE_CONCURRENT) && (createInfo.queueFamilyIndexCount > 0)) {
             delete createInfo.pQueueFamilyIndices;
             createInfo.pQueueFamilyIndices = nullptr;
         }
@@ -255,7 +255,7 @@ class IMAGE_STATE : public BINDABLE {
     bool acquired;  // If this is a swapchain image, has it been acquired by the app.
     IMAGE_STATE(VkImage img, const VkImageCreateInfo *pCreateInfo)
         : image(img), createInfo(*pCreateInfo), valid(false), acquired(false) {
-        if (createInfo.queueFamilyIndexCount > 0) {
+        if ((createInfo.sharingMode == VK_SHARING_MODE_CONCURRENT) && (createInfo.queueFamilyIndexCount > 0)) {
             uint32_t *pQueueFamilyIndices = new uint32_t[createInfo.queueFamilyIndexCount];
             for (uint32_t i = 0; i < createInfo.queueFamilyIndexCount; i++) {
                 pQueueFamilyIndices[i] = pCreateInfo->pQueueFamilyIndices[i];
@@ -271,7 +271,7 @@ class IMAGE_STATE : public BINDABLE {
     IMAGE_STATE(IMAGE_STATE const &rh_obj) = delete;
 
     ~IMAGE_STATE() {
-        if (createInfo.queueFamilyIndexCount > 0) {
+        if ((createInfo.sharingMode == VK_SHARING_MODE_CONCURRENT) && (createInfo.queueFamilyIndexCount > 0)) {
             delete createInfo.pQueueFamilyIndices;
             createInfo.pQueueFamilyIndices = nullptr;
         }
