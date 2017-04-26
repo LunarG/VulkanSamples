@@ -2961,6 +2961,19 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
                                             "be VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO. %s",
                                             i, validation_error_map[VALIDATION_ERROR_00538]);
                         }
+
+                        if (pCreateInfos[i].pTessellationState->patchControlPoints == 0 ||
+                            pCreateInfos[i].pTessellationState->patchControlPoints >
+                                device_data->device_limits.maxTessellationPatchSize) {
+                            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                            __LINE__, VALIDATION_ERROR_01426, LayerName,
+                                            "vkCreateGraphicsPipelines: invalid parameter "
+                                            "pCreateInfos[%d].pTessellationState->patchControlPoints value %u. patchControlPoints "
+                                            "should be >0 and <=%u. %s",
+                                            i, pCreateInfos[i].pTessellationState->patchControlPoints,
+                                            device_data->device_limits.maxTessellationPatchSize,
+                                            validation_error_map[VALIDATION_ERROR_01426]);
+                        }
                     }
                 }
             }

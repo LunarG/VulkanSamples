@@ -2905,21 +2905,6 @@ static bool verifyPipelineCreateState(layer_data *dev_data, std::vector<PIPELINE
         }
     }
 
-    if (pPipeline->graphicsPipelineCI.pTessellationState &&
-        ((pPipeline->graphicsPipelineCI.pTessellationState->patchControlPoints == 0) ||
-         (pPipeline->graphicsPipelineCI.pTessellationState->patchControlPoints >
-          dev_data->phys_dev_properties.properties.limits.maxTessellationPatchSize))) {
-        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
-                        reinterpret_cast<uint64_t &>(pPipeline->pipeline), __LINE__, VALIDATION_ERROR_01426, "DS",
-                        "Invalid Pipeline CreateInfo State: "
-                        "VK_PRIMITIVE_TOPOLOGY_PATCH_LIST primitive "
-                        "topology used with patchControlPoints value %u."
-                        " patchControlPoints should be >0 and <=%u. %s",
-                        pPipeline->graphicsPipelineCI.pTessellationState->patchControlPoints,
-                        dev_data->phys_dev_properties.properties.limits.maxTessellationPatchSize,
-                        validation_error_map[VALIDATION_ERROR_01426]);
-    }
-
     // If a rasterization state is provided...
     if (pPipeline->graphicsPipelineCI.pRasterizationState) {
         // Make sure that the line width conforms to the HW.
