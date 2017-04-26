@@ -473,6 +473,22 @@ bool ValidateBarriersToImages(layer_data *device_data, VkCommandBuffer cmdBuffer
         if (!img_barrier) continue;
 
         VkImageCreateInfo *image_create_info = &(GetImageState(device_data, img_barrier->image)->createInfo);
+        // For a Depth/Stencil image both aspects MUST be set
+        if (FormatIsDepthAndStencil(image_create_info->format)) {
+            auto const aspect_mask = img_barrier->subresourceRange.aspectMask;
+            auto const ds_mask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+            if ((aspect_mask & ds_mask) != (ds_mask)) {
+                skip |=
+                    log_msg(core_validation::GetReportData(device_data), VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                            VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, reinterpret_cast<const uint64_t &>(img_barrier->image), __LINE__,
+                            VALIDATION_ERROR_00302, "DS",
+                            "%s: Image barrier 0x%p references image 0x%" PRIx64
+                            " of format %s that must have the depth and stencil aspects set, but its "
+                            "aspectMask is 0x%" PRIx32 ". %s",
+                            func_name, img_barrier, reinterpret_cast<const uint64_t &>(img_barrier->image),
+                            string_VkFormat(image_create_info->format), aspect_mask, validation_error_map[VALIDATION_ERROR_00302]);
+            }
+        }
         uint32_t level_count = ResolveRemainingLevels(&img_barrier->subresourceRange, image_create_info->mipLevels);
         uint32_t layer_count = ResolveRemainingLayers(&img_barrier->subresourceRange, image_create_info->arrayLayers);
 
