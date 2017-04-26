@@ -4,92 +4,49 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle-experimental:0.8.0'
+        classpath 'com.android.tools.build:gradle:2.3.0'
     }
 }
 
-apply plugin: 'com.android.model.application'
+apply plugin: 'com.android.application'
 
-def demosDir = "../.."
-def smokeDir = "${demosDir}/smoke"
-def glmDir = "${demosDir}/../libs"
-def vulkanDir = "${demosDir}/../include"
-def layersDir = "${demosDir}/../build-android/libs"
+def layersDir = "../../../build-android/libs"
 
-Properties properties = new Properties()
-properties.load(project.rootProject.file('local.properties').newDataInputStream())
-def ndkDir = properties.getProperty('ndk.dir')
+android {
+    compileSdkVersion = 25
+    buildToolsVersion = "25.0.2"
 
-model {
-    android {
-        compileSdkVersion = 23
-        buildToolsVersion = "23.0.2"
-
-        defaultConfig.with {
-            applicationId = "com.example.Smoke"
-            minSdkVersion.apiLevel = 22
-            targetSdkVersion.apiLevel = 22
-            versionCode = 1
-            versionName = "0.1"
+    defaultConfig {
+        applicationId = "com.example.Smoke"
+        minSdkVersion 24
+        targetSdkVersion 24
+        versionCode = 1
+        versionName = "0.1"
+        ndk.abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86'
+        externalNativeBuild {
+            cmake.arguments '-DANDROID_PLATFORM=android-24',
+                            '-DANDROID_STL=c++_static',
+                            '-DANDROID_TOOLCHAIN=clang'
         }
     }
-
-    android.ndk {
-        moduleName = "Smoke"
-        toolchain = "clang"
-        stl = "c++_static"
-
-        cppFlags.addAll(["-std=c++11", "-fexceptions"])
-        cppFlags.addAll(["-Wall", "-Wextra", "-Wno-unused-parameter"])
-
-        cppFlags.addAll([
-            "-DVK_NO_PROTOTYPES",
-            "-DVK_USE_PLATFORM_ANDROID_KHR",
-            "-DGLM_FORCE_RADIANS",
-        ])
-
-        cppFlags.addAll([
-            "-I${file("${ndkDir}/sources/android/native_app_glue")}".toString(),
-            "-I${file("${vulkanDir}")}".toString(),
-            "-I${file("${glmDir}")}".toString(),
-            "-I${file("src/main/jni")}".toString(),
-        ])
-
-        ldLibs.addAll(["android", "log", "dl"])
+    externalNativeBuild {
+        cmake.path 'CMakeLists.txt'
     }
 
-    android.sources {
-        main {
-            jni {
-                source {
-                    srcDir "${ndkDir}/sources/android/native_app_glue"
-                    srcDir "${smokeDir}"
-                    exclude 'ShellXcb.cpp'
-                    exclude 'ShellWin32.cpp'
-                    exclude 'ShellWayland.cpp'
-                }
-            }
-            jniLibs {
-                dependencies {
-                    source.srcDir "${layersDir}"
-                }
-            }
-        }
+    // Need Android NDK-r12+ for pre-built validation layers
+    sourceSets {
+        main.jniLibs.srcDirs = [ "${layersDir}" ]
     }
 
-    android.buildTypes {
+    buildTypes {
         release {
-            ndk.with {
+            // enable debugging for release built too
+            ndk {
                 debuggable = true
             }
-        }
-    }
-
-    android.productFlavors {
-        create ("fat") {
-            ndk.abiFilters.add("arm64-v8a")
-            ndk.abiFilters.add("armeabi-v7a")
-            ndk.abiFilters.add("x86")
+            minifyEnabled = false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'),
+                'proguard-rules.pro'
         }
     }
 }
