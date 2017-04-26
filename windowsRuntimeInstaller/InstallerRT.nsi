@@ -45,6 +45,9 @@
 !ifndef HIDE_PUBLISHER
   !define PUBLISHER "YourCompany, Inc."
 !endif
+!ifndef COPYRIGHT
+  !define COPYRIGHT ""
+!endif
 #!define VERSION_BUILDNO "0"
 !define PRODUCTVERSION "${VERSION_API_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}.${VERSION_BUILDNO}"
 
@@ -232,7 +235,7 @@ VIProductVersion "${PRODUCTVERSION}"
 VIAddVersionKey  "ProductName" "${APINAME} Runtime"
 VIAddVersionKey  "FileVersion" "${PRODUCTVERSION}"
 VIAddVersionKey  "ProductVersion" "${PRODUCTVERSION}"
-VIAddVersionKey  "LegalCopyright" ""
+VIAddVersionKey  "LegalCopyright" "${COPYRIGHT}"
 
 !ifdef UNINSTALLER
     VIAddVersionKey  "FileDescription" "${APINAME} Runtime Uninstaller"
