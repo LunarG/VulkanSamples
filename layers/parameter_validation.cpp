@@ -2921,409 +2921,408 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
     if (pCreateInfos != nullptr) {
         for (uint32_t i = 0; i < createInfoCount; ++i) {
             // Validation for parameters excluded from the generated validation code due to a 'noautovalidity' tag in vk.xml
-            if (pCreateInfos[i].pTessellationState == nullptr) {
-                if (pCreateInfos[i].pStages != nullptr) {
-                    // If pStages includes a tessellation control shader stage and a tessellation evaluation shader stage,
-                    // pTessellationState must not be NULL
-                    bool has_control = false;
-                    bool has_eval = false;
+            if (pCreateInfos[i].pStages != nullptr) {
+                bool has_control = false;
+                bool has_eval = false;
 
-                    for (uint32_t stage_index = 0; stage_index < pCreateInfos[i].stageCount; ++stage_index) {
-                        if (pCreateInfos[i].pStages[stage_index].stage == VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT) {
-                            has_control = true;
-                        } else if (pCreateInfos[i].pStages[stage_index].stage == VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT) {
-                            has_eval = true;
-                        }
+                for (uint32_t stage_index = 0; stage_index < pCreateInfos[i].stageCount; ++stage_index) {
+                    if (pCreateInfos[i].pStages[stage_index].stage == VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT) {
+                        has_control = true;
+                    } else if (pCreateInfos[i].pStages[stage_index].stage == VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT) {
+                        has_eval = true;
                     }
+                }
 
-                    if (has_control && has_eval) {
+                // pTessellationState is ignored without both tessellation control and tessellation evaluation shaders stages
+                if (has_control && has_eval) {
+                    if (pCreateInfos[i].pTessellationState == nullptr) {
                         skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
                                         __LINE__, VALIDATION_ERROR_00536, LayerName,
-                                        "vkCreateGraphicsPipelines: if pCreateInfos[%d].pStages includes a tessellation "
-                                        "control shader stage and a tessellation evaluation shader stage, "
+                                        "vkCreateGraphicsPipelines: if pCreateInfos[%d].pStages includes a tessellation control "
+                                        "shader stage and a tessellation evaluation shader stage, "
                                         "pCreateInfos[%d].pTessellationState must not be NULL. %s",
                                         i, i, validation_error_map[VALIDATION_ERROR_00536]);
+                    } else {
+                        skip |= validate_struct_pnext(
+                            report_data, "vkCreateGraphicsPipelines",
+                            ParameterName("pCreateInfos[%i].pTessellationState->pNext", ParameterName::IndexVector{i}), NULL,
+                            pCreateInfos[i].pTessellationState->pNext, 0, NULL, GeneratedHeaderVersion);
+
+                        skip |= validate_reserved_flags(
+                            report_data, "vkCreateGraphicsPipelines",
+                            ParameterName("pCreateInfos[%i].pTessellationState->flags", ParameterName::IndexVector{i}),
+                            pCreateInfos[i].pTessellationState->flags);
+
+                        if (pCreateInfos[i].pTessellationState->sType !=
+                            VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO) {
+                            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                            __LINE__, VALIDATION_ERROR_00538, LayerName,
+                                            "vkCreateGraphicsPipelines: parameter pCreateInfos[%d].pTessellationState->sType must "
+                                            "be VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO. %s",
+                                            i, validation_error_map[VALIDATION_ERROR_00538]);
+                        }
                     }
-                }
-            } else {
-                skip |= validate_struct_pnext(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pTessellationState->pNext", ParameterName::IndexVector{i}), NULL,
-                    pCreateInfos[i].pTessellationState->pNext, 0, NULL, GeneratedHeaderVersion);
-
-                skip |= validate_reserved_flags(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pTessellationState->flags", ParameterName::IndexVector{i}),
-                    pCreateInfos[i].pTessellationState->flags);
-
-                if (pCreateInfos[i].pTessellationState->sType != VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO) {
-                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                    __LINE__, VALIDATION_ERROR_00538, LayerName,
-                                    "vkCreateGraphicsPipelines: parameter pCreateInfos[%d].pTessellationState->sType must be "
-                                    "VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO. %s",
-                                    i, validation_error_map[VALIDATION_ERROR_00538]);
                 }
             }
 
-            if (pCreateInfos[i].pViewportState == nullptr) {
-                // If the rasterizerDiscardEnable member of pRasterizationState is VK_FALSE, pViewportState must be a pointer to a
-                // valid VkPipelineViewportStateCreateInfo structure
-                if ((pCreateInfos[i].pRasterizationState != nullptr) &&
-                    (pCreateInfos[i].pRasterizationState->rasterizerDiscardEnable == VK_FALSE)) {
-                    skip |= log_msg(
-                        report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                        VALIDATION_ERROR_02113, LayerName,
-                        "vkCreateGraphicsPipelines: if pCreateInfos[%d].pRasterizationState->rasterizerDiscardEnable is VK_FALSE, "
-                        "pCreateInfos[%d].pViewportState must be a pointer to a valid VkPipelineViewportStateCreateInfo structure. "
-                        "%s",
-                        i, i, validation_error_map[VALIDATION_ERROR_02113]);
-                }
-            } else {
-                if (pCreateInfos[i].pViewportState->scissorCount != pCreateInfos[i].pViewportState->viewportCount) {
+            // pViewportState, pMultisampleState, pDepthStencilState, and pColorBlendState are ignored when
+            // rasterization is disabled
+            if ((pCreateInfos[i].pRasterizationState != nullptr) &&
+                (pCreateInfos[i].pRasterizationState->rasterizerDiscardEnable == VK_FALSE)) {
+                if (pCreateInfos[i].pViewportState == nullptr) {
                     skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                    __LINE__, VALIDATION_ERROR_01434, LayerName,
-                                    "Graphics Pipeline viewport count (%u) must match scissor count (%u). %s",
-                                    pCreateInfos[i].pViewportState->viewportCount, pCreateInfos[i].pViewportState->scissorCount,
-                                    validation_error_map[VALIDATION_ERROR_01434]);
-                }
-
-                skip |=
-                    validate_struct_pnext(report_data, "vkCreateGraphicsPipelines",
-                                          ParameterName("pCreateInfos[%i].pViewportState->pNext", ParameterName::IndexVector{i}),
-                                          NULL, pCreateInfos[i].pViewportState->pNext, 0, NULL, GeneratedHeaderVersion);
-
-                skip |=
-                    validate_reserved_flags(report_data, "vkCreateGraphicsPipelines",
-                                            ParameterName("pCreateInfos[%i].pViewportState->flags", ParameterName::IndexVector{i}),
-                                            pCreateInfos[i].pViewportState->flags);
-
-                if (pCreateInfos[i].pViewportState->sType != VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO) {
-                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                    __LINE__, INVALID_STRUCT_STYPE, LayerName,
-                                    "vkCreateGraphicsPipelines: parameter pCreateInfos[%d].pViewportState->sType must be "
-                                    "VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO",
-                                    i);
-                }
-
-                if (device_data->physical_device_features.multiViewport == false) {
-                    if (pCreateInfos[i].pViewportState->viewportCount != 1) {
-                        skip |=
-                            log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                    __LINE__, VALIDATION_ERROR_01430, LayerName,
-                                    "vkCreateGraphicsPipelines: The multiViewport feature is not enabled, so "
-                                    "pCreateInfos[%d].pViewportState->viewportCount must be 1 but is %d. %s",
-                                    i, pCreateInfos[i].pViewportState->viewportCount, validation_error_map[VALIDATION_ERROR_01430]);
-                    }
-                    if (pCreateInfos[i].pViewportState->scissorCount != 1) {
-                        skip |=
-                            log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                    __LINE__, VALIDATION_ERROR_01431, LayerName,
-                                    "vkCreateGraphicsPipelines: The multiViewport feature is not enabled, so "
-                                    "pCreateInfos[%d].pViewportState->scissorCount must be 1 but is %d. %s",
-                                    i, pCreateInfos[i].pViewportState->scissorCount, validation_error_map[VALIDATION_ERROR_01431]);
-                    }
+                                    __LINE__, VALIDATION_ERROR_02113, LayerName,
+                                    "vkCreateGraphicsPipelines: if pCreateInfos[%d].pRasterizationState->rasterizerDiscardEnable "
+                                    "is VK_FALSE, pCreateInfos[%d].pViewportState must be a pointer to a valid "
+                                    "VkPipelineViewportStateCreateInfo structure. %s",
+                                    i, i, validation_error_map[VALIDATION_ERROR_02113]);
                 } else {
-                    if ((pCreateInfos[i].pViewportState->viewportCount < 1) ||
-                        (pCreateInfos[i].pViewportState->viewportCount > device_data->device_limits.maxViewports)) {
+                    if (pCreateInfos[i].pViewportState->scissorCount != pCreateInfos[i].pViewportState->viewportCount) {
                         skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                        __LINE__, VALIDATION_ERROR_01432, LayerName,
-                                        "vkCreateGraphicsPipelines: multiViewport feature is enabled; "
-                                        "pCreateInfos[%d].pViewportState->viewportCount is %d but must be between 1 and "
-                                        "maxViewports (%d), inclusive. %s",
-                                        i, pCreateInfos[i].pViewportState->viewportCount, device_data->device_limits.maxViewports,
-                                        validation_error_map[VALIDATION_ERROR_01432]);
+                                        __LINE__, VALIDATION_ERROR_01434, LayerName,
+                                        "Graphics Pipeline viewport count (%u) must match scissor count (%u). %s",
+                                        pCreateInfos[i].pViewportState->viewportCount, pCreateInfos[i].pViewportState->scissorCount,
+                                        validation_error_map[VALIDATION_ERROR_01434]);
                     }
-                    if ((pCreateInfos[i].pViewportState->scissorCount < 1) ||
-                        (pCreateInfos[i].pViewportState->scissorCount > device_data->device_limits.maxViewports)) {
+
+                    skip |= validate_struct_pnext(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pViewportState->pNext", ParameterName::IndexVector{i}), NULL,
+                        pCreateInfos[i].pViewportState->pNext, 0, NULL, GeneratedHeaderVersion);
+
+                    skip |= validate_reserved_flags(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pViewportState->flags", ParameterName::IndexVector{i}),
+                        pCreateInfos[i].pViewportState->flags);
+
+                    if (pCreateInfos[i].pViewportState->sType != VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO) {
                         skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                        __LINE__, VALIDATION_ERROR_01433, LayerName,
-                                        "vkCreateGraphicsPipelines: multiViewport feature is enabled; "
-                                        "pCreateInfos[%d].pViewportState->scissorCount is %d but must be between 1 and "
-                                        "maxViewports (%d), inclusive. %s",
-                                        i, pCreateInfos[i].pViewportState->scissorCount, device_data->device_limits.maxViewports,
-                                        validation_error_map[VALIDATION_ERROR_01433]);
+                                        __LINE__, INVALID_STRUCT_STYPE, LayerName,
+                                        "vkCreateGraphicsPipelines: parameter pCreateInfos[%d].pViewportState->sType must be "
+                                        "VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO",
+                                        i);
                     }
-                }
 
-                if (pCreateInfos[i].pDynamicState != nullptr) {
-                    bool has_dynamic_viewport = false;
-                    bool has_dynamic_scissor = false;
-
-                    for (uint32_t state_index = 0; state_index < pCreateInfos[i].pDynamicState->dynamicStateCount; ++state_index) {
-                        if (pCreateInfos[i].pDynamicState->pDynamicStates[state_index] == VK_DYNAMIC_STATE_VIEWPORT) {
-                            has_dynamic_viewport = true;
-                        } else if (pCreateInfos[i].pDynamicState->pDynamicStates[state_index] == VK_DYNAMIC_STATE_SCISSOR) {
-                            has_dynamic_scissor = true;
+                    if (device_data->physical_device_features.multiViewport == false) {
+                        if (pCreateInfos[i].pViewportState->viewportCount != 1) {
+                            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                            __LINE__, VALIDATION_ERROR_01430, LayerName,
+                                            "vkCreateGraphicsPipelines: The multiViewport feature is not enabled, so "
+                                            "pCreateInfos[%d].pViewportState->viewportCount must be 1 but is %d. %s",
+                                            i, pCreateInfos[i].pViewportState->viewportCount,
+                                            validation_error_map[VALIDATION_ERROR_01430]);
+                        }
+                        if (pCreateInfos[i].pViewportState->scissorCount != 1) {
+                            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                            __LINE__, VALIDATION_ERROR_01431, LayerName,
+                                            "vkCreateGraphicsPipelines: The multiViewport feature is not enabled, so "
+                                            "pCreateInfos[%d].pViewportState->scissorCount must be 1 but is %d. %s",
+                                            i, pCreateInfos[i].pViewportState->scissorCount,
+                                            validation_error_map[VALIDATION_ERROR_01431]);
+                        }
+                    } else {
+                        if ((pCreateInfos[i].pViewportState->viewportCount < 1) ||
+                            (pCreateInfos[i].pViewportState->viewportCount > device_data->device_limits.maxViewports)) {
+                            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                            __LINE__, VALIDATION_ERROR_01432, LayerName,
+                                            "vkCreateGraphicsPipelines: multiViewport feature is enabled; "
+                                            "pCreateInfos[%d].pViewportState->viewportCount is %d but must be between 1 and "
+                                            "maxViewports (%d), inclusive. %s",
+                                            i, pCreateInfos[i].pViewportState->viewportCount,
+                                            device_data->device_limits.maxViewports, validation_error_map[VALIDATION_ERROR_01432]);
+                        }
+                        if ((pCreateInfos[i].pViewportState->scissorCount < 1) ||
+                            (pCreateInfos[i].pViewportState->scissorCount > device_data->device_limits.maxViewports)) {
+                            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                            __LINE__, VALIDATION_ERROR_01433, LayerName,
+                                            "vkCreateGraphicsPipelines: multiViewport feature is enabled; "
+                                            "pCreateInfos[%d].pViewportState->scissorCount is %d but must be between 1 and "
+                                            "maxViewports (%d), inclusive. %s",
+                                            i, pCreateInfos[i].pViewportState->scissorCount,
+                                            device_data->device_limits.maxViewports, validation_error_map[VALIDATION_ERROR_01433]);
                         }
                     }
 
-                    // If no element of the pDynamicStates member of pDynamicState is VK_DYNAMIC_STATE_VIEWPORT, the pViewports
-                    // member of pViewportState must be a pointer to an array of pViewportState->viewportCount VkViewport structures
-                    if (!has_dynamic_viewport && (pCreateInfos[i].pViewportState->pViewports == nullptr)) {
-                        skip |=
-                            log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                    __LINE__, VALIDATION_ERROR_02110, LayerName,
-                                    "vkCreateGraphicsPipelines: if pCreateInfos[%d].pDynamicState->pDynamicStates does not contain "
-                                    "VK_DYNAMIC_STATE_VIEWPORT, pCreateInfos[%d].pViewportState->pViewports must not be NULL. %s",
-                                    i, i, validation_error_map[VALIDATION_ERROR_02110]);
-                    }
+                    if (pCreateInfos[i].pDynamicState != nullptr) {
+                        bool has_dynamic_viewport = false;
+                        bool has_dynamic_scissor = false;
 
-                    // If no element of the pDynamicStates member of pDynamicState is VK_DYNAMIC_STATE_SCISSOR, the pScissors member
-                    // of pViewportState must be a pointer to an array of pViewportState->scissorCount VkRect2D structures
-                    if (!has_dynamic_scissor && (pCreateInfos[i].pViewportState->pScissors == nullptr)) {
-                        skip |=
-                            log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                    __LINE__, VALIDATION_ERROR_02111, LayerName,
-                                    "vkCreateGraphicsPipelines: if pCreateInfos[%d].pDynamicState->pDynamicStates does not contain "
-                                    "VK_DYNAMIC_STATE_SCISSOR, pCreateInfos[%d].pViewportState->pScissors must not be NULL. %s",
-                                    i, i, validation_error_map[VALIDATION_ERROR_02111]);
+                        for (uint32_t state_index = 0; state_index < pCreateInfos[i].pDynamicState->dynamicStateCount;
+                             ++state_index) {
+                            if (pCreateInfos[i].pDynamicState->pDynamicStates[state_index] == VK_DYNAMIC_STATE_VIEWPORT) {
+                                has_dynamic_viewport = true;
+                            } else if (pCreateInfos[i].pDynamicState->pDynamicStates[state_index] == VK_DYNAMIC_STATE_SCISSOR) {
+                                has_dynamic_scissor = true;
+                            }
+                        }
+
+                        // If no element of the pDynamicStates member of pDynamicState is VK_DYNAMIC_STATE_VIEWPORT, the pViewports
+                        // member of pViewportState must be a pointer to an array of pViewportState->viewportCount VkViewport
+                        // structures
+                        if (!has_dynamic_viewport && (pCreateInfos[i].pViewportState->pViewports == nullptr)) {
+                            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                            __LINE__, VALIDATION_ERROR_02110, LayerName,
+                                            "vkCreateGraphicsPipelines: if pCreateInfos[%d].pDynamicState->pDynamicStates does not "
+                                            "contain VK_DYNAMIC_STATE_VIEWPORT, pCreateInfos[%d].pViewportState->pViewports must "
+                                            "not be NULL. %s",
+                                            i, i, validation_error_map[VALIDATION_ERROR_02110]);
+                        }
+
+                        // If no element of the pDynamicStates member of pDynamicState is VK_DYNAMIC_STATE_SCISSOR, the pScissors
+                        // member
+                        // of pViewportState must be a pointer to an array of pViewportState->scissorCount VkRect2D structures
+                        if (!has_dynamic_scissor && (pCreateInfos[i].pViewportState->pScissors == nullptr)) {
+                            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                            __LINE__, VALIDATION_ERROR_02111, LayerName,
+                                            "vkCreateGraphicsPipelines: if pCreateInfos[%d].pDynamicState->pDynamicStates does not "
+                                            "contain VK_DYNAMIC_STATE_SCISSOR, pCreateInfos[%d].pViewportState->pScissors must not "
+                                            "be NULL. %s",
+                                            i, i, validation_error_map[VALIDATION_ERROR_02111]);
+                        }
                     }
                 }
-            }
 
-            if (pCreateInfos[i].pMultisampleState == nullptr) {
-                // If the rasterizerDiscardEnable member of pRasterizationState is VK_FALSE, pMultisampleState must be a pointer to
-                // a valid VkPipelineMultisampleStateCreateInfo structure
-                if ((pCreateInfos[i].pRasterizationState != nullptr) &&
-                    pCreateInfos[i].pRasterizationState->rasterizerDiscardEnable == VK_FALSE) {
+                if (pCreateInfos[i].pMultisampleState == nullptr) {
                     skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
                                     __LINE__, VALIDATION_ERROR_02114, LayerName,
-                                    "vkCreateGraphicsPipelines: if "
-                                    "pCreateInfos[%d].pRasterizationState->rasterizerDiscardEnable is "
-                                    "VK_FALSE, pCreateInfos[%d].pMultisampleState must not be NULL. %s",
+                                    "vkCreateGraphicsPipelines: if pCreateInfos[%d].pRasterizationState->rasterizerDiscardEnable "
+                                    "is VK_FALSE, pCreateInfos[%d].pMultisampleState must not be NULL. %s",
                                     i, i, validation_error_map[VALIDATION_ERROR_02114]);
-                }
-            } else {
-                skip |=
-                    validate_struct_pnext(report_data, "vkCreateGraphicsPipelines",
-                                          ParameterName("pCreateInfos[%i].pMultisampleState->pNext", ParameterName::IndexVector{i}),
-                                          NULL, pCreateInfos[i].pMultisampleState->pNext, 0, NULL, GeneratedHeaderVersion);
+                } else {
+                    skip |= validate_struct_pnext(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pMultisampleState->pNext", ParameterName::IndexVector{i}), NULL,
+                        pCreateInfos[i].pMultisampleState->pNext, 0, NULL, GeneratedHeaderVersion);
 
-                skip |= validate_reserved_flags(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pMultisampleState->flags", ParameterName::IndexVector{i}),
-                    pCreateInfos[i].pMultisampleState->flags);
+                    skip |= validate_reserved_flags(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pMultisampleState->flags", ParameterName::IndexVector{i}),
+                        pCreateInfos[i].pMultisampleState->flags);
 
-                skip |= validate_bool32(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pMultisampleState->sampleShadingEnable", ParameterName::IndexVector{i}),
-                    pCreateInfos[i].pMultisampleState->sampleShadingEnable);
+                    skip |= validate_bool32(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pMultisampleState->sampleShadingEnable", ParameterName::IndexVector{i}),
+                        pCreateInfos[i].pMultisampleState->sampleShadingEnable);
 
-                skip |= validate_array(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pMultisampleState->rasterizationSamples", ParameterName::IndexVector{i}),
-                    ParameterName("pCreateInfos[%i].pMultisampleState->pSampleMask", ParameterName::IndexVector{i}),
-                    pCreateInfos[i].pMultisampleState->rasterizationSamples, pCreateInfos[i].pMultisampleState->pSampleMask, true,
-                    false);
+                    skip |= validate_array(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pMultisampleState->rasterizationSamples", ParameterName::IndexVector{i}),
+                        ParameterName("pCreateInfos[%i].pMultisampleState->pSampleMask", ParameterName::IndexVector{i}),
+                        pCreateInfos[i].pMultisampleState->rasterizationSamples, pCreateInfos[i].pMultisampleState->pSampleMask,
+                        true, false);
 
-                skip |= validate_bool32(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pMultisampleState->alphaToCoverageEnable", ParameterName::IndexVector{i}),
-                    pCreateInfos[i].pMultisampleState->alphaToCoverageEnable);
+                    skip |= validate_bool32(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pMultisampleState->alphaToCoverageEnable", ParameterName::IndexVector{i}),
+                        pCreateInfos[i].pMultisampleState->alphaToCoverageEnable);
 
-                skip |= validate_bool32(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pMultisampleState->alphaToOneEnable", ParameterName::IndexVector{i}),
-                    pCreateInfos[i].pMultisampleState->alphaToOneEnable);
+                    skip |= validate_bool32(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pMultisampleState->alphaToOneEnable", ParameterName::IndexVector{i}),
+                        pCreateInfos[i].pMultisampleState->alphaToOneEnable);
 
-                if (pCreateInfos[i].pMultisampleState->sType != VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO) {
-                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                    __LINE__, INVALID_STRUCT_STYPE, LayerName,
-                                    "vkCreateGraphicsPipelines: parameter pCreateInfos[%d].pMultisampleState->sType must be "
-                                    "VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO",
-                                    i);
-                }
-            }
-
-            // TODO: Conditional NULL check based on rasterizerDiscardEnable and subpass
-            if (pCreateInfos[i].pDepthStencilState != nullptr) {
-                skip |= validate_struct_pnext(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pDepthStencilState->pNext", ParameterName::IndexVector{i}), NULL,
-                    pCreateInfos[i].pDepthStencilState->pNext, 0, NULL, GeneratedHeaderVersion);
-
-                skip |= validate_reserved_flags(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pDepthStencilState->flags", ParameterName::IndexVector{i}),
-                    pCreateInfos[i].pDepthStencilState->flags);
-
-                skip |= validate_bool32(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pDepthStencilState->depthTestEnable", ParameterName::IndexVector{i}),
-                    pCreateInfos[i].pDepthStencilState->depthTestEnable);
-
-                skip |= validate_bool32(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pDepthStencilState->depthWriteEnable", ParameterName::IndexVector{i}),
-                    pCreateInfos[i].pDepthStencilState->depthWriteEnable);
-
-                skip |= validate_ranged_enum(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pDepthStencilState->depthCompareOp", ParameterName::IndexVector{i}),
-                    "VkCompareOp", VK_COMPARE_OP_BEGIN_RANGE, VK_COMPARE_OP_END_RANGE,
-                    pCreateInfos[i].pDepthStencilState->depthCompareOp);
-
-                skip |= validate_bool32(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pDepthStencilState->depthBoundsTestEnable", ParameterName::IndexVector{i}),
-                    pCreateInfos[i].pDepthStencilState->depthBoundsTestEnable);
-
-                skip |= validate_bool32(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pDepthStencilState->stencilTestEnable", ParameterName::IndexVector{i}),
-                    pCreateInfos[i].pDepthStencilState->stencilTestEnable);
-
-                skip |= validate_ranged_enum(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pDepthStencilState->front.failOp", ParameterName::IndexVector{i}),
-                    "VkStencilOp", VK_STENCIL_OP_BEGIN_RANGE, VK_STENCIL_OP_END_RANGE,
-                    pCreateInfos[i].pDepthStencilState->front.failOp);
-
-                skip |= validate_ranged_enum(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pDepthStencilState->front.passOp", ParameterName::IndexVector{i}),
-                    "VkStencilOp", VK_STENCIL_OP_BEGIN_RANGE, VK_STENCIL_OP_END_RANGE,
-                    pCreateInfos[i].pDepthStencilState->front.passOp);
-
-                skip |= validate_ranged_enum(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pDepthStencilState->front.depthFailOp", ParameterName::IndexVector{i}),
-                    "VkStencilOp", VK_STENCIL_OP_BEGIN_RANGE, VK_STENCIL_OP_END_RANGE,
-                    pCreateInfos[i].pDepthStencilState->front.depthFailOp);
-
-                skip |= validate_ranged_enum(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pDepthStencilState->front.compareOp", ParameterName::IndexVector{i}),
-                    "VkCompareOp", VK_COMPARE_OP_BEGIN_RANGE, VK_COMPARE_OP_END_RANGE,
-                    pCreateInfos[i].pDepthStencilState->front.compareOp);
-
-                skip |= validate_ranged_enum(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pDepthStencilState->back.failOp", ParameterName::IndexVector{i}), "VkStencilOp",
-                    VK_STENCIL_OP_BEGIN_RANGE, VK_STENCIL_OP_END_RANGE, pCreateInfos[i].pDepthStencilState->back.failOp);
-
-                skip |= validate_ranged_enum(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pDepthStencilState->back.passOp", ParameterName::IndexVector{i}), "VkStencilOp",
-                    VK_STENCIL_OP_BEGIN_RANGE, VK_STENCIL_OP_END_RANGE, pCreateInfos[i].pDepthStencilState->back.passOp);
-
-                skip |= validate_ranged_enum(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pDepthStencilState->back.depthFailOp", ParameterName::IndexVector{i}),
-                    "VkStencilOp", VK_STENCIL_OP_BEGIN_RANGE, VK_STENCIL_OP_END_RANGE,
-                    pCreateInfos[i].pDepthStencilState->back.depthFailOp);
-
-                skip |= validate_ranged_enum(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pDepthStencilState->back.compareOp", ParameterName::IndexVector{i}),
-                    "VkCompareOp", VK_COMPARE_OP_BEGIN_RANGE, VK_COMPARE_OP_END_RANGE,
-                    pCreateInfos[i].pDepthStencilState->back.compareOp);
-
-                if (pCreateInfos[i].pDepthStencilState->sType != VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO) {
-                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                    __LINE__, INVALID_STRUCT_STYPE, LayerName,
-                                    "vkCreateGraphicsPipelines: parameter pCreateInfos[%d].pDepthStencilState->sType must be "
-                                    "VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO",
-                                    i);
-                }
-            }
-
-            // TODO: Conditional NULL check based on rasterizerDiscardEnable and subpass
-            if (pCreateInfos[i].pColorBlendState != nullptr) {
-                skip |=
-                    validate_struct_pnext(report_data, "vkCreateGraphicsPipelines",
-                                          ParameterName("pCreateInfos[%i].pColorBlendState->pNext", ParameterName::IndexVector{i}),
-                                          NULL, pCreateInfos[i].pColorBlendState->pNext, 0, NULL, GeneratedHeaderVersion);
-
-                skip |= validate_reserved_flags(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pColorBlendState->flags", ParameterName::IndexVector{i}),
-                    pCreateInfos[i].pColorBlendState->flags);
-
-                skip |= validate_bool32(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pColorBlendState->logicOpEnable", ParameterName::IndexVector{i}),
-                    pCreateInfos[i].pColorBlendState->logicOpEnable);
-
-                skip |= validate_array(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pColorBlendState->attachmentCount", ParameterName::IndexVector{i}),
-                    ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments", ParameterName::IndexVector{i}),
-                    pCreateInfos[i].pColorBlendState->attachmentCount, pCreateInfos[i].pColorBlendState->pAttachments, false, true);
-
-                if (pCreateInfos[i].pColorBlendState->pAttachments != NULL) {
-                    for (uint32_t attachmentIndex = 0; attachmentIndex < pCreateInfos[i].pColorBlendState->attachmentCount;
-                         ++attachmentIndex) {
-                        skip |= validate_bool32(report_data, "vkCreateGraphicsPipelines",
-                                                ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments[%i].blendEnable",
-                                                              ParameterName::IndexVector{i, attachmentIndex}),
-                                                pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].blendEnable);
-
-                        skip |= validate_ranged_enum(
-                            report_data, "vkCreateGraphicsPipelines",
-                            ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments[%i].srcColorBlendFactor",
-                                          ParameterName::IndexVector{i, attachmentIndex}),
-                            "VkBlendFactor", VK_BLEND_FACTOR_BEGIN_RANGE, VK_BLEND_FACTOR_END_RANGE,
-                            pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].srcColorBlendFactor);
-
-                        skip |= validate_ranged_enum(
-                            report_data, "vkCreateGraphicsPipelines",
-                            ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments[%i].dstColorBlendFactor",
-                                          ParameterName::IndexVector{i, attachmentIndex}),
-                            "VkBlendFactor", VK_BLEND_FACTOR_BEGIN_RANGE, VK_BLEND_FACTOR_END_RANGE,
-                            pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].dstColorBlendFactor);
-
-                        skip |=
-                            validate_ranged_enum(report_data, "vkCreateGraphicsPipelines",
-                                                 ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments[%i].colorBlendOp",
-                                                               ParameterName::IndexVector{i, attachmentIndex}),
-                                                 "VkBlendOp", VK_BLEND_OP_BEGIN_RANGE, VK_BLEND_OP_END_RANGE,
-                                                 pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].colorBlendOp);
-
-                        skip |= validate_ranged_enum(
-                            report_data, "vkCreateGraphicsPipelines",
-                            ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments[%i].srcAlphaBlendFactor",
-                                          ParameterName::IndexVector{i, attachmentIndex}),
-                            "VkBlendFactor", VK_BLEND_FACTOR_BEGIN_RANGE, VK_BLEND_FACTOR_END_RANGE,
-                            pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].srcAlphaBlendFactor);
-
-                        skip |= validate_ranged_enum(
-                            report_data, "vkCreateGraphicsPipelines",
-                            ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments[%i].dstAlphaBlendFactor",
-                                          ParameterName::IndexVector{i, attachmentIndex}),
-                            "VkBlendFactor", VK_BLEND_FACTOR_BEGIN_RANGE, VK_BLEND_FACTOR_END_RANGE,
-                            pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].dstAlphaBlendFactor);
-
-                        skip |=
-                            validate_ranged_enum(report_data, "vkCreateGraphicsPipelines",
-                                                 ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments[%i].alphaBlendOp",
-                                                               ParameterName::IndexVector{i, attachmentIndex}),
-                                                 "VkBlendOp", VK_BLEND_OP_BEGIN_RANGE, VK_BLEND_OP_END_RANGE,
-                                                 pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].alphaBlendOp);
-
-                        skip |=
-                            validate_flags(report_data, "vkCreateGraphicsPipelines",
-                                           ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments[%i].colorWriteMask",
-                                                         ParameterName::IndexVector{i, attachmentIndex}),
-                                           "VkColorComponentFlagBits", AllVkColorComponentFlagBits,
-                                           pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].colorWriteMask, false);
+                    if (pCreateInfos[i].pMultisampleState->sType != VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO) {
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                        __LINE__, INVALID_STRUCT_STYPE, LayerName,
+                                        "vkCreateGraphicsPipelines: parameter pCreateInfos[%d].pMultisampleState->sType must be "
+                                        "VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO",
+                                        i);
                     }
                 }
 
-                if (pCreateInfos[i].pColorBlendState->sType != VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO) {
-                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                    __LINE__, INVALID_STRUCT_STYPE, LayerName,
-                                    "vkCreateGraphicsPipelines: parameter pCreateInfos[%d].pColorBlendState->sType must be "
-                                    "VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO",
-                                    i);
-                }
+                // TODO: Conditional NULL check based on subpass depth/stencil attachment
+                if (pCreateInfos[i].pDepthStencilState != nullptr) {
+                    skip |= validate_struct_pnext(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pDepthStencilState->pNext", ParameterName::IndexVector{i}), NULL,
+                        pCreateInfos[i].pDepthStencilState->pNext, 0, NULL, GeneratedHeaderVersion);
 
-                // If logicOpEnable is VK_TRUE, logicOp must be a valid VkLogicOp value
-                if (pCreateInfos[i].pColorBlendState->logicOpEnable == VK_TRUE) {
+                    skip |= validate_reserved_flags(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pDepthStencilState->flags", ParameterName::IndexVector{i}),
+                        pCreateInfos[i].pDepthStencilState->flags);
+
+                    skip |= validate_bool32(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pDepthStencilState->depthTestEnable", ParameterName::IndexVector{i}),
+                        pCreateInfos[i].pDepthStencilState->depthTestEnable);
+
+                    skip |= validate_bool32(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pDepthStencilState->depthWriteEnable", ParameterName::IndexVector{i}),
+                        pCreateInfos[i].pDepthStencilState->depthWriteEnable);
+
                     skip |= validate_ranged_enum(
                         report_data, "vkCreateGraphicsPipelines",
-                        ParameterName("pCreateInfos[%i].pColorBlendState->logicOp", ParameterName::IndexVector{i}), "VkLogicOp",
-                        VK_LOGIC_OP_BEGIN_RANGE, VK_LOGIC_OP_END_RANGE, pCreateInfos[i].pColorBlendState->logicOp);
+                        ParameterName("pCreateInfos[%i].pDepthStencilState->depthCompareOp", ParameterName::IndexVector{i}),
+                        "VkCompareOp", VK_COMPARE_OP_BEGIN_RANGE, VK_COMPARE_OP_END_RANGE,
+                        pCreateInfos[i].pDepthStencilState->depthCompareOp);
+
+                    skip |= validate_bool32(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pDepthStencilState->depthBoundsTestEnable", ParameterName::IndexVector{i}),
+                        pCreateInfos[i].pDepthStencilState->depthBoundsTestEnable);
+
+                    skip |= validate_bool32(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pDepthStencilState->stencilTestEnable", ParameterName::IndexVector{i}),
+                        pCreateInfos[i].pDepthStencilState->stencilTestEnable);
+
+                    skip |= validate_ranged_enum(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pDepthStencilState->front.failOp", ParameterName::IndexVector{i}),
+                        "VkStencilOp", VK_STENCIL_OP_BEGIN_RANGE, VK_STENCIL_OP_END_RANGE,
+                        pCreateInfos[i].pDepthStencilState->front.failOp);
+
+                    skip |= validate_ranged_enum(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pDepthStencilState->front.passOp", ParameterName::IndexVector{i}),
+                        "VkStencilOp", VK_STENCIL_OP_BEGIN_RANGE, VK_STENCIL_OP_END_RANGE,
+                        pCreateInfos[i].pDepthStencilState->front.passOp);
+
+                    skip |= validate_ranged_enum(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pDepthStencilState->front.depthFailOp", ParameterName::IndexVector{i}),
+                        "VkStencilOp", VK_STENCIL_OP_BEGIN_RANGE, VK_STENCIL_OP_END_RANGE,
+                        pCreateInfos[i].pDepthStencilState->front.depthFailOp);
+
+                    skip |= validate_ranged_enum(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pDepthStencilState->front.compareOp", ParameterName::IndexVector{i}),
+                        "VkCompareOp", VK_COMPARE_OP_BEGIN_RANGE, VK_COMPARE_OP_END_RANGE,
+                        pCreateInfos[i].pDepthStencilState->front.compareOp);
+
+                    skip |= validate_ranged_enum(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pDepthStencilState->back.failOp", ParameterName::IndexVector{i}),
+                        "VkStencilOp", VK_STENCIL_OP_BEGIN_RANGE, VK_STENCIL_OP_END_RANGE,
+                        pCreateInfos[i].pDepthStencilState->back.failOp);
+
+                    skip |= validate_ranged_enum(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pDepthStencilState->back.passOp", ParameterName::IndexVector{i}),
+                        "VkStencilOp", VK_STENCIL_OP_BEGIN_RANGE, VK_STENCIL_OP_END_RANGE,
+                        pCreateInfos[i].pDepthStencilState->back.passOp);
+
+                    skip |= validate_ranged_enum(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pDepthStencilState->back.depthFailOp", ParameterName::IndexVector{i}),
+                        "VkStencilOp", VK_STENCIL_OP_BEGIN_RANGE, VK_STENCIL_OP_END_RANGE,
+                        pCreateInfos[i].pDepthStencilState->back.depthFailOp);
+
+                    skip |= validate_ranged_enum(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pDepthStencilState->back.compareOp", ParameterName::IndexVector{i}),
+                        "VkCompareOp", VK_COMPARE_OP_BEGIN_RANGE, VK_COMPARE_OP_END_RANGE,
+                        pCreateInfos[i].pDepthStencilState->back.compareOp);
+
+                    if (pCreateInfos[i].pDepthStencilState->sType != VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO) {
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                        __LINE__, INVALID_STRUCT_STYPE, LayerName,
+                                        "vkCreateGraphicsPipelines: parameter pCreateInfos[%d].pDepthStencilState->sType must be "
+                                        "VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO",
+                                        i);
+                    }
+                }
+
+                // TODO: Conditional NULL check based on subpass color attachment
+                if (pCreateInfos[i].pColorBlendState != nullptr) {
+                    skip |= validate_struct_pnext(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pColorBlendState->pNext", ParameterName::IndexVector{i}), NULL,
+                        pCreateInfos[i].pColorBlendState->pNext, 0, NULL, GeneratedHeaderVersion);
+
+                    skip |= validate_reserved_flags(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pColorBlendState->flags", ParameterName::IndexVector{i}),
+                        pCreateInfos[i].pColorBlendState->flags);
+
+                    skip |= validate_bool32(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pColorBlendState->logicOpEnable", ParameterName::IndexVector{i}),
+                        pCreateInfos[i].pColorBlendState->logicOpEnable);
+
+                    skip |= validate_array(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pColorBlendState->attachmentCount", ParameterName::IndexVector{i}),
+                        ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments", ParameterName::IndexVector{i}),
+                        pCreateInfos[i].pColorBlendState->attachmentCount, pCreateInfos[i].pColorBlendState->pAttachments, false,
+                        true);
+
+                    if (pCreateInfos[i].pColorBlendState->pAttachments != NULL) {
+                        for (uint32_t attachmentIndex = 0; attachmentIndex < pCreateInfos[i].pColorBlendState->attachmentCount;
+                             ++attachmentIndex) {
+                            skip |= validate_bool32(report_data, "vkCreateGraphicsPipelines",
+                                                    ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments[%i].blendEnable",
+                                                                  ParameterName::IndexVector{i, attachmentIndex}),
+                                                    pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].blendEnable);
+
+                            skip |= validate_ranged_enum(
+                                report_data, "vkCreateGraphicsPipelines",
+                                ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments[%i].srcColorBlendFactor",
+                                              ParameterName::IndexVector{i, attachmentIndex}),
+                                "VkBlendFactor", VK_BLEND_FACTOR_BEGIN_RANGE, VK_BLEND_FACTOR_END_RANGE,
+                                pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].srcColorBlendFactor);
+
+                            skip |= validate_ranged_enum(
+                                report_data, "vkCreateGraphicsPipelines",
+                                ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments[%i].dstColorBlendFactor",
+                                              ParameterName::IndexVector{i, attachmentIndex}),
+                                "VkBlendFactor", VK_BLEND_FACTOR_BEGIN_RANGE, VK_BLEND_FACTOR_END_RANGE,
+                                pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].dstColorBlendFactor);
+
+                            skip |= validate_ranged_enum(
+                                report_data, "vkCreateGraphicsPipelines",
+                                ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments[%i].colorBlendOp",
+                                              ParameterName::IndexVector{i, attachmentIndex}),
+                                "VkBlendOp", VK_BLEND_OP_BEGIN_RANGE, VK_BLEND_OP_END_RANGE,
+                                pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].colorBlendOp);
+
+                            skip |= validate_ranged_enum(
+                                report_data, "vkCreateGraphicsPipelines",
+                                ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments[%i].srcAlphaBlendFactor",
+                                              ParameterName::IndexVector{i, attachmentIndex}),
+                                "VkBlendFactor", VK_BLEND_FACTOR_BEGIN_RANGE, VK_BLEND_FACTOR_END_RANGE,
+                                pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].srcAlphaBlendFactor);
+
+                            skip |= validate_ranged_enum(
+                                report_data, "vkCreateGraphicsPipelines",
+                                ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments[%i].dstAlphaBlendFactor",
+                                              ParameterName::IndexVector{i, attachmentIndex}),
+                                "VkBlendFactor", VK_BLEND_FACTOR_BEGIN_RANGE, VK_BLEND_FACTOR_END_RANGE,
+                                pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].dstAlphaBlendFactor);
+
+                            skip |= validate_ranged_enum(
+                                report_data, "vkCreateGraphicsPipelines",
+                                ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments[%i].alphaBlendOp",
+                                              ParameterName::IndexVector{i, attachmentIndex}),
+                                "VkBlendOp", VK_BLEND_OP_BEGIN_RANGE, VK_BLEND_OP_END_RANGE,
+                                pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].alphaBlendOp);
+
+                            skip |= validate_flags(
+                                report_data, "vkCreateGraphicsPipelines",
+                                ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments[%i].colorWriteMask",
+                                              ParameterName::IndexVector{i, attachmentIndex}),
+                                "VkColorComponentFlagBits", AllVkColorComponentFlagBits,
+                                pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].colorWriteMask, false);
+                        }
+                    }
+
+                    if (pCreateInfos[i].pColorBlendState->sType != VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO) {
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                        __LINE__, INVALID_STRUCT_STYPE, LayerName,
+                                        "vkCreateGraphicsPipelines: parameter pCreateInfos[%d].pColorBlendState->sType must be "
+                                        "VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO",
+                                        i);
+                    }
+
+                    // If logicOpEnable is VK_TRUE, logicOp must be a valid VkLogicOp value
+                    if (pCreateInfos[i].pColorBlendState->logicOpEnable == VK_TRUE) {
+                        skip |= validate_ranged_enum(
+                            report_data, "vkCreateGraphicsPipelines",
+                            ParameterName("pCreateInfos[%i].pColorBlendState->logicOp", ParameterName::IndexVector{i}), "VkLogicOp",
+                            VK_LOGIC_OP_BEGIN_RANGE, VK_LOGIC_OP_END_RANGE, pCreateInfos[i].pColorBlendState->logicOp);
+                    }
                 }
             }
         }
