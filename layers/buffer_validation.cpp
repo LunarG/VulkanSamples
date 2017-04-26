@@ -32,8 +32,7 @@
 #include "buffer_validation.h"
 
 void SetLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair, const VkImageLayout &layout) {
-    if (std::find(pCB->imageSubresourceMap[imgpair.image].begin(), pCB->imageSubresourceMap[imgpair.image].end(), imgpair) !=
-        pCB->imageSubresourceMap[imgpair.image].end()) {
+    if (pCB->imageLayoutMap.find(imgpair) != pCB->imageLayoutMap.end()) {
         pCB->imageLayoutMap[imgpair].layout = layout;
     } else {
         assert(imgpair.hasSubresource);
@@ -222,11 +221,6 @@ void SetGlobalLayout(layer_data *device_data, ImageSubresourcePair imgpair, cons
 // Set the layout on the cmdbuf level
 void SetLayout(layer_data *device_data, GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair, const IMAGE_CMD_BUF_LAYOUT_NODE &node) {
     pCB->imageLayoutMap[imgpair] = node;
-    auto subresource =
-        std::find(pCB->imageSubresourceMap[imgpair.image].begin(), pCB->imageSubresourceMap[imgpair.image].end(), imgpair);
-    if (subresource == pCB->imageSubresourceMap[imgpair.image].end()) {
-        pCB->imageSubresourceMap[imgpair.image].push_back(imgpair);
-    }
 }
 // Set image layout for given VkImageSubresourceRange struct
 void SetImageLayout(layer_data *device_data, GLOBAL_CB_NODE *cb_node, const IMAGE_STATE *image_state,

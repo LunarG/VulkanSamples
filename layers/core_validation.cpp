@@ -3412,7 +3412,6 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
         pCB->queryToStateMap.clear();
         pCB->activeQueries.clear();
         pCB->startedQueries.clear();
-        pCB->imageSubresourceMap.clear();
         pCB->imageLayoutMap.clear();
         pCB->eventToStageMap.clear();
         pCB->drawData.clear();

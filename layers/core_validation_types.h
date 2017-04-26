@@ -654,7 +654,6 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     std::unordered_set<QueryObject> activeQueries;
     std::unordered_set<QueryObject> startedQueries;
     std::unordered_map<ImageSubresourcePair, IMAGE_CMD_BUF_LAYOUT_NODE> imageLayoutMap;
-    std::unordered_map<VkImage, std::vector<ImageSubresourcePair>> imageSubresourceMap;
     std::unordered_map<VkEvent, VkPipelineStageFlags> eventToStageMap;
     std::vector<DRAW_DATA> drawData;
     DRAW_DATA currentDrawData;
