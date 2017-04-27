@@ -8646,6 +8646,25 @@ static bool ValidateFramebufferCreateInfo(layer_data *dev_data, const VkFramebuf
                         pCreateInfo->layers, dev_data->phys_dev_properties.properties.limits.maxFramebufferLayers,
                         validation_error_map[VALIDATION_ERROR_00415]);
     }
+    // Verify FB dimensions are greater than zero
+    if (pCreateInfo->width <= 0) {
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_02806, "DS",
+                        "vkCreateFramebuffer(): Requested VkFramebufferCreateInfo width must be greater than zero. %s",
+                        validation_error_map[VALIDATION_ERROR_02806]);
+    }
+    if (pCreateInfo->height <= 0) {
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_02807, "DS",
+                        "vkCreateFramebuffer(): Requested VkFramebufferCreateInfo height must be greater than zero. %s",
+                        validation_error_map[VALIDATION_ERROR_02807]);
+    }
+    if (pCreateInfo->layers <= 0) {
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_02808, "DS",
+                        "vkCreateFramebuffer(): Requested VkFramebufferCreateInfo layers must be greater than zero. %s",
+                        validation_error_map[VALIDATION_ERROR_02808]);
+    }
     return skip;
 }
 
