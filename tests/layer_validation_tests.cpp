@@ -17126,76 +17126,186 @@ TEST_F(VkLayerTest, ImageFormatLimits) {
 
 TEST_F(VkLayerTest, CopyImageSrcSizeExceeded) {
     // Image copy with source region specified greater than src image size
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01175);
-
     ASSERT_NO_FATAL_FAILURE(Init());
 
+    uint32_t queue_count = 1;
+    VkQueueFamilyProperties queue_props;
+    vkGetPhysicalDeviceQueueFamilyProperties(gpu(), &queue_count, &queue_props);
+    if (0 == queue_props.minImageTransferGranularity.width || 0 == queue_props.minImageTransferGranularity.height ||
+        0 == queue_props.minImageTransferGranularity.depth) {
+        printf("             Image transfer granularity of 0, not supported; skipped.\n");
+        return;
+    }
+
+    // Create images with full mip chain
+    VkImageCreateInfo ci;
+    ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    ci.pNext = NULL;
+    ci.flags = 0;
+    ci.imageType = VK_IMAGE_TYPE_3D;
+    ci.format = VK_FORMAT_R8G8B8A8_UNORM;
+    ci.extent = {32, 32, 8};
+    ci.mipLevels = 6;
+    ci.arrayLayers = 1;
+    ci.samples = VK_SAMPLE_COUNT_1_BIT;
+    ci.tiling = VK_IMAGE_TILING_OPTIMAL;
+    ci.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    ci.queueFamilyIndexCount = 0;
+    ci.pQueueFamilyIndices = NULL;
+    ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
     VkImageObj src_image(m_device);
-    src_image.Init(32, 32, 1, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_TILING_LINEAR, 0);
+    src_image.init(&ci);
+    ASSERT_TRUE(src_image.initialized());
+
+    // Dest image with one more mip level
+    ci.extent = {64, 64, 16};
+    ci.mipLevels = 7;
+    ci.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     VkImageObj dst_image(m_device);
-    dst_image.Init(64, 64, 1, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_IMAGE_TILING_LINEAR, 0);
+    dst_image.init(&ci);
+    ASSERT_TRUE(dst_image.initialized());
 
     m_commandBuffer->BeginCommandBuffer();
+
     VkImageCopy copy_region;
+    copy_region.extent = {32, 32, 8};
     copy_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    copy_region.srcSubresource.mipLevel = 0;
-    copy_region.srcSubresource.baseArrayLayer = 0;
-    copy_region.srcSubresource.layerCount = 0;
-    copy_region.srcOffset.x = 0;
-    copy_region.srcOffset.y = 0;
-    copy_region.srcOffset.z = 0;
     copy_region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    copy_region.dstSubresource.mipLevel = 0;
+    copy_region.srcSubresource.mipLevel = 0;  // invalid for source
+    copy_region.dstSubresource.mipLevel = 0;  // ok
+    copy_region.srcSubresource.baseArrayLayer = 0;
     copy_region.dstSubresource.baseArrayLayer = 0;
-    copy_region.dstSubresource.layerCount = 0;
-    copy_region.dstOffset.x = 0;
-    copy_region.dstOffset.y = 0;
-    copy_region.dstOffset.z = 0;
-    copy_region.extent.width = 64;
-    copy_region.extent.height = 64;
-    copy_region.extent.depth = 1;
+    copy_region.srcSubresource.layerCount = 1;
+    copy_region.dstSubresource.layerCount = 1;
+    copy_region.srcOffset = {0, 0, 0};
+    copy_region.dstOffset = {0, 0, 0};
+
+    m_errorMonitor->ExpectSuccess();
     m_commandBuffer->CopyImage(src_image.image(), VK_IMAGE_LAYOUT_GENERAL, dst_image.image(), VK_IMAGE_LAYOUT_GENERAL, 1,
                                &copy_region);
-    m_commandBuffer->EndCommandBuffer();
+    m_errorMonitor->VerifyNotFound();
 
+    // Source exceeded in x-dim, VU 01202
+    copy_region.srcOffset.x = 4;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01175);  // General "contained within" VU
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01202);
+    m_commandBuffer->CopyImage(src_image.image(), VK_IMAGE_LAYOUT_GENERAL, dst_image.image(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                               &copy_region);
     m_errorMonitor->VerifyFound();
+
+    // Source exceeded in y-dim, VU 01203
+    copy_region.srcOffset.x = 0;
+    copy_region.extent.height = 48;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01175);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01203);
+    m_commandBuffer->CopyImage(src_image.image(), VK_IMAGE_LAYOUT_GENERAL, dst_image.image(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                               &copy_region);
+    m_errorMonitor->VerifyFound();
+
+    // Source exceeded in z-dim, VU 01204
+    copy_region.extent = {4, 4, 4};
+    copy_region.srcSubresource.mipLevel = 2;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01175);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01204);
+    m_commandBuffer->CopyImage(src_image.image(), VK_IMAGE_LAYOUT_GENERAL, dst_image.image(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                               &copy_region);
+    m_errorMonitor->VerifyFound();
+
+    m_commandBuffer->EndCommandBuffer();
 }
 
 TEST_F(VkLayerTest, CopyImageDstSizeExceeded) {
     // Image copy with dest region specified greater than dest image size
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01176);
-
     ASSERT_NO_FATAL_FAILURE(Init());
 
-    VkImageObj src_image(m_device);
-    src_image.Init(64, 64, 1, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_TILING_LINEAR, 0);
+    uint32_t queue_count = 1;
+    VkQueueFamilyProperties queue_props;
+    vkGetPhysicalDeviceQueueFamilyProperties(gpu(), &queue_count, &queue_props);
+    if (0 == queue_props.minImageTransferGranularity.width || 0 == queue_props.minImageTransferGranularity.height ||
+        0 == queue_props.minImageTransferGranularity.depth) {
+        printf("             Image transfer granularity of 0, not supported; skipped.\n");
+        return;
+    }
+
+    // Create images with full mip chain
+    VkImageCreateInfo ci;
+    ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    ci.pNext = NULL;
+    ci.flags = 0;
+    ci.imageType = VK_IMAGE_TYPE_3D;
+    ci.format = VK_FORMAT_R8G8B8A8_UNORM;
+    ci.extent = {32, 32, 8};
+    ci.mipLevels = 6;
+    ci.arrayLayers = 1;
+    ci.samples = VK_SAMPLE_COUNT_1_BIT;
+    ci.tiling = VK_IMAGE_TILING_OPTIMAL;
+    ci.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    ci.queueFamilyIndexCount = 0;
+    ci.pQueueFamilyIndices = NULL;
+    ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
     VkImageObj dst_image(m_device);
-    dst_image.Init(32, 32, 1, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_IMAGE_TILING_LINEAR, 0);
+    dst_image.init(&ci);
+    ASSERT_TRUE(dst_image.initialized());
+
+    // Src image with one more mip level
+    ci.extent = {64, 64, 16};
+    ci.mipLevels = 7;
+    ci.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    VkImageObj src_image(m_device);
+    src_image.init(&ci);
+    ASSERT_TRUE(src_image.initialized());
 
     m_commandBuffer->BeginCommandBuffer();
+
     VkImageCopy copy_region;
+    copy_region.extent = {32, 32, 8};
     copy_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    copy_region.srcSubresource.mipLevel = 0;
-    copy_region.srcSubresource.baseArrayLayer = 0;
-    copy_region.srcSubresource.layerCount = 0;
-    copy_region.srcOffset.x = 0;
-    copy_region.srcOffset.y = 0;
-    copy_region.srcOffset.z = 0;
     copy_region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    copy_region.dstSubresource.mipLevel = 0;
+    copy_region.srcSubresource.mipLevel = 0;  // invalid for source
+    copy_region.dstSubresource.mipLevel = 0;  // ok
+    copy_region.srcSubresource.baseArrayLayer = 0;
     copy_region.dstSubresource.baseArrayLayer = 0;
-    copy_region.dstSubresource.layerCount = 0;
-    copy_region.dstOffset.x = 0;
-    copy_region.dstOffset.y = 0;
-    copy_region.dstOffset.z = 0;
-    copy_region.extent.width = 64;
-    copy_region.extent.height = 64;
-    copy_region.extent.depth = 1;
+    copy_region.srcSubresource.layerCount = 1;
+    copy_region.dstSubresource.layerCount = 1;
+    copy_region.srcOffset = {0, 0, 0};
+    copy_region.dstOffset = {0, 0, 0};
+
+    m_errorMonitor->ExpectSuccess();
     m_commandBuffer->CopyImage(src_image.image(), VK_IMAGE_LAYOUT_GENERAL, dst_image.image(), VK_IMAGE_LAYOUT_GENERAL, 1,
                                &copy_region);
-    m_commandBuffer->EndCommandBuffer();
+    m_errorMonitor->VerifyNotFound();
 
+    // Dest exceeded in x-dim, VU 01205
+    copy_region.dstOffset.x = 4;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01176);  // General "contained within" VU
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01205);
+    m_commandBuffer->CopyImage(src_image.image(), VK_IMAGE_LAYOUT_GENERAL, dst_image.image(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                               &copy_region);
     m_errorMonitor->VerifyFound();
+
+    // Dest exceeded in y-dim, VU 01206
+    copy_region.dstOffset.x = 0;
+    copy_region.extent.height = 48;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01176);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01206);
+    m_commandBuffer->CopyImage(src_image.image(), VK_IMAGE_LAYOUT_GENERAL, dst_image.image(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                               &copy_region);
+    m_errorMonitor->VerifyFound();
+
+    // Dest exceeded in z-dim, VU 01207
+    copy_region.extent = {4, 4, 4};
+    copy_region.dstSubresource.mipLevel = 2;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01176);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01207);
+    m_commandBuffer->CopyImage(src_image.image(), VK_IMAGE_LAYOUT_GENERAL, dst_image.image(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                               &copy_region);
+    m_errorMonitor->VerifyFound();
+
+    m_commandBuffer->EndCommandBuffer();
 }
 
 TEST_F(VkLayerTest, CopyImageFormatSizeMismatch) {
