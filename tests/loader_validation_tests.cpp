@@ -26,7 +26,10 @@
  * Author: Mark Young <marky@lunarG.com>
  */
 
-#include <inttypes.h>  //Needed for PRIxLEAST64
+// Following items are needed for C++ to work with PRIxLEAST64
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
 #include <stdint.h> // For UINT32_MAX
 
 #include <algorithm>
