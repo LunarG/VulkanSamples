@@ -705,11 +705,11 @@ bool PreCallValidateCreateImage(layer_data *device_data, const VkImageCreateInfo
                         ImageFormatProperties->maxExtent.depth, string_VkFormat(pCreateInfo->format));
     }
 
-    uint64_t totalSize = ((uint64_t)pCreateInfo->extent.width * (uint64_t)pCreateInfo->extent.height *
-                              (uint64_t)pCreateInfo->extent.depth * (uint64_t)pCreateInfo->arrayLayers *
-                              (uint64_t)pCreateInfo->samples * (uint64_t)FormatSize(pCreateInfo->format) +
-                          (uint64_t)imageGranularity) &
-                         ~(uint64_t)imageGranularity;
+    uint64_t totalSize =
+        ((uint64_t)pCreateInfo->extent.width * (uint64_t)pCreateInfo->extent.height * (uint64_t)pCreateInfo->extent.depth *
+             (uint64_t)pCreateInfo->arrayLayers * (uint64_t)pCreateInfo->samples * (uint64_t)FormatSize(pCreateInfo->format) +
+         (uint64_t)imageGranularity) &
+        ~(uint64_t)imageGranularity;
 
     if (totalSize > ImageFormatProperties->maxResourceSize) {
         skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, 0, __LINE__,
@@ -780,7 +780,7 @@ void PostCallRecordCreateImage(layer_data *device_data, const VkImageCreateInfo 
 bool PreCallValidateDestroyImage(layer_data *device_data, VkImage image, IMAGE_STATE **image_state, VK_OBJECT *obj_struct) {
     const CHECK_DISABLED *disabled = core_validation::GetDisables(device_data);
     *image_state = core_validation::GetImageState(device_data, image);
-    *obj_struct = {reinterpret_cast<uint64_t &>(image), kVulkanObjectTypeImage };
+    *obj_struct = {reinterpret_cast<uint64_t &>(image), kVulkanObjectTypeImage};
     if (disabled->destroy_image) return false;
     bool skip = false;
     if (*image_state) {
@@ -1058,8 +1058,7 @@ static bool RegionIntersects(const VkImageCopy *src, const VkImageCopy *dst, VkI
 static const uint32_t x_bit = 1;
 static const uint32_t y_bit = 2;
 static const uint32_t z_bit = 4;
-static uint32_t ExceedsBounds(const VkOffset3D *offset, const VkExtent3D *extent, const VkExtent3D *image_extent) 
-{
+static uint32_t ExceedsBounds(const VkOffset3D *offset, const VkExtent3D *extent, const VkExtent3D *image_extent) {
     uint32_t result = 0;
     // Extents/depths cannot be negative but checks left in for clarity
     if ((offset->z + extent->depth > image_extent->depth) || (offset->z < 0) ||
@@ -1092,11 +1091,10 @@ static inline VkExtent3D GetImageSubresourceExtent(const IMAGE_STATE *img, const
     const uint32_t mip = subresource->mipLevel;
 
     // Return zero extent if mip level doesn't exist
-    if (mip >= img->createInfo.mipLevels)
-    {
-        return VkExtent3D{ 0, 0, 0 };
+    if (mip >= img->createInfo.mipLevels) {
+        return VkExtent3D{0, 0, 0};
     }
-    
+
     // Don't allow mip adjustment to create 0 dim, but pass along a 0 if that's what subresource specified
     VkExtent3D extent = img->createInfo.extent;
     extent.width = (0 == extent.width ? 0 : std::max(1U, extent.width >> mip));
@@ -1105,8 +1103,7 @@ static inline VkExtent3D GetImageSubresourceExtent(const IMAGE_STATE *img, const
 
     // For 2D images, the number of layers present becomes the effective depth (for 2D <-> 3D copies)
     // In this case the depth extent is not diminished with mip level
-    if (VK_IMAGE_TYPE_2D == img->createInfo.imageType)
-    {
+    if (VK_IMAGE_TYPE_2D == img->createInfo.imageType) {
         extent.depth = img->createInfo.arrayLayers;
     }
 
@@ -1545,8 +1542,7 @@ bool PreCallValidateCmdCopyImage(layer_data *device_data, GLOBAL_CB_NODE *cb_nod
     // The formats of src_image and dst_image must be compatible. Formats are considered compatible if their texel size in bytes
     // is the same between both formats. For example, VK_FORMAT_R8G8B8A8_UNORM is compatible with VK_FORMAT_R32_UINT because
     // because both texels are 4 bytes in size. Depth/stencil formats must match exactly.
-    if (FormatIsDepthOrStencil(src_image_state->createInfo.format) ||
-        FormatIsDepthOrStencil(dst_image_state->createInfo.format)) {
+    if (FormatIsDepthOrStencil(src_image_state->createInfo.format) || FormatIsDepthOrStencil(dst_image_state->createInfo.format)) {
         if (src_image_state->createInfo.format != dst_image_state->createInfo.format) {
             char const str[] = "vkCmdCopyImage called with unmatched source and dest image depth/stencil formats.";
             skip |=
@@ -2172,15 +2168,15 @@ bool ValidateMaskBitsFromLayouts(core_validation::layer_data *device_data, VkCom
             break;
         }
         case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
-            // Notes: QueuePresentKHR performs automatic visibility operations,
-            // so the app is /NOT/ required to include VK_ACCESS_MEMORY_READ_BIT
-            // when transitioning to this layout.
-            //
-            // When transitioning /from/ this layout, the application needs to
-            // avoid only a WAR hazard -- any writes need to be ordered after
-            // the PE's reads. There is no need for a memory dependency for this
-            // case.
-            /* fallthrough */
+        // Notes: QueuePresentKHR performs automatic visibility operations,
+        // so the app is /NOT/ required to include VK_ACCESS_MEMORY_READ_BIT
+        // when transitioning to this layout.
+        //
+        // When transitioning /from/ this layout, the application needs to
+        // avoid only a WAR hazard -- any writes need to be ordered after
+        // the PE's reads. There is no need for a memory dependency for this
+        // case.
+        /* fallthrough */
 
         case VK_IMAGE_LAYOUT_GENERAL:
         default: { break; }
@@ -2687,7 +2683,7 @@ void PostCallRecordDestroyImageView(layer_data *device_data, VkImageView image_v
 
 bool PreCallValidateDestroyBuffer(layer_data *device_data, VkBuffer buffer, BUFFER_STATE **buffer_state, VK_OBJECT *obj_struct) {
     *buffer_state = GetBufferState(device_data, buffer);
-    *obj_struct = {reinterpret_cast<uint64_t &>(buffer), kVulkanObjectTypeBuffer };
+    *obj_struct = {reinterpret_cast<uint64_t &>(buffer), kVulkanObjectTypeBuffer};
     if (GetDisables(device_data)->destroy_buffer) return false;
     bool skip = false;
     if (*buffer_state) {
@@ -2711,7 +2707,7 @@ void PostCallRecordDestroyBuffer(layer_data *device_data, VkBuffer buffer, BUFFE
 bool PreCallValidateDestroyBufferView(layer_data *device_data, VkBufferView buffer_view, BUFFER_VIEW_STATE **buffer_view_state,
                                       VK_OBJECT *obj_struct) {
     *buffer_view_state = GetBufferViewState(device_data, buffer_view);
-    *obj_struct = {reinterpret_cast<uint64_t &>(buffer_view), kVulkanObjectTypeBufferView };
+    *obj_struct = {reinterpret_cast<uint64_t &>(buffer_view), kVulkanObjectTypeBufferView};
     if (GetDisables(device_data)->destroy_buffer_view) return false;
     bool skip = false;
     if (*buffer_view_state) {
@@ -2792,8 +2788,7 @@ bool ValidateBufferImageCopyData(const debug_report_data *report_data, uint32_t 
         // If the the calling command's VkImage parameter's format is not a depth/stencil format,
         // then bufferOffset must be a multiple of the calling command's VkImage parameter's texel size
         auto texel_size = FormatSize(image_state->createInfo.format);
-        if (!FormatIsDepthAndStencil(image_state->createInfo.format) &&
-            SafeModulo(pRegions[i].bufferOffset, texel_size) != 0) {
+        if (!FormatIsDepthAndStencil(image_state->createInfo.format) && SafeModulo(pRegions[i].bufferOffset, texel_size) != 0) {
             skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                             reinterpret_cast<uint64_t &>(image_state->image), __LINE__, VALIDATION_ERROR_01263, "IMAGE",
                             "%s(): pRegion[%d] bufferOffset 0x%" PRIxLEAST64
