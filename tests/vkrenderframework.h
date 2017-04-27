@@ -433,7 +433,7 @@ class VkPipelineObj : public vk_testing::Pipeline {
     VkPipelineDepthStencilStateCreateInfo const *m_ds_state;
     VkPipelineViewportStateCreateInfo m_vp_state;
     VkPipelineMultisampleStateCreateInfo m_ms_state;
-    VkPipelineTessellationStateCreateInfo m_te_state;
+    VkPipelineTessellationStateCreateInfo const *m_te_state;
     VkPipelineDynamicStateCreateInfo m_pd_state;
     vector<VkDynamicState> m_dynamic_state_enables;
     vector<VkViewport> m_viewports;

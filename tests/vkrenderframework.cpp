@@ -1159,6 +1159,8 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device) {
 
     m_ds_state = nullptr;
 
+    m_te_state = nullptr;
+
     memset(&m_pd_state, 0, sizeof(m_pd_state));
 };
 
@@ -1221,11 +1223,11 @@ void VkPipelineObj::SetInputAssembly(const VkPipelineInputAssemblyStateCreateInf
 
 void VkPipelineObj::SetRasterization(const VkPipelineRasterizationStateCreateInfo *rs_state) { m_rs_state = *rs_state; }
 
-void VkPipelineObj::SetTessellation(const VkPipelineTessellationStateCreateInfo *te_state) { m_te_state = *te_state; }
+void VkPipelineObj::SetTessellation(const VkPipelineTessellationStateCreateInfo *te_state) { m_te_state = te_state; }
 
 void VkPipelineObj::InitGraphicsPipelineCreateInfo(VkGraphicsPipelineCreateInfo *gp_ci) {
     gp_ci->stageCount = m_shaderStages.size();
-    gp_ci->pStages = m_shaderStages.size() ? &m_shaderStages[0] : nullptr;
+    gp_ci->pStages = m_shaderStages.size() ? m_shaderStages.data() : nullptr;
 
     m_vi_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     gp_ci->pVertexInputState = &m_vi_state;
@@ -1268,13 +1270,7 @@ void VkPipelineObj::InitGraphicsPipelineCreateInfo(VkGraphicsPipelineCreateInfo 
     gp_ci->pMultisampleState = &m_ms_state;
     gp_ci->pDepthStencilState = m_ds_state;
     gp_ci->pColorBlendState = &m_cb_state;
-
-    if (m_ia_state.topology == VK_PRIMITIVE_TOPOLOGY_PATCH_LIST) {
-        m_te_state.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
-        gp_ci->pTessellationState = &m_te_state;
-    } else {
-        gp_ci->pTessellationState = nullptr;
-    }
+    gp_ci->pTessellationState = m_te_state;
 }
 
 VkResult VkPipelineObj::CreateVKPipeline(VkPipelineLayout layout, VkRenderPass render_pass, VkGraphicsPipelineCreateInfo *gp_ci) {
