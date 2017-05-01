@@ -10257,18 +10257,6 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, const char *
                         validation_error_map[VALIDATION_ERROR_02334]))
                 return true;
         }
-        if ((capabilities.currentExtent.width != kSurfaceSizeFromSwapchain) &&
-            ((pCreateInfo->imageExtent.width != capabilities.currentExtent.width) ||
-             (pCreateInfo->imageExtent.height != capabilities.currentExtent.height))) {
-            if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                        reinterpret_cast<uint64_t>(dev_data->device), __LINE__, VALIDATION_ERROR_02334, "DS",
-                        "%s called with imageExtent = (%d,%d), which is not equal to the currentExtent = (%d,%d) returned by "
-                        "vkGetPhysicalDeviceSurfaceCapabilitiesKHR(). %s",
-                        func_name, pCreateInfo->imageExtent.width, pCreateInfo->imageExtent.height,
-                        capabilities.currentExtent.width, capabilities.currentExtent.height,
-                        validation_error_map[VALIDATION_ERROR_02334]))
-                return true;
-        }
         // pCreateInfo->preTransform should have exactly one bit set, and that bit must also be set in
         // VkSurfaceCapabilitiesKHR::supportedTransforms.
         if (!pCreateInfo->preTransform || (pCreateInfo->preTransform & (pCreateInfo->preTransform - 1)) ||
