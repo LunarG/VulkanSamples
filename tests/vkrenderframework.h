@@ -263,17 +263,17 @@ class VkImageObj : public vk_testing::Image {
     bool IsCompatible(VkFlags usage, VkFlags features);
 
    public:
-    void init(uint32_t w, uint32_t h, VkFormat fmt, VkFlags usage, VkImageTiling tiling = VK_IMAGE_TILING_LINEAR,
-              VkMemoryPropertyFlags reqs = 0);
+    void Init(uint32_t const width, uint32_t const height, uint32_t const mipLevels, VkFormat const format, VkFlags const usage,
+              VkImageTiling const tiling = VK_IMAGE_TILING_LINEAR, VkMemoryPropertyFlags const reqs = 0);
 
     void init(const VkImageCreateInfo *create_info);
 
-    void init_no_layout(uint32_t w, uint32_t h, VkFormat fmt, VkFlags usage, VkImageTiling tiling = VK_IMAGE_TILING_LINEAR,
-                        VkMemoryPropertyFlags reqs = 0);
+    void InitNoLayout(uint32_t const width, uint32_t const height, uint32_t const mipLevels, VkFormat const format,
+                      VkFlags const usage, VkImageTiling tiling = VK_IMAGE_TILING_LINEAR, VkMemoryPropertyFlags reqs = 0);
 
     //    void clear( CommandBuffer*, uint32_t[4] );
 
-    void layout(VkImageLayout layout) { m_descriptorImageInfo.imageLayout = layout; }
+    void Layout(VkImageLayout const layout) { m_descriptorImageInfo.imageLayout = layout; }
 
     VkDeviceMemory memory() const { return Image::memory().handle(); }
 
@@ -309,7 +309,7 @@ class VkImageObj : public vk_testing::Image {
     void SetLayout(VkCommandBufferObj *cmd_buf, VkImageAspectFlags aspect, VkImageLayout image_layout);
     void SetLayout(VkImageAspectFlags aspect, VkImageLayout image_layout);
 
-    VkImageLayout layout() const { return m_descriptorImageInfo.imageLayout; }
+    VkImageLayout Layout() const { return m_descriptorImageInfo.imageLayout; }
     uint32_t width() const { return extent().width; }
     uint32_t height() const { return extent().height; }
     VkDeviceObj *device() const { return m_device; }
@@ -389,12 +389,10 @@ class VkShaderObj : public vk_testing::ShaderModule {
    public:
     VkShaderObj(VkDeviceObj *device, const char *shaderText, VkShaderStageFlagBits stage, VkRenderFramework *framework,
                 char const *name = "main");
-    VkPipelineShaderStageCreateInfo GetStageCreateInfo() const;
+    VkPipelineShaderStageCreateInfo const & GetStageCreateInfo() const;
 
    protected:
-    VkPipelineShaderStageCreateInfo stage_info;
-    VkShaderStageFlagBits m_stage;
-    char const *m_name;
+    VkPipelineShaderStageCreateInfo m_stage_info;
     VkDeviceObj *m_device;
 };
 
@@ -402,6 +400,7 @@ class VkPipelineObj : public vk_testing::Pipeline {
    public:
     VkPipelineObj(VkDeviceObj *device);
     void AddShader(VkShaderObj *shaderObj);
+    void AddShader(VkPipelineShaderStageCreateInfo const & createInfo);
     void AddVertexInputAttribs(VkVertexInputAttributeDescription *vi_attrib, uint32_t count);
     void AddVertexInputBindings(VkVertexInputBindingDescription *vi_binding, uint32_t count);
     void AddColorAttachment(uint32_t binding, const VkPipelineColorBlendAttachmentState *att);
@@ -440,7 +439,7 @@ class VkPipelineObj : public vk_testing::Pipeline {
     vector<VkViewport> m_viewports;
     vector<VkRect2D> m_scissors;
     VkDeviceObj *m_device;
-    vector<VkShaderObj *> m_shaderObjs;
+    vector<VkPipelineShaderStageCreateInfo> m_shaderStages;
     vector<int> m_vertexBufferBindings;
     vector<VkPipelineColorBlendAttachmentState> m_colorAttachments;
     int m_vertexBufferCount;

@@ -162,12 +162,12 @@ const std::map<VkFormat, VULKAN_FORMAT_INFO> vk_format_table = {
     {VK_FORMAT_B10G11R11_UFLOAT_PACK32,     {4, 3, VK_FORMAT_COMPATIBILITY_CLASS_32_BIT}},
     {VK_FORMAT_E5B9G9R9_UFLOAT_PACK32,      {4, 3, VK_FORMAT_COMPATIBILITY_CLASS_32_BIT}},
     {VK_FORMAT_D16_UNORM,                   {2, 1, VK_FORMAT_COMPATIBILITY_CLASS_NONE_BIT}},
-    {VK_FORMAT_X8_D24_UNORM_PACK32,         {3, 1, VK_FORMAT_COMPATIBILITY_CLASS_NONE_BIT}},
+    {VK_FORMAT_X8_D24_UNORM_PACK32,         {4, 1, VK_FORMAT_COMPATIBILITY_CLASS_NONE_BIT}},
     {VK_FORMAT_D32_SFLOAT,                  {4, 1, VK_FORMAT_COMPATIBILITY_CLASS_NONE_BIT}},
     {VK_FORMAT_S8_UINT,                     {1, 1, VK_FORMAT_COMPATIBILITY_CLASS_NONE_BIT}},
     {VK_FORMAT_D16_UNORM_S8_UINT,           {3, 2, VK_FORMAT_COMPATIBILITY_CLASS_NONE_BIT}},
     {VK_FORMAT_D24_UNORM_S8_UINT,           {4, 2, VK_FORMAT_COMPATIBILITY_CLASS_NONE_BIT}},
-    {VK_FORMAT_D32_SFLOAT_S8_UINT,          {5, 2, VK_FORMAT_COMPATIBILITY_CLASS_NONE_BIT}},
+    {VK_FORMAT_D32_SFLOAT_S8_UINT,          {8, 2, VK_FORMAT_COMPATIBILITY_CLASS_NONE_BIT}},
     {VK_FORMAT_BC1_RGB_UNORM_BLOCK,         {8, 4, VK_FORMAT_COMPATIBILITY_CLASS_BC1_RGB_BIT}},
     {VK_FORMAT_BC1_RGB_SRGB_BLOCK,          {8, 4, VK_FORMAT_COMPATIBILITY_CLASS_BC1_RGB_BIT}},
     {VK_FORMAT_BC1_RGBA_UNORM_BLOCK,        {8, 4, VK_FORMAT_COMPATIBILITY_CLASS_BC1_RGBA_BIT}},
@@ -678,7 +678,7 @@ VK_LAYER_EXPORT bool FormatIsSRGB(VkFormat format) {
     return is_srgb;
 }
 
-// Return true if format is in the USCALED colorspace
+// Return true if format is a USCALED format
 VK_LAYER_EXPORT bool FormatIsUScaled(VkFormat format) {
     bool is_uscaled = false;
 
@@ -705,7 +705,7 @@ VK_LAYER_EXPORT bool FormatIsUScaled(VkFormat format) {
     return is_uscaled;
 }
 
-// Return true if format is in the SSCALED colorspace
+// Return true if format is a SSCALED format
 VK_LAYER_EXPORT bool FormatIsSScaled(VkFormat format) {
     bool is_sscaled = false;
 

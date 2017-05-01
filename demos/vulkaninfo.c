@@ -223,6 +223,7 @@ static const char *VkPhysicalDeviceTypeString(VkPhysicalDeviceType type) {
         STR(INTEGRATED_GPU);
         STR(DISCRETE_GPU);
         STR(VIRTUAL_GPU);
+        STR(CPU);
 #undef STR
         default:
             return "UNKNOWN_DEVICE";
@@ -1067,14 +1068,17 @@ static void AppGpuDumpFeatures(const struct AppGpu *gpu)
     printf("\tdepthBounds                             = %u\n", features->depthBounds                            );
     printf("\twideLines                               = %u\n", features->wideLines                              );
     printf("\tlargePoints                             = %u\n", features->largePoints                            );
+    printf("\talphaToOne                              = %u\n", features->alphaToOne                             );
+    printf("\tmultiViewport                           = %u\n", features->multiViewport                          );
+    printf("\tsamplerAnisotropy                       = %u\n", features->samplerAnisotropy                      );
     printf("\ttextureCompressionETC2                  = %u\n", features->textureCompressionETC2                 );
     printf("\ttextureCompressionASTC_LDR              = %u\n", features->textureCompressionASTC_LDR             );
     printf("\ttextureCompressionBC                    = %u\n", features->textureCompressionBC                   );
     printf("\tocclusionQueryPrecise                   = %u\n", features->occlusionQueryPrecise                  );
     printf("\tpipelineStatisticsQuery                 = %u\n", features->pipelineStatisticsQuery                );
-    printf("\tvertexSideEffects                       = %u\n", features->vertexPipelineStoresAndAtomics         );
-    printf("\ttessellationSideEffects                 = %u\n", features->fragmentStoresAndAtomics               );
-    printf("\tgeometrySideEffects                     = %u\n", features->shaderTessellationAndGeometryPointSize );
+    printf("\tvertexPipelineStoresAndAtomics          = %u\n", features->vertexPipelineStoresAndAtomics         );
+    printf("\tfragmentStoresAndAtomics                = %u\n", features->fragmentStoresAndAtomics               );
+    printf("\tshaderTessellationAndGeometryPointSize  = %u\n", features->shaderTessellationAndGeometryPointSize );
     printf("\tshaderImageGatherExtended               = %u\n", features->shaderImageGatherExtended              );
     printf("\tshaderStorageImageExtendedFormats       = %u\n", features->shaderStorageImageExtendedFormats      );
     printf("\tshaderStorageImageMultisample           = %u\n", features->shaderStorageImageMultisample          );
@@ -1091,7 +1095,6 @@ static void AppGpuDumpFeatures(const struct AppGpu *gpu)
     printf("\tshaderInt16                             = %u\n", features->shaderInt16                            );
     printf("\tshaderResourceResidency                 = %u\n", features->shaderResourceResidency                );
     printf("\tshaderResourceMinLod                    = %u\n", features->shaderResourceMinLod                   );
-    printf("\talphaToOne                              = %u\n", features->alphaToOne                             );
     printf("\tsparseBinding                           = %u\n", features->sparseBinding                          );
     printf("\tsparseResidencyBuffer                   = %u\n", features->sparseResidencyBuffer                  );
     printf("\tsparseResidencyImage2D                  = %u\n", features->sparseResidencyImage2D                 );

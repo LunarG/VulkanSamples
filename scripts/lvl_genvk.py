@@ -357,6 +357,29 @@ def makeGenOpts(extensions = [], removeExtensions = [], protect = True, director
             helper_file_type  = 'safe_struct_source')
         ]
 
+    # Helper file generator options for vk_object_types.h
+    genOpts['vk_object_types.h'] = [
+          HelperFileOutputGenerator,
+          HelperFileOutputGeneratorOptions(
+            filename          = 'vk_object_types.h',
+            directory         = directory,
+            apiname           = 'vulkan',
+            profile           = None,
+            versions          = allVersions,
+            emitversions      = allVersions,
+            defaultExtensions = 'vulkan',
+            addExtensions     = addExtensions,
+            removeExtensions  = removeExtensions,
+            prefixText        = prefixStrings + vkPrefixStrings,
+            protectFeature    = False,
+            apicall           = 'VKAPI_ATTR ',
+            apientry          = 'VKAPI_CALL ',
+            apientryp         = 'VKAPI_PTR *',
+            alignFuncParam    = 48,
+            helper_file_type  = 'object_types_header')
+        ]
+
+
 # Generate a target based on the options in the matching genOpts{} object.
 # This is encapsulated in a function so it can be profiled and/or timed.
 # The args parameter is an parsed argument object containing the following

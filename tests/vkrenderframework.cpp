@@ -276,10 +276,10 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkImageView *dsBindin
         vkGetPhysicalDeviceFormatProperties(m_device->phy().handle(), m_render_target_fmt, &props);
 
         if (props.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) {
-            img->init((uint32_t)m_width, (uint32_t)m_height, m_render_target_fmt,
+            img->Init((uint32_t)m_width, (uint32_t)m_height, 1, m_render_target_fmt,
                       VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_TILING_LINEAR);
         } else if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) {
-            img->init((uint32_t)m_width, (uint32_t)m_height, m_render_target_fmt,
+            img->Init((uint32_t)m_width, (uint32_t)m_height, 1, m_render_target_fmt,
                       VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_TILING_OPTIMAL);
         } else {
             FAIL() << "Neither Linear nor Optimal allowed for render target";
@@ -562,7 +562,7 @@ void VkImageObj::ImageMemoryBarrier(VkCommandBufferObj *cmd_buf, VkImageAspectFl
                                     VkImageLayout image_layout) {
     const VkImageSubresourceRange subresourceRange = subresource_range(aspect, 0, 1, 0, 1);
     VkImageMemoryBarrier barrier;
-    barrier = image_memory_barrier(output_mask, input_mask, layout(), image_layout, subresourceRange);
+    barrier = image_memory_barrier(output_mask, input_mask, Layout(), image_layout, subresourceRange);
 
     VkImageMemoryBarrier *pmemory_barrier = &barrier;
 
@@ -660,18 +660,18 @@ void VkImageObj::SetLayout(VkImageAspectFlags aspect, VkImageLayout image_layout
     cmd_buf.QueueCommandBuffer();
 }
 
-bool VkImageObj::IsCompatible(VkFlags usage, VkFlags features) {
+bool VkImageObj::IsCompatible(VkFlags const usage, VkFlags const features) {
     if ((usage & VK_IMAGE_USAGE_SAMPLED_BIT) && !(features & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) return false;
 
     return true;
 }
 
-void VkImageObj::init_no_layout(uint32_t w, uint32_t h, VkFormat fmt, VkFlags usage, VkImageTiling requested_tiling,
-                                VkMemoryPropertyFlags reqs) {
+void VkImageObj::InitNoLayout(uint32_t const width, uint32_t const height, uint32_t const mipLevels, VkFormat const format,
+                              VkFlags const usage, VkImageTiling const requested_tiling, VkMemoryPropertyFlags const reqs) {
     VkFormatProperties image_fmt;
     VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
 
-    vkGetPhysicalDeviceFormatProperties(m_device->phy().handle(), fmt, &image_fmt);
+    vkGetPhysicalDeviceFormatProperties(m_device->phy().handle(), format, &image_fmt);
 
     if (requested_tiling == VK_IMAGE_TILING_LINEAR) {
         if (IsCompatible(usage, image_fmt.linearTilingFeatures)) {
@@ -691,22 +691,22 @@ void VkImageObj::init_no_layout(uint32_t w, uint32_t h, VkFormat fmt, VkFlags us
 
     VkImageCreateInfo imageCreateInfo = vk_testing::Image::create_info();
     imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
-    imageCreateInfo.format = fmt;
-    imageCreateInfo.extent.width = w;
-    imageCreateInfo.extent.height = h;
-    imageCreateInfo.mipLevels = 1;
+    imageCreateInfo.format = format;
+    imageCreateInfo.extent.width = width;
+    imageCreateInfo.extent.height = height;
+    imageCreateInfo.mipLevels = mipLevels;
     imageCreateInfo.tiling = tiling;
     imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-    layout(imageCreateInfo.initialLayout);
+    Layout(imageCreateInfo.initialLayout);
     imageCreateInfo.usage = usage;
 
     vk_testing::Image::init(*m_device, imageCreateInfo, reqs);
 }
 
-void VkImageObj::init(uint32_t w, uint32_t h, VkFormat fmt, VkFlags usage, VkImageTiling requested_tiling,
-                      VkMemoryPropertyFlags reqs) {
-    init_no_layout(w, h, fmt, usage, requested_tiling, reqs);
+void VkImageObj::Init(uint32_t const width, uint32_t const height, uint32_t const mipLevels, VkFormat const format,
+                      VkFlags const usage, VkImageTiling const requested_tiling, VkMemoryPropertyFlags const reqs) {
+    InitNoLayout(width, height, mipLevels, format, usage, requested_tiling, reqs);
 
     VkImageLayout newLayout;
     if (usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
@@ -717,11 +717,11 @@ void VkImageObj::init(uint32_t w, uint32_t h, VkFormat fmt, VkFlags usage, VkIma
         newLayout = m_descriptorImageInfo.imageLayout;
 
     VkImageAspectFlags image_aspect = 0;
-    if (FormatIsDepthAndStencil(fmt)) {
+    if (FormatIsDepthAndStencil(format)) {
         image_aspect = VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_DEPTH_BIT;
-    } else if (FormatIsDepthOnly(fmt)) {
+    } else if (FormatIsDepthOnly(format)) {
         image_aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
-    } else if (FormatIsStencilOnly(fmt)) {
+    } else if (FormatIsStencilOnly(format)) {
         image_aspect = VK_IMAGE_ASPECT_STENCIL_BIT;
     } else {  // color
         image_aspect = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -747,7 +747,7 @@ void VkImageObj::init(const VkImageCreateInfo *create_info) {
         default:
             break;
     }
-    layout(create_info->initialLayout);
+    Layout(create_info->initialLayout);
 
     vk_testing::Image::init(*m_device, *create_info, 0);
 
@@ -776,10 +776,10 @@ VkResult VkImageObj::CopyImage(VkImageObj &src_image) {
     assert(!err);
 
     /* TODO: Can we determine image aspect from image object? */
-    src_image_layout = src_image.layout();
+    src_image_layout = src_image.Layout();
     src_image.SetLayout(&cmd_buf, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
-    dest_image_layout = (this->layout() == VK_IMAGE_LAYOUT_UNDEFINED) ? VK_IMAGE_LAYOUT_GENERAL : this->layout();
+    dest_image_layout = (this->Layout() == VK_IMAGE_LAYOUT_UNDEFINED) ? VK_IMAGE_LAYOUT_GENERAL : this->Layout();
     this->SetLayout(&cmd_buf, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
     VkImageCopy copy_region = {};
@@ -799,7 +799,7 @@ VkResult VkImageObj::CopyImage(VkImageObj &src_image) {
     copy_region.dstOffset.z = 0;
     copy_region.extent = src_image.extent();
 
-    vkCmdCopyImage(cmd_buf.handle(), src_image.handle(), src_image.layout(), handle(), layout(), 1, &copy_region);
+    vkCmdCopyImage(cmd_buf.handle(), src_image.handle(), src_image.Layout(), handle(), Layout(), 1, &copy_region);
 
     src_image.SetLayout(&cmd_buf, VK_IMAGE_ASPECT_COLOR_BIT, src_image_layout);
 
@@ -822,8 +822,8 @@ VkTextureObj::VkTextureObj(VkDeviceObj *device, uint32_t *colors) : VkImageObj(d
     VkImageObj stagingImage(device);
     VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
-    stagingImage.init(16, 16, tex_format, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_TILING_LINEAR,
-                      reqs);
+    stagingImage.Init(16, 16, 1, tex_format, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+                      VK_IMAGE_TILING_LINEAR, reqs);
     VkSubresourceLayout layout = stagingImage.subresource_layout(subresource(VK_IMAGE_ASPECT_COLOR_BIT, 0, 0));
 
     if (colors == NULL) colors = tex_colors;
@@ -847,7 +847,7 @@ VkTextureObj::VkTextureObj(VkDeviceObj *device, uint32_t *colors) : VkImageObj(d
     view.subresourceRange.layerCount = 1;
 
     /* create image */
-    init(16, 16, tex_format, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_IMAGE_TILING_OPTIMAL);
+    Init(16, 16, 1, tex_format, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_IMAGE_TILING_OPTIMAL);
     stagingImage.SetLayout(VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_GENERAL);
 
     /* create image view */
@@ -1066,15 +1066,8 @@ void VkIndexBufferObj::Bind(VkCommandBuffer commandBuffer, VkDeviceSize offset) 
 
 VkIndexType VkIndexBufferObj::GetIndexType() { return m_indexType; }
 
-VkPipelineShaderStageCreateInfo VkShaderObj::GetStageCreateInfo() const {
-    VkPipelineShaderStageCreateInfo stageInfo = {};
-
-    stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    stageInfo.stage = m_stage;
-    stageInfo.module = handle();
-    stageInfo.pName = m_name;
-
-    return stageInfo;
+VkPipelineShaderStageCreateInfo const & VkShaderObj::GetStageCreateInfo() const {
+    return m_stage_info;
 }
 
 VkShaderObj::VkShaderObj(VkDeviceObj *device, const char *shader_code, VkShaderStageFlagBits stage, VkRenderFramework *framework,
@@ -1082,36 +1075,26 @@ VkShaderObj::VkShaderObj(VkDeviceObj *device, const char *shader_code, VkShaderS
     VkResult U_ASSERT_ONLY err = VK_SUCCESS;
     std::vector<unsigned int> spv;
     VkShaderModuleCreateInfo moduleCreateInfo;
-    size_t shader_len;
 
-    m_stage = stage;
     m_device = device;
-    m_name = name;
+    m_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    m_stage_info.pNext = nullptr;
+    m_stage_info.flags = 0;
+    m_stage_info.stage = stage;
+    m_stage_info.module = VK_NULL_HANDLE;
+    m_stage_info.pName = name;
+    m_stage_info.pSpecializationInfo = nullptr;
 
     moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    moduleCreateInfo.pNext = NULL;
+    moduleCreateInfo.pNext = nullptr;
 
-    if (framework->m_use_glsl) {
-        shader_len = strlen(shader_code);
-        moduleCreateInfo.codeSize = 3 * sizeof(uint32_t) + shader_len + 1;
-        moduleCreateInfo.pCode = (uint32_t *)malloc(moduleCreateInfo.codeSize);
-        moduleCreateInfo.flags = 0;
-
-        /* try version 0 first: VkShaderStage followed by GLSL */
-        ((uint32_t *)moduleCreateInfo.pCode)[0] = ICD_SPV_MAGIC;
-        ((uint32_t *)moduleCreateInfo.pCode)[1] = 0;
-        ((uint32_t *)moduleCreateInfo.pCode)[2] = stage;
-        memcpy(((uint32_t *)moduleCreateInfo.pCode + 3), shader_code, shader_len + 1);
-
-    } else {
-        // Use Reference GLSL to SPV compiler
-        framework->GLSLtoSPV(stage, shader_code, spv);
-        moduleCreateInfo.pCode = spv.data();
-        moduleCreateInfo.codeSize = spv.size() * sizeof(unsigned int);
-        moduleCreateInfo.flags = 0;
-    }
+    framework->GLSLtoSPV(stage, shader_code, spv);
+    moduleCreateInfo.pCode = spv.data();
+    moduleCreateInfo.codeSize = spv.size() * sizeof(unsigned int);
+    moduleCreateInfo.flags = 0;
 
     err = init_try(*m_device, moduleCreateInfo);
+    m_stage_info.module = handle();
     assert(VK_SUCCESS == err);
 }
 
@@ -1179,7 +1162,13 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device) {
     memset(&m_pd_state, 0, sizeof(m_pd_state));
 };
 
-void VkPipelineObj::AddShader(VkShaderObj *shader) { m_shaderObjs.push_back(shader); }
+void VkPipelineObj::AddShader(VkShaderObj *shader) {
+    m_shaderStages.push_back(shader->GetStageCreateInfo());
+}
+
+void VkPipelineObj::AddShader(VkPipelineShaderStageCreateInfo const & createInfo) {
+    m_shaderStages.push_back(createInfo);
+}
 
 void VkPipelineObj::AddVertexInputAttribs(VkVertexInputAttributeDescription *vi_attrib, uint32_t count) {
     m_vi_state.pVertexAttributeDescriptions = vi_attrib;
@@ -1235,12 +1224,8 @@ void VkPipelineObj::SetRasterization(const VkPipelineRasterizationStateCreateInf
 void VkPipelineObj::SetTessellation(const VkPipelineTessellationStateCreateInfo *te_state) { m_te_state = *te_state; }
 
 void VkPipelineObj::InitGraphicsPipelineCreateInfo(VkGraphicsPipelineCreateInfo *gp_ci) {
-    gp_ci->stageCount = m_shaderObjs.size();
-    gp_ci->pStages = new VkPipelineShaderStageCreateInfo[gp_ci->stageCount];
-
-    for (size_t i = 0; i < m_shaderObjs.size(); i++) {
-        ((VkPipelineShaderStageCreateInfo *)gp_ci->pStages)[i] = m_shaderObjs[i]->GetStageCreateInfo();
-    }
+    gp_ci->stageCount = m_shaderStages.size();
+    gp_ci->pStages = m_shaderStages.size() ? &m_shaderStages[0] : nullptr;
 
     m_vi_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     gp_ci->pVertexInputState = &m_vi_state;
@@ -1367,9 +1352,9 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColorValue clear_color, float de
 
     for (i = 0; i < m_renderTargets.size(); i++) {
         memory_barrier.image = m_renderTargets[i]->image();
-        memory_barrier.oldLayout = m_renderTargets[i]->layout();
+        memory_barrier.oldLayout = m_renderTargets[i]->Layout();
         vkCmdPipelineBarrier(handle(), src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, pmemory_barrier);
-        m_renderTargets[i]->layout(memory_barrier.newLayout);
+        m_renderTargets[i]->Layout(memory_barrier.newLayout);
 
         vkCmdClearColorImage(handle(), m_renderTargets[i]->image(), VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1, &srRange);
     }
@@ -1460,9 +1445,9 @@ void VkCommandBufferObj::PrepareAttachments() {
 
     for (i = 0; i < m_renderTargets.size(); i++) {
         memory_barrier.image = m_renderTargets[i]->image();
-        memory_barrier.oldLayout = m_renderTargets[i]->layout();
+        memory_barrier.oldLayout = m_renderTargets[i]->Layout();
         vkCmdPipelineBarrier(handle(), src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, pmemory_barrier);
-        m_renderTargets[i]->layout(memory_barrier.newLayout);
+        m_renderTargets[i]->Layout(memory_barrier.newLayout);
     }
 }
 
@@ -1586,7 +1571,7 @@ void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height,
     m_depth_stencil_fmt = format;
 
     /* create image */
-    init(width, height, m_depth_stencil_fmt, usage, VK_IMAGE_TILING_OPTIMAL);
+    VkImageObj::Init(width, height, 1, m_depth_stencil_fmt, usage, VK_IMAGE_TILING_OPTIMAL);
 
     VkImageAspectFlags aspect = VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_DEPTH_BIT;
     if (FormatIsDepthOnly(format))

@@ -140,7 +140,6 @@ VkTestFramework::VkTestFramework() : m_compile_options(0), m_num_shader_strings(
 VkTestFramework::~VkTestFramework() {}
 
 // Define all the static elements
-bool VkTestFramework::m_use_glsl = false;
 bool VkTestFramework::m_canonicalize_spv = false;
 bool VkTestFramework::m_strip_spv = false;
 bool VkTestFramework::m_do_everything_spv = false;
@@ -158,9 +157,7 @@ void VkTestFramework::InitArgs(int *argc, char *argv[]) {
     int i, n;
 
     for (i = 1, n = 1; i < *argc; i++) {
-        if (optionMatch("--no-SPV", argv[i]))
-            m_use_glsl = true;
-        else if (optionMatch("--strip-SPV", argv[i]))
+        if (optionMatch("--strip-SPV", argv[i]))
             m_strip_spv = true;
         else if (optionMatch("--canonicalize-SPV", argv[i]))
             m_canonicalize_spv = true;

@@ -132,12 +132,12 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
             'vkDestroyInstance',
             'vkCreateDevice',
             'vkDestroyDevice',
-            'vkAllocateMemory',
             'vkCreateComputePipelines',
             'vkCreateGraphicsPipelines',
             'vkCreateSwapchainKHR',
             'vkCreateSharedSwapchainsKHR',
             'vkGetSwapchainImagesKHR',
+            'vkQueuePresentKHR',
             'vkEnumerateInstanceLayerProperties',
             'vkEnumerateDeviceLayerProperties',
             'vkEnumerateInstanceExtensionProperties',
@@ -163,9 +163,22 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
         self.headerVersion = None
         # Internal state - accumulators for different inner block text
         self.sections = dict([(section, []) for section in self.ALL_SECTIONS])
-        self.structMembers = []                           # List of StructMemberData records for all Vulkan structs
+
+        self.cmdMembers = []
+        self.cmd_feature_protect = []  # Save ifdef's for each command
+        self.cmd_info_data = []        # Save the cmdinfo data for wrapping the handles when processing is complete
+        self.structMembers = []        # List of StructMemberData records for all Vulkan structs
+        self.extension_structs = []    # List of all structs or sister-structs containing handles
+                                       # A sister-struct may contain no handles but shares <validextensionstructs> with one that does
+        self.structTypes = dict()      # Map of Vulkan struct typename to required VkStructureType
+        self.struct_member_dict = dict()
         # Named tuples to store struct and command data
-        self.CommandParam = namedtuple('CommandParam', ['type', 'name', 'ispointer', 'isconst', 'iscount', 'len', 'extstructs', 'cdecl', 'islocal', 'iscreate', 'isdestroy'])
+        self.StructType = namedtuple('StructType', ['name', 'value'])
+        self.CmdMemberData = namedtuple('CmdMemberData', ['name', 'members'])
+        self.CmdInfoData = namedtuple('CmdInfoData', ['name', 'cmdinfo'])
+        self.CmdExtraProtect = namedtuple('CmdExtraProtect', ['name', 'extra_protect'])
+
+        self.CommandParam = namedtuple('CommandParam', ['type', 'name', 'ispointer', 'isconst', 'iscount', 'len', 'extstructs', 'cdecl', 'islocal', 'iscreate', 'isdestroy', 'feature_protect'])
         self.StructMemberData = namedtuple('StructMemberData', ['name', 'members'])
     #
     def incIndent(self, indent):
@@ -196,8 +209,37 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
         # Namespace
         self.newline()
         write('namespace unique_objects {', file = self.outFile)
-    #
+    # Now that the data is all collected and complete, generate and output the wrapping/unwrapping routines
     def endFile(self):
+
+        self.struct_member_dict = dict(self.structMembers)
+
+        # Generate the list of APIs that might need to handle wrapped extension structs
+        self.GenerateCommandWrapExtensionList()
+        # Write out wrapping/unwrapping functions
+        self.WrapCommands()
+        # Build and write out pNext processing function
+        extension_proc = self.build_extension_processing_func()
+        self.newline()
+        write('// Unique Objects pNext extension handling function', file=self.outFile)
+        write('%s' % extension_proc, file=self.outFile)
+
+        # Actually write the interface to the output file.
+        if (self.emit):
+            self.newline()
+            if (self.featureExtraProtect != None):
+                write('#ifdef', self.featureExtraProtect, file=self.outFile)
+            # Write the unique_objects code to the file
+            if (self.sections['command']):
+                if (self.genOpts.protectProto):
+                    write(self.genOpts.protectProto,
+                          self.genOpts.protectProtoStr, file=self.outFile)
+                write('\n'.join(self.sections['command']), end=u'', file=self.outFile)
+            if (self.featureExtraProtect != None):
+                write('\n#endif //', self.featureExtraProtect, file=self.outFile)
+            else:
+                self.newline()
+
         # Write out device extension white list
         self.newline()
         write('// Layer Device Extension Whitelist', file=self.outFile)
@@ -229,9 +271,7 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
         # Start processing in superclass
         OutputGenerator.beginFeature(self, interface, emit)
         self.headerVersion = None
-        self.sections = dict([(section, []) for section in self.ALL_SECTIONS])
-        self.cmdMembers = []
-        self.CmdMemberData = namedtuple('CmdMemberData', ['name', 'members'])
+
         if self.featureName != 'VK_VERSION_1_0':
             white_list_entry = []
             if (self.featureExtraProtect != None):
@@ -246,21 +286,6 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
                 self.device_extensions += white_list_entry
     #
     def endFeature(self):
-        # Actually write the interface to the output file.
-        if (self.emit):
-            self.newline()
-            if (self.featureExtraProtect != None):
-                write('#ifdef', self.featureExtraProtect, file=self.outFile)
-            # Write the unique_objects code to the file
-            if (self.sections['command']):
-                if (self.genOpts.protectProto):
-                    write(self.genOpts.protectProto,
-                          self.genOpts.protectProtoStr, file=self.outFile)
-                write('\n'.join(self.sections['command']), end=u'', file=self.outFile)
-            if (self.featureExtraProtect != None):
-                write('\n#endif //', self.featureExtraProtect, file=self.outFile)
-            else:
-                self.newline()
         # Finish processing in superclass
         OutputGenerator.endFeature(self)
     #
@@ -369,19 +394,24 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
                     value = result.group(0)
                 else:
                     value = self.genVkStructureType(typeName)
+                # Store the required type value
+                self.structTypes[typeName] = self.StructType(name=name, value=value)
             # Store pointer/array/string info
+            extstructs = member.attrib.get('validextensionstructs') if name == 'pNext' else None
             membersInfo.append(self.CommandParam(type=type,
                                                  name=name,
                                                  ispointer=self.paramIsPointer(member),
                                                  isconst=True if 'const' in cdecl else False,
                                                  iscount=True if name in lens else False,
                                                  len=self.getLen(member),
-                                                 extstructs=member.attrib.get('validextensionstructs') if name == 'pNext' else None,
+                                                 extstructs=extstructs,
                                                  cdecl=cdecl,
                                                  islocal=False,
                                                  iscreate=False,
-                                                 isdestroy=False))
+                                                 isdestroy=False,
+                                                 feature_protect=self.featureExtraProtect))
         self.structMembers.append(self.StructMemberData(name=typeName, members=membersInfo))
+
     #
     # Insert a lock_guard line
     def lock_guard(self, indent):
@@ -423,6 +453,87 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
             if self.isHandleTypeNonDispatchable(paramtype.text):
                 ndo_list.add(item)
         return ndo_list
+    #
+    # Construct list of extension structs containing handles, or extension structs that share a <validextensionstructs>
+    # tag WITH an extension struct containing handles. All extension structs in any pNext chain will have to be copied.
+    # TODO: make this recursive -- structs buried three or more levels deep are not searched for extensions
+    def GenerateCommandWrapExtensionList(self):
+        for struct in self.structMembers:
+            if (len(struct.members) > 1) and struct.members[1].extstructs is not None:
+                found = False;
+                for item in struct.members[1].extstructs.split(','):
+                    if item != '' and self.struct_contains_ndo(item) == True:
+                        found = True
+                if found == True:
+                    for item in struct.members[1].extstructs.split(','):
+                        if item != '' and item not in self.extension_structs:
+                            self.extension_structs.append(item)
+    #
+    # Returns True if a struct may have a pNext chain containing an NDO
+    def StructWithExtensions(self, struct_type):
+        if struct_type in self.struct_member_dict:
+            param_info = self.struct_member_dict[struct_type]
+            if (len(param_info) > 1) and param_info[1].extstructs is not None:
+                for item in param_info[1].extstructs.split(','):
+                    if item in self.extension_structs:
+                        return True
+        return False
+    #
+    # Generate pNext handling function
+    def build_extension_processing_func(self):
+        # Construct helper functions to build and free pNext extension chains
+        pnext_proc = ''
+        pnext_proc += 'void *CreateUnwrappedExtensionStructs(layer_data *dev_data, const void *pNext) {\n'
+        pnext_proc += '    void *cur_pnext = const_cast<void *>(pNext);\n'
+        pnext_proc += '    void *head_pnext = NULL;\n'
+        pnext_proc += '    void *prev_ext_struct = NULL;\n'
+        pnext_proc += '    void *cur_ext_struct = NULL;\n\n'
+        pnext_proc += '    while (cur_pnext != NULL) {\n'
+        pnext_proc += '        GenericHeader *header = reinterpret_cast<GenericHeader *>(cur_pnext);\n\n'
+        pnext_proc += '        switch (header->sType) {\n'
+        for item in self.extension_structs:
+            struct_info = self.struct_member_dict[item]
+            if struct_info[0].feature_protect is not None:
+                pnext_proc += '#ifdef %s \n' % struct_info[0].feature_protect
+            pnext_proc += '            case %s: {\n' % self.structTypes[item].value
+            pnext_proc += '                    safe_%s *safe_struct = reinterpret_cast<safe_%s *>(new safe_%s);\n' % (item, item, item)
+            pnext_proc += '                    safe_struct->initialize(reinterpret_cast<const %s *>(cur_pnext));\n' % item
+            # Generate code to unwrap the handles
+            indent = '                '
+            (tmp_decl, tmp_pre, tmp_post) = self.uniquify_members(struct_info, indent, 'safe_struct->', 0, False, False, False, False)
+            pnext_proc += tmp_pre
+            pnext_proc += '                    cur_ext_struct = reinterpret_cast<void *>(safe_struct);\n'
+            pnext_proc += '                } break;\n'
+            if struct_info[0].feature_protect is not None:
+                pnext_proc += '#endif // %s \n' % struct_info[0].feature_protect
+            pnext_proc += '\n'
+        pnext_proc += '            default:\n'
+        pnext_proc += '                break;\n'
+        pnext_proc += '        }\n\n'
+        pnext_proc += '        // Save pointer to the first structure in the pNext chain\n'
+        pnext_proc += '        head_pnext = (head_pnext ? head_pnext : cur_ext_struct);\n\n'
+        pnext_proc += '        // For any extension structure but the first, link the last struct\'s pNext to the current ext struct\n'
+        pnext_proc += '        if (prev_ext_struct) {\n'
+        pnext_proc += '            (reinterpret_cast<GenericHeader *>(prev_ext_struct))->pNext = cur_ext_struct;\n'
+        pnext_proc += '        }\n'
+        pnext_proc += '        prev_ext_struct = cur_ext_struct;\n\n'
+        pnext_proc += '        // Process the next structure in the chain\n'
+        pnext_proc += '        cur_pnext = const_cast<void *>(header->pNext);\n'
+        pnext_proc += '    }\n'
+        pnext_proc += '    return head_pnext;\n'
+        pnext_proc += '}\n\n'
+        pnext_proc += '// Free a pNext extension chain\n'
+        pnext_proc += 'void FreeUnwrappedExtensionStructs(void *head) {\n'
+        pnext_proc += '    void * curr_ptr = head;\n'
+        pnext_proc += '    while (curr_ptr) {\n'
+        pnext_proc += '        GenericHeader *header = reinterpret_cast<GenericHeader *>(curr_ptr);\n'
+        pnext_proc += '        void *temp = curr_ptr;\n'
+        pnext_proc += '        curr_ptr = header->pNext;\n'
+        pnext_proc += '        free(temp);\n'
+        pnext_proc += '    }\n'
+        pnext_proc += '}\n'
+        return pnext_proc
+
     #
     # Generate source for creating a non-dispatchable object
     def generate_create_ndo_code(self, indent, proto, params, cmd_info):
@@ -489,11 +600,17 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
 
     #
     # Clean up local declarations
-    def cleanUpLocalDeclarations(self, indent, prefix, name, len):
+    def cleanUpLocalDeclarations(self, indent, prefix, name, len, index, process_pnext):
         cleanup = '%sif (local_%s%s)\n' % (indent, prefix, name)
         if len is not None:
+            if process_pnext:
+                cleanup += '%s    for (uint32_t %s = 0; %s < %s%s; ++%s) {\n' % (indent, index, index, prefix, len, index)
+                cleanup += '%s        FreeUnwrappedExtensionStructs(const_cast<void *>(local_%s%s[%s].pNext));\n' % (indent, prefix, name, index)
+                cleanup += '%s    }\n' % indent
             cleanup += '%s    delete[] local_%s%s;\n' % (indent, prefix, name)
         else:
+            if process_pnext:
+                cleanup += '%s    FreeUnwrappedExtensionStructs(const_cast<void *>(local_%s%s->pNext));\n' % (indent, prefix, name)
             cleanup += '%s    delete local_%s%s;\n' % (indent, prefix, name)
         return cleanup
     #
@@ -526,7 +643,7 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
                 post_call_code += '%sdelete[] local_%s;\n' % (indent, ndo_name)
         else:
             if top_level == True:
-                if (destroy_func == False) or (destroy_array == True):       #### LUGMAL This line needs to be skipped for destroy_ndo and not destroy_array
+                if (destroy_func == False) or (destroy_array == True):
                     pre_call_code += '%s    %s = (%s)dev_data->unique_id_mapping[reinterpret_cast<uint64_t &>(%s)];\n' % (indent, ndo_name, ndo_type, ndo_name)
             else:
                 # Make temp copy of this var with the 'local' removed. It may be better to not pass in 'local_'
@@ -547,11 +664,11 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
         decls = ''
         pre_code = ''
         post_code = ''
-        struct_member_dict = dict(self.structMembers)
         index = 'index%s' % str(array_index)
         array_index += 1
         # Process any NDOs in this structure and recurse for any sub-structs in this struct
         for member in members:
+            process_pnext = self.StructWithExtensions(member.type)
             # Handle NDOs
             if self.isHandleTypeNonDispatchable(member.type) == True:
                 count_name = member.len
@@ -565,10 +682,10 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
                     pre_code += tmp_pre
                     post_code += tmp_post
             # Handle Structs that contain NDOs at some level
-            elif member.type in struct_member_dict:
-                # All structs at first level will have an NDO
-                if self.struct_contains_ndo(member.type) == True:
-                    struct_info = struct_member_dict[member.type]
+            elif member.type in self.struct_member_dict:
+                # Structs at first level will have an NDO, OR, we need a safe_struct for the pnext chain
+                if self.struct_contains_ndo(member.type) == True or process_pnext:
+                    struct_info = self.struct_member_dict[member.type]
                     # Struct Array
                     if member.len is not None:
                         # Update struct prefix
@@ -586,6 +703,8 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
                         indent = self.incIndent(indent)
                         if first_level_param == True:
                             pre_code += '%s    %s[%s].initialize(&%s[%s]);\n' % (indent, new_prefix, index, member.name, index)
+                            if process_pnext:
+                                pre_code += '%s    %s[%s].pNext = CreateUnwrappedExtensionStructs(dev_data, %s[%s].pNext);\n' % (indent, new_prefix, index, new_prefix, index)
                         local_prefix = '%s[%s].' % (new_prefix, index)
                         # Process sub-structs in this struct
                         (tmp_decl, tmp_pre, tmp_post) = self.uniquify_members(struct_info, indent, local_prefix, array_index, create_func, destroy_func, destroy_array, False)
@@ -597,7 +716,7 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
                         indent = self.decIndent(indent)
                         pre_code += '%s    }\n' % indent
                         if first_level_param == True:
-                            post_code += self.cleanUpLocalDeclarations(indent, prefix, member.name, member.len)
+                            post_code += self.cleanUpLocalDeclarations(indent, prefix, member.name, member.len, index, process_pnext)
                     # Single Struct
                     else:
                         # Update struct prefix
@@ -616,10 +735,12 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
                         decls += tmp_decl
                         pre_code += tmp_pre
                         post_code += tmp_post
+                        if process_pnext:
+                            pre_code += '%s    local_%s%s->pNext = CreateUnwrappedExtensionStructs(dev_data, local_%s%s->pNext);\n' % (indent, prefix, member.name, prefix, member.name)
                         indent = self.decIndent(indent)
                         pre_code += '%s    }\n' % indent
                         if first_level_param == True:
-                            post_code += self.cleanUpLocalDeclarations(indent, prefix, member.name, member.len)
+                            post_code += self.cleanUpLocalDeclarations(indent, prefix, member.name, member.len, index, process_pnext)
         return decls, pre_code, post_code
     #
     # For a particular API, generate the non-dispatchable-object wrapping/unwrapping code
@@ -627,6 +748,7 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
         indent = '    '
         proto = cmd.find('proto/name')
         params = cmd.findall('param')
+
         if proto.text is not None:
             cmd_member_dict = dict(self.cmdMembers)
             cmd_info = cmd_member_dict[proto.text]
@@ -660,15 +782,7 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
     #
     # Capture command parameter info needed to wrap NDOs as well as handling some boilerplate code
     def genCmd(self, cmdinfo, cmdname):
-        if cmdname in self.interface_functions:
-            return
-        if cmdname in self.no_autogen_list:
-            decls = self.makeCDecls(cmdinfo.elem)
-            self.appendSection('command', '')
-            self.appendSection('command', '// Declare only')
-            self.appendSection('command', decls[0])
-            self.intercepts += [ '    {"%s", reinterpret_cast<PFN_vkVoidFunction>(%s)},' % (cmdname,cmdname[2:]) ]
-            return
+
         # Add struct-member type information to command parameter information
         OutputGenerator.genCmd(self, cmdinfo, cmdname)
         members = cmdinfo.elem.findall('.//param')
@@ -681,6 +795,7 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
         struct_member_dict = dict(self.structMembers)
         # Generate member info
         membersInfo = []
+        constains_extension_structs = False
         for member in members:
             # Get type and name of member
             info = self.getTypeNameTuple(member)
@@ -701,79 +816,103 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
             elif type in struct_member_dict:
                 if self.struct_contains_ndo(type) == True:
                     islocal = True
-
             isdestroy = True if True in [destroy_txt in cmdname for destroy_txt in ['Destroy', 'Free']] else False
             iscreate = True if True in [create_txt in cmdname for create_txt in ['Create', 'Allocate', 'GetRandROutputDisplayEXT', 'RegisterDeviceEvent', 'RegisterDisplayEvent']] else False
-
+            extstructs = member.attrib.get('validextensionstructs') if name == 'pNext' else None
             membersInfo.append(self.CommandParam(type=type,
                                                  name=name,
                                                  ispointer=ispointer,
                                                  isconst=isconst,
                                                  iscount=iscount,
                                                  len=len,
-                                                 extstructs=member.attrib.get('validextensionstructs') if name == 'pNext' else None,
+                                                 extstructs=extstructs,
                                                  cdecl=cdecl,
                                                  islocal=islocal,
                                                  iscreate=iscreate,
-                                                 isdestroy=isdestroy))
+                                                 isdestroy=isdestroy,
+                                                 feature_protect=self.featureExtraProtect))
         self.cmdMembers.append(self.CmdMemberData(name=cmdname, members=membersInfo))
-        # Generate NDO wrapping/unwrapping code for all parameters
-        (api_decls, api_pre, api_post) = self.generate_wrapping_code(cmdinfo.elem)
-        # If API doesn't contain an NDO's, don't fool with it
-        if not api_decls and not api_pre and not api_post:
-            return
-        # Record that the function will be intercepted
-        if (self.featureExtraProtect != None):
-            self.intercepts += [ '#ifdef %s' % self.featureExtraProtect ]
-        self.intercepts += [ '    {"%s", reinterpret_cast<PFN_vkVoidFunction>(%s)},' % (cmdname,cmdname[2:]) ]
-        if (self.featureExtraProtect != None):
-            self.intercepts += [ '#endif' ]
-        decls = self.makeCDecls(cmdinfo.elem)
-        self.appendSection('command', '')
-        self.appendSection('command', decls[0][:-1])
-        self.appendSection('command', '{')
-        # Setup common to call wrappers, first parameter is always dispatchable
-        dispatchable_type = cmdinfo.elem.find('param/type').text
-        dispatchable_name = cmdinfo.elem.find('param/name').text
-        # Generate local instance/pdev/device data lookup
-        self.appendSection('command', '    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key('+dispatchable_name+'), layer_data_map);')
-        # Handle return values, if any
-        resulttype = cmdinfo.elem.find('proto/type')
-        if (resulttype != None and resulttype.text == 'void'):
-          resulttype = None
-        if (resulttype != None):
-            assignresult = resulttype.text + ' result = '
-        else:
-            assignresult = ''
-        # Pre-pend declarations and pre-api-call codegen
-        if api_decls:
-            self.appendSection('command', "\n".join(str(api_decls).rstrip().split("\n")))
-        if api_pre:
-            self.appendSection('command', "\n".join(str(api_pre).rstrip().split("\n")))
-        # Generate the API call itself
-        # Gather the parameter items
-        params = cmdinfo.elem.findall('param/name')
-        # Pull out the text for each of the parameters, separate them by commas in a list
-        paramstext = ', '.join([str(param.text) for param in params])
-        # If any of these paramters has been replaced by a local var, fix up the list
+        self.cmd_info_data.append(self.CmdInfoData(name=cmdname, cmdinfo=cmdinfo))
+        self.cmd_feature_protect.append(self.CmdExtraProtect(name=cmdname, extra_protect=self.featureExtraProtect))
+    #
+    # Create code to wrap NDOs as well as handling some boilerplate code
+    def WrapCommands(self):
         cmd_member_dict = dict(self.cmdMembers)
-        params = cmd_member_dict[cmdname]
-        for param in params:
-            if param.islocal == True:
-                if param.ispointer == True:
-                    paramstext = paramstext.replace(param.name, '(%s %s*)local_%s' % ('const', param.type, param.name))
-                else:
-                    paramstext = paramstext.replace(param.name, '(%s %s)local_%s' % ('const', param.type, param.name))
-        # Use correct dispatch table
-        if dispatchable_type in ["VkPhysicalDevice", "VkInstance"]:
-            API = cmdinfo.elem.attrib.get('name').replace('vk','dev_data->instance_dispatch_table->',1)
-        else:
-            API = cmdinfo.elem.attrib.get('name').replace('vk','dev_data->device_dispatch_table->',1)
-        # Put all this together for the final down-chain call
-        self.appendSection('command', '    ' + assignresult + API + '(' + paramstext + ');')
-        # And add the post-API-call codegen
-        self.appendSection('command', "\n".join(str(api_post).rstrip().split("\n")))
-        # Handle the return result variable, if any
-        if (resulttype != None):
-            self.appendSection('command', '    return result;')
-        self.appendSection('command', '}')
+        cmd_info_dict = dict(self.cmd_info_data)
+        cmd_protect_dict = dict(self.cmd_feature_protect)
+
+        for api_call in self.cmdMembers:
+            cmdname = api_call.name
+            cmdinfo = cmd_info_dict[api_call.name]
+            if cmdname in self.interface_functions:
+                continue
+            if cmdname in self.no_autogen_list:
+                decls = self.makeCDecls(cmdinfo.elem)
+                self.appendSection('command', '')
+                self.appendSection('command', '// Declare only')
+                self.appendSection('command', decls[0])
+                self.intercepts += [ '    {"%s", reinterpret_cast<PFN_vkVoidFunction>(%s)},' % (cmdname,cmdname[2:]) ]
+                continue
+            # Generate NDO wrapping/unwrapping code for all parameters
+            (api_decls, api_pre, api_post) = self.generate_wrapping_code(cmdinfo.elem)
+            # If API doesn't contain an NDO's, don't fool with it
+            if not api_decls and not api_pre and not api_post:
+                continue
+            feature_extra_protect = cmd_protect_dict[api_call.name]
+            if (feature_extra_protect != None):
+                self.appendSection('command', '')
+                self.appendSection('command', '#ifdef '+ feature_extra_protect)
+                self.intercepts += [ '#ifdef %s' % feature_extra_protect ]
+            # Add intercept to procmap
+            self.intercepts += [ '    {"%s", reinterpret_cast<PFN_vkVoidFunction>(%s)},' % (cmdname,cmdname[2:]) ]
+            decls = self.makeCDecls(cmdinfo.elem)
+            self.appendSection('command', '')
+            self.appendSection('command', decls[0][:-1])
+            self.appendSection('command', '{')
+            # Setup common to call wrappers, first parameter is always dispatchable
+            dispatchable_type = cmdinfo.elem.find('param/type').text
+            dispatchable_name = cmdinfo.elem.find('param/name').text
+            # Generate local instance/pdev/device data lookup
+            self.appendSection('command', '    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key('+dispatchable_name+'), layer_data_map);')
+            # Handle return values, if any
+            resulttype = cmdinfo.elem.find('proto/type')
+            if (resulttype != None and resulttype.text == 'void'):
+              resulttype = None
+            if (resulttype != None):
+                assignresult = resulttype.text + ' result = '
+            else:
+                assignresult = ''
+            # Pre-pend declarations and pre-api-call codegen
+            if api_decls:
+                self.appendSection('command', "\n".join(str(api_decls).rstrip().split("\n")))
+            if api_pre:
+                self.appendSection('command', "\n".join(str(api_pre).rstrip().split("\n")))
+            # Generate the API call itself
+            # Gather the parameter items
+            params = cmdinfo.elem.findall('param/name')
+            # Pull out the text for each of the parameters, separate them by commas in a list
+            paramstext = ', '.join([str(param.text) for param in params])
+            # If any of these paramters has been replaced by a local var, fix up the list
+            params = cmd_member_dict[cmdname]
+            for param in params:
+                if param.islocal == True or self.StructWithExtensions(param.type):
+                    if param.ispointer == True:
+                        paramstext = paramstext.replace(param.name, '(%s %s*)local_%s' % ('const', param.type, param.name))
+                    else:
+                        paramstext = paramstext.replace(param.name, '(%s %s)local_%s' % ('const', param.type, param.name))
+            # Use correct dispatch table
+            if dispatchable_type in ["VkPhysicalDevice", "VkInstance"]:
+                API = cmdinfo.elem.attrib.get('name').replace('vk','dev_data->instance_dispatch_table->',1)
+            else:
+                API = cmdinfo.elem.attrib.get('name').replace('vk','dev_data->device_dispatch_table->',1)
+            # Put all this together for the final down-chain call
+            self.appendSection('command', '    ' + assignresult + API + '(' + paramstext + ');')
+            # And add the post-API-call codegen
+            self.appendSection('command', "\n".join(str(api_post).rstrip().split("\n")))
+            # Handle the return result variable, if any
+            if (resulttype != None):
+                self.appendSection('command', '    return result;')
+            self.appendSection('command', '}')
+            if (feature_extra_protect != None):
+                self.appendSection('command', '#endif // '+ feature_extra_protect)
+                self.intercepts += [ '#endif' ]

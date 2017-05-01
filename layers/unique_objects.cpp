@@ -45,6 +45,7 @@
 #include "vk_layer_utils.h"
 #include "vk_enum_string_helper.h"
 #include "vk_validation_error_messages.h"
+#include "vk_object_types.h"
 #include "vulkan/vk_layer.h"
 
 // This intentionally includes a cpp file
@@ -357,65 +358,6 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance in
     return disp_table->GetPhysicalDeviceProcAddr(instance, funcName);
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL AllocateMemory(VkDevice device, const VkMemoryAllocateInfo *pAllocateInfo,
-                                              const VkAllocationCallbacks *pAllocator, VkDeviceMemory *pMemory) {
-    const VkMemoryAllocateInfo *input_allocate_info = pAllocateInfo;
-    std::unique_ptr<safe_VkMemoryAllocateInfo> safe_allocate_info;
-    std::unique_ptr<safe_VkDedicatedAllocationMemoryAllocateInfoNV> safe_dedicated_allocate_info;
-    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-
-    if ((pAllocateInfo != nullptr) &&
-        ContainsExtStruct(pAllocateInfo, VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_MEMORY_ALLOCATE_INFO_NV)) {
-        // Assuming there is only one extension struct of this type in the list for now
-        safe_dedicated_allocate_info =
-            std::unique_ptr<safe_VkDedicatedAllocationMemoryAllocateInfoNV>(new safe_VkDedicatedAllocationMemoryAllocateInfoNV);
-        safe_allocate_info = std::unique_ptr<safe_VkMemoryAllocateInfo>(new safe_VkMemoryAllocateInfo(pAllocateInfo));
-        input_allocate_info = reinterpret_cast<const VkMemoryAllocateInfo *>(safe_allocate_info.get());
-
-        const GenericHeader *orig_pnext = reinterpret_cast<const GenericHeader *>(pAllocateInfo->pNext);
-        GenericHeader *input_pnext = reinterpret_cast<GenericHeader *>(safe_allocate_info.get());
-        while (orig_pnext != nullptr) {
-            if (orig_pnext->sType == VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_MEMORY_ALLOCATE_INFO_NV) {
-                safe_dedicated_allocate_info->initialize(
-                    reinterpret_cast<const VkDedicatedAllocationMemoryAllocateInfoNV *>(orig_pnext));
-
-                std::unique_lock<std::mutex> lock(global_lock);
-
-                if (safe_dedicated_allocate_info->buffer != VK_NULL_HANDLE) {
-                    uint64_t local_buffer = reinterpret_cast<uint64_t &>(safe_dedicated_allocate_info->buffer);
-                    safe_dedicated_allocate_info->buffer =
-                        reinterpret_cast<VkBuffer &>(device_data->unique_id_mapping[local_buffer]);
-                }
-
-                if (safe_dedicated_allocate_info->image != VK_NULL_HANDLE) {
-                    uint64_t local_image = reinterpret_cast<uint64_t &>(safe_dedicated_allocate_info->image);
-                    safe_dedicated_allocate_info->image = reinterpret_cast<VkImage &>(device_data->unique_id_mapping[local_image]);
-                }
-
-                lock.unlock();
-
-                input_pnext->pNext = reinterpret_cast<GenericHeader *>(safe_dedicated_allocate_info.get());
-                input_pnext = reinterpret_cast<GenericHeader *>(input_pnext->pNext);
-            } else {
-                // TODO: generic handling of pNext copies
-            }
-
-            orig_pnext = reinterpret_cast<const GenericHeader *>(orig_pnext->pNext);
-        }
-    }
-
-    VkResult result = device_data->device_dispatch_table->AllocateMemory(device, input_allocate_info, pAllocator, pMemory);
-
-    if (VK_SUCCESS == result) {
-        std::lock_guard<std::mutex> lock(global_lock);
-        uint64_t unique_id = global_unique_id++;
-        device_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t &>(*pMemory);
-        *pMemory = reinterpret_cast<VkDeviceMemory &>(unique_id);
-    }
-
-    return result;
-}
-
 VKAPI_ATTR VkResult VKAPI_CALL CreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t createInfoCount,
                                                       const VkComputePipelineCreateInfo *pCreateInfos,
                                                       const VkAllocationCallbacks *pAllocator, VkPipeline *pPipelines) {
@@ -644,6 +586,43 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchai
     return result;
 }
 
+VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInfoKHR *pPresentInfo) {
+    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(queue), layer_data_map);
+    safe_VkPresentInfoKHR *local_pPresentInfo = NULL;
+    {
+        std::lock_guard<std::mutex> lock(global_lock);
+        if (pPresentInfo) {
+            local_pPresentInfo = new safe_VkPresentInfoKHR(pPresentInfo);
+            if (local_pPresentInfo->pWaitSemaphores) {
+                for (uint32_t index1 = 0; index1 < local_pPresentInfo->waitSemaphoreCount; ++index1) {
+                    local_pPresentInfo->pWaitSemaphores[index1] =
+                        (VkSemaphore)dev_data
+                            ->unique_id_mapping[reinterpret_cast<const uint64_t &>(local_pPresentInfo->pWaitSemaphores[index1])];
+                }
+            }
+            if (local_pPresentInfo->pSwapchains) {
+                for (uint32_t index1 = 0; index1 < local_pPresentInfo->swapchainCount; ++index1) {
+                    local_pPresentInfo->pSwapchains[index1] =
+                        (VkSwapchainKHR)dev_data
+                            ->unique_id_mapping[reinterpret_cast<const uint64_t &>(local_pPresentInfo->pSwapchains[index1])];
+                }
+            }
+        }
+    }
+    VkResult result = dev_data->device_dispatch_table->QueuePresentKHR(queue, (const VkPresentInfoKHR *)local_pPresentInfo);
+
+    // pResults is an output array embedded in a structure. The code generator neglects to copy back from the safe_* version,
+    // so handle it as a special case here:
+    if (pPresentInfo && pPresentInfo->pResults) {
+        for (uint32_t i = 0; i < pPresentInfo->swapchainCount; i++) {
+            pPresentInfo->pResults[i] = local_pPresentInfo->pResults[i];
+        }
+    }
+
+    if (local_pPresentInfo) delete local_pPresentInfo;
+    return result;
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorUpdateTemplateKHR(VkDevice device,
                                                                  const VkDescriptorUpdateTemplateCreateInfoKHR *pCreateInfo,
                                                                  const VkAllocationCallbacks *pAllocator,
@@ -700,7 +679,7 @@ void *BuildUnwrappedUpdateTemplateBuffer(layer_data *dev_data, uint64_t descript
     }
     auto const &create_info = template_map_entry->second->create_info;
     size_t allocation_size = 0;
-    std::vector<std::tuple<size_t, VkDebugReportObjectTypeEXT, void *>> template_entries;
+    std::vector<std::tuple<size_t, VulkanObjectType, void *>> template_entries;
 
     for (uint32_t i = 0; i < create_info.descriptorUpdateEntryCount; i++) {
         for (uint32_t j = 0; j < create_info.pDescriptorUpdateEntries[i].descriptorCount; j++) {
@@ -721,8 +700,7 @@ void *BuildUnwrappedUpdateTemplateBuffer(layer_data *dev_data, uint64_t descript
                         dev_data->unique_id_mapping[reinterpret_cast<uint64_t &>(image_entry->sampler)]);
                     wrapped_entry->imageView = reinterpret_cast<VkImageView &>(
                         dev_data->unique_id_mapping[reinterpret_cast<uint64_t &>(image_entry->imageView)]);
-                    template_entries.emplace_back(offset, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                                                  reinterpret_cast<void *>(wrapped_entry));
+                    template_entries.emplace_back(offset, kVulkanObjectTypeImage, reinterpret_cast<void *>(wrapped_entry));
                 } break;
 
                 case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
@@ -735,8 +713,7 @@ void *BuildUnwrappedUpdateTemplateBuffer(layer_data *dev_data, uint64_t descript
                     VkDescriptorBufferInfo *wrapped_entry = new VkDescriptorBufferInfo(*buffer_entry);
                     wrapped_entry->buffer = reinterpret_cast<VkBuffer &>(
                         dev_data->unique_id_mapping[reinterpret_cast<uint64_t &>(buffer_entry->buffer)]);
-                    template_entries.emplace_back(offset, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
-                                                  reinterpret_cast<void *>(wrapped_entry));
+                    template_entries.emplace_back(offset, kVulkanObjectTypeBuffer, reinterpret_cast<void *>(wrapped_entry));
                 } break;
 
                 case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
@@ -745,8 +722,7 @@ void *BuildUnwrappedUpdateTemplateBuffer(layer_data *dev_data, uint64_t descript
                     allocation_size = std::max(allocation_size, offset + sizeof(VkBufferView));
 
                     uint64_t wrapped_entry = dev_data->unique_id_mapping[reinterpret_cast<uint64_t &>(*buffer_view_handle)];
-                    template_entries.emplace_back(offset, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT,
-                                                  reinterpret_cast<void *>(wrapped_entry));
+                    template_entries.emplace_back(offset, kVulkanObjectTypeBufferView, reinterpret_cast<void *>(wrapped_entry));
                 } break;
                 default:
                     assert(0);
@@ -757,20 +733,20 @@ void *BuildUnwrappedUpdateTemplateBuffer(layer_data *dev_data, uint64_t descript
     // Allocate required buffer size and populate with source/unwrapped data
     void *unwrapped_data = malloc(allocation_size);
     for (auto &this_entry : template_entries) {
-        VkDebugReportObjectTypeEXT type = std::get<1>(this_entry);
+        VulkanObjectType type = std::get<1>(this_entry);
         void *destination = (char *)unwrapped_data + std::get<0>(this_entry);
         void *source = (char *)std::get<2>(this_entry);
 
         switch (type) {
-            case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT:
+            case kVulkanObjectTypeImage:
                 *(reinterpret_cast<VkDescriptorImageInfo *>(destination)) = *(reinterpret_cast<VkDescriptorImageInfo *>(source));
                 delete reinterpret_cast<VkDescriptorImageInfo *>(source);
                 break;
-            case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT:
+            case kVulkanObjectTypeBuffer:
                 *(reinterpret_cast<VkDescriptorBufferInfo *>(destination)) = *(reinterpret_cast<VkDescriptorBufferInfo *>(source));
                 delete reinterpret_cast<VkDescriptorBufferInfo *>(source);
                 break;
-            case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT:
+            case kVulkanObjectTypeBufferView:
                 *(reinterpret_cast<VkBufferView *>(destination)) = reinterpret_cast<VkBufferView>(source);
                 break;
             default:
