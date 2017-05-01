@@ -10114,6 +10114,29 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, const char *
     auto most_recent_swapchain = surface_state->swapchain ? surface_state->swapchain : surface_state->old_swapchain;
 
     // TODO: revisit this. some of these rules are being relaxed.
+
+    // All physical devices and queue families are required to be able
+    // to present to any native window on Android; require the
+    // application to have established support on any other platform.
+    if (!dev_data->instance_data->androidSurfaceExtensionEnabled) {
+        auto support_predicate = [dev_data](decltype(surface_state->gpu_queue_support)::const_reference qs) -> bool {
+            // TODO: should restrict search only to queue families of VkDeviceQueueCreateInfos, not whole phys. device
+            return (qs.first.gpu == dev_data->physical_device) && qs.second;
+        };
+        const auto& support = surface_state->gpu_queue_support;
+        bool is_supported = std::any_of(support.begin(), support.end(), support_predicate);
+
+        if (!is_supported) {
+            if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                        reinterpret_cast<uint64_t>(dev_data->device), __LINE__, VALIDATION_ERROR_01922, "DS",
+                        "%s: pCreateInfo->surface is not known at this time to be supported for presentation by this device. "
+                        "The vkGetPhysicalDeviceSurfaceSupportKHR() must be called beforehand, and it must return VK_TRUE support "
+                        "with this surface for at least one queue family of this device. %s",
+                         func_name, validation_error_map[VALIDATION_ERROR_01922]))
+                return true;
+        }
+    }
+
     if (most_recent_swapchain != old_swapchain_state || (surface_state->old_swapchain && surface_state->swapchain)) {
         if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                     reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_ALREADY_EXISTS, "DS",
@@ -11052,7 +11075,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevi
         instance_data->dispatch_table.GetPhysicalDeviceSurfaceSupportKHR(physicalDevice, queueFamilyIndex, surface, pSupported);
 
     if (result == VK_SUCCESS) {
-        surface_state->gpu_queue_support[{physicalDevice, queueFamilyIndex}] = (*pSupported != 0);
+        surface_state->gpu_queue_support[{physicalDevice, queueFamilyIndex}] = (*pSupported == VK_TRUE);
     }
 
     return result;

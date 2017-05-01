@@ -320,8 +320,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateAndroidSurfaceKHR(VkInstance instance, cons
             // Record the VkSurfaceKHR returned by the ICD:
             my_data->surfaceMap[*pSurface].surface = *pSurface;
             my_data->surfaceMap[*pSurface].pInstance = pInstance;
-            my_data->surfaceMap[*pSurface].numQueueFamilyIndexSupport = 0;
-            my_data->surfaceMap[*pSurface].pQueueFamilyIndexSupport = NULL;
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
         }
@@ -362,8 +360,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateMirSurfaceKHR(VkInstance instance, const Vk
             // Record the VkSurfaceKHR returned by the ICD:
             my_data->surfaceMap[*pSurface].surface = *pSurface;
             my_data->surfaceMap[*pSurface].pInstance = pInstance;
-            my_data->surfaceMap[*pSurface].numQueueFamilyIndexSupport = 0;
-            my_data->surfaceMap[*pSurface].pQueueFamilyIndexSupport = NULL;
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
         }
@@ -431,8 +427,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateWaylandSurfaceKHR(VkInstance instance, cons
             // Record the VkSurfaceKHR returned by the ICD:
             my_data->surfaceMap[*pSurface].surface = *pSurface;
             my_data->surfaceMap[*pSurface].pInstance = pInstance;
-            my_data->surfaceMap[*pSurface].numQueueFamilyIndexSupport = 0;
-            my_data->surfaceMap[*pSurface].pQueueFamilyIndexSupport = NULL;
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
         }
@@ -501,8 +495,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateWin32SurfaceKHR(VkInstance instance, const 
             // Record the VkSurfaceKHR returned by the ICD:
             my_data->surfaceMap[*pSurface].surface = *pSurface;
             my_data->surfaceMap[*pSurface].pInstance = pInstance;
-            my_data->surfaceMap[*pSurface].numQueueFamilyIndexSupport = 0;
-            my_data->surfaceMap[*pSurface].pQueueFamilyIndexSupport = NULL;
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
         }
@@ -569,8 +561,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateXcbSurfaceKHR(VkInstance instance, const Vk
             // Record the VkSurfaceKHR returned by the ICD:
             my_data->surfaceMap[*pSurface].surface = *pSurface;
             my_data->surfaceMap[*pSurface].pInstance = pInstance;
-            my_data->surfaceMap[*pSurface].numQueueFamilyIndexSupport = 0;
-            my_data->surfaceMap[*pSurface].pQueueFamilyIndexSupport = NULL;
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
         }
@@ -639,8 +629,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateXlibSurfaceKHR(VkInstance instance, const V
             // Record the VkSurfaceKHR returned by the ICD:
             my_data->surfaceMap[*pSurface].surface = *pSurface;
             my_data->surfaceMap[*pSurface].pInstance = pInstance;
-            my_data->surfaceMap[*pSurface].numQueueFamilyIndexSupport = 0;
-            my_data->surfaceMap[*pSurface].pQueueFamilyIndexSupport = NULL;
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
         }
@@ -811,8 +799,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDisplayPlaneSurfaceKHR(VkInstance instance,
             // Record the VkSurfaceKHR returned by the ICD:
             my_data->surfaceMap[*pSurface].surface = *pSurface;
             my_data->surfaceMap[*pSurface].pInstance = pInstance;
-            my_data->surfaceMap[*pSurface].numQueueFamilyIndexSupport = 0;
-            my_data->surfaceMap[*pSurface].pQueueFamilyIndexSupport = NULL;
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
         }
@@ -1005,34 +991,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevi
         // Call down the call chain:
         result = my_data->instance_dispatch_table->GetPhysicalDeviceSurfaceSupportKHR(physicalDevice, queueFamilyIndex, surface,
                                                                                       pSupported);
-        lock.lock();
-
-        // Obtain this pointer again after locking:
-        {
-            auto it = my_data->physicalDeviceMap.find(physicalDevice);
-            pPhysicalDevice = (it == my_data->physicalDeviceMap.end()) ? NULL : &it->second;
-        }
-        if ((result == VK_SUCCESS) && pSupported && pPhysicalDevice) {
-            // Record the result of this query:
-            SwpInstance *pInstance = pPhysicalDevice->pInstance;
-            SwpSurface *pSurface = (pInstance) ? pInstance->surfaces[surface] : NULL;
-            if (pSurface) {
-                pPhysicalDevice->supportedSurfaces[surface] = pSurface;
-                if (!pSurface->numQueueFamilyIndexSupport) {
-                    if (pPhysicalDevice->gotQueueFamilyPropertyCount) {
-                        pSurface->pQueueFamilyIndexSupport =
-                            (VkBool32 *)malloc(pPhysicalDevice->numOfQueueFamilies * sizeof(VkBool32));
-                        if (pSurface->pQueueFamilyIndexSupport != NULL) {
-                            pSurface->numQueueFamilyIndexSupport = pPhysicalDevice->numOfQueueFamilies;
-                        }
-                    }
-                }
-                if (pSurface->numQueueFamilyIndexSupport) {
-                    pSurface->pQueueFamilyIndexSupport[queueFamilyIndex] = *pSupported;
-                }
-            }
-        }
-        lock.unlock();
 
         return result;
     }
@@ -1062,21 +1020,6 @@ static bool validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
         for (uint32_t i = 0; i < pCreateInfo->queueFamilyIndexCount; i++) {
             skip_call |= ValidateQueueFamilyIndex(my_data, pCreateInfo->pQueueFamilyIndices[i], pPhysicalDevice->numOfQueueFamilies,
                                                   pPhysicalDevice->physicalDevice, "vkCreateSwapchainKHR");
-        }
-    }
-
-    if (pCreateInfo) {
-        // Validate pCreateInfo->surface to make sure that
-        // vkGetPhysicalDeviceSurfaceSupportKHR() reported this as a supported
-        // surface:
-        SwpSurface *pSurface = ((pPhysicalDevice) ? pPhysicalDevice->supportedSurfaces[pCreateInfo->surface] : NULL);
-        if (!pSurface) {
-            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                                 reinterpret_cast<uint64_t>(device), __LINE__, VALIDATION_ERROR_01922, swapchain_layer_name,
-                                 "The surface in pCreateInfo->surface, that was given to vkCreateSwapchainKHR(), must be a surface "
-                                 "that is supported by the device as determined by vkGetPhysicalDeviceSurfaceSupportKHR().  "
-                                 "However, vkGetPhysicalDeviceSurfaceSupportKHR() was never called with this surface. %s",
-                                 validation_error_map[VALIDATION_ERROR_01922]);
         }
     }
 
