@@ -23286,8 +23286,15 @@ TEST_F(VkPositiveLayerTest, LongSemaphoreChain)
 
         semaphores.push_back(semaphore);
 
-        VkSubmitInfo si = { VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, semaphores.size() > 1 ? 1u : 0u, &semaphores[semaphores.size() - 2], &flags,
-            0, nullptr, 1, &semaphores[semaphores.size() - 1] };
+        VkSubmitInfo si = {VK_STRUCTURE_TYPE_SUBMIT_INFO,
+                           nullptr,
+                           semaphores.size() > 1 ? 1u : 0u,
+                           semaphores.size() > 1 ? &semaphores[semaphores.size() - 2] : nullptr,
+                           &flags,
+                           0,
+                           nullptr,
+                           1,
+                           &semaphores[semaphores.size() - 1]};
         err = vkQueueSubmit(m_device->m_queue, 1, &si, VK_NULL_HANDLE);
         ASSERT_VK_SUCCESS(err);
     }
