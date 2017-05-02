@@ -873,7 +873,10 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
             dispatchable_type = cmdinfo.elem.find('param/type').text
             dispatchable_name = cmdinfo.elem.find('param/name').text
             # Generate local instance/pdev/device data lookup
-            self.appendSection('command', '    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key('+dispatchable_name+'), layer_data_map);')
+            if dispatchable_type in ["VkPhysicalDevice", "VkInstance"]:
+                self.appendSection('command', '    instance_layer_data *dev_data = GetLayerDataPtr(get_dispatch_key('+dispatchable_name+'), instance_layer_data_map);')
+            else:
+                self.appendSection('command', '    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key('+dispatchable_name+'), layer_data_map);')
             # Handle return values, if any
             resulttype = cmdinfo.elem.find('proto/type')
             if (resulttype != None and resulttype.text == 'void'):
@@ -901,10 +904,7 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
                     else:
                         paramstext = paramstext.replace(param.name, '(%s %s)local_%s' % ('const', param.type, param.name))
             # Use correct dispatch table
-            if dispatchable_type in ["VkPhysicalDevice", "VkInstance"]:
-                API = cmdinfo.elem.attrib.get('name').replace('vk','dev_data->instance_dispatch_table->',1)
-            else:
-                API = cmdinfo.elem.attrib.get('name').replace('vk','dev_data->device_dispatch_table->',1)
+            API = cmdinfo.elem.attrib.get('name').replace('vk','dev_data->dispatch_table->',1)
             # Put all this together for the final down-chain call
             self.appendSection('command', '    ' + assignresult + API + '(' + paramstext + ');')
             # And add the post-API-call codegen
