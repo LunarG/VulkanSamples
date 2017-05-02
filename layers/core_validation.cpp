@@ -120,14 +120,7 @@ struct instance_layer_data {
     unordered_map<VkPhysicalDevice, PHYSICAL_DEVICE_STATE> physical_device_map;
     unordered_map<VkSurfaceKHR, SURFACE_STATE> surface_map;
 
-    bool surfaceExtensionEnabled = false;
-    bool displayExtensionEnabled = false;
-    bool androidSurfaceExtensionEnabled = false;
-    bool mirSurfaceExtensionEnabled = false;
-    bool waylandSurfaceExtensionEnabled = false;
-    bool win32SurfaceExtensionEnabled = false;
-    bool xcbSurfaceExtensionEnabled = false;
-    bool xlibSurfaceExtensionEnabled = false;
+    InstanceExtensions extensions;
 };
 
 struct layer_data {
@@ -3396,39 +3389,6 @@ static void init_core_validation(instance_layer_data *instance_data, const VkAll
     layer_debug_actions(instance_data->report_data, instance_data->logging_callback, pAllocator, "lunarg_core_validation");
 }
 
-static void checkInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateInfo, instance_layer_data *instance_data) {
-    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-        if (!strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SURFACE_EXTENSION_NAME))
-            instance_data->surfaceExtensionEnabled = true;
-        if (!strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DISPLAY_EXTENSION_NAME))
-            instance_data->displayExtensionEnabled = true;
-#ifdef VK_USE_PLATFORM_ANDROID_KHR
-        if (!strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_ANDROID_SURFACE_EXTENSION_NAME))
-            instance_data->androidSurfaceExtensionEnabled = true;
-#endif
-#ifdef VK_USE_PLATFORM_MIR_KHR
-        if (!strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_MIR_SURFACE_EXTENSION_NAME))
-            instance_data->mirSurfaceExtensionEnabled = true;
-#endif
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
-        if (!strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME))
-            instance_data->waylandSurfaceExtensionEnabled = true;
-#endif
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-        if (!strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_WIN32_SURFACE_EXTENSION_NAME))
-            instance_data->win32SurfaceExtensionEnabled = true;
-#endif
-#ifdef VK_USE_PLATFORM_XCB_KHR
-        if (!strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XCB_SURFACE_EXTENSION_NAME))
-            instance_data->xcbSurfaceExtensionEnabled = true;
-#endif
-#ifdef VK_USE_PLATFORM_XLIB_KHR
-        if (!strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XLIB_SURFACE_EXTENSION_NAME))
-            instance_data->xlibSurfaceExtensionEnabled = true;
-#endif
-    }
-}
-
 // For the given ValidationCheck enum, set all relevant instance disabled flags to true
 void SetDisabledFlags(instance_layer_data *instance_data, VkValidationFlagsEXT *val_flags_struct) {
     for (uint32_t i = 0; i < val_flags_struct->disabledValidationCheckCount; ++i) {
@@ -3463,7 +3423,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateInstance(const VkInstanceCreateInfo *pCreat
     layer_init_instance_dispatch_table(*pInstance, &instance_data->dispatch_table, fpGetInstanceProcAddr);
     instance_data->report_data = debug_report_create_instance(
         &instance_data->dispatch_table, *pInstance, pCreateInfo->enabledExtensionCount, pCreateInfo->ppEnabledExtensionNames);
-    checkInstanceRegisterExtensions(pCreateInfo, instance_data);
+    instance_data->extensions.InitFromInstanceCreateInfo(pCreateInfo);
     init_core_validation(instance_data, pAllocator);
 
     ValidateLayerOrdering(*pCreateInfo);
@@ -10090,7 +10050,7 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, const char *
     // All physical devices and queue families are required to be able
     // to present to any native window on Android; require the
     // application to have established support on any other platform.
-    if (!dev_data->instance_data->androidSurfaceExtensionEnabled) {
+    if (!dev_data->instance_data->extensions.khr_android_surface) {
         auto support_predicate = [dev_data](decltype(surface_state->gpu_queue_support)::const_reference qs) -> bool {
             // TODO: should restrict search only to queue families of VkDeviceQueueCreateInfos, not whole phys. device
             return (qs.first.gpu == dev_data->physical_device) && qs.second;
@@ -10493,7 +10453,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
             // All physical devices and queue families are required to be able
             // to present to any native window on Android; require the
             // application to have established support on any other platform.
-            if (!dev_data->instance_data->androidSurfaceExtensionEnabled) {
+            if (!dev_data->instance_data->extensions.khr_android_surface) {
                 auto surface_state = GetSurfaceState(dev_data->instance_data, swapchain_data->createInfo.surface);
                 auto support_it = surface_state->gpu_queue_support.find({dev_data->physical_device, queue_state->queueFamilyIndex});
 
@@ -11622,47 +11582,48 @@ static PFN_vkVoidFunction intercept_khr_swapchain_command(const char *name, VkDe
 }
 
 static PFN_vkVoidFunction intercept_khr_surface_command(const char *name, VkInstance instance) {
+    using E = InstanceExtensions;
     static const struct {
         const char *name;
         PFN_vkVoidFunction proc;
-        bool instance_layer_data::*enable;
+        bool E::*enable;
     } khr_surface_commands[] = {
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
         {"vkCreateAndroidSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateAndroidSurfaceKHR),
-         &instance_layer_data::androidSurfaceExtensionEnabled},
+         &E::khr_android_surface},
 #endif  // VK_USE_PLATFORM_ANDROID_KHR
 #ifdef VK_USE_PLATFORM_MIR_KHR
         {"vkCreateMirSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateMirSurfaceKHR),
-         &instance_layer_data::mirSurfaceExtensionEnabled},
+         &E::khr_mir_surface},
 #endif  // VK_USE_PLATFORM_MIR_KHR
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
         {"vkCreateWaylandSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateWaylandSurfaceKHR),
-         &instance_layer_data::waylandSurfaceExtensionEnabled},
+         &E::khr_wayland_surface},
 #endif  // VK_USE_PLATFORM_WAYLAND_KHR
 #ifdef VK_USE_PLATFORM_WIN32_KHR
         {"vkCreateWin32SurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateWin32SurfaceKHR),
-         &instance_layer_data::win32SurfaceExtensionEnabled},
+         &E::khr_win32_surface},
 #endif  // VK_USE_PLATFORM_WIN32_KHR
 #ifdef VK_USE_PLATFORM_XCB_KHR
         {"vkCreateXcbSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateXcbSurfaceKHR),
-         &instance_layer_data::xcbSurfaceExtensionEnabled},
+         &E::khr_xcb_surface},
 #endif  // VK_USE_PLATFORM_XCB_KHR
 #ifdef VK_USE_PLATFORM_XLIB_KHR
         {"vkCreateXlibSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateXlibSurfaceKHR),
-         &instance_layer_data::xlibSurfaceExtensionEnabled},
+         &E::khr_xlib_surface},
 #endif  // VK_USE_PLATFORM_XLIB_KHR
         {"vkCreateDisplayPlaneSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateDisplayPlaneSurfaceKHR),
-         &instance_layer_data::displayExtensionEnabled},
+         &E::khr_display},
         {"vkDestroySurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(DestroySurfaceKHR),
-         &instance_layer_data::surfaceExtensionEnabled},
+         &E::khr_surface},
         {"vkGetPhysicalDeviceSurfaceCapabilitiesKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceCapabilitiesKHR),
-         &instance_layer_data::surfaceExtensionEnabled},
+         &E::khr_surface},
         {"vkGetPhysicalDeviceSurfaceSupportKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceSupportKHR),
-         &instance_layer_data::surfaceExtensionEnabled},
+         &E::khr_surface},
         {"vkGetPhysicalDeviceSurfacePresentModesKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfacePresentModesKHR),
-         &instance_layer_data::surfaceExtensionEnabled},
+         &E::khr_surface},
         {"vkGetPhysicalDeviceSurfaceFormatsKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceFormatsKHR),
-         &instance_layer_data::surfaceExtensionEnabled},
+         &E::khr_surface},
     };
 
     instance_layer_data *instance_data = nullptr;
@@ -11672,7 +11633,7 @@ static PFN_vkVoidFunction intercept_khr_surface_command(const char *name, VkInst
 
     for (size_t i = 0; i < ARRAY_SIZE(khr_surface_commands); i++) {
         if (!strcmp(khr_surface_commands[i].name, name)) {
-            if (instance_data && !(instance_data->*(khr_surface_commands[i].enable))) return nullptr;
+            if (instance_data && !(instance_data->extensions.*(khr_surface_commands[i].enable))) return nullptr;
             return khr_surface_commands[i].proc;
         }
     }
@@ -11681,6 +11642,7 @@ static PFN_vkVoidFunction intercept_khr_surface_command(const char *name, VkInst
 }
 
 static PFN_vkVoidFunction intercept_extension_instance_commands(const char *name, VkInstance instance) {
+    // TODO: sort this out.
     static const struct {
         const char *name;
         PFN_vkVoidFunction proc;

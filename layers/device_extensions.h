@@ -99,4 +99,55 @@ struct DeviceExtensions {
     }
 };
 
+struct InstanceExtensions {
+    bool khr_surface;
+    bool khr_display;
+    bool khr_android_surface;
+    bool khr_xcb_surface;
+    bool khr_xlib_surface;
+    bool khr_win32_surface;
+    bool khr_wayland_surface;
+    bool khr_mir_surface;
+
+    void InitFromInstanceCreateInfo(const VkInstanceCreateInfo *pCreateInfo) {
+        using E = InstanceExtensions;
+
+        static const std::pair<char const *, bool E::*> known_extensions[]{
+            {VK_KHR_SURFACE_EXTENSION_NAME, &E::khr_surface},
+            {VK_KHR_DISPLAY_EXTENSION_NAME, &E::khr_display},
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+            {VK_KHR_ANDROID_SURFACE_EXTENSION_NAME, &E::khr_android_surface},
+#endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
+            {VK_KHR_XCB_SURFACE_EXTENSION_NAME, &E::khr_xcb_surface},
+#endif
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+            {VK_KHR_XLIB_SURFACE_EXTENSION_NAME, &E::khr_xlib_surface},
+#endif
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+            {VK_KHR_WIN32_SURFACE_EXTENSION_NAME, &E::khr_win32_surface},
+#endif
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+            {VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME, &E::khr_wayland_surface},
+#endif
+#ifdef VK_USE_PLATFORM_MIR_KHR
+            {VK_KHR_MIR_SURFACE_EXTENSION_NAME, &E::khr_mir_surface},
+#endif
+        };
+
+        for (auto ext : known_extensions) {
+            this->*(ext.second) = false;
+        }
+
+        for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
+            for (auto ext : known_extensions) {
+                if (!strcmp(ext.first, pCreateInfo->ppEnabledExtensionNames[i])) {
+                    this->*(ext.second) = true;
+                    break;
+                }
+            }
+        }
+    }
+};
+
 #endif
