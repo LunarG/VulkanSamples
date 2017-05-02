@@ -6174,7 +6174,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateComputePipelines(VkDevice device, VkPipelin
         pPipeState[i]->pipeline_layout = *getPipelineLayout(dev_data, pCreateInfos[i].layout);
 
         // TODO: Add Compute Pipeline Verification
-        skip |= !validate_compute_pipeline(dev_data, pPipeState[i]);
+        skip |= validate_compute_pipeline(dev_data, pPipeState[i]);
         // skip |= verifyPipelineCreateState(dev_data, pPipeState[i]);
     }
 
