@@ -2216,13 +2216,13 @@ static bool validate_shader_capabilities(layer_data *dev_data, shader_module con
         {spv::CapabilityMultiViewport, {"multiViewport", &F::multiViewport}},
 
         // Capabilities that require an extension
-        {spv::CapabilityDrawParameters, {VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME, nullptr, &E::khr_shader_draw_parameters_enabled}},
-        {spv::CapabilityGeometryShaderPassthroughNV, {VK_NV_GEOMETRY_SHADER_PASSTHROUGH_EXTENSION_NAME, nullptr, &E::nv_geometry_shader_passthrough_enabled}},
-        {spv::CapabilitySampleMaskOverrideCoverageNV, {VK_NV_SAMPLE_MASK_OVERRIDE_COVERAGE_EXTENSION_NAME, nullptr, &E::nv_sample_mask_override_coverage_enabled}},
-        {spv::CapabilityShaderViewportIndexLayerNV, {VK_NV_VIEWPORT_ARRAY2_EXTENSION_NAME, nullptr, &E::nv_viewport_array2_enabled}},
-        {spv::CapabilityShaderViewportMaskNV, {VK_NV_VIEWPORT_ARRAY2_EXTENSION_NAME, nullptr, &E::nv_viewport_array2_enabled}},
-        {spv::CapabilitySubgroupBallotKHR, {VK_EXT_SHADER_SUBGROUP_BALLOT_EXTENSION_NAME, nullptr, &E::khr_subgroup_ballot_enabled}},
-        {spv::CapabilitySubgroupVoteKHR, {VK_EXT_SHADER_SUBGROUP_VOTE_EXTENSION_NAME, nullptr, &E::khr_subgroup_vote_enabled}},
+        {spv::CapabilityDrawParameters, {VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME, nullptr, &E::khr_shader_draw_parameters}},
+        {spv::CapabilityGeometryShaderPassthroughNV, {VK_NV_GEOMETRY_SHADER_PASSTHROUGH_EXTENSION_NAME, nullptr, &E::nv_geometry_shader_passthrough}},
+        {spv::CapabilitySampleMaskOverrideCoverageNV, {VK_NV_SAMPLE_MASK_OVERRIDE_COVERAGE_EXTENSION_NAME, nullptr, &E::nv_sample_mask_override_coverage}},
+        {spv::CapabilityShaderViewportIndexLayerNV, {VK_NV_VIEWPORT_ARRAY2_EXTENSION_NAME, nullptr, &E::nv_viewport_array2}},
+        {spv::CapabilityShaderViewportMaskNV, {VK_NV_VIEWPORT_ARRAY2_EXTENSION_NAME, nullptr, &E::nv_viewport_array2}},
+        {spv::CapabilitySubgroupBallotKHR, {VK_EXT_SHADER_SUBGROUP_BALLOT_EXTENSION_NAME, nullptr, &E::khr_subgroup_ballot}},
+        {spv::CapabilitySubgroupVoteKHR, {VK_EXT_SHADER_SUBGROUP_VOTE_EXTENSION_NAME, nullptr, &E::khr_subgroup_vote}},
     };
     // clang-format on
 
@@ -3508,17 +3508,17 @@ static void checkDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo,
     using E = devExts;
 
     static const std::pair<char const *, bool E::*> known_extensions[] {
-        {VK_KHR_SWAPCHAIN_EXTENSION_NAME, &E::khr_swapchain_enabled},
-        {VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME, &E::khr_display_swapchain_enabled},
-        {VK_NV_GLSL_SHADER_EXTENSION_NAME, &E::nv_glsl_shader_enabled},
-        {VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME, &E::khr_descriptor_update_template_enabled},
-        {VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME, &E::khr_shader_draw_parameters_enabled},
-        {VK_KHR_MAINTENANCE1_EXTENSION_NAME, &E::khr_maintenance1_enabled},
-        {VK_NV_GEOMETRY_SHADER_PASSTHROUGH_EXTENSION_NAME, &E::nv_geometry_shader_passthrough_enabled},
-        {VK_NV_SAMPLE_MASK_OVERRIDE_COVERAGE_EXTENSION_NAME, &E::nv_sample_mask_override_coverage_enabled},
-        {VK_NV_VIEWPORT_ARRAY2_EXTENSION_NAME, &E::nv_viewport_array2_enabled},
-        {VK_EXT_SHADER_SUBGROUP_BALLOT_EXTENSION_NAME, &E::khr_subgroup_ballot_enabled},
-        {VK_EXT_SHADER_SUBGROUP_VOTE_EXTENSION_NAME, &E::khr_subgroup_vote_enabled},
+        {VK_KHR_SWAPCHAIN_EXTENSION_NAME, &E::khr_swapchain},
+        {VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME, &E::khr_display_swapchain},
+        {VK_NV_GLSL_SHADER_EXTENSION_NAME, &E::nv_glsl_shader},
+        {VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME, &E::khr_descriptor_update_template},
+        {VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME, &E::khr_shader_draw_parameters},
+        {VK_KHR_MAINTENANCE1_EXTENSION_NAME, &E::khr_maintenance1},
+        {VK_NV_GEOMETRY_SHADER_PASSTHROUGH_EXTENSION_NAME, &E::nv_geometry_shader_passthrough},
+        {VK_NV_SAMPLE_MASK_OVERRIDE_COVERAGE_EXTENSION_NAME, &E::nv_sample_mask_override_coverage},
+        {VK_NV_VIEWPORT_ARRAY2_EXTENSION_NAME, &E::nv_viewport_array2},
+        {VK_EXT_SHADER_SUBGROUP_BALLOT_EXTENSION_NAME, &E::khr_subgroup_ballot},
+        {VK_EXT_SHADER_SUBGROUP_VOTE_EXTENSION_NAME, &E::khr_subgroup_vote},
     };
 
     for (auto ext : known_extensions) {
@@ -7843,7 +7843,7 @@ static bool ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, ui
                 arrayLayers = image_data->createInfo.arrayLayers;
                 mipLevels = image_data->createInfo.mipLevels;
                 imageFound = true;
-            } else if (dev_data->device_extensions.khr_swapchain_enabled) {
+            } else if (dev_data->device_extensions.khr_swapchain) {
                 auto imageswap_data = GetSwapchainFromImage(dev_data, mem_barrier->image);
                 if (imageswap_data) {
                     auto swapchain_data = GetSwapchainNode(dev_data, imageswap_data);
@@ -8892,7 +8892,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateShaderModule(VkDevice device, const VkShade
 
         spv_valid = spvValidate(ctx, &binary, &diag);
         if (spv_valid != SPV_SUCCESS) {
-            if (!dev_data->device_extensions.nv_glsl_shader_enabled || (pCreateInfo->pCode[0] == spv::MagicNumber)) {
+            if (!dev_data->device_extensions.nv_glsl_shader || (pCreateInfo->pCode[0] == spv::MagicNumber)) {
                 skip |= log_msg(dev_data->report_data,
                                 spv_valid == SPV_WARNING ? VK_DEBUG_REPORT_WARNING_BIT_EXT : VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                 VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, SHADER_CHECKER_INCONSISTENT_SPIRV, "SC",
@@ -11603,13 +11603,13 @@ static PFN_vkVoidFunction intercept_device_extension_command(const char *name, V
         bool enabled;
     } device_extension_commands[] = {
         {"vkCreateDescriptorUpdateTemplateKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateDescriptorUpdateTemplateKHR),
-         device_data->device_extensions.khr_descriptor_update_template_enabled},
+         device_data->device_extensions.khr_descriptor_update_template},
         {"vkDestroyDescriptorUpdateTemplateKHR", reinterpret_cast<PFN_vkVoidFunction>(DestroyDescriptorUpdateTemplateKHR),
-         device_data->device_extensions.khr_descriptor_update_template_enabled},
+         device_data->device_extensions.khr_descriptor_update_template},
         {"vkUpdateDescriptorSetWithTemplateKHR", reinterpret_cast<PFN_vkVoidFunction>(UpdateDescriptorSetWithTemplateKHR),
-         device_data->device_extensions.khr_descriptor_update_template_enabled},
+         device_data->device_extensions.khr_descriptor_update_template},
         {"vkCmdPushDescriptorSetWithTemplateKHR", reinterpret_cast<PFN_vkVoidFunction>(CmdPushDescriptorSetWithTemplateKHR),
-         device_data->device_extensions.khr_descriptor_update_template_enabled},
+         device_data->device_extensions.khr_descriptor_update_template},
     };
 
     if (!device_data) return nullptr;
@@ -11637,7 +11637,7 @@ static PFN_vkVoidFunction intercept_khr_swapchain_command(const char *name, VkDe
 
     if (dev) {
         dev_data = GetLayerDataPtr(get_dispatch_key(dev), layer_data_map);
-        if (!dev_data->device_extensions.khr_swapchain_enabled) return nullptr;
+        if (!dev_data->device_extensions.khr_swapchain) return nullptr;
     }
 
     for (size_t i = 0; i < ARRAY_SIZE(khr_swapchain_commands); i++) {
@@ -11645,7 +11645,7 @@ static PFN_vkVoidFunction intercept_khr_swapchain_command(const char *name, VkDe
     }
 
     if (dev_data) {
-        if (!dev_data->device_extensions.khr_display_swapchain_enabled) return nullptr;
+        if (!dev_data->device_extensions.khr_display_swapchain) return nullptr;
     }
 
     if (!strcmp("vkCreateSharedSwapchainsKHR", name)) return reinterpret_cast<PFN_vkVoidFunction>(CreateSharedSwapchainsKHR);

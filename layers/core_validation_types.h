@@ -754,17 +754,17 @@ namespace core_validation {
 struct layer_data;
 
 struct devExts {
-    bool khr_swapchain_enabled;
-    bool khr_display_swapchain_enabled;
-    bool nv_glsl_shader_enabled;
-    bool khr_descriptor_update_template_enabled;
-    bool khr_shader_draw_parameters_enabled;
-    bool khr_maintenance1_enabled;
-    bool nv_geometry_shader_passthrough_enabled;
-    bool nv_sample_mask_override_coverage_enabled;
-    bool nv_viewport_array2_enabled;
-    bool khr_subgroup_ballot_enabled;
-    bool khr_subgroup_vote_enabled;
+    bool khr_swapchain;
+    bool khr_display_swapchain;
+    bool nv_glsl_shader;
+    bool khr_descriptor_update_template;
+    bool khr_shader_draw_parameters;
+    bool khr_maintenance1;
+    bool nv_geometry_shader_passthrough;
+    bool nv_sample_mask_override_coverage;
+    bool nv_viewport_array2;
+    bool khr_subgroup_ballot;
+    bool khr_subgroup_vote;
 };
 
 cvdescriptorset::DescriptorSet *GetSetNode(const layer_data *, VkDescriptorSet);

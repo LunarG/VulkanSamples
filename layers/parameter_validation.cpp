@@ -70,8 +70,8 @@ struct instance_layer_data {
 };
 
 struct device_extension_enables {
-    bool khr_swapchain_enabled;
-    bool khr_display_swapchain_enabled;
+    bool khr_swapchain;
+    bool khr_display_swapchain;
     bool khr_maintenance1;
     bool khr_push_descriptor;
     bool khr_descriptor_update_template;
@@ -89,7 +89,7 @@ struct device_extension_enables {
     bool nv_external_memory;
     bool nv_external_memory_win32;
     bool nvx_device_generated_commands;
-    bool incremental_present;
+    bool khr_incremental_present;
 };
 
 struct layer_data {
@@ -1634,9 +1634,9 @@ static void CheckDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo,
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
-            device_data->enables.khr_swapchain_enabled = true;
+            device_data->enables.khr_swapchain = true;
         } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME) == 0) {
-            device_data->enables.khr_display_swapchain_enabled = true;
+            device_data->enables.khr_display_swapchain = true;
         } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_MAINTENANCE1_EXTENSION_NAME) == 0) {
             device_data->enables.khr_maintenance1 = true;
         } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME) == 0) {
@@ -1676,7 +1676,7 @@ static void CheckDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo,
         } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_NVX_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME) == 0) {
             device_data->enables.nvx_device_generated_commands = true;
         } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME) == 0) {
-            device_data->enables.incremental_present = true;
+            device_data->enables.khr_incremental_present = true;
         }
     }
 }
@@ -5116,7 +5116,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device, const VkSwapc
     layer_data *my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_device_extension(my_data, my_data->enables.khr_swapchain_enabled, "vkCreateSwapchainKHR",
+    skip |= require_device_extension(my_data, my_data->enables.khr_swapchain, "vkCreateSwapchainKHR",
                                      VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
     skip |= parameter_validation_vkCreateSwapchainKHR(my_data->report_data, pCreateInfo, pAllocator, pSwapchain);
@@ -5137,7 +5137,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchai
     layer_data *my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_device_extension(my_data, my_data->enables.khr_swapchain_enabled, "vkGetSwapchainImagesKHR",
+    skip |= require_device_extension(my_data, my_data->enables.khr_swapchain, "vkGetSwapchainImagesKHR",
                                      VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
     skip |= parameter_validation_vkGetSwapchainImagesKHR(my_data->report_data, swapchain, pSwapchainImageCount, pSwapchainImages);
@@ -5158,7 +5158,7 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
     layer_data *my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_device_extension(my_data, my_data->enables.khr_swapchain_enabled, "vkAcquireNextImageKHR",
+    skip |= require_device_extension(my_data, my_data->enables.khr_swapchain, "vkAcquireNextImageKHR",
                                      VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
     skip |= parameter_validation_vkAcquireNextImageKHR(my_data->report_data, swapchain, timeout, semaphore, fence, pImageIndex);
@@ -5178,7 +5178,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
     layer_data *my_data = GetLayerDataPtr(get_dispatch_key(queue), layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_device_extension(my_data, my_data->enables.khr_swapchain_enabled, "vkQueuePresentKHR",
+    skip |= require_device_extension(my_data, my_data->enables.khr_swapchain, "vkQueuePresentKHR",
                                      VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
     skip |= parameter_validation_vkQueuePresentKHR(my_data->report_data, pPresentInfo);
@@ -5192,7 +5192,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
         std_header *pnext = (std_header *)pPresentInfo->pNext;
         while (pnext) {
             if (VK_STRUCTURE_TYPE_PRESENT_REGIONS_KHR == pnext->sType) {
-                skip |= require_device_extension(my_data, my_data->enables.incremental_present, "vkQueuePresentKHR",
+                skip |= require_device_extension(my_data, my_data->enables.khr_incremental_present, "vkQueuePresentKHR",
                                                  VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME);
                 VkPresentRegionsKHR *present_regions = (VkPresentRegionsKHR *)pnext;
                 if (present_regions->swapchainCount != pPresentInfo->swapchainCount) {
@@ -5232,7 +5232,7 @@ VKAPI_ATTR void VKAPI_CALL DestroySwapchainKHR(VkDevice device, VkSwapchainKHR s
     layer_data *my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_device_extension(my_data, my_data->enables.khr_swapchain_enabled, "vkDestroySwapchainKHR",
+    skip |= require_device_extension(my_data, my_data->enables.khr_swapchain, "vkDestroySwapchainKHR",
                                      VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
     /* No generated validation function for this call */
@@ -5616,7 +5616,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSharedSwapchainsKHR(VkDevice device, uint32
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_device_extension(my_data, my_data->enables.khr_display_swapchain_enabled, "vkCreateSharedSwapchainsKHR",
+    skip |= require_device_extension(my_data, my_data->enables.khr_display_swapchain, "vkCreateSharedSwapchainsKHR",
                                      VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME);
 
     skip |= parameter_validation_vkCreateSharedSwapchainsKHR(my_data->report_data, swapchainCount, pCreateInfos, pAllocator,

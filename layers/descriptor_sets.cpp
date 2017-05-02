@@ -1672,7 +1672,7 @@ bool cvdescriptorset::ValidateAllocateDescriptorSets(const core_validation::laye
                         reinterpret_cast<const uint64_t &>(p_alloc_info->pSetLayouts[i]));
         }
     }
-    if (!GetDeviceExtensions(dev_data)->khr_maintenance1_enabled) {
+    if (!GetDeviceExtensions(dev_data)->khr_maintenance1) {
         auto pool_state = GetDescriptorPoolState(dev_data, p_alloc_info->descriptorPool);
         // Track number of descriptorSets allowable in this pool
         if (pool_state->availableSets < p_alloc_info->descriptorSetCount) {

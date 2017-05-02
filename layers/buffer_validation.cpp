@@ -1323,7 +1323,7 @@ bool PreCallValidateCmdCopyImage(layer_data *device_data, GLOBAL_CB_NODE *cb_nod
                             ss.str().c_str());
         }
 
-        if (!GetDeviceExtensions(device_data)->khr_maintenance1_enabled) {
+        if (!GetDeviceExtensions(device_data)->khr_maintenance1) {
             // For each region the layerCount member of srcSubresource and dstSubresource must match
             if (regions[i].srcSubresource.layerCount != regions[i].dstSubresource.layerCount) {
                 std::stringstream ss;
@@ -1382,7 +1382,7 @@ bool PreCallValidateCmdCopyImage(layer_data *device_data, GLOBAL_CB_NODE *cb_nod
                             validation_error_map[VALIDATION_ERROR_01221]);
         }
 
-        if (!GetDeviceExtensions(device_data)->khr_maintenance1_enabled) {
+        if (!GetDeviceExtensions(device_data)->khr_maintenance1) {
             // If either of the calling command's src_image or dst_image parameters are of VkImageType VK_IMAGE_TYPE_3D,
             // the baseArrayLayer and layerCount members of both srcSubresource and dstSubresource must be 0 and 1, respectively
             if (((src_image_state->createInfo.imageType == VK_IMAGE_TYPE_3D) ||
@@ -2547,7 +2547,7 @@ bool PreCallValidateCreateImageView(layer_data *device_data, const VkImageViewCr
                 log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                         VALIDATION_ERROR_00768, "IMAGE", "%s %s", ss.str().c_str(), validation_error_map[VALIDATION_ERROR_00768]);
         }
-        if (!GetDeviceExtensions(device_data)->khr_maintenance1_enabled) {
+        if (!GetDeviceExtensions(device_data)->khr_maintenance1) {
             if (create_info->subresourceRange.baseArrayLayer >= image_state->createInfo.arrayLayers) {
                 std::stringstream ss;
                 ss << "vkCreateImageView called with baseArrayLayer " << create_info->subresourceRange.baseArrayLayer
