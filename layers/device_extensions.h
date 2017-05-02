@@ -108,6 +108,14 @@ struct InstanceExtensions {
     bool khr_win32_surface;
     bool khr_wayland_surface;
     bool khr_mir_surface;
+    bool khr_get_physical_device_properties2;
+    bool khx_device_group_creation;
+    bool khx_external_memory_capabilities;
+    bool khx_external_semaphore_capabilities;
+    bool ext_acquire_xlib_display;
+    bool ext_direct_mode_display;
+    bool ext_display_surface_counter;
+    bool nv_external_memory_capabilities;
 
     void InitFromInstanceCreateInfo(const VkInstanceCreateInfo *pCreateInfo) {
         using E = InstanceExtensions;
@@ -133,6 +141,16 @@ struct InstanceExtensions {
 #ifdef VK_USE_PLATFORM_MIR_KHR
             {VK_KHR_MIR_SURFACE_EXTENSION_NAME, &E::khr_mir_surface},
 #endif
+            {VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME, &E::khr_get_physical_device_properties2},
+            {VK_KHX_DEVICE_GROUP_CREATION_EXTENSION_NAME, &E::khx_device_group_creation},
+            {VK_KHX_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME, &E::khx_external_memory_capabilities},
+            {VK_KHX_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME, &E::khx_external_semaphore_capabilities},
+#ifdef VK_USE_PLATFORM_XLIB_XRANDR_EXT
+            {VK_EXT_ACQUIRE_XLIB_DISPLAY_EXTENSION_NAME, &E::ext_acquire_xlib_display},
+#endif
+            {VK_EXT_DIRECT_MODE_DISPLAY_EXTENSION_NAME, &E::ext_direct_mode_display},
+            {VK_EXT_DISPLAY_SURFACE_COUNTER_EXTENSION_NAME, &E::ext_display_surface_counter},
+            {VK_NV_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME, &E::nv_external_memory_capabilities},
         };
 
         for (auto ext : known_extensions) {
