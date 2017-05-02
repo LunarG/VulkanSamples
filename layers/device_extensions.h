@@ -32,6 +32,22 @@ struct DeviceExtensions {
     bool nv_viewport_array2;
     bool khr_subgroup_ballot;
     bool khr_subgroup_vote;
+    bool khr_push_descriptor;
+    bool khx_device_group;
+    bool khx_external_memory_fd;
+    bool khx_external_memory_win32;
+    bool khx_external_semaphore_fd;
+    bool khx_external_semaphore_win32;
+    bool ext_debug_marker;
+    bool ext_discard_rectangles;
+    bool ext_display_control;
+    bool amd_draw_indirect_count;
+    bool amd_negative_viewport_height;
+    bool nv_clip_space_w_scaling;
+    bool nv_external_memory;
+    bool nv_external_memory_win32;
+    bool nvx_device_generated_commands;
+    bool khr_incremental_present;
 
     void InitFromDeviceCreateInfo(const VkDeviceCreateInfo *pCreateInfo) {
         using E = DeviceExtensions;
@@ -48,6 +64,24 @@ struct DeviceExtensions {
             {VK_NV_VIEWPORT_ARRAY2_EXTENSION_NAME, &E::nv_viewport_array2},
             {VK_EXT_SHADER_SUBGROUP_BALLOT_EXTENSION_NAME, &E::khr_subgroup_ballot},
             {VK_EXT_SHADER_SUBGROUP_VOTE_EXTENSION_NAME, &E::khr_subgroup_vote},
+            {VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME, &E::khr_push_descriptor},
+            {VK_KHX_DEVICE_GROUP_EXTENSION_NAME, &E::khx_device_group},
+            {VK_KHX_EXTERNAL_MEMORY_FD_EXTENSION_NAME, &E::khx_external_memory_fd},
+            {VK_KHX_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME, &E::khx_external_semaphore_fd},
+#ifdef VK_USE_PLATFORM_WIN32_KHX
+            {VK_KHX_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME, &E::khx_external_memory_win32},
+            {VK_KHX_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME, &E::khx_external_semaphore_win32},
+#endif
+            {VK_EXT_DEBUG_MARKER_EXTENSION_NAME, &E::ext_debug_marker},
+            {VK_EXT_DISCARD_RECTANGLES_EXTENSION_NAME, &E::ext_discard_rectangles},
+            {VK_EXT_DISPLAY_CONTROL_EXTENSION_NAME, &E::ext_display_control},
+            {VK_AMD_DRAW_INDIRECT_COUNT_EXTENSION_NAME, &E::amd_draw_indirect_count},
+            {VK_AMD_NEGATIVE_VIEWPORT_HEIGHT_EXTENSION_NAME, &E::amd_negative_viewport_height},
+            {VK_NV_EXTERNAL_MEMORY_EXTENSION_NAME, &E::nv_external_memory},
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+            {VK_NV_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME, &E::nv_external_memory_win32},
+#endif
+            {VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME, &E::khr_incremental_present},
         };
 
         for (auto ext : known_extensions) {

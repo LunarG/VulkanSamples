@@ -50,6 +50,7 @@
 
 #include "parameter_name.h"
 #include "parameter_validation.h"
+#include "device_extensions.h"
 
 namespace parameter_validation {
 
@@ -69,29 +70,6 @@ struct instance_layer_data {
     VkLayerInstanceDispatchTable dispatch_table = {};
 };
 
-struct device_extension_enables {
-    bool khr_swapchain;
-    bool khr_display_swapchain;
-    bool khr_maintenance1;
-    bool khr_push_descriptor;
-    bool khr_descriptor_update_template;
-    bool khx_device_group;
-    bool khx_external_memory_fd;
-    bool khx_external_memory_win32;
-    bool khx_external_semaphore_fd;
-    bool khx_external_semaphore_win32;
-    bool ext_debug_marker;
-    bool ext_discard_rectangles;
-    bool ext_display_control;
-    bool amd_draw_indirect_count;
-    bool amd_negative_viewport_height;
-    bool nv_clip_space_w_scaling;
-    bool nv_external_memory;
-    bool nv_external_memory_win32;
-    bool nvx_device_generated_commands;
-    bool khr_incremental_present;
-};
-
 struct layer_data {
     debug_report_data *report_data = nullptr;
     // Map for queue family index to queue count
@@ -99,9 +77,7 @@ struct layer_data {
     VkPhysicalDeviceLimits device_limits = {};
     VkPhysicalDeviceFeatures physical_device_features = {};
     VkPhysicalDevice physical_device = VK_NULL_HANDLE;
-    device_extension_enables enables;
-
-    layer_data() { memset(&enables, 0, sizeof(device_extension_enables)); }
+    DeviceExtensions enables;
 
     VkLayerDispatchTable dispatch_table = {};
 };
@@ -1630,57 +1606,6 @@ static void CheckInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateI
     }
 }
 
-static void CheckDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo, VkDevice device) {
-    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
-            device_data->enables.khr_swapchain = true;
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME) == 0) {
-            device_data->enables.khr_display_swapchain = true;
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_MAINTENANCE1_EXTENSION_NAME) == 0) {
-            device_data->enables.khr_maintenance1 = true;
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME) == 0) {
-            device_data->enables.khr_push_descriptor = true;
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME) == 0) {
-            device_data->enables.khr_descriptor_update_template = true;
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHX_DEVICE_GROUP_EXTENSION_NAME) == 0) {
-            device_data->enables.khx_device_group = true;
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHX_EXTERNAL_MEMORY_FD_EXTENSION_NAME) == 0) {
-            device_data->enables.khx_external_memory_fd = true;
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHX_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME) == 0) {
-            device_data->enables.khx_external_semaphore_fd = true;
-#ifdef VK_USE_PLATFORM_WIN32_KHX
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHX_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME) == 0) {
-            device_data->enables.khx_external_memory_win32 = true;
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHX_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME) == 0) {
-            device_data->enables.khx_external_semaphore_win32 = true;
-#endif
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_DEBUG_MARKER_EXTENSION_NAME) == 0) {
-            device_data->enables.ext_debug_marker = true;
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_DISCARD_RECTANGLES_EXTENSION_NAME) == 0) {
-            device_data->enables.ext_discard_rectangles = true;
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_DISPLAY_CONTROL_EXTENSION_NAME) == 0) {
-            device_data->enables.ext_display_control = true;
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_AMD_DRAW_INDIRECT_COUNT_EXTENSION_NAME) == 0) {
-            device_data->enables.amd_draw_indirect_count = true;
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_AMD_NEGATIVE_VIEWPORT_HEIGHT_EXTENSION_NAME) == 0) {
-            device_data->enables.amd_negative_viewport_height = true;
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_NV_CLIP_SPACE_W_SCALING_EXTENSION_NAME) == 0) {
-            device_data->enables.nv_clip_space_w_scaling = true;
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_NV_EXTERNAL_MEMORY_EXTENSION_NAME) == 0) {
-            device_data->enables.nv_external_memory = true;
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_NV_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME) == 0) {
-            device_data->enables.nv_external_memory_win32 = true;
-#endif
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_NVX_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME) == 0) {
-            device_data->enables.nvx_device_generated_commands = true;
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME) == 0) {
-            device_data->enables.khr_incremental_present = true;
-        }
-    }
-}
-
 void storeCreateDeviceData(VkDevice device, const VkDeviceCreateInfo *pCreateInfo) {
     layer_data *my_device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
 
@@ -1786,7 +1711,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physicalDevice, con
             my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
             layer_init_device_dispatch_table(*pDevice, &my_device_data->dispatch_table, fpGetDeviceProcAddr);
 
-            CheckDeviceRegisterExtensions(pCreateInfo, *pDevice);
+            my_device_data->enables.InitFromDeviceCreateInfo(pCreateInfo);
 
             uint32_t count;
             my_instance_data->dispatch_table.GetPhysicalDeviceQueueFamilyProperties(physicalDevice, &count, nullptr);

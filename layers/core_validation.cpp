@@ -3621,7 +3621,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu, const VkDevice
     device_data->physical_device = gpu;
 
     device_data->report_data = layer_debug_report_create_device(instance_data->report_data, *pDevice);
-    device_data->device_extensions->InitFromDeviceCreateInfo(pCreateInfo);
+    device_data->device_extensions.InitFromDeviceCreateInfo(pCreateInfo);
     // Get physical device limits for this device
     instance_data->dispatch_table.GetPhysicalDeviceProperties(gpu, &(device_data->phys_dev_properties.properties));
     uint32_t count;
