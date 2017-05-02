@@ -2163,162 +2163,77 @@ static bool validate_shader_capabilities(layer_data *dev_data, shader_module con
     auto report_data = dev_data->report_data;
     auto const & enabledFeatures = dev_data->enabled_features;
 
+    struct CapabilityInfo {
+        char const *name;
+        VkBool32 const VkPhysicalDeviceFeatures::*feature;
+        bool const devExts::*extension;
+    };
+
+    using F = VkPhysicalDeviceFeatures;
+    using E = devExts;
+
+    // clang-format off
+    static const std::unordered_map<uint32_t, CapabilityInfo> capabilities = {
+        // Capabilities always supported by a Vulkan 1.0 implementation -- no
+        // feature bits.
+        {spv::CapabilityMatrix, {nullptr}},
+        {spv::CapabilityShader, {nullptr}},
+        {spv::CapabilityInputAttachment, {nullptr}},
+        {spv::CapabilitySampled1D, {nullptr}},
+        {spv::CapabilityImage1D, {nullptr}},
+        {spv::CapabilitySampledBuffer, {nullptr}},
+        {spv::CapabilityImageQuery, {nullptr}},
+        {spv::CapabilityDerivativeControl, {nullptr}},
+
+        // Capabilities that are optionally supported, but require a feature to
+        // be enabled on the device
+        {spv::CapabilityGeometry, {"geometryShader", &F::geometryShader}},
+        {spv::CapabilityTessellation, {"tessellationShader", &F::tessellationShader}},
+        {spv::CapabilityFloat64, {"shaderFloat64", &F::shaderFloat64}},
+        {spv::CapabilityInt64, {"shaderInt64", &F::shaderInt64}},
+        {spv::CapabilityTessellationPointSize, {"shaderTessellationAndGeometryPointSize", &F::shaderTessellationAndGeometryPointSize}},
+        {spv::CapabilityGeometryPointSize, {"shaderTessellationAndGeometryPointSize", &F::shaderTessellationAndGeometryPointSize}},
+        {spv::CapabilityImageGatherExtended, {"shaderImageGatherExtended", &F::shaderImageGatherExtended}},
+        {spv::CapabilityStorageImageMultisample, {"shaderStorageImageMultisample", &F::shaderStorageImageMultisample}},
+        {spv::CapabilityUniformBufferArrayDynamicIndexing, {"shaderUniformBufferArrayDynamicIndexing", &F::shaderUniformBufferArrayDynamicIndexing}},
+        {spv::CapabilitySampledImageArrayDynamicIndexing, {"shaderSampledImageArrayDynamicIndexing", &F::shaderSampledImageArrayDynamicIndexing}},
+        {spv::CapabilityStorageBufferArrayDynamicIndexing, {"shaderStorageBufferArrayDynamicIndexing", &F::shaderStorageBufferArrayDynamicIndexing}},
+        {spv::CapabilityStorageImageArrayDynamicIndexing, {"shaderStorageImageArrayDynamicIndexing", &F::shaderStorageBufferArrayDynamicIndexing}},
+        {spv::CapabilityClipDistance, {"shaderClipDistance", &F::shaderClipDistance}},
+        {spv::CapabilityCullDistance, {"shaderCullDistance", &F::shaderCullDistance}},
+        {spv::CapabilityImageCubeArray, {"imageCubeArray", &F::imageCubeArray}},
+        {spv::CapabilitySampleRateShading, {"sampleRateShading", &F::sampleRateShading}},
+        {spv::CapabilitySparseResidency, {"shaderResourceResidency", &F::shaderResourceResidency}},
+        {spv::CapabilityMinLod, {"shaderResourceMinLod", &F::shaderResourceMinLod}},
+        {spv::CapabilitySampledCubeArray, {"imageCubeArray", &F::imageCubeArray}},
+        {spv::CapabilityImageMSArray, {"shaderStorageImageMultisample", &F::shaderStorageImageMultisample}},
+        {spv::CapabilityStorageImageExtendedFormats, {"shaderStorageImageExtendedFormats", &F::shaderStorageImageExtendedFormats}},
+        {spv::CapabilityInterpolationFunction, {"sampleRateShading", &F::sampleRateShading}},
+        {spv::CapabilityStorageImageReadWithoutFormat, {"shaderStorageImageReadWithoutFormat", &F::shaderStorageImageReadWithoutFormat}},
+        {spv::CapabilityStorageImageWriteWithoutFormat, {"shaderStorageImageWriteWithoutFormat", &F::shaderStorageImageWriteWithoutFormat}},
+        {spv::CapabilityMultiViewport, {"multiViewport", &F::multiViewport}},
+
+        // Capabilities that require an extension
+        {spv::CapabilityDrawParameters, {VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME, nullptr, &E::khr_shader_draw_parameters_enabled}},
+        {spv::CapabilityGeometryShaderPassthroughNV, {VK_NV_GEOMETRY_SHADER_PASSTHROUGH_EXTENSION_NAME, nullptr, &E::nv_geometry_shader_passthrough_enabled}},
+        {spv::CapabilitySampleMaskOverrideCoverageNV, {VK_NV_SAMPLE_MASK_OVERRIDE_COVERAGE_EXTENSION_NAME, nullptr, &E::nv_sample_mask_override_coverage_enabled}},
+        {spv::CapabilityShaderViewportIndexLayerNV, {VK_NV_VIEWPORT_ARRAY2_EXTENSION_NAME, nullptr, &E::nv_viewport_array2_enabled}},
+        {spv::CapabilityShaderViewportMaskNV, {VK_NV_VIEWPORT_ARRAY2_EXTENSION_NAME, nullptr, &E::nv_viewport_array2_enabled}},
+        {spv::CapabilitySubgroupBallotKHR, {VK_EXT_SHADER_SUBGROUP_BALLOT_EXTENSION_NAME, nullptr, &E::khr_subgroup_ballot_enabled}},
+        {spv::CapabilitySubgroupVoteKHR, {VK_EXT_SHADER_SUBGROUP_VOTE_EXTENSION_NAME, nullptr, &E::khr_subgroup_vote_enabled}},
+    };
+    // clang-format on
+
     for (auto insn : *src) {
         if (insn.opcode() == spv::OpCapability) {
-            switch (insn.word(1)) {
-                case spv::CapabilityMatrix:
-                case spv::CapabilityShader:
-                case spv::CapabilityInputAttachment:
-                case spv::CapabilitySampled1D:
-                case spv::CapabilityImage1D:
-                case spv::CapabilitySampledBuffer:
-                case spv::CapabilityImageBuffer:
-                case spv::CapabilityImageQuery:
-                case spv::CapabilityDerivativeControl:
-                    // Always supported by a Vulkan 1.0 implementation -- no feature bits.
-                    break;
-
-                case spv::CapabilityGeometry:
-                    skip |= require_feature(report_data, enabledFeatures.geometryShader, "geometryShader");
-                    break;
-
-                case spv::CapabilityTessellation:
-                    skip |= require_feature(report_data, enabledFeatures.tessellationShader, "tessellationShader");
-                    break;
-
-                case spv::CapabilityFloat64:
-                    skip |= require_feature(report_data, enabledFeatures.shaderFloat64, "shaderFloat64");
-                    break;
-
-                case spv::CapabilityInt64:
-                    skip |= require_feature(report_data, enabledFeatures.shaderInt64, "shaderInt64");
-                    break;
-
-                case spv::CapabilityTessellationPointSize:
-                case spv::CapabilityGeometryPointSize:
-                    skip |= require_feature(report_data, enabledFeatures.shaderTessellationAndGeometryPointSize,
-                                            "shaderTessellationAndGeometryPointSize");
-                    break;
-
-                case spv::CapabilityImageGatherExtended:
-                    skip |= require_feature(report_data, enabledFeatures.shaderImageGatherExtended, "shaderImageGatherExtended");
-                    break;
-
-                case spv::CapabilityStorageImageMultisample:
-                    skip |= require_feature(report_data, enabledFeatures.shaderStorageImageMultisample,
-                                            "shaderStorageImageMultisample");
-                    break;
-
-                case spv::CapabilityUniformBufferArrayDynamicIndexing:
-                    skip |= require_feature(report_data, enabledFeatures.shaderUniformBufferArrayDynamicIndexing,
-                                            "shaderUniformBufferArrayDynamicIndexing");
-                    break;
-
-                case spv::CapabilitySampledImageArrayDynamicIndexing:
-                    skip |= require_feature(report_data, enabledFeatures.shaderSampledImageArrayDynamicIndexing,
-                                            "shaderSampledImageArrayDynamicIndexing");
-                    break;
-
-                case spv::CapabilityStorageBufferArrayDynamicIndexing:
-                    skip |= require_feature(report_data, enabledFeatures.shaderStorageBufferArrayDynamicIndexing,
-                                            "shaderStorageBufferArrayDynamicIndexing");
-                    break;
-
-                case spv::CapabilityStorageImageArrayDynamicIndexing:
-                    skip |= require_feature(report_data, enabledFeatures.shaderStorageImageArrayDynamicIndexing,
-                                            "shaderStorageImageArrayDynamicIndexing");
-                    break;
-
-                case spv::CapabilityClipDistance:
-                    skip |= require_feature(report_data, enabledFeatures.shaderClipDistance, "shaderClipDistance");
-                    break;
-
-                case spv::CapabilityCullDistance:
-                    skip |= require_feature(report_data, enabledFeatures.shaderCullDistance, "shaderCullDistance");
-                    break;
-
-                case spv::CapabilityImageCubeArray:
-                    skip |= require_feature(report_data, enabledFeatures.imageCubeArray, "imageCubeArray");
-                    break;
-
-                case spv::CapabilitySampleRateShading:
-                    skip |= require_feature(report_data, enabledFeatures.sampleRateShading, "sampleRateShading");
-                    break;
-
-                case spv::CapabilitySparseResidency:
-                    skip |= require_feature(report_data, enabledFeatures.shaderResourceResidency, "shaderResourceResidency");
-                    break;
-
-                case spv::CapabilityMinLod:
-                    skip |= require_feature(report_data, enabledFeatures.shaderResourceMinLod, "shaderResourceMinLod");
-                    break;
-
-                case spv::CapabilitySampledCubeArray:
-                    skip |= require_feature(report_data, enabledFeatures.imageCubeArray, "imageCubeArray");
-                    break;
-
-                case spv::CapabilityImageMSArray:
-                    skip |= require_feature(report_data, enabledFeatures.shaderStorageImageMultisample,
-                                            "shaderStorageImageMultisample");
-                    break;
-
-                case spv::CapabilityStorageImageExtendedFormats:
-                    skip |= require_feature(report_data, enabledFeatures.shaderStorageImageExtendedFormats,
-                                            "shaderStorageImageExtendedFormats");
-                    break;
-
-                case spv::CapabilityInterpolationFunction:
-                    skip |= require_feature(report_data, enabledFeatures.sampleRateShading, "sampleRateShading");
-                    break;
-
-                case spv::CapabilityStorageImageReadWithoutFormat:
-                    skip |= require_feature(report_data, enabledFeatures.shaderStorageImageReadWithoutFormat,
-                                            "shaderStorageImageReadWithoutFormat");
-                    break;
-
-                case spv::CapabilityStorageImageWriteWithoutFormat:
-                    skip |= require_feature(report_data, enabledFeatures.shaderStorageImageWriteWithoutFormat,
-                                            "shaderStorageImageWriteWithoutFormat");
-                    break;
-
-                case spv::CapabilityMultiViewport:
-                    skip |= require_feature(report_data, enabledFeatures.multiViewport, "multiViewport");
-                    break;
-
-                case spv::CapabilityDrawParameters:
-                    skip |= require_extension(report_data, dev_data->device_extensions.khr_shader_draw_parameters_enabled,
-                                              VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME);
-                    break;
-
-                case spv::CapabilityGeometryShaderPassthroughNV:
-                    skip |= require_extension(report_data, dev_data->device_extensions.nv_geometry_shader_passthrough_enabled,
-                                              VK_NV_GEOMETRY_SHADER_PASSTHROUGH_EXTENSION_NAME);
-                    break;
-
-                case spv::CapabilitySampleMaskOverrideCoverageNV:
-                    skip |= require_extension(report_data, dev_data->device_extensions.nv_sample_mask_override_coverage_enabled,
-                                              VK_NV_SAMPLE_MASK_OVERRIDE_COVERAGE_EXTENSION_NAME);
-                    break;
-
-                case spv::CapabilityShaderViewportIndexLayerNV:
-                case spv::CapabilityShaderViewportMaskNV:
-                    skip |= require_extension(report_data, dev_data->device_extensions.nv_viewport_array2_enabled,
-                                              VK_NV_VIEWPORT_ARRAY2_EXTENSION_NAME);
-                    break;
-
-                case spv::CapabilitySubgroupBallotKHR:
-                    skip |= require_extension(report_data, dev_data->device_extensions.khr_subgroup_ballot_enabled,
-                                              VK_EXT_SHADER_SUBGROUP_BALLOT_EXTENSION_NAME);
-                    break;
-
-                case spv::CapabilitySubgroupVoteKHR:
-                    skip |= require_extension(report_data, dev_data->device_extensions.khr_subgroup_vote_enabled,
-                                              VK_EXT_SHADER_SUBGROUP_VOTE_EXTENSION_NAME);
-                    break;
-
-                default:
-                    // Spirv-validator should catch these errors
-                    break;
+            auto it = capabilities.find(insn.word(1));
+            if (it != capabilities.end()) {
+                if (it->second.feature) {
+                    skip |= require_feature(report_data, enabledFeatures.*(it->second.feature), it->second.name);
+                }
+                if (it->second.extension) {
+                    skip |= require_extension(report_data, dev_data->device_extensions.*(it->second.extension), it->second.name);
+                }
             }
         }
     }
