@@ -765,9 +765,6 @@ struct devExts {
     bool nv_viewport_array2_enabled;
     bool khr_subgroup_ballot_enabled;
     bool khr_subgroup_vote_enabled;
-
-    std::unordered_map<VkSwapchainKHR, std::unique_ptr<SWAPCHAIN_NODE>> swapchainMap;
-    std::unordered_map<VkImage, VkSwapchainKHR> imageToSwapchainMap;
 };
 
 cvdescriptorset::DescriptorSet *GetSetNode(const layer_data *, VkDescriptorSet);

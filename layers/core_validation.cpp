@@ -164,6 +164,8 @@ struct layer_data {
     unordered_map<VkRenderPass, unique_ptr<RENDER_PASS_STATE>> renderPassMap;
     unordered_map<VkShaderModule, unique_ptr<shader_module>> shaderModuleMap;
     unordered_map<VkDescriptorUpdateTemplateKHR, unique_ptr<TEMPLATE_STATE>> desc_template_map;
+    unordered_map<VkSwapchainKHR, std::unique_ptr<SWAPCHAIN_NODE>> swapchainMap;
+    unordered_map<VkImage, VkSwapchainKHR> imageToSwapchainMap;
 
     VkDevice device = VK_NULL_HANDLE;
     VkPhysicalDevice physical_device = VK_NULL_HANDLE;
@@ -319,16 +321,16 @@ BUFFER_STATE *GetBufferState(const layer_data *dev_data, VkBuffer buffer) {
 }
 // Return swapchain node for specified swapchain or else NULL
 SWAPCHAIN_NODE *GetSwapchainNode(const layer_data *dev_data, VkSwapchainKHR swapchain) {
-    auto swp_it = dev_data->device_extensions.swapchainMap.find(swapchain);
-    if (swp_it == dev_data->device_extensions.swapchainMap.end()) {
+    auto swp_it = dev_data->swapchainMap.find(swapchain);
+    if (swp_it == dev_data->swapchainMap.end()) {
         return nullptr;
     }
     return swp_it->second.get();
 }
 // Return swapchain for specified image or else NULL
 VkSwapchainKHR GetSwapchainFromImage(const layer_data *dev_data, VkImage image) {
-    auto img_it = dev_data->device_extensions.imageToSwapchainMap.find(image);
-    if (img_it == dev_data->device_extensions.imageToSwapchainMap.end()) {
+    auto img_it = dev_data->imageToSwapchainMap.find(image);
+    if (img_it == dev_data->imageToSwapchainMap.end()) {
         return VK_NULL_HANDLE;
     }
     return img_it->second;
@@ -10343,7 +10345,7 @@ static void PostCallRecordCreateSwapchainKHR(layer_data *dev_data, VkResult resu
         std::lock_guard<std::mutex> lock(global_lock);
         auto swapchain_state = unique_ptr<SWAPCHAIN_NODE>(new SWAPCHAIN_NODE(pCreateInfo, *pSwapchain));
         surface_state->swapchain = swapchain_state.get();
-        dev_data->device_extensions.swapchainMap[*pSwapchain] = std::move(swapchain_state);
+        dev_data->swapchainMap[*pSwapchain] = std::move(swapchain_state);
     } else {
         surface_state->swapchain = nullptr;
     }
@@ -10402,7 +10404,7 @@ VKAPI_ATTR void VKAPI_CALL DestroySwapchainKHR(VkDevice device, VkSwapchainKHR s
             if (surface_state->old_swapchain == swapchain_data) surface_state->old_swapchain = nullptr;
         }
 
-        dev_data->device_extensions.swapchainMap.erase(swapchain);
+        dev_data->swapchainMap.erase(swapchain);
     }
     lock.unlock();
     if (!skip) dev_data->dispatch_table.DestroySwapchainKHR(device, swapchain, pAllocator);
@@ -10458,7 +10460,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchai
             ImageSubresourcePair subpair = {pSwapchainImages[i], false, VkImageSubresource()};
             dev_data->imageSubresourceMap[pSwapchainImages[i]].push_back(subpair);
             dev_data->imageLayoutMap[subpair] = image_layout_node;
-            dev_data->device_extensions.imageToSwapchainMap[pSwapchainImages[i]] = swapchain;
+            dev_data->imageToSwapchainMap[pSwapchainImages[i]] = swapchain;
         }
     }
     return result;
@@ -10680,7 +10682,7 @@ static void PostCallRecordCreateSharedSwapchainsKHR(layer_data *dev_data, VkResu
         for (uint32_t i = 0; i < swapchainCount; i++) {
             auto swapchain_state = unique_ptr<SWAPCHAIN_NODE>(new SWAPCHAIN_NODE(&pCreateInfos[i], pSwapchains[i]));
             surface_state[i]->swapchain = swapchain_state.get();
-            dev_data->device_extensions.swapchainMap[pSwapchains[i]] = std::move(swapchain_state);
+            dev_data->swapchainMap[pSwapchains[i]] = std::move(swapchain_state);
         }
     } else {
         for (uint32_t i = 0; i < swapchainCount; i++) {
