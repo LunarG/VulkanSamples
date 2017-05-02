@@ -65,47 +65,9 @@ static void initUniqueObjects(instance_layer_data *instance_data, const VkAlloca
 static void checkInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateInfo, VkInstance instance) {
     uint32_t i;
     instance_layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(instance), instance_layer_data_map);
-    VkLayerInstanceDispatchTable *disp_table = &instance_data->dispatch_table;
-    instance_ext_map[disp_table] = {};
+    instance_data->extensions.InitFromInstanceCreateInfo(pCreateInfo);
 
     for (i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SURFACE_EXTENSION_NAME) == 0) {
-            instance_ext_map[disp_table].wsi_enabled = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DISPLAY_EXTENSION_NAME) == 0) {
-            instance_ext_map[disp_table].display_enabled = true;
-        }
-#ifdef VK_USE_PLATFORM_XLIB_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XLIB_SURFACE_EXTENSION_NAME) == 0) {
-            instance_ext_map[disp_table].xlib_enabled = true;
-        }
-#endif
-#ifdef VK_USE_PLATFORM_XCB_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XCB_SURFACE_EXTENSION_NAME) == 0) {
-            instance_ext_map[disp_table].xcb_enabled = true;
-        }
-#endif
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME) == 0) {
-            instance_ext_map[disp_table].wayland_enabled = true;
-        }
-#endif
-#ifdef VK_USE_PLATFORM_MIR_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_MIR_SURFACE_EXTENSION_NAME) == 0) {
-            instance_ext_map[disp_table].mir_enabled = true;
-        }
-#endif
-#ifdef VK_USE_PLATFORM_ANDROID_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_ANDROID_SURFACE_EXTENSION_NAME) == 0) {
-            instance_ext_map[disp_table].android_enabled = true;
-        }
-#endif
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_WIN32_SURFACE_EXTENSION_NAME) == 0) {
-            instance_ext_map[disp_table].win32_enabled = true;
-        }
-#endif
-
         // Check for recognized instance extensions
         if (!white_list(pCreateInfo->ppEnabledExtensionNames[i], kUniqueObjectsSupportedInstanceExtensions)) {
             log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
@@ -201,7 +163,6 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
     dispatch_key key = get_dispatch_key(instance);
     instance_layer_data *instance_data = GetLayerDataPtr(key, instance_layer_data_map);
     VkLayerInstanceDispatchTable *disp_table = &instance_data->dispatch_table;
-    instance_ext_map.erase(disp_table);
     disp_table->DestroyInstance(instance, pAllocator);
 
     // Clean up logging callback, if any

@@ -24,6 +24,7 @@
 #include "vk_layer_data.h"
 #include "vk_safe_struct.h"
 #include "vk_layer_utils.h"
+#include "device_extensions.h"
 #include "mutex"
 
 #pragma once
@@ -54,11 +55,9 @@ struct instance_layer_data {
     VkDebugReportCallbackCreateInfoEXT *tmp_dbg_create_infos;
     VkDebugReportCallbackEXT *tmp_callbacks;
 
-    bool wsi_enabled;
     std::unordered_map<uint64_t, uint64_t> unique_id_mapping;  // Map uniqueID to actual object handle
-    VkPhysicalDevice gpu;
 
-    instance_layer_data() : wsi_enabled(false), gpu(VK_NULL_HANDLE){};
+    InstanceExtensions extensions = {};
 };
 
 struct layer_data {
@@ -76,18 +75,6 @@ struct layer_data {
     layer_data() : wsi_enabled(false), gpu(VK_NULL_HANDLE){};
 };
 
-struct instance_extension_enables {
-    bool wsi_enabled;
-    bool xlib_enabled;
-    bool xcb_enabled;
-    bool wayland_enabled;
-    bool mir_enabled;
-    bool android_enabled;
-    bool win32_enabled;
-    bool display_enabled;
-};
-
-static std::unordered_map<void *, struct instance_extension_enables> instance_ext_map;
 static std::unordered_map<void *, instance_layer_data *> instance_layer_data_map;
 static std::unordered_map<void *, layer_data *> layer_data_map;
 
