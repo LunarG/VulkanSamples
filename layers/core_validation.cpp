@@ -11610,7 +11610,7 @@ static PFN_vkVoidFunction intercept_device_extension_command(const char *name, V
          device_data->device_extensions.khr_descriptor_update_template_enabled},
     };
 
-    if (!device_data || !device_data->device_extensions.khr_descriptor_update_template_enabled) return nullptr;
+    if (!device_data) return nullptr;
 
     for (size_t i = 0; i < ARRAY_SIZE(device_extension_commands); i++) {
         if (!strcmp(device_extension_commands[i].name, name) && device_extension_commands[i].enabled)
