@@ -13539,6 +13539,7 @@ TEST_F(VkLayerTest, ColorBlendLogicOpTests) {
 #if GTEST_IS_THREADSAFE
 struct thread_data_struct {
     VkCommandBuffer commandBuffer;
+    VkDevice device;
     VkEvent event;
     bool bailout;
 };
@@ -23313,6 +23314,43 @@ TEST_F(VkPositiveLayerTest, LongSemaphoreChain)
         vkDestroySemaphore(m_device->device(), semaphore, nullptr);
 
     vkDestroyFence(m_device->device(), fence, nullptr);
+
+    m_errorMonitor->VerifyNotFound();
+}
+
+extern "C" void *ReleaseNullFence(void *arg) {
+    struct thread_data_struct *data = (struct thread_data_struct *)arg;
+
+    for (int i = 0; i < 40000; i++) {
+        vkDestroyFence(data->device, VK_NULL_HANDLE, NULL);
+        if (data->bailout) {
+            break;
+        }
+    }
+    return NULL;
+}
+
+TEST_F(VkPositiveLayerTest, ThreadNullFenceCollision) {
+    test_platform_thread thread;
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "THREADING ERROR");
+
+    ASSERT_NO_FATAL_FAILURE(Init());
+
+    struct thread_data_struct data;
+    data.device = m_device->device();
+    data.bailout = false;
+    m_errorMonitor->SetBailout(&data.bailout);
+
+    // Call vkDestroyFence of VK_NULL_HANDLE repeatedly using multiple threads.
+    // There should be no validation error from collision of that non-object.
+    test_platform_thread_create(&thread, ReleaseNullFence, (void *)&data);
+    for (int i = 0; i < 40000; i++) {
+        vkDestroyFence(m_device->device(), VK_NULL_HANDLE, NULL);
+    }
+    test_platform_thread_join(thread, NULL);
+
+    m_errorMonitor->SetBailout(NULL);
 
     m_errorMonitor->VerifyNotFound();
 }
