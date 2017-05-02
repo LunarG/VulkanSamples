@@ -904,7 +904,7 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
                     else:
                         paramstext = paramstext.replace(param.name, '(%s %s)local_%s' % ('const', param.type, param.name))
             # Use correct dispatch table
-            API = cmdinfo.elem.attrib.get('name').replace('vk','dev_data->dispatch_table->',1)
+            API = cmdinfo.elem.attrib.get('name').replace('vk','dev_data->dispatch_table.',1)
             # Put all this together for the final down-chain call
             self.appendSection('command', '    ' + assignresult + API + '(' + paramstext + ');')
             # And add the post-API-call codegen
