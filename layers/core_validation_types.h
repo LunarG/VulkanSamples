@@ -51,6 +51,7 @@
 #include "vk_validation_error_messages.h"
 #include "vk_layer_logging.h"
 #include "vk_object_types.h"
+#include "device_extensions.h"
 #include <atomic>
 #include <functional>
 #include <map>
@@ -752,21 +753,6 @@ public:
 // Fwd declarations of layer_data and helpers to look-up/validate state from layer_data maps
 namespace core_validation {
 struct layer_data;
-
-struct devExts {
-    bool khr_swapchain;
-    bool khr_display_swapchain;
-    bool nv_glsl_shader;
-    bool khr_descriptor_update_template;
-    bool khr_shader_draw_parameters;
-    bool khr_maintenance1;
-    bool nv_geometry_shader_passthrough;
-    bool nv_sample_mask_override_coverage;
-    bool nv_viewport_array2;
-    bool khr_subgroup_ballot;
-    bool khr_subgroup_vote;
-};
-
 cvdescriptorset::DescriptorSet *GetSetNode(const layer_data *, VkDescriptorSet);
 cvdescriptorset::DescriptorSetLayout const *GetDescriptorSetLayout(layer_data const *, VkDescriptorSetLayout);
 DESCRIPTOR_POOL_STATE *GetDescriptorPoolState(const layer_data *, const VkDescriptorPool);
@@ -832,7 +818,7 @@ std::unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> const *GetImageLayou
 std::unordered_map<VkBuffer, std::unique_ptr<BUFFER_STATE>> *GetBufferMap(layer_data *device_data);
 std::unordered_map<VkBufferView, std::unique_ptr<BUFFER_VIEW_STATE>> *GetBufferViewMap(layer_data *device_data);
 std::unordered_map<VkImageView, std::unique_ptr<IMAGE_VIEW_STATE>> *GetImageViewMap(layer_data *device_data);
-const devExts *GetDeviceExtensions(const layer_data *);
+const DeviceExtensions *GetDeviceExtensions(const layer_data *);
 }
 
 #endif  // CORE_VALIDATION_TYPES_H_

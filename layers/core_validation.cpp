@@ -134,7 +134,7 @@ struct layer_data {
     debug_report_data *report_data = nullptr;
     VkLayerDispatchTable dispatch_table;
 
-    devExts device_extensions = {};
+    DeviceExtensions device_extensions = {};
     unordered_set<VkQueue> queues;  // All queues under given device
     // Global set of all cmdBuffers that are inFlight on this device
     unordered_set<VkCommandBuffer> globalInFlightCmdBuffers;
@@ -2168,11 +2168,11 @@ static bool validate_shader_capabilities(layer_data *dev_data, shader_module con
     struct CapabilityInfo {
         char const *name;
         VkBool32 const VkPhysicalDeviceFeatures::*feature;
-        bool const devExts::*extension;
+        bool const DeviceExtensions::*extension;
     };
 
     using F = VkPhysicalDeviceFeatures;
-    using E = devExts;
+    using E = DeviceExtensions;
 
     // clang-format off
     static const std::unordered_map<uint32_t, CapabilityInfo> capabilities = {
@@ -3503,38 +3503,6 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
     layer_data_map.erase(key);
 }
 
-static void checkDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo, devExts *exts) {
-
-    using E = devExts;
-
-    static const std::pair<char const *, bool E::*> known_extensions[] {
-        {VK_KHR_SWAPCHAIN_EXTENSION_NAME, &E::khr_swapchain},
-        {VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME, &E::khr_display_swapchain},
-        {VK_NV_GLSL_SHADER_EXTENSION_NAME, &E::nv_glsl_shader},
-        {VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME, &E::khr_descriptor_update_template},
-        {VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME, &E::khr_shader_draw_parameters},
-        {VK_KHR_MAINTENANCE1_EXTENSION_NAME, &E::khr_maintenance1},
-        {VK_NV_GEOMETRY_SHADER_PASSTHROUGH_EXTENSION_NAME, &E::nv_geometry_shader_passthrough},
-        {VK_NV_SAMPLE_MASK_OVERRIDE_COVERAGE_EXTENSION_NAME, &E::nv_sample_mask_override_coverage},
-        {VK_NV_VIEWPORT_ARRAY2_EXTENSION_NAME, &E::nv_viewport_array2},
-        {VK_EXT_SHADER_SUBGROUP_BALLOT_EXTENSION_NAME, &E::khr_subgroup_ballot},
-        {VK_EXT_SHADER_SUBGROUP_VOTE_EXTENSION_NAME, &E::khr_subgroup_vote},
-    };
-
-    for (auto ext : known_extensions) {
-        exts->*(ext.second) = false;
-    }
-
-    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-        for (auto ext : known_extensions) {
-            if (!strcmp(ext.first, pCreateInfo->ppEnabledExtensionNames[i])) {
-                exts->*(ext.second) = true;
-                break;
-            }
-        }
-    }
-}
-
 // Verify that queue family has been properly requested
 static bool ValidateRequestedQueueFamilyProperties(instance_layer_data *instance_data, VkPhysicalDevice gpu,
                                                    const VkDeviceCreateInfo *create_info) {
@@ -3653,7 +3621,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu, const VkDevice
     device_data->physical_device = gpu;
 
     device_data->report_data = layer_debug_report_create_device(instance_data->report_data, *pDevice);
-    checkDeviceRegisterExtensions(pCreateInfo, &device_data->device_extensions);
+    device_data->device_extensions->InitFromDeviceCreateInfo(pCreateInfo);
     // Get physical device limits for this device
     instance_data->dispatch_table.GetPhysicalDeviceProperties(gpu, &(device_data->phys_dev_properties.properties));
     uint32_t count;
@@ -5874,7 +5842,7 @@ const VkPhysicalDeviceFeatures *GetEnabledFeatures(const layer_data *device_data
     return &device_data->enabled_features;
 }
 
-const devExts *GetDeviceExtensions(const layer_data *device_data) { return &device_data->device_extensions; }
+const DeviceExtensions *GetDeviceExtensions(const layer_data *device_data) { return &device_data->device_extensions; }
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo,
                                            const VkAllocationCallbacks *pAllocator, VkImage *pImage) {
