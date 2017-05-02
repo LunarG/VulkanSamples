@@ -3505,18 +3505,20 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
 
 static void checkDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo, devExts *exts) {
 
-    static const std::pair<char const *, bool devExts::*> known_extensions[] {
-        {VK_KHR_SWAPCHAIN_EXTENSION_NAME, &devExts::khr_swapchain_enabled},
-        {VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME, &devExts::khr_display_swapchain_enabled},
-        {VK_NV_GLSL_SHADER_EXTENSION_NAME, &devExts::nv_glsl_shader_enabled},
-        {VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME, &devExts::khr_descriptor_update_template_enabled},
-        {VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME, &devExts::khr_shader_draw_parameters_enabled},
-        {VK_KHR_MAINTENANCE1_EXTENSION_NAME, &devExts::khr_maintenance1_enabled},
-        {VK_NV_GEOMETRY_SHADER_PASSTHROUGH_EXTENSION_NAME, &devExts::nv_geometry_shader_passthrough_enabled},
-        {VK_NV_SAMPLE_MASK_OVERRIDE_COVERAGE_EXTENSION_NAME, &devExts::nv_sample_mask_override_coverage_enabled},
-        {VK_NV_VIEWPORT_ARRAY2_EXTENSION_NAME, &devExts::nv_viewport_array2_enabled},
-        {VK_EXT_SHADER_SUBGROUP_BALLOT_EXTENSION_NAME, &devExts::khr_subgroup_ballot_enabled},
-        {VK_EXT_SHADER_SUBGROUP_VOTE_EXTENSION_NAME, &devExts::khr_subgroup_vote_enabled},
+    using E = devExts;
+
+    static const std::pair<char const *, bool E::*> known_extensions[] {
+        {VK_KHR_SWAPCHAIN_EXTENSION_NAME, &E::khr_swapchain_enabled},
+        {VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME, &E::khr_display_swapchain_enabled},
+        {VK_NV_GLSL_SHADER_EXTENSION_NAME, &E::nv_glsl_shader_enabled},
+        {VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME, &E::khr_descriptor_update_template_enabled},
+        {VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME, &E::khr_shader_draw_parameters_enabled},
+        {VK_KHR_MAINTENANCE1_EXTENSION_NAME, &E::khr_maintenance1_enabled},
+        {VK_NV_GEOMETRY_SHADER_PASSTHROUGH_EXTENSION_NAME, &E::nv_geometry_shader_passthrough_enabled},
+        {VK_NV_SAMPLE_MASK_OVERRIDE_COVERAGE_EXTENSION_NAME, &E::nv_sample_mask_override_coverage_enabled},
+        {VK_NV_VIEWPORT_ARRAY2_EXTENSION_NAME, &E::nv_viewport_array2_enabled},
+        {VK_EXT_SHADER_SUBGROUP_BALLOT_EXTENSION_NAME, &E::khr_subgroup_ballot_enabled},
+        {VK_EXT_SHADER_SUBGROUP_VOTE_EXTENSION_NAME, &E::khr_subgroup_vote_enabled},
     };
 
     for (auto ext : known_extensions) {
