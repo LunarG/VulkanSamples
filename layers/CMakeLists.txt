@@ -26,6 +26,7 @@ else()
 endif()
 
 set(LAYER_JSON_FILES
+    VkLayer_standard_validation
     VkLayer_core_validation
     VkLayer_object_tracker
     VkLayer_unique_objects
