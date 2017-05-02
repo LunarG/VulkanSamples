@@ -17128,15 +17128,6 @@ TEST_F(VkLayerTest, CopyImageSrcSizeExceeded) {
     // Image copy with source region specified greater than src image size
     ASSERT_NO_FATAL_FAILURE(Init());
 
-    uint32_t queue_count = 1;
-    VkQueueFamilyProperties queue_props;
-    vkGetPhysicalDeviceQueueFamilyProperties(gpu(), &queue_count, &queue_props);
-    if (0 == queue_props.minImageTransferGranularity.width || 0 == queue_props.minImageTransferGranularity.height ||
-        0 == queue_props.minImageTransferGranularity.depth) {
-        printf("             Image transfer granularity of 0, not supported; skipped.\n");
-        return;
-    }
-
     // Create images with full mip chain
     VkImageCreateInfo ci;
     ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -17173,8 +17164,8 @@ TEST_F(VkLayerTest, CopyImageSrcSizeExceeded) {
     copy_region.extent = {32, 32, 8};
     copy_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     copy_region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    copy_region.srcSubresource.mipLevel = 0;  // invalid for source
-    copy_region.dstSubresource.mipLevel = 0;  // ok
+    copy_region.srcSubresource.mipLevel = 0;
+    copy_region.dstSubresource.mipLevel = 0;
     copy_region.srcSubresource.baseArrayLayer = 0;
     copy_region.dstSubresource.baseArrayLayer = 0;
     copy_region.srcSubresource.layerCount = 1;
@@ -17220,15 +17211,6 @@ TEST_F(VkLayerTest, CopyImageDstSizeExceeded) {
     // Image copy with dest region specified greater than dest image size
     ASSERT_NO_FATAL_FAILURE(Init());
 
-    uint32_t queue_count = 1;
-    VkQueueFamilyProperties queue_props;
-    vkGetPhysicalDeviceQueueFamilyProperties(gpu(), &queue_count, &queue_props);
-    if (0 == queue_props.minImageTransferGranularity.width || 0 == queue_props.minImageTransferGranularity.height ||
-        0 == queue_props.minImageTransferGranularity.depth) {
-        printf("             Image transfer granularity of 0, not supported; skipped.\n");
-        return;
-    }
-
     // Create images with full mip chain
     VkImageCreateInfo ci;
     ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -17265,8 +17247,8 @@ TEST_F(VkLayerTest, CopyImageDstSizeExceeded) {
     copy_region.extent = {32, 32, 8};
     copy_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     copy_region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    copy_region.srcSubresource.mipLevel = 0;  // invalid for source
-    copy_region.dstSubresource.mipLevel = 0;  // ok
+    copy_region.srcSubresource.mipLevel = 0;
+    copy_region.dstSubresource.mipLevel = 0;
     copy_region.srcSubresource.baseArrayLayer = 0;
     copy_region.dstSubresource.baseArrayLayer = 0;
     copy_region.srcSubresource.layerCount = 1;
