@@ -61,7 +61,7 @@ struct instance_layer_data {
 };
 
 struct layer_data {
-    VkInstance instance;
+    instance_layer_data *instance_data;
 
     debug_report_data *report_data;
     VkLayerDispatchTable dispatch_table = {};

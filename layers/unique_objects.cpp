@@ -206,7 +206,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu, const VkDevice
     createDeviceRegisterExtensions(pCreateInfo, *pDevice);
     // Set gpu for this device in order to get at any objects mapped at instance level
 
-    my_device_data->gpu = gpu;
+    my_device_data->instance_data = my_instance_data;
 
     return result;
 }
@@ -462,7 +462,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device, const VkSwapc
         local_pCreateInfo->oldSwapchain =
             (VkSwapchainKHR)my_map_data->unique_id_mapping[reinterpret_cast<const uint64_t &>(pCreateInfo->oldSwapchain)];
         // Need to pull surface mapping from the instance-level map
-        instance_layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(my_map_data->gpu), instance_layer_data_map);
+        instance_layer_data *instance_data = my_map_data->instance_data;
         local_pCreateInfo->surface =
             (VkSurfaceKHR)instance_data->unique_id_mapping[reinterpret_cast<const uint64_t &>(pCreateInfo->surface)];
     }
@@ -490,7 +490,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSharedSwapchainsKHR(VkDevice device, uint32
         std::lock_guard<std::mutex> lock(global_lock);
         if (pCreateInfos) {
             // Need to pull surface mapping from the instance-level map
-            instance_layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(dev_data->gpu), instance_layer_data_map);
+            instance_layer_data *instance_data = dev_data->instance_data;
             local_pCreateInfos = new safe_VkSwapchainCreateInfoKHR[swapchainCount];
             for (uint32_t i = 0; i < swapchainCount; ++i) {
                 local_pCreateInfos[i].initialize(&pCreateInfos[i]);
