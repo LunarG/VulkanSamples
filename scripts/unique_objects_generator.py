@@ -626,11 +626,11 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
                 pre_call_code += '%s    local_%s%s = new %s[%s];\n' % (indent, prefix, ndo_name, ndo_type, ndo_count)
                 pre_call_code += '%s    for (uint32_t %s = 0; %s < %s; ++%s) {\n' % (indent, index, index, ndo_count, index)
                 indent = self.incIndent(indent)
-                pre_call_code += '%s    local_%s%s[%s] = (%s)dev_data->unique_id_mapping[reinterpret_cast<const uint64_t &>(%s[%s])];\n' % (indent, prefix, ndo_name, index, ndo_type, ndo_name, index)
+                pre_call_code += '%s    local_%s%s[%s] = Unwrap(dev_data, %s[%s]);\n' % (indent, prefix, ndo_name, index, ndo_name, index)
             else:
                 pre_call_code += '%s    for (uint32_t %s = 0; %s < %s; ++%s) {\n' % (indent, index, index, ndo_count, index)
                 indent = self.incIndent(indent)
-                pre_call_code += '%s    %s%s[%s] = (%s)dev_data->unique_id_mapping[reinterpret_cast<const uint64_t &>(%s%s[%s])];\n' % (indent, prefix, ndo_name, index, ndo_type, prefix, ndo_name, index)
+                pre_call_code += '%s    %s%s[%s] = Unwrap(dev_data, %s%s[%s]);\n' % (indent, prefix, ndo_name, index, prefix, ndo_name, index)
             indent = self.decIndent(indent)
             pre_call_code += '%s    }\n' % indent
             indent = self.decIndent(indent)
@@ -642,14 +642,14 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
         else:
             if top_level == True:
                 if (destroy_func == False) or (destroy_array == True):
-                    pre_call_code += '%s    %s = (%s)dev_data->unique_id_mapping[reinterpret_cast<uint64_t &>(%s)];\n' % (indent, ndo_name, ndo_type, ndo_name)
+                    pre_call_code += '%s    %s = Unwrap(dev_data, %s);\n' % (indent, ndo_name, ndo_name)
             else:
                 # Make temp copy of this var with the 'local' removed. It may be better to not pass in 'local_'
                 # as part of the string and explicitly print it
                 fix = str(prefix).strip('local_');
                 pre_call_code += '%s    if (%s%s) {\n' % (indent, fix, ndo_name)
                 indent = self.incIndent(indent)
-                pre_call_code += '%s    %s%s = (%s)dev_data->unique_id_mapping[reinterpret_cast<const uint64_t &>(%s%s)];\n' % (indent, prefix, ndo_name, ndo_type, fix, ndo_name)
+                pre_call_code += '%s    %s%s = Unwrap(dev_data, %s%s);\n' % (indent, prefix, ndo_name, fix, ndo_name)
                 indent = self.decIndent(indent)
                 pre_call_code += '%s    }\n' % indent
         return decl_code, pre_call_code, post_call_code
