@@ -722,40 +722,14 @@ VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetWithTemplateKHR(VkCommandBuffer c
 VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceDisplayPropertiesKHR(VkPhysicalDevice physicalDevice, uint32_t *pPropertyCount,
                                                                      VkDisplayPropertiesKHR *pProperties) {
     instance_layer_data *my_map_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
-    safe_VkDisplayPropertiesKHR *local_pProperties = NULL;
-    {
-        std::lock_guard<std::mutex> lock(global_lock);
-        if (pProperties) {
-            local_pProperties = new safe_VkDisplayPropertiesKHR[*pPropertyCount];
-            for (uint32_t idx0 = 0; idx0 < *pPropertyCount; ++idx0) {
-                local_pProperties[idx0].initialize(&pProperties[idx0]);
-                if (pProperties[idx0].display) {
-                    local_pProperties[idx0].display =
-                        (VkDisplayKHR)my_map_data->unique_id_mapping[reinterpret_cast<const uint64_t &>(pProperties[idx0].display)];
-                }
-            }
-        }
-    }
 
     VkResult result = my_map_data->dispatch_table.GetPhysicalDeviceDisplayPropertiesKHR(
-        physicalDevice, pPropertyCount, (VkDisplayPropertiesKHR *)local_pProperties);
-    if (result == VK_SUCCESS && pProperties) {
+        physicalDevice, pPropertyCount, pProperties);
+    if ((result == VK_SUCCESS || result == VK_INCOMPLETE) && pProperties) {
+        std::lock_guard<std::mutex> lock(global_lock);
         for (uint32_t idx0 = 0; idx0 < *pPropertyCount; ++idx0) {
-            std::lock_guard<std::mutex> lock(global_lock);
-
-            uint64_t unique_id = global_unique_id++;
-            my_map_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t &>(local_pProperties[idx0].display);
-            pProperties[idx0].display = reinterpret_cast<VkDisplayKHR &>(unique_id);
-            pProperties[idx0].displayName = local_pProperties[idx0].displayName;
-            pProperties[idx0].physicalDimensions = local_pProperties[idx0].physicalDimensions;
-            pProperties[idx0].physicalResolution = local_pProperties[idx0].physicalResolution;
-            pProperties[idx0].supportedTransforms = local_pProperties[idx0].supportedTransforms;
-            pProperties[idx0].planeReorderPossible = local_pProperties[idx0].planeReorderPossible;
-            pProperties[idx0].persistentContent = local_pProperties[idx0].persistentContent;
+            pProperties[idx0].display = WrapNew(my_map_data, pProperties[idx0].display);
         }
-    }
-    if (local_pProperties) {
-        delete[] local_pProperties;
     }
     return result;
 }
