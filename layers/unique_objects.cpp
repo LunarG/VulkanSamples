@@ -756,31 +756,18 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneSupportedDisplaysKHR(VkPhysicalDev
 VKAPI_ATTR VkResult VKAPI_CALL GetDisplayModePropertiesKHR(VkPhysicalDevice physicalDevice, VkDisplayKHR display,
                                                            uint32_t *pPropertyCount, VkDisplayModePropertiesKHR *pProperties) {
     instance_layer_data *my_map_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
-    VkDisplayModePropertiesKHR *local_pProperties = NULL;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        display = (VkDisplayKHR)my_map_data->unique_id_mapping[reinterpret_cast<uint64_t &>(display)];
-        if (pProperties) {
-            local_pProperties = new VkDisplayModePropertiesKHR[*pPropertyCount];
-        }
+        display = Unwrap(my_map_data, display);
     }
 
     VkResult result = my_map_data->dispatch_table.GetDisplayModePropertiesKHR(
-        physicalDevice, display, pPropertyCount, (VkDisplayModePropertiesKHR *)local_pProperties);
+        physicalDevice, display, pPropertyCount, pProperties);
     if (result == VK_SUCCESS && pProperties) {
+        std::lock_guard<std::mutex> lock(global_lock);
         for (uint32_t idx0 = 0; idx0 < *pPropertyCount; ++idx0) {
-            std::lock_guard<std::mutex> lock(global_lock);
-
-            uint64_t unique_id = global_unique_id++;
-            my_map_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t &>(local_pProperties[idx0].displayMode);
-            pProperties[idx0].displayMode = reinterpret_cast<VkDisplayModeKHR &>(unique_id);
-            pProperties[idx0].parameters.visibleRegion.width = local_pProperties[idx0].parameters.visibleRegion.width;
-            pProperties[idx0].parameters.visibleRegion.height = local_pProperties[idx0].parameters.visibleRegion.height;
-            pProperties[idx0].parameters.refreshRate = local_pProperties[idx0].parameters.refreshRate;
+            pProperties[idx0].displayMode = WrapNew(my_map_data, pProperties[idx0].displayMode);
         }
-    }
-    if (local_pProperties) {
-        delete[] local_pProperties;
     }
     return result;
 }
