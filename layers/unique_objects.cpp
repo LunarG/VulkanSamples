@@ -743,6 +743,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneSupportedDisplaysKHR(VkPhysicalDev
         if ((*pDisplayCount > 0) && pDisplays) {
             std::lock_guard<std::mutex> lock(global_lock);
             for (uint32_t i = 0; i < *pDisplayCount; i++) {
+                // TODO: this looks like it really wants a /reverse/ mapping. What's going on here?
                 auto it = my_map_data->unique_id_mapping.find(reinterpret_cast<const uint64_t &>(pDisplays[i]));
                 assert(it != my_map_data->unique_id_mapping.end());
                 pDisplays[i] = reinterpret_cast<VkDisplayKHR &>(it->second);
