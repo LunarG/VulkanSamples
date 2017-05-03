@@ -316,6 +316,23 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance in
     return disp_table->GetPhysicalDeviceProcAddr(instance, funcName);
 }
 
+/* Unwrap a handle. */
+// must hold lock!
+template<typename HandleType, typename MapType>
+static HandleType Unwrap(MapType *layer_data, HandleType wrappedHandle) {
+    // TODO: don't use operator[] here.
+    return (HandleType)layer_data->unique_id_mapping[reinterpret_cast<uint64_t const &>(wrappedHandle)];
+}
+
+/* Wrap a newly created handle with a new unique ID, and return the new ID. */
+// must hold lock!
+template<typename HandleType, typename MapType>
+static HandleType WrapNew(MapType *layer_data, HandleType newlyCreatedHandle) {
+    auto unique_id = global_unique_id++;
+    layer_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t const &>(newlyCreatedHandle);
+    return (HandleType)unique_id;
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL CreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t createInfoCount,
                                                       const VkComputePipelineCreateInfo *pCreateInfos,
                                                       const VkAllocationCallbacks *pAllocator, VkPipeline *pPipelines) {
