@@ -496,7 +496,7 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
             if struct_info[0].feature_protect is not None:
                 pnext_proc += '#ifdef %s \n' % struct_info[0].feature_protect
             pnext_proc += '            case %s: {\n' % self.structTypes[item].value
-            pnext_proc += '                    safe_%s *safe_struct = reinterpret_cast<safe_%s *>(new safe_%s);\n' % (item, item, item)
+            pnext_proc += '                    safe_%s *safe_struct = new safe_%s;\n' % (item, item)
             pnext_proc += '                    safe_struct->initialize(reinterpret_cast<const %s *>(cur_pnext));\n' % item
             # Generate code to unwrap the handles
             indent = '                '
