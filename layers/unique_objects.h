@@ -102,4 +102,22 @@ bool ContainsExtStruct(const T *target, VkStructureType ext_type) {
     return false;
 }
 
+
+/* Unwrap a handle. */
+// must hold lock!
+template<typename HandleType, typename MapType>
+HandleType Unwrap(MapType *layer_data, HandleType wrappedHandle) {
+    // TODO: don't use operator[] here.
+    return (HandleType)layer_data->unique_id_mapping[reinterpret_cast<uint64_t const &>(wrappedHandle)];
+}
+
+/* Wrap a newly created handle with a new unique ID, and return the new ID. */
+// must hold lock!
+template<typename HandleType, typename MapType>
+HandleType WrapNew(MapType *layer_data, HandleType newlyCreatedHandle) {
+    auto unique_id = global_unique_id++;
+    layer_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t const &>(newlyCreatedHandle);
+    return (HandleType)unique_id;
+}
+
 }  // namespace unique_objects
