@@ -777,15 +777,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneCapabilitiesKHR(VkPhysicalDevice p
     instance_layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        auto it = dev_data->unique_id_mapping.find(reinterpret_cast<uint64_t &>(mode));
-        if (it == dev_data->unique_id_mapping.end()) {
-            uint64_t unique_id = global_unique_id++;
-            dev_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t &>(mode);
-
-            mode = reinterpret_cast<VkDisplayModeKHR &>(unique_id);
-        } else {
-            mode = reinterpret_cast<VkDisplayModeKHR &>(it->second);
-        }
+        mode = Unwrap(dev_data, mode);
     }
     VkResult result =
         dev_data->dispatch_table.GetDisplayPlaneCapabilitiesKHR(physicalDevice, mode, planeIndex, pCapabilities);
