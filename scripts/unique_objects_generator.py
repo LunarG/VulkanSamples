@@ -553,9 +553,7 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
                 create_ndo_code += '%sfor (uint32_t index0 = 0; index0 < %s; index0++) {\n' % (indent, cmd_info[-1].len)
                 indent = self.incIndent(indent)
                 ndo_dest = '%s[index0]' % cmd_info[-1].name
-            create_ndo_code += '%suint64_t unique_id = global_unique_id++;\n' % (indent)
-            create_ndo_code += '%sdev_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t &>(%s);\n' % (indent, ndo_dest)
-            create_ndo_code += '%s%s = reinterpret_cast<%s&>(unique_id);\n' % (indent, ndo_dest, handle_type.text)
+            create_ndo_code += '%s%s = WrapNew(dev_data, %s);\n' % (indent, ndo_dest, ndo_dest)
             if ndo_array == True:
                 indent = self.decIndent(indent)
                 create_ndo_code += '%s}\n' % indent
