@@ -77,10 +77,12 @@ struct DeviceExtensions {
             {VK_EXT_DISPLAY_CONTROL_EXTENSION_NAME, &E::ext_display_control},
             {VK_AMD_DRAW_INDIRECT_COUNT_EXTENSION_NAME, &E::amd_draw_indirect_count},
             {VK_AMD_NEGATIVE_VIEWPORT_HEIGHT_EXTENSION_NAME, &E::amd_negative_viewport_height},
+            {VK_NV_CLIP_SPACE_W_SCALING_EXTENSION_NAME, &E::nv_clip_space_w_scaling},
             {VK_NV_EXTERNAL_MEMORY_EXTENSION_NAME, &E::nv_external_memory},
 #ifdef VK_USE_PLATFORM_WIN32_KHR
             {VK_NV_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME, &E::nv_external_memory_win32},
 #endif
+            {VK_NVX_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME, &E::nvx_device_generated_commands},
             {VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME, &E::khr_incremental_present},
         };
 
