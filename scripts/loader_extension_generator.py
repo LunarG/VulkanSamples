@@ -687,7 +687,6 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
                 tables += '                                                             VkDevice dev) {\n'
                 tables += '    VkLayerDispatchTable *table = &dev_table->core_dispatch;\n'
                 tables += '    for (uint32_t i = 0; i < MAX_NUM_UNKNOWN_EXTS; i++) dev_table->ext_dispatch.dev_ext[i] = (PFN_vkDevExt)vkDevExtError;\n'
-                tables += '\n'
 
             elif x == 1:
                 cur_type = 'device'
@@ -698,7 +697,6 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
                 tables += 'VKAPI_ATTR void VKAPI_CALL loader_init_device_extension_dispatch_table(struct loader_dev_dispatch_table *dev_table,\n'
                 tables += '                                                                       PFN_vkGetDeviceProcAddr gpa, VkDevice dev) {\n'
                 tables += '    VkLayerDispatchTable *table = &dev_table->core_dispatch;\n'
-                tables += '\n'
 
             elif x == 2:
                 cur_type = 'instance'
@@ -740,7 +738,14 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
                     if cur_cmd.protect is not None:
                         tables += '#ifdef %s\n' % cur_cmd.protect
 
-                    tables += '    table->%s = (PFN_%s)gpa(%s, "%s");\n' % (base_name, cur_cmd.name, gpa_param, cur_cmd.name)
+                    # If we're looking for the proc we are passing in, just point the table to it.  This fixes the issue where
+                    # a layer overrides the function name for the loader.
+                    if (x <= 1 and base_name == 'GetDeviceProcAddr'):
+                        tables += '    table->GetDeviceProcAddr = gpa;\n'
+                    elif (x > 1 and base_name == 'GetInstanceProcAddr'):
+                        tables += '    table->GetInstanceProcAddr = gpa;\n'
+                    else:
+                        tables += '    table->%s = (PFN_%s)gpa(%s, "%s");\n' % (base_name, cur_cmd.name, gpa_param, cur_cmd.name)
 
                     if cur_cmd.protect is not None:
                         tables += '#endif // %s\n' % cur_cmd.protect
