@@ -192,7 +192,7 @@ const char *ConfigFile::getOption(const std::string &_option) {
             }
             parseFile(envPath.c_str());
         } else {
-            parseFile("vk_layer_settings.txt");
+            parseFile(m_fileName.c_str());
         }
     }
 
@@ -215,7 +215,7 @@ void ConfigFile::setOption(const std::string &_option, const std::string &_val) 
             }
             parseFile(envPath.c_str());
         } else {
-            parseFile("vk_layer_settings.txt");
+            parseFile(m_fileName.c_str());
         }
     }
 
