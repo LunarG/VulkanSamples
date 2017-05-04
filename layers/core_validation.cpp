@@ -3476,8 +3476,9 @@ static bool ValidateRequestedQueueFamilyProperties(instance_layer_data *instance
     } else if (QUERY_DETAILS != physical_device_state->vkGetPhysicalDeviceQueueFamilyPropertiesState) {
         // TODO: This is not called out as an invalid use in the spec so make more informative recommendation.
         skip |= log_msg(instance_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT,
-                        VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST, "DL",
-                        "Call to vkCreateDevice() w/o first calling vkGetPhysicalDeviceQueueFamilyProperties().");
+                        VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, VALIDATION_ERROR_00054, "DL",
+                        "Call to vkCreateDevice() w/o first calling vkGetPhysicalDeviceQueueFamilyProperties(). %s",
+                        validation_error_map[VALIDATION_ERROR_00054]);
     } else {
         // Check that the requested queue properties are valid
         for (uint32_t i = 0; i < create_info->queueCreateInfoCount; i++) {
@@ -3485,17 +3486,18 @@ static bool ValidateRequestedQueueFamilyProperties(instance_layer_data *instance
             if (requestedIndex >= physical_device_state->queue_family_properties.size()) {
                 skip |= log_msg(
                     instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0,
-                    __LINE__, DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST, "DL",
-                    "Invalid queue create request in vkCreateDevice(). Invalid queueFamilyIndex %u requested.", requestedIndex);
+                    __LINE__, VALIDATION_ERROR_00054, "DL",
+                    "Invalid queue create request in vkCreateDevice(). Invalid queueFamilyIndex %u requested. %s", requestedIndex,
+                    validation_error_map[VALIDATION_ERROR_00054]);
             } else if (create_info->pQueueCreateInfos[i].queueCount >
                        physical_device_state->queue_family_properties[requestedIndex].queueCount) {
                 skip |= log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                 VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__,
-                                DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST, "DL",
+                                VALIDATION_ERROR_02055, "DL",
                                 "Invalid queue create request in vkCreateDevice(). QueueFamilyIndex %u only has %u queues, but "
-                                "requested queueCount is %u.",
+                                "requested queueCount is %u. %s",
                                 requestedIndex, physical_device_state->queue_family_properties[requestedIndex].queueCount,
-                                create_info->pQueueCreateInfos[i].queueCount);
+                                create_info->pQueueCreateInfos[i].queueCount, validation_error_map[VALIDATION_ERROR_02055]);
             }
         }
     }
