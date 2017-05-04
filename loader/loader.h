@@ -180,7 +180,13 @@ struct loader_device {
     VkDevice icd_device;    // device object from the icd
     struct loader_physical_device_term *phys_dev_term;
 
-    struct loader_layer_list activated_layer_list;
+    // List of activated layers.
+    //  app_      is the version based on exactly what the application asked for.
+    //            This is what must be returned to the application on Enumerate calls.
+    //  expanded_ is the version based on expanding meta-layers into their
+    //            individual component layers.  This is what is used internally.
+    struct loader_layer_list app_activated_layer_list;
+    struct loader_layer_list expanded_activated_layer_list;
 
     VkAllocationCallbacks alloc_callbacks;
 
@@ -250,7 +256,15 @@ struct loader_instance {
     struct loader_msg_callback_map_entry *icd_msg_callback_map;
 
     struct loader_layer_list instance_layer_list;
-    struct loader_layer_list activated_layer_list;
+
+    // List of activated layers.
+    //  app_      is the version based on exactly what the application asked for.
+    //            This is what must be returned to the application on Enumerate calls.
+    //  expanded_ is the version based on expanding meta-layers into their
+    //            individual component layers.  This is what is used internally.
+    struct loader_layer_list app_activated_layer_list;
+    struct loader_layer_list expanded_activated_layer_list;
+
     VkInstance instance;  // layers/ICD instance returned to trampoline
 
     struct loader_extension_list ext_list;  // icds and loaders extensions
@@ -420,7 +434,8 @@ bool loader_find_layer_name_array(const char *name, uint32_t layer_count, const 
 VkResult loader_add_to_layer_list(const struct loader_instance *inst, struct loader_layer_list *list, uint32_t prop_list_count,
                                   const struct loader_layer_properties *props);
 void loader_find_layer_name_add_list(const struct loader_instance *inst, const char *name, const enum layer_type_flags type_flags,
-                                     const struct loader_layer_list *search_list, struct loader_layer_list *found_list);
+                                     const struct loader_layer_list *source_list, struct loader_layer_list *target_list,
+                                     struct loader_layer_list *expanded_target_list);
 void loader_scanned_icd_clear(const struct loader_instance *inst, struct loader_icd_tramp_list *icd_tramp_list);
 VkResult loader_icd_scan(const struct loader_instance *inst, struct loader_icd_tramp_list *icd_tramp_list);
 void loader_layer_scan(const struct loader_instance *inst, struct loader_layer_list *instance_layers);
