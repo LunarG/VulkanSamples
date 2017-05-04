@@ -2210,6 +2210,71 @@ bool ValidateLayouts(core_validation::layer_data *device_data, VkDevice device, 
     std::vector<bool> attach_first_use(pCreateInfo->attachmentCount, true);
     for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
         const VkSubpassDescription &subpass = pCreateInfo->pSubpasses[i];
+
+        // Check input attachments first, so we can detect first-use-as-input for VU #00349
+        for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
+            auto attach_index = subpass.pInputAttachments[j].attachment;
+            if (attach_index == VK_ATTACHMENT_UNUSED) continue;
+
+            switch (subpass.pInputAttachments[j].layout) {
+                case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+                case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+                    // These are ideal.
+                    break;
+
+                case VK_IMAGE_LAYOUT_GENERAL:
+                    // May not be optimal. TODO: reconsider this warning based on other constraints.
+                    skip |= log_msg(report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
+                                    VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                                    "Layout for input attachment is GENERAL but should be READ_ONLY_OPTIMAL.");
+                    break;
+
+                default:
+                    // No other layouts are acceptable
+                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                    __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                                    "Layout for input attachment is %s but can only be READ_ONLY_OPTIMAL or GENERAL.",
+                                    string_VkImageLayout(subpass.pInputAttachments[j].layout));
+            }
+
+            VkImageLayout layout = subpass.pInputAttachments[j].layout;
+            bool found_layout_mismatch = subpass.pDepthStencilAttachment &&
+                                         subpass.pDepthStencilAttachment->attachment == attach_index &&
+                                         subpass.pDepthStencilAttachment->layout != layout;
+            for (uint32_t c = 0; !found_layout_mismatch && c < subpass.colorAttachmentCount; ++c) {
+                found_layout_mismatch =
+                    (subpass.pColorAttachments[c].attachment == attach_index && subpass.pColorAttachments[c].layout != layout);
+            }
+            if (found_layout_mismatch) {
+                skip |= log_msg(
+                    report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                    VALIDATION_ERROR_00358, "DS",
+                    "CreateRenderPass:  Subpass %u pInputAttachments[%u] (%u) has layout %u, but is also used as a depth/color "
+                    "attachment with a different layout. %s",
+                    i, j, attach_index, layout, validation_error_map[VALIDATION_ERROR_00358]);
+            }
+
+            if (attach_first_use[attach_index]) {
+                skip |= ValidateLayoutVsAttachmentDescription(report_data, subpass.pInputAttachments[j].layout, attach_index,
+                                                              pCreateInfo->pAttachments[attach_index]);
+
+                bool used_as_depth =
+                    (subpass.pDepthStencilAttachment != NULL && subpass.pDepthStencilAttachment->attachment == attach_index);
+                bool used_as_color = false;
+                for (uint32_t k = 0; !used_as_depth && !used_as_color && k < subpass.colorAttachmentCount; ++k) {
+                    used_as_color = (subpass.pColorAttachments[k].attachment == attach_index);
+                }
+                if (!used_as_depth && !used_as_color &&
+                    pCreateInfo->pAttachments[attach_index].loadOp == VK_ATTACHMENT_LOAD_OP_CLEAR) {
+                    skip |= log_msg(
+                        report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_00349, "DS",
+                        "CreateRenderPass: attachment %u is first used as an input attachment in subpass %u with loadOp=CLEAR. %s",
+                        attach_index, attach_index, validation_error_map[VALIDATION_ERROR_00349]);
+                }
+            }
+            attach_first_use[attach_index] = false;
+        }
         for (uint32_t j = 0; j < subpass.colorAttachmentCount; ++j) {
             auto attach_index = subpass.pColorAttachments[j].attachment;
             if (attach_index == VK_ATTACHMENT_UNUSED) continue;
@@ -2266,37 +2331,6 @@ bool ValidateLayouts(core_validation::layer_data *device_data, VkDevice device, 
             auto attach_index = subpass.pDepthStencilAttachment->attachment;
             if (attach_first_use[attach_index]) {
                 skip |= ValidateLayoutVsAttachmentDescription(report_data, subpass.pDepthStencilAttachment->layout, attach_index,
-                                                              pCreateInfo->pAttachments[attach_index]);
-            }
-            attach_first_use[attach_index] = false;
-        }
-        for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
-            auto attach_index = subpass.pInputAttachments[j].attachment;
-            if (attach_index == VK_ATTACHMENT_UNUSED) continue;
-
-            switch (subpass.pInputAttachments[j].layout) {
-                case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
-                case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-                    // These are ideal.
-                    break;
-
-                case VK_IMAGE_LAYOUT_GENERAL:
-                    // May not be optimal. TODO: reconsider this warning based on other constraints.
-                    skip |= log_msg(report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
-                                    VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                                    "Layout for input attachment is GENERAL but should be READ_ONLY_OPTIMAL.");
-                    break;
-
-                default:
-                    // No other layouts are acceptable
-                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                    __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                                    "Layout for input attachment is %s but can only be READ_ONLY_OPTIMAL or GENERAL.",
-                                    string_VkImageLayout(subpass.pInputAttachments[j].layout));
-            }
-
-            if (attach_first_use[attach_index]) {
-                skip |= ValidateLayoutVsAttachmentDescription(report_data, subpass.pInputAttachments[j].layout, attach_index,
                                                               pCreateInfo->pAttachments[attach_index]);
             }
             attach_first_use[attach_index] = false;
