@@ -2956,10 +2956,10 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
                         if (pCreateInfos[i].pTessellationState->sType !=
                             VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO) {
                             skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                            __LINE__, VALIDATION_ERROR_00538, LayerName,
+                                            __LINE__, VALIDATION_ERROR_01427, LayerName,
                                             "vkCreateGraphicsPipelines: parameter pCreateInfos[%d].pTessellationState->sType must "
                                             "be VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO. %s",
-                                            i, validation_error_map[VALIDATION_ERROR_00538]);
+                                            i, validation_error_map[VALIDATION_ERROR_01427]);
                         }
 
                         if (pCreateInfos[i].pTessellationState->patchControlPoints == 0 ||
