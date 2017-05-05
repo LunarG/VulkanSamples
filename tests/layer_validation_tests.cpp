@@ -15517,6 +15517,140 @@ TEST_F(VkLayerTest, CreatePipelineTessPatchDecorationMismatch) {
     m_errorMonitor->VerifyFound();
 }
 
+TEST_F(VkLayerTest, CreatePipelineTessErrors) {
+    TEST_DESCRIPTION("Test various errors when creating a graphics pipeline with tessellation stages active.");
+
+    ASSERT_NO_FATAL_FAILURE(Init());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    if (!m_device->phy().features().tessellationShader) {
+        printf("             Device does not support tessellation shaders; skipped.\n");
+        return;
+    }
+
+    char const *vsSource =
+        "#version 450\n"
+        "void main(){}\n";
+    char const *tcsSource =
+        "#version 450\n"
+        "layout(vertices=3) out;\n"
+        "void main(){\n"
+        "   gl_TessLevelOuter[0] = gl_TessLevelOuter[1] = gl_TessLevelOuter[2] = 1;\n"
+        "   gl_TessLevelInner[0] = 1;\n"
+        "}\n";
+    char const *tesSource =
+        "#version 450\n"
+        "layout(triangles, equal_spacing, cw) in;\n"
+        "out gl_PerVertex { vec4 gl_Position; };\n"
+        "void main(){\n"
+        "   gl_Position.xyz = gl_TessCoord;\n"
+        "   gl_Position.w = 0;\n"
+        "}\n";
+    char const *fsSource =
+        "#version 450\n"
+        "layout(location=0) out vec4 color;\n"
+        "void main(){\n"
+        "   color = vec4(1);\n"
+        "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj tcs(m_device, tcsSource, VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, this);
+    VkShaderObj tes(m_device, tesSource, VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineInputAssemblyStateCreateInfo iasci{VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO, nullptr, 0,
+                                                 VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, VK_FALSE};
+
+    VkPipelineTessellationStateCreateInfo tsci{VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO, nullptr, 0, 3};
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendDummy();
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    {
+        VkPipelineObj pipe(m_device);
+        VkPipelineInputAssemblyStateCreateInfo iasci_bad = iasci;
+        iasci_bad.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;  // otherwise we get a failure about invalid topology
+        pipe.SetInputAssembly(&iasci_bad);
+        pipe.AddColorAttachment();
+        pipe.AddShader(&vs);
+        pipe.AddShader(&fs);
+
+        // Pass a tess control shader without a tess eval shader
+        pipe.AddShader(&tcs);
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00534);
+        pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+        m_errorMonitor->VerifyFound();
+    }
+
+    {
+        VkPipelineObj pipe(m_device);
+        VkPipelineInputAssemblyStateCreateInfo iasci_bad = iasci;
+        iasci_bad.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;  // otherwise we get a failure about invalid topology
+        pipe.SetInputAssembly(&iasci_bad);
+        pipe.AddColorAttachment();
+        pipe.AddShader(&vs);
+        pipe.AddShader(&fs);
+
+        // Pass a tess eval shader without a tess control shader
+        pipe.AddShader(&tes);
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00535);
+        pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+        m_errorMonitor->VerifyFound();
+    }
+
+    {
+        VkPipelineObj pipe(m_device);
+        pipe.SetInputAssembly(&iasci);
+        pipe.AddColorAttachment();
+        pipe.AddShader(&vs);
+        pipe.AddShader(&fs);
+
+        // Pass patch topology without tessellation shaders
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02100);
+        pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+        m_errorMonitor->VerifyFound();
+
+        pipe.AddShader(&tcs);
+        pipe.AddShader(&tes);
+        // Pass a NULL pTessellationState (with active tessellation shader stages)
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00536);
+        pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+        m_errorMonitor->VerifyFound();
+
+        // Pass an invalid pTessellationState (bad sType)
+        VkPipelineTessellationStateCreateInfo tsci_bad = tsci;
+        tsci_bad.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        pipe.SetTessellation(&tsci_bad);
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01427);
+        pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+        m_errorMonitor->VerifyFound();
+        // Pass out-of-range patchControlPoints
+        tsci_bad = tsci;
+        tsci_bad.patchControlPoints = 0;
+        pipe.SetTessellation(&tsci);
+        pipe.SetTessellation(&tsci_bad);
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01426);
+        pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+        m_errorMonitor->VerifyFound();
+        tsci_bad.patchControlPoints = m_device->props.limits.maxTessellationPatchSize + 1;
+        pipe.SetTessellation(&tsci_bad);
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01426);
+        pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+        m_errorMonitor->VerifyFound();
+        pipe.SetTessellation(&tsci);
+
+        // Pass an invalid primitive topology
+        VkPipelineInputAssemblyStateCreateInfo iasci_bad = iasci;
+        iasci_bad.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        pipe.SetInputAssembly(&iasci_bad);
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02099);
+        pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+        m_errorMonitor->VerifyFound();
+        pipe.SetInputAssembly(&iasci);
+    }
+}
+
 TEST_F(VkLayerTest, CreatePipelineAttribBindingConflict) {
     TEST_DESCRIPTION(
         "Test that an error is produced for a vertex attribute setup where multiple "
