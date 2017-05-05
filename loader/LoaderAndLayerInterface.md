@@ -25,6 +25,7 @@
     * [Layer Dispatch Initialization](#layer-dispatch-initialization)
     * [Example Code for CreateInstance](#example-code-for-createinstance)
     * [Example Code for CreateDevice](#example-code-for-createdevice)
+    * [Meta-layers](#meta-layers)
     * [Special Considerations](#special-considerations)
     * [Layer Manifest File Format](#layer-manifest-file-format)
     * [Layer Library Versions](#layer-library-versions)
@@ -766,6 +767,7 @@ In this section we'll discuss how the loader interacts with layers, including:
   * [Layer Dispatch Initialization](#layer-dispatch-initialization)
   * [Example Code for CreateInstance](#example-code-for-createinstance)
   * [Example Code for CreateDevice](#example-code-for-createdevice)
+  * [Meta-layers](#meta-layers)
   * [Special Considerations](#special-considerations)
     * [Associating Private Data with Vulkan Objects Within a Layer](#associating-private-data-with-vulkan-objects-within-a-layer)
       * [Wrapping](#wrapping)
@@ -1353,6 +1355,60 @@ vkCreateDevice(
 ```
 
 
+#### Meta-layers
+
+Meta-layers are a special kind of layer which is only available through the
+desktop loader.  While normal layers are associated with one particular library,
+a meta-layer is actually a collection layer which contains an ordered list of
+other layers (called component layers).
+
+The most common example of a meta-layer is the
+`VK_LAYER_LUNARG_standard_validation` layer which groups all the most common
+individual validation layers into a single layer for ease-of-use.
+
+The benefits of a meta-layer are:
+ 1. You can activate more than one layer using a single layer name by simply
+grouping multiple layers in a meta-layer.
+ 2. You can define the order the loader will activate individual layers within
+the meta-layer.
+ 3. You can easily share your special layer configuration with others.
+ 4. The loader will automatically collate all instance and device extensions in
+a meta-layer's component layers, and report them as the meta-layer's properties
+to the application when queried.
+ 
+Restrictions to defining and using a meta-layer are:
+ 1. A Meta-layer Manifest file **must** be a properly formated that contains one
+or more component layers.
+ 3. All component layers **must be** present on a system for the meta-layer to
+be used.
+ 4. All component layers **must be** at the same Vulkan API major and minor
+version for the meta-layer to be used.
+ 
+The ordering of a meta-layer's component layers in the instance or device
+call-chain is simple:
+  * The first layer listed will be the layer closest to the application.
+  * The last layer listed will be the layer closest to the drivers.
+
+Inside the meta-layer Manifest file, each component layer is listed by its
+layer name.  This is the "name" tag's value associated with each component layer's
+Manifest file under the "layer" or "layers" tag.  This is also the name that
+would normally be used when activating a layer during `vkCreateInstance`.
+
+Any duplicate layer names in either the component layer list, or globally among
+all enabled layers, will simply be ignored.  Only the first instance of any
+layer name will be used.
+
+For example, if you have a layer enabled using the environment variable
+`VK_INSTANCE_LAYERS` and have that same layer listed in a meta-layer, then the
+environment variable enabled layer will be used and the component layer will
+be dropped.  Likewise, if a person were to enable a meta-layer and then
+separately enable one of the component layers afterwards, the second
+instantiation of the layer name would be ignored.
+
+The
+Manifest file formatting necessary to define a meta-layer can be found in the
+[Layer Manifest File Format](#layer-manifest-file-format) section.
+
 #### Special Considerations
 
 
@@ -1571,6 +1627,27 @@ manifest file:
 }
 ```
 
+Here's an example of a meta-layer manifest file:
+```
+{
+   "file_format_version" : "1.1.1",
+   "layer": {
+       "name": "VK_LAYER_LUNARG_standard_validation",
+       "type": "GLOBAL",
+       "api_version" : "1.0.40",
+       "implementation_version" : "1",
+       "description" : "LunarG Standard Validation Meta-layer",
+       "component_layers": [
+           "VK_LAYER_GOOGLE_threading",
+           "VK_LAYER_LUNARG_parameter_validation",
+           "VK_LAYER_LUNARG_object_tracker",
+           "VK_LAYER_LUNARG_core_validation",
+           "VK_LAYER_LUNARG_swapchain",
+           "VK_LAYER_GOOGLE_unique_objects"
+       ]
+   }
+}
+```
 | JSON Node | Description and Notes | Introspection Query |
 |:----------------:|--------------------|:----------------:
 | "file\_format\_version" | Manifest format major.minor.patch version number. | N/A |
@@ -1580,7 +1657,7 @@ manifest file:
 | "name" | The string used to uniquely identify this layer to applications. | vkEnumerateInstanceLayerProperties |
 | "type" | This field indicates the type of layer.  The values can be: GLOBAL, or INSTANCE | vkEnumerate*LayerProperties |
 |  | **NOTES:** Prior to deprecation, the "type" node was used to indicate which layer chain(s) to activate the layer upon: instance, device, or both. Distinct instance and device layers are deprecated; there are now just layers. Allowable values for type (both before and after deprecation) are "INSTANCE", "GLOBAL" and, "DEVICE." "DEVICE" layers are skipped over by the loader as if they were not found. |  |
-| "library\_path" | The "library\_path" specifies either a filename, a relative pathname, or a full pathname to a layer shared library file.  If "library\_path" specifies a relative pathname, it is relative to the path of the JSON manifest file (e.g. for cases when an application provides a layer that is in the same folder hierarchy as the rest of the application files).  If "library\_path" specifies a filename, the library must live in the system's shared object search path. There are no rules about the name of the layer shared library files other than it should end with the appropriate suffix (".DLL" on Windows, and ".so" on Linux). | N/A |
+| "library\_path" | The "library\_path" specifies either a filename, a relative pathname, or a full pathname to a layer shared library file.  If "library\_path" specifies a relative pathname, it is relative to the path of the JSON manifest file (e.g. for cases when an application provides a layer that is in the same folder hierarchy as the rest of the application files).  If "library\_path" specifies a filename, the library must live in the system's shared object search path. There are no rules about the name of the layer shared library files other than it should end with the appropriate suffix (".DLL" on Windows, and ".so" on Linux).  **This field must not be present if "component_layers" is defined**  | N/A |
 | "api\_version" | The major.minor.patch version number of the Vulkan API that the shared library file for the library was built against. For example: 1.0.33. | vkEnumerateInstanceLayerProperties |
 | "implementation_version" | The version of the layer implemented.  If the layer itself has any major changes, this number should change so the loader and/or application can identify it properly. | vkEnumerateInstanceLayerProperties |
 | "description" | A high-level description of the layer and it's intended use. | vkEnumerateInstanceLayerProperties |
@@ -1589,7 +1666,7 @@ manifest file:
 | "device\_extensions" | **OPTIONAL:** Contains the list of device extension names supported by this layer. One "device_\extensions" node with an array of one or more elements is required if any device extensions are supported by a layer, otherwise the node is optional. Each element of the array must have the nodes "name" and "spec_version" which correspond to `VkExtensionProperties` "extensionName" and "specVersion" respectively. Additionally, each element of the array of device extensions must have the node "entrypoints" if the device extension adds Vulkan API functions, otherwise this node is not required. The "entrypoint" node is an array of the names of all entrypoints added by the supported extension. | vkEnumerateDeviceExtensionProperties |
 | "enable\_environment" | **Implicit Layers Only** - **OPTIONAL:** Indicates an environment variable used to enable the Implicit Layer (w/ value of 1).  This environment variable (which should vary with each "version" of the layer) must be set to the given value or else the implicit layer is not loaded. This is for application environments (e.g. Steam) which want to enable a layer(s) only for applications that they launch, and allows for applications run outside of an application environment to not get that implicit layer(s).| N/A |
 | "disable\_environment" | **Implicit Layers Only** - **REQUIRED:**Indicates an environment variable used to disable the Implicit Layer (w/ value of 1). In rare cases of an application not working with an implicit layer, the application can set this environment variable (before calling Vulkan functions) in order to "blacklist" the layer. This environment variable (which should vary with each "version" of the layer) must be set (not particularly to any value). If both the "enable_environment" and "disable_environment" variables are set, the implicit layer is disabled. | N/A |
-
+| "component_layers" | **Meta-layers Only** - Indicates the component layer names that are part of a meta-layer.  The names listed must be the "name" identified in each of the component layer's Mainfest file "name" tag (this is the same as the name of the layer that is passed to the `vkCreateInstance` command).  All component layers must be present on the system and found by the loader in order for this meta-layer to be available and activated. **This field must not be present if "library\_path" is defined** | N/A |
 
 ##### Layer Manifest File Version History
 

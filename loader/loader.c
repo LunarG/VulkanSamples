@@ -1926,8 +1926,8 @@ out:
 static bool verify_meta_layer_comp_layers(const struct loader_instance *inst, struct loader_layer_properties *prop,
                                           struct loader_layer_list *instance_layers) {
     bool success = true;
-    uint32_t expected_major = 0;
-    uint32_t expected_minor = 0;
+    const uint32_t expected_major = VK_VERSION_MAJOR(prop->info.specVersion);
+    const uint32_t expected_minor = VK_VERSION_MINOR(prop->info.specVersion);
 
     for (uint32_t comp_layer = 0; comp_layer < prop->num_component_layers; comp_layer++) {
         if (!loader_find_layer_name_list(prop->component_layer_names[comp_layer], instance_layers)) {
@@ -1950,20 +1950,15 @@ static bool verify_meta_layer_comp_layers(const struct loader_instance *inst, st
             }
 
             // Check the version of each layer, they need to at least match MAJOR and MINOR
-            if (comp_layer == 0) {
-                expected_major = VK_VERSION_MAJOR(comp_prop->info.specVersion);
-                expected_minor = VK_VERSION_MINOR(comp_prop->info.specVersion);
-            } else {
-                uint32_t cur_major = VK_VERSION_MAJOR(comp_prop->info.specVersion);
-                uint32_t cur_minor = VK_VERSION_MINOR(comp_prop->info.specVersion);
-                if (cur_major != expected_major || cur_minor != expected_minor) {
-                    loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
-                               "Meta-layer %s component layer 0 uses API version %d.%d, but component layer "
-                               " %d, uses API version %d.%d.  Skipping this layer.",
-                               prop->info.layerName, expected_major, expected_minor, comp_layer, cur_major, cur_minor);
-                    success = false;
-                    break;
-                }
+            uint32_t cur_major = VK_VERSION_MAJOR(comp_prop->info.specVersion);
+            uint32_t cur_minor = VK_VERSION_MINOR(comp_prop->info.specVersion);
+            if (cur_major != expected_major || cur_minor != expected_minor) {
+                loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                           "Meta-layer uses API version %d.%d, but component layer %d uses API "
+                           "version %d.%d.  Skipping this layer.",
+                           expected_major, expected_minor, comp_layer, cur_major, cur_minor);
+                success = false;
+                break;
             }
 
             // Make sure the layer isn't using it's own name
@@ -2022,7 +2017,6 @@ static bool verify_meta_layer_comp_layers(const struct loader_instance *inst, st
 
 // Verify that all meta-layers in a layer list are valid.
 static void verify_all_meta_layers(const struct loader_instance *inst, struct loader_layer_list *instance_layers) {
-    bool has_layers_at_start = instance_layers->count > 0;
     for (uint32_t i = 0; i < instance_layers->count; i++) {
         struct loader_layer_properties *prop = &instance_layers->list[i];
 
