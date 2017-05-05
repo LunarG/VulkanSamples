@@ -8921,6 +8921,298 @@ TEST_F(VkLayerTest, VALIDATION_ERROR_01408) {
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, nullptr);
 }
 
+TEST_F(VkLayerTest, VALIDATION_ERROR_01410) {
+    TEST_DESCRIPTION("Test VALIDATION_ERROR_01410: location must be less than VkPhysicalDeviceLimits::maxVertexInputAttributes");
+
+    ASSERT_NO_FATAL_FAILURE(Init());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkPipelineCache pipeline_cache;
+    {
+        VkPipelineCacheCreateInfo create_info{};
+        create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+
+        VkResult err = vkCreatePipelineCache(m_device->device(), &create_info, nullptr, &pipeline_cache);
+        ASSERT_VK_SUCCESS(err);
+    }
+
+    VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineShaderStageCreateInfo stages[2]{{}};
+    stages[0] = vs.GetStageCreateInfo();
+    stages[1] = fs.GetStageCreateInfo();
+
+    // Test when location is greater than or equal to VkPhysicalDeviceLimits::maxVertexInputAttributes.
+    VkVertexInputAttributeDescription vertex_input_attribute_description{};
+    vertex_input_attribute_description.location = m_device->props.limits.maxVertexInputAttributes;
+
+    VkPipelineVertexInputStateCreateInfo vertex_input_state{};
+    vertex_input_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vertex_input_state.pNext = nullptr;
+    vertex_input_state.vertexBindingDescriptionCount = 0;
+    vertex_input_state.pVertexBindingDescriptions = nullptr;
+    vertex_input_state.vertexAttributeDescriptionCount = 1;
+    vertex_input_state.pVertexAttributeDescriptions = &vertex_input_attribute_description;
+
+    VkPipelineInputAssemblyStateCreateInfo input_assembly_state{};
+    input_assembly_state.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    input_assembly_state.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+
+    VkViewport viewport{};
+    VkPipelineViewportStateCreateInfo viewport_state{};
+    viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    viewport_state.scissorCount = 1;
+    viewport_state.viewportCount = 1;
+    viewport_state.pViewports = &viewport;
+
+    VkPipelineMultisampleStateCreateInfo multisample_state{};
+    multisample_state.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multisample_state.pNext = nullptr;
+    multisample_state.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    multisample_state.sampleShadingEnable = 0;
+    multisample_state.minSampleShading = 1.0;
+    multisample_state.pSampleMask = nullptr;
+
+    VkPipelineRasterizationStateCreateInfo rasterization_state{};
+    rasterization_state.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterization_state.polygonMode = VK_POLYGON_MODE_FILL;
+    rasterization_state.cullMode = VK_CULL_MODE_BACK_BIT;
+    rasterization_state.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    rasterization_state.depthClampEnable = VK_FALSE;
+    rasterization_state.rasterizerDiscardEnable = VK_FALSE;
+    rasterization_state.depthBiasEnable = VK_FALSE;
+
+    VkPipelineLayout pipeline_layout;
+    {
+        VkPipelineLayoutCreateInfo create_info{};
+        create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        create_info.setLayoutCount = 0;
+        create_info.pSetLayouts = nullptr;
+
+        VkResult err = vkCreatePipelineLayout(m_device->device(), &create_info, nullptr, &pipeline_layout);
+        ASSERT_VK_SUCCESS(err);
+    }
+
+    {
+        VkGraphicsPipelineCreateInfo create_info{};
+        create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+        create_info.stageCount = 2;
+        create_info.pStages = stages;
+        create_info.pVertexInputState = &vertex_input_state;
+        create_info.pInputAssemblyState = &input_assembly_state;
+        create_info.pViewportState = &viewport_state;
+        create_info.pMultisampleState = &multisample_state;
+        create_info.pRasterizationState = &rasterization_state;
+        create_info.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
+        create_info.layout = pipeline_layout;
+        create_info.renderPass = renderPass();
+
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01410);
+        VkPipeline pipeline;
+        vkCreateGraphicsPipelines(m_device->device(), pipeline_cache, 1, &create_info, nullptr, &pipeline);
+        m_errorMonitor->VerifyFound();
+    }
+
+    vkDestroyPipelineCache(m_device->device(), pipeline_cache, nullptr);
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, nullptr);
+}
+
+TEST_F(VkLayerTest, VALIDATION_ERROR_01411) {
+    TEST_DESCRIPTION("Test VALIDATION_ERROR_01411: binding must be less than VkPhysicalDeviceLimits::maxVertexInputBindings");
+
+    ASSERT_NO_FATAL_FAILURE(Init());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkPipelineCache pipeline_cache;
+    {
+        VkPipelineCacheCreateInfo create_info{};
+        create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+
+        VkResult err = vkCreatePipelineCache(m_device->device(), &create_info, nullptr, &pipeline_cache);
+        ASSERT_VK_SUCCESS(err);
+    }
+
+    VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineShaderStageCreateInfo stages[2]{{}};
+    stages[0] = vs.GetStageCreateInfo();
+    stages[1] = fs.GetStageCreateInfo();
+
+    // Test when binding is greater than or equal to VkPhysicalDeviceLimits::maxVertexInputBindings.
+    VkVertexInputAttributeDescription vertex_input_attribute_description{};
+    vertex_input_attribute_description.binding = m_device->props.limits.maxVertexInputBindings;
+
+    VkPipelineVertexInputStateCreateInfo vertex_input_state{};
+    vertex_input_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vertex_input_state.pNext = nullptr;
+    vertex_input_state.vertexBindingDescriptionCount = 0;
+    vertex_input_state.pVertexBindingDescriptions = nullptr;
+    vertex_input_state.vertexAttributeDescriptionCount = 1;
+    vertex_input_state.pVertexAttributeDescriptions = &vertex_input_attribute_description;
+
+    VkPipelineInputAssemblyStateCreateInfo input_assembly_state{};
+    input_assembly_state.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    input_assembly_state.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+
+    VkViewport viewport{};
+    VkPipelineViewportStateCreateInfo viewport_state{};
+    viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    viewport_state.scissorCount = 1;
+    viewport_state.viewportCount = 1;
+    viewport_state.pViewports = &viewport;
+
+    VkPipelineMultisampleStateCreateInfo multisample_state{};
+    multisample_state.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multisample_state.pNext = nullptr;
+    multisample_state.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    multisample_state.sampleShadingEnable = 0;
+    multisample_state.minSampleShading = 1.0;
+    multisample_state.pSampleMask = nullptr;
+
+    VkPipelineRasterizationStateCreateInfo rasterization_state{};
+    rasterization_state.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterization_state.polygonMode = VK_POLYGON_MODE_FILL;
+    rasterization_state.cullMode = VK_CULL_MODE_BACK_BIT;
+    rasterization_state.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    rasterization_state.depthClampEnable = VK_FALSE;
+    rasterization_state.rasterizerDiscardEnable = VK_FALSE;
+    rasterization_state.depthBiasEnable = VK_FALSE;
+
+    VkPipelineLayout pipeline_layout;
+    {
+        VkPipelineLayoutCreateInfo create_info{};
+        create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        create_info.setLayoutCount = 0;
+        create_info.pSetLayouts = nullptr;
+
+        VkResult err = vkCreatePipelineLayout(m_device->device(), &create_info, nullptr, &pipeline_layout);
+        ASSERT_VK_SUCCESS(err);
+    }
+
+    {
+        VkGraphicsPipelineCreateInfo create_info{};
+        create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+        create_info.stageCount = 2;
+        create_info.pStages = stages;
+        create_info.pVertexInputState = &vertex_input_state;
+        create_info.pInputAssemblyState = &input_assembly_state;
+        create_info.pViewportState = &viewport_state;
+        create_info.pMultisampleState = &multisample_state;
+        create_info.pRasterizationState = &rasterization_state;
+        create_info.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
+        create_info.layout = pipeline_layout;
+        create_info.renderPass = renderPass();
+
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01411);
+        VkPipeline pipeline;
+        vkCreateGraphicsPipelines(m_device->device(), pipeline_cache, 1, &create_info, nullptr, &pipeline);
+        m_errorMonitor->VerifyFound();
+    }
+
+    vkDestroyPipelineCache(m_device->device(), pipeline_cache, nullptr);
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, nullptr);
+}
+
+TEST_F(VkLayerTest, VALIDATION_ERROR_01412) {
+    TEST_DESCRIPTION(
+        "Test VALIDATION_ERROR_01412: offset must be less than or equal to VkPhysicalDeviceLimits::maxVertexInputAttributeOffset");
+
+    ASSERT_NO_FATAL_FAILURE(Init());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkPipelineCache pipeline_cache;
+    {
+        VkPipelineCacheCreateInfo create_info{};
+        create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+
+        VkResult err = vkCreatePipelineCache(m_device->device(), &create_info, nullptr, &pipeline_cache);
+        ASSERT_VK_SUCCESS(err);
+    }
+
+    VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineShaderStageCreateInfo stages[2]{{}};
+    stages[0] = vs.GetStageCreateInfo();
+    stages[1] = fs.GetStageCreateInfo();
+
+    // Test when offset is greater than maximum.
+    VkVertexInputAttributeDescription vertex_input_attribute_description{};
+    vertex_input_attribute_description.offset = m_device->props.limits.maxVertexInputAttributeOffset + 1;
+
+    VkPipelineVertexInputStateCreateInfo vertex_input_state{};
+    vertex_input_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vertex_input_state.pNext = nullptr;
+    vertex_input_state.vertexBindingDescriptionCount = 0;
+    vertex_input_state.pVertexBindingDescriptions = nullptr;
+    vertex_input_state.vertexAttributeDescriptionCount = 1;
+    vertex_input_state.pVertexAttributeDescriptions = &vertex_input_attribute_description;
+
+    VkPipelineInputAssemblyStateCreateInfo input_assembly_state{};
+    input_assembly_state.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    input_assembly_state.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+
+    VkViewport viewport{};
+    VkPipelineViewportStateCreateInfo viewport_state{};
+    viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    viewport_state.scissorCount = 1;
+    viewport_state.viewportCount = 1;
+    viewport_state.pViewports = &viewport;
+
+    VkPipelineMultisampleStateCreateInfo multisample_state{};
+    multisample_state.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multisample_state.pNext = nullptr;
+    multisample_state.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    multisample_state.sampleShadingEnable = 0;
+    multisample_state.minSampleShading = 1.0;
+    multisample_state.pSampleMask = nullptr;
+
+    VkPipelineRasterizationStateCreateInfo rasterization_state{};
+    rasterization_state.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterization_state.polygonMode = VK_POLYGON_MODE_FILL;
+    rasterization_state.cullMode = VK_CULL_MODE_BACK_BIT;
+    rasterization_state.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    rasterization_state.depthClampEnable = VK_FALSE;
+    rasterization_state.rasterizerDiscardEnable = VK_FALSE;
+    rasterization_state.depthBiasEnable = VK_FALSE;
+
+    VkPipelineLayout pipeline_layout;
+    {
+        VkPipelineLayoutCreateInfo create_info{};
+        create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        create_info.setLayoutCount = 0;
+        create_info.pSetLayouts = nullptr;
+
+        VkResult err = vkCreatePipelineLayout(m_device->device(), &create_info, nullptr, &pipeline_layout);
+        ASSERT_VK_SUCCESS(err);
+    }
+
+    {
+        VkGraphicsPipelineCreateInfo create_info{};
+        create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+        create_info.stageCount = 2;
+        create_info.pStages = stages;
+        create_info.pVertexInputState = &vertex_input_state;
+        create_info.pInputAssemblyState = &input_assembly_state;
+        create_info.pViewportState = &viewport_state;
+        create_info.pMultisampleState = &multisample_state;
+        create_info.pRasterizationState = &rasterization_state;
+        create_info.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
+        create_info.layout = pipeline_layout;
+        create_info.renderPass = renderPass();
+
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01412);
+        VkPipeline pipeline;
+        vkCreateGraphicsPipelines(m_device->device(), pipeline_cache, 1, &create_info, nullptr, &pipeline);
+        m_errorMonitor->VerifyFound();
+    }
+
+    vkDestroyPipelineCache(m_device->device(), pipeline_cache, nullptr);
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, nullptr);
+}
+
 TEST_F(VkLayerTest, NullRenderPass) {
     // Bind a NULL RenderPass
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,

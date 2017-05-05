@@ -2945,6 +2945,39 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
                                         validation_error_map[VALIDATION_ERROR_01408]);
                     }
                 }
+
+                for (uint32_t d = 0; d < vertex_input_state->vertexAttributeDescriptionCount; ++d) {
+                    auto const &vertex_attrib_desc = vertex_input_state->pVertexAttributeDescriptions[d];
+                    if (vertex_attrib_desc.location >= device_data->device_limits.maxVertexInputAttributes) {
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                        __LINE__, VALIDATION_ERROR_01410, LayerName,
+                                        "vkCreateGraphicsPipelines: parameter "
+                                        "pCreateInfos[%u].pVertexInputState->pVertexAttributeDescriptions[%u].location (%u) is "
+                                        "greater than or equal to VkPhysicalDeviceLimits::maxVertexInputAttributes (%u). %s",
+                                        i, d, vertex_attrib_desc.location, device_data->device_limits.maxVertexInputAttributes,
+                                        validation_error_map[VALIDATION_ERROR_01410]);
+                    }
+
+                    if (vertex_attrib_desc.binding >= device_data->device_limits.maxVertexInputBindings) {
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                        __LINE__, VALIDATION_ERROR_01411, LayerName,
+                                        "vkCreateGraphicsPipelines: parameter "
+                                        "pCreateInfos[%u].pVertexInputState->pVertexAttributeDescriptions[%u].binding (%u) is "
+                                        "greater than or equal to VkPhysicalDeviceLimits::maxVertexInputBindings (%u). %s",
+                                        i, d, vertex_attrib_desc.binding, device_data->device_limits.maxVertexInputBindings,
+                                        validation_error_map[VALIDATION_ERROR_01411]);
+                    }
+
+                    if (vertex_attrib_desc.offset > device_data->device_limits.maxVertexInputAttributeOffset) {
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                        __LINE__, VALIDATION_ERROR_01412, LayerName,
+                                        "vkCreateGraphicsPipelines: parameter "
+                                        "pCreateInfos[%u].pVertexInputState->pVertexAttributeDescriptions[%u].offset (%u) is "
+                                        "greater than VkPhysicalDeviceLimits::maxVertexInputAttributeOffset (%u). %s",
+                                        i, d, vertex_attrib_desc.offset, device_data->device_limits.maxVertexInputAttributeOffset,
+                                        validation_error_map[VALIDATION_ERROR_01412]);
+                    }
+                }
             }
 
             if (pCreateInfos[i].pStages != nullptr) {
