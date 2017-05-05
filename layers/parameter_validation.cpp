@@ -2921,6 +2921,32 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
     if (pCreateInfos != nullptr) {
         for (uint32_t i = 0; i < createInfoCount; ++i) {
             // Validation for parameters excluded from the generated validation code due to a 'noautovalidity' tag in vk.xml
+            if (pCreateInfos[i].pVertexInputState != nullptr) {
+                auto const &vertex_input_state = pCreateInfos[i].pVertexInputState;
+                for (uint32_t d = 0; d < vertex_input_state->vertexBindingDescriptionCount; ++d) {
+                    auto const &vertex_bind_desc = vertex_input_state->pVertexBindingDescriptions[d];
+                    if (vertex_bind_desc.binding >= device_data->device_limits.maxVertexInputBindings) {
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                        __LINE__, VALIDATION_ERROR_01407, LayerName,
+                                        "vkCreateGraphicsPipelines: parameter "
+                                        "pCreateInfos[%u].pVertexInputState->pVertexBindingDescriptions[%u].binding (%u) is "
+                                        "greater than or equal to VkPhysicalDeviceLimits::maxVertexInputBindings (%u). %s",
+                                        i, d, vertex_bind_desc.binding, device_data->device_limits.maxVertexInputBindings,
+                                        validation_error_map[VALIDATION_ERROR_01407]);
+                    }
+
+                    if (vertex_bind_desc.stride >= device_data->device_limits.maxVertexInputBindingStride) {
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                        __LINE__, VALIDATION_ERROR_01408, LayerName,
+                                        "vkCreateGraphicsPipelines: parameter "
+                                        "pCreateInfos[%u].pVertexInputState->pVertexBindingDescriptions[%u].stride (%u) is greater "
+                                        "than VkPhysicalDeviceLimits::maxVertexInputBindingStride (%u). %s",
+                                        i, d, vertex_bind_desc.stride, device_data->device_limits.maxVertexInputBindingStride,
+                                        validation_error_map[VALIDATION_ERROR_01408]);
+                    }
+                }
+            }
+
             if (pCreateInfos[i].pStages != nullptr) {
                 bool has_control = false;
                 bool has_eval = false;
