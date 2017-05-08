@@ -410,138 +410,132 @@ bool cvdescriptorset::DescriptorSet::ValidateDrawState(const std::map<uint32_t, 
             return false;
         }
         auto start_idx = p_layout_->GetGlobalStartIndexFromBinding(binding);
-        if (descriptors_[start_idx]->IsImmutableSampler()) {
-            // Nothing to do for strictly immutable sampler
-        } else {
-            auto end_idx = p_layout_->GetGlobalEndIndexFromBinding(binding);
-            auto array_idx = 0;  // Track array idx if we're dealing with array descriptors
-            for (uint32_t i = start_idx; i <= end_idx; ++i, ++array_idx) {
-                if (!descriptors_[i]->updated) {
-                    std::stringstream error_str;
-                    error_str << "Descriptor in binding #" << binding << " at global descriptor index " << i
-                              << " is being used in draw but has not been updated.";
-                    *error = error_str.str();
-                    return false;
-                } else {
-                    auto descriptor_class = descriptors_[i]->GetClass();
-                    if (descriptor_class == GeneralBuffer) {
-                        // Verify that buffers are valid
-                        auto buffer = static_cast<BufferDescriptor *>(descriptors_[i].get())->GetBuffer();
-                        auto buffer_node = GetBufferState(device_data_, buffer);
-                        if (!buffer_node) {
-                            std::stringstream error_str;
-                            error_str << "Descriptor in binding #" << binding << " at global descriptor index " << i
-                                      << " references invalid buffer " << buffer << ".";
-                            *error = error_str.str();
-                            return false;
-                        } else {
-                            for (auto mem_binding : buffer_node->GetBoundMemory()) {
-                                if (!GetMemObjInfo(device_data_, mem_binding)) {
-                                    std::stringstream error_str;
-                                    error_str << "Descriptor in binding #" << binding << " at global descriptor index " << i
-                                              << " uses buffer " << buffer << " that references invalid memory " << mem_binding
-                                              << ".";
-                                    *error = error_str.str();
-                                    return false;
-                                }
-                            }
-                        }
-                        if (descriptors_[i]->IsDynamic()) {
-                            // Validate that dynamic offsets are within the buffer
-                            auto buffer_size = buffer_node->createInfo.size;
-                            auto range = static_cast<BufferDescriptor *>(descriptors_[i].get())->GetRange();
-                            auto desc_offset = static_cast<BufferDescriptor *>(descriptors_[i].get())->GetOffset();
-                            auto dyn_offset = dynamic_offsets[GetDynamicOffsetIndexFromBinding(binding) + array_idx];
-                            if (VK_WHOLE_SIZE == range) {
-                                if ((dyn_offset + desc_offset) > buffer_size) {
-                                    std::stringstream error_str;
-                                    error_str << "Dynamic descriptor in binding #" << binding << " at global descriptor index " << i
-                                              << " uses buffer " << buffer
-                                              << " with update range of VK_WHOLE_SIZE has dynamic offset " << dyn_offset
-                                              << " combined with offset " << desc_offset << " that oversteps the buffer size of "
-                                              << buffer_size << ".";
-                                    *error = error_str.str();
-                                    return false;
-                                }
-                            } else {
-                                if ((dyn_offset + desc_offset + range) > buffer_size) {
-                                    std::stringstream error_str;
-                                    error_str << "Dynamic descriptor in binding #" << binding << " at global descriptor index " << i
-                                              << " uses buffer " << buffer << " with dynamic offset " << dyn_offset
-                                              << " combined with offset " << desc_offset << " and range " << range
-                                              << " that oversteps the buffer size of " << buffer_size << ".";
-                                    *error = error_str.str();
-                                    return false;
-                                }
-                            }
-                        }
-                    } else if (descriptor_class == ImageSampler || descriptor_class == Image) {
-                        VkImageView image_view;
-                        VkImageLayout image_layout;
-                        if (descriptor_class == ImageSampler) {
-                            image_view = static_cast<ImageSamplerDescriptor *>(descriptors_[i].get())->GetImageView();
-                            image_layout = static_cast<ImageSamplerDescriptor *>(descriptors_[i].get())->GetImageLayout();
-                        } else {
-                            image_view = static_cast<ImageDescriptor *>(descriptors_[i].get())->GetImageView();
-                            image_layout = static_cast<ImageDescriptor *>(descriptors_[i].get())->GetImageLayout();
-                        }
-                        auto reqs = binding_pair.second;
-
-                        auto image_view_state = GetImageViewState(device_data_, image_view);
-                        assert(image_view_state);
-                        auto image_view_ci = image_view_state->create_info;
-
-                        if ((reqs & DESCRIPTOR_REQ_ALL_VIEW_TYPE_BITS) && (~reqs & (1 << image_view_ci.viewType))) {
-                            // bad view type
-                            std::stringstream error_str;
-                            error_str << "Descriptor in binding #" << binding << " at global descriptor index " << i
-                                      << " requires an image view of type " << string_descriptor_req_view_type(reqs) << " but got "
-                                      << string_VkImageViewType(image_view_ci.viewType) << ".";
-                            *error = error_str.str();
-                            return false;
-                        }
-
-                        auto image_node = GetImageState(device_data_, image_view_ci.image);
-                        assert(image_node);
-                        // Verify Image Layout
-                        // TODO: VALIDATION_ERROR_02981 is the error physically closest to the spec language of interest, however
-                        //  there is no VUID for the actual spec language. Need to file a spec MR to add VU language for:
-                        // imageLayout is the layout that the image subresources accessible from imageView will be in at the time
-                        // this descriptor is accessed.
-                        // Copy first mip level into sub_layers and loop over each mip level to verify layout
-                        VkImageSubresourceLayers sub_layers;
-                        sub_layers.aspectMask = image_view_ci.subresourceRange.aspectMask;
-                        sub_layers.baseArrayLayer = image_view_ci.subresourceRange.baseArrayLayer;
-                        sub_layers.layerCount = image_view_ci.subresourceRange.layerCount;
-                        bool hit_error = false;
-                        for (auto cur_level = image_view_ci.subresourceRange.baseMipLevel;
-                             cur_level < image_view_ci.subresourceRange.levelCount; ++cur_level) {
-                            sub_layers.mipLevel = cur_level;
-                            VerifyImageLayout(device_data_, cb_node, image_node, sub_layers, image_layout,
-                                              VK_IMAGE_LAYOUT_UNDEFINED, caller, VALIDATION_ERROR_02981, &hit_error);
-                            if (hit_error) {
-                                *error =
-                                    "Image layout specified at vkUpdateDescriptorSets() time doesn't match actual image layout at "
-                                    "time descriptor is used. See previous error callback for specific details.";
+        auto end_idx = p_layout_->GetGlobalEndIndexFromBinding(binding);
+        auto array_idx = 0;  // Track array idx if we're dealing with array descriptors
+        for (uint32_t i = start_idx; i <= end_idx; ++i, ++array_idx) {
+            if (!descriptors_[i]->updated) {
+                std::stringstream error_str;
+                error_str << "Descriptor in binding #" << binding << " at global descriptor index " << i
+                          << " is being used in draw but has not been updated.";
+                *error = error_str.str();
+                return false;
+            } else {
+                auto descriptor_class = descriptors_[i]->GetClass();
+                if (descriptor_class == GeneralBuffer) {
+                    // Verify that buffers are valid
+                    auto buffer = static_cast<BufferDescriptor *>(descriptors_[i].get())->GetBuffer();
+                    auto buffer_node = GetBufferState(device_data_, buffer);
+                    if (!buffer_node) {
+                        std::stringstream error_str;
+                        error_str << "Descriptor in binding #" << binding << " at global descriptor index " << i
+                                  << " references invalid buffer " << buffer << ".";
+                        *error = error_str.str();
+                        return false;
+                    } else {
+                        for (auto mem_binding : buffer_node->GetBoundMemory()) {
+                            if (!GetMemObjInfo(device_data_, mem_binding)) {
+                                std::stringstream error_str;
+                                error_str << "Descriptor in binding #" << binding << " at global descriptor index " << i
+                                          << " uses buffer " << buffer << " that references invalid memory " << mem_binding << ".";
+                                *error = error_str.str();
                                 return false;
                             }
                         }
-                        // Verify Sample counts
-                        if ((reqs & DESCRIPTOR_REQ_SINGLE_SAMPLE) && image_node->createInfo.samples != VK_SAMPLE_COUNT_1_BIT) {
-                            std::stringstream error_str;
-                            error_str << "Descriptor in binding #" << binding << " at global descriptor index " << i
-                                      << " requires bound image to have VK_SAMPLE_COUNT_1_BIT but got "
-                                      << string_VkSampleCountFlagBits(image_node->createInfo.samples) << ".";
-                            *error = error_str.str();
+                    }
+                    if (descriptors_[i]->IsDynamic()) {
+                        // Validate that dynamic offsets are within the buffer
+                        auto buffer_size = buffer_node->createInfo.size;
+                        auto range = static_cast<BufferDescriptor *>(descriptors_[i].get())->GetRange();
+                        auto desc_offset = static_cast<BufferDescriptor *>(descriptors_[i].get())->GetOffset();
+                        auto dyn_offset = dynamic_offsets[GetDynamicOffsetIndexFromBinding(binding) + array_idx];
+                        if (VK_WHOLE_SIZE == range) {
+                            if ((dyn_offset + desc_offset) > buffer_size) {
+                                std::stringstream error_str;
+                                error_str << "Dynamic descriptor in binding #" << binding << " at global descriptor index " << i
+                                          << " uses buffer " << buffer << " with update range of VK_WHOLE_SIZE has dynamic offset "
+                                          << dyn_offset << " combined with offset " << desc_offset
+                                          << " that oversteps the buffer size of " << buffer_size << ".";
+                                *error = error_str.str();
+                                return false;
+                            }
+                        } else {
+                            if ((dyn_offset + desc_offset + range) > buffer_size) {
+                                std::stringstream error_str;
+                                error_str << "Dynamic descriptor in binding #" << binding << " at global descriptor index " << i
+                                          << " uses buffer " << buffer << " with dynamic offset " << dyn_offset
+                                          << " combined with offset " << desc_offset << " and range " << range
+                                          << " that oversteps the buffer size of " << buffer_size << ".";
+                                *error = error_str.str();
+                                return false;
+                            }
+                        }
+                    }
+                } else if (descriptor_class == ImageSampler || descriptor_class == Image) {
+                    VkImageView image_view;
+                    VkImageLayout image_layout;
+                    if (descriptor_class == ImageSampler) {
+                        image_view = static_cast<ImageSamplerDescriptor *>(descriptors_[i].get())->GetImageView();
+                        image_layout = static_cast<ImageSamplerDescriptor *>(descriptors_[i].get())->GetImageLayout();
+                    } else {
+                        image_view = static_cast<ImageDescriptor *>(descriptors_[i].get())->GetImageView();
+                        image_layout = static_cast<ImageDescriptor *>(descriptors_[i].get())->GetImageLayout();
+                    }
+                    auto reqs = binding_pair.second;
+
+                    auto image_view_state = GetImageViewState(device_data_, image_view);
+                    assert(image_view_state);
+                    auto image_view_ci = image_view_state->create_info;
+
+                    if ((reqs & DESCRIPTOR_REQ_ALL_VIEW_TYPE_BITS) && (~reqs & (1 << image_view_ci.viewType))) {
+                        // bad view type
+                        std::stringstream error_str;
+                        error_str << "Descriptor in binding #" << binding << " at global descriptor index " << i
+                                  << " requires an image view of type " << string_descriptor_req_view_type(reqs) << " but got "
+                                  << string_VkImageViewType(image_view_ci.viewType) << ".";
+                        *error = error_str.str();
+                        return false;
+                    }
+
+                    auto image_node = GetImageState(device_data_, image_view_ci.image);
+                    assert(image_node);
+                    // Verify Image Layout
+                    // TODO: VALIDATION_ERROR_02981 is the error physically closest to the spec language of interest, however
+                    //  there is no VUID for the actual spec language. Need to file a spec MR to add VU language for:
+                    // imageLayout is the layout that the image subresources accessible from imageView will be in at the time
+                    // this descriptor is accessed.
+                    // Copy first mip level into sub_layers and loop over each mip level to verify layout
+                    VkImageSubresourceLayers sub_layers;
+                    sub_layers.aspectMask = image_view_ci.subresourceRange.aspectMask;
+                    sub_layers.baseArrayLayer = image_view_ci.subresourceRange.baseArrayLayer;
+                    sub_layers.layerCount = image_view_ci.subresourceRange.layerCount;
+                    bool hit_error = false;
+                    for (auto cur_level = image_view_ci.subresourceRange.baseMipLevel;
+                         cur_level < image_view_ci.subresourceRange.levelCount; ++cur_level) {
+                        sub_layers.mipLevel = cur_level;
+                        VerifyImageLayout(device_data_, cb_node, image_node, sub_layers, image_layout, VK_IMAGE_LAYOUT_UNDEFINED,
+                                          caller, VALIDATION_ERROR_02981, &hit_error);
+                        if (hit_error) {
+                            *error =
+                                "Image layout specified at vkUpdateDescriptorSets() time doesn't match actual image layout at "
+                                "time descriptor is used. See previous error callback for specific details.";
                             return false;
                         }
-                        if ((reqs & DESCRIPTOR_REQ_MULTI_SAMPLE) && image_node->createInfo.samples == VK_SAMPLE_COUNT_1_BIT) {
-                            std::stringstream error_str;
-                            error_str << "Descriptor in binding #" << binding << " at global descriptor index " << i
-                                      << " requires bound image to have multiple samples, but got VK_SAMPLE_COUNT_1_BIT.";
-                            *error = error_str.str();
-                            return false;
-                        }
+                    }
+                    // Verify Sample counts
+                    if ((reqs & DESCRIPTOR_REQ_SINGLE_SAMPLE) && image_node->createInfo.samples != VK_SAMPLE_COUNT_1_BIT) {
+                        std::stringstream error_str;
+                        error_str << "Descriptor in binding #" << binding << " at global descriptor index " << i
+                                  << " requires bound image to have VK_SAMPLE_COUNT_1_BIT but got "
+                                  << string_VkSampleCountFlagBits(image_node->createInfo.samples) << ".";
+                        *error = error_str.str();
+                        return false;
+                    }
+                    if ((reqs & DESCRIPTOR_REQ_MULTI_SAMPLE) && image_node->createInfo.samples == VK_SAMPLE_COUNT_1_BIT) {
+                        std::stringstream error_str;
+                        error_str << "Descriptor in binding #" << binding << " at global descriptor index " << i
+                                  << " requires bound image to have multiple samples, but got VK_SAMPLE_COUNT_1_BIT.";
+                        *error = error_str.str();
+                        return false;
                     }
                 }
             }
