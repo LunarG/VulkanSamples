@@ -964,7 +964,6 @@ cvdescriptorset::ImageSamplerDescriptor::ImageSamplerDescriptor(const VkSampler 
     if (immut) {
         sampler_ = *immut;
         immutable_ = true;
-        updated = true;
     }
 }
 
