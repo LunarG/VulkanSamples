@@ -327,9 +327,10 @@ cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const V
             case VK_DESCRIPTOR_TYPE_SAMPLER: {
                 auto immut_sampler = p_layout_->GetImmutableSamplerPtrFromIndex(i);
                 for (uint32_t di = 0; di < p_layout_->GetDescriptorCountFromIndex(i); ++di) {
-                    if (immut_sampler)
+                    if (immut_sampler) {
                         descriptors_.emplace_back(new SamplerDescriptor(immut_sampler + di));
-                    else
+                        some_update_ = true;  // Immutable samplers are updated at creation
+                    } else
                         descriptors_.emplace_back(new SamplerDescriptor());
                 }
                 break;
@@ -337,9 +338,10 @@ cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const V
             case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER: {
                 auto immut = p_layout_->GetImmutableSamplerPtrFromIndex(i);
                 for (uint32_t di = 0; di < p_layout_->GetDescriptorCountFromIndex(i); ++di) {
-                    if (immut)
+                    if (immut) {
                         descriptors_.emplace_back(new ImageSamplerDescriptor(immut + di));
-                    else
+                        some_update_ = true;  // Immutable samplers are updated at creation
+                    } else
                         descriptors_.emplace_back(new ImageSamplerDescriptor());
                 }
                 break;
