@@ -2655,26 +2655,6 @@ static bool ValidateDrawState(layer_data *dev_data, GLOBAL_CB_NODE *cb_node, con
             } else {  // Valid set is bound and layout compatible, validate that it's updated
                 // Pull the set node
                 cvdescriptorset::DescriptorSet *descriptor_set = state.boundDescriptorSets[setIndex];
-                // Gather active bindings
-                std::unordered_set<uint32_t> active_bindings;
-                for (auto binding : set_binding_pair.second) {
-                    active_bindings.insert(binding.first);
-                }
-                // Make sure set has been updated if it has no immutable samplers
-                //  If it has immutable samplers, we'll flag error later as needed depending on binding
-                if (!descriptor_set->IsUpdated()) {
-                    for (auto binding : active_bindings) {
-                        if (!descriptor_set->GetImmutableSamplerPtrFromBinding(binding)) {
-                            result |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                              VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)descriptor_set->GetSet(),
-                                              __LINE__, DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED, "DS",
-                                              "Descriptor Set 0x%" PRIxLEAST64
-                                              " bound but was never updated. It is now being used to draw so "
-                                              "this will result in undefined behavior.",
-                                              (uint64_t)descriptor_set->GetSet());
-                        }
-                    }
-                }
                 // Validate the draw-time state for this descriptor set
                 std::string err_str;
                 if (!descriptor_set->ValidateDrawState(set_binding_pair.second, state.dynamicOffsets[setIndex], cb_node, function,
