@@ -1057,37 +1057,6 @@ TEST_F(VkLayerTest, UnrecognizedValue) {
     m_errorMonitor->VerifyFound();
 }
 
-TEST_F(VkLayerTest, FailedReturnValue) {
-    TEST_DESCRIPTION("Check for a message describing a VkResult failure code");
-
-    ASSERT_NO_FATAL_FAILURE(Init());
-
-    // Find an unsupported image format
-    VkFormat unsupported = VK_FORMAT_UNDEFINED;
-    for (int f = VK_FORMAT_BEGIN_RANGE; f <= VK_FORMAT_END_RANGE; f++) {
-        VkFormat format = static_cast<VkFormat>(f);
-        VkFormatProperties fProps = m_device->format_properties(format);
-        if (format != VK_FORMAT_UNDEFINED && fProps.linearTilingFeatures == 0 && fProps.optimalTilingFeatures == 0) {
-            unsupported = format;
-            break;
-        }
-    }
-
-    if (unsupported != VK_FORMAT_UNDEFINED) {
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT,
-                                             "the requested format is not supported on this device");
-        // Specify an unsupported VkFormat value to generate a
-        // VK_ERROR_FORMAT_NOT_SUPPORTED return code
-        // Expected to trigger a warning from
-        // parameter_validation::validate_result
-        VkImageFormatProperties image_format_properties;
-        VkResult err = vkGetPhysicalDeviceImageFormatProperties(gpu(), unsupported, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL,
-                                                                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, 0, &image_format_properties);
-        ASSERT_TRUE(err == VK_ERROR_FORMAT_NOT_SUPPORTED);
-        m_errorMonitor->VerifyFound();
-    }
-}
-
 TEST_F(VkLayerTest, UpdateBufferAlignment) {
     TEST_DESCRIPTION("Check alignment parameters for vkCmdUpdateBuffer");
     uint32_t updateData[] = {1, 2, 3, 4, 5, 6, 7, 8};
