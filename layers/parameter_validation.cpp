@@ -1449,8 +1449,8 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceImageFormatProperties(VkPhysical
     if (!skip) {
         result = my_data->dispatch_table.GetPhysicalDeviceImageFormatProperties(physicalDevice, format, type, tiling, usage, flags,
                                                                                 pImageFormatProperties);
-
-        validate_result(my_data->report_data, "vkGetPhysicalDeviceImageFormatProperties", {}, result);
+        const std::vector<VkResult> ignore_list = {VK_ERROR_FORMAT_NOT_SUPPORTED};
+        validate_result(my_data->report_data, "vkGetPhysicalDeviceImageFormatProperties", ignore_list, result);
     }
 
     return result;
@@ -5791,7 +5791,8 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceImageFormatProperties2KHR(
     if (!skip) {
         result = my_data->dispatch_table.GetPhysicalDeviceImageFormatProperties2KHR(physicalDevice, pImageFormatInfo,
                                                                                     pImageFormatProperties);
-        validate_result(my_data->report_data, "vkGetPhysicalDeviceImageFormatProperties2KHR", {}, result);
+        const std::vector<VkResult> ignore_list = {VK_ERROR_FORMAT_NOT_SUPPORTED};
+        validate_result(my_data->report_data, "vkGetPhysicalDeviceImageFormatProperties2KHR", ignore_list, result);
     }
 
     return result;
@@ -6737,8 +6738,8 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceExternalImageFormatPropertiesNV(
     if (!skip) {
         result = my_data->dispatch_table.GetPhysicalDeviceExternalImageFormatPropertiesNV(
             physicalDevice, format, type, tiling, usage, flags, externalHandleType, pExternalImageFormatProperties);
-
-        validate_result(my_data->report_data, "vkGetPhysicalDeviceExternalImageFormatPropertiesNV", {}, result);
+        const std::vector<VkResult> ignore_list = {VK_ERROR_FORMAT_NOT_SUPPORTED};
+        validate_result(my_data->report_data, "vkGetPhysicalDeviceExternalImageFormatPropertiesNV", ignore_list, result);
     }
 
     return result;
