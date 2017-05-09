@@ -1404,7 +1404,7 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumeratePhysicalDevices(VkInstance instance, uin
 
     if (!skip) {
         result = my_data->dispatch_table.EnumeratePhysicalDevices(instance, pPhysicalDeviceCount, pPhysicalDevices);
-        validate_result(my_data->report_data, "vkEnumeratePhysicalDevices", result);
+        validate_result(my_data->report_data, "vkEnumeratePhysicalDevices", {}, result);
     }
     return result;
 }
@@ -1450,7 +1450,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceImageFormatProperties(VkPhysical
         result = my_data->dispatch_table.GetPhysicalDeviceImageFormatProperties(physicalDevice, format, type, tiling, usage, flags,
                                                                                 pImageFormatProperties);
 
-        validate_result(my_data->report_data, "vkGetPhysicalDeviceImageFormatProperties", result);
+        validate_result(my_data->report_data, "vkGetPhysicalDeviceImageFormatProperties", {}, result);
     }
 
     return result;
@@ -1644,7 +1644,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physicalDevice, con
 
         result = fpCreateDevice(physicalDevice, pCreateInfo, pAllocator, pDevice);
 
-        validate_result(my_instance_data->report_data, "vkCreateDevice", result);
+        validate_result(my_instance_data->report_data, "vkCreateDevice", {}, result);
 
         if (result == VK_SUCCESS) {
             layer_data *my_device_data = GetLayerDataPtr(get_dispatch_key(*pDevice), layer_data_map);
@@ -1745,7 +1745,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueueSubmit(VkQueue queue, uint32_t submitCount, 
     if (!skip) {
         result = my_data->dispatch_table.QueueSubmit(queue, submitCount, pSubmits, fence);
 
-        validate_result(my_data->report_data, "vkQueueSubmit", result);
+        validate_result(my_data->report_data, "vkQueueSubmit", {}, result);
     }
 
     return result;
@@ -1757,7 +1757,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueueWaitIdle(VkQueue queue) {
 
     VkResult result = my_data->dispatch_table.QueueWaitIdle(queue);
 
-    validate_result(my_data->report_data, "vkQueueWaitIdle", result);
+    validate_result(my_data->report_data, "vkQueueWaitIdle", {}, result);
 
     return result;
 }
@@ -1768,7 +1768,7 @@ VKAPI_ATTR VkResult VKAPI_CALL DeviceWaitIdle(VkDevice device) {
 
     VkResult result = my_data->dispatch_table.DeviceWaitIdle(device);
 
-    validate_result(my_data->report_data, "vkDeviceWaitIdle", result);
+    validate_result(my_data->report_data, "vkDeviceWaitIdle", {}, result);
 
     return result;
 }
@@ -1785,7 +1785,7 @@ VKAPI_ATTR VkResult VKAPI_CALL AllocateMemory(VkDevice device, const VkMemoryAll
     if (!skip) {
         result = my_data->dispatch_table.AllocateMemory(device, pAllocateInfo, pAllocator, pMemory);
 
-        validate_result(my_data->report_data, "vkAllocateMemory", result);
+        validate_result(my_data->report_data, "vkAllocateMemory", {}, result);
     }
 
     return result;
@@ -1815,7 +1815,7 @@ VKAPI_ATTR VkResult VKAPI_CALL MapMemory(VkDevice device, VkDeviceMemory memory,
     if (!skip) {
         result = my_data->dispatch_table.MapMemory(device, memory, offset, size, flags, ppData);
 
-        validate_result(my_data->report_data, "vkMapMemory", result);
+        validate_result(my_data->report_data, "vkMapMemory", {}, result);
     }
 
     return result;
@@ -1845,7 +1845,7 @@ VKAPI_ATTR VkResult VKAPI_CALL FlushMappedMemoryRanges(VkDevice device, uint32_t
     if (!skip) {
         result = my_data->dispatch_table.FlushMappedMemoryRanges(device, memoryRangeCount, pMemoryRanges);
 
-        validate_result(my_data->report_data, "vkFlushMappedMemoryRanges", result);
+        validate_result(my_data->report_data, "vkFlushMappedMemoryRanges", {}, result);
     }
 
     return result;
@@ -1863,7 +1863,7 @@ VKAPI_ATTR VkResult VKAPI_CALL InvalidateMappedMemoryRanges(VkDevice device, uin
     if (!skip) {
         result = my_data->dispatch_table.InvalidateMappedMemoryRanges(device, memoryRangeCount, pMemoryRanges);
 
-        validate_result(my_data->report_data, "vkInvalidateMappedMemoryRanges", result);
+        validate_result(my_data->report_data, "vkInvalidateMappedMemoryRanges", {}, result);
     }
 
     return result;
@@ -1894,7 +1894,7 @@ VKAPI_ATTR VkResult VKAPI_CALL BindBufferMemory(VkDevice device, VkBuffer buffer
     if (!skip) {
         result = my_data->dispatch_table.BindBufferMemory(device, buffer, memory, memoryOffset);
 
-        validate_result(my_data->report_data, "vkBindBufferMemory", result);
+        validate_result(my_data->report_data, "vkBindBufferMemory", {}, result);
     }
 
     return result;
@@ -1911,7 +1911,7 @@ VKAPI_ATTR VkResult VKAPI_CALL BindImageMemory(VkDevice device, VkImage image, V
     if (!skip) {
         result = my_data->dispatch_table.BindImageMemory(device, image, memory, memoryOffset);
 
-        validate_result(my_data->report_data, "vkBindImageMemory", result);
+        validate_result(my_data->report_data, "vkBindImageMemory", {}, result);
     }
 
     return result;
@@ -2029,7 +2029,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueueBindSparse(VkQueue queue, uint32_t bindInfoC
     if (!skip) {
         result = my_data->dispatch_table.QueueBindSparse(queue, bindInfoCount, pBindInfo, fence);
 
-        validate_result(my_data->report_data, "vkQueueBindSparse", result);
+        validate_result(my_data->report_data, "vkQueueBindSparse", {}, result);
     }
 
     return result;
@@ -2047,7 +2047,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateFence(VkDevice device, const VkFenceCreateI
     if (!skip) {
         result = my_data->dispatch_table.CreateFence(device, pCreateInfo, pAllocator, pFence);
 
-        validate_result(my_data->report_data, "vkCreateFence", result);
+        validate_result(my_data->report_data, "vkCreateFence", {}, result);
     }
 
     return result;
@@ -2076,7 +2076,7 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetFences(VkDevice device, uint32_t fenceCount,
     if (!skip) {
         result = my_data->dispatch_table.ResetFences(device, fenceCount, pFences);
 
-        validate_result(my_data->report_data, "vkResetFences", result);
+        validate_result(my_data->report_data, "vkResetFences", {}, result);
     }
 
     return result;
@@ -2093,7 +2093,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetFenceStatus(VkDevice device, VkFence fence) {
     if (!skip) {
         result = my_data->dispatch_table.GetFenceStatus(device, fence);
 
-        validate_result(my_data->report_data, "vkGetFenceStatus", result);
+        validate_result(my_data->report_data, "vkGetFenceStatus", {}, result);
     }
 
     return result;
@@ -2111,7 +2111,7 @@ VKAPI_ATTR VkResult VKAPI_CALL WaitForFences(VkDevice device, uint32_t fenceCoun
     if (!skip) {
         result = my_data->dispatch_table.WaitForFences(device, fenceCount, pFences, waitAll, timeout);
 
-        validate_result(my_data->report_data, "vkWaitForFences", result);
+        validate_result(my_data->report_data, "vkWaitForFences", {}, result);
     }
 
     return result;
@@ -2129,7 +2129,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSemaphore(VkDevice device, const VkSemaphor
     if (!skip) {
         result = my_data->dispatch_table.CreateSemaphore(device, pCreateInfo, pAllocator, pSemaphore);
 
-        validate_result(my_data->report_data, "vkCreateSemaphore", result);
+        validate_result(my_data->report_data, "vkCreateSemaphore", {}, result);
     }
 
     return result;
@@ -2159,7 +2159,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateEvent(VkDevice device, const VkEventCreateI
     if (!skip) {
         result = my_data->dispatch_table.CreateEvent(device, pCreateInfo, pAllocator, pEvent);
 
-        validate_result(my_data->report_data, "vkCreateEvent", result);
+        validate_result(my_data->report_data, "vkCreateEvent", {}, result);
     }
 
     return result;
@@ -2188,7 +2188,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetEventStatus(VkDevice device, VkEvent event) {
     if (!skip) {
         result = my_data->dispatch_table.GetEventStatus(device, event);
 
-        validate_result(my_data->report_data, "vkGetEventStatus", result);
+        validate_result(my_data->report_data, "vkGetEventStatus", {}, result);
     }
 
     return result;
@@ -2205,7 +2205,7 @@ VKAPI_ATTR VkResult VKAPI_CALL SetEvent(VkDevice device, VkEvent event) {
     if (!skip) {
         result = my_data->dispatch_table.SetEvent(device, event);
 
-        validate_result(my_data->report_data, "vkSetEvent", result);
+        validate_result(my_data->report_data, "vkSetEvent", {}, result);
     }
 
     return result;
@@ -2222,7 +2222,7 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetEvent(VkDevice device, VkEvent event) {
     if (!skip) {
         result = my_data->dispatch_table.ResetEvent(device, event);
 
-        validate_result(my_data->report_data, "vkResetEvent", result);
+        validate_result(my_data->report_data, "vkResetEvent", {}, result);
     }
 
     return result;
@@ -2256,7 +2256,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateQueryPool(VkDevice device, const VkQueryPoo
     if (!skip) {
         result = device_data->dispatch_table.CreateQueryPool(device, pCreateInfo, pAllocator, pQueryPool);
 
-        validate_result(report_data, "vkCreateQueryPool", result);
+        validate_result(report_data, "vkCreateQueryPool", {}, result);
     }
 
     return result;
@@ -2288,7 +2288,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetQueryPoolResults(VkDevice device, VkQueryPool 
         result =
             my_data->dispatch_table.GetQueryPoolResults(device, queryPool, firstQuery, queryCount, dataSize, pData, stride, flags);
 
-        validate_result(my_data->report_data, "vkGetQueryPoolResults", result);
+        validate_result(my_data->report_data, "vkGetQueryPoolResults", {}, result);
     }
 
     return result;
@@ -2351,7 +2351,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateBuffer(VkDevice device, const VkBufferCreat
     if (!skip) {
         result = device_data->dispatch_table.CreateBuffer(device, pCreateInfo, pAllocator, pBuffer);
 
-        validate_result(report_data, "vkCreateBuffer", result);
+        validate_result(report_data, "vkCreateBuffer", {}, result);
     }
 
     return result;
@@ -2381,7 +2381,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateBufferView(VkDevice device, const VkBufferV
     if (!skip) {
         result = my_data->dispatch_table.CreateBufferView(device, pCreateInfo, pAllocator, pView);
 
-        validate_result(my_data->report_data, "vkCreateBufferView", result);
+        validate_result(my_data->report_data, "vkCreateBufferView", {}, result);
     }
 
     return result;
@@ -2609,7 +2609,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateI
     if (!skip) {
         result = device_data->dispatch_table.CreateImage(device, pCreateInfo, pAllocator, pImage);
 
-        validate_result(report_data, "vkCreateImage", result);
+        validate_result(report_data, "vkCreateImage", {}, result);
     }
 
     return result;
@@ -2728,7 +2728,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImageView(VkDevice device, const VkImageVie
     if (!skip) {
         result = my_data->dispatch_table.CreateImageView(device, pCreateInfo, pAllocator, pView);
 
-        validate_result(my_data->report_data, "vkCreateImageView", result);
+        validate_result(my_data->report_data, "vkCreateImageView", {}, result);
     }
 
     return result;
@@ -2758,7 +2758,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateShaderModule(VkDevice device, const VkShade
     if (!skip) {
         result = my_data->dispatch_table.CreateShaderModule(device, pCreateInfo, pAllocator, pShaderModule);
 
-        validate_result(my_data->report_data, "vkCreateShaderModule", result);
+        validate_result(my_data->report_data, "vkCreateShaderModule", {}, result);
     }
 
     return result;
@@ -2789,7 +2789,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreatePipelineCache(VkDevice device, const VkPipe
     if (!skip) {
         result = my_data->dispatch_table.CreatePipelineCache(device, pCreateInfo, pAllocator, pPipelineCache);
 
-        validate_result(my_data->report_data, "vkCreatePipelineCache", result);
+        validate_result(my_data->report_data, "vkCreatePipelineCache", {}, result);
     }
 
     return result;
@@ -2820,7 +2820,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPipelineCacheData(VkDevice device, VkPipelineC
     if (!skip) {
         result = my_data->dispatch_table.GetPipelineCacheData(device, pipelineCache, pDataSize, pData);
 
-        validate_result(my_data->report_data, "vkGetPipelineCacheData", result);
+        validate_result(my_data->report_data, "vkGetPipelineCacheData", {}, result);
     }
 
     return result;
@@ -2838,7 +2838,7 @@ VKAPI_ATTR VkResult VKAPI_CALL MergePipelineCaches(VkDevice device, VkPipelineCa
     if (!skip) {
         result = my_data->dispatch_table.MergePipelineCaches(device, dstCache, srcCacheCount, pSrcCaches);
 
-        validate_result(my_data->report_data, "vkMergePipelineCaches", result);
+        validate_result(my_data->report_data, "vkMergePipelineCaches", {}, result);
     }
 
     return result;
@@ -3404,7 +3404,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
     if (!skip) {
         result = device_data->dispatch_table.CreateGraphicsPipelines(device, pipelineCache, createInfoCount, pCreateInfos,
                                                                      pAllocator, pPipelines);
-        validate_result(report_data, "vkCreateGraphicsPipelines", result);
+        validate_result(report_data, "vkCreateGraphicsPipelines", {}, result);
     }
 
     return result;
@@ -3439,7 +3439,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateComputePipelines(VkDevice device, VkPipelin
     if (!skip) {
         result = my_data->dispatch_table.CreateComputePipelines(device, pipelineCache, createInfoCount, pCreateInfos, pAllocator,
                                                                 pPipelines);
-        validate_result(my_data->report_data, "vkCreateComputePipelines", result);
+        validate_result(my_data->report_data, "vkCreateComputePipelines", {}, result);
     }
 
     return result;
@@ -3469,7 +3469,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreatePipelineLayout(VkDevice device, const VkPip
     if (!skip) {
         result = my_data->dispatch_table.CreatePipelineLayout(device, pCreateInfo, pAllocator, pPipelineLayout);
 
-        validate_result(my_data->report_data, "vkCreatePipelineLayout", result);
+        validate_result(my_data->report_data, "vkCreatePipelineLayout", {}, result);
     }
 
     return result;
@@ -3527,7 +3527,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSampler(VkDevice device, const VkSamplerCre
     if (!skip) {
         result = device_data->dispatch_table.CreateSampler(device, pCreateInfo, pAllocator, pSampler);
 
-        validate_result(report_data, "vkCreateSampler", result);
+        validate_result(report_data, "vkCreateSampler", {}, result);
     }
 
     return result;
@@ -3596,7 +3596,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorSetLayout(VkDevice device, const 
     if (!skip) {
         result = device_data->dispatch_table.CreateDescriptorSetLayout(device, pCreateInfo, pAllocator, pSetLayout);
 
-        validate_result(report_data, "vkCreateDescriptorSetLayout", result);
+        validate_result(report_data, "vkCreateDescriptorSetLayout", {}, result);
     }
 
     return result;
@@ -3629,7 +3629,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorPool(VkDevice device, const VkDes
     if (!skip) {
         result = my_data->dispatch_table.CreateDescriptorPool(device, pCreateInfo, pAllocator, pDescriptorPool);
 
-        validate_result(my_data->report_data, "vkCreateDescriptorPool", result);
+        validate_result(my_data->report_data, "vkCreateDescriptorPool", {}, result);
     }
 
     return result;
@@ -3660,7 +3660,7 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetDescriptorPool(VkDevice device, VkDescriptor
     if (!skip) {
         result = my_data->dispatch_table.ResetDescriptorPool(device, descriptorPool, flags);
 
-        validate_result(my_data->report_data, "vkResetDescriptorPool", result);
+        validate_result(my_data->report_data, "vkResetDescriptorPool", {}, result);
     }
 
     return result;
@@ -3678,7 +3678,7 @@ VKAPI_ATTR VkResult VKAPI_CALL AllocateDescriptorSets(VkDevice device, const VkD
     if (!skip) {
         result = my_data->dispatch_table.AllocateDescriptorSets(device, pAllocateInfo, pDescriptorSets);
 
-        validate_result(my_data->report_data, "vkAllocateDescriptorSets", result);
+        validate_result(my_data->report_data, "vkAllocateDescriptorSets", {}, result);
     }
 
     return result;
@@ -3703,7 +3703,7 @@ VKAPI_ATTR VkResult VKAPI_CALL FreeDescriptorSets(VkDevice device, VkDescriptorP
     if (!skip) {
         result = device_data->dispatch_table.FreeDescriptorSets(device, descriptorPool, descriptorSetCount, pDescriptorSets);
 
-        validate_result(report_data, "vkFreeDescriptorSets", result);
+        validate_result(report_data, "vkFreeDescriptorSets", {}, result);
     }
 
     return result;
@@ -3869,7 +3869,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateFramebuffer(VkDevice device, const VkFrameb
     if (!skip) {
         result = my_data->dispatch_table.CreateFramebuffer(device, pCreateInfo, pAllocator, pFramebuffer);
 
-        validate_result(my_data->report_data, "vkCreateFramebuffer", result);
+        validate_result(my_data->report_data, "vkCreateFramebuffer", {}, result);
     }
 
     return result;
@@ -3926,7 +3926,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
     if (!skip) {
         result = my_data->dispatch_table.CreateRenderPass(device, pCreateInfo, pAllocator, pRenderPass);
 
-        validate_result(my_data->report_data, "vkCreateRenderPass", result);
+        validate_result(my_data->report_data, "vkCreateRenderPass", {}, result);
     }
 
     return result;
@@ -3971,7 +3971,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateCommandPool(VkDevice device, const VkComman
     if (!skip) {
         result = my_data->dispatch_table.CreateCommandPool(device, pCreateInfo, pAllocator, pCommandPool);
 
-        validate_result(my_data->report_data, "vkCreateCommandPool", result);
+        validate_result(my_data->report_data, "vkCreateCommandPool", {}, result);
     }
 
     return result;
@@ -4000,7 +4000,7 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetCommandPool(VkDevice device, VkCommandPool c
     if (!skip) {
         result = my_data->dispatch_table.ResetCommandPool(device, commandPool, flags);
 
-        validate_result(my_data->report_data, "vkResetCommandPool", result);
+        validate_result(my_data->report_data, "vkResetCommandPool", {}, result);
     }
 
     return result;
@@ -4018,7 +4018,7 @@ VKAPI_ATTR VkResult VKAPI_CALL AllocateCommandBuffers(VkDevice device, const VkC
     if (!skip) {
         result = my_data->dispatch_table.AllocateCommandBuffers(device, pAllocateInfo, pCommandBuffers);
 
-        validate_result(my_data->report_data, "vkAllocateCommandBuffers", result);
+        validate_result(my_data->report_data, "vkAllocateCommandBuffers", {}, result);
     }
 
     return result;
@@ -4102,7 +4102,7 @@ VKAPI_ATTR VkResult VKAPI_CALL BeginCommandBuffer(VkCommandBuffer commandBuffer,
     if (!skip) {
         result = device_data->dispatch_table.BeginCommandBuffer(commandBuffer, pBeginInfo);
 
-        validate_result(report_data, "vkBeginCommandBuffer", result);
+        validate_result(report_data, "vkBeginCommandBuffer", {}, result);
     }
 
     return result;
@@ -4114,7 +4114,7 @@ VKAPI_ATTR VkResult VKAPI_CALL EndCommandBuffer(VkCommandBuffer commandBuffer) {
 
     VkResult result = my_data->dispatch_table.EndCommandBuffer(commandBuffer);
 
-    validate_result(my_data->report_data, "vkEndCommandBuffer", result);
+    validate_result(my_data->report_data, "vkEndCommandBuffer", {}, result);
 
     return result;
 }
@@ -4129,7 +4129,7 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetCommandBuffer(VkCommandBuffer commandBuffer,
     if (!skip) {
         result = my_data->dispatch_table.ResetCommandBuffer(commandBuffer, flags);
 
-        validate_result(my_data->report_data, "vkResetCommandBuffer", result);
+        validate_result(my_data->report_data, "vkResetCommandBuffer", {}, result);
     }
 
     return result;
@@ -5062,7 +5062,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device, const VkSwapc
     if (!skip) {
         result = my_data->dispatch_table.CreateSwapchainKHR(device, pCreateInfo, pAllocator, pSwapchain);
 
-        validate_result(my_data->report_data, "vkCreateSwapchainKHR", result);
+        validate_result(my_data->report_data, "vkCreateSwapchainKHR", {}, result);
     }
 
     return result;
@@ -5083,7 +5083,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchai
     if (!skip) {
         result = my_data->dispatch_table.GetSwapchainImagesKHR(device, swapchain, pSwapchainImageCount, pSwapchainImages);
 
-        validate_result(my_data->report_data, "vkGetSwapchainImagesKHR", result);
+        validate_result(my_data->report_data, "vkGetSwapchainImagesKHR", {}, result);
     }
 
     return result;
@@ -5104,7 +5104,7 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
     if (!skip) {
         result = my_data->dispatch_table.AcquireNextImageKHR(device, swapchain, timeout, semaphore, fence, pImageIndex);
 
-        validate_result(my_data->report_data, "vkAcquireNextImageKHR", result);
+        validate_result(my_data->report_data, "vkAcquireNextImageKHR", {}, result);
     }
 
     return result;
@@ -5159,7 +5159,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
     if (!skip) {
         result = my_data->dispatch_table.QueuePresentKHR(queue, pPresentInfo);
 
-        validate_result(my_data->report_data, "vkQueuePresentKHR", result);
+        validate_result(my_data->report_data, "vkQueuePresentKHR", {}, result);
     }
 
     return result;
@@ -5208,7 +5208,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevi
     if (!skip) {
         result = my_data->dispatch_table.GetPhysicalDeviceSurfaceSupportKHR(physicalDevice, queueFamilyIndex, surface, pSupported);
 
-        validate_result(my_data->report_data, "vkGetPhysicalDeviceSurfaceSupportKHR", result);
+        validate_result(my_data->report_data, "vkGetPhysicalDeviceSurfaceSupportKHR", {}, result);
     }
 
     return result;
@@ -5229,7 +5229,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilitiesKHR(VkPhysica
     if (!skip) {
         result = my_data->dispatch_table.GetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, pSurfaceCapabilities);
 
-        validate_result(my_data->report_data, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR", result);
+        validate_result(my_data->report_data, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR", {}, result);
     }
 
     return result;
@@ -5253,7 +5253,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevi
         result = my_data->dispatch_table.GetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, pSurfaceFormatCount,
                                                                             pSurfaceFormats);
 
-        validate_result(my_data->report_data, "vkGetPhysicalDeviceSurfaceFormatsKHR", result);
+        validate_result(my_data->report_data, "vkGetPhysicalDeviceSurfaceFormatsKHR", {}, result);
     }
 
     return result;
@@ -5277,7 +5277,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfacePresentModesKHR(VkPhysica
         result = my_data->dispatch_table.GetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, pPresentModeCount,
                                                                                  pPresentModes);
 
-        validate_result(my_data->report_data, "vkGetPhysicalDeviceSurfacePresentModesKHR", result);
+        validate_result(my_data->report_data, "vkGetPhysicalDeviceSurfacePresentModesKHR", {}, result);
     }
 
     return result;
@@ -5319,7 +5319,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateWin32SurfaceKHR(VkInstance instance, const 
         result = my_data->dispatch_table.CreateWin32SurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
     }
 
-    validate_result(my_data->report_data, "vkCreateWin32SurfaceKHR", result);
+    validate_result(my_data->report_data, "vkCreateWin32SurfaceKHR", {}, result);
 
     return result;
 }
@@ -5364,7 +5364,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateXcbSurfaceKHR(VkInstance instance, const Vk
         result = my_data->dispatch_table.CreateXcbSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
     }
 
-    validate_result(my_data->report_data, "vkCreateXcbSurfaceKHR", result);
+    validate_result(my_data->report_data, "vkCreateXcbSurfaceKHR", {}, result);
 
     return result;
 }
@@ -5411,7 +5411,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateXlibSurfaceKHR(VkInstance instance, const V
         result = my_data->dispatch_table.CreateXlibSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
     }
 
-    validate_result(my_data->report_data, "vkCreateXlibSurfaceKHR", result);
+    validate_result(my_data->report_data, "vkCreateXlibSurfaceKHR", {}, result);
 
     return result;
 }
@@ -5457,7 +5457,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateMirSurfaceKHR(VkInstance instance, const Vk
         result = my_data->dispatch_table.CreateMirSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
     }
 
-    validate_result(my_data->report_data, "vkCreateMirSurfaceKHR", result);
+    validate_result(my_data->report_data, "vkCreateMirSurfaceKHR", {}, result);
 
     return result;
 }
@@ -5501,7 +5501,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateWaylandSurfaceKHR(VkInstance instance, cons
         result = my_data->dispatch_table.CreateWaylandSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
     }
 
-    validate_result(my_data->report_data, "vkCreateWaylandSurfaceKHR", result);
+    validate_result(my_data->report_data, "vkCreateWaylandSurfaceKHR", {}, result);
 
     return result;
 }
@@ -5546,7 +5546,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateAndroidSurfaceKHR(VkInstance instance, cons
         result = my_data->dispatch_table.CreateAndroidSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
     }
 
-    validate_result(my_data->report_data, "vkCreateAndroidSurfaceKHR", result);
+    validate_result(my_data->report_data, "vkCreateAndroidSurfaceKHR", {}, result);
 
     return result;
 }
@@ -5569,7 +5569,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSharedSwapchainsKHR(VkDevice device, uint32
     if (!skip) {
         result = my_data->dispatch_table.CreateSharedSwapchainsKHR(device, swapchainCount, pCreateInfos, pAllocator, pSwapchains);
 
-        validate_result(my_data->report_data, "vkCreateSharedSwapchainsKHR", result);
+        validate_result(my_data->report_data, "vkCreateSharedSwapchainsKHR", {}, result);
     }
 
     return result;
@@ -5590,7 +5590,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceDisplayPropertiesKHR(VkPhysicalD
     if (!skip) {
         result = my_data->dispatch_table.GetPhysicalDeviceDisplayPropertiesKHR(physicalDevice, pPropertyCount, pProperties);
 
-        validate_result(my_data->report_data, "vkGetPhysicalDeviceDisplayPropertiesKHR", result);
+        validate_result(my_data->report_data, "vkGetPhysicalDeviceDisplayPropertiesKHR", {}, result);
     }
 
     return result;
@@ -5611,7 +5611,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceDisplayPlanePropertiesKHR(VkPhys
     if (!skip) {
         result = my_data->dispatch_table.GetPhysicalDeviceDisplayPlanePropertiesKHR(physicalDevice, pPropertyCount, pProperties);
 
-        validate_result(my_data->report_data, "vkGetPhysicalDeviceDisplayPlanePropertiesKHR", result);
+        validate_result(my_data->report_data, "vkGetPhysicalDeviceDisplayPlanePropertiesKHR", {}, result);
     }
 
     return result;
@@ -5632,7 +5632,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneSupportedDisplaysKHR(VkPhysicalDev
     if (!skip) {
         result = my_data->dispatch_table.GetDisplayPlaneSupportedDisplaysKHR(physicalDevice, planeIndex, pDisplayCount, pDisplays);
 
-        validate_result(my_data->report_data, "vkGetDisplayPlaneSupportedDisplaysKHR", result);
+        validate_result(my_data->report_data, "vkGetDisplayPlaneSupportedDisplaysKHR", {}, result);
     }
 
     return result;
@@ -5653,7 +5653,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayModePropertiesKHR(VkPhysicalDevice phys
     if (!skip) {
         result = my_data->dispatch_table.GetDisplayModePropertiesKHR(physicalDevice, display, pPropertyCount, pProperties);
 
-        validate_result(my_data->report_data, "vkGetDisplayModePropertiesKHR", result);
+        validate_result(my_data->report_data, "vkGetDisplayModePropertiesKHR", {}, result);
     }
 
     return result;
@@ -5675,7 +5675,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDisplayModeKHR(VkPhysicalDevice physicalDev
     if (!skip) {
         result = my_data->dispatch_table.CreateDisplayModeKHR(physicalDevice, display, pCreateInfo, pAllocator, pMode);
 
-        validate_result(my_data->report_data, "vkCreateDisplayModeKHR", result);
+        validate_result(my_data->report_data, "vkCreateDisplayModeKHR", {}, result);
     }
 
     return result;
@@ -5696,7 +5696,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneCapabilitiesKHR(VkPhysicalDevice p
     if (!skip) {
         result = my_data->dispatch_table.GetDisplayPlaneCapabilitiesKHR(physicalDevice, mode, planeIndex, pCapabilities);
 
-        validate_result(my_data->report_data, "vkGetDisplayPlaneCapabilitiesKHR", result);
+        validate_result(my_data->report_data, "vkGetDisplayPlaneCapabilitiesKHR", {}, result);
     }
 
     return result;
@@ -5717,7 +5717,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDisplayPlaneSurfaceKHR(VkInstance instance,
     if (!skip) {
         result = my_data->dispatch_table.CreateDisplayPlaneSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
 
-        validate_result(my_data->report_data, "vkCreateDisplayPlaneSurfaceKHR", result);
+        validate_result(my_data->report_data, "vkCreateDisplayPlaneSurfaceKHR", {}, result);
     }
 
     return result;
@@ -5791,7 +5791,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceImageFormatProperties2KHR(
     if (!skip) {
         result = my_data->dispatch_table.GetPhysicalDeviceImageFormatProperties2KHR(physicalDevice, pImageFormatInfo,
                                                                                     pImageFormatProperties);
-        validate_result(my_data->report_data, "vkGetPhysicalDeviceImageFormatProperties2KHR", result);
+        validate_result(my_data->report_data, "vkGetPhysicalDeviceImageFormatProperties2KHR", {}, result);
     }
 
     return result;
@@ -5935,7 +5935,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorUpdateTemplateKHR(VkDevice device
     if (!skip) {
         result =
             my_data->dispatch_table.CreateDescriptorUpdateTemplateKHR(device, pCreateInfo, pAllocator, pDescriptorUpdateTemplate);
-        validate_result(my_data->report_data, "vkCreateDescriptorUpdateTemplateKHR", result);
+        validate_result(my_data->report_data, "vkCreateDescriptorUpdateTemplateKHR", {}, result);
     }
 
     return result;
@@ -6015,7 +6015,7 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumeratePhysicalDeviceGroupsKHX(
     if (!skip) {
         result = my_data->dispatch_table.EnumeratePhysicalDeviceGroupsKHX(instance, pPhysicalDeviceGroupCount,
                                                                           pPhysicalDeviceGroupProperties);
-        validate_result(my_data->report_data, "vkEnumeratePhysicalDeviceGroupsKHX", result);
+        validate_result(my_data->report_data, "vkEnumeratePhysicalDeviceGroupsKHX", {}, result);
     }
     return result;
 }
@@ -6055,7 +6055,7 @@ VKAPI_ATTR VkResult VKAPI_CALL BindBufferMemory2KHX(VkDevice device, uint32_t bi
 
     if (!skip) {
         result = my_data->dispatch_table.BindBufferMemory2KHX(device, bindInfoCount, pBindInfos);
-        validate_result(my_data->report_data, "vkBindBufferMemory2KHX", result);
+        validate_result(my_data->report_data, "vkBindBufferMemory2KHX", {}, result);
     }
 
     return result;
@@ -6075,7 +6075,7 @@ VKAPI_ATTR VkResult VKAPI_CALL BindImageMemory2KHX(VkDevice device, uint32_t bin
 
     if (!skip) {
         result = my_data->dispatch_table.BindImageMemory2KHX(device, bindInfoCount, pBindInfos);
-        validate_result(my_data->report_data, "vkBindImageMemory2KHX", result);
+        validate_result(my_data->report_data, "vkBindImageMemory2KHX", {}, result);
     }
 
     return result;
@@ -6112,7 +6112,7 @@ GetDeviceGroupPresentCapabilitiesKHX(VkDevice device, VkDeviceGroupPresentCapabi
 
     if (!skip) {
         result = my_data->dispatch_table.GetDeviceGroupPresentCapabilitiesKHX(device, pDeviceGroupPresentCapabilities);
-        validate_result(my_data->report_data, "vkGetDeviceGroupPresentCapabilitiesKHX", result);
+        validate_result(my_data->report_data, "vkGetDeviceGroupPresentCapabilitiesKHX", {}, result);
     }
 
     return result;
@@ -6132,7 +6132,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDeviceGroupSurfacePresentModesKHX(VkDevice dev
 
     if (!skip) {
         result = my_data->dispatch_table.GetDeviceGroupSurfacePresentModesKHX(device, surface, pModes);
-        validate_result(my_data->report_data, "vkGetDeviceGroupSurfacePresentModesKHX", result);
+        validate_result(my_data->report_data, "vkGetDeviceGroupSurfacePresentModesKHX", {}, result);
     }
     return result;
 }
@@ -6151,7 +6151,7 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImage2KHX(VkDevice device, const VkAcq
 
     if (!skip) {
         result = my_data->dispatch_table.AcquireNextImage2KHX(device, pAcquireInfo, pImageIndex);
-        validate_result(my_data->report_data, "vkAcquireNextImage2KHX", result);
+        validate_result(my_data->report_data, "vkAcquireNextImage2KHX", {}, result);
     }
     return result;
 }
@@ -6189,7 +6189,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDevicePresentRectanglesKHX(VkPhysicalD
     if (!skip) {
         result = my_data->dispatch_table.GetPhysicalDevicePresentRectanglesKHX(physicalDevice, surface, pRectCount, pRects);
 
-        validate_result(my_data->report_data, "vkGetPhysicalDevicePresentRectanglesKHX", result);
+        validate_result(my_data->report_data, "vkGetPhysicalDevicePresentRectanglesKHX", {}, result);
     }
 
     return result;
@@ -6230,7 +6230,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetMemoryFdKHX(VkDevice device, VkDeviceMemory me
 
     if (!skip) {
         result = my_data->dispatch_table.GetMemoryFdKHX(device, memory, handleType, pFd);
-        validate_result(my_data->report_data, "vkGetMemoryFdKHX", result);
+        validate_result(my_data->report_data, "vkGetMemoryFdKHX", {}, result);
     }
 
     return result;
@@ -6250,7 +6250,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetMemoryFdPropertiesKHX(VkDevice device, VkExter
 
     if (!skip) {
         result = my_data->dispatch_table.GetMemoryFdPropertiesKHX(device, handleType, fd, pMemoryFdProperties);
-        validate_result(my_data->report_data, "vkGetMemoryFdPropertiesKHX", result);
+        validate_result(my_data->report_data, "vkGetMemoryFdPropertiesKHX", {}, result);
     }
 
     return result;
@@ -6272,7 +6272,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetMemoryWin32HandleKHX(VkDevice device, VkDevice
 
     if (!skip) {
         result = my_data->dispatch_table.GetMemoryWin32HandleKHX(device, memory, handleType, pHandle);
-        validate_result(my_data->report_data, "vkGetMemoryWin32HandleKHX", result);
+        validate_result(my_data->report_data, "vkGetMemoryWin32HandleKHX", {}, result);
     }
     return result;
 }
@@ -6293,7 +6293,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetMemoryWin32HandlePropertiesKHX(VkDevice device
     if (!skip) {
         result =
             my_data->dispatch_table.GetMemoryWin32HandlePropertiesKHX(device, handleType, handle, pMemoryWin32HandleProperties);
-        validate_result(my_data->report_data, "vkGetMemoryWin32HandlePropertiesKHX", result);
+        validate_result(my_data->report_data, "vkGetMemoryWin32HandlePropertiesKHX", {}, result);
     }
     return result;
 }
@@ -6333,7 +6333,7 @@ VKAPI_ATTR VkResult VKAPI_CALL ImportSemaphoreFdKHX(VkDevice device, const VkImp
 
     if (!skip) {
         result = my_data->dispatch_table.ImportSemaphoreFdKHX(device, pImportSemaphoreFdInfo);
-        validate_result(my_data->report_data, "vkImportSemaphoreFdKHX", result);
+        validate_result(my_data->report_data, "vkImportSemaphoreFdKHX", {}, result);
     }
 
     return result;
@@ -6353,7 +6353,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSemaphoreFdKHX(VkDevice device, VkSemaphore se
 
     if (!skip) {
         result = my_data->dispatch_table.GetSemaphoreFdKHX(device, semaphore, handleType, pFd);
-        validate_result(my_data->report_data, "vkGetSemaphoreFdKHX", result);
+        validate_result(my_data->report_data, "vkGetSemaphoreFdKHX", {}, result);
     }
 
     return result;
@@ -6374,7 +6374,7 @@ ImportSemaphoreWin32HandleKHX(VkDevice device, const VkImportSemaphoreWin32Handl
     skip |= parameter_validation_vkImportSemaphoreWin32HandleKHX(my_data->report_data, pImportSemaphoreWin32HandleInfo);
     if (!skip) {
         result = my_data->dispatch_table.ImportSemaphoreWin32HandleKHX(device, pImportSemaphoreWin32HandleInfo);
-        validate_result(my_data->report_data, "vkImportSemaphoreWin32HandleKHX", result);
+        validate_result(my_data->report_data, "vkImportSemaphoreWin32HandleKHX", {}, result);
     }
     return result;
 }
@@ -6390,7 +6390,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSemaphoreWin32HandleKHX(VkDevice device, VkSem
     skip |= parameter_validation_vkGetSemaphoreWin32HandleKHX(my_data->report_data, semaphore, handleType, pHandle);
     if (!skip) {
         result = my_data->dispatch_table.GetSemaphoreWin32HandleKHX(device, semaphore, handleType, pHandle);
-        validate_result(my_data->report_data, "vkGetSemaphoreWin32HandleKHX", result);
+        validate_result(my_data->report_data, "vkGetSemaphoreWin32HandleKHX", {}, result);
     }
     return result;
 }
@@ -6409,7 +6409,7 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireXlibDisplayEXT(VkPhysicalDevice physicalDe
     skip |= parameter_validation_vkAcquireXlibDisplayEXT(my_data->report_data, dpy, display);
     if (!skip) {
         result = my_data->dispatch_table.AcquireXlibDisplayEXT(physicalDevice, dpy, display);
-        validate_result(my_data->report_data, "vkAcquireXlibDisplayEXT", result);
+        validate_result(my_data->report_data, "vkAcquireXlibDisplayEXT", {}, result);
     }
     return result;
 }
@@ -6425,7 +6425,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetRandROutputDisplayEXT(VkPhysicalDevice physica
     skip |= parameter_validation_vkGetRandROutputDisplayEXT(my_data->report_data, dpy, rrOutput, pDisplay);
     if (!skip) {
         result = my_data->dispatch_table.GetRandROutputDisplayEXT(physicalDevice, dpy, rrOutput, pDisplay);
-        validate_result(my_data->report_data, "vkGetRandROutputDisplayEXT", result);
+        validate_result(my_data->report_data, "vkGetRandROutputDisplayEXT", {}, result);
     }
     return result;
 }
@@ -6447,7 +6447,7 @@ VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectTagEXT(VkDevice device, VkDeb
     if (!skip) {
         if (my_data->dispatch_table.DebugMarkerSetObjectTagEXT) {
             result = my_data->dispatch_table.DebugMarkerSetObjectTagEXT(device, pTagInfo);
-            validate_result(my_data->report_data, "vkDebugMarkerSetObjectTagEXT", result);
+            validate_result(my_data->report_data, "vkDebugMarkerSetObjectTagEXT", {}, result);
         } else {
             result = VK_SUCCESS;
         }
@@ -6470,7 +6470,7 @@ VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectNameEXT(VkDevice device, VkDe
     if (!skip) {
         if (my_data->dispatch_table.DebugMarkerSetObjectNameEXT) {
             result = my_data->dispatch_table.DebugMarkerSetObjectNameEXT(device, pNameInfo);
-            validate_result(my_data->report_data, "vkDebugMarkerSetObjectNameEXT", result);
+            validate_result(my_data->report_data, "vkDebugMarkerSetObjectNameEXT", {}, result);
         } else {
             result = VK_SUCCESS;
         }
@@ -6523,7 +6523,7 @@ VKAPI_ATTR VkResult VKAPI_CALL ReleaseDisplayEXT(VkPhysicalDevice physicalDevice
 #endif
     if (!skip) {
         result = my_data->dispatch_table.ReleaseDisplayEXT(physicalDevice, display);
-        validate_result(my_data->report_data, "vkGetRandROutputDisplayEXT", result);
+        validate_result(my_data->report_data, "vkGetRandROutputDisplayEXT", {}, result);
     }
     return result;
 }
@@ -6565,7 +6565,7 @@ VKAPI_ATTR VkResult VKAPI_CALL DisplayPowerControlEXT(VkDevice device, VkDisplay
     if (!skip) {
         if (my_data->dispatch_table.DisplayPowerControlEXT) {
             result = my_data->dispatch_table.DisplayPowerControlEXT(device, display, pDisplayPowerInfo);
-            validate_result(my_data->report_data, "vkDisplayPowerControlEXT", result);
+            validate_result(my_data->report_data, "vkDisplayPowerControlEXT", {}, result);
         } else {
             result = VK_SUCCESS;
         }
@@ -6589,7 +6589,7 @@ VKAPI_ATTR VkResult VKAPI_CALL RegisterDeviceEventEXT(VkDevice device, const VkD
     if (!skip) {
         if (my_data->dispatch_table.RegisterDeviceEventEXT) {
             result = my_data->dispatch_table.RegisterDeviceEventEXT(device, pDeviceEventInfo, pAllocator, pFence);
-            validate_result(my_data->report_data, "vkRegisterDeviceEventEXT", result);
+            validate_result(my_data->report_data, "vkRegisterDeviceEventEXT", {}, result);
         } else {
             result = VK_SUCCESS;
         }
@@ -6614,7 +6614,7 @@ VKAPI_ATTR VkResult VKAPI_CALL RegisterDisplayEventEXT(VkDevice device, VkDispla
     if (!skip) {
         if (my_data->dispatch_table.RegisterDisplayEventEXT) {
             result = my_data->dispatch_table.RegisterDisplayEventEXT(device, display, pDisplayEventInfo, pAllocator, pFence);
-            validate_result(my_data->report_data, "vkRegisterDisplayEventEXT", result);
+            validate_result(my_data->report_data, "vkRegisterDisplayEventEXT", {}, result);
         } else {
             result = VK_SUCCESS;
         }
@@ -6638,7 +6638,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainCounterEXT(VkDevice device, VkSwapcha
     if (!skip) {
         if (my_data->dispatch_table.GetSwapchainCounterEXT) {
             result = my_data->dispatch_table.GetSwapchainCounterEXT(device, swapchain, counter, pCounterValue);
-            validate_result(my_data->report_data, "vkGetSwapchainCounterEXT", result);
+            validate_result(my_data->report_data, "vkGetSwapchainCounterEXT", {}, result);
         } else {
             result = VK_SUCCESS;
         }
@@ -6694,7 +6694,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilities2EXT(VkPhysic
     skip |= parameter_validation_vkGetPhysicalDeviceSurfaceCapabilities2EXT(my_data->report_data, surface, pSurfaceCapabilities);
     if (!skip) {
         result = my_data->dispatch_table.GetPhysicalDeviceSurfaceCapabilities2EXT(physicalDevice, surface, pSurfaceCapabilities);
-        validate_result(my_data->report_data, "vkGetPhysicalDeviceSurfaceCapabilities2EXT", result);
+        validate_result(my_data->report_data, "vkGetPhysicalDeviceSurfaceCapabilities2EXT", {}, result);
     }
     return result;
 }
@@ -6738,7 +6738,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceExternalImageFormatPropertiesNV(
         result = my_data->dispatch_table.GetPhysicalDeviceExternalImageFormatPropertiesNV(
             physicalDevice, format, type, tiling, usage, flags, externalHandleType, pExternalImageFormatProperties);
 
-        validate_result(my_data->report_data, "vkGetPhysicalDeviceExternalImageFormatPropertiesNV", result);
+        validate_result(my_data->report_data, "vkGetPhysicalDeviceExternalImageFormatPropertiesNV", {}, result);
     }
 
     return result;
@@ -6809,7 +6809,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateIndirectCommandsLayoutNVX(VkDevice device,
                                                                    pIndirectCommandsLayout);
     if (!skip) {
         result = my_data->dispatch_table.CreateIndirectCommandsLayoutNVX(device, pCreateInfo, pAllocator, pIndirectCommandsLayout);
-        validate_result(my_data->report_data, "vkCreateIndirectCommandsLayoutNVX", result);
+        validate_result(my_data->report_data, "vkCreateIndirectCommandsLayoutNVX", {}, result);
     }
     return result;
 }
@@ -6840,7 +6840,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateObjectTableNVX(VkDevice device, const VkObj
     skip |= parameter_validation_vkCreateObjectTableNVX(my_data->report_data, pCreateInfo, pAllocator, pObjectTable);
     if (!skip) {
         result = my_data->dispatch_table.CreateObjectTableNVX(device, pCreateInfo, pAllocator, pObjectTable);
-        validate_result(my_data->report_data, "vkCreateObjectTableNVX", result);
+        validate_result(my_data->report_data, "vkCreateObjectTableNVX", {}, result);
     }
     return result;
 }
@@ -6873,7 +6873,7 @@ VKAPI_ATTR VkResult VKAPI_CALL RegisterObjectsNVX(VkDevice device, VkObjectTable
                                                       pObjectIndices);
     if (!skip) {
         result = my_data->dispatch_table.RegisterObjectsNVX(device, objectTable, objectCount, ppObjectTableEntries, pObjectIndices);
-        validate_result(my_data->report_data, "vkRegisterObjectsNVX", result);
+        validate_result(my_data->report_data, "vkRegisterObjectsNVX", {}, result);
     }
     return result;
 }
@@ -6890,7 +6890,7 @@ VKAPI_ATTR VkResult VKAPI_CALL UnregisterObjectsNVX(VkDevice device, VkObjectTab
                                                         pObjectIndices);
     if (!skip) {
         result = my_data->dispatch_table.UnregisterObjectsNVX(device, objectTable, objectCount, pObjectEntryTypes, pObjectIndices);
-        validate_result(my_data->report_data, "vkUnregisterObjectsNVX", result);
+        validate_result(my_data->report_data, "vkUnregisterObjectsNVX", {}, result);
     }
     return result;
 }
