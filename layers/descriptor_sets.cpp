@@ -331,7 +331,7 @@ cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const V
                         descriptors_.emplace_back(new SamplerDescriptor(immut_sampler + di));
                         some_update_ = true;  // Immutable samplers are updated at creation
                     } else
-                        descriptors_.emplace_back(new SamplerDescriptor());
+                        descriptors_.emplace_back(new SamplerDescriptor(nullptr));
                 }
                 break;
             }
@@ -342,7 +342,7 @@ cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const V
                         descriptors_.emplace_back(new ImageSamplerDescriptor(immut + di));
                         some_update_ = true;  // Immutable samplers are updated at creation
                     } else
-                        descriptors_.emplace_back(new ImageSamplerDescriptor());
+                        descriptors_.emplace_back(new ImageSamplerDescriptor(nullptr));
                 }
                 break;
             }
@@ -742,11 +742,6 @@ void cvdescriptorset::DescriptorSet::BindCommandBuffer(GLOBAL_CB_NODE *cb_node,
     }
 }
 
-cvdescriptorset::SamplerDescriptor::SamplerDescriptor() : sampler_(VK_NULL_HANDLE), immutable_(false) {
-    updated = false;
-    descriptor_class = PlainSampler;
-};
-
 cvdescriptorset::SamplerDescriptor::SamplerDescriptor(const VkSampler *immut) : sampler_(VK_NULL_HANDLE), immutable_(false) {
     updated = false;
     descriptor_class = PlainSampler;
@@ -951,14 +946,8 @@ void cvdescriptorset::SamplerDescriptor::BindCommandBuffer(const layer_data *dev
     }
 }
 
-cvdescriptorset::ImageSamplerDescriptor::ImageSamplerDescriptor()
-    : sampler_(VK_NULL_HANDLE), immutable_(false), image_view_(VK_NULL_HANDLE), image_layout_(VK_IMAGE_LAYOUT_UNDEFINED) {
-    updated = false;
-    descriptor_class = ImageSampler;
-}
-
 cvdescriptorset::ImageSamplerDescriptor::ImageSamplerDescriptor(const VkSampler *immut)
-    : sampler_(VK_NULL_HANDLE), immutable_(true), image_view_(VK_NULL_HANDLE), image_layout_(VK_IMAGE_LAYOUT_UNDEFINED) {
+    : sampler_(VK_NULL_HANDLE), immutable_(false), image_view_(VK_NULL_HANDLE), image_layout_(VK_IMAGE_LAYOUT_UNDEFINED) {
     updated = false;
     descriptor_class = ImageSampler;
     if (immut) {
