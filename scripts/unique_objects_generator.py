@@ -599,7 +599,7 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
     #
     # Clean up local declarations
     def cleanUpLocalDeclarations(self, indent, prefix, name, len, index, process_pnext):
-        cleanup = '%sif (local_%s%s)\n' % (indent, prefix, name)
+        cleanup = '%sif (local_%s%s) {\n' % (indent, prefix, name)
         if len is not None:
             if process_pnext:
                 cleanup += '%s    for (uint32_t %s = 0; %s < %s%s; ++%s) {\n' % (indent, index, index, prefix, len, index)
@@ -610,6 +610,7 @@ class UniqueObjectsOutputGenerator(OutputGenerator):
             if process_pnext:
                 cleanup += '%s    FreeUnwrappedExtensionStructs(const_cast<void *>(local_%s%s->pNext));\n' % (indent, prefix, name)
             cleanup += '%s    delete local_%s%s;\n' % (indent, prefix, name)
+        cleanup += "%s}\n" % (indent)
         return cleanup
     #
     # Output UO code for a single NDO (ndo_count is NULL) or a counted list of NDOs
