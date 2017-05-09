@@ -434,13 +434,13 @@ struct Demo {
     }
 
     void draw() {
-        // Ensure no more than FRAME_LAG presentations are outstanding
+        // Ensure no more than FRAME_LAG renderings are outstanding
         device.waitForFences(1, &fences[frame_index], VK_TRUE, UINT64_MAX);
         device.resetFences(1, &fences[frame_index]);
 
         // Get the index of the next available swapchain image:
-        auto result = device.acquireNextImageKHR(swapchain, UINT64_MAX, image_acquired_semaphores[frame_index], fences[frame_index],
-                                                 &current_buffer);
+        auto result = device.acquireNextImageKHR(swapchain, UINT64_MAX, image_acquired_semaphores[frame_index],
+                                                 vk::Fence(), &current_buffer);
         if (result == vk::Result::eErrorOutOfDateKHR) {
             // swapchain is out of date (e.g. the window was resized) and
             // must be recreated:
@@ -471,7 +471,7 @@ struct Demo {
                                      .setSignalSemaphoreCount(1)
                                      .setPSignalSemaphores(&draw_complete_semaphores[frame_index]);
 
-        result = graphics_queue.submit(1, &submit_info, vk::Fence());
+        result = graphics_queue.submit(1, &submit_info, fences[frame_index]);
         VERIFY(result == vk::Result::eSuccess);
 
         if (separate_present_queue) {

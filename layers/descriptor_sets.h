@@ -193,7 +193,6 @@ bool ValidateImageUpdate(VkImageView, VkImageLayout, VkDescriptorType, const cor
 
 class SamplerDescriptor : public Descriptor {
    public:
-    SamplerDescriptor();
     SamplerDescriptor(const VkSampler *);
     void WriteUpdate(const VkWriteDescriptorSet *, const uint32_t) override;
     void CopyUpdate(const Descriptor *) override;
@@ -209,7 +208,6 @@ class SamplerDescriptor : public Descriptor {
 
 class ImageSamplerDescriptor : public Descriptor {
    public:
-    ImageSamplerDescriptor();
     ImageSamplerDescriptor(const VkSampler *);
     void WriteUpdate(const VkWriteDescriptorSet *, const uint32_t) override;
     void CopyUpdate(const Descriptor *) override;

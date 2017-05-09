@@ -50,6 +50,7 @@
 
 #include "parameter_name.h"
 #include "parameter_validation.h"
+#include "device_extensions.h"
 
 namespace parameter_validation {
 
@@ -64,32 +65,9 @@ struct instance_layer_data {
     uint32_t num_tmp_callbacks = 0;
     VkDebugReportCallbackCreateInfoEXT *tmp_dbg_create_infos = nullptr;
     VkDebugReportCallbackEXT *tmp_callbacks = nullptr;
-    instance_extension_enables extensions = {};
+    InstanceExtensions extensions = {};
 
     VkLayerInstanceDispatchTable dispatch_table = {};
-};
-
-struct device_extension_enables {
-    bool khr_swapchain_enabled;
-    bool khr_display_swapchain_enabled;
-    bool khr_maintenance1;
-    bool khr_push_descriptor;
-    bool khr_descriptor_update_template;
-    bool khx_device_group;
-    bool khx_external_memory_fd;
-    bool khx_external_memory_win32;
-    bool khx_external_semaphore_fd;
-    bool khx_external_semaphore_win32;
-    bool ext_debug_marker;
-    bool ext_discard_rectangles;
-    bool ext_display_control;
-    bool amd_draw_indirect_count;
-    bool amd_negative_viewport_height;
-    bool nv_clip_space_w_scaling;
-    bool nv_external_memory;
-    bool nv_external_memory_win32;
-    bool nvx_device_generated_commands;
-    bool incremental_present;
 };
 
 struct layer_data {
@@ -99,9 +77,7 @@ struct layer_data {
     VkPhysicalDeviceLimits device_limits = {};
     VkPhysicalDeviceFeatures physical_device_features = {};
     VkPhysicalDevice physical_device = VK_NULL_HANDLE;
-    device_extension_enables enables;
-
-    layer_data() { memset(&enables, 0, sizeof(device_extension_enables)); }
+    DeviceExtensions enables;
 
     VkLayerDispatchTable dispatch_table = {};
 };
@@ -1300,8 +1276,6 @@ static bool validate_queue_family_indices(layer_data *device_data, const char *f
     return skip;
 }
 
-static void CheckInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateInfo, instance_layer_data *instance_data);
-
 VKAPI_ATTR VkResult VKAPI_CALL CreateInstance(const VkInstanceCreateInfo *pCreateInfo, const VkAllocationCallbacks *pAllocator,
                                               VkInstance *pInstance) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
@@ -1348,7 +1322,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateInstance(const VkInstanceCreateInfo *pCreat
         }
 
         init_parameter_validation(my_instance_data, pAllocator);
-        CheckInstanceRegisterExtensions(pCreateInfo, my_instance_data);
+        my_instance_data->extensions.InitFromInstanceCreateInfo(pCreateInfo);
 
         // Ordinarily we'd check these before calling down the chain, but none of the layer
         // support is in place until now, if we survive we can report the issue now.
@@ -1574,113 +1548,6 @@ static void validateDeviceCreateInfo(VkPhysicalDevice physicalDevice, const VkDe
     }
 }
 
-static void CheckInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateInfo, instance_layer_data *instance_data) {
-    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-        auto name = pCreateInfo->ppEnabledExtensionNames[i];
-
-        if (strcmp(name, VK_KHR_SURFACE_EXTENSION_NAME) == 0) {
-            instance_data->extensions.surface_enabled = true;
-#ifdef VK_USE_PLATFORM_XLIB_KHR
-        } else if (strcmp(name, VK_KHR_XLIB_SURFACE_EXTENSION_NAME) == 0) {
-            instance_data->extensions.xlib_enabled = true;
-#endif
-#ifdef VK_USE_PLATFORM_XCB_KHR
-        } else if (strcmp(name, VK_KHR_XCB_SURFACE_EXTENSION_NAME) == 0) {
-            instance_data->extensions.xcb_enabled = true;
-#endif
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
-        } else if (strcmp(name, VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME) == 0) {
-            instance_data->extensions.wayland_enabled = true;
-#endif
-#ifdef VK_USE_PLATFORM_MIR_KHR
-        } else if (strcmp(name, VK_KHR_MIR_SURFACE_EXTENSION_NAME) == 0) {
-            instance_data->extensions.mir_enabled = true;
-#endif
-#ifdef VK_USE_PLATFORM_ANDROID_KHR
-        } else if (strcmp(name, VK_KHR_ANDROID_SURFACE_EXTENSION_NAME) == 0) {
-            instance_data->extensions.android_enabled = true;
-#endif
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-        } else if (strcmp(name, VK_KHR_WIN32_SURFACE_EXTENSION_NAME) == 0) {
-            instance_data->extensions.win32_enabled = true;
-#endif
-        } else if (strcmp(name, VK_KHR_DISPLAY_EXTENSION_NAME) == 0) {
-            instance_data->extensions.display_enabled = true;
-        } else if (strcmp(name, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME) == 0) {
-            instance_data->extensions.khr_get_phys_dev_properties2_enabled = true;
-        } else if (strcmp(name, VK_KHX_DEVICE_GROUP_CREATION_EXTENSION_NAME) == 0) {
-            instance_data->extensions.khx_device_group_creation_enabled = true;
-        } else if (strcmp(name, VK_KHX_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME) == 0) {
-            instance_data->extensions.khx_external_memory_capabilities_enabled = true;
-        } else if (strcmp(name, VK_KHX_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME) == 0) {
-            instance_data->extensions.khx_external_semaphore_capabilities_enabled = true;
-        } else if (strcmp(name, VK_NV_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME) == 0) {
-            instance_data->extensions.nv_external_memory_capabilities_enabled = true;
-#ifdef VK_USE_PLATFORM_XLIB_XRANDR_EXT
-        } else if (strcmp(name, VK_EXT_ACQUIRE_XLIB_DISPLAY_EXTENSION_NAME) == 0) {
-            instance_data->extensions.ext_acquire_xlib_display_enabled = true;
-#endif
-        } else if (strcmp(name, VK_EXT_DIRECT_MODE_DISPLAY_EXTENSION_NAME) == 0) {
-            instance_data->extensions.ext_direct_mode_display_enabled = true;
-        } else if (strcmp(name, VK_EXT_DISPLAY_SURFACE_COUNTER_EXTENSION_NAME) == 0) {
-            instance_data->extensions.ext_display_surface_counter_enabled = true;
-        } else if (strcmp(name, VK_NV_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME) == 0) {
-            instance_data->extensions.nv_external_memory_capabilities_enabled = true;
-        }
-    }
-}
-
-static void CheckDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo, VkDevice device) {
-    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
-            device_data->enables.khr_swapchain_enabled = true;
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME) == 0) {
-            device_data->enables.khr_display_swapchain_enabled = true;
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_MAINTENANCE1_EXTENSION_NAME) == 0) {
-            device_data->enables.khr_maintenance1 = true;
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME) == 0) {
-            device_data->enables.khr_push_descriptor = true;
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME) == 0) {
-            device_data->enables.khr_descriptor_update_template = true;
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHX_DEVICE_GROUP_EXTENSION_NAME) == 0) {
-            device_data->enables.khx_device_group = true;
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHX_EXTERNAL_MEMORY_FD_EXTENSION_NAME) == 0) {
-            device_data->enables.khx_external_memory_fd = true;
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHX_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME) == 0) {
-            device_data->enables.khx_external_semaphore_fd = true;
-#ifdef VK_USE_PLATFORM_WIN32_KHX
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHX_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME) == 0) {
-            device_data->enables.khx_external_memory_win32 = true;
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHX_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME) == 0) {
-            device_data->enables.khx_external_semaphore_win32 = true;
-#endif
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_DEBUG_MARKER_EXTENSION_NAME) == 0) {
-            device_data->enables.ext_debug_marker = true;
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_DISCARD_RECTANGLES_EXTENSION_NAME) == 0) {
-            device_data->enables.ext_discard_rectangles = true;
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_DISPLAY_CONTROL_EXTENSION_NAME) == 0) {
-            device_data->enables.ext_display_control = true;
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_AMD_DRAW_INDIRECT_COUNT_EXTENSION_NAME) == 0) {
-            device_data->enables.amd_draw_indirect_count = true;
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_AMD_NEGATIVE_VIEWPORT_HEIGHT_EXTENSION_NAME) == 0) {
-            device_data->enables.amd_negative_viewport_height = true;
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_NV_CLIP_SPACE_W_SCALING_EXTENSION_NAME) == 0) {
-            device_data->enables.nv_clip_space_w_scaling = true;
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_NV_EXTERNAL_MEMORY_EXTENSION_NAME) == 0) {
-            device_data->enables.nv_external_memory = true;
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_NV_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME) == 0) {
-            device_data->enables.nv_external_memory_win32 = true;
-#endif
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_NVX_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME) == 0) {
-            device_data->enables.nvx_device_generated_commands = true;
-        } else if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME) == 0) {
-            device_data->enables.incremental_present = true;
-        }
-    }
-}
-
 void storeCreateDeviceData(VkDevice device, const VkDeviceCreateInfo *pCreateInfo) {
     layer_data *my_device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
 
@@ -1786,7 +1653,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physicalDevice, con
             my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
             layer_init_device_dispatch_table(*pDevice, &my_device_data->dispatch_table, fpGetDeviceProcAddr);
 
-            CheckDeviceRegisterExtensions(pCreateInfo, *pDevice);
+            my_device_data->enables.InitFromDeviceCreateInfo(pCreateInfo);
 
             uint32_t count;
             my_instance_data->dispatch_table.GetPhysicalDeviceQueueFamilyProperties(physicalDevice, &count, nullptr);
@@ -3054,409 +2921,480 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateGraphicsPipelines(VkDevice device, VkPipeli
     if (pCreateInfos != nullptr) {
         for (uint32_t i = 0; i < createInfoCount; ++i) {
             // Validation for parameters excluded from the generated validation code due to a 'noautovalidity' tag in vk.xml
-            if (pCreateInfos[i].pTessellationState == nullptr) {
-                if (pCreateInfos[i].pStages != nullptr) {
-                    // If pStages includes a tessellation control shader stage and a tessellation evaluation shader stage,
-                    // pTessellationState must not be NULL
-                    bool has_control = false;
-                    bool has_eval = false;
-
-                    for (uint32_t stage_index = 0; stage_index < pCreateInfos[i].stageCount; ++stage_index) {
-                        if (pCreateInfos[i].pStages[stage_index].stage == VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT) {
-                            has_control = true;
-                        } else if (pCreateInfos[i].pStages[stage_index].stage == VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT) {
-                            has_eval = true;
-                        }
+            if (pCreateInfos[i].pVertexInputState != nullptr) {
+                auto const &vertex_input_state = pCreateInfos[i].pVertexInputState;
+                for (uint32_t d = 0; d < vertex_input_state->vertexBindingDescriptionCount; ++d) {
+                    auto const &vertex_bind_desc = vertex_input_state->pVertexBindingDescriptions[d];
+                    if (vertex_bind_desc.binding >= device_data->device_limits.maxVertexInputBindings) {
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                        __LINE__, VALIDATION_ERROR_01407, LayerName,
+                                        "vkCreateGraphicsPipelines: parameter "
+                                        "pCreateInfos[%u].pVertexInputState->pVertexBindingDescriptions[%u].binding (%u) is "
+                                        "greater than or equal to VkPhysicalDeviceLimits::maxVertexInputBindings (%u). %s",
+                                        i, d, vertex_bind_desc.binding, device_data->device_limits.maxVertexInputBindings,
+                                        validation_error_map[VALIDATION_ERROR_01407]);
                     }
 
-                    if (has_control && has_eval) {
+                    if (vertex_bind_desc.stride >= device_data->device_limits.maxVertexInputBindingStride) {
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                        __LINE__, VALIDATION_ERROR_01408, LayerName,
+                                        "vkCreateGraphicsPipelines: parameter "
+                                        "pCreateInfos[%u].pVertexInputState->pVertexBindingDescriptions[%u].stride (%u) is greater "
+                                        "than VkPhysicalDeviceLimits::maxVertexInputBindingStride (%u). %s",
+                                        i, d, vertex_bind_desc.stride, device_data->device_limits.maxVertexInputBindingStride,
+                                        validation_error_map[VALIDATION_ERROR_01408]);
+                    }
+                }
+
+                for (uint32_t d = 0; d < vertex_input_state->vertexAttributeDescriptionCount; ++d) {
+                    auto const &vertex_attrib_desc = vertex_input_state->pVertexAttributeDescriptions[d];
+                    if (vertex_attrib_desc.location >= device_data->device_limits.maxVertexInputAttributes) {
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                        __LINE__, VALIDATION_ERROR_01410, LayerName,
+                                        "vkCreateGraphicsPipelines: parameter "
+                                        "pCreateInfos[%u].pVertexInputState->pVertexAttributeDescriptions[%u].location (%u) is "
+                                        "greater than or equal to VkPhysicalDeviceLimits::maxVertexInputAttributes (%u). %s",
+                                        i, d, vertex_attrib_desc.location, device_data->device_limits.maxVertexInputAttributes,
+                                        validation_error_map[VALIDATION_ERROR_01410]);
+                    }
+
+                    if (vertex_attrib_desc.binding >= device_data->device_limits.maxVertexInputBindings) {
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                        __LINE__, VALIDATION_ERROR_01411, LayerName,
+                                        "vkCreateGraphicsPipelines: parameter "
+                                        "pCreateInfos[%u].pVertexInputState->pVertexAttributeDescriptions[%u].binding (%u) is "
+                                        "greater than or equal to VkPhysicalDeviceLimits::maxVertexInputBindings (%u). %s",
+                                        i, d, vertex_attrib_desc.binding, device_data->device_limits.maxVertexInputBindings,
+                                        validation_error_map[VALIDATION_ERROR_01411]);
+                    }
+
+                    if (vertex_attrib_desc.offset > device_data->device_limits.maxVertexInputAttributeOffset) {
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                        __LINE__, VALIDATION_ERROR_01412, LayerName,
+                                        "vkCreateGraphicsPipelines: parameter "
+                                        "pCreateInfos[%u].pVertexInputState->pVertexAttributeDescriptions[%u].offset (%u) is "
+                                        "greater than VkPhysicalDeviceLimits::maxVertexInputAttributeOffset (%u). %s",
+                                        i, d, vertex_attrib_desc.offset, device_data->device_limits.maxVertexInputAttributeOffset,
+                                        validation_error_map[VALIDATION_ERROR_01412]);
+                    }
+                }
+            }
+
+            if (pCreateInfos[i].pStages != nullptr) {
+                bool has_control = false;
+                bool has_eval = false;
+
+                for (uint32_t stage_index = 0; stage_index < pCreateInfos[i].stageCount; ++stage_index) {
+                    if (pCreateInfos[i].pStages[stage_index].stage == VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT) {
+                        has_control = true;
+                    } else if (pCreateInfos[i].pStages[stage_index].stage == VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT) {
+                        has_eval = true;
+                    }
+                }
+
+                // pTessellationState is ignored without both tessellation control and tessellation evaluation shaders stages
+                if (has_control && has_eval) {
+                    if (pCreateInfos[i].pTessellationState == nullptr) {
                         skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
                                         __LINE__, VALIDATION_ERROR_00536, LayerName,
-                                        "vkCreateGraphicsPipelines: if pCreateInfos[%d].pStages includes a tessellation "
-                                        "control shader stage and a tessellation evaluation shader stage, "
+                                        "vkCreateGraphicsPipelines: if pCreateInfos[%d].pStages includes a tessellation control "
+                                        "shader stage and a tessellation evaluation shader stage, "
                                         "pCreateInfos[%d].pTessellationState must not be NULL. %s",
                                         i, i, validation_error_map[VALIDATION_ERROR_00536]);
+                    } else {
+                        skip |= validate_struct_pnext(
+                            report_data, "vkCreateGraphicsPipelines",
+                            ParameterName("pCreateInfos[%i].pTessellationState->pNext", ParameterName::IndexVector{i}), NULL,
+                            pCreateInfos[i].pTessellationState->pNext, 0, NULL, GeneratedHeaderVersion);
+
+                        skip |= validate_reserved_flags(
+                            report_data, "vkCreateGraphicsPipelines",
+                            ParameterName("pCreateInfos[%i].pTessellationState->flags", ParameterName::IndexVector{i}),
+                            pCreateInfos[i].pTessellationState->flags);
+
+                        if (pCreateInfos[i].pTessellationState->sType !=
+                            VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO) {
+                            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                            __LINE__, VALIDATION_ERROR_01427, LayerName,
+                                            "vkCreateGraphicsPipelines: parameter pCreateInfos[%d].pTessellationState->sType must "
+                                            "be VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO. %s",
+                                            i, validation_error_map[VALIDATION_ERROR_01427]);
+                        }
+
+                        if (pCreateInfos[i].pTessellationState->patchControlPoints == 0 ||
+                            pCreateInfos[i].pTessellationState->patchControlPoints >
+                                device_data->device_limits.maxTessellationPatchSize) {
+                            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                            __LINE__, VALIDATION_ERROR_01426, LayerName,
+                                            "vkCreateGraphicsPipelines: invalid parameter "
+                                            "pCreateInfos[%d].pTessellationState->patchControlPoints value %u. patchControlPoints "
+                                            "should be >0 and <=%u. %s",
+                                            i, pCreateInfos[i].pTessellationState->patchControlPoints,
+                                            device_data->device_limits.maxTessellationPatchSize,
+                                            validation_error_map[VALIDATION_ERROR_01426]);
+                        }
                     }
-                }
-            } else {
-                skip |= validate_struct_pnext(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pTessellationState->pNext", ParameterName::IndexVector{i}), NULL,
-                    pCreateInfos[i].pTessellationState->pNext, 0, NULL, GeneratedHeaderVersion);
-
-                skip |= validate_reserved_flags(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pTessellationState->flags", ParameterName::IndexVector{i}),
-                    pCreateInfos[i].pTessellationState->flags);
-
-                if (pCreateInfos[i].pTessellationState->sType != VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO) {
-                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                    __LINE__, VALIDATION_ERROR_00538, LayerName,
-                                    "vkCreateGraphicsPipelines: parameter pCreateInfos[%d].pTessellationState->sType must be "
-                                    "VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO. %s",
-                                    i, validation_error_map[VALIDATION_ERROR_00538]);
                 }
             }
 
-            if (pCreateInfos[i].pViewportState == nullptr) {
-                // If the rasterizerDiscardEnable member of pRasterizationState is VK_FALSE, pViewportState must be a pointer to a
-                // valid VkPipelineViewportStateCreateInfo structure
-                if ((pCreateInfos[i].pRasterizationState != nullptr) &&
-                    (pCreateInfos[i].pRasterizationState->rasterizerDiscardEnable == VK_FALSE)) {
-                    skip |= log_msg(
-                        report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                        VALIDATION_ERROR_02113, LayerName,
-                        "vkCreateGraphicsPipelines: if pCreateInfos[%d].pRasterizationState->rasterizerDiscardEnable is VK_FALSE, "
-                        "pCreateInfos[%d].pViewportState must be a pointer to a valid VkPipelineViewportStateCreateInfo structure. "
-                        "%s",
-                        i, i, validation_error_map[VALIDATION_ERROR_02113]);
-                }
-            } else {
-                if (pCreateInfos[i].pViewportState->scissorCount != pCreateInfos[i].pViewportState->viewportCount) {
+            // pViewportState, pMultisampleState, pDepthStencilState, and pColorBlendState are ignored when
+            // rasterization is disabled
+            if ((pCreateInfos[i].pRasterizationState != nullptr) &&
+                (pCreateInfos[i].pRasterizationState->rasterizerDiscardEnable == VK_FALSE)) {
+                if (pCreateInfos[i].pViewportState == nullptr) {
                     skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                    __LINE__, VALIDATION_ERROR_01434, LayerName,
-                                    "Graphics Pipeline viewport count (%u) must match scissor count (%u). %s",
-                                    pCreateInfos[i].pViewportState->viewportCount, pCreateInfos[i].pViewportState->scissorCount,
-                                    validation_error_map[VALIDATION_ERROR_01434]);
-                }
-
-                skip |=
-                    validate_struct_pnext(report_data, "vkCreateGraphicsPipelines",
-                                          ParameterName("pCreateInfos[%i].pViewportState->pNext", ParameterName::IndexVector{i}),
-                                          NULL, pCreateInfos[i].pViewportState->pNext, 0, NULL, GeneratedHeaderVersion);
-
-                skip |=
-                    validate_reserved_flags(report_data, "vkCreateGraphicsPipelines",
-                                            ParameterName("pCreateInfos[%i].pViewportState->flags", ParameterName::IndexVector{i}),
-                                            pCreateInfos[i].pViewportState->flags);
-
-                if (pCreateInfos[i].pViewportState->sType != VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO) {
-                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                    __LINE__, INVALID_STRUCT_STYPE, LayerName,
-                                    "vkCreateGraphicsPipelines: parameter pCreateInfos[%d].pViewportState->sType must be "
-                                    "VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO",
-                                    i);
-                }
-
-                if (device_data->physical_device_features.multiViewport == false) {
-                    if (pCreateInfos[i].pViewportState->viewportCount != 1) {
-                        skip |=
-                            log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                    __LINE__, VALIDATION_ERROR_01430, LayerName,
-                                    "vkCreateGraphicsPipelines: The multiViewport feature is not enabled, so "
-                                    "pCreateInfos[%d].pViewportState->viewportCount must be 1 but is %d. %s",
-                                    i, pCreateInfos[i].pViewportState->viewportCount, validation_error_map[VALIDATION_ERROR_01430]);
-                    }
-                    if (pCreateInfos[i].pViewportState->scissorCount != 1) {
-                        skip |=
-                            log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                    __LINE__, VALIDATION_ERROR_01431, LayerName,
-                                    "vkCreateGraphicsPipelines: The multiViewport feature is not enabled, so "
-                                    "pCreateInfos[%d].pViewportState->scissorCount must be 1 but is %d. %s",
-                                    i, pCreateInfos[i].pViewportState->scissorCount, validation_error_map[VALIDATION_ERROR_01431]);
-                    }
+                                    __LINE__, VALIDATION_ERROR_02113, LayerName,
+                                    "vkCreateGraphicsPipelines: if pCreateInfos[%d].pRasterizationState->rasterizerDiscardEnable "
+                                    "is VK_FALSE, pCreateInfos[%d].pViewportState must be a pointer to a valid "
+                                    "VkPipelineViewportStateCreateInfo structure. %s",
+                                    i, i, validation_error_map[VALIDATION_ERROR_02113]);
                 } else {
-                    if ((pCreateInfos[i].pViewportState->viewportCount < 1) ||
-                        (pCreateInfos[i].pViewportState->viewportCount > device_data->device_limits.maxViewports)) {
+                    if (pCreateInfos[i].pViewportState->scissorCount != pCreateInfos[i].pViewportState->viewportCount) {
                         skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                        __LINE__, VALIDATION_ERROR_01432, LayerName,
-                                        "vkCreateGraphicsPipelines: multiViewport feature is enabled; "
-                                        "pCreateInfos[%d].pViewportState->viewportCount is %d but must be between 1 and "
-                                        "maxViewports (%d), inclusive. %s",
-                                        i, pCreateInfos[i].pViewportState->viewportCount, device_data->device_limits.maxViewports,
-                                        validation_error_map[VALIDATION_ERROR_01432]);
+                                        __LINE__, VALIDATION_ERROR_01434, LayerName,
+                                        "Graphics Pipeline viewport count (%u) must match scissor count (%u). %s",
+                                        pCreateInfos[i].pViewportState->viewportCount, pCreateInfos[i].pViewportState->scissorCount,
+                                        validation_error_map[VALIDATION_ERROR_01434]);
                     }
-                    if ((pCreateInfos[i].pViewportState->scissorCount < 1) ||
-                        (pCreateInfos[i].pViewportState->scissorCount > device_data->device_limits.maxViewports)) {
+
+                    skip |= validate_struct_pnext(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pViewportState->pNext", ParameterName::IndexVector{i}), NULL,
+                        pCreateInfos[i].pViewportState->pNext, 0, NULL, GeneratedHeaderVersion);
+
+                    skip |= validate_reserved_flags(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pViewportState->flags", ParameterName::IndexVector{i}),
+                        pCreateInfos[i].pViewportState->flags);
+
+                    if (pCreateInfos[i].pViewportState->sType != VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO) {
                         skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                        __LINE__, VALIDATION_ERROR_01433, LayerName,
-                                        "vkCreateGraphicsPipelines: multiViewport feature is enabled; "
-                                        "pCreateInfos[%d].pViewportState->scissorCount is %d but must be between 1 and "
-                                        "maxViewports (%d), inclusive. %s",
-                                        i, pCreateInfos[i].pViewportState->scissorCount, device_data->device_limits.maxViewports,
-                                        validation_error_map[VALIDATION_ERROR_01433]);
+                                        __LINE__, INVALID_STRUCT_STYPE, LayerName,
+                                        "vkCreateGraphicsPipelines: parameter pCreateInfos[%d].pViewportState->sType must be "
+                                        "VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO",
+                                        i);
                     }
-                }
 
-                if (pCreateInfos[i].pDynamicState != nullptr) {
-                    bool has_dynamic_viewport = false;
-                    bool has_dynamic_scissor = false;
-
-                    for (uint32_t state_index = 0; state_index < pCreateInfos[i].pDynamicState->dynamicStateCount; ++state_index) {
-                        if (pCreateInfos[i].pDynamicState->pDynamicStates[state_index] == VK_DYNAMIC_STATE_VIEWPORT) {
-                            has_dynamic_viewport = true;
-                        } else if (pCreateInfos[i].pDynamicState->pDynamicStates[state_index] == VK_DYNAMIC_STATE_SCISSOR) {
-                            has_dynamic_scissor = true;
+                    if (device_data->physical_device_features.multiViewport == false) {
+                        if (pCreateInfos[i].pViewportState->viewportCount != 1) {
+                            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                            __LINE__, VALIDATION_ERROR_01430, LayerName,
+                                            "vkCreateGraphicsPipelines: The multiViewport feature is not enabled, so "
+                                            "pCreateInfos[%d].pViewportState->viewportCount must be 1 but is %d. %s",
+                                            i, pCreateInfos[i].pViewportState->viewportCount,
+                                            validation_error_map[VALIDATION_ERROR_01430]);
+                        }
+                        if (pCreateInfos[i].pViewportState->scissorCount != 1) {
+                            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                            __LINE__, VALIDATION_ERROR_01431, LayerName,
+                                            "vkCreateGraphicsPipelines: The multiViewport feature is not enabled, so "
+                                            "pCreateInfos[%d].pViewportState->scissorCount must be 1 but is %d. %s",
+                                            i, pCreateInfos[i].pViewportState->scissorCount,
+                                            validation_error_map[VALIDATION_ERROR_01431]);
+                        }
+                    } else {
+                        if ((pCreateInfos[i].pViewportState->viewportCount < 1) ||
+                            (pCreateInfos[i].pViewportState->viewportCount > device_data->device_limits.maxViewports)) {
+                            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                            __LINE__, VALIDATION_ERROR_01432, LayerName,
+                                            "vkCreateGraphicsPipelines: multiViewport feature is enabled; "
+                                            "pCreateInfos[%d].pViewportState->viewportCount is %d but must be between 1 and "
+                                            "maxViewports (%d), inclusive. %s",
+                                            i, pCreateInfos[i].pViewportState->viewportCount,
+                                            device_data->device_limits.maxViewports, validation_error_map[VALIDATION_ERROR_01432]);
+                        }
+                        if ((pCreateInfos[i].pViewportState->scissorCount < 1) ||
+                            (pCreateInfos[i].pViewportState->scissorCount > device_data->device_limits.maxViewports)) {
+                            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                            __LINE__, VALIDATION_ERROR_01433, LayerName,
+                                            "vkCreateGraphicsPipelines: multiViewport feature is enabled; "
+                                            "pCreateInfos[%d].pViewportState->scissorCount is %d but must be between 1 and "
+                                            "maxViewports (%d), inclusive. %s",
+                                            i, pCreateInfos[i].pViewportState->scissorCount,
+                                            device_data->device_limits.maxViewports, validation_error_map[VALIDATION_ERROR_01433]);
                         }
                     }
 
-                    // If no element of the pDynamicStates member of pDynamicState is VK_DYNAMIC_STATE_VIEWPORT, the pViewports
-                    // member of pViewportState must be a pointer to an array of pViewportState->viewportCount VkViewport structures
-                    if (!has_dynamic_viewport && (pCreateInfos[i].pViewportState->pViewports == nullptr)) {
-                        skip |=
-                            log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                    __LINE__, VALIDATION_ERROR_02110, LayerName,
-                                    "vkCreateGraphicsPipelines: if pCreateInfos[%d].pDynamicState->pDynamicStates does not contain "
-                                    "VK_DYNAMIC_STATE_VIEWPORT, pCreateInfos[%d].pViewportState->pViewports must not be NULL. %s",
-                                    i, i, validation_error_map[VALIDATION_ERROR_02110]);
-                    }
+                    if (pCreateInfos[i].pDynamicState != nullptr) {
+                        bool has_dynamic_viewport = false;
+                        bool has_dynamic_scissor = false;
 
-                    // If no element of the pDynamicStates member of pDynamicState is VK_DYNAMIC_STATE_SCISSOR, the pScissors member
-                    // of pViewportState must be a pointer to an array of pViewportState->scissorCount VkRect2D structures
-                    if (!has_dynamic_scissor && (pCreateInfos[i].pViewportState->pScissors == nullptr)) {
-                        skip |=
-                            log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                    __LINE__, VALIDATION_ERROR_02111, LayerName,
-                                    "vkCreateGraphicsPipelines: if pCreateInfos[%d].pDynamicState->pDynamicStates does not contain "
-                                    "VK_DYNAMIC_STATE_SCISSOR, pCreateInfos[%d].pViewportState->pScissors must not be NULL. %s",
-                                    i, i, validation_error_map[VALIDATION_ERROR_02111]);
+                        for (uint32_t state_index = 0; state_index < pCreateInfos[i].pDynamicState->dynamicStateCount;
+                             ++state_index) {
+                            if (pCreateInfos[i].pDynamicState->pDynamicStates[state_index] == VK_DYNAMIC_STATE_VIEWPORT) {
+                                has_dynamic_viewport = true;
+                            } else if (pCreateInfos[i].pDynamicState->pDynamicStates[state_index] == VK_DYNAMIC_STATE_SCISSOR) {
+                                has_dynamic_scissor = true;
+                            }
+                        }
+
+                        // If no element of the pDynamicStates member of pDynamicState is VK_DYNAMIC_STATE_VIEWPORT, the pViewports
+                        // member of pViewportState must be a pointer to an array of pViewportState->viewportCount VkViewport
+                        // structures
+                        if (!has_dynamic_viewport && (pCreateInfos[i].pViewportState->pViewports == nullptr)) {
+                            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                            __LINE__, VALIDATION_ERROR_02110, LayerName,
+                                            "vkCreateGraphicsPipelines: if pCreateInfos[%d].pDynamicState->pDynamicStates does not "
+                                            "contain VK_DYNAMIC_STATE_VIEWPORT, pCreateInfos[%d].pViewportState->pViewports must "
+                                            "not be NULL. %s",
+                                            i, i, validation_error_map[VALIDATION_ERROR_02110]);
+                        }
+
+                        // If no element of the pDynamicStates member of pDynamicState is VK_DYNAMIC_STATE_SCISSOR, the pScissors
+                        // member
+                        // of pViewportState must be a pointer to an array of pViewportState->scissorCount VkRect2D structures
+                        if (!has_dynamic_scissor && (pCreateInfos[i].pViewportState->pScissors == nullptr)) {
+                            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                            __LINE__, VALIDATION_ERROR_02111, LayerName,
+                                            "vkCreateGraphicsPipelines: if pCreateInfos[%d].pDynamicState->pDynamicStates does not "
+                                            "contain VK_DYNAMIC_STATE_SCISSOR, pCreateInfos[%d].pViewportState->pScissors must not "
+                                            "be NULL. %s",
+                                            i, i, validation_error_map[VALIDATION_ERROR_02111]);
+                        }
                     }
                 }
-            }
 
-            if (pCreateInfos[i].pMultisampleState == nullptr) {
-                // If the rasterizerDiscardEnable member of pRasterizationState is VK_FALSE, pMultisampleState must be a pointer to
-                // a valid VkPipelineMultisampleStateCreateInfo structure
-                if ((pCreateInfos[i].pRasterizationState != nullptr) &&
-                    pCreateInfos[i].pRasterizationState->rasterizerDiscardEnable == VK_FALSE) {
+                if (pCreateInfos[i].pMultisampleState == nullptr) {
                     skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
                                     __LINE__, VALIDATION_ERROR_02114, LayerName,
-                                    "vkCreateGraphicsPipelines: if "
-                                    "pCreateInfos[%d].pRasterizationState->rasterizerDiscardEnable is "
-                                    "VK_FALSE, pCreateInfos[%d].pMultisampleState must not be NULL. %s",
+                                    "vkCreateGraphicsPipelines: if pCreateInfos[%d].pRasterizationState->rasterizerDiscardEnable "
+                                    "is VK_FALSE, pCreateInfos[%d].pMultisampleState must not be NULL. %s",
                                     i, i, validation_error_map[VALIDATION_ERROR_02114]);
-                }
-            } else {
-                skip |=
-                    validate_struct_pnext(report_data, "vkCreateGraphicsPipelines",
-                                          ParameterName("pCreateInfos[%i].pMultisampleState->pNext", ParameterName::IndexVector{i}),
-                                          NULL, pCreateInfos[i].pMultisampleState->pNext, 0, NULL, GeneratedHeaderVersion);
+                } else {
+                    skip |= validate_struct_pnext(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pMultisampleState->pNext", ParameterName::IndexVector{i}), NULL,
+                        pCreateInfos[i].pMultisampleState->pNext, 0, NULL, GeneratedHeaderVersion);
 
-                skip |= validate_reserved_flags(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pMultisampleState->flags", ParameterName::IndexVector{i}),
-                    pCreateInfos[i].pMultisampleState->flags);
+                    skip |= validate_reserved_flags(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pMultisampleState->flags", ParameterName::IndexVector{i}),
+                        pCreateInfos[i].pMultisampleState->flags);
 
-                skip |= validate_bool32(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pMultisampleState->sampleShadingEnable", ParameterName::IndexVector{i}),
-                    pCreateInfos[i].pMultisampleState->sampleShadingEnable);
+                    skip |= validate_bool32(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pMultisampleState->sampleShadingEnable", ParameterName::IndexVector{i}),
+                        pCreateInfos[i].pMultisampleState->sampleShadingEnable);
 
-                skip |= validate_array(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pMultisampleState->rasterizationSamples", ParameterName::IndexVector{i}),
-                    ParameterName("pCreateInfos[%i].pMultisampleState->pSampleMask", ParameterName::IndexVector{i}),
-                    pCreateInfos[i].pMultisampleState->rasterizationSamples, pCreateInfos[i].pMultisampleState->pSampleMask, true,
-                    false);
+                    skip |= validate_array(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pMultisampleState->rasterizationSamples", ParameterName::IndexVector{i}),
+                        ParameterName("pCreateInfos[%i].pMultisampleState->pSampleMask", ParameterName::IndexVector{i}),
+                        pCreateInfos[i].pMultisampleState->rasterizationSamples, pCreateInfos[i].pMultisampleState->pSampleMask,
+                        true, false);
 
-                skip |= validate_bool32(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pMultisampleState->alphaToCoverageEnable", ParameterName::IndexVector{i}),
-                    pCreateInfos[i].pMultisampleState->alphaToCoverageEnable);
+                    skip |= validate_bool32(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pMultisampleState->alphaToCoverageEnable", ParameterName::IndexVector{i}),
+                        pCreateInfos[i].pMultisampleState->alphaToCoverageEnable);
 
-                skip |= validate_bool32(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pMultisampleState->alphaToOneEnable", ParameterName::IndexVector{i}),
-                    pCreateInfos[i].pMultisampleState->alphaToOneEnable);
+                    skip |= validate_bool32(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pMultisampleState->alphaToOneEnable", ParameterName::IndexVector{i}),
+                        pCreateInfos[i].pMultisampleState->alphaToOneEnable);
 
-                if (pCreateInfos[i].pMultisampleState->sType != VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO) {
-                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                    __LINE__, INVALID_STRUCT_STYPE, LayerName,
-                                    "vkCreateGraphicsPipelines: parameter pCreateInfos[%d].pMultisampleState->sType must be "
-                                    "VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO",
-                                    i);
-                }
-            }
-
-            // TODO: Conditional NULL check based on rasterizerDiscardEnable and subpass
-            if (pCreateInfos[i].pDepthStencilState != nullptr) {
-                skip |= validate_struct_pnext(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pDepthStencilState->pNext", ParameterName::IndexVector{i}), NULL,
-                    pCreateInfos[i].pDepthStencilState->pNext, 0, NULL, GeneratedHeaderVersion);
-
-                skip |= validate_reserved_flags(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pDepthStencilState->flags", ParameterName::IndexVector{i}),
-                    pCreateInfos[i].pDepthStencilState->flags);
-
-                skip |= validate_bool32(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pDepthStencilState->depthTestEnable", ParameterName::IndexVector{i}),
-                    pCreateInfos[i].pDepthStencilState->depthTestEnable);
-
-                skip |= validate_bool32(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pDepthStencilState->depthWriteEnable", ParameterName::IndexVector{i}),
-                    pCreateInfos[i].pDepthStencilState->depthWriteEnable);
-
-                skip |= validate_ranged_enum(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pDepthStencilState->depthCompareOp", ParameterName::IndexVector{i}),
-                    "VkCompareOp", VK_COMPARE_OP_BEGIN_RANGE, VK_COMPARE_OP_END_RANGE,
-                    pCreateInfos[i].pDepthStencilState->depthCompareOp);
-
-                skip |= validate_bool32(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pDepthStencilState->depthBoundsTestEnable", ParameterName::IndexVector{i}),
-                    pCreateInfos[i].pDepthStencilState->depthBoundsTestEnable);
-
-                skip |= validate_bool32(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pDepthStencilState->stencilTestEnable", ParameterName::IndexVector{i}),
-                    pCreateInfos[i].pDepthStencilState->stencilTestEnable);
-
-                skip |= validate_ranged_enum(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pDepthStencilState->front.failOp", ParameterName::IndexVector{i}),
-                    "VkStencilOp", VK_STENCIL_OP_BEGIN_RANGE, VK_STENCIL_OP_END_RANGE,
-                    pCreateInfos[i].pDepthStencilState->front.failOp);
-
-                skip |= validate_ranged_enum(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pDepthStencilState->front.passOp", ParameterName::IndexVector{i}),
-                    "VkStencilOp", VK_STENCIL_OP_BEGIN_RANGE, VK_STENCIL_OP_END_RANGE,
-                    pCreateInfos[i].pDepthStencilState->front.passOp);
-
-                skip |= validate_ranged_enum(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pDepthStencilState->front.depthFailOp", ParameterName::IndexVector{i}),
-                    "VkStencilOp", VK_STENCIL_OP_BEGIN_RANGE, VK_STENCIL_OP_END_RANGE,
-                    pCreateInfos[i].pDepthStencilState->front.depthFailOp);
-
-                skip |= validate_ranged_enum(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pDepthStencilState->front.compareOp", ParameterName::IndexVector{i}),
-                    "VkCompareOp", VK_COMPARE_OP_BEGIN_RANGE, VK_COMPARE_OP_END_RANGE,
-                    pCreateInfos[i].pDepthStencilState->front.compareOp);
-
-                skip |= validate_ranged_enum(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pDepthStencilState->back.failOp", ParameterName::IndexVector{i}), "VkStencilOp",
-                    VK_STENCIL_OP_BEGIN_RANGE, VK_STENCIL_OP_END_RANGE, pCreateInfos[i].pDepthStencilState->back.failOp);
-
-                skip |= validate_ranged_enum(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pDepthStencilState->back.passOp", ParameterName::IndexVector{i}), "VkStencilOp",
-                    VK_STENCIL_OP_BEGIN_RANGE, VK_STENCIL_OP_END_RANGE, pCreateInfos[i].pDepthStencilState->back.passOp);
-
-                skip |= validate_ranged_enum(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pDepthStencilState->back.depthFailOp", ParameterName::IndexVector{i}),
-                    "VkStencilOp", VK_STENCIL_OP_BEGIN_RANGE, VK_STENCIL_OP_END_RANGE,
-                    pCreateInfos[i].pDepthStencilState->back.depthFailOp);
-
-                skip |= validate_ranged_enum(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pDepthStencilState->back.compareOp", ParameterName::IndexVector{i}),
-                    "VkCompareOp", VK_COMPARE_OP_BEGIN_RANGE, VK_COMPARE_OP_END_RANGE,
-                    pCreateInfos[i].pDepthStencilState->back.compareOp);
-
-                if (pCreateInfos[i].pDepthStencilState->sType != VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO) {
-                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                    __LINE__, INVALID_STRUCT_STYPE, LayerName,
-                                    "vkCreateGraphicsPipelines: parameter pCreateInfos[%d].pDepthStencilState->sType must be "
-                                    "VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO",
-                                    i);
-                }
-            }
-
-            // TODO: Conditional NULL check based on rasterizerDiscardEnable and subpass
-            if (pCreateInfos[i].pColorBlendState != nullptr) {
-                skip |=
-                    validate_struct_pnext(report_data, "vkCreateGraphicsPipelines",
-                                          ParameterName("pCreateInfos[%i].pColorBlendState->pNext", ParameterName::IndexVector{i}),
-                                          NULL, pCreateInfos[i].pColorBlendState->pNext, 0, NULL, GeneratedHeaderVersion);
-
-                skip |= validate_reserved_flags(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pColorBlendState->flags", ParameterName::IndexVector{i}),
-                    pCreateInfos[i].pColorBlendState->flags);
-
-                skip |= validate_bool32(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pColorBlendState->logicOpEnable", ParameterName::IndexVector{i}),
-                    pCreateInfos[i].pColorBlendState->logicOpEnable);
-
-                skip |= validate_array(
-                    report_data, "vkCreateGraphicsPipelines",
-                    ParameterName("pCreateInfos[%i].pColorBlendState->attachmentCount", ParameterName::IndexVector{i}),
-                    ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments", ParameterName::IndexVector{i}),
-                    pCreateInfos[i].pColorBlendState->attachmentCount, pCreateInfos[i].pColorBlendState->pAttachments, false, true);
-
-                if (pCreateInfos[i].pColorBlendState->pAttachments != NULL) {
-                    for (uint32_t attachmentIndex = 0; attachmentIndex < pCreateInfos[i].pColorBlendState->attachmentCount;
-                         ++attachmentIndex) {
-                        skip |= validate_bool32(report_data, "vkCreateGraphicsPipelines",
-                                                ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments[%i].blendEnable",
-                                                              ParameterName::IndexVector{i, attachmentIndex}),
-                                                pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].blendEnable);
-
-                        skip |= validate_ranged_enum(
-                            report_data, "vkCreateGraphicsPipelines",
-                            ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments[%i].srcColorBlendFactor",
-                                          ParameterName::IndexVector{i, attachmentIndex}),
-                            "VkBlendFactor", VK_BLEND_FACTOR_BEGIN_RANGE, VK_BLEND_FACTOR_END_RANGE,
-                            pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].srcColorBlendFactor);
-
-                        skip |= validate_ranged_enum(
-                            report_data, "vkCreateGraphicsPipelines",
-                            ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments[%i].dstColorBlendFactor",
-                                          ParameterName::IndexVector{i, attachmentIndex}),
-                            "VkBlendFactor", VK_BLEND_FACTOR_BEGIN_RANGE, VK_BLEND_FACTOR_END_RANGE,
-                            pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].dstColorBlendFactor);
-
-                        skip |=
-                            validate_ranged_enum(report_data, "vkCreateGraphicsPipelines",
-                                                 ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments[%i].colorBlendOp",
-                                                               ParameterName::IndexVector{i, attachmentIndex}),
-                                                 "VkBlendOp", VK_BLEND_OP_BEGIN_RANGE, VK_BLEND_OP_END_RANGE,
-                                                 pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].colorBlendOp);
-
-                        skip |= validate_ranged_enum(
-                            report_data, "vkCreateGraphicsPipelines",
-                            ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments[%i].srcAlphaBlendFactor",
-                                          ParameterName::IndexVector{i, attachmentIndex}),
-                            "VkBlendFactor", VK_BLEND_FACTOR_BEGIN_RANGE, VK_BLEND_FACTOR_END_RANGE,
-                            pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].srcAlphaBlendFactor);
-
-                        skip |= validate_ranged_enum(
-                            report_data, "vkCreateGraphicsPipelines",
-                            ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments[%i].dstAlphaBlendFactor",
-                                          ParameterName::IndexVector{i, attachmentIndex}),
-                            "VkBlendFactor", VK_BLEND_FACTOR_BEGIN_RANGE, VK_BLEND_FACTOR_END_RANGE,
-                            pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].dstAlphaBlendFactor);
-
-                        skip |=
-                            validate_ranged_enum(report_data, "vkCreateGraphicsPipelines",
-                                                 ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments[%i].alphaBlendOp",
-                                                               ParameterName::IndexVector{i, attachmentIndex}),
-                                                 "VkBlendOp", VK_BLEND_OP_BEGIN_RANGE, VK_BLEND_OP_END_RANGE,
-                                                 pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].alphaBlendOp);
-
-                        skip |=
-                            validate_flags(report_data, "vkCreateGraphicsPipelines",
-                                           ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments[%i].colorWriteMask",
-                                                         ParameterName::IndexVector{i, attachmentIndex}),
-                                           "VkColorComponentFlagBits", AllVkColorComponentFlagBits,
-                                           pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].colorWriteMask, false);
+                    if (pCreateInfos[i].pMultisampleState->sType != VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO) {
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                        __LINE__, INVALID_STRUCT_STYPE, LayerName,
+                                        "vkCreateGraphicsPipelines: parameter pCreateInfos[%d].pMultisampleState->sType must be "
+                                        "VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO",
+                                        i);
                     }
                 }
 
-                if (pCreateInfos[i].pColorBlendState->sType != VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO) {
-                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                    __LINE__, INVALID_STRUCT_STYPE, LayerName,
-                                    "vkCreateGraphicsPipelines: parameter pCreateInfos[%d].pColorBlendState->sType must be "
-                                    "VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO",
-                                    i);
-                }
+                // TODO: Conditional NULL check based on subpass depth/stencil attachment
+                if (pCreateInfos[i].pDepthStencilState != nullptr) {
+                    skip |= validate_struct_pnext(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pDepthStencilState->pNext", ParameterName::IndexVector{i}), NULL,
+                        pCreateInfos[i].pDepthStencilState->pNext, 0, NULL, GeneratedHeaderVersion);
 
-                // If logicOpEnable is VK_TRUE, logicOp must be a valid VkLogicOp value
-                if (pCreateInfos[i].pColorBlendState->logicOpEnable == VK_TRUE) {
+                    skip |= validate_reserved_flags(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pDepthStencilState->flags", ParameterName::IndexVector{i}),
+                        pCreateInfos[i].pDepthStencilState->flags);
+
+                    skip |= validate_bool32(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pDepthStencilState->depthTestEnable", ParameterName::IndexVector{i}),
+                        pCreateInfos[i].pDepthStencilState->depthTestEnable);
+
+                    skip |= validate_bool32(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pDepthStencilState->depthWriteEnable", ParameterName::IndexVector{i}),
+                        pCreateInfos[i].pDepthStencilState->depthWriteEnable);
+
                     skip |= validate_ranged_enum(
                         report_data, "vkCreateGraphicsPipelines",
-                        ParameterName("pCreateInfos[%i].pColorBlendState->logicOp", ParameterName::IndexVector{i}), "VkLogicOp",
-                        VK_LOGIC_OP_BEGIN_RANGE, VK_LOGIC_OP_END_RANGE, pCreateInfos[i].pColorBlendState->logicOp);
+                        ParameterName("pCreateInfos[%i].pDepthStencilState->depthCompareOp", ParameterName::IndexVector{i}),
+                        "VkCompareOp", VK_COMPARE_OP_BEGIN_RANGE, VK_COMPARE_OP_END_RANGE,
+                        pCreateInfos[i].pDepthStencilState->depthCompareOp);
+
+                    skip |= validate_bool32(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pDepthStencilState->depthBoundsTestEnable", ParameterName::IndexVector{i}),
+                        pCreateInfos[i].pDepthStencilState->depthBoundsTestEnable);
+
+                    skip |= validate_bool32(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pDepthStencilState->stencilTestEnable", ParameterName::IndexVector{i}),
+                        pCreateInfos[i].pDepthStencilState->stencilTestEnable);
+
+                    skip |= validate_ranged_enum(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pDepthStencilState->front.failOp", ParameterName::IndexVector{i}),
+                        "VkStencilOp", VK_STENCIL_OP_BEGIN_RANGE, VK_STENCIL_OP_END_RANGE,
+                        pCreateInfos[i].pDepthStencilState->front.failOp);
+
+                    skip |= validate_ranged_enum(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pDepthStencilState->front.passOp", ParameterName::IndexVector{i}),
+                        "VkStencilOp", VK_STENCIL_OP_BEGIN_RANGE, VK_STENCIL_OP_END_RANGE,
+                        pCreateInfos[i].pDepthStencilState->front.passOp);
+
+                    skip |= validate_ranged_enum(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pDepthStencilState->front.depthFailOp", ParameterName::IndexVector{i}),
+                        "VkStencilOp", VK_STENCIL_OP_BEGIN_RANGE, VK_STENCIL_OP_END_RANGE,
+                        pCreateInfos[i].pDepthStencilState->front.depthFailOp);
+
+                    skip |= validate_ranged_enum(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pDepthStencilState->front.compareOp", ParameterName::IndexVector{i}),
+                        "VkCompareOp", VK_COMPARE_OP_BEGIN_RANGE, VK_COMPARE_OP_END_RANGE,
+                        pCreateInfos[i].pDepthStencilState->front.compareOp);
+
+                    skip |= validate_ranged_enum(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pDepthStencilState->back.failOp", ParameterName::IndexVector{i}),
+                        "VkStencilOp", VK_STENCIL_OP_BEGIN_RANGE, VK_STENCIL_OP_END_RANGE,
+                        pCreateInfos[i].pDepthStencilState->back.failOp);
+
+                    skip |= validate_ranged_enum(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pDepthStencilState->back.passOp", ParameterName::IndexVector{i}),
+                        "VkStencilOp", VK_STENCIL_OP_BEGIN_RANGE, VK_STENCIL_OP_END_RANGE,
+                        pCreateInfos[i].pDepthStencilState->back.passOp);
+
+                    skip |= validate_ranged_enum(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pDepthStencilState->back.depthFailOp", ParameterName::IndexVector{i}),
+                        "VkStencilOp", VK_STENCIL_OP_BEGIN_RANGE, VK_STENCIL_OP_END_RANGE,
+                        pCreateInfos[i].pDepthStencilState->back.depthFailOp);
+
+                    skip |= validate_ranged_enum(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pDepthStencilState->back.compareOp", ParameterName::IndexVector{i}),
+                        "VkCompareOp", VK_COMPARE_OP_BEGIN_RANGE, VK_COMPARE_OP_END_RANGE,
+                        pCreateInfos[i].pDepthStencilState->back.compareOp);
+
+                    if (pCreateInfos[i].pDepthStencilState->sType != VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO) {
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                        __LINE__, INVALID_STRUCT_STYPE, LayerName,
+                                        "vkCreateGraphicsPipelines: parameter pCreateInfos[%d].pDepthStencilState->sType must be "
+                                        "VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO",
+                                        i);
+                    }
+                }
+
+                // TODO: Conditional NULL check based on subpass color attachment
+                if (pCreateInfos[i].pColorBlendState != nullptr) {
+                    skip |= validate_struct_pnext(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pColorBlendState->pNext", ParameterName::IndexVector{i}), NULL,
+                        pCreateInfos[i].pColorBlendState->pNext, 0, NULL, GeneratedHeaderVersion);
+
+                    skip |= validate_reserved_flags(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pColorBlendState->flags", ParameterName::IndexVector{i}),
+                        pCreateInfos[i].pColorBlendState->flags);
+
+                    skip |= validate_bool32(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pColorBlendState->logicOpEnable", ParameterName::IndexVector{i}),
+                        pCreateInfos[i].pColorBlendState->logicOpEnable);
+
+                    skip |= validate_array(
+                        report_data, "vkCreateGraphicsPipelines",
+                        ParameterName("pCreateInfos[%i].pColorBlendState->attachmentCount", ParameterName::IndexVector{i}),
+                        ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments", ParameterName::IndexVector{i}),
+                        pCreateInfos[i].pColorBlendState->attachmentCount, pCreateInfos[i].pColorBlendState->pAttachments, false,
+                        true);
+
+                    if (pCreateInfos[i].pColorBlendState->pAttachments != NULL) {
+                        for (uint32_t attachmentIndex = 0; attachmentIndex < pCreateInfos[i].pColorBlendState->attachmentCount;
+                             ++attachmentIndex) {
+                            skip |= validate_bool32(report_data, "vkCreateGraphicsPipelines",
+                                                    ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments[%i].blendEnable",
+                                                                  ParameterName::IndexVector{i, attachmentIndex}),
+                                                    pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].blendEnable);
+
+                            skip |= validate_ranged_enum(
+                                report_data, "vkCreateGraphicsPipelines",
+                                ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments[%i].srcColorBlendFactor",
+                                              ParameterName::IndexVector{i, attachmentIndex}),
+                                "VkBlendFactor", VK_BLEND_FACTOR_BEGIN_RANGE, VK_BLEND_FACTOR_END_RANGE,
+                                pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].srcColorBlendFactor);
+
+                            skip |= validate_ranged_enum(
+                                report_data, "vkCreateGraphicsPipelines",
+                                ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments[%i].dstColorBlendFactor",
+                                              ParameterName::IndexVector{i, attachmentIndex}),
+                                "VkBlendFactor", VK_BLEND_FACTOR_BEGIN_RANGE, VK_BLEND_FACTOR_END_RANGE,
+                                pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].dstColorBlendFactor);
+
+                            skip |= validate_ranged_enum(
+                                report_data, "vkCreateGraphicsPipelines",
+                                ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments[%i].colorBlendOp",
+                                              ParameterName::IndexVector{i, attachmentIndex}),
+                                "VkBlendOp", VK_BLEND_OP_BEGIN_RANGE, VK_BLEND_OP_END_RANGE,
+                                pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].colorBlendOp);
+
+                            skip |= validate_ranged_enum(
+                                report_data, "vkCreateGraphicsPipelines",
+                                ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments[%i].srcAlphaBlendFactor",
+                                              ParameterName::IndexVector{i, attachmentIndex}),
+                                "VkBlendFactor", VK_BLEND_FACTOR_BEGIN_RANGE, VK_BLEND_FACTOR_END_RANGE,
+                                pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].srcAlphaBlendFactor);
+
+                            skip |= validate_ranged_enum(
+                                report_data, "vkCreateGraphicsPipelines",
+                                ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments[%i].dstAlphaBlendFactor",
+                                              ParameterName::IndexVector{i, attachmentIndex}),
+                                "VkBlendFactor", VK_BLEND_FACTOR_BEGIN_RANGE, VK_BLEND_FACTOR_END_RANGE,
+                                pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].dstAlphaBlendFactor);
+
+                            skip |= validate_ranged_enum(
+                                report_data, "vkCreateGraphicsPipelines",
+                                ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments[%i].alphaBlendOp",
+                                              ParameterName::IndexVector{i, attachmentIndex}),
+                                "VkBlendOp", VK_BLEND_OP_BEGIN_RANGE, VK_BLEND_OP_END_RANGE,
+                                pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].alphaBlendOp);
+
+                            skip |= validate_flags(
+                                report_data, "vkCreateGraphicsPipelines",
+                                ParameterName("pCreateInfos[%i].pColorBlendState->pAttachments[%i].colorWriteMask",
+                                              ParameterName::IndexVector{i, attachmentIndex}),
+                                "VkColorComponentFlagBits", AllVkColorComponentFlagBits,
+                                pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].colorWriteMask, false);
+                        }
+                    }
+
+                    if (pCreateInfos[i].pColorBlendState->sType != VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO) {
+                        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                        __LINE__, INVALID_STRUCT_STYPE, LayerName,
+                                        "vkCreateGraphicsPipelines: parameter pCreateInfos[%d].pColorBlendState->sType must be "
+                                        "VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO",
+                                        i);
+                    }
+
+                    // If logicOpEnable is VK_TRUE, logicOp must be a valid VkLogicOp value
+                    if (pCreateInfos[i].pColorBlendState->logicOpEnable == VK_TRUE) {
+                        skip |= validate_ranged_enum(
+                            report_data, "vkCreateGraphicsPipelines",
+                            ParameterName("pCreateInfos[%i].pColorBlendState->logicOp", ParameterName::IndexVector{i}), "VkLogicOp",
+                            VK_LOGIC_OP_BEGIN_RANGE, VK_LOGIC_OP_END_RANGE, pCreateInfos[i].pColorBlendState->logicOp);
+                    }
                 }
             }
         }
@@ -5116,7 +5054,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device, const VkSwapc
     layer_data *my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_device_extension(my_data, my_data->enables.khr_swapchain_enabled, "vkCreateSwapchainKHR",
+    skip |= require_device_extension(my_data, my_data->enables.khr_swapchain, "vkCreateSwapchainKHR",
                                      VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
     skip |= parameter_validation_vkCreateSwapchainKHR(my_data->report_data, pCreateInfo, pAllocator, pSwapchain);
@@ -5137,7 +5075,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchai
     layer_data *my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_device_extension(my_data, my_data->enables.khr_swapchain_enabled, "vkGetSwapchainImagesKHR",
+    skip |= require_device_extension(my_data, my_data->enables.khr_swapchain, "vkGetSwapchainImagesKHR",
                                      VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
     skip |= parameter_validation_vkGetSwapchainImagesKHR(my_data->report_data, swapchain, pSwapchainImageCount, pSwapchainImages);
@@ -5158,7 +5096,7 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
     layer_data *my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_device_extension(my_data, my_data->enables.khr_swapchain_enabled, "vkAcquireNextImageKHR",
+    skip |= require_device_extension(my_data, my_data->enables.khr_swapchain, "vkAcquireNextImageKHR",
                                      VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
     skip |= parameter_validation_vkAcquireNextImageKHR(my_data->report_data, swapchain, timeout, semaphore, fence, pImageIndex);
@@ -5178,7 +5116,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
     layer_data *my_data = GetLayerDataPtr(get_dispatch_key(queue), layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_device_extension(my_data, my_data->enables.khr_swapchain_enabled, "vkQueuePresentKHR",
+    skip |= require_device_extension(my_data, my_data->enables.khr_swapchain, "vkQueuePresentKHR",
                                      VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
     skip |= parameter_validation_vkQueuePresentKHR(my_data->report_data, pPresentInfo);
@@ -5192,7 +5130,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
         std_header *pnext = (std_header *)pPresentInfo->pNext;
         while (pnext) {
             if (VK_STRUCTURE_TYPE_PRESENT_REGIONS_KHR == pnext->sType) {
-                skip |= require_device_extension(my_data, my_data->enables.incremental_present, "vkQueuePresentKHR",
+                skip |= require_device_extension(my_data, my_data->enables.khr_incremental_present, "vkQueuePresentKHR",
                                                  VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME);
                 VkPresentRegionsKHR *present_regions = (VkPresentRegionsKHR *)pnext;
                 if (present_regions->swapchainCount != pPresentInfo->swapchainCount) {
@@ -5232,7 +5170,7 @@ VKAPI_ATTR void VKAPI_CALL DestroySwapchainKHR(VkDevice device, VkSwapchainKHR s
     layer_data *my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_device_extension(my_data, my_data->enables.khr_swapchain_enabled, "vkDestroySwapchainKHR",
+    skip |= require_device_extension(my_data, my_data->enables.khr_swapchain, "vkDestroySwapchainKHR",
                                      VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
     /* No generated validation function for this call */
@@ -5242,7 +5180,7 @@ VKAPI_ATTR void VKAPI_CALL DestroySwapchainKHR(VkDevice device, VkSwapchainKHR s
     }
 }
 
-static bool require_instance_extension(void *instance, bool instance_extension_enables::*flag, char const *function_name,
+static bool require_instance_extension(void *instance, bool InstanceExtensions::*flag, char const *function_name,
                                        char const *extension_name) {
     auto my_data = GetLayerDataPtr(get_dispatch_key(instance), instance_layer_data_map);
     if (!(my_data->extensions.*flag)) {
@@ -5262,7 +5200,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevi
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_instance_extension(physicalDevice, &instance_extension_enables::surface_enabled,
+    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_surface,
                                        "vkGetPhysicalDeviceSurfaceSupportKHR", VK_KHR_SURFACE_EXTENSION_NAME);
 
     skip |= parameter_validation_vkGetPhysicalDeviceSurfaceSupportKHR(my_data->report_data, queueFamilyIndex, surface, pSupported);
@@ -5283,7 +5221,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilitiesKHR(VkPhysica
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_instance_extension(physicalDevice, &instance_extension_enables::surface_enabled,
+    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_surface,
                                        "vkGetPhysicalDeviceSurfaceCapabilitiesKHR", VK_KHR_SURFACE_EXTENSION_NAME);
 
     skip |= parameter_validation_vkGetPhysicalDeviceSurfaceCapabilitiesKHR(my_data->report_data, surface, pSurfaceCapabilities);
@@ -5305,7 +5243,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevi
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_instance_extension(physicalDevice, &instance_extension_enables::surface_enabled,
+    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_surface,
                                        "vkGetPhysicalDeviceSurfaceFormatsKHR", VK_KHR_SURFACE_EXTENSION_NAME);
 
     skip |= parameter_validation_vkGetPhysicalDeviceSurfaceFormatsKHR(my_data->report_data, surface, pSurfaceFormatCount,
@@ -5329,7 +5267,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfacePresentModesKHR(VkPhysica
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_instance_extension(physicalDevice, &instance_extension_enables::surface_enabled,
+    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_surface,
                                        "vkGetPhysicalDeviceSurfacePresentModesKHR", VK_KHR_SURFACE_EXTENSION_NAME);
 
     skip |= parameter_validation_vkGetPhysicalDeviceSurfacePresentModesKHR(my_data->report_data, surface, pPresentModeCount,
@@ -5349,7 +5287,7 @@ VKAPI_ATTR void VKAPI_CALL DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR s
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(instance), instance_layer_data_map);
 
-    skip |= require_instance_extension(instance, &instance_extension_enables::surface_enabled, "vkDestroySurfaceKHR",
+    skip |= require_instance_extension(instance, &InstanceExtensions::khr_surface, "vkDestroySurfaceKHR",
                                        VK_KHR_SURFACE_EXTENSION_NAME);
 
     if (!skip) {
@@ -5366,7 +5304,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateWin32SurfaceKHR(VkInstance instance, const 
     assert(my_data != NULL);
     bool skip = false;
 
-    skip |= require_instance_extension(instance, &instance_extension_enables::win32_enabled, "vkCreateWin32SurfaceKHR",
+    skip |= require_instance_extension(instance, &InstanceExtensions::khr_win32_surface, "vkCreateWin32SurfaceKHR",
                                        VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 
     skip |= parameter_validation_vkCreateWin32SurfaceKHR(my_data->report_data, pCreateInfo, pAllocator, pSurface);
@@ -5388,7 +5326,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceWin32PresentationSupportKHR(VkPh
     assert(my_data != NULL);
     bool skip = false;
 
-    skip |= require_instance_extension(physicalDevice, &instance_extension_enables::win32_enabled,
+    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_win32_surface,
                                        "vkGetPhysicalDeviceWin32PresentationSupportKHR", VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 
     // TODO: codegen doesn't produce this function?
@@ -5411,7 +5349,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateXcbSurfaceKHR(VkInstance instance, const Vk
     assert(my_data != NULL);
     bool skip = false;
 
-    skip |= require_instance_extension(instance, &instance_extension_enables::xcb_enabled, "vkCreateXcbSurfaceKHR",
+    skip |= require_instance_extension(instance, &InstanceExtensions::khr_xcb_surface, "vkCreateXcbSurfaceKHR",
                                        VK_KHR_XCB_SURFACE_EXTENSION_NAME);
 
     skip |= parameter_validation_vkCreateXcbSurfaceKHR(my_data->report_data, pCreateInfo, pAllocator, pSurface);
@@ -5434,7 +5372,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceXcbPresentationSupportKHR(VkPhys
     assert(my_data != NULL);
     bool skip = false;
 
-    skip |= require_instance_extension(physicalDevice, &instance_extension_enables::xcb_enabled,
+    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_xcb_surface,
                                        "vkGetPhysicalDeviceXcbPresentationSupportKHR", VK_KHR_XCB_SURFACE_EXTENSION_NAME);
 
     skip |= parameter_validation_vkGetPhysicalDeviceXcbPresentationSupportKHR(my_data->report_data, queueFamilyIndex, connection,
@@ -5458,7 +5396,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateXlibSurfaceKHR(VkInstance instance, const V
     assert(my_data != NULL);
     bool skip = false;
 
-    skip |= require_instance_extension(instance, &instance_extension_enables::xlib_enabled, "vkCreateXlibSurfaceKHR",
+    skip |= require_instance_extension(instance, &InstanceExtensions::khr_xlib_surface, "vkCreateXlibSurfaceKHR",
                                        VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
 
     skip |= parameter_validation_vkCreateXlibSurfaceKHR(my_data->report_data, pCreateInfo, pAllocator, pSurface);
@@ -5481,7 +5419,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceXlibPresentationSupportKHR(VkPhy
     assert(my_data != NULL);
     bool skip = false;
 
-    skip |= require_instance_extension(physicalDevice, &instance_extension_enables::xlib_enabled,
+    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_xlib_surface,
                                        "vkGetPhysicalDeviceXlibPresentationSupportKHR", VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
 
     skip |=
@@ -5504,7 +5442,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateMirSurfaceKHR(VkInstance instance, const Vk
     assert(my_data != NULL);
     bool skip = false;
 
-    skip |= require_instance_extension(instance, &instance_extension_enables::mir_enabled, "vkCreateMirSurfaceKHR",
+    skip |= require_instance_extension(instance, &InstanceExtensions::khr_mir_surface, "vkCreateMirSurfaceKHR",
                                        VK_KHR_MIR_SURFACE_EXTENSION_NAME);
 
     skip |= parameter_validation_vkCreateMirSurfaceKHR(my_data->report_data, pCreateInfo, pAllocator, pSurface);
@@ -5527,7 +5465,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceMirPresentationSupportKHR(VkPhys
 
     bool skip = false;
 
-    skip |= require_instance_extension(physicalDevice, &instance_extension_enables::mir_enabled,
+    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_mir_surface,
                                        "vkGetPhysicalDeviceMirPresentationSupportKHR", VK_KHR_MIR_SURFACE_EXTENSION_NAME);
 
     skip |= parameter_validation_vkGetPhysicalDeviceMirPresentationSupportKHR(my_data->report_data, queueFamilyIndex, connection);
@@ -5548,7 +5486,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateWaylandSurfaceKHR(VkInstance instance, cons
     assert(my_data != NULL);
     bool skip = false;
 
-    skip |= require_instance_extension(instance, &instance_extension_enables::wayland_enabled, "vkCreateWaylandSurfaceKHR",
+    skip |= require_instance_extension(instance, &InstanceExtensions::khr_wayland_surface, "vkCreateWaylandSurfaceKHR",
                                        VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
 
     skip |= parameter_validation_vkCreateWaylandSurfaceKHR(my_data->report_data, pCreateInfo, pAllocator, pSurface);
@@ -5571,7 +5509,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceWaylandPresentationSupportKHR(Vk
     assert(my_data != NULL);
     bool skip = false;
 
-    skip |= require_instance_extension(physicalDevice, &instance_extension_enables::wayland_enabled,
+    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_wayland_surface,
                                        "vkGetPhysicalDeviceWaylandPresentationSupportKHR", VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
 
     skip |= parameter_validation_vkGetPhysicalDeviceWaylandPresentationSupportKHR(my_data->report_data, queueFamilyIndex, display);
@@ -5593,7 +5531,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateAndroidSurfaceKHR(VkInstance instance, cons
     assert(my_data != NULL);
     bool skip = false;
 
-    skip |= require_instance_extension(instance, &instance_extension_enables::android_enabled, "vkCreateAndroidSurfaceKHR",
+    skip |= require_instance_extension(instance, &InstanceExtensions::khr_android_surface, "vkCreateAndroidSurfaceKHR",
                                        VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
 
     skip |= parameter_validation_vkCreateAndroidSurfaceKHR(my_data->report_data, pCreateInfo, pAllocator, pSurface);
@@ -5616,7 +5554,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSharedSwapchainsKHR(VkDevice device, uint32
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_device_extension(my_data, my_data->enables.khr_display_swapchain_enabled, "vkCreateSharedSwapchainsKHR",
+    skip |= require_device_extension(my_data, my_data->enables.khr_display_swapchain, "vkCreateSharedSwapchainsKHR",
                                      VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME);
 
     skip |= parameter_validation_vkCreateSharedSwapchainsKHR(my_data->report_data, swapchainCount, pCreateInfos, pAllocator,
@@ -5638,7 +5576,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceDisplayPropertiesKHR(VkPhysicalD
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_instance_extension(physicalDevice, &instance_extension_enables::display_enabled,
+    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_display,
                                        "vkGetPhysicalDeviceDisplayPropertiesKHR", VK_KHR_DISPLAY_EXTENSION_NAME);
 
     // No parameter validation function for this call?
@@ -5659,7 +5597,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceDisplayPlanePropertiesKHR(VkPhys
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_instance_extension(physicalDevice, &instance_extension_enables::display_enabled,
+    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_display,
                                        "vkGetPhysicalDeviceDisplayPlanePropertiesKHR", VK_KHR_DISPLAY_EXTENSION_NAME);
 
     // No parameter validation function for this call?
@@ -5680,7 +5618,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneSupportedDisplaysKHR(VkPhysicalDev
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_instance_extension(physicalDevice, &instance_extension_enables::display_enabled,
+    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_display,
                                        "vkGetDisplayPlaneSupportedDisplaysKHR", VK_KHR_DISPLAY_EXTENSION_NAME);
 
     // No parameter validation function for this call?
@@ -5701,7 +5639,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayModePropertiesKHR(VkPhysicalDevice phys
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_instance_extension(physicalDevice, &instance_extension_enables::display_enabled,
+    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_display,
                                        "vkGetDisplayModePropertiesKHR", VK_KHR_DISPLAY_EXTENSION_NAME);
 
     // No parameter validation function for this call?
@@ -5723,7 +5661,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDisplayModeKHR(VkPhysicalDevice physicalDev
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_instance_extension(physicalDevice, &instance_extension_enables::display_enabled, "vkCreateDisplayModeKHR",
+    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_display, "vkCreateDisplayModeKHR",
                                        VK_KHR_DISPLAY_EXTENSION_NAME);
 
     // No parameter validation function for this call?
@@ -5744,7 +5682,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneCapabilitiesKHR(VkPhysicalDevice p
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_instance_extension(physicalDevice, &instance_extension_enables::display_enabled,
+    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_display,
                                        "vkGetDisplayPlaneCapabilitiesKHR", VK_KHR_DISPLAY_EXTENSION_NAME);
 
     // No parameter validation function for this call?
@@ -5765,7 +5703,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDisplayPlaneSurfaceKHR(VkInstance instance,
     auto my_data = GetLayerDataPtr(get_dispatch_key(instance), instance_layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_instance_extension(instance, &instance_extension_enables::display_enabled, "vkCreateDisplayPlaneSurfaceKHR",
+    skip |= require_instance_extension(instance, &InstanceExtensions::khr_display, "vkCreateDisplayPlaneSurfaceKHR",
                                        VK_KHR_DISPLAY_EXTENSION_NAME);
 
     // No parameter validation function for this call?
@@ -5786,7 +5724,7 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceFeatures2KHR(VkPhysicalDevice physic
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_instance_extension(physicalDevice, &instance_extension_enables::khr_get_phys_dev_properties2_enabled,
+    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_get_physical_device_properties2,
                                        "vkGetPhysicalDeviceFeatures2KHR", VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
     skip |= parameter_validation_vkGetPhysicalDeviceFeatures2KHR(my_data->report_data, pFeatures);
@@ -5802,7 +5740,7 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceProperties2KHR(VkPhysicalDevice phys
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_instance_extension(physicalDevice, &instance_extension_enables::khr_get_phys_dev_properties2_enabled,
+    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_get_physical_device_properties2,
                                        "vkGetPhysicalDeviceProperties2KHR", VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
     skip |= parameter_validation_vkGetPhysicalDeviceProperties2KHR(my_data->report_data, pProperties);
@@ -5818,7 +5756,7 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceFormatProperties2KHR(VkPhysicalDevic
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_instance_extension(physicalDevice, &instance_extension_enables::khr_get_phys_dev_properties2_enabled,
+    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_get_physical_device_properties2,
                                        "vkGetPhysicalDeviceFormatProperties2KHR",
                                        VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
@@ -5837,7 +5775,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceImageFormatProperties2KHR(
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_instance_extension(physicalDevice, &instance_extension_enables::khr_get_phys_dev_properties2_enabled,
+    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_get_physical_device_properties2,
                                        "vkGetPhysicalDeviceImageFormatProperties2KHR",
                                        VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
@@ -5860,7 +5798,7 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceQueueFamilyProperties2KHR(VkPhysical
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_instance_extension(physicalDevice, &instance_extension_enables::khr_get_phys_dev_properties2_enabled,
+    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_get_physical_device_properties2,
                                        "vkGetPhysicalDeviceQueueFamilyProperties2KHR",
                                        VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
@@ -5879,7 +5817,7 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceMemoryProperties2KHR(VkPhysicalDevic
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_instance_extension(physicalDevice, &instance_extension_enables::khr_get_phys_dev_properties2_enabled,
+    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_get_physical_device_properties2,
                                        "vkGetPhysicalDeviceMemoryProperties2KHR",
                                        VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
@@ -5919,7 +5857,7 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceSparseImageFormatProperties2KHR(
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_instance_extension(physicalDevice, &instance_extension_enables::khr_get_phys_dev_properties2_enabled,
+    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_get_physical_device_properties2,
                                        "vkGetPhysicalDeviceSparseImageFormatProperties2KHR",
                                        VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
@@ -6062,7 +6000,7 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumeratePhysicalDeviceGroupsKHX(
     auto my_data = GetLayerDataPtr(get_dispatch_key(instance), instance_layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_instance_extension(instance, &instance_extension_enables::khx_device_group_creation_enabled,
+    skip |= require_instance_extension(instance, &InstanceExtensions::khx_device_group_creation,
                                        "vkEnumeratePhysicalDeviceGroupsKHX", VK_KHX_DEVICE_GROUP_CREATION_EXTENSION_NAME);
 
     skip |= parameter_validation_vkEnumeratePhysicalDeviceGroupsKHX(my_data->report_data, pPhysicalDeviceGroupCount,
@@ -6259,7 +6197,7 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceExternalBufferPropertiesKHX(
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
     bool skip = false;
-    skip |= require_instance_extension(physicalDevice, &instance_extension_enables::khx_external_memory_capabilities_enabled,
+    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khx_external_memory_capabilities,
                                        "vkGetPhysicalDeviceExternalBufferPropertiesKHX",
                                        VK_KHX_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME);
     skip |= parameter_validation_vkGetPhysicalDeviceExternalBufferPropertiesKHX(my_data->report_data, pExternalBufferInfo,
@@ -6363,7 +6301,7 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceExternalSemaphorePropertiesKHX(
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
     bool skip = false;
-    skip |= require_instance_extension(physicalDevice, &instance_extension_enables::khx_external_memory_capabilities_enabled,
+    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khx_external_memory_capabilities,
                                        "vkGetPhysicalDeviceExternalSemaphorePropertiesKHX",
                                        VK_KHX_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME);
     skip |= parameter_validation_vkGetPhysicalDeviceExternalSemaphorePropertiesKHX(my_data->report_data, pExternalSemaphoreInfo,
@@ -6460,7 +6398,7 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireXlibDisplayEXT(VkPhysicalDevice physicalDe
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
     bool skip = false;
-    skip |= require_instance_extension(physicalDevice, &instance_extension_enables::ext_acquire_xlib_display_enabled,
+    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::ext_acquire_xlib_display,
                                        "vkAcquireXlibDisplayEXT", VK_EXT_ACQUIRE_XLIB_DISPLAY_EXTENSION_NAME);
     skip |= parameter_validation_vkAcquireXlibDisplayEXT(my_data->report_data, dpy, display);
     if (!skip) {
@@ -6476,7 +6414,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetRandROutputDisplayEXT(VkPhysicalDevice physica
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
     bool skip = false;
-    skip |= require_instance_extension(physicalDevice, &instance_extension_enables::ext_acquire_xlib_display_enabled,
+    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::ext_acquire_xlib_display,
                                        "vkGetRandROutputDisplayEXT", VK_EXT_ACQUIRE_XLIB_DISPLAY_EXTENSION_NAME);
     skip |= parameter_validation_vkGetRandROutputDisplayEXT(my_data->report_data, dpy, rrOutput, pDisplay);
     if (!skip) {
@@ -6572,7 +6510,7 @@ VKAPI_ATTR VkResult VKAPI_CALL ReleaseDisplayEXT(VkPhysicalDevice physicalDevice
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
     bool skip = false;
-    skip |= require_instance_extension(physicalDevice, &instance_extension_enables::ext_direct_mode_display_enabled,
+    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::ext_direct_mode_display,
                                        "vkReleaseDisplayEXT", VK_EXT_DIRECT_MODE_DISPLAY_EXTENSION_NAME);
 #if 0  // Validation not automatically generated
     skip |= parameter_validation_vkReleaseDisplayEXT(my_data->report_data, display);
@@ -6745,7 +6683,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilities2EXT(VkPhysic
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
     bool skip = false;
-    skip |= require_instance_extension(physicalDevice, &instance_extension_enables::ext_display_surface_counter_enabled,
+    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::ext_display_surface_counter,
                                        "vkGetPhysicalDeviceSurfaceCapabilities2EXT", VK_EXT_DISPLAY_SURFACE_COUNTER_EXTENSION_NAME);
     skip |= parameter_validation_vkGetPhysicalDeviceSurfaceCapabilities2EXT(my_data->report_data, surface, pSurfaceCapabilities);
     if (!skip) {
@@ -6783,7 +6721,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceExternalImageFormatPropertiesNV(
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_instance_extension(physicalDevice, &instance_extension_enables::nv_external_memory_capabilities_enabled,
+    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::nv_external_memory_capabilities,
                                        "vkGetPhysicalDeviceExternalImageFormatPropertiesNV",
                                        VK_NV_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME);
 

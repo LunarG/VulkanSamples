@@ -114,16 +114,6 @@ struct SwpSurface {
     // When vkCreateSwapchainKHR is called, the VkSwapchainKHR's are
     // remembered:
     std::unordered_map<VkSwapchainKHR, SwpSwapchain *> swapchains;
-
-    // Value of pQueueFamilyPropertyCount that was returned by the
-    // vkGetPhysicalDeviceQueueFamilyProperties() function:
-    uint32_t numQueueFamilyIndexSupport;
-    // Array of VkBool32's that is intialized by the
-    // vkGetPhysicalDeviceSurfaceSupportKHR() function.  First call for a given
-    // surface allocates and initializes this array to false for all
-    // queueFamilyIndex's (and sets numQueueFamilyIndexSupport to non-zero).
-    // All calls set the entry for a given queueFamilyIndex:
-    VkBool32 *pQueueFamilyIndexSupport;
 };
 
 // Create one of these for each VkPhysicalDevice within a VkInstance:
@@ -141,10 +131,6 @@ struct SwpPhysicalDevice {
     // numOfQueueFamilies parameter when pQueueFamilyProperties is NULL:
     bool gotQueueFamilyPropertyCount;
     uint32_t numOfQueueFamilies;
-
-    // Record all surfaces that vkGetPhysicalDeviceSurfaceSupportKHR() was
-    // called for:
-    std::unordered_map<VkSurfaceKHR, SwpSurface *> supportedSurfaces;
 
     // Count returned by vkGetPhysicalDeviceDisplayPlanePropertiesKHR():
     uint32_t displayPlanePropertyCount;
