@@ -14063,9 +14063,7 @@ TEST_F(VkLayerTest, ThreadCommandBufferCollision) {
 #endif  // GTEST_IS_THREADSAFE
 
 TEST_F(VkLayerTest, InvalidSPIRVCodeSize) {
-    TEST_DESCRIPTION(
-        "Test that an error is produced for a spirv module "
-        "with an impossible code size");
+    TEST_DESCRIPTION("Test that errors are produced for a spirv modules with invalid code sizes");
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Invalid SPIR-V header");
 
@@ -14086,6 +14084,33 @@ TEST_F(VkLayerTest, InvalidSPIRVCodeSize) {
     moduleCreateInfo.codeSize = 4;
     moduleCreateInfo.flags = 0;
     vkCreateShaderModule(m_device->device(), &moduleCreateInfo, NULL, &module);
+
+    m_errorMonitor->VerifyFound();
+
+    char const *vsSource =
+        "#version 450\n"
+        "\n"
+        "layout(location=0) out float x;\n"
+        "out gl_PerVertex {\n"
+        "    vec4 gl_Position;\n"
+        "};\n"
+        "void main(){\n"
+        "   gl_Position = vec4(1);\n"
+        "   x = 0;\n"
+        "}\n";
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02816);
+    std::vector<unsigned int> shader;
+    VkShaderModuleCreateInfo module_create_info;
+    VkShaderModule shader_module;
+    module_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    module_create_info.pNext = NULL;
+    this->GLSLtoSPV(VK_SHADER_STAGE_VERTEX_BIT, vsSource, shader);
+    module_create_info.pCode = shader.data();
+    // Introduce failure by making codeSize a non-multiple of 4
+    module_create_info.codeSize = shader.size() * sizeof(unsigned int) - 1;
+    module_create_info.flags = 0;
+    vkCreateShaderModule(m_device->handle(), &module_create_info, NULL, &shader_module);
 
     m_errorMonitor->VerifyFound();
 }
@@ -14111,7 +14136,7 @@ TEST_F(VkLayerTest, InvalidSPIRVMagic) {
     moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     moduleCreateInfo.pNext = NULL;
     moduleCreateInfo.pCode = (const uint32_t *)&spv;
-    moduleCreateInfo.codeSize = sizeof(spv) + 10;
+    moduleCreateInfo.codeSize = sizeof(spv) + 16;
     moduleCreateInfo.flags = 0;
     vkCreateShaderModule(m_device->device(), &moduleCreateInfo, NULL, &module);
 
