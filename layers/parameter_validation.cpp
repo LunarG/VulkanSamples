@@ -5306,6 +5306,12 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateWin32SurfaceKHR(VkInstance instance, const 
 
     skip |= require_instance_extension(instance, &InstanceExtensions::khr_win32_surface, "vkCreateWin32SurfaceKHR",
                                        VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+    if (pCreateInfo->hwnd == nullptr) {
+        skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        VALIDATION_ERROR_02505, LayerName,
+                        "vkCreateWin32SurfaceKHR(): hwnd must be a valid Win32 HWND but hwnd is NULL. %s",
+                        validation_error_map[VALIDATION_ERROR_02505]);
+    }
 
     skip |= parameter_validation_vkCreateWin32SurfaceKHR(my_data->report_data, pCreateInfo, pAllocator, pSurface);
 
