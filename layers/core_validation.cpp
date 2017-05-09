@@ -1992,9 +1992,9 @@ static bool verify_renderpass_compatibility(const layer_data *dev_data, const Vk
         uint32_t secondaryInputCount = secondaryRPCI->pSubpasses[spIndex].inputAttachmentCount;
         uint32_t inputMax = std::max(primaryInputCount, secondaryInputCount);
         for (uint32_t i = 0; i < inputMax; ++i) {
-            if (!attachment_references_compatible(i, primaryRPCI->pSubpasses[spIndex].pInputAttachments, primaryColorCount,
+            if (!attachment_references_compatible(i, primaryRPCI->pSubpasses[spIndex].pInputAttachments, primaryInputCount,
                                                   primaryRPCI->pAttachments, secondaryRPCI->pSubpasses[spIndex].pInputAttachments,
-                                                  secondaryColorCount, secondaryRPCI->pAttachments)) {
+                                                  secondaryInputCount, secondaryRPCI->pAttachments)) {
                 stringstream errorStr;
                 errorStr << "input attachments at index " << i << " of subpass index " << spIndex << " are not compatible.";
                 errorMsg = errorStr.str();
