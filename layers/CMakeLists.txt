@@ -25,8 +25,7 @@ else()
     message(FATAL_ERROR "Unsupported Platform!")
 endif()
 
-set(LAYER_JSON_FILES
-    VkLayer_standard_validation
+set(LAYER_JSON_FILES_WITH_DEPENDENCIES
     VkLayer_core_validation
     VkLayer_object_tracker
     VkLayer_unique_objects
@@ -34,6 +33,12 @@ set(LAYER_JSON_FILES
     VkLayer_swapchain
     VkLayer_threading
     )
+
+set(LAYER_JSON_FILES_NO_DEPENDENCIES
+    VkLayer_standard_validation
+    )
+
+set(LAYER_JSON_FILES ${LAYER_JSON_FILES_WITH_DEPENDENCIES} ${LAYER_JSON_FILES_NO_DEPENDENCIES})
 
 if (WIN32)
     if (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
@@ -45,7 +50,6 @@ if (WIN32)
                     COMMAND copy ${src_json} ${dst_json}
                     VERBATIM
                     )
-                add_dependencies(${config_file}-json ${config_file})
             endforeach(config_file)
         else()
             foreach (config_file ${LAYER_JSON_FILES})
@@ -55,7 +59,6 @@ if (WIN32)
                     COMMAND copy ${src_json} ${dst_json}
                     VERBATIM
                     )
-                add_dependencies(${config_file}-json ${config_file})
             endforeach(config_file)
         endif()
     endif()
@@ -67,10 +70,12 @@ else()
                 COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/linux/${config_file}.json
                 VERBATIM
                 )
-                add_dependencies(${config_file}-json ${config_file})
         endforeach(config_file)
     endif()
 endif()
+foreach (config_file ${LAYER_JSON_FILES_WITH_DEPENDENCIES})
+    add_dependencies(${config_file}-json ${config_file})
+endforeach(config_file)
 
 # Add targets for JSON file install on Linux.
 # Need to remove the "./" from the library path before installing to /etc.

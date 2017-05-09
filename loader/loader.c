@@ -2017,7 +2017,7 @@ static bool verify_meta_layer_comp_layers(const struct loader_instance *inst, st
 
 // Verify that all meta-layers in a layer list are valid.
 static void verify_all_meta_layers(const struct loader_instance *inst, struct loader_layer_list *instance_layers) {
-    for (uint32_t i = 0; i < instance_layers->count; i++) {
+    for (int32_t i = 0; i < (int32_t)instance_layers->count; i++) {
         struct loader_layer_properties *prop = &instance_layers->list[i];
 
         // If this is a meta-layer, make sure it is valid
@@ -2026,18 +2026,17 @@ static void verify_all_meta_layers(const struct loader_instance *inst, struct lo
                        "Removing meta-layer %s from instance layer list since it appears invalid.", prop->info.layerName);
 
             // Delete the component layers
-            prop->num_component_layers = 0;
             loader_instance_heap_free(inst, prop->component_layer_names);
-            prop->component_layer_names = NULL;
 
             // Remove the current invalid meta-layer from the layer list
             for (uint32_t j = i + 1; j < instance_layers->count; j++) {
-                memcpy(&instance_layers->list[j - 1], &instance_layers->list[j], sizeof(struct loader_layer_properties));
+                // Use memmove since we are overlapping the source and destination addresses.
+                memmove(&instance_layers->list[j - 1], &instance_layers->list[j], sizeof(struct loader_layer_properties));
             }
             instance_layers->count--;
 
-            // Re-verify the remaining list
-            verify_all_meta_layers(inst, instance_layers);
+            // Decrement the loop index so we re-check this.
+            i--;
         }
     }
 }
