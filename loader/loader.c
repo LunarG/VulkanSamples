@@ -2028,14 +2028,14 @@ static void verify_all_meta_layers(const struct loader_instance *inst, struct lo
             // Delete the component layers
             loader_instance_heap_free(inst, prop->component_layer_names);
 
-            // Remove the current invalid meta-layer from the layer list
-            for (uint32_t j = i + 1; j < instance_layers->count; j++) {
-                // Use memmove since we are overlapping the source and destination addresses.
-                memmove(&instance_layers->list[j - 1], &instance_layers->list[j], sizeof(struct loader_layer_properties));
-            }
-            instance_layers->count--;
+            // Remove the current invalid meta-layer from the layer list.  Use memmove since we are
+            // overlapping the source and destination addresses.
+            memmove(&instance_layers->list[i], &instance_layers->list[i + 1],
+                    sizeof(struct loader_layer_properties) * (instance_layers->count - 1 - i));
 
-            // Decrement the loop index so we re-check this.
+            // Decrement the count (because we now have one less) and decrement the loop index since we need to
+            // re-check this index.
+            instance_layers->count--;
             i--;
         }
     }
