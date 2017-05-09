@@ -116,7 +116,7 @@ int sample_main(int argc, char *argv[]) {
 
     info.texture_data.image_info.sampler = 0;
     info.texture_data.image_info.imageView = info.textures[0].view;
-    info.texture_data.image_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    info.texture_data.image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
     // Create our separate sampler
     VkSampler separateSampler = {};

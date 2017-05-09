@@ -1879,7 +1879,7 @@ void init_texture(struct sample_info &info, const char *textureName, VkImageUsag
     /* track a description of the texture */
     info.texture_data.image_info.imageView = info.textures.back().view;
     info.texture_data.image_info.sampler = info.textures.back().sampler;
-    info.texture_data.image_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    info.texture_data.image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 }
 
 void init_viewports(struct sample_info &info) {
