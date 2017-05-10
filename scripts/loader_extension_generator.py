@@ -835,7 +835,14 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
         # Some extensions have to be manually added.  Skip those in the automatic
         # generation.  They will be manually added later.
         manual_ext_commands = ['vkEnumeratePhysicalDeviceGroupsKHX',
-                               'vkGetPhysicalDeviceExternalImageFormatPropertiesNV']
+                               'vkGetPhysicalDeviceExternalImageFormatPropertiesNV',
+                               'vkGetPhysicalDeviceFeatures2KHR',
+                               'vkGetPhysicalDeviceProperties2KHR',
+                               'vkGetPhysicalDeviceFormatProperties2KHR',
+                               'vkGetPhysicalDeviceImageFormatProperties2KHR',
+                               'vkGetPhysicalDeviceQueueFamilyProperties2KHR',
+                               'vkGetPhysicalDeviceMemoryProperties2KHR',
+                               'vkGetPhysicalDeviceSparseImageFormatProperties2KHR']
 
         for ext_cmd in self.ext_commands:
             if (ext_cmd.ext_name in WSI_EXT_NAMES or

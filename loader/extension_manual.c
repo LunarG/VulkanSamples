@@ -173,6 +173,260 @@ terminator_GetPhysicalDeviceExternalImageFormatPropertiesNV(
         externalHandleType, pExternalImageFormatProperties);
 }
 
+// ---- VK_KHR_get_physical_device_properties2 extension trampoline/terminators
+
+VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceFeatures2KHR(VkPhysicalDevice physicalDevice, VkPhysicalDeviceFeatures2KHR *pFeatures) {
+    const VkLayerInstanceDispatchTable *disp;
+    VkPhysicalDevice unwrapped_phys_dev = loader_unwrap_physical_device(physicalDevice);
+    disp = loader_get_instance_layer_dispatch(physicalDevice);
+    disp->GetPhysicalDeviceFeatures2KHR(unwrapped_phys_dev, pFeatures);
+}
+
+VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceFeatures2KHR(VkPhysicalDevice physicalDevice,
+                                                                    VkPhysicalDeviceFeatures2KHR *pFeatures) {
+    struct loader_physical_device_term *phys_dev_term = (struct loader_physical_device_term *)physicalDevice;
+    struct loader_icd_term *icd_term = phys_dev_term->this_icd_term;
+
+    if (icd_term->dispatch.GetPhysicalDeviceFeatures2KHR != NULL) {
+        icd_term->dispatch.GetPhysicalDeviceFeatures2KHR(phys_dev_term->phys_dev, pFeatures);
+    } else {
+        loader_log(icd_term->this_instance, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
+                   "vkGetPhysicalDeviceFeatures2KHR: Emulating call using vkGetPhysicalDeviceFeatures");
+        if (pFeatures->pNext != NULL) {
+            loader_log(
+                icd_term->this_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                "vkGetPhysicalDeviceFeatures2KHR: Emulation found a non-null pNext in pFeatures - This pointer will be ignored");
+        }
+        icd_term->dispatch.GetPhysicalDeviceFeatures(phys_dev_term->phys_dev, &pFeatures->features);
+    }
+}
+
+VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceProperties2KHR(VkPhysicalDevice physicalDevice,
+                                                           VkPhysicalDeviceProperties2KHR *pProperties) {
+    const VkLayerInstanceDispatchTable *disp;
+    VkPhysicalDevice unwrapped_phys_dev = loader_unwrap_physical_device(physicalDevice);
+    disp = loader_get_instance_layer_dispatch(physicalDevice);
+    disp->GetPhysicalDeviceProperties2KHR(unwrapped_phys_dev, pProperties);
+}
+
+VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceProperties2KHR(VkPhysicalDevice physicalDevice,
+                                                                      VkPhysicalDeviceProperties2KHR *pProperties) {
+    struct loader_physical_device_term *phys_dev_term = (struct loader_physical_device_term *)physicalDevice;
+    struct loader_icd_term *icd_term = phys_dev_term->this_icd_term;
+
+    if (icd_term->dispatch.GetPhysicalDeviceProperties2KHR != NULL) {
+        icd_term->dispatch.GetPhysicalDeviceProperties2KHR(phys_dev_term->phys_dev, pProperties);
+    } else {
+        loader_log(icd_term->this_instance, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
+                   "vkGetPhysicalDeviceProperties2KHR: Emulating call using vkGetPhysicalDeviceProperties");
+        if (pProperties->pNext != NULL) {
+            loader_log(icd_term->this_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                       "vkGetPhysicalDeviceProperties2KHR: Emulation found a non-null pNext in pProperties - This pointer will be "
+                       "ignored");
+        }
+        icd_term->dispatch.GetPhysicalDeviceProperties(phys_dev_term->phys_dev, &pProperties->properties);
+    }
+}
+
+VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceFormatProperties2KHR(VkPhysicalDevice physicalDevice, VkFormat format,
+                                                                 VkFormatProperties2KHR *pFormatProperties) {
+    const VkLayerInstanceDispatchTable *disp;
+    VkPhysicalDevice unwrapped_phys_dev = loader_unwrap_physical_device(physicalDevice);
+    disp = loader_get_instance_layer_dispatch(physicalDevice);
+    disp->GetPhysicalDeviceFormatProperties2KHR(unwrapped_phys_dev, format, pFormatProperties);
+}
+
+VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceFormatProperties2KHR(VkPhysicalDevice physicalDevice, VkFormat format,
+                                                                            VkFormatProperties2KHR *pFormatProperties) {
+    struct loader_physical_device_term *phys_dev_term = (struct loader_physical_device_term *)physicalDevice;
+    struct loader_icd_term *icd_term = phys_dev_term->this_icd_term;
+
+    if (icd_term->dispatch.GetPhysicalDeviceFormatProperties2KHR != NULL) {
+        icd_term->dispatch.GetPhysicalDeviceFormatProperties2KHR(phys_dev_term->phys_dev, format, pFormatProperties);
+    } else {
+        loader_log(icd_term->this_instance, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
+                   "vkGetPhysicalDeviceFormatProperties2KHR: Emulating call using vkGetPhysicalDeviceFormatProperties");
+        if (pFormatProperties->pNext != NULL) {
+            loader_log(icd_term->this_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                       "vkGetPhysicalDeviceFormatProperties2KHR: Emulation found a non-null pNext in pFormatProperties - This "
+                       "pointer will be ignored");
+        }
+        icd_term->dispatch.GetPhysicalDeviceFormatProperties(phys_dev_term->phys_dev, format, &pFormatProperties->formatProperties);
+    }
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceImageFormatProperties2KHR(
+    VkPhysicalDevice physicalDevice, const VkPhysicalDeviceImageFormatInfo2KHR *pImageFormatInfo,
+    VkImageFormatProperties2KHR *pImageFormatProperties) {
+    const VkLayerInstanceDispatchTable *disp;
+    VkPhysicalDevice unwrapped_phys_dev = loader_unwrap_physical_device(physicalDevice);
+    disp = loader_get_instance_layer_dispatch(physicalDevice);
+    return disp->GetPhysicalDeviceImageFormatProperties2KHR(unwrapped_phys_dev, pImageFormatInfo, pImageFormatProperties);
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL terminator_GetPhysicalDeviceImageFormatProperties2KHR(
+    VkPhysicalDevice physicalDevice, const VkPhysicalDeviceImageFormatInfo2KHR *pImageFormatInfo,
+    VkImageFormatProperties2KHR *pImageFormatProperties) {
+    struct loader_physical_device_term *phys_dev_term = (struct loader_physical_device_term *)physicalDevice;
+    struct loader_icd_term *icd_term = phys_dev_term->this_icd_term;
+
+    if (icd_term->dispatch.GetPhysicalDeviceImageFormatProperties2KHR != NULL) {
+        return icd_term->dispatch.GetPhysicalDeviceImageFormatProperties2KHR(phys_dev_term->phys_dev, pImageFormatInfo,
+                                                                             pImageFormatProperties);
+    } else {
+        loader_log(icd_term->this_instance, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
+                   "vkGetPhysicalDeviceImageFormatProperties2KHR: Emulating call using vkGetPhysicalDeviceImageFormatProperties");
+        if (pImageFormatInfo != NULL) {
+            loader_log(icd_term->this_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                       "vkGetPhysicalDeviceImageFormatProperties2KHR: Emulation found a non-null pNext in pImageFormatInfo - This "
+                       "pointer will be ignored");
+        }
+        if (pImageFormatProperties != NULL) {
+            loader_log(icd_term->this_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                       "vkGetPhysicalDeviceImageFormatProperties2KHR: Emulation found a non-null pNext in pImageFormatProperties - "
+                       "This pointer will be ignored");
+        }
+        VkResult res = icd_term->dispatch.GetPhysicalDeviceImageFormatProperties(
+            phys_dev_term->phys_dev, pImageFormatInfo->format, pImageFormatInfo->type, pImageFormatInfo->tiling,
+            pImageFormatInfo->usage, pImageFormatInfo->flags, &pImageFormatProperties->imageFormatProperties);
+        return pImageFormatInfo->pNext == NULL ? res : VK_ERROR_FORMAT_NOT_SUPPORTED;
+    }
+}
+
+VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceQueueFamilyProperties2KHR(VkPhysicalDevice physicalDevice,
+                                                                      uint32_t *pQueueFamilyPropertyCount,
+                                                                      VkQueueFamilyProperties2KHR *pQueueFamilyProperties) {
+    const VkLayerInstanceDispatchTable *disp;
+    VkPhysicalDevice unwrapped_phys_dev = loader_unwrap_physical_device(physicalDevice);
+    disp = loader_get_instance_layer_dispatch(physicalDevice);
+    disp->GetPhysicalDeviceQueueFamilyProperties2KHR(unwrapped_phys_dev, pQueueFamilyPropertyCount, pQueueFamilyProperties);
+}
+
+VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceQueueFamilyProperties2KHR(
+    VkPhysicalDevice physicalDevice, uint32_t *pQueueFamilyPropertyCount, VkQueueFamilyProperties2KHR *pQueueFamilyProperties) {
+    struct loader_physical_device_term *phys_dev_term = (struct loader_physical_device_term *)physicalDevice;
+    struct loader_icd_term *icd_term = phys_dev_term->this_icd_term;
+
+    if (icd_term->dispatch.GetPhysicalDeviceQueueFamilyProperties2KHR != NULL) {
+        icd_term->dispatch.GetPhysicalDeviceQueueFamilyProperties2KHR(phys_dev_term->phys_dev, pQueueFamilyPropertyCount,
+                                                                      pQueueFamilyProperties);
+    } else if (pQueueFamilyProperties == NULL || *pQueueFamilyPropertyCount == 0) {
+        loader_log(icd_term->this_instance, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
+                   "vkGetPhysicalDeviceQueueFamilyProperties2KHR: Emulating call using vkGetPhysicalDeviceQueueFamilyProperties");
+        icd_term->dispatch.GetPhysicalDeviceQueueFamilyProperties(phys_dev_term->phys_dev, pQueueFamilyPropertyCount, NULL);
+    } else {
+        loader_log(icd_term->this_instance, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
+                   "vkGetPhysicalDeviceQueueFamilyProperties2KHR: Emulating call using vkGetPhysicalDeviceQueueFamilyProperties");
+        VkQueueFamilyProperties *properties = loader_stack_alloc(*pQueueFamilyPropertyCount * sizeof(VkQueueFamilyProperties));
+        if (properties == NULL) {
+            *pQueueFamilyPropertyCount = 0;
+            loader_log(
+                icd_term->this_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                "vkGetPhysicalDeviceQueueFamilyProperties2KHR: Out of memory - Failed to allocate arrary for loader emulation.");
+        } else {
+            icd_term->dispatch.GetPhysicalDeviceQueueFamilyProperties(phys_dev_term->phys_dev, pQueueFamilyPropertyCount,
+                                                                      properties);
+            for (uint32_t i = 0; i < *pQueueFamilyPropertyCount; ++i) {
+                if (pQueueFamilyProperties[i].pNext != NULL) {
+                    loader_log(icd_term->this_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                               "vkGetPhysicalDeviceQueueFamilyProperties2KHR: Emulation found a non-null pNext in "
+                               "pQueueFamilyProperties at index %d - This pointer will be ignored",
+                               i);
+                }
+                memcpy(&pQueueFamilyProperties[i].queueFamilyProperties, &properties[i], sizeof(VkQueueFamilyProperties));
+            }
+        }
+    }
+}
+
+VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceMemoryProperties2KHR(VkPhysicalDevice physicalDevice,
+                                                                 VkPhysicalDeviceMemoryProperties2KHR *pMemoryProperties) {
+    const VkLayerInstanceDispatchTable *disp;
+    VkPhysicalDevice unwrapped_phys_dev = loader_unwrap_physical_device(physicalDevice);
+    disp = loader_get_instance_layer_dispatch(physicalDevice);
+    disp->GetPhysicalDeviceMemoryProperties2KHR(unwrapped_phys_dev, pMemoryProperties);
+}
+
+VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceMemoryProperties2KHR(
+    VkPhysicalDevice physicalDevice, VkPhysicalDeviceMemoryProperties2KHR *pMemoryProperties) {
+    struct loader_physical_device_term *phys_dev_term = (struct loader_physical_device_term *)physicalDevice;
+    struct loader_icd_term *icd_term = phys_dev_term->this_icd_term;
+
+    if (icd_term->dispatch.GetPhysicalDeviceMemoryProperties2KHR != NULL) {
+        icd_term->dispatch.GetPhysicalDeviceMemoryProperties2KHR(phys_dev_term->phys_dev, pMemoryProperties);
+    } else {
+        loader_log(icd_term->this_instance, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
+                   "vkGetPhysicalDeviceMemoryProperties2KHR: Emulating call using vkGetPhysicalDeviceMemoryProperties");
+        if (pMemoryProperties != NULL) {
+            loader_log(icd_term->this_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                       "vkGetPhysicalDeviceMemoryProperties2KHR: Emulation found a non-null pNext in pMemoryProperties - This "
+                       "pointer will be ignored");
+        }
+        icd_term->dispatch.GetPhysicalDeviceMemoryProperties(phys_dev_term->phys_dev, &pMemoryProperties->memoryProperties);
+    }
+}
+
+VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceSparseImageFormatProperties2KHR(
+    VkPhysicalDevice physicalDevice, const VkPhysicalDeviceSparseImageFormatInfo2KHR *pFormatInfo, uint32_t *pPropertyCount,
+    VkSparseImageFormatProperties2KHR *pProperties) {
+    const VkLayerInstanceDispatchTable *disp;
+    VkPhysicalDevice unwrapped_phys_dev = loader_unwrap_physical_device(physicalDevice);
+    disp = loader_get_instance_layer_dispatch(physicalDevice);
+    disp->GetPhysicalDeviceSparseImageFormatProperties2KHR(unwrapped_phys_dev, pFormatInfo, pPropertyCount, pProperties);
+}
+
+VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceSparseImageFormatProperties2KHR(
+    VkPhysicalDevice physicalDevice, const VkPhysicalDeviceSparseImageFormatInfo2KHR *pFormatInfo, uint32_t *pPropertyCount,
+    VkSparseImageFormatProperties2KHR *pProperties) {
+    struct loader_physical_device_term *phys_dev_term = (struct loader_physical_device_term *)physicalDevice;
+    struct loader_icd_term *icd_term = phys_dev_term->this_icd_term;
+
+    if (icd_term->dispatch.GetPhysicalDeviceSparseImageFormatProperties2KHR != NULL) {
+        icd_term->dispatch.GetPhysicalDeviceSparseImageFormatProperties2KHR(phys_dev_term->phys_dev, pFormatInfo, pPropertyCount,
+                                                                            pProperties);
+    } else if (pProperties == NULL || *pPropertyCount == 0) {
+        loader_log(icd_term->this_instance, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
+                   "vkGetPhysicalDeviceSparseImageFormatProperties2KHR: Emulating call using "
+                   "vkGetPhysicalDeviceSparseImageFormatProperties");
+        if (pFormatInfo->pNext != NULL) {
+            loader_log(icd_term->this_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                       "vkGetPhysicalDeviceSparseImageFormatProperties2KHR: Emulation found a non-null pNext in pFormatInfo - This "
+                       "pointer will be ignored");
+        }
+        icd_term->dispatch.GetPhysicalDeviceSparseImageFormatProperties(phys_dev_term->phys_dev, pFormatInfo->format,
+                                                                        pFormatInfo->type, pFormatInfo->samples, pFormatInfo->usage,
+                                                                        pFormatInfo->tiling, pPropertyCount, NULL);
+    } else {
+        loader_log(icd_term->this_instance, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
+                   "vkGetPhysicalDeviceSparseImageFormatProperties2KHR: Emulating call using "
+                   "vkGetPhysicalDeviceSparseImageFormatProperties");
+        if (pFormatInfo->pNext != NULL) {
+            loader_log(icd_term->this_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                       "vkGetPhysicalDeviceSparseImageFormatProperties2KHR: Emulation found a non-null pNext in pFormatInfo - This "
+                       "pointer will be ignored");
+        }
+        VkSparseImageFormatProperties *properties = loader_stack_alloc(*pPropertyCount * sizeof(VkSparseImageMemoryRequirements));
+        if (properties == NULL) {
+            *pPropertyCount = 0;
+            loader_log(icd_term->this_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                       "vkGetPhysicalDeviceSparseImageFormatProperties2KHR: Out of memory - Failed to allocate arrary for loader "
+                       "emulation.");
+        } else {
+            icd_term->dispatch.GetPhysicalDeviceSparseImageFormatProperties(
+                phys_dev_term->phys_dev, pFormatInfo->format, pFormatInfo->type, pFormatInfo->samples, pFormatInfo->usage,
+                pFormatInfo->tiling, pPropertyCount, properties);
+            for (uint32_t i = 0; i < *pPropertyCount; ++i) {
+                if (pProperties[i].pNext != NULL) {
+                    loader_log(icd_term->this_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                               "vkGetPhysicalDeviceSparseImageFormatProperties2KHR: Emulation found a non-null pNext in "
+                               "pProperties at index %d - This pointer will be ignored",
+                               i);
+                }
+                memcpy(&pProperties[i].properties, &properties[i], sizeof(VkSparseImageFormatProperties));
+            }
+        }
+    }
+}
 
 VkResult setupLoaderTrampPhysDevGroups(VkInstance instance) {
     VkResult res = VK_SUCCESS;
