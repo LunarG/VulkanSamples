@@ -17994,6 +17994,327 @@ TEST_F(VkLayerTest, ImageFormatLimits) {
     image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 }
 
+TEST_F(VkLayerTest, CopyImageTypeExtentMismatch) {
+    // Image copy tests where format type and extents don't match
+
+    // Include maintenance1 extension if available
+    device_extension_names.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
+    InitFramework(instance_layer_names, instance_extension_names, device_extension_names, myDbgFunc, m_errorMonitor);
+
+    // See if maintenance1 extension is available and enabled.
+    uint32_t extension_count = 0;
+    bool supports_maintenance1_extension = false;
+    VkResult err = vkEnumerateDeviceExtensionProperties(gpu(), nullptr, &extension_count, nullptr);
+    ASSERT_VK_SUCCESS(err);
+    if (extension_count > 0) {
+        std::vector<VkExtensionProperties> available_extensions(extension_count);
+
+        err = vkEnumerateDeviceExtensionProperties(gpu(), nullptr, &extension_count, &available_extensions[0]);
+        ASSERT_VK_SUCCESS(err);
+        for (const auto &extension_props : available_extensions) {
+            if (strcmp(extension_props.extensionName, VK_KHR_MAINTENANCE1_EXTENSION_NAME) == 0) {
+                supports_maintenance1_extension = true;
+            }
+        }
+    }
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkImageCreateInfo ci;
+    ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    ci.pNext = NULL;
+    ci.flags = 0;
+    ci.imageType = VK_IMAGE_TYPE_1D;
+    ci.format = VK_FORMAT_R8G8B8A8_UNORM;
+    ci.extent = {32, 1, 1};
+    ci.mipLevels = 1;
+    ci.arrayLayers = 1;
+    ci.samples = VK_SAMPLE_COUNT_1_BIT;
+    ci.tiling = VK_IMAGE_TILING_OPTIMAL;
+    ci.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    ci.queueFamilyIndexCount = 0;
+    ci.pQueueFamilyIndices = NULL;
+    ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    // Create 1D image
+    VkImageObj image_1D(m_device);
+    image_1D.init(&ci);
+    ASSERT_TRUE(image_1D.initialized());
+
+    // 2D image
+    ci.imageType = VK_IMAGE_TYPE_2D;
+    ci.extent = {32, 32, 1};
+    VkImageObj image_2D(m_device);
+    image_2D.init(&ci);
+    ASSERT_TRUE(image_2D.initialized());
+
+    // 3D image
+    ci.imageType = VK_IMAGE_TYPE_3D;
+    ci.extent = {32, 32, 8};
+    VkImageObj image_3D(m_device);
+    image_3D.init(&ci);
+    ASSERT_TRUE(image_3D.initialized());
+
+    // 2D image array
+    ci.imageType = VK_IMAGE_TYPE_2D;
+    ci.extent = {32, 32, 1};
+    ci.arrayLayers = 8;
+    VkImageObj image_2D_array(m_device);
+    image_2D_array.init(&ci);
+    ASSERT_TRUE(image_2D_array.initialized());
+
+    m_commandBuffer->BeginCommandBuffer();
+
+    VkImageCopy copy_region;
+    copy_region.extent = {32, 1, 1};
+    copy_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copy_region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copy_region.srcSubresource.mipLevel = 0;
+    copy_region.dstSubresource.mipLevel = 0;
+    copy_region.srcSubresource.baseArrayLayer = 0;
+    copy_region.dstSubresource.baseArrayLayer = 0;
+    copy_region.srcSubresource.layerCount = 1;
+    copy_region.dstSubresource.layerCount = 1;
+    copy_region.srcOffset = {0, 0, 0};
+    copy_region.dstOffset = {0, 0, 0};
+
+    // Sanity check
+    m_errorMonitor->ExpectSuccess();
+    m_commandBuffer->CopyImage(image_1D.image(), VK_IMAGE_LAYOUT_GENERAL, image_2D.image(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                               &copy_region);
+    m_errorMonitor->VerifyNotFound();
+
+    // 1D texture w/ offset.y > 0. Source = VU 01742, dest = 01744
+    copy_region.srcOffset.y = 1;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01742);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01203);  // also y-dim overrun
+    m_commandBuffer->CopyImage(image_1D.image(), VK_IMAGE_LAYOUT_GENERAL, image_2D.image(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                               &copy_region);
+    m_errorMonitor->VerifyFound();
+    copy_region.srcOffset.y = 0;
+    copy_region.dstOffset.y = 1;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01744);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01206);  // also y-dim overrun
+    m_commandBuffer->CopyImage(image_2D.image(), VK_IMAGE_LAYOUT_GENERAL, image_1D.image(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                               &copy_region);
+    m_errorMonitor->VerifyFound();
+    copy_region.dstOffset.y = 0;
+
+    // 1D texture w/ extent.height > 1. Source = VU 01742, dest = 01744
+    copy_region.extent.height = 2;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01742);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01203);  // also y-dim overrun
+    m_commandBuffer->CopyImage(image_1D.image(), VK_IMAGE_LAYOUT_GENERAL, image_2D.image(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                               &copy_region);
+    m_errorMonitor->VerifyFound();
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01744);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01206);  // also y-dim overrun
+    m_commandBuffer->CopyImage(image_2D.image(), VK_IMAGE_LAYOUT_GENERAL, image_1D.image(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                               &copy_region);
+    m_errorMonitor->VerifyFound();
+    copy_region.extent.height = 1;
+
+    // 2D texture w/ offset.z > 0. Source = VU 01743, dest = 01745
+    copy_region.extent = {16, 16, 1};
+    copy_region.srcOffset.z = 4;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01743);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01204);  // also z-dim overrun
+    m_commandBuffer->CopyImage(image_2D.image(), VK_IMAGE_LAYOUT_GENERAL, image_3D.image(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                               &copy_region);
+    m_errorMonitor->VerifyFound();
+    copy_region.srcOffset.z = 0;
+    copy_region.dstOffset.z = 1;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01745);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01207);  // also z-dim overrun
+    m_commandBuffer->CopyImage(image_3D.image(), VK_IMAGE_LAYOUT_GENERAL, image_2D.image(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                               &copy_region);
+    m_errorMonitor->VerifyFound();
+    copy_region.dstOffset.z = 0;
+
+    // 2D texture w/ extent.depth > 1. Source = VU 01743, dest = 01745
+    copy_region.extent.depth = 8;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01743);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01204);  // also z-dim overrun
+    if (supports_maintenance1_extension) {  // With maintenance1, will also report a depth slice mismatch
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01198);
+    }
+    m_commandBuffer->CopyImage(image_2D.image(), VK_IMAGE_LAYOUT_GENERAL, image_3D.image(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                               &copy_region);
+    m_errorMonitor->VerifyFound();
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01745);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01207);  // also z-dim overrun
+    if (supports_maintenance1_extension) {  // With maintenance1, will also report a depth slice mismatch
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01198);
+    }
+    m_commandBuffer->CopyImage(image_3D.image(), VK_IMAGE_LAYOUT_GENERAL, image_2D.image(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                               &copy_region);
+    m_errorMonitor->VerifyFound();
+    copy_region.extent.depth = 1;
+
+    // 3D texture accessing an array layer other than 0. VU 01199
+    copy_region.extent = {4, 4, 1};
+    copy_region.srcSubresource.baseArrayLayer = 1;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01199);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01224);  // also triggers 'too many layers'
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         VALIDATION_ERROR_02603);  // and 'copy from layer not present'
+    m_commandBuffer->CopyImage(image_3D.image(), VK_IMAGE_LAYOUT_GENERAL, image_2D.image(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                               &copy_region);
+    m_errorMonitor->VerifyFound();
+
+    if (supports_maintenance1_extension) {
+        // Copy from layer not present - VU02603
+        // TODO: this VU is redundant with VU01224. Gitlab issue 812 submitted to have it removed.
+        copy_region.srcSubresource.baseArrayLayer = 4;
+        copy_region.srcSubresource.layerCount = 6;
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02603);
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01224);
+        m_commandBuffer->CopyImage(image_2D_array.image(), VK_IMAGE_LAYOUT_GENERAL, image_3D.image(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                                   &copy_region);
+        m_errorMonitor->VerifyFound();
+        copy_region.srcSubresource.baseArrayLayer = 0;
+        copy_region.srcSubresource.layerCount = 1;
+
+        // Copy to layer not present - VU02604
+        // TODO: this VU is redundant with VU01224. Gitlab issue 812 submitted to have it removed.
+        copy_region.dstSubresource.baseArrayLayer = 1;
+        copy_region.dstSubresource.layerCount = 8;
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02604);
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01224);
+        m_commandBuffer->CopyImage(image_3D.image(), VK_IMAGE_LAYOUT_GENERAL, image_2D_array.image(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                                   &copy_region);
+        m_errorMonitor->VerifyFound();
+        copy_region.dstSubresource.layerCount = 1;
+    }
+    m_commandBuffer->EndCommandBuffer();
+}
+
+TEST_F(VkLayerTest, CopyImageCompressedBlockAlignment) {
+    // Image copy tests on compressed images with block alignment errors
+
+    ASSERT_NO_FATAL_FAILURE(Init());
+
+    // Select a compressed format and verify support
+    VkPhysicalDeviceFeatures device_features = {};
+    ASSERT_NO_FATAL_FAILURE(GetPhysicalDeviceFeatures(&device_features));
+    VkFormat compressed_format = VK_FORMAT_UNDEFINED;
+    if (device_features.textureCompressionBC) {
+        compressed_format = VK_FORMAT_BC3_SRGB_BLOCK;
+    } else if (device_features.textureCompressionETC2) {
+        compressed_format = VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK;
+    } else if (device_features.textureCompressionASTC_LDR) {
+        compressed_format = VK_FORMAT_ASTC_4x4_UNORM_BLOCK;
+    }
+
+    VkImageCreateInfo ci;
+    ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    ci.pNext = NULL;
+    ci.flags = 0;
+    ci.imageType = VK_IMAGE_TYPE_2D;
+    ci.format = compressed_format;
+    ci.extent = {64, 64, 1};
+    ci.mipLevels = 1;
+    ci.arrayLayers = 1;
+    ci.samples = VK_SAMPLE_COUNT_1_BIT;
+    ci.tiling = VK_IMAGE_TILING_OPTIMAL;
+    ci.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    ci.queueFamilyIndexCount = 0;
+    ci.pQueueFamilyIndices = NULL;
+    ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    VkImageFormatProperties img_prop = {};
+    if (VK_SUCCESS != vkGetPhysicalDeviceImageFormatProperties(m_device->phy().handle(), ci.format, ci.imageType, ci.tiling,
+                                                               ci.usage, ci.flags, &img_prop)) {
+        printf("             No compressed formats supported - CopyImageCompressedBlockAlignment skipped.\n");
+        return;
+    }
+
+    // Create images
+    VkImageObj image_1(m_device);
+    image_1.init(&ci);
+    ASSERT_TRUE(image_1.initialized());
+
+    ci.extent = {62, 62, 1};  // slightly smaller and not divisible by block size
+    VkImageObj image_2(m_device);
+    image_2.init(&ci);
+    ASSERT_TRUE(image_2.initialized());
+
+    m_commandBuffer->BeginCommandBuffer();
+
+    VkImageCopy copy_region;
+    copy_region.extent = {48, 48, 1};
+    copy_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copy_region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copy_region.srcSubresource.mipLevel = 0;
+    copy_region.dstSubresource.mipLevel = 0;
+    copy_region.srcSubresource.baseArrayLayer = 0;
+    copy_region.dstSubresource.baseArrayLayer = 0;
+    copy_region.srcSubresource.layerCount = 1;
+    copy_region.dstSubresource.layerCount = 1;
+    copy_region.srcOffset = {0, 0, 0};
+    copy_region.dstOffset = {0, 0, 0};
+
+    // Sanity check
+    m_errorMonitor->ExpectSuccess();
+    m_commandBuffer->CopyImage(image_1.image(), VK_IMAGE_LAYOUT_GENERAL, image_2.image(), VK_IMAGE_LAYOUT_GENERAL, 1, &copy_region);
+    m_errorMonitor->VerifyNotFound();
+
+    // Src, Dest offsets must be multiples of compressed block sizes {4, 4, 1}
+    // Image transfer granularity gets set to compressed block size, so an ITG error is also (unavoidably) triggered.
+    copy_region.srcOffset = {2, 4, 0};  // source width
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01209);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "queue family image transfer granularity");
+    m_commandBuffer->CopyImage(image_1.image(), VK_IMAGE_LAYOUT_GENERAL, image_2.image(), VK_IMAGE_LAYOUT_GENERAL, 1, &copy_region);
+    m_errorMonitor->VerifyFound();
+    copy_region.srcOffset = {12, 1, 0};  // source height
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01209);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "queue family image transfer granularity");
+    m_commandBuffer->CopyImage(image_1.image(), VK_IMAGE_LAYOUT_GENERAL, image_2.image(), VK_IMAGE_LAYOUT_GENERAL, 1, &copy_region);
+    m_errorMonitor->VerifyFound();
+    copy_region.srcOffset = {0, 0, 0};
+    copy_region.dstOffset = {1, 0, 0};  // dest width
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01214);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "queue family image transfer granularity");
+    m_commandBuffer->CopyImage(image_1.image(), VK_IMAGE_LAYOUT_GENERAL, image_2.image(), VK_IMAGE_LAYOUT_GENERAL, 1, &copy_region);
+    m_errorMonitor->VerifyFound();
+    copy_region.dstOffset = {4, 1, 0};  // dest height
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01214);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "queue family image transfer granularity");
+    m_commandBuffer->CopyImage(image_1.image(), VK_IMAGE_LAYOUT_GENERAL, image_2.image(), VK_IMAGE_LAYOUT_GENERAL, 1, &copy_region);
+    m_errorMonitor->VerifyFound();
+    copy_region.dstOffset = {0, 0, 0};
+
+    // Copy extent must be multiples of compressed block sizes {4, 4, 1} if not full width/height
+    copy_region.extent = {62, 60, 1};  // source width
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01210);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "queue family image transfer granularity");
+    m_commandBuffer->CopyImage(image_1.image(), VK_IMAGE_LAYOUT_GENERAL, image_2.image(), VK_IMAGE_LAYOUT_GENERAL, 1, &copy_region);
+    m_errorMonitor->VerifyFound();
+    copy_region.extent = {60, 62, 1};  // source height
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01211);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "queue family image transfer granularity");
+    m_commandBuffer->CopyImage(image_1.image(), VK_IMAGE_LAYOUT_GENERAL, image_2.image(), VK_IMAGE_LAYOUT_GENERAL, 1, &copy_region);
+    m_errorMonitor->VerifyFound();
+    copy_region.extent = {62, 60, 1};  // dest width
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01215);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "queue family image transfer granularity");
+    m_commandBuffer->CopyImage(image_2.image(), VK_IMAGE_LAYOUT_GENERAL, image_1.image(), VK_IMAGE_LAYOUT_GENERAL, 1, &copy_region);
+    m_errorMonitor->VerifyFound();
+    copy_region.extent = {60, 62, 1};  // dest height
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01216);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "queue family image transfer granularity");
+    m_commandBuffer->CopyImage(image_2.image(), VK_IMAGE_LAYOUT_GENERAL, image_1.image(), VK_IMAGE_LAYOUT_GENERAL, 1, &copy_region);
+    m_errorMonitor->VerifyFound();
+
+    // Note: VALIDATION_ERROR_01212 and VALIDATION_ERROR_01217
+    //       VUs 01212 and 01217 should be tested here, if possible.  There are currently no supported compressed formats with
+    //       a block depth other than 1, so impossible to create a 'not a multiple' condiditon for depth.
+
+    m_commandBuffer->EndCommandBuffer();
+}
+
 TEST_F(VkLayerTest, CopyImageSrcSizeExceeded) {
     // Image copy with source region specified greater than src image size
     ASSERT_NO_FATAL_FAILURE(Init());
