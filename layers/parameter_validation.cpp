@@ -54,6 +54,19 @@
 #include "parameter_validation.h"
 #include "device_extensions.h"
 
+// TODO: remove on NDK update (r15 will probably have proper STL impl)
+#ifdef __ANDROID__
+namespace std {
+
+template <typename T>
+std::string to_string(T var) {
+    std::ostringstream ss;
+    ss << var;
+    return ss.str();
+}
+}
+#endif
+
 namespace parameter_validation {
 
 struct instance_layer_data {
@@ -1245,7 +1258,7 @@ static bool ValidateDeviceQueueFamily(layer_data *device_data, uint32_t queue_fa
     } else if (device_data->queueFamilyIndexMap.find(queue_family) == device_data->queueFamilyIndexMap.end()) {
         skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                         reinterpret_cast<uint64_t>(device_data->device), __LINE__, error_code, LayerName,
-                        "%s: %s (=%" PRIu32 ") is not one of the queue families given via VkDeviceQueueCreateInfo structures when "
+                        "%s: %s (= %" PRIu32 ") is not one of the queue families given via VkDeviceQueueCreateInfo structures when "
                         "the device was created. %s",
                         cmd_name, parameter_name, queue_family, vu_note);
     }
@@ -1253,27 +1266,31 @@ static bool ValidateDeviceQueueFamily(layer_data *device_data, uint32_t queue_fa
     return skip;
 }
 
-static bool validate_queue_family_indices(layer_data *device_data, const char *function_name, const char *parameter_name,
-                                          const uint32_t count, const uint32_t *indices) {
-    assert(device_data != nullptr);
-    debug_report_data *report_data = device_data->report_data;
+static bool ValidateQueueFamilies(layer_data *device_data, uint32_t queue_family_count, const uint32_t *queue_families,
+                                  const char *cmd_name, const char *array_parameter_name, int32_t unique_error_code,
+                                  int32_t valid_error_code, bool optional = false, const char *unique_vu_note = nullptr,
+                                  const char *valid_vu_note = nullptr) {
     bool skip = false;
 
-    if (indices != nullptr) {
-        for (uint32_t i = 0; i < count; i++) {
-            if (indices[i] == VK_QUEUE_FAMILY_IGNORED) {
-                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, 1,
-                                LayerName, "%s: %s[%d] cannot be VK_QUEUE_FAMILY_IGNORED.", function_name, parameter_name, i);
+    if (!unique_vu_note) unique_vu_note = validation_error_map[unique_error_code];
+    if (!valid_vu_note) valid_vu_note = validation_error_map[valid_error_code];
+
+    if (queue_families) {
+        std::unordered_set<uint32_t> set;
+
+        for (uint32_t i = 0; i < queue_family_count; ++i) {
+            std::string parameter_name = std::string(array_parameter_name) + "[" + std::to_string(i) + "]";
+
+            if (set.count(queue_families[i])) {
+                skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                reinterpret_cast<uint64_t>(device_data->device), __LINE__, VALIDATION_ERROR_00035, LayerName,
+                                "%s: %s (=%" PRIu32 ") is not unique within %s array. %s", cmd_name, parameter_name.c_str(),
+                                queue_families[i], array_parameter_name, unique_vu_note);
             } else {
-                const auto &queue_data = device_data->queueFamilyIndexMap.find(indices[i]);
-                if (queue_data == device_data->queueFamilyIndexMap.end()) {
-                    skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                    __LINE__, 1, LayerName,
-                                    "%s: %s[%d] (%d) must be one of the indices specified when the device was "
-                                    "created, via the VkDeviceQueueCreateInfo structure.",
-                                    function_name, parameter_name, i, indices[i]);
-                    return false;
-                }
+                set.insert(queue_families[i]);
+
+                skip |= ValidateDeviceQueueFamily(device_data, queue_families[i], cmd_name, parameter_name.c_str(),
+                                                  valid_error_code, optional, valid_vu_note);
             }
         }
     }
@@ -1650,6 +1667,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physicalDevice, con
         result = fpCreateDevice(physicalDevice, pCreateInfo, pAllocator, pDevice);
 
         lock.lock();
+
         validate_result(my_instance_data->report_data, "vkCreateDevice", {}, result);
 
 
@@ -2306,6 +2324,8 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateBuffer(VkDevice device, const VkBufferCreat
     bool skip = false;
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(device_data != nullptr);
+
+    std::unique_lock<std::mutex> lock(global_lock);
     debug_report_data *report_data = device_data->report_data;
 
     skip |= parameter_validation_vkCreateBuffer(report_data, pCreateInfo, pAllocator, pBuffer);
@@ -2335,11 +2355,12 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateBuffer(VkDevice device, const VkBufferCreat
                                 "pCreateInfo->pQueueFamilyIndices must be a pointer to an array of "
                                 "pCreateInfo->queueFamilyIndexCount uint32_t values. %s",
                                 validation_error_map[VALIDATION_ERROR_00664]);
+            } else {
+                // TODO: Not in the spec VUs. Probably missing -- KhronosGroup/Vulkan-Docs#501. Update error codes when resolved.
+                skip |= ValidateQueueFamilies(device_data, pCreateInfo->queueFamilyIndexCount, pCreateInfo->pQueueFamilyIndices,
+                                              "vkCreateBuffer", "pCreateInfo->pQueueFamilyIndices", INVALID_USAGE, INVALID_USAGE,
+                                              false, "", "");
             }
-
-            // Ensure that the queue family indices were specified at device creation
-            skip |= validate_queue_family_indices(device_data, "vkCreateBuffer", "pCreateInfo->pQueueFamilyIndices",
-                                                  pCreateInfo->queueFamilyIndexCount, pCreateInfo->pQueueFamilyIndices);
         }
 
         // If flags contains VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT or VK_BUFFER_CREATE_SPARSE_ALIASED_BIT, it must also contain
@@ -2353,6 +2374,8 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateBuffer(VkDevice device, const VkBufferCreat
                             validation_error_map[VALIDATION_ERROR_00669]);
         }
     }
+
+    lock.unlock();
 
     if (!skip) {
         result = device_data->dispatch_table.CreateBuffer(device, pCreateInfo, pAllocator, pBuffer);
@@ -2411,6 +2434,8 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateI
     bool skip = false;
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(device_data != nullptr);
+
+    std::unique_lock<std::mutex> lock(global_lock);
     debug_report_data *report_data = device_data->report_data;
 
     skip |= parameter_validation_vkCreateImage(report_data, pCreateInfo, pAllocator, pImage);
@@ -2465,10 +2490,12 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateI
                                 "pCreateInfo->pQueueFamilyIndices must be a pointer to an array of "
                                 "pCreateInfo->queueFamilyIndexCount uint32_t values. %s",
                                 validation_error_map[VALIDATION_ERROR_00713]);
+            } else {
+                // TODO: Not in the spec VUs. Probably missing -- KhronosGroup/Vulkan-Docs#501. Update error codes when resolved.
+                skip |= ValidateQueueFamilies(device_data, pCreateInfo->queueFamilyIndexCount, pCreateInfo->pQueueFamilyIndices,
+                                              "vkCreateImage", "pCreateInfo->pQueueFamilyIndices", INVALID_USAGE, INVALID_USAGE,
+                                              false, "", "");
             }
-
-            skip |= validate_queue_family_indices(device_data, "vkCreateImage", "pCreateInfo->pQueueFamilyIndices",
-                                                  pCreateInfo->queueFamilyIndexCount, pCreateInfo->pQueueFamilyIndices);
         }
 
         // width, height, and depth members of extent must be greater than 0
@@ -2611,6 +2638,8 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateI
             }
         }
     }
+
+    lock.unlock();
 
     if (!skip) {
         result = device_data->dispatch_table.CreateImage(device, pCreateInfo, pAllocator, pImage);
@@ -5057,18 +5086,84 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device, const VkSwapc
                                                   const VkAllocationCallbacks *pAllocator, VkSwapchainKHR *pSwapchain) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip = false;
-    layer_data *my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-    assert(my_data != NULL);
+    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    assert(device_data != nullptr);
+    std::unique_lock<std::mutex> lock(global_lock);
+    debug_report_data *report_data = device_data->report_data;
 
-    skip |= require_device_extension(my_data, my_data->enables.khr_swapchain, "vkCreateSwapchainKHR",
+    skip |= require_device_extension(device_data, device_data->enables.khr_swapchain, "vkCreateSwapchainKHR",
                                      VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
-    skip |= parameter_validation_vkCreateSwapchainKHR(my_data->report_data, pCreateInfo, pAllocator, pSwapchain);
+    skip |= parameter_validation_vkCreateSwapchainKHR(device_data->report_data, pCreateInfo, pAllocator, pSwapchain);
+
+    if (pCreateInfo != nullptr) {
+        if ((device_data->physical_device_features.textureCompressionETC2 == false) &&
+            FormatIsCompressed_ETC2_EAC(pCreateInfo->imageFormat)) {
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                            DEVICE_FEATURE, LayerName,
+                            "vkCreateSwapchainKHR(): Attempting to create swapchain VkImage with format %s. The "
+                            "textureCompressionETC2 feature is not enabled: neither ETC2 nor EAC formats can be used to create "
+                            "images.",
+                            string_VkFormat(pCreateInfo->imageFormat));
+        }
+
+        if ((device_data->physical_device_features.textureCompressionASTC_LDR == false) &&
+            FormatIsCompressed_ASTC_LDR(pCreateInfo->imageFormat)) {
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                            DEVICE_FEATURE, LayerName,
+                            "vkCreateSwapchainKHR(): Attempting to create swapchain VkImage with format %s. The "
+                            "textureCompressionASTC_LDR feature is not enabled: ASTC formats cannot be used to create images.",
+                            string_VkFormat(pCreateInfo->imageFormat));
+        }
+
+        if ((device_data->physical_device_features.textureCompressionBC == false) &&
+            FormatIsCompressed_BC(pCreateInfo->imageFormat)) {
+            skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                            DEVICE_FEATURE, LayerName,
+                            "vkCreateSwapchainKHR(): Attempting to create swapchain VkImage with format %s. The "
+                            "textureCompressionBC feature is not enabled: BC compressed formats cannot be used to create images.",
+                            string_VkFormat(pCreateInfo->imageFormat));
+        }
+
+        // Validation for parameters excluded from the generated validation code due to a 'noautovalidity' tag in vk.xml
+        if (pCreateInfo->imageSharingMode == VK_SHARING_MODE_CONCURRENT) {
+            // If imageSharingMode is VK_SHARING_MODE_CONCURRENT, queueFamilyIndexCount must be greater than 1
+            if (pCreateInfo->queueFamilyIndexCount <= 1) {
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                                VALIDATION_ERROR_02338, LayerName,
+                                "vkCreateSwapchainKHR(): if pCreateInfo->imageSharingMode is VK_SHARING_MODE_CONCURRENT, "
+                                "pCreateInfo->queueFamilyIndexCount must be greater than 1. %s",
+                                validation_error_map[VALIDATION_ERROR_02338]);
+            }
+
+            // If imageSharingMode is VK_SHARING_MODE_CONCURRENT, pQueueFamilyIndices must be a pointer to an array of
+            // queueFamilyIndexCount uint32_t values
+            if (pCreateInfo->pQueueFamilyIndices == nullptr) {
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                                VALIDATION_ERROR_02337, LayerName,
+                                "vkCreateSwapchainKHR(): if pCreateInfo->imageSharingMode is VK_SHARING_MODE_CONCURRENT, "
+                                "pCreateInfo->pQueueFamilyIndices must be a pointer to an array of "
+                                "pCreateInfo->queueFamilyIndexCount uint32_t values. %s",
+                                validation_error_map[VALIDATION_ERROR_02337]);
+            } else {
+                // TODO: Not in the spec VUs. Probably missing -- KhronosGroup/Vulkan-Docs#501. Update error codes when resolved.
+                skip |= ValidateQueueFamilies(device_data, pCreateInfo->queueFamilyIndexCount, pCreateInfo->pQueueFamilyIndices,
+                                              "vkCreateSwapchainKHR", "pCreateInfo->pQueueFamilyIndices", INVALID_USAGE,
+                                              INVALID_USAGE, false, "", "");
+            }
+        }
+
+        // imageArrayLayers must be greater than 0
+        skip |= ValidateGreaterThan(report_data, "vkCreateSwapchainKHR", "pCreateInfo->imageArrayLayers",
+                                    pCreateInfo->imageArrayLayers, 0u);
+    }
+
+    lock.unlock();
 
     if (!skip) {
-        result = my_data->dispatch_table.CreateSwapchainKHR(device, pCreateInfo, pAllocator, pSwapchain);
+        result = device_data->dispatch_table.CreateSwapchainKHR(device, pCreateInfo, pAllocator, pSwapchain);
 
-        validate_result(my_data->report_data, "vkCreateSwapchainKHR", {}, result);
+        validate_result(report_data, "vkCreateSwapchainKHR", {}, result);
     }
 
     return result;

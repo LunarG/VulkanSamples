@@ -3459,7 +3459,7 @@ static bool ValidatePhysicalDeviceQueueFamily(instance_layer_data *instance_data
     if (requested_queue_family >= pd_state->queue_family_count) {
         skip |= log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
                         reinterpret_cast<uint64_t>(pd_state->phys_device), __LINE__, err_code, "DL",
-                        "%s: %s (=%" PRIu32 ") is not less than any previously obtained pQueueFamilyPropertyCount from "
+                        "%s: %s (= %" PRIu32 ") is not less than any previously obtained pQueueFamilyPropertyCount from "
                         "vkGetPhysicalDeviceQueueFamilyProperties%s (%s). %s",
                         cmd_name, queue_family_var_name, requested_queue_family, conditional_ext_cmd, count_note.c_str(), vu_note);
     }
@@ -3549,8 +3549,17 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu, const VkDevice
                                             const VkAllocationCallbacks *pAllocator, VkDevice *pDevice) {
     bool skip = false;
     instance_layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(gpu), instance_layer_data_map);
-    auto pd_state = GetPhysicalDeviceState(instance_data, gpu);
+
     std::unique_lock<std::mutex> lock(global_lock);
+    auto pd_state = GetPhysicalDeviceState(instance_data, gpu);
+
+    // TODO: object_tracker should perhaps do this instead
+    //       and it does not seem to currently work anyway -- the loader just crashes before this point
+    if (!GetPhysicalDeviceState(instance_data, gpu)) {
+        skip |= log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                        0, __LINE__, DEVLIMITS_MUST_QUERY_COUNT, "DL",
+                        "Invalid call to vkCreateDevice() w/o first calling vkEnumeratePhysicalDevices().");
+    }
 
     // Check that any requested features are available
     if (pCreateInfo->pEnabledFeatures) {
@@ -11035,12 +11044,57 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateMirSurfaceKHR(VkInstance instance, const Vk
                                                    const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
     return CreateSurface(instance, pCreateInfo, pAllocator, pSurface, &VkLayerInstanceDispatchTable::CreateMirSurfaceKHR);
 }
+
+VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceMirPresentationSupportKHR(VkPhysicalDevice physicalDevice,
+                                                                          uint32_t queueFamilyIndex, MirConnection *connection) {
+    bool skip = false;
+    instance_layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
+
+    std::unique_lock<std::mutex> lock(global_lock);
+    const auto pd_state = GetPhysicalDeviceState(instance_data, physicalDevice);
+
+    skip |= ValidatePhysicalDeviceQueueFamily(instance_data, pd_state, queueFamilyIndex, VALIDATION_ERROR_01893,
+                                              "vkGetPhysicalDeviceMirPresentationSupportKHR", "queueFamilyIndex");
+
+    lock.unlock();
+
+    if (skip) return VK_FALSE;
+
+    // Call down the call chain:
+    VkBool32 result =
+        instance_data->dispatch_table.GetPhysicalDeviceMirPresentationSupportKHR(physicalDevice, queueFamilyIndex, connection);
+
+    return result;
+}
 #endif  // VK_USE_PLATFORM_MIR_KHR
 
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
 VKAPI_ATTR VkResult VKAPI_CALL CreateWaylandSurfaceKHR(VkInstance instance, const VkWaylandSurfaceCreateInfoKHR *pCreateInfo,
                                                        const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
     return CreateSurface(instance, pCreateInfo, pAllocator, pSurface, &VkLayerInstanceDispatchTable::CreateWaylandSurfaceKHR);
+}
+
+VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceWaylandPresentationSupportKHR(VkPhysicalDevice physicalDevice,
+                                                                              uint32_t queueFamilyIndex,
+                                                                              struct wl_display *display) {
+    bool skip = false;
+    instance_layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
+
+    std::unique_lock<std::mutex> lock(global_lock);
+    const auto pd_state = GetPhysicalDeviceState(instance_data, physicalDevice);
+
+    skip |= ValidatePhysicalDeviceQueueFamily(instance_data, pd_state, queueFamilyIndex, VALIDATION_ERROR_01896,
+                                              "vkGetPhysicalDeviceWaylandPresentationSupportKHR", "queueFamilyIndex");
+
+    lock.unlock();
+
+    if (skip) return VK_FALSE;
+
+    // Call down the call chain:
+    VkBool32 result =
+        instance_data->dispatch_table.GetPhysicalDeviceWaylandPresentationSupportKHR(physicalDevice, queueFamilyIndex, display);
+
+    return result;
 }
 #endif  // VK_USE_PLATFORM_WAYLAND_KHR
 
@@ -11049,6 +11103,27 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateWin32SurfaceKHR(VkInstance instance, const 
                                                      const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
     return CreateSurface(instance, pCreateInfo, pAllocator, pSurface, &VkLayerInstanceDispatchTable::CreateWin32SurfaceKHR);
 }
+
+VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceWin32PresentationSupportKHR(VkPhysicalDevice physicalDevice,
+                                                                            uint32_t queueFamilyIndex) {
+    bool skip = false;
+    instance_layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
+
+    std::unique_lock<std::mutex> lock(global_lock);
+    const auto pd_state = GetPhysicalDeviceState(instance_data, physicalDevice);
+
+    skip |= ValidatePhysicalDeviceQueueFamily(instance_data, pd_state, queueFamilyIndex, VALIDATION_ERROR_01899,
+                                              "vkGetPhysicalDeviceWin32PresentationSupportKHR", "queueFamilyIndex");
+
+    lock.unlock();
+
+    if (skip) return VK_FALSE;
+
+    // Call down the call chain:
+    VkBool32 result = instance_data->dispatch_table.GetPhysicalDeviceWin32PresentationSupportKHR(physicalDevice, queueFamilyIndex);
+
+    return result;
+}
 #endif  // VK_USE_PLATFORM_WIN32_KHR
 
 #ifdef VK_USE_PLATFORM_XCB_KHR
@@ -11056,12 +11131,58 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateXcbSurfaceKHR(VkInstance instance, const Vk
                                                    const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
     return CreateSurface(instance, pCreateInfo, pAllocator, pSurface, &VkLayerInstanceDispatchTable::CreateXcbSurfaceKHR);
 }
+
+VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceXcbPresentationSupportKHR(VkPhysicalDevice physicalDevice,
+                                                                          uint32_t queueFamilyIndex, xcb_connection_t *connection,
+                                                                          xcb_visualid_t visual_id) {
+    bool skip = false;
+    instance_layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
+
+    std::unique_lock<std::mutex> lock(global_lock);
+    const auto pd_state = GetPhysicalDeviceState(instance_data, physicalDevice);
+
+    skip |= ValidatePhysicalDeviceQueueFamily(instance_data, pd_state, queueFamilyIndex, VALIDATION_ERROR_01901,
+                                              "vkGetPhysicalDeviceXcbPresentationSupportKHR", "queueFamilyIndex");
+
+    lock.unlock();
+
+    if (skip) return VK_FALSE;
+
+    // Call down the call chain:
+    VkBool32 result = instance_data->dispatch_table.GetPhysicalDeviceXcbPresentationSupportKHR(physicalDevice, queueFamilyIndex,
+                                                                                               connection, visual_id);
+
+    return result;
+}
 #endif  // VK_USE_PLATFORM_XCB_KHR
 
 #ifdef VK_USE_PLATFORM_XLIB_KHR
 VKAPI_ATTR VkResult VKAPI_CALL CreateXlibSurfaceKHR(VkInstance instance, const VkXlibSurfaceCreateInfoKHR *pCreateInfo,
                                                     const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
     return CreateSurface(instance, pCreateInfo, pAllocator, pSurface, &VkLayerInstanceDispatchTable::CreateXlibSurfaceKHR);
+}
+
+VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceXlibPresentationSupportKHR(VkPhysicalDevice physicalDevice,
+                                                                           uint32_t queueFamilyIndex, Display *dpy,
+                                                                           VisualID visualID) {
+    bool skip = false;
+    instance_layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
+
+    std::unique_lock<std::mutex> lock(global_lock);
+    const auto pd_state = GetPhysicalDeviceState(instance_data, physicalDevice);
+
+    skip |= ValidatePhysicalDeviceQueueFamily(instance_data, pd_state, queueFamilyIndex, VALIDATION_ERROR_01904,
+                                              "vkGetPhysicalDeviceXlibPresentationSupportKHR", "queueFamilyIndex");
+
+    lock.unlock();
+
+    if (skip) return VK_FALSE;
+
+    // Call down the call chain:
+    VkBool32 result =
+        instance_data->dispatch_table.GetPhysicalDeviceXlibPresentationSupportKHR(physicalDevice, queueFamilyIndex, dpy, visualID);
+
+    return result;
 }
 #endif  // VK_USE_PLATFORM_XLIB_KHR
 
@@ -11086,10 +11207,19 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilitiesKHR(VkPhysica
 
 VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex,
                                                                   VkSurfaceKHR surface, VkBool32 *pSupported) {
+    bool skip = false;
     auto instance_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
+
     std::unique_lock<std::mutex> lock(global_lock);
+    const auto pd_state = GetPhysicalDeviceState(instance_data, physicalDevice);
     auto surface_state = GetSurfaceState(instance_data, surface);
+
+    skip |= ValidatePhysicalDeviceQueueFamily(instance_data, pd_state, queueFamilyIndex, VALIDATION_ERROR_01889,
+                                              "vkGetPhysicalDeviceSurfaceSupportKHR", "queueFamilyIndex");
+
     lock.unlock();
+
+    if (skip) return VK_ERROR_VALIDATION_FAILED_EXT;
 
     auto result =
         instance_data->dispatch_table.GetPhysicalDeviceSurfaceSupportKHR(physicalDevice, queueFamilyIndex, surface, pSupported);
@@ -11677,33 +11807,35 @@ static PFN_vkVoidFunction intercept_khr_surface_command(const char *name, VkInst
         bool E::*enable;
     } khr_surface_commands[] = {
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
-        {"vkCreateAndroidSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateAndroidSurfaceKHR),
-         &E::khr_android_surface},
+        {"vkCreateAndroidSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateAndroidSurfaceKHR), &E::khr_android_surface},
 #endif  // VK_USE_PLATFORM_ANDROID_KHR
 #ifdef VK_USE_PLATFORM_MIR_KHR
-        {"vkCreateMirSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateMirSurfaceKHR),
-         &E::khr_mir_surface},
+        {"vkCreateMirSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateMirSurfaceKHR), &E::khr_mir_surface},
+        {"vkGetPhysicalDeviceMirPresentationSupportKHR",
+         reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceMirPresentationSupportKHR), &E::khr_mir_surface},
 #endif  // VK_USE_PLATFORM_MIR_KHR
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
-        {"vkCreateWaylandSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateWaylandSurfaceKHR),
-         &E::khr_wayland_surface},
+        {"vkCreateWaylandSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateWaylandSurfaceKHR), &E::khr_wayland_surface},
+        {"vkGetPhysicalDeviceWaylandPresentationSupportKHR",
+         reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceWaylandPresentationSupportKHR), &E::khr_wayland_surface},
 #endif  // VK_USE_PLATFORM_WAYLAND_KHR
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-        {"vkCreateWin32SurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateWin32SurfaceKHR),
-         &E::khr_win32_surface},
+        {"vkCreateWin32SurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateWin32SurfaceKHR), &E::khr_win32_surface},
+        {"vkGetPhysicalDeviceWin32PresentationSupportKHR",
+         reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceWin32PresentationSupportKHR), &E::khr_win32_surface},
 #endif  // VK_USE_PLATFORM_WIN32_KHR
 #ifdef VK_USE_PLATFORM_XCB_KHR
-        {"vkCreateXcbSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateXcbSurfaceKHR),
-         &E::khr_xcb_surface},
+        {"vkCreateXcbSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateXcbSurfaceKHR), &E::khr_xcb_surface},
+        {"vkGetPhysicalDeviceXcbPresentationSupportKHR",
+         reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceXcbPresentationSupportKHR), &E::khr_xcb_surface},
 #endif  // VK_USE_PLATFORM_XCB_KHR
 #ifdef VK_USE_PLATFORM_XLIB_KHR
-        {"vkCreateXlibSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateXlibSurfaceKHR),
-         &E::khr_xlib_surface},
+        {"vkCreateXlibSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateXlibSurfaceKHR), &E::khr_xlib_surface},
+        {"vkGetPhysicalDeviceXlibPresentationSupportKHR",
+         reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceXlibPresentationSupportKHR), &E::khr_xlib_surface},
 #endif  // VK_USE_PLATFORM_XLIB_KHR
-        {"vkCreateDisplayPlaneSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateDisplayPlaneSurfaceKHR),
-         &E::khr_display},
-        {"vkDestroySurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(DestroySurfaceKHR),
-         &E::khr_surface},
+        {"vkCreateDisplayPlaneSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateDisplayPlaneSurfaceKHR), &E::khr_display},
+        {"vkDestroySurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(DestroySurfaceKHR), &E::khr_surface},
         {"vkGetPhysicalDeviceSurfaceCapabilitiesKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceCapabilitiesKHR),
          &E::khr_surface},
         {"vkGetPhysicalDeviceSurfaceSupportKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceSupportKHR),
