@@ -7666,56 +7666,56 @@ static bool ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, ui
     }
     for (uint32_t i = 0; i < imageMemBarrierCount; ++i) {
         auto mem_barrier = &pImageMemBarriers[i];
-        auto image_data = GetImageState(dev_data, mem_barrier->image);
-        if (image_data) {
-            uint32_t src_q_f_index = mem_barrier->srcQueueFamilyIndex;
-            uint32_t dst_q_f_index = mem_barrier->dstQueueFamilyIndex;
-            if (image_data->createInfo.sharingMode == VK_SHARING_MODE_CONCURRENT) {
-                // srcQueueFamilyIndex and dstQueueFamilyIndex must both
-                // be VK_QUEUE_FAMILY_IGNORED
-                if ((src_q_f_index != VK_QUEUE_FAMILY_IGNORED) || (dst_q_f_index != VK_QUEUE_FAMILY_IGNORED)) {
-                    skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                    VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t>(cmdBuffer), __LINE__,
-                                    DRAWSTATE_INVALID_QUEUE_INDEX, "DS",
-                                    "%s: Image Barrier for image 0x%" PRIx64
-                                    " was created with sharingMode of "
-                                    "VK_SHARING_MODE_CONCURRENT. Src and dst "
-                                    "queueFamilyIndices must be VK_QUEUE_FAMILY_IGNORED.",
-                                    funcName, reinterpret_cast<const uint64_t &>(mem_barrier->image));
-                }
-            } else {
-                // Sharing mode is VK_SHARING_MODE_EXCLUSIVE. srcQueueFamilyIndex and
-                // dstQueueFamilyIndex must either both be VK_QUEUE_FAMILY_IGNORED,
-                // or both be a valid queue family
-                if (((src_q_f_index == VK_QUEUE_FAMILY_IGNORED) || (dst_q_f_index == VK_QUEUE_FAMILY_IGNORED)) &&
-                    (src_q_f_index != dst_q_f_index)) {
-                    skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                    VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t>(cmdBuffer), __LINE__,
-                                    DRAWSTATE_INVALID_QUEUE_INDEX, "DS",
-                                    "%s: Image 0x%" PRIx64
-                                    " was created with sharingMode "
-                                    "of VK_SHARING_MODE_EXCLUSIVE. If one of src- or "
-                                    "dstQueueFamilyIndex is VK_QUEUE_FAMILY_IGNORED, both "
-                                    "must be.",
-                                    funcName, reinterpret_cast<const uint64_t &>(mem_barrier->image));
-                } else if (((src_q_f_index != VK_QUEUE_FAMILY_IGNORED) && (dst_q_f_index != VK_QUEUE_FAMILY_IGNORED)) &&
-                           ((src_q_f_index >= dev_data->phys_dev_properties.queue_family_properties.size()) ||
-                            (dst_q_f_index >= dev_data->phys_dev_properties.queue_family_properties.size()))) {
-                    skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                    VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t>(cmdBuffer), __LINE__,
-                                    DRAWSTATE_INVALID_QUEUE_INDEX, "DS",
-                                    "%s: Image 0x%" PRIx64
-                                    " was created with sharingMode "
-                                    "of VK_SHARING_MODE_EXCLUSIVE, but srcQueueFamilyIndex %d"
-                                    " or dstQueueFamilyIndex %d is greater than " PRINTF_SIZE_T_SPECIFIER
-                                    "queueFamilies crated for this device.",
-                                    funcName, reinterpret_cast<const uint64_t &>(mem_barrier->image), src_q_f_index, dst_q_f_index,
-                                    dev_data->phys_dev_properties.queue_family_properties.size());
+        if (mem_barrier) {
+            auto image_data = GetImageState(dev_data, mem_barrier->image);
+            if (image_data) {
+                uint32_t src_q_f_index = mem_barrier->srcQueueFamilyIndex;
+                uint32_t dst_q_f_index = mem_barrier->dstQueueFamilyIndex;
+                if (image_data->createInfo.sharingMode == VK_SHARING_MODE_CONCURRENT) {
+                    // srcQueueFamilyIndex and dstQueueFamilyIndex must both
+                    // be VK_QUEUE_FAMILY_IGNORED
+                    if ((src_q_f_index != VK_QUEUE_FAMILY_IGNORED) || (dst_q_f_index != VK_QUEUE_FAMILY_IGNORED)) {
+                        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                        VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t>(cmdBuffer),
+                                        __LINE__, DRAWSTATE_INVALID_QUEUE_INDEX, "DS",
+                                        "%s: Image Barrier for image 0x%" PRIx64
+                                        " was created with sharingMode of "
+                                        "VK_SHARING_MODE_CONCURRENT. Src and dst "
+                                        "queueFamilyIndices must be VK_QUEUE_FAMILY_IGNORED.",
+                                        funcName, reinterpret_cast<const uint64_t &>(mem_barrier->image));
+                    }
+                } else {
+                    // Sharing mode is VK_SHARING_MODE_EXCLUSIVE. srcQueueFamilyIndex and
+                    // dstQueueFamilyIndex must either both be VK_QUEUE_FAMILY_IGNORED,
+                    // or both be a valid queue family
+                    if (((src_q_f_index == VK_QUEUE_FAMILY_IGNORED) || (dst_q_f_index == VK_QUEUE_FAMILY_IGNORED)) &&
+                        (src_q_f_index != dst_q_f_index)) {
+                        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                        VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t>(cmdBuffer),
+                                        __LINE__, DRAWSTATE_INVALID_QUEUE_INDEX, "DS",
+                                        "%s: Image 0x%" PRIx64
+                                        " was created with sharingMode "
+                                        "of VK_SHARING_MODE_EXCLUSIVE. If one of src- or "
+                                        "dstQueueFamilyIndex is VK_QUEUE_FAMILY_IGNORED, both "
+                                        "must be.",
+                                        funcName, reinterpret_cast<const uint64_t &>(mem_barrier->image));
+                    } else if (((src_q_f_index != VK_QUEUE_FAMILY_IGNORED) && (dst_q_f_index != VK_QUEUE_FAMILY_IGNORED)) &&
+                               ((src_q_f_index >= dev_data->phys_dev_properties.queue_family_properties.size()) ||
+                                (dst_q_f_index >= dev_data->phys_dev_properties.queue_family_properties.size()))) {
+                        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                        VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t>(cmdBuffer),
+                                        __LINE__, DRAWSTATE_INVALID_QUEUE_INDEX, "DS",
+                                        "%s: Image 0x%" PRIx64
+                                        " was created with sharingMode "
+                                        "of VK_SHARING_MODE_EXCLUSIVE, but srcQueueFamilyIndex %d"
+                                        " or dstQueueFamilyIndex %d is greater than " PRINTF_SIZE_T_SPECIFIER
+                                        "queueFamilies crated for this device.",
+                                        funcName, reinterpret_cast<const uint64_t &>(mem_barrier->image), src_q_f_index,
+                                        dst_q_f_index, dev_data->phys_dev_properties.queue_family_properties.size());
+                    }
                 }
             }
-        }
 
-        if (mem_barrier) {
             if (mem_barrier->oldLayout != mem_barrier->newLayout) {
                 skip |=
                     ValidateMaskBitsFromLayouts(dev_data, cmdBuffer, mem_barrier->srcAccessMask, mem_barrier->oldLayout, "Source");
