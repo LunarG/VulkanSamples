@@ -12394,6 +12394,22 @@ TEST_F(VkLayerTest, VertexBufferInvalid) {
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
 }
 
+TEST_F(VkLayerTest, BadVertexBufferOffset) {
+    TEST_DESCRIPTION("Submit an offset past the end of a vertex buffer");
+
+    ASSERT_NO_FATAL_FAILURE(Init());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    static const float vbo_data[3] = {1.f, 0.f, 1.f};
+    VkConstantBufferObj vbo(m_device, sizeof(vbo_data), sizeof(float), (const void *)&vbo_data);
+    VkMemoryRequirements memory_reqs;
+    vkGetBufferMemoryRequirements(m_device->device(), vbo.handle(), &memory_reqs);
+    m_commandBuffer->BeginCommandBuffer();
+    m_commandBuffer->BeginRenderPass(m_renderPassBeginInfo);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01417);
+    BindVertexBuffer(&vbo, (VkDeviceSize)(memory_reqs.size + 1), 1);  // Offset past the end of the buffer
+    m_errorMonitor->VerifyFound();
+}
+
 // INVALID_IMAGE_LAYOUT tests (one other case is hit by MapMemWithoutHostVisibleBit and not here)
 TEST_F(VkLayerTest, InvalidImageLayout) {
     TEST_DESCRIPTION(
