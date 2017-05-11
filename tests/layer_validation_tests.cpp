@@ -10063,7 +10063,7 @@ TEST_F(VkLayerTest, InvalidQueueFamilyIndex) {
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "vkCreateBuffer: pCreateInfo->pQueueFamilyIndices[0] (= 777) is not one of the queue "
                                          "families given via VkDeviceQueueCreateInfo structures when the device was created.");
-    auto err_ib1 = vkCreateBuffer(m_device->device(), &buffCI, NULL, &ib);
+    vkCreateBuffer(m_device->device(), &buffCI, NULL, &ib);
     m_errorMonitor->VerifyFound();
 
     if (m_device->queue_props.size() > 2) {
@@ -10099,8 +10099,6 @@ TEST_F(VkLayerTest, InvalidQueueFamilyIndex) {
         vkDestroyBuffer(m_device->device(), ib2, NULL);
         vkFreeMemory(m_device->device(), mem, NULL);
     }
-
-    if(!err_ib1) vkDestroyBuffer(m_device->device(), ib, NULL);
 }
 
 TEST_F(VkLayerTest, ExecuteCommandsPrimaryCB) {
