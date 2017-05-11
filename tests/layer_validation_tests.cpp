@@ -12397,13 +12397,11 @@ TEST_F(VkLayerTest, BadVertexBufferOffset) {
     ASSERT_NO_FATAL_FAILURE(Init());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     static const float vbo_data[3] = {1.f, 0.f, 1.f};
-    VkConstantBufferObj vbo(m_device, sizeof(vbo_data), sizeof(float), (const void *)&vbo_data);
-    VkMemoryRequirements memory_reqs;
-    vkGetBufferMemoryRequirements(m_device->device(), vbo.handle(), &memory_reqs);
+    VkConstantBufferObj vbo(m_device, 3, sizeof(float), (const void *)&vbo_data);
     m_commandBuffer->BeginCommandBuffer();
     m_commandBuffer->BeginRenderPass(m_renderPassBeginInfo);
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01417);
-    BindVertexBuffer(&vbo, (VkDeviceSize)(memory_reqs.size + 1), 1);  // Offset past the end of the buffer
+    BindVertexBuffer(&vbo, (VkDeviceSize)(3 * sizeof(float)), 1);  // Offset at the end of the buffer
     m_errorMonitor->VerifyFound();
 }
 
