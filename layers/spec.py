@@ -1,9 +1,11 @@
 #!/usr/bin/python -i
 
 import sys
-import xml.etree.ElementTree as etree
+#import xml.etree.ElementTree as etree
 import urllib2
 from bs4 import BeautifulSoup
+import json
+import vuid_mapping
 
 #############################
 # spec.py script
@@ -47,7 +49,7 @@ validation_error_enum_name = "VALIDATION_ERROR_"
 remap_dict = {}
 
 def printHelp():
-    print ("Usage: python spec.py [-spec <specfile.html>] [-out <headerfile.h>] [-gendb <databasefile.txt>] [-compare <databasefile.txt>] [-update] [-remap <new_id-old_id,count>] [-help]")
+    print ("Usage: python spec.py [-spec <specfile.html>] [-out <headerfile.h>] [-gendb <databasefile.txt>] [-compare <databasefile.txt>] [-update] [-remap <new_id-old_id,count>] [-json <json_file>] [-help]")
     print ("\n Default script behavior is to parse the specfile and generate a header of unique error enums and corresponding error messages based on the specfile.\n")
     print ("  Default specfile is from online at %s" % (spec_url))
     print ("  Default headerfile is %s" % (out_filename))
@@ -59,6 +61,7 @@ def printHelp():
     print ("  and online spec file as the latest. The default header and database files will be updated in-place for review and commit to the git repo.")
     print ("\nIf '-remap' option is specified it supplies forced remapping from new enum ids to old enum ids. This should only be specified along with -update")
     print ("  option. Starting at newid and remapping to oldid, count ids will be remapped. Default count is '1' and use ':' to specify multiple remappings.")
+    print ("\nIf '-json' option is used to point to json file, parse the json file and generate VUIDs based on that.")
 
 class Specification:
     def __init__(self):
@@ -117,6 +120,25 @@ class Specification:
     def updateDict(self, updated_dict):
         """Assign internal dict to use updated_dict"""
         self.val_error_dict = updated_dict
+
+    def readJSON(self, json_file):
+        """Read in JSON file"""
+        with open(json_file) as jsf:
+            self.json_data = json.load(jsf)
+    def parseJSON(self):
+        """Parse JSON VUIDs into data struct"""
+        # Format of JSON file is:
+        # "API": { "core|EXT": [ {"vuid": "<id>", "text": "<VU txt>"}]},
+        # "VK_KHX_external_memory" & "VK_KHX_device_group" - extension case (vs. "core")
+
+        for api in sorted(self.json_data):
+            for ext in sorted(self.json_data[api]):
+                for vu_txt_dict in self.json_data[api][ext]:
+                    vuid = vu_txt_dict['vuid']
+                    vutxt = vu_txt_dict['text']
+                    #print ("%s:%s:%s:%s" % (api, ext, vuid, vutxt))
+                    vuid_mapping.convertVUID(vuid)
+
     def parseSoup(self):
         """Parse the registry Element, once created"""
         print ("Parsing spec file...")
@@ -542,6 +564,9 @@ if __name__ == "__main__":
             # If user specifies local specfile, skip online
             use_online = False
             i = i + 1
+        elif (arg == '-json'):
+            json_filename = sys.argv[i]
+            i = i + 1
         elif (arg == '-out'):
             out_filename = sys.argv[i]
             i = i + 1
@@ -569,6 +594,11 @@ if __name__ == "__main__":
         print ("ERROR: '-remap' option can only be used along with '-update' option. Exiting.")
         sys.exit()
     spec = Specification()
+    if (None != json_filename):
+        print ("Reading json file:%s" % (json_filename))
+        spec.readJSON(json_filename)
+        spec.parseJSON()
+        sys.exit()
     spec.soupLoadFile(use_online, spec_filename)
     spec.analyze()
     if (spec_compare):
