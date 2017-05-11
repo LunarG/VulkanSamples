@@ -895,14 +895,29 @@ bool cvdescriptorset::ValidateImageUpdate(VkImageView image_view, VkImageLayout 
                 error_usage_bit = "VK_IMAGE_USAGE_STORAGE_BIT";
             } else if (VK_IMAGE_LAYOUT_GENERAL != image_layout) {
                 std::stringstream error_str;
-                // TODO : Need to create custom enum error code for this case
-                error_str
-                    << "ImageView (" << image_view << ") of VK_DESCRIPTOR_TYPE_STORAGE_IMAGE type is being updated with layout "
-                    << string_VkImageLayout(image_layout)
-                    << " but according to spec section 13.1 Descriptor Types, 'Load and store operations on storage images can "
-                       "only be done on images in VK_IMAGE_LAYOUT_GENERAL layout.'";
-                *error_msg = error_str.str();
-                return false;
+                // TODO : Need to create custom enum error codes for these cases
+                if (image_node->shared_presentable) {
+                    if (VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR != image_layout) {
+                        error_str
+                            << "ImageView (" << image_view
+                            << ") of VK_DESCRIPTOR_TYPE_STORAGE_IMAGE type with a front-buffered image is being updated with "
+                               "layout "
+                            << string_VkImageLayout(image_layout)
+                            << " but according to spec section 13.1 Descriptor Types, 'Front-buffered images that report support "
+                               "for "
+                               "VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT must be in the VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR layout.'";
+                        *error_msg = error_str.str();
+                        return false;
+                    }
+                } else if (VK_IMAGE_LAYOUT_GENERAL != image_layout) {
+                    error_str
+                        << "ImageView (" << image_view << ") of VK_DESCRIPTOR_TYPE_STORAGE_IMAGE type is being updated with layout "
+                        << string_VkImageLayout(image_layout)
+                        << " but according to spec section 13.1 Descriptor Types, 'Load and store operations on storage images can "
+                           "only be done on images in VK_IMAGE_LAYOUT_GENERAL layout.'";
+                    *error_msg = error_str.str();
+                    return false;
+                }
             }
             break;
         }

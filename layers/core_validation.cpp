@@ -10342,6 +10342,19 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, const char *
                 return true;
         }
     }
+    // Validate state for shared presentable case
+    if (VK_PRESENT_MODE_SHARED_DEMAND_REFRESH_KHR == pCreateInfo->presentMode ||
+        VK_PRESENT_MODE_SHARED_CONTINUOUS_REFRESH_KHR == pCreateInfo->presentMode) {
+        if (pCreateInfo->minImageCount != 1) {
+            // TODO: Add unique error id when available.
+            if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                        reinterpret_cast<uint64_t>(dev_data->device), __LINE__, DRAWSTATE_SWAPCHAIN_CREATE_BEFORE_QUERY, "DS",
+                        "%s called with presentMode %s, but minImageCount value is %d. For shared presentable image, minImageCount "
+                        "must be 1.",
+                        func_name, string_VkPresentModeKHR(pCreateInfo->presentMode), pCreateInfo->minImageCount))
+                return true;
+        }
+    }
 
     return false;
 }
@@ -10352,6 +10365,10 @@ static void PostCallRecordCreateSwapchainKHR(layer_data *dev_data, VkResult resu
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
         auto swapchain_state = unique_ptr<SWAPCHAIN_NODE>(new SWAPCHAIN_NODE(pCreateInfo, *pSwapchain));
+        if (VK_PRESENT_MODE_SHARED_DEMAND_REFRESH_KHR == pCreateInfo->presentMode ||
+            VK_PRESENT_MODE_SHARED_CONTINUOUS_REFRESH_KHR == pCreateInfo->presentMode) {
+            swapchain_state->shared_presentable = true;
+        }
         surface_state->swapchain = swapchain_state.get();
         dev_data->swapchainMap[*pSwapchain] = std::move(swapchain_state);
     } else {
@@ -10503,6 +10520,12 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
             } else {
                 auto image = swapchain_data->images[pPresentInfo->pImageIndices[i]];
                 auto image_state = GetImageState(dev_data, image);
+
+                if (image_state->shared_presentable) {
+                    image_state->layout_locked = true;
+                } else {
+                    image_state->acquired = false;
+                }
                 skip |= ValidateImageMemoryIsValid(dev_data, image_state, "vkQueuePresentKHR()");
 
                 if (!image_state->acquired) {
@@ -10689,6 +10712,10 @@ static void PostCallRecordCreateSharedSwapchainsKHR(layer_data *dev_data, VkResu
     if (VK_SUCCESS == result) {
         for (uint32_t i = 0; i < swapchainCount; i++) {
             auto swapchain_state = unique_ptr<SWAPCHAIN_NODE>(new SWAPCHAIN_NODE(&pCreateInfos[i], pSwapchains[i]));
+            if (VK_PRESENT_MODE_SHARED_DEMAND_REFRESH_KHR == pCreateInfos[i].presentMode ||
+                VK_PRESENT_MODE_SHARED_CONTINUOUS_REFRESH_KHR == pCreateInfos[i].presentMode) {
+                swapchain_state->shared_presentable = true;
+            }
             surface_state[i]->swapchain = swapchain_state.get();
             dev_data->swapchainMap[pSwapchains[i]] = std::move(swapchain_state);
         }
@@ -10807,6 +10834,7 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
         auto image = swapchain_data->images[*pImageIndex];
         auto image_state = GetImageState(dev_data, image);
         image_state->acquired = true;
+        image_state->shared_presentable = swapchain_data->shared_presentable;
     }
     lock.unlock();
 

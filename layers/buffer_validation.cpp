@@ -472,6 +472,24 @@ bool ValidateBarriersToImages(layer_data *device_data, VkCommandBuffer cmdBuffer
         auto img_barrier = &pImageMemoryBarriers[i];
         if (!img_barrier) continue;
 
+        auto image_state = GetImageState(device_data, img_barrier->image);
+        if (image_state) {
+            VkImageUsageFlags usage_flags = image_state->createInfo.usage;
+            skip |= ValidateBarrierLayoutToImageUsage(device_data, img_barrier, false, usage_flags, func_name);
+            skip |= ValidateBarrierLayoutToImageUsage(device_data, img_barrier, true, usage_flags, func_name);
+
+            // Make sure layout is able to be transitioned, currently only presented shared presentable images are locked
+            if (image_state->layout_locked) {
+                // TODO: Add unique id for error when available
+                skip |= log_msg(core_validation::GetReportData(device_data), VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                    VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, 0, "DS",
+                    "Attempting to transition shared presentable image 0x%" PRIxLEAST64
+                    " from layout %s to layout %s, but image has already been presented and cannot have its layout transitioned.",
+                    reinterpret_cast<const uint64_t &>(img_barrier->image), string_VkImageLayout(img_barrier->oldLayout),
+                    string_VkImageLayout(img_barrier->newLayout));
+            }
+        }
+
         VkImageCreateInfo *image_create_info = &(GetImageState(device_data, img_barrier->image)->createInfo);
         // For a Depth/Stencil image both aspects MUST be set
         if (FormatIsDepthAndStencil(image_create_info->format)) {
@@ -501,13 +519,6 @@ bool ValidateBarriersToImages(layer_data *device_data, VkCommandBuffer cmdBuffer
                 skip |= ValidateImageAspectLayout(device_data, pCB, img_barrier, level, layer, VK_IMAGE_ASPECT_STENCIL_BIT);
                 skip |= ValidateImageAspectLayout(device_data, pCB, img_barrier, level, layer, VK_IMAGE_ASPECT_METADATA_BIT);
             }
-        }
-
-        IMAGE_STATE *image_state = GetImageState(device_data, img_barrier->image);
-        if (image_state) {
-            VkImageUsageFlags usage_flags = image_state->createInfo.usage;
-            skip |= ValidateBarrierLayoutToImageUsage(device_data, img_barrier, false, usage_flags, func_name);
-            skip |= ValidateBarrierLayoutToImageUsage(device_data, img_barrier, true, usage_flags, func_name);
         }
     }
     return skip;
@@ -572,6 +583,14 @@ bool VerifyImageLayout(layer_data const *device_data, GLOBAL_CB_NODE const *cb_n
                                 __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
                                 "%s: For optimal performance image 0x%" PRIxLEAST64 " layout should be %s instead of GENERAL.",
                                 caller, reinterpret_cast<const uint64_t &>(image), string_VkImageLayout(optimal_layout));
+            }
+        } else if (image_state->shared_presentable) {
+            if (VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR != explicit_layout) {
+                // TODO: Add unique error id when available.
+                skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
+                                __LINE__, msg_code, "DS",
+                                "Layout for shared presentable image is %s but must be VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR.",
+                                string_VkImageLayout(optimal_layout));
             }
         } else {
             *error = true;
@@ -877,6 +896,14 @@ bool VerifyClearImageLayout(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IM
                 skip |= log_msg(report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                                 reinterpret_cast<uint64_t &>(image_state->image), __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
                                 "%s: Layout for cleared image should be TRANSFER_DST_OPTIMAL instead of GENERAL.", func_name);
+            }
+        } else if (image_state->shared_presentable) {
+            if (VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR != dest_image_layout) {
+                // TODO: Add unique error id when available.
+                skip |=
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 0, "DS",
+                            "Layout for shared presentable cleared image is %s but can only be VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR.",
+                            string_VkImageLayout(dest_image_layout));
             }
         } else {
             UNIQUE_VALIDATION_ERROR_CODE error_code = VALIDATION_ERROR_01086;
@@ -1809,6 +1836,7 @@ bool PreCallValidateCmdResolveImage(layer_data *device_data, GLOBAL_CB_NODE *cb_
                             reinterpret_cast<uint64_t>(cb_node->commandBuffer), __LINE__, VALIDATION_ERROR_01321, "IMAGE", "%s. %s",
                             str, validation_error_map[VALIDATION_ERROR_01321]);
         }
+        // TODO: Need to validate image layouts, which will include layout validation for shared presentable images
     } else {
         assert(0);
     }
@@ -1852,6 +1880,7 @@ bool PreCallValidateCmdBlitImage(layer_data *device_data, GLOBAL_CB_NODE *cb_nod
         skip |= ValidateCmdQueueFlags(device_data, cb_node, "vkCmdBlitImage()", VK_QUEUE_GRAPHICS_BIT, VALIDATION_ERROR_01299);
         skip |= ValidateCmd(device_data, cb_node, CMD_BLITIMAGE, "vkCmdBlitImage()");
         skip |= insideRenderPass(device_data, cb_node, "vkCmdBlitImage()", VALIDATION_ERROR_01300);
+        // TODO: Need to validate image layouts, which will include layout validation for shared presentable images
 
         for (uint32_t i = 0; i < regionCount; i++) {
             // Warn for zero-sized regions
@@ -2279,9 +2308,14 @@ bool ValidateLayouts(core_validation::layer_data *device_data, VkDevice device, 
             auto attach_index = subpass.pColorAttachments[j].attachment;
             if (attach_index == VK_ATTACHMENT_UNUSED) continue;
 
+            // TODO: Need a way to validate shared presentable images here, currently just allowing
+            // VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR
+            //  as an acceptable layout, but need to make sure shared presentable images ONLY use that layout
             switch (subpass.pColorAttachments[j].layout) {
                 case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
                     // This is ideal.
+                case VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR:
+                    // TODO: See note above, just assuming that attachment is shared presentable and allowing this for now.
                     break;
 
                 case VK_IMAGE_LAYOUT_GENERAL:
