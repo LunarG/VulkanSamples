@@ -787,15 +787,6 @@ bool cvdescriptorset::ValidateImageUpdate(VkImageView image_view, VkImageLayout 
             *error_msg = "No memory bound to image.";
             return false;
         }
-    } else {
-        // Also need to check the swapchains.
-        auto swapchain = GetSwapchainFromImage(dev_data, image);
-        if (swapchain) {
-            auto swapchain_node = GetSwapchainNode(dev_data, swapchain);
-            if (swapchain_node) {
-                format = swapchain_node->createInfo.imageFormat;
-            }
-        }
     }
     // First validate that format and layout are compatible
     if (format == VK_FORMAT_MAX_ENUM) {

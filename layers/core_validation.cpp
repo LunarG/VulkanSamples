@@ -7795,52 +7795,33 @@ static bool ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, ui
                             "PREINITIALIZED.",
                             funcName);
         }
-        VkFormat format = VK_FORMAT_UNDEFINED;
-        uint32_t arrayLayers = 0, mipLevels = 0;
-        bool imageFound = false;
         if (image_data) {
-            format = image_data->createInfo.format;
-            arrayLayers = image_data->createInfo.arrayLayers;
-            mipLevels = image_data->createInfo.mipLevels;
-            imageFound = true;
-        } else if (dev_data->device_extensions.khr_swapchain) {
-            auto imageswap_data = GetSwapchainFromImage(dev_data, mem_barrier->image);
-            if (imageswap_data) {
-                auto swapchain_data = GetSwapchainNode(dev_data, imageswap_data);
-                if (swapchain_data) {
-                    format = swapchain_data->createInfo.imageFormat;
-                    arrayLayers = swapchain_data->createInfo.imageArrayLayers;
-                    mipLevels = 1;
-                    imageFound = true;
-                }
-            }
-        }
-        if (imageFound) {
             skip |= ValidateImageSubrangeLevelLayerCounts(dev_data, mem_barrier->subresourceRange, funcName);
             auto aspect_mask = mem_barrier->subresourceRange.aspectMask;
-            skip |= ValidateImageAspectMask(dev_data, image_data->image, format, aspect_mask, funcName);
+            skip |= ValidateImageAspectMask(dev_data, image_data->image, image_data->createInfo.format, aspect_mask, funcName);
 
             uint32_t layer_count = ResolveRemainingLayers(&mem_barrier->subresourceRange, image_data->createInfo.arrayLayers);
-            if ((mem_barrier->subresourceRange.baseArrayLayer + layer_count) > arrayLayers) {
-                skip |=
-                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            reinterpret_cast<uint64_t>(cmdBuffer), __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
-                            "%s: Subresource must have the sum of the baseArrayLayer (%d) and layerCount (%d) be less "
-                            "than or equal to the total number of layers (%d).",
-                            funcName, mem_barrier->subresourceRange.baseArrayLayer, layer_count, arrayLayers);
+            if ((mem_barrier->subresourceRange.baseArrayLayer + layer_count) > image_data->createInfo.arrayLayers) {
+                skip |= log_msg(
+                    dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                    reinterpret_cast<uint64_t>(cmdBuffer), __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
+                    "%s: Subresource must have the sum of the baseArrayLayer (%d) and layerCount (%d) be less "
+                    "than or equal to the total number of layers (%d).",
+                    funcName, mem_barrier->subresourceRange.baseArrayLayer, layer_count, image_data->createInfo.arrayLayers);
             }
 
             uint32_t level_count = ResolveRemainingLevels(&mem_barrier->subresourceRange, image_data->createInfo.mipLevels);
-            if ((mem_barrier->subresourceRange.baseMipLevel + level_count) > mipLevels) {
+            if ((mem_barrier->subresourceRange.baseMipLevel + level_count) > image_data->createInfo.mipLevels) {
                 skip |= log_msg(
                     dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                     reinterpret_cast<uint64_t>(cmdBuffer), __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
                     "%s: Subresource must have the sum of the baseMipLevel (%d) and levelCount (%d) be less than or equal to "
                     "the total number of levels (%d).",
-                    funcName, mem_barrier->subresourceRange.baseMipLevel, level_count, mipLevels);
+                    funcName, mem_barrier->subresourceRange.baseMipLevel, level_count, image_data->createInfo.mipLevels);
             }
         }
     }
+
     for (uint32_t i = 0; i < bufferBarrierCount; ++i) {
         auto mem_barrier = &pBufferMemBarriers[i];
         if (pCB->activeRenderPass) {

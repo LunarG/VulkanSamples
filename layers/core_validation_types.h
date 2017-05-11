@@ -765,7 +765,6 @@ DEVICE_MEM_INFO *GetMemObjInfo(const layer_data *, VkDeviceMemory);
 BUFFER_VIEW_STATE *GetBufferViewState(const layer_data *, VkBufferView);
 SAMPLER_STATE *GetSamplerState(const layer_data *, VkSampler);
 IMAGE_VIEW_STATE *GetImageViewState(const layer_data *, VkImageView);
-VkSwapchainKHR GetSwapchainFromImage(const layer_data *, VkImage);
 SWAPCHAIN_NODE *GetSwapchainNode(const layer_data *, VkSwapchainKHR);
 GLOBAL_CB_NODE *GetCBNode(layer_data const *my_data, const VkCommandBuffer cb);
 RENDER_PASS_STATE *GetRenderPassState(layer_data const *my_data, VkRenderPass renderpass);
