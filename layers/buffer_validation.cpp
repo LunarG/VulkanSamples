@@ -900,8 +900,9 @@ bool VerifyClearImageLayout(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IM
             }
         } else if (VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR == dest_image_layout) {
             if (!GetDeviceExtensions(device_data)->khr_shared_presentable_image) {
+                // TODO: Add unique error id when available.
                 skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                    reinterpret_cast<uint64_t &>(image_state->image), __LINE__, 0, "DS",
+                    HandleToUint64(image_state->image), __LINE__, 0, "DS",
                     "Must enable VK_KHR_shared_presentable_image extension before creating images with a layout type "
                     "of VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR.");
 
@@ -909,7 +910,7 @@ bool VerifyClearImageLayout(layer_data *device_data, GLOBAL_CB_NODE *cb_node, IM
                 if (image_state->shared_presentable) {
                     skip |= log_msg(
                         report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                        reinterpret_cast<uint64_t &>(image_state->image), __LINE__, 0, "DS",
+                        HandleToUint64(image_state->image), __LINE__, 0, "DS",
                         "Layout for shared presentable cleared image is %s but can only be VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR.",
                         string_VkImageLayout(dest_image_layout));
                 }
