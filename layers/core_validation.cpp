@@ -172,7 +172,6 @@ struct layer_data {
     unordered_map<VkShaderModule, unique_ptr<shader_module>> shaderModuleMap;
     unordered_map<VkDescriptorUpdateTemplateKHR, unique_ptr<TEMPLATE_STATE>> desc_template_map;
     unordered_map<VkSwapchainKHR, std::unique_ptr<SWAPCHAIN_NODE>> swapchainMap;
-    unordered_map<VkImage, VkSwapchainKHR> imageToSwapchainMap;
 
     VkDevice device = VK_NULL_HANDLE;
     VkPhysicalDevice physical_device = VK_NULL_HANDLE;
@@ -333,14 +332,6 @@ SWAPCHAIN_NODE *GetSwapchainNode(const layer_data *dev_data, VkSwapchainKHR swap
         return nullptr;
     }
     return swp_it->second.get();
-}
-// Return swapchain for specified image or else NULL
-VkSwapchainKHR GetSwapchainFromImage(const layer_data *dev_data, VkImage image) {
-    auto img_it = dev_data->imageToSwapchainMap.find(image);
-    if (img_it == dev_data->imageToSwapchainMap.end()) {
-        return VK_NULL_HANDLE;
-    }
-    return img_it->second;
 }
 // Return buffer node ptr for specified buffer or else NULL
 BUFFER_VIEW_STATE *GetBufferViewState(const layer_data *dev_data, VkBufferView buffer_view) {
@@ -10473,7 +10464,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchai
             ImageSubresourcePair subpair = {pSwapchainImages[i], false, VkImageSubresource()};
             dev_data->imageSubresourceMap[pSwapchainImages[i]].push_back(subpair);
             dev_data->imageLayoutMap[subpair] = image_layout_node;
-            dev_data->imageToSwapchainMap[pSwapchainImages[i]] = swapchain;
         }
     }
     return result;
