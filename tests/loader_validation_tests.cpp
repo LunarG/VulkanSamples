@@ -1262,7 +1262,7 @@ TEST(Allocation, CreateInstanceItentionalAllocFail) {
         FreeAllocTracker();
     } while (result == VK_ERROR_OUT_OF_HOST_MEMORY);
 
-    vkDestroyInstance(instance, NULL);
+    vkDestroyInstance(instance, &alloc_callbacks);
 }
 
 // Test failure during vkCreateDevice to make sure we don't leak memory if
@@ -1366,7 +1366,7 @@ TEST(Allocation, CreateInstanceDeviceItentionalAllocFail) {
         physicalCount = 0;
         result = vkEnumeratePhysicalDevices(instance, &physicalCount, nullptr);
         if (result == VK_ERROR_OUT_OF_HOST_MEMORY) {
-            vkDestroyInstance(instance, NULL);
+            vkDestroyInstance(instance, &alloc_callbacks);
             if (!IsAllocTrackerEmpty()) {
                 std::cout << "Failed on index " << fail_index << '\n';
                 ASSERT_EQ(true, IsAllocTrackerEmpty());
@@ -1379,7 +1379,7 @@ TEST(Allocation, CreateInstanceDeviceItentionalAllocFail) {
         std::unique_ptr<VkPhysicalDevice[]> physical(new VkPhysicalDevice[physicalCount]);
         result = vkEnumeratePhysicalDevices(instance, &physicalCount, physical.get());
         if (result == VK_ERROR_OUT_OF_HOST_MEMORY) {
-            vkDestroyInstance(instance, NULL);
+            vkDestroyInstance(instance, &alloc_callbacks);
             if (!IsAllocTrackerEmpty()) {
                 std::cout << "Failed on index " << fail_index << '\n';
                 ASSERT_EQ(true, IsAllocTrackerEmpty());
@@ -1413,7 +1413,7 @@ TEST(Allocation, CreateInstanceDeviceItentionalAllocFail) {
 
         result = vkCreateDevice(physical[0], deviceInfo, &alloc_callbacks, &device);
         if (result == VK_ERROR_OUT_OF_HOST_MEMORY) {
-            vkDestroyInstance(instance, NULL);
+            vkDestroyInstance(instance, &alloc_callbacks);
             if (!IsAllocTrackerEmpty()) {
                 std::cout << "Failed on index " << fail_index << '\n';
                 ASSERT_EQ(true, IsAllocTrackerEmpty());
@@ -1422,7 +1422,7 @@ TEST(Allocation, CreateInstanceDeviceItentionalAllocFail) {
             continue;
         }
         vkDestroyDevice(device, &alloc_callbacks);
-        vkDestroyInstance(instance, NULL);
+        vkDestroyInstance(instance, &alloc_callbacks);
         FreeAllocTracker();
     }
 }
