@@ -1252,13 +1252,14 @@ static bool ValidateDeviceQueueFamily(layer_data *device_data, uint32_t queue_fa
 
     if (!optional && queue_family == VK_QUEUE_FAMILY_IGNORED) {
         skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                        reinterpret_cast<uint64_t>(device_data->device), __LINE__, error_code, LayerName,
+                        HandleToUint64(device_data->device), __LINE__, error_code, LayerName,
                         "%s: %s is VK_QUEUE_FAMILY_IGNORED, but it is required to provide a valid queue family index value. %s",
                         cmd_name, parameter_name, vu_note);
     } else if (device_data->queueFamilyIndexMap.find(queue_family) == device_data->queueFamilyIndexMap.end()) {
         skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                        reinterpret_cast<uint64_t>(device_data->device), __LINE__, error_code, LayerName,
-                        "%s: %s (= %" PRIu32 ") is not one of the queue families given via VkDeviceQueueCreateInfo structures when "
+                        HandleToUint64(device_data->device), __LINE__, error_code, LayerName,
+                        "%s: %s (= %" PRIu32
+                        ") is not one of the queue families given via VkDeviceQueueCreateInfo structures when "
                         "the device was created. %s",
                         cmd_name, parameter_name, queue_family, vu_note);
     }
@@ -1283,7 +1284,7 @@ static bool ValidateQueueFamilies(layer_data *device_data, uint32_t queue_family
 
             if (set.count(queue_families[i])) {
                 skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                                reinterpret_cast<uint64_t>(device_data->device), __LINE__, VALIDATION_ERROR_00035, LayerName,
+                                HandleToUint64(device_data->device), __LINE__, VALIDATION_ERROR_00035, LayerName,
                                 "%s: %s (=%" PRIu32 ") is not unique within %s array. %s", cmd_name, parameter_name.c_str(),
                                 queue_families[i], array_parameter_name, unique_vu_note);
             } else {
@@ -1584,16 +1585,18 @@ static bool ValidateDeviceCreateInfo(instance_layer_data *instance_data, VkPhysi
             const uint32_t requested_queue_family = pCreateInfo->pQueueCreateInfos[i].queueFamilyIndex;
             if (requested_queue_family == VK_QUEUE_FAMILY_IGNORED) {
                 skip |= log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, reinterpret_cast<uint64_t>(physicalDevice),
-                                __LINE__, VALIDATION_ERROR_00054, LayerName,
-                                "vkCreateDevice: pCreateInfo->pQueueCreateInfos[%" PRIu32 "].queueFamilyIndex is "
+                                VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, HandleToUint64(physicalDevice), __LINE__,
+                                VALIDATION_ERROR_00054, LayerName,
+                                "vkCreateDevice: pCreateInfo->pQueueCreateInfos[%" PRIu32
+                                "].queueFamilyIndex is "
                                 "VK_QUEUE_FAMILY_IGNORED, but it is required to provide a valid queue family index value. %s",
                                 i, validation_error_map[VALIDATION_ERROR_00054]);
             } else if (set.count(requested_queue_family)) {
                 skip |= log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, reinterpret_cast<uint64_t>(physicalDevice),
-                                __LINE__, VALIDATION_ERROR_00035, LayerName,
-                                "vkCreateDevice: pCreateInfo->pQueueCreateInfos[%" PRIu32 "].queueFamilyIndex (=%" PRIu32 ") is "
+                                VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, HandleToUint64(physicalDevice), __LINE__,
+                                VALIDATION_ERROR_00035, LayerName,
+                                "vkCreateDevice: pCreateInfo->pQueueCreateInfos[%" PRIu32 "].queueFamilyIndex (=%" PRIu32
+                                ") is "
                                 "not unique within pCreateInfo->pQueueCreateInfos array. %s",
                                 i, requested_queue_family, validation_error_map[VALIDATION_ERROR_00035]);
             } else {
@@ -1605,8 +1608,8 @@ static bool ValidateDeviceCreateInfo(instance_layer_data *instance_data, VkPhysi
                     const float queue_priority = pCreateInfo->pQueueCreateInfos[i].pQueuePriorities[j];
                     if (!(queue_priority >= 0.f) || !(queue_priority <= 1.f)) {
                         skip |= log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                        VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, reinterpret_cast<uint64_t>(physicalDevice),
-                                        __LINE__, VALIDATION_ERROR_02056, LayerName,
+                                        VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, HandleToUint64(physicalDevice), __LINE__,
+                                        VALIDATION_ERROR_02056, LayerName,
                                         "vkCreateDevice: pCreateInfo->pQueueCreateInfos[%" PRIu32 "].pQueuePriorities[%" PRIu32
                                         "] (=%f) is not between 0 and 1 (inclusive). %s",
                                         i, j, queue_priority, validation_error_map[VALIDATION_ERROR_02056]);
@@ -1732,8 +1735,9 @@ static bool PreGetDeviceQueue(VkDevice device, uint32_t queueFamilyIndex, uint32
     const auto &queue_data = my_device_data->queueFamilyIndexMap.find(queueFamilyIndex);
     if (queue_data != my_device_data->queueFamilyIndexMap.end() && queue_data->second <= queueIndex) {
         skip |= log_msg(my_device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                        reinterpret_cast<uint64_t>(device), __LINE__, VALIDATION_ERROR_00061, LayerName,
-                        "vkGetDeviceQueue: queueIndex (=%" PRIu32 ") is not less than the number of queues requested from "
+                        HandleToUint64(device), __LINE__, VALIDATION_ERROR_00061, LayerName,
+                        "vkGetDeviceQueue: queueIndex (=%" PRIu32
+                        ") is not less than the number of queues requested from "
                         "queueFamilyIndex (=%" PRIu32 ") when the device was created (i.e. is not less than %" PRIu32 "). %s",
                         queueIndex, queueFamilyIndex, queue_data->second, validation_error_map[VALIDATION_ERROR_00061]);
     }
@@ -4086,7 +4090,7 @@ static bool PreBeginCommandBuffer(layer_data *dev_data, VkCommandBuffer commandB
     if (pInfo != NULL) {
         if ((dev_data->physical_device_features.inheritedQueries == VK_FALSE) && (pInfo->occlusionQueryEnable != VK_FALSE)) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            reinterpret_cast<uint64_t>(commandBuffer), __LINE__, VALIDATION_ERROR_00116, LayerName,
+                            HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_00116, LayerName,
                             "Cannot set inherited occlusionQueryEnable in vkBeginCommandBuffer() when device does not support "
                             "inheritedQueries. %s",
                             validation_error_map[VALIDATION_ERROR_00116]);
@@ -5286,7 +5290,7 @@ static bool require_instance_extension(void *instance, bool InstanceExtensions::
     auto my_data = GetLayerDataPtr(get_dispatch_key(instance), instance_layer_data_map);
     if (!(my_data->extensions.*flag)) {
         return log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-                       reinterpret_cast<uint64_t>(instance), __LINE__, EXTENSION_NOT_ENABLED, LayerName,
+                       HandleToUint64(instance), __LINE__, EXTENSION_NOT_ENABLED, LayerName,
                        "%s() called even though the %s extension was not enabled for this VkInstance.", function_name,
                        extension_name);
     }

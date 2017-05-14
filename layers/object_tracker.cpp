@@ -66,7 +66,7 @@ static void AddQueueInfo(VkDevice device, uint32_t queue_node_index, VkQueue que
             device_data->queue_info_map[queue] = p_queue_info;
         } else {
             log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT,
-                    reinterpret_cast<uint64_t>(queue), __LINE__, OBJTRACK_INTERNAL_ERROR, LayerName,
+                    HandleToUint64(queue), __LINE__, OBJTRACK_INTERNAL_ERROR, LayerName,
                     "ERROR:  VK_ERROR_OUT_OF_HOST_MEMORY -- could not allocate memory for Queue Information");
         }
     }
@@ -109,7 +109,7 @@ static void ValidateQueueFlags(VkQueue queue, const char *function) {
             if ((instance_data->queue_family_properties[pQueueInfo->queue_node_index].queueFlags & VK_QUEUE_SPARSE_BINDING_BIT) ==
                 0) {
                 log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT,
-                        reinterpret_cast<uint64_t>(queue), __LINE__, VALIDATION_ERROR_01651, LayerName,
+                        HandleToUint64(queue), __LINE__, VALIDATION_ERROR_01651, LayerName,
                         "Attempting %s on a non-memory-management capable queue -- VK_QUEUE_SPARSE_BINDING_BIT not set. %s",
                         function, validation_error_map[VALIDATION_ERROR_01651]);
             }
@@ -122,20 +122,20 @@ static void AllocateCommandBuffer(VkDevice device, const VkCommandPool command_p
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
 
     log_msg(device_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-            reinterpret_cast<const uint64_t>(command_buffer), __LINE__, OBJTRACK_NONE, LayerName,
+            HandleToUint64(command_buffer), __LINE__, OBJTRACK_NONE, LayerName,
             "OBJ[0x%" PRIxLEAST64 "] : CREATE %s object 0x%" PRIxLEAST64, object_track_index++,
-            "VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT", reinterpret_cast<const uint64_t>(command_buffer));
+            "VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT", HandleToUint64(command_buffer));
 
     OBJTRACK_NODE *pNewObjNode = new OBJTRACK_NODE;
     pNewObjNode->object_type = kVulkanObjectTypeCommandBuffer;
-    pNewObjNode->handle = reinterpret_cast<const uint64_t>(command_buffer);
-    pNewObjNode->parent_object = reinterpret_cast<const uint64_t &>(command_pool);
+    pNewObjNode->handle = HandleToUint64(command_buffer);
+    pNewObjNode->parent_object = HandleToUint64(command_pool);
     if (level == VK_COMMAND_BUFFER_LEVEL_SECONDARY) {
         pNewObjNode->status = OBJSTATUS_COMMAND_BUFFER_SECONDARY;
     } else {
         pNewObjNode->status = OBJSTATUS_NONE;
     }
-    device_data->object_map[kVulkanObjectTypeCommandBuffer][reinterpret_cast<const uint64_t>(command_buffer)] = pNewObjNode;
+    device_data->object_map[kVulkanObjectTypeCommandBuffer][HandleToUint64(command_buffer)] = pNewObjNode;
     device_data->num_objects[kVulkanObjectTypeCommandBuffer]++;
     device_data->num_total_objects++;
 }
@@ -143,18 +143,18 @@ static void AllocateCommandBuffer(VkDevice device, const VkCommandPool command_p
 static bool ValidateCommandBuffer(VkDevice device, VkCommandPool command_pool, VkCommandBuffer command_buffer) {
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     bool skip = false;
-    uint64_t object_handle = reinterpret_cast<uint64_t>(command_buffer);
+    uint64_t object_handle = HandleToUint64(command_buffer);
     if (device_data->object_map[kVulkanObjectTypeCommandBuffer].find(object_handle) !=
         device_data->object_map[kVulkanObjectTypeCommandBuffer].end()) {
-        OBJTRACK_NODE *pNode = device_data->object_map[kVulkanObjectTypeCommandBuffer][reinterpret_cast<uint64_t>(command_buffer)];
+        OBJTRACK_NODE *pNode = device_data->object_map[kVulkanObjectTypeCommandBuffer][HandleToUint64(command_buffer)];
 
-        if (pNode->parent_object != reinterpret_cast<uint64_t &>(command_pool)) {
+        if (pNode->parent_object != HandleToUint64(command_pool)) {
             skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             object_handle, __LINE__, VALIDATION_ERROR_00102, LayerName,
                             "FreeCommandBuffers is attempting to free Command Buffer 0x%" PRIxLEAST64
                             " belonging to Command Pool 0x%" PRIxLEAST64 " from pool 0x%" PRIxLEAST64 "). %s",
-                            reinterpret_cast<uint64_t>(command_buffer), pNode->parent_object,
-                            reinterpret_cast<uint64_t &>(command_pool), validation_error_map[VALIDATION_ERROR_00102]);
+                            HandleToUint64(command_buffer), pNode->parent_object, HandleToUint64(command_pool),
+                            validation_error_map[VALIDATION_ERROR_00102]);
         }
     } else {
         skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
@@ -168,16 +168,16 @@ static void AllocateDescriptorSet(VkDevice device, VkDescriptorPool descriptor_p
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
 
     log_msg(device_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
-            reinterpret_cast<uint64_t &>(descriptor_set), __LINE__, OBJTRACK_NONE, LayerName,
+            HandleToUint64(descriptor_set), __LINE__, OBJTRACK_NONE, LayerName,
             "OBJ[0x%" PRIxLEAST64 "] : CREATE %s object 0x%" PRIxLEAST64, object_track_index++,
-            "VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT", reinterpret_cast<uint64_t &>(descriptor_set));
+            "VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT", HandleToUint64(descriptor_set));
 
     OBJTRACK_NODE *pNewObjNode = new OBJTRACK_NODE;
     pNewObjNode->object_type = kVulkanObjectTypeDescriptorSet;
     pNewObjNode->status = OBJSTATUS_NONE;
-    pNewObjNode->handle = reinterpret_cast<uint64_t &>(descriptor_set);
-    pNewObjNode->parent_object = reinterpret_cast<uint64_t &>(descriptor_pool);
-    device_data->object_map[kVulkanObjectTypeDescriptorSet][reinterpret_cast<uint64_t &>(descriptor_set)] = pNewObjNode;
+    pNewObjNode->handle = HandleToUint64(descriptor_set);
+    pNewObjNode->parent_object = HandleToUint64(descriptor_pool);
+    device_data->object_map[kVulkanObjectTypeDescriptorSet][HandleToUint64(descriptor_set)] = pNewObjNode;
     device_data->num_objects[kVulkanObjectTypeDescriptorSet]++;
     device_data->num_total_objects++;
 }
@@ -185,18 +185,18 @@ static void AllocateDescriptorSet(VkDevice device, VkDescriptorPool descriptor_p
 static bool ValidateDescriptorSet(VkDevice device, VkDescriptorPool descriptor_pool, VkDescriptorSet descriptor_set) {
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     bool skip = false;
-    uint64_t object_handle = reinterpret_cast<uint64_t &>(descriptor_set);
+    uint64_t object_handle = HandleToUint64(descriptor_set);
     auto dsItem = device_data->object_map[kVulkanObjectTypeDescriptorSet].find(object_handle);
     if (dsItem != device_data->object_map[kVulkanObjectTypeDescriptorSet].end()) {
         OBJTRACK_NODE *pNode = dsItem->second;
 
-        if (pNode->parent_object != reinterpret_cast<uint64_t &>(descriptor_pool)) {
+        if (pNode->parent_object != HandleToUint64(descriptor_pool)) {
             skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                             object_handle, __LINE__, VALIDATION_ERROR_00927, LayerName,
                             "FreeDescriptorSets is attempting to free descriptorSet 0x%" PRIxLEAST64
                             " belonging to Descriptor Pool 0x%" PRIxLEAST64 " from pool 0x%" PRIxLEAST64 "). %s",
-                            reinterpret_cast<uint64_t &>(descriptor_set), pNode->parent_object,
-                            reinterpret_cast<uint64_t &>(descriptor_pool), validation_error_map[VALIDATION_ERROR_00927]);
+                            HandleToUint64(descriptor_set), pNode->parent_object, HandleToUint64(descriptor_pool),
+                            validation_error_map[VALIDATION_ERROR_00927]);
         }
     } else {
         skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
@@ -210,15 +210,14 @@ static void CreateQueue(VkDevice device, VkQueue vkObj) {
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
 
     log_msg(device_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT,
-            reinterpret_cast<uint64_t>(vkObj), __LINE__, OBJTRACK_NONE, LayerName,
-            "OBJ[0x%" PRIxLEAST64 "] : CREATE %s object 0x%" PRIxLEAST64, object_track_index++,
-            "VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT", reinterpret_cast<uint64_t>(vkObj));
+            HandleToUint64(vkObj), __LINE__, OBJTRACK_NONE, LayerName, "OBJ[0x%" PRIxLEAST64 "] : CREATE %s object 0x%" PRIxLEAST64,
+            object_track_index++, "VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT", HandleToUint64(vkObj));
 
     OBJTRACK_NODE *p_obj_node = NULL;
-    auto queue_item = device_data->object_map[kVulkanObjectTypeQueue].find(reinterpret_cast<uint64_t>(vkObj));
+    auto queue_item = device_data->object_map[kVulkanObjectTypeQueue].find(HandleToUint64(vkObj));
     if (queue_item == device_data->object_map[kVulkanObjectTypeQueue].end()) {
         p_obj_node = new OBJTRACK_NODE;
-        device_data->object_map[kVulkanObjectTypeQueue][reinterpret_cast<uint64_t>(vkObj)] = p_obj_node;
+        device_data->object_map[kVulkanObjectTypeQueue][HandleToUint64(vkObj)] = p_obj_node;
         device_data->num_objects[kVulkanObjectTypeQueue]++;
         device_data->num_total_objects++;
     } else {
@@ -226,38 +225,29 @@ static void CreateQueue(VkDevice device, VkQueue vkObj) {
     }
     p_obj_node->object_type = kVulkanObjectTypeQueue;
     p_obj_node->status = OBJSTATUS_NONE;
-    p_obj_node->handle = reinterpret_cast<uint64_t>(vkObj);
+    p_obj_node->handle = HandleToUint64(vkObj);
 }
 
 static void CreateSwapchainImageObject(VkDevice dispatchable_object, VkImage swapchain_image, VkSwapchainKHR swapchain) {
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(dispatchable_object), layer_data_map);
     log_msg(device_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-            reinterpret_cast<uint64_t &>(swapchain_image), __LINE__, OBJTRACK_NONE, LayerName,
+            HandleToUint64(swapchain_image), __LINE__, OBJTRACK_NONE, LayerName,
             "OBJ[0x%" PRIxLEAST64 "] : CREATE %s object 0x%" PRIxLEAST64, object_track_index++, "SwapchainImage",
-            reinterpret_cast<uint64_t &>(swapchain_image));
+            HandleToUint64(swapchain_image));
 
     OBJTRACK_NODE *pNewObjNode = new OBJTRACK_NODE;
     pNewObjNode->object_type = kVulkanObjectTypeImage;
     pNewObjNode->status = OBJSTATUS_NONE;
-    pNewObjNode->handle = reinterpret_cast<uint64_t &>(swapchain_image);
-    pNewObjNode->parent_object = reinterpret_cast<uint64_t &>(swapchain);
-    device_data->swapchainImageMap[reinterpret_cast<uint64_t &>(swapchain_image)] = pNewObjNode;
-}
-
-template <typename T>
-uint64_t handle_value(T handle) {
-    return reinterpret_cast<uint64_t &>(handle);
-}
-template <typename T>
-uint64_t handle_value(T *handle) {
-    return reinterpret_cast<uint64_t>(handle);
+    pNewObjNode->handle = HandleToUint64(swapchain_image);
+    pNewObjNode->parent_object = HandleToUint64(swapchain);
+    device_data->swapchainImageMap[HandleToUint64(swapchain_image)] = pNewObjNode;
 }
 
 template <typename T1, typename T2>
 static void CreateObject(T1 dispatchable_object, T2 object, VulkanObjectType object_type, const VkAllocationCallbacks *pAllocator) {
     layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(dispatchable_object), layer_data_map);
 
-    auto object_handle = handle_value(object);
+    auto object_handle = HandleToUint64(object);
     bool custom_allocator = pAllocator != nullptr;
 
     if (!instance_data->object_map[object_type].count(object_handle)) {
@@ -283,7 +273,7 @@ static void DestroyObject(T1 dispatchable_object, T2 object, VulkanObjectType ob
                           enum UNIQUE_VALIDATION_ERROR_CODE expected_default_allocator_code) {
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(dispatchable_object), layer_data_map);
 
-    auto object_handle = handle_value(object);
+    auto object_handle = HandleToUint64(object);
     bool custom_allocator = pAllocator != nullptr;
     VkDebugReportObjectTypeEXT debug_object_type = get_debug_report_enum[object_type];
 
@@ -299,7 +289,7 @@ static void DestroyObject(T1 dispatchable_object, T2 object, VulkanObjectType ob
             log_msg(device_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, debug_object_type, object_handle, __LINE__,
                     OBJTRACK_NONE, LayerName,
                     "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%" PRIu64 " total objs remain & %" PRIu64 " %s objs).",
-                    object_string[object_type], reinterpret_cast<uint64_t &>(object), device_data->num_total_objects,
+                    object_string[object_type], HandleToUint64(object), device_data->num_total_objects,
                     device_data->num_objects[pNode->object_type], object_string[object_type]);
 
             auto allocated_with_custom = (pNode->status & OBJSTATUS_CUSTOM_ALLOCATOR) ? true : false;
@@ -336,7 +326,7 @@ static bool ValidateObject(T1 dispatchable_object, T2 object, VulkanObjectType o
     if (null_allowed && (object == VK_NULL_HANDLE)) {
         return false;
     }
-    auto object_handle = handle_value(object);
+    auto object_handle = HandleToUint64(object);
     VkDebugReportObjectTypeEXT debug_object_type = get_debug_report_enum[object_type];
 
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(dispatchable_object), layer_data_map);
@@ -382,8 +372,7 @@ static void DeviceReportUndestroyedObjects(VkDevice device, VulkanObjectType obj
         log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, get_debug_report_enum[object_type], object_info->handle,
                 __LINE__, error_code, LayerName,
                 "OBJ ERROR : For device 0x%" PRIxLEAST64 ", %s object 0x%" PRIxLEAST64 " has not been destroyed. %s",
-                reinterpret_cast<uint64_t>(device), object_string[object_type], object_info->handle,
-                validation_error_map[error_code]);
+                HandleToUint64(device), object_string[object_type], object_info->handle, validation_error_map[error_code]);
         item = device_data->object_map[object_type].erase(item);
     }
 }
@@ -1603,7 +1592,7 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetDescriptorPool(VkDevice device, VkDescriptor
     while (itr != device_data->object_map[kVulkanObjectTypeDescriptorSet].end()) {
         OBJTRACK_NODE *pNode = (*itr).second;
         auto del_itr = itr++;
-        if (pNode->parent_object == reinterpret_cast<uint64_t &>(descriptorPool)) {
+        if (pNode->parent_object == HandleToUint64(descriptorPool)) {
             DestroyObject(device, (VkDescriptorSet)((*del_itr).first), kVulkanObjectTypeDescriptorSet, nullptr,
                           VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
         }
@@ -1825,8 +1814,7 @@ VKAPI_ATTR VkResult VKAPI_CALL BeginCommandBuffer(VkCommandBuffer command_buffer
         skip |= ValidateObject(command_buffer, command_buffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_00108,
                                VALIDATION_ERROR_UNDEFINED);
         if (begin_info) {
-            OBJTRACK_NODE *pNode =
-                device_data->object_map[kVulkanObjectTypeCommandBuffer][reinterpret_cast<const uint64_t>(command_buffer)];
+            OBJTRACK_NODE *pNode = device_data->object_map[kVulkanObjectTypeCommandBuffer][HandleToUint64(command_buffer)];
             if ((begin_info->pInheritanceInfo) && (pNode->status & OBJSTATUS_COMMAND_BUFFER_SECONDARY) &&
                 (begin_info->flags & VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT)) {
                 skip |= ValidateObject(command_buffer, begin_info->pInheritanceInfo->framebuffer, kVulkanObjectTypeFramebuffer,
@@ -3664,7 +3652,7 @@ VKAPI_ATTR void VKAPI_CALL DestroySwapchainKHR(VkDevice device, VkSwapchainKHR s
     std::unordered_map<uint64_t, OBJTRACK_NODE *>::iterator itr = device_data->swapchainImageMap.begin();
     while (itr != device_data->swapchainImageMap.end()) {
         OBJTRACK_NODE *pNode = (*itr).second;
-        if (pNode->parent_object == reinterpret_cast<uint64_t &>(swapchain)) {
+        if (pNode->parent_object == HandleToUint64(swapchain)) {
             delete pNode;
             auto delete_item = itr++;
             device_data->swapchainImageMap.erase(delete_item);
@@ -3724,7 +3712,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyDescriptorPool(VkDevice device, VkDescriptorPo
     while (itr != device_data->object_map[kVulkanObjectTypeDescriptorSet].end()) {
         OBJTRACK_NODE *pNode = (*itr).second;
         auto del_itr = itr++;
-        if (pNode->parent_object == reinterpret_cast<uint64_t &>(descriptorPool)) {
+        if (pNode->parent_object == HandleToUint64(descriptorPool)) {
             DestroyObject(device, (VkDescriptorSet)((*del_itr).first), kVulkanObjectTypeDescriptorSet, nullptr,
                           VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
         }
@@ -3753,7 +3741,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyCommandPool(VkDevice device, VkCommandPool com
     while (itr != device_data->object_map[kVulkanObjectTypeCommandBuffer].end()) {
         OBJTRACK_NODE *pNode = (*itr).second;
         del_itr = itr++;
-        if (pNode->parent_object == reinterpret_cast<uint64_t &>(commandPool)) {
+        if (pNode->parent_object == HandleToUint64(commandPool)) {
             skip |= ValidateCommandBuffer(device, commandPool, reinterpret_cast<VkCommandBuffer>((*del_itr).first));
             DestroyObject(device, reinterpret_cast<VkCommandBuffer>((*del_itr).first), kVulkanObjectTypeCommandBuffer, nullptr,
                           VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);

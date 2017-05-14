@@ -63,7 +63,7 @@ static void checkDeviceRegisterExtensions(VkPhysicalDevice physicalDevice, const
         // TBD: Should we leave error in (since Swapchain really needs this
         // link)?
         log_msg(my_instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
-                reinterpret_cast<uint64_t>(physicalDevice), __LINE__, VALIDATION_ERROR_00031, "Swapchain",
+                HandleToUint64(physicalDevice), __LINE__, VALIDATION_ERROR_00031, "Swapchain",
                 "vkCreateDevice() called with a non-valid VkPhysicalDevice. %s", validation_error_map[VALIDATION_ERROR_00031]);
     }
     my_device_data->deviceMap[device].device = device;
@@ -174,7 +174,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
             if (pPhysicalDevice) {
                 if (pPhysicalDevice->pDevice) {
                     log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                            reinterpret_cast<uint64_t>(pPhysicalDevice->pDevice->device), __LINE__, VALIDATION_ERROR_00018,
+                            HandleToUint64(pPhysicalDevice->pDevice->device), __LINE__, VALIDATION_ERROR_00018,
                             swapchain_layer_name,
                             "VkDestroyInstance() called before all of its associated VkDevices were destroyed. %s",
                             validation_error_map[VALIDATION_ERROR_00018]);
@@ -190,7 +190,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
             SwpSurface *pSurface = it->second;
             if (pSurface) {
                 log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-                        reinterpret_cast<uint64_t>(pInstance->instance), __LINE__, VALIDATION_ERROR_00018, swapchain_layer_name,
+                        HandleToUint64(pInstance->instance), __LINE__, VALIDATION_ERROR_00018, swapchain_layer_name,
                         "VkDestroyInstance() called before all of its associated VkSurfaceKHRs were destroyed. %s",
                         validation_error_map[VALIDATION_ERROR_00018]);
             }
@@ -503,7 +503,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneSupportedDisplaysKHR(VkPhysicalDev
 
     if (!pPhysicalDevice->gotDisplayPlanePropertyCount) {
         skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-                             reinterpret_cast<uint64_t>(pPhysicalDevice->pInstance->instance), __LINE__,
+                             HandleToUint64(pPhysicalDevice->pInstance->instance), __LINE__,
                              SWAPCHAIN_GET_SUPPORTED_DISPLAYS_WITHOUT_QUERY, swapchain_layer_name,
                              "Potential problem with calling vkGetDisplayPlaneSupportedDisplaysKHR() without first "
                              "querying vkGetPhysicalDeviceDisplayPlanePropertiesKHR.");
@@ -512,8 +512,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneSupportedDisplaysKHR(VkPhysicalDev
     if (pPhysicalDevice->gotDisplayPlanePropertyCount && planeIndex >= pPhysicalDevice->displayPlanePropertyCount) {
         skip_call |=
             log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-                    reinterpret_cast<uint64_t>(pPhysicalDevice->pInstance->instance), __LINE__, VALIDATION_ERROR_01857,
-                    swapchain_layer_name,
+                    HandleToUint64(pPhysicalDevice->pInstance->instance), __LINE__, VALIDATION_ERROR_01857, swapchain_layer_name,
                     "vkGetDisplayPlaneSupportedDisplaysKHR(): planeIndex must be in the range [0, %d] that was returned by "
                     "vkGetPhysicalDeviceDisplayPlanePropertiesKHR. Do you have the plane index hardcoded? %s",
                     pPhysicalDevice->displayPlanePropertyCount - 1, validation_error_map[VALIDATION_ERROR_01857]);
@@ -544,7 +543,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneCapabilitiesKHR(VkPhysicalDevice p
 
     if (!pPhysicalDevice->gotDisplayPlanePropertyCount) {
         skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-                             reinterpret_cast<uint64_t>(pPhysicalDevice->pInstance->instance), __LINE__,
+                             HandleToUint64(pPhysicalDevice->pInstance->instance), __LINE__,
                              SWAPCHAIN_GET_SUPPORTED_DISPLAYS_WITHOUT_QUERY, swapchain_layer_name,
                              "Potential problem with calling vkGetDisplayPlaneCapabilitiesKHR() without first "
                              "querying vkGetPhysicalDeviceDisplayPlanePropertiesKHR.");
@@ -552,8 +551,8 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneCapabilitiesKHR(VkPhysicalDevice p
 
     if (pPhysicalDevice->gotDisplayPlanePropertyCount && planeIndex >= pPhysicalDevice->displayPlanePropertyCount) {
         skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-                             reinterpret_cast<uint64_t>(pPhysicalDevice->pInstance->instance), __LINE__,
-                             SWAPCHAIN_PLANE_INDEX_TOO_LARGE, swapchain_layer_name,
+                             HandleToUint64(pPhysicalDevice->pInstance->instance), __LINE__, SWAPCHAIN_PLANE_INDEX_TOO_LARGE,
+                             swapchain_layer_name,
                              "vkGetDisplayPlaneCapabilitiesKHR(): planeIndex must be in the range [0, %d] that was returned by "
                              "vkGetPhysicalDeviceDisplayPlanePropertiesKHR. Do you have the plane index hardcoded?",
                              pPhysicalDevice->displayPlanePropertyCount - 1);
@@ -617,7 +616,7 @@ VKAPI_ATTR void VKAPI_CALL DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR s
         }
         if (!pSurface->swapchains.empty()) {
             skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-                                 reinterpret_cast<uint64_t>(instance), __LINE__, VALIDATION_ERROR_01844, swapchain_layer_name,
+                                 HandleToUint64(instance), __LINE__, VALIDATION_ERROR_01844, swapchain_layer_name,
                                  "vkDestroySurfaceKHR() called before all of its associated VkSwapchainKHRs were destroyed. %s",
                                  validation_error_map[VALIDATION_ERROR_01844]);
 
@@ -728,7 +727,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
         }
         if (!pDevice->swapchains.empty()) {
             log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                    reinterpret_cast<uint64_t>(device), __LINE__, VALIDATION_ERROR_00049, swapchain_layer_name,
+                    HandleToUint64(device), __LINE__, VALIDATION_ERROR_00049, swapchain_layer_name,
                     "vkDestroyDevice() called before all of its associated VkSwapchainKHRs were destroyed. %s",
                     validation_error_map[VALIDATION_ERROR_00049]);
 
@@ -841,12 +840,12 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchai
             // Since we haven't recorded a preliminary value of *pSwapchainImageCount, that likely means that the application didn't
             // previously call this function with a NULL value of pSwapchainImages:
             skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                                 reinterpret_cast<uint64_t>(device), __LINE__, SWAPCHAIN_PRIOR_COUNT, swapchain_layer_name,
+                                 HandleToUint64(device), __LINE__, SWAPCHAIN_PRIOR_COUNT, swapchain_layer_name,
                                  "vkGetSwapchainImagesKHR() called with non-NULL pSwapchainImageCount; but no prior positive "
                                  "value has been seen for pSwapchainImages.");
         } else if (*pSwapchainImageCount > pSwapchain->imageCount) {
             skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                                 reinterpret_cast<uint64_t>(device), __LINE__, SWAPCHAIN_INVALID_COUNT, swapchain_layer_name,
+                                 HandleToUint64(device), __LINE__, SWAPCHAIN_INVALID_COUNT, swapchain_layer_name,
                                  "vkGetSwapchainImagesKHR() called with non-NULL pSwapchainImageCount, and with "
                                  "pSwapchainImages set to a value (%d) that is greater than the value (%d) that was returned when "
                                  "pSwapchainImageCount was NULL.",
