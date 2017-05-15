@@ -12529,7 +12529,7 @@ TEST_F(VkLayerTest, InvalidImageLayout) {
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "with specific layout VK_IMAGE_LAYOUT_UNDEFINED that "
                                          "doesn't match the actual current layout VK_IMAGE_LAYOUT_GENERAL.");
-    m_errorMonitor->SetUnexpectedError("srcImageLayout must be VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL or VK_IMAGE_LAYOUT_GENERAL");
+    m_errorMonitor->SetUnexpectedError("is VK_IMAGE_LAYOUT_UNDEFINED but can only be VK_IMAGE_LAYOUT");
     m_commandBuffer->CopyImage(src_image, VK_IMAGE_LAYOUT_UNDEFINED, dst_image, VK_IMAGE_LAYOUT_GENERAL, 1, &copy_region);
     m_errorMonitor->VerifyFound();
     // Final src error is due to bad layout type
