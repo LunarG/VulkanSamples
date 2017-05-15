@@ -5045,9 +5045,8 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainStatusKHR(VkDevice device, VkSwapchai
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |=
-            ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(device, swapchain, kVulkanObjectTypeSwapchainKHR, false, VALIDATION_ERROR_UNDEFINED,
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_03293, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, swapchain, kVulkanObjectTypeSwapchainKHR, false, VALIDATION_ERROR_03294,
                                VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
@@ -5063,10 +5062,10 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilities2KHR(VkPhysic
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_UNDEFINED,
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_03283,
                                VALIDATION_ERROR_UNDEFINED);
-        skip |= ValidateObject(physicalDevice, pSurfaceInfo->surface, kVulkanObjectTypeSurfaceKHR, false,
-                               VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, pSurfaceInfo->surface, kVulkanObjectTypeSurfaceKHR, false, VALIDATION_ERROR_03288,
+                               VALIDATION_ERROR_UNDEFINED);
     }
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -5083,7 +5082,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceFormats2KHR(VkPhysicalDev
     bool skip = false;
     {
         std::lock_guard<std::mutex> lock(global_lock);
-        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_UNDEFINED,
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_03289,
                                VALIDATION_ERROR_UNDEFINED);
         skip |= ValidateObject(physicalDevice, pSurfaceInfo->surface, kVulkanObjectTypeSurfaceKHR, false,
                                VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
