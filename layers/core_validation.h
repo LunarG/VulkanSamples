@@ -150,7 +150,6 @@ enum CALL_STATE {
 struct PHYSICAL_DEVICE_STATE {
     // Track the call state and array sizes for various query functions
     CALL_STATE vkGetPhysicalDeviceQueueFamilyPropertiesState = UNCALLED;
-    uint32_t queueFamilyPropertiesCount = 0;
     CALL_STATE vkGetPhysicalDeviceLayerPropertiesState = UNCALLED;
     CALL_STATE vkGetPhysicalDeviceExtensionPropertiesState = UNCALLED;
     CALL_STATE vkGetPhysicalDeviceFeaturesState = UNCALLED;
@@ -159,6 +158,7 @@ struct PHYSICAL_DEVICE_STATE {
     CALL_STATE vkGetPhysicalDeviceSurfaceFormatsKHRState = UNCALLED;
     VkPhysicalDeviceFeatures features = {};
     VkPhysicalDevice phys_device = VK_NULL_HANDLE;
+    uint32_t queue_family_count = 0;
     std::vector<VkQueueFamilyProperties> queue_family_properties;
     VkSurfaceCapabilitiesKHR surfaceCapabilities = {};
     std::vector<VkPresentModeKHR> present_modes;

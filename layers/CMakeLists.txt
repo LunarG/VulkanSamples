@@ -73,9 +73,17 @@ else()
         endforeach(config_file)
     endif()
 endif()
+# If a layer has a direcgt dependency on a project with the same name, use it.
 foreach (config_file ${LAYER_JSON_FILES_WITH_DEPENDENCIES})
     add_dependencies(${config_file}-json ${config_file})
 endforeach(config_file)
+# If a layer has no direct dependencies, give it one so it copies in the proper order
+foreach (config_file ${LAYER_JSON_FILES_NO_DEPENDENCIES})
+    add_dependencies(${config_file}-json VkLayer_utils)
+endforeach(config_file)
+
+
+
 
 # Add targets for JSON file install on Linux.
 # Need to remove the "./" from the library path before installing to /etc.

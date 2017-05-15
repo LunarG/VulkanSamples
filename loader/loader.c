@@ -290,7 +290,7 @@ static inline void loader_free_getenv(char *val, const struct loader_instance *i
 void loader_log(const struct loader_instance *inst, VkFlags msg_type, int32_t msg_code, const char *format, ...) {
     char msg[512];
     char cmd_line_msg[512];
-    uint16_t cmd_line_size = sizeof(cmd_line_msg);
+    size_t cmd_line_size = sizeof(cmd_line_msg);
     va_list ap;
     int ret;
 
@@ -311,6 +311,8 @@ void loader_log(const struct loader_instance *inst, VkFlags msg_type, int32_t ms
     }
 
     cmd_line_msg[0] = '\0';
+    cmd_line_size -= 1;
+    size_t original_size = cmd_line_size;
 
     va_start(ap, format);
     if ((msg_type & LOADER_INFO_BIT) != 0) {
@@ -318,7 +320,7 @@ void loader_log(const struct loader_instance *inst, VkFlags msg_type, int32_t ms
         cmd_line_size -= 4;
     }
     if ((msg_type & LOADER_WARN_BIT) != 0) {
-        if (cmd_line_size != sizeof(cmd_line_msg)) {
+        if (cmd_line_size != original_size) {
             strncat(cmd_line_msg, " | ", cmd_line_size);
             cmd_line_size -= 3;
         }
@@ -326,7 +328,7 @@ void loader_log(const struct loader_instance *inst, VkFlags msg_type, int32_t ms
         cmd_line_size -= 7;
     }
     if ((msg_type & LOADER_PERF_BIT) != 0) {
-        if (cmd_line_size != sizeof(cmd_line_msg)) {
+        if (cmd_line_size != original_size) {
             strncat(cmd_line_msg, " | ", cmd_line_size);
             cmd_line_size -= 3;
         }
@@ -334,7 +336,7 @@ void loader_log(const struct loader_instance *inst, VkFlags msg_type, int32_t ms
         cmd_line_size -= 4;
     }
     if ((msg_type & LOADER_ERROR_BIT) != 0) {
-        if (cmd_line_size != sizeof(cmd_line_msg)) {
+        if (cmd_line_size != original_size) {
             strncat(cmd_line_msg, " | ", cmd_line_size);
             cmd_line_size -= 3;
         }
@@ -342,23 +344,35 @@ void loader_log(const struct loader_instance *inst, VkFlags msg_type, int32_t ms
         cmd_line_size -= 5;
     }
     if ((msg_type & LOADER_DEBUG_BIT) != 0) {
-        if (cmd_line_size != sizeof(cmd_line_msg)) {
+        if (cmd_line_size != original_size) {
             strncat(cmd_line_msg, " | ", cmd_line_size);
             cmd_line_size -= 3;
         }
         strncat(cmd_line_msg, "DEBUG", cmd_line_size);
         cmd_line_size -= 5;
     }
-    if (cmd_line_size != sizeof(cmd_line_msg)) {
+    if (cmd_line_size != original_size) {
         strncat(cmd_line_msg, ": ", cmd_line_size);
         cmd_line_size -= 2;
     }
-    strncat(cmd_line_msg, msg, cmd_line_size);
+
+    if (0 < cmd_line_size) {
+        // If the message is too long, trim it down
+        if (strlen(msg) > cmd_line_size) {
+            msg[cmd_line_size - 1] = '\0';
+        }
+        strncat(cmd_line_msg, msg, cmd_line_size);
+    } else {
+        // Shouldn't get here, but check to make sure if we've already overrun
+        // the string boundary
+        assert(false);
+    }
 
 #if defined(WIN32)
     OutputDebugString(cmd_line_msg);
     OutputDebugString("\n");
 #endif
+
     fputs(cmd_line_msg, stderr);
     fputc('\n', stderr);
 }
@@ -2028,14 +2042,14 @@ static void verify_all_meta_layers(const struct loader_instance *inst, struct lo
             // Delete the component layers
             loader_instance_heap_free(inst, prop->component_layer_names);
 
-            // Remove the current invalid meta-layer from the layer list
-            for (uint32_t j = i + 1; j < instance_layers->count; j++) {
-                // Use memmove since we are overlapping the source and destination addresses.
-                memmove(&instance_layers->list[j - 1], &instance_layers->list[j], sizeof(struct loader_layer_properties));
-            }
-            instance_layers->count--;
+            // Remove the current invalid meta-layer from the layer list.  Use memmove since we are
+            // overlapping the source and destination addresses.
+            memmove(&instance_layers->list[i], &instance_layers->list[i + 1],
+                    sizeof(struct loader_layer_properties) * (instance_layers->count - 1 - i));
 
-            // Decrement the loop index so we re-check this.
+            // Decrement the count (because we now have one less) and decrement the loop index since we need to
+            // re-check this index.
+            instance_layers->count--;
             i--;
         }
     }

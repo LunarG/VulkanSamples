@@ -8,6 +8,7 @@
 
 Param(
     [switch]$Debug,
+    [string]$LoaderTestExceptions,
     [string]$TestExceptions
 )
 
@@ -21,7 +22,7 @@ Set-Item -path env:Path -value ($env:Path + ";..\loader\$dPath")
 Set-Item -path env:Path -value ($env:Path + ";gtest-1.7.0\$dPath")
 $env:VK_LAYER_PATH = "..\layers\$dPath"
 
-& $dPath\vk_loader_validation_tests
+& $dPath\vk_loader_validation_tests --gtest_filter=-$LoaderTestExceptions
 if ($lastexitcode -ne 0) {
    exit 1
 }

@@ -813,12 +813,16 @@ static std::string get_result_description(VkResult result) {
 *
 * @param report_data debug_report_data object for routing validation messages.
 * @param apiName Name of API call being validated.
+* @param ignore vector of VkResult return codes to be ignored
 * @param value VkResult value to validate.
 */
-static void validate_result(debug_report_data *report_data, const char *apiName, VkResult result) {
+static void validate_result(debug_report_data *report_data, const char *apiName, std::vector<VkResult> const &ignore,
+                            VkResult result) {
     if (result < 0 && result != VK_ERROR_VALIDATION_FAILED_EXT) {
+        if (std::find(ignore.begin(), ignore.end(), result) != ignore.end()) {
+            return;
+        }
         std::string resultName = string_VkResult(result);
-
         if (resultName == UnsupportedResultString) {
             // Unrecognized result code
             log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,

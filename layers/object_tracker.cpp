@@ -5041,6 +5041,60 @@ VKAPI_ATTR void VKAPI_CALL SetHdrMetadataEXT(VkDevice device, uint32_t swapchain
     }
 }
 
+VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainStatusKHR(VkDevice device, VkSwapchainKHR swapchain) {
+    bool skip = false;
+    {
+        std::lock_guard<std::mutex> lock(global_lock);
+        skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_03293, VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(device, swapchain, kVulkanObjectTypeSwapchainKHR, false, VALIDATION_ERROR_03294,
+                               VALIDATION_ERROR_UNDEFINED);
+    }
+    if (skip) {
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+    }
+    VkResult result = get_dispatch_table(ot_device_table_map, device)->GetSwapchainStatusKHR(device, swapchain);
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilities2KHR(VkPhysicalDevice physicalDevice,
+                                                                        const VkPhysicalDeviceSurfaceInfo2KHR *pSurfaceInfo,
+                                                                        VkSurfaceCapabilities2KHR *pSurfaceCapabilities) {
+    bool skip = false;
+    {
+        std::lock_guard<std::mutex> lock(global_lock);
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_03283,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, pSurfaceInfo->surface, kVulkanObjectTypeSurfaceKHR, false, VALIDATION_ERROR_03288,
+                               VALIDATION_ERROR_UNDEFINED);
+    }
+    if (skip) {
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+    }
+    VkResult result = get_dispatch_table(ot_instance_table_map, physicalDevice)
+                          ->GetPhysicalDeviceSurfaceCapabilities2KHR(physicalDevice, pSurfaceInfo, pSurfaceCapabilities);
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceFormats2KHR(VkPhysicalDevice physicalDevice,
+                                                                   const VkPhysicalDeviceSurfaceInfo2KHR *pSurfaceInfo,
+                                                                   uint32_t *pSurfaceFormatCount,
+                                                                   VkSurfaceFormat2KHR *pSurfaceFormats) {
+    bool skip = false;
+    {
+        std::lock_guard<std::mutex> lock(global_lock);
+        skip |= ValidateObject(physicalDevice, physicalDevice, kVulkanObjectTypePhysicalDevice, false, VALIDATION_ERROR_03289,
+                               VALIDATION_ERROR_UNDEFINED);
+        skip |= ValidateObject(physicalDevice, pSurfaceInfo->surface, kVulkanObjectTypeSurfaceKHR, false,
+                               VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+    }
+    if (skip) {
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+    }
+    VkResult result = get_dispatch_table(ot_instance_table_map, physicalDevice)
+                          ->GetPhysicalDeviceSurfaceFormats2KHR(physicalDevice, pSurfaceInfo, pSurfaceFormatCount, pSurfaceFormats);
+    return result;
+}
+
 static inline PFN_vkVoidFunction InterceptCoreDeviceCommand(const char *name) {
     if (!name || name[0] != 'v' || name[1] != 'k') return NULL;
 
