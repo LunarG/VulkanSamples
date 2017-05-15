@@ -191,7 +191,8 @@ VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceFeatures2KHR(VkPhysicalDe
         icd_term->dispatch.GetPhysicalDeviceFeatures2KHR(phys_dev_term->phys_dev, pFeatures);
     } else {
         loader_log(icd_term->this_instance, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
-                   "vkGetPhysicalDeviceFeatures2KHR: Emulating call using vkGetPhysicalDeviceFeatures");
+                   "vkGetPhysicalDeviceFeatures2KHR: Emulating call in ICD \"%s\" using vkGetPhysicalDeviceFeatures",
+                   icd_term->scanned_icd->lib_name);
         if (pFeatures->pNext != NULL) {
             loader_log(
                 icd_term->this_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
@@ -218,7 +219,8 @@ VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceProperties2KHR(VkPhysical
         icd_term->dispatch.GetPhysicalDeviceProperties2KHR(phys_dev_term->phys_dev, pProperties);
     } else {
         loader_log(icd_term->this_instance, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
-                   "vkGetPhysicalDeviceProperties2KHR: Emulating call using vkGetPhysicalDeviceProperties");
+                   "vkGetPhysicalDeviceProperties2KHR: Emulating call in ICD \"%s\" using vkGetPhysicalDeviceProperties",
+                   icd_term->scanned_icd->lib_name);
         if (pProperties->pNext != NULL) {
             loader_log(icd_term->this_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                        "vkGetPhysicalDeviceProperties2KHR: Emulation found a non-null pNext in pProperties - This pointer will be "
@@ -244,8 +246,10 @@ VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceFormatProperties2KHR(VkPh
     if (icd_term->dispatch.GetPhysicalDeviceFormatProperties2KHR != NULL) {
         icd_term->dispatch.GetPhysicalDeviceFormatProperties2KHR(phys_dev_term->phys_dev, format, pFormatProperties);
     } else {
-        loader_log(icd_term->this_instance, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
-                   "vkGetPhysicalDeviceFormatProperties2KHR: Emulating call using vkGetPhysicalDeviceFormatProperties");
+        loader_log(
+            icd_term->this_instance, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
+            "vkGetPhysicalDeviceFormatProperties2KHR: Emulating call in ICD \"%s\" using vkGetPhysicalDeviceFormatProperties",
+            icd_term->scanned_icd->lib_name);
         if (pFormatProperties->pNext != NULL) {
             loader_log(icd_term->this_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                        "vkGetPhysicalDeviceFormatProperties2KHR: Emulation found a non-null pNext in pFormatProperties - This "
@@ -275,7 +279,9 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_GetPhysicalDeviceImageFormatProperties
                                                                              pImageFormatProperties);
     } else {
         loader_log(icd_term->this_instance, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
-                   "vkGetPhysicalDeviceImageFormatProperties2KHR: Emulating call using vkGetPhysicalDeviceImageFormatProperties");
+                   "vkGetPhysicalDeviceImageFormatProperties2KHR: Emulating call in ICD \"%s\" using "
+                   "vkGetPhysicalDeviceImageFormatProperties",
+                   icd_term->scanned_icd->lib_name);
         if (pImageFormatInfo != NULL) {
             loader_log(icd_term->this_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                        "vkGetPhysicalDeviceImageFormatProperties2KHR: Emulation found a non-null pNext in pImageFormatInfo - This "
@@ -312,11 +318,15 @@ VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceQueueFamilyProperties2KHR
                                                                       pQueueFamilyProperties);
     } else if (pQueueFamilyProperties == NULL || *pQueueFamilyPropertyCount == 0) {
         loader_log(icd_term->this_instance, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
-                   "vkGetPhysicalDeviceQueueFamilyProperties2KHR: Emulating call using vkGetPhysicalDeviceQueueFamilyProperties");
+                   "vkGetPhysicalDeviceQueueFamilyProperties2KHR: Emulating call in ICD \"%s\" using "
+                   "vkGetPhysicalDeviceQueueFamilyProperties",
+                   icd_term->scanned_icd->lib_name);
         icd_term->dispatch.GetPhysicalDeviceQueueFamilyProperties(phys_dev_term->phys_dev, pQueueFamilyPropertyCount, NULL);
     } else {
         loader_log(icd_term->this_instance, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
-                   "vkGetPhysicalDeviceQueueFamilyProperties2KHR: Emulating call using vkGetPhysicalDeviceQueueFamilyProperties");
+                   "vkGetPhysicalDeviceQueueFamilyProperties2KHR: Emulating call in ICD \"%s\" using "
+                   "vkGetPhysicalDeviceQueueFamilyProperties",
+                   icd_term->scanned_icd->lib_name);
         VkQueueFamilyProperties *properties = loader_stack_alloc(*pQueueFamilyPropertyCount * sizeof(VkQueueFamilyProperties));
         if (properties == NULL) {
             *pQueueFamilyPropertyCount = 0;
@@ -355,8 +365,10 @@ VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceMemoryProperties2KHR(
     if (icd_term->dispatch.GetPhysicalDeviceMemoryProperties2KHR != NULL) {
         icd_term->dispatch.GetPhysicalDeviceMemoryProperties2KHR(phys_dev_term->phys_dev, pMemoryProperties);
     } else {
-        loader_log(icd_term->this_instance, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
-                   "vkGetPhysicalDeviceMemoryProperties2KHR: Emulating call using vkGetPhysicalDeviceMemoryProperties");
+        loader_log(
+            icd_term->this_instance, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
+            "vkGetPhysicalDeviceMemoryProperties2KHR: Emulating call in ICD \"%s\" using vkGetPhysicalDeviceMemoryProperties",
+            icd_term->scanned_icd->lib_name);
         if (pMemoryProperties != NULL) {
             loader_log(icd_term->this_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                        "vkGetPhysicalDeviceMemoryProperties2KHR: Emulation found a non-null pNext in pMemoryProperties - This "
@@ -386,8 +398,9 @@ VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceSparseImageFormatProperti
                                                                             pProperties);
     } else if (pProperties == NULL || *pPropertyCount == 0) {
         loader_log(icd_term->this_instance, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
-                   "vkGetPhysicalDeviceSparseImageFormatProperties2KHR: Emulating call using "
-                   "vkGetPhysicalDeviceSparseImageFormatProperties");
+                   "vkGetPhysicalDeviceSparseImageFormatProperties2KHR: Emulating call in ICD \"%s\" using "
+                   "vkGetPhysicalDeviceSparseImageFormatProperties",
+                   icd_term->scanned_icd->lib_name);
         if (pFormatInfo->pNext != NULL) {
             loader_log(icd_term->this_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                        "vkGetPhysicalDeviceSparseImageFormatProperties2KHR: Emulation found a non-null pNext in pFormatInfo - This "
@@ -398,8 +411,9 @@ VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceSparseImageFormatProperti
                                                                         pFormatInfo->tiling, pPropertyCount, NULL);
     } else {
         loader_log(icd_term->this_instance, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
-                   "vkGetPhysicalDeviceSparseImageFormatProperties2KHR: Emulating call using "
-                   "vkGetPhysicalDeviceSparseImageFormatProperties");
+                   "vkGetPhysicalDeviceSparseImageFormatProperties2KHR: Emulating call in ICD \"%s\" using "
+                   "vkGetPhysicalDeviceSparseImageFormatProperties",
+                   icd_term->scanned_icd->lib_name);
         if (pFormatInfo->pNext != NULL) {
             loader_log(icd_term->this_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                        "vkGetPhysicalDeviceSparseImageFormatProperties2KHR: Emulation found a non-null pNext in pFormatInfo - This "
