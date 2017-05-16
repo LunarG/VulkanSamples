@@ -113,6 +113,20 @@ then
 fi
 echo "Middle insertion test PASSED"
 
+# Run a sanity check to make sure the validation tests can be run in the current environment.
+GTEST_PRINT_TIME=0 \
+   VK_LAYER_PATH=$vk_layer_path \
+   LD_LIBRARY_PATH=$ld_library_path \
+   GTEST_FILTER=VkLayerTest.ReservedParameter \
+   ./vk_layer_validation_tests > /dev/null
+ec=$?
+
+if [ $ec -ne 0 ]
+then
+   echo "Execution test FAILED - there may be a problem executing the layer validation tests" >&2
+   exit 1
+fi
+
 # Run the layer validation tests with and without the wrap-objects layer. Diff the results.
 # Filter out the "Unexpected:" lines because they contain varying object handles.
 GTEST_PRINT_TIME=0 \
