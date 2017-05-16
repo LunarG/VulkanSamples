@@ -27,6 +27,8 @@
 #include <vulkan/vulkan.h>
 #endif
 
+#include "layers/vk_device_profile_api_layer.h"
+
 #if defined(ANDROID) && defined(VALIDATION_APK)
 #include <android/log.h>
 #include <android_native_app_glue.h>
@@ -3004,6 +3006,80 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject) {
     m_errorMonitor->VerifyFound();
 
     vkFreeMemory(m_device->device(), mem, NULL);
+}
+
+TEST_F(VkLayerTest, ExceedMemoryAllocationCount) {
+    VkResult err = VK_SUCCESS;
+    const int max_mems = 32;
+    VkDeviceMemory mems[max_mems + 1];
+    uint32_t instance_layer_count = 0;
+
+    err = vkEnumerateInstanceLayerProperties(&instance_layer_count, NULL);
+    assert(!err);
+
+    if (!instance_layer_count) {
+        printf("             No instance layers found; skipped.\n");
+        return;
+    }
+    VkLayerProperties *instance_layers = (VkLayerProperties *)malloc(sizeof(VkLayerProperties) * instance_layer_count);
+    assert(instance_layers);
+    err = vkEnumerateInstanceLayerProperties(&instance_layer_count, instance_layers);
+    assert(!err);
+
+    bool found = false;
+    for (uint32_t i = 0; i < instance_layer_count; i++) {
+        if (!strcmp(instance_layers[i].layerName, "VK_LAYER_LUNARG_device_profile_api")) {
+            found = true;
+            break;
+        }
+    }
+    free(instance_layers);
+
+    if (!found) {
+        printf("             Did not find VK_LAYER_LUNARG_device_profile_api layer; skipped.\n");
+        return;
+    }
+
+    instance_layer_names.push_back("VK_LAYER_LUNARG_device_profile_api");
+    ASSERT_NO_FATAL_FAILURE(
+        InitFramework(instance_layer_names, instance_extension_names, device_extension_names, myDbgFunc, m_errorMonitor));
+
+    PFN_vkSetPhysicalDeviceLimitsEXT fpvkSetPhysicalDeviceLimitsEXT =
+        (PFN_vkSetPhysicalDeviceLimitsEXT)vkGetInstanceProcAddr(instance(), "vkSetPhysicalDeviceLimitsEXT");
+    PFN_vkGetOriginalPhysicalDeviceLimitsEXT fpvkGetOriginalPhysicalDeviceLimitsEXT =
+        (PFN_vkGetOriginalPhysicalDeviceLimitsEXT)vkGetInstanceProcAddr(instance(), "vkGetOriginalPhysicalDeviceLimitsEXT");
+
+    if (!(fpvkSetPhysicalDeviceLimitsEXT) || !(fpvkGetOriginalPhysicalDeviceLimitsEXT)) {
+        printf("             Can't find device_profile_api functions; skipped.\n");
+        return;
+    }
+    VkPhysicalDeviceProperties props;
+    fpvkGetOriginalPhysicalDeviceLimitsEXT(gpu(), &props.limits);
+    if (props.limits.maxMemoryAllocationCount > max_mems) {
+        props.limits.maxMemoryAllocationCount = max_mems;
+        fpvkSetPhysicalDeviceLimitsEXT(gpu(), &props.limits);
+    }
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_16c004f8);
+
+    VkMemoryAllocateInfo mem_alloc = {};
+    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    mem_alloc.pNext = NULL;
+    mem_alloc.memoryTypeIndex = 0;
+    mem_alloc.allocationSize = 4;
+
+    int i;
+    for (i = 0; i <= max_mems; i++) {
+        err = vkAllocateMemory(m_device->device(), &mem_alloc, NULL, &mems[i]);
+        if (err != VK_SUCCESS) {
+            break;
+        }
+    }
+    m_errorMonitor->VerifyFound();
+
+    for (int j = 0; j < i; j++) {
+        vkFreeMemory(m_device->device(), mems[j], NULL);
+    }
 }
 
 TEST_F(VkLayerTest, CreatePipelineBadVertexAttributeFormat) {
