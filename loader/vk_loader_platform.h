@@ -242,7 +242,15 @@ static char *loader_platform_basename(char *pathname) {
 
 // Dynamic Loading:
 typedef HMODULE loader_platform_dl_handle;
-static loader_platform_dl_handle loader_platform_open_library(const char *libPath) { return LoadLibrary(libPath); }
+static loader_platform_dl_handle loader_platform_open_library(const char *lib_path) {
+    // Try loading the library the original way first.
+    loader_platform_dl_handle lib_handle = LoadLibrary(lib_path);
+    if (lib_handle == NULL && GetLastError() == ERROR_MOD_NOT_FOUND && PathFileExists(lib_path)) {
+        // If that failed, then try loading it with broarder search folders.
+        lib_handle = LoadLibraryEx(lib_path, NULL, LOAD_LIBRARY_SEARCH_DEFAULT_DIRS | LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR);
+    }
+    return lib_handle;
+}
 static char *loader_platform_open_library_error(const char *libPath) {
     static char errorMsg[164];
     (void)snprintf(errorMsg, 163, "Failed to open dynamic library \"%s\"", libPath);
