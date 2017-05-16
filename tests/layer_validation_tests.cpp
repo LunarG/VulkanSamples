@@ -1029,6 +1029,30 @@ TEST_F(VkLayerTest, UnrecognizedValue) {
     vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
     m_errorMonitor->VerifyFound();
 
+    // Sneak in a test to make sure using VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE
+    // doesn't trigger a false positive.
+    uint32_t extension_count = 0;
+    bool supports_mirror_clamp = false;
+    VkResult err = vkEnumerateDeviceExtensionProperties(gpu(), nullptr, &extension_count, nullptr);
+    ASSERT_VK_SUCCESS(err);
+    if (extension_count > 0) {
+        std::vector<VkExtensionProperties> available_extensions(extension_count);
+
+        err = vkEnumerateDeviceExtensionProperties(gpu(), nullptr, &extension_count, &available_extensions[0]);
+        ASSERT_VK_SUCCESS(err);
+        for (const auto &extension_props : available_extensions) {
+            if (strcmp(extension_props.extensionName, VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME) == 0) {
+                supports_mirror_clamp = true;
+            }
+        }
+    }
+    VkSamplerAddressMode address_mode = VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
+    if (!supports_mirror_clamp) {
+        printf("             mirror_clamp_to_edge Extension not supported, skipping tests\n");
+        address_mode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        return;
+    }
+
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT, "is neither VK_TRUE nor VK_FALSE");
     // Specify an invalid VkBool32 value
     // Expected to trigger a warning with
@@ -1040,9 +1064,9 @@ TEST_F(VkLayerTest, UnrecognizedValue) {
     sampler_info.magFilter = VK_FILTER_NEAREST;
     sampler_info.minFilter = VK_FILTER_NEAREST;
     sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-    sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sampler_info.addressModeU = address_mode;
+    sampler_info.addressModeV = address_mode;
+    sampler_info.addressModeW = address_mode;
     sampler_info.mipLodBias = 1.0;
     sampler_info.maxAnisotropy = 1;
     sampler_info.compareEnable = VK_FALSE;
@@ -1055,6 +1079,24 @@ TEST_F(VkLayerTest, UnrecognizedValue) {
     sampler_info.anisotropyEnable = 3;
     vkCreateSampler(m_device->device(), &sampler_info, NULL, &sampler);
     m_errorMonitor->VerifyFound();
+
+    // Specify MAX_ENUM
+    VkDescriptorSetLayoutBinding binding = {};
+    binding.binding = 0;
+    binding.descriptorType = VK_DESCRIPTOR_TYPE_MAX_ENUM;
+    binding.descriptorCount = 1;
+    binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    VkDescriptorSetLayoutCreateInfo layout_ci = {};
+    layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layout_ci.bindingCount = 1;
+    layout_ci.pBindings = &binding;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "does not fall within the begin..end range");
+    VkDescriptorSetLayout layout = VK_NULL_HANDLE;
+    vkCreateDescriptorSetLayout(device(), &layout_ci, NULL, &layout);
+    m_errorMonitor->VerifyFound();
+    if (layout != VK_NULL_HANDLE) {
+        vkDestroyDescriptorSetLayout(device(), layout, NULL);
+    }
 }
 
 TEST_F(VkLayerTest, UpdateBufferAlignment) {

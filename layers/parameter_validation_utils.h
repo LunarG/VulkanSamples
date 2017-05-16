@@ -82,9 +82,12 @@ const std::string UnsupportedResultString = "Unhandled VkResult";
 // See Appendix C.10 "Assigning Extension Token Values" from the Vulkan specification
 const uint32_t ExtEnumBaseValue = 1000000000;
 
+// The value of all VK_xxx_MAX_ENUM tokens
+const uint32_t MaxEnumValue = 0x7FFFFFFF;
+
 template <typename T>
 bool is_extension_added_token(T value) {
-    return (static_cast<uint32_t>(std::abs(static_cast<int32_t>(value))) >= ExtEnumBaseValue);
+    return (value != MaxEnumValue) && (static_cast<uint32_t>(std::abs(static_cast<int32_t>(value))) >= ExtEnumBaseValue);
 }
 
 // VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE token is a special case that was converted from a core token to an
@@ -92,8 +95,8 @@ bool is_extension_added_token(T value) {
 // the base value that other extension added tokens use, and it does not fall within the enum's begin/end range.
 template <>
 bool is_extension_added_token(VkSamplerAddressMode value) {
-    bool result = (static_cast<uint32_t>(std::abs(static_cast<int32_t>(value))) >= ExtEnumBaseValue);
-    return (result || (value == VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE));
+    bool result = is_extension_added_token(static_cast<uint32_t>(value));
+    return result || (value == VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE);
 }
 
 /**
