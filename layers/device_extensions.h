@@ -48,6 +48,7 @@ struct DeviceExtensions {
     bool nv_external_memory_win32;
     bool nvx_device_generated_commands;
     bool khr_incremental_present;
+    bool khr_shared_presentable_image;
 
     void InitFromDeviceCreateInfo(const VkDeviceCreateInfo *pCreateInfo) {
         using E = DeviceExtensions;
@@ -84,6 +85,8 @@ struct DeviceExtensions {
 #endif
             {VK_NVX_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME, &E::nvx_device_generated_commands},
             {VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME, &E::khr_incremental_present},
+            {VK_KHR_SHARED_PRESENTABLE_IMAGE_EXTENSION_NAME, &E::khr_shared_presentable_image},
+
         };
 
         for (auto ext : known_extensions) {
