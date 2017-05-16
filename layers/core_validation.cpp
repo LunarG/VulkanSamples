@@ -3904,7 +3904,7 @@ static bool validateCommandBufferSimultaneousUse(layer_data *dev_data, GLOBAL_CB
 }
 
 static bool validateCommandBufferState(layer_data *dev_data, GLOBAL_CB_NODE *cb_state, const char *call_source,
-                                       int current_submit_count) {
+                                       int current_submit_count, UNIQUE_VALIDATION_ERROR_CODE vu_id) {
     bool skip = false;
     if (dev_data->instance_data->disabled.command_buffer_state) return skip;
     // Validate ONE_TIME_SUBMIT_BIT CB is not being submitted more than once
@@ -3920,6 +3920,11 @@ static bool validateCommandBufferState(layer_data *dev_data, GLOBAL_CB_NODE *cb_
     if (CB_RECORDED != cb_state->state) {
         if (CB_INVALID == cb_state->state) {
             skip |= ReportInvalidCommandBuffer(dev_data, cb_state, call_source);
+        } else if (CB_NEW == cb_state->state) {
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            (uint64_t)(cb_state->commandBuffer), __LINE__, vu_id, "DS",
+                            "Command buffer 0x%p used in the call to %s is unrecorded and contains no commands. %s",
+                            cb_state->commandBuffer, call_source, validation_error_map[vu_id]);
         } else {  // Flag error for using CB w/o vkEndCommandBuffer() called
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             HandleToUint64(cb_state->commandBuffer), __LINE__, DRAWSTATE_NO_END_COMMAND_BUFFER, "DS",
@@ -4039,7 +4044,7 @@ static bool validatePrimaryCommandBufferState(layer_data *dev_data, GLOBAL_CB_NO
         }
     }
 
-    skip |= validateCommandBufferState(dev_data, pCB, "vkQueueSubmit()", current_submit_count);
+    skip |= validateCommandBufferState(dev_data, pCB, "vkQueueSubmit()", current_submit_count, VALIDATION_ERROR_00134);
 
     return skip;
 }
@@ -9515,41 +9520,45 @@ VKAPI_ATTR void VKAPI_CALL CmdExecuteCommands(VkCommandBuffer commandBuffer, uin
                             "array. All cmd buffers in pCommandBuffers array must be secondary. %s",
                             pCommandBuffers[i], i, validation_error_map[VALIDATION_ERROR_00156]);
             } else if (pCB->activeRenderPass) {  // Secondary CB w/i RenderPass must have *CONTINUE_BIT set
-                auto secondary_rp_state = GetRenderPassState(dev_data, pSubCB->beginInfo.pInheritanceInfo->renderPass);
-                if (!(pSubCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT)) {
-                    skip |= log_msg(
-                        dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                        HandleToUint64(pCommandBuffers[i]), __LINE__, VALIDATION_ERROR_02057, "DS",
-                        "vkCmdExecuteCommands(): Secondary Command Buffer (0x%p) executed within render pass (0x%" PRIxLEAST64
-                        ") must have had vkBeginCommandBuffer() called w/ VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT set. %s",
-                        pCommandBuffers[i], HandleToUint64(pCB->activeRenderPass->renderPass),
-                        validation_error_map[VALIDATION_ERROR_02057]);
-                } else {
-                    // Make sure render pass is compatible with parent command buffer pass if has continue
-                    if (pCB->activeRenderPass->renderPass != secondary_rp_state->renderPass) {
-                        skip |= validateRenderPassCompatibility(dev_data, commandBuffer, pCB->activeRenderPass->createInfo.ptr(),
+                if (pSubCB->beginInfo.pInheritanceInfo != nullptr) {
+                    auto secondary_rp_state = GetRenderPassState(dev_data, pSubCB->beginInfo.pInheritanceInfo->renderPass);
+                    if (!(pSubCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT)) {
+                        skip |= log_msg(
+                            dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            HandleToUint64(pCommandBuffers[i]), __LINE__, VALIDATION_ERROR_02057, "DS",
+                            "vkCmdExecuteCommands(): Secondary Command Buffer (0x%p) executed within render pass (0x%" PRIxLEAST64
+                            ") must have had vkBeginCommandBuffer() called w/ VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT "
+                            "set. %s",
+                            pCommandBuffers[i], HandleToUint64(pCB->activeRenderPass->renderPass),
+                            validation_error_map[VALIDATION_ERROR_02057]);
+                    } else {
+                        // Make sure render pass is compatible with parent command buffer pass if has continue
+                        if (pCB->activeRenderPass->renderPass != secondary_rp_state->renderPass) {
+                            skip |=
+                                validateRenderPassCompatibility(dev_data, commandBuffer, pCB->activeRenderPass->createInfo.ptr(),
                                                                 pCommandBuffers[i], secondary_rp_state->createInfo.ptr());
+                        }
+                        //  If framebuffer for secondary CB is not NULL, then it must match active FB from primaryCB
+                        skip |= validateFramebuffer(dev_data, commandBuffer, pCB, pCommandBuffers[i], pSubCB);
                     }
-                    //  If framebuffer for secondary CB is not NULL, then it must match active FB from primaryCB
-                    skip |= validateFramebuffer(dev_data, commandBuffer, pCB, pCommandBuffers[i], pSubCB);
-                }
-                string errorString = "";
-                // secondaryCB must have been created w/ RP compatible w/ primaryCB active renderpass
-                if ((pCB->activeRenderPass->renderPass != secondary_rp_state->renderPass) &&
-                    !verify_renderpass_compatibility(dev_data, pCB->activeRenderPass->createInfo.ptr(),
-                                                     secondary_rp_state->createInfo.ptr(), errorString)) {
-                    skip |= log_msg(
-                        dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                        HandleToUint64(pCommandBuffers[i]), __LINE__, DRAWSTATE_RENDERPASS_INCOMPATIBLE, "DS",
-                        "vkCmdExecuteCommands(): Secondary Command Buffer (0x%p) w/ render pass (0x%" PRIxLEAST64
-                        ") is incompatible w/ primary command buffer (0x%p) w/ render pass (0x%" PRIxLEAST64 ") due to: %s",
-                        pCommandBuffers[i], HandleToUint64(pSubCB->beginInfo.pInheritanceInfo->renderPass), commandBuffer,
-                        HandleToUint64(pCB->activeRenderPass->renderPass), errorString.c_str());
+                    string errorString = "";
+                    // secondaryCB must have been created w/ RP compatible w/ primaryCB active renderpass
+                    if ((pCB->activeRenderPass->renderPass != secondary_rp_state->renderPass) &&
+                        !verify_renderpass_compatibility(dev_data, pCB->activeRenderPass->createInfo.ptr(),
+                                                         secondary_rp_state->createInfo.ptr(), errorString)) {
+                        skip |= log_msg(
+                            dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                            HandleToUint64(pCommandBuffers[i]), __LINE__, DRAWSTATE_RENDERPASS_INCOMPATIBLE, "DS",
+                            "vkCmdExecuteCommands(): Secondary Command Buffer (0x%p) w/ render pass (0x%" PRIxLEAST64
+                            ") is incompatible w/ primary command buffer (0x%p) w/ render pass (0x%" PRIxLEAST64 ") due to: %s",
+                            pCommandBuffers[i], HandleToUint64(pSubCB->beginInfo.pInheritanceInfo->renderPass), commandBuffer,
+                            HandleToUint64(pCB->activeRenderPass->renderPass), errorString.c_str());
+                    }
                 }
             }
             // TODO(mlentine): Move more logic into this method
             skip |= validateSecondaryCommandBufferState(dev_data, pCB, pSubCB);
-            skip |= validateCommandBufferState(dev_data, pSubCB, "vkCmdExecuteCommands()", 0);
+            skip |= validateCommandBufferState(dev_data, pSubCB, "vkCmdExecuteCommands()", 0, VALIDATION_ERROR_00155);
             // Secondary cmdBuffers are considered pending execution starting w/
             // being recorded
             if (!(pSubCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT)) {
