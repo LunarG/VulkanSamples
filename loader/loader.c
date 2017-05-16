@@ -3960,7 +3960,7 @@ struct loader_instance *loader_get_instance(const VkInstance instance) {
 static loader_platform_dl_handle loader_open_layer_lib(const struct loader_instance *inst, const char *chain_type,
                                                        struct loader_layer_properties *prop) {
     if ((prop->lib_handle = loader_platform_open_library(prop->lib_name)) == NULL) {
-        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0, "loader_open_layer_lib: Failed to open library %s", prop->lib_name);
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0, loader_platform_open_library_error(prop->lib_name));
     } else {
         loader_log(inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0, "Loading layer library %s", prop->lib_name);
     }
