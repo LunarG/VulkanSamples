@@ -98,7 +98,10 @@ static inline char *loader_platform_dirname(char *path) { return dirname(path); 
 // Dynamic Loading of libraries:
 typedef void *loader_platform_dl_handle;
 static inline loader_platform_dl_handle loader_platform_open_library(const char *libPath) {
-    return dlopen(libPath, RTLD_LAZY | RTLD_LOCAL);
+    // When loading the library, we need to make sure we load it with RTLD_NOW to force
+    // symbol resolution at the time of load.  This way, we make sure that all appropriate
+    // symbols are there.
+    return dlopen(libPath, RTLD_NOW | RTLD_LOCAL);
 }
 static inline const char *loader_platform_open_library_error(const char *libPath) { return dlerror(); }
 static inline void loader_platform_close_library(loader_platform_dl_handle library) { dlclose(library); }
