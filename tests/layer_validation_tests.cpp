@@ -1135,7 +1135,7 @@ TEST_F(VkLayerTest, PSOPolygonModeInvalid) {
     std::vector<const char *> device_extension_names;
     auto features = m_device->phy().features();
     // Artificially disable support for non-solid fill modes
-    features.fillModeNonSolid = false;
+    features.fillModeNonSolid = VK_FALSE;
     // The sacrificial device object
     VkDeviceObj test_device(0, gpu(), device_extension_names, &features);
 
@@ -1154,7 +1154,7 @@ TEST_F(VkLayerTest, PSOPolygonModeInvalid) {
     rs_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rs_ci.pNext = nullptr;
     rs_ci.lineWidth = 1.0f;
-    rs_ci.rasterizerDiscardEnable = true;
+    rs_ci.rasterizerDiscardEnable = VK_TRUE;
 
     VkShaderObj vs(&test_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
     VkShaderObj fs(&test_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
