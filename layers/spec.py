@@ -256,7 +256,7 @@ class Specification:
         db_lines.append("# <error_enum>%s<check_implemented>%s<testname>%s<api>%s<errormsg>%s<note>" % (self.delimiter, self.delimiter, self.delimiter, self.delimiter, self.delimiter))
         db_lines.append("# error_enum: Unique error enum for this check of format %s<uniqueid>" % validation_error_enum_name)
         db_lines.append("# check_implemented: 'Y' if check has been implemented in layers, or 'N' for not implemented")
-        db_lines.append("# testname: Name of validation test for this check, 'Unknown' for unknown, or 'None' if not implmented")
+        db_lines.append("# testname: Name of validation test for this check, 'Unknown' for unknown, 'None' if not implemented, or 'NotTestable' if cannot be implemented")
         db_lines.append("# api: Vulkan API function that this check is related to")
         db_lines.append("# errormsg: The unique error message for this check that includes spec language and link")
         db_lines.append("# note: Free txt field with any custom notes related to the check in question")
@@ -405,7 +405,7 @@ class Specification:
                 print ("Added msg '%s' w/ enum %s to orig_core_msg_dict" % (orig_core_msg_period, enum))
                 self.orig_core_msg_dict[orig_core_msg_period] = [enum]
             # Also capture all enums that have a test and/or implementation
-            if self.error_db_dict[enum]['check_implemented'] == 'Y' or self.error_db_dict[enum]['testname'] not in ['None','Unknown']:
+            if self.error_db_dict[enum]['check_implemented'] == 'Y' or self.error_db_dict[enum]['testname'] not in ['None','Unknown','NotTestable']:
                 print ("Recording %s with implemented value %s and testname %s" % (enum, self.error_db_dict[enum]['check_implemented'], self.error_db_dict[enum]['testname']))
                 self.orig_test_imp_enums.add(enum)
         # Values to be used for the update dict
