@@ -10530,9 +10530,8 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
 
                 if (image_state->shared_presentable) {
                     image_state->layout_locked = true;
-                } else {
-                    image_state->acquired = false;
                 }
+
                 skip |= ValidateImageMemoryIsValid(dev_data, image_state, "vkQueuePresentKHR()");
 
                 if (!image_state->acquired) {
