@@ -3740,7 +3740,7 @@ static bool loader_check_layer_list_for_phys_dev_ext_address(struct loader_insta
         if (layer_prop_list[layer].interface_version > 1) {
             const struct loader_layer_functions *const functions = &(layer_prop_list[layer].functions);
             if (NULL != functions->get_physical_device_proc_addr &&
-                NULL != functions->get_physical_device_proc_addr((VkInstance)inst, funcName)) {
+                NULL != functions->get_physical_device_proc_addr((VkInstance)inst->instance, funcName)) {
                 return true;
             }
         }
@@ -3920,7 +3920,7 @@ bool loader_phys_dev_ext_gpa(struct loader_instance *inst, const char *funcName,
             struct loader_layer_properties *layer_prop = &inst->expanded_activated_layer_list.list[i];
             if (layer_prop->interface_version > 1 && NULL != layer_prop->functions.get_physical_device_proc_addr) {
                 inst->disp->phys_dev_ext[idx] =
-                    (PFN_PhysDevExt)layer_prop->functions.get_physical_device_proc_addr((VkInstance)inst, funcName);
+                    (PFN_PhysDevExt)layer_prop->functions.get_physical_device_proc_addr((VkInstance)inst->instance, funcName);
                 if (NULL != inst->disp->phys_dev_ext[idx]) {
                     break;
                 }
