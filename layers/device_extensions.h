@@ -114,6 +114,7 @@ struct InstanceExtensions {
     bool khr_wayland_surface;
     bool khr_mir_surface;
     bool khr_get_physical_device_properties2;
+    bool khr_get_surface_capabilities2;
     bool khx_device_group_creation;
     bool khx_external_memory_capabilities;
     bool khx_external_semaphore_capabilities;
@@ -147,6 +148,7 @@ struct InstanceExtensions {
             {VK_KHR_MIR_SURFACE_EXTENSION_NAME, &E::khr_mir_surface},
 #endif
             {VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME, &E::khr_get_physical_device_properties2},
+            {VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME, &E::khr_get_surface_capabilities2},
             {VK_KHX_DEVICE_GROUP_CREATION_EXTENSION_NAME, &E::khx_device_group_creation},
             {VK_KHX_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME, &E::khx_external_memory_capabilities},
             {VK_KHX_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME, &E::khx_external_semaphore_capabilities},
