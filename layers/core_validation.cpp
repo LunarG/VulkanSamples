@@ -143,8 +143,6 @@ struct layer_data {
 
     DeviceExtensions device_extensions = {};
     unordered_set<VkQueue> queues;  // All queues under given device
-    // Global set of all cmdBuffers that are inFlight on this device
-    unordered_set<VkCommandBuffer> globalInFlightCmdBuffers;
     // Layer specific data
     unordered_map<VkSampler, unique_ptr<SAMPLER_STATE>> samplerMap;
     unordered_map<VkImageView, unique_ptr<IMAGE_VIEW_STATE>> imageViewMap;
@@ -3254,10 +3252,6 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
         pCB->currentDrawData.buffers.clear();
         pCB->vertex_buffer_used = false;
         pCB->primaryCommandBuffer = VK_NULL_HANDLE;
-        // Make sure any secondaryCommandBuffers are removed from globalInFlight
-        for (auto secondary_cb : pCB->secondaryCommandBuffers) {
-            dev_data->globalInFlightCmdBuffers.erase(secondary_cb);
-        }
         pCB->secondaryCommandBuffers.clear();
         pCB->updateImages.clear();
         pCB->updateBuffers.clear();
@@ -3696,7 +3690,6 @@ static void IncrementBoundObjects(layer_data *dev_data, GLOBAL_CB_NODE const *cb
 static void incrementResources(layer_data *dev_data, GLOBAL_CB_NODE *cb_node) {
     cb_node->submitCount++;
     cb_node->in_use.fetch_add(1);
-    dev_data->globalInFlightCmdBuffers.insert(cb_node->commandBuffer);
 
     // First Increment for all "generic" objects bound to cmd buffer, followed by special-case objects below
     IncrementBoundObjects(dev_data, cb_node);
@@ -3792,17 +3785,6 @@ static bool VerifyQueueStateToFence(layer_data *dev_data, VkFence fence) {
     return false;
 }
 
-// TODO: nuke this completely.
-// Decrement cmd_buffer in_use and if it goes to 0 remove cmd_buffer from globalInFlightCmdBuffers
-static inline void removeInFlightCmdBuffer(layer_data *dev_data, VkCommandBuffer cmd_buffer) {
-    // Pull it off of global list initially, but if we find it in any other queue list, add it back in
-    GLOBAL_CB_NODE *pCB = GetCBNode(dev_data, cmd_buffer);
-    pCB->in_use.fetch_sub(1);
-    if (!pCB->in_use.load()) {
-        dev_data->globalInFlightCmdBuffers.erase(cmd_buffer);
-    }
-}
-
 // Decrement in-use count for objects bound to command buffer
 static void DecrementBoundResources(layer_data *dev_data, GLOBAL_CB_NODE const *cb_node) {
     BASE_NODE *base_obj = nullptr;
@@ -3865,7 +3847,7 @@ static void RetireWorkOnQueue(layer_data *dev_data, QUEUE_STATE *pQueue, uint64_
                 dev_data->eventMap[eventStagePair.first].stageMask = eventStagePair.second;
             }
 
-            removeInFlightCmdBuffer(dev_data, cb);
+            cb_node->in_use.fetch_sub(1);
         }
 
         auto pFence = GetFenceNode(dev_data, submission.fence);
@@ -3893,7 +3875,7 @@ static void SubmitFence(QUEUE_STATE *pQueue, FENCE_NODE *pFence, uint64_t submit
 
 static bool validateCommandBufferSimultaneousUse(layer_data *dev_data, GLOBAL_CB_NODE *pCB, int current_submit_count) {
     bool skip = false;
-    if ((dev_data->globalInFlightCmdBuffers.count(pCB->commandBuffer) || current_submit_count > 1) &&
+    if ((pCB->in_use.load() || current_submit_count > 1) &&
         !(pCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT)) {
         skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0,
                         __LINE__, VALIDATION_ERROR_00133, "DS",
@@ -4756,10 +4738,13 @@ VKAPI_ATTR void VKAPI_CALL DestroyQueryPool(VkDevice device, VkQueryPool queryPo
 static bool PreCallValidateGetQueryPoolResults(layer_data *dev_data, VkQueryPool query_pool, uint32_t first_query,
                                                uint32_t query_count, VkQueryResultFlags flags,
                                                unordered_map<QueryObject, vector<VkCommandBuffer>> *queries_in_flight) {
-    for (auto cmd_buffer : dev_data->globalInFlightCmdBuffers) {
-        auto cb = GetCBNode(dev_data, cmd_buffer);
-        for (auto query_state_pair : cb->queryToStateMap) {
-            (*queries_in_flight)[query_state_pair.first].push_back(cmd_buffer);
+    // TODO: clean this up, it's insanely wasteful.
+    for (auto cmd_buffer : dev_data->commandBufferMap) {
+        if (cmd_buffer.second->in_use.load()) {
+            for (auto query_state_pair : cmd_buffer.second->queryToStateMap) {
+                (*queries_in_flight)[query_state_pair.first].push_back(
+                    cmd_buffer.first);
+            }
         }
     }
     if (dev_data->instance_data->disabled.get_query_pool_results) return false;
@@ -5422,15 +5407,11 @@ VKAPI_ATTR void VKAPI_CALL DestroyDescriptorPool(VkDevice device, VkDescriptorPo
 static bool checkCommandBufferInFlight(layer_data *dev_data, const GLOBAL_CB_NODE *cb_node, const char *action,
                                        UNIQUE_VALIDATION_ERROR_CODE error_code) {
     bool skip = false;
-    if (dev_data->globalInFlightCmdBuffers.count(cb_node->commandBuffer)) {
-        // Primary CB or secondary where primary is also in-flight is an error
-        if ((cb_node->createInfo.level != VK_COMMAND_BUFFER_LEVEL_SECONDARY) ||
-            (dev_data->globalInFlightCmdBuffers.count(cb_node->primaryCommandBuffer))) {
-            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            HandleToUint64(cb_node->commandBuffer), __LINE__, error_code, "DS",
-                            "Attempt to %s command buffer (0x%p) which is in use. %s", action, cb_node->commandBuffer,
-                            validation_error_map[error_code]);
-        }
+    if (cb_node->in_use.load()) {
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                        HandleToUint64(cb_node->commandBuffer), __LINE__, error_code, "DS",
+                        "Attempt to %s command buffer (0x%p) which is in use. %s", action, cb_node->commandBuffer,
+                        validation_error_map[error_code]);
     }
     return skip;
 }
@@ -5440,17 +5421,9 @@ static bool checkCommandBuffersInFlight(layer_data *dev_data, COMMAND_POOL_NODE 
                                         UNIQUE_VALIDATION_ERROR_CODE error_code) {
     bool skip = false;
     for (auto cmd_buffer : pPool->commandBuffers) {
-        if (dev_data->globalInFlightCmdBuffers.count(cmd_buffer)) {
-            skip |= checkCommandBufferInFlight(dev_data, GetCBNode(dev_data, cmd_buffer), action, error_code);
-        }
+        skip |= checkCommandBufferInFlight(dev_data, GetCBNode(dev_data, cmd_buffer), action, error_code);
     }
     return skip;
-}
-
-static void clearCommandBuffersInFlight(layer_data *dev_data, COMMAND_POOL_NODE *pPool) {
-    for (auto cmd_buffer : pPool->commandBuffers) {
-        dev_data->globalInFlightCmdBuffers.erase(cmd_buffer);
-    }
 }
 
 VKAPI_ATTR void VKAPI_CALL FreeCommandBuffers(VkDevice device, VkCommandPool commandPool, uint32_t commandBufferCount,
@@ -5474,8 +5447,8 @@ VKAPI_ATTR void VKAPI_CALL FreeCommandBuffers(VkDevice device, VkCommandPool com
         auto cb_node = GetCBNode(dev_data, pCommandBuffers[i]);
         // Delete CB information structure, and remove from commandBufferMap
         if (cb_node) {
-            dev_data->globalInFlightCmdBuffers.erase(cb_node->commandBuffer);
             // reset prior to delete for data clean-up
+            // TODO: fix this, it's insane.
             resetCB(dev_data, cb_node->commandBuffer);
             dev_data->commandBufferMap.erase(cb_node->commandBuffer);
             delete cb_node;
@@ -6484,7 +6457,7 @@ VKAPI_ATTR VkResult VKAPI_CALL BeginCommandBuffer(VkCommandBuffer commandBuffer,
     GLOBAL_CB_NODE *cb_node = GetCBNode(dev_data, commandBuffer);
     if (cb_node) {
         // This implicitly resets the Cmd Buffer so make sure any fence is done and then clear memory references
-        if (dev_data->globalInFlightCmdBuffers.count(commandBuffer)) {
+        if (cb_node->in_use.load()) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_00103, "MEM",
                             "Calling vkBeginCommandBuffer() on active command buffer 0x%p before it has completed. "
@@ -6652,7 +6625,6 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetCommandBuffer(VkCommandBuffer commandBuffer,
     VkResult result = dev_data->dispatch_table.ResetCommandBuffer(commandBuffer, flags);
     if (VK_SUCCESS == result) {
         lock.lock();
-        dev_data->globalInFlightCmdBuffers.erase(commandBuffer);
         resetCB(dev_data, commandBuffer);
         lock.unlock();
     }
@@ -9557,10 +9529,8 @@ VKAPI_ATTR void VKAPI_CALL CmdExecuteCommands(VkCommandBuffer commandBuffer, uin
             // TODO(mlentine): Move more logic into this method
             skip |= validateSecondaryCommandBufferState(dev_data, pCB, pSubCB);
             skip |= validateCommandBufferState(dev_data, pSubCB, "vkCmdExecuteCommands()", 0, VALIDATION_ERROR_00155);
-            // Secondary cmdBuffers are considered pending execution starting w/
-            // being recorded
             if (!(pSubCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT)) {
-                if (dev_data->globalInFlightCmdBuffers.find(pSubCB->commandBuffer) != dev_data->globalInFlightCmdBuffers.end()) {
+                if (pSubCB->in_use.load()) {
                     skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                     VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, HandleToUint64(pCB->commandBuffer), __LINE__,
                                     VALIDATION_ERROR_00154, "DS",
@@ -9597,7 +9567,6 @@ VKAPI_ATTR void VKAPI_CALL CmdExecuteCommands(VkCommandBuffer commandBuffer, uin
             }
             pSubCB->primaryCommandBuffer = pCB->commandBuffer;
             pCB->secondaryCommandBuffers.insert(pSubCB->commandBuffer);
-            dev_data->globalInFlightCmdBuffers.insert(pSubCB->commandBuffer);
             for (auto &function : pSubCB->queryUpdates) {
                 pCB->queryUpdates.push_back(function);
             }
