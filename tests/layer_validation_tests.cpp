@@ -7543,10 +7543,10 @@ TEST_F(VkLayerTest, SecondaryCommandBufferNullRenderpass) {
     vkFreeCommandBuffers(m_device->device(), m_commandPool->handle(), 1, &draw_cmd);
 }
 
-TEST_F(VkLayerTest, SecondaryCommandBufferRerecorded) {
+TEST_F(VkLayerTest, SecondaryCommandBufferRerecordedExplicitReset) {
     ASSERT_NO_FATAL_FAILURE(Init());
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Dummy");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "was destroyed or rerecorded");
 
     // A pool we can reset in.
     VkCommandPoolObj pool(m_device, m_device->graphics_queue_node_index_,
@@ -7561,15 +7561,36 @@ TEST_F(VkLayerTest, SecondaryCommandBufferRerecorded) {
     vkCmdExecuteCommands(m_commandBuffer->handle(), 1, &secondary.handle());
 
     // rerecording of secondary
-    secondary.reset();      // masks our ability to catch this!
+    secondary.reset();      // explicit reset here.
     secondary.begin();
     secondary.end();
 
     vkCmdExecuteCommands(m_commandBuffer->handle(), 1, &secondary.handle());
-    m_commandBuffer->end();
+    m_errorMonitor->VerifyFound();
+}
 
-    // submit
-    m_commandBuffer->QueueCommandBuffer(false);
+TEST_F(VkLayerTest, SecondaryCommandBufferRerecordedNoReset) {
+    ASSERT_NO_FATAL_FAILURE(Init());
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "was destroyed or rerecorded");
+
+    // A pool we can reset in.
+    VkCommandPoolObj pool(m_device, m_device->graphics_queue_node_index_,
+                          VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+    VkCommandBufferObj secondary(m_device, &pool,
+                                 VK_COMMAND_BUFFER_LEVEL_SECONDARY);
+
+    secondary.begin();
+    secondary.end();
+
+    m_commandBuffer->begin();
+    vkCmdExecuteCommands(m_commandBuffer->handle(), 1, &secondary.handle());
+
+    // rerecording of secondary
+    secondary.begin();  // implicit reset in begin
+    secondary.end();
+
+    vkCmdExecuteCommands(m_commandBuffer->handle(), 1, &secondary.handle());
     m_errorMonitor->VerifyFound();
 }
 

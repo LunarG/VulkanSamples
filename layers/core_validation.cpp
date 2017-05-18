@@ -3096,12 +3096,19 @@ bool ValidateCmdQueueFlags(layer_data *dev_data, GLOBAL_CB_NODE *cb_node, const 
     return false;
 }
 
+static char const * GetCauseStr(VK_OBJECT obj) {
+    if (obj.type == kVulkanObjectTypeDescriptorSet)
+        return "destroyed or updated";
+    if (obj.type == kVulkanObjectTypeCommandBuffer)
+        return "destroyed or rerecorded";
+    return "destroyed";
+}
+
 static bool ReportInvalidCommandBuffer(layer_data *dev_data, GLOBAL_CB_NODE *cb_state, const char *call_source) {
     bool skip = false;
     for (auto obj : cb_state->broken_bindings) {
         const char *type_str = object_string[obj.type];
-        // Descriptor sets are a special case that can be either destroyed or updated to invalidate a CB
-        const char *cause_str = (obj.type == kVulkanObjectTypeDescriptorSet) ? "destroyed or updated" : "destroyed";
+        const char *cause_str = GetCauseStr(obj);
         skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                         HandleToUint64(cb_state->commandBuffer), __LINE__, DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
                         "You are adding %s to command buffer 0x%p that is invalid because bound %s 0x%" PRIxLEAST64 " was %s.",
