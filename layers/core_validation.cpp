@@ -5629,6 +5629,11 @@ void invalidateCommandBuffers(const layer_data *dev_data, std::unordered_set<GLO
         }
         cb_node->state = CB_INVALID;
         cb_node->broken_bindings.push_back(obj);
+
+        // if secondary, then propagate the invalidation to the primaries that will call us.
+        if (cb_node->createInfo.level == VK_COMMAND_BUFFER_LEVEL_SECONDARY) {
+            invalidateCommandBuffers(dev_data, cb_node->linkedCommandBuffers, obj);
+        }
     }
 }
 
