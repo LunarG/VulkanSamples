@@ -38,6 +38,8 @@
     * [ICD Dispatchable Object Creation](#icd-dispatchable-object-creation)
     * [Handling KHR Surface Objects in WSI Extensions](#handling-khr-surface-objects-in-wsi-extensions)
     * [Loader and ICD Interface Negotiation](#loader-and-icd-interface-negotiation)
+
+  * [Table of Debug Environment Variables](#table-of-debug-environment-variables)
   * [Glossary of Terms](#glossary-of-terms)
  
 ## Overview
@@ -1803,6 +1805,7 @@ This section discusses the various requirements for the loader and a Vulkan
 ICD to properly hand-shake.
 
   * [ICD Discovery](#icd-discovery)
+    * [Overriding the Default ICD Usage](#overriding-the-default-icd-usage)
     * [ICD Manifest File Usage](#icd-manifest-file-usage)
     * [ICD Discovery on Windows](#icd-discovery-on-windows)
     * [ICD Discovery on Linux](#icd-discovery-on-linux)
@@ -1836,6 +1839,37 @@ for an application and return this information to the application. The process
 in which the loader discovers the available Installable Client Drivers (ICDs)
 on a system is platform dependent. Windows, Linux and Android ICD discovery
 details are listed below.
+
+#### Overriding the Default ICD Usage
+
+There may be times that a developer wishes to force the loader to use a specific ICD.
+This could be for many reasons including : using a beta driver, or forcing the loader
+to skip a problematic ICD.  In order to support this, the loader can be forced to
+look at specific ICDs with the `VK_ICD_FILENAMES` environment variable.  In order
+to use the setting, simply set it to a properly delimited list of ICD Manifest
+files that you wish to use.  In this case, please provide the global path to these
+files to reduce issues.
+
+For example:
+
+##### On Windows
+
+```
+set VK_ICD_FILENAMES=/windows/system32/nv-vk64.json
+```
+
+This is an example which is using the `VK_ICD_FILENAMES` override on Windows to point
+to the Nvidia Vulkan driver's ICD Manifest file.
+
+##### On Linux
+
+```
+export VK_ICD_FILENAMES=/home/user/dev/mesa/share/vulkan/icd.d/intel_icd.x86_64.json
+```
+
+This is an example which is using the `VK_ICD_FILENAMES` override on Linux to point
+to the Intel Mesa driver's ICD Manifest file.
+
 
 #### ICD Manifest File Usage
 
@@ -1925,6 +1959,14 @@ pathname of an ICD shared library (".so") file.
 
 See the [ICD Manifest File Format](#icd-manifest-file-format) section for more
 details.
+
+##### Additional Settings For ICD Debugging
+
+If you are seeing issues which may be related to the ICD.  A possible option to debug is to enable the
+`LD_BIND_NOW` environment variable.  This forces every dynamic library's symbols to be fully resolved on load.  If
+there is a problem with an ICD missing symbols on your system, this will expose it and cause the Vulkan loader
+to fail on loading the ICD.  It is recommended that you enable `LD_BIND_NOW` along with `VK_LOADER_DEBUG=warn`
+to expose any issues.
 
 #### Using Pre-Production ICDs on Windows and Linux
 
@@ -2377,6 +2419,19 @@ loader queries layer and extension information directly from the
 respective libraries and does not use the json manifest files used
 by the Windows and Linux loaders.
 
+## Table of Debug Environment Variables
+
+The following are all the Debug Environment Variables available for use with the
+Loader.  These are referenced throughout the text, but collected here for ease
+of discovery.
+
+| Environment Variable              | Behavior |  Example Format  |
+|----------------|---------------------|----------------------|
+| VK_ICD_FILENAMES                  | Force the loader to use the specific ICD JSON files.  The value should contain a list of delimited full path listings to ICD JSON Manifest files.  **NOTE:** If you fail to use the global path to a JSON file, you may encounter issues.  |  `export VK_ICD_FILENAMES=<folder_a>\intel.json:<folder_b>\amd.json`<br/><br/>`set VK_ICD_FILENAMES=<folder_a>\nvidia.json;<folder_b>\mesa.json` |
+| VK_INSTANCE_LAYERS                | Force the loader to add the given layers to the list of Enabled layers normally passed into `vkCreateInstance`.  These layers are added first, and the loader will remove any duplicate layers that appear in both this list as well as that passed into `ppEnabledLayerNames`. | `export VK_INSTANCE_LAYERS=<layer_a>:<layer_b>`<br/><br/>`set VK_INSTANCE_LAYERS=<layer_a>;<layer_b>` |
+| VK_LAYER_PATH                     | Override the loader's standard Layer library search folders and use the provided delimited folders to search for layer Manifest files. | `export VK_LAYER_PATH=<path_a>:<path_b>`<br/><br/>`set VK_LAYER_PATH=<path_a>;<pathb>` |
+| VK_LOADER_DISABLE_INST_EXT_FILTER | Disable the filtering out of instance extensions that the loader doesn't know about.  This will allow applications to enable instance extensions exposed by ICDs but that the loader has no support for.  **NOTE:** This may cause the loader or applciation to crash. |  `export VK_LOADER_DISABLE_INST_EXT_FILTER=1`<br/><br/>`set VK_LOADER_DISABLE_INST_EXT_FILTER=1` |
+| VK_LOADER_DEBUG                   | Enable loader debug messages.  Options are:<br/>- error (only errors)<br/>- warn (warnings and errors)<br/>- info (info, warning, and errors)<br/> - debug (debug + all before) <br/> -all (report out all messages) | `export VK_LOADER_DEBUG=all`<br/><br/>`set VK_LOADER_DEBUG=warn` |
  
 ## Glossary of Terms
 
