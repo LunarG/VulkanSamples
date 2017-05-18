@@ -7594,6 +7594,30 @@ TEST_F(VkLayerTest, SecondaryCommandBufferRerecordedNoReset) {
     m_errorMonitor->VerifyFound();
 }
 
+TEST_F(VkLayerTest, CascadedInvalidation) {
+    ASSERT_NO_FATAL_FAILURE(Init());
+
+    VkEventCreateInfo eci = { VK_STRUCTURE_TYPE_EVENT_CREATE_INFO, nullptr, 0 };
+    VkEvent event;
+    vkCreateEvent(m_device->device(), &eci, nullptr, &event);
+
+    VkCommandBufferObj secondary(m_device, m_commandPool, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
+    secondary.begin();
+    vkCmdSetEvent(secondary.handle(), event, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+    secondary.end();
+
+    m_commandBuffer->begin();
+    vkCmdExecuteCommands(m_commandBuffer->handle(), 1, &secondary.handle());
+    m_commandBuffer->end();
+
+    // destroying the event should invalidate both primary and secondary CB
+    vkDestroyEvent(m_device->device(), event, nullptr);
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "invalid because bound Event");
+    m_commandBuffer->QueueCommandBuffer(false);
+    m_errorMonitor->VerifyFound();
+}
+
 TEST_F(VkLayerTest, CommandBufferResetErrors) {
     // Cause error due to Begin while recording CB
     // Then cause 2 errors for attempting to reset CB w/o having
