@@ -122,7 +122,7 @@ class ValidationDatabase:
                     self.db_unimplemented_implicit.append(error_enum)
                 if implemented not in ['Y', 'N']:
                     self.db_invalid_implemented.append(error_enum)
-                if testname.lower() not in ['unknown', 'none']:
+                if testname.lower() not in ['unknown', 'none', 'nottestable']:
                     self.db_enum_to_tests[error_enum] = testname.split(',')
                     #if len(self.db_enum_to_tests[error_enum]) > 1:
                     #    print "Found check %s that has multiple tests: %s" % (error_enum, self.db_enum_to_tests[error_enum])
