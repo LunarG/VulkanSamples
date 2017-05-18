@@ -13774,8 +13774,9 @@ TEST_F(VkLayerTest, QueueForwardProgressFenceWait) {
         " which has not been submitted on a Queue or during "
         "acquire next image.";
 
-    m_commandBuffer->BeginCommandBuffer();
-    m_commandBuffer->EndCommandBuffer();
+    VkCommandBufferObj cb1(m_device, m_commandPool);
+    cb1.begin();
+    cb1.end();
 
     VkSemaphoreCreateInfo semaphore_create_info = {};
     semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -13784,15 +13785,14 @@ TEST_F(VkLayerTest, QueueForwardProgressFenceWait) {
     VkSubmitInfo submit_info = {};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &m_commandBuffer->handle();
+    submit_info.pCommandBuffers = &cb1.handle();
     submit_info.signalSemaphoreCount = 1;
     submit_info.pSignalSemaphores = &semaphore;
     vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
-    m_errorMonitor->ExpectSuccess(0);
-    vkResetCommandBuffer(m_commandBuffer->handle(), 0);
-    m_errorMonitor->VerifyNotFound();
+
     m_commandBuffer->BeginCommandBuffer();
     m_commandBuffer->EndCommandBuffer();
+    submit_info.pCommandBuffers = &m_commandBuffer->handle();
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, queue_forward_progress_message);
     vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
     m_errorMonitor->VerifyFound();
