@@ -6503,9 +6503,7 @@ VKAPI_ATTR VkResult VKAPI_CALL BeginCommandBuffer(VkCommandBuffer commandBuffer,
                             validation_error_map[VALIDATION_ERROR_00106]);
             } else {
                 if (pBeginInfo->flags & VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT) {
-                    // Object_tracker makes sure these objects are valid
                     assert(pInfo->renderPass);
-                    assert(pInfo->framebuffer);
                     string errorString = "";
                     auto framebuffer = GetFramebufferState(dev_data, pInfo->framebuffer);
                     if (framebuffer) {
