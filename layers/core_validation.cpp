@@ -3898,6 +3898,7 @@ static bool validateCommandBufferState(layer_data *dev_data, GLOBAL_CB_NODE *cb_
                         "set, but has been submitted 0x%" PRIxLEAST64 " times.",
                         cb_state->commandBuffer, cb_state->submitCount + current_submit_count);
     }
+
     // Validate that cmd buffers have been updated
     if (CB_RECORDED != cb_state->state) {
         if (CB_INVALID == cb_state->state) {

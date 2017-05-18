@@ -12845,76 +12845,82 @@ TEST_F(VkLayerTest, InvalidStorageImageLayout) {
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
 
-TEST_F(VkLayerTest, SimultaneousUse) {
-    TEST_DESCRIPTION(
-        "Use vkCmdExecuteCommands with invalid state "
-        "in primary and secondary command buffers.");
-
+TEST_F(VkLayerTest, NonSimultaneousSecondaryMarksPrimary) {
     ASSERT_NO_FATAL_FAILURE(Init());
-    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-
-    const char *simultaneous_use_message1 = "without VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set!";
-    const char *simultaneous_use_message2 =
+    const char *simultaneous_use_message =
         "does not have VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set and "
         "will cause primary command buffer";
 
-    VkCommandBufferAllocateInfo command_buffer_allocate_info = {};
-    command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    command_buffer_allocate_info.commandPool = m_commandPool->handle();
-    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
-    command_buffer_allocate_info.commandBufferCount = 1;
+    VkCommandBufferObj secondary(m_device, m_commandPool, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
 
-    VkCommandBuffer secondary_command_buffer;
-    ASSERT_VK_SUCCESS(vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, &secondary_command_buffer));
-    VkCommandBufferBeginInfo command_buffer_begin_info = {};
-    VkCommandBufferInheritanceInfo command_buffer_inheritance_info = {};
-    command_buffer_inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-    command_buffer_inheritance_info.renderPass = m_renderPass;
-    command_buffer_inheritance_info.framebuffer = m_framebuffer;
+    secondary.begin();
+    secondary.end();
 
-    command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    command_buffer_begin_info.flags =
-        VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
-    command_buffer_begin_info.pInheritanceInfo = &command_buffer_inheritance_info;
+    VkCommandBufferBeginInfo cbbi = {
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr,
+        VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT, nullptr,
+    };
 
-    vkBeginCommandBuffer(secondary_command_buffer, &command_buffer_begin_info);
-    vkEndCommandBuffer(secondary_command_buffer);
-
-    VkSubmitInfo submit_info = {};
-    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &m_commandBuffer->handle();
-
-    vkBeginCommandBuffer(m_commandBuffer->handle(), &command_buffer_begin_info);
-    vkCmdBeginRenderPass(m_commandBuffer->handle(), &renderPassBeginInfo(), VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, simultaneous_use_message1);
-    vkCmdExecuteCommands(m_commandBuffer->handle(), 1, &secondary_command_buffer);
-    vkCmdExecuteCommands(m_commandBuffer->handle(), 1, &secondary_command_buffer);
+    m_commandBuffer->begin(&cbbi);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT, simultaneous_use_message);
+    vkCmdExecuteCommands(m_commandBuffer->handle(), 1, &secondary.handle());
     m_errorMonitor->VerifyFound();
-    vkCmdEndRenderPass(m_commandBuffer->GetBufferHandle());
-    vkEndCommandBuffer(m_commandBuffer->handle());
+    m_commandBuffer->end();
+}
 
-    m_errorMonitor->ExpectSuccess(0);
-    vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
-    m_errorMonitor->VerifyNotFound();
+TEST_F(VkLayerTest, SimultaneousUseSecondaryTwoExecutes) {
+    ASSERT_NO_FATAL_FAILURE(Init());
 
-    command_buffer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-    m_errorMonitor->SetUnexpectedError("commandBuffer must not be in the recording or pending state.");
-    m_errorMonitor->SetUnexpectedError(
-        "If commandBuffer was allocated from a VkCommandPool which did not have the "
-        "VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT flag set, commandBuffer must be in the initial state");
-    vkBeginCommandBuffer(m_commandBuffer->handle(), &command_buffer_begin_info);
-    vkCmdBeginRenderPass(m_commandBuffer->handle(), &renderPassBeginInfo(), VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+    const char *simultaneous_use_message = "without VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set!";
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT, simultaneous_use_message2);
-    vkCmdExecuteCommands(m_commandBuffer->handle(), 1, &secondary_command_buffer);
+    VkCommandBufferObj secondary(m_device, m_commandPool, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
+
+    VkCommandBufferInheritanceInfo inh = {
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO, nullptr,
+    };
+    VkCommandBufferBeginInfo cbbi = {
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr,
+        0, &inh
+    };
+
+    secondary.begin(&cbbi);
+    secondary.end();
+
+    m_commandBuffer->begin();
+    vkCmdExecuteCommands(m_commandBuffer->handle(), 1, &secondary.handle());
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, simultaneous_use_message);
+    vkCmdExecuteCommands(m_commandBuffer->handle(), 1, &secondary.handle());
     m_errorMonitor->VerifyFound();
-    vkCmdEndRenderPass(m_commandBuffer->GetBufferHandle());
-    vkEndCommandBuffer(m_commandBuffer->handle());
+    m_commandBuffer->end();
+}
 
-    vkQueueWaitIdle(m_device->m_queue);
+TEST_F(VkLayerTest, SimultaneousUseSecondarySingleExecute) {
+    ASSERT_NO_FATAL_FAILURE(Init());
 
-    m_errorMonitor->SetUnexpectedError("All elements of pCommandBuffers must not be in the pending state");
+    // variation on previous test executing the same CB twice in the same
+    // CmdExecuteCommands call
+
+    const char *simultaneous_use_message = "without VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set!";
+
+    VkCommandBufferObj secondary(m_device, m_commandPool, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
+
+    VkCommandBufferInheritanceInfo inh = {
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO, nullptr,
+    };
+    VkCommandBufferBeginInfo cbbi = {
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr,
+        0, &inh
+    };
+
+    secondary.begin(&cbbi);
+    secondary.end();
+
+    m_commandBuffer->begin();
+    VkCommandBuffer cbs[] = { secondary.handle(), secondary.handle() };
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, simultaneous_use_message);
+    vkCmdExecuteCommands(m_commandBuffer->handle(), 2, cbs);
+    m_errorMonitor->VerifyFound();
+    m_commandBuffer->end();
 }
 
 TEST_F(VkLayerTest, SimultaneousUseOneShot) {
