@@ -4009,20 +4009,17 @@ static bool validatePrimaryCommandBufferState(layer_data *dev_data, GLOBAL_CB_NO
 
     skip |= validateResources(dev_data, pCB);
 
-    if (!pCB->secondaryCommandBuffers.empty()) {
-        for (auto secondaryCmdBuffer : pCB->secondaryCommandBuffers) {
-            GLOBAL_CB_NODE *pSubCB = GetCBNode(dev_data, secondaryCmdBuffer);
-            skip |= validateResources(dev_data, pSubCB);
-            if ((pSubCB->primaryCommandBuffer != pCB->commandBuffer) &&
-                !(pSubCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT)) {
-                log_msg(
-                    dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0,
-                    __LINE__, VALIDATION_ERROR_00135, "DS",
-                    "Commandbuffer 0x%p was submitted with secondary buffer 0x%p but that buffer has subsequently been bound to "
+    for (auto pSubCB : pCB->secondaryCommandBuffers) {
+        skip |= validateResources(dev_data, pSubCB);
+        if ((pSubCB->primaryCommandBuffer != pCB->commandBuffer) &&
+            !(pSubCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT)) {
+            log_msg(
+                dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0,
+                __LINE__, VALIDATION_ERROR_00135, "DS",
+                "Commandbuffer 0x%p was submitted with secondary buffer 0x%p but that buffer has subsequently been bound to "
                     "primary cmd buffer 0x%p and it does not have VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set. %s",
-                    pCB->commandBuffer, secondaryCmdBuffer, pSubCB->primaryCommandBuffer,
-                    validation_error_map[VALIDATION_ERROR_00135]);
-            }
+                pCB->commandBuffer, pSubCB->commandBuffer, pSubCB->primaryCommandBuffer,
+                validation_error_map[VALIDATION_ERROR_00135]);
         }
     }
 
@@ -4098,15 +4095,12 @@ static void PostCallRecordQueueSubmit(layer_data *dev_data, VkQueue queue, uint3
             if (cb_node) {
                 cbs.push_back(submit->pCommandBuffers[i]);
                 for (auto secondaryCmdBuffer : cb_node->secondaryCommandBuffers) {
-                    cbs.push_back(secondaryCmdBuffer);
+                    cbs.push_back(secondaryCmdBuffer->commandBuffer);
                 }
                 UpdateCmdBufImageLayouts(dev_data, cb_node);
                 incrementResources(dev_data, cb_node);
-                if (!cb_node->secondaryCommandBuffers.empty()) {
-                    for (auto secondaryCmdBuffer : cb_node->secondaryCommandBuffers) {
-                        GLOBAL_CB_NODE *pSubCB = GetCBNode(dev_data, secondaryCmdBuffer);
-                        incrementResources(dev_data, pSubCB);
-                    }
+                for (auto secondaryCmdBuffer : cb_node->secondaryCommandBuffers) {
+                    incrementResources(dev_data, secondaryCmdBuffer);
                 }
             }
         }
@@ -5515,7 +5509,6 @@ static bool PreCallValidateDestroyCommandPool(layer_data *dev_data, VkCommandPoo
 
 static void PostCallRecordDestroyCommandPool(layer_data *dev_data, VkCommandPool pool, COMMAND_POOL_NODE *cp_state) {
     // Must remove cmdpool from cmdpoolmap, after removing all cmdbuffers in its list from the commandBufferMap
-    clearCommandBuffersInFlight(dev_data, cp_state);
     for (auto cb : cp_state->commandBuffers) {
         auto cb_node = GetCBNode(dev_data, cb);
         clear_cmd_buf_and_mem_references(dev_data, cb_node);
@@ -5566,7 +5559,6 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetCommandPool(VkDevice device, VkCommandPool c
     // Reset all of the CBs allocated from this pool
     if (VK_SUCCESS == result) {
         lock.lock();
-        clearCommandBuffersInFlight(dev_data, pPool);
         for (auto cmdBuffer : pPool->commandBuffers) {
             resetCB(dev_data, cmdBuffer);
         }
@@ -9566,7 +9558,7 @@ VKAPI_ATTR void VKAPI_CALL CmdExecuteCommands(VkCommandBuffer commandBuffer, uin
                 SetLayout(dev_data, pCB, ilm_entry.first, ilm_entry.second);
             }
             pSubCB->primaryCommandBuffer = pCB->commandBuffer;
-            pCB->secondaryCommandBuffers.insert(pSubCB->commandBuffer);
+            pCB->secondaryCommandBuffers.insert(pSubCB);
             for (auto &function : pSubCB->queryUpdates) {
                 pCB->queryUpdates.push_back(function);
             }

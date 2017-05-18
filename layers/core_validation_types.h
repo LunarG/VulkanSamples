@@ -668,7 +668,7 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     std::unordered_set<VkBuffer> updateBuffers;
     // If cmd buffer is primary, track secondary command buffers pending
     // execution
-    std::unordered_set<VkCommandBuffer> secondaryCommandBuffers;
+    std::unordered_set<GLOBAL_CB_NODE *> secondaryCommandBuffers;
     // MTMTODO : Scrub these data fields and merge active sets w/ lastBound as appropriate
     std::vector<std::function<bool()>> validate_functions;
     std::unordered_set<VkDeviceMemory> memObjs;
