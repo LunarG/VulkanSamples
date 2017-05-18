@@ -666,9 +666,9 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     // Track images and buffers that are updated by this CB at the point of a draw
     std::unordered_set<VkImageView> updateImages;
     std::unordered_set<VkBuffer> updateBuffers;
-    // If cmd buffer is primary, track secondary command buffers pending
-    // execution
-    std::unordered_set<GLOBAL_CB_NODE *> secondaryCommandBuffers;
+    // If primary, the secondary command buffers we will call.
+    // If secondary, the primary command buffers we will be called by.
+    std::unordered_set<GLOBAL_CB_NODE *> linkedCommandBuffers;
     // MTMTODO : Scrub these data fields and merge active sets w/ lastBound as appropriate
     std::vector<std::function<bool()>> validate_functions;
     std::unordered_set<VkDeviceMemory> memObjs;

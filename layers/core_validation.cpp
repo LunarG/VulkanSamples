@@ -3252,7 +3252,18 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
         pCB->currentDrawData.buffers.clear();
         pCB->vertex_buffer_used = false;
         pCB->primaryCommandBuffer = VK_NULL_HANDLE;
-        pCB->secondaryCommandBuffers.clear();
+        // If secondary, invalidate any primary command buffer that may call us.
+        if (pCB->createInfo.level == VK_COMMAND_BUFFER_LEVEL_SECONDARY) {
+            invalidateCommandBuffers(dev_data,
+                                     pCB->linkedCommandBuffers,
+                                     {HandleToUint64(cb), kVulkanObjectTypeCommandBuffer});
+        }
+
+        // Remove reverse command buffer links.
+        for (auto pSubCB : pCB->linkedCommandBuffers) {
+            pSubCB->linkedCommandBuffers.erase(pCB);
+        }
+        pCB->linkedCommandBuffers.clear();
         pCB->updateImages.clear();
         pCB->updateBuffers.clear();
         clear_cmd_buf_and_mem_references(dev_data, pCB);
@@ -4010,8 +4021,9 @@ static bool validatePrimaryCommandBufferState(layer_data *dev_data, GLOBAL_CB_NO
 
     skip |= validateResources(dev_data, pCB);
 
-    for (auto pSubCB : pCB->secondaryCommandBuffers) {
+    for (auto pSubCB : pCB->linkedCommandBuffers) {
         skip |= validateResources(dev_data, pSubCB);
+        // TODO: replace with invalidateCommandBuffers() at recording.
         if ((pSubCB->primaryCommandBuffer != pCB->commandBuffer) &&
             !(pSubCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT)) {
             log_msg(
@@ -4095,12 +4107,12 @@ static void PostCallRecordQueueSubmit(layer_data *dev_data, VkQueue queue, uint3
             auto cb_node = GetCBNode(dev_data, submit->pCommandBuffers[i]);
             if (cb_node) {
                 cbs.push_back(submit->pCommandBuffers[i]);
-                for (auto secondaryCmdBuffer : cb_node->secondaryCommandBuffers) {
+                for (auto secondaryCmdBuffer : cb_node->linkedCommandBuffers) {
                     cbs.push_back(secondaryCmdBuffer->commandBuffer);
                 }
                 UpdateCmdBufImageLayouts(dev_data, cb_node);
                 incrementResources(dev_data, cb_node);
-                for (auto secondaryCmdBuffer : cb_node->secondaryCommandBuffers) {
+                for (auto secondaryCmdBuffer : cb_node->linkedCommandBuffers) {
                     incrementResources(dev_data, secondaryCmdBuffer);
                 }
             }
@@ -9559,7 +9571,8 @@ VKAPI_ATTR void VKAPI_CALL CmdExecuteCommands(VkCommandBuffer commandBuffer, uin
                 SetLayout(dev_data, pCB, ilm_entry.first, ilm_entry.second);
             }
             pSubCB->primaryCommandBuffer = pCB->commandBuffer;
-            pCB->secondaryCommandBuffers.insert(pSubCB);
+            pCB->linkedCommandBuffers.insert(pSubCB);
+            pSubCB->linkedCommandBuffers.insert(pCB);
             for (auto &function : pSubCB->queryUpdates) {
                 pCB->queryUpdates.push_back(function);
             }
