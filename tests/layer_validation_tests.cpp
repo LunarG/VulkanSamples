@@ -9450,6 +9450,153 @@ TEST_F(VkLayerTest, UpdateBufferWithinRenderPass) {
     m_errorMonitor->VerifyFound();
 }
 
+TEST_F(VkLayerTest, ClearColorImageWithBadRange) {
+    TEST_DESCRIPTION("Record clear color with an invalid VkImageSubresourceRange");
+
+    ASSERT_NO_FATAL_FAILURE(Init());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkImageObj image(m_device);
+    image.Init(32, 32, 1, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_IMAGE_TILING_OPTIMAL);
+    ASSERT_TRUE(image.create_info().arrayLayers == 1);
+    ASSERT_TRUE(image.initialized());
+    image.SetLayout(VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+    const VkClearColorValue clear_color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+
+    m_commandBuffer->BeginCommandBuffer();
+    const auto cb_handle = m_commandBuffer->GetBufferHandle();
+
+    // Try levelCount = 0
+    {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00768);
+        const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 0, 1};
+        vkCmdClearColorImage(cb_handle, image.handle(), image.Layout(), &clear_color, 1, &range);
+        m_errorMonitor->VerifyFound();
+    }
+
+    // Try baseLevel + levelCount > image.mipLevels
+    {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00768);
+        const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 1, 1, 0, 1};
+        vkCmdClearColorImage(cb_handle, image.handle(), image.Layout(), &clear_color, 1, &range);
+        m_errorMonitor->VerifyFound();
+    }
+
+    // Try baseLevel >= image.mipLevels with VK_REMAINING_MIP_LEVELS
+    {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             "vkCmdClearColorImage: pRanges[0].baseMipLevel (= 1) is greater or equal to the mip "
+                                             "level count of the image (i.e. greater or equal to 1).");
+        const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 1, VK_REMAINING_MIP_LEVELS, 0, 1};
+        vkCmdClearColorImage(cb_handle, image.handle(), image.Layout(), &clear_color, 1, &range);
+        m_errorMonitor->VerifyFound();
+    }
+
+    // Try layerCount = 0
+    {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02931);
+        const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 0};
+        vkCmdClearColorImage(cb_handle, image.handle(), image.Layout(), &clear_color, 1, &range);
+        m_errorMonitor->VerifyFound();
+    }
+
+    // Try baseLayer + layerCount > image.arrayLayers
+    {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02931);
+        const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 1, 1};
+        vkCmdClearColorImage(cb_handle, image.handle(), image.Layout(), &clear_color, 1, &range);
+        m_errorMonitor->VerifyFound();
+    }
+
+    // Try baseLevel >= image.mipLevels with VK_REMAINING_ARRAY_LAYERS
+    {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             "vkCmdClearColorImage: pRanges[0].baseArrayLayer (= 1) is greater or equal to the "
+                                             "arrayLayers of the image when it was created (i.e. greater or equal to 1).");
+        const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 1, VK_REMAINING_ARRAY_LAYERS};
+        vkCmdClearColorImage(cb_handle, image.handle(), image.Layout(), &clear_color, 1, &range);
+        m_errorMonitor->VerifyFound();
+    }
+}
+
+TEST_F(VkLayerTest, ClearDepthStencilWithBadRange) {
+    TEST_DESCRIPTION("Record clear depth with an invalid VkImageSubresourceRange");
+
+    ASSERT_NO_FATAL_FAILURE(Init());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    const auto depth_format = FindSupportedDepthStencilFormat(gpu());
+    if (!depth_format) {
+        printf("             No Depth + Stencil format found. Skipped.\n");
+        return;
+    }
+
+    VkImageObj image(m_device);
+    image.Init(32, 32, 1, depth_format, VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_IMAGE_TILING_OPTIMAL);
+    ASSERT_TRUE(image.create_info().arrayLayers == 1);
+    ASSERT_TRUE(image.initialized());
+    const VkImageAspectFlags ds_aspect = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+    image.SetLayout(ds_aspect, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+    const VkClearDepthStencilValue clear_value = {};
+
+    m_commandBuffer->BeginCommandBuffer();
+    const auto cb_handle = m_commandBuffer->GetBufferHandle();
+
+    // Try levelCount = 0
+    {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00768);
+        const VkImageSubresourceRange range = {ds_aspect, 0, 0, 0, 1};
+        vkCmdClearDepthStencilImage(cb_handle, image.handle(), image.Layout(), &clear_value, 1, &range);
+        m_errorMonitor->VerifyFound();
+    }
+
+    // Try baseLevel + levelCount > image.mipLevels
+    {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00768);
+        const VkImageSubresourceRange range = {ds_aspect, 1, 1, 0, 1};
+        vkCmdClearDepthStencilImage(cb_handle, image.handle(), image.Layout(), &clear_value, 1, &range);
+        m_errorMonitor->VerifyFound();
+    }
+
+    // Try baseLevel >= image.mipLevels with VK_REMAINING_MIP_LEVELS
+    {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             "vkCmdClearDepthStencilImage: pRanges[0].baseMipLevel (= 1) is greater or equal to "
+                                             "the mip level count of the image (i.e. greater or equal to 1).");
+        const VkImageSubresourceRange range = {ds_aspect, 1, VK_REMAINING_MIP_LEVELS, 0, 1};
+        vkCmdClearDepthStencilImage(cb_handle, image.handle(), image.Layout(), &clear_value, 1, &range);
+        m_errorMonitor->VerifyFound();
+    }
+
+    // Try layerCount = 0
+    {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02931);
+        const VkImageSubresourceRange range = {ds_aspect, 0, 1, 0, 0};
+        vkCmdClearDepthStencilImage(cb_handle, image.handle(), image.Layout(), &clear_value, 1, &range);
+        m_errorMonitor->VerifyFound();
+    }
+
+    // Try baseLayer + layerCount > image.arrayLayers
+    {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02931);
+        const VkImageSubresourceRange range = {ds_aspect, 0, 1, 1, 1};
+        vkCmdClearDepthStencilImage(cb_handle, image.handle(), image.Layout(), &clear_value, 1, &range);
+        m_errorMonitor->VerifyFound();
+    }
+
+    // Try baseLevel >= image.mipLevels with VK_REMAINING_ARRAY_LAYERS
+    {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             "vkCmdClearDepthStencilImage: pRanges[0].baseArrayLayer (= 1) is greater or equal to "
+                                             "the arrayLayers of the image when it was created (i.e. greater or equal to 1).");
+        const VkImageSubresourceRange range = {ds_aspect, 0, 1, 1, VK_REMAINING_ARRAY_LAYERS};
+        vkCmdClearDepthStencilImage(cb_handle, image.handle(), image.Layout(), &clear_value, 1, &range);
+        m_errorMonitor->VerifyFound();
+    }
+}
+
 TEST_F(VkLayerTest, ClearColorImageWithinRenderPass) {
     // Call CmdClearColorImage within an active RenderPass
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
@@ -9707,7 +9854,7 @@ TEST_F(VkLayerTest, InvalidBarriers) {
     m_errorMonitor->VerifyFound();
 
     img_barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Subresource must have the sum of the baseArrayLayer");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02931);
     // baseArrayLayer + layerCount must be <= image's arrayLayers
     img_barrier.subresourceRange.baseArrayLayer = 1;
     vkCmdPipelineBarrier(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
@@ -9715,7 +9862,7 @@ TEST_F(VkLayerTest, InvalidBarriers) {
     m_errorMonitor->VerifyFound();
     img_barrier.subresourceRange.baseArrayLayer = 0;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Subresource must have the sum of the baseMipLevel");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00768);
     // baseMipLevel + levelCount must be <= image's mipLevels
     img_barrier.subresourceRange.baseMipLevel = 1;
     vkCmdPipelineBarrier(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
@@ -9732,7 +9879,7 @@ TEST_F(VkLayerTest, InvalidBarriers) {
     img_barrier.subresourceRange.levelCount = 1;
 
     // layerCount must be non-zero.
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00769);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02931);
     img_barrier.subresourceRange.layerCount = 0;
     vkCmdPipelineBarrier(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
                          nullptr, 0, nullptr, 1, &img_barrier);
@@ -16540,69 +16687,6 @@ TEST_F(VkLayerTest, AttachmentDescriptionUndefinedFormat) {
     }
 }
 
-TEST_F(VkLayerTest, InvalidImageView) {
-    ASSERT_NO_FATAL_FAILURE(Init());
-
-    // Create an image and try to create a view with bad baseMipLevel
-    const VkFormat tex_format = VK_FORMAT_B8G8R8A8_UNORM;
-    const int32_t tex_width = 32;
-    const int32_t tex_height = 32;
-
-    VkImageCreateInfo image_create_info = {};
-    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    image_create_info.pNext = NULL;
-    image_create_info.imageType = VK_IMAGE_TYPE_2D;
-    image_create_info.format = tex_format;
-    image_create_info.extent.width = tex_width;
-    image_create_info.extent.height = tex_height;
-    image_create_info.extent.depth = 1;
-    image_create_info.mipLevels = 1;
-    image_create_info.arrayLayers = 1;
-    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
-    image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
-    image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
-    image_create_info.flags = 0;
-
-    VkImage image;
-    VkResult err = vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
-    ASSERT_VK_SUCCESS(err);
-
-    VkMemoryRequirements requirements;
-    vkGetImageMemoryRequirements(m_device->device(), image, &requirements);
-
-    VkMemoryAllocateInfo alloc_info{};
-    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    alloc_info.pNext = NULL;
-    alloc_info.memoryTypeIndex = 0;
-    alloc_info.allocationSize = requirements.size;
-    bool pass = m_device->phy().set_memory_type(requirements.memoryTypeBits, &alloc_info, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    ASSERT_TRUE(pass);
-
-    VkDeviceMemory memory;
-    err = vkAllocateMemory(m_device->device(), &alloc_info, NULL, &memory);
-    ASSERT_VK_SUCCESS(err);
-
-    err = vkBindImageMemory(m_device->device(), image, memory, 0);
-
-    VkImageViewCreateInfo image_view_create_info = {};
-    image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    image_view_create_info.image = image;
-    image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    image_view_create_info.format = tex_format;
-    image_view_create_info.subresourceRange.layerCount = 1;
-    image_view_create_info.subresourceRange.baseMipLevel = 10;  // cause an error
-    image_view_create_info.subresourceRange.levelCount = 1;
-    image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-
-    VkImageView view;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00768);
-    err = vkCreateImageView(m_device->device(), &image_view_create_info, NULL, &view);
-    m_errorMonitor->VerifyFound();
-
-    vkFreeMemory(m_device->device(), memory, NULL);
-    vkDestroyImage(m_device->device(), image, NULL);
-}
-
 TEST_F(VkLayerTest, CreateImageViewNoMemoryBoundToImage) {
     VkResult err;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
@@ -16923,42 +17007,6 @@ TEST_F(VkLayerTest, ImageLayerViewTests) {
     imgViewInfo.subresourceRange.levelCount = 1;
     imgViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
-    // View can't have baseMipLevel >= image's mipLevels - Expect VIEW_CREATE_ERROR
-    imgViewInfo.subresourceRange.baseMipLevel = 1;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00768);
-    vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
-    m_errorMonitor->VerifyFound();
-    imgViewInfo.subresourceRange.baseMipLevel = 0;
-
-    // View's levelCount can't be 0 - Expect VIEW_CREATE_ERROR
-    imgViewInfo.subresourceRange.levelCount = 0;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00768);
-    vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
-    m_errorMonitor->VerifyFound();
-    imgViewInfo.subresourceRange.levelCount = 1;
-
-    // View's levelCount can't be > image's mipLevels - Expect VIEW_CREATE_ERROR
-    imgViewInfo.subresourceRange.levelCount = 2;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00768);
-    vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
-    m_errorMonitor->VerifyFound();
-    imgViewInfo.subresourceRange.levelCount = 1;
-
-    // View can't have baseArrayLayer >= image's arraySize - Expect VIEW_CREATE_ERROR
-    imgViewInfo.subresourceRange.baseArrayLayer = 1;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00769);
-    vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
-    m_errorMonitor->VerifyFound();
-    imgViewInfo.subresourceRange.baseArrayLayer = 0;
-
-    // View's layerCount can't be 0 - Expect VIEW_CREATE_ERROR
-    imgViewInfo.subresourceRange.layerCount = 0;
-    m_errorMonitor->SetDesiredFailureMsg(
-        VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "if pCreateInfo->viewType is VK_IMAGE_TYPE_2D, pCreateInfo->subresourceRange.layerCount must be 1");
-    vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
-    m_errorMonitor->VerifyFound();
-    imgViewInfo.subresourceRange.layerCount = 1;
 
     // Can't use depth format for view into color image - Expect INVALID_FORMAT
     imgViewInfo.format = depth_format;
@@ -17019,6 +17067,112 @@ TEST_F(VkLayerTest, ImageLayerViewTests) {
 
     vkFreeMemory(m_device->device(), memory, NULL);
     vkDestroyImage(m_device->handle(), mutImage, NULL);
+}
+
+TEST_F(VkLayerTest, ImageViewSubresourceRangeTests) {
+    TEST_DESCRIPTION("Passing bad image subrange to CreateImageView");
+
+    ASSERT_NO_FATAL_FAILURE(Init());
+    auto depth_format = FindSupportedDepthStencilFormat(gpu());
+    if (!depth_format) {
+        return;
+    }
+
+    VkImageObj image(m_device);
+    image.Init(128, 128, 1, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+               VK_IMAGE_TILING_OPTIMAL, 0);
+    ASSERT_TRUE(image.initialized());
+
+    VkImageView imgView;
+    VkImageViewCreateInfo imgViewInfo = {};
+    imgViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    imgViewInfo.image = image.handle();
+    imgViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    imgViewInfo.format = VK_FORMAT_B8G8R8A8_UNORM;
+    imgViewInfo.subresourceRange.layerCount = 1;
+    imgViewInfo.subresourceRange.baseMipLevel = 0;
+    imgViewInfo.subresourceRange.levelCount = 1;
+    imgViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+    // View's levelCount can't be 0
+    imgViewInfo.subresourceRange.levelCount = 0;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00768);
+    vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
+    m_errorMonitor->VerifyFound();
+    imgViewInfo.subresourceRange.levelCount = 1;
+
+    // View can't have baseMipLevel >= image's mipLevels
+    imgViewInfo.subresourceRange.baseMipLevel = 1;
+    imgViewInfo.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "vkCreateImageView: pCreateInfo->subresourceRange.baseMipLevel (= 1) is greater or equal "
+                                         "to the mip level count of the image (i.e. greater or equal to 1).");
+    vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
+    m_errorMonitor->VerifyFound();
+    imgViewInfo.subresourceRange.baseMipLevel = 0;
+    imgViewInfo.subresourceRange.levelCount = 1;
+
+    // View can't have baseMipLevel >= image's mipLevels
+    imgViewInfo.subresourceRange.baseMipLevel = 1;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00768);
+    vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
+    m_errorMonitor->VerifyFound();
+    imgViewInfo.subresourceRange.baseMipLevel = 0;
+
+    // View's baseMipLevel + levelCount can't be > image's mipLevels
+    imgViewInfo.subresourceRange.levelCount = 2;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00768);
+    vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
+    m_errorMonitor->VerifyFound();
+    imgViewInfo.subresourceRange.levelCount = 1;
+
+    // View's layerCount can't be 0
+    imgViewInfo.subresourceRange.layerCount = 0;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "if pCreateInfo->viewType is VK_IMAGE_TYPE_2D, pCreateInfo->subresourceRange.layerCount must be 1");
+    // m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02931); // overlap with param_validation
+    vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
+    m_errorMonitor->VerifyFound();
+    imgViewInfo.subresourceRange.layerCount = 1;
+
+    // View can't have baseArrayLayer >= image's arraySize
+    imgViewInfo.subresourceRange.baseArrayLayer = 1;
+    imgViewInfo.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "vkCreateImageView: pCreateInfo->subresourceRange.baseArrayLayer (= 1) is greater or "
+                                         "equal to the arrayLayers of the image when it was created (i.e. greater or equal to 1).");
+    vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
+    m_errorMonitor->VerifyFound();
+    imgViewInfo.subresourceRange.baseArrayLayer = 0;
+    imgViewInfo.subresourceRange.layerCount = 1;
+
+    // View can't have baseArrayLayer >= image's arraySize
+    imgViewInfo.subresourceRange.baseArrayLayer = 1;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02931);
+    vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
+    m_errorMonitor->VerifyFound();
+    imgViewInfo.subresourceRange.baseArrayLayer = 0;
+
+    // View's baseArrayLayer + layerCount can't be > image's arrayLayers
+    imgViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+    imgViewInfo.subresourceRange.layerCount = 2;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02931);
+    vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
+    m_errorMonitor->VerifyFound();
+    imgViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    imgViewInfo.subresourceRange.layerCount = 1;
+
+    // View's  layerCount of 2D view has to be 1
+    imgViewInfo.subresourceRange.layerCount = 2;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "if pCreateInfo->viewType is VK_IMAGE_TYPE_2D, pCreateInfo->subresourceRange.layerCount must be 1");
+    vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
+    m_errorMonitor->VerifyFound();
+    imgViewInfo.subresourceRange.layerCount = 1;
+
+    // TODO: should test maitenance1 3D -> 2D array view feature
 }
 
 TEST_F(VkLayerTest, CompressedImageMipCopyTests) {
@@ -17729,7 +17883,7 @@ TEST_F(VkLayerTest, MiscImageLayerTests) {
                    intImage2.Layout(), 1, &blitRegion, VK_FILTER_LINEAR);
     m_errorMonitor->VerifyFound();
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_00769);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_02931);
     VkImageMemoryBarrier img_barrier;
     img_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     img_barrier.pNext = NULL;
@@ -24325,6 +24479,81 @@ TEST_F(VkPositiveLayerTest, LongFenceChain)
     m_errorMonitor->VerifyNotFound();
 }
 #endif
+
+TEST_F(VkPositiveLayerTest, ClearColorImageWithValidRange) {
+    TEST_DESCRIPTION("Record clear color with a valid VkImageSubresourceRange");
+
+    ASSERT_NO_FATAL_FAILURE(Init());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkImageObj image(m_device);
+    image.Init(32, 32, 1, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_IMAGE_TILING_OPTIMAL);
+    ASSERT_TRUE(image.create_info().arrayLayers == 1);
+    ASSERT_TRUE(image.initialized());
+    image.SetLayout(VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+    const VkClearColorValue clear_color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+
+    m_commandBuffer->BeginCommandBuffer();
+    const auto cb_handle = m_commandBuffer->GetBufferHandle();
+
+    // Try good case
+    {
+        m_errorMonitor->ExpectSuccess();
+        VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+        vkCmdClearColorImage(cb_handle, image.handle(), image.Layout(), &clear_color, 1, &range);
+        m_errorMonitor->VerifyNotFound();
+    }
+
+    // Try good case with VK_REMAINING
+    {
+        m_errorMonitor->ExpectSuccess();
+        VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS};
+        vkCmdClearColorImage(cb_handle, image.handle(), image.Layout(), &clear_color, 1, &range);
+        m_errorMonitor->VerifyNotFound();
+    }
+}
+
+TEST_F(VkPositiveLayerTest, ClearDepthStencilWithValidRange) {
+    TEST_DESCRIPTION("Record clear depth with a valid VkImageSubresourceRange");
+
+    ASSERT_NO_FATAL_FAILURE(Init());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    auto depth_format = FindSupportedDepthStencilFormat(gpu());
+    if (!depth_format) {
+        printf("             No Depth + Stencil format found. Skipped.\n");
+        return;
+    }
+
+    VkImageObj image(m_device);
+    image.Init(32, 32, 1, depth_format, VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_IMAGE_TILING_OPTIMAL);
+    ASSERT_TRUE(image.create_info().arrayLayers == 1);
+    ASSERT_TRUE(image.initialized());
+    const VkImageAspectFlags ds_aspect = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+    image.SetLayout(ds_aspect, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+    const VkClearDepthStencilValue clear_value = {};
+
+    m_commandBuffer->BeginCommandBuffer();
+    const auto cb_handle = m_commandBuffer->GetBufferHandle();
+
+    // Try good case
+    {
+        m_errorMonitor->ExpectSuccess();
+        VkImageSubresourceRange range = {ds_aspect, 0, 1, 0, 1};
+        vkCmdClearDepthStencilImage(cb_handle, image.handle(), image.Layout(), &clear_value, 1, &range);
+        m_errorMonitor->VerifyNotFound();
+    }
+
+    // Try good case with VK_REMAINING
+    {
+        m_errorMonitor->ExpectSuccess();
+        VkImageSubresourceRange range = {ds_aspect, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS};
+        vkCmdClearDepthStencilImage(cb_handle, image.handle(), image.Layout(), &clear_value, 1, &range);
+        m_errorMonitor->VerifyNotFound();
+    }
+}
 
 #if defined(ANDROID) && defined(VALIDATION_APK)
 const char *appTag = "VulkanLayerValidationTests";

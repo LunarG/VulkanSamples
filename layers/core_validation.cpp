@@ -7766,29 +7766,12 @@ static bool ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, ui
                             funcName);
         }
         if (image_data) {
-            skip |= ValidateImageSubrangeLevelLayerCounts(dev_data, mem_barrier->subresourceRange, funcName);
             auto aspect_mask = mem_barrier->subresourceRange.aspectMask;
             skip |= ValidateImageAspectMask(dev_data, image_data->image, image_data->createInfo.format, aspect_mask, funcName);
 
-            uint32_t layer_count = ResolveRemainingLayers(&mem_barrier->subresourceRange, image_data->createInfo.arrayLayers);
-            if ((mem_barrier->subresourceRange.baseArrayLayer + layer_count) > image_data->createInfo.arrayLayers) {
-                skip |= log_msg(
-                    dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                    HandleToUint64(cmdBuffer), __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
-                    "%s: Subresource must have the sum of the baseArrayLayer (%d) and layerCount (%d) be less "
-                    "than or equal to the total number of layers (%d).",
-                    funcName, mem_barrier->subresourceRange.baseArrayLayer, layer_count, image_data->createInfo.arrayLayers);
-            }
-
-            uint32_t level_count = ResolveRemainingLevels(&mem_barrier->subresourceRange, image_data->createInfo.mipLevels);
-            if ((mem_barrier->subresourceRange.baseMipLevel + level_count) > image_data->createInfo.mipLevels) {
-                skip |= log_msg(
-                    dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                    HandleToUint64(cmdBuffer), __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
-                    "%s: Subresource must have the sum of the baseMipLevel (%d) and levelCount (%d) be less than or equal to "
-                    "the total number of levels (%d).",
-                    funcName, mem_barrier->subresourceRange.baseMipLevel, level_count, image_data->createInfo.mipLevels);
-            }
+            std::string param_name = "pImageMemoryBarriers[" + std::to_string(i) + "].subresourceRange";
+            skip |= ValidateImageSubresourceRange(dev_data, image_data, nullptr, mem_barrier->subresourceRange, funcName,
+                                                  param_name.c_str());
         }
     }
 

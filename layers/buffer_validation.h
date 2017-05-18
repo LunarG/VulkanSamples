@@ -185,8 +185,9 @@ void PostCallRecordCreateBufferView(layer_data *device_data, const VkBufferViewC
 bool ValidateImageAspectMask(layer_data *device_data, VkImage image, VkFormat format, VkImageAspectFlags aspect_mask,
                              const char *func_name);
 
-bool ValidateImageSubrangeLevelLayerCounts(layer_data *device_data, const VkImageSubresourceRange &subresourceRange,
-                                           const char *func_name);
+bool ValidateImageSubresourceRange(const layer_data *device_data, const IMAGE_STATE *image_state,
+                                   const VkImageViewCreateInfo *image_view_create_info,
+                                   const VkImageSubresourceRange &subresourceRange, const char *cmd_name, const char *param_name);
 
 bool PreCallValidateCreateImageView(layer_data *device_data, const VkImageViewCreateInfo *create_info);
 
