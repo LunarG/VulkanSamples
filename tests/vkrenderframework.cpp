@@ -1288,10 +1288,11 @@ VkResult VkPipelineObj::CreateVKPipeline(VkPipelineLayout layout, VkRenderPass r
     return init_try(*m_device, *gp_ci);
 }
 
-VkCommandBufferObj::VkCommandBufferObj(VkDeviceObj *device, VkCommandPoolObj *pool) {
+VkCommandBufferObj::VkCommandBufferObj(VkDeviceObj *device, VkCommandPoolObj *pool, VkCommandBufferLevel level) {
     m_device = device;
-
-    init(*device, vk_testing::CommandBuffer::create_info(pool->handle()));
+    auto create_info = vk_testing::CommandBuffer::create_info(pool->handle());
+    create_info.level = level;
+    init(*device, create_info);
 }
 
 VkCommandBuffer VkCommandBufferObj::GetBufferHandle() { return handle(); }
