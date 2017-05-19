@@ -991,9 +991,7 @@ TEST_F(VkLayerTest, InvalidStructPNext) {
     m_errorMonitor->VerifyFound();
 }
 
-TEST_F(VkLayerTest, UnrecognizedValue) {
-    TEST_DESCRIPTION("Specify unrecognized Vulkan enumeration, flags, and VkBool32 values");
-
+TEST_F(VkLayerTest, UnrecognizedValueOutOfRange) {
     ASSERT_NO_FATAL_FAILURE(Init());
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
@@ -1006,6 +1004,10 @@ TEST_F(VkLayerTest, UnrecognizedValue) {
     VkFormatProperties format_properties;
     vkGetPhysicalDeviceFormatProperties(gpu(), static_cast<VkFormat>(8000), &format_properties);
     m_errorMonitor->VerifyFound();
+}
+
+TEST_F(VkLayerTest, UnrecognizedValueBadMask) {
+    ASSERT_NO_FATAL_FAILURE(Init());
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "contains flag bits that are not recognized members of");
     // Specify an invalid VkFlags bitmask value
@@ -1014,6 +1016,10 @@ TEST_F(VkLayerTest, UnrecognizedValue) {
     vkGetPhysicalDeviceImageFormatProperties(gpu(), VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL,
                                              static_cast<VkImageUsageFlags>(1 << 25), 0, &image_format_properties);
     m_errorMonitor->VerifyFound();
+}
+
+TEST_F(VkLayerTest, UnrecognizedValueBadFlag) {
+    ASSERT_NO_FATAL_FAILURE(Init());
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "contains flag bits that are not recognized members of");
     // Specify an invalid VkFlags array entry
@@ -1028,6 +1034,10 @@ TEST_F(VkLayerTest, UnrecognizedValue) {
     submit_info.pWaitDstStageMask = &stage_flags;
     vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
     m_errorMonitor->VerifyFound();
+}
+
+TEST_F(VkLayerTest, UnrecognizedValueBadBool) {
+    ASSERT_NO_FATAL_FAILURE(Init());
 
     // Sneak in a test to make sure using VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE
     // doesn't trigger a false positive.
@@ -1050,7 +1060,6 @@ TEST_F(VkLayerTest, UnrecognizedValue) {
     if (!supports_mirror_clamp) {
         printf("             mirror_clamp_to_edge Extension not supported, skipping tests\n");
         address_mode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        return;
     }
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT, "is neither VK_TRUE nor VK_FALSE");
@@ -1079,6 +1088,11 @@ TEST_F(VkLayerTest, UnrecognizedValue) {
     sampler_info.anisotropyEnable = 3;
     vkCreateSampler(m_device->device(), &sampler_info, NULL, &sampler);
     m_errorMonitor->VerifyFound();
+}
+
+#if 0
+TEST_F(VkLayerTest, UnrecognizedValueMaxEnum) {
+    ASSERT_NO_FATAL_FAILURE(Init());
 
     // Specify MAX_ENUM
     VkDescriptorSetLayoutBinding binding = {};
@@ -1098,6 +1112,7 @@ TEST_F(VkLayerTest, UnrecognizedValue) {
         vkDestroyDescriptorSetLayout(device(), layout, NULL);
     }
 }
+#endif
 
 TEST_F(VkLayerTest, UpdateBufferAlignment) {
     TEST_DESCRIPTION("Check alignment parameters for vkCmdUpdateBuffer");
