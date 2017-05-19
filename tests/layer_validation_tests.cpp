@@ -4869,7 +4869,7 @@ TEST_F(VkLayerTest, InvalidCmdBufferBufferViewDestroyed) {
     VkBufferViewCreateInfo bvci = {};
     bvci.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
     bvci.buffer = buffer;
-    bvci.format = VK_FORMAT_R8_UNORM;
+    bvci.format = VK_FORMAT_R32_SFLOAT;
     bvci.range = VK_WHOLE_SIZE;
 
     err = vkCreateBufferView(m_device->device(), &bvci, NULL, &view);
@@ -4897,7 +4897,7 @@ TEST_F(VkLayerTest, InvalidCmdBufferBufferViewDestroyed) {
     char const *fsSource =
         "#version 450\n"
         "\n"
-        "layout(set=0, binding=0, r8) uniform imageBuffer s;\n"
+        "layout(set=0, binding=0, r32f) uniform imageBuffer s;\n"
         "layout(location=0) out vec4 x;\n"
         "void main(){\n"
         "   x = imageLoad(s, 0);\n"
@@ -12322,6 +12322,9 @@ TEST_F(VkLayerTest, MismatchCountQueueCreateRequestedFeature) {
     m_errorMonitor->VerifyFound();
 
     queue_create_info.queueFamilyIndex = 1;
+    if (m_device->phy().queue_properties().size() < 2) {
+        queue_create_info.queueFamilyIndex = 0;
+    }
 
     unsigned feature_count = sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32);
     VkBool32 *feature_array = reinterpret_cast<VkBool32 *>(&features);
@@ -13741,7 +13744,7 @@ TEST_F(VkLayerTest, BufferViewInUseDestroyedSignaled) {
     VkBufferViewCreateInfo bvci = {};
     bvci.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
     bvci.buffer = buffer;
-    bvci.format = VK_FORMAT_R8_UNORM;
+    bvci.format = VK_FORMAT_R32_SFLOAT;
     bvci.range = VK_WHOLE_SIZE;
 
     err = vkCreateBufferView(m_device->device(), &bvci, NULL, &view);
@@ -13769,7 +13772,7 @@ TEST_F(VkLayerTest, BufferViewInUseDestroyedSignaled) {
     char const *fsSource =
         "#version 450\n"
         "\n"
-        "layout(set=0, binding=0, r8) uniform imageBuffer s;\n"
+        "layout(set=0, binding=0, r32f) uniform imageBuffer s;\n"
         "layout(location=0) out vec4 x;\n"
         "void main(){\n"
         "   x = imageLoad(s, 0);\n"
@@ -18197,6 +18200,7 @@ TEST_F(VkLayerTest, CopyImageFormatSizeMismatch) {
     VkFormatProperties properties;
     vkGetPhysicalDeviceFormatProperties(m_device->phy().handle(), image_create_info.format, &properties);
     if (properties.optimalTilingFeatures == 0) {
+        vkDestroyImage(m_device->device(), srcImage, NULL);
         printf("             Image format not supported; skipped.\n");
         return;
     }
