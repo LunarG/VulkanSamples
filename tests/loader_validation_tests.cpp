@@ -387,12 +387,14 @@ VKAPI_ATTR void *VKAPI_CALL ReallocCallbackFunc(void *pUserData, void *pOriginal
                     return pOriginal;
                 } else {
                     void *pNew = AllocCallbackFunc(pUserData, size, alignment, allocationScope);
-                    size_t copy_size = size;
-                    if (g_allocated_vector[iii].requested_size_bytes < size) {
-                        copy_size = g_allocated_vector[iii].requested_size_bytes;
+                    if (pNew != NULL) {
+                        size_t copy_size = size;
+                        if (g_allocated_vector[iii].requested_size_bytes < size) {
+                            copy_size = g_allocated_vector[iii].requested_size_bytes;
+                        }
+                        memcpy(pNew, pOriginal, copy_size);
+                        FreeCallbackFunc(pUserData, pOriginal);
                     }
-                    memcpy(pNew, pOriginal, copy_size);
-                    FreeCallbackFunc(pUserData, pOriginal);
                     return pNew;
                 }
             }
@@ -1235,7 +1237,7 @@ TEST(Allocation, DeviceButNotInstance) {
 
 // Test failure during vkCreateInstance to make sure we don't leak memory if
 // one of the out-of-memory conditions trigger.
-TEST(Allocation, CreateInstanceItentionalAllocFail) {
+TEST(Allocation, CreateInstanceIntentionalAllocFail) {
     auto const info = VK::InstanceCreateInfo();
     VkInstance instance = VK_NULL_HANDLE;
     VkAllocationCallbacks alloc_callbacks = {};
@@ -1267,7 +1269,7 @@ TEST(Allocation, CreateInstanceItentionalAllocFail) {
 
 // Test failure during vkCreateDevice to make sure we don't leak memory if
 // one of the out-of-memory conditions trigger.
-TEST(Allocation, CreateDeviceItentionalAllocFail) {
+TEST(Allocation, CreateDeviceIntentionalAllocFail) {
     auto const info = VK::InstanceCreateInfo();
     VkInstance instance = VK_NULL_HANDLE;
     VkDevice device = VK_NULL_HANDLE;
@@ -1336,7 +1338,7 @@ TEST(Allocation, CreateDeviceItentionalAllocFail) {
 
 // Test failure during vkCreateInstance and vkCreateDevice to make sure we don't
 // leak memory if one of the out-of-memory conditions trigger.
-TEST(Allocation, CreateInstanceDeviceItentionalAllocFail) {
+TEST(Allocation, CreateInstanceDeviceIntentionalAllocFail) {
     auto const info = VK::InstanceCreateInfo();
     VkInstance instance = VK_NULL_HANDLE;
     VkDevice device = VK_NULL_HANDLE;
