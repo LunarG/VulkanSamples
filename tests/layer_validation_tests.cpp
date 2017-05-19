@@ -9337,57 +9337,6 @@ TEST_F(VkLayerTest, RenderPassClearOpMismatch) {
     vkDestroyRenderPass(m_device->device(), rp, NULL);
 }
 
-TEST_F(VkLayerTest, RenderPassClearOpTooManyValues) {
-    TEST_DESCRIPTION(
-        "Begin a renderPass where clearValueCount is greater than"
-        "the number of renderPass attachments that use loadOp"
-        "VK_ATTACHMENT_LOAD_OP_CLEAR.");
-
-    ASSERT_NO_FATAL_FAILURE(Init());
-    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-
-    // Create a renderPass with a single attachment that uses loadOp CLEAR
-    VkAttachmentReference attach = {};
-    attach.layout = VK_IMAGE_LAYOUT_GENERAL;
-    VkSubpassDescription subpass = {};
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &attach;
-    VkRenderPassCreateInfo rpci = {};
-    rpci.subpassCount = 1;
-    rpci.pSubpasses = &subpass;
-    rpci.attachmentCount = 1;
-    VkAttachmentDescription attach_desc = {};
-    attach_desc.format = VK_FORMAT_B8G8R8A8_UNORM;
-    // Set loadOp to CLEAR
-    attach_desc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    rpci.pAttachments = &attach_desc;
-    rpci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    VkRenderPass rp;
-    vkCreateRenderPass(m_device->device(), &rpci, NULL, &rp);
-
-    VkCommandBufferBeginInfo info = {};
-    info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-
-    vkBeginCommandBuffer(m_commandBuffer->handle(), &info);
-    VkRenderPassBeginInfo rp_begin = {};
-    rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    rp_begin.pNext = NULL;
-    rp_begin.renderPass = renderPass();
-    rp_begin.framebuffer = framebuffer();
-    rp_begin.clearValueCount = 2;  // Should be 1
-
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT,
-                                         " has a clearValueCount of"
-                                         " 2 but only first 1 entries in pClearValues array are used");
-
-    vkCmdBeginRenderPass(m_commandBuffer->GetBufferHandle(), &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
-
-    m_errorMonitor->VerifyFound();
-
-    vkDestroyRenderPass(m_device->device(), rp, NULL);
-}
-
 TEST_F(VkLayerTest, EndCommandBufferWithinRenderPass) {
     TEST_DESCRIPTION("End a command buffer with an active render pass");
 
