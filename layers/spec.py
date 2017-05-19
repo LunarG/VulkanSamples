@@ -110,7 +110,8 @@ class Specification:
             self.soup = BeautifulSoup(urllib2.urlopen(spec_url), 'html.parser')
         else:
             print ("Making soup from local spec %s, this will take a minute" % (spec_file))
-            self.soup = BeautifulSoup(spec_file, 'html.parser')
+            with open(spec_file, "r") as sf:
+                self.soup = BeautifulSoup(sf, 'html.parser')
         self.parseSoup()
         #print(self.soup.prettify())
     def updateDict(self, updated_dict):
