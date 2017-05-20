@@ -1065,29 +1065,15 @@ TEST_F(VkLayerTest, UnrecognizedValueBadBool) {
     m_errorMonitor->VerifyFound();
 }
 
-#if 0
 TEST_F(VkLayerTest, UnrecognizedValueMaxEnum) {
     ASSERT_NO_FATAL_FAILURE(Init());
 
     // Specify MAX_ENUM
-    VkDescriptorSetLayoutBinding binding = {};
-    binding.binding = 0;
-    binding.descriptorType = VK_DESCRIPTOR_TYPE_MAX_ENUM;
-    binding.descriptorCount = 1;
-    binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    VkDescriptorSetLayoutCreateInfo layout_ci = {};
-    layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layout_ci.bindingCount = 1;
-    layout_ci.pBindings = &binding;
+    VkFormatProperties format_properties;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "does not fall within the begin..end range");
-    VkDescriptorSetLayout layout = VK_NULL_HANDLE;
-    vkCreateDescriptorSetLayout(device(), &layout_ci, NULL, &layout);
+    vkGetPhysicalDeviceFormatProperties(gpu(), VK_FORMAT_MAX_ENUM, &format_properties);
     m_errorMonitor->VerifyFound();
-    if (layout != VK_NULL_HANDLE) {
-        vkDestroyDescriptorSetLayout(device(), layout, NULL);
-    }
 }
-#endif
 
 TEST_F(VkLayerTest, UpdateBufferAlignment) {
     TEST_DESCRIPTION("Check alignment parameters for vkCmdUpdateBuffer");
