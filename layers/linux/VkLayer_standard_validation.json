@@ -3,7 +3,7 @@
     "layer": {
         "name": "VK_LAYER_LUNARG_standard_validation",
         "type": "GLOBAL",
-        "api_version": "1.0.49",
+        "api_version": "1.0.50",
         "implementation_version": "1",
         "description": "LunarG Standard Validation",
         "component_layers": [

@@ -21,7 +21,6 @@
 
 // This header is generated from the Khronos Vulkan XML API Registry.
 
-
 #ifndef VULKAN_HPP
 #define VULKAN_HPP
 
@@ -41,8 +40,7 @@
 # include <memory>
 # include <vector>
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
-
-static_assert( VK_HEADER_VERSION ==  49 , "Wrong VK_HEADER_VERSION!" );
+static_assert( VK_HEADER_VERSION ==  50 , "Wrong VK_HEADER_VERSION!" );
 
 // 32-bit vulkan is not typesafe for handles, so don't allow copy constructors on this platform by default.
 // To enable this feature on 32-bit platforms please define VULKAN_HPP_TYPESAFE_CONVERSION
@@ -93,6 +91,7 @@ static_assert( VK_HEADER_VERSION ==  49 , "Wrong VK_HEADER_VERSION!" );
 
 namespace vk
 {
+
   template <typename FlagBitsType> struct FlagTraits
   {
     enum { allFlags = 0 };
@@ -197,19 +196,19 @@ namespace vk
   private:
     MaskType  m_mask;
   };
-  
+
   template <typename BitType>
   Flags<BitType> operator|(BitType bit, Flags<BitType> const& flags)
   {
     return flags | bit;
   }
-  
+
   template <typename BitType>
   Flags<BitType> operator&(BitType bit, Flags<BitType> const& flags)
   {
     return flags & bit;
   }
-  
+
   template <typename BitType>
   Flags<BitType> operator^(BitType bit, Flags<BitType> const& flags)
   {
@@ -324,7 +323,6 @@ namespace vk
     T *       m_ptr;
   };
 #endif
-
 
 #if defined(VULKAN_HPP_NO_EXCEPTIONS) && !defined(VULKAN_HPP_NO_SMART_HANDLE)
 #  define VULKAN_HPP_NO_SMART_HANDLE
@@ -500,6 +498,7 @@ namespace vk
     }
   }
 
+
 #if defined(_MSC_VER) && (_MSC_VER == 1800)
 # define noexcept _NOEXCEPT
 #endif
@@ -531,6 +530,244 @@ namespace vk
     return std::error_condition(static_cast<int>(e), errorCategory());
   }
 
+#if defined(_MSC_VER) && (_MSC_VER == 1800)
+# define noexcept _NOEXCEPT
+#endif
+
+  class Error
+  {
+    public:
+    virtual ~Error() = default;
+
+    virtual const char* what() const noexcept = 0;
+  };
+
+  class LogicError : public Error, public std::logic_error
+  {
+    public:
+    explicit LogicError( const std::string& what )
+      : Error(), std::logic_error(what) {}
+    explicit LogicError( char const * what )
+      : Error(), std::logic_error(what) {}
+    virtual ~LogicError() = default;
+
+    virtual const char* what() const noexcept { return std::logic_error::what(); }
+  };
+
+  class SystemError : public Error, public std::system_error
+  {
+    public:
+    SystemError( std::error_code ec )
+      : Error(), std::system_error(ec) {}
+    SystemError( std::error_code ec, std::string const& what )
+      : Error(), std::system_error(ec, what) {}
+    SystemError( std::error_code ec, char const * what )
+      : Error(), std::system_error(ec, what) {}
+    SystemError( int ev, std::error_category const& ecat )
+      : Error(), std::system_error(ev, ecat) {}
+    SystemError( int ev, std::error_category const& ecat, std::string const& what)
+      : Error(), std::system_error(ev, ecat, what) {}
+    SystemError( int ev, std::error_category const& ecat, char const * what)
+      : Error(), std::system_error(ev, ecat, what) {}
+    virtual ~SystemError() = default;
+
+    virtual const char* what() const noexcept { return std::system_error::what(); }
+  };
+
+#if defined(_MSC_VER) && (_MSC_VER == 1800)
+# undef noexcept
+#endif
+
+  class OutOfHostMemoryError : public SystemError
+  {
+  public:
+    OutOfHostMemoryError( std::string const& message )
+      : SystemError( make_error_code( Result::eErrorOutOfHostMemory ), message ) {}
+    OutOfHostMemoryError( char const * message )
+      : SystemError( make_error_code( Result::eErrorOutOfHostMemory ), message ) {}
+  };
+  class OutOfDeviceMemoryError : public SystemError
+  {
+  public:
+    OutOfDeviceMemoryError( std::string const& message )
+      : SystemError( make_error_code( Result::eErrorOutOfDeviceMemory ), message ) {}
+    OutOfDeviceMemoryError( char const * message )
+      : SystemError( make_error_code( Result::eErrorOutOfDeviceMemory ), message ) {}
+  };
+  class InitializationFailedError : public SystemError
+  {
+  public:
+    InitializationFailedError( std::string const& message )
+      : SystemError( make_error_code( Result::eErrorInitializationFailed ), message ) {}
+    InitializationFailedError( char const * message )
+      : SystemError( make_error_code( Result::eErrorInitializationFailed ), message ) {}
+  };
+  class DeviceLostError : public SystemError
+  {
+  public:
+    DeviceLostError( std::string const& message )
+      : SystemError( make_error_code( Result::eErrorDeviceLost ), message ) {}
+    DeviceLostError( char const * message )
+      : SystemError( make_error_code( Result::eErrorDeviceLost ), message ) {}
+  };
+  class MemoryMapFailedError : public SystemError
+  {
+  public:
+    MemoryMapFailedError( std::string const& message )
+      : SystemError( make_error_code( Result::eErrorMemoryMapFailed ), message ) {}
+    MemoryMapFailedError( char const * message )
+      : SystemError( make_error_code( Result::eErrorMemoryMapFailed ), message ) {}
+  };
+  class LayerNotPresentError : public SystemError
+  {
+  public:
+    LayerNotPresentError( std::string const& message )
+      : SystemError( make_error_code( Result::eErrorLayerNotPresent ), message ) {}
+    LayerNotPresentError( char const * message )
+      : SystemError( make_error_code( Result::eErrorLayerNotPresent ), message ) {}
+  };
+  class ExtensionNotPresentError : public SystemError
+  {
+  public:
+    ExtensionNotPresentError( std::string const& message )
+      : SystemError( make_error_code( Result::eErrorExtensionNotPresent ), message ) {}
+    ExtensionNotPresentError( char const * message )
+      : SystemError( make_error_code( Result::eErrorExtensionNotPresent ), message ) {}
+  };
+  class FeatureNotPresentError : public SystemError
+  {
+  public:
+    FeatureNotPresentError( std::string const& message )
+      : SystemError( make_error_code( Result::eErrorFeatureNotPresent ), message ) {}
+    FeatureNotPresentError( char const * message )
+      : SystemError( make_error_code( Result::eErrorFeatureNotPresent ), message ) {}
+  };
+  class IncompatibleDriverError : public SystemError
+  {
+  public:
+    IncompatibleDriverError( std::string const& message )
+      : SystemError( make_error_code( Result::eErrorIncompatibleDriver ), message ) {}
+    IncompatibleDriverError( char const * message )
+      : SystemError( make_error_code( Result::eErrorIncompatibleDriver ), message ) {}
+  };
+  class TooManyObjectsError : public SystemError
+  {
+  public:
+    TooManyObjectsError( std::string const& message )
+      : SystemError( make_error_code( Result::eErrorTooManyObjects ), message ) {}
+    TooManyObjectsError( char const * message )
+      : SystemError( make_error_code( Result::eErrorTooManyObjects ), message ) {}
+  };
+  class FormatNotSupportedError : public SystemError
+  {
+  public:
+    FormatNotSupportedError( std::string const& message )
+      : SystemError( make_error_code( Result::eErrorFormatNotSupported ), message ) {}
+    FormatNotSupportedError( char const * message )
+      : SystemError( make_error_code( Result::eErrorFormatNotSupported ), message ) {}
+  };
+  class FragmentedPoolError : public SystemError
+  {
+  public:
+    FragmentedPoolError( std::string const& message )
+      : SystemError( make_error_code( Result::eErrorFragmentedPool ), message ) {}
+    FragmentedPoolError( char const * message )
+      : SystemError( make_error_code( Result::eErrorFragmentedPool ), message ) {}
+  };
+  class SurfaceLostKHRError : public SystemError
+  {
+  public:
+    SurfaceLostKHRError( std::string const& message )
+      : SystemError( make_error_code( Result::eErrorSurfaceLostKHR ), message ) {}
+    SurfaceLostKHRError( char const * message )
+      : SystemError( make_error_code( Result::eErrorSurfaceLostKHR ), message ) {}
+  };
+  class NativeWindowInUseKHRError : public SystemError
+  {
+  public:
+    NativeWindowInUseKHRError( std::string const& message )
+      : SystemError( make_error_code( Result::eErrorNativeWindowInUseKHR ), message ) {}
+    NativeWindowInUseKHRError( char const * message )
+      : SystemError( make_error_code( Result::eErrorNativeWindowInUseKHR ), message ) {}
+  };
+  class OutOfDateKHRError : public SystemError
+  {
+  public:
+    OutOfDateKHRError( std::string const& message )
+      : SystemError( make_error_code( Result::eErrorOutOfDateKHR ), message ) {}
+    OutOfDateKHRError( char const * message )
+      : SystemError( make_error_code( Result::eErrorOutOfDateKHR ), message ) {}
+  };
+  class IncompatibleDisplayKHRError : public SystemError
+  {
+  public:
+    IncompatibleDisplayKHRError( std::string const& message )
+      : SystemError( make_error_code( Result::eErrorIncompatibleDisplayKHR ), message ) {}
+    IncompatibleDisplayKHRError( char const * message )
+      : SystemError( make_error_code( Result::eErrorIncompatibleDisplayKHR ), message ) {}
+  };
+  class ValidationFailedEXTError : public SystemError
+  {
+  public:
+    ValidationFailedEXTError( std::string const& message )
+      : SystemError( make_error_code( Result::eErrorValidationFailedEXT ), message ) {}
+    ValidationFailedEXTError( char const * message )
+      : SystemError( make_error_code( Result::eErrorValidationFailedEXT ), message ) {}
+  };
+  class InvalidShaderNVError : public SystemError
+  {
+  public:
+    InvalidShaderNVError( std::string const& message )
+      : SystemError( make_error_code( Result::eErrorInvalidShaderNV ), message ) {}
+    InvalidShaderNVError( char const * message )
+      : SystemError( make_error_code( Result::eErrorInvalidShaderNV ), message ) {}
+  };
+  class OutOfPoolMemoryKHRError : public SystemError
+  {
+  public:
+    OutOfPoolMemoryKHRError( std::string const& message )
+      : SystemError( make_error_code( Result::eErrorOutOfPoolMemoryKHR ), message ) {}
+    OutOfPoolMemoryKHRError( char const * message )
+      : SystemError( make_error_code( Result::eErrorOutOfPoolMemoryKHR ), message ) {}
+  };
+  class InvalidExternalHandleKHXError : public SystemError
+  {
+  public:
+    InvalidExternalHandleKHXError( std::string const& message )
+      : SystemError( make_error_code( Result::eErrorInvalidExternalHandleKHX ), message ) {}
+    InvalidExternalHandleKHXError( char const * message )
+      : SystemError( make_error_code( Result::eErrorInvalidExternalHandleKHX ), message ) {}
+  };
+
+  VULKAN_HPP_INLINE void throwResultException( Result result, char const * message )
+  {
+    assert ( static_cast<long long int>(result) < 0 );
+    switch ( result )
+    {
+    case Result::eErrorOutOfHostMemory: throw OutOfHostMemoryError ( message );
+    case Result::eErrorOutOfDeviceMemory: throw OutOfDeviceMemoryError ( message );
+    case Result::eErrorInitializationFailed: throw InitializationFailedError ( message );
+    case Result::eErrorDeviceLost: throw DeviceLostError ( message );
+    case Result::eErrorMemoryMapFailed: throw MemoryMapFailedError ( message );
+    case Result::eErrorLayerNotPresent: throw LayerNotPresentError ( message );
+    case Result::eErrorExtensionNotPresent: throw ExtensionNotPresentError ( message );
+    case Result::eErrorFeatureNotPresent: throw FeatureNotPresentError ( message );
+    case Result::eErrorIncompatibleDriver: throw IncompatibleDriverError ( message );
+    case Result::eErrorTooManyObjects: throw TooManyObjectsError ( message );
+    case Result::eErrorFormatNotSupported: throw FormatNotSupportedError ( message );
+    case Result::eErrorFragmentedPool: throw FragmentedPoolError ( message );
+    case Result::eErrorSurfaceLostKHR: throw SurfaceLostKHRError ( message );
+    case Result::eErrorNativeWindowInUseKHR: throw NativeWindowInUseKHRError ( message );
+    case Result::eErrorOutOfDateKHR: throw OutOfDateKHRError ( message );
+    case Result::eErrorIncompatibleDisplayKHR: throw IncompatibleDisplayKHRError ( message );
+    case Result::eErrorValidationFailedEXT: throw ValidationFailedEXTError ( message );
+    case Result::eErrorInvalidShaderNV: throw InvalidShaderNVError ( message );
+    case Result::eErrorOutOfPoolMemoryKHR: throw OutOfPoolMemoryKHRError ( message );
+    case Result::eErrorInvalidExternalHandleKHX: throw InvalidExternalHandleKHXError ( message );
+    default: throw SystemError( make_error_code( result ) );
+    }
+  }
+
 } // namespace vk
 
 namespace std
@@ -542,6 +779,7 @@ namespace std
 
 namespace vk
 {
+
   template <typename T>
   struct ResultValue
   {
@@ -566,7 +804,8 @@ namespace vk
 #endif
   };
 
-  template <>  struct ResultValueType<void>
+  template <>
+  struct ResultValueType<void>
   {
 #ifdef VULKAN_HPP_NO_EXCEPTIONS
     typedef Result type;
@@ -583,7 +822,7 @@ namespace vk
 #else
     if ( result != Result::eSuccess )
     {
-      throw std::system_error( result, message );
+      throwResultException( result, message );
     }
 #endif
   }
@@ -597,7 +836,7 @@ namespace vk
 #else
     if ( result != Result::eSuccess )
     {
-      throw std::system_error( result, message );
+      throwResultException( result, message );
     }
     return data;
 #endif
@@ -610,7 +849,7 @@ namespace vk
 #else
     if ( std::find( successCodes.begin(), successCodes.end(), result ) == successCodes.end() )
     {
-      throw std::system_error( result, message );
+      throwResultException( result, message );
     }
 #endif
     return result;
@@ -624,7 +863,7 @@ namespace vk
 #else
     if ( std::find( successCodes.begin(), successCodes.end(), result ) == successCodes.end() )
     {
-      throw std::system_error( result, message );
+      throwResultException( result, message );
     }
 #endif
     return ResultValue<T>( result, data );
@@ -642,21 +881,11 @@ namespace vk
 
   using FramebufferCreateFlags = Flags<FramebufferCreateFlagBits, VkFramebufferCreateFlags>;
 
-  VULKAN_HPP_INLINE FramebufferCreateFlags operator|( FramebufferCreateFlagBits bit0, FramebufferCreateFlagBits bit1 )
-  {
-    return FramebufferCreateFlags( bit0 ) | bit1;
-  }
-
   enum class QueryPoolCreateFlagBits
   {
   };
 
   using QueryPoolCreateFlags = Flags<QueryPoolCreateFlagBits, VkQueryPoolCreateFlags>;
-
-  VULKAN_HPP_INLINE QueryPoolCreateFlags operator|( QueryPoolCreateFlagBits bit0, QueryPoolCreateFlagBits bit1 )
-  {
-    return QueryPoolCreateFlags( bit0 ) | bit1;
-  }
 
   enum class RenderPassCreateFlagBits
   {
@@ -664,21 +893,11 @@ namespace vk
 
   using RenderPassCreateFlags = Flags<RenderPassCreateFlagBits, VkRenderPassCreateFlags>;
 
-  VULKAN_HPP_INLINE RenderPassCreateFlags operator|( RenderPassCreateFlagBits bit0, RenderPassCreateFlagBits bit1 )
-  {
-    return RenderPassCreateFlags( bit0 ) | bit1;
-  }
-
   enum class SamplerCreateFlagBits
   {
   };
 
   using SamplerCreateFlags = Flags<SamplerCreateFlagBits, VkSamplerCreateFlags>;
-
-  VULKAN_HPP_INLINE SamplerCreateFlags operator|( SamplerCreateFlagBits bit0, SamplerCreateFlagBits bit1 )
-  {
-    return SamplerCreateFlags( bit0 ) | bit1;
-  }
 
   enum class PipelineLayoutCreateFlagBits
   {
@@ -686,21 +905,11 @@ namespace vk
 
   using PipelineLayoutCreateFlags = Flags<PipelineLayoutCreateFlagBits, VkPipelineLayoutCreateFlags>;
 
-  VULKAN_HPP_INLINE PipelineLayoutCreateFlags operator|( PipelineLayoutCreateFlagBits bit0, PipelineLayoutCreateFlagBits bit1 )
-  {
-    return PipelineLayoutCreateFlags( bit0 ) | bit1;
-  }
-
   enum class PipelineCacheCreateFlagBits
   {
   };
 
   using PipelineCacheCreateFlags = Flags<PipelineCacheCreateFlagBits, VkPipelineCacheCreateFlags>;
-
-  VULKAN_HPP_INLINE PipelineCacheCreateFlags operator|( PipelineCacheCreateFlagBits bit0, PipelineCacheCreateFlagBits bit1 )
-  {
-    return PipelineCacheCreateFlags( bit0 ) | bit1;
-  }
 
   enum class PipelineDepthStencilStateCreateFlagBits
   {
@@ -708,21 +917,11 @@ namespace vk
 
   using PipelineDepthStencilStateCreateFlags = Flags<PipelineDepthStencilStateCreateFlagBits, VkPipelineDepthStencilStateCreateFlags>;
 
-  VULKAN_HPP_INLINE PipelineDepthStencilStateCreateFlags operator|( PipelineDepthStencilStateCreateFlagBits bit0, PipelineDepthStencilStateCreateFlagBits bit1 )
-  {
-    return PipelineDepthStencilStateCreateFlags( bit0 ) | bit1;
-  }
-
   enum class PipelineDynamicStateCreateFlagBits
   {
   };
 
   using PipelineDynamicStateCreateFlags = Flags<PipelineDynamicStateCreateFlagBits, VkPipelineDynamicStateCreateFlags>;
-
-  VULKAN_HPP_INLINE PipelineDynamicStateCreateFlags operator|( PipelineDynamicStateCreateFlagBits bit0, PipelineDynamicStateCreateFlagBits bit1 )
-  {
-    return PipelineDynamicStateCreateFlags( bit0 ) | bit1;
-  }
 
   enum class PipelineColorBlendStateCreateFlagBits
   {
@@ -730,21 +929,11 @@ namespace vk
 
   using PipelineColorBlendStateCreateFlags = Flags<PipelineColorBlendStateCreateFlagBits, VkPipelineColorBlendStateCreateFlags>;
 
-  VULKAN_HPP_INLINE PipelineColorBlendStateCreateFlags operator|( PipelineColorBlendStateCreateFlagBits bit0, PipelineColorBlendStateCreateFlagBits bit1 )
-  {
-    return PipelineColorBlendStateCreateFlags( bit0 ) | bit1;
-  }
-
   enum class PipelineMultisampleStateCreateFlagBits
   {
   };
 
   using PipelineMultisampleStateCreateFlags = Flags<PipelineMultisampleStateCreateFlagBits, VkPipelineMultisampleStateCreateFlags>;
-
-  VULKAN_HPP_INLINE PipelineMultisampleStateCreateFlags operator|( PipelineMultisampleStateCreateFlagBits bit0, PipelineMultisampleStateCreateFlagBits bit1 )
-  {
-    return PipelineMultisampleStateCreateFlags( bit0 ) | bit1;
-  }
 
   enum class PipelineRasterizationStateCreateFlagBits
   {
@@ -752,21 +941,11 @@ namespace vk
 
   using PipelineRasterizationStateCreateFlags = Flags<PipelineRasterizationStateCreateFlagBits, VkPipelineRasterizationStateCreateFlags>;
 
-  VULKAN_HPP_INLINE PipelineRasterizationStateCreateFlags operator|( PipelineRasterizationStateCreateFlagBits bit0, PipelineRasterizationStateCreateFlagBits bit1 )
-  {
-    return PipelineRasterizationStateCreateFlags( bit0 ) | bit1;
-  }
-
   enum class PipelineViewportStateCreateFlagBits
   {
   };
 
   using PipelineViewportStateCreateFlags = Flags<PipelineViewportStateCreateFlagBits, VkPipelineViewportStateCreateFlags>;
-
-  VULKAN_HPP_INLINE PipelineViewportStateCreateFlags operator|( PipelineViewportStateCreateFlagBits bit0, PipelineViewportStateCreateFlagBits bit1 )
-  {
-    return PipelineViewportStateCreateFlags( bit0 ) | bit1;
-  }
 
   enum class PipelineTessellationStateCreateFlagBits
   {
@@ -774,21 +953,11 @@ namespace vk
 
   using PipelineTessellationStateCreateFlags = Flags<PipelineTessellationStateCreateFlagBits, VkPipelineTessellationStateCreateFlags>;
 
-  VULKAN_HPP_INLINE PipelineTessellationStateCreateFlags operator|( PipelineTessellationStateCreateFlagBits bit0, PipelineTessellationStateCreateFlagBits bit1 )
-  {
-    return PipelineTessellationStateCreateFlags( bit0 ) | bit1;
-  }
-
   enum class PipelineInputAssemblyStateCreateFlagBits
   {
   };
 
   using PipelineInputAssemblyStateCreateFlags = Flags<PipelineInputAssemblyStateCreateFlagBits, VkPipelineInputAssemblyStateCreateFlags>;
-
-  VULKAN_HPP_INLINE PipelineInputAssemblyStateCreateFlags operator|( PipelineInputAssemblyStateCreateFlagBits bit0, PipelineInputAssemblyStateCreateFlagBits bit1 )
-  {
-    return PipelineInputAssemblyStateCreateFlags( bit0 ) | bit1;
-  }
 
   enum class PipelineVertexInputStateCreateFlagBits
   {
@@ -796,21 +965,11 @@ namespace vk
 
   using PipelineVertexInputStateCreateFlags = Flags<PipelineVertexInputStateCreateFlagBits, VkPipelineVertexInputStateCreateFlags>;
 
-  VULKAN_HPP_INLINE PipelineVertexInputStateCreateFlags operator|( PipelineVertexInputStateCreateFlagBits bit0, PipelineVertexInputStateCreateFlagBits bit1 )
-  {
-    return PipelineVertexInputStateCreateFlags( bit0 ) | bit1;
-  }
-
   enum class PipelineShaderStageCreateFlagBits
   {
   };
 
   using PipelineShaderStageCreateFlags = Flags<PipelineShaderStageCreateFlagBits, VkPipelineShaderStageCreateFlags>;
-
-  VULKAN_HPP_INLINE PipelineShaderStageCreateFlags operator|( PipelineShaderStageCreateFlagBits bit0, PipelineShaderStageCreateFlagBits bit1 )
-  {
-    return PipelineShaderStageCreateFlags( bit0 ) | bit1;
-  }
 
   enum class BufferViewCreateFlagBits
   {
@@ -818,21 +977,11 @@ namespace vk
 
   using BufferViewCreateFlags = Flags<BufferViewCreateFlagBits, VkBufferViewCreateFlags>;
 
-  VULKAN_HPP_INLINE BufferViewCreateFlags operator|( BufferViewCreateFlagBits bit0, BufferViewCreateFlagBits bit1 )
-  {
-    return BufferViewCreateFlags( bit0 ) | bit1;
-  }
-
   enum class InstanceCreateFlagBits
   {
   };
 
   using InstanceCreateFlags = Flags<InstanceCreateFlagBits, VkInstanceCreateFlags>;
-
-  VULKAN_HPP_INLINE InstanceCreateFlags operator|( InstanceCreateFlagBits bit0, InstanceCreateFlagBits bit1 )
-  {
-    return InstanceCreateFlags( bit0 ) | bit1;
-  }
 
   enum class DeviceCreateFlagBits
   {
@@ -840,21 +989,11 @@ namespace vk
 
   using DeviceCreateFlags = Flags<DeviceCreateFlagBits, VkDeviceCreateFlags>;
 
-  VULKAN_HPP_INLINE DeviceCreateFlags operator|( DeviceCreateFlagBits bit0, DeviceCreateFlagBits bit1 )
-  {
-    return DeviceCreateFlags( bit0 ) | bit1;
-  }
-
   enum class DeviceQueueCreateFlagBits
   {
   };
 
   using DeviceQueueCreateFlags = Flags<DeviceQueueCreateFlagBits, VkDeviceQueueCreateFlags>;
-
-  VULKAN_HPP_INLINE DeviceQueueCreateFlags operator|( DeviceQueueCreateFlagBits bit0, DeviceQueueCreateFlagBits bit1 )
-  {
-    return DeviceQueueCreateFlags( bit0 ) | bit1;
-  }
 
   enum class ImageViewCreateFlagBits
   {
@@ -862,21 +1001,11 @@ namespace vk
 
   using ImageViewCreateFlags = Flags<ImageViewCreateFlagBits, VkImageViewCreateFlags>;
 
-  VULKAN_HPP_INLINE ImageViewCreateFlags operator|( ImageViewCreateFlagBits bit0, ImageViewCreateFlagBits bit1 )
-  {
-    return ImageViewCreateFlags( bit0 ) | bit1;
-  }
-
   enum class SemaphoreCreateFlagBits
   {
   };
 
   using SemaphoreCreateFlags = Flags<SemaphoreCreateFlagBits, VkSemaphoreCreateFlags>;
-
-  VULKAN_HPP_INLINE SemaphoreCreateFlags operator|( SemaphoreCreateFlagBits bit0, SemaphoreCreateFlagBits bit1 )
-  {
-    return SemaphoreCreateFlags( bit0 ) | bit1;
-  }
 
   enum class ShaderModuleCreateFlagBits
   {
@@ -884,21 +1013,11 @@ namespace vk
 
   using ShaderModuleCreateFlags = Flags<ShaderModuleCreateFlagBits, VkShaderModuleCreateFlags>;
 
-  VULKAN_HPP_INLINE ShaderModuleCreateFlags operator|( ShaderModuleCreateFlagBits bit0, ShaderModuleCreateFlagBits bit1 )
-  {
-    return ShaderModuleCreateFlags( bit0 ) | bit1;
-  }
-
   enum class EventCreateFlagBits
   {
   };
 
   using EventCreateFlags = Flags<EventCreateFlagBits, VkEventCreateFlags>;
-
-  VULKAN_HPP_INLINE EventCreateFlags operator|( EventCreateFlagBits bit0, EventCreateFlagBits bit1 )
-  {
-    return EventCreateFlags( bit0 ) | bit1;
-  }
 
   enum class MemoryMapFlagBits
   {
@@ -906,21 +1025,11 @@ namespace vk
 
   using MemoryMapFlags = Flags<MemoryMapFlagBits, VkMemoryMapFlags>;
 
-  VULKAN_HPP_INLINE MemoryMapFlags operator|( MemoryMapFlagBits bit0, MemoryMapFlagBits bit1 )
-  {
-    return MemoryMapFlags( bit0 ) | bit1;
-  }
-
   enum class DescriptorPoolResetFlagBits
   {
   };
 
   using DescriptorPoolResetFlags = Flags<DescriptorPoolResetFlagBits, VkDescriptorPoolResetFlags>;
-
-  VULKAN_HPP_INLINE DescriptorPoolResetFlags operator|( DescriptorPoolResetFlagBits bit0, DescriptorPoolResetFlagBits bit1 )
-  {
-    return DescriptorPoolResetFlags( bit0 ) | bit1;
-  }
 
   enum class DescriptorUpdateTemplateCreateFlagBitsKHR
   {
@@ -928,32 +1037,17 @@ namespace vk
 
   using DescriptorUpdateTemplateCreateFlagsKHR = Flags<DescriptorUpdateTemplateCreateFlagBitsKHR, VkDescriptorUpdateTemplateCreateFlagsKHR>;
 
-  VULKAN_HPP_INLINE DescriptorUpdateTemplateCreateFlagsKHR operator|( DescriptorUpdateTemplateCreateFlagBitsKHR bit0, DescriptorUpdateTemplateCreateFlagBitsKHR bit1 )
-  {
-    return DescriptorUpdateTemplateCreateFlagsKHR( bit0 ) | bit1;
-  }
-
   enum class DisplayModeCreateFlagBitsKHR
   {
   };
 
   using DisplayModeCreateFlagsKHR = Flags<DisplayModeCreateFlagBitsKHR, VkDisplayModeCreateFlagsKHR>;
 
-  VULKAN_HPP_INLINE DisplayModeCreateFlagsKHR operator|( DisplayModeCreateFlagBitsKHR bit0, DisplayModeCreateFlagBitsKHR bit1 )
-  {
-    return DisplayModeCreateFlagsKHR( bit0 ) | bit1;
-  }
-
   enum class DisplaySurfaceCreateFlagBitsKHR
   {
   };
 
   using DisplaySurfaceCreateFlagsKHR = Flags<DisplaySurfaceCreateFlagBitsKHR, VkDisplaySurfaceCreateFlagsKHR>;
-
-  VULKAN_HPP_INLINE DisplaySurfaceCreateFlagsKHR operator|( DisplaySurfaceCreateFlagBitsKHR bit0, DisplaySurfaceCreateFlagBitsKHR bit1 )
-  {
-    return DisplaySurfaceCreateFlagsKHR( bit0 ) | bit1;
-  }
 
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
   enum class AndroidSurfaceCreateFlagBitsKHR
@@ -963,11 +1057,6 @@ namespace vk
 
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
   using AndroidSurfaceCreateFlagsKHR = Flags<AndroidSurfaceCreateFlagBitsKHR, VkAndroidSurfaceCreateFlagsKHR>;
-
-  VULKAN_HPP_INLINE AndroidSurfaceCreateFlagsKHR operator|( AndroidSurfaceCreateFlagBitsKHR bit0, AndroidSurfaceCreateFlagBitsKHR bit1 )
-  {
-    return AndroidSurfaceCreateFlagsKHR( bit0 ) | bit1;
-  }
 #endif /*VK_USE_PLATFORM_ANDROID_KHR*/
 
 #ifdef VK_USE_PLATFORM_MIR_KHR
@@ -978,11 +1067,6 @@ namespace vk
 
 #ifdef VK_USE_PLATFORM_MIR_KHR
   using MirSurfaceCreateFlagsKHR = Flags<MirSurfaceCreateFlagBitsKHR, VkMirSurfaceCreateFlagsKHR>;
-
-  VULKAN_HPP_INLINE MirSurfaceCreateFlagsKHR operator|( MirSurfaceCreateFlagBitsKHR bit0, MirSurfaceCreateFlagBitsKHR bit1 )
-  {
-    return MirSurfaceCreateFlagsKHR( bit0 ) | bit1;
-  }
 #endif /*VK_USE_PLATFORM_MIR_KHR*/
 
 #ifdef VK_USE_PLATFORM_VI_NN
@@ -993,11 +1077,6 @@ namespace vk
 
 #ifdef VK_USE_PLATFORM_VI_NN
   using ViSurfaceCreateFlagsNN = Flags<ViSurfaceCreateFlagBitsNN, VkViSurfaceCreateFlagsNN>;
-
-  VULKAN_HPP_INLINE ViSurfaceCreateFlagsNN operator|( ViSurfaceCreateFlagBitsNN bit0, ViSurfaceCreateFlagBitsNN bit1 )
-  {
-    return ViSurfaceCreateFlagsNN( bit0 ) | bit1;
-  }
 #endif /*VK_USE_PLATFORM_VI_NN*/
 
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
@@ -1008,11 +1087,6 @@ namespace vk
 
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
   using WaylandSurfaceCreateFlagsKHR = Flags<WaylandSurfaceCreateFlagBitsKHR, VkWaylandSurfaceCreateFlagsKHR>;
-
-  VULKAN_HPP_INLINE WaylandSurfaceCreateFlagsKHR operator|( WaylandSurfaceCreateFlagBitsKHR bit0, WaylandSurfaceCreateFlagBitsKHR bit1 )
-  {
-    return WaylandSurfaceCreateFlagsKHR( bit0 ) | bit1;
-  }
 #endif /*VK_USE_PLATFORM_WAYLAND_KHR*/
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
@@ -1023,11 +1097,6 @@ namespace vk
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
   using Win32SurfaceCreateFlagsKHR = Flags<Win32SurfaceCreateFlagBitsKHR, VkWin32SurfaceCreateFlagsKHR>;
-
-  VULKAN_HPP_INLINE Win32SurfaceCreateFlagsKHR operator|( Win32SurfaceCreateFlagBitsKHR bit0, Win32SurfaceCreateFlagBitsKHR bit1 )
-  {
-    return Win32SurfaceCreateFlagsKHR( bit0 ) | bit1;
-  }
 #endif /*VK_USE_PLATFORM_WIN32_KHR*/
 
 #ifdef VK_USE_PLATFORM_XLIB_KHR
@@ -1038,11 +1107,6 @@ namespace vk
 
 #ifdef VK_USE_PLATFORM_XLIB_KHR
   using XlibSurfaceCreateFlagsKHR = Flags<XlibSurfaceCreateFlagBitsKHR, VkXlibSurfaceCreateFlagsKHR>;
-
-  VULKAN_HPP_INLINE XlibSurfaceCreateFlagsKHR operator|( XlibSurfaceCreateFlagBitsKHR bit0, XlibSurfaceCreateFlagBitsKHR bit1 )
-  {
-    return XlibSurfaceCreateFlagsKHR( bit0 ) | bit1;
-  }
 #endif /*VK_USE_PLATFORM_XLIB_KHR*/
 
 #ifdef VK_USE_PLATFORM_XCB_KHR
@@ -1053,11 +1117,6 @@ namespace vk
 
 #ifdef VK_USE_PLATFORM_XCB_KHR
   using XcbSurfaceCreateFlagsKHR = Flags<XcbSurfaceCreateFlagBitsKHR, VkXcbSurfaceCreateFlagsKHR>;
-
-  VULKAN_HPP_INLINE XcbSurfaceCreateFlagsKHR operator|( XcbSurfaceCreateFlagBitsKHR bit0, XcbSurfaceCreateFlagBitsKHR bit1 )
-  {
-    return XcbSurfaceCreateFlagsKHR( bit0 ) | bit1;
-  }
 #endif /*VK_USE_PLATFORM_XCB_KHR*/
 
 #ifdef VK_USE_PLATFORM_IOS_MVK
@@ -1068,11 +1127,6 @@ namespace vk
 
 #ifdef VK_USE_PLATFORM_IOS_MVK
   using IOSSurfaceCreateFlagsMVK = Flags<IOSSurfaceCreateFlagBitsMVK, VkIOSSurfaceCreateFlagsMVK>;
-
-  VULKAN_HPP_INLINE IOSSurfaceCreateFlagsMVK operator|( IOSSurfaceCreateFlagBitsMVK bit0, IOSSurfaceCreateFlagBitsMVK bit1 )
-  {
-    return IOSSurfaceCreateFlagsMVK( bit0 ) | bit1;
-  }
 #endif /*VK_USE_PLATFORM_IOS_MVK*/
 
 #ifdef VK_USE_PLATFORM_MACOS_MVK
@@ -1083,11 +1137,6 @@ namespace vk
 
 #ifdef VK_USE_PLATFORM_MACOS_MVK
   using MacOSSurfaceCreateFlagsMVK = Flags<MacOSSurfaceCreateFlagBitsMVK, VkMacOSSurfaceCreateFlagsMVK>;
-
-  VULKAN_HPP_INLINE MacOSSurfaceCreateFlagsMVK operator|( MacOSSurfaceCreateFlagBitsMVK bit0, MacOSSurfaceCreateFlagBitsMVK bit1 )
-  {
-    return MacOSSurfaceCreateFlagsMVK( bit0 ) | bit1;
-  }
 #endif /*VK_USE_PLATFORM_MACOS_MVK*/
 
   enum class CommandPoolTrimFlagBitsKHR
@@ -1096,32 +1145,17 @@ namespace vk
 
   using CommandPoolTrimFlagsKHR = Flags<CommandPoolTrimFlagBitsKHR, VkCommandPoolTrimFlagsKHR>;
 
-  VULKAN_HPP_INLINE CommandPoolTrimFlagsKHR operator|( CommandPoolTrimFlagBitsKHR bit0, CommandPoolTrimFlagBitsKHR bit1 )
-  {
-    return CommandPoolTrimFlagsKHR( bit0 ) | bit1;
-  }
-
   enum class PipelineViewportSwizzleStateCreateFlagBitsNV
   {
   };
 
   using PipelineViewportSwizzleStateCreateFlagsNV = Flags<PipelineViewportSwizzleStateCreateFlagBitsNV, VkPipelineViewportSwizzleStateCreateFlagsNV>;
 
-  VULKAN_HPP_INLINE PipelineViewportSwizzleStateCreateFlagsNV operator|( PipelineViewportSwizzleStateCreateFlagBitsNV bit0, PipelineViewportSwizzleStateCreateFlagBitsNV bit1 )
-  {
-    return PipelineViewportSwizzleStateCreateFlagsNV( bit0 ) | bit1;
-  }
-
   enum class PipelineDiscardRectangleStateCreateFlagBitsEXT
   {
   };
 
   using PipelineDiscardRectangleStateCreateFlagsEXT = Flags<PipelineDiscardRectangleStateCreateFlagBitsEXT, VkPipelineDiscardRectangleStateCreateFlagsEXT>;
-
-  VULKAN_HPP_INLINE PipelineDiscardRectangleStateCreateFlagsEXT operator|( PipelineDiscardRectangleStateCreateFlagBitsEXT bit0, PipelineDiscardRectangleStateCreateFlagBitsEXT bit1 )
-  {
-    return PipelineDiscardRectangleStateCreateFlagsEXT( bit0 ) | bit1;
-  }
 
   class DeviceMemory
   {
@@ -1134,38 +1168,40 @@ namespace vk
       : m_deviceMemory(VK_NULL_HANDLE)
     {}
 
-    VULKAN_HPP_TYPESAFE_EXPLICIT DeviceMemory(VkDeviceMemory deviceMemory)
-       : m_deviceMemory(deviceMemory)
+    VULKAN_HPP_TYPESAFE_EXPLICIT DeviceMemory( VkDeviceMemory deviceMemory )
+       : m_deviceMemory( deviceMemory )
     {}
 
 #if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    DeviceMemory& operator=(VkDeviceMemory deviceMemory)
+    DeviceMemory & operator=(VkDeviceMemory deviceMemory)
     {
       m_deviceMemory = deviceMemory;
-      return *this;
+      return *this; 
     }
 #endif
 
-    DeviceMemory& operator=( std::nullptr_t )
+    DeviceMemory & operator=( std::nullptr_t )
     {
       m_deviceMemory = VK_NULL_HANDLE;
       return *this;
     }
 
-    bool operator==(DeviceMemory const &rhs) const
+    bool operator==( DeviceMemory const & rhs ) const
     {
       return m_deviceMemory == rhs.m_deviceMemory;
     }
 
-    bool operator!=(DeviceMemory const &rhs) const
+    bool operator!=(DeviceMemory const & rhs ) const
     {
       return m_deviceMemory != rhs.m_deviceMemory;
     }
 
-    bool operator<(DeviceMemory const &rhs) const
+    bool operator<(DeviceMemory const & rhs ) const
     {
       return m_deviceMemory < rhs.m_deviceMemory;
     }
+
+
 
     VULKAN_HPP_TYPESAFE_EXPLICIT operator VkDeviceMemory() const
     {
@@ -1185,6 +1221,7 @@ namespace vk
   private:
     VkDeviceMemory m_deviceMemory;
   };
+
   static_assert( sizeof( DeviceMemory ) == sizeof( VkDeviceMemory ), "handle and wrapper have different size!" );
 
   class CommandPool
@@ -1198,38 +1235,40 @@ namespace vk
       : m_commandPool(VK_NULL_HANDLE)
     {}
 
-    VULKAN_HPP_TYPESAFE_EXPLICIT CommandPool(VkCommandPool commandPool)
-       : m_commandPool(commandPool)
+    VULKAN_HPP_TYPESAFE_EXPLICIT CommandPool( VkCommandPool commandPool )
+       : m_commandPool( commandPool )
     {}
 
 #if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    CommandPool& operator=(VkCommandPool commandPool)
+    CommandPool & operator=(VkCommandPool commandPool)
     {
       m_commandPool = commandPool;
-      return *this;
+      return *this; 
     }
 #endif
 
-    CommandPool& operator=( std::nullptr_t )
+    CommandPool & operator=( std::nullptr_t )
     {
       m_commandPool = VK_NULL_HANDLE;
       return *this;
     }
 
-    bool operator==(CommandPool const &rhs) const
+    bool operator==( CommandPool const & rhs ) const
     {
       return m_commandPool == rhs.m_commandPool;
     }
 
-    bool operator!=(CommandPool const &rhs) const
+    bool operator!=(CommandPool const & rhs ) const
     {
       return m_commandPool != rhs.m_commandPool;
     }
 
-    bool operator<(CommandPool const &rhs) const
+    bool operator<(CommandPool const & rhs ) const
     {
       return m_commandPool < rhs.m_commandPool;
     }
+
+
 
     VULKAN_HPP_TYPESAFE_EXPLICIT operator VkCommandPool() const
     {
@@ -1249,6 +1288,7 @@ namespace vk
   private:
     VkCommandPool m_commandPool;
   };
+
   static_assert( sizeof( CommandPool ) == sizeof( VkCommandPool ), "handle and wrapper have different size!" );
 
   class Buffer
@@ -1262,38 +1302,40 @@ namespace vk
       : m_buffer(VK_NULL_HANDLE)
     {}
 
-    VULKAN_HPP_TYPESAFE_EXPLICIT Buffer(VkBuffer buffer)
-       : m_buffer(buffer)
+    VULKAN_HPP_TYPESAFE_EXPLICIT Buffer( VkBuffer buffer )
+       : m_buffer( buffer )
     {}
 
 #if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    Buffer& operator=(VkBuffer buffer)
+    Buffer & operator=(VkBuffer buffer)
     {
       m_buffer = buffer;
-      return *this;
+      return *this; 
     }
 #endif
 
-    Buffer& operator=( std::nullptr_t )
+    Buffer & operator=( std::nullptr_t )
     {
       m_buffer = VK_NULL_HANDLE;
       return *this;
     }
 
-    bool operator==(Buffer const &rhs) const
+    bool operator==( Buffer const & rhs ) const
     {
       return m_buffer == rhs.m_buffer;
     }
 
-    bool operator!=(Buffer const &rhs) const
+    bool operator!=(Buffer const & rhs ) const
     {
       return m_buffer != rhs.m_buffer;
     }
 
-    bool operator<(Buffer const &rhs) const
+    bool operator<(Buffer const & rhs ) const
     {
       return m_buffer < rhs.m_buffer;
     }
+
+
 
     VULKAN_HPP_TYPESAFE_EXPLICIT operator VkBuffer() const
     {
@@ -1313,6 +1355,7 @@ namespace vk
   private:
     VkBuffer m_buffer;
   };
+
   static_assert( sizeof( Buffer ) == sizeof( VkBuffer ), "handle and wrapper have different size!" );
 
   class BufferView
@@ -1326,38 +1369,40 @@ namespace vk
       : m_bufferView(VK_NULL_HANDLE)
     {}
 
-    VULKAN_HPP_TYPESAFE_EXPLICIT BufferView(VkBufferView bufferView)
-       : m_bufferView(bufferView)
+    VULKAN_HPP_TYPESAFE_EXPLICIT BufferView( VkBufferView bufferView )
+       : m_bufferView( bufferView )
     {}
 
 #if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    BufferView& operator=(VkBufferView bufferView)
+    BufferView & operator=(VkBufferView bufferView)
     {
       m_bufferView = bufferView;
-      return *this;
+      return *this; 
     }
 #endif
 
-    BufferView& operator=( std::nullptr_t )
+    BufferView & operator=( std::nullptr_t )
     {
       m_bufferView = VK_NULL_HANDLE;
       return *this;
     }
 
-    bool operator==(BufferView const &rhs) const
+    bool operator==( BufferView const & rhs ) const
     {
       return m_bufferView == rhs.m_bufferView;
     }
 
-    bool operator!=(BufferView const &rhs) const
+    bool operator!=(BufferView const & rhs ) const
     {
       return m_bufferView != rhs.m_bufferView;
     }
 
-    bool operator<(BufferView const &rhs) const
+    bool operator<(BufferView const & rhs ) const
     {
       return m_bufferView < rhs.m_bufferView;
     }
+
+
 
     VULKAN_HPP_TYPESAFE_EXPLICIT operator VkBufferView() const
     {
@@ -1377,6 +1422,7 @@ namespace vk
   private:
     VkBufferView m_bufferView;
   };
+
   static_assert( sizeof( BufferView ) == sizeof( VkBufferView ), "handle and wrapper have different size!" );
 
   class Image
@@ -1390,38 +1436,40 @@ namespace vk
       : m_image(VK_NULL_HANDLE)
     {}
 
-    VULKAN_HPP_TYPESAFE_EXPLICIT Image(VkImage image)
-       : m_image(image)
+    VULKAN_HPP_TYPESAFE_EXPLICIT Image( VkImage image )
+       : m_image( image )
     {}
 
 #if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    Image& operator=(VkImage image)
+    Image & operator=(VkImage image)
     {
       m_image = image;
-      return *this;
+      return *this; 
     }
 #endif
 
-    Image& operator=( std::nullptr_t )
+    Image & operator=( std::nullptr_t )
     {
       m_image = VK_NULL_HANDLE;
       return *this;
     }
 
-    bool operator==(Image const &rhs) const
+    bool operator==( Image const & rhs ) const
     {
       return m_image == rhs.m_image;
     }
 
-    bool operator!=(Image const &rhs) const
+    bool operator!=(Image const & rhs ) const
     {
       return m_image != rhs.m_image;
     }
 
-    bool operator<(Image const &rhs) const
+    bool operator<(Image const & rhs ) const
     {
       return m_image < rhs.m_image;
     }
+
+
 
     VULKAN_HPP_TYPESAFE_EXPLICIT operator VkImage() const
     {
@@ -1441,6 +1489,7 @@ namespace vk
   private:
     VkImage m_image;
   };
+
   static_assert( sizeof( Image ) == sizeof( VkImage ), "handle and wrapper have different size!" );
 
   class ImageView
@@ -1454,38 +1503,40 @@ namespace vk
       : m_imageView(VK_NULL_HANDLE)
     {}
 
-    VULKAN_HPP_TYPESAFE_EXPLICIT ImageView(VkImageView imageView)
-       : m_imageView(imageView)
+    VULKAN_HPP_TYPESAFE_EXPLICIT ImageView( VkImageView imageView )
+       : m_imageView( imageView )
     {}
 
 #if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    ImageView& operator=(VkImageView imageView)
+    ImageView & operator=(VkImageView imageView)
     {
       m_imageView = imageView;
-      return *this;
+      return *this; 
     }
 #endif
 
-    ImageView& operator=( std::nullptr_t )
+    ImageView & operator=( std::nullptr_t )
     {
       m_imageView = VK_NULL_HANDLE;
       return *this;
     }
 
-    bool operator==(ImageView const &rhs) const
+    bool operator==( ImageView const & rhs ) const
     {
       return m_imageView == rhs.m_imageView;
     }
 
-    bool operator!=(ImageView const &rhs) const
+    bool operator!=(ImageView const & rhs ) const
     {
       return m_imageView != rhs.m_imageView;
     }
 
-    bool operator<(ImageView const &rhs) const
+    bool operator<(ImageView const & rhs ) const
     {
       return m_imageView < rhs.m_imageView;
     }
+
+
 
     VULKAN_HPP_TYPESAFE_EXPLICIT operator VkImageView() const
     {
@@ -1505,6 +1556,7 @@ namespace vk
   private:
     VkImageView m_imageView;
   };
+
   static_assert( sizeof( ImageView ) == sizeof( VkImageView ), "handle and wrapper have different size!" );
 
   class ShaderModule
@@ -1518,38 +1570,40 @@ namespace vk
       : m_shaderModule(VK_NULL_HANDLE)
     {}
 
-    VULKAN_HPP_TYPESAFE_EXPLICIT ShaderModule(VkShaderModule shaderModule)
-       : m_shaderModule(shaderModule)
+    VULKAN_HPP_TYPESAFE_EXPLICIT ShaderModule( VkShaderModule shaderModule )
+       : m_shaderModule( shaderModule )
     {}
 
 #if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    ShaderModule& operator=(VkShaderModule shaderModule)
+    ShaderModule & operator=(VkShaderModule shaderModule)
     {
       m_shaderModule = shaderModule;
-      return *this;
+      return *this; 
     }
 #endif
 
-    ShaderModule& operator=( std::nullptr_t )
+    ShaderModule & operator=( std::nullptr_t )
     {
       m_shaderModule = VK_NULL_HANDLE;
       return *this;
     }
 
-    bool operator==(ShaderModule const &rhs) const
+    bool operator==( ShaderModule const & rhs ) const
     {
       return m_shaderModule == rhs.m_shaderModule;
     }
 
-    bool operator!=(ShaderModule const &rhs) const
+    bool operator!=(ShaderModule const & rhs ) const
     {
       return m_shaderModule != rhs.m_shaderModule;
     }
 
-    bool operator<(ShaderModule const &rhs) const
+    bool operator<(ShaderModule const & rhs ) const
     {
       return m_shaderModule < rhs.m_shaderModule;
     }
+
+
 
     VULKAN_HPP_TYPESAFE_EXPLICIT operator VkShaderModule() const
     {
@@ -1569,6 +1623,7 @@ namespace vk
   private:
     VkShaderModule m_shaderModule;
   };
+
   static_assert( sizeof( ShaderModule ) == sizeof( VkShaderModule ), "handle and wrapper have different size!" );
 
   class Pipeline
@@ -1582,38 +1637,40 @@ namespace vk
       : m_pipeline(VK_NULL_HANDLE)
     {}
 
-    VULKAN_HPP_TYPESAFE_EXPLICIT Pipeline(VkPipeline pipeline)
-       : m_pipeline(pipeline)
+    VULKAN_HPP_TYPESAFE_EXPLICIT Pipeline( VkPipeline pipeline )
+       : m_pipeline( pipeline )
     {}
 
 #if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    Pipeline& operator=(VkPipeline pipeline)
+    Pipeline & operator=(VkPipeline pipeline)
     {
       m_pipeline = pipeline;
-      return *this;
+      return *this; 
     }
 #endif
 
-    Pipeline& operator=( std::nullptr_t )
+    Pipeline & operator=( std::nullptr_t )
     {
       m_pipeline = VK_NULL_HANDLE;
       return *this;
     }
 
-    bool operator==(Pipeline const &rhs) const
+    bool operator==( Pipeline const & rhs ) const
     {
       return m_pipeline == rhs.m_pipeline;
     }
 
-    bool operator!=(Pipeline const &rhs) const
+    bool operator!=(Pipeline const & rhs ) const
     {
       return m_pipeline != rhs.m_pipeline;
     }
 
-    bool operator<(Pipeline const &rhs) const
+    bool operator<(Pipeline const & rhs ) const
     {
       return m_pipeline < rhs.m_pipeline;
     }
+
+
 
     VULKAN_HPP_TYPESAFE_EXPLICIT operator VkPipeline() const
     {
@@ -1633,6 +1690,7 @@ namespace vk
   private:
     VkPipeline m_pipeline;
   };
+
   static_assert( sizeof( Pipeline ) == sizeof( VkPipeline ), "handle and wrapper have different size!" );
 
   class PipelineLayout
@@ -1646,38 +1704,40 @@ namespace vk
       : m_pipelineLayout(VK_NULL_HANDLE)
     {}
 
-    VULKAN_HPP_TYPESAFE_EXPLICIT PipelineLayout(VkPipelineLayout pipelineLayout)
-       : m_pipelineLayout(pipelineLayout)
+    VULKAN_HPP_TYPESAFE_EXPLICIT PipelineLayout( VkPipelineLayout pipelineLayout )
+       : m_pipelineLayout( pipelineLayout )
     {}
 
 #if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    PipelineLayout& operator=(VkPipelineLayout pipelineLayout)
+    PipelineLayout & operator=(VkPipelineLayout pipelineLayout)
     {
       m_pipelineLayout = pipelineLayout;
-      return *this;
+      return *this; 
     }
 #endif
 
-    PipelineLayout& operator=( std::nullptr_t )
+    PipelineLayout & operator=( std::nullptr_t )
     {
       m_pipelineLayout = VK_NULL_HANDLE;
       return *this;
     }
 
-    bool operator==(PipelineLayout const &rhs) const
+    bool operator==( PipelineLayout const & rhs ) const
     {
       return m_pipelineLayout == rhs.m_pipelineLayout;
     }
 
-    bool operator!=(PipelineLayout const &rhs) const
+    bool operator!=(PipelineLayout const & rhs ) const
     {
       return m_pipelineLayout != rhs.m_pipelineLayout;
     }
 
-    bool operator<(PipelineLayout const &rhs) const
+    bool operator<(PipelineLayout const & rhs ) const
     {
       return m_pipelineLayout < rhs.m_pipelineLayout;
     }
+
+
 
     VULKAN_HPP_TYPESAFE_EXPLICIT operator VkPipelineLayout() const
     {
@@ -1697,6 +1757,7 @@ namespace vk
   private:
     VkPipelineLayout m_pipelineLayout;
   };
+
   static_assert( sizeof( PipelineLayout ) == sizeof( VkPipelineLayout ), "handle and wrapper have different size!" );
 
   class Sampler
@@ -1710,38 +1771,40 @@ namespace vk
       : m_sampler(VK_NULL_HANDLE)
     {}
 
-    VULKAN_HPP_TYPESAFE_EXPLICIT Sampler(VkSampler sampler)
-       : m_sampler(sampler)
+    VULKAN_HPP_TYPESAFE_EXPLICIT Sampler( VkSampler sampler )
+       : m_sampler( sampler )
     {}
 
 #if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    Sampler& operator=(VkSampler sampler)
+    Sampler & operator=(VkSampler sampler)
     {
       m_sampler = sampler;
-      return *this;
+      return *this; 
     }
 #endif
 
-    Sampler& operator=( std::nullptr_t )
+    Sampler & operator=( std::nullptr_t )
     {
       m_sampler = VK_NULL_HANDLE;
       return *this;
     }
 
-    bool operator==(Sampler const &rhs) const
+    bool operator==( Sampler const & rhs ) const
     {
       return m_sampler == rhs.m_sampler;
     }
 
-    bool operator!=(Sampler const &rhs) const
+    bool operator!=(Sampler const & rhs ) const
     {
       return m_sampler != rhs.m_sampler;
     }
 
-    bool operator<(Sampler const &rhs) const
+    bool operator<(Sampler const & rhs ) const
     {
       return m_sampler < rhs.m_sampler;
     }
+
+
 
     VULKAN_HPP_TYPESAFE_EXPLICIT operator VkSampler() const
     {
@@ -1761,6 +1824,7 @@ namespace vk
   private:
     VkSampler m_sampler;
   };
+
   static_assert( sizeof( Sampler ) == sizeof( VkSampler ), "handle and wrapper have different size!" );
 
   class DescriptorSet
@@ -1774,38 +1838,40 @@ namespace vk
       : m_descriptorSet(VK_NULL_HANDLE)
     {}
 
-    VULKAN_HPP_TYPESAFE_EXPLICIT DescriptorSet(VkDescriptorSet descriptorSet)
-       : m_descriptorSet(descriptorSet)
+    VULKAN_HPP_TYPESAFE_EXPLICIT DescriptorSet( VkDescriptorSet descriptorSet )
+       : m_descriptorSet( descriptorSet )
     {}
 
 #if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    DescriptorSet& operator=(VkDescriptorSet descriptorSet)
+    DescriptorSet & operator=(VkDescriptorSet descriptorSet)
     {
       m_descriptorSet = descriptorSet;
-      return *this;
+      return *this; 
     }
 #endif
 
-    DescriptorSet& operator=( std::nullptr_t )
+    DescriptorSet & operator=( std::nullptr_t )
     {
       m_descriptorSet = VK_NULL_HANDLE;
       return *this;
     }
 
-    bool operator==(DescriptorSet const &rhs) const
+    bool operator==( DescriptorSet const & rhs ) const
     {
       return m_descriptorSet == rhs.m_descriptorSet;
     }
 
-    bool operator!=(DescriptorSet const &rhs) const
+    bool operator!=(DescriptorSet const & rhs ) const
     {
       return m_descriptorSet != rhs.m_descriptorSet;
     }
 
-    bool operator<(DescriptorSet const &rhs) const
+    bool operator<(DescriptorSet const & rhs ) const
     {
       return m_descriptorSet < rhs.m_descriptorSet;
     }
+
+
 
     VULKAN_HPP_TYPESAFE_EXPLICIT operator VkDescriptorSet() const
     {
@@ -1825,6 +1891,7 @@ namespace vk
   private:
     VkDescriptorSet m_descriptorSet;
   };
+
   static_assert( sizeof( DescriptorSet ) == sizeof( VkDescriptorSet ), "handle and wrapper have different size!" );
 
   class DescriptorSetLayout
@@ -1838,38 +1905,40 @@ namespace vk
       : m_descriptorSetLayout(VK_NULL_HANDLE)
     {}
 
-    VULKAN_HPP_TYPESAFE_EXPLICIT DescriptorSetLayout(VkDescriptorSetLayout descriptorSetLayout)
-       : m_descriptorSetLayout(descriptorSetLayout)
+    VULKAN_HPP_TYPESAFE_EXPLICIT DescriptorSetLayout( VkDescriptorSetLayout descriptorSetLayout )
+       : m_descriptorSetLayout( descriptorSetLayout )
     {}
 
 #if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    DescriptorSetLayout& operator=(VkDescriptorSetLayout descriptorSetLayout)
+    DescriptorSetLayout & operator=(VkDescriptorSetLayout descriptorSetLayout)
     {
       m_descriptorSetLayout = descriptorSetLayout;
-      return *this;
+      return *this; 
     }
 #endif
 
-    DescriptorSetLayout& operator=( std::nullptr_t )
+    DescriptorSetLayout & operator=( std::nullptr_t )
     {
       m_descriptorSetLayout = VK_NULL_HANDLE;
       return *this;
     }
 
-    bool operator==(DescriptorSetLayout const &rhs) const
+    bool operator==( DescriptorSetLayout const & rhs ) const
     {
       return m_descriptorSetLayout == rhs.m_descriptorSetLayout;
     }
 
-    bool operator!=(DescriptorSetLayout const &rhs) const
+    bool operator!=(DescriptorSetLayout const & rhs ) const
     {
       return m_descriptorSetLayout != rhs.m_descriptorSetLayout;
     }
 
-    bool operator<(DescriptorSetLayout const &rhs) const
+    bool operator<(DescriptorSetLayout const & rhs ) const
     {
       return m_descriptorSetLayout < rhs.m_descriptorSetLayout;
     }
+
+
 
     VULKAN_HPP_TYPESAFE_EXPLICIT operator VkDescriptorSetLayout() const
     {
@@ -1889,6 +1958,7 @@ namespace vk
   private:
     VkDescriptorSetLayout m_descriptorSetLayout;
   };
+
   static_assert( sizeof( DescriptorSetLayout ) == sizeof( VkDescriptorSetLayout ), "handle and wrapper have different size!" );
 
   class DescriptorPool
@@ -1902,38 +1972,40 @@ namespace vk
       : m_descriptorPool(VK_NULL_HANDLE)
     {}
 
-    VULKAN_HPP_TYPESAFE_EXPLICIT DescriptorPool(VkDescriptorPool descriptorPool)
-       : m_descriptorPool(descriptorPool)
+    VULKAN_HPP_TYPESAFE_EXPLICIT DescriptorPool( VkDescriptorPool descriptorPool )
+       : m_descriptorPool( descriptorPool )
     {}
 
 #if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    DescriptorPool& operator=(VkDescriptorPool descriptorPool)
+    DescriptorPool & operator=(VkDescriptorPool descriptorPool)
     {
       m_descriptorPool = descriptorPool;
-      return *this;
+      return *this; 
     }
 #endif
 
-    DescriptorPool& operator=( std::nullptr_t )
+    DescriptorPool & operator=( std::nullptr_t )
     {
       m_descriptorPool = VK_NULL_HANDLE;
       return *this;
     }
 
-    bool operator==(DescriptorPool const &rhs) const
+    bool operator==( DescriptorPool const & rhs ) const
     {
       return m_descriptorPool == rhs.m_descriptorPool;
     }
 
-    bool operator!=(DescriptorPool const &rhs) const
+    bool operator!=(DescriptorPool const & rhs ) const
     {
       return m_descriptorPool != rhs.m_descriptorPool;
     }
 
-    bool operator<(DescriptorPool const &rhs) const
+    bool operator<(DescriptorPool const & rhs ) const
     {
       return m_descriptorPool < rhs.m_descriptorPool;
     }
+
+
 
     VULKAN_HPP_TYPESAFE_EXPLICIT operator VkDescriptorPool() const
     {
@@ -1953,6 +2025,7 @@ namespace vk
   private:
     VkDescriptorPool m_descriptorPool;
   };
+
   static_assert( sizeof( DescriptorPool ) == sizeof( VkDescriptorPool ), "handle and wrapper have different size!" );
 
   class Fence
@@ -1966,38 +2039,40 @@ namespace vk
       : m_fence(VK_NULL_HANDLE)
     {}
 
-    VULKAN_HPP_TYPESAFE_EXPLICIT Fence(VkFence fence)
-       : m_fence(fence)
+    VULKAN_HPP_TYPESAFE_EXPLICIT Fence( VkFence fence )
+       : m_fence( fence )
     {}
 
 #if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    Fence& operator=(VkFence fence)
+    Fence & operator=(VkFence fence)
     {
       m_fence = fence;
-      return *this;
+      return *this; 
     }
 #endif
 
-    Fence& operator=( std::nullptr_t )
+    Fence & operator=( std::nullptr_t )
     {
       m_fence = VK_NULL_HANDLE;
       return *this;
     }
 
-    bool operator==(Fence const &rhs) const
+    bool operator==( Fence const & rhs ) const
     {
       return m_fence == rhs.m_fence;
     }
 
-    bool operator!=(Fence const &rhs) const
+    bool operator!=(Fence const & rhs ) const
     {
       return m_fence != rhs.m_fence;
     }
 
-    bool operator<(Fence const &rhs) const
+    bool operator<(Fence const & rhs ) const
     {
       return m_fence < rhs.m_fence;
     }
+
+
 
     VULKAN_HPP_TYPESAFE_EXPLICIT operator VkFence() const
     {
@@ -2017,6 +2092,7 @@ namespace vk
   private:
     VkFence m_fence;
   };
+
   static_assert( sizeof( Fence ) == sizeof( VkFence ), "handle and wrapper have different size!" );
 
   class Semaphore
@@ -2030,38 +2106,40 @@ namespace vk
       : m_semaphore(VK_NULL_HANDLE)
     {}
 
-    VULKAN_HPP_TYPESAFE_EXPLICIT Semaphore(VkSemaphore semaphore)
-       : m_semaphore(semaphore)
+    VULKAN_HPP_TYPESAFE_EXPLICIT Semaphore( VkSemaphore semaphore )
+       : m_semaphore( semaphore )
     {}
 
 #if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    Semaphore& operator=(VkSemaphore semaphore)
+    Semaphore & operator=(VkSemaphore semaphore)
     {
       m_semaphore = semaphore;
-      return *this;
+      return *this; 
     }
 #endif
 
-    Semaphore& operator=( std::nullptr_t )
+    Semaphore & operator=( std::nullptr_t )
     {
       m_semaphore = VK_NULL_HANDLE;
       return *this;
     }
 
-    bool operator==(Semaphore const &rhs) const
+    bool operator==( Semaphore const & rhs ) const
     {
       return m_semaphore == rhs.m_semaphore;
     }
 
-    bool operator!=(Semaphore const &rhs) const
+    bool operator!=(Semaphore const & rhs ) const
     {
       return m_semaphore != rhs.m_semaphore;
     }
 
-    bool operator<(Semaphore const &rhs) const
+    bool operator<(Semaphore const & rhs ) const
     {
       return m_semaphore < rhs.m_semaphore;
     }
+
+
 
     VULKAN_HPP_TYPESAFE_EXPLICIT operator VkSemaphore() const
     {
@@ -2081,6 +2159,7 @@ namespace vk
   private:
     VkSemaphore m_semaphore;
   };
+
   static_assert( sizeof( Semaphore ) == sizeof( VkSemaphore ), "handle and wrapper have different size!" );
 
   class Event
@@ -2094,38 +2173,40 @@ namespace vk
       : m_event(VK_NULL_HANDLE)
     {}
 
-    VULKAN_HPP_TYPESAFE_EXPLICIT Event(VkEvent event)
-       : m_event(event)
+    VULKAN_HPP_TYPESAFE_EXPLICIT Event( VkEvent event )
+       : m_event( event )
     {}
 
 #if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    Event& operator=(VkEvent event)
+    Event & operator=(VkEvent event)
     {
       m_event = event;
-      return *this;
+      return *this; 
     }
 #endif
 
-    Event& operator=( std::nullptr_t )
+    Event & operator=( std::nullptr_t )
     {
       m_event = VK_NULL_HANDLE;
       return *this;
     }
 
-    bool operator==(Event const &rhs) const
+    bool operator==( Event const & rhs ) const
     {
       return m_event == rhs.m_event;
     }
 
-    bool operator!=(Event const &rhs) const
+    bool operator!=(Event const & rhs ) const
     {
       return m_event != rhs.m_event;
     }
 
-    bool operator<(Event const &rhs) const
+    bool operator<(Event const & rhs ) const
     {
       return m_event < rhs.m_event;
     }
+
+
 
     VULKAN_HPP_TYPESAFE_EXPLICIT operator VkEvent() const
     {
@@ -2145,6 +2226,7 @@ namespace vk
   private:
     VkEvent m_event;
   };
+
   static_assert( sizeof( Event ) == sizeof( VkEvent ), "handle and wrapper have different size!" );
 
   class QueryPool
@@ -2158,38 +2240,40 @@ namespace vk
       : m_queryPool(VK_NULL_HANDLE)
     {}
 
-    VULKAN_HPP_TYPESAFE_EXPLICIT QueryPool(VkQueryPool queryPool)
-       : m_queryPool(queryPool)
+    VULKAN_HPP_TYPESAFE_EXPLICIT QueryPool( VkQueryPool queryPool )
+       : m_queryPool( queryPool )
     {}
 
 #if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    QueryPool& operator=(VkQueryPool queryPool)
+    QueryPool & operator=(VkQueryPool queryPool)
     {
       m_queryPool = queryPool;
-      return *this;
+      return *this; 
     }
 #endif
 
-    QueryPool& operator=( std::nullptr_t )
+    QueryPool & operator=( std::nullptr_t )
     {
       m_queryPool = VK_NULL_HANDLE;
       return *this;
     }
 
-    bool operator==(QueryPool const &rhs) const
+    bool operator==( QueryPool const & rhs ) const
     {
       return m_queryPool == rhs.m_queryPool;
     }
 
-    bool operator!=(QueryPool const &rhs) const
+    bool operator!=(QueryPool const & rhs ) const
     {
       return m_queryPool != rhs.m_queryPool;
     }
 
-    bool operator<(QueryPool const &rhs) const
+    bool operator<(QueryPool const & rhs ) const
     {
       return m_queryPool < rhs.m_queryPool;
     }
+
+
 
     VULKAN_HPP_TYPESAFE_EXPLICIT operator VkQueryPool() const
     {
@@ -2209,6 +2293,7 @@ namespace vk
   private:
     VkQueryPool m_queryPool;
   };
+
   static_assert( sizeof( QueryPool ) == sizeof( VkQueryPool ), "handle and wrapper have different size!" );
 
   class Framebuffer
@@ -2222,38 +2307,40 @@ namespace vk
       : m_framebuffer(VK_NULL_HANDLE)
     {}
 
-    VULKAN_HPP_TYPESAFE_EXPLICIT Framebuffer(VkFramebuffer framebuffer)
-       : m_framebuffer(framebuffer)
+    VULKAN_HPP_TYPESAFE_EXPLICIT Framebuffer( VkFramebuffer framebuffer )
+       : m_framebuffer( framebuffer )
     {}
 
 #if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    Framebuffer& operator=(VkFramebuffer framebuffer)
+    Framebuffer & operator=(VkFramebuffer framebuffer)
     {
       m_framebuffer = framebuffer;
-      return *this;
+      return *this; 
     }
 #endif
 
-    Framebuffer& operator=( std::nullptr_t )
+    Framebuffer & operator=( std::nullptr_t )
     {
       m_framebuffer = VK_NULL_HANDLE;
       return *this;
     }
 
-    bool operator==(Framebuffer const &rhs) const
+    bool operator==( Framebuffer const & rhs ) const
     {
       return m_framebuffer == rhs.m_framebuffer;
     }
 
-    bool operator!=(Framebuffer const &rhs) const
+    bool operator!=(Framebuffer const & rhs ) const
     {
       return m_framebuffer != rhs.m_framebuffer;
     }
 
-    bool operator<(Framebuffer const &rhs) const
+    bool operator<(Framebuffer const & rhs ) const
     {
       return m_framebuffer < rhs.m_framebuffer;
     }
+
+
 
     VULKAN_HPP_TYPESAFE_EXPLICIT operator VkFramebuffer() const
     {
@@ -2273,6 +2360,7 @@ namespace vk
   private:
     VkFramebuffer m_framebuffer;
   };
+
   static_assert( sizeof( Framebuffer ) == sizeof( VkFramebuffer ), "handle and wrapper have different size!" );
 
   class RenderPass
@@ -2286,38 +2374,40 @@ namespace vk
       : m_renderPass(VK_NULL_HANDLE)
     {}
 
-    VULKAN_HPP_TYPESAFE_EXPLICIT RenderPass(VkRenderPass renderPass)
-       : m_renderPass(renderPass)
+    VULKAN_HPP_TYPESAFE_EXPLICIT RenderPass( VkRenderPass renderPass )
+       : m_renderPass( renderPass )
     {}
 
 #if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    RenderPass& operator=(VkRenderPass renderPass)
+    RenderPass & operator=(VkRenderPass renderPass)
     {
       m_renderPass = renderPass;
-      return *this;
+      return *this; 
     }
 #endif
 
-    RenderPass& operator=( std::nullptr_t )
+    RenderPass & operator=( std::nullptr_t )
     {
       m_renderPass = VK_NULL_HANDLE;
       return *this;
     }
 
-    bool operator==(RenderPass const &rhs) const
+    bool operator==( RenderPass const & rhs ) const
     {
       return m_renderPass == rhs.m_renderPass;
     }
 
-    bool operator!=(RenderPass const &rhs) const
+    bool operator!=(RenderPass const & rhs ) const
     {
       return m_renderPass != rhs.m_renderPass;
     }
 
-    bool operator<(RenderPass const &rhs) const
+    bool operator<(RenderPass const & rhs ) const
     {
       return m_renderPass < rhs.m_renderPass;
     }
+
+
 
     VULKAN_HPP_TYPESAFE_EXPLICIT operator VkRenderPass() const
     {
@@ -2337,6 +2427,7 @@ namespace vk
   private:
     VkRenderPass m_renderPass;
   };
+
   static_assert( sizeof( RenderPass ) == sizeof( VkRenderPass ), "handle and wrapper have different size!" );
 
   class PipelineCache
@@ -2350,38 +2441,40 @@ namespace vk
       : m_pipelineCache(VK_NULL_HANDLE)
     {}
 
-    VULKAN_HPP_TYPESAFE_EXPLICIT PipelineCache(VkPipelineCache pipelineCache)
-       : m_pipelineCache(pipelineCache)
+    VULKAN_HPP_TYPESAFE_EXPLICIT PipelineCache( VkPipelineCache pipelineCache )
+       : m_pipelineCache( pipelineCache )
     {}
 
 #if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    PipelineCache& operator=(VkPipelineCache pipelineCache)
+    PipelineCache & operator=(VkPipelineCache pipelineCache)
     {
       m_pipelineCache = pipelineCache;
-      return *this;
+      return *this; 
     }
 #endif
 
-    PipelineCache& operator=( std::nullptr_t )
+    PipelineCache & operator=( std::nullptr_t )
     {
       m_pipelineCache = VK_NULL_HANDLE;
       return *this;
     }
 
-    bool operator==(PipelineCache const &rhs) const
+    bool operator==( PipelineCache const & rhs ) const
     {
       return m_pipelineCache == rhs.m_pipelineCache;
     }
 
-    bool operator!=(PipelineCache const &rhs) const
+    bool operator!=(PipelineCache const & rhs ) const
     {
       return m_pipelineCache != rhs.m_pipelineCache;
     }
 
-    bool operator<(PipelineCache const &rhs) const
+    bool operator<(PipelineCache const & rhs ) const
     {
       return m_pipelineCache < rhs.m_pipelineCache;
     }
+
+
 
     VULKAN_HPP_TYPESAFE_EXPLICIT operator VkPipelineCache() const
     {
@@ -2401,6 +2494,7 @@ namespace vk
   private:
     VkPipelineCache m_pipelineCache;
   };
+
   static_assert( sizeof( PipelineCache ) == sizeof( VkPipelineCache ), "handle and wrapper have different size!" );
 
   class ObjectTableNVX
@@ -2414,38 +2508,40 @@ namespace vk
       : m_objectTableNVX(VK_NULL_HANDLE)
     {}
 
-    VULKAN_HPP_TYPESAFE_EXPLICIT ObjectTableNVX(VkObjectTableNVX objectTableNVX)
-       : m_objectTableNVX(objectTableNVX)
+    VULKAN_HPP_TYPESAFE_EXPLICIT ObjectTableNVX( VkObjectTableNVX objectTableNVX )
+       : m_objectTableNVX( objectTableNVX )
     {}
 
 #if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    ObjectTableNVX& operator=(VkObjectTableNVX objectTableNVX)
+    ObjectTableNVX & operator=(VkObjectTableNVX objectTableNVX)
     {
       m_objectTableNVX = objectTableNVX;
-      return *this;
+      return *this; 
     }
 #endif
 
-    ObjectTableNVX& operator=( std::nullptr_t )
+    ObjectTableNVX & operator=( std::nullptr_t )
     {
       m_objectTableNVX = VK_NULL_HANDLE;
       return *this;
     }
 
-    bool operator==(ObjectTableNVX const &rhs) const
+    bool operator==( ObjectTableNVX const & rhs ) const
     {
       return m_objectTableNVX == rhs.m_objectTableNVX;
     }
 
-    bool operator!=(ObjectTableNVX const &rhs) const
+    bool operator!=(ObjectTableNVX const & rhs ) const
     {
       return m_objectTableNVX != rhs.m_objectTableNVX;
     }
 
-    bool operator<(ObjectTableNVX const &rhs) const
+    bool operator<(ObjectTableNVX const & rhs ) const
     {
       return m_objectTableNVX < rhs.m_objectTableNVX;
     }
+
+
 
     VULKAN_HPP_TYPESAFE_EXPLICIT operator VkObjectTableNVX() const
     {
@@ -2465,6 +2561,7 @@ namespace vk
   private:
     VkObjectTableNVX m_objectTableNVX;
   };
+
   static_assert( sizeof( ObjectTableNVX ) == sizeof( VkObjectTableNVX ), "handle and wrapper have different size!" );
 
   class IndirectCommandsLayoutNVX
@@ -2478,38 +2575,40 @@ namespace vk
       : m_indirectCommandsLayoutNVX(VK_NULL_HANDLE)
     {}
 
-    VULKAN_HPP_TYPESAFE_EXPLICIT IndirectCommandsLayoutNVX(VkIndirectCommandsLayoutNVX indirectCommandsLayoutNVX)
-       : m_indirectCommandsLayoutNVX(indirectCommandsLayoutNVX)
+    VULKAN_HPP_TYPESAFE_EXPLICIT IndirectCommandsLayoutNVX( VkIndirectCommandsLayoutNVX indirectCommandsLayoutNVX )
+       : m_indirectCommandsLayoutNVX( indirectCommandsLayoutNVX )
     {}
 
 #if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    IndirectCommandsLayoutNVX& operator=(VkIndirectCommandsLayoutNVX indirectCommandsLayoutNVX)
+    IndirectCommandsLayoutNVX & operator=(VkIndirectCommandsLayoutNVX indirectCommandsLayoutNVX)
     {
       m_indirectCommandsLayoutNVX = indirectCommandsLayoutNVX;
-      return *this;
+      return *this; 
     }
 #endif
 
-    IndirectCommandsLayoutNVX& operator=( std::nullptr_t )
+    IndirectCommandsLayoutNVX & operator=( std::nullptr_t )
     {
       m_indirectCommandsLayoutNVX = VK_NULL_HANDLE;
       return *this;
     }
 
-    bool operator==(IndirectCommandsLayoutNVX const &rhs) const
+    bool operator==( IndirectCommandsLayoutNVX const & rhs ) const
     {
       return m_indirectCommandsLayoutNVX == rhs.m_indirectCommandsLayoutNVX;
     }
 
-    bool operator!=(IndirectCommandsLayoutNVX const &rhs) const
+    bool operator!=(IndirectCommandsLayoutNVX const & rhs ) const
     {
       return m_indirectCommandsLayoutNVX != rhs.m_indirectCommandsLayoutNVX;
     }
 
-    bool operator<(IndirectCommandsLayoutNVX const &rhs) const
+    bool operator<(IndirectCommandsLayoutNVX const & rhs ) const
     {
       return m_indirectCommandsLayoutNVX < rhs.m_indirectCommandsLayoutNVX;
     }
+
+
 
     VULKAN_HPP_TYPESAFE_EXPLICIT operator VkIndirectCommandsLayoutNVX() const
     {
@@ -2529,6 +2628,7 @@ namespace vk
   private:
     VkIndirectCommandsLayoutNVX m_indirectCommandsLayoutNVX;
   };
+
   static_assert( sizeof( IndirectCommandsLayoutNVX ) == sizeof( VkIndirectCommandsLayoutNVX ), "handle and wrapper have different size!" );
 
   class DescriptorUpdateTemplateKHR
@@ -2542,38 +2642,40 @@ namespace vk
       : m_descriptorUpdateTemplateKHR(VK_NULL_HANDLE)
     {}
 
-    VULKAN_HPP_TYPESAFE_EXPLICIT DescriptorUpdateTemplateKHR(VkDescriptorUpdateTemplateKHR descriptorUpdateTemplateKHR)
-       : m_descriptorUpdateTemplateKHR(descriptorUpdateTemplateKHR)
+    VULKAN_HPP_TYPESAFE_EXPLICIT DescriptorUpdateTemplateKHR( VkDescriptorUpdateTemplateKHR descriptorUpdateTemplateKHR )
+       : m_descriptorUpdateTemplateKHR( descriptorUpdateTemplateKHR )
     {}
 
 #if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    DescriptorUpdateTemplateKHR& operator=(VkDescriptorUpdateTemplateKHR descriptorUpdateTemplateKHR)
+    DescriptorUpdateTemplateKHR & operator=(VkDescriptorUpdateTemplateKHR descriptorUpdateTemplateKHR)
     {
       m_descriptorUpdateTemplateKHR = descriptorUpdateTemplateKHR;
-      return *this;
+      return *this; 
     }
 #endif
 
-    DescriptorUpdateTemplateKHR& operator=( std::nullptr_t )
+    DescriptorUpdateTemplateKHR & operator=( std::nullptr_t )
     {
       m_descriptorUpdateTemplateKHR = VK_NULL_HANDLE;
       return *this;
     }
 
-    bool operator==(DescriptorUpdateTemplateKHR const &rhs) const
+    bool operator==( DescriptorUpdateTemplateKHR const & rhs ) const
     {
       return m_descriptorUpdateTemplateKHR == rhs.m_descriptorUpdateTemplateKHR;
     }
 
-    bool operator!=(DescriptorUpdateTemplateKHR const &rhs) const
+    bool operator!=(DescriptorUpdateTemplateKHR const & rhs ) const
     {
       return m_descriptorUpdateTemplateKHR != rhs.m_descriptorUpdateTemplateKHR;
     }
 
-    bool operator<(DescriptorUpdateTemplateKHR const &rhs) const
+    bool operator<(DescriptorUpdateTemplateKHR const & rhs ) const
     {
       return m_descriptorUpdateTemplateKHR < rhs.m_descriptorUpdateTemplateKHR;
     }
+
+
 
     VULKAN_HPP_TYPESAFE_EXPLICIT operator VkDescriptorUpdateTemplateKHR() const
     {
@@ -2593,6 +2695,7 @@ namespace vk
   private:
     VkDescriptorUpdateTemplateKHR m_descriptorUpdateTemplateKHR;
   };
+
   static_assert( sizeof( DescriptorUpdateTemplateKHR ) == sizeof( VkDescriptorUpdateTemplateKHR ), "handle and wrapper have different size!" );
 
   class DisplayKHR
@@ -2606,38 +2709,40 @@ namespace vk
       : m_displayKHR(VK_NULL_HANDLE)
     {}
 
-    VULKAN_HPP_TYPESAFE_EXPLICIT DisplayKHR(VkDisplayKHR displayKHR)
-       : m_displayKHR(displayKHR)
+    VULKAN_HPP_TYPESAFE_EXPLICIT DisplayKHR( VkDisplayKHR displayKHR )
+       : m_displayKHR( displayKHR )
     {}
 
 #if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    DisplayKHR& operator=(VkDisplayKHR displayKHR)
+    DisplayKHR & operator=(VkDisplayKHR displayKHR)
     {
       m_displayKHR = displayKHR;
-      return *this;
+      return *this; 
     }
 #endif
 
-    DisplayKHR& operator=( std::nullptr_t )
+    DisplayKHR & operator=( std::nullptr_t )
     {
       m_displayKHR = VK_NULL_HANDLE;
       return *this;
     }
 
-    bool operator==(DisplayKHR const &rhs) const
+    bool operator==( DisplayKHR const & rhs ) const
     {
       return m_displayKHR == rhs.m_displayKHR;
     }
 
-    bool operator!=(DisplayKHR const &rhs) const
+    bool operator!=(DisplayKHR const & rhs ) const
     {
       return m_displayKHR != rhs.m_displayKHR;
     }
 
-    bool operator<(DisplayKHR const &rhs) const
+    bool operator<(DisplayKHR const & rhs ) const
     {
       return m_displayKHR < rhs.m_displayKHR;
     }
+
+
 
     VULKAN_HPP_TYPESAFE_EXPLICIT operator VkDisplayKHR() const
     {
@@ -2657,6 +2762,7 @@ namespace vk
   private:
     VkDisplayKHR m_displayKHR;
   };
+
   static_assert( sizeof( DisplayKHR ) == sizeof( VkDisplayKHR ), "handle and wrapper have different size!" );
 
   class DisplayModeKHR
@@ -2670,38 +2776,40 @@ namespace vk
       : m_displayModeKHR(VK_NULL_HANDLE)
     {}
 
-    VULKAN_HPP_TYPESAFE_EXPLICIT DisplayModeKHR(VkDisplayModeKHR displayModeKHR)
-       : m_displayModeKHR(displayModeKHR)
+    VULKAN_HPP_TYPESAFE_EXPLICIT DisplayModeKHR( VkDisplayModeKHR displayModeKHR )
+       : m_displayModeKHR( displayModeKHR )
     {}
 
 #if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    DisplayModeKHR& operator=(VkDisplayModeKHR displayModeKHR)
+    DisplayModeKHR & operator=(VkDisplayModeKHR displayModeKHR)
     {
       m_displayModeKHR = displayModeKHR;
-      return *this;
+      return *this; 
     }
 #endif
 
-    DisplayModeKHR& operator=( std::nullptr_t )
+    DisplayModeKHR & operator=( std::nullptr_t )
     {
       m_displayModeKHR = VK_NULL_HANDLE;
       return *this;
     }
 
-    bool operator==(DisplayModeKHR const &rhs) const
+    bool operator==( DisplayModeKHR const & rhs ) const
     {
       return m_displayModeKHR == rhs.m_displayModeKHR;
     }
 
-    bool operator!=(DisplayModeKHR const &rhs) const
+    bool operator!=(DisplayModeKHR const & rhs ) const
     {
       return m_displayModeKHR != rhs.m_displayModeKHR;
     }
 
-    bool operator<(DisplayModeKHR const &rhs) const
+    bool operator<(DisplayModeKHR const & rhs ) const
     {
       return m_displayModeKHR < rhs.m_displayModeKHR;
     }
+
+
 
     VULKAN_HPP_TYPESAFE_EXPLICIT operator VkDisplayModeKHR() const
     {
@@ -2721,6 +2829,7 @@ namespace vk
   private:
     VkDisplayModeKHR m_displayModeKHR;
   };
+
   static_assert( sizeof( DisplayModeKHR ) == sizeof( VkDisplayModeKHR ), "handle and wrapper have different size!" );
 
   class SurfaceKHR
@@ -2734,38 +2843,40 @@ namespace vk
       : m_surfaceKHR(VK_NULL_HANDLE)
     {}
 
-    VULKAN_HPP_TYPESAFE_EXPLICIT SurfaceKHR(VkSurfaceKHR surfaceKHR)
-       : m_surfaceKHR(surfaceKHR)
+    VULKAN_HPP_TYPESAFE_EXPLICIT SurfaceKHR( VkSurfaceKHR surfaceKHR )
+       : m_surfaceKHR( surfaceKHR )
     {}
 
 #if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    SurfaceKHR& operator=(VkSurfaceKHR surfaceKHR)
+    SurfaceKHR & operator=(VkSurfaceKHR surfaceKHR)
     {
       m_surfaceKHR = surfaceKHR;
-      return *this;
+      return *this; 
     }
 #endif
 
-    SurfaceKHR& operator=( std::nullptr_t )
+    SurfaceKHR & operator=( std::nullptr_t )
     {
       m_surfaceKHR = VK_NULL_HANDLE;
       return *this;
     }
 
-    bool operator==(SurfaceKHR const &rhs) const
+    bool operator==( SurfaceKHR const & rhs ) const
     {
       return m_surfaceKHR == rhs.m_surfaceKHR;
     }
 
-    bool operator!=(SurfaceKHR const &rhs) const
+    bool operator!=(SurfaceKHR const & rhs ) const
     {
       return m_surfaceKHR != rhs.m_surfaceKHR;
     }
 
-    bool operator<(SurfaceKHR const &rhs) const
+    bool operator<(SurfaceKHR const & rhs ) const
     {
       return m_surfaceKHR < rhs.m_surfaceKHR;
     }
+
+
 
     VULKAN_HPP_TYPESAFE_EXPLICIT operator VkSurfaceKHR() const
     {
@@ -2785,6 +2896,7 @@ namespace vk
   private:
     VkSurfaceKHR m_surfaceKHR;
   };
+
   static_assert( sizeof( SurfaceKHR ) == sizeof( VkSurfaceKHR ), "handle and wrapper have different size!" );
 
   class SwapchainKHR
@@ -2798,38 +2910,40 @@ namespace vk
       : m_swapchainKHR(VK_NULL_HANDLE)
     {}
 
-    VULKAN_HPP_TYPESAFE_EXPLICIT SwapchainKHR(VkSwapchainKHR swapchainKHR)
-       : m_swapchainKHR(swapchainKHR)
+    VULKAN_HPP_TYPESAFE_EXPLICIT SwapchainKHR( VkSwapchainKHR swapchainKHR )
+       : m_swapchainKHR( swapchainKHR )
     {}
 
 #if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    SwapchainKHR& operator=(VkSwapchainKHR swapchainKHR)
+    SwapchainKHR & operator=(VkSwapchainKHR swapchainKHR)
     {
       m_swapchainKHR = swapchainKHR;
-      return *this;
+      return *this; 
     }
 #endif
 
-    SwapchainKHR& operator=( std::nullptr_t )
+    SwapchainKHR & operator=( std::nullptr_t )
     {
       m_swapchainKHR = VK_NULL_HANDLE;
       return *this;
     }
 
-    bool operator==(SwapchainKHR const &rhs) const
+    bool operator==( SwapchainKHR const & rhs ) const
     {
       return m_swapchainKHR == rhs.m_swapchainKHR;
     }
 
-    bool operator!=(SwapchainKHR const &rhs) const
+    bool operator!=(SwapchainKHR const & rhs ) const
     {
       return m_swapchainKHR != rhs.m_swapchainKHR;
     }
 
-    bool operator<(SwapchainKHR const &rhs) const
+    bool operator<(SwapchainKHR const & rhs ) const
     {
       return m_swapchainKHR < rhs.m_swapchainKHR;
     }
+
+
 
     VULKAN_HPP_TYPESAFE_EXPLICIT operator VkSwapchainKHR() const
     {
@@ -2849,6 +2963,7 @@ namespace vk
   private:
     VkSwapchainKHR m_swapchainKHR;
   };
+
   static_assert( sizeof( SwapchainKHR ) == sizeof( VkSwapchainKHR ), "handle and wrapper have different size!" );
 
   class DebugReportCallbackEXT
@@ -2862,38 +2977,40 @@ namespace vk
       : m_debugReportCallbackEXT(VK_NULL_HANDLE)
     {}
 
-    VULKAN_HPP_TYPESAFE_EXPLICIT DebugReportCallbackEXT(VkDebugReportCallbackEXT debugReportCallbackEXT)
-       : m_debugReportCallbackEXT(debugReportCallbackEXT)
+    VULKAN_HPP_TYPESAFE_EXPLICIT DebugReportCallbackEXT( VkDebugReportCallbackEXT debugReportCallbackEXT )
+       : m_debugReportCallbackEXT( debugReportCallbackEXT )
     {}
 
 #if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    DebugReportCallbackEXT& operator=(VkDebugReportCallbackEXT debugReportCallbackEXT)
+    DebugReportCallbackEXT & operator=(VkDebugReportCallbackEXT debugReportCallbackEXT)
     {
       m_debugReportCallbackEXT = debugReportCallbackEXT;
-      return *this;
+      return *this; 
     }
 #endif
 
-    DebugReportCallbackEXT& operator=( std::nullptr_t )
+    DebugReportCallbackEXT & operator=( std::nullptr_t )
     {
       m_debugReportCallbackEXT = VK_NULL_HANDLE;
       return *this;
     }
 
-    bool operator==(DebugReportCallbackEXT const &rhs) const
+    bool operator==( DebugReportCallbackEXT const & rhs ) const
     {
       return m_debugReportCallbackEXT == rhs.m_debugReportCallbackEXT;
     }
 
-    bool operator!=(DebugReportCallbackEXT const &rhs) const
+    bool operator!=(DebugReportCallbackEXT const & rhs ) const
     {
       return m_debugReportCallbackEXT != rhs.m_debugReportCallbackEXT;
     }
 
-    bool operator<(DebugReportCallbackEXT const &rhs) const
+    bool operator<(DebugReportCallbackEXT const & rhs ) const
     {
       return m_debugReportCallbackEXT < rhs.m_debugReportCallbackEXT;
     }
+
+
 
     VULKAN_HPP_TYPESAFE_EXPLICIT operator VkDebugReportCallbackEXT() const
     {
@@ -2913,6 +3030,7 @@ namespace vk
   private:
     VkDebugReportCallbackEXT m_debugReportCallbackEXT;
   };
+
   static_assert( sizeof( DebugReportCallbackEXT ) == sizeof( VkDebugReportCallbackEXT ), "handle and wrapper have different size!" );
 
   struct Offset2D
@@ -2925,15 +3043,14 @@ namespace vk
 
     Offset2D( VkOffset2D const & rhs )
     {
-      memcpy( this, &rhs, sizeof(Offset2D) );
+      memcpy( this, &rhs, sizeof( Offset2D ) );
     }
 
     Offset2D& operator=( VkOffset2D const & rhs )
     {
-      memcpy( this, &rhs, sizeof(Offset2D) );
+      memcpy( this, &rhs, sizeof( Offset2D ) );
       return *this;
     }
-
     Offset2D& setX( int32_t x_ )
     {
       x = x_;
@@ -2978,15 +3095,14 @@ namespace vk
 
     Offset3D( VkOffset3D const & rhs )
     {
-      memcpy( this, &rhs, sizeof(Offset3D) );
+      memcpy( this, &rhs, sizeof( Offset3D ) );
     }
 
     Offset3D& operator=( VkOffset3D const & rhs )
     {
-      memcpy( this, &rhs, sizeof(Offset3D) );
+      memcpy( this, &rhs, sizeof( Offset3D ) );
       return *this;
     }
-
     Offset3D& setX( int32_t x_ )
     {
       x = x_;
@@ -3038,15 +3154,14 @@ namespace vk
 
     Extent2D( VkExtent2D const & rhs )
     {
-      memcpy( this, &rhs, sizeof(Extent2D) );
+      memcpy( this, &rhs, sizeof( Extent2D ) );
     }
 
     Extent2D& operator=( VkExtent2D const & rhs )
     {
-      memcpy( this, &rhs, sizeof(Extent2D) );
+      memcpy( this, &rhs, sizeof( Extent2D ) );
       return *this;
     }
-
     Extent2D& setWidth( uint32_t width_ )
     {
       width = width_;
@@ -3091,15 +3206,14 @@ namespace vk
 
     Extent3D( VkExtent3D const & rhs )
     {
-      memcpy( this, &rhs, sizeof(Extent3D) );
+      memcpy( this, &rhs, sizeof( Extent3D ) );
     }
 
     Extent3D& operator=( VkExtent3D const & rhs )
     {
-      memcpy( this, &rhs, sizeof(Extent3D) );
+      memcpy( this, &rhs, sizeof( Extent3D ) );
       return *this;
     }
-
     Extent3D& setWidth( uint32_t width_ )
     {
       width = width_;
@@ -3155,15 +3269,14 @@ namespace vk
 
     Viewport( VkViewport const & rhs )
     {
-      memcpy( this, &rhs, sizeof(Viewport) );
+      memcpy( this, &rhs, sizeof( Viewport ) );
     }
 
     Viewport& operator=( VkViewport const & rhs )
     {
-      memcpy( this, &rhs, sizeof(Viewport) );
+      memcpy( this, &rhs, sizeof( Viewport ) );
       return *this;
     }
-
     Viewport& setX( float x_ )
     {
       x = x_;
@@ -3239,15 +3352,14 @@ namespace vk
 
     Rect2D( VkRect2D const & rhs )
     {
-      memcpy( this, &rhs, sizeof(Rect2D) );
+      memcpy( this, &rhs, sizeof( Rect2D ) );
     }
 
     Rect2D& operator=( VkRect2D const & rhs )
     {
-      memcpy( this, &rhs, sizeof(Rect2D) );
+      memcpy( this, &rhs, sizeof( Rect2D ) );
       return *this;
     }
-
     Rect2D& setOffset( Offset2D offset_ )
     {
       offset = offset_;
@@ -3292,15 +3404,14 @@ namespace vk
 
     ClearRect( VkClearRect const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ClearRect) );
+      memcpy( this, &rhs, sizeof( ClearRect ) );
     }
 
     ClearRect& operator=( VkClearRect const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ClearRect) );
+      memcpy( this, &rhs, sizeof( ClearRect ) );
       return *this;
     }
-
     ClearRect& setRect( Rect2D rect_ )
     {
       rect = rect_;
@@ -3406,15 +3517,14 @@ namespace vk
 
     AllocationCallbacks( VkAllocationCallbacks const & rhs )
     {
-      memcpy( this, &rhs, sizeof(AllocationCallbacks) );
+      memcpy( this, &rhs, sizeof( AllocationCallbacks ) );
     }
 
     AllocationCallbacks& operator=( VkAllocationCallbacks const & rhs )
     {
-      memcpy( this, &rhs, sizeof(AllocationCallbacks) );
+      memcpy( this, &rhs, sizeof( AllocationCallbacks ) );
       return *this;
     }
-
     AllocationCallbacks& setPUserData( void* pUserData_ )
     {
       pUserData = pUserData_;
@@ -3516,15 +3626,14 @@ namespace vk
 
     DescriptorBufferInfo( VkDescriptorBufferInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DescriptorBufferInfo) );
+      memcpy( this, &rhs, sizeof( DescriptorBufferInfo ) );
     }
 
     DescriptorBufferInfo& operator=( VkDescriptorBufferInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DescriptorBufferInfo) );
+      memcpy( this, &rhs, sizeof( DescriptorBufferInfo ) );
       return *this;
     }
-
     DescriptorBufferInfo& setBuffer( Buffer buffer_ )
     {
       buffer = buffer_;
@@ -3606,15 +3715,14 @@ namespace vk
 
     BufferCopy( VkBufferCopy const & rhs )
     {
-      memcpy( this, &rhs, sizeof(BufferCopy) );
+      memcpy( this, &rhs, sizeof( BufferCopy ) );
     }
 
     BufferCopy& operator=( VkBufferCopy const & rhs )
     {
-      memcpy( this, &rhs, sizeof(BufferCopy) );
+      memcpy( this, &rhs, sizeof( BufferCopy ) );
       return *this;
     }
-
     BufferCopy& setSrcOffset( DeviceSize srcOffset_ )
     {
       srcOffset = srcOffset_;
@@ -3667,15 +3775,14 @@ namespace vk
 
     SpecializationMapEntry( VkSpecializationMapEntry const & rhs )
     {
-      memcpy( this, &rhs, sizeof(SpecializationMapEntry) );
+      memcpy( this, &rhs, sizeof( SpecializationMapEntry ) );
     }
 
     SpecializationMapEntry& operator=( VkSpecializationMapEntry const & rhs )
     {
-      memcpy( this, &rhs, sizeof(SpecializationMapEntry) );
+      memcpy( this, &rhs, sizeof( SpecializationMapEntry ) );
       return *this;
     }
-
     SpecializationMapEntry& setConstantID( uint32_t constantID_ )
     {
       constantID = constantID_;
@@ -3729,15 +3836,14 @@ namespace vk
 
     SpecializationInfo( VkSpecializationInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(SpecializationInfo) );
+      memcpy( this, &rhs, sizeof( SpecializationInfo ) );
     }
 
     SpecializationInfo& operator=( VkSpecializationInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(SpecializationInfo) );
+      memcpy( this, &rhs, sizeof( SpecializationInfo ) );
       return *this;
     }
-
     SpecializationInfo& setMapEntryCount( uint32_t mapEntryCount_ )
     {
       mapEntryCount = mapEntryCount_;
@@ -3842,15 +3948,14 @@ namespace vk
 
     ClearDepthStencilValue( VkClearDepthStencilValue const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ClearDepthStencilValue) );
+      memcpy( this, &rhs, sizeof( ClearDepthStencilValue ) );
     }
 
     ClearDepthStencilValue& operator=( VkClearDepthStencilValue const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ClearDepthStencilValue) );
+      memcpy( this, &rhs, sizeof( ClearDepthStencilValue ) );
       return *this;
     }
-
     ClearDepthStencilValue& setDepth( float depth_ )
     {
       depth = depth_;
@@ -3985,15 +4090,14 @@ namespace vk
 
     PhysicalDeviceFeatures( VkPhysicalDeviceFeatures const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PhysicalDeviceFeatures) );
+      memcpy( this, &rhs, sizeof( PhysicalDeviceFeatures ) );
     }
 
     PhysicalDeviceFeatures& operator=( VkPhysicalDeviceFeatures const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PhysicalDeviceFeatures) );
+      memcpy( this, &rhs, sizeof( PhysicalDeviceFeatures ) );
       return *this;
     }
-
     PhysicalDeviceFeatures& setRobustBufferAccess( Bool32 robustBufferAccess_ )
     {
       robustBufferAccess = robustBufferAccess_;
@@ -4492,15 +4596,14 @@ namespace vk
 
     DrawIndirectCommand( VkDrawIndirectCommand const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DrawIndirectCommand) );
+      memcpy( this, &rhs, sizeof( DrawIndirectCommand ) );
     }
 
     DrawIndirectCommand& operator=( VkDrawIndirectCommand const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DrawIndirectCommand) );
+      memcpy( this, &rhs, sizeof( DrawIndirectCommand ) );
       return *this;
     }
-
     DrawIndirectCommand& setVertexCount( uint32_t vertexCount_ )
     {
       vertexCount = vertexCount_;
@@ -4563,15 +4666,14 @@ namespace vk
 
     DrawIndexedIndirectCommand( VkDrawIndexedIndirectCommand const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DrawIndexedIndirectCommand) );
+      memcpy( this, &rhs, sizeof( DrawIndexedIndirectCommand ) );
     }
 
     DrawIndexedIndirectCommand& operator=( VkDrawIndexedIndirectCommand const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DrawIndexedIndirectCommand) );
+      memcpy( this, &rhs, sizeof( DrawIndexedIndirectCommand ) );
       return *this;
     }
-
     DrawIndexedIndirectCommand& setIndexCount( uint32_t indexCount_ )
     {
       indexCount = indexCount_;
@@ -4640,15 +4742,14 @@ namespace vk
 
     DispatchIndirectCommand( VkDispatchIndirectCommand const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DispatchIndirectCommand) );
+      memcpy( this, &rhs, sizeof( DispatchIndirectCommand ) );
     }
 
     DispatchIndirectCommand& operator=( VkDispatchIndirectCommand const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DispatchIndirectCommand) );
+      memcpy( this, &rhs, sizeof( DispatchIndirectCommand ) );
       return *this;
     }
-
     DispatchIndirectCommand& setX( uint32_t x_ )
     {
       x = x_;
@@ -4723,15 +4824,14 @@ namespace vk
 
     DisplayModeParametersKHR( VkDisplayModeParametersKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DisplayModeParametersKHR) );
+      memcpy( this, &rhs, sizeof( DisplayModeParametersKHR ) );
     }
 
     DisplayModeParametersKHR& operator=( VkDisplayModeParametersKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DisplayModeParametersKHR) );
+      memcpy( this, &rhs, sizeof( DisplayModeParametersKHR ) );
       return *this;
     }
-
     DisplayModeParametersKHR& setVisibleRegion( Extent2D visibleRegion_ )
     {
       visibleRegion = visibleRegion_;
@@ -4799,15 +4899,14 @@ namespace vk
 
     RectLayerKHR( VkRectLayerKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(RectLayerKHR) );
+      memcpy( this, &rhs, sizeof( RectLayerKHR ) );
     }
 
     RectLayerKHR& operator=( VkRectLayerKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(RectLayerKHR) );
+      memcpy( this, &rhs, sizeof( RectLayerKHR ) );
       return *this;
     }
-
     RectLayerKHR& setOffset( Offset2D offset_ )
     {
       offset = offset_;
@@ -4859,15 +4958,14 @@ namespace vk
 
     PresentRegionKHR( VkPresentRegionKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PresentRegionKHR) );
+      memcpy( this, &rhs, sizeof( PresentRegionKHR ) );
     }
 
     PresentRegionKHR& operator=( VkPresentRegionKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PresentRegionKHR) );
+      memcpy( this, &rhs, sizeof( PresentRegionKHR ) );
       return *this;
     }
-
     PresentRegionKHR& setRectangleCount( uint32_t rectangleCount_ )
     {
       rectangleCount = rectangleCount_;
@@ -4911,15 +5009,14 @@ namespace vk
 
     XYColorEXT( VkXYColorEXT const & rhs )
     {
-      memcpy( this, &rhs, sizeof(XYColorEXT) );
+      memcpy( this, &rhs, sizeof( XYColorEXT ) );
     }
 
     XYColorEXT& operator=( VkXYColorEXT const & rhs )
     {
-      memcpy( this, &rhs, sizeof(XYColorEXT) );
+      memcpy( this, &rhs, sizeof( XYColorEXT ) );
       return *this;
     }
-
     XYColorEXT& setX( float x_ )
     {
       x = x_;
@@ -4962,15 +5059,14 @@ namespace vk
 
     RefreshCycleDurationGOOGLE( VkRefreshCycleDurationGOOGLE const & rhs )
     {
-      memcpy( this, &rhs, sizeof(RefreshCycleDurationGOOGLE) );
+      memcpy( this, &rhs, sizeof( RefreshCycleDurationGOOGLE ) );
     }
 
     RefreshCycleDurationGOOGLE& operator=( VkRefreshCycleDurationGOOGLE const & rhs )
     {
-      memcpy( this, &rhs, sizeof(RefreshCycleDurationGOOGLE) );
+      memcpy( this, &rhs, sizeof( RefreshCycleDurationGOOGLE ) );
       return *this;
     }
-
     RefreshCycleDurationGOOGLE& setRefreshDuration( uint64_t refreshDuration_ )
     {
       refreshDuration = refreshDuration_;
@@ -5009,15 +5105,14 @@ namespace vk
 
     PastPresentationTimingGOOGLE( VkPastPresentationTimingGOOGLE const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PastPresentationTimingGOOGLE) );
+      memcpy( this, &rhs, sizeof( PastPresentationTimingGOOGLE ) );
     }
 
     PastPresentationTimingGOOGLE& operator=( VkPastPresentationTimingGOOGLE const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PastPresentationTimingGOOGLE) );
+      memcpy( this, &rhs, sizeof( PastPresentationTimingGOOGLE ) );
       return *this;
     }
-
     PastPresentationTimingGOOGLE& setPresentID( uint32_t presentID_ )
     {
       presentID = presentID_;
@@ -5085,15 +5180,14 @@ namespace vk
 
     PresentTimeGOOGLE( VkPresentTimeGOOGLE const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PresentTimeGOOGLE) );
+      memcpy( this, &rhs, sizeof( PresentTimeGOOGLE ) );
     }
 
     PresentTimeGOOGLE& operator=( VkPresentTimeGOOGLE const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PresentTimeGOOGLE) );
+      memcpy( this, &rhs, sizeof( PresentTimeGOOGLE ) );
       return *this;
     }
-
     PresentTimeGOOGLE& setPresentID( uint32_t presentID_ )
     {
       presentID = presentID_;
@@ -5137,15 +5231,14 @@ namespace vk
 
     ViewportWScalingNV( VkViewportWScalingNV const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ViewportWScalingNV) );
+      memcpy( this, &rhs, sizeof( ViewportWScalingNV ) );
     }
 
     ViewportWScalingNV& operator=( VkViewportWScalingNV const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ViewportWScalingNV) );
+      memcpy( this, &rhs, sizeof( ViewportWScalingNV ) );
       return *this;
     }
-
     ViewportWScalingNV& setXcoeff( float xcoeff_ )
     {
       xcoeff = xcoeff_;
@@ -5205,15 +5298,14 @@ namespace vk
 
     DescriptorImageInfo( VkDescriptorImageInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DescriptorImageInfo) );
+      memcpy( this, &rhs, sizeof( DescriptorImageInfo ) );
     }
 
     DescriptorImageInfo& operator=( VkDescriptorImageInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DescriptorImageInfo) );
+      memcpy( this, &rhs, sizeof( DescriptorImageInfo ) );
       return *this;
     }
-
     DescriptorImageInfo& setSampler( Sampler sampler_ )
     {
       sampler = sampler_;
@@ -5265,15 +5357,14 @@ namespace vk
 
     AttachmentReference( VkAttachmentReference const & rhs )
     {
-      memcpy( this, &rhs, sizeof(AttachmentReference) );
+      memcpy( this, &rhs, sizeof( AttachmentReference ) );
     }
 
     AttachmentReference& operator=( VkAttachmentReference const & rhs )
     {
-      memcpy( this, &rhs, sizeof(AttachmentReference) );
+      memcpy( this, &rhs, sizeof( AttachmentReference ) );
       return *this;
     }
-
     AttachmentReference& setAttachment( uint32_t attachment_ )
     {
       attachment = attachment_;
@@ -5373,15 +5464,14 @@ namespace vk
 
     ComponentMapping( VkComponentMapping const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ComponentMapping) );
+      memcpy( this, &rhs, sizeof( ComponentMapping ) );
     }
 
     ComponentMapping& operator=( VkComponentMapping const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ComponentMapping) );
+      memcpy( this, &rhs, sizeof( ComponentMapping ) );
       return *this;
     }
-
     ComponentMapping& setR( ComponentSwizzle r_ )
     {
       r = r_;
@@ -5456,15 +5546,14 @@ namespace vk
 
     DescriptorPoolSize( VkDescriptorPoolSize const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DescriptorPoolSize) );
+      memcpy( this, &rhs, sizeof( DescriptorPoolSize ) );
     }
 
     DescriptorPoolSize& operator=( VkDescriptorPoolSize const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DescriptorPoolSize) );
+      memcpy( this, &rhs, sizeof( DescriptorPoolSize ) );
       return *this;
     }
-
     DescriptorPoolSize& setType( DescriptorType type_ )
     {
       type = type_;
@@ -5512,15 +5601,14 @@ namespace vk
 
     DescriptorUpdateTemplateEntryKHR( VkDescriptorUpdateTemplateEntryKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DescriptorUpdateTemplateEntryKHR) );
+      memcpy( this, &rhs, sizeof( DescriptorUpdateTemplateEntryKHR ) );
     }
 
     DescriptorUpdateTemplateEntryKHR& operator=( VkDescriptorUpdateTemplateEntryKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DescriptorUpdateTemplateEntryKHR) );
+      memcpy( this, &rhs, sizeof( DescriptorUpdateTemplateEntryKHR ) );
       return *this;
     }
-
     DescriptorUpdateTemplateEntryKHR& setDstBinding( uint32_t dstBinding_ )
     {
       dstBinding = dstBinding_;
@@ -5775,15 +5863,14 @@ namespace vk
 
     StencilOpState( VkStencilOpState const & rhs )
     {
-      memcpy( this, &rhs, sizeof(StencilOpState) );
+      memcpy( this, &rhs, sizeof( StencilOpState ) );
     }
 
     StencilOpState& operator=( VkStencilOpState const & rhs )
     {
-      memcpy( this, &rhs, sizeof(StencilOpState) );
+      memcpy( this, &rhs, sizeof( StencilOpState ) );
       return *this;
     }
-
     StencilOpState& setFailOp( StencilOp failOp_ )
     {
       failOp = failOp_;
@@ -5917,15 +6004,14 @@ namespace vk
 
     VertexInputBindingDescription( VkVertexInputBindingDescription const & rhs )
     {
-      memcpy( this, &rhs, sizeof(VertexInputBindingDescription) );
+      memcpy( this, &rhs, sizeof( VertexInputBindingDescription ) );
     }
 
     VertexInputBindingDescription& operator=( VkVertexInputBindingDescription const & rhs )
     {
-      memcpy( this, &rhs, sizeof(VertexInputBindingDescription) );
+      memcpy( this, &rhs, sizeof( VertexInputBindingDescription ) );
       return *this;
     }
-
     VertexInputBindingDescription& setBinding( uint32_t binding_ )
     {
       binding = binding_;
@@ -6176,15 +6262,14 @@ namespace vk
 
     VertexInputAttributeDescription( VkVertexInputAttributeDescription const & rhs )
     {
-      memcpy( this, &rhs, sizeof(VertexInputAttributeDescription) );
+      memcpy( this, &rhs, sizeof( VertexInputAttributeDescription ) );
     }
 
     VertexInputAttributeDescription& operator=( VkVertexInputAttributeDescription const & rhs )
     {
-      memcpy( this, &rhs, sizeof(VertexInputAttributeDescription) );
+      memcpy( this, &rhs, sizeof( VertexInputAttributeDescription ) );
       return *this;
     }
-
     VertexInputAttributeDescription& setLocation( uint32_t location_ )
     {
       location = location_;
@@ -6304,6 +6389,7 @@ namespace vk
     eDedicatedAllocationImageCreateInfoNV = VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_IMAGE_CREATE_INFO_NV,
     eDedicatedAllocationBufferCreateInfoNV = VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_BUFFER_CREATE_INFO_NV,
     eDedicatedAllocationMemoryAllocateInfoNV = VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_MEMORY_ALLOCATE_INFO_NV,
+    eTextureLodGatherFormatPropertiesAMD = VK_STRUCTURE_TYPE_TEXTURE_LOD_GATHER_FORMAT_PROPERTIES_AMD,
     eRenderPassMultiviewCreateInfoKHX = VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO_KHX,
     ePhysicalDeviceMultiviewFeaturesKHX = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES_KHX,
     ePhysicalDeviceMultiviewPropertiesKHX = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_PROPERTIES_KHX,
@@ -6403,15 +6489,14 @@ namespace vk
 
     ApplicationInfo( VkApplicationInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ApplicationInfo) );
+      memcpy( this, &rhs, sizeof( ApplicationInfo ) );
     }
 
     ApplicationInfo& operator=( VkApplicationInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ApplicationInfo) );
+      memcpy( this, &rhs, sizeof( ApplicationInfo ) );
       return *this;
     }
-
     ApplicationInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -6496,15 +6581,14 @@ namespace vk
 
     DeviceQueueCreateInfo( VkDeviceQueueCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DeviceQueueCreateInfo) );
+      memcpy( this, &rhs, sizeof( DeviceQueueCreateInfo ) );
     }
 
     DeviceQueueCreateInfo& operator=( VkDeviceQueueCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DeviceQueueCreateInfo) );
+      memcpy( this, &rhs, sizeof( DeviceQueueCreateInfo ) );
       return *this;
     }
-
     DeviceQueueCreateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -6585,15 +6669,14 @@ namespace vk
 
     DeviceCreateInfo( VkDeviceCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DeviceCreateInfo) );
+      memcpy( this, &rhs, sizeof( DeviceCreateInfo ) );
     }
 
     DeviceCreateInfo& operator=( VkDeviceCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DeviceCreateInfo) );
+      memcpy( this, &rhs, sizeof( DeviceCreateInfo ) );
       return *this;
     }
-
     DeviceCreateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -6704,15 +6787,14 @@ namespace vk
 
     InstanceCreateInfo( VkInstanceCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(InstanceCreateInfo) );
+      memcpy( this, &rhs, sizeof( InstanceCreateInfo ) );
     }
 
     InstanceCreateInfo& operator=( VkInstanceCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(InstanceCreateInfo) );
+      memcpy( this, &rhs, sizeof( InstanceCreateInfo ) );
       return *this;
     }
-
     InstanceCreateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -6803,15 +6885,14 @@ namespace vk
 
     MemoryAllocateInfo( VkMemoryAllocateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(MemoryAllocateInfo) );
+      memcpy( this, &rhs, sizeof( MemoryAllocateInfo ) );
     }
 
     MemoryAllocateInfo& operator=( VkMemoryAllocateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(MemoryAllocateInfo) );
+      memcpy( this, &rhs, sizeof( MemoryAllocateInfo ) );
       return *this;
     }
-
     MemoryAllocateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -6871,15 +6952,14 @@ namespace vk
 
     MappedMemoryRange( VkMappedMemoryRange const & rhs )
     {
-      memcpy( this, &rhs, sizeof(MappedMemoryRange) );
+      memcpy( this, &rhs, sizeof( MappedMemoryRange ) );
     }
 
     MappedMemoryRange& operator=( VkMappedMemoryRange const & rhs )
     {
-      memcpy( this, &rhs, sizeof(MappedMemoryRange) );
+      memcpy( this, &rhs, sizeof( MappedMemoryRange ) );
       return *this;
     }
-
     MappedMemoryRange& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -6952,15 +7032,14 @@ namespace vk
 
     WriteDescriptorSet( VkWriteDescriptorSet const & rhs )
     {
-      memcpy( this, &rhs, sizeof(WriteDescriptorSet) );
+      memcpy( this, &rhs, sizeof( WriteDescriptorSet ) );
     }
 
     WriteDescriptorSet& operator=( VkWriteDescriptorSet const & rhs )
     {
-      memcpy( this, &rhs, sizeof(WriteDescriptorSet) );
+      memcpy( this, &rhs, sizeof( WriteDescriptorSet ) );
       return *this;
     }
-
     WriteDescriptorSet& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -7072,15 +7151,14 @@ namespace vk
 
     CopyDescriptorSet( VkCopyDescriptorSet const & rhs )
     {
-      memcpy( this, &rhs, sizeof(CopyDescriptorSet) );
+      memcpy( this, &rhs, sizeof( CopyDescriptorSet ) );
     }
 
     CopyDescriptorSet& operator=( VkCopyDescriptorSet const & rhs )
     {
-      memcpy( this, &rhs, sizeof(CopyDescriptorSet) );
+      memcpy( this, &rhs, sizeof( CopyDescriptorSet ) );
       return *this;
     }
-
     CopyDescriptorSet& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -7182,15 +7260,14 @@ namespace vk
 
     BufferViewCreateInfo( VkBufferViewCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(BufferViewCreateInfo) );
+      memcpy( this, &rhs, sizeof( BufferViewCreateInfo ) );
     }
 
     BufferViewCreateInfo& operator=( VkBufferViewCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(BufferViewCreateInfo) );
+      memcpy( this, &rhs, sizeof( BufferViewCreateInfo ) );
       return *this;
     }
-
     BufferViewCreateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -7274,15 +7351,14 @@ namespace vk
 
     ShaderModuleCreateInfo( VkShaderModuleCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ShaderModuleCreateInfo) );
+      memcpy( this, &rhs, sizeof( ShaderModuleCreateInfo ) );
     }
 
     ShaderModuleCreateInfo& operator=( VkShaderModuleCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ShaderModuleCreateInfo) );
+      memcpy( this, &rhs, sizeof( ShaderModuleCreateInfo ) );
       return *this;
     }
-
     ShaderModuleCreateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -7350,15 +7426,14 @@ namespace vk
 
     DescriptorSetAllocateInfo( VkDescriptorSetAllocateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DescriptorSetAllocateInfo) );
+      memcpy( this, &rhs, sizeof( DescriptorSetAllocateInfo ) );
     }
 
     DescriptorSetAllocateInfo& operator=( VkDescriptorSetAllocateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DescriptorSetAllocateInfo) );
+      memcpy( this, &rhs, sizeof( DescriptorSetAllocateInfo ) );
       return *this;
     }
-
     DescriptorSetAllocateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -7428,15 +7503,14 @@ namespace vk
 
     PipelineVertexInputStateCreateInfo( VkPipelineVertexInputStateCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PipelineVertexInputStateCreateInfo) );
+      memcpy( this, &rhs, sizeof( PipelineVertexInputStateCreateInfo ) );
     }
 
     PipelineVertexInputStateCreateInfo& operator=( VkPipelineVertexInputStateCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PipelineVertexInputStateCreateInfo) );
+      memcpy( this, &rhs, sizeof( PipelineVertexInputStateCreateInfo ) );
       return *this;
     }
-
     PipelineVertexInputStateCreateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -7520,15 +7594,14 @@ namespace vk
 
     PipelineInputAssemblyStateCreateInfo( VkPipelineInputAssemblyStateCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PipelineInputAssemblyStateCreateInfo) );
+      memcpy( this, &rhs, sizeof( PipelineInputAssemblyStateCreateInfo ) );
     }
 
     PipelineInputAssemblyStateCreateInfo& operator=( VkPipelineInputAssemblyStateCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PipelineInputAssemblyStateCreateInfo) );
+      memcpy( this, &rhs, sizeof( PipelineInputAssemblyStateCreateInfo ) );
       return *this;
     }
-
     PipelineInputAssemblyStateCreateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -7595,15 +7668,14 @@ namespace vk
 
     PipelineTessellationStateCreateInfo( VkPipelineTessellationStateCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PipelineTessellationStateCreateInfo) );
+      memcpy( this, &rhs, sizeof( PipelineTessellationStateCreateInfo ) );
     }
 
     PipelineTessellationStateCreateInfo& operator=( VkPipelineTessellationStateCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PipelineTessellationStateCreateInfo) );
+      memcpy( this, &rhs, sizeof( PipelineTessellationStateCreateInfo ) );
       return *this;
     }
-
     PipelineTessellationStateCreateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -7665,15 +7737,14 @@ namespace vk
 
     PipelineViewportStateCreateInfo( VkPipelineViewportStateCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PipelineViewportStateCreateInfo) );
+      memcpy( this, &rhs, sizeof( PipelineViewportStateCreateInfo ) );
     }
 
     PipelineViewportStateCreateInfo& operator=( VkPipelineViewportStateCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PipelineViewportStateCreateInfo) );
+      memcpy( this, &rhs, sizeof( PipelineViewportStateCreateInfo ) );
       return *this;
     }
-
     PipelineViewportStateCreateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -7765,15 +7836,14 @@ namespace vk
 
     PipelineRasterizationStateCreateInfo( VkPipelineRasterizationStateCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PipelineRasterizationStateCreateInfo) );
+      memcpy( this, &rhs, sizeof( PipelineRasterizationStateCreateInfo ) );
     }
 
     PipelineRasterizationStateCreateInfo& operator=( VkPipelineRasterizationStateCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PipelineRasterizationStateCreateInfo) );
+      memcpy( this, &rhs, sizeof( PipelineRasterizationStateCreateInfo ) );
       return *this;
     }
-
     PipelineRasterizationStateCreateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -7912,15 +7982,14 @@ namespace vk
 
     PipelineDepthStencilStateCreateInfo( VkPipelineDepthStencilStateCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PipelineDepthStencilStateCreateInfo) );
+      memcpy( this, &rhs, sizeof( PipelineDepthStencilStateCreateInfo ) );
     }
 
     PipelineDepthStencilStateCreateInfo& operator=( VkPipelineDepthStencilStateCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PipelineDepthStencilStateCreateInfo) );
+      memcpy( this, &rhs, sizeof( PipelineDepthStencilStateCreateInfo ) );
       return *this;
     }
-
     PipelineDepthStencilStateCreateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -8044,15 +8113,14 @@ namespace vk
 
     PipelineCacheCreateInfo( VkPipelineCacheCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PipelineCacheCreateInfo) );
+      memcpy( this, &rhs, sizeof( PipelineCacheCreateInfo ) );
     }
 
     PipelineCacheCreateInfo& operator=( VkPipelineCacheCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PipelineCacheCreateInfo) );
+      memcpy( this, &rhs, sizeof( PipelineCacheCreateInfo ) );
       return *this;
     }
-
     PipelineCacheCreateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -8133,15 +8201,14 @@ namespace vk
 
     SamplerCreateInfo( VkSamplerCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(SamplerCreateInfo) );
+      memcpy( this, &rhs, sizeof( SamplerCreateInfo ) );
     }
 
     SamplerCreateInfo& operator=( VkSamplerCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(SamplerCreateInfo) );
+      memcpy( this, &rhs, sizeof( SamplerCreateInfo ) );
       return *this;
     }
-
     SamplerCreateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -8313,15 +8380,14 @@ namespace vk
 
     CommandBufferAllocateInfo( VkCommandBufferAllocateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(CommandBufferAllocateInfo) );
+      memcpy( this, &rhs, sizeof( CommandBufferAllocateInfo ) );
     }
 
     CommandBufferAllocateInfo& operator=( VkCommandBufferAllocateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(CommandBufferAllocateInfo) );
+      memcpy( this, &rhs, sizeof( CommandBufferAllocateInfo ) );
       return *this;
     }
-
     CommandBufferAllocateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -8391,15 +8457,14 @@ namespace vk
 
     RenderPassBeginInfo( VkRenderPassBeginInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(RenderPassBeginInfo) );
+      memcpy( this, &rhs, sizeof( RenderPassBeginInfo ) );
     }
 
     RenderPassBeginInfo& operator=( VkRenderPassBeginInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(RenderPassBeginInfo) );
+      memcpy( this, &rhs, sizeof( RenderPassBeginInfo ) );
       return *this;
     }
-
     RenderPassBeginInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -8481,15 +8546,14 @@ namespace vk
 
     EventCreateInfo( VkEventCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(EventCreateInfo) );
+      memcpy( this, &rhs, sizeof( EventCreateInfo ) );
     }
 
     EventCreateInfo& operator=( VkEventCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(EventCreateInfo) );
+      memcpy( this, &rhs, sizeof( EventCreateInfo ) );
       return *this;
     }
-
     EventCreateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -8539,15 +8603,14 @@ namespace vk
 
     SemaphoreCreateInfo( VkSemaphoreCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(SemaphoreCreateInfo) );
+      memcpy( this, &rhs, sizeof( SemaphoreCreateInfo ) );
     }
 
     SemaphoreCreateInfo& operator=( VkSemaphoreCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(SemaphoreCreateInfo) );
+      memcpy( this, &rhs, sizeof( SemaphoreCreateInfo ) );
       return *this;
     }
-
     SemaphoreCreateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -8603,15 +8666,14 @@ namespace vk
 
     FramebufferCreateInfo( VkFramebufferCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(FramebufferCreateInfo) );
+      memcpy( this, &rhs, sizeof( FramebufferCreateInfo ) );
     }
 
     FramebufferCreateInfo& operator=( VkFramebufferCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(FramebufferCreateInfo) );
+      memcpy( this, &rhs, sizeof( FramebufferCreateInfo ) );
       return *this;
     }
-
     FramebufferCreateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -8710,15 +8772,14 @@ namespace vk
 
     DisplayModeCreateInfoKHR( VkDisplayModeCreateInfoKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DisplayModeCreateInfoKHR) );
+      memcpy( this, &rhs, sizeof( DisplayModeCreateInfoKHR ) );
     }
 
     DisplayModeCreateInfoKHR& operator=( VkDisplayModeCreateInfoKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DisplayModeCreateInfoKHR) );
+      memcpy( this, &rhs, sizeof( DisplayModeCreateInfoKHR ) );
       return *this;
     }
-
     DisplayModeCreateInfoKHR& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -8778,15 +8839,14 @@ namespace vk
 
     DisplayPresentInfoKHR( VkDisplayPresentInfoKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DisplayPresentInfoKHR) );
+      memcpy( this, &rhs, sizeof( DisplayPresentInfoKHR ) );
     }
 
     DisplayPresentInfoKHR& operator=( VkDisplayPresentInfoKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DisplayPresentInfoKHR) );
+      memcpy( this, &rhs, sizeof( DisplayPresentInfoKHR ) );
       return *this;
     }
-
     DisplayPresentInfoKHR& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -8854,15 +8914,14 @@ namespace vk
 
     AndroidSurfaceCreateInfoKHR( VkAndroidSurfaceCreateInfoKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(AndroidSurfaceCreateInfoKHR) );
+      memcpy( this, &rhs, sizeof( AndroidSurfaceCreateInfoKHR ) );
     }
 
     AndroidSurfaceCreateInfoKHR& operator=( VkAndroidSurfaceCreateInfoKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(AndroidSurfaceCreateInfoKHR) );
+      memcpy( this, &rhs, sizeof( AndroidSurfaceCreateInfoKHR ) );
       return *this;
     }
-
     AndroidSurfaceCreateInfoKHR& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -8924,15 +8983,14 @@ namespace vk
 
     MirSurfaceCreateInfoKHR( VkMirSurfaceCreateInfoKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(MirSurfaceCreateInfoKHR) );
+      memcpy( this, &rhs, sizeof( MirSurfaceCreateInfoKHR ) );
     }
 
     MirSurfaceCreateInfoKHR& operator=( VkMirSurfaceCreateInfoKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(MirSurfaceCreateInfoKHR) );
+      memcpy( this, &rhs, sizeof( MirSurfaceCreateInfoKHR ) );
       return *this;
     }
-
     MirSurfaceCreateInfoKHR& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -9001,15 +9059,14 @@ namespace vk
 
     ViSurfaceCreateInfoNN( VkViSurfaceCreateInfoNN const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ViSurfaceCreateInfoNN) );
+      memcpy( this, &rhs, sizeof( ViSurfaceCreateInfoNN ) );
     }
 
     ViSurfaceCreateInfoNN& operator=( VkViSurfaceCreateInfoNN const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ViSurfaceCreateInfoNN) );
+      memcpy( this, &rhs, sizeof( ViSurfaceCreateInfoNN ) );
       return *this;
     }
-
     ViSurfaceCreateInfoNN& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -9071,15 +9128,14 @@ namespace vk
 
     WaylandSurfaceCreateInfoKHR( VkWaylandSurfaceCreateInfoKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(WaylandSurfaceCreateInfoKHR) );
+      memcpy( this, &rhs, sizeof( WaylandSurfaceCreateInfoKHR ) );
     }
 
     WaylandSurfaceCreateInfoKHR& operator=( VkWaylandSurfaceCreateInfoKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(WaylandSurfaceCreateInfoKHR) );
+      memcpy( this, &rhs, sizeof( WaylandSurfaceCreateInfoKHR ) );
       return *this;
     }
-
     WaylandSurfaceCreateInfoKHR& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -9149,15 +9205,14 @@ namespace vk
 
     Win32SurfaceCreateInfoKHR( VkWin32SurfaceCreateInfoKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(Win32SurfaceCreateInfoKHR) );
+      memcpy( this, &rhs, sizeof( Win32SurfaceCreateInfoKHR ) );
     }
 
     Win32SurfaceCreateInfoKHR& operator=( VkWin32SurfaceCreateInfoKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(Win32SurfaceCreateInfoKHR) );
+      memcpy( this, &rhs, sizeof( Win32SurfaceCreateInfoKHR ) );
       return *this;
     }
-
     Win32SurfaceCreateInfoKHR& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -9227,15 +9282,14 @@ namespace vk
 
     XlibSurfaceCreateInfoKHR( VkXlibSurfaceCreateInfoKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(XlibSurfaceCreateInfoKHR) );
+      memcpy( this, &rhs, sizeof( XlibSurfaceCreateInfoKHR ) );
     }
 
     XlibSurfaceCreateInfoKHR& operator=( VkXlibSurfaceCreateInfoKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(XlibSurfaceCreateInfoKHR) );
+      memcpy( this, &rhs, sizeof( XlibSurfaceCreateInfoKHR ) );
       return *this;
     }
-
     XlibSurfaceCreateInfoKHR& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -9305,15 +9359,14 @@ namespace vk
 
     XcbSurfaceCreateInfoKHR( VkXcbSurfaceCreateInfoKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(XcbSurfaceCreateInfoKHR) );
+      memcpy( this, &rhs, sizeof( XcbSurfaceCreateInfoKHR ) );
     }
 
     XcbSurfaceCreateInfoKHR& operator=( VkXcbSurfaceCreateInfoKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(XcbSurfaceCreateInfoKHR) );
+      memcpy( this, &rhs, sizeof( XcbSurfaceCreateInfoKHR ) );
       return *this;
     }
-
     XcbSurfaceCreateInfoKHR& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -9381,15 +9434,14 @@ namespace vk
 
     DebugMarkerMarkerInfoEXT( VkDebugMarkerMarkerInfoEXT const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DebugMarkerMarkerInfoEXT) );
+      memcpy( this, &rhs, sizeof( DebugMarkerMarkerInfoEXT ) );
     }
 
     DebugMarkerMarkerInfoEXT& operator=( VkDebugMarkerMarkerInfoEXT const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DebugMarkerMarkerInfoEXT) );
+      memcpy( this, &rhs, sizeof( DebugMarkerMarkerInfoEXT ) );
       return *this;
     }
-
     DebugMarkerMarkerInfoEXT& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -9447,15 +9499,14 @@ namespace vk
 
     DedicatedAllocationImageCreateInfoNV( VkDedicatedAllocationImageCreateInfoNV const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DedicatedAllocationImageCreateInfoNV) );
+      memcpy( this, &rhs, sizeof( DedicatedAllocationImageCreateInfoNV ) );
     }
 
     DedicatedAllocationImageCreateInfoNV& operator=( VkDedicatedAllocationImageCreateInfoNV const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DedicatedAllocationImageCreateInfoNV) );
+      memcpy( this, &rhs, sizeof( DedicatedAllocationImageCreateInfoNV ) );
       return *this;
     }
-
     DedicatedAllocationImageCreateInfoNV& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -9505,15 +9556,14 @@ namespace vk
 
     DedicatedAllocationBufferCreateInfoNV( VkDedicatedAllocationBufferCreateInfoNV const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DedicatedAllocationBufferCreateInfoNV) );
+      memcpy( this, &rhs, sizeof( DedicatedAllocationBufferCreateInfoNV ) );
     }
 
     DedicatedAllocationBufferCreateInfoNV& operator=( VkDedicatedAllocationBufferCreateInfoNV const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DedicatedAllocationBufferCreateInfoNV) );
+      memcpy( this, &rhs, sizeof( DedicatedAllocationBufferCreateInfoNV ) );
       return *this;
     }
-
     DedicatedAllocationBufferCreateInfoNV& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -9564,15 +9614,14 @@ namespace vk
 
     DedicatedAllocationMemoryAllocateInfoNV( VkDedicatedAllocationMemoryAllocateInfoNV const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DedicatedAllocationMemoryAllocateInfoNV) );
+      memcpy( this, &rhs, sizeof( DedicatedAllocationMemoryAllocateInfoNV ) );
     }
 
     DedicatedAllocationMemoryAllocateInfoNV& operator=( VkDedicatedAllocationMemoryAllocateInfoNV const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DedicatedAllocationMemoryAllocateInfoNV) );
+      memcpy( this, &rhs, sizeof( DedicatedAllocationMemoryAllocateInfoNV ) );
       return *this;
     }
-
     DedicatedAllocationMemoryAllocateInfoNV& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -9632,15 +9681,14 @@ namespace vk
 
     ExportMemoryWin32HandleInfoNV( VkExportMemoryWin32HandleInfoNV const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ExportMemoryWin32HandleInfoNV) );
+      memcpy( this, &rhs, sizeof( ExportMemoryWin32HandleInfoNV ) );
     }
 
     ExportMemoryWin32HandleInfoNV& operator=( VkExportMemoryWin32HandleInfoNV const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ExportMemoryWin32HandleInfoNV) );
+      memcpy( this, &rhs, sizeof( ExportMemoryWin32HandleInfoNV ) );
       return *this;
     }
-
     ExportMemoryWin32HandleInfoNV& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -9706,15 +9754,14 @@ namespace vk
 
     Win32KeyedMutexAcquireReleaseInfoNV( VkWin32KeyedMutexAcquireReleaseInfoNV const & rhs )
     {
-      memcpy( this, &rhs, sizeof(Win32KeyedMutexAcquireReleaseInfoNV) );
+      memcpy( this, &rhs, sizeof( Win32KeyedMutexAcquireReleaseInfoNV ) );
     }
 
     Win32KeyedMutexAcquireReleaseInfoNV& operator=( VkWin32KeyedMutexAcquireReleaseInfoNV const & rhs )
     {
-      memcpy( this, &rhs, sizeof(Win32KeyedMutexAcquireReleaseInfoNV) );
+      memcpy( this, &rhs, sizeof( Win32KeyedMutexAcquireReleaseInfoNV ) );
       return *this;
     }
-
     Win32KeyedMutexAcquireReleaseInfoNV& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -9813,15 +9860,14 @@ namespace vk
 
     DeviceGeneratedCommandsFeaturesNVX( VkDeviceGeneratedCommandsFeaturesNVX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DeviceGeneratedCommandsFeaturesNVX) );
+      memcpy( this, &rhs, sizeof( DeviceGeneratedCommandsFeaturesNVX ) );
     }
 
     DeviceGeneratedCommandsFeaturesNVX& operator=( VkDeviceGeneratedCommandsFeaturesNVX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DeviceGeneratedCommandsFeaturesNVX) );
+      memcpy( this, &rhs, sizeof( DeviceGeneratedCommandsFeaturesNVX ) );
       return *this;
     }
-
     DeviceGeneratedCommandsFeaturesNVX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -9875,15 +9921,14 @@ namespace vk
 
     DeviceGeneratedCommandsLimitsNVX( VkDeviceGeneratedCommandsLimitsNVX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DeviceGeneratedCommandsLimitsNVX) );
+      memcpy( this, &rhs, sizeof( DeviceGeneratedCommandsLimitsNVX ) );
     }
 
     DeviceGeneratedCommandsLimitsNVX& operator=( VkDeviceGeneratedCommandsLimitsNVX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DeviceGeneratedCommandsLimitsNVX) );
+      memcpy( this, &rhs, sizeof( DeviceGeneratedCommandsLimitsNVX ) );
       return *this;
     }
-
     DeviceGeneratedCommandsLimitsNVX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -9967,15 +10012,14 @@ namespace vk
 
     CmdReserveSpaceForCommandsInfoNVX( VkCmdReserveSpaceForCommandsInfoNVX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(CmdReserveSpaceForCommandsInfoNVX) );
+      memcpy( this, &rhs, sizeof( CmdReserveSpaceForCommandsInfoNVX ) );
     }
 
     CmdReserveSpaceForCommandsInfoNVX& operator=( VkCmdReserveSpaceForCommandsInfoNVX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(CmdReserveSpaceForCommandsInfoNVX) );
+      memcpy( this, &rhs, sizeof( CmdReserveSpaceForCommandsInfoNVX ) );
       return *this;
     }
-
     CmdReserveSpaceForCommandsInfoNVX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -10041,15 +10085,14 @@ namespace vk
 
     PhysicalDeviceFeatures2KHR( VkPhysicalDeviceFeatures2KHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PhysicalDeviceFeatures2KHR) );
+      memcpy( this, &rhs, sizeof( PhysicalDeviceFeatures2KHR ) );
     }
 
     PhysicalDeviceFeatures2KHR& operator=( VkPhysicalDeviceFeatures2KHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PhysicalDeviceFeatures2KHR) );
+      memcpy( this, &rhs, sizeof( PhysicalDeviceFeatures2KHR ) );
       return *this;
     }
-
     PhysicalDeviceFeatures2KHR& setPNext( void* pNext_ )
     {
       pNext = pNext_;
@@ -10099,15 +10142,14 @@ namespace vk
 
     PhysicalDevicePushDescriptorPropertiesKHR( VkPhysicalDevicePushDescriptorPropertiesKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PhysicalDevicePushDescriptorPropertiesKHR) );
+      memcpy( this, &rhs, sizeof( PhysicalDevicePushDescriptorPropertiesKHR ) );
     }
 
     PhysicalDevicePushDescriptorPropertiesKHR& operator=( VkPhysicalDevicePushDescriptorPropertiesKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PhysicalDevicePushDescriptorPropertiesKHR) );
+      memcpy( this, &rhs, sizeof( PhysicalDevicePushDescriptorPropertiesKHR ) );
       return *this;
     }
-
     PhysicalDevicePushDescriptorPropertiesKHR& setPNext( void* pNext_ )
     {
       pNext = pNext_;
@@ -10158,15 +10200,14 @@ namespace vk
 
     PresentRegionsKHR( VkPresentRegionsKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PresentRegionsKHR) );
+      memcpy( this, &rhs, sizeof( PresentRegionsKHR ) );
     }
 
     PresentRegionsKHR& operator=( VkPresentRegionsKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PresentRegionsKHR) );
+      memcpy( this, &rhs, sizeof( PresentRegionsKHR ) );
       return *this;
     }
-
     PresentRegionsKHR& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -10261,15 +10302,14 @@ namespace vk
 
     ExportMemoryWin32HandleInfoKHX( VkExportMemoryWin32HandleInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ExportMemoryWin32HandleInfoKHX) );
+      memcpy( this, &rhs, sizeof( ExportMemoryWin32HandleInfoKHX ) );
     }
 
     ExportMemoryWin32HandleInfoKHX& operator=( VkExportMemoryWin32HandleInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ExportMemoryWin32HandleInfoKHX) );
+      memcpy( this, &rhs, sizeof( ExportMemoryWin32HandleInfoKHX ) );
       return *this;
     }
-
     ExportMemoryWin32HandleInfoKHX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -10401,15 +10441,14 @@ namespace vk
 
     Win32KeyedMutexAcquireReleaseInfoKHX( VkWin32KeyedMutexAcquireReleaseInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(Win32KeyedMutexAcquireReleaseInfoKHX) );
+      memcpy( this, &rhs, sizeof( Win32KeyedMutexAcquireReleaseInfoKHX ) );
     }
 
     Win32KeyedMutexAcquireReleaseInfoKHX& operator=( VkWin32KeyedMutexAcquireReleaseInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(Win32KeyedMutexAcquireReleaseInfoKHX) );
+      memcpy( this, &rhs, sizeof( Win32KeyedMutexAcquireReleaseInfoKHX ) );
       return *this;
     }
-
     Win32KeyedMutexAcquireReleaseInfoKHX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -10511,15 +10550,14 @@ namespace vk
 
     ExportSemaphoreWin32HandleInfoKHX( VkExportSemaphoreWin32HandleInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ExportSemaphoreWin32HandleInfoKHX) );
+      memcpy( this, &rhs, sizeof( ExportSemaphoreWin32HandleInfoKHX ) );
     }
 
     ExportSemaphoreWin32HandleInfoKHX& operator=( VkExportSemaphoreWin32HandleInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ExportSemaphoreWin32HandleInfoKHX) );
+      memcpy( this, &rhs, sizeof( ExportSemaphoreWin32HandleInfoKHX ) );
       return *this;
     }
-
     ExportSemaphoreWin32HandleInfoKHX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -10590,15 +10628,14 @@ namespace vk
 
     D3D12FenceSubmitInfoKHX( VkD3D12FenceSubmitInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(D3D12FenceSubmitInfoKHX) );
+      memcpy( this, &rhs, sizeof( D3D12FenceSubmitInfoKHX ) );
     }
 
     D3D12FenceSubmitInfoKHX& operator=( VkD3D12FenceSubmitInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(D3D12FenceSubmitInfoKHX) );
+      memcpy( this, &rhs, sizeof( D3D12FenceSubmitInfoKHX ) );
       return *this;
     }
-
     D3D12FenceSubmitInfoKHX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -10675,15 +10712,14 @@ namespace vk
 
     PhysicalDeviceMultiviewFeaturesKHX( VkPhysicalDeviceMultiviewFeaturesKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PhysicalDeviceMultiviewFeaturesKHX) );
+      memcpy( this, &rhs, sizeof( PhysicalDeviceMultiviewFeaturesKHX ) );
     }
 
     PhysicalDeviceMultiviewFeaturesKHX& operator=( VkPhysicalDeviceMultiviewFeaturesKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PhysicalDeviceMultiviewFeaturesKHX) );
+      memcpy( this, &rhs, sizeof( PhysicalDeviceMultiviewFeaturesKHX ) );
       return *this;
     }
-
     PhysicalDeviceMultiviewFeaturesKHX& setPNext( void* pNext_ )
     {
       pNext = pNext_;
@@ -10784,15 +10820,14 @@ namespace vk
 
     RenderPassMultiviewCreateInfoKHX( VkRenderPassMultiviewCreateInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(RenderPassMultiviewCreateInfoKHX) );
+      memcpy( this, &rhs, sizeof( RenderPassMultiviewCreateInfoKHX ) );
     }
 
     RenderPassMultiviewCreateInfoKHX& operator=( VkRenderPassMultiviewCreateInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(RenderPassMultiviewCreateInfoKHX) );
+      memcpy( this, &rhs, sizeof( RenderPassMultiviewCreateInfoKHX ) );
       return *this;
     }
-
     RenderPassMultiviewCreateInfoKHX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -10886,15 +10921,14 @@ namespace vk
 
     BindBufferMemoryInfoKHX( VkBindBufferMemoryInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(BindBufferMemoryInfoKHX) );
+      memcpy( this, &rhs, sizeof( BindBufferMemoryInfoKHX ) );
     }
 
     BindBufferMemoryInfoKHX& operator=( VkBindBufferMemoryInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(BindBufferMemoryInfoKHX) );
+      memcpy( this, &rhs, sizeof( BindBufferMemoryInfoKHX ) );
       return *this;
     }
-
     BindBufferMemoryInfoKHX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -10982,15 +11016,14 @@ namespace vk
 
     BindImageMemoryInfoKHX( VkBindImageMemoryInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(BindImageMemoryInfoKHX) );
+      memcpy( this, &rhs, sizeof( BindImageMemoryInfoKHX ) );
     }
 
     BindImageMemoryInfoKHX& operator=( VkBindImageMemoryInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(BindImageMemoryInfoKHX) );
+      memcpy( this, &rhs, sizeof( BindImageMemoryInfoKHX ) );
       return *this;
     }
-
     BindImageMemoryInfoKHX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -11090,15 +11123,14 @@ namespace vk
 
     DeviceGroupRenderPassBeginInfoKHX( VkDeviceGroupRenderPassBeginInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DeviceGroupRenderPassBeginInfoKHX) );
+      memcpy( this, &rhs, sizeof( DeviceGroupRenderPassBeginInfoKHX ) );
     }
 
     DeviceGroupRenderPassBeginInfoKHX& operator=( VkDeviceGroupRenderPassBeginInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DeviceGroupRenderPassBeginInfoKHX) );
+      memcpy( this, &rhs, sizeof( DeviceGroupRenderPassBeginInfoKHX ) );
       return *this;
     }
-
     DeviceGroupRenderPassBeginInfoKHX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -11164,15 +11196,14 @@ namespace vk
 
     DeviceGroupCommandBufferBeginInfoKHX( VkDeviceGroupCommandBufferBeginInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DeviceGroupCommandBufferBeginInfoKHX) );
+      memcpy( this, &rhs, sizeof( DeviceGroupCommandBufferBeginInfoKHX ) );
     }
 
     DeviceGroupCommandBufferBeginInfoKHX& operator=( VkDeviceGroupCommandBufferBeginInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DeviceGroupCommandBufferBeginInfoKHX) );
+      memcpy( this, &rhs, sizeof( DeviceGroupCommandBufferBeginInfoKHX ) );
       return *this;
     }
-
     DeviceGroupCommandBufferBeginInfoKHX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -11227,15 +11258,14 @@ namespace vk
 
     DeviceGroupSubmitInfoKHX( VkDeviceGroupSubmitInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DeviceGroupSubmitInfoKHX) );
+      memcpy( this, &rhs, sizeof( DeviceGroupSubmitInfoKHX ) );
     }
 
     DeviceGroupSubmitInfoKHX& operator=( VkDeviceGroupSubmitInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DeviceGroupSubmitInfoKHX) );
+      memcpy( this, &rhs, sizeof( DeviceGroupSubmitInfoKHX ) );
       return *this;
     }
-
     DeviceGroupSubmitInfoKHX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -11326,15 +11356,14 @@ namespace vk
 
     DeviceGroupBindSparseInfoKHX( VkDeviceGroupBindSparseInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DeviceGroupBindSparseInfoKHX) );
+      memcpy( this, &rhs, sizeof( DeviceGroupBindSparseInfoKHX ) );
     }
 
     DeviceGroupBindSparseInfoKHX& operator=( VkDeviceGroupBindSparseInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DeviceGroupBindSparseInfoKHX) );
+      memcpy( this, &rhs, sizeof( DeviceGroupBindSparseInfoKHX ) );
       return *this;
     }
-
     DeviceGroupBindSparseInfoKHX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -11392,15 +11421,14 @@ namespace vk
 
     ImageSwapchainCreateInfoKHX( VkImageSwapchainCreateInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ImageSwapchainCreateInfoKHX) );
+      memcpy( this, &rhs, sizeof( ImageSwapchainCreateInfoKHX ) );
     }
 
     ImageSwapchainCreateInfoKHX& operator=( VkImageSwapchainCreateInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ImageSwapchainCreateInfoKHX) );
+      memcpy( this, &rhs, sizeof( ImageSwapchainCreateInfoKHX ) );
       return *this;
     }
-
     ImageSwapchainCreateInfoKHX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -11451,15 +11479,14 @@ namespace vk
 
     BindImageMemorySwapchainInfoKHX( VkBindImageMemorySwapchainInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(BindImageMemorySwapchainInfoKHX) );
+      memcpy( this, &rhs, sizeof( BindImageMemorySwapchainInfoKHX ) );
     }
 
     BindImageMemorySwapchainInfoKHX& operator=( VkBindImageMemorySwapchainInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(BindImageMemorySwapchainInfoKHX) );
+      memcpy( this, &rhs, sizeof( BindImageMemorySwapchainInfoKHX ) );
       return *this;
     }
-
     BindImageMemorySwapchainInfoKHX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -11521,15 +11548,14 @@ namespace vk
 
     AcquireNextImageInfoKHX( VkAcquireNextImageInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(AcquireNextImageInfoKHX) );
+      memcpy( this, &rhs, sizeof( AcquireNextImageInfoKHX ) );
     }
 
     AcquireNextImageInfoKHX& operator=( VkAcquireNextImageInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(AcquireNextImageInfoKHX) );
+      memcpy( this, &rhs, sizeof( AcquireNextImageInfoKHX ) );
       return *this;
     }
-
     AcquireNextImageInfoKHX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -11618,15 +11644,14 @@ namespace vk
 
     HdrMetadataEXT( VkHdrMetadataEXT const & rhs )
     {
-      memcpy( this, &rhs, sizeof(HdrMetadataEXT) );
+      memcpy( this, &rhs, sizeof( HdrMetadataEXT ) );
     }
 
     HdrMetadataEXT& operator=( VkHdrMetadataEXT const & rhs )
     {
-      memcpy( this, &rhs, sizeof(HdrMetadataEXT) );
+      memcpy( this, &rhs, sizeof( HdrMetadataEXT ) );
       return *this;
     }
-
     HdrMetadataEXT& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -11733,15 +11758,14 @@ namespace vk
 
     PresentTimesInfoGOOGLE( VkPresentTimesInfoGOOGLE const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PresentTimesInfoGOOGLE) );
+      memcpy( this, &rhs, sizeof( PresentTimesInfoGOOGLE ) );
     }
 
     PresentTimesInfoGOOGLE& operator=( VkPresentTimesInfoGOOGLE const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PresentTimesInfoGOOGLE) );
+      memcpy( this, &rhs, sizeof( PresentTimesInfoGOOGLE ) );
       return *this;
     }
-
     PresentTimesInfoGOOGLE& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -11801,15 +11825,14 @@ namespace vk
 
     IOSSurfaceCreateInfoMVK( VkIOSSurfaceCreateInfoMVK const & rhs )
     {
-      memcpy( this, &rhs, sizeof(IOSSurfaceCreateInfoMVK) );
+      memcpy( this, &rhs, sizeof( IOSSurfaceCreateInfoMVK ) );
     }
 
     IOSSurfaceCreateInfoMVK& operator=( VkIOSSurfaceCreateInfoMVK const & rhs )
     {
-      memcpy( this, &rhs, sizeof(IOSSurfaceCreateInfoMVK) );
+      memcpy( this, &rhs, sizeof( IOSSurfaceCreateInfoMVK ) );
       return *this;
     }
-
     IOSSurfaceCreateInfoMVK& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -11870,15 +11893,14 @@ namespace vk
 
     MacOSSurfaceCreateInfoMVK( VkMacOSSurfaceCreateInfoMVK const & rhs )
     {
-      memcpy( this, &rhs, sizeof(MacOSSurfaceCreateInfoMVK) );
+      memcpy( this, &rhs, sizeof( MacOSSurfaceCreateInfoMVK ) );
     }
 
     MacOSSurfaceCreateInfoMVK& operator=( VkMacOSSurfaceCreateInfoMVK const & rhs )
     {
-      memcpy( this, &rhs, sizeof(MacOSSurfaceCreateInfoMVK) );
+      memcpy( this, &rhs, sizeof( MacOSSurfaceCreateInfoMVK ) );
       return *this;
     }
-
     MacOSSurfaceCreateInfoMVK& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -11939,15 +11961,14 @@ namespace vk
 
     PipelineViewportWScalingStateCreateInfoNV( VkPipelineViewportWScalingStateCreateInfoNV const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PipelineViewportWScalingStateCreateInfoNV) );
+      memcpy( this, &rhs, sizeof( PipelineViewportWScalingStateCreateInfoNV ) );
     }
 
     PipelineViewportWScalingStateCreateInfoNV& operator=( VkPipelineViewportWScalingStateCreateInfoNV const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PipelineViewportWScalingStateCreateInfoNV) );
+      memcpy( this, &rhs, sizeof( PipelineViewportWScalingStateCreateInfoNV ) );
       return *this;
     }
-
     PipelineViewportWScalingStateCreateInfoNV& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -12013,15 +12034,14 @@ namespace vk
 
     PhysicalDeviceDiscardRectanglePropertiesEXT( VkPhysicalDeviceDiscardRectanglePropertiesEXT const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PhysicalDeviceDiscardRectanglePropertiesEXT) );
+      memcpy( this, &rhs, sizeof( PhysicalDeviceDiscardRectanglePropertiesEXT ) );
     }
 
     PhysicalDeviceDiscardRectanglePropertiesEXT& operator=( VkPhysicalDeviceDiscardRectanglePropertiesEXT const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PhysicalDeviceDiscardRectanglePropertiesEXT) );
+      memcpy( this, &rhs, sizeof( PhysicalDeviceDiscardRectanglePropertiesEXT ) );
       return *this;
     }
-
     PhysicalDeviceDiscardRectanglePropertiesEXT& setPNext( void* pNext_ )
     {
       pNext = pNext_;
@@ -12099,15 +12119,14 @@ namespace vk
 
     PhysicalDeviceSurfaceInfo2KHR( VkPhysicalDeviceSurfaceInfo2KHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PhysicalDeviceSurfaceInfo2KHR) );
+      memcpy( this, &rhs, sizeof( PhysicalDeviceSurfaceInfo2KHR ) );
     }
 
     PhysicalDeviceSurfaceInfo2KHR& operator=( VkPhysicalDeviceSurfaceInfo2KHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PhysicalDeviceSurfaceInfo2KHR) );
+      memcpy( this, &rhs, sizeof( PhysicalDeviceSurfaceInfo2KHR ) );
       return *this;
     }
-
     PhysicalDeviceSurfaceInfo2KHR& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -12146,6 +12165,34 @@ namespace vk
   };
   static_assert( sizeof( PhysicalDeviceSurfaceInfo2KHR ) == sizeof( VkPhysicalDeviceSurfaceInfo2KHR ), "struct and wrapper have different size!" );
 
+  struct TextureLODGatherFormatPropertiesAMD
+  {
+    operator const VkTextureLODGatherFormatPropertiesAMD&() const
+    {
+      return *reinterpret_cast<const VkTextureLODGatherFormatPropertiesAMD*>(this);
+    }
+
+    bool operator==( TextureLODGatherFormatPropertiesAMD const& rhs ) const
+    {
+      return ( sType == rhs.sType )
+          && ( pNext == rhs.pNext )
+          && ( supportsTextureGatherLODBiasAMD == rhs.supportsTextureGatherLODBiasAMD );
+    }
+
+    bool operator!=( TextureLODGatherFormatPropertiesAMD const& rhs ) const
+    {
+      return !operator==( rhs );
+    }
+
+  private:
+    StructureType sType;
+
+  public:
+    void* pNext;
+    Bool32 supportsTextureGatherLODBiasAMD;
+  };
+  static_assert( sizeof( TextureLODGatherFormatPropertiesAMD ) == sizeof( VkTextureLODGatherFormatPropertiesAMD ), "struct and wrapper have different size!" );
+
   enum class SubpassContents
   {
     eInline = VK_SUBPASS_CONTENTS_INLINE,
@@ -12168,15 +12215,14 @@ namespace vk
 
     PresentInfoKHR( VkPresentInfoKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PresentInfoKHR) );
+      memcpy( this, &rhs, sizeof( PresentInfoKHR ) );
     }
 
     PresentInfoKHR& operator=( VkPresentInfoKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PresentInfoKHR) );
+      memcpy( this, &rhs, sizeof( PresentInfoKHR ) );
       return *this;
     }
-
     PresentInfoKHR& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -12283,15 +12329,14 @@ namespace vk
 
     PipelineDynamicStateCreateInfo( VkPipelineDynamicStateCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PipelineDynamicStateCreateInfo) );
+      memcpy( this, &rhs, sizeof( PipelineDynamicStateCreateInfo ) );
     }
 
     PipelineDynamicStateCreateInfo& operator=( VkPipelineDynamicStateCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PipelineDynamicStateCreateInfo) );
+      memcpy( this, &rhs, sizeof( PipelineDynamicStateCreateInfo ) );
       return *this;
     }
-
     PipelineDynamicStateCreateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -12370,15 +12415,14 @@ namespace vk
 
     DescriptorUpdateTemplateCreateInfoKHR( VkDescriptorUpdateTemplateCreateInfoKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DescriptorUpdateTemplateCreateInfoKHR) );
+      memcpy( this, &rhs, sizeof( DescriptorUpdateTemplateCreateInfoKHR ) );
     }
 
     DescriptorUpdateTemplateCreateInfoKHR& operator=( VkDescriptorUpdateTemplateCreateInfoKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DescriptorUpdateTemplateCreateInfoKHR) );
+      memcpy( this, &rhs, sizeof( DescriptorUpdateTemplateCreateInfoKHR ) );
       return *this;
     }
-
     DescriptorUpdateTemplateCreateInfoKHR& setPNext( void* pNext_ )
     {
       pNext = pNext_;
@@ -12805,15 +12849,14 @@ namespace vk
 
     MemoryBarrier( VkMemoryBarrier const & rhs )
     {
-      memcpy( this, &rhs, sizeof(MemoryBarrier) );
+      memcpy( this, &rhs, sizeof( MemoryBarrier ) );
     }
 
     MemoryBarrier& operator=( VkMemoryBarrier const & rhs )
     {
-      memcpy( this, &rhs, sizeof(MemoryBarrier) );
+      memcpy( this, &rhs, sizeof( MemoryBarrier ) );
       return *this;
     }
-
     MemoryBarrier& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -12877,15 +12920,14 @@ namespace vk
 
     BufferMemoryBarrier( VkBufferMemoryBarrier const & rhs )
     {
-      memcpy( this, &rhs, sizeof(BufferMemoryBarrier) );
+      memcpy( this, &rhs, sizeof( BufferMemoryBarrier ) );
     }
 
     BufferMemoryBarrier& operator=( VkBufferMemoryBarrier const & rhs )
     {
-      memcpy( this, &rhs, sizeof(BufferMemoryBarrier) );
+      memcpy( this, &rhs, sizeof( BufferMemoryBarrier ) );
       return *this;
     }
-
     BufferMemoryBarrier& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -13048,15 +13090,14 @@ namespace vk
 
     BufferCreateInfo( VkBufferCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(BufferCreateInfo) );
+      memcpy( this, &rhs, sizeof( BufferCreateInfo ) );
     }
 
     BufferCreateInfo& operator=( VkBufferCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(BufferCreateInfo) );
+      memcpy( this, &rhs, sizeof( BufferCreateInfo ) );
       return *this;
     }
-
     BufferCreateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -13180,15 +13221,14 @@ namespace vk
 
     DescriptorSetLayoutBinding( VkDescriptorSetLayoutBinding const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DescriptorSetLayoutBinding) );
+      memcpy( this, &rhs, sizeof( DescriptorSetLayoutBinding ) );
     }
 
     DescriptorSetLayoutBinding& operator=( VkDescriptorSetLayoutBinding const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DescriptorSetLayoutBinding) );
+      memcpy( this, &rhs, sizeof( DescriptorSetLayoutBinding ) );
       return *this;
     }
-
     DescriptorSetLayoutBinding& setBinding( uint32_t binding_ )
     {
       binding = binding_;
@@ -13261,15 +13301,14 @@ namespace vk
 
     PipelineShaderStageCreateInfo( VkPipelineShaderStageCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PipelineShaderStageCreateInfo) );
+      memcpy( this, &rhs, sizeof( PipelineShaderStageCreateInfo ) );
     }
 
     PipelineShaderStageCreateInfo& operator=( VkPipelineShaderStageCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PipelineShaderStageCreateInfo) );
+      memcpy( this, &rhs, sizeof( PipelineShaderStageCreateInfo ) );
       return *this;
     }
-
     PipelineShaderStageCreateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -13351,15 +13390,14 @@ namespace vk
 
     PushConstantRange( VkPushConstantRange const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PushConstantRange) );
+      memcpy( this, &rhs, sizeof( PushConstantRange ) );
     }
 
     PushConstantRange& operator=( VkPushConstantRange const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PushConstantRange) );
+      memcpy( this, &rhs, sizeof( PushConstantRange ) );
       return *this;
     }
-
     PushConstantRange& setStageFlags( ShaderStageFlags stageFlags_ )
     {
       stageFlags = stageFlags_;
@@ -13416,15 +13454,14 @@ namespace vk
 
     PipelineLayoutCreateInfo( VkPipelineLayoutCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PipelineLayoutCreateInfo) );
+      memcpy( this, &rhs, sizeof( PipelineLayoutCreateInfo ) );
     }
 
     PipelineLayoutCreateInfo& operator=( VkPipelineLayoutCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PipelineLayoutCreateInfo) );
+      memcpy( this, &rhs, sizeof( PipelineLayoutCreateInfo ) );
       return *this;
     }
-
     PipelineLayoutCreateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -13601,15 +13638,14 @@ namespace vk
 
     PhysicalDeviceImageFormatInfo2KHR( VkPhysicalDeviceImageFormatInfo2KHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PhysicalDeviceImageFormatInfo2KHR) );
+      memcpy( this, &rhs, sizeof( PhysicalDeviceImageFormatInfo2KHR ) );
     }
 
     PhysicalDeviceImageFormatInfo2KHR& operator=( VkPhysicalDeviceImageFormatInfo2KHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PhysicalDeviceImageFormatInfo2KHR) );
+      memcpy( this, &rhs, sizeof( PhysicalDeviceImageFormatInfo2KHR ) );
       return *this;
     }
-
     PhysicalDeviceImageFormatInfo2KHR& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -13724,15 +13760,14 @@ namespace vk
 
     ComputePipelineCreateInfo( VkComputePipelineCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ComputePipelineCreateInfo) );
+      memcpy( this, &rhs, sizeof( ComputePipelineCreateInfo ) );
     }
 
     ComputePipelineCreateInfo& operator=( VkComputePipelineCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ComputePipelineCreateInfo) );
+      memcpy( this, &rhs, sizeof( ComputePipelineCreateInfo ) );
       return *this;
     }
-
     ComputePipelineCreateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -13847,15 +13882,14 @@ namespace vk
 
     PipelineColorBlendAttachmentState( VkPipelineColorBlendAttachmentState const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PipelineColorBlendAttachmentState) );
+      memcpy( this, &rhs, sizeof( PipelineColorBlendAttachmentState ) );
     }
 
     PipelineColorBlendAttachmentState& operator=( VkPipelineColorBlendAttachmentState const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PipelineColorBlendAttachmentState) );
+      memcpy( this, &rhs, sizeof( PipelineColorBlendAttachmentState ) );
       return *this;
     }
-
     PipelineColorBlendAttachmentState& setBlendEnable( Bool32 blendEnable_ )
     {
       blendEnable = blendEnable_;
@@ -13953,15 +13987,14 @@ namespace vk
 
     PipelineColorBlendStateCreateInfo( VkPipelineColorBlendStateCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PipelineColorBlendStateCreateInfo) );
+      memcpy( this, &rhs, sizeof( PipelineColorBlendStateCreateInfo ) );
     }
 
     PipelineColorBlendStateCreateInfo& operator=( VkPipelineColorBlendStateCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PipelineColorBlendStateCreateInfo) );
+      memcpy( this, &rhs, sizeof( PipelineColorBlendStateCreateInfo ) );
       return *this;
     }
-
     PipelineColorBlendStateCreateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -14076,15 +14109,14 @@ namespace vk
 
     FenceCreateInfo( VkFenceCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(FenceCreateInfo) );
+      memcpy( this, &rhs, sizeof( FenceCreateInfo ) );
     }
 
     FenceCreateInfo& operator=( VkFenceCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(FenceCreateInfo) );
+      memcpy( this, &rhs, sizeof( FenceCreateInfo ) );
       return *this;
     }
-
     FenceCreateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -14347,15 +14379,14 @@ namespace vk
 
     CommandBufferInheritanceInfo( VkCommandBufferInheritanceInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(CommandBufferInheritanceInfo) );
+      memcpy( this, &rhs, sizeof( CommandBufferInheritanceInfo ) );
     }
 
     CommandBufferInheritanceInfo& operator=( VkCommandBufferInheritanceInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(CommandBufferInheritanceInfo) );
+      memcpy( this, &rhs, sizeof( CommandBufferInheritanceInfo ) );
       return *this;
     }
-
     CommandBufferInheritanceInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -14446,15 +14477,14 @@ namespace vk
 
     CommandBufferBeginInfo( VkCommandBufferBeginInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(CommandBufferBeginInfo) );
+      memcpy( this, &rhs, sizeof( CommandBufferBeginInfo ) );
     }
 
     CommandBufferBeginInfo& operator=( VkCommandBufferBeginInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(CommandBufferBeginInfo) );
+      memcpy( this, &rhs, sizeof( CommandBufferBeginInfo ) );
       return *this;
     }
-
     CommandBufferBeginInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -14515,15 +14545,14 @@ namespace vk
 
     QueryPoolCreateInfo( VkQueryPoolCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(QueryPoolCreateInfo) );
+      memcpy( this, &rhs, sizeof( QueryPoolCreateInfo ) );
     }
 
     QueryPoolCreateInfo& operator=( VkQueryPoolCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(QueryPoolCreateInfo) );
+      memcpy( this, &rhs, sizeof( QueryPoolCreateInfo ) );
       return *this;
     }
-
     QueryPoolCreateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -14625,15 +14654,14 @@ namespace vk
 
     ImageSubresource( VkImageSubresource const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ImageSubresource) );
+      memcpy( this, &rhs, sizeof( ImageSubresource ) );
     }
 
     ImageSubresource& operator=( VkImageSubresource const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ImageSubresource) );
+      memcpy( this, &rhs, sizeof( ImageSubresource ) );
       return *this;
     }
-
     ImageSubresource& setAspectMask( ImageAspectFlags aspectMask_ )
     {
       aspectMask = aspectMask_;
@@ -14687,15 +14715,14 @@ namespace vk
 
     ImageSubresourceLayers( VkImageSubresourceLayers const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ImageSubresourceLayers) );
+      memcpy( this, &rhs, sizeof( ImageSubresourceLayers ) );
     }
 
     ImageSubresourceLayers& operator=( VkImageSubresourceLayers const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ImageSubresourceLayers) );
+      memcpy( this, &rhs, sizeof( ImageSubresourceLayers ) );
       return *this;
     }
-
     ImageSubresourceLayers& setAspectMask( ImageAspectFlags aspectMask_ )
     {
       aspectMask = aspectMask_;
@@ -14758,15 +14785,14 @@ namespace vk
 
     ImageSubresourceRange( VkImageSubresourceRange const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ImageSubresourceRange) );
+      memcpy( this, &rhs, sizeof( ImageSubresourceRange ) );
     }
 
     ImageSubresourceRange& operator=( VkImageSubresourceRange const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ImageSubresourceRange) );
+      memcpy( this, &rhs, sizeof( ImageSubresourceRange ) );
       return *this;
     }
-
     ImageSubresourceRange& setAspectMask( ImageAspectFlags aspectMask_ )
     {
       aspectMask = aspectMask_;
@@ -14842,15 +14868,14 @@ namespace vk
 
     ImageMemoryBarrier( VkImageMemoryBarrier const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ImageMemoryBarrier) );
+      memcpy( this, &rhs, sizeof( ImageMemoryBarrier ) );
     }
 
     ImageMemoryBarrier& operator=( VkImageMemoryBarrier const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ImageMemoryBarrier) );
+      memcpy( this, &rhs, sizeof( ImageMemoryBarrier ) );
       return *this;
     }
-
     ImageMemoryBarrier& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -14961,15 +14986,14 @@ namespace vk
 
     ImageViewCreateInfo( VkImageViewCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ImageViewCreateInfo) );
+      memcpy( this, &rhs, sizeof( ImageViewCreateInfo ) );
     }
 
     ImageViewCreateInfo& operator=( VkImageViewCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ImageViewCreateInfo) );
+      memcpy( this, &rhs, sizeof( ImageViewCreateInfo ) );
       return *this;
     }
-
     ImageViewCreateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -15061,15 +15085,14 @@ namespace vk
 
     ImageCopy( VkImageCopy const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ImageCopy) );
+      memcpy( this, &rhs, sizeof( ImageCopy ) );
     }
 
     ImageCopy& operator=( VkImageCopy const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ImageCopy) );
+      memcpy( this, &rhs, sizeof( ImageCopy ) );
       return *this;
     }
-
     ImageCopy& setSrcSubresource( ImageSubresourceLayers srcSubresource_ )
     {
       srcSubresource = srcSubresource_;
@@ -15139,15 +15162,14 @@ namespace vk
 
     ImageBlit( VkImageBlit const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ImageBlit) );
+      memcpy( this, &rhs, sizeof( ImageBlit ) );
     }
 
     ImageBlit& operator=( VkImageBlit const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ImageBlit) );
+      memcpy( this, &rhs, sizeof( ImageBlit ) );
       return *this;
     }
-
     ImageBlit& setSrcSubresource( ImageSubresourceLayers srcSubresource_ )
     {
       srcSubresource = srcSubresource_;
@@ -15211,15 +15233,14 @@ namespace vk
 
     BufferImageCopy( VkBufferImageCopy const & rhs )
     {
-      memcpy( this, &rhs, sizeof(BufferImageCopy) );
+      memcpy( this, &rhs, sizeof( BufferImageCopy ) );
     }
 
     BufferImageCopy& operator=( VkBufferImageCopy const & rhs )
     {
-      memcpy( this, &rhs, sizeof(BufferImageCopy) );
+      memcpy( this, &rhs, sizeof( BufferImageCopy ) );
       return *this;
     }
-
     BufferImageCopy& setBufferOffset( DeviceSize bufferOffset_ )
     {
       bufferOffset = bufferOffset_;
@@ -15298,15 +15319,14 @@ namespace vk
 
     ImageResolve( VkImageResolve const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ImageResolve) );
+      memcpy( this, &rhs, sizeof( ImageResolve ) );
     }
 
     ImageResolve& operator=( VkImageResolve const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ImageResolve) );
+      memcpy( this, &rhs, sizeof( ImageResolve ) );
       return *this;
     }
-
     ImageResolve& setSrcSubresource( ImageSubresourceLayers srcSubresource_ )
     {
       srcSubresource = srcSubresource_;
@@ -15375,15 +15395,14 @@ namespace vk
 
     ClearAttachment( VkClearAttachment const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ClearAttachment) );
+      memcpy( this, &rhs, sizeof( ClearAttachment ) );
     }
 
     ClearAttachment& operator=( VkClearAttachment const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ClearAttachment) );
+      memcpy( this, &rhs, sizeof( ClearAttachment ) );
       return *this;
     }
-
     ClearAttachment& setAspectMask( ImageAspectFlags aspectMask_ )
     {
       aspectMask = aspectMask_;
@@ -15560,15 +15579,14 @@ namespace vk
 
     SparseMemoryBind( VkSparseMemoryBind const & rhs )
     {
-      memcpy( this, &rhs, sizeof(SparseMemoryBind) );
+      memcpy( this, &rhs, sizeof( SparseMemoryBind ) );
     }
 
     SparseMemoryBind& operator=( VkSparseMemoryBind const & rhs )
     {
-      memcpy( this, &rhs, sizeof(SparseMemoryBind) );
+      memcpy( this, &rhs, sizeof( SparseMemoryBind ) );
       return *this;
     }
-
     SparseMemoryBind& setResourceOffset( DeviceSize resourceOffset_ )
     {
       resourceOffset = resourceOffset_;
@@ -15640,15 +15658,14 @@ namespace vk
 
     SparseImageMemoryBind( VkSparseImageMemoryBind const & rhs )
     {
-      memcpy( this, &rhs, sizeof(SparseImageMemoryBind) );
+      memcpy( this, &rhs, sizeof( SparseImageMemoryBind ) );
     }
 
     SparseImageMemoryBind& operator=( VkSparseImageMemoryBind const & rhs )
     {
-      memcpy( this, &rhs, sizeof(SparseImageMemoryBind) );
+      memcpy( this, &rhs, sizeof( SparseImageMemoryBind ) );
       return *this;
     }
-
     SparseImageMemoryBind& setSubresource( ImageSubresource subresource_ )
     {
       subresource = subresource_;
@@ -15725,15 +15742,14 @@ namespace vk
 
     SparseBufferMemoryBindInfo( VkSparseBufferMemoryBindInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(SparseBufferMemoryBindInfo) );
+      memcpy( this, &rhs, sizeof( SparseBufferMemoryBindInfo ) );
     }
 
     SparseBufferMemoryBindInfo& operator=( VkSparseBufferMemoryBindInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(SparseBufferMemoryBindInfo) );
+      memcpy( this, &rhs, sizeof( SparseBufferMemoryBindInfo ) );
       return *this;
     }
-
     SparseBufferMemoryBindInfo& setBuffer( Buffer buffer_ )
     {
       buffer = buffer_;
@@ -15786,15 +15802,14 @@ namespace vk
 
     SparseImageOpaqueMemoryBindInfo( VkSparseImageOpaqueMemoryBindInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(SparseImageOpaqueMemoryBindInfo) );
+      memcpy( this, &rhs, sizeof( SparseImageOpaqueMemoryBindInfo ) );
     }
 
     SparseImageOpaqueMemoryBindInfo& operator=( VkSparseImageOpaqueMemoryBindInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(SparseImageOpaqueMemoryBindInfo) );
+      memcpy( this, &rhs, sizeof( SparseImageOpaqueMemoryBindInfo ) );
       return *this;
     }
-
     SparseImageOpaqueMemoryBindInfo& setImage( Image image_ )
     {
       image = image_;
@@ -15847,15 +15862,14 @@ namespace vk
 
     SparseImageMemoryBindInfo( VkSparseImageMemoryBindInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(SparseImageMemoryBindInfo) );
+      memcpy( this, &rhs, sizeof( SparseImageMemoryBindInfo ) );
     }
 
     SparseImageMemoryBindInfo& operator=( VkSparseImageMemoryBindInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(SparseImageMemoryBindInfo) );
+      memcpy( this, &rhs, sizeof( SparseImageMemoryBindInfo ) );
       return *this;
     }
-
     SparseImageMemoryBindInfo& setImage( Image image_ )
     {
       image = image_;
@@ -15917,15 +15931,14 @@ namespace vk
 
     BindSparseInfo( VkBindSparseInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(BindSparseInfo) );
+      memcpy( this, &rhs, sizeof( BindSparseInfo ) );
     }
 
     BindSparseInfo& operator=( VkBindSparseInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(BindSparseInfo) );
+      memcpy( this, &rhs, sizeof( BindSparseInfo ) );
       return *this;
     }
-
     BindSparseInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -16116,15 +16129,14 @@ namespace vk
 
     CommandPoolCreateInfo( VkCommandPoolCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(CommandPoolCreateInfo) );
+      memcpy( this, &rhs, sizeof( CommandPoolCreateInfo ) );
     }
 
     CommandPoolCreateInfo& operator=( VkCommandPoolCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(CommandPoolCreateInfo) );
+      memcpy( this, &rhs, sizeof( CommandPoolCreateInfo ) );
       return *this;
     }
-
     CommandPoolCreateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -16304,15 +16316,14 @@ namespace vk
 
     ImageCreateInfo( VkImageCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ImageCreateInfo) );
+      memcpy( this, &rhs, sizeof( ImageCreateInfo ) );
     }
 
     ImageCreateInfo& operator=( VkImageCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ImageCreateInfo) );
+      memcpy( this, &rhs, sizeof( ImageCreateInfo ) );
       return *this;
     }
-
     ImageCreateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -16464,15 +16475,14 @@ namespace vk
 
     PipelineMultisampleStateCreateInfo( VkPipelineMultisampleStateCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PipelineMultisampleStateCreateInfo) );
+      memcpy( this, &rhs, sizeof( PipelineMultisampleStateCreateInfo ) );
     }
 
     PipelineMultisampleStateCreateInfo& operator=( VkPipelineMultisampleStateCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PipelineMultisampleStateCreateInfo) );
+      memcpy( this, &rhs, sizeof( PipelineMultisampleStateCreateInfo ) );
       return *this;
     }
-
     PipelineMultisampleStateCreateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -16586,15 +16596,14 @@ namespace vk
 
     GraphicsPipelineCreateInfo( VkGraphicsPipelineCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(GraphicsPipelineCreateInfo) );
+      memcpy( this, &rhs, sizeof( GraphicsPipelineCreateInfo ) );
     }
 
     GraphicsPipelineCreateInfo& operator=( VkGraphicsPipelineCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(GraphicsPipelineCreateInfo) );
+      memcpy( this, &rhs, sizeof( GraphicsPipelineCreateInfo ) );
       return *this;
     }
-
     GraphicsPipelineCreateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -17100,15 +17109,14 @@ namespace vk
 
     PhysicalDeviceSparseImageFormatInfo2KHR( VkPhysicalDeviceSparseImageFormatInfo2KHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PhysicalDeviceSparseImageFormatInfo2KHR) );
+      memcpy( this, &rhs, sizeof( PhysicalDeviceSparseImageFormatInfo2KHR ) );
     }
 
     PhysicalDeviceSparseImageFormatInfo2KHR& operator=( VkPhysicalDeviceSparseImageFormatInfo2KHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PhysicalDeviceSparseImageFormatInfo2KHR) );
+      memcpy( this, &rhs, sizeof( PhysicalDeviceSparseImageFormatInfo2KHR ) );
       return *this;
     }
-
     PhysicalDeviceSparseImageFormatInfo2KHR& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -17221,15 +17229,14 @@ namespace vk
 
     AttachmentDescription( VkAttachmentDescription const & rhs )
     {
-      memcpy( this, &rhs, sizeof(AttachmentDescription) );
+      memcpy( this, &rhs, sizeof( AttachmentDescription ) );
     }
 
     AttachmentDescription& operator=( VkAttachmentDescription const & rhs )
     {
-      memcpy( this, &rhs, sizeof(AttachmentDescription) );
+      memcpy( this, &rhs, sizeof( AttachmentDescription ) );
       return *this;
     }
-
     AttachmentDescription& setFlags( AttachmentDescriptionFlags flags_ )
     {
       flags = flags_;
@@ -17385,15 +17392,14 @@ namespace vk
 
     DescriptorPoolCreateInfo( VkDescriptorPoolCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DescriptorPoolCreateInfo) );
+      memcpy( this, &rhs, sizeof( DescriptorPoolCreateInfo ) );
     }
 
     DescriptorPoolCreateInfo& operator=( VkDescriptorPoolCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DescriptorPoolCreateInfo) );
+      memcpy( this, &rhs, sizeof( DescriptorPoolCreateInfo ) );
       return *this;
     }
-
     DescriptorPoolCreateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -17498,15 +17504,14 @@ namespace vk
 
     SubpassDependency( VkSubpassDependency const & rhs )
     {
-      memcpy( this, &rhs, sizeof(SubpassDependency) );
+      memcpy( this, &rhs, sizeof( SubpassDependency ) );
     }
 
     SubpassDependency& operator=( VkSubpassDependency const & rhs )
     {
-      memcpy( this, &rhs, sizeof(SubpassDependency) );
+      memcpy( this, &rhs, sizeof( SubpassDependency ) );
       return *this;
     }
-
     SubpassDependency& setSrcSubpass( uint32_t srcSubpass_ )
     {
       srcSubpass = srcSubpass_;
@@ -17836,15 +17841,14 @@ namespace vk
 
     DisplaySurfaceCreateInfoKHR( VkDisplaySurfaceCreateInfoKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DisplaySurfaceCreateInfoKHR) );
+      memcpy( this, &rhs, sizeof( DisplaySurfaceCreateInfoKHR ) );
     }
 
     DisplaySurfaceCreateInfoKHR& operator=( VkDisplaySurfaceCreateInfoKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DisplaySurfaceCreateInfoKHR) );
+      memcpy( this, &rhs, sizeof( DisplaySurfaceCreateInfoKHR ) );
       return *this;
     }
-
     DisplaySurfaceCreateInfoKHR& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -18048,15 +18052,14 @@ namespace vk
 
     DebugReportCallbackCreateInfoEXT( VkDebugReportCallbackCreateInfoEXT const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DebugReportCallbackCreateInfoEXT) );
+      memcpy( this, &rhs, sizeof( DebugReportCallbackCreateInfoEXT ) );
     }
 
     DebugReportCallbackCreateInfoEXT& operator=( VkDebugReportCallbackCreateInfoEXT const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DebugReportCallbackCreateInfoEXT) );
+      memcpy( this, &rhs, sizeof( DebugReportCallbackCreateInfoEXT ) );
       return *this;
     }
-
     DebugReportCallbackCreateInfoEXT& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -18141,7 +18144,7 @@ namespace vk
     eCommandPool = VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT,
     eSurfaceKhr = VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT,
     eSwapchainKhr = VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
-    eDebugReport = VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT,
+    eDebugReportCallbackExt = VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_CALLBACK_EXT_EXT,
     eDisplayKhr = VK_DEBUG_REPORT_OBJECT_TYPE_DISPLAY_KHR_EXT,
     eDisplayModeKhr = VK_DEBUG_REPORT_OBJECT_TYPE_DISPLAY_MODE_KHR_EXT,
     eObjectTableNvx = VK_DEBUG_REPORT_OBJECT_TYPE_OBJECT_TABLE_NVX_EXT,
@@ -18162,15 +18165,14 @@ namespace vk
 
     DebugMarkerObjectNameInfoEXT( VkDebugMarkerObjectNameInfoEXT const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DebugMarkerObjectNameInfoEXT) );
+      memcpy( this, &rhs, sizeof( DebugMarkerObjectNameInfoEXT ) );
     }
 
     DebugMarkerObjectNameInfoEXT& operator=( VkDebugMarkerObjectNameInfoEXT const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DebugMarkerObjectNameInfoEXT) );
+      memcpy( this, &rhs, sizeof( DebugMarkerObjectNameInfoEXT ) );
       return *this;
     }
-
     DebugMarkerObjectNameInfoEXT& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -18240,15 +18242,14 @@ namespace vk
 
     DebugMarkerObjectTagInfoEXT( VkDebugMarkerObjectTagInfoEXT const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DebugMarkerObjectTagInfoEXT) );
+      memcpy( this, &rhs, sizeof( DebugMarkerObjectTagInfoEXT ) );
     }
 
     DebugMarkerObjectTagInfoEXT& operator=( VkDebugMarkerObjectTagInfoEXT const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DebugMarkerObjectTagInfoEXT) );
+      memcpy( this, &rhs, sizeof( DebugMarkerObjectTagInfoEXT ) );
       return *this;
     }
-
     DebugMarkerObjectTagInfoEXT& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -18319,12 +18320,6 @@ namespace vk
   };
   static_assert( sizeof( DebugMarkerObjectTagInfoEXT ) == sizeof( VkDebugMarkerObjectTagInfoEXT ), "struct and wrapper have different size!" );
 
-  enum class DebugReportErrorEXT
-  {
-    eNone = VK_DEBUG_REPORT_ERROR_NONE_EXT,
-    eCallbackRef = VK_DEBUG_REPORT_ERROR_CALLBACK_REF_EXT
-  };
-
   enum class RasterizationOrderAMD
   {
     eStrict = VK_RASTERIZATION_ORDER_STRICT_AMD,
@@ -18342,15 +18337,14 @@ namespace vk
 
     PipelineRasterizationStateRasterizationOrderAMD( VkPipelineRasterizationStateRasterizationOrderAMD const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PipelineRasterizationStateRasterizationOrderAMD) );
+      memcpy( this, &rhs, sizeof( PipelineRasterizationStateRasterizationOrderAMD ) );
     }
 
     PipelineRasterizationStateRasterizationOrderAMD& operator=( VkPipelineRasterizationStateRasterizationOrderAMD const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PipelineRasterizationStateRasterizationOrderAMD) );
+      memcpy( this, &rhs, sizeof( PipelineRasterizationStateRasterizationOrderAMD ) );
       return *this;
     }
-
     PipelineRasterizationStateRasterizationOrderAMD& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -18428,15 +18422,14 @@ namespace vk
 
     ExternalMemoryImageCreateInfoNV( VkExternalMemoryImageCreateInfoNV const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ExternalMemoryImageCreateInfoNV) );
+      memcpy( this, &rhs, sizeof( ExternalMemoryImageCreateInfoNV ) );
     }
 
     ExternalMemoryImageCreateInfoNV& operator=( VkExternalMemoryImageCreateInfoNV const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ExternalMemoryImageCreateInfoNV) );
+      memcpy( this, &rhs, sizeof( ExternalMemoryImageCreateInfoNV ) );
       return *this;
     }
-
     ExternalMemoryImageCreateInfoNV& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -18486,15 +18479,14 @@ namespace vk
 
     ExportMemoryAllocateInfoNV( VkExportMemoryAllocateInfoNV const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ExportMemoryAllocateInfoNV) );
+      memcpy( this, &rhs, sizeof( ExportMemoryAllocateInfoNV ) );
     }
 
     ExportMemoryAllocateInfoNV& operator=( VkExportMemoryAllocateInfoNV const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ExportMemoryAllocateInfoNV) );
+      memcpy( this, &rhs, sizeof( ExportMemoryAllocateInfoNV ) );
       return *this;
     }
-
     ExportMemoryAllocateInfoNV& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -18546,15 +18538,14 @@ namespace vk
 
     ImportMemoryWin32HandleInfoNV( VkImportMemoryWin32HandleInfoNV const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ImportMemoryWin32HandleInfoNV) );
+      memcpy( this, &rhs, sizeof( ImportMemoryWin32HandleInfoNV ) );
     }
 
     ImportMemoryWin32HandleInfoNV& operator=( VkImportMemoryWin32HandleInfoNV const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ImportMemoryWin32HandleInfoNV) );
+      memcpy( this, &rhs, sizeof( ImportMemoryWin32HandleInfoNV ) );
       return *this;
     }
-
     ImportMemoryWin32HandleInfoNV& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -18658,7 +18649,8 @@ namespace vk
 
   enum class ValidationCheckEXT
   {
-    eAll = VK_VALIDATION_CHECK_ALL_EXT
+    eAll = VK_VALIDATION_CHECK_ALL_EXT,
+    eShaders = VK_VALIDATION_CHECK_SHADERS_EXT
   };
 
   struct ValidationFlagsEXT
@@ -18673,15 +18665,14 @@ namespace vk
 
     ValidationFlagsEXT( VkValidationFlagsEXT const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ValidationFlagsEXT) );
+      memcpy( this, &rhs, sizeof( ValidationFlagsEXT ) );
     }
 
     ValidationFlagsEXT& operator=( VkValidationFlagsEXT const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ValidationFlagsEXT) );
+      memcpy( this, &rhs, sizeof( ValidationFlagsEXT ) );
       return *this;
     }
-
     ValidationFlagsEXT& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -18805,15 +18796,14 @@ namespace vk
 
     IndirectCommandsTokenNVX( VkIndirectCommandsTokenNVX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(IndirectCommandsTokenNVX) );
+      memcpy( this, &rhs, sizeof( IndirectCommandsTokenNVX ) );
     }
 
     IndirectCommandsTokenNVX& operator=( VkIndirectCommandsTokenNVX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(IndirectCommandsTokenNVX) );
+      memcpy( this, &rhs, sizeof( IndirectCommandsTokenNVX ) );
       return *this;
     }
-
     IndirectCommandsTokenNVX& setTokenType( IndirectCommandsTokenTypeNVX tokenType_ )
     {
       tokenType = tokenType_;
@@ -18867,15 +18857,14 @@ namespace vk
 
     IndirectCommandsLayoutTokenNVX( VkIndirectCommandsLayoutTokenNVX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(IndirectCommandsLayoutTokenNVX) );
+      memcpy( this, &rhs, sizeof( IndirectCommandsLayoutTokenNVX ) );
     }
 
     IndirectCommandsLayoutTokenNVX& operator=( VkIndirectCommandsLayoutTokenNVX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(IndirectCommandsLayoutTokenNVX) );
+      memcpy( this, &rhs, sizeof( IndirectCommandsLayoutTokenNVX ) );
       return *this;
     }
-
     IndirectCommandsLayoutTokenNVX& setTokenType( IndirectCommandsTokenTypeNVX tokenType_ )
     {
       tokenType = tokenType_;
@@ -18939,15 +18928,14 @@ namespace vk
 
     IndirectCommandsLayoutCreateInfoNVX( VkIndirectCommandsLayoutCreateInfoNVX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(IndirectCommandsLayoutCreateInfoNVX) );
+      memcpy( this, &rhs, sizeof( IndirectCommandsLayoutCreateInfoNVX ) );
     }
 
     IndirectCommandsLayoutCreateInfoNVX& operator=( VkIndirectCommandsLayoutCreateInfoNVX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(IndirectCommandsLayoutCreateInfoNVX) );
+      memcpy( this, &rhs, sizeof( IndirectCommandsLayoutCreateInfoNVX ) );
       return *this;
     }
-
     IndirectCommandsLayoutCreateInfoNVX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -19038,15 +19026,14 @@ namespace vk
 
     ObjectTableCreateInfoNVX( VkObjectTableCreateInfoNVX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ObjectTableCreateInfoNVX) );
+      memcpy( this, &rhs, sizeof( ObjectTableCreateInfoNVX ) );
     }
 
     ObjectTableCreateInfoNVX& operator=( VkObjectTableCreateInfoNVX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ObjectTableCreateInfoNVX) );
+      memcpy( this, &rhs, sizeof( ObjectTableCreateInfoNVX ) );
       return *this;
     }
-
     ObjectTableCreateInfoNVX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -19159,15 +19146,14 @@ namespace vk
 
     ObjectTableEntryNVX( VkObjectTableEntryNVX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ObjectTableEntryNVX) );
+      memcpy( this, &rhs, sizeof( ObjectTableEntryNVX ) );
     }
 
     ObjectTableEntryNVX& operator=( VkObjectTableEntryNVX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ObjectTableEntryNVX) );
+      memcpy( this, &rhs, sizeof( ObjectTableEntryNVX ) );
       return *this;
     }
-
     ObjectTableEntryNVX& setType( ObjectEntryTypeNVX type_ )
     {
       type = type_;
@@ -19212,15 +19198,14 @@ namespace vk
 
     ObjectTablePipelineEntryNVX( VkObjectTablePipelineEntryNVX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ObjectTablePipelineEntryNVX) );
+      memcpy( this, &rhs, sizeof( ObjectTablePipelineEntryNVX ) );
     }
 
     ObjectTablePipelineEntryNVX& operator=( VkObjectTablePipelineEntryNVX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ObjectTablePipelineEntryNVX) );
+      memcpy( this, &rhs, sizeof( ObjectTablePipelineEntryNVX ) );
       return *this;
     }
-
     ObjectTablePipelineEntryNVX& setType( ObjectEntryTypeNVX type_ )
     {
       type = type_;
@@ -19274,15 +19259,14 @@ namespace vk
 
     ObjectTableDescriptorSetEntryNVX( VkObjectTableDescriptorSetEntryNVX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ObjectTableDescriptorSetEntryNVX) );
+      memcpy( this, &rhs, sizeof( ObjectTableDescriptorSetEntryNVX ) );
     }
 
     ObjectTableDescriptorSetEntryNVX& operator=( VkObjectTableDescriptorSetEntryNVX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ObjectTableDescriptorSetEntryNVX) );
+      memcpy( this, &rhs, sizeof( ObjectTableDescriptorSetEntryNVX ) );
       return *this;
     }
-
     ObjectTableDescriptorSetEntryNVX& setType( ObjectEntryTypeNVX type_ )
     {
       type = type_;
@@ -19343,15 +19327,14 @@ namespace vk
 
     ObjectTableVertexBufferEntryNVX( VkObjectTableVertexBufferEntryNVX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ObjectTableVertexBufferEntryNVX) );
+      memcpy( this, &rhs, sizeof( ObjectTableVertexBufferEntryNVX ) );
     }
 
     ObjectTableVertexBufferEntryNVX& operator=( VkObjectTableVertexBufferEntryNVX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ObjectTableVertexBufferEntryNVX) );
+      memcpy( this, &rhs, sizeof( ObjectTableVertexBufferEntryNVX ) );
       return *this;
     }
-
     ObjectTableVertexBufferEntryNVX& setType( ObjectEntryTypeNVX type_ )
     {
       type = type_;
@@ -19405,15 +19388,14 @@ namespace vk
 
     ObjectTableIndexBufferEntryNVX( VkObjectTableIndexBufferEntryNVX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ObjectTableIndexBufferEntryNVX) );
+      memcpy( this, &rhs, sizeof( ObjectTableIndexBufferEntryNVX ) );
     }
 
     ObjectTableIndexBufferEntryNVX& operator=( VkObjectTableIndexBufferEntryNVX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ObjectTableIndexBufferEntryNVX) );
+      memcpy( this, &rhs, sizeof( ObjectTableIndexBufferEntryNVX ) );
       return *this;
     }
-
     ObjectTableIndexBufferEntryNVX& setType( ObjectEntryTypeNVX type_ )
     {
       type = type_;
@@ -19475,15 +19457,14 @@ namespace vk
 
     ObjectTablePushConstantEntryNVX( VkObjectTablePushConstantEntryNVX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ObjectTablePushConstantEntryNVX) );
+      memcpy( this, &rhs, sizeof( ObjectTablePushConstantEntryNVX ) );
     }
 
     ObjectTablePushConstantEntryNVX& operator=( VkObjectTablePushConstantEntryNVX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ObjectTablePushConstantEntryNVX) );
+      memcpy( this, &rhs, sizeof( ObjectTablePushConstantEntryNVX ) );
       return *this;
     }
-
     ObjectTablePushConstantEntryNVX& setType( ObjectEntryTypeNVX type_ )
     {
       type = type_;
@@ -19571,15 +19552,14 @@ namespace vk
 
     DescriptorSetLayoutCreateInfo( VkDescriptorSetLayoutCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DescriptorSetLayoutCreateInfo) );
+      memcpy( this, &rhs, sizeof( DescriptorSetLayoutCreateInfo ) );
     }
 
     DescriptorSetLayoutCreateInfo& operator=( VkDescriptorSetLayoutCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DescriptorSetLayoutCreateInfo) );
+      memcpy( this, &rhs, sizeof( DescriptorSetLayoutCreateInfo ) );
       return *this;
     }
-
     DescriptorSetLayoutCreateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -19676,15 +19656,14 @@ namespace vk
 
     PhysicalDeviceExternalImageFormatInfoKHX( VkPhysicalDeviceExternalImageFormatInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PhysicalDeviceExternalImageFormatInfoKHX) );
+      memcpy( this, &rhs, sizeof( PhysicalDeviceExternalImageFormatInfoKHX ) );
     }
 
     PhysicalDeviceExternalImageFormatInfoKHX& operator=( VkPhysicalDeviceExternalImageFormatInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PhysicalDeviceExternalImageFormatInfoKHX) );
+      memcpy( this, &rhs, sizeof( PhysicalDeviceExternalImageFormatInfoKHX ) );
       return *this;
     }
-
     PhysicalDeviceExternalImageFormatInfoKHX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -19736,15 +19715,14 @@ namespace vk
 
     PhysicalDeviceExternalBufferInfoKHX( VkPhysicalDeviceExternalBufferInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PhysicalDeviceExternalBufferInfoKHX) );
+      memcpy( this, &rhs, sizeof( PhysicalDeviceExternalBufferInfoKHX ) );
     }
 
     PhysicalDeviceExternalBufferInfoKHX& operator=( VkPhysicalDeviceExternalBufferInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PhysicalDeviceExternalBufferInfoKHX) );
+      memcpy( this, &rhs, sizeof( PhysicalDeviceExternalBufferInfoKHX ) );
       return *this;
     }
-
     PhysicalDeviceExternalBufferInfoKHX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -19810,15 +19788,14 @@ namespace vk
 
     ExternalMemoryImageCreateInfoKHX( VkExternalMemoryImageCreateInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ExternalMemoryImageCreateInfoKHX) );
+      memcpy( this, &rhs, sizeof( ExternalMemoryImageCreateInfoKHX ) );
     }
 
     ExternalMemoryImageCreateInfoKHX& operator=( VkExternalMemoryImageCreateInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ExternalMemoryImageCreateInfoKHX) );
+      memcpy( this, &rhs, sizeof( ExternalMemoryImageCreateInfoKHX ) );
       return *this;
     }
-
     ExternalMemoryImageCreateInfoKHX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -19868,15 +19845,14 @@ namespace vk
 
     ExternalMemoryBufferCreateInfoKHX( VkExternalMemoryBufferCreateInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ExternalMemoryBufferCreateInfoKHX) );
+      memcpy( this, &rhs, sizeof( ExternalMemoryBufferCreateInfoKHX ) );
     }
 
     ExternalMemoryBufferCreateInfoKHX& operator=( VkExternalMemoryBufferCreateInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ExternalMemoryBufferCreateInfoKHX) );
+      memcpy( this, &rhs, sizeof( ExternalMemoryBufferCreateInfoKHX ) );
       return *this;
     }
-
     ExternalMemoryBufferCreateInfoKHX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -19926,15 +19902,14 @@ namespace vk
 
     ExportMemoryAllocateInfoKHX( VkExportMemoryAllocateInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ExportMemoryAllocateInfoKHX) );
+      memcpy( this, &rhs, sizeof( ExportMemoryAllocateInfoKHX ) );
     }
 
     ExportMemoryAllocateInfoKHX& operator=( VkExportMemoryAllocateInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ExportMemoryAllocateInfoKHX) );
+      memcpy( this, &rhs, sizeof( ExportMemoryAllocateInfoKHX ) );
       return *this;
     }
-
     ExportMemoryAllocateInfoKHX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -19986,15 +19961,14 @@ namespace vk
 
     ImportMemoryWin32HandleInfoKHX( VkImportMemoryWin32HandleInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ImportMemoryWin32HandleInfoKHX) );
+      memcpy( this, &rhs, sizeof( ImportMemoryWin32HandleInfoKHX ) );
     }
 
     ImportMemoryWin32HandleInfoKHX& operator=( VkImportMemoryWin32HandleInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ImportMemoryWin32HandleInfoKHX) );
+      memcpy( this, &rhs, sizeof( ImportMemoryWin32HandleInfoKHX ) );
       return *this;
     }
-
     ImportMemoryWin32HandleInfoKHX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -20054,15 +20028,14 @@ namespace vk
 
     ImportMemoryFdInfoKHX( VkImportMemoryFdInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ImportMemoryFdInfoKHX) );
+      memcpy( this, &rhs, sizeof( ImportMemoryFdInfoKHX ) );
     }
 
     ImportMemoryFdInfoKHX& operator=( VkImportMemoryFdInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ImportMemoryFdInfoKHX) );
+      memcpy( this, &rhs, sizeof( ImportMemoryFdInfoKHX ) );
       return *this;
     }
-
     ImportMemoryFdInfoKHX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -20257,15 +20230,14 @@ namespace vk
 
     PhysicalDeviceExternalSemaphoreInfoKHX( VkPhysicalDeviceExternalSemaphoreInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PhysicalDeviceExternalSemaphoreInfoKHX) );
+      memcpy( this, &rhs, sizeof( PhysicalDeviceExternalSemaphoreInfoKHX ) );
     }
 
     PhysicalDeviceExternalSemaphoreInfoKHX& operator=( VkPhysicalDeviceExternalSemaphoreInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PhysicalDeviceExternalSemaphoreInfoKHX) );
+      memcpy( this, &rhs, sizeof( PhysicalDeviceExternalSemaphoreInfoKHX ) );
       return *this;
     }
-
     PhysicalDeviceExternalSemaphoreInfoKHX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -20315,15 +20287,14 @@ namespace vk
 
     ExportSemaphoreCreateInfoKHX( VkExportSemaphoreCreateInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ExportSemaphoreCreateInfoKHX) );
+      memcpy( this, &rhs, sizeof( ExportSemaphoreCreateInfoKHX ) );
     }
 
     ExportSemaphoreCreateInfoKHX& operator=( VkExportSemaphoreCreateInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ExportSemaphoreCreateInfoKHX) );
+      memcpy( this, &rhs, sizeof( ExportSemaphoreCreateInfoKHX ) );
       return *this;
     }
-
     ExportSemaphoreCreateInfoKHX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -20376,15 +20347,14 @@ namespace vk
 
     ImportSemaphoreWin32HandleInfoKHX( VkImportSemaphoreWin32HandleInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ImportSemaphoreWin32HandleInfoKHX) );
+      memcpy( this, &rhs, sizeof( ImportSemaphoreWin32HandleInfoKHX ) );
     }
 
     ImportSemaphoreWin32HandleInfoKHX& operator=( VkImportSemaphoreWin32HandleInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ImportSemaphoreWin32HandleInfoKHX) );
+      memcpy( this, &rhs, sizeof( ImportSemaphoreWin32HandleInfoKHX ) );
       return *this;
     }
-
     ImportSemaphoreWin32HandleInfoKHX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -20453,15 +20423,14 @@ namespace vk
 
     ImportSemaphoreFdInfoKHX( VkImportSemaphoreFdInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ImportSemaphoreFdInfoKHX) );
+      memcpy( this, &rhs, sizeof( ImportSemaphoreFdInfoKHX ) );
     }
 
     ImportSemaphoreFdInfoKHX& operator=( VkImportSemaphoreFdInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ImportSemaphoreFdInfoKHX) );
+      memcpy( this, &rhs, sizeof( ImportSemaphoreFdInfoKHX ) );
       return *this;
     }
-
     ImportSemaphoreFdInfoKHX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -20658,15 +20627,14 @@ namespace vk
 
     SwapchainCounterCreateInfoEXT( VkSwapchainCounterCreateInfoEXT const & rhs )
     {
-      memcpy( this, &rhs, sizeof(SwapchainCounterCreateInfoEXT) );
+      memcpy( this, &rhs, sizeof( SwapchainCounterCreateInfoEXT ) );
     }
 
     SwapchainCounterCreateInfoEXT& operator=( VkSwapchainCounterCreateInfoEXT const & rhs )
     {
-      memcpy( this, &rhs, sizeof(SwapchainCounterCreateInfoEXT) );
+      memcpy( this, &rhs, sizeof( SwapchainCounterCreateInfoEXT ) );
       return *this;
     }
-
     SwapchainCounterCreateInfoEXT& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -20723,15 +20691,14 @@ namespace vk
 
     DisplayPowerInfoEXT( VkDisplayPowerInfoEXT const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DisplayPowerInfoEXT) );
+      memcpy( this, &rhs, sizeof( DisplayPowerInfoEXT ) );
     }
 
     DisplayPowerInfoEXT& operator=( VkDisplayPowerInfoEXT const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DisplayPowerInfoEXT) );
+      memcpy( this, &rhs, sizeof( DisplayPowerInfoEXT ) );
       return *this;
     }
-
     DisplayPowerInfoEXT& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -20786,15 +20753,14 @@ namespace vk
 
     DeviceEventInfoEXT( VkDeviceEventInfoEXT const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DeviceEventInfoEXT) );
+      memcpy( this, &rhs, sizeof( DeviceEventInfoEXT ) );
     }
 
     DeviceEventInfoEXT& operator=( VkDeviceEventInfoEXT const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DeviceEventInfoEXT) );
+      memcpy( this, &rhs, sizeof( DeviceEventInfoEXT ) );
       return *this;
     }
-
     DeviceEventInfoEXT& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -20849,15 +20815,14 @@ namespace vk
 
     DisplayEventInfoEXT( VkDisplayEventInfoEXT const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DisplayEventInfoEXT) );
+      memcpy( this, &rhs, sizeof( DisplayEventInfoEXT ) );
     }
 
     DisplayEventInfoEXT& operator=( VkDisplayEventInfoEXT const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DisplayEventInfoEXT) );
+      memcpy( this, &rhs, sizeof( DisplayEventInfoEXT ) );
       return *this;
     }
-
     DisplayEventInfoEXT& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -20961,15 +20926,14 @@ namespace vk
 
     MemoryAllocateFlagsInfoKHX( VkMemoryAllocateFlagsInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(MemoryAllocateFlagsInfoKHX) );
+      memcpy( this, &rhs, sizeof( MemoryAllocateFlagsInfoKHX ) );
     }
 
     MemoryAllocateFlagsInfoKHX& operator=( VkMemoryAllocateFlagsInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(MemoryAllocateFlagsInfoKHX) );
+      memcpy( this, &rhs, sizeof( MemoryAllocateFlagsInfoKHX ) );
       return *this;
     }
-
     MemoryAllocateFlagsInfoKHX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -21087,15 +21051,14 @@ namespace vk
 
     DeviceGroupPresentInfoKHX( VkDeviceGroupPresentInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DeviceGroupPresentInfoKHX) );
+      memcpy( this, &rhs, sizeof( DeviceGroupPresentInfoKHX ) );
     }
 
     DeviceGroupPresentInfoKHX& operator=( VkDeviceGroupPresentInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DeviceGroupPresentInfoKHX) );
+      memcpy( this, &rhs, sizeof( DeviceGroupPresentInfoKHX ) );
       return *this;
     }
-
     DeviceGroupPresentInfoKHX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -21161,15 +21124,14 @@ namespace vk
 
     DeviceGroupSwapchainCreateInfoKHX( VkDeviceGroupSwapchainCreateInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DeviceGroupSwapchainCreateInfoKHX) );
+      memcpy( this, &rhs, sizeof( DeviceGroupSwapchainCreateInfoKHX ) );
     }
 
     DeviceGroupSwapchainCreateInfoKHX& operator=( VkDeviceGroupSwapchainCreateInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DeviceGroupSwapchainCreateInfoKHX) );
+      memcpy( this, &rhs, sizeof( DeviceGroupSwapchainCreateInfoKHX ) );
       return *this;
     }
-
     DeviceGroupSwapchainCreateInfoKHX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -21259,15 +21221,14 @@ namespace vk
 
     SwapchainCreateInfoKHR( VkSwapchainCreateInfoKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(SwapchainCreateInfoKHR) );
+      memcpy( this, &rhs, sizeof( SwapchainCreateInfoKHR ) );
     }
 
     SwapchainCreateInfoKHR& operator=( VkSwapchainCreateInfoKHR const & rhs )
     {
-      memcpy( this, &rhs, sizeof(SwapchainCreateInfoKHR) );
+      memcpy( this, &rhs, sizeof( SwapchainCreateInfoKHR ) );
       return *this;
     }
-
     SwapchainCreateInfoKHR& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -21450,15 +21411,14 @@ namespace vk
 
     ViewportSwizzleNV( VkViewportSwizzleNV const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ViewportSwizzleNV) );
+      memcpy( this, &rhs, sizeof( ViewportSwizzleNV ) );
     }
 
     ViewportSwizzleNV& operator=( VkViewportSwizzleNV const & rhs )
     {
-      memcpy( this, &rhs, sizeof(ViewportSwizzleNV) );
+      memcpy( this, &rhs, sizeof( ViewportSwizzleNV ) );
       return *this;
     }
-
     ViewportSwizzleNV& setX( ViewportCoordinateSwizzleNV x_ )
     {
       x = x_;
@@ -21521,15 +21481,14 @@ namespace vk
 
     PipelineViewportSwizzleStateCreateInfoNV( VkPipelineViewportSwizzleStateCreateInfoNV const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PipelineViewportSwizzleStateCreateInfoNV) );
+      memcpy( this, &rhs, sizeof( PipelineViewportSwizzleStateCreateInfoNV ) );
     }
 
     PipelineViewportSwizzleStateCreateInfoNV& operator=( VkPipelineViewportSwizzleStateCreateInfoNV const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PipelineViewportSwizzleStateCreateInfoNV) );
+      memcpy( this, &rhs, sizeof( PipelineViewportSwizzleStateCreateInfoNV ) );
       return *this;
     }
-
     PipelineViewportSwizzleStateCreateInfoNV& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -21604,15 +21563,14 @@ namespace vk
 
     PipelineDiscardRectangleStateCreateInfoEXT( VkPipelineDiscardRectangleStateCreateInfoEXT const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PipelineDiscardRectangleStateCreateInfoEXT) );
+      memcpy( this, &rhs, sizeof( PipelineDiscardRectangleStateCreateInfoEXT ) );
     }
 
     PipelineDiscardRectangleStateCreateInfoEXT& operator=( VkPipelineDiscardRectangleStateCreateInfoEXT const & rhs )
     {
-      memcpy( this, &rhs, sizeof(PipelineDiscardRectangleStateCreateInfoEXT) );
+      memcpy( this, &rhs, sizeof( PipelineDiscardRectangleStateCreateInfoEXT ) );
       return *this;
     }
-
     PipelineDiscardRectangleStateCreateInfoEXT& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -21719,15 +21677,14 @@ namespace vk
 
     SubpassDescription( VkSubpassDescription const & rhs )
     {
-      memcpy( this, &rhs, sizeof(SubpassDescription) );
+      memcpy( this, &rhs, sizeof( SubpassDescription ) );
     }
 
     SubpassDescription& operator=( VkSubpassDescription const & rhs )
     {
-      memcpy( this, &rhs, sizeof(SubpassDescription) );
+      memcpy( this, &rhs, sizeof( SubpassDescription ) );
       return *this;
     }
-
     SubpassDescription& setFlags( SubpassDescriptionFlags flags_ )
     {
       flags = flags_;
@@ -21842,15 +21799,14 @@ namespace vk
 
     RenderPassCreateInfo( VkRenderPassCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(RenderPassCreateInfo) );
+      memcpy( this, &rhs, sizeof( RenderPassCreateInfo ) );
     }
 
     RenderPassCreateInfo& operator=( VkRenderPassCreateInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(RenderPassCreateInfo) );
+      memcpy( this, &rhs, sizeof( RenderPassCreateInfo ) );
       return *this;
     }
-
     RenderPassCreateInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -21937,10 +21893,10 @@ namespace vk
   };
   static_assert( sizeof( RenderPassCreateInfo ) == sizeof( VkRenderPassCreateInfo ), "struct and wrapper have different size!" );
 
-    Result enumerateInstanceLayerProperties( uint32_t* pPropertyCount, LayerProperties* pProperties );
+  Result enumerateInstanceLayerProperties( uint32_t* pPropertyCount, LayerProperties* pProperties );
 #ifndef VULKAN_HPP_DISABLE_ENHANCED_MODE
-    template <typename Allocator = std::allocator<LayerProperties>> 
-    typename ResultValueType<std::vector<LayerProperties,Allocator>>::type enumerateInstanceLayerProperties();
+  template <typename Allocator = std::allocator<LayerProperties>> 
+  typename ResultValueType<std::vector<LayerProperties,Allocator>>::type enumerateInstanceLayerProperties();
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
 
   VULKAN_HPP_INLINE Result enumerateInstanceLayerProperties( uint32_t* pPropertyCount, LayerProperties* pProperties )
@@ -21963,17 +21919,17 @@ namespace vk
         result = static_cast<Result>( vkEnumerateInstanceLayerProperties( &propertyCount, reinterpret_cast<VkLayerProperties*>( properties.data() ) ) );
       }
     } while ( result == Result::eIncomplete );
-    assert( propertyCount <= properties.size() ); 
-    properties.resize( propertyCount ); 
+    assert( propertyCount <= properties.size() );
+    properties.resize( propertyCount );
     return createResultValue( result, properties, "vk::enumerateInstanceLayerProperties" );
   }
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
 
 
-    Result enumerateInstanceExtensionProperties( const char* pLayerName, uint32_t* pPropertyCount, ExtensionProperties* pProperties );
+  Result enumerateInstanceExtensionProperties( const char* pLayerName, uint32_t* pPropertyCount, ExtensionProperties* pProperties );
 #ifndef VULKAN_HPP_DISABLE_ENHANCED_MODE
-    template <typename Allocator = std::allocator<ExtensionProperties>> 
-    typename ResultValueType<std::vector<ExtensionProperties,Allocator>>::type enumerateInstanceExtensionProperties( Optional<const std::string> layerName = nullptr );
+  template <typename Allocator = std::allocator<ExtensionProperties>> 
+  typename ResultValueType<std::vector<ExtensionProperties,Allocator>>::type enumerateInstanceExtensionProperties( Optional<const std::string> layerName = nullptr );
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
 
   VULKAN_HPP_INLINE Result enumerateInstanceExtensionProperties( const char* pLayerName, uint32_t* pPropertyCount, ExtensionProperties* pProperties )
@@ -21996,8 +21952,8 @@ namespace vk
         result = static_cast<Result>( vkEnumerateInstanceExtensionProperties( layerName ? layerName->c_str() : nullptr, &propertyCount, reinterpret_cast<VkExtensionProperties*>( properties.data() ) ) );
       }
     } while ( result == Result::eIncomplete );
-    assert( propertyCount <= properties.size() ); 
-    properties.resize( propertyCount ); 
+    assert( propertyCount <= properties.size() );
+    properties.resize( propertyCount );
     return createResultValue( result, properties, "vk::enumerateInstanceExtensionProperties" );
   }
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
@@ -22017,35 +21973,35 @@ namespace vk
       : m_commandBuffer(VK_NULL_HANDLE)
     {}
 
-    VULKAN_HPP_TYPESAFE_EXPLICIT CommandBuffer(VkCommandBuffer commandBuffer)
-       : m_commandBuffer(commandBuffer)
+    VULKAN_HPP_TYPESAFE_EXPLICIT CommandBuffer( VkCommandBuffer commandBuffer )
+       : m_commandBuffer( commandBuffer )
     {}
 
 #if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    CommandBuffer& operator=(VkCommandBuffer commandBuffer)
+    CommandBuffer & operator=(VkCommandBuffer commandBuffer)
     {
       m_commandBuffer = commandBuffer;
-      return *this;
+      return *this; 
     }
 #endif
 
-    CommandBuffer& operator=( std::nullptr_t )
+    CommandBuffer & operator=( std::nullptr_t )
     {
       m_commandBuffer = VK_NULL_HANDLE;
       return *this;
     }
 
-    bool operator==(CommandBuffer const &rhs) const
+    bool operator==( CommandBuffer const & rhs ) const
     {
       return m_commandBuffer == rhs.m_commandBuffer;
     }
 
-    bool operator!=(CommandBuffer const &rhs) const
+    bool operator!=(CommandBuffer const & rhs ) const
     {
       return m_commandBuffer != rhs.m_commandBuffer;
     }
 
-    bool operator<(CommandBuffer const &rhs) const
+    bool operator<(CommandBuffer const & rhs ) const
     {
       return m_commandBuffer < rhs.m_commandBuffer;
     }
@@ -22261,6 +22217,8 @@ namespace vk
     void setDiscardRectangleEXT( uint32_t firstDiscardRectangle, ArrayProxy<const Rect2D> discardRectangles ) const;
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
 
+
+
     VULKAN_HPP_TYPESAFE_EXPLICIT operator VkCommandBuffer() const
     {
       return m_commandBuffer;
@@ -22279,6 +22237,7 @@ namespace vk
   private:
     VkCommandBuffer m_commandBuffer;
   };
+
   static_assert( sizeof( CommandBuffer ) == sizeof( VkCommandBuffer ), "handle and wrapper have different size!" );
 
   VULKAN_HPP_INLINE Result CommandBuffer::begin( const CommandBufferBeginInfo* pBeginInfo ) const
@@ -22409,7 +22368,7 @@ namespace vk
 #else
     if ( buffers.size() != offsets.size() )
     {
-      throw std::logic_error( "vk::CommandBuffer::bindVertexBuffers: buffers.size() != offsets.size()" );
+      throw LogicError( "vk::CommandBuffer::bindVertexBuffers: buffers.size() != offsets.size()" );
     }
 #endif  // VULKAN_HPP_NO_EXCEPTIONS
     vkCmdBindVertexBuffers( m_commandBuffer, firstBinding, buffers.size() , reinterpret_cast<const VkBuffer*>( buffers.data() ), offsets.data() );
@@ -22791,15 +22750,14 @@ namespace vk
 
     SubmitInfo( VkSubmitInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(SubmitInfo) );
+      memcpy( this, &rhs, sizeof( SubmitInfo ) );
     }
 
     SubmitInfo& operator=( VkSubmitInfo const & rhs )
     {
-      memcpy( this, &rhs, sizeof(SubmitInfo) );
+      memcpy( this, &rhs, sizeof( SubmitInfo ) );
       return *this;
     }
-
     SubmitInfo& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -22897,35 +22855,35 @@ namespace vk
       : m_queue(VK_NULL_HANDLE)
     {}
 
-    VULKAN_HPP_TYPESAFE_EXPLICIT Queue(VkQueue queue)
-       : m_queue(queue)
+    VULKAN_HPP_TYPESAFE_EXPLICIT Queue( VkQueue queue )
+       : m_queue( queue )
     {}
 
 #if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    Queue& operator=(VkQueue queue)
+    Queue & operator=(VkQueue queue)
     {
       m_queue = queue;
-      return *this;
+      return *this; 
     }
 #endif
 
-    Queue& operator=( std::nullptr_t )
+    Queue & operator=( std::nullptr_t )
     {
       m_queue = VK_NULL_HANDLE;
       return *this;
     }
 
-    bool operator==(Queue const &rhs) const
+    bool operator==( Queue const & rhs ) const
     {
       return m_queue == rhs.m_queue;
     }
 
-    bool operator!=(Queue const &rhs) const
+    bool operator!=(Queue const & rhs ) const
     {
       return m_queue != rhs.m_queue;
     }
 
-    bool operator<(Queue const &rhs) const
+    bool operator<(Queue const & rhs ) const
     {
       return m_queue < rhs.m_queue;
     }
@@ -22951,6 +22909,8 @@ namespace vk
     Result presentKHR( const PresentInfoKHR & presentInfo ) const;
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
 
+
+
     VULKAN_HPP_TYPESAFE_EXPLICIT operator VkQueue() const
     {
       return m_queue;
@@ -22969,6 +22929,7 @@ namespace vk
   private:
     VkQueue m_queue;
   };
+
   static_assert( sizeof( Queue ) == sizeof( VkQueue ), "handle and wrapper have different size!" );
 
   VULKAN_HPP_INLINE Result Queue::submit( uint32_t submitCount, const SubmitInfo* pSubmits, Fence fence ) const
@@ -23084,35 +23045,35 @@ namespace vk
       : m_device(VK_NULL_HANDLE)
     {}
 
-    VULKAN_HPP_TYPESAFE_EXPLICIT Device(VkDevice device)
-       : m_device(device)
+    VULKAN_HPP_TYPESAFE_EXPLICIT Device( VkDevice device )
+       : m_device( device )
     {}
 
 #if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    Device& operator=(VkDevice device)
+    Device & operator=(VkDevice device)
     {
       m_device = device;
-      return *this;
+      return *this; 
     }
 #endif
 
-    Device& operator=( std::nullptr_t )
+    Device & operator=( std::nullptr_t )
     {
       m_device = VK_NULL_HANDLE;
       return *this;
     }
 
-    bool operator==(Device const &rhs) const
+    bool operator==( Device const & rhs ) const
     {
       return m_device == rhs.m_device;
     }
 
-    bool operator!=(Device const &rhs) const
+    bool operator!=(Device const & rhs ) const
     {
       return m_device != rhs.m_device;
     }
 
-    bool operator<(Device const &rhs) const
+    bool operator<(Device const & rhs ) const
     {
       return m_device < rhs.m_device;
     }
@@ -23777,6 +23738,8 @@ namespace vk
     typename ResultValueType<std::vector<PastPresentationTimingGOOGLE,Allocator>>::type getPastPresentationTimingGOOGLE( SwapchainKHR swapchain ) const;
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
 
+
+
     VULKAN_HPP_TYPESAFE_EXPLICIT operator VkDevice() const
     {
       return m_device;
@@ -23795,6 +23758,7 @@ namespace vk
   private:
     VkDevice m_device;
   };
+
   static_assert( sizeof( Device ) == sizeof( VkDevice ), "handle and wrapper have different size!" );
 
 #ifndef VULKAN_HPP_NO_SMART_HANDLE
@@ -24884,8 +24848,8 @@ namespace vk
         result = static_cast<Result>( vkGetPipelineCacheData( m_device, static_cast<VkPipelineCache>( pipelineCache ), &dataSize, reinterpret_cast<void*>( data.data() ) ) );
       }
     } while ( result == Result::eIncomplete );
-    assert( dataSize <= data.size() ); 
-    data.resize( dataSize ); 
+    assert( dataSize <= data.size() );
+    data.resize( dataSize );
     return createResultValue( result, data, "vk::Device::getPipelineCacheData" );
   }
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
@@ -25432,8 +25396,8 @@ namespace vk
         result = static_cast<Result>( vkGetSwapchainImagesKHR( m_device, static_cast<VkSwapchainKHR>( swapchain ), &swapchainImageCount, reinterpret_cast<VkImage*>( swapchainImages.data() ) ) );
       }
     } while ( result == Result::eIncomplete );
-    assert( swapchainImageCount <= swapchainImages.size() ); 
-    swapchainImages.resize( swapchainImageCount ); 
+    assert( swapchainImageCount <= swapchainImages.size() );
+    swapchainImages.resize( swapchainImageCount );
     return createResultValue( result, swapchainImages, "vk::Device::getSwapchainImagesKHR" );
   }
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
@@ -25566,7 +25530,7 @@ namespace vk
 #else
     if ( pObjectTableEntries.size() != objectIndices.size() )
     {
-      throw std::logic_error( "vk::Device::registerObjectsNVX: pObjectTableEntries.size() != objectIndices.size()" );
+      throw LogicError( "vk::Device::registerObjectsNVX: pObjectTableEntries.size() != objectIndices.size()" );
     }
 #endif  // VULKAN_HPP_NO_EXCEPTIONS
     Result result = static_cast<Result>( vkRegisterObjectsNVX( m_device, static_cast<VkObjectTableNVX>( objectTable ), pObjectTableEntries.size() , reinterpret_cast<const VkObjectTableEntryNVX* const*>( pObjectTableEntries.data() ), objectIndices.data() ) );
@@ -25586,7 +25550,7 @@ namespace vk
 #else
     if ( objectEntryTypes.size() != objectIndices.size() )
     {
-      throw std::logic_error( "vk::Device::unregisterObjectsNVX: objectEntryTypes.size() != objectIndices.size()" );
+      throw LogicError( "vk::Device::unregisterObjectsNVX: objectEntryTypes.size() != objectIndices.size()" );
     }
 #endif  // VULKAN_HPP_NO_EXCEPTIONS
     Result result = static_cast<Result>( vkUnregisterObjectsNVX( m_device, static_cast<VkObjectTableNVX>( objectTable ), objectEntryTypes.size() , reinterpret_cast<const VkObjectEntryTypeNVX*>( objectEntryTypes.data() ), objectIndices.data() ) );
@@ -25884,7 +25848,7 @@ namespace vk
 #else
     if ( swapchains.size() != metadata.size() )
     {
-      throw std::logic_error( "vk::Device::setHdrMetadataEXT: swapchains.size() != metadata.size()" );
+      throw LogicError( "vk::Device::setHdrMetadataEXT: swapchains.size() != metadata.size()" );
     }
 #endif  // VULKAN_HPP_NO_EXCEPTIONS
     vkSetHdrMetadataEXT( m_device, swapchains.size() , reinterpret_cast<const VkSwapchainKHR*>( swapchains.data() ), reinterpret_cast<const VkHdrMetadataEXT*>( metadata.data() ) );
@@ -25953,35 +25917,35 @@ namespace vk
       : m_physicalDevice(VK_NULL_HANDLE)
     {}
 
-    VULKAN_HPP_TYPESAFE_EXPLICIT PhysicalDevice(VkPhysicalDevice physicalDevice)
-       : m_physicalDevice(physicalDevice)
+    VULKAN_HPP_TYPESAFE_EXPLICIT PhysicalDevice( VkPhysicalDevice physicalDevice )
+       : m_physicalDevice( physicalDevice )
     {}
 
 #if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    PhysicalDevice& operator=(VkPhysicalDevice physicalDevice)
+    PhysicalDevice & operator=(VkPhysicalDevice physicalDevice)
     {
       m_physicalDevice = physicalDevice;
-      return *this;
+      return *this; 
     }
 #endif
 
-    PhysicalDevice& operator=( std::nullptr_t )
+    PhysicalDevice & operator=( std::nullptr_t )
     {
       m_physicalDevice = VK_NULL_HANDLE;
       return *this;
     }
 
-    bool operator==(PhysicalDevice const &rhs) const
+    bool operator==( PhysicalDevice const & rhs ) const
     {
       return m_physicalDevice == rhs.m_physicalDevice;
     }
 
-    bool operator!=(PhysicalDevice const &rhs) const
+    bool operator!=(PhysicalDevice const & rhs ) const
     {
       return m_physicalDevice != rhs.m_physicalDevice;
     }
 
-    bool operator<(PhysicalDevice const &rhs) const
+    bool operator<(PhysicalDevice const & rhs ) const
     {
       return m_physicalDevice < rhs.m_physicalDevice;
     }
@@ -26221,7 +26185,7 @@ namespace vk
 
     Result getSurfaceCapabilities2KHR( const PhysicalDeviceSurfaceInfo2KHR* pSurfaceInfo, SurfaceCapabilities2KHR* pSurfaceCapabilities ) const;
 #ifndef VULKAN_HPP_DISABLE_ENHANCED_MODE
-    Result getSurfaceCapabilities2KHR( const PhysicalDeviceSurfaceInfo2KHR & surfaceInfo ) const;
+    ResultValueType<SurfaceCapabilities2KHR>::type getSurfaceCapabilities2KHR( const PhysicalDeviceSurfaceInfo2KHR & surfaceInfo ) const;
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
 
     Result getSurfaceFormats2KHR( const PhysicalDeviceSurfaceInfo2KHR* pSurfaceInfo, uint32_t* pSurfaceFormatCount, SurfaceFormat2KHR* pSurfaceFormats ) const;
@@ -26229,6 +26193,8 @@ namespace vk
     template <typename Allocator = std::allocator<SurfaceFormat2KHR>> 
     typename ResultValueType<std::vector<SurfaceFormat2KHR,Allocator>>::type getSurfaceFormats2KHR( const PhysicalDeviceSurfaceInfo2KHR & surfaceInfo ) const;
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
+
+
 
     VULKAN_HPP_TYPESAFE_EXPLICIT operator VkPhysicalDevice() const
     {
@@ -26248,6 +26214,7 @@ namespace vk
   private:
     VkPhysicalDevice m_physicalDevice;
   };
+
   static_assert( sizeof( PhysicalDevice ) == sizeof( VkPhysicalDevice ), "handle and wrapper have different size!" );
 
 #ifndef VULKAN_HPP_NO_SMART_HANDLE
@@ -26390,8 +26357,8 @@ namespace vk
         result = static_cast<Result>( vkEnumerateDeviceLayerProperties( m_physicalDevice, &propertyCount, reinterpret_cast<VkLayerProperties*>( properties.data() ) ) );
       }
     } while ( result == Result::eIncomplete );
-    assert( propertyCount <= properties.size() ); 
-    properties.resize( propertyCount ); 
+    assert( propertyCount <= properties.size() );
+    properties.resize( propertyCount );
     return createResultValue( result, properties, "vk::PhysicalDevice::enumerateDeviceLayerProperties" );
   }
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
@@ -26416,8 +26383,8 @@ namespace vk
         result = static_cast<Result>( vkEnumerateDeviceExtensionProperties( m_physicalDevice, layerName ? layerName->c_str() : nullptr, &propertyCount, reinterpret_cast<VkExtensionProperties*>( properties.data() ) ) );
       }
     } while ( result == Result::eIncomplete );
-    assert( propertyCount <= properties.size() ); 
-    properties.resize( propertyCount ); 
+    assert( propertyCount <= properties.size() );
+    properties.resize( propertyCount );
     return createResultValue( result, properties, "vk::PhysicalDevice::enumerateDeviceExtensionProperties" );
   }
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
@@ -26459,8 +26426,8 @@ namespace vk
         result = static_cast<Result>( vkGetPhysicalDeviceDisplayPropertiesKHR( m_physicalDevice, &propertyCount, reinterpret_cast<VkDisplayPropertiesKHR*>( properties.data() ) ) );
       }
     } while ( result == Result::eIncomplete );
-    assert( propertyCount <= properties.size() ); 
-    properties.resize( propertyCount ); 
+    assert( propertyCount <= properties.size() );
+    properties.resize( propertyCount );
     return createResultValue( result, properties, "vk::PhysicalDevice::getDisplayPropertiesKHR" );
   }
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
@@ -26485,8 +26452,8 @@ namespace vk
         result = static_cast<Result>( vkGetPhysicalDeviceDisplayPlanePropertiesKHR( m_physicalDevice, &propertyCount, reinterpret_cast<VkDisplayPlanePropertiesKHR*>( properties.data() ) ) );
       }
     } while ( result == Result::eIncomplete );
-    assert( propertyCount <= properties.size() ); 
-    properties.resize( propertyCount ); 
+    assert( propertyCount <= properties.size() );
+    properties.resize( propertyCount );
     return createResultValue( result, properties, "vk::PhysicalDevice::getDisplayPlanePropertiesKHR" );
   }
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
@@ -26511,8 +26478,8 @@ namespace vk
         result = static_cast<Result>( vkGetDisplayPlaneSupportedDisplaysKHR( m_physicalDevice, planeIndex, &displayCount, reinterpret_cast<VkDisplayKHR*>( displays.data() ) ) );
       }
     } while ( result == Result::eIncomplete );
-    assert( displayCount <= displays.size() ); 
-    displays.resize( displayCount ); 
+    assert( displayCount <= displays.size() );
+    displays.resize( displayCount );
     return createResultValue( result, displays, "vk::PhysicalDevice::getDisplayPlaneSupportedDisplaysKHR" );
   }
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
@@ -26537,8 +26504,8 @@ namespace vk
         result = static_cast<Result>( vkGetDisplayModePropertiesKHR( m_physicalDevice, static_cast<VkDisplayKHR>( display ), &propertyCount, reinterpret_cast<VkDisplayModePropertiesKHR*>( properties.data() ) ) );
       }
     } while ( result == Result::eIncomplete );
-    assert( propertyCount <= properties.size() ); 
-    properties.resize( propertyCount ); 
+    assert( propertyCount <= properties.size() );
+    properties.resize( propertyCount );
     return createResultValue( result, properties, "vk::PhysicalDevice::getDisplayModePropertiesKHR" );
   }
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
@@ -26628,8 +26595,8 @@ namespace vk
         result = static_cast<Result>( vkGetPhysicalDeviceSurfaceFormatsKHR( m_physicalDevice, static_cast<VkSurfaceKHR>( surface ), &surfaceFormatCount, reinterpret_cast<VkSurfaceFormatKHR*>( surfaceFormats.data() ) ) );
       }
     } while ( result == Result::eIncomplete );
-    assert( surfaceFormatCount <= surfaceFormats.size() ); 
-    surfaceFormats.resize( surfaceFormatCount ); 
+    assert( surfaceFormatCount <= surfaceFormats.size() );
+    surfaceFormats.resize( surfaceFormatCount );
     return createResultValue( result, surfaceFormats, "vk::PhysicalDevice::getSurfaceFormatsKHR" );
   }
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
@@ -26654,8 +26621,8 @@ namespace vk
         result = static_cast<Result>( vkGetPhysicalDeviceSurfacePresentModesKHR( m_physicalDevice, static_cast<VkSurfaceKHR>( surface ), &presentModeCount, reinterpret_cast<VkPresentModeKHR*>( presentModes.data() ) ) );
       }
     } while ( result == Result::eIncomplete );
-    assert( presentModeCount <= presentModes.size() ); 
-    presentModes.resize( presentModeCount ); 
+    assert( presentModeCount <= presentModes.size() );
+    presentModes.resize( presentModeCount );
     return createResultValue( result, presentModes, "vk::PhysicalDevice::getSurfacePresentModesKHR" );
   }
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
@@ -26933,8 +26900,8 @@ namespace vk
         result = static_cast<Result>( vkGetPhysicalDevicePresentRectanglesKHX( m_physicalDevice, static_cast<VkSurfaceKHR>( surface ), &rectCount, reinterpret_cast<VkRect2D*>( rects.data() ) ) );
       }
     } while ( result == Result::eIncomplete );
-    assert( rectCount <= rects.size() ); 
-    rects.resize( rectCount ); 
+    assert( rectCount <= rects.size() );
+    rects.resize( rectCount );
     return createResultValue( result, rects, "vk::PhysicalDevice::getPresentRectanglesKHX" );
   }
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
@@ -26944,13 +26911,12 @@ namespace vk
     return static_cast<Result>( vkGetPhysicalDeviceSurfaceCapabilities2KHR( m_physicalDevice, reinterpret_cast<const VkPhysicalDeviceSurfaceInfo2KHR*>( pSurfaceInfo ), reinterpret_cast<VkSurfaceCapabilities2KHR*>( pSurfaceCapabilities ) ) );
   }
 #ifndef VULKAN_HPP_DISABLE_ENHANCED_MODE
-#if 0   // LunarG 1.0.48 header update workaround
-  VULKAN_HPP_INLINE Result PhysicalDevice::getSurfaceCapabilities2KHR( const PhysicalDeviceSurfaceInfo2KHR & surfaceInfo ) const
+  VULKAN_HPP_INLINE ResultValueType<SurfaceCapabilities2KHR>::type PhysicalDevice::getSurfaceCapabilities2KHR( const PhysicalDeviceSurfaceInfo2KHR & surfaceInfo ) const
   {
+    SurfaceCapabilities2KHR surfaceCapabilities;
     Result result = static_cast<Result>( vkGetPhysicalDeviceSurfaceCapabilities2KHR( m_physicalDevice, reinterpret_cast<const VkPhysicalDeviceSurfaceInfo2KHR*>( &surfaceInfo ), reinterpret_cast<VkSurfaceCapabilities2KHR*>( &surfaceCapabilities ) ) );
     return createResultValue( result, surfaceCapabilities, "vk::PhysicalDevice::getSurfaceCapabilities2KHR" );
   }
-#endif
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
 
   VULKAN_HPP_INLINE Result PhysicalDevice::getSurfaceFormats2KHR( const PhysicalDeviceSurfaceInfo2KHR* pSurfaceInfo, uint32_t* pSurfaceFormatCount, SurfaceFormat2KHR* pSurfaceFormats ) const
@@ -26973,8 +26939,8 @@ namespace vk
         result = static_cast<Result>( vkGetPhysicalDeviceSurfaceFormats2KHR( m_physicalDevice, reinterpret_cast<const VkPhysicalDeviceSurfaceInfo2KHR*>( &surfaceInfo ), &surfaceFormatCount, reinterpret_cast<VkSurfaceFormat2KHR*>( surfaceFormats.data() ) ) );
       }
     } while ( result == Result::eIncomplete );
-    assert( surfaceFormatCount <= surfaceFormats.size() ); 
-    surfaceFormats.resize( surfaceFormatCount ); 
+    assert( surfaceFormatCount <= surfaceFormats.size() );
+    surfaceFormats.resize( surfaceFormatCount );
     return createResultValue( result, surfaceFormats, "vk::PhysicalDevice::getSurfaceFormats2KHR" );
   }
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
@@ -26999,15 +26965,14 @@ namespace vk
 
     CmdProcessCommandsInfoNVX( VkCmdProcessCommandsInfoNVX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(CmdProcessCommandsInfoNVX) );
+      memcpy( this, &rhs, sizeof( CmdProcessCommandsInfoNVX ) );
     }
 
     CmdProcessCommandsInfoNVX& operator=( VkCmdProcessCommandsInfoNVX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(CmdProcessCommandsInfoNVX) );
+      memcpy( this, &rhs, sizeof( CmdProcessCommandsInfoNVX ) );
       return *this;
     }
-
     CmdProcessCommandsInfoNVX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -27168,35 +27133,35 @@ namespace vk
       : m_instance(VK_NULL_HANDLE)
     {}
 
-    VULKAN_HPP_TYPESAFE_EXPLICIT Instance(VkInstance instance)
-       : m_instance(instance)
+    VULKAN_HPP_TYPESAFE_EXPLICIT Instance( VkInstance instance )
+       : m_instance( instance )
     {}
 
 #if defined(VULKAN_HPP_TYPESAFE_CONVERSION)
-    Instance& operator=(VkInstance instance)
+    Instance & operator=(VkInstance instance)
     {
       m_instance = instance;
-      return *this;
+      return *this; 
     }
 #endif
 
-    Instance& operator=( std::nullptr_t )
+    Instance & operator=( std::nullptr_t )
     {
       m_instance = VK_NULL_HANDLE;
       return *this;
     }
 
-    bool operator==(Instance const &rhs) const
+    bool operator==( Instance const & rhs ) const
     {
       return m_instance == rhs.m_instance;
     }
 
-    bool operator!=(Instance const &rhs) const
+    bool operator!=(Instance const & rhs ) const
     {
       return m_instance != rhs.m_instance;
     }
 
-    bool operator<(Instance const &rhs) const
+    bool operator<(Instance const & rhs ) const
     {
       return m_instance < rhs.m_instance;
     }
@@ -27344,6 +27309,8 @@ namespace vk
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
 #endif /*VK_USE_PLATFORM_MACOS_MVK*/
 
+
+
     VULKAN_HPP_TYPESAFE_EXPLICIT operator VkInstance() const
     {
       return m_instance;
@@ -27362,6 +27329,7 @@ namespace vk
   private:
     VkInstance m_instance;
   };
+
   static_assert( sizeof( Instance ) == sizeof( VkInstance ), "handle and wrapper have different size!" );
 
 #ifndef VULKAN_HPP_NO_SMART_HANDLE
@@ -27433,8 +27401,8 @@ namespace vk
         result = static_cast<Result>( vkEnumeratePhysicalDevices( m_instance, &physicalDeviceCount, reinterpret_cast<VkPhysicalDevice*>( physicalDevices.data() ) ) );
       }
     } while ( result == Result::eIncomplete );
-    assert( physicalDeviceCount <= physicalDevices.size() ); 
-    physicalDevices.resize( physicalDeviceCount ); 
+    assert( physicalDeviceCount <= physicalDevices.size() );
+    physicalDevices.resize( physicalDeviceCount );
     return createResultValue( result, physicalDevices, "vk::Instance::enumeratePhysicalDevices" );
   }
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
@@ -27678,7 +27646,7 @@ namespace vk
 #else
     if ( layerPrefix.size() != message.size() )
     {
-      throw std::logic_error( "vk::Instance::debugReportMessageEXT: layerPrefix.size() != message.size()" );
+      throw LogicError( "vk::Instance::debugReportMessageEXT: layerPrefix.size() != message.size()" );
     }
 #endif  // VULKAN_HPP_NO_EXCEPTIONS
     vkDebugReportMessageEXT( m_instance, static_cast<VkDebugReportFlagsEXT>( flags ), static_cast<VkDebugReportObjectTypeEXT>( objectType ), object, location, messageCode, layerPrefix.c_str(), message.c_str() );
@@ -27705,8 +27673,8 @@ namespace vk
         result = static_cast<Result>( vkEnumeratePhysicalDeviceGroupsKHX( m_instance, &physicalDeviceGroupCount, reinterpret_cast<VkPhysicalDeviceGroupPropertiesKHX*>( physicalDeviceGroupProperties.data() ) ) );
       }
     } while ( result == Result::eIncomplete );
-    assert( physicalDeviceGroupCount <= physicalDeviceGroupProperties.size() ); 
-    physicalDeviceGroupProperties.resize( physicalDeviceGroupCount ); 
+    assert( physicalDeviceGroupCount <= physicalDeviceGroupProperties.size() );
+    physicalDeviceGroupProperties.resize( physicalDeviceGroupCount );
     return createResultValue( result, physicalDeviceGroupProperties, "vk::Instance::enumeratePhysicalDeviceGroupsKHX" );
   }
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
@@ -27767,15 +27735,14 @@ namespace vk
 
     DeviceGroupDeviceCreateInfoKHX( VkDeviceGroupDeviceCreateInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DeviceGroupDeviceCreateInfoKHX) );
+      memcpy( this, &rhs, sizeof( DeviceGroupDeviceCreateInfoKHX ) );
     }
 
     DeviceGroupDeviceCreateInfoKHX& operator=( VkDeviceGroupDeviceCreateInfoKHX const & rhs )
     {
-      memcpy( this, &rhs, sizeof(DeviceGroupDeviceCreateInfoKHX) );
+      memcpy( this, &rhs, sizeof( DeviceGroupDeviceCreateInfoKHX ) );
       return *this;
     }
-
     DeviceGroupDeviceCreateInfoKHX& setPNext( const void* pNext_ )
     {
       pNext = pNext_;
@@ -27827,11 +27794,11 @@ namespace vk
   using UniqueInstance = UniqueHandle<Instance, InstanceDeleter>;
 #endif /*VULKAN_HPP_NO_SMART_HANDLE*/
 
-    Result createInstance( const InstanceCreateInfo* pCreateInfo, const AllocationCallbacks* pAllocator, Instance* pInstance );
+  Result createInstance( const InstanceCreateInfo* pCreateInfo, const AllocationCallbacks* pAllocator, Instance* pInstance );
 #ifndef VULKAN_HPP_DISABLE_ENHANCED_MODE
-    ResultValueType<Instance>::type createInstance( const InstanceCreateInfo & createInfo, Optional<const AllocationCallbacks> allocator = nullptr );
+  ResultValueType<Instance>::type createInstance( const InstanceCreateInfo & createInfo, Optional<const AllocationCallbacks> allocator = nullptr );
 #ifndef VULKAN_HPP_NO_SMART_HANDLE
-    UniqueInstance createInstanceUnique( const InstanceCreateInfo & createInfo, Optional<const AllocationCallbacks> allocator = nullptr );
+  UniqueInstance createInstanceUnique( const InstanceCreateInfo & createInfo, Optional<const AllocationCallbacks> allocator = nullptr );
 #endif /*VULKAN_HPP_NO_SMART_HANDLE*/
 #endif /*VULKAN_HPP_DISABLE_ENHANCED_MODE*/
 
@@ -29015,6 +28982,7 @@ namespace vk
     case StructureType::eDedicatedAllocationImageCreateInfoNV: return "DedicatedAllocationImageCreateInfoNV";
     case StructureType::eDedicatedAllocationBufferCreateInfoNV: return "DedicatedAllocationBufferCreateInfoNV";
     case StructureType::eDedicatedAllocationMemoryAllocateInfoNV: return "DedicatedAllocationMemoryAllocateInfoNV";
+    case StructureType::eTextureLodGatherFormatPropertiesAMD: return "TextureLodGatherFormatPropertiesAMD";
     case StructureType::eRenderPassMultiviewCreateInfoKHX: return "RenderPassMultiviewCreateInfoKHX";
     case StructureType::ePhysicalDeviceMultiviewFeaturesKHX: return "PhysicalDeviceMultiviewFeaturesKHX";
     case StructureType::ePhysicalDeviceMultiviewPropertiesKHX: return "PhysicalDeviceMultiviewPropertiesKHX";
@@ -30099,22 +30067,12 @@ namespace vk
     case DebugReportObjectTypeEXT::eCommandPool: return "CommandPool";
     case DebugReportObjectTypeEXT::eSurfaceKhr: return "SurfaceKhr";
     case DebugReportObjectTypeEXT::eSwapchainKhr: return "SwapchainKhr";
-    case DebugReportObjectTypeEXT::eDebugReport: return "DebugReport";
+    case DebugReportObjectTypeEXT::eDebugReportCallbackExt: return "DebugReportCallbackExt";
     case DebugReportObjectTypeEXT::eDisplayKhr: return "DisplayKhr";
     case DebugReportObjectTypeEXT::eDisplayModeKhr: return "DisplayModeKhr";
     case DebugReportObjectTypeEXT::eObjectTableNvx: return "ObjectTableNvx";
     case DebugReportObjectTypeEXT::eIndirectCommandsLayoutNvx: return "IndirectCommandsLayoutNvx";
     case DebugReportObjectTypeEXT::eDescriptorUpdateTemplateKHR: return "DescriptorUpdateTemplateKHR";
-    default: return "invalid";
-    }
-  }
-
-  VULKAN_HPP_INLINE std::string to_string(DebugReportErrorEXT value)
-  {
-    switch (value)
-    {
-    case DebugReportErrorEXT::eNone: return "None";
-    case DebugReportErrorEXT::eCallbackRef: return "CallbackRef";
     default: return "invalid";
     }
   }
@@ -30178,6 +30136,7 @@ namespace vk
     switch (value)
     {
     case ValidationCheckEXT::eAll: return "All";
+    case ValidationCheckEXT::eShaders: return "Shaders";
     default: return "invalid";
     }
   }
