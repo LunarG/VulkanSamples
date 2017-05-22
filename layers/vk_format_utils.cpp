@@ -542,6 +542,7 @@ VK_LAYER_EXPORT bool FormatIsUInt(VkFormat format) {
 
     switch (format) {
         case VK_FORMAT_R8_UINT:
+        case VK_FORMAT_S8_UINT:
         case VK_FORMAT_R8G8_UINT:
         case VK_FORMAT_R8G8B8_UINT:
         case VK_FORMAT_R8G8B8A8_UINT:
