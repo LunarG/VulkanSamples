@@ -2080,9 +2080,9 @@ bool PreCallValidateCmdClearAttachments(layer_data *device_data, VkCommandBuffer
                     }
                     // The layers specified by a given element of pRects must be contained within every attachment that
                     // pAttachments refers to
-                    auto attachment_base_array_layer = image_view_state->create_info.subresourceRange.baseArrayLayer;
                     auto attachment_layer_count = image_view_state->create_info.subresourceRange.layerCount;
-                    if ((pRects[j].baseArrayLayer < attachment_base_array_layer) || pRects[j].layerCount > attachment_layer_count) {
+                    if ((pRects[j].baseArrayLayer >= attachment_layer_count) ||
+                        (pRects[j].baseArrayLayer + pRects[j].layerCount > attachment_layer_count)) {
                         skip |=
                             log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                                     HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_01116, "DS",
