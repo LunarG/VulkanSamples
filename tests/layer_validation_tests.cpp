@@ -82,9 +82,6 @@ struct vktriangle_vs_uniform {
 static const char bindStateVertShaderText[] =
     "#version 450\n"
     "vec2 vertices[3];\n"
-    "out gl_PerVertex {\n"
-    "    vec4 gl_Position;\n"
-    "};\n"
     "void main() {\n"
     "      vertices[0] = vec2(-1.0, -1.0);\n"
     "      vertices[1] = vec2( 1.0, -1.0);\n"
@@ -3069,9 +3066,6 @@ TEST_F(VkLayerTest, CreatePipelineBadVertexAttributeFormat) {
     char const *vsSource =
         "#version 450\n"
         "\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = vec4(1);\n"
         "}\n";
@@ -4888,9 +4882,6 @@ TEST_F(VkLayerTest, InvalidCmdBufferBufferViewDestroyed) {
     char const *vsSource =
         "#version 450\n"
         "\n"
-        "out gl_PerVertex { \n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = vec4(1);\n"
         "}\n";
@@ -5751,9 +5742,6 @@ TEST_F(VkLayerTest, InvalidCmdBufferDescriptorSetBufferDestroyed) {
     char const *vsSource =
         "#version 450\n"
         "\n"
-        "out gl_PerVertex { \n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = vec4(1);\n"
         "}\n";
@@ -5975,9 +5963,6 @@ TEST_F(VkLayerTest, InvalidCmdBufferDescriptorSetImageSamplerDestroyed) {
     char const *vsSource =
         "#version 450\n"
         "\n"
-        "out gl_PerVertex { \n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = vec4(1);\n"
         "}\n";
@@ -6219,9 +6204,6 @@ TEST_F(VkLayerTest, ImageDescriptorLayoutMismatch) {
     char const *vsSource =
         "#version 450\n"
         "\n"
-        "out gl_PerVertex { \n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = vec4(1);\n"
         "}\n";
@@ -6383,9 +6365,6 @@ TEST_F(VkLayerTest, DescriptorPoolInUseDestroyedSignaled) {
     char const *vsSource =
         "#version 450\n"
         "\n"
-        "out gl_PerVertex { \n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = vec4(1);\n"
         "}\n";
@@ -6951,9 +6930,6 @@ TEST_F(VkLayerTest, InvalidDynamicOffsetCases) {
     char const *vsSource =
         "#version 450\n"
         "\n"
-        "out gl_PerVertex { \n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = vec4(1);\n"
         "}\n";
@@ -7421,9 +7397,6 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility) {
     char const *vsSource =
         "#version 450\n"
         "\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = vec4(1);\n"
         "}\n";
@@ -13606,9 +13579,6 @@ TEST_F(VkLayerTest, ImageViewInUseDestroyedSignaled) {
     char const *vsSource =
         "#version 450\n"
         "\n"
-        "out gl_PerVertex { \n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = vec4(1);\n"
         "}\n";
@@ -13773,9 +13743,6 @@ TEST_F(VkLayerTest, BufferViewInUseDestroyedSignaled) {
     char const *vsSource =
         "#version 450\n"
         "\n"
-        "out gl_PerVertex { \n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = vec4(1);\n"
         "}\n";
@@ -13946,9 +13913,6 @@ TEST_F(VkLayerTest, SamplerInUseDestroyedSignaled) {
     char const *vsSource =
         "#version 450\n"
         "\n"
-        "out gl_PerVertex { \n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = vec4(1);\n"
         "}\n";
@@ -14360,9 +14324,6 @@ TEST_F(VkLayerTest, InvalidSPIRVCodeSize) {
         "#version 450\n"
         "\n"
         "layout(location=0) out float x;\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = vec4(1);\n"
         "   x = 0;\n"
@@ -14454,9 +14415,6 @@ TEST_F(VkLayerTest, CreatePipelineVertexOutputNotConsumed) {
         "#version 450\n"
         "\n"
         "layout(location=0) out float x;\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = vec4(1);\n"
         "   x = 0;\n"
@@ -14498,9 +14456,6 @@ TEST_F(VkLayerTest, CreatePipelineCheckShaderBadSpecialization) {
     char const *vsSource =
         "#version 450\n"
         "\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = vec4(1);\n"
         "}\n";
@@ -14661,9 +14616,6 @@ TEST_F(VkLayerTest, CreatePipelineCheckShaderDescriptorTypeMismatch) {
         "layout (std140, set = 0, binding = 0) uniform buf {\n"
         "    mat4 mvp;\n"
         "} ubuf;\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = ubuf.mvp * vec4(1);\n"
         "}\n";
@@ -14756,9 +14708,6 @@ TEST_F(VkLayerTest, CreatePipelineCheckShaderDescriptorNotAccessible) {
         "layout (std140, set = 0, binding = 0) uniform buf {\n"
         "    mat4 mvp;\n"
         "} ubuf;\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = ubuf.mvp * vec4(1);\n"
         "}\n";
@@ -14811,9 +14760,6 @@ TEST_F(VkLayerTest, CreatePipelineCheckShaderPushConstantNotAccessible) {
         "#version 450\n"
         "\n"
         "layout(push_constant, std430) uniform foo { float x; } consts;\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = vec4(consts.x);\n"
         "}\n";
@@ -14877,9 +14823,6 @@ TEST_F(VkLayerTest, CreatePipelineCheckShaderNotEnabled) {
     char const *vsSource =
         "#version 450\n"
         "\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = vec4(1);\n"
         "}\n";
@@ -14924,9 +14867,6 @@ TEST_F(VkLayerTest, CreateShaderModuleCheckBadCapability) {
     char const *vsSource =
         "#version 450\n"
         "\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "layout(xfb_buffer = 1) out;"
         "void main(){\n"
         "   gl_Position = vec4(1);\n"
@@ -14962,9 +14902,6 @@ TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvided) {
     char const *vsSource =
         "#version 450\n"
         "\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = vec4(1);\n"
         "}\n";
@@ -15007,9 +14944,6 @@ TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvidedInBlock) {
     char const *vsSource =
         "#version 450\n"
         "\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = vec4(1);\n"
         "}\n";
@@ -15055,9 +14989,6 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatchArraySize) {
         "#version 450\n"
         "\n"
         "layout(location=0) out float x[2];\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   x[0] = 0; x[1] = 0;\n"
         "   gl_Position = vec4(1);\n"
@@ -15101,9 +15032,6 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatch) {
         "#version 450\n"
         "\n"
         "layout(location=0) out int x;\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   x = 0;\n"
         "   gl_Position = vec4(1);\n"
@@ -15148,9 +15076,6 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatchInBlock) {
         "#version 450\n"
         "\n"
         "out block { layout(location=0) int x; } outs;\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   outs.x = 0;\n"
         "   gl_Position = vec4(1);\n"
@@ -15195,9 +15120,6 @@ TEST_F(VkLayerTest, CreatePipelineVsFsMismatchByLocation) {
         "#version 450\n"
         "\n"
         "out block { layout(location=1) float x; } outs;\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   outs.x = 0;\n"
         "   gl_Position = vec4(1);\n"
@@ -15242,9 +15164,6 @@ TEST_F(VkLayerTest, CreatePipelineVsFsMismatchByComponent) {
         "#version 450\n"
         "\n"
         "out block { layout(location=0, component=0) float x; } outs;\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   outs.x = 0;\n"
         "   gl_Position = vec4(1);\n"
@@ -15364,9 +15283,6 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotConsumed) {
     char const *vsSource =
         "#version 450\n"
         "\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = vec4(1);\n"
         "}\n";
@@ -15418,9 +15334,6 @@ TEST_F(VkLayerTest, CreatePipelineAttribLocationMismatch) {
         "#version 450\n"
         "\n"
         "layout(location=1) in float x;\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = vec4(x);\n"
         "}\n";
@@ -15467,9 +15380,6 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotProvided) {
         "#version 450\n"
         "\n"
         "layout(location=0) in vec4 x;\n" /* not provided */
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = x;\n"
         "}\n";
@@ -15519,9 +15429,6 @@ TEST_F(VkLayerTest, CreatePipelineAttribTypeMismatch) {
         "#version 450\n"
         "\n"
         "layout(location=0) in int x;\n" /* attrib provided float */
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = vec4(x);\n"
         "}\n";
@@ -15566,9 +15473,6 @@ TEST_F(VkLayerTest, CreatePipelineDuplicateStage) {
     char const *vsSource =
         "#version 450\n"
         "\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = vec4(1);\n"
         "}\n";
@@ -15606,9 +15510,6 @@ TEST_F(VkLayerTest, CreatePipelineMissingEntrypoint) {
 
     char const *vsSource =
         "#version 450\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = vec4(0);\n"
         "}\n";
@@ -15729,7 +15630,6 @@ TEST_F(VkLayerTest, CreatePipelineTessPatchDecorationMismatch) {
         "#version 450\n"
         "layout(triangles, equal_spacing, cw) in;\n"
         "layout(location=0) patch in int x;\n"
-        "out gl_PerVertex { vec4 gl_Position; };\n"
         "void main(){\n"
         "   gl_Position.xyz = gl_TessCoord;\n"
         "   gl_Position.w = x;\n"
@@ -15793,7 +15693,6 @@ TEST_F(VkLayerTest, CreatePipelineTessErrors) {
     char const *tesSource =
         "#version 450\n"
         "layout(triangles, equal_spacing, cw) in;\n"
-        "out gl_PerVertex { vec4 gl_Position; };\n"
         "void main(){\n"
         "   gl_Position.xyz = gl_TessCoord;\n"
         "   gl_Position.w = 0;\n"
@@ -15925,9 +15824,6 @@ TEST_F(VkLayerTest, CreatePipelineAttribBindingConflict) {
         "#version 450\n"
         "\n"
         "layout(location=0) in float x;\n" /* attrib provided float */
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = vec4(x);\n"
         "}\n";
@@ -15970,9 +15866,6 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotWritten) {
     char const *vsSource =
         "#version 450\n"
         "\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = vec4(1);\n"
         "}\n";
@@ -16014,9 +15907,6 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotConsumed) {
     char const *vsSource =
         "#version 450\n"
         "\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = vec4(1);\n"
         "}\n";
@@ -16062,9 +15952,6 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputTypeMismatch) {
     char const *vsSource =
         "#version 450\n"
         "\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = vec4(1);\n"
         "}\n";
@@ -16107,9 +15994,6 @@ TEST_F(VkLayerTest, CreatePipelineUniformBlockNotProvided) {
     char const *vsSource =
         "#version 450\n"
         "\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = vec4(1);\n"
         "}\n";
@@ -16153,9 +16037,6 @@ TEST_F(VkLayerTest, CreatePipelinePushConstantsNotInLayout) {
         "#version 450\n"
         "\n"
         "layout(push_constant, std430) uniform foo { float x; } consts;\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = vec4(consts.x);\n"
         "}\n";
@@ -16199,9 +16080,6 @@ TEST_F(VkLayerTest, CreatePipelineInputAttachmentMissing) {
     char const *vsSource =
         "#version 450\n"
         "\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "    gl_Position = vec4(1);\n"
         "}\n";
@@ -16255,9 +16133,6 @@ TEST_F(VkLayerTest, CreatePipelineInputAttachmentTypeMismatch) {
     char const *vsSource =
         "#version 450\n"
         "\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "    gl_Position = vec4(1);\n"
         "}\n";
@@ -16333,9 +16208,6 @@ TEST_F(VkLayerTest, CreatePipelineInputAttachmentMissingArray) {
     char const *vsSource =
         "#version 450\n"
         "\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "    gl_Position = vec4(1);\n"
         "}\n";
@@ -16483,7 +16355,6 @@ TEST_F(VkLayerTest, DrawTimeImageViewTypeMismatchWithPipeline) {
     char const *vsSource =
         "#version 450\n"
         "\n"
-        "out gl_PerVertex { vec4 gl_Position; };\n"
         "void main() { gl_Position = vec4(0); }\n";
     char const *fsSource =
         "#version 450\n"
@@ -16544,7 +16415,6 @@ TEST_F(VkLayerTest, DrawTimeImageMultisampleMismatchWithPipeline) {
     char const *vsSource =
         "#version 450\n"
         "\n"
-        "out gl_PerVertex { vec4 gl_Position; };\n"
         "void main() { gl_Position = vec4(0); }\n";
     char const *fsSource =
         "#version 450\n"
@@ -21223,9 +21093,6 @@ TEST_F(VkPositiveLayerTest, DynamicOffsetWithInactiveBinding) {
     char const *vsSource =
         "#version 450\n"
         "\n"
-        "out gl_PerVertex { \n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = vec4(1);\n"
         "}\n";
@@ -23736,9 +23603,6 @@ TEST_F(VkPositiveLayerTest, CreatePipelineAttribMatrixType) {
         "#version 450\n"
         "\n"
         "layout(location=0) in mat2x4 x;\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = x[0] + x[1];\n"
         "}\n";
@@ -23792,9 +23656,6 @@ TEST_F(VkPositiveLayerTest, CreatePipelineAttribArrayType) {
         "#version 450\n"
         "\n"
         "layout(location=0) in vec4 x[2];\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = x[0] + x[1];\n"
         "}\n";
@@ -23854,9 +23715,6 @@ TEST_F(VkPositiveLayerTest, CreatePipelineAttribComponents) {
         "layout(location=1) in vec3 y1;\n"
         "layout(location=1, component=3) in float y2;\n"
         "layout(location=2) in vec4 z;\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = x + vec4(y1, y2) + z;\n"
         "}\n";
@@ -23896,9 +23754,6 @@ TEST_F(VkPositiveLayerTest, CreatePipelineSimplePositive) {
 
     char const *vsSource =
         "#version 450\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = vec4(0);\n"
         "}\n";
@@ -23941,9 +23796,6 @@ TEST_F(VkPositiveLayerTest, CreatePipelineRelaxedTypeMatch) {
 
     char const *vsSource =
         "#version 450\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "layout(location=0) out vec3 x;\n"
         "layout(location=1) out ivec3 y;\n"
         "layout(location=2) out vec3 z;\n"
@@ -24011,7 +23863,6 @@ TEST_F(VkPositiveLayerTest, CreatePipelineTessPerVertex) {
         "#version 450\n"
         "layout(triangles, equal_spacing, cw) in;\n"
         "layout(location=0) in int x[];\n"
-        "out gl_PerVertex { vec4 gl_Position; };\n"
         "void main(){\n"
         "   gl_Position.xyz = gl_TessCoord;\n"
         "   gl_Position.w = x[0] + x[1] + x[2];\n"
@@ -24078,7 +23929,6 @@ TEST_F(VkPositiveLayerTest, CreatePipelineGeometryInputBlockPositive) {
         "layout(triangles) in;\n"
         "layout(triangle_strip, max_vertices=3) out;\n"
         "layout(location=0) in VertexData { vec4 x; } gs_in[];\n"
-        "out gl_PerVertex { vec4 gl_Position; };\n"
         "void main() {\n"
         "   gl_Position = gs_in[0].x;\n"
         "   EmitVertex();\n"
@@ -24146,9 +23996,6 @@ TEST_F(VkPositiveLayerTest, CreatePipeline64BitAttributesPositive) {
         "#version 450\n"
         "\n"
         "layout(location=0) in dmat4 x;\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "   gl_Position = vec4(x[0][0]);\n"
         "}\n";
@@ -24189,9 +24036,6 @@ TEST_F(VkPositiveLayerTest, CreatePipelineInputAttachmentPositive) {
     char const *vsSource =
         "#version 450\n"
         "\n"
-        "out gl_PerVertex {\n"
-        "    vec4 gl_Position;\n"
-        "};\n"
         "void main(){\n"
         "    gl_Position = vec4(1);\n"
         "}\n";
