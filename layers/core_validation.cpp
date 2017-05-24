@@ -11574,49 +11574,211 @@ VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetWithTemplateKHR(VkCommandBuffer c
     dev_data->dispatch_table.CmdPushDescriptorSetWithTemplateKHR(commandBuffer, descriptorUpdateTemplate, layout, set, pData);
 }
 
-static PFN_vkVoidFunction intercept_core_instance_command(const char *name);
+VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, const char *funcName);
+VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance instance, const char *funcName);
+VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance, const char *funcName);
 
-static PFN_vkVoidFunction intercept_core_device_command(const char *name);
+// Map of all APIs to be intercepted by this layer
+static const std::unordered_map<std::string, void*> name_to_funcptr_map = {
+    {"vkGetInstanceProcAddr", (void*)GetInstanceProcAddr},
+    {"vk_layerGetPhysicalDeviceProcAddr", (void*)GetPhysicalDeviceProcAddr},
+    {"vkGetDeviceProcAddr", (void*)GetDeviceProcAddr},
+    {"vkCreateInstance", (void*)CreateInstance},
+    {"vkCreateDevice", (void*)CreateDevice},
+    {"vkEnumeratePhysicalDevices", (void*)EnumeratePhysicalDevices},
+    {"vkGetPhysicalDeviceQueueFamilyProperties", (void*)GetPhysicalDeviceQueueFamilyProperties},
+    {"vkDestroyInstance", (void*)DestroyInstance},
+    {"vkEnumerateInstanceLayerProperties", (void*)EnumerateInstanceLayerProperties},
+    {"vkEnumerateDeviceLayerProperties", (void*)EnumerateDeviceLayerProperties},
+    {"vkEnumerateInstanceExtensionProperties", (void*)EnumerateInstanceExtensionProperties},
+    {"vkEnumerateDeviceExtensionProperties", (void*)EnumerateDeviceExtensionProperties},
+    {"vkCreateDescriptorUpdateTemplateKHR", (void*)CreateDescriptorUpdateTemplateKHR},
+    {"vkDestroyDescriptorUpdateTemplateKHR", (void*)DestroyDescriptorUpdateTemplateKHR},
+    {"vkUpdateDescriptorSetWithTemplateKHR", (void*)UpdateDescriptorSetWithTemplateKHR},
+    {"vkCmdPushDescriptorSetWithTemplateKHR", (void*)CmdPushDescriptorSetWithTemplateKHR},
+    {"vkCreateSwapchainKHR", (void*)CreateSwapchainKHR},
+    {"vkDestroySwapchainKHR", (void*)DestroySwapchainKHR},
+    {"vkGetSwapchainImagesKHR", (void*)GetSwapchainImagesKHR},
+    {"vkAcquireNextImageKHR", (void*)AcquireNextImageKHR},
+    {"vkQueuePresentKHR", (void*)QueuePresentKHR},
+    {"vkQueueSubmit", (void*)QueueSubmit},
+    {"vkWaitForFences", (void*)WaitForFences},
+    {"vkGetFenceStatus", (void*)GetFenceStatus},
+    {"vkQueueWaitIdle", (void*)QueueWaitIdle},
+    {"vkDeviceWaitIdle", (void*)DeviceWaitIdle},
+    {"vkGetDeviceQueue", (void*)GetDeviceQueue},
+    {"vkDestroyDevice", (void*)DestroyDevice},
+    {"vkDestroyFence", (void*)DestroyFence},
+    {"vkResetFences", (void*)ResetFences},
+    {"vkDestroySemaphore", (void*)DestroySemaphore},
+    {"vkDestroyEvent", (void*)DestroyEvent},
+    {"vkDestroyQueryPool", (void*)DestroyQueryPool},
+    {"vkDestroyBuffer", (void*)DestroyBuffer},
+    {"vkDestroyBufferView", (void*)DestroyBufferView},
+    {"vkDestroyImage", (void*)DestroyImage},
+    {"vkDestroyImageView", (void*)DestroyImageView},
+    {"vkDestroyShaderModule", (void*)DestroyShaderModule},
+    {"vkDestroyPipeline", (void*)DestroyPipeline},
+    {"vkDestroyPipelineLayout", (void*)DestroyPipelineLayout},
+    {"vkDestroySampler", (void*)DestroySampler},
+    {"vkDestroyDescriptorSetLayout", (void*)DestroyDescriptorSetLayout},
+    {"vkDestroyDescriptorPool", (void*)DestroyDescriptorPool},
+    {"vkDestroyFramebuffer", (void*)DestroyFramebuffer},
+    {"vkDestroyRenderPass", (void*)DestroyRenderPass},
+    {"vkCreateBuffer", (void*)CreateBuffer},
+    {"vkCreateBufferView", (void*)CreateBufferView},
+    {"vkCreateImage", (void*)CreateImage},
+    {"vkCreateImageView", (void*)CreateImageView},
+    {"vkCreateFence", (void*)CreateFence},
+    {"vkCreatePipelineCache", (void*)CreatePipelineCache},
+    {"vkDestroyPipelineCache", (void*)DestroyPipelineCache},
+    {"vkGetPipelineCacheData", (void*)GetPipelineCacheData},
+    {"vkMergePipelineCaches", (void*)MergePipelineCaches},
+    {"vkCreateGraphicsPipelines", (void*)CreateGraphicsPipelines},
+    {"vkCreateComputePipelines", (void*)CreateComputePipelines},
+    {"vkCreateSampler", (void*)CreateSampler},
+    {"vkCreateDescriptorSetLayout", (void*)CreateDescriptorSetLayout},
+    {"vkCreatePipelineLayout", (void*)CreatePipelineLayout},
+    {"vkCreateDescriptorPool", (void*)CreateDescriptorPool},
+    {"vkResetDescriptorPool", (void*)ResetDescriptorPool},
+    {"vkAllocateDescriptorSets", (void*)AllocateDescriptorSets},
+    {"vkFreeDescriptorSets", (void*)FreeDescriptorSets},
+    {"vkUpdateDescriptorSets", (void*)UpdateDescriptorSets},
+    {"vkCreateCommandPool", (void*)CreateCommandPool},
+    {"vkDestroyCommandPool", (void*)DestroyCommandPool},
+    {"vkResetCommandPool", (void*)ResetCommandPool},
+    {"vkCreateQueryPool", (void*)CreateQueryPool},
+    {"vkAllocateCommandBuffers", (void*)AllocateCommandBuffers},
+    {"vkFreeCommandBuffers", (void*)FreeCommandBuffers},
+    {"vkBeginCommandBuffer", (void*)BeginCommandBuffer},
+    {"vkEndCommandBuffer", (void*)EndCommandBuffer},
+    {"vkResetCommandBuffer", (void*)ResetCommandBuffer},
+    {"vkCmdBindPipeline", (void*)CmdBindPipeline},
+    {"vkCmdSetViewport", (void*)CmdSetViewport},
+    {"vkCmdSetScissor", (void*)CmdSetScissor},
+    {"vkCmdSetLineWidth", (void*)CmdSetLineWidth},
+    {"vkCmdSetDepthBias", (void*)CmdSetDepthBias},
+    {"vkCmdSetBlendConstants", (void*)CmdSetBlendConstants},
+    {"vkCmdSetDepthBounds", (void*)CmdSetDepthBounds},
+    {"vkCmdSetStencilCompareMask", (void*)CmdSetStencilCompareMask},
+    {"vkCmdSetStencilWriteMask", (void*)CmdSetStencilWriteMask},
+    {"vkCmdSetStencilReference", (void*)CmdSetStencilReference},
+    {"vkCmdBindDescriptorSets", (void*)CmdBindDescriptorSets},
+    {"vkCmdBindVertexBuffers", (void*)CmdBindVertexBuffers},
+    {"vkCmdBindIndexBuffer", (void*)CmdBindIndexBuffer},
+    {"vkCmdDraw", (void*)CmdDraw},
+    {"vkCmdDrawIndexed", (void*)CmdDrawIndexed},
+    {"vkCmdDrawIndirect", (void*)CmdDrawIndirect},
+    {"vkCmdDrawIndexedIndirect", (void*)CmdDrawIndexedIndirect},
+    {"vkCmdDispatch", (void*)CmdDispatch},
+    {"vkCmdDispatchIndirect", (void*)CmdDispatchIndirect},
+    {"vkCmdCopyBuffer", (void*)CmdCopyBuffer},
+    {"vkCmdCopyImage", (void*)CmdCopyImage},
+    {"vkCmdBlitImage", (void*)CmdBlitImage},
+    {"vkCmdCopyBufferToImage", (void*)CmdCopyBufferToImage},
+    {"vkCmdCopyImageToBuffer", (void*)CmdCopyImageToBuffer},
+    {"vkCmdUpdateBuffer", (void*)CmdUpdateBuffer},
+    {"vkCmdFillBuffer", (void*)CmdFillBuffer},
+    {"vkCmdClearColorImage", (void*)CmdClearColorImage},
+    {"vkCmdClearDepthStencilImage", (void*)CmdClearDepthStencilImage},
+    {"vkCmdClearAttachments", (void*)CmdClearAttachments},
+    {"vkCmdResolveImage", (void*)CmdResolveImage},
+    {"vkGetImageSubresourceLayout", (void*)GetImageSubresourceLayout},
+    {"vkCmdSetEvent", (void*)CmdSetEvent},
+    {"vkCmdResetEvent", (void*)CmdResetEvent},
+    {"vkCmdWaitEvents", (void*)CmdWaitEvents},
+    {"vkCmdPipelineBarrier", (void*)CmdPipelineBarrier},
+    {"vkCmdBeginQuery", (void*)CmdBeginQuery},
+    {"vkCmdEndQuery", (void*)CmdEndQuery},
+    {"vkCmdResetQueryPool", (void*)CmdResetQueryPool},
+    {"vkCmdCopyQueryPoolResults", (void*)CmdCopyQueryPoolResults},
+    {"vkCmdPushConstants", (void*)CmdPushConstants},
+    {"vkCmdWriteTimestamp", (void*)CmdWriteTimestamp},
+    {"vkCreateFramebuffer", (void*)CreateFramebuffer},
+    {"vkCreateShaderModule", (void*)CreateShaderModule},
+    {"vkCreateRenderPass", (void*)CreateRenderPass},
+    {"vkCmdBeginRenderPass", (void*)CmdBeginRenderPass},
+    {"vkCmdNextSubpass", (void*)CmdNextSubpass},
+    {"vkCmdEndRenderPass", (void*)CmdEndRenderPass},
+    {"vkCmdExecuteCommands", (void*)CmdExecuteCommands},
+    {"vkSetEvent", (void*)SetEvent},
+    {"vkMapMemory", (void*)MapMemory},
+    {"vkUnmapMemory", (void*)UnmapMemory},
+    {"vkFlushMappedMemoryRanges", (void*)FlushMappedMemoryRanges},
+    {"vkInvalidateMappedMemoryRanges", (void*)InvalidateMappedMemoryRanges},
+    {"vkAllocateMemory", (void*)AllocateMemory},
+    {"vkFreeMemory", (void*)FreeMemory},
+    {"vkBindBufferMemory", (void*)BindBufferMemory},
+    {"vkGetBufferMemoryRequirements", (void*)GetBufferMemoryRequirements},
+    {"vkGetImageMemoryRequirements", (void*)GetImageMemoryRequirements},
+    {"vkGetQueryPoolResults", (void*)GetQueryPoolResults},
+    {"vkBindImageMemory", (void*)BindImageMemory},
+    {"vkQueueBindSparse", (void*)QueueBindSparse},
+    {"vkCreateSemaphore", (void*)CreateSemaphore},
+    {"vkCreateEvent", (void*)CreateEvent},
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+    {"vkCreateAndroidSurfaceKHR", (void*)CreateAndroidSurfaceKHR},
+#endif
+#ifdef VK_USE_PLATFORM_MIR_KHR
+    {"vkCreateMirSurfaceKHR", (void*)CreateMirSurfaceKHR},
+    {"vkGetPhysicalDeviceMirPresentationSupportKHR", (void*)GetPhysicalDeviceMirPresentationSupportKHR},
+#endif
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+    {"vkCreateWaylandSurfaceKHR", (void*)CreateWaylandSurfaceKHR},
+    {"vkGetPhysicalDeviceWaylandPresentationSupportKHR", (void*)GetPhysicalDeviceWaylandPresentationSupportKHR},
+#endif
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+    {"vkCreateWin32SurfaceKHR", (void*)CreateWin32SurfaceKHR},
+    {"vkGetPhysicalDeviceWin32PresentationSupportKHR", (void*)GetPhysicalDeviceWin32PresentationSupportKHR},
+#endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
+    {"vkCreateXcbSurfaceKHR", (void*)CreateXcbSurfaceKHR},
+    {"vkGetPhysicalDeviceXcbPresentationSupportKHR", (void*)GetPhysicalDeviceXcbPresentationSupportKHR},
+#endif
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+    {"vkCreateXlibSurfaceKHR", (void*)CreateXlibSurfaceKHR},
+    {"vkGetPhysicalDeviceXlibPresentationSupportKHR", (void*)GetPhysicalDeviceXlibPresentationSupportKHR},
+#endif
+    {"vkCreateDisplayPlaneSurfaceKHR", (void*)CreateDisplayPlaneSurfaceKHR},
+    {"vkDestroySurfaceKHR", (void*)DestroySurfaceKHR},
+    {"vkGetPhysicalDeviceSurfaceCapabilitiesKHR", (void*)GetPhysicalDeviceSurfaceCapabilitiesKHR},
+    {"vkGetPhysicalDeviceSurfaceCapabilities2KHR", (void*)GetPhysicalDeviceSurfaceCapabilities2KHR},
+    {"vkGetPhysicalDeviceSurfaceCapabilities2EXT", (void*)GetPhysicalDeviceSurfaceCapabilities2EXT},
+    {"vkGetPhysicalDeviceSurfaceSupportKHR", (void*)GetPhysicalDeviceSurfaceSupportKHR},
+    {"vkGetPhysicalDeviceSurfacePresentModesKHR", (void*)GetPhysicalDeviceSurfacePresentModesKHR},
+    {"vkGetPhysicalDeviceSurfaceFormatsKHR", (void*)GetPhysicalDeviceSurfaceFormatsKHR},
+    {"vkGetPhysicalDeviceSurfaceFormats2KHR", (void*)GetPhysicalDeviceSurfaceFormats2KHR},
+    {"vkGetPhysicalDeviceQueueFamilyProperties2KHR", (void*)GetPhysicalDeviceQueueFamilyProperties2KHR},
+    {"vkEnumeratePhysicalDeviceGroupsKHX", (void*)EnumeratePhysicalDeviceGroupsKHX},
+    {"vkCreateDebugReportCallbackEXT", (void*)CreateDebugReportCallbackEXT},
+    {"vkDestroyDebugReportCallbackEXT", (void*)DestroyDebugReportCallbackEXT},
+    {"vkDebugReportMessageEXT", (void*)DebugReportMessageEXT},
+};
 
-static PFN_vkVoidFunction intercept_device_extension_command(const char *name, VkDevice device);
+VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, const char *funcName) {
+    assert(device);
+    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
 
-static PFN_vkVoidFunction intercept_khr_swapchain_command(const char *name, VkDevice dev);
+    // Is API to be intercepted by this layer?
+    const auto &item = name_to_funcptr_map.find(funcName);
+    if (item != name_to_funcptr_map.end()) {
+        return reinterpret_cast<PFN_vkVoidFunction>(item->second);
+    }
 
-static PFN_vkVoidFunction intercept_khr_surface_command(const char *name, VkInstance instance);
-
-static PFN_vkVoidFunction
-intercept_extension_instance_commands(const char *name, VkInstance instance);
-
-VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice dev, const char *funcName) {
-    assert(dev);
-
-    PFN_vkVoidFunction proc = intercept_core_device_command(funcName);
-    if (!proc) proc = intercept_device_extension_command(funcName, dev);
-    if (!proc) proc = intercept_khr_swapchain_command(funcName, dev);
-    if (proc) return proc;
-
-    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(dev), layer_data_map);
-    auto &table = dev_data->dispatch_table;
+    auto &table = device_data->dispatch_table;
     if (!table.GetDeviceProcAddr) return nullptr;
-    return table.GetDeviceProcAddr(dev, funcName);
+    return table.GetDeviceProcAddr(device, funcName);
 }
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance, const char *funcName) {
-    PFN_vkVoidFunction proc = intercept_core_instance_command(funcName);
-    if (!proc) proc = intercept_core_device_command(funcName);
-    if (!proc) proc = intercept_khr_swapchain_command(funcName, VK_NULL_HANDLE);
-    if (!proc) proc = intercept_khr_surface_command(funcName, instance);
-    if (proc) return proc;
+    instance_layer_data *instance_data;
+    // Is API to be intercepted by this layer?
+    const auto &item = name_to_funcptr_map.find(funcName);
+    if (item != name_to_funcptr_map.end()) {
+        return reinterpret_cast<PFN_vkVoidFunction>(item->second);
+    }
 
-    assert(instance);
-
-    instance_layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(instance), instance_layer_data_map);
-    proc = debug_report_get_instance_proc_addr(instance_data->report_data, funcName);
-    if (proc) return proc;
-
-    proc = intercept_extension_instance_commands(funcName, instance);
-    if (proc) return proc;
-
+    instance_data = GetLayerDataPtr(get_dispatch_key(instance), instance_layer_data_map);
     auto &table = instance_data->dispatch_table;
     if (!table.GetInstanceProcAddr) return nullptr;
     return table.GetInstanceProcAddr(instance, funcName);
@@ -11624,317 +11786,11 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance instance, const char *funcName) {
     assert(instance);
-
     instance_layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(instance), instance_layer_data_map);
 
     auto &table = instance_data->dispatch_table;
     if (!table.GetPhysicalDeviceProcAddr) return nullptr;
     return table.GetPhysicalDeviceProcAddr(instance, funcName);
-}
-
-static PFN_vkVoidFunction intercept_core_instance_command(const char *name) {
-    static const struct {
-        const char *name;
-        PFN_vkVoidFunction proc;
-    } core_instance_commands[] = {
-        {"vkGetInstanceProcAddr", reinterpret_cast<PFN_vkVoidFunction>(GetInstanceProcAddr)},
-        {"vk_layerGetPhysicalDeviceProcAddr", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceProcAddr)},
-        {"vkGetDeviceProcAddr", reinterpret_cast<PFN_vkVoidFunction>(GetDeviceProcAddr)},
-        {"vkCreateInstance", reinterpret_cast<PFN_vkVoidFunction>(CreateInstance)},
-        {"vkCreateDevice", reinterpret_cast<PFN_vkVoidFunction>(CreateDevice)},
-        {"vkEnumeratePhysicalDevices", reinterpret_cast<PFN_vkVoidFunction>(EnumeratePhysicalDevices)},
-        {"vkGetPhysicalDeviceQueueFamilyProperties", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceQueueFamilyProperties)},
-        {"vkDestroyInstance", reinterpret_cast<PFN_vkVoidFunction>(DestroyInstance)},
-        {"vkEnumerateInstanceLayerProperties", reinterpret_cast<PFN_vkVoidFunction>(EnumerateInstanceLayerProperties)},
-        {"vkEnumerateDeviceLayerProperties", reinterpret_cast<PFN_vkVoidFunction>(EnumerateDeviceLayerProperties)},
-        {"vkEnumerateInstanceExtensionProperties", reinterpret_cast<PFN_vkVoidFunction>(EnumerateInstanceExtensionProperties)},
-        {"vkEnumerateDeviceExtensionProperties", reinterpret_cast<PFN_vkVoidFunction>(EnumerateDeviceExtensionProperties)},
-    };
-
-    for (size_t i = 0; i < ARRAY_SIZE(core_instance_commands); i++) {
-        if (!strcmp(core_instance_commands[i].name, name)) return core_instance_commands[i].proc;
-    }
-
-    return nullptr;
-}
-
-static PFN_vkVoidFunction intercept_core_device_command(const char *name) {
-    static const struct {
-        const char *name;
-        PFN_vkVoidFunction proc;
-    } core_device_commands[] = {
-        {"vkGetDeviceProcAddr", reinterpret_cast<PFN_vkVoidFunction>(GetDeviceProcAddr)},
-        {"vkQueueSubmit", reinterpret_cast<PFN_vkVoidFunction>(QueueSubmit)},
-        {"vkWaitForFences", reinterpret_cast<PFN_vkVoidFunction>(WaitForFences)},
-        {"vkGetFenceStatus", reinterpret_cast<PFN_vkVoidFunction>(GetFenceStatus)},
-        {"vkQueueWaitIdle", reinterpret_cast<PFN_vkVoidFunction>(QueueWaitIdle)},
-        {"vkDeviceWaitIdle", reinterpret_cast<PFN_vkVoidFunction>(DeviceWaitIdle)},
-        {"vkGetDeviceQueue", reinterpret_cast<PFN_vkVoidFunction>(GetDeviceQueue)},
-        {"vkDestroyInstance", reinterpret_cast<PFN_vkVoidFunction>(DestroyInstance)},
-        {"vkDestroyDevice", reinterpret_cast<PFN_vkVoidFunction>(DestroyDevice)},
-        {"vkDestroyFence", reinterpret_cast<PFN_vkVoidFunction>(DestroyFence)},
-        {"vkResetFences", reinterpret_cast<PFN_vkVoidFunction>(ResetFences)},
-        {"vkDestroySemaphore", reinterpret_cast<PFN_vkVoidFunction>(DestroySemaphore)},
-        {"vkDestroyEvent", reinterpret_cast<PFN_vkVoidFunction>(DestroyEvent)},
-        {"vkDestroyQueryPool", reinterpret_cast<PFN_vkVoidFunction>(DestroyQueryPool)},
-        {"vkDestroyBuffer", reinterpret_cast<PFN_vkVoidFunction>(DestroyBuffer)},
-        {"vkDestroyBufferView", reinterpret_cast<PFN_vkVoidFunction>(DestroyBufferView)},
-        {"vkDestroyImage", reinterpret_cast<PFN_vkVoidFunction>(DestroyImage)},
-        {"vkDestroyImageView", reinterpret_cast<PFN_vkVoidFunction>(DestroyImageView)},
-        {"vkDestroyShaderModule", reinterpret_cast<PFN_vkVoidFunction>(DestroyShaderModule)},
-        {"vkDestroyPipeline", reinterpret_cast<PFN_vkVoidFunction>(DestroyPipeline)},
-        {"vkDestroyPipelineLayout", reinterpret_cast<PFN_vkVoidFunction>(DestroyPipelineLayout)},
-        {"vkDestroySampler", reinterpret_cast<PFN_vkVoidFunction>(DestroySampler)},
-        {"vkDestroyDescriptorSetLayout", reinterpret_cast<PFN_vkVoidFunction>(DestroyDescriptorSetLayout)},
-        {"vkDestroyDescriptorPool", reinterpret_cast<PFN_vkVoidFunction>(DestroyDescriptorPool)},
-        {"vkDestroyFramebuffer", reinterpret_cast<PFN_vkVoidFunction>(DestroyFramebuffer)},
-        {"vkDestroyRenderPass", reinterpret_cast<PFN_vkVoidFunction>(DestroyRenderPass)},
-        {"vkCreateBuffer", reinterpret_cast<PFN_vkVoidFunction>(CreateBuffer)},
-        {"vkCreateBufferView", reinterpret_cast<PFN_vkVoidFunction>(CreateBufferView)},
-        {"vkCreateImage", reinterpret_cast<PFN_vkVoidFunction>(CreateImage)},
-        {"vkCreateImageView", reinterpret_cast<PFN_vkVoidFunction>(CreateImageView)},
-        {"vkCreateFence", reinterpret_cast<PFN_vkVoidFunction>(CreateFence)},
-        {"vkCreatePipelineCache", reinterpret_cast<PFN_vkVoidFunction>(CreatePipelineCache)},
-        {"vkDestroyPipelineCache", reinterpret_cast<PFN_vkVoidFunction>(DestroyPipelineCache)},
-        {"vkGetPipelineCacheData", reinterpret_cast<PFN_vkVoidFunction>(GetPipelineCacheData)},
-        {"vkMergePipelineCaches", reinterpret_cast<PFN_vkVoidFunction>(MergePipelineCaches)},
-        {"vkCreateGraphicsPipelines", reinterpret_cast<PFN_vkVoidFunction>(CreateGraphicsPipelines)},
-        {"vkCreateComputePipelines", reinterpret_cast<PFN_vkVoidFunction>(CreateComputePipelines)},
-        {"vkCreateSampler", reinterpret_cast<PFN_vkVoidFunction>(CreateSampler)},
-        {"vkCreateDescriptorSetLayout", reinterpret_cast<PFN_vkVoidFunction>(CreateDescriptorSetLayout)},
-        {"vkCreatePipelineLayout", reinterpret_cast<PFN_vkVoidFunction>(CreatePipelineLayout)},
-        {"vkCreateDescriptorPool", reinterpret_cast<PFN_vkVoidFunction>(CreateDescriptorPool)},
-        {"vkResetDescriptorPool", reinterpret_cast<PFN_vkVoidFunction>(ResetDescriptorPool)},
-        {"vkAllocateDescriptorSets", reinterpret_cast<PFN_vkVoidFunction>(AllocateDescriptorSets)},
-        {"vkFreeDescriptorSets", reinterpret_cast<PFN_vkVoidFunction>(FreeDescriptorSets)},
-        {"vkUpdateDescriptorSets", reinterpret_cast<PFN_vkVoidFunction>(UpdateDescriptorSets)},
-        {"vkCreateCommandPool", reinterpret_cast<PFN_vkVoidFunction>(CreateCommandPool)},
-        {"vkDestroyCommandPool", reinterpret_cast<PFN_vkVoidFunction>(DestroyCommandPool)},
-        {"vkResetCommandPool", reinterpret_cast<PFN_vkVoidFunction>(ResetCommandPool)},
-        {"vkCreateQueryPool", reinterpret_cast<PFN_vkVoidFunction>(CreateQueryPool)},
-        {"vkAllocateCommandBuffers", reinterpret_cast<PFN_vkVoidFunction>(AllocateCommandBuffers)},
-        {"vkFreeCommandBuffers", reinterpret_cast<PFN_vkVoidFunction>(FreeCommandBuffers)},
-        {"vkBeginCommandBuffer", reinterpret_cast<PFN_vkVoidFunction>(BeginCommandBuffer)},
-        {"vkEndCommandBuffer", reinterpret_cast<PFN_vkVoidFunction>(EndCommandBuffer)},
-        {"vkResetCommandBuffer", reinterpret_cast<PFN_vkVoidFunction>(ResetCommandBuffer)},
-        {"vkCmdBindPipeline", reinterpret_cast<PFN_vkVoidFunction>(CmdBindPipeline)},
-        {"vkCmdSetViewport", reinterpret_cast<PFN_vkVoidFunction>(CmdSetViewport)},
-        {"vkCmdSetScissor", reinterpret_cast<PFN_vkVoidFunction>(CmdSetScissor)},
-        {"vkCmdSetLineWidth", reinterpret_cast<PFN_vkVoidFunction>(CmdSetLineWidth)},
-        {"vkCmdSetDepthBias", reinterpret_cast<PFN_vkVoidFunction>(CmdSetDepthBias)},
-        {"vkCmdSetBlendConstants", reinterpret_cast<PFN_vkVoidFunction>(CmdSetBlendConstants)},
-        {"vkCmdSetDepthBounds", reinterpret_cast<PFN_vkVoidFunction>(CmdSetDepthBounds)},
-        {"vkCmdSetStencilCompareMask", reinterpret_cast<PFN_vkVoidFunction>(CmdSetStencilCompareMask)},
-        {"vkCmdSetStencilWriteMask", reinterpret_cast<PFN_vkVoidFunction>(CmdSetStencilWriteMask)},
-        {"vkCmdSetStencilReference", reinterpret_cast<PFN_vkVoidFunction>(CmdSetStencilReference)},
-        {"vkCmdBindDescriptorSets", reinterpret_cast<PFN_vkVoidFunction>(CmdBindDescriptorSets)},
-        {"vkCmdBindVertexBuffers", reinterpret_cast<PFN_vkVoidFunction>(CmdBindVertexBuffers)},
-        {"vkCmdBindIndexBuffer", reinterpret_cast<PFN_vkVoidFunction>(CmdBindIndexBuffer)},
-        {"vkCmdDraw", reinterpret_cast<PFN_vkVoidFunction>(CmdDraw)},
-        {"vkCmdDrawIndexed", reinterpret_cast<PFN_vkVoidFunction>(CmdDrawIndexed)},
-        {"vkCmdDrawIndirect", reinterpret_cast<PFN_vkVoidFunction>(CmdDrawIndirect)},
-        {"vkCmdDrawIndexedIndirect", reinterpret_cast<PFN_vkVoidFunction>(CmdDrawIndexedIndirect)},
-        {"vkCmdDispatch", reinterpret_cast<PFN_vkVoidFunction>(CmdDispatch)},
-        {"vkCmdDispatchIndirect", reinterpret_cast<PFN_vkVoidFunction>(CmdDispatchIndirect)},
-        {"vkCmdCopyBuffer", reinterpret_cast<PFN_vkVoidFunction>(CmdCopyBuffer)},
-        {"vkCmdCopyImage", reinterpret_cast<PFN_vkVoidFunction>(CmdCopyImage)},
-        {"vkCmdBlitImage", reinterpret_cast<PFN_vkVoidFunction>(CmdBlitImage)},
-        {"vkCmdCopyBufferToImage", reinterpret_cast<PFN_vkVoidFunction>(CmdCopyBufferToImage)},
-        {"vkCmdCopyImageToBuffer", reinterpret_cast<PFN_vkVoidFunction>(CmdCopyImageToBuffer)},
-        {"vkCmdUpdateBuffer", reinterpret_cast<PFN_vkVoidFunction>(CmdUpdateBuffer)},
-        {"vkCmdFillBuffer", reinterpret_cast<PFN_vkVoidFunction>(CmdFillBuffer)},
-        {"vkCmdClearColorImage", reinterpret_cast<PFN_vkVoidFunction>(CmdClearColorImage)},
-        {"vkCmdClearDepthStencilImage", reinterpret_cast<PFN_vkVoidFunction>(CmdClearDepthStencilImage)},
-        {"vkCmdClearAttachments", reinterpret_cast<PFN_vkVoidFunction>(CmdClearAttachments)},
-        {"vkCmdResolveImage", reinterpret_cast<PFN_vkVoidFunction>(CmdResolveImage)},
-        {"vkGetImageSubresourceLayout", reinterpret_cast<PFN_vkVoidFunction>(GetImageSubresourceLayout) },
-        {"vkCmdSetEvent", reinterpret_cast<PFN_vkVoidFunction>(CmdSetEvent)},
-        {"vkCmdResetEvent", reinterpret_cast<PFN_vkVoidFunction>(CmdResetEvent)},
-        {"vkCmdWaitEvents", reinterpret_cast<PFN_vkVoidFunction>(CmdWaitEvents)},
-        {"vkCmdPipelineBarrier", reinterpret_cast<PFN_vkVoidFunction>(CmdPipelineBarrier)},
-        {"vkCmdBeginQuery", reinterpret_cast<PFN_vkVoidFunction>(CmdBeginQuery)},
-        {"vkCmdEndQuery", reinterpret_cast<PFN_vkVoidFunction>(CmdEndQuery)},
-        {"vkCmdResetQueryPool", reinterpret_cast<PFN_vkVoidFunction>(CmdResetQueryPool)},
-        {"vkCmdCopyQueryPoolResults", reinterpret_cast<PFN_vkVoidFunction>(CmdCopyQueryPoolResults)},
-        {"vkCmdPushConstants", reinterpret_cast<PFN_vkVoidFunction>(CmdPushConstants)},
-        {"vkCmdWriteTimestamp", reinterpret_cast<PFN_vkVoidFunction>(CmdWriteTimestamp)},
-        {"vkCreateFramebuffer", reinterpret_cast<PFN_vkVoidFunction>(CreateFramebuffer)},
-        {"vkCreateShaderModule", reinterpret_cast<PFN_vkVoidFunction>(CreateShaderModule)},
-        {"vkCreateRenderPass", reinterpret_cast<PFN_vkVoidFunction>(CreateRenderPass)},
-        {"vkCmdBeginRenderPass", reinterpret_cast<PFN_vkVoidFunction>(CmdBeginRenderPass)},
-        {"vkCmdNextSubpass", reinterpret_cast<PFN_vkVoidFunction>(CmdNextSubpass)},
-        {"vkCmdEndRenderPass", reinterpret_cast<PFN_vkVoidFunction>(CmdEndRenderPass)},
-        {"vkCmdExecuteCommands", reinterpret_cast<PFN_vkVoidFunction>(CmdExecuteCommands)},
-        {"vkSetEvent", reinterpret_cast<PFN_vkVoidFunction>(SetEvent)},
-        {"vkMapMemory", reinterpret_cast<PFN_vkVoidFunction>(MapMemory)},
-        {"vkUnmapMemory", reinterpret_cast<PFN_vkVoidFunction>(UnmapMemory)},
-        {"vkFlushMappedMemoryRanges", reinterpret_cast<PFN_vkVoidFunction>(FlushMappedMemoryRanges)},
-        {"vkInvalidateMappedMemoryRanges", reinterpret_cast<PFN_vkVoidFunction>(InvalidateMappedMemoryRanges)},
-        {"vkAllocateMemory", reinterpret_cast<PFN_vkVoidFunction>(AllocateMemory)},
-        {"vkFreeMemory", reinterpret_cast<PFN_vkVoidFunction>(FreeMemory)},
-        {"vkBindBufferMemory", reinterpret_cast<PFN_vkVoidFunction>(BindBufferMemory)},
-        {"vkGetBufferMemoryRequirements", reinterpret_cast<PFN_vkVoidFunction>(GetBufferMemoryRequirements)},
-        {"vkGetImageMemoryRequirements", reinterpret_cast<PFN_vkVoidFunction>(GetImageMemoryRequirements)},
-        {"vkGetQueryPoolResults", reinterpret_cast<PFN_vkVoidFunction>(GetQueryPoolResults)},
-        {"vkBindImageMemory", reinterpret_cast<PFN_vkVoidFunction>(BindImageMemory)},
-        {"vkQueueBindSparse", reinterpret_cast<PFN_vkVoidFunction>(QueueBindSparse)},
-        {"vkCreateSemaphore", reinterpret_cast<PFN_vkVoidFunction>(CreateSemaphore)},
-        {"vkCreateEvent", reinterpret_cast<PFN_vkVoidFunction>(CreateEvent)},
-    };
-
-    for (size_t i = 0; i < ARRAY_SIZE(core_device_commands); i++) {
-        if (!strcmp(core_device_commands[i].name, name)) return core_device_commands[i].proc;
-    }
-
-    return nullptr;
-}
-
-static PFN_vkVoidFunction intercept_device_extension_command(const char *name, VkDevice device) {
-    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-
-    const struct {
-        const char *name;
-        PFN_vkVoidFunction proc;
-        bool enabled;
-    } device_extension_commands[] = {
-        {"vkCreateDescriptorUpdateTemplateKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateDescriptorUpdateTemplateKHR),
-         device_data->extensions.vk_khr_descriptor_update_template},
-        {"vkDestroyDescriptorUpdateTemplateKHR", reinterpret_cast<PFN_vkVoidFunction>(DestroyDescriptorUpdateTemplateKHR),
-         device_data->extensions.vk_khr_descriptor_update_template},
-        {"vkUpdateDescriptorSetWithTemplateKHR", reinterpret_cast<PFN_vkVoidFunction>(UpdateDescriptorSetWithTemplateKHR),
-         device_data->extensions.vk_khr_descriptor_update_template},
-        {"vkCmdPushDescriptorSetWithTemplateKHR", reinterpret_cast<PFN_vkVoidFunction>(CmdPushDescriptorSetWithTemplateKHR),
-         device_data->extensions.vk_khr_descriptor_update_template},
-    };
-
-    if (!device_data) return nullptr;
-
-    for (size_t i = 0; i < ARRAY_SIZE(device_extension_commands); i++) {
-        if (!strcmp(device_extension_commands[i].name, name) && device_extension_commands[i].enabled)
-            return device_extension_commands[i].proc;
-    }
-
-    return nullptr;
-}
-
-static PFN_vkVoidFunction intercept_khr_swapchain_command(const char *name, VkDevice dev) {
-    static const struct {
-        const char *name;
-        PFN_vkVoidFunction proc;
-    } khr_swapchain_commands[] = {
-        {"vkCreateSwapchainKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateSwapchainKHR)},
-        {"vkDestroySwapchainKHR", reinterpret_cast<PFN_vkVoidFunction>(DestroySwapchainKHR)},
-        {"vkGetSwapchainImagesKHR", reinterpret_cast<PFN_vkVoidFunction>(GetSwapchainImagesKHR)},
-        {"vkAcquireNextImageKHR", reinterpret_cast<PFN_vkVoidFunction>(AcquireNextImageKHR)},
-        {"vkQueuePresentKHR", reinterpret_cast<PFN_vkVoidFunction>(QueuePresentKHR)},
-    };
-    layer_data *dev_data = nullptr;
-
-    if (dev) {
-        dev_data = GetLayerDataPtr(get_dispatch_key(dev), layer_data_map);
-        if (!dev_data->extensions.vk_khr_swapchain) return nullptr;
-    }
-
-    for (size_t i = 0; i < ARRAY_SIZE(khr_swapchain_commands); i++) {
-        if (!strcmp(khr_swapchain_commands[i].name, name)) return khr_swapchain_commands[i].proc;
-    }
-
-    if (dev_data) {
-        if (!dev_data->extensions.vk_khr_display_swapchain) return nullptr;
-    }
-
-    if (!strcmp("vkCreateSharedSwapchainsKHR", name)) return reinterpret_cast<PFN_vkVoidFunction>(CreateSharedSwapchainsKHR);
-
-    return nullptr;
-}
-
-static PFN_vkVoidFunction intercept_khr_surface_command(const char *name, VkInstance instance) {
-    using E = InstanceExtensions;
-    static const struct {
-        const char *name;
-        PFN_vkVoidFunction proc;
-        bool E::*enable;
-    } khr_surface_commands[] = {
-#ifdef VK_USE_PLATFORM_ANDROID_KHR
-        {"vkCreateAndroidSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateAndroidSurfaceKHR), &E::vk_khr_android_surface},
-#endif  // VK_USE_PLATFORM_ANDROID_KHR
-#ifdef VK_USE_PLATFORM_MIR_KHR
-        {"vkCreateMirSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateMirSurfaceKHR), &E::vk_khr_mir_surface},
-        {"vkGetPhysicalDeviceMirPresentationSupportKHR",
-         reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceMirPresentationSupportKHR), &E::vk_khr_mir_surface},
-#endif  // VK_USE_PLATFORM_MIR_KHR
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
-        {"vkCreateWaylandSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateWaylandSurfaceKHR), &E::vk_khr_wayland_surface},
-        {"vkGetPhysicalDeviceWaylandPresentationSupportKHR",
-         reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceWaylandPresentationSupportKHR), &E::vk_khr_wayland_surface},
-#endif  // VK_USE_PLATFORM_WAYLAND_KHR
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-        {"vkCreateWin32SurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateWin32SurfaceKHR), &E::vk_khr_win32_surface},
-        {"vkGetPhysicalDeviceWin32PresentationSupportKHR",
-         reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceWin32PresentationSupportKHR), &E::vk_khr_win32_surface},
-#endif  // VK_USE_PLATFORM_WIN32_KHR
-#ifdef VK_USE_PLATFORM_XCB_KHR
-        {"vkCreateXcbSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateXcbSurfaceKHR), &E::vk_khr_xcb_surface},
-        {"vkGetPhysicalDeviceXcbPresentationSupportKHR",
-         reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceXcbPresentationSupportKHR), &E::vk_khr_xcb_surface},
-#endif  // VK_USE_PLATFORM_XCB_KHR
-#ifdef VK_USE_PLATFORM_XLIB_KHR
-        {"vkCreateXlibSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateXlibSurfaceKHR), &E::vk_khr_xlib_surface},
-        {"vkGetPhysicalDeviceXlibPresentationSupportKHR",
-         reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceXlibPresentationSupportKHR), &E::vk_khr_xlib_surface},
-#endif  // VK_USE_PLATFORM_XLIB_KHR
-        {"vkCreateDisplayPlaneSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateDisplayPlaneSurfaceKHR), &E::vk_khr_display},
-        {"vkDestroySurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(DestroySurfaceKHR), &E::vk_khr_surface},
-        {"vkGetPhysicalDeviceSurfaceCapabilitiesKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceCapabilitiesKHR),
-         &E::vk_khr_surface},
-        {"vkGetPhysicalDeviceSurfaceCapabilities2KHR",
-         reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceCapabilities2KHR), &E::vk_khr_get_surface_capabilities_2},
-        {"vkGetPhysicalDeviceSurfaceCapabilities2EXT",
-         reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceCapabilities2EXT), &E::vk_ext_display_surface_counter},
-        {"vkGetPhysicalDeviceSurfaceSupportKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceSupportKHR),
-         &E::vk_khr_surface},
-        {"vkGetPhysicalDeviceSurfacePresentModesKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfacePresentModesKHR),
-         &E::vk_khr_surface},
-        {"vkGetPhysicalDeviceSurfaceFormatsKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceFormatsKHR),
-         &E::vk_khr_surface},
-        {"vkGetPhysicalDeviceSurfaceFormats2KHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceFormats2KHR),
-         &E::vk_khr_get_surface_capabilities_2},
-    };
-
-    instance_layer_data *instance_data = nullptr;
-    if (instance) {
-        instance_data = GetLayerDataPtr(get_dispatch_key(instance), instance_layer_data_map);
-    }
-
-    for (size_t i = 0; i < ARRAY_SIZE(khr_surface_commands); i++) {
-        if (!strcmp(khr_surface_commands[i].name, name)) {
-            if (instance_data && !(instance_data->extensions.*(khr_surface_commands[i].enable))) return nullptr;
-            return khr_surface_commands[i].proc;
-        }
-    }
-
-    return nullptr;
-}
-
-static PFN_vkVoidFunction intercept_extension_instance_commands(const char *name, VkInstance instance) {
-    // TODO: sort this out.
-    static const struct {
-        const char *name;
-        PFN_vkVoidFunction proc;
-        bool instance_layer_data::*enable;
-    } instance_extension_commands[] = {
-        {"vkGetPhysicalDeviceQueueFamilyProperties2KHR",
-         reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceQueueFamilyProperties2KHR)},
-        {"vkEnumeratePhysicalDeviceGroupsKHX",
-         reinterpret_cast<PFN_vkVoidFunction>(EnumeratePhysicalDeviceGroupsKHX)},
-    };
-
-    for (size_t i = 0; i < ARRAY_SIZE(instance_extension_commands); i++) {
-        if (!strcmp(instance_extension_commands[i].name, name)) {
-            return instance_extension_commands[i].proc;
-        }
-    }
-    return nullptr;
 }
 
 }  // namespace core_validation
