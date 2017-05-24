@@ -155,7 +155,8 @@ class VkCommandPoolObj : public vk_testing::CommandPool {
 
 class VkCommandBufferObj : public vk_testing::CommandBuffer {
    public:
-    VkCommandBufferObj(VkDeviceObj *device, VkCommandPoolObj *pool);
+    VkCommandBufferObj(VkDeviceObj *device, VkCommandPoolObj *pool,
+                       VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     VkCommandBuffer GetBufferHandle();
     VkResult BeginCommandBuffer();
     VkResult BeginCommandBuffer(VkCommandBufferBeginInfo *pInfo);

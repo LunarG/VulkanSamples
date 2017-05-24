@@ -1,9 +1,13 @@
 #!/usr/bin/python -i
 
 import sys
-import xml.etree.ElementTree as etree
+#import xml.etree.ElementTree as etree
 import urllib2
 from bs4 import BeautifulSoup
+import json
+import vuid_mapping
+import operator
+import re
 
 #############################
 # spec.py script
@@ -33,11 +37,22 @@ from bs4 import BeautifulSoup
 spec_filename = "vkspec.html" # can override w/ '-spec <filename>' option
 out_filename = "vk_validation_error_messages.h" # can override w/ '-out <filename>' option
 db_filename = "vk_validation_error_database.txt" # can override w/ '-gendb <filename>' option
+json_filename = None # con pass in w/ '-json <filename> option
 gen_db = False # set to True when '-gendb <filename>' option provided
 spec_compare = False # set to True with '-compare <db_filename>' option
+json_compare = False # compare existing DB to json file input
+migrate_ids = False # set to True with '-migrate' option to move old ids from database to new ids in spec
+# When migrating IDs:
+# 1. Read in DB
+# 2. Create mapping between old VU enum values & new string-based IDs
+# 3. Read in source and update all old VU enum values to new string-based IDs
+json_url = "https://www.khronos.org/registry/vulkan/specs/1.0-extensions/validation/validusage.json"
+read_json = False
 # This is the root spec link that is used in error messages to point users to spec sections
 #old_spec_url = "https://www.khronos.org/registry/vulkan/specs/1.0/xhtml/vkspec.html"
 spec_url = "https://www.khronos.org/registry/vulkan/specs/1.0-extensions/html/vkspec.html"
+core_url = "https://www.khronos.org/registry/vulkan/specs/1.0/html/vkspec.html"
+ext_url = "https://www.khronos.org/registry/vulkan/specs/1.0-extensions/html/vkspec.html"
 # After the custom validation error message, this is the prefix for the standard message that includes the
 #  spec valid usage language as well as the link to nearest section of spec to that language
 error_msg_prefix = "For more information refer to Vulkan Spec Section "
@@ -45,9 +60,13 @@ ns = {'ns': 'http://www.w3.org/1999/xhtml'}
 validation_error_enum_name = "VALIDATION_ERROR_"
 # Dict of new enum values that should be forced to remap to old handles, explicitly set by -remap option
 remap_dict = {}
+# Custom map to override known-bad values
+struct_to_api_map = {
+'VkDeviceQueueCreateInfo' : 'vkCreateDevice',
+}
 
 def printHelp():
-    print ("Usage: python spec.py [-spec <specfile.html>] [-out <headerfile.h>] [-gendb <databasefile.txt>] [-compare <databasefile.txt>] [-update] [-remap <new_id-old_id,count>] [-help]")
+    print ("Usage: python spec.py [-spec <specfile.html>] [-out <headerfile.h>] [-gendb <databasefile.txt>] [-compare <databasefile.txt>] [-update] [-remap <new_id-old_id,count>] [-json <json_file>] [-help]")
     print ("\n Default script behavior is to parse the specfile and generate a header of unique error enums and corresponding error messages based on the specfile.\n")
     print ("  Default specfile is from online at %s" % (spec_url))
     print ("  Default headerfile is %s" % (out_filename))
@@ -59,6 +78,16 @@ def printHelp():
     print ("  and online spec file as the latest. The default header and database files will be updated in-place for review and commit to the git repo.")
     print ("\nIf '-remap' option is specified it supplies forced remapping from new enum ids to old enum ids. This should only be specified along with -update")
     print ("  option. Starting at newid and remapping to oldid, count ids will be remapped. Default count is '1' and use ':' to specify multiple remappings.")
+    print ("\nIf '-json' option is used trigger the script to load in data from a json file.")
+    print ("\nIf '-json-file' option is it will point to a local json file, else '%s' is used from the web." % (json_url))
+
+def get8digithex(dec_num):
+    """Convert a decimal # into an 8-digit hex"""
+    if dec_num > 4294967295:
+        print ("ERROR: Decimal # %d can't be represented in 8 hex digits" % (dec_num))
+        sys.exit()
+    hex_num = hex(dec_num)
+    return hex_num[2:].zfill(8)
 
 class Specification:
     def __init__(self):
@@ -73,6 +102,15 @@ class Specification:
         self.orig_core_msg_dict = {} # Pair of API,Original core msg (no link or section) to ID list mapping
         self.last_mapped_id = -10 # start as negative so we don't hit an accidental sequence
         self.orig_test_imp_enums = set() # Track old enums w/ tests and/or implementation to flag any that aren't carried fwd
+        # Dict of data from json DB
+        # Key is API,<short_msg> which leads to dict w/ following values
+        #   'ext' -> <core|<ext_name>>
+        #   'string_vuid' -> <string_vuid>
+        #   'number_vuid' -> <numerical_vuid>
+        self.json_db = {}
+        self.json_missing = 0
+        self.struct_to_func_map = {} # Map structs to the API func that they fall under in the spec
+        self.duplicate_json_key_count = 0
         self.copyright = """/* THIS FILE IS GENERATED.  DO NOT EDIT. */
 
 /*
@@ -110,12 +148,122 @@ class Specification:
             self.soup = BeautifulSoup(urllib2.urlopen(spec_url), 'html.parser')
         else:
             print ("Making soup from local spec %s, this will take a minute" % (spec_file))
-            self.soup = BeautifulSoup(spec_file, 'html.parser')
+            with open(spec_file, "r") as sf:
+                self.soup = BeautifulSoup(sf, 'html.parser')
         self.parseSoup()
         #print(self.soup.prettify())
     def updateDict(self, updated_dict):
         """Assign internal dict to use updated_dict"""
         self.val_error_dict = updated_dict
+
+    def readJSON(self):
+        """Read in JSON file"""
+        if json_filename is not None:
+            with open(json_filename) as jsf:
+                self.json_data = json.load(jsf)
+        else:
+            self.json_data = json.load(urllib2.urlopen(json_url))
+
+    def parseJSON(self):
+        """Parse JSON VUIDs into data struct"""
+        # Format of JSON file is:
+        # "API": { "core|EXT": [ {"vuid": "<id>", "text": "<VU txt>"}]},
+        # "VK_KHX_external_memory" & "VK_KHX_device_group" - extension case (vs. "core")
+        for api in sorted(self.json_data):
+            for ext in sorted(self.json_data[api]):
+                for vu_txt_dict in self.json_data[api][ext]:
+                    vuid = vu_txt_dict['vuid']
+                    vutxt = vu_txt_dict['text']
+                    #print ("%s:%s:%s:%s" % (api, ext, vuid, vutxt))
+                    #print ("VUTXT orig:%s" % (vutxt))
+                    just_txt = BeautifulSoup(vutxt, 'html.parser')
+                    #print ("VUTXT only:%s" % (just_txt.get_text()))
+                    num_vuid = vuid_mapping.convertVUID(vuid)
+                    function = api
+                    if function in self.struct_to_func_map:
+                        function = self.struct_to_func_map[function]
+                    key = "%s,'%s'" % (function, just_txt.get_text())
+                    if key in self.json_db:
+                        print ("Key '%s' is already in json_db!" % (key))
+                        self.duplicate_json_key_count = self.duplicate_json_key_count + 1
+                        #sys.exit()
+                    self.json_db[vuid] = {}
+                    self.json_db[vuid]['ext'] = ext
+                    #self.json_db[key]['string_vuid'] = vuid
+                    self.json_db[vuid]['number_vuid'] = num_vuid
+                    self.json_db[vuid]['struct_func'] = api
+                    just_txt = just_txt.get_text().strip()
+                    unicode_map = {
+                    u"\u2019" : "'",
+                    u"\u2192" : "->",
+                    }
+                    for um in unicode_map:
+                        just_txt = just_txt.replace(um, unicode_map[um])
+                    self.json_db[vuid]['vu_txt'] = just_txt
+                    print ("Spec vu txt:%s" % (self.json_db[vuid]['vu_txt']))
+#                    if 'must specify aspects present in the calling command' in key:
+#                        print "Found KEY:%s" % (key)
+                        #sys.exit()
+        #sys.exit()
+
+    def compareJSON(self):
+        """Compare parsed json file with existing data read in from DB file"""
+        json_db_set = set()
+        for vuid in self.json_db: # pull entries out and see which fields we're missing from error_db
+            json_db_set.add(vuid)
+        for enum in self.error_db_dict:
+            vuid_string = self.error_db_dict[enum]['vuid_string']
+            if vuid_string not in self.json_db:
+                #print ("Full string for %s is:%s" % (enum, full_error_string))
+                print ("WARN: Couldn't find vuid_string in json db:%s" % (vuid_string))
+                self.json_missing = self.json_missing + 1
+                self.error_db_dict[enum]['ext'] = 'core'
+                #sys.exit()
+            else:
+                json_db_set.remove(vuid_string)
+                # TMP: Add ext details to error db
+                self.error_db_dict[enum]['ext'] = self.json_db[vuid_string]['ext']
+                if 'core' == self.json_db[vuid_string]['ext'] or '!' in self.json_db[vuid_string]['ext']:
+                    spec_link = "%s#%s" % (core_url, vuid_string)
+                else:
+                    spec_link = "%s#%s" % (ext_url, vuid_string)
+                self.error_db_dict[enum]['error_msg'] = "The spec valid usage text states '%s' (%s)" % (self.json_db[vuid_string]['vu_txt'], spec_link)
+                print ("Updated error_db error_msg:%s" % (self.error_db_dict[enum]['error_msg']))
+        #sys.exit()
+        print ("These json DB entries are not in error DB:")
+        for extra_vuid in json_db_set:
+            print ("\t%s" % (extra_vuid))
+            # Add these missing entries into the error_db
+            # Create link into core or ext spec as needed
+            if 'core' == self.json_db[extra_vuid]['ext'] or '!' in self.json_db[extra_vuid]['ext']:
+                spec_link = "%s#%s" % (core_url, extra_vuid)
+            else:
+                spec_link = "%s#%s" % (ext_url, extra_vuid)
+            error_enum = "VALIDATION_ERROR_%d" % (self.json_db[extra_vuid]['number_vuid'])
+            self.error_db_dict[error_enum] = {}
+            self.error_db_dict[error_enum]['check_implemented'] = 'N'
+            self.error_db_dict[error_enum]['testname'] = 'None'
+            self.error_db_dict[error_enum]['api'] = self.json_db[extra_vuid]['struct_func']
+            self.error_db_dict[error_enum]['vuid_string'] = extra_vuid
+            self.error_db_dict[error_enum]['error_msg'] = "The spec valid usage text states '%s' (%s)" % (self.json_db[extra_vuid]['vu_txt'], spec_link)
+            self.error_db_dict[error_enum]['note'] = ''
+            self.error_db_dict[error_enum]['ext'] = self.json_db[extra_vuid]['ext']
+        # Enable this code if you want to reset val_error_dict & assign to db dict
+#        self.val_error_dict = {}
+#        for enum in self.error_db_dict:
+#            self.val_error_dict[enum] = {}
+#            self.val_error_dict[enum]['check_implemented'] = self.error_db_dict[enum]['check_implemented']
+#            self.val_error_dict[enum]['testname'] = self.error_db_dict[enum]['testname']
+#            self.val_error_dict[enum]['api'] = self.error_db_dict[enum]['api']
+#            self.val_error_dict[enum]['vuid_string'] = self.error_db_dict[enum]['vuid_string']
+#            self.val_error_dict[enum]['ext'] = self.error_db_dict[enum]['ext']
+#            self.val_error_dict[enum]['error_msg'] = self.error_db_dict[enum]['error_msg']
+#            self.val_error_dict[enum]['note'] = self.error_db_dict[enum]['note']
+#            implicit = False
+#            if extra_vuid.split("_")[-1].isdigit():
+#                implicit = True
+#            self.val_error_dict[enum]['implicit'] = implicit
+
     def parseSoup(self):
         """Parse the registry Element, once created"""
         print ("Parsing spec file...")
@@ -158,6 +306,11 @@ class Specification:
                 elif tag.get('id') != None:
                     prev_link = tag.get('id')
                     #print ("Updated prev link to %s" % (prev_link))
+                    if tag.get('id').startswith('Vk') and api_function != '':
+                #if len(code_text_list) > 1 and code_text_list[1].startswith('Vk'):
+                        self.struct_to_func_map[tag.get('id')] = api_function
+                        print ("Added mapping from struct:%s to API:%s" % (tag.get('id'), api_function))
+
             #elif tag.name == '{http://www.w3.org/1999/xhtml}div' and tag.get('class') == 'sidebar':
             elif tag.name == 'div' and tag.get('class') is not None and tag['class'][0] == 'content':
                 #print("Parsing down a div content tag")
@@ -173,6 +326,11 @@ class Specification:
                         else:
                             implicit = False
                     elif valid_usage and elem.name == 'li': # grab actual valid usage requirements
+                        # Grab link
+                        prev_link = elem.a.get('id')
+                        if 'VUID' not in prev_link:
+                            print ("Found VU link that doesn't have 'VUID':%s" % (prev_link))
+                            sys.exit()
                         #print("I think this is a VU w/ elem.strings is %s" % (elem.strings))
                         error_msg_str = "%s '%s' which states '%s' (%s#%s)" % (error_msg_prefix, prev_heading, "".join(elem.strings).replace('\n', ' ').strip(), spec_url, prev_link)
                         # Some txt has multiple spaces so split on whitespace and join w/ single space
@@ -187,11 +345,15 @@ class Specification:
                             self.val_error_dict[enum_str]['error_msg'] = error_msg_str.encode("ascii", "ignore").replace("\\", "/")
                             self.val_error_dict[enum_str]['api'] = api_function.encode("ascii", "ignore")
                             self.val_error_dict[enum_str]['implicit'] = False
+                            self.val_error_dict[enum_str]['vuid_string'] = prev_link
                             if implicit:
                                 self.val_error_dict[enum_str]['implicit'] = True
                                 self.implicit_count = self.implicit_count + 1
                             unique_enum_id = unique_enum_id + 1
         #print ("Validation Error Dict has a total of %d unique errors and contents are:\n%s" % (unique_enum_id, self.val_error_dict))
+        # TEMP : override struct to api mapping with manual data
+        for struct in struct_to_api_map:
+            self.struct_to_func_map[struct] = struct_to_api_map[struct]
         print ("Validation Error Dict has a total of %d unique errors" % (unique_enum_id))
     def genHeader(self, header_file):
         """Generate a header file based on the contents of a parsed spec"""
@@ -209,12 +371,22 @@ class Specification:
         enum_decl = ['enum UNIQUE_VALIDATION_ERROR_CODE {\n    VALIDATION_ERROR_UNDEFINED = -1,']
         error_string_map = ['static std::unordered_map<int, char const *const> validation_error_map{']
         enum_value = 0
+        max_enum_val = 0
         for enum in sorted(self.val_error_dict):
             #print ("Header enum is %s" % (enum))
-            enum_value = int(enum.split('_')[-1])
-            enum_decl.append('    %s = %d,' % (enum, enum_value))
-            error_string_map.append('    {%s, "%s"},' % (enum, self.val_error_dict[enum]['error_msg']))
-        enum_decl.append('    %sMAX_ENUM = %d,' % (validation_error_enum_name, enum_value + 1))
+            #enum_value = int(enum.split('_')[-1])
+            # TMP: Use updated value
+            vuid_str = self.val_error_dict[enum]['vuid_string']
+            if vuid_str in self.json_db:
+                enum_value = self.json_db[vuid_str]['number_vuid']
+            else:
+                enum_value = vuid_mapping.convertVUID(vuid_str)
+            new_enum = "%s%s" % (validation_error_enum_name, get8digithex(enum_value))
+            enum_decl.append('    %s = 0x%s,' % (new_enum, get8digithex(enum_value)))
+            error_string_map.append('    {%s, "%s"},' % (new_enum, self.val_error_dict[enum]['error_msg']))
+            max_enum_val = max(max_enum_val, enum_value)
+        #enum_decl.append('    %sMAX_ENUM = %d,' % (validation_error_enum_name, enum_value + 1))
+        enum_decl.append('    %sMAX_ENUM = %d,' % (validation_error_enum_name, max_enum_val + 1))
         enum_decl.append('};')
         error_string_map.append('};\n')
         file_contents.extend(enum_decl)
@@ -247,17 +419,19 @@ class Specification:
         print ("Found %d repeat strings" % (repeat_string))
         print ("Found %d implicit checks" % (self.implicit_count))
     def genDB(self, db_file):
-        """Generate a database of check_enum, check_coded?, testname, error_string"""
+        """Generate a database of check_enum, check_coded?, testname, API, VUID_string, core|ext, error_string, notes"""
         db_lines = []
         # Write header for database file
         db_lines.append("# This is a database file with validation error check information")
         db_lines.append("# Comments are denoted with '#' char")
         db_lines.append("# The format of the lines is:")
-        db_lines.append("# <error_enum>%s<check_implemented>%s<testname>%s<api>%s<errormsg>%s<note>" % (self.delimiter, self.delimiter, self.delimiter, self.delimiter, self.delimiter))
+        db_lines.append("# <error_enum>%s<check_implemented>%s<testname>%s<api>%s<vuid_string>%s<core|ext>%s<errormsg>%s<note>" % (self.delimiter, self.delimiter, self.delimiter, self.delimiter, self.delimiter, self.delimiter, self.delimiter))
         db_lines.append("# error_enum: Unique error enum for this check of format %s<uniqueid>" % validation_error_enum_name)
         db_lines.append("# check_implemented: 'Y' if check has been implemented in layers, or 'N' for not implemented")
-        db_lines.append("# testname: Name of validation test for this check, 'Unknown' for unknown, or 'None' if not implmented")
+        db_lines.append("# testname: Name of validation test for this check, 'Unknown' for unknown, 'None' if not implemented, or 'NotTestable' if cannot be implemented")
         db_lines.append("# api: Vulkan API function that this check is related to")
+        db_lines.append("# vuid_string: Unique string to identify this check")
+        db_lines.append("# core|ext: Either 'core' for core spec or some extension string that indicates the extension required for this VU to be relevant")
         db_lines.append("# errormsg: The unique error message for this check that includes spec language and link")
         db_lines.append("# note: Free txt field with any custom notes related to the check in question")
         for enum in sorted(self.val_error_dict):
@@ -265,12 +439,15 @@ class Specification:
             implemented = 'N'
             testname = 'Unknown'
             note = ''
+            core_ext = 'core'
             implicit = self.val_error_dict[enum]['implicit']
             # If we have an existing db entry for this enum, use its implemented/testname values
             if enum in self.error_db_dict:
                 implemented = self.error_db_dict[enum]['check_implemented']
                 testname = self.error_db_dict[enum]['testname']
                 note = self.error_db_dict[enum]['note']
+                core_ext = self.error_db_dict[enum]['ext']
+                self.val_error_dict[enum]['vuid_string'] = self.error_db_dict[enum]['vuid_string']
             if implicit and 'implicit' not in note: # add implicit note
                 if '' != note:
                     note = "implicit, %s" % (note)
@@ -278,13 +455,13 @@ class Specification:
                     note = "implicit"
             #print ("delimiter: %s, id: %s, str: %s" % (self.delimiter, enum, self.val_error_dict[enum])
             # No existing entry so default to N for implemented and None for testname
-            db_lines.append("%s%s%s%s%s%s%s%s%s%s%s" % (enum, self.delimiter, implemented, self.delimiter, testname, self.delimiter, self.val_error_dict[enum]['api'], self.delimiter, self.val_error_dict[enum]['error_msg'], self.delimiter, note))
+            db_lines.append("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s" % (enum, self.delimiter, implemented, self.delimiter, testname, self.delimiter, self.val_error_dict[enum]['api'], self.delimiter, self.val_error_dict[enum]['vuid_string'], self.delimiter, core_ext, self.delimiter, self.val_error_dict[enum]['error_msg'], self.delimiter, note))
         db_lines.append("\n") # newline at end of file
         print ("Generating database file %s" % (db_file))
         with open(db_file, "w") as outfile:
             outfile.write("\n".join(db_lines))
     def readDB(self, db_file):
-        """Read a db file into a dict, format of each line is <enum><implemented Y|N?><testname><errormsg>"""
+        """Read a db file into a dict, refer to genDB function above for format of each line"""
         db_dict = {} # This is a simple db of just enum->errormsg, the same as is created from spec
         max_id = 0
         with open(db_file, "r") as infile:
@@ -293,21 +470,25 @@ class Specification:
                 if line.startswith('#') or '' == line:
                     continue
                 db_line = line.split(self.delimiter)
-                if len(db_line) != 6:
-                    print ("ERROR: Bad database line doesn't have 6 elements: %s" % (line))
+                if len(db_line) != 8:
+                    print ("ERROR: Bad database line doesn't have 8 elements: %s" % (line))
                 error_enum = db_line[0]
                 implemented = db_line[1]
                 testname = db_line[2]
                 api = db_line[3]
-                error_str = db_line[4]
-                note = db_line[5]
+                vuid_str = db_line[4]
+                core_ext = db_line[5]
+                error_str = db_line[6]
+                note = db_line[7]
                 db_dict[error_enum] = error_str
                 # Also read complete database contents into our class var for later use
                 self.error_db_dict[error_enum] = {}
                 self.error_db_dict[error_enum]['check_implemented'] = implemented
                 self.error_db_dict[error_enum]['testname'] = testname
                 self.error_db_dict[error_enum]['api'] = api
-                self.error_db_dict[error_enum]['error_string'] = error_str
+                self.error_db_dict[error_enum]['vuid_string'] = vuid_str
+                self.error_db_dict[error_enum]['core_ext'] = core_ext
+                self.error_db_dict[error_enum]['error_msg'] = error_str
                 self.error_db_dict[error_enum]['note'] = note
                 unique_id = int(db_line[0].split('_')[-1])
                 if unique_id > max_id:
@@ -405,7 +586,7 @@ class Specification:
                 print ("Added msg '%s' w/ enum %s to orig_core_msg_dict" % (orig_core_msg_period, enum))
                 self.orig_core_msg_dict[orig_core_msg_period] = [enum]
             # Also capture all enums that have a test and/or implementation
-            if self.error_db_dict[enum]['check_implemented'] == 'Y' or self.error_db_dict[enum]['testname'] not in ['None','Unknown']:
+            if self.error_db_dict[enum]['check_implemented'] == 'Y' or self.error_db_dict[enum]['testname'] not in ['None','Unknown','NotTestable']:
                 print ("Recording %s with implemented value %s and testname %s" % (enum, self.error_db_dict[enum]['check_implemented'], self.error_db_dict[enum]['testname']))
                 self.orig_test_imp_enums.add(enum)
         # Values to be used for the update dict
@@ -421,6 +602,7 @@ class Specification:
             update_msg = self.val_error_dict[enum]['error_msg']
             update_api = self.val_error_dict[enum]['api']
             implicit = self.val_error_dict[enum]['implicit']
+            vuid_string = self.val_error_dict[enum]['vuid_string']
             new_full_msg = update_msg
             new_no_link_msg = "%s,%s" % (update_api, new_full_msg.split('(https', 1)[0])
             new_core_msg = "%s,%s" % (update_api, new_no_link_msg.split(' which states ', 1)[-1])
@@ -484,10 +666,43 @@ class Specification:
             updated_val_error_dict[update_enum]['error_msg'] = update_msg
             updated_val_error_dict[update_enum]['api'] = update_api
             updated_val_error_dict[update_enum]['implicit'] = implicit
+            updated_val_error_dict[update_enum]['vuid_string'] = vuid_string
         # Assign parsed dict to be the updated dict based on db compare
         print ("In compareDB parsed %d entries" % (ids_parsed))
         return updated_val_error_dict
 
+    def migrateIDs(self):
+        """Using the error db dict map from old IDs to new IDs and then update source w/ the mappings"""
+        #First create a mapping of old ID to new ID
+        old_to_new_id_map = {}
+        new_to_old_map = {} # Reverse sort according to new IDs to avoid start of a new ID aliasing an old ID and getting replaced
+        for enum in self.error_db_dict:
+            vuid_string = self.error_db_dict[enum]['vuid_string']
+            if vuid_string in self.json_db:
+                new_enum = "%s%s" % (validation_error_enum_name, get8digithex(self.json_db[vuid_string]['number_vuid']))
+            else:
+                new_enum = "%s%s" % (validation_error_enum_name, get8digithex(vuid_mapping.convertVUID(vuid_string)))
+            old_to_new_id_map[enum] = new_enum
+            new_to_old_map[new_enum] = enum
+        for enum in sorted(old_to_new_id_map):
+            print ("ID mapping old:new = %s:%s" % (enum, old_to_new_id_map[enum]))
+        # Create a data struct of old->new ids based on new ids so we don't double-replace any ids
+        #new_id_sorted_list = sorted(old_to_new_id_map, key=operator.itemgetter(1))
+        #print ("NEW ID SORTED LIST:\n%s" % (new_id_sorted_list))
+        #sys.exit()
+        layer_source_files = ['vk_validation_stats.py','../tests/layer_validation_tests.cpp','swapchain.cpp','core_validation.cpp','core_validation_types.h','descriptor_sets.h','descriptor_sets.cpp','parameter_validation.cpp','unique_objects.cpp','object_tracker.cpp','buffer_validation.h','buffer_validation.cpp']
+        # For each file in source file list
+        for source_file in layer_source_files:
+            with open(source_file, 'r+') as f:
+                #  Read in the file
+                src_txt = f.read()
+                # For each old id, replace it with the new id
+                for n_enum in reversed(sorted(new_to_old_map)):
+                    src_txt = re.sub(new_to_old_map[n_enum], n_enum, src_txt)
+                f.seek(0)
+                #  Write out file if there were updates
+                f.write(src_txt)
+                f.truncate()
     def validateUpdateDict(self, update_dict):
         """Compare original dict vs. update dict and make sure that all of the checks are still there"""
         # Currently just make sure that the same # of checks as the original checks are there
@@ -541,6 +756,13 @@ if __name__ == "__main__":
             # If user specifies local specfile, skip online
             use_online = False
             i = i + 1
+        elif (arg == '-json-file'):
+            json_filename = sys.argv[i]
+            i = i + 1
+        elif (arg == '-json'):
+            read_json = True
+        elif (arg == '-json-compare'):
+            json_compare = True
         elif (arg == '-out'):
             out_filename = sys.argv[i]
             i = i + 1
@@ -561,6 +783,9 @@ if __name__ == "__main__":
         elif (arg == '-remap'):
             updateRemapDict(sys.argv[i])
             i = i + 1
+        elif (arg == '-migrate'):
+            migrate_ids = True
+            read_json = True
         elif (arg in ['-help', '-h']):
             printHelp()
             sys.exit()
@@ -570,6 +795,27 @@ if __name__ == "__main__":
     spec = Specification()
     spec.soupLoadFile(use_online, spec_filename)
     spec.analyze()
+    if read_json:
+        spec.readJSON()
+        spec.parseJSON()
+        #sys.exit()
+    if (json_compare):
+        # Read in current spec info from db file
+        (orig_err_msg_dict, max_id) = spec.readDB(db_filename)
+        spec.compareJSON()
+        print ("Found %d missing db entries in json db" % (spec.json_missing))
+        print ("Found %d duplicate json entries" % (spec.duplicate_json_key_count))
+        spec.genDB("json_vk_validation_error_database.txt")
+        sys.exit()
+    if (migrate_ids):
+        # Updated spec is already read into spec
+        # Read in existing error ids from database
+        (db_err_msg_dict, max_id) = spec.readDB(db_filename)
+        spec.migrateIDs()
+        spec.val_error_dict = spec.error_db_dict
+        #spec.genDB(db_filename)
+        spec.genHeader(out_filename)
+        sys.exit()
     if (spec_compare):
         # Read in old spec info from db file
         (orig_err_msg_dict, max_id) = spec.readDB(db_filename)

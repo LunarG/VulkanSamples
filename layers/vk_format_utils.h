@@ -84,7 +84,11 @@ typedef enum VkFormatCompatibilityClass {
     VK_FORMAT_COMPATIBILITY_CLASS_D16S8_BIT = 42,
     VK_FORMAT_COMPATIBILITY_CLASS_D24S8_BIT = 43,
     VK_FORMAT_COMPATIBILITY_CLASS_D32S8_BIT = 44,
-    VK_FORMAT_COMPATIBILITY_CLASS_MAX_ENUM = 45
+    VK_FORMAT_COMPATIBILITY_CLASS_PVRTC1_2BPP_BIT = 45,
+    VK_FORMAT_COMPATIBILITY_CLASS_PVRTC1_4BPP_BIT = 46,
+    VK_FORMAT_COMPATIBILITY_CLASS_PVRTC2_2BPP_BIT = 47,
+    VK_FORMAT_COMPATIBILITY_CLASS_PVRTC2_4BPP_BIT = 48,
+    VK_FORMAT_COMPATIBILITY_CLASS_MAX_ENUM = 49
 } VkFormatCompatibilityClass;
 
 VK_LAYER_EXPORT bool FormatIsDepthOrStencil(VkFormat format);
@@ -94,6 +98,7 @@ VK_LAYER_EXPORT bool FormatIsStencilOnly(VkFormat format);
 VK_LAYER_EXPORT bool FormatIsCompressed_ETC2_EAC(VkFormat format);
 VK_LAYER_EXPORT bool FormatIsCompressed_ASTC_LDR(VkFormat format);
 VK_LAYER_EXPORT bool FormatIsCompressed_BC(VkFormat format);
+VK_LAYER_EXPORT bool FormatIsCompressed_PVRTC(VkFormat format);
 VK_LAYER_EXPORT bool FormatIsNorm(VkFormat format);
 VK_LAYER_EXPORT bool FormatIsUNorm(VkFormat format);
 VK_LAYER_EXPORT bool FormatIsSNorm(VkFormat format);
