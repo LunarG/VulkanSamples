@@ -910,10 +910,10 @@ def convertVUID(vuid_string):
                 uniqueid = uniqueid + (param_id << IMPLICIT_PARAM_SHIFT) + (implicit_type_map[vuid_parts[-1]] << IMPLICIT_TYPE_SHIFT) + implicit_bit0
             else: # No parameter so that field is 0
                 uniqueid = uniqueid + (implicit_type_map[vuid_parts[-1]] << IMPLICIT_TYPE_SHIFT) + implicit_bit0
-    if uniqueid in uniqueid_set:
-        print ("ERROR: Uniqueid %d for string id %s is a duplicate!" % (uniqueid, vuid_string))
-        print (" TODO: Figure out what caused the dupe and fix it")
-        sys.exit()
+#    if uniqueid in uniqueid_set:
+#        print ("ERROR: Uniqueid %d for string id %s is a duplicate!" % (uniqueid, vuid_string))
+#        print (" TODO: Figure out what caused the dupe and fix it")
+        #sys.exit()
     print ("Storing uniqueid %d for unique string %s" % (uniqueid, vuid_string))
     uniqueid_set.add(uniqueid)
 #    if func_struct_update:

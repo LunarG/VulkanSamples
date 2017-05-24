@@ -57,26 +57,26 @@ header_file = 'vk_validation_error_messages.h'
 test_file = '../tests/layer_validation_tests.cpp'
 # List of enums that are allowed to be used more than once so don't warn on their duplicates
 duplicate_exceptions = [
-'VALIDATION_ERROR_00018', # This covers the broad case that all child objects must be destroyed at DestroyInstance time
-'VALIDATION_ERROR_00049', # This covers the broad case that all child objects must be destroyed at DestroyDevice time
-'VALIDATION_ERROR_00112', # Obj tracker check makes sure non-null framebuffer is valid & CV check makes sure it's compatible w/ renderpass framebuffer
-'VALIDATION_ERROR_00324', # This is an aliasing error that we report twice, for each of the two allocations that are aliasing
-'VALIDATION_ERROR_00515', # Covers valid shader module handle for both Compute & Graphics pipelines
-'VALIDATION_ERROR_00648', # This is a case for VkMappedMemoryRange struct that is used by both Flush & Invalidate MappedMemoryRange
-'VALIDATION_ERROR_00741', # This is a blanket case for all invalid image aspect bit errors. The spec link has appropriate details for all separate cases.
-'VALIDATION_ERROR_00768', # This case covers two separate checks which are done independently
-'VALIDATION_ERROR_00769', # This case covers two separate checks which are done independently
-'VALIDATION_ERROR_00942', # This is a descriptor set write update error that we use for a couple copy cases as well
-'VALIDATION_ERROR_00988', # Single error for mis-matched stageFlags of vkCmdPushConstants() that is flagged for no stage flags & mis-matched flags
-'VALIDATION_ERROR_01088', # Handles both depth/stencil & compressed image errors for vkCmdClearColorImage()
-'VALIDATION_ERROR_01223', # Used for the mipLevel check of both dst & src images on vkCmdCopyImage call
-'VALIDATION_ERROR_01224', # Used for the arraySize check of both dst & src images on vkCmdCopyImage call
-'VALIDATION_ERROR_01450', # Used for both x & y bounds of viewport
-'VALIDATION_ERROR_01489', # Used for both x & y value of scissors to make sure they're not negative
-'VALIDATION_ERROR_01926', # Surface of VkSwapchainCreateInfoKHR must be valid when creating both single or shared swapchains
-'VALIDATION_ERROR_01935', # oldSwapchain of VkSwapchainCreateInfoKHR must be valid when creating both single or shared swapchains
-'VALIDATION_ERROR_02333', # Single error for both imageFormat & imageColorSpace requirements when creating swapchain
-'VALIDATION_ERROR_02525', # Used twice for the same error codepath as both a param & to set a variable, so not really a duplicate
+'VALIDATION_ERROR_258004ea', # This covers the broad case that all child objects must be destroyed at DestroyInstance time
+'VALIDATION_ERROR_24a002f4', # This covers the broad case that all child objects must be destroyed at DestroyDevice time
+'VALIDATION_ERROR_0280006e', # Obj tracker check makes sure non-null framebuffer is valid & CV check makes sure it's compatible w/ renderpass framebuffer
+'VALIDATION_ERROR_12200682', # This is an aliasing error that we report twice, for each of the two allocations that are aliasing
+'VALIDATION_ERROR_1060d201', # Covers valid shader module handle for both Compute & Graphics pipelines
+'VALIDATION_ERROR_0c20c601', # This is a case for VkMappedMemoryRange struct that is used by both Flush & Invalidate MappedMemoryRange
+'VALIDATION_ERROR_0a400c01', # This is a blanket case for all invalid image aspect bit errors. The spec link has appropriate details for all separate cases.
+'VALIDATION_ERROR_0a8007fc', # This case covers two separate checks which are done independently
+'VALIDATION_ERROR_0a800800', # This case covers two separate checks which are done independently
+'VALIDATION_ERROR_15c0028a', # This is a descriptor set write update error that we use for a couple copy cases as well
+'VALIDATION_ERROR_1bc002de', # Single error for mis-matched stageFlags of vkCmdPushConstants() that is flagged for no stage flags & mis-matched flags
+'VALIDATION_ERROR_1880000e', # Handles both depth/stencil & compressed image errors for vkCmdClearColorImage()
+'VALIDATION_ERROR_0a600152', # Used for the mipLevel check of both dst & src images on vkCmdCopyImage call
+'VALIDATION_ERROR_0a600154', # Used for the arraySize check of both dst & src images on vkCmdCopyImage call
+'VALIDATION_ERROR_1500099e', # Used for both x & y bounds of viewport
+'VALIDATION_ERROR_1d8004a6', # Used for both x & y value of scissors to make sure they're not negative
+'VALIDATION_ERROR_1462ec01', # Surface of VkSwapchainCreateInfoKHR must be valid when creating both single or shared swapchains
+'VALIDATION_ERROR_1460de01', # oldSwapchain of VkSwapchainCreateInfoKHR must be valid when creating both single or shared swapchains
+'VALIDATION_ERROR_146009f2', # Single error for both imageFormat & imageColorSpace requirements when creating swapchain
+'VALIDATION_ERROR_15c00294', # Used twice for the same error codepath as both a param & to set a variable, so not really a duplicate
 ]
 
 class ValidationDatabase:
@@ -164,8 +164,8 @@ class ValidationSource:
         self.source_files = source_file_list
         self.enum_count_dict = {} # dict of enum values to the count of how much they're used, and location of where they're used
         # 1790 is a special case that provides an exception when an extension is enabled. No specific error is flagged, but the exception is handled so add it here
-        self.enum_count_dict['VALIDATION_ERROR_01790'] = {}
-        self.enum_count_dict['VALIDATION_ERROR_01790']['count'] = 1
+        self.enum_count_dict['VALIDATION_ERROR_1500099c'] = {}
+        self.enum_count_dict['VALIDATION_ERROR_1500099c']['count'] = 1
     def parse(self):
         duplicate_checks = 0
         for sf in self.source_files:

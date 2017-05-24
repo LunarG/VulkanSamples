@@ -6,6 +6,8 @@ import urllib2
 from bs4 import BeautifulSoup
 import json
 import vuid_mapping
+import operator
+import re
 
 #############################
 # spec.py script
@@ -39,6 +41,11 @@ json_filename = None # con pass in w/ '-json <filename> option
 gen_db = False # set to True when '-gendb <filename>' option provided
 spec_compare = False # set to True with '-compare <db_filename>' option
 json_compare = False # compare existing DB to json file input
+migrate_ids = False # set to True with '-migrate' option to move old ids from database to new ids in spec
+# When migrating IDs:
+# 1. Read in DB
+# 2. Create mapping between old VU enum values & new string-based IDs
+# 3. Read in source and update all old VU enum values to new string-based IDs
 json_url = "https://www.khronos.org/registry/vulkan/specs/1.0-extensions/validation/validusage.json"
 read_json = False
 # This is the root spec link that is used in error messages to point users to spec sections
@@ -73,6 +80,14 @@ def printHelp():
     print ("  option. Starting at newid and remapping to oldid, count ids will be remapped. Default count is '1' and use ':' to specify multiple remappings.")
     print ("\nIf '-json' option is used trigger the script to load in data from a json file.")
     print ("\nIf '-json-file' option is it will point to a local json file, else '%s' is used from the web." % (json_url))
+
+def get8digithex(dec_num):
+    """Convert a decimal # into an 8-digit hex"""
+    if dec_num > 4294967295:
+        print ("ERROR: Decimal # %d can't be represented in 8 hex digits" % (dec_num))
+        sys.exit()
+    hex_num = hex(dec_num)
+    return hex_num[2:].zfill(8)
 
 class Specification:
     def __init__(self):
@@ -356,12 +371,22 @@ class Specification:
         enum_decl = ['enum UNIQUE_VALIDATION_ERROR_CODE {\n    VALIDATION_ERROR_UNDEFINED = -1,']
         error_string_map = ['static std::unordered_map<int, char const *const> validation_error_map{']
         enum_value = 0
+        max_enum_val = 0
         for enum in sorted(self.val_error_dict):
             #print ("Header enum is %s" % (enum))
-            enum_value = int(enum.split('_')[-1])
-            enum_decl.append('    %s = %d,' % (enum, enum_value))
-            error_string_map.append('    {%s, "%s"},' % (enum, self.val_error_dict[enum]['error_msg']))
-        enum_decl.append('    %sMAX_ENUM = %d,' % (validation_error_enum_name, enum_value + 1))
+            #enum_value = int(enum.split('_')[-1])
+            # TMP: Use updated value
+            vuid_str = self.val_error_dict[enum]['vuid_string']
+            if vuid_str in self.json_db:
+                enum_value = self.json_db[vuid_str]['number_vuid']
+            else:
+                enum_value = vuid_mapping.convertVUID(vuid_str)
+            new_enum = "%s%s" % (validation_error_enum_name, get8digithex(enum_value))
+            enum_decl.append('    %s = 0x%s,' % (new_enum, get8digithex(enum_value)))
+            error_string_map.append('    {%s, "%s"},' % (new_enum, self.val_error_dict[enum]['error_msg']))
+            max_enum_val = max(max_enum_val, enum_value)
+        #enum_decl.append('    %sMAX_ENUM = %d,' % (validation_error_enum_name, enum_value + 1))
+        enum_decl.append('    %sMAX_ENUM = %d,' % (validation_error_enum_name, max_enum_val + 1))
         enum_decl.append('};')
         error_string_map.append('};\n')
         file_contents.extend(enum_decl)
@@ -646,6 +671,38 @@ class Specification:
         print ("In compareDB parsed %d entries" % (ids_parsed))
         return updated_val_error_dict
 
+    def migrateIDs(self):
+        """Using the error db dict map from old IDs to new IDs and then update source w/ the mappings"""
+        #First create a mapping of old ID to new ID
+        old_to_new_id_map = {}
+        new_to_old_map = {} # Reverse sort according to new IDs to avoid start of a new ID aliasing an old ID and getting replaced
+        for enum in self.error_db_dict:
+            vuid_string = self.error_db_dict[enum]['vuid_string']
+            if vuid_string in self.json_db:
+                new_enum = "%s%s" % (validation_error_enum_name, get8digithex(self.json_db[vuid_string]['number_vuid']))
+            else:
+                new_enum = "%s%s" % (validation_error_enum_name, get8digithex(vuid_mapping.convertVUID(vuid_string)))
+            old_to_new_id_map[enum] = new_enum
+            new_to_old_map[new_enum] = enum
+        for enum in sorted(old_to_new_id_map):
+            print ("ID mapping old:new = %s:%s" % (enum, old_to_new_id_map[enum]))
+        # Create a data struct of old->new ids based on new ids so we don't double-replace any ids
+        #new_id_sorted_list = sorted(old_to_new_id_map, key=operator.itemgetter(1))
+        #print ("NEW ID SORTED LIST:\n%s" % (new_id_sorted_list))
+        #sys.exit()
+        layer_source_files = ['vk_validation_stats.py','../tests/layer_validation_tests.cpp','swapchain.cpp','core_validation.cpp','core_validation_types.h','descriptor_sets.h','descriptor_sets.cpp','parameter_validation.cpp','unique_objects.cpp','object_tracker.cpp','buffer_validation.h','buffer_validation.cpp']
+        # For each file in source file list
+        for source_file in layer_source_files:
+            with open(source_file, 'r+') as f:
+                #  Read in the file
+                src_txt = f.read()
+                # For each old id, replace it with the new id
+                for n_enum in reversed(sorted(new_to_old_map)):
+                    src_txt = re.sub(new_to_old_map[n_enum], n_enum, src_txt)
+                f.seek(0)
+                #  Write out file if there were updates
+                f.write(src_txt)
+                f.truncate()
     def validateUpdateDict(self, update_dict):
         """Compare original dict vs. update dict and make sure that all of the checks are still there"""
         # Currently just make sure that the same # of checks as the original checks are there
@@ -726,6 +783,9 @@ if __name__ == "__main__":
         elif (arg == '-remap'):
             updateRemapDict(sys.argv[i])
             i = i + 1
+        elif (arg == '-migrate'):
+            migrate_ids = True
+            read_json = True
         elif (arg in ['-help', '-h']):
             printHelp()
             sys.exit()
@@ -746,6 +806,15 @@ if __name__ == "__main__":
         print ("Found %d missing db entries in json db" % (spec.json_missing))
         print ("Found %d duplicate json entries" % (spec.duplicate_json_key_count))
         spec.genDB("json_vk_validation_error_database.txt")
+        sys.exit()
+    if (migrate_ids):
+        # Updated spec is already read into spec
+        # Read in existing error ids from database
+        (db_err_msg_dict, max_id) = spec.readDB(db_filename)
+        spec.migrateIDs()
+        spec.val_error_dict = spec.error_db_dict
+        #spec.genDB(db_filename)
+        spec.genHeader(out_filename)
         sys.exit()
     if (spec_compare):
         # Read in old spec info from db file

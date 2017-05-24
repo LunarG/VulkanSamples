@@ -63,8 +63,8 @@ static void checkDeviceRegisterExtensions(VkPhysicalDevice physicalDevice, const
         // TBD: Should we leave error in (since Swapchain really needs this
         // link)?
         log_msg(my_instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
-                HandleToUint64(physicalDevice), __LINE__, VALIDATION_ERROR_00031, "Swapchain",
-                "vkCreateDevice() called with a non-valid VkPhysicalDevice. %s", validation_error_map[VALIDATION_ERROR_00031]);
+                HandleToUint64(physicalDevice), __LINE__, VALIDATION_ERROR_1fc27a01, "Swapchain",
+                "vkCreateDevice() called with a non-valid VkPhysicalDevice. %s", validation_error_map[VALIDATION_ERROR_1fc27a01]);
     }
     my_device_data->deviceMap[device].device = device;
 }
@@ -174,10 +174,10 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
             if (pPhysicalDevice) {
                 if (pPhysicalDevice->pDevice) {
                     log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                            HandleToUint64(pPhysicalDevice->pDevice->device), __LINE__, VALIDATION_ERROR_00018,
+                            HandleToUint64(pPhysicalDevice->pDevice->device), __LINE__, VALIDATION_ERROR_258004ea,
                             swapchain_layer_name,
                             "VkDestroyInstance() called before all of its associated VkDevices were destroyed. %s",
-                            validation_error_map[VALIDATION_ERROR_00018]);
+                            validation_error_map[VALIDATION_ERROR_258004ea]);
                 }
             }
 
@@ -190,9 +190,9 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
             SwpSurface *pSurface = it->second;
             if (pSurface) {
                 log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-                        HandleToUint64(pInstance->instance), __LINE__, VALIDATION_ERROR_00018, swapchain_layer_name,
+                        HandleToUint64(pInstance->instance), __LINE__, VALIDATION_ERROR_258004ea, swapchain_layer_name,
                         "VkDestroyInstance() called before all of its associated VkSurfaceKHRs were destroyed. %s",
-                        validation_error_map[VALIDATION_ERROR_00018]);
+                        validation_error_map[VALIDATION_ERROR_258004ea]);
             }
         }
         my_data->instanceMap.erase(instance);
@@ -512,10 +512,10 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneSupportedDisplaysKHR(VkPhysicalDev
     if (pPhysicalDevice->gotDisplayPlanePropertyCount && planeIndex >= pPhysicalDevice->displayPlanePropertyCount) {
         skip_call |=
             log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-                    HandleToUint64(pPhysicalDevice->pInstance->instance), __LINE__, VALIDATION_ERROR_01857, swapchain_layer_name,
+                    HandleToUint64(pPhysicalDevice->pInstance->instance), __LINE__, VALIDATION_ERROR_29c009c2, swapchain_layer_name,
                     "vkGetDisplayPlaneSupportedDisplaysKHR(): planeIndex must be in the range [0, %d] that was returned by "
                     "vkGetPhysicalDeviceDisplayPlanePropertiesKHR. Do you have the plane index hardcoded? %s",
-                    pPhysicalDevice->displayPlanePropertyCount - 1, validation_error_map[VALIDATION_ERROR_01857]);
+                    pPhysicalDevice->displayPlanePropertyCount - 1, validation_error_map[VALIDATION_ERROR_29c009c2]);
     }
     lock.unlock();
 
@@ -616,9 +616,9 @@ VKAPI_ATTR void VKAPI_CALL DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR s
         }
         if (!pSurface->swapchains.empty()) {
             skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-                                 HandleToUint64(instance), __LINE__, VALIDATION_ERROR_01844, swapchain_layer_name,
+                                 HandleToUint64(instance), __LINE__, VALIDATION_ERROR_26c009e4, swapchain_layer_name,
                                  "vkDestroySurfaceKHR() called before all of its associated VkSwapchainKHRs were destroyed. %s",
-                                 validation_error_map[VALIDATION_ERROR_01844]);
+                                 validation_error_map[VALIDATION_ERROR_26c009e4]);
 
             // Empty and then delete all SwpSwapchains
             for (auto it = pSurface->swapchains.begin(); it != pSurface->swapchains.end(); it++) {
@@ -727,9 +727,9 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
         }
         if (!pDevice->swapchains.empty()) {
             log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                    HandleToUint64(device), __LINE__, VALIDATION_ERROR_00049, swapchain_layer_name,
+                    HandleToUint64(device), __LINE__, VALIDATION_ERROR_24a002f4, swapchain_layer_name,
                     "vkDestroyDevice() called before all of its associated VkSwapchainKHRs were destroyed. %s",
-                    validation_error_map[VALIDATION_ERROR_00049]);
+                    validation_error_map[VALIDATION_ERROR_24a002f4]);
 
             // Empty and then delete all SwpSwapchain's
             for (auto it = pDevice->swapchains.begin(); it != pDevice->swapchains.end(); it++) {
