@@ -2816,7 +2816,7 @@ static bool verifyPipelineCreateState(layer_data *dev_data, std::vector<PIPELINE
                         validation_error_map[VALIDATION_ERROR_096005ee]);
     }
 
-    if (!GetDisables(dev_data)->shader_validation && validate_and_capture_pipeline_shader_state(dev_data, pPipeline)) {
+    if (validate_and_capture_pipeline_shader_state(dev_data, pPipeline)) {
         skip = true;
     }
     // Each shader's stage must be unique
@@ -3370,6 +3370,9 @@ static void init_core_validation(instance_layer_data *instance_data, const VkAll
 void SetDisabledFlags(instance_layer_data *instance_data, VkValidationFlagsEXT *val_flags_struct) {
     for (uint32_t i = 0; i < val_flags_struct->disabledValidationCheckCount; ++i) {
         switch (val_flags_struct->pDisabledValidationChecks[i]) {
+            case VK_VALIDATION_CHECK_SHADERS_EXT:
+                instance_data->disabled.shader_validation = true;
+                break;
             case VK_VALIDATION_CHECK_ALL_EXT:
                 // Set all disabled flags to true
                 instance_data->disabled.SetAll(true);
@@ -6477,7 +6480,7 @@ VKAPI_ATTR VkResult VKAPI_CALL BeginCommandBuffer(VkCommandBuffer commandBuffer,
         if (cb_node->in_use.load()) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             HandleToUint64(commandBuffer), __LINE__, VALIDATION_ERROR_16e00062, "MEM",
-                            "Calling vkBeginCommandBuffer() on active command buffer 0x%p before it has completed. "
+                            "Calling vkBeginCommandBuffer() on active command buffer %p before it has completed. "
                             "You must check command buffer fence before this call. %s",
                             commandBuffer, validation_error_map[VALIDATION_ERROR_16e00062]);
         }
@@ -8815,7 +8818,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateShaderModule(VkDevice device, const VkShade
 
     VkResult res = dev_data->dispatch_table.CreateShaderModule(device, pCreateInfo, pAllocator, pShaderModule);
 
-    if (res == VK_SUCCESS && !GetDisables(dev_data)->shader_validation) {
+    if (res == VK_SUCCESS) {
         std::lock_guard<std::mutex> lock(global_lock);
         const auto new_shader_module = (SPV_SUCCESS == spv_valid ? new shader_module(pCreateInfo) : new shader_module());
         dev_data->shaderModuleMap[*pShaderModule] = unique_ptr<shader_module>(new_shader_module);
