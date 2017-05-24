@@ -4909,6 +4909,65 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDevice(VkPhysicalDevice physical
         }
     }
 
+    // Handle loader emulation for structs that are not supported by the ICD:
+    // Presently, the emulation leaves the pNext chain alone. This means that the ICD will receive items in the chain which
+    // are not recognized by the ICD. If this causes the ICD to fail, then the items would have to be removed here. The current
+    // implementation does not remove them because copying the pNext chain would be impossible if the loader does not recognize
+    // the any of the struct types, as the loader would not know the size to allocate and copy.
+    if (icd_term->dispatch.GetPhysicalDeviceFeatures2KHR == NULL) {
+        const void *pNext = localCreateInfo.pNext;
+        while (pNext != NULL) {
+            switch (*(VkStructureType *)pNext) {
+                case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR: {
+                    loader_log(icd_term->this_instance, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
+                               "vkCreateDevice: Emulating handling of VkPhysicalDeviceFeatures2KHR in pNext chain for ICD \"%s\"",
+                               icd_term->scanned_icd->lib_name);
+                    const VkPhysicalDeviceFeatures2KHR *features = pNext;
+
+                    // Verify that VK_KHR_get_physical_device_properties2 is enabled
+                    if (icd_term->this_instance->enabled_known_extensions.khr_get_physical_device_properties2) {
+                        localCreateInfo.pEnabledFeatures = &features->features;
+                    }
+
+                    // Leave this item in the pNext chain for now
+
+                    pNext = features->pNext;
+                    break;
+                }
+
+                case VK_STRUCTURE_TYPE_DEVICE_GROUP_DEVICE_CREATE_INFO_KHX: {
+                    loader_log(
+                        icd_term->this_instance, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
+                        "vkCreateDevice: Emulating handling of VkDeviceGroupDeviceCreateInfoKHX in pNext chain for ICD \"%s\"",
+                        icd_term->scanned_icd->lib_name);
+                    const VkDeviceGroupDeviceCreateInfoKHX *group_info = pNext;
+
+                    // The group must contain only this one device, since physical device groups aren't actually supported
+                    if (group_info->physicalDeviceCount != 1 || group_info->pPhysicalDevices[0] != physicalDevice) {
+                        loader_log(icd_term->this_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                                   "vkCreateDevice: Emulation failed to create device from device group info");
+                        res = VK_ERROR_INITIALIZATION_FAILED;
+                        goto out;
+                    }
+
+                    // Nothing needs to be done here because we're leaving the item in the pNext chain and because the spec states
+                    // that the physicalDevice argument must be included in the device group, and we've already checked that it is
+
+                    pNext = group_info->pNext;
+                    break;
+                }
+
+                // Multiview properties are also allowed, but since VK_KHX_multiview is a device extension, we'll just let the ICD
+                // handle that error when the user enables the extension here
+                default: {
+                    const struct VkStructureHeader *header = pNext;
+                    pNext = header->pNext;
+                    break;
+                }
+            }
+        }
+    }
+
     res = fpCreateDevice(phys_dev_term->phys_dev, &localCreateInfo, pAllocator, &dev->icd_device);
     if (res != VK_SUCCESS) {
         loader_log(icd_term->this_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
