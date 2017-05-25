@@ -259,8 +259,6 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkImageView *dsBindin
     VkClearValue clear = {};
     clear.color = m_clear_color;
 
-    VkImageView bind = {};
-
     for (uint32_t i = 0; i < targets; i++) {
         attachments.push_back(att);
 
@@ -286,8 +284,7 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkImageView *dsBindin
         }
 
         m_renderTargets.push_back(img);
-        bind = img->targetView(m_render_target_fmt);
-        bindings.push_back(bind);
+        bindings.push_back(img->targetView(m_render_target_fmt));
     }
 
     VkSubpassDescription subpass = {};
@@ -896,7 +893,6 @@ VkSamplerObj::VkSamplerObj(VkDeviceObj *device) {
  */
 VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device, VkBufferUsageFlags usage) {
     m_device = device;
-    m_commandBuffer = 0;
 
     memset(&m_descriptorBufferInfo, 0, sizeof(m_descriptorBufferInfo));
 
@@ -906,22 +902,11 @@ VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device, VkBufferUsageFlags
     }
 }
 
-VkConstantBufferObj::~VkConstantBufferObj() {
-    // TODO: Should we call QueueRemoveMemReference for the constant buffer
-    // memory here?
-    if (m_commandBuffer) {
-        delete m_commandBuffer;
-        delete m_commandPool;
-    }
-}
-
 VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device, int constantCount, int constantSize, const void *data,
                                          VkBufferUsageFlags usage) {
     m_device = device;
-    m_commandBuffer = 0;
 
     memset(&m_descriptorBufferInfo, 0, sizeof(m_descriptorBufferInfo));
-    m_stride = constantSize;
 
     VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
     const VkDeviceSize allocationSize = static_cast<VkDeviceSize>(constantCount * constantSize);

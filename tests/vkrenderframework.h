@@ -201,15 +201,11 @@ class VkConstantBufferObj : public vk_testing::Buffer {
                         VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
     VkConstantBufferObj(VkDeviceObj *device, int constantCount, int constantSize, const void *data,
                         VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
-    ~VkConstantBufferObj();
 
     VkDescriptorBufferInfo m_descriptorBufferInfo;
 
    protected:
     VkDeviceObj *m_device;
-    int m_stride;
-    VkCommandPoolObj *m_commandPool;
-    VkCommandBufferObj *m_commandBuffer;
 };
 
 class VkRenderpassObj {
