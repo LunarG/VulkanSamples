@@ -1379,35 +1379,9 @@ void VkCommandBufferObj::SetViewport(uint32_t firstViewport, uint32_t viewportCo
     vkCmdSetViewport(handle(), firstViewport, viewportCount, pViewports);
 }
 
-void VkCommandBufferObj::SetScissor(uint32_t firstScissor, uint32_t scissorCount, const VkRect2D *pScissors) {
-    vkCmdSetScissor(handle(), firstScissor, scissorCount, pScissors);
-}
-
-void VkCommandBufferObj::SetLineWidth(float lineWidth) { vkCmdSetLineWidth(handle(), lineWidth); }
-
-void VkCommandBufferObj::SetDepthBias(float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlopeFactor) {
-    vkCmdSetDepthBias(handle(), depthBiasConstantFactor, depthBiasClamp, depthBiasSlopeFactor);
-}
-
-void VkCommandBufferObj::SetBlendConstants(const float blendConstants[4]) { vkCmdSetBlendConstants(handle(), blendConstants); }
-
-void VkCommandBufferObj::SetDepthBounds(float minDepthBounds, float maxDepthBounds) {
-    vkCmdSetDepthBounds(handle(), minDepthBounds, maxDepthBounds);
-}
-
-void VkCommandBufferObj::SetStencilReadMask(VkStencilFaceFlags faceMask, uint32_t compareMask) {
-    vkCmdSetStencilCompareMask(handle(), faceMask, compareMask);
-}
-
-void VkCommandBufferObj::SetStencilWriteMask(VkStencilFaceFlags faceMask, uint32_t writeMask) {
-    vkCmdSetStencilWriteMask(handle(), faceMask, writeMask);
-}
-
 void VkCommandBufferObj::SetStencilReference(VkStencilFaceFlags faceMask, uint32_t reference) {
     vkCmdSetStencilReference(handle(), faceMask, reference);
 }
-
-void VkCommandBufferObj::AddRenderTarget(VkImageObj *renderTarget) { m_renderTargets.push_back(renderTarget); }
 
 void VkCommandBufferObj::DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset,
                                      uint32_t firstInstance) {
@@ -1462,10 +1436,6 @@ void VkCommandBufferObj::BindDescriptorSet(VkDescriptorSetObj &descriptorSet) {
     // bind pipeline, vertex buffer (descriptor set) and WVP (dynamic buffer
     // view)
     vkCmdBindDescriptorSets(handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, descriptorSet.GetPipelineLayout(), 0, 1, &set_obj, 0, NULL);
-}
-
-void VkCommandBufferObj::BindIndexBuffer(VkIndexBufferObj *indexBuffer, VkDeviceSize offset) {
-    vkCmdBindIndexBuffer(handle(), indexBuffer->handle(), offset, indexBuffer->GetIndexType());
 }
 
 void VkCommandBufferObj::BindVertexBuffer(VkConstantBufferObj *vertexBuffer, VkDeviceSize offset, uint32_t binding) {

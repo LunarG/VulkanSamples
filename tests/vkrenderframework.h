@@ -165,15 +165,12 @@ class VkCommandBufferObj : public vk_testing::CommandBuffer {
                          uint32_t memoryBarrierCount, const VkMemoryBarrier *pMemoryBarriers, uint32_t bufferMemoryBarrierCount,
                          const VkBufferMemoryBarrier *pBufferMemoryBarriers, uint32_t imageMemoryBarrierCount,
                          const VkImageMemoryBarrier *pImageMemoryBarriers);
-    void AddRenderTarget(VkImageObj *renderTarget);
-    void AddDepthStencil();
     void ClearAllBuffers(VkClearColorValue clear_color, float depth_clear_color, uint32_t stencil_clear_color,
                          VkDepthStencilObj *depthStencilObj);
     void PrepareAttachments();
     void BindPipeline(VkPipelineObj &pipeline);
     void BindDescriptorSet(VkDescriptorSetObj &descriptorSet);
     void BindVertexBuffer(VkConstantBufferObj *vertexBuffer, VkDeviceSize offset, uint32_t binding);
-    void BindIndexBuffer(VkIndexBufferObj *indexBuffer, VkDeviceSize offset);
     void BeginRenderPass(const VkRenderPassBeginInfo &info);
     void EndRenderPass();
     void FillBuffer(VkBuffer buffer, VkDeviceSize offset, VkDeviceSize fill_size, uint32_t data);
@@ -183,13 +180,6 @@ class VkCommandBufferObj : public vk_testing::CommandBuffer {
     void QueueCommandBuffer(bool checkSuccess = true);
     void QueueCommandBuffer(VkFence fence, bool checkSuccess = true);
     void SetViewport(uint32_t firstViewport, uint32_t viewportCount, const VkViewport *pViewports);
-    void SetScissor(uint32_t firstScissor, uint32_t scissorCount, const VkRect2D *pScissors);
-    void SetLineWidth(float lineWidth);
-    void SetDepthBias(float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlopeFactor);
-    void SetBlendConstants(const float blendConstants[4]);
-    void SetDepthBounds(float minDepthBounds, float maxDepthBounds);
-    void SetStencilReadMask(VkStencilFaceFlags faceMask, uint32_t compareMask);
-    void SetStencilWriteMask(VkStencilFaceFlags faceMask, uint32_t writeMask);
     void SetStencilReference(VkStencilFaceFlags faceMask, uint32_t reference);
     void UpdateBuffer(VkBuffer buffer, VkDeviceSize dstOffset, VkDeviceSize dataSize, const void *pData);
     void CopyImage(VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage, VkImageLayout dstImageLayout,
