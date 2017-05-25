@@ -49,6 +49,25 @@ struct DeviceExtensions {
     bool nvx_device_generated_commands;
     bool khr_incremental_present;
     bool khr_shared_presentable_image;
+    bool khr_sampler_mirror_clamp_to_edge;
+    bool img_filter_cubic;
+    bool amd_rasterization_order;
+    bool amd_shader_trinary_minmax;
+    bool amd_shader_explicit_vertex_parameter;
+    bool amd_gcn_shader;
+    bool nv_dedicated_allocation;
+    bool amd_gpu_shader_half_float;
+    bool amd_shader_ballot;
+    bool amd_texture_gather_bias_lod;
+    bool khx_multiview;
+    bool img_format_pvrtc;
+    bool nv_win32_keyed_mutex;
+    bool khx_win32_keyed_mutex;
+    bool khx_external_memory;
+    bool khx_external_semaphore;
+    bool nvx_multiview_per_view_attributes;
+    bool nv_viewport_swizzle;
+    bool ext_hdr_metadata;
 
     void InitFromDeviceCreateInfo(const VkDeviceCreateInfo *pCreateInfo) {
         using E = DeviceExtensions;
@@ -80,13 +99,31 @@ struct DeviceExtensions {
             {VK_AMD_NEGATIVE_VIEWPORT_HEIGHT_EXTENSION_NAME, &E::amd_negative_viewport_height},
             {VK_NV_CLIP_SPACE_W_SCALING_EXTENSION_NAME, &E::nv_clip_space_w_scaling},
             {VK_NV_EXTERNAL_MEMORY_EXTENSION_NAME, &E::nv_external_memory},
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-            {VK_NV_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME, &E::nv_external_memory_win32},
-#endif
             {VK_NVX_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME, &E::nvx_device_generated_commands},
             {VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME, &E::khr_incremental_present},
             {VK_KHR_SHARED_PRESENTABLE_IMAGE_EXTENSION_NAME, &E::khr_shared_presentable_image},
-
+            {VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME, &E::khr_sampler_mirror_clamp_to_edge},
+            {VK_IMG_FILTER_CUBIC_EXTENSION_NAME, &E::img_filter_cubic},
+            {VK_AMD_RASTERIZATION_ORDER_EXTENSION_NAME, &E::amd_rasterization_order},
+            {VK_AMD_SHADER_TRINARY_MINMAX_EXTENSION_NAME, &E::amd_shader_trinary_minmax},
+            {VK_AMD_SHADER_EXPLICIT_VERTEX_PARAMETER_EXTENSION_NAME, &E::amd_shader_explicit_vertex_parameter},
+            {VK_AMD_GCN_SHADER_EXTENSION_NAME, &E::amd_gcn_shader},
+            {VK_NV_DEDICATED_ALLOCATION_EXTENSION_NAME, &E::nv_dedicated_allocation},
+            {VK_AMD_GPU_SHADER_HALF_FLOAT_EXTENSION_NAME, &E::amd_gpu_shader_half_float},
+            {VK_AMD_SHADER_BALLOT_EXTENSION_NAME, &E::amd_shader_ballot},
+            {VK_AMD_TEXTURE_GATHER_BIAS_LOD_EXTENSION_NAME, &E::amd_texture_gather_bias_lod},
+            {VK_KHX_MULTIVIEW_EXTENSION_NAME, &E::khx_multiview},
+            {VK_IMG_FORMAT_PVRTC_EXTENSION_NAME, &E::img_format_pvrtc},
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+            {VK_KHX_WIN32_KEYED_MUTEX_EXTENSION_NAME, &E::khx_win32_keyed_mutex},
+            {VK_NV_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME, &E::nv_external_memory_win32},
+            {VK_NV_WIN32_KEYED_MUTEX_EXTENSION_NAME, &E::nv_win32_keyed_mutex},
+#endif
+            {VK_KHX_EXTERNAL_MEMORY_EXTENSION_NAME, &E::khx_external_memory},
+            {VK_KHX_EXTERNAL_SEMAPHORE_EXTENSION_NAME, &E::khx_external_semaphore},
+            {VK_NVX_MULTIVIEW_PER_VIEW_ATTRIBUTES_EXTENSION_NAME, &E::nvx_multiview_per_view_attributes},
+            {VK_NV_VIEWPORT_SWIZZLE_EXTENSION_NAME, &E::nv_viewport_swizzle},
+            {VK_EXT_HDR_METADATA_EXTENSION_NAME, &E::ext_hdr_metadata},
         };
 
         for (auto ext : known_extensions) {
@@ -122,6 +159,12 @@ struct InstanceExtensions {
     bool ext_direct_mode_display;
     bool ext_display_surface_counter;
     bool nv_external_memory_capabilities;
+    bool ext_debug_report;
+    bool ext_validation_flags;
+    bool nn_vi_surface;
+    bool ext_swapchain_color_space;
+    bool mvk_ios_surface;
+    bool mvk_macos_surface;
 
     void InitFromInstanceCreateInfo(const VkInstanceCreateInfo *pCreateInfo) {
         using E = InstanceExtensions;
@@ -158,6 +201,18 @@ struct InstanceExtensions {
             {VK_EXT_DIRECT_MODE_DISPLAY_EXTENSION_NAME, &E::ext_direct_mode_display},
             {VK_EXT_DISPLAY_SURFACE_COUNTER_EXTENSION_NAME, &E::ext_display_surface_counter},
             {VK_NV_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME, &E::nv_external_memory_capabilities},
+            {VK_EXT_DEBUG_REPORT_EXTENSION_NAME, &E::ext_debug_report},
+            {VK_EXT_VALIDATION_FLAGS_EXTENSION_NAME, &E::ext_validation_flags},
+#ifdef VK_USE_PLATFORM_VI_NN
+            {VK_NN_VI_SURFACE_EXTENSION_NAME, &E::nn_vi_surface},
+#endif
+            {VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME, &E::ext_swapchain_color_space},
+#ifdef VK_USE_PLATFORM_IOS_MVK
+            {VK_MVK_IOS_SURFACE_EXTENSION_NAME, &E::mvk_ios_surface},
+#endif
+#ifdef VK_USE_PLATFORM_MACOS_MVK
+            {VK_MVK_MACOS_SURFACE_EXTENSION_NAME, &E::mvk_macos_surface},
+#endif
         };
 
         for (auto ext : known_extensions) {
