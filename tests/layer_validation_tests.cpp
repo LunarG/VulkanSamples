@@ -191,7 +191,7 @@ class ErrorMonitor {
     VkBool32 CheckForDesiredMsg(const uint32_t message_code, const char *const msgString) {
         VkBool32 result = VK_FALSE;
         test_platform_thread_lock_mutex(&mutex_);
-        if (bailout_ != NULL) {
+        if (bailout_ != nullptr) {
             *bailout_ = true;
         }
         string errorString(msgString);
@@ -205,13 +205,13 @@ class ErrorMonitor {
                     // And don't erase the "" string, so it remains if another error is found.
                     result = VK_TRUE;
                     found_expected = true;
-                    message_found_ = VK_TRUE;
+                    message_found_ = true;
                     failure_message_strings_.insert(errorString);
                 } else if (errorString.find(desired_msg) != string::npos) {
                     found_expected = true;
                     message_outstanding_count_--;
                     failure_message_strings_.insert(errorString);
-                    message_found_ = VK_TRUE;
+                    message_found_ = true;
                     result = VK_TRUE;
                     // We only want one match for each expected error so remove from set here
                     // Since we're about the break the loop it's ok to remove from set we're iterating over
@@ -230,7 +230,7 @@ class ErrorMonitor {
                         found_expected = true;
                         message_outstanding_count_--;
                         result = VK_TRUE;
-                        message_found_ = VK_TRUE;
+                        message_found_ = true;
                         desired_message_ids_.erase(desired_id);
                         break;
                     } else {
@@ -251,17 +251,17 @@ class ErrorMonitor {
         return result;
     }
 
-    vector<string> GetOtherFailureMsgs(void) const { return other_messages_; }
+    vector<string> GetOtherFailureMsgs() const { return other_messages_; }
 
-    VkDebugReportFlagsEXT GetMessageFlags(void) const { return message_flags_; }
+    VkDebugReportFlagsEXT GetMessageFlags() const { return message_flags_; }
 
-    VkBool32 AnyDesiredMsgFound(void) const { return message_found_; }
+    bool AnyDesiredMsgFound() const { return message_found_; }
 
-    VkBool32 AllDesiredMsgsFound(void) const { return (0 == message_outstanding_count_); }
+    bool AllDesiredMsgsFound() const { return (0 == message_outstanding_count_); }
 
     void SetBailout(bool *bailout) { bailout_ = bailout; }
 
-    void DumpFailureMsgs(void) const {
+    void DumpFailureMsgs() const {
         vector<string> otherMsgs = GetOtherFailureMsgs();
         if (otherMsgs.size()) {
             cout << "Other error messages logged for this test were:" << endl;
@@ -326,7 +326,7 @@ class ErrorMonitor {
     vector<string> other_messages_;
     test_platform_thread_mutex mutex_;
     bool *bailout_;
-    VkBool32 message_found_;
+    bool message_found_;
     int message_outstanding_count_;
 };
 
@@ -343,7 +343,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL myDbgFunc(VkFlags msgFlags, VkDebugReportO
         return errMonitor->CheckForDesiredMsg(msgCode, pMsg);
 #endif
     }
-    return false;
+    return VK_FALSE;
 }
 
 class VkLayerTest : public VkRenderFramework {
