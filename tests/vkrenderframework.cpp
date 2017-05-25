@@ -946,47 +946,6 @@ VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device, int constantCount,
     this->m_descriptorBufferInfo.range = allocationSize;
 }
 
-void VkConstantBufferObj::Bind(VkCommandBuffer commandBuffer, VkDeviceSize offset, uint32_t binding) {
-    vkCmdBindVertexBuffers(commandBuffer, binding, 1, &handle(), &offset);
-}
-
-VkIndexBufferObj::VkIndexBufferObj(VkDeviceObj *device) : VkConstantBufferObj(device) {}
-
-void VkIndexBufferObj::CreateAndInitBuffer(int numIndexes, VkIndexType indexType, const void *data) {
-    m_indexType = indexType;
-    switch (indexType) {
-        case VK_INDEX_TYPE_UINT16:
-            m_stride = 2;
-            break;
-        case VK_INDEX_TYPE_UINT32:
-            m_stride = 4;
-            break;
-        default:
-            assert(!"unknown index type");
-            m_stride = 2;
-            break;
-    }
-
-    const size_t allocationSize = numIndexes * m_stride;
-    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-    init_as_src_and_dst(*m_device, allocationSize, reqs);
-
-    void *pData = memory().map();
-    memcpy(pData, data, allocationSize);
-    memory().unmap();
-
-    // set up the descriptor for the constant buffer
-    this->m_descriptorBufferInfo.buffer = handle();
-    this->m_descriptorBufferInfo.offset = 0;
-    this->m_descriptorBufferInfo.range = allocationSize;
-}
-
-void VkIndexBufferObj::Bind(VkCommandBuffer commandBuffer, VkDeviceSize offset) {
-    vkCmdBindIndexBuffer(commandBuffer, handle(), offset, m_indexType);
-}
-
-VkIndexType VkIndexBufferObj::GetIndexType() { return m_indexType; }
-
 VkPipelineShaderStageCreateInfo const & VkShaderObj::GetStageCreateInfo() const {
     return m_stage_info;
 }

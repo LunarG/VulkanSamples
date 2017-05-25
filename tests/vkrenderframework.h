@@ -143,7 +143,6 @@ class VkRenderFramework : public VkTestFramework {
 };
 
 class VkDescriptorSetObj;
-class VkIndexBufferObj;
 class VkConstantBufferObj;
 class VkPipelineObj;
 class VkDescriptorSetObj;
@@ -204,8 +203,6 @@ class VkConstantBufferObj : public vk_testing::Buffer {
                         VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
     ~VkConstantBufferObj();
 
-    void Bind(VkCommandBuffer commandBuffer, VkDeviceSize offset, uint32_t binding);
-
     VkDescriptorBufferInfo m_descriptorBufferInfo;
 
    protected:
@@ -213,17 +210,6 @@ class VkConstantBufferObj : public vk_testing::Buffer {
     int m_stride;
     VkCommandPoolObj *m_commandPool;
     VkCommandBufferObj *m_commandBuffer;
-};
-
-class VkIndexBufferObj : public VkConstantBufferObj {
-   public:
-    VkIndexBufferObj(VkDeviceObj *device);
-    void CreateAndInitBuffer(int numIndexes, VkIndexType dataFormat, const void *data);
-    void Bind(VkCommandBuffer commandBuffer, VkDeviceSize offset);
-    VkIndexType GetIndexType();
-
-   protected:
-    VkIndexType m_indexType;
 };
 
 class VkRenderpassObj {
