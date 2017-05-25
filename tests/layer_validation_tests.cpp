@@ -22057,7 +22057,7 @@ TEST_F(VkPositiveLayerTest, WaitEventThenSet) {
 }
 // This is a positive test.  No errors should be generated.
 TEST_F(VkPositiveLayerTest, QueryAndCopySecondaryCommandBuffers) {
-    TEST_DESCRIPTION("Issue a query on a secondary command buffery and copy it on a primary.");
+    TEST_DESCRIPTION("Issue a query on a secondary command buffer and copy it on a primary.");
 
     ASSERT_NO_FATAL_FAILURE(Init());
     if ((m_device->queue_props.empty()) || (m_device->queue_props[0].queueCount < 2)) return;
