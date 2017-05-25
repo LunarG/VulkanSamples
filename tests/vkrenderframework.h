@@ -291,7 +291,6 @@ class VkTextureObj : public VkImageObj {
    protected:
     VkDeviceObj *m_device;
     vk_testing::ImageView m_textureView;
-    VkDeviceSize m_rowPitch;
 };
 
 class VkDepthStencilObj : public VkImageObj {
