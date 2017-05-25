@@ -24306,25 +24306,12 @@ TEST_F(VkPositiveLayerTest, Maintenance1Tests) {
 
     m_errorMonitor->ExpectSuccess();
     ASSERT_NO_FATAL_FAILURE(InitState());
-    VkCommandBuffer cmd_buf;
-    VkCommandBufferAllocateInfo alloc_info;
-    alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    alloc_info.pNext = NULL;
-    alloc_info.commandBufferCount = 1;
-    alloc_info.commandPool = m_commandPool->handle();
-    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    vkAllocateCommandBuffers(m_device->device(), &alloc_info, &cmd_buf);
-
-    VkCommandBufferBeginInfo cb_binfo;
-    cb_binfo.pNext = NULL;
-    cb_binfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    cb_binfo.pInheritanceInfo = VK_NULL_HANDLE;
-    cb_binfo.flags = 0;
-    vkBeginCommandBuffer(cmd_buf, &cb_binfo);
+    VkCommandBufferObj cmd_buf(m_device, m_commandPool);
+    cmd_buf.begin();
     // Set Negative height, should give error if Maintenance 1 is not enabled
     VkViewport viewport = {0, 0, 16, -16, 0, 1};
-    vkCmdSetViewport(cmd_buf, 0, 1, &viewport);
-    vkEndCommandBuffer(cmd_buf);
+    vkCmdSetViewport(cmd_buf.handle(), 0, 1, &viewport);
+    cmd_buf.end();
 
     m_errorMonitor->VerifyNotFound();
 }
