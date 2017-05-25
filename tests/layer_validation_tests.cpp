@@ -19872,57 +19872,12 @@ TEST_F(VkPositiveLayerTest, IgnoreUnrelatedDescriptor) {
     {
         m_errorMonitor->ExpectSuccess();
 
-        VkImage image;
-        const VkFormat tex_format = VK_FORMAT_B8G8R8A8_UNORM;
-        const int32_t tex_width = 32;
-        const int32_t tex_height = 32;
-        VkImageCreateInfo image_create_info = {};
-        image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-        image_create_info.pNext = NULL;
-        image_create_info.imageType = VK_IMAGE_TYPE_2D;
-        image_create_info.format = tex_format;
-        image_create_info.extent.width = tex_width;
-        image_create_info.extent.height = tex_height;
-        image_create_info.extent.depth = 1;
-        image_create_info.mipLevels = 1;
-        image_create_info.arrayLayers = 1;
-        image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
-        image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-        image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
-        image_create_info.flags = 0;
-        VkResult err = vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
-        ASSERT_VK_SUCCESS(err);
+        VkImageObj image(m_device);
+        image.Init(32, 32, 1, VK_FORMAT_B8G8R8A8_UNORM,
+                   VK_IMAGE_USAGE_SAMPLED_BIT,
+                   VK_IMAGE_TILING_OPTIMAL, 0);
 
-        VkMemoryRequirements memory_reqs;
-        VkDeviceMemory image_memory;
-        bool pass;
-        VkMemoryAllocateInfo memory_info = {};
-        memory_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        memory_info.pNext = NULL;
-        memory_info.allocationSize = 0;
-        memory_info.memoryTypeIndex = 0;
-        vkGetImageMemoryRequirements(m_device->device(), image, &memory_reqs);
-        memory_info.allocationSize = memory_reqs.size;
-        pass = m_device->phy().set_memory_type(memory_reqs.memoryTypeBits, &memory_info, 0);
-        ASSERT_TRUE(pass);
-        err = vkAllocateMemory(m_device->device(), &memory_info, NULL, &image_memory);
-        ASSERT_VK_SUCCESS(err);
-        err = vkBindImageMemory(m_device->device(), image, image_memory, 0);
-        ASSERT_VK_SUCCESS(err);
-
-        VkImageViewCreateInfo image_view_create_info = {};
-        image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        image_view_create_info.image = image;
-        image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        image_view_create_info.format = tex_format;
-        image_view_create_info.subresourceRange.layerCount = 1;
-        image_view_create_info.subresourceRange.baseMipLevel = 0;
-        image_view_create_info.subresourceRange.levelCount = 1;
-        image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-
-        VkImageView view;
-        err = vkCreateImageView(m_device->device(), &image_view_create_info, NULL, &view);
-        ASSERT_VK_SUCCESS(err);
+        VkImageView view = image.targetView(VK_FORMAT_B8G8R8A8_UNORM);
 
         VkDescriptorPoolSize ds_type_count = {};
         ds_type_count.type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
@@ -19936,7 +19891,7 @@ TEST_F(VkPositiveLayerTest, IgnoreUnrelatedDescriptor) {
         ds_pool_ci.pPoolSizes = &ds_type_count;
 
         VkDescriptorPool ds_pool;
-        err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
+        VkResult err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
         ASSERT_VK_SUCCESS(err);
 
         VkDescriptorSetLayoutBinding dsl_binding = {};
@@ -19992,9 +19947,6 @@ TEST_F(VkPositiveLayerTest, IgnoreUnrelatedDescriptor) {
 
         vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
         vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
-        vkDestroyImageView(m_device->device(), view, NULL);
-        vkDestroyImage(m_device->device(), image, NULL);
-        vkFreeMemory(m_device->device(), image_memory, NULL);
     }
 
     // Buffer Case
