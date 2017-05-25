@@ -434,7 +434,6 @@ void VkLayerTest::VKTriangleTest(const char *vertShaderText, const char *fragSha
     glm::mat4 Model = glm::mat4(1.0f);
     glm::mat4 MVP = Projection * View * Model;
     const int matrixSize = sizeof(MVP);
-    const int bufSize = sizeof(vktriangle_vs_uniform) / sizeof(float);
 
     memcpy(&data.mvp, &MVP[0][0], matrixSize);
 
@@ -455,7 +454,7 @@ void VkLayerTest::VKTriangleTest(const char *vertShaderText, const char *fragSha
 
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    VkConstantBufferObj constantBuffer(m_device, bufSize * 2, sizeof(float), (const void *)&data,
+    VkConstantBufferObj constantBuffer(m_device, sizeof(vktriangle_vs_uniform), (const void *)&data,
                                        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 
     VkShaderObj vs(m_device, vertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
@@ -727,7 +726,7 @@ class VkVerticesObj {
           BindingCount(aBindingCount),
           BindId(BindIdGenerator),
           PipelineVertexInputStateCreateInfo(),
-          VulkanMemoryBuffer(aVulkanDevice, 1, static_cast<int>(aByteStride * aVertexCount),
+          VulkanMemoryBuffer(aVulkanDevice, static_cast<int>(aByteStride * aVertexCount),
                              reinterpret_cast<const void *>(aVerticies), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT) {
         BindIdGenerator++;  // NB: This can wrap w/misuse
 
@@ -12235,7 +12234,7 @@ TEST_F(VkLayerTest, VtxBufferBadIndex) {
     vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
     // Don't care about actual data, just need to get to draw to flag error
     static const float vbo_data[3] = {1.f, 0.f, 1.f};
-    VkConstantBufferObj vbo(m_device, sizeof(vbo_data), sizeof(float), (const void *)&vbo_data);
+    VkConstantBufferObj vbo(m_device, sizeof(vbo_data), (const void *)&vbo_data);
     m_commandBuffer->BindVertexBuffer(&vbo, (VkDeviceSize)0, 1);  // VBO idx 1, but no VBO in PSO
     m_commandBuffer->Draw(1, 0, 0, 0);
 
@@ -12591,7 +12590,7 @@ TEST_F(VkLayerTest, BadVertexBufferOffset) {
     ASSERT_NO_FATAL_FAILURE(Init());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     static const float vbo_data[3] = {1.f, 0.f, 1.f};
-    VkConstantBufferObj vbo(m_device, 3, sizeof(float), (const void *)&vbo_data);
+    VkConstantBufferObj vbo(m_device, sizeof(vbo_data), (const void *)&vbo_data);
     m_commandBuffer->BeginCommandBuffer();
     m_commandBuffer->BeginRenderPass(m_renderPassBeginInfo);
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_182004e4);

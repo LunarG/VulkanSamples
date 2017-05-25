@@ -199,7 +199,7 @@ class VkConstantBufferObj : public vk_testing::Buffer {
    public:
     VkConstantBufferObj(VkDeviceObj *device,
                         VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
-    VkConstantBufferObj(VkDeviceObj *device, int constantCount, int constantSize, const void *data,
+    VkConstantBufferObj(VkDeviceObj *device, VkDeviceSize size, const void *data,
                         VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 
     VkDescriptorBufferInfo m_descriptorBufferInfo;

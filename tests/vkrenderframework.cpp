@@ -902,14 +902,13 @@ VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device, VkBufferUsageFlags
     }
 }
 
-VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device, int constantCount, int constantSize, const void *data,
+VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device, VkDeviceSize allocationSize, const void *data,
                                          VkBufferUsageFlags usage) {
     m_device = device;
 
     memset(&m_descriptorBufferInfo, 0, sizeof(m_descriptorBufferInfo));
 
     VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-    const VkDeviceSize allocationSize = static_cast<VkDeviceSize>(constantCount * constantSize);
 
     if ((VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT) == usage) {
         init_as_src_and_dst(*m_device, allocationSize, reqs);
