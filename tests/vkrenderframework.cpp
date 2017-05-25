@@ -1159,8 +1159,6 @@ VkCommandBufferObj::VkCommandBufferObj(VkDeviceObj *device, VkCommandPoolObj *po
     init(*device, create_info);
 }
 
-VkCommandBuffer VkCommandBufferObj::GetBufferHandle() { return handle(); }
-
 VkResult VkCommandBufferObj::BeginCommandBuffer(VkCommandBufferBeginInfo *pInfo) {
     begin(pInfo);
     return VK_SUCCESS;
