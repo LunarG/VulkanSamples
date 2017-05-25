@@ -21458,20 +21458,7 @@ TEST_F(VkPositiveLayerTest, FramebufferBindingDestroyCommandPool) {
     image.Init(32, 32, 1, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
     ASSERT_TRUE(image.initialized());
 
-    VkImageViewCreateInfo ivci = {
-        VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-        nullptr,
-        0,
-        image.handle(),
-        VK_IMAGE_VIEW_TYPE_2D,
-        VK_FORMAT_R8G8B8A8_UNORM,
-        {VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
-         VK_COMPONENT_SWIZZLE_IDENTITY},
-        {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1},
-    };
-    VkImageView view;
-    err = vkCreateImageView(m_device->device(), &ivci, nullptr, &view);
-    ASSERT_VK_SUCCESS(err);
+    VkImageView view = image.targetView(VK_FORMAT_R8G8B8A8_UNORM);
 
     VkFramebufferCreateInfo fci = {VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr, 0, rp, 1, &view, 32, 32, 1};
     VkFramebuffer fb;
@@ -21504,7 +21491,6 @@ TEST_F(VkPositiveLayerTest, FramebufferBindingDestroyCommandPool) {
     vkCmdBeginRenderPass(command_buffer, &rpbi, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdEndRenderPass(command_buffer);
     vkEndCommandBuffer(command_buffer);
-    vkDestroyImageView(m_device->device(), view, nullptr);
     // Destroy command pool to implicitly free command buffer
     vkDestroyCommandPool(m_device->device(), command_pool, NULL);
     vkDestroyFramebuffer(m_device->device(), fb, nullptr);
