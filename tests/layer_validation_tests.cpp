@@ -7517,22 +7517,9 @@ TEST_F(VkLayerTest, NoBeginCommandBuffer) {
 }
 
 TEST_F(VkLayerTest, SecondaryCommandBufferNullRenderpass) {
-    VkResult err;
-    VkCommandBuffer draw_cmd;
-
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0280006a);
-
     ASSERT_NO_FATAL_FAILURE(Init());
 
-    VkCommandBufferAllocateInfo cmd = {};
-    cmd.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    cmd.pNext = NULL;
-    cmd.commandPool = m_commandPool->handle();
-    cmd.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
-    cmd.commandBufferCount = 1;
-
-    err = vkAllocateCommandBuffers(m_device->device(), &cmd, &draw_cmd);
-    ASSERT_VK_SUCCESS(err);
+    VkCommandBufferObj cb(m_device, m_commandPool, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
 
     // Force the failure by not setting the Renderpass and Framebuffer fields
     VkCommandBufferInheritanceInfo cmd_buf_hinfo = {};
@@ -7544,11 +7531,9 @@ TEST_F(VkLayerTest, SecondaryCommandBufferNullRenderpass) {
     cmd_buf_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
     cmd_buf_info.pInheritanceInfo = &cmd_buf_hinfo;
 
-    // The error should be caught by validation of the BeginCommandBuffer call
-    vkBeginCommandBuffer(draw_cmd, &cmd_buf_info);
-
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0280006a);
+    vkBeginCommandBuffer(cb.handle(), &cmd_buf_info);
     m_errorMonitor->VerifyFound();
-    vkFreeCommandBuffers(m_device->device(), m_commandPool->handle(), 1, &draw_cmd);
 }
 
 TEST_F(VkLayerTest, SecondaryCommandBufferRerecordedExplicitReset) {
