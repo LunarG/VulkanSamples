@@ -399,9 +399,7 @@ class VkPipelineObj : public vk_testing::Pipeline {
     vector<VkRect2D> m_scissors;
     VkDeviceObj *m_device;
     vector<VkPipelineShaderStageCreateInfo> m_shaderStages;
-    vector<int> m_vertexBufferBindings;
     vector<VkPipelineColorBlendAttachmentState> m_colorAttachments;
-    int m_vertexBufferCount;
 };
 
 #endif  // VKRENDERFRAMEWORK_H

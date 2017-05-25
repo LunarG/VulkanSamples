@@ -972,8 +972,6 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device) {
     m_vi_state.vertexAttributeDescriptionCount = 0;
     m_vi_state.pVertexAttributeDescriptions = VK_NULL_HANDLE;
 
-    m_vertexBufferCount = 0;
-
     m_ia_state.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     m_ia_state.pNext = VK_NULL_HANDLE;
     m_ia_state.flags = 0;
