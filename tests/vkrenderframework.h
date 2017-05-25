@@ -329,9 +329,8 @@ class VkDescriptorSetObj : public vk_testing::DescriptorPool {
 
     VkDescriptorSet GetDescriptorSetHandle() const;
     VkPipelineLayout GetPipelineLayout() const;
-    int GetTypeCounts() { return m_type_counts.size(); }
 
-   protected:
+  protected:
     VkDeviceObj *m_device;
     std::vector<VkDescriptorSetLayoutBinding> m_layout_bindings;
     std::map<VkDescriptorType, int> m_type_counts;
