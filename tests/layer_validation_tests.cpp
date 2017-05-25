@@ -22071,24 +22071,9 @@ TEST_F(VkPositiveLayerTest, QueryAndCopySecondaryCommandBuffers) {
     query_pool_create_info.queryCount = 1;
     vkCreateQueryPool(m_device->device(), &query_pool_create_info, nullptr, &query_pool);
 
-    VkCommandPool command_pool;
-    VkCommandPoolCreateInfo pool_create_info{};
-    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
-    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr, &command_pool);
-
-    VkCommandBuffer command_buffer;
-    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
-    command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    command_buffer_allocate_info.commandPool = command_pool;
-    command_buffer_allocate_info.commandBufferCount = 1;
-    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, &command_buffer);
-
-    VkCommandBuffer secondary_command_buffer;
-    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
-    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info, &secondary_command_buffer);
+    VkCommandPoolObj command_pool(m_device, m_device->graphics_queue_node_index_, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+    VkCommandBufferObj primary_buffer(m_device, &command_pool);
+    VkCommandBufferObj secondary_buffer(m_device, &command_pool, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
 
     VkQueue queue = VK_NULL_HANDLE;
     vkGetDeviceQueue(m_device->device(), m_device->graphics_queue_node_index_, 1, &queue);
@@ -22138,37 +22123,21 @@ TEST_F(VkPositiveLayerTest, QueryAndCopySecondaryCommandBuffers) {
         VkCommandBufferBeginInfo begin_info{};
         begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         begin_info.pInheritanceInfo = &hinfo;
-        vkBeginCommandBuffer(secondary_command_buffer, &begin_info);
+        secondary_buffer.begin(&begin_info);
+        vkCmdResetQueryPool(secondary_buffer.handle(), query_pool, 0, 1);
+        vkCmdWriteTimestamp(secondary_buffer.handle(), VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, query_pool, 0);
+        secondary_buffer.end();
 
-        vkCmdResetQueryPool(secondary_command_buffer, query_pool, 0, 1);
-        vkCmdWriteTimestamp(secondary_command_buffer, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, query_pool, 0);
-
-        vkEndCommandBuffer(secondary_command_buffer);
-
-        begin_info.pInheritanceInfo = nullptr;
-        vkBeginCommandBuffer(command_buffer, &begin_info);
-
-        vkCmdExecuteCommands(command_buffer, 1, &secondary_command_buffer);
-        vkCmdCopyQueryPoolResults(command_buffer, query_pool, 0, 1, buffer, 0, 0, 0);
-
-        vkEndCommandBuffer(command_buffer);
-    }
-    {
-        VkSubmitInfo submit_info{};
-        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &command_buffer;
-        submit_info.signalSemaphoreCount = 0;
-        submit_info.pSignalSemaphores = nullptr;
-        vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
+        primary_buffer.begin();
+        vkCmdExecuteCommands(primary_buffer.handle(), 1, &secondary_buffer.handle());
+        vkCmdCopyQueryPoolResults(primary_buffer.handle(), query_pool, 0, 1, buffer, 0, 0, 0);
+        primary_buffer.end();
     }
 
+    primary_buffer.QueueCommandBuffer();
     vkQueueWaitIdle(queue);
 
     vkDestroyQueryPool(m_device->device(), query_pool, nullptr);
-    vkFreeCommandBuffers(m_device->device(), command_pool, 1, &command_buffer);
-    vkFreeCommandBuffers(m_device->device(), command_pool, 1, &secondary_command_buffer);
-    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
     vkDestroyBuffer(m_device->device(), buffer, NULL);
     vkFreeMemory(m_device->device(), mem, NULL);
 
