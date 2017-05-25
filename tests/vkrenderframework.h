@@ -156,9 +156,6 @@ class VkCommandBufferObj : public vk_testing::CommandBuffer {
    public:
     VkCommandBufferObj(VkDeviceObj *device, VkCommandPoolObj *pool,
                        VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-    VkResult BeginCommandBuffer();
-    VkResult BeginCommandBuffer(VkCommandBufferBeginInfo *pInfo);
-    VkResult EndCommandBuffer();
     void PipelineBarrier(VkPipelineStageFlags src_stages, VkPipelineStageFlags dest_stages, VkDependencyFlags dependencyFlags,
                          uint32_t memoryBarrierCount, const VkMemoryBarrier *pMemoryBarriers, uint32_t bufferMemoryBarrierCount,
                          const VkBufferMemoryBarrier *pBufferMemoryBarriers, uint32_t imageMemoryBarrierCount,

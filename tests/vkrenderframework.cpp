@@ -646,13 +646,9 @@ void VkImageObj::SetLayout(VkImageAspectFlags aspect, VkImageLayout image_layout
     VkCommandBufferObj cmd_buf(m_device, &pool);
 
     /* Build command buffer to set image layout in the driver */
-    err = cmd_buf.BeginCommandBuffer();
-    assert(!err);
-
+    cmd_buf.begin();
     SetLayout(&cmd_buf, aspect, image_layout);
-
-    err = cmd_buf.EndCommandBuffer();
-    assert(!err);
+    cmd_buf.end();
 
     cmd_buf.QueueCommandBuffer();
 }
@@ -762,15 +758,13 @@ void VkImageObj::init(const VkImageCreateInfo *create_info) {
 }
 
 VkResult VkImageObj::CopyImage(VkImageObj &src_image) {
-    VkResult U_ASSERT_ONLY err;
     VkImageLayout src_image_layout, dest_image_layout;
 
     VkCommandPoolObj pool(m_device, m_device->graphics_queue_node_index_);
     VkCommandBufferObj cmd_buf(m_device, &pool);
 
     /* Build command buffer to copy staging texture to usable texture */
-    err = cmd_buf.BeginCommandBuffer();
-    assert(!err);
+    cmd_buf.begin();
 
     /* TODO: Can we determine image aspect from image object? */
     src_image_layout = src_image.Layout();
@@ -802,8 +796,7 @@ VkResult VkImageObj::CopyImage(VkImageObj &src_image) {
 
     this->SetLayout(&cmd_buf, VK_IMAGE_ASPECT_COLOR_BIT, dest_image_layout);
 
-    err = cmd_buf.EndCommandBuffer();
-    assert(!err);
+    cmd_buf.end();
 
     cmd_buf.QueueCommandBuffer();
 
@@ -1155,21 +1148,6 @@ VkCommandBufferObj::VkCommandBufferObj(VkDeviceObj *device, VkCommandPoolObj *po
     auto create_info = vk_testing::CommandBuffer::create_info(pool->handle());
     create_info.level = level;
     init(*device, create_info);
-}
-
-VkResult VkCommandBufferObj::BeginCommandBuffer(VkCommandBufferBeginInfo *pInfo) {
-    begin(pInfo);
-    return VK_SUCCESS;
-}
-
-VkResult VkCommandBufferObj::BeginCommandBuffer() {
-    begin();
-    return VK_SUCCESS;
-}
-
-VkResult VkCommandBufferObj::EndCommandBuffer() {
-    end();
-    return VK_SUCCESS;
 }
 
 void VkCommandBufferObj::PipelineBarrier(VkPipelineStageFlags src_stages, VkPipelineStageFlags dest_stages,
