@@ -351,25 +351,7 @@ class VkLayerTest : public VkRenderFramework {
     void VKTriangleTest(const char *vertShaderText, const char *fragShaderText, BsoFailSelect failMask);
     void GenericDrawPreparation(VkCommandBufferObj *commandBuffer, VkPipelineObj &pipelineobj, VkDescriptorSetObj &descriptorSet,
                                 BsoFailSelect failMask);
-    void GenericDrawPreparation(VkPipelineObj &pipelineobj, VkDescriptorSetObj &descriptorSet, BsoFailSelect failMask) {
-        GenericDrawPreparation(m_commandBuffer, pipelineobj, descriptorSet, failMask);
-    }
 
-    void Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance) {
-        m_commandBuffer->Draw(vertexCount, instanceCount, firstVertex, firstInstance);
-    }
-    void DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset,
-                     uint32_t firstInstance) {
-        m_commandBuffer->DrawIndexed(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
-    }
-    void QueueCommandBuffer(bool checkSuccess = true) { m_commandBuffer->QueueCommandBuffer(checkSuccess); }
-    void QueueCommandBuffer(const VkFence &fence) { m_commandBuffer->QueueCommandBuffer(fence); }
-    void BindVertexBuffer(VkConstantBufferObj *vertexBuffer, VkDeviceSize offset, uint32_t binding) {
-        m_commandBuffer->BindVertexBuffer(vertexBuffer, offset, binding);
-    }
-    void BindIndexBuffer(VkIndexBufferObj *indexBuffer, VkDeviceSize offset) {
-        m_commandBuffer->BindIndexBuffer(indexBuffer, offset);
-    }
     void Init(VkPhysicalDeviceFeatures *features = nullptr, const VkCommandPoolCreateFlags flags = 0) {
         InitFramework(instance_layer_names, instance_extension_names, device_extension_names, myDbgFunc, m_errorMonitor);
         InitState(features, flags);
@@ -533,14 +515,14 @@ void VkLayerTest::VKTriangleTest(const char *vertShaderText, const char *fragSha
     m_commandBuffer->BeginCommandBuffer();
     m_commandBuffer->BeginRenderPass(m_renderPassBeginInfo);
 
-    GenericDrawPreparation(pipelineobj, descriptorSet, failMask);
+    GenericDrawPreparation(m_commandBuffer, pipelineobj, descriptorSet, failMask);
 
     // render triangle
     if (failMask & BsoFailIndexBuffer) {
         // Use DrawIndexed w/o an index buffer bound
-        DrawIndexed(3, 1, 0, 0, 0);
+        m_commandBuffer->DrawIndexed(3, 1, 0, 0, 0);
     } else {
-        Draw(3, 1, 0, 0);
+        m_commandBuffer->Draw(3, 1, 0, 0);
     }
 
     if (failMask & BsoFailCmdClearAttachments) {
@@ -555,7 +537,7 @@ void VkLayerTest::VKTriangleTest(const char *vertShaderText, const char *fragSha
     // finalize recording of the command buffer
     m_commandBuffer->EndRenderPass();
     m_commandBuffer->EndCommandBuffer();
-    QueueCommandBuffer();
+    m_commandBuffer->QueueCommandBuffer(true);
 }
 
 void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *commandBuffer, VkPipelineObj &pipelineobj,
@@ -4914,7 +4896,7 @@ TEST_F(VkLayerTest, InvalidCmdBufferBufferViewDestroyed) {
     vkCmdBindPipeline(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
     vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1,
                             &descriptor_set, 0, nullptr);
-    Draw(1, 0, 0, 0);
+    m_commandBuffer->Draw(1, 0, 0, 0);
     m_commandBuffer->EndRenderPass();
     m_commandBuffer->EndCommandBuffer();
 
@@ -5087,7 +5069,7 @@ TEST_F(VkLayerTest, InvalidCmdBufferFramebufferImageDestroyed) {
     vkDestroyImage(m_device->device(), image, NULL);
     // Now attempt to submit cmd buffer and verify error
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, " that is invalid because bound Image ");
-    QueueCommandBuffer(false);
+    m_commandBuffer->QueueCommandBuffer(false);
     m_errorMonitor->VerifyFound();
 
     vkDestroyFramebuffer(m_device->device(), fb, nullptr);
@@ -5770,7 +5752,7 @@ TEST_F(VkLayerTest, InvalidCmdBufferDescriptorSetBufferDestroyed) {
     vkCmdSetViewport(m_commandBuffer->handle(), 0, 1, &m_viewports[0]);
     vkCmdSetScissor(m_commandBuffer->handle(), 0, 1, &m_scissors[0]);
 
-    Draw(1, 0, 0, 0);
+    m_commandBuffer->Draw(1, 0, 0, 0);
     m_commandBuffer->EndRenderPass();
     m_commandBuffer->EndCommandBuffer();
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, " that is invalid because bound Buffer ");
@@ -5993,7 +5975,7 @@ TEST_F(VkLayerTest, InvalidCmdBufferDescriptorSetImageSamplerDestroyed) {
     VkRect2D scissor = {{0, 0}, {16, 16}};
     vkCmdSetViewport(m_commandBuffer->handle(), 0, 1, &viewport);
     vkCmdSetScissor(m_commandBuffer->handle(), 0, 1, &scissor);
-    Draw(1, 0, 0, 0);
+    m_commandBuffer->Draw(1, 0, 0, 0);
     m_commandBuffer->EndRenderPass();
     m_commandBuffer->EndCommandBuffer();
     // Destroy sampler invalidates the cmd buffer, causing error on submit
@@ -6022,7 +6004,7 @@ TEST_F(VkLayerTest, InvalidCmdBufferDescriptorSetImageSamplerDestroyed) {
                             &descriptorSet, 0, NULL);
     vkCmdSetViewport(m_commandBuffer->handle(), 0, 1, &viewport);
     vkCmdSetScissor(m_commandBuffer->handle(), 0, 1, &scissor);
-    Draw(1, 0, 0, 0);
+    m_commandBuffer->Draw(1, 0, 0, 0);
     m_commandBuffer->EndRenderPass();
     m_commandBuffer->EndCommandBuffer();
     // Destroy image invalidates the cmd buffer, causing error on submit
@@ -6044,7 +6026,7 @@ TEST_F(VkLayerTest, InvalidCmdBufferDescriptorSetImageSamplerDestroyed) {
                             &descriptorSet, 0, NULL);
     vkCmdSetViewport(m_commandBuffer->handle(), 0, 1, &viewport);
     vkCmdSetScissor(m_commandBuffer->handle(), 0, 1, &scissor);
-    Draw(1, 0, 0, 0);
+    m_commandBuffer->Draw(1, 0, 0, 0);
     m_commandBuffer->EndRenderPass();
     m_commandBuffer->EndCommandBuffer();
     vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
@@ -6395,7 +6377,7 @@ TEST_F(VkLayerTest, DescriptorPoolInUseDestroyedSignaled) {
     vkCmdSetViewport(m_commandBuffer->handle(), 0, 1, &viewport);
     vkCmdSetScissor(m_commandBuffer->handle(), 0, 1, &scissor);
 
-    Draw(1, 0, 0, 0);
+    m_commandBuffer->Draw(1, 0, 0, 0);
     m_commandBuffer->EndRenderPass();
     m_commandBuffer->EndCommandBuffer();
     // Submit cmd buffer to put pool in-flight
@@ -6600,7 +6582,7 @@ TEST_F(VkLayerTest, InvalidPipeline) {
 
     // Now issue a draw call with no pipeline bound
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "At Draw/Dispatch time no valid VkPipeline is bound!");
-    Draw(1, 0, 0, 0);
+    m_commandBuffer->Draw(1, 0, 0, 0);
     m_errorMonitor->VerifyFound();
 
     // Finally same check once more but with Dispatch/Compute
@@ -6959,7 +6941,7 @@ TEST_F(VkLayerTest, InvalidDynamicOffsetCases) {
     // /w range 1024 & size 1024
     vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1,
                             &descriptorSet, 1, pDynOff);
-    Draw(1, 0, 0, 0);
+    m_commandBuffer->Draw(1, 0, 0, 0);
     m_errorMonitor->VerifyFound();
 
     vkDestroyBuffer(m_device->device(), dyub, NULL);
@@ -7505,7 +7487,7 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility) {
     vkCmdSetViewport(m_commandBuffer->handle(), 0, 1, &viewport);
     vkCmdSetScissor(m_commandBuffer->handle(), 0, 1, &scissor);
 
-    Draw(1, 0, 0, 0);
+    m_commandBuffer->Draw(1, 0, 0, 0);
     m_errorMonitor->VerifyFound();
 
     vkDestroyPipelineLayout(m_device->device(), pipe_layout_bad_set0, NULL);
@@ -7514,7 +7496,7 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility) {
     vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 2,
                             &descriptorSet[0], 0, NULL);
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, " bound as set #0 is not compatible with ");
-    Draw(1, 0, 0, 0);
+    m_commandBuffer->Draw(1, 0, 0, 0);
     m_errorMonitor->VerifyFound();
 
     // Remaining clean-up
@@ -8423,7 +8405,7 @@ TEST_F(VkLayerTest, PSOViewportCountWithoutDataAndDynScissorMismatch) {
     VkRect2D scissors[1] = {};  // don't care about data
     // Count of 2 doesn't match PSO count of 1
     vkCmdSetScissor(m_commandBuffer->GetBufferHandle(), 1, 1, scissors);
-    Draw(1, 0, 0, 0);
+    m_commandBuffer->Draw(1, 0, 0, 0);
 
     m_errorMonitor->VerifyFound();
 
@@ -8600,7 +8582,7 @@ TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch) {
     viewports[0].height = 8;
     // Count of 2 doesn't match PSO count of 1
     vkCmdSetViewport(m_commandBuffer->GetBufferHandle(), 1, 1, viewports);
-    Draw(1, 0, 0, 0);
+    m_commandBuffer->Draw(1, 0, 0, 0);
 
     m_errorMonitor->VerifyFound();
 
@@ -10296,7 +10278,7 @@ TEST_F(VkLayerTest, InvalidQueueFamilyIndex) {
         m_commandBuffer->begin();
         vkCmdFillBuffer(m_commandBuffer->handle(), ib2, 0, 16, 5);
         m_commandBuffer->end();
-        QueueCommandBuffer(false);
+        m_commandBuffer->QueueCommandBuffer(false);
         m_errorMonitor->VerifyFound();
         vkDestroyBuffer(m_device->device(), ib2, NULL);
         vkFreeMemory(m_device->device(), mem, NULL);
@@ -11832,7 +11814,7 @@ TEST_F(VkLayerTest, NumSamplesMismatch) {
     vkCmdSetScissor(m_commandBuffer->handle(), 0, 1, &scissor);
 
     // Render triangle (the error should trigger on the attempt to draw).
-    Draw(3, 1, 0, 0);
+    m_commandBuffer->Draw(3, 1, 0, 0);
 
     // Finalize recording of the command buffer
     m_commandBuffer->EndRenderPass();
@@ -11936,7 +11918,7 @@ TEST_F(VkLayerTest, RenderPassIncompatible) {
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, " is incompatible w/ gfx pipeline ");
     // Render triangle (the error should trigger on the attempt to draw).
-    Draw(3, 1, 0, 0);
+    m_commandBuffer->Draw(3, 1, 0, 0);
 
     // Finalize recording of the command buffer
     m_commandBuffer->EndRenderPass();
@@ -12257,8 +12239,8 @@ TEST_F(VkLayerTest, VtxBufferBadIndex) {
     // Don't care about actual data, just need to get to draw to flag error
     static const float vbo_data[3] = {1.f, 0.f, 1.f};
     VkConstantBufferObj vbo(m_device, sizeof(vbo_data), sizeof(float), (const void *)&vbo_data);
-    BindVertexBuffer(&vbo, (VkDeviceSize)0, 1);  // VBO idx 1, but no VBO in PSO
-    Draw(1, 0, 0, 0);
+    m_commandBuffer->BindVertexBuffer(&vbo, (VkDeviceSize)0, 1);  // VBO idx 1, but no VBO in PSO
+    m_commandBuffer->Draw(1, 0, 0, 0);
 
     m_errorMonitor->VerifyFound();
 
@@ -12518,13 +12500,13 @@ TEST_F(VkLayerTest, VertexBufferInvalid) {
         draw_verticies.AddVertexInputToPipe(pipe);
     }
 
-    Draw(1, 0, 0, 0);
+    m_commandBuffer->Draw(1, 0, 0, 0);
 
     m_commandBuffer->EndRenderPass();
     m_commandBuffer->EndCommandBuffer();
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, deleted_buffer_in_command_buffer);
-    QueueCommandBuffer(false);
+    m_commandBuffer->QueueCommandBuffer(false);
     m_errorMonitor->VerifyFound();
 
     {
@@ -12616,7 +12598,7 @@ TEST_F(VkLayerTest, BadVertexBufferOffset) {
     m_commandBuffer->BeginCommandBuffer();
     m_commandBuffer->BeginRenderPass(m_renderPassBeginInfo);
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_182004e4);
-    BindVertexBuffer(&vbo, (VkDeviceSize)(3 * sizeof(float)), 1);  // Offset at the end of the buffer
+    m_commandBuffer->BindVertexBuffer(&vbo, (VkDeviceSize)(3 * sizeof(float)), 1);  // Offset at the end of the buffer
     m_errorMonitor->VerifyFound();
 }
 
@@ -13613,7 +13595,7 @@ TEST_F(VkLayerTest, ImageViewInUseDestroyedSignaled) {
     vkCmdSetViewport(m_commandBuffer->handle(), 0, 1, &viewport);
     vkCmdSetScissor(m_commandBuffer->handle(), 0, 1, &scissor);
 
-    Draw(1, 0, 0, 0);
+    m_commandBuffer->Draw(1, 0, 0, 0);
     m_commandBuffer->EndRenderPass();
     m_commandBuffer->EndCommandBuffer();
     // Submit cmd buffer then destroy sampler
@@ -13775,7 +13757,7 @@ TEST_F(VkLayerTest, BufferViewInUseDestroyedSignaled) {
     vkCmdBindPipeline(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
     vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1,
                             &descriptor_set, 0, nullptr);
-    Draw(1, 0, 0, 0);
+    m_commandBuffer->Draw(1, 0, 0, 0);
     m_commandBuffer->EndRenderPass();
     m_commandBuffer->EndCommandBuffer();
 
@@ -13947,7 +13929,7 @@ TEST_F(VkLayerTest, SamplerInUseDestroyedSignaled) {
     vkCmdSetViewport(m_commandBuffer->handle(), 0, 1, &viewport);
     vkCmdSetScissor(m_commandBuffer->handle(), 0, 1, &scissor);
 
-    Draw(1, 0, 0, 0);
+    m_commandBuffer->Draw(1, 0, 0, 0);
     m_commandBuffer->EndRenderPass();
     m_commandBuffer->EndCommandBuffer();
     // Submit cmd buffer then destroy sampler
@@ -21108,7 +21090,7 @@ TEST_F(VkPositiveLayerTest, DynamicOffsetWithInactiveBinding) {
     uint32_t dyn_off[BINDING_COUNT] = {0, 1024, 256};
     vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1,
                             &descriptor_set, BINDING_COUNT, dyn_off);
-    Draw(1, 0, 0, 0);
+    m_commandBuffer->Draw(1, 0, 0, 0);
     m_errorMonitor->VerifyNotFound();
 
     vkDestroyBuffer(m_device->device(), dyub1, NULL);
@@ -21808,7 +21790,7 @@ TEST_F(VkPositiveLayerTest, DepthStencilLayoutTransitionForDepthOnlyImageview) {
                          &imb);
 
     m_commandBuffer->EndCommandBuffer();
-    QueueCommandBuffer(false);
+    m_commandBuffer->QueueCommandBuffer(false);
     m_errorMonitor->VerifyNotFound();
 
     vkDestroyFramebuffer(m_device->device(), fb, nullptr);
@@ -23557,7 +23539,7 @@ TEST_F(VkPositiveLayerTest, RenderPassDepthStencilLayoutTransition) {
     vkCmdBeginRenderPass(m_commandBuffer->handle(), &rpbi, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdEndRenderPass(m_commandBuffer->handle());
     m_commandBuffer->EndCommandBuffer();
-    QueueCommandBuffer(false);
+    m_commandBuffer->QueueCommandBuffer(false);
     m_errorMonitor->VerifyNotFound();
 
     // Cleanup
