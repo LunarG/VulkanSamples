@@ -1343,10 +1343,6 @@ void VkCommandBufferObj::QueueCommandBuffer(VkFence fence, bool checkSuccess) {
     vkDeviceWaitIdle(m_device->device());
 }
 
-void VkCommandBufferObj::BindPipeline(VkPipelineObj &pipeline) {
-    vkCmdBindPipeline(handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.handle());
-}
-
 void VkCommandBufferObj::BindDescriptorSet(VkDescriptorSetObj &descriptorSet) {
     VkDescriptorSet set_obj = descriptorSet.GetDescriptorSetHandle();
 
