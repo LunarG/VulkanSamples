@@ -634,10 +634,7 @@ class VkBufferTest {
         } else if (VK_BUFFER_USAGE_STORAGE_BUFFER_BIT & aBufferUsage) {
             offset_limit = aVulkanDevice->props.limits.minStorageBufferOffsetAlignment;
         }
-        if (eOffsetAlignment < offset_limit) {
-            return true;
-        }
-        return false;
+        return eOffsetAlignment < offset_limit;
     }
 
     // A constructor which performs validation tests within construction.
