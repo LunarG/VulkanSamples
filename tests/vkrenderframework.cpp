@@ -921,7 +921,6 @@ VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device, int constantCount,
     m_commandBuffer = 0;
 
     memset(&m_descriptorBufferInfo, 0, sizeof(m_descriptorBufferInfo));
-    m_numVertices = constantCount;
     m_stride = constantSize;
 
     VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
@@ -951,87 +950,9 @@ void VkConstantBufferObj::Bind(VkCommandBuffer commandBuffer, VkDeviceSize offse
     vkCmdBindVertexBuffers(commandBuffer, binding, 1, &handle(), &offset);
 }
 
-void VkConstantBufferObj::BufferMemoryBarrier(VkFlags srcAccessMask /*=
-            VK_ACCESS_HOST_WRITE_BIT |
-            VK_ACCESS_SHADER_WRITE_BIT |
-            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
-            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
-            VK_MEMORY_OUTPUT_COPY_BIT*/,
-                                              VkFlags dstAccessMask /*=
-            VK_ACCESS_HOST_READ_BIT |
-            VK_ACCESS_INDIRECT_COMMAND_READ_BIT |
-            VK_ACCESS_INDEX_READ_BIT |
-            VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT |
-            VK_ACCESS_UNIFORM_READ_BIT |
-            VK_ACCESS_SHADER_READ_BIT |
-            VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
-            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
-            VK_MEMORY_INPUT_COPY_BIT*/) {
-    VkResult err = VK_SUCCESS;
-
-    if (!m_commandBuffer) {
-        m_fence.init(*m_device, vk_testing::Fence::create_info());
-        m_commandPool = new VkCommandPoolObj(m_device, m_device->graphics_queue_node_index_);
-        m_commandBuffer = new VkCommandBufferObj(m_device, m_commandPool);
-    } else {
-        m_device->wait(m_fence);
-    }
-
-    // open the command buffer
-    VkCommandBufferBeginInfo cmd_buf_info = {};
-    VkCommandBufferInheritanceInfo cmd_buf_hinfo = {};
-    cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    cmd_buf_info.pNext = NULL;
-    cmd_buf_info.flags = 0;
-    cmd_buf_info.pInheritanceInfo = &cmd_buf_hinfo;
-
-    cmd_buf_hinfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-    cmd_buf_hinfo.pNext = NULL;
-    cmd_buf_hinfo.renderPass = VK_NULL_HANDLE;
-    cmd_buf_hinfo.subpass = 0;
-    cmd_buf_hinfo.framebuffer = VK_NULL_HANDLE;
-    cmd_buf_hinfo.occlusionQueryEnable = VK_FALSE;
-    cmd_buf_hinfo.queryFlags = 0;
-    cmd_buf_hinfo.pipelineStatistics = 0;
-
-    err = m_commandBuffer->BeginCommandBuffer(&cmd_buf_info);
-    ASSERT_VK_SUCCESS(err);
-
-    VkBufferMemoryBarrier memory_barrier = buffer_memory_barrier(srcAccessMask, dstAccessMask, 0, m_numVertices * m_stride);
-    VkBufferMemoryBarrier *pmemory_barrier = &memory_barrier;
-
-    VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-    VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-
-    // write barrier to the command buffer
-    m_commandBuffer->PipelineBarrier(src_stages, dest_stages, 0, 0, NULL, 1, pmemory_barrier, 0, NULL);
-
-    // finish recording the command buffer
-    err = m_commandBuffer->EndCommandBuffer();
-    ASSERT_VK_SUCCESS(err);
-
-    // submit the command buffer to the universal queue
-    VkCommandBuffer bufferArray[1];
-    bufferArray[0] = m_commandBuffer->GetBufferHandle();
-    VkSubmitInfo submit_info;
-    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submit_info.pNext = NULL;
-    submit_info.waitSemaphoreCount = 0;
-    submit_info.pWaitSemaphores = NULL;
-    submit_info.pWaitDstStageMask = NULL;
-    submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = bufferArray;
-    submit_info.signalSemaphoreCount = 0;
-    submit_info.pSignalSemaphores = NULL;
-
-    err = vkQueueSubmit(m_device->m_queue, 1, &submit_info, m_fence.handle());
-    ASSERT_VK_SUCCESS(err);
-}
-
 VkIndexBufferObj::VkIndexBufferObj(VkDeviceObj *device) : VkConstantBufferObj(device) {}
 
 void VkIndexBufferObj::CreateAndInitBuffer(int numIndexes, VkIndexType indexType, const void *data) {
-    m_numVertices = numIndexes;
     m_indexType = indexType;
     switch (indexType) {
         case VK_INDEX_TYPE_UINT16:

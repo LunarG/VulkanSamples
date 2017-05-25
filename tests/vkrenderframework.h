@@ -213,14 +213,6 @@ class VkConstantBufferObj : public vk_testing::Buffer {
     VkConstantBufferObj(VkDeviceObj *device, int constantCount, int constantSize, const void *data,
                         VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
     ~VkConstantBufferObj();
-    void BufferMemoryBarrier(VkFlags srcAccessMask = VK_ACCESS_HOST_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT |
-                                                     VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
-                                                     VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_TRANSFER_WRITE_BIT,
-                             VkFlags dstAccessMask = VK_ACCESS_HOST_READ_BIT | VK_ACCESS_INDIRECT_COMMAND_READ_BIT |
-                                                     VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT |
-                                                     VK_ACCESS_UNIFORM_READ_BIT | VK_ACCESS_SHADER_READ_BIT |
-                                                     VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
-                                                     VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_MEMORY_READ_BIT);
 
     void Bind(VkCommandBuffer commandBuffer, VkDeviceSize offset, uint32_t binding);
 
@@ -228,12 +220,9 @@ class VkConstantBufferObj : public vk_testing::Buffer {
 
    protected:
     VkDeviceObj *m_device;
-    vk_testing::BufferView m_bufferView;
-    int m_numVertices;
     int m_stride;
     VkCommandPoolObj *m_commandPool;
     VkCommandBufferObj *m_commandBuffer;
-    vk_testing::Fence m_fence;
 };
 
 class VkIndexBufferObj : public VkConstantBufferObj {
