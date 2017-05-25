@@ -342,8 +342,9 @@ static bool ValidateObject(T1 dispatchable_object, T2 object, VulkanObjectType o
                 if (other_device_data.second != device_data) {
                     if (other_device_data.second->object_map[object_type].find(object_handle) !=
                             other_device_data.second->object_map[object_type].end() ||
-                        (object_type == kVulkanObjectTypeImage && other_device_data.second->swapchainImageMap.find(object_handle) !=
-                                                                      other_device_data.second->swapchainImageMap.end())) {
+                        (object_type == kVulkanObjectTypeImage &&
+                         other_device_data.second->swapchainImageMap.find(object_handle) !=
+                             other_device_data.second->swapchainImageMap.end())) {
                         // Object found on other device, report an error if object has a device parent error code
                         if (wrong_device_code != VALIDATION_ERROR_UNDEFINED) {
                             return log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, debug_object_type,
@@ -359,8 +360,8 @@ static bool ValidateObject(T1 dispatchable_object, T2 object, VulkanObjectType o
             }
             // Report an error if object was not found anywhere
             return log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, debug_object_type, object_handle, __LINE__,
-                           invalid_handle_code, LayerName, "Invalid %s Object 0x%" PRIxLEAST64 ". %s",
-                           object_string[object_type], object_handle, validation_error_map[invalid_handle_code]);
+                           invalid_handle_code, LayerName, "Invalid %s Object 0x%" PRIxLEAST64 ". %s", object_string[object_type],
+                           object_handle, validation_error_map[invalid_handle_code]);
         }
     }
     return false;
@@ -4213,7 +4214,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorUpdateTemplateKHR(VkDevice device
                                                                  VkDescriptorUpdateTemplateKHR *pDescriptorUpdateTemplate) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_1fa05601, VALIDATION_ERROR_UNDEFINED);
     lock.unlock();
     if (skip) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -4221,7 +4222,10 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorUpdateTemplateKHR(VkDevice device
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     VkResult result = VK_SUCCESS;
     result = dev_data->dispatch_table.CreateDescriptorUpdateTemplateKHR(device, pCreateInfo, pAllocator, pDescriptorUpdateTemplate);
-    // TODO: Add tracking of VkDescriptorUpdateTemplateKHR
+    if (result == VK_SUCCESS) {
+        CreateObject(device, *pDescriptorUpdateTemplate, kVulkanObjectTypeDescriptorUpdateTemplateKHR, pAllocator);
+    }
+
     return result;
 }
 
@@ -4230,12 +4234,15 @@ VKAPI_ATTR void VKAPI_CALL DestroyDescriptorUpdateTemplateKHR(VkDevice device,
                                                               const VkAllocationCallbacks *pAllocator) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
-    // TODO: Add tracking of VkDescriptorUpdateTemplateKHR
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_24805601, VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, descriptorUpdateTemplate, kVulkanObjectTypeDescriptorUpdateTemplateKHR, false,
+                           VALIDATION_ERROR_24805201, VALIDATION_ERROR_24805207);
     lock.unlock();
     if (!skip) {
         layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
         dev_data->dispatch_table.DestroyDescriptorUpdateTemplateKHR(device, descriptorUpdateTemplate, pAllocator);
+        DestroyObject(device, descriptorUpdateTemplate, kVulkanObjectTypeDescriptorUpdateTemplateKHR, pAllocator,
+                      VALIDATION_ERROR_248002c8, VALIDATION_ERROR_248002ca);
     }
 }
 
@@ -4244,10 +4251,11 @@ VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSetWithTemplateKHR(VkDevice device, V
                                                               const void *pData) {
     bool skip = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
-    skip |= ValidateObject(device, descriptorSet, kVulkanObjectTypeDescriptorSet, false, VALIDATION_ERROR_UNDEFINED,
+    skip |= ValidateObject(device, device, kVulkanObjectTypeDevice, false, VALIDATION_ERROR_33a05601, VALIDATION_ERROR_UNDEFINED);
+    skip |= ValidateObject(device, descriptorSet, kVulkanObjectTypeDescriptorSet, false, VALIDATION_ERROR_33a04801,
                            VALIDATION_ERROR_UNDEFINED);
-    // TODO: Add tracking of VkDescriptorUpdateTemplateKHR
+    skip |= ValidateObject(device, descriptorUpdateTemplate, kVulkanObjectTypeDescriptorUpdateTemplateKHR, false,
+                           VALIDATION_ERROR_33a05201, VALIDATION_ERROR_33a05207);
     lock.unlock();
     if (!skip) {
         layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
@@ -4260,11 +4268,12 @@ VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetWithTemplateKHR(VkCommandBuffer c
                                                                VkPipelineLayout layout, uint32_t set, const void *pData) {
     bool skip = false;
     std::unique_lock<std::mutex> lock(global_lock);
-    skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_UNDEFINED,
+    skip |= ValidateObject(commandBuffer, commandBuffer, kVulkanObjectTypeCommandBuffer, false, VALIDATION_ERROR_1c002401,
                            VALIDATION_ERROR_UNDEFINED);
-    skip |= ValidateObject(commandBuffer, layout, kVulkanObjectTypePipelineLayout, false, VALIDATION_ERROR_UNDEFINED,
-                           VALIDATION_ERROR_UNDEFINED);
-    // TODO: Add tracking of VkDescriptorUpdateTemplateKHR
+    skip |= ValidateObject(commandBuffer, layout, kVulkanObjectTypePipelineLayout, false, VALIDATION_ERROR_1c00be01,
+                           VALIDATION_ERROR_1c000009);
+    skip |= ValidateObject(commandBuffer, descriptorUpdateTemplate, kVulkanObjectTypeDescriptorUpdateTemplateKHR, false,
+                           VALIDATION_ERROR_1c005201, VALIDATION_ERROR_1c000009);
     lock.unlock();
     if (!skip) {
         layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
