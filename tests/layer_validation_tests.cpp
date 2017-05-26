@@ -16799,8 +16799,8 @@ TEST_F(VkLayerTest, ImageLayerUnsupportedFormat) {
     }
 }
 
-TEST_F(VkLayerTest, ImageLayerViewTests) {
-    TEST_DESCRIPTION("Passing bad parameters to CreateImageView");
+TEST_F(VkLayerTest, CreateImageViewFormatMismatchUnrelated) {
+    TEST_DESCRIPTION("Create an image with a color format, then try to create a depth view of it")
 
     ASSERT_NO_FATAL_FAILURE(Init());
     auto depth_format = FindSupportedDepthStencilFormat(gpu());
@@ -16818,7 +16818,7 @@ TEST_F(VkLayerTest, ImageLayerViewTests) {
     imgViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     imgViewInfo.image = image.handle();
     imgViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    imgViewInfo.format = VK_FORMAT_B8G8R8A8_UNORM;
+    imgViewInfo.format = depth_format;
     imgViewInfo.subresourceRange.layerCount = 1;
     imgViewInfo.subresourceRange.baseMipLevel = 0;
     imgViewInfo.subresourceRange.levelCount = 1;
@@ -16826,13 +16826,32 @@ TEST_F(VkLayerTest, ImageLayerViewTests) {
 
 
     // Can't use depth format for view into color image - Expect INVALID_FORMAT
-    imgViewInfo.format = depth_format;
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "Formats MUST be IDENTICAL unless VK_IMAGE_CREATE_MUTABLE_FORMAT BIT was set on image creation.");
     vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
     m_errorMonitor->VerifyFound();
-    imgViewInfo.format = VK_FORMAT_B8G8R8A8_UNORM;
+}
+
+TEST_F(VkLayerTest, ImageLayerViewTests) {
+    TEST_DESCRIPTION("Passing bad parameters to CreateImageView");
+
+    ASSERT_NO_FATAL_FAILURE(Init());
+
+    VkImageObj image(m_device);
+    image.Init(128, 128, 1, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+               VK_IMAGE_TILING_OPTIMAL, 0);
+    ASSERT_TRUE(image.initialized());
+
+    VkImageView imgView;
+    VkImageViewCreateInfo imgViewInfo = {};
+    imgViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    imgViewInfo.image = image.handle();
+    imgViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    imgViewInfo.subresourceRange.layerCount = 1;
+    imgViewInfo.subresourceRange.baseMipLevel = 0;
+    imgViewInfo.subresourceRange.levelCount = 1;
+    imgViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
     // Same compatibility class but no MUTABLE_FORMAT bit - Expect
     // VIEW_CREATE_ERROR
