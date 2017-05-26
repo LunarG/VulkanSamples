@@ -24743,12 +24743,21 @@ void android_main(struct android_app *app) {
 }
 #endif
 
+#if defined(_WIN32) && !defined(NDEBUG)
+#include <crtdbg.h>
+#endif
+
 int main(int argc, char **argv) {
     int result;
 
 #ifdef ANDROID
     int vulkanSupport = InitVulkan();
     if (vulkanSupport == 0) return 1;
+#endif
+
+#if defined(_WIN32) && !defined(NDEBUG)
+    _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
+    _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
 #endif
 
     ::testing::InitGoogleTest(&argc, argv);
