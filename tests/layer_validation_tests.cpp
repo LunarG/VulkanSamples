@@ -16800,7 +16800,7 @@ TEST_F(VkLayerTest, ImageLayerUnsupportedFormat) {
 }
 
 TEST_F(VkLayerTest, CreateImageViewFormatMismatchUnrelated) {
-    TEST_DESCRIPTION("Create an image with a color format, then try to create a depth view of it")
+    TEST_DESCRIPTION("Create an image with a color format, then try to create a depth view of it");
 
     ASSERT_NO_FATAL_FAILURE(Init());
     auto depth_format = FindSupportedDepthStencilFormat(gpu());
@@ -16809,7 +16809,7 @@ TEST_F(VkLayerTest, CreateImageViewFormatMismatchUnrelated) {
     }
 
     VkImageObj image(m_device);
-    image.Init(128, 128, 1, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+    image.Init(128, 128, 1, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
                VK_IMAGE_TILING_OPTIMAL, 0);
     ASSERT_TRUE(image.initialized());
 
@@ -16824,7 +16824,6 @@ TEST_F(VkLayerTest, CreateImageViewFormatMismatchUnrelated) {
     imgViewInfo.subresourceRange.levelCount = 1;
     imgViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
-
     // Can't use depth format for view into color image - Expect INVALID_FORMAT
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
@@ -16833,13 +16832,14 @@ TEST_F(VkLayerTest, CreateImageViewFormatMismatchUnrelated) {
     m_errorMonitor->VerifyFound();
 }
 
-TEST_F(VkLayerTest, ImageLayerViewTests) {
-    TEST_DESCRIPTION("Passing bad parameters to CreateImageView");
+TEST_F(VkLayerTest, CreateImageViewNoMutableFormatBit) {
+    TEST_DESCRIPTION(
+        "Create an image view with a different format, when the image does not have MUTABLE_FORMAT bit");
 
     ASSERT_NO_FATAL_FAILURE(Init());
 
     VkImageObj image(m_device);
-    image.Init(128, 128, 1, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+    image.Init(128, 128, 1, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
                VK_IMAGE_TILING_OPTIMAL, 0);
     ASSERT_TRUE(image.initialized());
 
@@ -16848,6 +16848,7 @@ TEST_F(VkLayerTest, ImageLayerViewTests) {
     imgViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     imgViewInfo.image = image.handle();
     imgViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    imgViewInfo.format = VK_FORMAT_B8G8R8A8_UINT;
     imgViewInfo.subresourceRange.layerCount = 1;
     imgViewInfo.subresourceRange.baseMipLevel = 0;
     imgViewInfo.subresourceRange.levelCount = 1;
@@ -16855,54 +16856,52 @@ TEST_F(VkLayerTest, ImageLayerViewTests) {
 
     // Same compatibility class but no MUTABLE_FORMAT bit - Expect
     // VIEW_CREATE_ERROR
-    imgViewInfo.format = VK_FORMAT_B8G8R8A8_UINT;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0ac007f6);
     vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
     m_errorMonitor->VerifyFound();
+}
+
+TEST_F(VkLayerTest, CreateImageViewDifferentClass) {
+    TEST_DESCRIPTION("Passing bad parameters to CreateImageView");
+
+    ASSERT_NO_FATAL_FAILURE(Init());
+
+    if (!(m_device->format_properties(VK_FORMAT_R8_UINT).optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)) {
+        printf("Device does not support R8_UINT as color attachment; skipped");
+        return;
+    }
+
+    VkImageCreateInfo mutImgInfo = {
+        VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, nullptr,
+        VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT,
+        VK_IMAGE_TYPE_2D,
+        VK_FORMAT_R8_UINT,
+        {128, 128, 1},
+        1, 1, VK_SAMPLE_COUNT_1_BIT,
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        VK_SHARING_MODE_EXCLUSIVE,
+        0, nullptr,
+        VK_IMAGE_LAYOUT_UNDEFINED
+    };
+    VkImageObj mutImage(m_device);
+    mutImage.init(&mutImgInfo);
+    ASSERT_TRUE(mutImage.initialized());
+
+    VkImageView imgView;
+    VkImageViewCreateInfo imgViewInfo = {};
+    imgViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    imgViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
     imgViewInfo.format = VK_FORMAT_B8G8R8A8_UNORM;
+    imgViewInfo.subresourceRange.layerCount = 1;
+    imgViewInfo.subresourceRange.baseMipLevel = 0;
+    imgViewInfo.subresourceRange.levelCount = 1;
+    imgViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    imgViewInfo.image = mutImage.handle();
 
-    // TODO: Update framework to easily passing mutable flag into ImageObj init
-    //   For now just allowing image for this one test to not have memory bound
-    // TODO: The following line is preventing the intended validation from occurring because of the way the error monitor works.
-    // m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-    //                                      " used with no memory bound. Memory should be bound by calling vkBindImageMemory().");
-    // Have MUTABLE_FORMAT bit but not in same compatibility class - Expect
-    // VIEW_CREATE_ERROR
-    VkImageCreateInfo mutImgInfo = image.create_info();
-    VkImage mutImage;
-    mutImgInfo.format = VK_FORMAT_R8_UINT;
-    assert(m_device->format_properties(VK_FORMAT_R8_UINT).optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT);
-    mutImgInfo.flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
-    mutImgInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    VkResult ret = vkCreateImage(m_device->handle(), &mutImgInfo, NULL, &mutImage);
-    ASSERT_VK_SUCCESS(ret);
-
-    VkMemoryRequirements requirements;
-    vkGetImageMemoryRequirements(m_device->device(), mutImage, &requirements);
-
-    VkMemoryAllocateInfo alloc_info{};
-    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    alloc_info.pNext = NULL;
-    alloc_info.memoryTypeIndex = 0;
-    alloc_info.allocationSize = requirements.size;
-    bool pass = m_device->phy().set_memory_type(requirements.memoryTypeBits, &alloc_info, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    ASSERT_TRUE(pass);
-
-    VkDeviceMemory memory;
-    ret = vkAllocateMemory(m_device->device(), &alloc_info, NULL, &memory);
-    ASSERT_VK_SUCCESS(ret);
-
-    ret = vkBindImageMemory(m_device->device(), mutImage, memory, 0);
-    ASSERT_VK_SUCCESS(ret);
-
-    imgViewInfo.image = mutImage;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0ac007f4);
     vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
     m_errorMonitor->VerifyFound();
-    imgViewInfo.image = image.handle();
-
-    vkFreeMemory(m_device->device(), memory, NULL);
-    vkDestroyImage(m_device->handle(), mutImage, NULL);
 }
 
 TEST_F(VkLayerTest, ImageViewSubresourceRangeTests) {
