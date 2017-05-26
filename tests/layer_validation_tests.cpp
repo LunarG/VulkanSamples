@@ -337,7 +337,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL myDbgFunc(VkFlags msgFlags, VkDebugReportO
     if (msgFlags & errMonitor->GetMessageFlags()) {
 #ifdef _DEBUG
         char embedded_code_string[2048];
-        snprintf(embedded_code_string, 2048, "%s [%05d]", pMsg, msgCode);
+        snprintf(embedded_code_string, 2048, "%s [%08x]", pMsg, msgCode);
         return errMonitor->CheckForDesiredMsg(msgCode, embedded_code_string);
 #else
         return errMonitor->CheckForDesiredMsg(msgCode, pMsg);
@@ -3089,6 +3089,10 @@ TEST_F(VkLayerTest, ImageSampleCounts) {
     blit_region.dstSubresource.baseArrayLayer = 0;
     blit_region.dstSubresource.layerCount = 1;
     blit_region.dstSubresource.mipLevel = 0;
+    blit_region.srcOffsets[0] = {0, 0, 0};
+    blit_region.srcOffsets[1] = {256, 256, 1};
+    blit_region.dstOffsets[0] = {0, 0, 0};
+    blit_region.dstOffsets[1] = {128, 128, 1};
 
     // Create two images, the source with sampleCount = 2, and attempt to blit
     // between them
@@ -3199,6 +3203,10 @@ TEST_F(VkLayerTest, BlitImageFormats) {
     blitRegion.dstSubresource.baseArrayLayer = 0;
     blitRegion.dstSubresource.layerCount = 1;
     blitRegion.dstSubresource.mipLevel = 0;
+    blitRegion.srcOffsets[0] = {64, 64, 0};
+    blitRegion.srcOffsets[1] = {0, 0, 1};
+    blitRegion.dstOffsets[0] = {0, 0, 0};
+    blitRegion.dstOffsets[1] = {32, 32, 1};
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_184001cc);
 
@@ -3222,6 +3230,145 @@ TEST_F(VkLayerTest, BlitImageFormats) {
 
     // TODO: Note that this only verifies that at least one of the VU enums was found
     //       Also, if any were not seen, they'll remain in the target list (Soln TBD, JIRA task: VL-72)
+    m_errorMonitor->VerifyFound();
+
+    m_commandBuffer->end();
+}
+
+TEST_F(VkLayerTest, BlitImageOffsets) {
+    ASSERT_NO_FATAL_FAILURE(Init());
+
+    VkFormatProperties format_properties;
+    vkGetPhysicalDeviceFormatProperties(gpu(), VK_FORMAT_R8G8B8A8_UNORM, &format_properties);
+    if (0 == (format_properties.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT) ||
+        0 == (format_properties.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_DST_BIT)) {
+        printf("             No blit feature bits - BlitImageOffsets skipped.\n");
+        return;
+    }
+
+    VkImageCreateInfo ci;
+    ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    ci.pNext = NULL;
+    ci.flags = 0;
+    ci.imageType = VK_IMAGE_TYPE_1D;
+    ci.format = VK_FORMAT_R8G8B8A8_UNORM;
+    ci.extent = {64, 1, 1};
+    ci.mipLevels = 1;
+    ci.arrayLayers = 1;
+    ci.samples = VK_SAMPLE_COUNT_1_BIT;
+    ci.tiling = VK_IMAGE_TILING_OPTIMAL;
+    ci.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    ci.queueFamilyIndexCount = 0;
+    ci.pQueueFamilyIndices = NULL;
+    ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    VkImageObj image_1D(m_device);
+    image_1D.init(&ci);
+    ASSERT_TRUE(image_1D.initialized());
+
+    ci.imageType = VK_IMAGE_TYPE_2D;
+    ci.extent = {64, 64, 1};
+    VkImageObj image_2D(m_device);
+    image_2D.init(&ci);
+    ASSERT_TRUE(image_2D.initialized());
+
+    ci.imageType = VK_IMAGE_TYPE_3D;
+    ci.extent = {64, 64, 64};
+    VkImageObj image_3D(m_device);
+    image_3D.init(&ci);
+    ASSERT_TRUE(image_3D.initialized());
+
+    VkImageBlit blit_region = {};
+    blit_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    blit_region.srcSubresource.baseArrayLayer = 0;
+    blit_region.srcSubresource.layerCount = 1;
+    blit_region.srcSubresource.mipLevel = 0;
+    blit_region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    blit_region.dstSubresource.baseArrayLayer = 0;
+    blit_region.dstSubresource.layerCount = 1;
+    blit_region.dstSubresource.mipLevel = 0;
+
+    m_commandBuffer->begin();
+
+    // 1D, with src/dest y offsets other than (0,1)
+    blit_region.srcOffsets[0] = {0, 1, 0};
+    blit_region.srcOffsets[1] = {30, 1, 1};
+    blit_region.dstOffsets[0] = {32, 0, 0};
+    blit_region.dstOffsets[1] = {64, 1, 1};
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09a001ea);
+    vkCmdBlitImage(m_commandBuffer->handle(), image_1D.image(), image_1D.Layout(), image_1D.image(), image_1D.Layout(), 1,
+                   &blit_region, VK_FILTER_NEAREST);
+    m_errorMonitor->VerifyFound();
+
+    blit_region.srcOffsets[0] = {0, 0, 0};
+    blit_region.dstOffsets[0] = {32, 1, 0};
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09a001f4);
+    vkCmdBlitImage(m_commandBuffer->handle(), image_1D.image(), image_1D.Layout(), image_1D.image(), image_1D.Layout(), 1,
+                   &blit_region, VK_FILTER_NEAREST);
+    m_errorMonitor->VerifyFound();
+
+    // 2D, with src/dest z offsets other than (0,1)
+    blit_region.srcOffsets[0] = {0, 0, 1};
+    blit_region.srcOffsets[1] = {24, 31, 1};
+    blit_region.dstOffsets[0] = {32, 32, 0};
+    blit_region.dstOffsets[1] = {64, 64, 1};
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09a001ee);
+    vkCmdBlitImage(m_commandBuffer->handle(), image_2D.image(), image_2D.Layout(), image_2D.image(), image_2D.Layout(), 1,
+                   &blit_region, VK_FILTER_NEAREST);
+    m_errorMonitor->VerifyFound();
+
+    blit_region.srcOffsets[0] = {0, 0, 0};
+    blit_region.dstOffsets[0] = {32, 32, 1};
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09a001f8);
+    vkCmdBlitImage(m_commandBuffer->handle(), image_2D.image(), image_2D.Layout(), image_2D.image(), image_2D.Layout(), 1,
+                   &blit_region, VK_FILTER_NEAREST);
+    m_errorMonitor->VerifyFound();
+
+    // Source offsets exceeding source image dimensions
+    blit_region.srcOffsets[0] = {0, 0, 0};
+    blit_region.srcOffsets[1] = {65, 64, 1};  // src x
+    blit_region.dstOffsets[0] = {0, 0, 0};
+    blit_region.dstOffsets[1] = {64, 64, 1};
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09a001e6);
+    vkCmdBlitImage(m_commandBuffer->handle(), image_3D.image(), image_3D.Layout(), image_2D.image(), image_2D.Layout(), 1,
+                   &blit_region, VK_FILTER_NEAREST);
+    m_errorMonitor->VerifyFound();
+
+    blit_region.srcOffsets[1] = {64, 65, 1};  // src y
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09a001e8);
+    vkCmdBlitImage(m_commandBuffer->handle(), image_3D.image(), image_3D.Layout(), image_2D.image(), image_2D.Layout(), 1,
+                   &blit_region, VK_FILTER_NEAREST);
+    m_errorMonitor->VerifyFound();
+
+    blit_region.srcOffsets[0] = {0, 0, 65};  // src z
+    blit_region.srcOffsets[1] = {64, 64, 64};
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09a001ec);
+    vkCmdBlitImage(m_commandBuffer->handle(), image_3D.image(), image_3D.Layout(), image_2D.image(), image_2D.Layout(), 1,
+                   &blit_region, VK_FILTER_NEAREST);
+    m_errorMonitor->VerifyFound();
+
+    // Dest offsets exceeding source image dimensions
+    blit_region.srcOffsets[0] = {0, 0, 0};
+    blit_region.srcOffsets[1] = {64, 64, 1};
+    blit_region.dstOffsets[0] = {96, 64, 32};  // dst x
+    blit_region.dstOffsets[1] = {64, 0, 33};
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09a001f0);
+    vkCmdBlitImage(m_commandBuffer->handle(), image_2D.image(), image_2D.Layout(), image_3D.image(), image_3D.Layout(), 1,
+                   &blit_region, VK_FILTER_NEAREST);
+    m_errorMonitor->VerifyFound();
+
+    blit_region.dstOffsets[0] = {0, 65, 32};  // dst y
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09a001f2);
+    vkCmdBlitImage(m_commandBuffer->handle(), image_2D.image(), image_2D.Layout(), image_3D.image(), image_3D.Layout(), 1,
+                   &blit_region, VK_FILTER_NEAREST);
+    m_errorMonitor->VerifyFound();
+
+    blit_region.dstOffsets[0] = {0, 64, 65};  // dst z
+    blit_region.dstOffsets[1] = {64, 0, 64};
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09a001f6);
+    vkCmdBlitImage(m_commandBuffer->handle(), image_2D.image(), image_2D.Layout(), image_3D.image(), image_3D.Layout(), 1,
+                   &blit_region, VK_FILTER_NEAREST);
     m_errorMonitor->VerifyFound();
 
     m_commandBuffer->end();
@@ -17706,6 +17853,10 @@ TEST_F(VkLayerTest, MiscImageLayerTests) {
     blitRegion.dstSubresource.baseArrayLayer = 0;
     blitRegion.dstSubresource.layerCount = 1;
     blitRegion.dstSubresource.mipLevel = 0;
+    blitRegion.srcOffsets[0] = {128, 0, 0};
+    blitRegion.srcOffsets[1] = {128, 128, 1};
+    blitRegion.dstOffsets[0] = {0, 128, 0};
+    blitRegion.dstOffsets[1] = {128, 128, 1};
 
     // Look for NULL-blit warning
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT,
