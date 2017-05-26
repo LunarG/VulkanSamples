@@ -74,6 +74,10 @@ int sample_main(int argc, char *argv[]) {
         std::cout << std::endl << std::endl;
     }
 
+    if (instance_layer_count == 0) {
+        std::cout << "Set the environment variable VK_LAYER_PATH to point to the location of your layers" << std::endl;
+    }
+
     std::cout << std::endl;
 
     free(vk_props);

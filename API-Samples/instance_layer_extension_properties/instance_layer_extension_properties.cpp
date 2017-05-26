@@ -100,23 +100,26 @@ int sample_main(int argc, char *argv[]) {
     /* VULKAN_KEY_END */
 
     std::cout << "Instance Layers:" << std::endl;
-    for (std::vector<layer_properties>::iterator it = instance_layer_properties.begin(); it != instance_layer_properties.end();
-         it++) {
-        layer_properties *props = &(*it);
-        std::cout << props->properties.layerName << std::endl;
-        if (props->extensions.size() > 0) {
-            for (uint32_t j = 0; j < props->extensions.size(); j++) {
-                if (j > 0) {
-                    std::cout << ", ";
+    if (instance_layer_count == 0) {
+        std::cout << "Set the environment variable VK_LAYER_PATH to point to the location of your layers" << std::endl;
+    } else {
+        for (std::vector<layer_properties>::iterator it = instance_layer_properties.begin(); it != instance_layer_properties.end();
+             it++) {
+            layer_properties *props = &(*it);
+            std::cout << props->properties.layerName << std::endl;
+            if (props->extensions.size() > 0) {
+                for (uint32_t j = 0; j < props->extensions.size(); j++) {
+                    if (j > 0) {
+                        std::cout << ", ";
+                    }
+                    std::cout << props->extensions[j].extensionName << " Version " << props->extensions[j].specVersion;
                 }
-                std::cout << props->extensions[j].extensionName << " Version " << props->extensions[j].specVersion;
+            } else {
+                std::cout << "Layer Extensions: None";
             }
-        } else {
-            std::cout << "Layer Extensions: None";
+            std::cout << std::endl << std::endl;
         }
-        std::cout << std::endl << std::endl;
     }
-
     std::cout << std::endl;
 
     return 0;
