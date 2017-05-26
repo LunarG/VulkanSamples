@@ -636,8 +636,6 @@ void VkImageObj::SetLayout(VkCommandBufferObj *cmd_buf, VkImageAspectFlags aspec
 }
 
 void VkImageObj::SetLayout(VkImageAspectFlags aspect, VkImageLayout image_layout) {
-    VkResult U_ASSERT_ONLY err;
-
     if (image_layout == m_descriptorImageInfo.imageLayout) {
         return;
     }
