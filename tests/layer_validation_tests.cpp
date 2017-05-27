@@ -18386,85 +18386,29 @@ TEST_F(VkLayerTest, CopyImageFormatSizeMismatch) {
 }
 
 TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch) {
-    VkResult err;
-    bool pass;
-
-    // Create a depth image and a depth/stencil image and try to copy between them
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "vkCmdCopyImage called with unmatched source and dest image depth");
-
     ASSERT_NO_FATAL_FAILURE(Init());
     auto depth_format = FindSupportedDepthStencilFormat(gpu());
     if (!depth_format) {
         return;
     }
 
-    // Create two images of different types and try to copy between them
-    VkImage srcImage;
-    VkImage dstImage;
-    VkDeviceMemory srcMem;
-    VkDeviceMemory destMem;
-    VkMemoryRequirements memReqs;
-
-    VkImageCreateInfo image_create_info = {};
-    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    image_create_info.pNext = NULL;
-    image_create_info.imageType = VK_IMAGE_TYPE_2D;
-    image_create_info.format = VK_FORMAT_D32_SFLOAT;
-    image_create_info.extent.width = 32;
-    image_create_info.extent.height = 32;
-    image_create_info.extent.depth = 1;
-    image_create_info.mipLevels = 1;
-    image_create_info.arrayLayers = 1;
-    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
-    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-    image_create_info.flags = 0;
     VkFormatProperties properties;
-    vkGetPhysicalDeviceFormatProperties(m_device->phy().handle(), image_create_info.format, &properties);
+    vkGetPhysicalDeviceFormatProperties(m_device->phy().handle(), VK_FORMAT_D32_SFLOAT, &properties);
     if (properties.optimalTilingFeatures == 0) {
         printf("             Image format not supported; skipped.\n");
         return;
     }
 
-    err = vkCreateImage(m_device->device(), &image_create_info, NULL, &srcImage);
-    ASSERT_VK_SUCCESS(err);
+    VkImageObj srcImage(m_device);
+    srcImage.Init(32, 32, 1, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+                  VK_IMAGE_TILING_OPTIMAL);
+    ASSERT_TRUE(srcImage.initialized());
+    VkImageObj dstImage(m_device);
+    dstImage.Init(32, 32, 1, depth_format, VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+                  VK_IMAGE_TILING_OPTIMAL);
+    ASSERT_TRUE(dstImage.initialized());
 
-    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-
-    // Introduce failure by creating second image with a depth/stencil format
-    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-    image_create_info.format = depth_format;
-    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-
-    err = vkCreateImage(m_device->device(), &image_create_info, NULL, &dstImage);
-    ASSERT_VK_SUCCESS(err);
-
-    // Allocate memory
-    VkMemoryAllocateInfo memAlloc = {};
-    memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    memAlloc.pNext = NULL;
-    memAlloc.allocationSize = 0;
-    memAlloc.memoryTypeIndex = 0;
-
-    vkGetImageMemoryRequirements(m_device->device(), srcImage, &memReqs);
-    memAlloc.allocationSize = memReqs.size;
-    pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
-    ASSERT_TRUE(pass);
-    err = vkAllocateMemory(m_device->device(), &memAlloc, NULL, &srcMem);
-    ASSERT_VK_SUCCESS(err);
-
-    vkGetImageMemoryRequirements(m_device->device(), dstImage, &memReqs);
-    memAlloc.allocationSize = memReqs.size;
-    pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
-    ASSERT_TRUE(pass);
-    err = vkAllocateMemory(m_device->device(), &memAlloc, NULL, &destMem);
-    ASSERT_VK_SUCCESS(err);
-
-    err = vkBindImageMemory(m_device->device(), srcImage, srcMem, 0);
-    ASSERT_VK_SUCCESS(err);
-    err = vkBindImageMemory(m_device->device(), dstImage, destMem, 0);
-    ASSERT_VK_SUCCESS(err);
+    // Create two images of different types and try to copy between them
 
     m_commandBuffer->begin();
     VkImageCopy copyRegion;
@@ -18485,15 +18429,13 @@ TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch) {
     copyRegion.extent.width = 1;
     copyRegion.extent.height = 1;
     copyRegion.extent.depth = 1;
-    m_commandBuffer->CopyImage(srcImage, VK_IMAGE_LAYOUT_GENERAL, dstImage, VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "vkCmdCopyImage called with unmatched source and dest image depth");
+    m_commandBuffer->CopyImage(srcImage.handle(), VK_IMAGE_LAYOUT_GENERAL, dstImage.handle(), VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
     m_commandBuffer->end();
 
     m_errorMonitor->VerifyFound();
-
-    vkDestroyImage(m_device->device(), srcImage, NULL);
-    vkDestroyImage(m_device->device(), dstImage, NULL);
-    vkFreeMemory(m_device->device(), srcMem, NULL);
-    vkFreeMemory(m_device->device(), destMem, NULL);
 }
 
 TEST_F(VkLayerTest, CopyImageSampleCountMismatch) {
