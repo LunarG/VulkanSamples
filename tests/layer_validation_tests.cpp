@@ -18688,9 +18688,6 @@ TEST_F(VkLayerTest, ResolveImageLowSampleCount) {
     ASSERT_VK_SUCCESS(err);
 
     m_commandBuffer->begin();
-    // Need memory barrier to VK_IMAGE_LAYOUT_GENERAL for source and dest?
-    // VK_IMAGE_LAYOUT_UNDEFINED = 0,
-    // VK_IMAGE_LAYOUT_GENERAL = 1,
     VkImageResolve resolveRegion;
     resolveRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     resolveRegion.srcSubresource.mipLevel = 0;
