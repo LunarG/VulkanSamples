@@ -81,7 +81,7 @@ struct instance_layer_data {
     VkDebugReportCallbackCreateInfoEXT *tmp_dbg_create_infos = nullptr;
     VkDebugReportCallbackEXT *tmp_callbacks = nullptr;
     InstanceExtensions extensions = {};
-
+    std::unordered_set<std::string> enabled_extensions;
     VkLayerInstanceDispatchTable dispatch_table = {};
 };
 
@@ -94,6 +94,7 @@ struct layer_data {
     VkPhysicalDevice physical_device = VK_NULL_HANDLE;
     VkDevice device = VK_NULL_HANDLE;
     DeviceExtensions enables;
+    std::unordered_set<std::string> enabled_extensions;
 
     VkLayerDispatchTable dispatch_table = {};
 };
@@ -108,6 +109,8 @@ static std::unordered_map<void *, instance_layer_data *> instance_layer_data_map
 static void init_parameter_validation(instance_layer_data *my_data, const VkAllocationCallbacks *pAllocator) {
     layer_debug_actions(my_data->report_data, my_data->logging_callback, pAllocator, "lunarg_parameter_validation");
 }
+
+
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateDebugReportCallbackEXT(VkInstance instance,
                                                             const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
@@ -143,6 +146,16 @@ static const VkExtensionProperties instance_extensions[] = {{VK_EXT_DEBUG_REPORT
 static const VkLayerProperties global_layer = {
     "VK_LAYER_LUNARG_parameter_validation", VK_LAYER_API_VERSION, 1, "LunarG Validation Layer",
 };
+
+bool ValidateRequiredExtensions(std::string api_name, const std::vector<std::string> required_extensions) {
+    bool skip = false;
+
+    for (auto reqd_ext = required_extensions.begin(); reqd_ext != required_extensions.end(); reqd_ext++) {
+        // Insert depency checks here
+    }
+
+    return skip;
+}
 
 static const int MaxParamCheckerStringLength = 256;
 
@@ -247,6 +260,11 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateInstance(const VkInstanceCreateInfo *pCreat
     if (result == VK_SUCCESS) {
         auto my_instance_data = GetLayerDataPtr(get_dispatch_key(*pInstance), instance_layer_data_map);
         assert(my_instance_data != nullptr);
+
+        // Save enabled instance extension names for validation extension APIs
+        for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
+            my_instance_data->enabled_extensions.emplace(pCreateInfo->ppEnabledExtensionNames[i]);
+        }
 
         layer_init_instance_dispatch_table(*pInstance, &my_instance_data->dispatch_table, fpGetInstanceProcAddr);
         my_instance_data->instance = *pInstance;
@@ -606,6 +624,11 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physicalDevice, con
 
             my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
             layer_init_device_dispatch_table(*pDevice, &my_device_data->dispatch_table, fpGetDeviceProcAddr);
+
+            // Save enabled instance extension names for validation extension APIs
+            for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
+                my_instance_data->enabled_extensions.emplace(pCreateInfo->ppEnabledExtensionNames[i]);
+            }
 
             my_device_data->enables.InitFromDeviceCreateInfo(pCreateInfo);
 

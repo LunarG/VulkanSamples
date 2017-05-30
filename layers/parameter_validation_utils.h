@@ -86,6 +86,9 @@ const uint32_t ExtEnumBaseValue = 1000000000;
 // The value of all VK_xxx_MAX_ENUM tokens
 const uint32_t MaxEnumValue = 0x7FFFFFFF;
 
+// Forward declaration
+bool ValidateRequiredExtensions(std::string api_name, const std::vector<std::string> required_extensions);
+
 template <typename T>
 bool is_extension_added_token(T value) {
     return (value != MaxEnumValue) && (static_cast<uint32_t>(std::abs(static_cast<int32_t>(value))) >= ExtEnumBaseValue);

@@ -18,6 +18,7 @@
 # limitations under the License.
 #
 # Author: Dustin Graves <dustin@lunarg.com>
+# Author: Mark Lobodzinski <mark@lunarg.com>
 
 import os,re,sys
 import xml.etree.ElementTree as etree
@@ -155,6 +156,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         self.flags = set()                                # Map of flags typenames
         self.flagBits = dict()                            # Map of flag bits typename to list of values
         self.newFlags = set()                             # Map of flags typenames /defined in the current feature/
+        self.required_extensions = []                     # List of required extensions for the current extension
         # Named tuples to store struct and command data
         self.StructType = namedtuple('StructType', ['name', 'value'])
         self.CommandParam = namedtuple('CommandParam', ['type', 'name', 'ispointer', 'isstaticarray', 'isbool', 'israngedenum',
@@ -241,6 +243,13 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         self.commands = []
         self.structMembers = []
         self.newFlags = set()
+        # Save list of required extensions for this extension
+        self.required_extensions = []
+        if self.featureName != "VK_VERSION_1_0":
+            self.required_extensions.append(self.featureName)
+        required_extensions = interface.get('requires')
+        if required_extensions is not None:
+            self.required_extensions.extend(required_extensions.split(','))
     def endFeature(self):
         # C-specific
         # Actually write the interface to the output file.
@@ -631,7 +640,10 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         # argument is a handle (not vkCreateInstance)
         reportData = '    debug_report_data*'.ljust(self.genOpts.alignFuncParam) + 'report_data,'
         if cmd.name != 'vkCreateInstance':
-            lines[1] = reportData
+            if len(lines) < 3:   # Terminate correctly if single parameter
+                lines[1] = reportData[:-1] + ')'
+            else:
+                lines[1] = reportData
         else:
             lines.insert(1, reportData)
         return '\n'.join(lines)
@@ -1010,7 +1022,17 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         for command in self.commands:
             # Skip first parameter if it is a dispatch handle (everything except vkCreateInstance)
             startIndex = 0 if command.name == 'vkCreateInstance' else 1
+            if command.name == 'vkCmdDebugMarkerEndEXT':
+                stop = 'here'
             lines, unused = self.genFuncBody(command.name, command.params[startIndex:], '', '', None)
+            if self.required_extensions:
+                def_line = 'std::vector<std::string> required_extensions = {'
+                for ext in self.required_extensions:
+                    def_line += '"%s", ' % ext
+                def_line = def_line[:-2] + '};'
+                ext_call = 'skipCall |= ValidateRequiredExtensions("%s", required_extensions);\n' % command.name
+                lines.insert(0, ext_call)
+                lines.insert(0, def_line)
             if lines:
                 cmdDef = self.getCmdDef(command) + '\n'
                 cmdDef += '{\n'
@@ -1023,6 +1045,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                     if len(unused) > 0:
                         cmdDef += '\n'
                 cmdDef += indent + 'bool skipCall = false;\n'
+
                 for line in lines:
                     cmdDef += '\n'
                     if type(line) is list:
