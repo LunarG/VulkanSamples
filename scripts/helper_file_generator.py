@@ -85,6 +85,7 @@ class HelperFileOutputGenerator(OutputGenerator):
         self.structMembers = []                           # List of StructMemberData records for all Vulkan structs
         self.object_types = []                            # List of all handle types
         self.debug_report_object_types = []               # Handy copy of debug_report_object_type enum data
+        self.core_object_types = []                       # Handy copy of core_object_type enum data
 
         # Named tuples to store struct and command data
         self.StructType = namedtuple('StructType', ['name', 'value'])
@@ -154,11 +155,18 @@ class HelperFileOutputGenerator(OutputGenerator):
                     value_list.append(item_name)
             if value_list is not None:
                 self.enum_output += self.GenerateEnumStringConversion(groupName, value_list)
-        elif self.helper_file_type == 'object_types_header' and groupName == 'VkDebugReportObjectTypeEXT':
-            for elem in groupElem.findall('enum'):
-                if elem.get('supported') != 'disabled':
-                    item_name = elem.get('name')
-                    self.debug_report_object_types.append(item_name)
+        elif self.helper_file_type == 'object_types_header':
+            if groupName == 'VkDebugReportObjectTypeEXT':
+                for elem in groupElem.findall('enum'):
+                    if elem.get('supported') != 'disabled':
+                        item_name = elem.get('name')
+                        self.debug_report_object_types.append(item_name)
+            elif groupName == 'VkObjectType':
+                for elem in groupElem.findall('enum'):
+                    if elem.get('supported') != 'disabled':
+                        item_name = elem.get('name')
+                        self.core_object_types.append(item_name)
+
     #
     # Called for each type -- if the type is a struct/union, grab the metadata
     def genType(self, typeinfo, name):
@@ -560,7 +568,7 @@ class HelperFileOutputGenerator(OutputGenerator):
 
         # Output a conversion routine from the layer object definitions to the debug report definitions
         object_types_header += '\n'
-        object_types_header += '// Helper array to get Official Vulkan object type enum from the internal layers version\n'
+        object_types_header += '// Helper array to get Vulkan VK_EXT_debug_report object type enum from the internal layers version\n'
         object_types_header += 'const VkDebugReportObjectTypeEXT get_debug_report_enum[] = {\n'
         for object_type in type_list:
             done = False
@@ -579,6 +587,25 @@ class HelperFileOutputGenerator(OutputGenerator):
                 else:
                     object_types_header += '    VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT; // No Match\n'
         object_types_header += '};\n'
+
+        # Output a conversion routine from the layer object definitions to the core object type definitions
+        object_types_header += '\n'
+        object_types_header += '// Helper array to get Official Vulkan VkObjectType enum from the internal layers version\n'
+        object_types_header += 'const VkObjectType get_object_type_enum[] = {\n'
+        for object_type in type_list:
+            done = False
+            search_type = object_type.replace("kVulkanObjectType", "").lower()
+            for vk_object_type in self.core_object_types:
+                target_type = vk_object_type.replace("VK_OBJECT_TYPE_", "").lower()
+                target_type = target_type.replace("_", "")
+                if search_type == target_type:
+                    object_types_header += '    %s,   // %s\n' % (vk_object_type, object_type)
+                    done = True
+                    break
+            if done == False:
+                object_types_header += '    VK_OBJECT_TYPE_UNKNOWN; // No Match\n'
+        object_types_header += '};\n'
+
         return object_types_header
     #
     # Determine if a structure needs a safe_struct helper function
