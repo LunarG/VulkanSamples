@@ -92,3 +92,21 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceSparseImageFormatProperties2KHR(
 VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceSparseImageFormatProperties2KHR(
     VkPhysicalDevice physicalDevice, const VkPhysicalDeviceSparseImageFormatInfo2KHR* pFormatInfo, uint32_t* pPropertyCount,
     VkSparseImageFormatProperties2KHR* pProperties);
+
+VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilities2KHR(VkPhysicalDevice physicalDevice,
+                                                                        const VkPhysicalDeviceSurfaceInfo2KHR* pSurfaceInfo,
+                                                                        VkSurfaceCapabilities2KHR* pSurfaceCapabilities);
+
+VKAPI_ATTR VkResult VKAPI_CALL terminator_GetPhysicalDeviceSurfaceCapabilities2KHR(
+    VkPhysicalDevice physicalDevice, const VkPhysicalDeviceSurfaceInfo2KHR* pSurfaceInfo,
+    VkSurfaceCapabilities2KHR* pSurfaceCapabilities);
+
+VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceFormats2KHR(VkPhysicalDevice physicalDevice,
+                                                                   const VkPhysicalDeviceSurfaceInfo2KHR* pSurfaceInfo,
+                                                                   uint32_t* pSurfaceFormatCount,
+                                                                   VkSurfaceFormat2KHR* pSurfaceFormats);
+
+VKAPI_ATTR VkResult VKAPI_CALL terminator_GetPhysicalDeviceSurfaceFormats2KHR(VkPhysicalDevice physicalDevice,
+                                                                              const VkPhysicalDeviceSurfaceInfo2KHR* pSurfaceInfo,
+                                                                              uint32_t* pSurfaceFormatCount,
+                                                                              VkSurfaceFormat2KHR* pSurfaceFormats);

@@ -408,7 +408,7 @@ VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceQueueFamilyProperties2KHR
                 if (pQueueFamilyProperties[i].pNext != NULL) {
                     loader_log(icd_term->this_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                                "vkGetPhysicalDeviceQueueFamilyProperties2KHR: Emulation found unrecognized structure type in "
-                               "pQueueFamilyProperties[%d]->pNext - this struct will be ignored",
+                               "pQueueFamilyProperties[%d].pNext - this struct will be ignored",
                                i);
                 }
             }
@@ -509,13 +509,151 @@ VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceSparseImageFormatProperti
                 if (pProperties[i].pNext != NULL) {
                     loader_log(icd_term->this_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                                "vkGetPhysicalDeviceSparseImageFormatProperties2KHR: Emulation found unrecognized structure type in "
-                               "pProperties[%d]->pNext - this struct will be ignored",
+                               "pProperties[%d].pNext - this struct will be ignored",
                                i);
                 }
             }
         }
     }
 }
+
+// ---- VK_KHR_get_surface_capabilities2 extension trampoline/terminators
+
+VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilities2KHR(VkPhysicalDevice physicalDevice,
+                                                                        const VkPhysicalDeviceSurfaceInfo2KHR *pSurfaceInfo,
+                                                                        VkSurfaceCapabilities2KHR *pSurfaceCapabilities) {
+    const VkLayerInstanceDispatchTable *disp;
+    VkPhysicalDevice unwrapped_phys_dev = loader_unwrap_physical_device(physicalDevice);
+    disp = loader_get_instance_layer_dispatch(physicalDevice);
+    return disp->GetPhysicalDeviceSurfaceCapabilities2KHR(unwrapped_phys_dev, pSurfaceInfo, pSurfaceCapabilities);
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL terminator_GetPhysicalDeviceSurfaceCapabilities2KHR(
+    VkPhysicalDevice physicalDevice, const VkPhysicalDeviceSurfaceInfo2KHR *pSurfaceInfo,
+    VkSurfaceCapabilities2KHR *pSurfaceCapabilities) {
+    struct loader_physical_device_term *phys_dev_term = (struct loader_physical_device_term *)physicalDevice;
+    struct loader_icd_term *icd_term = phys_dev_term->this_icd_term;
+
+    VkIcdSurface *icd_surface = (VkIcdSurface *)(pSurfaceInfo->surface);
+    uint8_t icd_index = phys_dev_term->icd_index;
+
+    if (icd_term->dispatch.GetPhysicalDeviceSurfaceCapabilities2KHR != NULL) {
+        // Pass the call to the driver, possibly unwrapping the ICD surface
+        if (icd_surface->real_icd_surfaces != NULL && (void *)icd_surface->real_icd_surfaces[icd_index] != NULL) {
+            VkPhysicalDeviceSurfaceInfo2KHR info_copy = *pSurfaceInfo;
+            info_copy.surface = icd_surface->real_icd_surfaces[icd_index];
+            return icd_term->dispatch.GetPhysicalDeviceSurfaceCapabilities2KHR(phys_dev_term->phys_dev, &info_copy,
+                                                                               pSurfaceCapabilities);
+        } else {
+            return icd_term->dispatch.GetPhysicalDeviceSurfaceCapabilities2KHR(phys_dev_term->phys_dev, pSurfaceInfo,
+                                                                               pSurfaceCapabilities);
+        }
+    } else {
+        // Emulate the call
+        loader_log(icd_term->this_instance, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
+                   "vkGetPhysicalDeviceSurfaceCapabilities2KHR: Emulating call in ICD \"%s\" using "
+                   "vkGetPhysicalDeviceSurfaceCapabilitiesKHR",
+                   icd_term->scanned_icd->lib_name);
+
+        if (pSurfaceInfo->pNext != NULL) {
+            loader_log(icd_term->this_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                       "vkGetPhysicalDeviceSurfaceCapabilities2KHR: Emulation found unrecognized structure type in "
+                       "pSurfaceInfo->pNext - this struct will be ignored");
+        }
+
+        // Write to the VkSurfaceCapabilities2KHR struct
+        VkSurfaceKHR surface = pSurfaceInfo->surface;
+        if (icd_surface->real_icd_surfaces != NULL && (void *)icd_surface->real_icd_surfaces[icd_index] != NULL) {
+            surface = icd_surface->real_icd_surfaces[icd_index];
+        }
+        VkResult res = icd_term->dispatch.GetPhysicalDeviceSurfaceCapabilitiesKHR(phys_dev_term->phys_dev, surface,
+                                                                                  &pSurfaceCapabilities->surfaceCapabilities);
+
+        if (pSurfaceCapabilities->pNext != NULL) {
+            loader_log(icd_term->this_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                       "vkGetPhysicalDeviceSurfaceCapabilities2KHR: Emulation found unrecognized structure type in "
+                       "pSurfaceCapabilities->pNext - this struct will be ignored");
+        }
+        return res;
+    }
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceFormats2KHR(VkPhysicalDevice physicalDevice,
+                                                                   const VkPhysicalDeviceSurfaceInfo2KHR *pSurfaceInfo,
+                                                                   uint32_t *pSurfaceFormatCount,
+                                                                   VkSurfaceFormat2KHR *pSurfaceFormats) {
+    const VkLayerInstanceDispatchTable *disp;
+    VkPhysicalDevice unwrapped_phys_dev = loader_unwrap_physical_device(physicalDevice);
+    disp = loader_get_instance_layer_dispatch(physicalDevice);
+    return disp->GetPhysicalDeviceSurfaceFormats2KHR(unwrapped_phys_dev, pSurfaceInfo, pSurfaceFormatCount, pSurfaceFormats);
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL terminator_GetPhysicalDeviceSurfaceFormats2KHR(VkPhysicalDevice physicalDevice,
+                                                                              const VkPhysicalDeviceSurfaceInfo2KHR *pSurfaceInfo,
+                                                                              uint32_t *pSurfaceFormatCount,
+                                                                              VkSurfaceFormat2KHR *pSurfaceFormats) {
+    struct loader_physical_device_term *phys_dev_term = (struct loader_physical_device_term *)physicalDevice;
+    struct loader_icd_term *icd_term = phys_dev_term->this_icd_term;
+
+    VkIcdSurface *icd_surface = (VkIcdSurface *)(pSurfaceInfo->surface);
+    uint8_t icd_index = phys_dev_term->icd_index;
+
+    if (icd_term->dispatch.GetPhysicalDeviceSurfaceFormats2KHR != NULL) {
+        // Pass the call to the driver, possibly unwrapping the ICD surface
+        if (icd_surface->real_icd_surfaces != NULL && (void *)icd_surface->real_icd_surfaces[icd_index] != NULL) {
+            VkPhysicalDeviceSurfaceInfo2KHR info_copy = *pSurfaceInfo;
+            info_copy.surface = icd_surface->real_icd_surfaces[icd_index];
+            return icd_term->dispatch.GetPhysicalDeviceSurfaceFormats2KHR(phys_dev_term->phys_dev, &info_copy, pSurfaceFormatCount,
+                                                                          pSurfaceFormats);
+        } else {
+            return icd_term->dispatch.GetPhysicalDeviceSurfaceFormats2KHR(phys_dev_term->phys_dev, pSurfaceInfo,
+                                                                          pSurfaceFormatCount, pSurfaceFormats);
+        }
+    } else {
+        // Emulate the call
+        loader_log(icd_term->this_instance, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
+                   "vkGetPhysicalDeviceSurfaceFormats2KHR: Emulating call in ICD \"%s\" using vkGetPhysicalDeviceSurfaceFormatsKHR",
+                   icd_term->scanned_icd->lib_name);
+
+        if (pSurfaceInfo->pNext != NULL) {
+            loader_log(icd_term->this_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                       "vkGetPhysicalDeviceSurfaceFormats2KHR: Emulation found unrecognized structure type in pSurfaceInfo->pNext "
+                       "- this struct will be ignored");
+        }
+
+        VkSurfaceKHR surface = pSurfaceInfo->surface;
+        if (icd_surface->real_icd_surfaces != NULL && (void *)icd_surface->real_icd_surfaces[icd_index] != NULL) {
+            surface = icd_surface->real_icd_surfaces[icd_index];
+        }
+
+        if (*pSurfaceFormatCount == 0 || pSurfaceFormats == NULL) {
+            // Write to pSurfaceFormatCount
+            return icd_term->dispatch.GetPhysicalDeviceSurfaceFormatsKHR(phys_dev_term->phys_dev, surface, pSurfaceFormatCount,
+                                                                         NULL);
+        } else {
+            // Allocate a temporary array for the output of the old function
+            VkSurfaceFormatKHR *formats = loader_stack_alloc(*pSurfaceFormatCount * sizeof(VkSurfaceFormatKHR));
+            if (formats == NULL) {
+                return VK_ERROR_OUT_OF_HOST_MEMORY;
+            }
+
+            VkResult res = icd_term->dispatch.GetPhysicalDeviceSurfaceFormatsKHR(phys_dev_term->phys_dev, surface,
+                                                                                 pSurfaceFormatCount, formats);
+            for (uint32_t i = 0; i < *pSurfaceFormatCount; ++i) {
+                pSurfaceFormats[i].surfaceFormat = formats[i];
+                if (pSurfaceFormats[i].pNext != NULL) {
+                    loader_log(icd_term->this_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                               "vkGetPhysicalDeviceSurfaceFormats2KHR: Emulation found unrecognized structure type in "
+                               "pSurfaceFormats[%d].pNext - this struct will be ignored",
+                               i);
+                }
+            }
+            return res;
+        }
+    }
+}
+
+// ---- Helper functions
 
 VkResult setupLoaderTrampPhysDevGroups(VkInstance instance) {
     VkResult res = VK_SUCCESS;
