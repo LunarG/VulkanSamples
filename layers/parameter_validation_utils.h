@@ -30,10 +30,42 @@
 #include "vk_enum_string_helper.h"
 #include "vk_layer_logging.h"
 #include "vk_validation_error_messages.h"
+#include "device_extensions.h"
+
 
 #include "parameter_name.h"
 
 namespace parameter_validation {
+
+struct instance_layer_data {
+    VkInstance instance = VK_NULL_HANDLE;
+
+    debug_report_data *report_data = nullptr;
+    std::vector<VkDebugReportCallbackEXT> logging_callback;
+
+    // The following are for keeping track of the temporary callbacks that can
+    // be used in vkCreateInstance and vkDestroyInstance:
+    uint32_t num_tmp_callbacks = 0;
+    VkDebugReportCallbackCreateInfoEXT *tmp_dbg_create_infos = nullptr;
+    VkDebugReportCallbackEXT *tmp_callbacks = nullptr;
+    InstanceExtensions extensions = {};
+    std::unordered_set<std::string> enabled_extensions;
+    VkLayerInstanceDispatchTable dispatch_table = {};
+};
+
+struct layer_data {
+    debug_report_data *report_data = nullptr;
+    // Map for queue family index to queue count
+    std::unordered_map<uint32_t, uint32_t> queueFamilyIndexMap;
+    VkPhysicalDeviceLimits device_limits = {};
+    VkPhysicalDeviceFeatures physical_device_features = {};
+    VkPhysicalDevice physical_device = VK_NULL_HANDLE;
+    VkDevice device = VK_NULL_HANDLE;
+    DeviceExtensions enables;
+    std::unordered_set<std::string> enabled_extensions;
+
+    VkLayerDispatchTable dispatch_table = {};
+};
 
 enum ErrorCode {
     NONE,                   // Used for INFO & other non-error messages
