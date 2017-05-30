@@ -631,21 +631,22 @@ class ParamCheckerOutputGenerator(OutputGenerator):
     #
     # Convert a vulkan.h command declaration into a parameter_validation.h definition
     def getCmdDef(self, cmd):
-        #
         # Strip the trailing ';' and split into individual lines
         lines = cmd.cdecl[:-1].split('\n')
         # Replace Vulkan prototype
         lines[0] = 'static bool parameter_validation_' + cmd.name + '('
-        # Replace the first argument with debug_report_data, when the first
-        # argument is a handle (not vkCreateInstance)
-        reportData = '    debug_report_data*'.ljust(self.genOpts.alignFuncParam) + 'report_data,'
-        if cmd.name != 'vkCreateInstance':
+        # Replace the first argument with debug_report_data, when the first argument is a handle (not vkCreateInstance)
+        if cmd.name == 'vkCreateInstance':
+            lines.insert(1, '    instance_layer_data*'.ljust(self.genOpts.alignFuncParam) + 'layer_data,')
+        else:
+            if cmd.params[0].type in ["VkInstance", "VkPhysicalDevice"]:
+                reportData = '    instance_layer_data*'.ljust(self.genOpts.alignFuncParam) + 'layer_data,'
+            else:
+                reportData = '    layer_data*'.ljust(self.genOpts.alignFuncParam) + 'layer_data,'
             if len(lines) < 3:   # Terminate correctly if single parameter
                 lines[1] = reportData[:-1] + ')'
             else:
                 lines[1] = reportData
-        else:
-            lines.insert(1, reportData)
         return '\n'.join(lines)
     #
     # Generate the code to check for a NULL dereference before calling the
@@ -693,15 +694,15 @@ class ParamCheckerOutputGenerator(OutputGenerator):
             # This is an array with a pointer to a count value
             if lenValue.ispointer:
                 # When the length parameter is a pointer, there is an extra Boolean parameter in the function call to indicate if it is required
-                checkExpr.append('skipCall |= validate_struct_type_array(report_data, "{}", {ppp}"{ldn}"{pps}, {ppp}"{dn}"{pps}, "{sv}", {pf}{ln}, {pf}{vn}, {sv}, {}, {}, {});\n'.format(
+                checkExpr.append('skipCall |= validate_struct_type_array(layer_data->report_data, "{}", {ppp}"{ldn}"{pps}, {ppp}"{dn}"{pps}, "{sv}", {pf}{ln}, {pf}{vn}, {sv}, {}, {}, {});\n'.format(
                     funcPrintName, lenPtrRequired, lenValueRequired, valueRequired, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, sv=stype.value, pf=prefix, **postProcSpec))
             # This is an array with an integer count value
             else:
-                checkExpr.append('skipCall |= validate_struct_type_array(report_data, "{}", {ppp}"{ldn}"{pps}, {ppp}"{dn}"{pps}, "{sv}", {pf}{ln}, {pf}{vn}, {sv}, {}, {});\n'.format(
+                checkExpr.append('skipCall |= validate_struct_type_array(layer_data->report_data, "{}", {ppp}"{ldn}"{pps}, {ppp}"{dn}"{pps}, "{sv}", {pf}{ln}, {pf}{vn}, {sv}, {}, {});\n'.format(
                     funcPrintName, lenValueRequired, valueRequired, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, sv=stype.value, pf=prefix, **postProcSpec))
         # This is an individual struct
         else:
-            checkExpr.append('skipCall |= validate_struct_type(report_data, "{}", {ppp}"{}"{pps}, "{sv}", {}{vn}, {sv}, {});\n'.format(
+            checkExpr.append('skipCall |= validate_struct_type(layer_data->report_data, "{}", {ppp}"{}"{pps}, "{sv}", {}{vn}, {sv}, {});\n'.format(
                 funcPrintName, valuePrintName, prefix, valueRequired, vn=value.name, sv=stype.value, **postProcSpec))
         return checkExpr
     #
@@ -714,7 +715,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                 raise('Unsupported parameter validation case: Output handle array elements are not NULL checked')
             else:
                 # This is an array with an integer count value
-                checkExpr.append('skipCall |= validate_handle_array(report_data, "{}", {ppp}"{ldn}"{pps}, {ppp}"{dn}"{pps}, {pf}{ln}, {pf}{vn}, {}, {});\n'.format(
+                checkExpr.append('skipCall |= validate_handle_array(layer_data->report_data, "{}", {ppp}"{ldn}"{pps}, {ppp}"{dn}"{pps}, {pf}{ln}, {pf}{vn}, {}, {});\n'.format(
                     funcPrintName, lenValueRequired, valueRequired, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, pf=prefix, **postProcSpec))
         else:
             # This is assumed to be an output handle pointer
@@ -729,7 +730,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
             raise('Unsupported parameter validation case: array of reserved VkFlags')
         else:
             allFlags = 'All' + flagBitsName
-            checkExpr.append('skipCall |= validate_flags_array(report_data, "{}", {ppp}"{}"{pps}, {ppp}"{}"{pps}, "{}", {}, {pf}{}, {pf}{}, {}, {});\n'.format(funcPrintName, lenPrintName, valuePrintName, flagBitsName, allFlags, lenValue.name, value.name, lenValueRequired, valueRequired, pf=prefix, **postProcSpec))
+            checkExpr.append('skipCall |= validate_flags_array(layer_data->report_data, "{}", {ppp}"{}"{pps}, {ppp}"{}"{pps}, "{}", {}, {pf}{}, {pf}{}, {}, {});\n'.format(funcPrintName, lenPrintName, valuePrintName, flagBitsName, allFlags, lenValue.name, value.name, lenValueRequired, valueRequired, pf=prefix, **postProcSpec))
         return checkExpr
     #
     # Generate pNext check string
@@ -745,7 +746,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
             extStructCount = 'ARRAY_SIZE(allowedStructs)'
             extStructVar = 'allowedStructs'
             extStructNames = '"' + ', '.join(structs) + '"'
-        checkExpr.append('skipCall |= validate_struct_pnext(report_data, "{}", {ppp}"{}"{pps}, {}, {}{}, {}, {}, GeneratedHeaderVersion);\n'.format(
+        checkExpr.append('skipCall |= validate_struct_pnext(layer_data->report_data, "{}", {ppp}"{}"{pps}, {}, {}{}, {}, {}, GeneratedHeaderVersion);\n'.format(
             funcPrintName, valuePrintName, extStructNames, prefix, value.name, extStructCount, extStructVar, **postProcSpec))
         return checkExpr
     #
@@ -758,7 +759,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                 # If count and array parameters are optional, there will be no validation
                 if valueRequired == 'true' or lenPtrRequired == 'true' or lenValueRequired == 'true':
                     # When the length parameter is a pointer, there is an extra Boolean parameter in the function call to indicate if it is required
-                    checkExpr.append('skipCall |= validate_array(report_data, "{}", {ppp}"{ldn}"{pps}, {ppp}"{dn}"{pps}, {pf}{ln}, {pf}{vn}, {}, {}, {});\n'.format(
+                    checkExpr.append('skipCall |= validate_array(layer_data->report_data, "{}", {ppp}"{ldn}"{pps}, {ppp}"{dn}"{pps}, {pf}{ln}, {pf}{vn}, {}, {}, {});\n'.format(
                         funcPrintName, lenPtrRequired, lenValueRequired, valueRequired, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, pf=prefix, **postProcSpec))
             # This is an array with an integer count value
             else:
@@ -766,7 +767,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                 if valueRequired == 'true' or lenValueRequired == 'true':
                     # Arrays of strings receive special processing
                     validationFuncName = 'validate_array' if value.type != 'char' else 'validate_string_array'
-                    checkExpr.append('skipCall |= {}(report_data, "{}", {ppp}"{ldn}"{pps}, {ppp}"{dn}"{pps}, {pf}{ln}, {pf}{vn}, {}, {});\n'.format(
+                    checkExpr.append('skipCall |= {}(layer_data->report_data, "{}", {ppp}"{ldn}"{pps}, {ppp}"{dn}"{pps}, {pf}{ln}, {pf}{vn}, {}, {});\n'.format(
                         validationFuncName, funcPrintName, lenValueRequired, valueRequired, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, pf=prefix, **postProcSpec))
             if checkExpr:
                 if lenValue and ('->' in lenValue.name):
@@ -776,9 +777,9 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         elif not value.isoptional:
             # Function pointers need a reinterpret_cast to void*
             if value.type[:4] == 'PFN_':
-                checkExpr.append('skipCall |= validate_required_pointer(report_data, "{}", {ppp}"{}"{pps}, reinterpret_cast<const void*>({}{}));\n'.format(funcPrintName, valuePrintName, prefix, value.name, **postProcSpec))
+                checkExpr.append('skipCall |= validate_required_pointer(layer_data->report_data, "{}", {ppp}"{}"{pps}, reinterpret_cast<const void*>({}{}));\n'.format(funcPrintName, valuePrintName, prefix, value.name, **postProcSpec))
             else:
-                checkExpr.append('skipCall |= validate_required_pointer(report_data, "{}", {ppp}"{}"{pps}, {}{});\n'.format(funcPrintName, valuePrintName, prefix, value.name, **postProcSpec))
+                checkExpr.append('skipCall |= validate_required_pointer(layer_data->report_data, "{}", {ppp}"{}"{pps}, {}{});\n'.format(funcPrintName, valuePrintName, prefix, value.name, **postProcSpec))
         return checkExpr
     #
     # Process struct member validation code, performing name suibstitution if required
@@ -937,10 +938,10 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                     elif value.type in self.flags and value.isconst:
                         usedLines += self.makeFlagsArrayCheck(valuePrefix, value, lenParam, req, cvReq, funcName, lenDisplayName, valueDisplayName, postProcSpec)
                     elif value.isbool and value.isconst:
-                        usedLines.append('skipCall |= validate_bool32_array(report_data, "{}", {ppp}"{}"{pps}, {ppp}"{}"{pps}, {pf}{}, {pf}{}, {}, {});\n'.format(funcName, lenDisplayName, valueDisplayName, lenParam.name, value.name, cvReq, req, pf=valuePrefix, **postProcSpec))
+                        usedLines.append('skipCall |= validate_bool32_array(layer_data->report_data, "{}", {ppp}"{}"{pps}, {ppp}"{}"{pps}, {pf}{}, {pf}{}, {}, {});\n'.format(funcName, lenDisplayName, valueDisplayName, lenParam.name, value.name, cvReq, req, pf=valuePrefix, **postProcSpec))
                     elif value.israngedenum and value.isconst:
                         enumRange = self.enumRanges[value.type]
-                        usedLines.append('skipCall |= validate_ranged_enum_array(report_data, "{}", {ppp}"{}"{pps}, {ppp}"{}"{pps}, "{}", {}, {}, {pf}{}, {pf}{}, {}, {});\n'.format(funcName, lenDisplayName, valueDisplayName, value.type, enumRange[0], enumRange[1], lenParam.name, value.name, cvReq, req, pf=valuePrefix, **postProcSpec))
+                        usedLines.append('skipCall |= validate_ranged_enum_array(layer_data->report_data, "{}", {ppp}"{}"{pps}, {ppp}"{}"{pps}, "{}", {}, {}, {pf}{}, {pf}{}, {}, {});\n'.format(funcName, lenDisplayName, valueDisplayName, value.type, enumRange[0], enumRange[1], lenParam.name, value.name, cvReq, req, pf=valuePrefix, **postProcSpec))
                     elif value.name == 'pNext':
                         # We need to ignore VkDeviceCreateInfo and VkInstanceCreateInfo, as the loader manipulates them in a way that is not documented in vk.xml
                         if not structTypeName in ['VkDeviceCreateInfo', 'VkInstanceCreateInfo']:
@@ -963,30 +964,30 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                 else:
                     if value.type in self.structTypes:
                         stype = self.structTypes[value.type]
-                        usedLines.append('skipCall |= validate_struct_type(report_data, "{}", {ppp}"{}"{pps}, "{sv}", &({}{vn}), {sv}, false);\n'.format(
+                        usedLines.append('skipCall |= validate_struct_type(layer_data->report_data, "{}", {ppp}"{}"{pps}, "{sv}", &({}{vn}), {sv}, false);\n'.format(
                             funcName, valueDisplayName, valuePrefix, vn=value.name, sv=stype.value, **postProcSpec))
                     elif value.type in self.handleTypes:
                         if not self.isHandleOptional(value, None):
-                            usedLines.append('skipCall |= validate_required_handle(report_data, "{}", {ppp}"{}"{pps}, {}{});\n'.format(funcName, valueDisplayName, valuePrefix, value.name, **postProcSpec))
+                            usedLines.append('skipCall |= validate_required_handle(layer_data->report_data, "{}", {ppp}"{}"{pps}, {}{});\n'.format(funcName, valueDisplayName, valuePrefix, value.name, **postProcSpec))
                     elif value.type in self.flags:
                         flagBitsName = value.type.replace('Flags', 'FlagBits')
                         if not flagBitsName in self.flagBits:
-                            usedLines.append('skipCall |= validate_reserved_flags(report_data, "{}", {ppp}"{}"{pps}, {pf}{});\n'.format(funcName, valueDisplayName, value.name, pf=valuePrefix, **postProcSpec))
+                            usedLines.append('skipCall |= validate_reserved_flags(layer_data->report_data, "{}", {ppp}"{}"{pps}, {pf}{});\n'.format(funcName, valueDisplayName, value.name, pf=valuePrefix, **postProcSpec))
                         else:
                             flagsRequired = 'false' if value.isoptional else 'true'
                             allFlagsName = 'All' + flagBitsName
-                            usedLines.append('skipCall |= validate_flags(report_data, "{}", {ppp}"{}"{pps}, "{}", {}, {pf}{}, {}, false);\n'.format(funcName, valueDisplayName, flagBitsName, allFlagsName, value.name, flagsRequired, pf=valuePrefix, **postProcSpec))
+                            usedLines.append('skipCall |= validate_flags(layer_data->report_data, "{}", {ppp}"{}"{pps}, "{}", {}, {pf}{}, {}, false);\n'.format(funcName, valueDisplayName, flagBitsName, allFlagsName, value.name, flagsRequired, pf=valuePrefix, **postProcSpec))
                     elif value.type in self.flagBits:
                         flagsRequired = 'false' if value.isoptional else 'true'
                         allFlagsName = 'All' + value.type
-                        usedLines.append('skipCall |= validate_flags(report_data, "{}", {ppp}"{}"{pps}, "{}", {}, {pf}{}, {}, true);\n'.format(funcName, valueDisplayName, value.type, allFlagsName, value.name, flagsRequired, pf=valuePrefix, **postProcSpec))
+                        usedLines.append('skipCall |= validate_flags(layer_data->report_data, "{}", {ppp}"{}"{pps}, "{}", {}, {pf}{}, {}, true);\n'.format(funcName, valueDisplayName, value.type, allFlagsName, value.name, flagsRequired, pf=valuePrefix, **postProcSpec))
                     elif value.isbool:
-                        usedLines.append('skipCall |= validate_bool32(report_data, "{}", {ppp}"{}"{pps}, {}{});\n'.format(funcName, valueDisplayName, valuePrefix, value.name, **postProcSpec))
+                        usedLines.append('skipCall |= validate_bool32(layer_data->report_data, "{}", {ppp}"{}"{pps}, {}{});\n'.format(funcName, valueDisplayName, valuePrefix, value.name, **postProcSpec))
                     elif value.israngedenum:
                         enumRange = self.enumRanges[value.type]
                         if value.type == "VkObjectEntryTypeNVX":
                             garbage = 2
-                        usedLines.append('skipCall |= validate_ranged_enum(report_data, "{}", {ppp}"{}"{pps}, "{}", {}, {}, {}{});\n'.format(funcName, valueDisplayName, value.type, enumRange[0], enumRange[1], valuePrefix, value.name, **postProcSpec))
+                        usedLines.append('skipCall |= validate_ranged_enum(layer_data->report_data, "{}", {ppp}"{}"{pps}, "{}", {}, {}, {}{});\n'.format(funcName, valueDisplayName, value.type, enumRange[0], enumRange[1], valuePrefix, value.name, **postProcSpec))
                     #
                     # If this is a struct, see if it contains members that need to be checked
                     if value.type in self.validatedStructs:
@@ -1022,8 +1023,6 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         for command in self.commands:
             # Skip first parameter if it is a dispatch handle (everything except vkCreateInstance)
             startIndex = 0 if command.name == 'vkCreateInstance' else 1
-            if command.name == 'vkCmdDebugMarkerEndEXT':
-                stop = 'here'
             lines, unused = self.genFuncBody(command.name, command.params[startIndex:], '', '', None)
             if self.required_extensions:
                 def_line = 'std::vector<std::string> required_extensions = {'
