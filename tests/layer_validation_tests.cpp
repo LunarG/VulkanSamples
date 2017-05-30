@@ -17806,29 +17806,7 @@ TEST_F(VkLayerTest, ImageFormatLimits) {
 
 TEST_F(VkLayerTest, CopyImageTypeExtentMismatch) {
     // Image copy tests where format type and extents don't match
-
-    // Include maintenance1 extension if available
-    device_extension_names.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
-    InitFramework(instance_layer_names, instance_extension_names, device_extension_names, myDbgFunc, m_errorMonitor);
-
-    // See if maintenance1 extension is available and enabled.
-    uint32_t extension_count = 0;
-    bool supports_maintenance1_extension = false;
-    VkResult err = vkEnumerateDeviceExtensionProperties(gpu(), nullptr, &extension_count, nullptr);
-    ASSERT_VK_SUCCESS(err);
-    if (extension_count > 0) {
-        std::vector<VkExtensionProperties> available_extensions(extension_count);
-
-        err = vkEnumerateDeviceExtensionProperties(gpu(), nullptr, &extension_count, &available_extensions[0]);
-        ASSERT_VK_SUCCESS(err);
-        for (const auto &extension_props : available_extensions) {
-            if (strcmp(extension_props.extensionName, VK_KHR_MAINTENANCE1_EXTENSION_NAME) == 0) {
-                supports_maintenance1_extension = true;
-            }
-        }
-    }
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(Init());
 
     VkImageCreateInfo ci;
     ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -17895,7 +17873,7 @@ TEST_F(VkLayerTest, CopyImageTypeExtentMismatch) {
                                &copy_region);
     m_errorMonitor->VerifyNotFound();
 
-    // 1D texture w/ offset.y > 0. Source = VU 01742, dest = 01744
+    // 1D texture w/ offset.y > 0. Source = VU 09c00124, dest = 09c00130
     copy_region.srcOffset.y = 1;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09c00124);
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09c00122);  // also y-dim overrun
@@ -17911,7 +17889,7 @@ TEST_F(VkLayerTest, CopyImageTypeExtentMismatch) {
     m_errorMonitor->VerifyFound();
     copy_region.dstOffset.y = 0;
 
-    // 1D texture w/ extent.height > 1. Source = VU 01742, dest = 01744
+    // 1D texture w/ extent.height > 1. Source = VU 09c00124, dest = 09c00130
     copy_region.extent.height = 2;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09c00124);
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09c00122);  // also y-dim overrun
@@ -17925,7 +17903,7 @@ TEST_F(VkLayerTest, CopyImageTypeExtentMismatch) {
     m_errorMonitor->VerifyFound();
     copy_region.extent.height = 1;
 
-    // 2D texture w/ offset.z > 0. Source = VU 01743, dest = 01745
+    // 2D texture w/ offset.z > 0. Source = VU 09c00128, dest = 09c00134
     copy_region.extent = {16, 16, 1};
     copy_region.srcOffset.z = 4;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09c00128);
@@ -17942,41 +17920,34 @@ TEST_F(VkLayerTest, CopyImageTypeExtentMismatch) {
     m_errorMonitor->VerifyFound();
     copy_region.dstOffset.z = 0;
 
-    // 2D texture w/ extent.depth > 1. Source = VU 01743, dest = 01745
+    // 2D texture w/ extent.depth > 1. Source = VU 09c00128, dest = 09c00134
     copy_region.extent.depth = 8;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09c00128);
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09c00126);  // also z-dim overrun
-    if (supports_maintenance1_extension) {  // With maintenance1, will also report a depth slice mismatch
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09c00118);
-    }
     m_commandBuffer->CopyImage(image_2D.image(), VK_IMAGE_LAYOUT_GENERAL, image_3D.image(), VK_IMAGE_LAYOUT_GENERAL, 1,
                                &copy_region);
     m_errorMonitor->VerifyFound();
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09c00134);
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09c00132);  // also z-dim overrun
-    if (supports_maintenance1_extension) {  // With maintenance1, will also report a depth slice mismatch
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09c00118);
-    }
     m_commandBuffer->CopyImage(image_3D.image(), VK_IMAGE_LAYOUT_GENERAL, image_2D.image(), VK_IMAGE_LAYOUT_GENERAL, 1,
                                &copy_region);
     m_errorMonitor->VerifyFound();
     copy_region.extent.depth = 1;
 
-    // 3D texture accessing an array layer other than 0. VU 01199
+    // 3D texture accessing an array layer other than 0. VU 09c0011a
     copy_region.extent = {4, 4, 1};
     copy_region.srcSubresource.baseArrayLayer = 1;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09c0011a);
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         VALIDATION_ERROR_0a600154);  // also triggers 'too many layers'
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         VALIDATION_ERROR_09c0012a);  // and 'copy from layer not present'
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a600154);  // also triggers 'too many layers'
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09c0012a);  // and 'copy from layer not present'
     m_commandBuffer->CopyImage(image_3D.image(), VK_IMAGE_LAYOUT_GENERAL, image_2D.image(), VK_IMAGE_LAYOUT_GENERAL, 1,
                                &copy_region);
     m_errorMonitor->VerifyFound();
 
+#if 0 // TODO: these should be re-added, with an appropriate extension guard, once the spec issue is resolved
     if (supports_maintenance1_extension) {
-        // Copy from layer not present - VU02603
-        // TODO: this VU is redundant with VU01224. Gitlab issue 812 submitted to have it removed.
+        // Copy from layer not present - VU 09c0012a
+        // TODO: this VU is redundant with VU 0a600154. Gitlab issue 812 submitted to have it removed.
         copy_region.srcSubresource.baseArrayLayer = 4;
         copy_region.srcSubresource.layerCount = 6;
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09c0012a);
@@ -17987,8 +17958,8 @@ TEST_F(VkLayerTest, CopyImageTypeExtentMismatch) {
         copy_region.srcSubresource.baseArrayLayer = 0;
         copy_region.srcSubresource.layerCount = 1;
 
-        // Copy to layer not present - VU02604
-        // TODO: this VU is redundant with VU01224. Gitlab issue 812 submitted to have it removed.
+        // Copy to layer not present - VU 09c00136
+        // TODO: this VU is redundant with 0a600154. Gitlab issue 812 submitted to have it removed.
         copy_region.dstSubresource.baseArrayLayer = 1;
         copy_region.dstSubresource.layerCount = 8;
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09c00136);
@@ -17998,6 +17969,8 @@ TEST_F(VkLayerTest, CopyImageTypeExtentMismatch) {
         m_errorMonitor->VerifyFound();
         copy_region.dstSubresource.layerCount = 1;
     }
+#endif
+
     m_commandBuffer->end();
 }
 
