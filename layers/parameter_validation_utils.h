@@ -119,7 +119,9 @@ const uint32_t ExtEnumBaseValue = 1000000000;
 const uint32_t MaxEnumValue = 0x7FFFFFFF;
 
 // Forward declaration
-bool ValidateRequiredExtensions(std::string api_name, const std::vector<std::string> required_extensions);
+template <typename T>
+bool ValidateRequiredExtensions(const T *layer_data, const std::string &api_name,
+                                const std::vector<std::string> &required_extensions);
 
 template <typename T>
 bool is_extension_added_token(T value) {

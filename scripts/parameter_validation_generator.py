@@ -1029,7 +1029,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                 for ext in self.required_extensions:
                     def_line += '"%s", ' % ext
                 def_line = def_line[:-2] + '};'
-                ext_call = 'skipCall |= ValidateRequiredExtensions("%s", required_extensions);\n' % command.name
+                ext_call = 'skipCall |= ValidateRequiredExtensions(layer_data, "%s", required_extensions);\n' % command.name
                 lines.insert(0, ext_call)
                 lines.insert(0, def_line)
             if lines:

@@ -117,13 +117,20 @@ static const VkLayerProperties global_layer = {
     "VK_LAYER_LUNARG_parameter_validation", VK_LAYER_API_VERSION, 1, "LunarG Validation Layer",
 };
 
-bool ValidateRequiredExtensions(std::string api_name, const std::vector<std::string> required_extensions) {
+template <typename T>
+bool ValidateRequiredExtensions(const T *layer_data, const std::string &api_name, const std::vector<std::string> &required_extensions) {
     bool skip = false;
+    std::stringstream error_results;
+    auto const &enabled_extensions = layer_data->enabled_extensions;
 
-    for (auto reqd_ext = required_extensions.begin(); reqd_ext != required_extensions.end(); reqd_ext++) {
-        // Insert depency checks here
+    for (const auto &reqd_ext : required_extensions) {
+        if (enabled_extensions.find(reqd_ext) == enabled_extensions.end()) {
+            skip = log_msg(layer_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                           __LINE__, EXTENSION_NOT_ENABLED, LayerName,
+                           "Attemped to call %s() but its required extension %s has not been enabled\n", api_name.c_str(),
+                           reqd_ext.c_str());
+        }
     }
-
     return skip;
 }
 
@@ -595,9 +602,12 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physicalDevice, con
             my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
             layer_init_device_dispatch_table(*pDevice, &my_device_data->dispatch_table, fpGetDeviceProcAddr);
 
-            // Save enabled instance extension names for validation extension APIs
+            // Save enabled device AND instance extension names for validation extension APIs
             for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-                my_instance_data->enabled_extensions.emplace(pCreateInfo->ppEnabledExtensionNames[i]);
+                my_device_data->enabled_extensions.emplace(pCreateInfo->ppEnabledExtensionNames[i]);
+            }
+            for (const auto &inst_ext : my_instance_data->enabled_extensions) {
+                my_device_data->enabled_extensions.emplace(inst_ext);
             }
 
             my_device_data->enables.InitFromDeviceCreateInfo(pCreateInfo);
