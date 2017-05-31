@@ -4532,7 +4532,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceDisplayPropertiesKHR(VkPhysicalD
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
-    // No parameter validation function for this call?
+    skip |= parameter_validation_vkGetPhysicalDeviceDisplayPropertiesKHR(my_data, pPropertyCount, pProperties);
 
     if (!skip) {
         result = my_data->dispatch_table.GetPhysicalDeviceDisplayPropertiesKHR(physicalDevice, pPropertyCount, pProperties);
@@ -4550,7 +4550,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceDisplayPlanePropertiesKHR(VkPhys
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
-    // No parameter validation function for this call?
+    skip |= parameter_validation_vkGetPhysicalDeviceDisplayPlanePropertiesKHR(my_data, pPropertyCount, pProperties);
 
     if (!skip) {
         result = my_data->dispatch_table.GetPhysicalDeviceDisplayPlanePropertiesKHR(physicalDevice, pPropertyCount, pProperties);
@@ -4568,7 +4568,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneSupportedDisplaysKHR(VkPhysicalDev
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
-    // No parameter validation function for this call?
+    skip |= parameter_validation_vkGetDisplayPlaneSupportedDisplaysKHR(my_data, planeIndex, pDisplayCount, pDisplays);
 
     if (!skip) {
         result = my_data->dispatch_table.GetDisplayPlaneSupportedDisplaysKHR(physicalDevice, planeIndex, pDisplayCount, pDisplays);
@@ -4586,7 +4586,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayModePropertiesKHR(VkPhysicalDevice phys
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
-    // No parameter validation function for this call?
+    skip |= parameter_validation_vkGetDisplayModePropertiesKHR(my_data, display, pPropertyCount, pProperties);
 
     if (!skip) {
         result = my_data->dispatch_table.GetDisplayModePropertiesKHR(physicalDevice, display, pPropertyCount, pProperties);
@@ -4605,7 +4605,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDisplayModeKHR(VkPhysicalDevice physicalDev
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
-    // No parameter validation function for this call?
+    skip |= parameter_validation_vkCreateDisplayModeKHR(my_data, display, pCreateInfo, pAllocator, pMode);
 
     if (!skip) {
         result = my_data->dispatch_table.CreateDisplayModeKHR(physicalDevice, display, pCreateInfo, pAllocator, pMode);
@@ -4623,7 +4623,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneCapabilitiesKHR(VkPhysicalDevice p
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
-    // No parameter validation function for this call?
+    skip |= parameter_validation_vkGetDisplayPlaneCapabilitiesKHR(my_data, mode, planeIndex, pCapabilities);
 
     if (!skip) {
         result = my_data->dispatch_table.GetDisplayPlaneCapabilitiesKHR(physicalDevice, mode, planeIndex, pCapabilities);
@@ -4641,7 +4641,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDisplayPlaneSurfaceKHR(VkInstance instance,
     auto my_data = GetLayerDataPtr(get_dispatch_key(instance), instance_layer_data_map);
     assert(my_data != NULL);
 
-    // No parameter validation function for this call?
+    skip |= parameter_validation_vkCreateDisplayPlaneSurfaceKHR(my_data, pCreateInfo, pAllocator, pSurface);
 
     if (!skip) {
         result = my_data->dispatch_table.CreateDisplayPlaneSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
@@ -4843,10 +4843,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyDescriptorUpdateTemplateKHR(VkDevice device,
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-#if 0  // Validation not automatically generated
-    skip |= parameter_validation_vkDestroyDescriptorUpdateTemplateKHR(my_data, descriptorUpdateTemplate,
-                                                                          pAllocator);
-#endif
+    skip |= parameter_validation_vkDestroyDescriptorUpdateTemplateKHR(my_data, descriptorUpdateTemplate, pAllocator);
 
     if (!skip) {
         my_data->dispatch_table.DestroyDescriptorUpdateTemplateKHR(device, descriptorUpdateTemplate, pAllocator);
@@ -5006,9 +5003,7 @@ VKAPI_ATTR void VKAPI_CALL CmdSetDeviceMaskKHX(VkCommandBuffer commandBuffer, ui
     auto my_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     assert(my_data != NULL);
 
-#if 0  // Validation not automatically generated
     skip |= parameter_validation_vkCmdSetDeviceMaskKHX(my_data, deviceMask);
-#endif
 
     if (!skip) {
         my_data->dispatch_table.CmdSetDeviceMaskKHX(commandBuffer, deviceMask);
@@ -5071,10 +5066,8 @@ VKAPI_ATTR void VKAPI_CALL CmdDispatchBaseKHX(VkCommandBuffer commandBuffer, uin
     auto my_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     assert(my_data != NULL);
 
-#if 0  // Validation not automatically generated
-    skip |= parameter_validation_vkCmdDispatchBaseKHX(my_data, baseGroupX, baseGroupY, baseGroupZ,
-                                                           groupCountX, groupCountY, groupCountZ);
-#endif
+    skip |= parameter_validation_vkCmdDispatchBaseKHX(my_data, baseGroupX, baseGroupY, baseGroupZ, groupCountX, groupCountY,
+                                                      groupCountZ);
 
     if (!skip) {
         my_data->dispatch_table.CmdDispatchBaseKHX(commandBuffer, baseGroupX, baseGroupY, baseGroupZ, groupCountX, groupCountY,
@@ -5380,9 +5373,9 @@ VKAPI_ATTR VkResult VKAPI_CALL ReleaseDisplayEXT(VkPhysicalDevice physicalDevice
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
     bool skip = false;
-#if 0  // Validation not automatically generated
+
     skip |= parameter_validation_vkReleaseDisplayEXT(my_data, display);
-#endif
+
     if (!skip) {
         result = my_data->dispatch_table.ReleaseDisplayEXT(physicalDevice, display);
         validate_result(my_data->report_data, "vkGetRandROutputDisplayEXT", {}, result);
@@ -5550,9 +5543,8 @@ VKAPI_ATTR void VKAPI_CALL CmdSetViewportWScalingNV(VkCommandBuffer commandBuffe
     auto my_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     assert(my_data != NULL);
 
-#if 0  // Validation not automatically generated
     skip |= parameter_validation_vkCmdSetViewportWScalingNV(my_data, firstViewport, viewportCount, pViewportWScalings);
-#endif
+
     if (!skip) {
         my_data->dispatch_table.CmdSetViewportWScalingNV(commandBuffer, firstViewport, viewportCount, pViewportWScalings);
     }
@@ -5652,9 +5644,8 @@ VKAPI_ATTR void VKAPI_CALL DestroyIndirectCommandsLayoutNVX(VkDevice device, VkI
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-#if 0  // Validation not automatically generated
     skip |= parameter_validation_vkDestroyIndirectCommandsLayoutNVX(my_data, indirectCommandsLayout, pAllocator);
-#endif
+
     if (!skip) {
         my_data->dispatch_table.DestroyIndirectCommandsLayoutNVX(device, indirectCommandsLayout, pAllocator);
     }
@@ -5681,9 +5672,8 @@ VKAPI_ATTR void VKAPI_CALL DestroyObjectTableNVX(VkDevice device, VkObjectTableN
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-#if 0  // Validation not automatically generated
     skip |= parameter_validation_vkDestroyObjectTableNVX(my_data, objectTable, pAllocator);
-#endif
+
     if (!skip) {
         my_data->dispatch_table.DestroyObjectTableNVX(device, objectTable, pAllocator);
     }
