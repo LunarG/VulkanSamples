@@ -4208,28 +4208,12 @@ VKAPI_ATTR void VKAPI_CALL DestroySwapchainKHR(VkDevice device, VkSwapchainKHR s
     }
 }
 
-static bool require_instance_extension(void *instance, bool InstanceExtensions::*flag, char const *function_name,
-                                       char const *extension_name) {
-    auto my_data = GetLayerDataPtr(get_dispatch_key(instance), instance_layer_data_map);
-    if (!(my_data->extensions.*flag)) {
-        return log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-                       HandleToUint64(instance), __LINE__, EXTENSION_NOT_ENABLED, LayerName,
-                       "%s() called even though the %s extension was not enabled for this VkInstance.", function_name,
-                       extension_name);
-    }
-
-    return false;
-}
-
 VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex,
                                                                   VkSurfaceKHR surface, VkBool32 *pSupported) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
-
-    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_surface,
-                                       "vkGetPhysicalDeviceSurfaceSupportKHR", VK_KHR_SURFACE_EXTENSION_NAME);
 
     skip |= parameter_validation_vkGetPhysicalDeviceSurfaceSupportKHR(my_data, queueFamilyIndex, surface, pSupported);
 
@@ -4249,9 +4233,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilitiesKHR(VkPhysica
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_surface,
-                                       "vkGetPhysicalDeviceSurfaceCapabilitiesKHR", VK_KHR_SURFACE_EXTENSION_NAME);
-
     skip |= parameter_validation_vkGetPhysicalDeviceSurfaceCapabilitiesKHR(my_data, surface, pSurfaceCapabilities);
 
     if (!skip) {
@@ -4270,9 +4251,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevi
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
-
-    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_surface,
-                                       "vkGetPhysicalDeviceSurfaceFormatsKHR", VK_KHR_SURFACE_EXTENSION_NAME);
 
     skip |= parameter_validation_vkGetPhysicalDeviceSurfaceFormatsKHR(my_data, surface, pSurfaceFormatCount,
                                                                       pSurfaceFormats);
@@ -4295,9 +4273,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfacePresentModesKHR(VkPhysica
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_surface,
-                                       "vkGetPhysicalDeviceSurfacePresentModesKHR", VK_KHR_SURFACE_EXTENSION_NAME);
-
     skip |= parameter_validation_vkGetPhysicalDeviceSurfacePresentModesKHR(my_data, surface, pPresentModeCount,
                                                                            pPresentModes);
 
@@ -4315,9 +4290,6 @@ VKAPI_ATTR void VKAPI_CALL DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR s
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(instance), instance_layer_data_map);
 
-    skip |= require_instance_extension(instance, &InstanceExtensions::khr_surface, "vkDestroySurfaceKHR",
-                                       VK_KHR_SURFACE_EXTENSION_NAME);
-
     if (!skip) {
         my_data->dispatch_table.DestroySurfaceKHR(instance, surface, pAllocator);
     }
@@ -4332,8 +4304,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateWin32SurfaceKHR(VkInstance instance, const 
     assert(my_data != NULL);
     bool skip = false;
 
-    skip |= require_instance_extension(instance, &InstanceExtensions::khr_win32_surface, "vkCreateWin32SurfaceKHR",
-                                       VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
     if (pCreateInfo->hwnd == nullptr) {
         skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                         VALIDATION_ERROR_15a00a38, LayerName,
@@ -4360,9 +4330,6 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceWin32PresentationSupportKHR(VkPh
     assert(my_data != NULL);
     bool skip = false;
 
-    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_win32_surface,
-                                       "vkGetPhysicalDeviceWin32PresentationSupportKHR", VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-
     // TODO: codegen doesn't produce this function?
     // skip |= parameter_validation_vkGetPhysicalDeviceWin32PresentationSupportKHR(physicalDevice, queueFamilyIndex);
 
@@ -4383,9 +4350,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateXcbSurfaceKHR(VkInstance instance, const Vk
     assert(my_data != NULL);
     bool skip = false;
 
-    skip |= require_instance_extension(instance, &InstanceExtensions::khr_xcb_surface, "vkCreateXcbSurfaceKHR",
-                                       VK_KHR_XCB_SURFACE_EXTENSION_NAME);
-
     skip |= parameter_validation_vkCreateXcbSurfaceKHR(my_data, pCreateInfo, pAllocator, pSurface);
 
     if (!skip) {
@@ -4405,9 +4369,6 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceXcbPresentationSupportKHR(VkPhys
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
     bool skip = false;
-
-    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_xcb_surface,
-                                       "vkGetPhysicalDeviceXcbPresentationSupportKHR", VK_KHR_XCB_SURFACE_EXTENSION_NAME);
 
     skip |= parameter_validation_vkGetPhysicalDeviceXcbPresentationSupportKHR(my_data, queueFamilyIndex, connection,
                                                                               visual_id);
@@ -4430,9 +4391,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateXlibSurfaceKHR(VkInstance instance, const V
     assert(my_data != NULL);
     bool skip = false;
 
-    skip |= require_instance_extension(instance, &InstanceExtensions::khr_xlib_surface, "vkCreateXlibSurfaceKHR",
-                                       VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
-
     skip |= parameter_validation_vkCreateXlibSurfaceKHR(my_data, pCreateInfo, pAllocator, pSurface);
 
     if (!skip) {
@@ -4452,9 +4410,6 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceXlibPresentationSupportKHR(VkPhy
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
     bool skip = false;
-
-    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_xlib_surface,
-                                       "vkGetPhysicalDeviceXlibPresentationSupportKHR", VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
 
     skip |=
         parameter_validation_vkGetPhysicalDeviceXlibPresentationSupportKHR(my_data, queueFamilyIndex, dpy, visualID);
@@ -4476,9 +4431,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateMirSurfaceKHR(VkInstance instance, const Vk
     assert(my_data != NULL);
     bool skip = false;
 
-    skip |= require_instance_extension(instance, &InstanceExtensions::khr_mir_surface, "vkCreateMirSurfaceKHR",
-                                       VK_KHR_MIR_SURFACE_EXTENSION_NAME);
-
     skip |= parameter_validation_vkCreateMirSurfaceKHR(my_data, pCreateInfo, pAllocator, pSurface);
 
     if (!skip) {
@@ -4499,9 +4451,6 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceMirPresentationSupportKHR(VkPhys
 
     bool skip = false;
 
-    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_mir_surface,
-                                       "vkGetPhysicalDeviceMirPresentationSupportKHR", VK_KHR_MIR_SURFACE_EXTENSION_NAME);
-
     skip |= parameter_validation_vkGetPhysicalDeviceMirPresentationSupportKHR(my_data, queueFamilyIndex, connection);
 
     if (!skip) {
@@ -4519,9 +4468,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateWaylandSurfaceKHR(VkInstance instance, cons
     auto my_data = GetLayerDataPtr(get_dispatch_key(instance), instance_layer_data_map);
     assert(my_data != NULL);
     bool skip = false;
-
-    skip |= require_instance_extension(instance, &InstanceExtensions::khr_wayland_surface, "vkCreateWaylandSurfaceKHR",
-                                       VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
 
     skip |= parameter_validation_vkCreateWaylandSurfaceKHR(my_data, pCreateInfo, pAllocator, pSurface);
 
@@ -4543,9 +4489,6 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceWaylandPresentationSupportKHR(Vk
     assert(my_data != NULL);
     bool skip = false;
 
-    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_wayland_surface,
-                                       "vkGetPhysicalDeviceWaylandPresentationSupportKHR", VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
-
     skip |= parameter_validation_vkGetPhysicalDeviceWaylandPresentationSupportKHR(my_data, queueFamilyIndex, display);
 
     if (!skip) {
@@ -4564,9 +4507,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateAndroidSurfaceKHR(VkInstance instance, cons
     auto my_data = GetLayerDataPtr(get_dispatch_key(instance), instance_layer_data_map);
     assert(my_data != NULL);
     bool skip = false;
-
-    skip |= require_instance_extension(instance, &InstanceExtensions::khr_android_surface, "vkCreateAndroidSurfaceKHR",
-                                       VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
 
     skip |= parameter_validation_vkCreateAndroidSurfaceKHR(my_data, pCreateInfo, pAllocator, pSurface);
 
@@ -4610,9 +4550,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceDisplayPropertiesKHR(VkPhysicalD
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_display,
-                                       "vkGetPhysicalDeviceDisplayPropertiesKHR", VK_KHR_DISPLAY_EXTENSION_NAME);
-
     // No parameter validation function for this call?
 
     if (!skip) {
@@ -4630,9 +4567,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceDisplayPlanePropertiesKHR(VkPhys
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
-
-    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_display,
-                                       "vkGetPhysicalDeviceDisplayPlanePropertiesKHR", VK_KHR_DISPLAY_EXTENSION_NAME);
 
     // No parameter validation function for this call?
 
@@ -4652,9 +4586,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneSupportedDisplaysKHR(VkPhysicalDev
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_display,
-                                       "vkGetDisplayPlaneSupportedDisplaysKHR", VK_KHR_DISPLAY_EXTENSION_NAME);
-
     // No parameter validation function for this call?
 
     if (!skip) {
@@ -4672,9 +4603,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayModePropertiesKHR(VkPhysicalDevice phys
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
-
-    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_display,
-                                       "vkGetDisplayModePropertiesKHR", VK_KHR_DISPLAY_EXTENSION_NAME);
 
     // No parameter validation function for this call?
 
@@ -4695,9 +4623,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDisplayModeKHR(VkPhysicalDevice physicalDev
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_display, "vkCreateDisplayModeKHR",
-                                       VK_KHR_DISPLAY_EXTENSION_NAME);
-
     // No parameter validation function for this call?
 
     if (!skip) {
@@ -4715,9 +4640,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneCapabilitiesKHR(VkPhysicalDevice p
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
-
-    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_display,
-                                       "vkGetDisplayPlaneCapabilitiesKHR", VK_KHR_DISPLAY_EXTENSION_NAME);
 
     // No parameter validation function for this call?
 
@@ -4737,9 +4659,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDisplayPlaneSurfaceKHR(VkInstance instance,
     auto my_data = GetLayerDataPtr(get_dispatch_key(instance), instance_layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_instance_extension(instance, &InstanceExtensions::khr_display, "vkCreateDisplayPlaneSurfaceKHR",
-                                       VK_KHR_DISPLAY_EXTENSION_NAME);
-
     // No parameter validation function for this call?
 
     if (!skip) {
@@ -4758,9 +4677,6 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceFeatures2KHR(VkPhysicalDevice physic
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_get_physical_device_properties2,
-                                       "vkGetPhysicalDeviceFeatures2KHR", VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
-
     skip |= parameter_validation_vkGetPhysicalDeviceFeatures2KHR(my_data, pFeatures);
 
     if (!skip) {
@@ -4774,9 +4690,6 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceProperties2KHR(VkPhysicalDevice phys
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_get_physical_device_properties2,
-                                       "vkGetPhysicalDeviceProperties2KHR", VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
-
     skip |= parameter_validation_vkGetPhysicalDeviceProperties2KHR(my_data, pProperties);
 
     if (!skip) {
@@ -4789,10 +4702,6 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceFormatProperties2KHR(VkPhysicalDevic
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
-
-    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_get_physical_device_properties2,
-                                       "vkGetPhysicalDeviceFormatProperties2KHR",
-                                       VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
     skip |= parameter_validation_vkGetPhysicalDeviceFormatProperties2KHR(my_data, format, pFormatProperties);
 
@@ -4808,10 +4717,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceImageFormatProperties2KHR(
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
-
-    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_get_physical_device_properties2,
-                                       "vkGetPhysicalDeviceImageFormatProperties2KHR",
-                                       VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
     skip |= parameter_validation_vkGetPhysicalDeviceImageFormatProperties2KHR(my_data, pImageFormatInfo,
                                                                               pImageFormatProperties);
@@ -4833,10 +4738,6 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceQueueFamilyProperties2KHR(VkPhysical
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_get_physical_device_properties2,
-                                       "vkGetPhysicalDeviceQueueFamilyProperties2KHR",
-                                       VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
-
     skip |= parameter_validation_vkGetPhysicalDeviceQueueFamilyProperties2KHR(my_data, pQueueFamilyPropertyCount,
                                                                               pQueueFamilyProperties);
 
@@ -4851,10 +4752,6 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceMemoryProperties2KHR(VkPhysicalDevic
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
-
-    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_get_physical_device_properties2,
-                                       "vkGetPhysicalDeviceMemoryProperties2KHR",
-                                       VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
     skip |= parameter_validation_vkGetPhysicalDeviceMemoryProperties2KHR(my_data, pMemoryProperties);
 
@@ -4891,10 +4788,6 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceSparseImageFormatProperties2KHR(
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
-
-    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khr_get_physical_device_properties2,
-                                       "vkGetPhysicalDeviceSparseImageFormatProperties2KHR",
-                                       VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
     skip |= parameter_validation_vkGetPhysicalDeviceSparseImageFormatProperties2KHR(my_data, pFormatInfo,
                                                                                     pPropertyCount, pProperties);
@@ -5080,9 +4973,6 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumeratePhysicalDeviceGroupsKHX(
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(instance), instance_layer_data_map);
     assert(my_data != NULL);
-
-    skip |= require_instance_extension(instance, &InstanceExtensions::khx_device_group_creation,
-                                       "vkEnumeratePhysicalDeviceGroupsKHX", VK_KHX_DEVICE_GROUP_CREATION_EXTENSION_NAME);
 
     skip |= parameter_validation_vkEnumeratePhysicalDeviceGroupsKHX(my_data, pPhysicalDeviceGroupCount,
                                                                     pPhysicalDeviceGroupProperties);
@@ -5278,9 +5168,6 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceExternalBufferPropertiesKHX(
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
     bool skip = false;
-    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khx_external_memory_capabilities,
-                                       "vkGetPhysicalDeviceExternalBufferPropertiesKHX",
-                                       VK_KHX_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME);
     skip |= parameter_validation_vkGetPhysicalDeviceExternalBufferPropertiesKHX(my_data, pExternalBufferInfo,
                                                                                 pExternalBufferProperties);
     if (!skip) {
@@ -5382,9 +5269,6 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceExternalSemaphorePropertiesKHX(
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
     bool skip = false;
-    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::khx_external_memory_capabilities,
-                                       "vkGetPhysicalDeviceExternalSemaphorePropertiesKHX",
-                                       VK_KHX_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME);
     skip |= parameter_validation_vkGetPhysicalDeviceExternalSemaphorePropertiesKHX(my_data, pExternalSemaphoreInfo,
                                                                                    pExternalSemaphoreProperties);
     if (!skip) {
@@ -5479,8 +5363,6 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireXlibDisplayEXT(VkPhysicalDevice physicalDe
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
     bool skip = false;
-    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::ext_acquire_xlib_display,
-                                       "vkAcquireXlibDisplayEXT", VK_EXT_ACQUIRE_XLIB_DISPLAY_EXTENSION_NAME);
     skip |= parameter_validation_vkAcquireXlibDisplayEXT(my_data, dpy, display);
     if (!skip) {
         result = my_data->dispatch_table.AcquireXlibDisplayEXT(physicalDevice, dpy, display);
@@ -5495,8 +5377,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetRandROutputDisplayEXT(VkPhysicalDevice physica
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
     bool skip = false;
-    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::ext_acquire_xlib_display,
-                                       "vkGetRandROutputDisplayEXT", VK_EXT_ACQUIRE_XLIB_DISPLAY_EXTENSION_NAME);
     skip |= parameter_validation_vkGetRandROutputDisplayEXT(my_data, dpy, rrOutput, pDisplay);
     if (!skip) {
         result = my_data->dispatch_table.GetRandROutputDisplayEXT(physicalDevice, dpy, rrOutput, pDisplay);
@@ -5591,8 +5471,6 @@ VKAPI_ATTR VkResult VKAPI_CALL ReleaseDisplayEXT(VkPhysicalDevice physicalDevice
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
     bool skip = false;
-    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::ext_direct_mode_display,
-                                       "vkReleaseDisplayEXT", VK_EXT_DIRECT_MODE_DISPLAY_EXTENSION_NAME);
 #if 0  // Validation not automatically generated
     skip |= parameter_validation_vkReleaseDisplayEXT(my_data, display);
 #endif
@@ -5764,8 +5642,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilities2EXT(VkPhysic
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
     bool skip = false;
-    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::ext_display_surface_counter,
-                                       "vkGetPhysicalDeviceSurfaceCapabilities2EXT", VK_EXT_DISPLAY_SURFACE_COUNTER_EXTENSION_NAME);
     skip |= parameter_validation_vkGetPhysicalDeviceSurfaceCapabilities2EXT(my_data, surface, pSurfaceCapabilities);
     if (!skip) {
         result = my_data->dispatch_table.GetPhysicalDeviceSurfaceCapabilities2EXT(physicalDevice, surface, pSurfaceCapabilities);
@@ -5801,10 +5677,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceExternalImageFormatPropertiesNV(
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
     assert(my_data != NULL);
-
-    skip |= require_instance_extension(physicalDevice, &InstanceExtensions::nv_external_memory_capabilities,
-                                       "vkGetPhysicalDeviceExternalImageFormatPropertiesNV",
-                                       VK_NV_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME);
 
     skip |= parameter_validation_vkGetPhysicalDeviceExternalImageFormatPropertiesNV(
         my_data, format, type, tiling, usage, flags, externalHandleType, pExternalImageFormatProperties);
