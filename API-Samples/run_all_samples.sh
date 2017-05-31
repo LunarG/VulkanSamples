@@ -13,11 +13,11 @@ while test $# -gt 0; do
         case "$1" in
         --save-images)
                 SAVEIMAGES="true"
-		ARGS="$ARGS --save-images"
+		ARGS="--save-images $ARGS"
                 ;;
         --compare-images)
                 COMPAREIMAGES="true"
-		ARGS="$ARGS --save-images"
+		ARGS="--save-images $ARGS"
                 ;;
         -)
                 echo "error: unknown option"
