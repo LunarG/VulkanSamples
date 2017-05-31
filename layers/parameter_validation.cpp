@@ -4146,6 +4146,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
         std_header *pnext = (std_header *)pPresentInfo->pNext;
         while (pnext) {
             if (VK_STRUCTURE_TYPE_PRESENT_REGIONS_KHR == pnext->sType) {
+                // TODO: This and all other pNext extension dependencies should be added to code-generation
                 skip |= require_device_extension(my_data, my_data->enables.khr_incremental_present, "vkQueuePresentKHR",
                                                  VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME);
                 VkPresentRegionsKHR *present_regions = (VkPresentRegionsKHR *)pnext;
