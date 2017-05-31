@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <string>
+#include <bitset>
 
 #include "vulkan/vulkan.h"
 #include "vk_enum_string_helper.h"
@@ -692,10 +693,11 @@ static bool validate_reserved_flags(debug_report_data *report_data, const char *
 * @param all_flags A bit mask combining all valid flag bits for the VkFlags type being validated.
 * @param value VkFlags value to validate.
 * @param flags_required The 'value' parameter may not be 0 when true.
+* @param singleFlag The 'value' parameter may not contain more than one bit from all_flags.
 * @return Boolean value indicating that the call should be skipped.
 */
 static bool validate_flags(debug_report_data *report_data, const char *api_name, const ParameterName &parameter_name,
-                           const char *flag_bits_name, VkFlags all_flags, VkFlags value, bool flags_required) {
+                           const char *flag_bits_name, VkFlags all_flags, VkFlags value, bool flags_required, bool singleFlag) {
     bool skip_call = false;
 
     if (value == 0) {
@@ -709,6 +711,11 @@ static bool validate_flags(debug_report_data *report_data, const char *api_name,
             log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                     UNRECOGNIZED_VALUE, LayerName, "%s: value of %s contains flag bits that are not recognized members of %s",
                     api_name, parameter_name.get_name().c_str(), flag_bits_name);
+    } else if (singleFlag && (std::bitset<sizeof(VkFlags) * 8>(value).count() > 1)) {
+        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                             UNRECOGNIZED_VALUE, LayerName,
+                             "%s: value of %s contains multiple members of %s when only a single value is allowed", api_name,
+                             parameter_name.get_name().c_str(), flag_bits_name);
     }
 
     return skip_call;

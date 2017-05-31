@@ -963,7 +963,11 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                         else:
                             flagsRequired = 'false' if value.isoptional else 'true'
                             allFlagsName = 'All' + flagBitsName
-                            usedLines.append('skipCall |= validate_flags(report_data, "{}", {ppp}"{}"{pps}, "{}", {}, {pf}{}, {});\n'.format(funcName, valueDisplayName, flagBitsName, allFlagsName, value.name, flagsRequired, pf=valuePrefix, **postProcSpec))
+                            usedLines.append('skipCall |= validate_flags(report_data, "{}", {ppp}"{}"{pps}, "{}", {}, {pf}{}, {}, false);\n'.format(funcName, valueDisplayName, flagBitsName, allFlagsName, value.name, flagsRequired, pf=valuePrefix, **postProcSpec))
+                    elif value.type in self.flagBits:
+                        flagsRequired = 'false' if value.isoptional else 'true'
+                        allFlagsName = 'All' + value.type
+                        usedLines.append('skipCall |= validate_flags(report_data, "{}", {ppp}"{}"{pps}, "{}", {}, {pf}{}, {}, true);\n'.format(funcName, valueDisplayName, value.type, allFlagsName, value.name, flagsRequired, pf=valuePrefix, **postProcSpec))
                     elif value.isbool:
                         usedLines.append('skipCall |= validate_bool32(report_data, "{}", {ppp}"{}"{pps}, {}{});\n'.format(funcName, valueDisplayName, valuePrefix, value.name, **postProcSpec))
                     elif value.israngedenum:
