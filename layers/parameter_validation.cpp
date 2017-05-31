@@ -4018,9 +4018,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device, const VkSwapc
     std::unique_lock<std::mutex> lock(global_lock);
     debug_report_data *report_data = device_data->report_data;
 
-    skip |= require_device_extension(device_data, device_data->enables.khr_swapchain, "vkCreateSwapchainKHR",
-                                     VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-
     skip |= parameter_validation_vkCreateSwapchainKHR(device_data, pCreateInfo, pAllocator, pSwapchain);
 
     if (pCreateInfo != nullptr) {
@@ -4103,9 +4100,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchai
     layer_data *my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_device_extension(my_data, my_data->enables.khr_swapchain, "vkGetSwapchainImagesKHR",
-                                     VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-
     skip |= parameter_validation_vkGetSwapchainImagesKHR(my_data, swapchain, pSwapchainImageCount, pSwapchainImages);
 
     if (!skip) {
@@ -4124,9 +4118,6 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
     layer_data *my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_device_extension(my_data, my_data->enables.khr_swapchain, "vkAcquireNextImageKHR",
-                                     VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-
     skip |= parameter_validation_vkAcquireNextImageKHR(my_data, swapchain, timeout, semaphore, fence, pImageIndex);
 
     if (!skip) {
@@ -4143,9 +4134,6 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
     bool skip = false;
     layer_data *my_data = GetLayerDataPtr(get_dispatch_key(queue), layer_data_map);
     assert(my_data != NULL);
-
-    skip |= require_device_extension(my_data, my_data->enables.khr_swapchain, "vkQueuePresentKHR",
-                                     VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
     skip |= parameter_validation_vkQueuePresentKHR(my_data, pPresentInfo);
 
@@ -4197,9 +4185,6 @@ VKAPI_ATTR void VKAPI_CALL DestroySwapchainKHR(VkDevice device, VkSwapchainKHR s
     bool skip = false;
     layer_data *my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
-
-    skip |= require_device_extension(my_data, my_data->enables.khr_swapchain, "vkDestroySwapchainKHR",
-                                     VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
     /* No generated validation function for this call */
 
@@ -4528,9 +4513,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSharedSwapchainsKHR(VkDevice device, uint32
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_device_extension(my_data, my_data->enables.khr_display_swapchain, "vkCreateSharedSwapchainsKHR",
-                                     VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME);
-
     skip |= parameter_validation_vkCreateSharedSwapchainsKHR(my_data, swapchainCount, pCreateInfos, pAllocator,
                                                              pSwapchains);
 
@@ -4806,9 +4788,6 @@ VKAPI_ATTR void VKAPI_CALL TrimCommandPoolKHR(VkDevice device, VkCommandPool com
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_device_extension(my_data, my_data->enables.khr_maintenance1, "vkTrimCommandPoolKHR",
-                                     VK_KHR_MAINTENANCE1_EXTENSION_NAME);
-
     skip |= parameter_validation_vkTrimCommandPoolKHR(my_data, commandPool, flags);
 
     if (!skip) {
@@ -4824,9 +4803,6 @@ VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetKHR(VkCommandBuffer commandBuffer
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     assert(my_data != NULL);
-
-    skip |= require_device_extension(my_data, my_data->enables.khr_push_descriptor, "vkCmdPushDescriptorSetKHR",
-                                     VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
 
     skip |= parameter_validation_vkCmdPushDescriptorSetKHR(my_data, pipelineBindPoint, layout, set,
                                                            descriptorWriteCount, pDescriptorWrites);
@@ -4848,9 +4824,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorUpdateTemplateKHR(VkDevice device
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_device_extension(my_data, my_data->enables.khr_descriptor_update_template,
-                                     "vkCreateDescriptorUpdateTemplateKHR", VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME);
-
     skip |= parameter_validation_vkCreateDescriptorUpdateTemplateKHR(my_data, pCreateInfo, pAllocator,
                                                                      pDescriptorUpdateTemplate);
 
@@ -4870,9 +4843,6 @@ VKAPI_ATTR void VKAPI_CALL DestroyDescriptorUpdateTemplateKHR(VkDevice device,
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_device_extension(my_data, my_data->enables.khr_descriptor_update_template,
-                                     "vkDestroyDescriptorUpdateTemplateKHR", VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME);
-
 #if 0  // Validation not automatically generated
     skip |= parameter_validation_vkDestroyDescriptorUpdateTemplateKHR(my_data, descriptorUpdateTemplate,
                                                                           pAllocator);
@@ -4890,9 +4860,6 @@ VKAPI_ATTR void VKAPI_CALL UpdateDescriptorSetWithTemplateKHR(VkDevice device, V
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_device_extension(my_data, my_data->enables.khr_descriptor_update_template,
-                                     "vkUpdateDescriptorSetWithTemplateKHR", VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME);
-
     skip |= parameter_validation_vkUpdateDescriptorSetWithTemplateKHR(my_data, descriptorSet, descriptorUpdateTemplate,
                                                                       pData);
 
@@ -4907,9 +4874,6 @@ VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetWithTemplateKHR(VkCommandBuffer c
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     assert(my_data != NULL);
-
-    skip |= require_device_extension(my_data, my_data->enables.khr_descriptor_update_template,
-                                     "vkCmdPushDescriptorSetWithTemplateKHR", VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME);
 
     skip |= parameter_validation_vkCmdPushDescriptorSetWithTemplateKHR(my_data, descriptorUpdateTemplate, layout, set,
                                                                        pData);
@@ -4994,9 +4958,6 @@ VKAPI_ATTR void VKAPI_CALL GetDeviceGroupPeerMemoryFeaturesKHX(VkDevice device, 
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_device_extension(my_data, my_data->enables.khx_device_group, "vkGetDeviceGroupPeerMemoryFeaturesKHX",
-                                     VK_KHX_DEVICE_GROUP_EXTENSION_NAME);
-
     skip |= parameter_validation_vkGetDeviceGroupPeerMemoryFeaturesKHX(my_data, heapIndex, localDeviceIndex,
                                                                        remoteDeviceIndex, pPeerMemoryFeatures);
 
@@ -5012,9 +4973,6 @@ VKAPI_ATTR VkResult VKAPI_CALL BindBufferMemory2KHX(VkDevice device, uint32_t bi
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
-
-    skip |= require_device_extension(my_data, my_data->enables.khx_device_group, "vkBindBufferMemory2KHX",
-                                     VK_KHX_DEVICE_GROUP_EXTENSION_NAME);
 
     skip |= parameter_validation_vkBindBufferMemory2KHX(my_data, bindInfoCount, pBindInfos);
 
@@ -5033,9 +4991,6 @@ VKAPI_ATTR VkResult VKAPI_CALL BindImageMemory2KHX(VkDevice device, uint32_t bin
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_device_extension(my_data, my_data->enables.khx_device_group, "vkBindImageMemory2KHX",
-                                     VK_KHX_DEVICE_GROUP_EXTENSION_NAME);
-
     skip |= parameter_validation_vkBindImageMemory2KHX(my_data, bindInfoCount, pBindInfos);
 
     if (!skip) {
@@ -5050,9 +5005,6 @@ VKAPI_ATTR void VKAPI_CALL CmdSetDeviceMaskKHX(VkCommandBuffer commandBuffer, ui
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     assert(my_data != NULL);
-
-    skip |= require_device_extension(my_data, my_data->enables.khx_device_group, "vkCmdSetDeviceMaskKHX",
-                                     VK_KHX_DEVICE_GROUP_EXTENSION_NAME);
 
 #if 0  // Validation not automatically generated
     skip |= parameter_validation_vkCmdSetDeviceMaskKHX(my_data, deviceMask);
@@ -5069,9 +5021,6 @@ GetDeviceGroupPresentCapabilitiesKHX(VkDevice device, VkDeviceGroupPresentCapabi
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
-
-    skip |= require_device_extension(my_data, my_data->enables.khx_device_group, "vkGetDeviceGroupPresentCapabilitiesKHX",
-                                     VK_KHX_DEVICE_GROUP_EXTENSION_NAME);
 
     skip |= parameter_validation_vkGetDeviceGroupPresentCapabilitiesKHX(my_data, pDeviceGroupPresentCapabilities);
 
@@ -5090,9 +5039,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetDeviceGroupSurfacePresentModesKHX(VkDevice dev
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_device_extension(my_data, my_data->enables.khx_device_group, "vkGetDeviceGroupSurfacePresentModesKHX",
-                                     VK_KHX_DEVICE_GROUP_EXTENSION_NAME);
-
     skip |= parameter_validation_vkGetDeviceGroupSurfacePresentModesKHX(my_data, surface, pModes);
 
     if (!skip) {
@@ -5109,9 +5055,6 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImage2KHX(VkDevice device, const VkAcq
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_device_extension(my_data, my_data->enables.khx_device_group, "vkAcquireNextImage2KHX",
-                                     VK_KHX_DEVICE_GROUP_EXTENSION_NAME);
-
     skip |= parameter_validation_vkAcquireNextImage2KHX(my_data, pAcquireInfo, pImageIndex);
 
     if (!skip) {
@@ -5127,9 +5070,6 @@ VKAPI_ATTR void VKAPI_CALL CmdDispatchBaseKHX(VkCommandBuffer commandBuffer, uin
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     assert(my_data != NULL);
-
-    skip |= require_device_extension(my_data, my_data->enables.khx_device_group, "vkCmdDispatchBaseKHX",
-                                     VK_KHX_DEVICE_GROUP_EXTENSION_NAME);
 
 #if 0  // Validation not automatically generated
     skip |= parameter_validation_vkCmdDispatchBaseKHX(my_data, baseGroupX, baseGroupY, baseGroupZ,
@@ -5185,9 +5125,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetMemoryFdKHX(VkDevice device, VkDeviceMemory me
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_device_extension(my_data, my_data->enables.khx_external_memory_fd, "vkGetMemoryFdKHX",
-                                     VK_KHX_EXTERNAL_MEMORY_FD_EXTENSION_NAME);
-
     skip |= parameter_validation_vkGetMemoryFdKHX(my_data, memory, handleType, pFd);
 
     if (!skip) {
@@ -5204,9 +5141,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetMemoryFdPropertiesKHX(VkDevice device, VkExter
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
-
-    skip |= require_device_extension(my_data, my_data->enables.khx_external_memory_fd, "vkGetMemoryFdPropertiesKHX",
-                                     VK_KHX_EXTERNAL_MEMORY_FD_EXTENSION_NAME);
 
     skip |= parameter_validation_vkGetMemoryFdPropertiesKHX(my_data, handleType, fd, pMemoryFdProperties);
 
@@ -5227,8 +5161,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetMemoryWin32HandleKHX(VkDevice device, VkDevice
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
-    skip |= require_device_extension(my_data, my_data->enables.khx_external_memory_win32, "vkGetMemoryWin32HandleKHX",
-                                     VK_KHX_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME);
 
     skip |= parameter_validation_vkGetMemoryWin32HandleKHX(my_data, memory, handleType, pHandle);
 
@@ -5246,8 +5178,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetMemoryWin32HandlePropertiesKHX(VkDevice device
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
-    skip |= require_device_extension(my_data, my_data->enables.khx_external_memory_win32, "vkGetMemoryWin32HandlePropertiesKHX",
-                                     VK_KHX_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME);
 
     skip |= parameter_validation_vkGetMemoryWin32HandlePropertiesKHX(my_data, handleType, handle,
                                                                      pMemoryWin32HandleProperties);
@@ -5285,9 +5215,6 @@ VKAPI_ATTR VkResult VKAPI_CALL ImportSemaphoreFdKHX(VkDevice device, const VkImp
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_device_extension(my_data, my_data->enables.khx_external_semaphore_fd, "vkImportSemaphoreFdKHX",
-                                     VK_KHX_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME);
-
     skip |= parameter_validation_vkImportSemaphoreFdKHX(my_data, pImportSemaphoreFdInfo);
 
     if (!skip) {
@@ -5304,9 +5231,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSemaphoreFdKHX(VkDevice device, VkSemaphore se
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
-
-    skip |= require_device_extension(my_data, my_data->enables.khx_external_semaphore_fd, "vkGetSemaphoreFdKHX",
-                                     VK_KHX_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME);
 
     skip |= parameter_validation_vkGetSemaphoreFdKHX(my_data, semaphore, handleType, pFd);
 
@@ -5327,8 +5251,6 @@ ImportSemaphoreWin32HandleKHX(VkDevice device, const VkImportSemaphoreWin32Handl
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
-    skip |= require_device_extension(my_data, my_data->enables.khx_external_semaphore_win32, "vkImportSemaphoreWin32HandleKHX",
-                                     VK_KHX_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME);
 
     skip |= parameter_validation_vkImportSemaphoreWin32HandleKHX(my_data, pImportSemaphoreWin32HandleInfo);
     if (!skip) {
@@ -5344,8 +5266,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSemaphoreWin32HandleKHX(VkDevice device, VkSem
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
-    skip |= require_device_extension(my_data, my_data->enables.khx_external_semaphore_win32, "vkGetSemaphoreWin32HandleKHX",
-                                     VK_KHX_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME);
+
     skip |= parameter_validation_vkGetSemaphoreWin32HandleKHX(my_data, semaphore, handleType, pHandle);
     if (!skip) {
         result = my_data->dispatch_table.GetSemaphoreWin32HandleKHX(device, semaphore, handleType, pHandle);
@@ -5394,9 +5315,6 @@ VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectTagEXT(VkDevice device, VkDeb
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_device_extension(my_data, my_data->enables.ext_debug_marker, "vkDebugMarkerSetObjectTagEXT",
-                                     VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
-
     skip |= parameter_validation_vkDebugMarkerSetObjectTagEXT(my_data, pTagInfo);
 
     if (!skip) {
@@ -5417,9 +5335,6 @@ VKAPI_ATTR VkResult VKAPI_CALL DebugMarkerSetObjectNameEXT(VkDevice device, VkDe
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_device_extension(my_data, my_data->enables.ext_debug_marker, "vkDebugMarkerSetObjectNameEXT",
-                                     VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
-
     skip |= parameter_validation_vkDebugMarkerSetObjectNameEXT(my_data, pNameInfo);
 
     if (!skip) {
@@ -5439,9 +5354,6 @@ VKAPI_ATTR void VKAPI_CALL CmdDebugMarkerBeginEXT(VkCommandBuffer commandBuffer,
     auto my_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_device_extension(my_data, my_data->enables.ext_debug_marker, "vkCmdDebugMarkerBeginEXT",
-                                     VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
-
     skip |= parameter_validation_vkCmdDebugMarkerBeginEXT(my_data, pMarkerInfo);
 
     if (!skip && my_data->dispatch_table.CmdDebugMarkerBeginEXT) {
@@ -5453,9 +5365,6 @@ VKAPI_ATTR void VKAPI_CALL CmdDebugMarkerInsertEXT(VkCommandBuffer commandBuffer
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     assert(my_data != NULL);
-
-    skip |= require_device_extension(my_data, my_data->enables.ext_debug_marker, "vkCmdDebugMarkerInsertEXT",
-                                     VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
 
     skip |= parameter_validation_vkCmdDebugMarkerInsertEXT(my_data, pMarkerInfo);
 
@@ -5489,9 +5398,6 @@ VKAPI_ATTR void VKAPI_CALL CmdSetDiscardRectangleEXT(VkCommandBuffer commandBuff
     auto my_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_device_extension(my_data, my_data->enables.ext_discard_rectangles, "vkCmdSetDiscardRectangleEXT",
-                                     VK_EXT_DISCARD_RECTANGLES_EXTENSION_NAME);
-
     skip |= parameter_validation_vkCmdSetDiscardRectangleEXT(my_data, firstDiscardRectangle,
                                                              discardRectangleCount, pDiscardRectangles);
 
@@ -5509,9 +5415,6 @@ VKAPI_ATTR VkResult VKAPI_CALL DisplayPowerControlEXT(VkDevice device, VkDisplay
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
-
-    skip |= require_device_extension(my_data, my_data->enables.ext_display_control, "vkDisplayPowerControlEXT",
-                                     VK_EXT_DISPLAY_CONTROL_EXTENSION_NAME);
 
     skip |= parameter_validation_vkDisplayPowerControlEXT(my_data, display, pDisplayPowerInfo);
 
@@ -5533,9 +5436,6 @@ VKAPI_ATTR VkResult VKAPI_CALL RegisterDeviceEventEXT(VkDevice device, const VkD
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
-
-    skip |= require_device_extension(my_data, my_data->enables.ext_display_control, "vkRegisterDeviceEventEXT",
-                                     VK_EXT_DISPLAY_CONTROL_EXTENSION_NAME);
 
     skip |= parameter_validation_vkRegisterDeviceEventEXT(my_data, pDeviceEventInfo, pAllocator, pFence);
 
@@ -5559,9 +5459,6 @@ VKAPI_ATTR VkResult VKAPI_CALL RegisterDisplayEventEXT(VkDevice device, VkDispla
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_device_extension(my_data, my_data->enables.ext_display_control, "vkRegisterDisplayEventEXT",
-                                     VK_EXT_DISPLAY_CONTROL_EXTENSION_NAME);
-
     skip |= parameter_validation_vkRegisterDisplayEventEXT(my_data, display, pDisplayEventInfo, pAllocator, pFence);
 
     if (!skip) {
@@ -5582,9 +5479,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainCounterEXT(VkDevice device, VkSwapcha
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
-
-    skip |= require_device_extension(my_data, my_data->enables.ext_display_control, "vkGetSwapchainCounterEXT",
-                                     VK_EXT_DISPLAY_CONTROL_EXTENSION_NAME);
 
     skip |= parameter_validation_vkGetSwapchainCounterEXT(my_data, swapchain, counter, pCounterValue);
 
@@ -5608,8 +5502,7 @@ VKAPI_ATTR void VKAPI_CALL CmdDrawIndirectCountAMD(VkCommandBuffer commandBuffer
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     assert(my_data != NULL);
-    skip |= require_device_extension(my_data, my_data->enables.amd_draw_indirect_count, "vkCmdDrawIndirectCountAMD",
-                                     VK_AMD_DRAW_INDIRECT_COUNT_EXTENSION_NAME);
+
     skip |= parameter_validation_vkCmdDrawIndirectCountAMD(my_data, buffer, offset, countBuffer, countBufferOffset,
                                                            maxDrawCount, stride);
     if (!skip) {
@@ -5624,8 +5517,7 @@ VKAPI_ATTR void VKAPI_CALL CmdDrawIndexedIndirectCountAMD(VkCommandBuffer comman
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     assert(my_data != NULL);
-    skip |= require_device_extension(my_data, my_data->enables.amd_draw_indirect_count, "vkCmdDrawIndexedIndirectCountAMD",
-                                     VK_AMD_DRAW_INDIRECT_COUNT_EXTENSION_NAME);
+
     skip |= parameter_validation_vkCmdDrawIndexedIndirectCountAMD(my_data, buffer, offset, countBuffer,
                                                                   countBufferOffset, maxDrawCount, stride);
     if (!skip) {
@@ -5657,8 +5549,7 @@ VKAPI_ATTR void VKAPI_CALL CmdSetViewportWScalingNV(VkCommandBuffer commandBuffe
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     assert(my_data != NULL);
-    skip |= require_device_extension(my_data, my_data->enables.amd_draw_indirect_count, "vkCmdSetViewportWScalingNV",
-                                     VK_NV_CLIP_SPACE_W_SCALING_EXTENSION_NAME);
+
 #if 0  // Validation not automatically generated
     skip |= parameter_validation_vkCmdSetViewportWScalingNV(my_data, firstViewport, viewportCount, pViewportWScalings);
 #endif
@@ -5701,9 +5592,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetMemoryWin32HandleNV(VkDevice device, VkDeviceM
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-    skip |= require_device_extension(my_data, my_data->enables.nv_external_memory_win32, "vkGetMemoryWin32HandleNV",
-                                     VK_NV_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME);
-
     skip |= parameter_validation_vkGetMemoryWin32HandleNV(my_data, memory, handleType, pHandle);
 
     if (!skip) {
@@ -5721,8 +5609,7 @@ VKAPI_ATTR void VKAPI_CALL CmdProcessCommandsNVX(VkCommandBuffer commandBuffer,
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     assert(my_data != NULL);
-    skip |= require_device_extension(my_data, my_data->enables.nvx_device_generated_commands, "vkCmdProcessCommandsNVX",
-                                     VK_NVX_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME);
+
     skip |= parameter_validation_vkCmdProcessCommandsNVX(my_data, pProcessCommandsInfo);
     if (!skip) {
         my_data->dispatch_table.CmdProcessCommandsNVX(commandBuffer, pProcessCommandsInfo);
@@ -5734,8 +5621,7 @@ VKAPI_ATTR void VKAPI_CALL CmdReserveSpaceForCommandsNVX(VkCommandBuffer command
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     assert(my_data != NULL);
-    skip |= require_device_extension(my_data, my_data->enables.nvx_device_generated_commands, "vkCmdReserveSpaceForCommandsNVX",
-                                     VK_NVX_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME);
+
     skip |= parameter_validation_vkCmdReserveSpaceForCommandsNVX(my_data, pReserveSpaceInfo);
     if (!skip) {
         my_data->dispatch_table.CmdReserveSpaceForCommandsNVX(commandBuffer, pReserveSpaceInfo);
@@ -5750,8 +5636,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateIndirectCommandsLayoutNVX(VkDevice device,
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
-    skip |= require_device_extension(my_data, my_data->enables.nvx_device_generated_commands, "vkCreateIndirectCommandsLayoutNVX",
-                                     VK_NVX_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME);
+
     skip |= parameter_validation_vkCreateIndirectCommandsLayoutNVX(my_data, pCreateInfo, pAllocator,
                                                                    pIndirectCommandsLayout);
     if (!skip) {
@@ -5766,8 +5651,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyIndirectCommandsLayoutNVX(VkDevice device, VkI
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
-    skip |= require_device_extension(my_data, my_data->enables.nvx_device_generated_commands, "vkDestroyIndirectCommandsLayoutNVX",
-                                     VK_NVX_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME);
+
 #if 0  // Validation not automatically generated
     skip |= parameter_validation_vkDestroyIndirectCommandsLayoutNVX(my_data, indirectCommandsLayout, pAllocator);
 #endif
@@ -5782,8 +5666,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateObjectTableNVX(VkDevice device, const VkObj
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
-    skip |= require_device_extension(my_data, my_data->enables.nvx_device_generated_commands, "vkCreateObjectTableNVX",
-                                     VK_NVX_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME);
+
     skip |= parameter_validation_vkCreateObjectTableNVX(my_data, pCreateInfo, pAllocator, pObjectTable);
     if (!skip) {
         result = my_data->dispatch_table.CreateObjectTableNVX(device, pCreateInfo, pAllocator, pObjectTable);
@@ -5797,8 +5680,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyObjectTableNVX(VkDevice device, VkObjectTableN
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
-    skip |= require_device_extension(my_data, my_data->enables.nvx_device_generated_commands, "vkDestroyObjectTableNVX",
-                                     VK_NVX_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME);
+
 #if 0  // Validation not automatically generated
     skip |= parameter_validation_vkDestroyObjectTableNVX(my_data, objectTable, pAllocator);
 #endif
@@ -5814,8 +5696,7 @@ VKAPI_ATTR VkResult VKAPI_CALL RegisterObjectsNVX(VkDevice device, VkObjectTable
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
-    skip |= require_device_extension(my_data, my_data->enables.nvx_device_generated_commands, "vkRegisterObjectsNVX",
-                                     VK_NVX_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME);
+
     skip |= parameter_validation_vkRegisterObjectsNVX(my_data, objectTable, objectCount, ppObjectTableEntries,
                                                       pObjectIndices);
     if (!skip) {
@@ -5831,8 +5712,7 @@ VKAPI_ATTR VkResult VKAPI_CALL UnregisterObjectsNVX(VkDevice device, VkObjectTab
     bool skip = false;
     auto my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
-    skip |= require_device_extension(my_data, my_data->enables.nvx_device_generated_commands, "vkUnregisterObjectsNVX",
-                                     VK_NVX_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME);
+
     skip |= parameter_validation_vkUnregisterObjectsNVX(my_data, objectTable, objectCount, pObjectEntryTypes,
                                                         pObjectIndices);
     if (!skip) {
