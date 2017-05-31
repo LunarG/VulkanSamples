@@ -18,6 +18,7 @@
  *
  * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
  * Author: Tony Barbour <tony@LunarG.com>
+ * Author: Dave Houlton <daveh@lunarg.com>
  */
 
 #include "vkrenderframework.h"
@@ -61,42 +62,110 @@ VkRenderFramework::VkRenderFramework()
 
 VkRenderFramework::~VkRenderFramework() {}
 
-void VkRenderFramework::InitFramework() {
-    std::vector<const char *> instance_layer_names;
-    std::vector<const char *> instance_extension_names;
-    std::vector<const char *> device_extension_names;
-    instance_extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
-    device_extension_names.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-#ifdef _WIN32
-    instance_extension_names.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-#endif
-#ifdef VK_USE_PLATFORM_XCB_KHR
-    instance_extension_names.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
-#endif
-    InitFramework(instance_layer_names, instance_extension_names, device_extension_names);
+VkPhysicalDevice VkRenderFramework::gpu() {
+    EXPECT_NE((VkInstance)0, inst);  // Invalid to request gpu before instance exists
+    return objs[0];
 }
 
-void VkRenderFramework::InitFramework(std::vector<const char *> instance_layer_names,
-                                      std::vector<const char *> instance_extension_names,
-                                      std::vector<const char *> device_extension_names, PFN_vkDebugReportCallbackEXT dbgFunction,
-                                      void *userData) {
+// Return true if layer name is found and spec+implementation values are >= requested values
+bool VkRenderFramework::InstanceLayerSupported(const char *name, uint32_t spec, uint32_t implementation) {
+    uint32_t layer_count = 0;
+    std::vector<VkLayerProperties> layer_props;
+
+    VkResult res = vkEnumerateInstanceLayerProperties(&layer_count, NULL);
+    if (VK_SUCCESS != res) return false;
+    if (0 == layer_count) return false;
+
+    layer_props.resize(layer_count);
+    res = vkEnumerateInstanceLayerProperties(&layer_count, layer_props.data());
+    if (VK_SUCCESS != res) return false;
+
+    for (auto &it : layer_props) {
+        if (0 == strncmp(name, it.layerName, VK_MAX_EXTENSION_NAME_SIZE)) {
+            return ((it.specVersion >= spec) && (it.implementationVersion >= implementation));
+        }
+    }
+    return false;
+};
+
+// Return true if extension name is found and spec value is >= requested spec value
+bool VkRenderFramework::InstanceExtensionSupported(const char *ext_name, uint32_t spec) {
+    uint32_t ext_count = 0;
+    std::vector<VkExtensionProperties> ext_props;
+    VkResult res = vkEnumerateInstanceExtensionProperties(nullptr, &ext_count, nullptr);
+    if (VK_SUCCESS != res) return false;
+    if (0 == ext_count) return false;
+
+    ext_props.resize(ext_count);
+    res = vkEnumerateInstanceExtensionProperties(nullptr, &ext_count, ext_props.data());
+    if (VK_SUCCESS != res) return false;
+
+    for (auto &it : ext_props) {
+        if (0 == strncmp(ext_name, it.extensionName, VK_MAX_EXTENSION_NAME_SIZE)) {
+            return (it.specVersion >= spec);
+        }
+    }
+    return false;
+};
+
+// Return true if extension name is found and spec value is >= requested spec value
+bool VkRenderFramework::DeviceExtensionSupported(VkPhysicalDevice dev, const char *ext_name, uint32_t spec) {
+    if (!inst) {
+        EXPECT_NE((VkInstance)0, inst);  // Complain, not cool without an instance
+        return false;
+    }
+    uint32_t ext_count = 0;
+    std::vector<VkExtensionProperties> ext_props;
+    VkResult res = vkEnumerateDeviceExtensionProperties(dev, nullptr, &ext_count, nullptr);
+    if (VK_SUCCESS != res) return false;
+    if (0 == ext_count) return false;
+
+    ext_props.resize(ext_count);
+    res = vkEnumerateDeviceExtensionProperties(dev, nullptr, &ext_count, ext_props.data());
+    if (VK_SUCCESS != res) return false;
+
+    for (auto &it : ext_props) {
+        if (0 == strncmp(ext_name, it.extensionName, VK_MAX_EXTENSION_NAME_SIZE)) {
+            return (it.specVersion >= spec);
+        }
+    }
+    return false;
+};
+
+void VkRenderFramework::InitFramework(PFN_vkDebugReportCallbackEXT dbgFunction, void *userData) {
     // Assert not already initialized
     ASSERT_EQ((VkInstance)0, inst);
 
-    VkInstanceCreateInfo instInfo = {};
-    std::vector<VkExtensionProperties> instance_extensions;
-    std::vector<VkExtensionProperties> device_extensions;
-    VkResult U_ASSERT_ONLY err;
+    // Remove any unsupported layer names from list
+    for (auto layer = m_instance_layer_names.begin(); layer != m_instance_layer_names.end();) {
+        if (!InstanceLayerSupported(*layer)) {
+            ADD_FAILURE() << "InitFramework(): Requested layer " << *layer << " was not found. Disabled.";
+            layer = m_instance_extension_names.erase(layer);
+        } else {
+            ++layer;
+        }
+    }
 
-    /* TODO: Verify requested extensions are available */
+    // Remove any unsupported instance extension names from list
+    for (auto ext = m_instance_extension_names.begin(); ext != m_instance_extension_names.end();) {
+        if (!InstanceExtensionSupported(*ext)) {
+            ADD_FAILURE() << "InitFramework(): Requested extension " << *ext << " was not found. Disabled.";
+            ext = m_instance_extension_names.erase(ext);
+        } else {
+            ++ext;
+        }
+    }
+
+    VkInstanceCreateInfo instInfo = {};
+    VkResult U_ASSERT_ONLY err;
 
     instInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instInfo.pNext = NULL;
     instInfo.pApplicationInfo = &app_info;
-    instInfo.enabledLayerCount = instance_layer_names.size();
-    instInfo.ppEnabledLayerNames = instance_layer_names.data();
-    instInfo.enabledExtensionCount = instance_extension_names.size();
-    instInfo.ppEnabledExtensionNames = instance_extension_names.data();
+    instInfo.enabledLayerCount = m_instance_layer_names.size();
+    instInfo.ppEnabledLayerNames = m_instance_layer_names.data();
+    instInfo.enabledExtensionCount = m_instance_extension_names.size();
+    instInfo.ppEnabledExtensionNames = m_instance_extension_names.data();
     err = vkCreateInstance(&instInfo, NULL, &this->inst);
     ASSERT_VK_SUCCESS(err);
 
@@ -133,9 +202,6 @@ void VkRenderFramework::InitFramework(std::vector<const char *> instance_layer_n
                 << "Did not get function pointer for DebugReportMessage";
         }
     }
-
-    /* TODO: Verify requested physical device extensions are available */
-    this->device_extension_names = device_extension_names;
 }
 
 void VkRenderFramework::ShutdownFramework() {
@@ -167,7 +233,7 @@ void VkRenderFramework::ShutdownFramework() {
 
 void VkRenderFramework::GetPhysicalDeviceFeatures(VkPhysicalDeviceFeatures *features) {
     if (NULL == m_device) {
-        VkDeviceObj *temp_device = new VkDeviceObj(0, objs[0], device_extension_names);
+        VkDeviceObj *temp_device = new VkDeviceObj(0, objs[0], m_device_extension_names);
         *features = temp_device->phy().features();
         delete (temp_device);
     } else {
@@ -176,7 +242,17 @@ void VkRenderFramework::GetPhysicalDeviceFeatures(VkPhysicalDeviceFeatures *feat
 }
 
 void VkRenderFramework::InitState(VkPhysicalDeviceFeatures *features, const VkCommandPoolCreateFlags flags) {
-    m_device = new VkDeviceObj(0, objs[0], device_extension_names, features);
+    // Remove any unsupported device extension names from list
+    for (auto ext = m_device_extension_names.begin(); ext != m_device_extension_names.end();) {
+        if (!DeviceExtensionSupported(objs[0], *ext)) {
+            ADD_FAILURE() << "InitState(): The requested device extension " << *ext << " was not found. Disabled.";
+            ext = m_device_extension_names.erase(ext);
+        } else {
+            ++ext;
+        }
+    }
+
+    m_device = new VkDeviceObj(0, objs[0], m_device_extension_names, features);
     m_device->get_device_queue();
 
     m_depthStencil = new VkDepthStencilObj(m_device);
@@ -921,9 +997,7 @@ VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device, VkDeviceSize alloc
     this->m_descriptorBufferInfo.range = allocationSize;
 }
 
-VkPipelineShaderStageCreateInfo const & VkShaderObj::GetStageCreateInfo() const {
-    return m_stage_info;
-}
+VkPipelineShaderStageCreateInfo const &VkShaderObj::GetStageCreateInfo() const { return m_stage_info; }
 
 VkShaderObj::VkShaderObj(VkDeviceObj *device, const char *shader_code, VkShaderStageFlagBits stage, VkRenderFramework *framework,
                          char const *name) {
@@ -1017,13 +1091,9 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device) {
     memset(&m_pd_state, 0, sizeof(m_pd_state));
 };
 
-void VkPipelineObj::AddShader(VkShaderObj *shader) {
-    m_shaderStages.push_back(shader->GetStageCreateInfo());
-}
+void VkPipelineObj::AddShader(VkShaderObj *shader) { m_shaderStages.push_back(shader->GetStageCreateInfo()); }
 
-void VkPipelineObj::AddShader(VkPipelineShaderStageCreateInfo const & createInfo) {
-    m_shaderStages.push_back(createInfo);
-}
+void VkPipelineObj::AddShader(VkPipelineShaderStageCreateInfo const &createInfo) { m_shaderStages.push_back(createInfo); }
 
 void VkPipelineObj::AddVertexInputAttribs(VkVertexInputAttributeDescription *vi_attrib, uint32_t count) {
     m_vi_state.pVertexAttributeDescriptions = vi_attrib;

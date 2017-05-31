@@ -355,54 +355,58 @@ class VkLayerTest : public VkRenderFramework {
                                 BsoFailSelect failMask);
 
     void Init(VkPhysicalDeviceFeatures *features = nullptr, const VkCommandPoolCreateFlags flags = 0) {
-        InitFramework(instance_layer_names, instance_extension_names, device_extension_names, myDbgFunc, m_errorMonitor);
+        InitFramework(myDbgFunc, m_errorMonitor);
         InitState(features, flags);
     }
 
    protected:
     ErrorMonitor *m_errorMonitor;
     bool m_enableWSI;
-    std::vector<const char *> instance_layer_names;
-    std::vector<const char *> instance_extension_names;
-    std::vector<const char *> device_extension_names;
 
     virtual void SetUp() {
-        instance_extension_names.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-        /*
-         * Since CreateDbgMsgCallback is an instance level extension call
-         * any extension / layer that utilizes that feature also needs
-         * to be enabled at create instance time.
-         */
+        m_instance_layer_names.clear();
+        m_instance_extension_names.clear();
+        m_device_extension_names.clear();
+
+        // Add default instance extensions to the list
+        m_instance_extension_names.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+#ifdef _WIN32
+        m_instance_extension_names.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
+        m_instance_extension_names.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
+#endif
+
         // Use Threading layer first to protect others from
         // ThreadCommandBufferCollision test
-        instance_layer_names.push_back("VK_LAYER_GOOGLE_threading");
-        instance_layer_names.push_back("VK_LAYER_LUNARG_parameter_validation");
-        instance_layer_names.push_back("VK_LAYER_LUNARG_object_tracker");
-        instance_layer_names.push_back("VK_LAYER_LUNARG_core_validation");
-        instance_layer_names.push_back("VK_LAYER_LUNARG_swapchain");
-        instance_layer_names.push_back("VK_LAYER_GOOGLE_unique_objects");
+        m_instance_layer_names.push_back("VK_LAYER_GOOGLE_threading");
+        m_instance_layer_names.push_back("VK_LAYER_LUNARG_parameter_validation");
+        m_instance_layer_names.push_back("VK_LAYER_LUNARG_object_tracker");
+        m_instance_layer_names.push_back("VK_LAYER_LUNARG_core_validation");
+        m_instance_layer_names.push_back("VK_LAYER_LUNARG_swapchain");
+        m_instance_layer_names.push_back("VK_LAYER_GOOGLE_unique_objects");
 
         if (m_enableWSI) {
-            instance_extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
-            device_extension_names.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+            m_instance_extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+            m_device_extension_names.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 #ifdef NEED_TO_TEST_THIS_ON_PLATFORM
 #if defined(VK_USE_PLATFORM_ANDROID_KHR)
-            instance_extension_names.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
+            m_instance_extension_names.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
 #endif  // VK_USE_PLATFORM_ANDROID_KHR
 #if defined(VK_USE_PLATFORM_MIR_KHR)
-            instance_extension_names.push_back(VK_KHR_MIR_SURFACE_EXTENSION_NAME);
+            m_instance_extension_names.push_back(VK_KHR_MIR_SURFACE_EXTENSION_NAME);
 #endif  // VK_USE_PLATFORM_MIR_KHR
 #if defined(VK_USE_PLATFORM_WAYLAND_KHR)
-            instance_extension_names.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
+            m_instance_extension_names.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
 #endif  // VK_USE_PLATFORM_WAYLAND_KHR
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
-            instance_extension_names.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+            m_instance_extension_names.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #endif  // VK_USE_PLATFORM_WIN32_KHR
 #endif  // NEED_TO_TEST_THIS_ON_PLATFORM
 #if defined(VK_USE_PLATFORM_XCB_KHR)
-            instance_extension_names.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
+            m_instance_extension_names.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
 #elif defined(VK_USE_PLATFORM_XLIB_KHR)
-            instance_extension_names.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
+            m_instance_extension_names.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
 #endif  // VK_USE_PLATFORM_XLIB_KHR
         }
 
@@ -1359,8 +1363,7 @@ TEST_F(VkLayerTest, SparseResidencyImageCreateUnsupportedTypes) {
 
     // Determine which device feature are available
     VkPhysicalDeviceFeatures device_features = {};
-    ASSERT_NO_FATAL_FAILURE(
-        InitFramework(instance_layer_names, instance_extension_names, device_extension_names, myDbgFunc, m_errorMonitor));
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
     ASSERT_NO_FATAL_FAILURE(GetPhysicalDeviceFeatures(&device_features));
 
     // Mask out device features we don't want and initialize device state
@@ -1426,8 +1429,7 @@ TEST_F(VkLayerTest, SparseResidencyImageCreateUnsupportedSamples) {
 
     // Determine which device feature are available
     VkPhysicalDeviceFeatures device_features = {};
-    ASSERT_NO_FATAL_FAILURE(
-        InitFramework(instance_layer_names, instance_extension_names, device_extension_names, myDbgFunc, m_errorMonitor));
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
     ASSERT_NO_FATAL_FAILURE(GetPhysicalDeviceFeatures(&device_features));
 
     // These tests require that the device support sparse residency for 2D images
@@ -3012,37 +3014,15 @@ TEST_F(VkLayerTest, ExceedMemoryAllocationCount) {
     VkResult err = VK_SUCCESS;
     const int max_mems = 32;
     VkDeviceMemory mems[max_mems + 1];
-    uint32_t instance_layer_count = 0;
 
-    err = vkEnumerateInstanceLayerProperties(&instance_layer_count, NULL);
-    assert(!err);
-
-    if (!instance_layer_count) {
-        printf("             No instance layers found; skipped.\n");
-        return;
-    }
-    VkLayerProperties *instance_layers = (VkLayerProperties *)malloc(sizeof(VkLayerProperties) * instance_layer_count);
-    assert(instance_layers);
-    err = vkEnumerateInstanceLayerProperties(&instance_layer_count, instance_layers);
-    assert(!err);
-
-    bool found = false;
-    for (uint32_t i = 0; i < instance_layer_count; i++) {
-        if (!strcmp(instance_layers[i].layerName, "VK_LAYER_LUNARG_device_profile_api")) {
-            found = true;
-            break;
-        }
-    }
-    free(instance_layers);
-
-    if (!found) {
+    if (InstanceLayerSupported("VK_LAYER_LUNARG_device_profile_api")) {
+        m_instance_layer_names.push_back("VK_LAYER_LUNARG_device_profile_api");
+    } else {
         printf("             Did not find VK_LAYER_LUNARG_device_profile_api layer; skipped.\n");
         return;
     }
 
-    instance_layer_names.push_back("VK_LAYER_LUNARG_device_profile_api");
-    ASSERT_NO_FATAL_FAILURE(
-        InitFramework(instance_layer_names, instance_extension_names, device_extension_names, myDbgFunc, m_errorMonitor));
+    ASSERT_NO_FATAL_FAILURE(InitFramework(myDbgFunc, m_errorMonitor));
 
     PFN_vkSetPhysicalDeviceLimitsEXT fpvkSetPhysicalDeviceLimitsEXT =
         (PFN_vkSetPhysicalDeviceLimitsEXT)vkGetInstanceProcAddr(instance(), "vkSetPhysicalDeviceLimitsEXT");
@@ -24218,34 +24198,17 @@ TEST_F(VkPositiveLayerTest, CreateComputePipelineCombinedImageSamplerConsumedAsB
 TEST_F(VkPositiveLayerTest, Maintenance1Tests) {
     TEST_DESCRIPTION("Validate various special cases for the Maintenance1_KHR extension");
 
-    device_extension_names.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
-    InitFramework(instance_layer_names, instance_extension_names, device_extension_names, myDbgFunc, m_errorMonitor);
-
-    // Ensure that extension is available and enabled.
-    uint32_t extension_count = 0;
-    bool supports_maintenance1_extension = false;
-    VkResult err = vkEnumerateDeviceExtensionProperties(gpu(), nullptr, &extension_count, nullptr);
-    ASSERT_VK_SUCCESS(err);
-    if (extension_count > 0) {
-        std::vector<VkExtensionProperties> available_extensions(extension_count);
-
-        err = vkEnumerateDeviceExtensionProperties(gpu(), nullptr, &extension_count, &available_extensions[0]);
-        ASSERT_VK_SUCCESS(err);
-        for (const auto &extension_props : available_extensions) {
-            if (strcmp(extension_props.extensionName, VK_KHR_MAINTENANCE1_EXTENSION_NAME) == 0) {
-                supports_maintenance1_extension = true;
-            }
-        }
-    }
-
-    // Proceed if extension is supported by hardware
-    if (!supports_maintenance1_extension) {
+    ASSERT_NO_FATAL_FAILURE(InitFramework());  // gpu() is not valid prior to InitFramework()
+    if (DeviceExtensionSupported(gpu(), VK_KHR_MAINTENANCE1_EXTENSION_NAME)) {
+        m_device_extension_names.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
+    } else {
         printf("             Maintenance1 Extension not supported, skipping tests\n");
         return;
     }
+    ASSERT_NO_FATAL_FAILURE(InitState());
 
     m_errorMonitor->ExpectSuccess();
-    ASSERT_NO_FATAL_FAILURE(InitState());
+
     VkCommandBufferObj cmd_buf(m_device, m_commandPool);
     cmd_buf.begin();
     // Set Negative height, should give error if Maintenance 1 is not enabled

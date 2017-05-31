@@ -63,7 +63,7 @@ class VkRenderFramework : public VkTestFramework {
 
     VkInstance instance() { return inst; }
     VkDevice device() { return m_device->device(); }
-    VkPhysicalDevice gpu() { return objs[0]; }
+    VkPhysicalDevice gpu();
     VkRenderPass renderPass() { return m_renderPass; }
     VkFramebuffer framebuffer() { return m_framebuffer; }
     void InitViewport(float width, float height);
@@ -72,16 +72,17 @@ class VkRenderFramework : public VkTestFramework {
     void InitRenderTarget(uint32_t targets);
     void InitRenderTarget(VkImageView *dsBinding);
     void InitRenderTarget(uint32_t targets, VkImageView *dsBinding);
-    void InitFramework();
-    void InitFramework(std::vector<const char *> instance_layer_names, std::vector<const char *> instance_extension_names,
-                       std::vector<const char *> device_extension_names, PFN_vkDebugReportCallbackEXT = NULL,
-                       void *userData = NULL);
+    void InitFramework(PFN_vkDebugReportCallbackEXT = NULL, void *userData = NULL);
 
     void ShutdownFramework();
     void GetPhysicalDeviceFeatures(VkPhysicalDeviceFeatures *features);
     void InitState(VkPhysicalDeviceFeatures *features = nullptr, const VkCommandPoolCreateFlags flags = 0);
 
     const VkRenderPassBeginInfo &renderPassBeginInfo() const { return m_renderPassBeginInfo; }
+
+    bool InstanceLayerSupported(const char *name, uint32_t specVersion = 0, uint32_t implementationVersion = 0);
+    bool InstanceExtensionSupported(const char *name, uint32_t specVersion = 0);
+    bool DeviceExtensionSupported(VkPhysicalDevice dev, const char *name, uint32_t specVersion = 0);
 
    protected:
     VkApplicationInfo app_info;
@@ -121,7 +122,10 @@ class VkRenderFramework : public VkTestFramework {
     PFN_vkDebugReportMessageEXT m_DebugReportMessage;
     VkDebugReportCallbackEXT m_globalMsgCallback;
     VkDebugReportCallbackEXT m_devMsgCallback;
-    std::vector<const char *> device_extension_names;
+
+    std::vector<const char *> m_instance_layer_names;
+    std::vector<const char *> m_instance_extension_names;
+    std::vector<const char *> m_device_extension_names;
 
     /*
      * SetUp and TearDown are called by the Google Test framework
