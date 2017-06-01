@@ -51,7 +51,7 @@
 #include "vk_validation_error_messages.h"
 #include "vk_layer_logging.h"
 #include "vk_object_types.h"
-#include "device_extensions.h"
+#include "vk_extension_helper.h"
 #include <atomic>
 #include <functional>
 #include <map>
