@@ -118,20 +118,10 @@ static const VkLayerProperties global_layer = {
 };
 
 template <typename T>
-bool ValidateRequiredExtensions(const T *layer_data, const std::string &api_name, const std::vector<std::string> &required_extensions) {
-    bool skip = false;
-    std::stringstream error_results;
-    auto const &enabled_extensions = layer_data->enabled_extensions;
-
-    for (const auto &reqd_ext : required_extensions) {
-        if (enabled_extensions.find(reqd_ext) == enabled_extensions.end()) {
-            skip = log_msg(layer_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                           __LINE__, EXTENSION_NOT_ENABLED, LayerName,
-                           "Attemped to call %s() but its required extension %s has not been enabled\n", api_name.c_str(),
-                           reqd_ext.c_str());
-        }
-    }
-    return skip;
+bool OutputExtensionError(const T *layer_data, const std::string &api_name, const std::string &extension_name) {
+    return log_msg(layer_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                   EXTENSION_NOT_ENABLED, LayerName, "Attemped to call %s() but its required extension %s has not been enabled\n",
+                   api_name.c_str(), extension_name.c_str());
 }
 
 static const int MaxParamCheckerStringLength = 256;
