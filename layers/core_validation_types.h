@@ -739,7 +739,6 @@ struct CHECK_DISABLED {
 struct MT_FB_ATTACHMENT_INFO {
     IMAGE_VIEW_STATE *view_state;
     VkImage image;
-    VkDeviceMemory mem;
 };
 
 class FRAMEBUFFER_STATE : public BASE_NODE {
