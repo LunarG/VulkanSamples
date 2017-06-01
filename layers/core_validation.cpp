@@ -10386,7 +10386,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchai
         // This should never happen and is checked by param checker.
         if (!pCount) return result;
         std::lock_guard<std::mutex> lock(global_lock);
-        const size_t count = *pCount;
         auto swapchain_node = GetSwapchainNode(dev_data, swapchain);
         for (uint32_t i = 0; i < *pCount; ++i) {
             IMAGE_LAYOUT_NODE image_layout_node;

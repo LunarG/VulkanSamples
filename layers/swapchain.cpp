@@ -875,30 +875,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchai
     return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
-VKAPI_ATTR void VKAPI_CALL GetDeviceQueue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue *pQueue) {
-    bool skip_call = false;
-    layer_data *my_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-
-    if (!skip_call) {
-        // Call down the call chain:
-        my_data->device_dispatch_table->GetDeviceQueue(device, queueFamilyIndex, queueIndex, pQueue);
-
-        // Remember the queue's handle, and link it to the device:
-        std::lock_guard<std::mutex> lock(global_lock);
-        SwpDevice *pDevice = NULL;
-        {
-            auto it = my_data->deviceMap.find(device);
-            pDevice = (it == my_data->deviceMap.end()) ? NULL : &it->second;
-        }
-        my_data->queueMap[&pQueue].queue = *pQueue;
-        if (pDevice) {
-            pDevice->queues[*pQueue] = &my_data->queueMap[*pQueue];
-        }
-        my_data->queueMap[&pQueue].pDevice = pDevice;
-        my_data->queueMap[&pQueue].queueFamilyIndex = queueFamilyIndex;
-    }
-}
-
 VKAPI_ATTR VkResult VKAPI_CALL CreateDebugReportCallbackEXT(VkInstance instance,
                                                             const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
                                                             const VkAllocationCallbacks *pAllocator,
@@ -1093,7 +1069,6 @@ static PFN_vkVoidFunction intercept_core_device_command(const char *name) {
     } core_device_commands[] = {
         {"vkGetDeviceProcAddr", reinterpret_cast<PFN_vkVoidFunction>(GetDeviceProcAddr)},
         {"vkDestroyDevice", reinterpret_cast<PFN_vkVoidFunction>(DestroyDevice)},
-        {"vkGetDeviceQueue", reinterpret_cast<PFN_vkVoidFunction>(GetDeviceQueue)},
     };
 
     for (size_t i = 0; i < ARRAY_SIZE(core_device_commands); i++) {

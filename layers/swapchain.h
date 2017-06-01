@@ -137,9 +137,6 @@ struct SwpDevice {
     // When vkCreateSwapchainKHR is called, the VkSwapchainKHR's are
     // remembered:
     std::unordered_map<VkSwapchainKHR, SwpSwapchain *> swapchains;
-
-    // When vkGetDeviceQueue is called, the VkQueue's are remembered:
-    std::unordered_map<VkQueue, SwpQueue *> queues;
 };
 
 // Create one of these for each VkImage within a VkSwapchainKHR:
