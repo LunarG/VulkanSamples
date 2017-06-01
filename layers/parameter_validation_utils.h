@@ -30,7 +30,7 @@
 #include "vk_enum_string_helper.h"
 #include "vk_layer_logging.h"
 #include "vk_validation_error_messages.h"
-#include "device_extensions.h"
+#include "vk_extension_helper.h"
 
 
 #include "parameter_name.h"
