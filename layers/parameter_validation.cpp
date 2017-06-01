@@ -610,7 +610,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physicalDevice, con
                 my_device_data->enabled_extensions.emplace(inst_ext);
             }
 
-            my_device_data->enables.InitFromDeviceCreateInfo(&my_instance_data->extensions, pCreateInfo);
+            my_device_data->extensions.InitFromDeviceCreateInfo(&my_instance_data->extensions, pCreateInfo);
 
             storeCreateDeviceData(*pDevice, pCreateInfo);
 
@@ -3154,8 +3154,8 @@ static bool preCmdSetViewport(layer_data *my_data, uint32_t first_viewport, uint
             }
 
             bool invalid_height = (viewport.height <= 0 || viewport.height > limits.maxViewportDimensions[1]);
-            if ((my_data->enables.vk_amd_negative_viewport_height || my_data->enables.vk_khr_maintenance1) && (viewport.height < 0)) {
-                // VALIDATION_ERROR_1500099c
+            if ((my_data->extensions.vk_amd_negative_viewport_height || my_data->extensions.vk_khr_maintenance1) &&
+                (viewport.height < 0)) { // VALIDATION_ERROR_1500099c
                 invalid_height = false;
             }
             if (invalid_height) {
@@ -4147,7 +4147,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
         while (pnext) {
             if (VK_STRUCTURE_TYPE_PRESENT_REGIONS_KHR == pnext->sType) {
                 // TODO: This and all other pNext extension dependencies should be added to code-generation
-                skip |= require_device_extension(my_data, my_data->enables.vk_khr_incremental_present, "vkQueuePresentKHR",
+                skip |= require_device_extension(my_data, my_data->extensions.vk_khr_incremental_present, "vkQueuePresentKHR",
                                                  VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME);
                 VkPresentRegionsKHR *present_regions = (VkPresentRegionsKHR *)pnext;
                 if (present_regions->swapchainCount != pPresentInfo->swapchainCount) {

@@ -61,7 +61,7 @@ struct layer_data {
     VkPhysicalDeviceFeatures physical_device_features = {};
     VkPhysicalDevice physical_device = VK_NULL_HANDLE;
     VkDevice device = VK_NULL_HANDLE;
-    DeviceExtensions enables;
+    DeviceExtensions extensions;
     std::unordered_set<std::string> enabled_extensions;
 
     VkLayerDispatchTable dispatch_table = {};
