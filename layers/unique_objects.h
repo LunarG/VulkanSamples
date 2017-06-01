@@ -24,7 +24,6 @@
 #include "vk_layer_data.h"
 #include "vk_safe_struct.h"
 #include "vk_layer_utils.h"
-#include "device_extensions.h"
 #include "mutex"
 
 #pragma once
@@ -56,8 +55,6 @@ struct instance_layer_data {
     VkDebugReportCallbackEXT *tmp_callbacks;
 
     std::unordered_map<uint64_t, uint64_t> unique_id_mapping;  // Map uniqueID to actual object handle
-
-    InstanceExtensions extensions = {};
 };
 
 struct layer_data {

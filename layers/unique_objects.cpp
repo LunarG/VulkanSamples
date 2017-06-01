@@ -65,7 +65,6 @@ static void initUniqueObjects(instance_layer_data *instance_data, const VkAlloca
 static void checkInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateInfo, VkInstance instance) {
     uint32_t i;
     instance_layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(instance), instance_layer_data_map);
-    instance_data->extensions.InitFromInstanceCreateInfo(pCreateInfo);
 
     for (i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         // Check for recognized instance extensions
