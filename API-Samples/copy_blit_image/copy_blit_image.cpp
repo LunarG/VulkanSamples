@@ -323,7 +323,7 @@ int sample_main(int argc, char *argv[]) {
 
     wait_seconds(1);
     /* VULKAN_KEY_END */
-    if (info.save_images) write_ppm(info, "copyblitimage");
+    if (info.save_images) write_ppm(info, "copy_blit_image");
 
     vkDestroySemaphore(info.device, imageAcquiredSemaphore, NULL);
     vkDestroyFence(info.device, drawFence, NULL);

@@ -354,7 +354,7 @@ int sample_main(int argc, char *argv[]) {
 
     wait_seconds(1);
     /* VULKAN_KEY_END */
-    if (info.save_images) write_ppm(info, "dynamicuniform");
+    if (info.save_images) write_ppm(info, "dynamic_uniform");
 
     vkDestroySemaphore(info.device, imageAcquiredSemaphore, NULL);
     vkDestroyFence(info.device, drawFence, NULL);

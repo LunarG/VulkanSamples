@@ -638,7 +638,7 @@ int sample_main(int argc, char *argv[]) {
 
     wait_seconds(1);
     /* VULKAN_KEY_END */
-    if (info.save_images) write_ppm(info, "drawsubpasses");
+    if (info.save_images) write_ppm(info, "draw_subpasses");
 
     for (uint32_t i = 0; i < info.swapchainImageCount; i++) vkDestroyFramebuffer(info.device, stencil_framebuffers[i], NULL);
     free(stencil_framebuffers);

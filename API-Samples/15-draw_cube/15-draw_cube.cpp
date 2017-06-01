@@ -196,7 +196,7 @@ int sample_main(int argc, char *argv[]) {
 
     wait_seconds(1);
     /* VULKAN_KEY_END */
-    if (info.save_images) write_ppm(info, "drawcube");
+    if (info.save_images) write_ppm(info, "15-draw_cube");
 
     vkDestroySemaphore(info.device, imageAcquiredSemaphore, NULL);
     vkDestroyFence(info.device, drawFence, NULL);

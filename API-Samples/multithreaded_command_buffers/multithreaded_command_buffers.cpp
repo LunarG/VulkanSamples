@@ -286,7 +286,7 @@ int sample_main(int argc, char *argv[]) {
 
     wait_seconds(1);
     /* VULKAN_KEY_END */
-    if (info.save_images) write_ppm(info, "multithreadcmdbuf");
+    if (info.save_images) write_ppm(info, "multithreaded_command_buffers");
 
     vkDestroyBuffer(info.device, vertex_buffer[0].buf, NULL);
     vkDestroyBuffer(info.device, vertex_buffer[1].buf, NULL);
