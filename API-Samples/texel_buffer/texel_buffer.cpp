@@ -308,7 +308,7 @@ int sample_main(int argc, char *argv[]) {
 
     wait_seconds(1);
     /* VULKAN_KEY_END */
-    if (info.save_images) write_ppm(info, "texelbuffer");
+    if (info.save_images) write_ppm(info, "texel_buffer");
 
     vkDestroySemaphore(info.device, info.imageAcquiredSemaphore, NULL);
     vkDestroyBufferView(info.device, texel_view, NULL);
