@@ -86,6 +86,8 @@ class HelperFileOutputGenerator(OutputGenerator):
         self.object_types = []                            # List of all handle types
         self.debug_report_object_types = []               # Handy copy of debug_report_object_type enum data
         self.core_object_types = []                       # Handy copy of core_object_type enum data
+        self.device_extension_info = dict()               # Dict of device extension name defines and ifdef values
+        self.instance_extension_info = dict()             # Dict of instance extension name defines and ifdef values
 
         # Named tuples to store struct and command data
         self.StructType = namedtuple('StructType', ['name', 'value'])
@@ -127,6 +129,7 @@ class HelperFileOutputGenerator(OutputGenerator):
         copyright += ' * Author: Mark Lobodzinski <mark@lunarg.com>\n'
         copyright += ' * Author: Courtney Goeltzenleuchter <courtneygo@google.com>\n'
         copyright += ' * Author: Tobin Ehlis <tobine@google.com>\n'
+        copyright += ' * Author: Chris Forbes <chrisforbes@google.com>\n'
         copyright += ' *\n'
         copyright += ' ****************************************************************************/\n'
         write(copyright, file=self.outFile)
@@ -141,6 +144,26 @@ class HelperFileOutputGenerator(OutputGenerator):
         write(dest_file, file=self.outFile);
         # Finish processing in superclass
         OutputGenerator.endFile(self)
+    #
+    # Override parent class to be notified of the beginning of an extension
+    def beginFeature(self, interface, emit):
+        # Start processing in superclass
+        OutputGenerator.beginFeature(self, interface, emit)
+        if self.featureName == 'VK_VERSION_1_0':
+            return
+        nameElem = interface[0][1]
+        name = nameElem.get('name')
+        if 'EXTENSION_NAME' not in name:
+            print("Error in vk.xml file -- extension name is not available")
+        if interface.get('type') == 'instance':
+            self.instance_extension_info[name] = self.featureExtraProtect
+        else:
+            self.device_extension_info[name] = self.featureExtraProtect
+    #
+    # Override parent class to be notified of the end of an extension
+    def endFeature(self):
+        # Finish processing in superclass
+        OutputGenerator.endFeature(self)
     #
     # Grab group (e.g. C "enum" type) info to output for enum-string conversion helper
     def genGroup(self, groupinfo, groupName):
@@ -529,6 +552,64 @@ class HelperFileOutputGenerator(OutputGenerator):
                     safe_struct_header += '#endif // %s\n' % item.ifdef_protect
         return safe_struct_header
     #
+    # Generate extension helper header file
+    def GenerateExtensionHelperHeader(self):
+        extension_helper_header = '\n'
+        extension_helper_header += '#ifndef VK_EXTENSION_HELPER_H_\n'
+        extension_helper_header += '#define VK_EXTENSION_HELPER_H_\n'
+        struct  = '\n'
+        extension_dict = dict()
+        for type in ['Instance', 'Device']:
+            if type == 'Instance':
+                extension_dict = self.instance_extension_info
+                struct += 'struct InstanceExtensions { \n'
+            else:
+                extension_dict = self.device_extension_info
+                struct += 'struct DeviceExtensions : public InstanceExtensions { \n'
+            for ext_name, ifdef in extension_dict.items():
+                bool_name = ext_name.lower()
+                bool_name = re.sub('_extension_name', '', bool_name)
+                struct += '    bool %s{false};\n' % bool_name
+            struct += '\n'
+            if type == 'Instance':
+                struct += '    void InitFromInstanceCreateInfo(const VkInstanceCreateInfo *pCreateInfo) {\n'
+            else:
+                struct += '    void InitFromDeviceCreateInfo(const InstanceExtensions *instance_extensions, const VkDeviceCreateInfo *pCreateInfo) {\n'
+            struct += '\n'
+            struct += '        static const std::pair<char const *, bool %sExtensions::*> known_extensions[]{\n' % type
+            for ext_name, ifdef in extension_dict.items():
+                if ifdef is not None:
+                    struct += '#ifdef %s\n' % ifdef
+                bool_name = ext_name.lower()
+                bool_name = re.sub('_extension_name', '', bool_name)
+                struct += '            {%s, &%sExtensions::%s},\n' % (ext_name, type, bool_name)
+                if ifdef is not None:
+                    struct += '#endif\n'
+            struct += '        };\n'
+            struct += '\n'
+            struct += '        // Initialize struct data\n'
+            for ext_name, ifdef in self.instance_extension_info.items():
+                bool_name = ext_name.lower()
+                bool_name = re.sub('_extension_name', '', bool_name)
+                if type == 'Device':
+                    struct += '        %s = instance_extensions->%s;\n' % (bool_name, bool_name)
+            struct += '\n'
+            struct += '        for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {\n'
+            struct += '            for (auto ext : known_extensions) {\n'
+            struct += '                if (!strcmp(ext.first, pCreateInfo->ppEnabledExtensionNames[i])) {\n'
+            struct += '                    this->*(ext.second) = true;\n'
+            struct += '                    break;\n'
+            struct += '                }\n'
+            struct += '            }\n'
+            struct += '        }\n'
+            struct += '    }\n'
+            struct += '};\n'
+            struct += '\n'
+        extension_helper_header += struct
+        extension_helper_header += '\n'
+        extension_helper_header += '#endif // VK_EXTENSION_HELPER_H_\n'
+        return extension_helper_header
+    #
     # Combine object types helper header file preamble with body text and return
     def GenerateObjectTypesHelperHeader(self):
         object_types_helper_header = '\n'
@@ -798,6 +879,8 @@ class HelperFileOutputGenerator(OutputGenerator):
             return self.GenerateSafeStructHelperSource()
         elif self.helper_file_type == 'object_types_header':
             return self.GenerateObjectTypesHelperHeader()
+        elif self.helper_file_type == 'extension_helper_header':
+            return self.GenerateExtensionHelperHeader()
         else:
             return 'Bad Helper File Generator Option %s' % self.helper_file_type
 
