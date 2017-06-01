@@ -726,10 +726,6 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
             pDevice->pPhysicalDevice->pDevice = NULL;
         }
         if (!pDevice->swapchains.empty()) {
-            log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                    HandleToUint64(device), __LINE__, VALIDATION_ERROR_24a002f4, swapchain_layer_name,
-                    "vkDestroyDevice() called before all of its associated VkSwapchainKHRs were destroyed. %s",
-                    validation_error_map[VALIDATION_ERROR_24a002f4]);
 
             // Empty and then delete all SwpSwapchain's
             for (auto it = pDevice->swapchains.begin(); it != pDevice->swapchains.end(); it++) {
