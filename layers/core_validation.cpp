@@ -10388,19 +10388,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchai
         std::lock_guard<std::mutex> lock(global_lock);
         const size_t count = *pCount;
         auto swapchain_node = GetSwapchainNode(dev_data, swapchain);
-        if (swapchain_node && !swapchain_node->images.empty()) {
-            // TODO : Not sure I like the memcmp here, but it works
-            const bool mismatch = (swapchain_node->images.size() != count ||
-                                   memcmp(&swapchain_node->images[0], pSwapchainImages, sizeof(swapchain_node->images[0]) * count));
-            if (mismatch) {
-                // TODO: Verify against Valid Usage section of extension
-                log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
-                        HandleToUint64(swapchain), __LINE__, MEMTRACK_NONE, "SWAP_CHAIN",
-                        "vkGetSwapchainInfoKHR(0x%" PRIx64
-                        ", VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_KHR) returned mismatching data",
-                        HandleToUint64(swapchain));
-            }
-        }
         for (uint32_t i = 0; i < *pCount; ++i) {
             IMAGE_LAYOUT_NODE image_layout_node;
             image_layout_node.layout = VK_IMAGE_LAYOUT_UNDEFINED;
