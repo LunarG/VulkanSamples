@@ -2227,8 +2227,8 @@ TEST_F(VkLayerTest, InvalidUsageBits) {
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Image should have VK_IMAGE_USAGE_TRANSFER_DST_BIT");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "Buffer should have VK_BUFFER_USAGE_TRANSFER_SRC_BIT");
 
-    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer.handle(), image.handle(),
-                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer.handle(), image.handle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
+                           &region);
     m_errorMonitor->VerifyFound();
 }
 
@@ -3165,8 +3165,8 @@ TEST_F(VkLayerTest, ImageSampleCounts) {
         m_errorMonitor->SetDesiredFailureMsg(
             VK_DEBUG_REPORT_ERROR_BIT_EXT,
             "was created with a sample count of VK_SAMPLE_COUNT_2_BIT but must be VK_SAMPLE_COUNT_1_BIT");
-        vkCmdBlitImage(m_commandBuffer->handle(), src_image.handle(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                       dst_image.handle(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1, &blit_region, VK_FILTER_NEAREST);
+        vkCmdBlitImage(m_commandBuffer->handle(), src_image.handle(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, dst_image.handle(),
+                       VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1, &blit_region, VK_FILTER_NEAREST);
         m_errorMonitor->VerifyFound();
         m_commandBuffer->end();
     }
@@ -3186,8 +3186,8 @@ TEST_F(VkLayerTest, ImageSampleCounts) {
         m_errorMonitor->SetDesiredFailureMsg(
             VK_DEBUG_REPORT_ERROR_BIT_EXT,
             "was created with a sample count of VK_SAMPLE_COUNT_4_BIT but must be VK_SAMPLE_COUNT_1_BIT");
-        vkCmdBlitImage(m_commandBuffer->handle(), src_image.handle(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                       dst_image.handle(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1, &blit_region, VK_FILTER_NEAREST);
+        vkCmdBlitImage(m_commandBuffer->handle(), src_image.handle(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, dst_image.handle(),
+                       VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1, &blit_region, VK_FILTER_NEAREST);
         m_errorMonitor->VerifyFound();
         m_commandBuffer->end();
     }
@@ -3556,40 +3556,35 @@ TEST_F(VkLayerTest, DSImageTransferGranularityTests) {
     // Introduce failure by setting bufferRowLength to a bad granularity value
     region.bufferRowLength = 3;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "queue family image transfer granularity");
-    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer.handle(), srcImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
-                           &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer.handle(), srcImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
     m_errorMonitor->VerifyFound();
     region.bufferRowLength = 128;
 
     // Introduce failure by setting bufferOffset to a bad granularity value
     region.bufferOffset = 3;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "queue family image transfer granularity");
-    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), srcImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, buffer.handle(), 1,
-                           &region);
+    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), srcImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, buffer.handle(), 1, &region);
     m_errorMonitor->VerifyFound();
     region.bufferOffset = 0;
 
     // Introduce failure by setting bufferImageHeight to a bad granularity value
     region.bufferImageHeight = 3;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "queue family image transfer granularity");
-    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), srcImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, buffer.handle(), 1,
-                           &region);
+    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), srcImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, buffer.handle(), 1, &region);
     m_errorMonitor->VerifyFound();
     region.bufferImageHeight = 128;
 
     // Introduce failure by setting imageExtent to a bad granularity value
     region.imageExtent.width = 3;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "queue family image transfer granularity");
-    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), srcImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, buffer.handle(), 1,
-                           &region);
+    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), srcImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, buffer.handle(), 1, &region);
     m_errorMonitor->VerifyFound();
     region.imageExtent.width = 16;
 
     // Introduce failure by setting imageOffset to a bad granularity value
     region.imageOffset.z = 3;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "queue family image transfer granularity");
-    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer.handle(), srcImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
-                           &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer.handle(), srcImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
     m_errorMonitor->VerifyFound();
 
     m_commandBuffer->end();
@@ -3882,8 +3877,7 @@ TEST_F(VkLayerTest, CreateRenderPassAttachments) {
     std::vector<VkAttachmentDescription> attachments = {
         // input attachments
         {0, VK_FORMAT_R8G8B8A8_UNORM, VK_SAMPLE_COUNT_4_BIT, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
-         VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE, VK_IMAGE_LAYOUT_GENERAL,
-         VK_IMAGE_LAYOUT_GENERAL},
+         VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL},
         // color attachments
         {0, VK_FORMAT_R8G8B8A8_UNORM, VK_SAMPLE_COUNT_4_BIT, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
          VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -4688,8 +4682,7 @@ TEST_F(VkLayerTest, InvalidDescriptorSet) {
     ASSERT_VK_SUCCESS(err);
 
     m_commandBuffer->begin();
-    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &bad_set, 0,
-                            NULL);
+    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &bad_set, 0, NULL);
     m_errorMonitor->VerifyFound();
     m_commandBuffer->end();
     vkDestroyPipelineLayout(device(), pipeline_layout, NULL);
@@ -5079,8 +5072,8 @@ TEST_F(VkLayerTest, InvalidCmdBufferBufferViewDestroyed) {
     vkCmdSetScissor(m_commandBuffer->handle(), 0, 1, &scissor);
     // Bind pipeline to cmd buffer
     vkCmdBindPipeline(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
-    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1,
-                            &descriptor_set, 0, nullptr);
+    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_set, 0,
+                            nullptr);
     m_commandBuffer->Draw(1, 0, 0, 0);
     m_commandBuffer->EndRenderPass();
     m_commandBuffer->end();
@@ -5628,8 +5621,7 @@ TEST_F(VkLayerTest, BufferMemoryNotBound) {
     region.imageExtent.width = 4;
     region.imageExtent.depth = 1;
     m_commandBuffer->begin();
-    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer, image.handle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
-                           &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer, image.handle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
     m_commandBuffer->end();
 
     m_errorMonitor->VerifyFound();
@@ -5931,8 +5923,8 @@ TEST_F(VkLayerTest, InvalidCmdBufferDescriptorSetBufferDestroyed) {
     m_commandBuffer->begin();
     m_commandBuffer->BeginRenderPass(m_renderPassBeginInfo);
     vkCmdBindPipeline(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
-    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1,
-                            &descriptorSet, 0, NULL);
+    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptorSet, 0,
+                            NULL);
 
     vkCmdSetViewport(m_commandBuffer->handle(), 0, 1, &m_viewports[0]);
     vkCmdSetScissor(m_commandBuffer->handle(), 0, 1, &m_scissors[0]);
@@ -6154,8 +6146,8 @@ TEST_F(VkLayerTest, InvalidCmdBufferDescriptorSetImageSamplerDestroyed) {
     m_commandBuffer->begin();
     m_commandBuffer->BeginRenderPass(m_renderPassBeginInfo);
     vkCmdBindPipeline(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
-    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1,
-                            &descriptorSet, 0, NULL);
+    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptorSet, 0,
+                            NULL);
     VkViewport viewport = {0, 0, 16, 16, 0, 1};
     VkRect2D scissor = {{0, 0}, {16, 16}};
     vkCmdSetViewport(m_commandBuffer->handle(), 0, 1, &viewport);
@@ -6185,8 +6177,8 @@ TEST_F(VkLayerTest, InvalidCmdBufferDescriptorSetImageSamplerDestroyed) {
     m_commandBuffer->begin(&info);
     m_commandBuffer->BeginRenderPass(m_renderPassBeginInfo);
     vkCmdBindPipeline(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
-    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1,
-                            &descriptorSet, 0, NULL);
+    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptorSet, 0,
+                            NULL);
     vkCmdSetViewport(m_commandBuffer->handle(), 0, 1, &viewport);
     vkCmdSetScissor(m_commandBuffer->handle(), 0, 1, &scissor);
     m_commandBuffer->Draw(1, 0, 0, 0);
@@ -6207,8 +6199,8 @@ TEST_F(VkLayerTest, InvalidCmdBufferDescriptorSetImageSamplerDestroyed) {
     m_commandBuffer->begin(&info);
     m_commandBuffer->BeginRenderPass(m_renderPassBeginInfo);
     vkCmdBindPipeline(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
-    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1,
-                            &descriptorSet, 0, NULL);
+    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptorSet, 0,
+                            NULL);
     vkCmdSetViewport(m_commandBuffer->handle(), 0, 1, &viewport);
     vkCmdSetScissor(m_commandBuffer->handle(), 0, 1, &scissor);
     m_commandBuffer->Draw(1, 0, 0, 0);
@@ -6554,8 +6546,8 @@ TEST_F(VkLayerTest, DescriptorPoolInUseDestroyedSignaled) {
     m_commandBuffer->begin();
     m_commandBuffer->BeginRenderPass(m_renderPassBeginInfo);
     vkCmdBindPipeline(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
-    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1,
-                            &descriptor_set, 0, NULL);
+    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_set, 0,
+                            NULL);
 
     VkViewport viewport = {0, 0, 16, 16, 0, 1};
     VkRect2D scissor = {{0, 0}, {16, 16}};
@@ -6849,8 +6841,8 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated) {
 
     m_commandBuffer->begin();
     vkCmdBindPipeline(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
-    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1,
-                            &descriptorSet, 0, NULL);
+    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptorSet, 0,
+                            NULL);
 
     m_errorMonitor->VerifyFound();
 
@@ -7078,15 +7070,15 @@ TEST_F(VkLayerTest, InvalidDynamicOffsetCases) {
 
     m_commandBuffer->begin();
     m_commandBuffer->BeginRenderPass(m_renderPassBeginInfo);
-    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1,
-                            &descriptorSet, 0, NULL);
+    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptorSet, 0,
+                            NULL);
     m_errorMonitor->VerifyFound();
     uint32_t pDynOff[2] = {512, 756};
     // Now cause error b/c too many dynOffsets in array for # of dyn descriptors
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "Attempting to bind 1 descriptorSets with 1 dynamic descriptors, but ");
-    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1,
-                            &descriptorSet, 2, pDynOff);
+    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptorSet, 2,
+                            pDynOff);
     m_errorMonitor->VerifyFound();
     // Finally cause error due to dynamicOffset being too big
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
@@ -7124,8 +7116,8 @@ TEST_F(VkLayerTest, InvalidDynamicOffsetCases) {
     vkCmdBindPipeline(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
     // This update should succeed, but offset size of 512 will overstep buffer
     // /w range 1024 & size 1024
-    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1,
-                            &descriptorSet, 1, pDynOff);
+    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptorSet, 1,
+                            pDynOff);
     m_commandBuffer->Draw(1, 0, 0, 0);
     m_errorMonitor->VerifyFound();
 
@@ -7407,8 +7399,7 @@ TEST_F(VkLayerTest, InvalidPushConstants) {
     }};
     for (const auto &iter : cmd_range_tests) {
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_1bc002de);
-        vkCmdPushConstants(m_commandBuffer->handle(), pipeline_layout, iter.stageFlags, iter.offset, iter.size,
-                           dummy_values);
+        vkCmdPushConstants(m_commandBuffer->handle(), pipeline_layout, iter.stageFlags, iter.offset, iter.size, dummy_values);
         m_errorMonitor->VerifyFound();
     }
 
@@ -7600,14 +7591,14 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility) {
     // verify_set_layout_compatibility fail cases:
     // 1. invalid VkPipelineLayout (layout) passed into vkCmdBindDescriptorSets
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_17c0be01);
-    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            (VkPipelineLayout)((size_t)0xbaadb1be), 0, 1, &descriptorSet[0], 0, NULL);
+    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, (VkPipelineLayout)((size_t)0xbaadb1be), 0,
+                            1, &descriptorSet[0], 0, NULL);
     m_errorMonitor->VerifyFound();
 
     // 2. layoutIndex exceeds # of layouts in layout
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, " attempting to bind set to index 1");
-    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, single_pipe_layout, 0, 2,
-                            &descriptorSet[0], 0, NULL);
+    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, single_pipe_layout, 0, 2, &descriptorSet[0],
+                            0, NULL);
     m_errorMonitor->VerifyFound();
 
     vkDestroyPipelineLayout(m_device->device(), single_pipe_layout, NULL);
@@ -7635,22 +7626,22 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility) {
 
     // Cause INFO messages due to disturbing previously bound Sets
     // First bind sets 0 & 1
-    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 2,
-                            &descriptorSet[0], 0, NULL);
+    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 2, &descriptorSet[0], 0,
+                            NULL);
     // 1. Disturb bound set0 by re-binding set1 w/ updated pipelineLayout
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, " previously bound as set #0 was disturbed ");
     vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe_layout_bad_set0, 1, 1,
                             &descriptorSet[1], 0, NULL);
     m_errorMonitor->VerifyFound();
 
-    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 2,
-                            &descriptorSet[0], 0, NULL);
+    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 2, &descriptorSet[0], 0,
+                            NULL);
     // 2. Disturb set after last bound set
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
                                          " newly bound as set #0 so set #1 and "
                                          "any subsequent sets were disturbed ");
-    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe_layout_fs_only, 0, 1,
-                            &ds0_fs_only, 0, NULL);
+    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe_layout_fs_only, 0, 1, &ds0_fs_only, 0,
+                            NULL);
     m_errorMonitor->VerifyFound();
 
     // Now that we're done actively using the pipelineLayout that gfx pipeline
@@ -7661,8 +7652,8 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility) {
     // Cause draw-time errors due to PSO incompatibilities
     // 1. Error due to not binding required set (we actually use same code as
     // above to disturb set0)
-    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 2,
-                            &descriptorSet[0], 0, NULL);
+    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 2, &descriptorSet[0], 0,
+                            NULL);
     vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe_layout_bad_set0, 1, 1,
                             &descriptorSet[1], 0, NULL);
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, " uses set #0 but that set is not bound.");
@@ -7678,8 +7669,8 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility) {
     vkDestroyPipelineLayout(m_device->device(), pipe_layout_bad_set0, NULL);
     // 2. Error due to bound set not being compatible with PSO's
     // VkPipelineLayout (diff stageFlags in this case)
-    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 2,
-                            &descriptorSet[0], 0, NULL);
+    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 2, &descriptorSet[0], 0,
+                            NULL);
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, " bound as set #0 is not compatible with ");
     m_commandBuffer->Draw(1, 0, 0, 0);
     m_errorMonitor->VerifyFound();
@@ -7731,10 +7722,8 @@ TEST_F(VkLayerTest, SecondaryCommandBufferRerecordedExplicitReset) {
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "was destroyed or rerecorded");
 
     // A pool we can reset in.
-    VkCommandPoolObj pool(m_device, m_device->graphics_queue_node_index_,
-                          VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-    VkCommandBufferObj secondary(m_device, &pool,
-                          VK_COMMAND_BUFFER_LEVEL_SECONDARY);
+    VkCommandPoolObj pool(m_device, m_device->graphics_queue_node_index_, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+    VkCommandBufferObj secondary(m_device, &pool, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
 
     secondary.begin();
     secondary.end();
@@ -7743,7 +7732,7 @@ TEST_F(VkLayerTest, SecondaryCommandBufferRerecordedExplicitReset) {
     vkCmdExecuteCommands(m_commandBuffer->handle(), 1, &secondary.handle());
 
     // rerecording of secondary
-    secondary.reset();      // explicit reset here.
+    secondary.reset();  // explicit reset here.
     secondary.begin();
     secondary.end();
 
@@ -7757,10 +7746,8 @@ TEST_F(VkLayerTest, SecondaryCommandBufferRerecordedNoReset) {
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "was destroyed or rerecorded");
 
     // A pool we can reset in.
-    VkCommandPoolObj pool(m_device, m_device->graphics_queue_node_index_,
-                          VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-    VkCommandBufferObj secondary(m_device, &pool,
-                                 VK_COMMAND_BUFFER_LEVEL_SECONDARY);
+    VkCommandPoolObj pool(m_device, m_device->graphics_queue_node_index_, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+    VkCommandBufferObj secondary(m_device, &pool, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
 
     secondary.begin();
     secondary.end();
@@ -7779,7 +7766,7 @@ TEST_F(VkLayerTest, SecondaryCommandBufferRerecordedNoReset) {
 TEST_F(VkLayerTest, CascadedInvalidation) {
     ASSERT_NO_FATAL_FAILURE(Init());
 
-    VkEventCreateInfo eci = { VK_STRUCTURE_TYPE_EVENT_CREATE_INFO, nullptr, 0 };
+    VkEventCreateInfo eci = {VK_STRUCTURE_TYPE_EVENT_CREATE_INFO, nullptr, 0};
     VkEvent event;
     vkCreateEvent(m_device->device(), &eci, nullptr, &event);
 
@@ -9803,8 +9790,7 @@ TEST_F(VkLayerTest, ClearDepthStencilImageWithinRenderPass) {
 
     const VkImageSubresourceRange range = vk_testing::Image::subresource_range(image_create_info, VK_IMAGE_ASPECT_DEPTH_BIT);
 
-    vkCmdClearDepthStencilImage(m_commandBuffer->handle(), dstImage.handle(), VK_IMAGE_LAYOUT_GENERAL, &clear_value, 1,
-                                &range);
+    vkCmdClearDepthStencilImage(m_commandBuffer->handle(), dstImage.handle(), VK_IMAGE_LAYOUT_GENERAL, &clear_value, 1, &range);
 
     m_errorMonitor->VerifyFound();
 }
@@ -9916,8 +9902,8 @@ TEST_F(VkLayerTest, BufferMemoryBarrierNoBuffer) {
     buf_barrier.buffer = VK_NULL_HANDLE;
     buf_barrier.offset = 0;
     buf_barrier.size = VK_WHOLE_SIZE;
-    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
-                         nullptr, 1, &buf_barrier, 0, nullptr);
+    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr,
+                         1, &buf_barrier, 0, nullptr);
 
     m_errorMonitor->VerifyFound();
 }
@@ -9967,53 +9953,53 @@ TEST_F(VkLayerTest, InvalidBarriers) {
     img_barrier.subresourceRange.baseMipLevel = 0;
     img_barrier.subresourceRange.layerCount = 1;
     img_barrier.subresourceRange.levelCount = 1;
-    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
-                         nullptr, 0, nullptr, 1, &img_barrier);
+    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr,
+                         0, nullptr, 1, &img_barrier);
     m_errorMonitor->VerifyFound();
 
     // Transition image to color attachment optimal
     vkCmdEndRenderPass(m_commandBuffer->handle());
     img_barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
-                         nullptr, 0, nullptr, 1, &img_barrier);
+    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr,
+                         0, nullptr, 1, &img_barrier);
     m_commandBuffer->BeginRenderPass(m_renderPassBeginInfo);
 
     // Try to change layout in a renderpass
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_1b80093a);
-    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
-                         nullptr, 0, nullptr, 1, &img_barrier);
+    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr,
+                         0, nullptr, 1, &img_barrier);
     m_errorMonitor->VerifyFound();
 
     img_barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a800802);
     // baseArrayLayer + layerCount must be <= image's arrayLayers
     img_barrier.subresourceRange.baseArrayLayer = 1;
-    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
-                         nullptr, 0, nullptr, 1, &img_barrier);
+    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr,
+                         0, nullptr, 1, &img_barrier);
     m_errorMonitor->VerifyFound();
     img_barrier.subresourceRange.baseArrayLayer = 0;
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a8007fc);
     // baseMipLevel + levelCount must be <= image's mipLevels
     img_barrier.subresourceRange.baseMipLevel = 1;
-    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
-                         nullptr, 0, nullptr, 1, &img_barrier);
+    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr,
+                         0, nullptr, 1, &img_barrier);
     m_errorMonitor->VerifyFound();
     img_barrier.subresourceRange.baseMipLevel = 0;
 
     // levelCount must be non-zero.
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a8007fc);
     img_barrier.subresourceRange.levelCount = 0;
-    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
-                         nullptr, 0, nullptr, 1, &img_barrier);
+    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr,
+                         0, nullptr, 1, &img_barrier);
     m_errorMonitor->VerifyFound();
     img_barrier.subresourceRange.levelCount = 1;
 
     // layerCount must be non-zero.
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a800802);
     img_barrier.subresourceRange.layerCount = 0;
-    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
-                         nullptr, 0, nullptr, 1, &img_barrier);
+    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr,
+                         0, nullptr, 1, &img_barrier);
     m_errorMonitor->VerifyFound();
     img_barrier.subresourceRange.layerCount = 1;
 
@@ -10032,24 +10018,24 @@ TEST_F(VkLayerTest, InvalidBarriers) {
     buf_barrier.offset = 0;
     buf_barrier.size = VK_WHOLE_SIZE;
     // Can't send buffer barrier during a render pass
-    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
-                         nullptr, 1, &buf_barrier, 0, nullptr);
+    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr,
+                         1, &buf_barrier, 0, nullptr);
     m_errorMonitor->VerifyFound();
     vkCmdEndRenderPass(m_commandBuffer->handle());
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "which is not less than total size");
     buf_barrier.offset = 257;
     // Offset greater than total size
-    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
-                         nullptr, 1, &buf_barrier, 0, nullptr);
+    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr,
+                         1, &buf_barrier, 0, nullptr);
     m_errorMonitor->VerifyFound();
     buf_barrier.offset = 0;
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "whose sum is greater than total size");
     buf_barrier.size = 257;
     // Size greater than total size
-    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
-                         nullptr, 1, &buf_barrier, 0, nullptr);
+    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr,
+                         1, &buf_barrier, 0, nullptr);
     m_errorMonitor->VerifyFound();
 
     // Now exercise barrier aspect bit errors, first DS
@@ -10064,22 +10050,22 @@ TEST_F(VkLayerTest, InvalidBarriers) {
 
     // Not having DEPTH or STENCIL set is an error
     img_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_METADATA_BIT;
-    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
-                         nullptr, 0, nullptr, 1, &img_barrier);
+    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr,
+                         0, nullptr, 1, &img_barrier);
     m_errorMonitor->VerifyFound();
 
     // Having only one of depth or stencil set for DS image is an error
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a00096e);
     img_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_STENCIL_BIT;
-    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
-                         nullptr, 0, nullptr, 1, &img_barrier);
+    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr,
+                         0, nullptr, 1, &img_barrier);
     m_errorMonitor->VerifyFound();
 
     // Having anything other than DEPTH and STENCIL is an error
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a400c01);
     img_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_COLOR_BIT;
-    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
-                         nullptr, 0, nullptr, 1, &img_barrier);
+    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr,
+                         0, nullptr, 1, &img_barrier);
     m_errorMonitor->VerifyFound();
 
     // Now test depth-only
@@ -10097,16 +10083,16 @@ TEST_F(VkLayerTest, InvalidBarriers) {
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                              "Depth-only image formats must have the VK_IMAGE_ASPECT_DEPTH_BIT set.");
         img_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_METADATA_BIT;
-        vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0,
-                             0, nullptr, 0, nullptr, 1, &img_barrier);
+        vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
+                             nullptr, 0, nullptr, 1, &img_barrier);
         m_errorMonitor->VerifyFound();
 
         // No bits other than DEPTH may be set
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                              "Depth-only image formats can have only the VK_IMAGE_ASPECT_DEPTH_BIT set.");
         img_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_COLOR_BIT;
-        vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0,
-                             0, nullptr, 0, nullptr, 1, &img_barrier);
+        vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
+                             nullptr, 0, nullptr, 1, &img_barrier);
         m_errorMonitor->VerifyFound();
     }
 
@@ -10123,8 +10109,8 @@ TEST_F(VkLayerTest, InvalidBarriers) {
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                              "Stencil-only image formats must have the VK_IMAGE_ASPECT_STENCIL_BIT set.");
         img_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0,
-                             0, nullptr, 0, nullptr, 1, &img_barrier);
+        vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
+                             nullptr, 0, nullptr, 1, &img_barrier);
         m_errorMonitor->VerifyFound();
     }
 
@@ -10140,16 +10126,16 @@ TEST_F(VkLayerTest, InvalidBarriers) {
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "Color image formats must have the VK_IMAGE_ASPECT_COLOR_BIT set.");
     img_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_METADATA_BIT;
-    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
-                         nullptr, 0, nullptr, 1, &img_barrier);
+    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr,
+                         0, nullptr, 1, &img_barrier);
     m_errorMonitor->VerifyFound();
 
     // No bits other than COLOR may be set
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "Color image formats must have ONLY the VK_IMAGE_ASPECT_COLOR_BIT set.");
     img_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT;
-    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
-                         nullptr, 0, nullptr, 1, &img_barrier);
+    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr,
+                         0, nullptr, 1, &img_barrier);
     m_errorMonitor->VerifyFound();
 
     // A barrier's new and old VkImageLayout must be compatible with an image's VkImageUsageFlags.
@@ -10232,15 +10218,15 @@ TEST_F(VkLayerTest, InvalidBarriers) {
             img_barrier.oldLayout = bad_buffer_layouts[i].bad_layout;
             img_barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
             m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, bad_buffer_layouts[i].msg_code);
-            vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT,
-                                 VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &img_barrier);
+            vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
+                                 nullptr, 0, nullptr, 1, &img_barrier);
             m_errorMonitor->VerifyFound();
 
             img_barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
             img_barrier.newLayout = bad_buffer_layouts[i].bad_layout;
             m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, bad_buffer_layouts[i].msg_code);
-            vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT,
-                                 VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &img_barrier);
+            vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
+                                 nullptr, 0, nullptr, 1, &img_barrier);
             m_errorMonitor->VerifyFound();
         }
 
@@ -10265,8 +10251,8 @@ TEST_F(VkLayerTest, InvalidBarriers) {
     bad_command_buffer.begin();
     buf_barrier.offset = 0;
     buf_barrier.size = VK_WHOLE_SIZE;
-    vkCmdPipelineBarrier(bad_command_buffer.handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 1,
-                         &buf_barrier, 0, nullptr);
+    vkCmdPipelineBarrier(bad_command_buffer.handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
+                         nullptr, 1, &buf_barrier, 0, nullptr);
     m_errorMonitor->VerifyFound();
 
     if ((queue_props[queue_family_index].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0) {
@@ -10278,8 +10264,8 @@ TEST_F(VkLayerTest, InvalidBarriers) {
     VkEventCreateInfo event_create_info{};
     event_create_info.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
     vkCreateEvent(m_device->device(), &event_create_info, nullptr, &event);
-    vkCmdWaitEvents(bad_command_buffer.handle(), 1, &event, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, nullptr, 0,
-                    nullptr, 0, nullptr);
+    vkCmdWaitEvents(bad_command_buffer.handle(), 1, &event, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0,
+                    nullptr, 0, nullptr, 0, nullptr);
     m_errorMonitor->VerifyFound();
     bad_command_buffer.end();
 }
@@ -13176,8 +13162,7 @@ TEST_F(VkLayerTest, NonSimultaneousSecondaryMarksPrimary) {
     secondary.end();
 
     VkCommandBufferBeginInfo cbbi = {
-        VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr,
-        VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT, nullptr,
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr, VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT, nullptr,
     };
 
     m_commandBuffer->begin(&cbbi);
@@ -13197,10 +13182,7 @@ TEST_F(VkLayerTest, SimultaneousUseSecondaryTwoExecutes) {
     VkCommandBufferInheritanceInfo inh = {
         VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO, nullptr,
     };
-    VkCommandBufferBeginInfo cbbi = {
-        VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr,
-        0, &inh
-    };
+    VkCommandBufferBeginInfo cbbi = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr, 0, &inh};
 
     secondary.begin(&cbbi);
     secondary.end();
@@ -13226,16 +13208,13 @@ TEST_F(VkLayerTest, SimultaneousUseSecondarySingleExecute) {
     VkCommandBufferInheritanceInfo inh = {
         VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO, nullptr,
     };
-    VkCommandBufferBeginInfo cbbi = {
-        VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr,
-        0, &inh
-    };
+    VkCommandBufferBeginInfo cbbi = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr, 0, &inh};
 
     secondary.begin(&cbbi);
     secondary.end();
 
     m_commandBuffer->begin();
-    VkCommandBuffer cbs[] = { secondary.handle(), secondary.handle() };
+    VkCommandBuffer cbs[] = {secondary.handle(), secondary.handle()};
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, simultaneous_use_message);
     vkCmdExecuteCommands(m_commandBuffer->handle(), 2, cbs);
     m_errorMonitor->VerifyFound();
@@ -13471,8 +13450,8 @@ TEST_F(VkLayerTest, InUseDestroyedSignaled) {
     vkCmdSetEvent(m_commandBuffer->handle(), event, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
 
     vkCmdBindPipeline(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
-    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1,
-                            &descriptorset, 0, NULL);
+    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptorset, 0,
+                            NULL);
 
     m_commandBuffer->end();
 
@@ -13739,8 +13718,8 @@ TEST_F(VkLayerTest, ImageViewInUseDestroyedSignaled) {
     m_commandBuffer->BeginRenderPass(m_renderPassBeginInfo);
     // Bind pipeline to cmd buffer
     vkCmdBindPipeline(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
-    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1,
-                            &descriptor_set, 0, nullptr);
+    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_set, 0,
+                            nullptr);
 
     VkViewport viewport = {0, 0, 16, 16, 0, 1};
     VkRect2D scissor = {{0, 0}, {16, 16}};
@@ -13907,8 +13886,8 @@ TEST_F(VkLayerTest, BufferViewInUseDestroyedSignaled) {
     vkCmdSetScissor(m_commandBuffer->handle(), 0, 1, &scissor);
     // Bind pipeline to cmd buffer
     vkCmdBindPipeline(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
-    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1,
-                            &descriptor_set, 0, nullptr);
+    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_set, 0,
+                            nullptr);
     m_commandBuffer->Draw(1, 0, 0, 0);
     m_commandBuffer->EndRenderPass();
     m_commandBuffer->end();
@@ -14073,8 +14052,8 @@ TEST_F(VkLayerTest, SamplerInUseDestroyedSignaled) {
     m_commandBuffer->BeginRenderPass(m_renderPassBeginInfo);
     // Bind pipeline to cmd buffer
     vkCmdBindPipeline(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
-    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1,
-                            &descriptor_set, 0, nullptr);
+    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_set, 0,
+                            nullptr);
 
     VkViewport viewport = {0, 0, 16, 16, 0, 1};
     VkRect2D scissor = {{0, 0}, {16, 16}};
@@ -17016,8 +16995,7 @@ TEST_F(VkLayerTest, CreateImageViewFormatMismatchUnrelated) {
     }
 
     VkImageObj image(m_device);
-    image.Init(128, 128, 1, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-               VK_IMAGE_TILING_OPTIMAL, 0);
+    image.Init(128, 128, 1, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
     ASSERT_TRUE(image.initialized());
 
     VkImageView imgView;
@@ -17040,14 +17018,12 @@ TEST_F(VkLayerTest, CreateImageViewFormatMismatchUnrelated) {
 }
 
 TEST_F(VkLayerTest, CreateImageViewNoMutableFormatBit) {
-    TEST_DESCRIPTION(
-        "Create an image view with a different format, when the image does not have MUTABLE_FORMAT bit");
+    TEST_DESCRIPTION("Create an image view with a different format, when the image does not have MUTABLE_FORMAT bit");
 
     ASSERT_NO_FATAL_FAILURE(Init());
 
     VkImageObj image(m_device);
-    image.Init(128, 128, 1, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-               VK_IMAGE_TILING_OPTIMAL, 0);
+    image.Init(128, 128, 1, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
     ASSERT_TRUE(image.initialized());
 
     VkImageView imgView;
@@ -17078,19 +17054,21 @@ TEST_F(VkLayerTest, CreateImageViewDifferentClass) {
         return;
     }
 
-    VkImageCreateInfo mutImgInfo = {
-        VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, nullptr,
-        VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT,
-        VK_IMAGE_TYPE_2D,
-        VK_FORMAT_R8_UINT,
-        {128, 128, 1},
-        1, 1, VK_SAMPLE_COUNT_1_BIT,
-        VK_IMAGE_TILING_OPTIMAL,
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-        VK_SHARING_MODE_EXCLUSIVE,
-        0, nullptr,
-        VK_IMAGE_LAYOUT_UNDEFINED
-    };
+    VkImageCreateInfo mutImgInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+                                    nullptr,
+                                    VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT,
+                                    VK_IMAGE_TYPE_2D,
+                                    VK_FORMAT_R8_UINT,
+                                    {128, 128, 1},
+                                    1,
+                                    1,
+                                    VK_SAMPLE_COUNT_1_BIT,
+                                    VK_IMAGE_TILING_OPTIMAL,
+                                    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                                    VK_SHARING_MODE_EXCLUSIVE,
+                                    0,
+                                    nullptr,
+                                    VK_IMAGE_LAYOUT_UNDEFINED};
     VkImageObj mutImage(m_device);
     mutImage.init(&mutImgInfo);
     ASSERT_TRUE(mutImage.initialized());
@@ -17284,86 +17262,68 @@ TEST_F(VkLayerTest, CompressedImageMipCopyTests) {
     // Mip 0 should fit in 1k buffer - 1k texels @ 1b each
     region.imageExtent = {32, 32, 1};
     region.imageSubresource.mipLevel = 0;
-    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_1024.handle(), 1,
-                           &region);
-    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_1024.handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
-                           &region);
+    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_1024.handle(), 1, &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_1024.handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1, &region);
 
     // Mip 2 should fit in 64b buffer - 64 texels @ 1b each
     region.imageExtent = {8, 8, 1};
     region.imageSubresource.mipLevel = 2;
-    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_64.handle(), 1,
-                           &region);
-    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_64.handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
-                           &region);
+    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_64.handle(), 1, &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_64.handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1, &region);
 
     // Mip 3 should fit in 16b buffer - 16 texels @ 1b each
     region.imageExtent = {4, 4, 1};
     region.imageSubresource.mipLevel = 3;
-    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16.handle(), 1,
-                           &region);
-    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_16.handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
-                           &region);
+    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16.handle(), 1, &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_16.handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1, &region);
 
     // Mip 4&5 should fit in 16b buffer with no complaint - 4 & 1 texels @ 1b each
     region.imageExtent = {2, 2, 1};
     region.imageSubresource.mipLevel = 4;
-    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16.handle(), 1,
-                           &region);
-    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_16.handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
-                           &region);
+    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16.handle(), 1, &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_16.handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1, &region);
 
     region.imageExtent = {1, 1, 1};
     region.imageSubresource.mipLevel = 5;
-    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16.handle(), 1,
-                           &region);
-    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_16.handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
-                           &region);
+    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16.handle(), 1, &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_16.handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1, &region);
     m_errorMonitor->VerifyNotFound();
 
     // Buffer must accomodate a full compressed block, regardless of texel count
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_1920016e);
-    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_8.handle(), 1,
-                           &region);
+    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_8.handle(), 1, &region);
     m_errorMonitor->VerifyFound();
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_18e00156);
-    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_8.handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
-                           &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_8.handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1, &region);
     m_errorMonitor->VerifyFound();
 
     // Copy width < compressed block size, but not the full mip width
     region.imageExtent = {1, 2, 1};
     region.imageSubresource.mipLevel = 4;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0160019e);
-    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16.handle(), 1,
-                           &region);
+    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16.handle(), 1, &region);
     m_errorMonitor->VerifyFound();
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0160019e);
-    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_16.handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
-                           &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_16.handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1, &region);
     m_errorMonitor->VerifyFound();
 
     // Copy height < compressed block size but not the full mip height
     region.imageExtent = {2, 1, 1};
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_016001a0);
-    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16.handle(), 1,
-                           &region);
+    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16.handle(), 1, &region);
     m_errorMonitor->VerifyFound();
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_016001a0);
-    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_16.handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
-                           &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_16.handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1, &region);
     m_errorMonitor->VerifyFound();
 
     // Offsets must be multiple of compressed block size
     region.imageOffset = {1, 1, 0};
     region.imageExtent = {1, 1, 1};
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0160019a);
-    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16.handle(), 1,
-                           &region);
+    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16.handle(), 1, &region);
     m_errorMonitor->VerifyFound();
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0160019a);
-    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_16.handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
-                           &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_16.handle(), image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1, &region);
     m_errorMonitor->VerifyFound();
 
     // Offset + extent width = mip width - should succeed
@@ -17371,30 +17331,24 @@ TEST_F(VkLayerTest, CompressedImageMipCopyTests) {
     region.imageExtent = {3, 4, 1};
     region.imageSubresource.mipLevel = 2;
     m_errorMonitor->ExpectSuccess();
-    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), odd_image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16.handle(), 1,
-                           &region);
-    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_16.handle(), odd_image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
-                           &region);
+    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), odd_image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16.handle(), 1, &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_16.handle(), odd_image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1, &region);
     m_errorMonitor->VerifyNotFound();
 
     // Offset + extent width > mip width, but still within the final compressed block - should succeed
     region.imageExtent = {4, 4, 1};
     m_errorMonitor->ExpectSuccess();
-    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), odd_image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16.handle(), 1,
-                           &region);
-    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_16.handle(), odd_image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
-                           &region);
+    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), odd_image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16.handle(), 1, &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_16.handle(), odd_image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1, &region);
     m_errorMonitor->VerifyNotFound();
 
     // Offset + extent width < mip width and not a multiple of block width - should fail
     region.imageExtent = {3, 3, 1};
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_016001a0);
-    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), odd_image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16.handle(), 1,
-                           &region);
+    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), odd_image.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16.handle(), 1, &region);
     m_errorMonitor->VerifyFound();
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_016001a0);
-    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_16.handle(), odd_image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
-                           &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_16.handle(), odd_image.handle(), VK_IMAGE_LAYOUT_GENERAL, 1, &region);
     m_errorMonitor->VerifyFound();
 }
 
@@ -17495,13 +17449,11 @@ TEST_F(VkLayerTest, ImageBufferCopyTests) {
 
     // attempt copies before putting command buffer in recording state
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_18e02413);
-    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_64k.handle(), image_64k.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
-                           &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_64k.handle(), image_64k.handle(), VK_IMAGE_LAYOUT_GENERAL, 1, &region);
     m_errorMonitor->VerifyFound();
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_19202413);
-    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_64k.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_64k.handle(), 1,
-                           &region);
+    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_64k.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_64k.handle(), 1, &region);
     m_errorMonitor->VerifyFound();
 
     // start recording
@@ -17509,46 +17461,37 @@ TEST_F(VkLayerTest, ImageBufferCopyTests) {
 
     // successful copies
     m_errorMonitor->ExpectSuccess();
-    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_16k.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16k.handle(), 1,
-                           &region);
-    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_16k.handle(), image_16k.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
-                           &region);
+    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_16k.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16k.handle(), 1, &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_16k.handle(), image_16k.handle(), VK_IMAGE_LAYOUT_GENERAL, 1, &region);
     region.imageOffset.x = 16;  // 16k copy, offset requires larger image
-    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_64k.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16k.handle(), 1,
-                           &region);
+    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_64k.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16k.handle(), 1, &region);
     region.imageExtent.height = 78;  // > 16k copy requires larger buffer & image
-    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_64k.handle(), image_64k.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
-                           &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_64k.handle(), image_64k.handle(), VK_IMAGE_LAYOUT_GENERAL, 1, &region);
     region.imageOffset.x = 0;
     region.imageExtent.height = 64;
     region.bufferOffset = 256;  // 16k copy with buffer offset, requires larger buffer
-    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_16k.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_64k.handle(), 1,
-                           &region);
+    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_16k.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_64k.handle(), 1, &region);
     m_errorMonitor->VerifyNotFound();
 
     // image/buffer too small (extent too large) on copy to image
     region.imageExtent = {65, 64, 1};
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_18e00156);  // buffer too small
-    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_16k.handle(), image_64k.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
-                           &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_16k.handle(), image_64k.handle(), VK_IMAGE_LAYOUT_GENERAL, 1, &region);
     m_errorMonitor->VerifyFound();
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_18e00158);  // image too small
-    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_64k.handle(), image_16k.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
-                           &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_64k.handle(), image_16k.handle(), VK_IMAGE_LAYOUT_GENERAL, 1, &region);
     m_errorMonitor->VerifyFound();
 
     // image/buffer too small (offset) on copy to image
     region.imageExtent = {64, 64, 1};
     region.imageOffset = {0, 4, 0};
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_18e00156);  // buffer too small
-    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_16k.handle(), image_64k.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
-                           &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_16k.handle(), image_64k.handle(), VK_IMAGE_LAYOUT_GENERAL, 1, &region);
     m_errorMonitor->VerifyFound();
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_18e00158);  // image too small
-    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_64k.handle(), image_16k.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
-                           &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer_64k.handle(), image_16k.handle(), VK_IMAGE_LAYOUT_GENERAL, 1, &region);
     m_errorMonitor->VerifyFound();
 
     // image/buffer too small on copy to buffer
@@ -17556,30 +17499,26 @@ TEST_F(VkLayerTest, ImageBufferCopyTests) {
     region.imageOffset = {0, 0, 0};
     region.bufferOffset = 4;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_1920016e);  // buffer too small
-    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_64k.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16k.handle(), 1,
-                           &region);
+    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_64k.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16k.handle(), 1, &region);
     m_errorMonitor->VerifyFound();
 
     region.imageExtent = {64, 65, 1};
     region.bufferOffset = 0;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_1920016c);  // image too small
-    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_16k.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_64k.handle(), 1,
-                           &region);
+    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_16k.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_64k.handle(), 1, &region);
     m_errorMonitor->VerifyFound();
 
     // buffer size ok but rowlength causes loose packing
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_1920016e);
     region.imageExtent = {64, 64, 1};
     region.bufferRowLength = 68;
-    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_16k.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16k.handle(), 1,
-                           &region);
+    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_16k.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16k.handle(), 1, &region);
     m_errorMonitor->VerifyFound();
 
     // An extent with zero area should produce a warning, but no error
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT, "} has zero area");
     region.imageExtent.width = 0;
-    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_16k.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16k.handle(), 1,
-                           &region);
+    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_16k.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16k.handle(), 1, &region);
     m_errorMonitor->VerifyFound();
 
     // aspect bits
@@ -17588,20 +17527,19 @@ TEST_F(VkLayerTest, ImageBufferCopyTests) {
     region.bufferRowLength = 0;
     region.bufferImageHeight = 0;
     region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_16k_depth.handle(), VK_IMAGE_LAYOUT_GENERAL,
-                           buffer_16k.handle(), 1, &region);
+    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_16k_depth.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16k.handle(), 1,
+                           &region);
     m_errorMonitor->VerifyFound();
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_016001a6);  // mis-matched aspect
     region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_16k.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16k.handle(), 1,
-                           &region);
+    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_16k.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16k.handle(), 1, &region);
     m_errorMonitor->VerifyFound();
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_016001a6);  // different mis-matched aspect
     region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_16k_depth.handle(), VK_IMAGE_LAYOUT_GENERAL,
-                           buffer_16k.handle(), 1, &region);
+    vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_16k_depth.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16k.handle(), 1,
+                           &region);
     m_errorMonitor->VerifyFound();
 
     // Test Depth/Stencil copies
@@ -17727,30 +17665,30 @@ TEST_F(VkLayerTest, ImageBufferCopyTests) {
         // Just fits
         m_errorMonitor->ExpectSuccess();
         region.imageExtent = {128, 128, 1};
-        vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_16k_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL,
-                               buffer_16k.handle(), 1, &region);
+        vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_16k_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16k.handle(),
+                               1, &region);
         m_errorMonitor->VerifyNotFound();
 
         // with offset, too big for buffer
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_1920016e);
         region.bufferOffset = 16;
-        vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_16k_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL,
-                               buffer_16k.handle(), 1, &region);
+        vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_16k_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16k.handle(),
+                               1, &region);
         m_errorMonitor->VerifyFound();
         region.bufferOffset = 0;
 
         // extents that are not a multiple of compressed block size
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0160019e);
         region.imageExtent.width = 66;
-        vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_NPOT_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL,
-                               buffer_16k.handle(), 1, &region);
+        vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_NPOT_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16k.handle(),
+                               1, &region);
         m_errorMonitor->VerifyFound();
         region.imageExtent.width = 128;
 
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_016001a0);
         region.imageExtent.height = 2;
-        vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_NPOT_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL,
-                               buffer_16k.handle(), 1, &region);
+        vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_NPOT_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16k.handle(),
+                               1, &region);
         m_errorMonitor->VerifyFound();
         region.imageExtent.height = 128;
 
@@ -17760,14 +17698,14 @@ TEST_F(VkLayerTest, ImageBufferCopyTests) {
         m_errorMonitor->ExpectSuccess();
         region.imageExtent.width = 66;
         region.imageOffset.x = 64;
-        vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_NPOT_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL,
-                               buffer_16k.handle(), 1, &region);
+        vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_NPOT_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16k.handle(),
+                               1, &region);
         region.imageExtent.width = 16;
         region.imageOffset.x = 0;
         region.imageExtent.height = 2;
         region.imageOffset.y = 128;
-        vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_NPOT_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL,
-                               buffer_16k.handle(), 1, &region);
+        vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_NPOT_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16k.handle(),
+                               1, &region);
         m_errorMonitor->VerifyNotFound();
         region.imageOffset = {0, 0, 0};
 
@@ -17776,8 +17714,8 @@ TEST_F(VkLayerTest, ImageBufferCopyTests) {
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01600182);
         region.imageExtent = {64, 64, 1};
         region.bufferOffset = 24;
-        vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_16k_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL,
-                               buffer_16k.handle(), 1, &region);
+        vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_16k_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_16k.handle(),
+                               1, &region);
         m_errorMonitor->VerifyFound();
 
         // rowlength not a multiple of block width (4)
@@ -17785,16 +17723,16 @@ TEST_F(VkLayerTest, ImageBufferCopyTests) {
         region.bufferOffset = 0;
         region.bufferRowLength = 130;
         region.bufferImageHeight = 0;
-        vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_16k_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL,
-                               buffer_64k.handle(), 1, &region);
+        vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_16k_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_64k.handle(),
+                               1, &region);
         m_errorMonitor->VerifyFound();
 
         // imageheight not a multiple of block height (4)
         m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01600198);
         region.bufferRowLength = 0;
         region.bufferImageHeight = 130;
-        vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_16k_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL,
-                               buffer_64k.handle(), 1, &region);
+        vkCmdCopyImageToBuffer(m_commandBuffer->handle(), image_16k_4x4comp.handle(), VK_IMAGE_LAYOUT_GENERAL, buffer_64k.handle(),
+                               1, &region);
         m_errorMonitor->VerifyFound();
     }
 }
@@ -17844,8 +17782,8 @@ TEST_F(VkLayerTest, MiscImageLayerTests) {
     // Introduce failure by setting imageExtent.depth to 0
     region.imageExtent.depth = 0;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01600192);
-    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer.handle(), image.handle(),
-                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer.handle(), image.handle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
+                           &region);
     m_errorMonitor->VerifyFound();
 
     region.imageExtent.depth = 1;
@@ -17856,8 +17794,8 @@ TEST_F(VkLayerTest, MiscImageLayerTests) {
     region.imageOffset.z = 4;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01600192);
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_18e00158);
-    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer.handle(), image.handle(),
-                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer.handle(), image.handle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
+                           &region);
     m_errorMonitor->VerifyFound();
 
     region.imageOffset.z = 0;
@@ -17865,16 +17803,16 @@ TEST_F(VkLayerTest, MiscImageLayerTests) {
     // Introduce failure by setting bufferOffset to 1 and 1/2 texels
     region.bufferOffset = 4;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01600182);
-    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer.handle(), image.handle(),
-                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer.handle(), image.handle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
+                           &region);
     m_errorMonitor->VerifyFound();
 
     // BufferOffset must be a multiple of 4
     // Introduce failure by setting bufferOffset to a value not divisible by 4
     region2.bufferOffset = 6;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01600184);
-    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer2.handle(), image2.handle(),
-                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region2);
+    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer2.handle(), image2.handle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
+                           &region2);
     m_errorMonitor->VerifyFound();
 
     // BufferRowLength must be 0, or greater than or equal to the width member of imageExtent
@@ -17884,8 +17822,8 @@ TEST_F(VkLayerTest, MiscImageLayerTests) {
     // Introduce failure by setting bufferRowLength > 0 but less than width
     region.bufferRowLength = 64;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01600186);
-    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer.handle(), image.handle(),
-                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer.handle(), image.handle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
+                           &region);
     m_errorMonitor->VerifyFound();
 
     // BufferImageHeight must be 0, or greater than or equal to the height member of imageExtent
@@ -17893,8 +17831,8 @@ TEST_F(VkLayerTest, MiscImageLayerTests) {
     // Introduce failure by setting bufferRowHeight > 0 but less than height
     region.bufferImageHeight = 64;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_01600188);
-    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer.handle(), image.handle(),
-                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+    vkCmdCopyBufferToImage(m_commandBuffer->handle(), buffer.handle(), image.handle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
+                           &region);
     m_errorMonitor->VerifyFound();
 
     region.bufferImageHeight = 128;
@@ -17923,8 +17861,8 @@ TEST_F(VkLayerTest, MiscImageLayerTests) {
                                          "vkCmdBlitImage: pRegions[0].srcOffsets specify a zero-volume area.");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT,
                                          "vkCmdBlitImage: pRegions[0].dstOffsets specify a zero-volume area.");
-    vkCmdBlitImage(m_commandBuffer->handle(), intImage1.handle(), intImage1.Layout(), intImage2.handle(),
-                   intImage2.Layout(), 1, &blitRegion, VK_FILTER_LINEAR);
+    vkCmdBlitImage(m_commandBuffer->handle(), intImage1.handle(), intImage1.Layout(), intImage2.handle(), intImage2.Layout(), 1,
+                   &blitRegion, VK_FILTER_LINEAR);
     m_errorMonitor->VerifyFound();
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a800802);
@@ -17943,8 +17881,8 @@ TEST_F(VkLayerTest, MiscImageLayerTests) {
     img_barrier.subresourceRange.baseMipLevel = 0;
     img_barrier.subresourceRange.layerCount = 0;
     img_barrier.subresourceRange.levelCount = 1;
-    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
-                         nullptr, 0, nullptr, 1, &img_barrier);
+    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr,
+                         0, nullptr, 1, &img_barrier);
     m_errorMonitor->VerifyFound();
     img_barrier.subresourceRange.layerCount = 1;
 }
@@ -18162,13 +18100,15 @@ TEST_F(VkLayerTest, CopyImageTypeExtentMismatch) {
     copy_region.extent = {4, 4, 1};
     copy_region.srcSubresource.baseArrayLayer = 1;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09c0011a);
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_0a600154);  // also triggers 'too many layers'
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_09c0012a);  // and 'copy from layer not present'
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         VALIDATION_ERROR_0a600154);  // also triggers 'too many layers'
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         VALIDATION_ERROR_09c0012a);  // and 'copy from layer not present'
     m_commandBuffer->CopyImage(image_3D.image(), VK_IMAGE_LAYOUT_GENERAL, image_2D.image(), VK_IMAGE_LAYOUT_GENERAL, 1,
                                &copy_region);
     m_errorMonitor->VerifyFound();
 
-#if 0 // TODO: these should be re-added, with an appropriate extension guard, once the spec issue is resolved
+#if 0  // TODO: these should be re-added, with an appropriate extension guard, once the spec issue is resolved
     if (supports_maintenance1_extension) {
         // Copy from layer not present - VU 09c0012a
         // TODO: this VU is redundant with VU 0a600154. Gitlab issue 812 submitted to have it removed.
@@ -18610,12 +18550,10 @@ TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch) {
     }
 
     VkImageObj srcImage(m_device);
-    srcImage.Init(32, 32, 1, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-                  VK_IMAGE_TILING_OPTIMAL);
+    srcImage.Init(32, 32, 1, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_TILING_OPTIMAL);
     ASSERT_TRUE(srcImage.initialized());
     VkImageObj dstImage(m_device);
-    dstImage.Init(32, 32, 1, depth_format, VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-                  VK_IMAGE_TILING_OPTIMAL);
+    dstImage.Init(32, 32, 1, depth_format, VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_IMAGE_TILING_OPTIMAL);
     ASSERT_TRUE(dstImage.initialized());
 
     // Create two images of different types and try to copy between them
@@ -18642,7 +18580,8 @@ TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch) {
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "vkCmdCopyImage called with unmatched source and dest image depth");
-    m_commandBuffer->CopyImage(srcImage.handle(), VK_IMAGE_LAYOUT_GENERAL, dstImage.handle(), VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
+    m_commandBuffer->CopyImage(srcImage.handle(), VK_IMAGE_LAYOUT_GENERAL, dstImage.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                               &copyRegion);
     m_commandBuffer->end();
 
     m_errorMonitor->VerifyFound();
@@ -18712,24 +18651,24 @@ TEST_F(VkLayerTest, CopyImageSampleCountMismatch) {
 
     // Copy a single sample image to/from a multi-sample image
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_19000110);
-    vkCmdCopyImage(m_commandBuffer->handle(), image1.handle(), VK_IMAGE_LAYOUT_GENERAL, image4.handle(),
-                   VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
+    vkCmdCopyImage(m_commandBuffer->handle(), image1.handle(), VK_IMAGE_LAYOUT_GENERAL, image4.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                   &copyRegion);
     m_errorMonitor->VerifyFound();
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_19000110);
-    vkCmdCopyImage(m_commandBuffer->handle(), image2.handle(), VK_IMAGE_LAYOUT_GENERAL, image1.handle(),
-                   VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
+    vkCmdCopyImage(m_commandBuffer->handle(), image2.handle(), VK_IMAGE_LAYOUT_GENERAL, image1.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                   &copyRegion);
     m_errorMonitor->VerifyFound();
 
     // Copy between multi-sample images with different sample counts
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_19000110);
-    vkCmdCopyImage(m_commandBuffer->handle(), image2.handle(), VK_IMAGE_LAYOUT_GENERAL, image4.handle(),
-                   VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
+    vkCmdCopyImage(m_commandBuffer->handle(), image2.handle(), VK_IMAGE_LAYOUT_GENERAL, image4.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                   &copyRegion);
     m_errorMonitor->VerifyFound();
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, VALIDATION_ERROR_19000110);
-    vkCmdCopyImage(m_commandBuffer->handle(), image4.handle(), VK_IMAGE_LAYOUT_GENERAL, image2.handle(),
-                   VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
+    vkCmdCopyImage(m_commandBuffer->handle(), image4.handle(), VK_IMAGE_LAYOUT_GENERAL, image2.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                   &copyRegion);
     m_errorMonitor->VerifyFound();
 
     m_commandBuffer->end();
@@ -18882,7 +18821,8 @@ TEST_F(VkLayerTest, ResolveImageLowSampleCount) {
     resolveRegion.extent.width = 1;
     resolveRegion.extent.height = 1;
     resolveRegion.extent.depth = 1;
-    m_commandBuffer->ResolveImage(srcImage.handle(), VK_IMAGE_LAYOUT_GENERAL, dstImage.handle(), VK_IMAGE_LAYOUT_GENERAL, 1, &resolveRegion);
+    m_commandBuffer->ResolveImage(srcImage.handle(), VK_IMAGE_LAYOUT_GENERAL, dstImage.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                                  &resolveRegion);
     m_commandBuffer->end();
 
     m_errorMonitor->VerifyFound();
@@ -18910,8 +18850,8 @@ TEST_F(VkLayerTest, ResolveImageHighSampleCount) {
     image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
     // Note: Some implementations expect color attachment usage for any
     // multisample surface
-    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    image_create_info.usage =
+        VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     image_create_info.flags = 0;
 
     VkImageObj srcImage(m_device);
@@ -18944,7 +18884,8 @@ TEST_F(VkLayerTest, ResolveImageHighSampleCount) {
     resolveRegion.extent.width = 1;
     resolveRegion.extent.height = 1;
     resolveRegion.extent.depth = 1;
-    m_commandBuffer->ResolveImage(srcImage.handle(), VK_IMAGE_LAYOUT_GENERAL, dstImage.handle(), VK_IMAGE_LAYOUT_GENERAL, 1, &resolveRegion);
+    m_commandBuffer->ResolveImage(srcImage.handle(), VK_IMAGE_LAYOUT_GENERAL, dstImage.handle(), VK_IMAGE_LAYOUT_GENERAL, 1,
+                                  &resolveRegion);
     m_commandBuffer->end();
 
     m_errorMonitor->VerifyFound();
@@ -19346,8 +19287,7 @@ TEST_F(VkLayerTest, ClearImageErrors) {
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "vkCmdClearColorImage called with depth/stencil image.");
 
-    vkCmdClearColorImage(m_commandBuffer->handle(), ds_image.handle(), VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1,
-                         &color_range);
+    vkCmdClearColorImage(m_commandBuffer->handle(), ds_image.handle(), VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1, &color_range);
 
     m_errorMonitor->VerifyFound();
 
@@ -19356,8 +19296,7 @@ TEST_F(VkLayerTest, ClearImageErrors) {
                                          "image created without "
                                          "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
 
-    vkCmdClearColorImage(m_commandBuffer->handle(), color_image.handle(), VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1,
-                         &color_range);
+    vkCmdClearColorImage(m_commandBuffer->handle(), color_image.handle(), VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1, &color_range);
 
     m_errorMonitor->VerifyFound();
 
@@ -19365,8 +19304,8 @@ TEST_F(VkLayerTest, ClearImageErrors) {
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "vkCmdClearDepthStencilImage called without a depth/stencil image.");
 
-    vkCmdClearDepthStencilImage(m_commandBuffer->handle(), color_image.handle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                                &clear_value, 1, &ds_range);
+    vkCmdClearDepthStencilImage(m_commandBuffer->handle(), color_image.handle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_value,
+                                1, &ds_range);
 
     m_errorMonitor->VerifyFound();
 }
@@ -19934,9 +19873,7 @@ TEST_F(VkPositiveLayerTest, IgnoreUnrelatedDescriptor) {
         m_errorMonitor->ExpectSuccess();
 
         VkImageObj image(m_device);
-        image.Init(32, 32, 1, VK_FORMAT_B8G8R8A8_UNORM,
-                   VK_IMAGE_USAGE_SAMPLED_BIT,
-                   VK_IMAGE_TILING_OPTIMAL, 0);
+        image.Init(32, 32, 1, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
 
         VkImageView view = image.targetView(VK_FORMAT_B8G8R8A8_UNORM);
 
@@ -20314,8 +20251,8 @@ TEST_F(VkPositiveLayerTest, ImmutableSamplerOnlyDescriptor) {
     m_commandBuffer->begin();
     m_commandBuffer->BeginRenderPass(m_renderPassBeginInfo);
 
-    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1,
-                            &descriptor_set, 0, nullptr);
+    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_set, 0,
+                            nullptr);
     m_errorMonitor->VerifyNotFound();
 
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
@@ -21060,8 +20997,8 @@ TEST_F(VkPositiveLayerTest, DynamicOffsetWithInactiveBinding) {
     // This update should succeed, but offset of inactive binding 1 oversteps binding 2 buffer size
     //   we used to have a bug in this case.
     uint32_t dyn_off[BINDING_COUNT] = {0, 1024, 256};
-    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1,
-                            &descriptor_set, BINDING_COUNT, dyn_off);
+    vkCmdBindDescriptorSets(m_commandBuffer->handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_set,
+                            BINDING_COUNT, dyn_off);
     m_commandBuffer->Draw(1, 0, 0, 0);
     m_errorMonitor->VerifyNotFound();
 
@@ -22041,13 +21978,13 @@ TEST_F(VkPositiveLayerTest, BarrierLayoutToImageUsage) {
 
             img_barrier.oldLayout = buffer_layouts[i].old_layout;
             img_barrier.newLayout = buffer_layouts[i].new_layout;
-            vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT,
-                                 VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &img_barrier);
+            vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
+                                 nullptr, 0, nullptr, 1, &img_barrier);
 
             img_barrier.oldLayout = buffer_layouts[i].new_layout;
             img_barrier.newLayout = buffer_layouts[i].old_layout;
-            vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT,
-                                 VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &img_barrier);
+            vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0,
+                                 nullptr, 0, nullptr, 1, &img_barrier);
         }
         m_commandBuffer->end();
 

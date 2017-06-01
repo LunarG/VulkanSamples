@@ -16,6 +16,7 @@
  * limitations under the License.
  *
  * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
+ * Author: Dave Houlton <daveh@lunarg.com>
  */
 
 #ifndef VKRENDERFRAMEWORK_H
@@ -158,8 +159,7 @@ class VkCommandPoolObj : public vk_testing::CommandPool {
 
 class VkCommandBufferObj : public vk_testing::CommandBuffer {
    public:
-    VkCommandBufferObj(VkDeviceObj *device, VkCommandPoolObj *pool,
-                       VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    VkCommandBufferObj(VkDeviceObj *device, VkCommandPoolObj *pool, VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     void PipelineBarrier(VkPipelineStageFlags src_stages, VkPipelineStageFlags dest_stages, VkDependencyFlags dependencyFlags,
                          uint32_t memoryBarrierCount, const VkMemoryBarrier *pMemoryBarriers, uint32_t bufferMemoryBarrierCount,
                          const VkBufferMemoryBarrier *pBufferMemoryBarriers, uint32_t imageMemoryBarrierCount,
@@ -330,7 +330,7 @@ class VkDescriptorSetObj : public vk_testing::DescriptorPool {
     VkDescriptorSet GetDescriptorSetHandle() const;
     VkPipelineLayout GetPipelineLayout() const;
 
-  protected:
+   protected:
     VkDeviceObj *m_device;
     std::vector<VkDescriptorSetLayoutBinding> m_layout_bindings;
     std::map<VkDescriptorType, int> m_type_counts;
@@ -348,7 +348,7 @@ class VkShaderObj : public vk_testing::ShaderModule {
    public:
     VkShaderObj(VkDeviceObj *device, const char *shaderText, VkShaderStageFlagBits stage, VkRenderFramework *framework,
                 char const *name = "main");
-    VkPipelineShaderStageCreateInfo const & GetStageCreateInfo() const;
+    VkPipelineShaderStageCreateInfo const &GetStageCreateInfo() const;
 
    protected:
     VkPipelineShaderStageCreateInfo m_stage_info;
@@ -359,7 +359,7 @@ class VkPipelineObj : public vk_testing::Pipeline {
    public:
     VkPipelineObj(VkDeviceObj *device);
     void AddShader(VkShaderObj *shaderObj);
-    void AddShader(VkPipelineShaderStageCreateInfo const & createInfo);
+    void AddShader(VkPipelineShaderStageCreateInfo const &createInfo);
     void AddVertexInputAttribs(VkVertexInputAttributeDescription *vi_attrib, uint32_t count);
     void AddVertexInputBindings(VkVertexInputBindingDescription *vi_binding, uint32_t count);
     void AddColorAttachment(uint32_t binding, const VkPipelineColorBlendAttachmentState *att);
