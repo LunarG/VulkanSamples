@@ -10381,12 +10381,19 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchai
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
     VkResult result = dev_data->dispatch_table.GetSwapchainImagesKHR(device, swapchain, pCount, pSwapchainImages);
 
-    if (result == VK_SUCCESS && pSwapchainImages != NULL) {
+    if ((result == VK_SUCCESS || result == VK_INCOMPLETE) && pSwapchainImages != nullptr) {
         // This should never happen and is checked by param checker.
         if (!pCount) return result;
         std::lock_guard<std::mutex> lock(global_lock);
         auto swapchain_node = GetSwapchainNode(dev_data, swapchain);
+
+        if (*pCount > swapchain_node->images.size())
+            swapchain_node->images.resize(*pCount);
+
         for (uint32_t i = 0; i < *pCount; ++i) {
+            if (swapchain_node->images[i] != VK_NULL_HANDLE)
+                continue;   // Already retrieved this.
+
             IMAGE_LAYOUT_NODE image_layout_node;
             image_layout_node.layout = VK_IMAGE_LAYOUT_UNDEFINED;
             image_layout_node.format = swapchain_node->createInfo.imageFormat;
@@ -10408,7 +10415,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchai
             auto &image_state = dev_data->imageMap[pSwapchainImages[i]];
             image_state->valid = false;
             image_state->binding.mem = MEMTRACKER_SWAP_CHAIN_IMAGE_KEY;
-            swapchain_node->images.push_back(pSwapchainImages[i]);
+            swapchain_node->images[i] = pSwapchainImages[i];
             ImageSubresourcePair subpair = {pSwapchainImages[i], false, VkImageSubresource()};
             dev_data->imageSubresourceMap[pSwapchainImages[i]].push_back(subpair);
             dev_data->imageLayoutMap[subpair] = image_layout_node;
