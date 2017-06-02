@@ -212,8 +212,19 @@ void Hologram::create_render_pass() {
 
 #ifdef MVK_USE_MOLTENVK_SHADER_CONVERTER
 
+#include <MoltenVK/vk_mvk_moltenvk.h>
 #include <MoltenGLSLToSPIRVConverter/GLSLConversion.h>
 void Hologram::create_shader_modules() {
+
+#ifdef DEBUG
+    // If debugging, enable MoltenVK debug mode to enable debugging capabilities,
+    // including logging shader conversions from SPIR-V to Metal Shading Language.
+    MVKDeviceConfiguration mvkConfig;
+    vkGetMoltenVKDeviceConfigurationMVK(dev_, &mvkConfig );
+    mvkConfig.debugMode = true;
+    vkSetMoltenVKDeviceConfigurationMVK(dev_, &mvkConfig );
+#endif
+
     char* spvLog;
     bool wasConverted;
 
