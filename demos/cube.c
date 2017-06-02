@@ -957,28 +957,28 @@ static void demo_draw(struct demo *demo) {
     vkWaitForFences(demo->device, 1, &demo->fences[demo->frame_index], VK_TRUE, UINT64_MAX);
     vkResetFences(demo->device, 1, &demo->fences[demo->frame_index]);
 
-    // Get the index of the next available swapchain image:
-    err = demo->fpAcquireNextImageKHR(demo->device, demo->swapchain, UINT64_MAX,
-                                      demo->image_acquired_semaphores[demo->frame_index],
-                                      VK_NULL_HANDLE, &demo->current_buffer);
-
     demo_update_data_buffer(demo);
 
-    if (err == VK_ERROR_OUT_OF_DATE_KHR) {
-        // demo->swapchain is out of date (e.g. the window was resized) and
-        // must be recreated:
-        demo->frame_index += 1;
-        demo->frame_index %= FRAME_LAG;
+    err = !(VK_SUCCESS);
+    while (err != VK_SUCCESS) {
+        // Get the index of the next available swapchain image:
+        err = demo->fpAcquireNextImageKHR(demo->device, demo->swapchain, UINT64_MAX,
+                                          demo->image_acquired_semaphores[demo->frame_index],
+                                          VK_NULL_HANDLE, &demo->current_buffer);
 
-        demo_resize(demo);
-        demo_draw(demo);
-        return;
-    } else if (err == VK_SUBOPTIMAL_KHR) {
-        // demo->swapchain is not as optimal as it could be, but the platform's
-        // presentation engine will still present the image correctly.
-    } else {
-        assert(!err);
+        if (err == VK_ERROR_OUT_OF_DATE_KHR) {
+            // demo->swapchain is out of date (e.g. the window was resized) and
+            // must be recreated:
+            demo_resize(demo);
+        } else if (err == VK_SUBOPTIMAL_KHR) {
+            // demo->swapchain is not as optimal as it could be, but the platform's
+            // presentation engine will still present the image correctly.
+            break;
+        } else {
+            assert(!err);
+        }
     }
+
     if (demo->VK_GOOGLE_display_timing_enabled) {
         // Look at what happened to previous presents, and make appropriate
         // adjustments in timing:
@@ -1285,9 +1285,6 @@ static void demo_prepare_buffers(struct demo *demo) {
     // Note: destroying the swapchain also cleans up all its associated
     // presentable images once the platform is done with them.
     if (oldSwapchain != VK_NULL_HANDLE) {
-        // AMD driver times out waiting on fences used in AcquireNextImage on
-        // a swapchain that is subsequently destroyed before the wait.
-        vkWaitForFences(demo->device, FRAME_LAG, demo->fences, VK_TRUE, UINT64_MAX);
         demo->fpDestroySwapchainKHR(demo->device, oldSwapchain, NULL);
     }
 
