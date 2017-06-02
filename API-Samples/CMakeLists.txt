@@ -1,5 +1,11 @@
 cmake_minimum_required(VERSION 2.8.11)
 
+# If ANDROID is ON, turn on cross-compiling for it
+if(ANDROID)
+    set(CMAKE_SYSTEM_NAME "Android")
+    set(CMAKE_SYSTEM_VERSION "7")
+endif()
+
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     add_definitions(-DVK_USE_PLATFORM_WIN32_KHR -DWIN32_LEAN_AND_MEAN)
     set(DisplayServer Win32)
@@ -85,7 +91,7 @@ function(sampleWithSingleFile)
             STRING(REPLACE "-" "_" PACKAGE_NAME ${SAMPLE_NAME})
             STRING(REGEX MATCH "^[0-9]" LEADING_DIGIT "${PACKAGE_NAME}")
             if(NOT LEADING_DIGIT STREQUAL "")
-                STRING(CONCAT PACKAGE_NAME "T" "${PACKAGE_NAME}")
+                set(PACKAGE_NAME "T${PACKAGE_NAME}")
             endif()
             set (PACKAGE_NAME org.khronos.vulkan.samples.${PACKAGE_NAME})
             set (SAMPLE_DESCRIPTION "Vulkan sample: ${SAMPLE_NAME}")
@@ -104,7 +110,7 @@ function(sampleWithSingleFile)
 
             # Include resource files.
             set (SAMPLE_WITH_RESOURCES
-             draw_textured_cube init_texture immutable_sampler multiple_sets pipeline_cache
+             draw_textured_cube init_texture immutable_sampler memory_barriers multiple_sets pipeline_cache
              pipeline_derivative secondary_command_buffer separate_image_sampler spirv_assembly
              spirv_specialization template)
             if (";${SAMPLE_WITH_RESOURCES};" MATCHES ";${SAMPLE_NAME};")
@@ -251,7 +257,7 @@ set (S_TARGETS
     instance_layer_extension_properties create_debug_report_callback
     enable_validation_with_callback multiple_sets
     copy_blit_image template separate_image_sampler input_attachment
-    occlusion_query pipeline_cache pipeline_derivative
+    occlusion_query pipeline_cache pipeline_derivative push_descriptors
     immutable_sampler push_constants draw_subpasses secondary_command_buffer
     spirv_assembly spirv_specialization memory_barriers)
 sampleWithSingleFile()

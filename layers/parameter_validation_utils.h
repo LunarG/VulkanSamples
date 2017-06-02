@@ -71,27 +71,6 @@ struct GenericHeader {
 // Layer name string to be logged with validation messages.
 const char LayerName[] = "ParameterValidation";
 
-// Enables for display-related instance extensions
-struct instance_extension_enables {
-    bool surface_enabled;
-    bool xlib_enabled;
-    bool xcb_enabled;
-    bool wayland_enabled;
-    bool mir_enabled;
-    bool android_enabled;
-    bool win32_enabled;
-    bool display_enabled;
-    bool khr_get_phys_dev_properties2_enabled;
-    bool khx_device_group_creation_enabled;
-    bool khx_external_fence_capabilities_enabled;
-    bool khx_external_memory_capabilities_enabled;
-    bool khx_external_semaphore_capabilities_enabled;
-    bool ext_acquire_xlib_display_enabled;
-    bool ext_direct_mode_display_enabled;
-    bool ext_display_surface_counter_enabled;
-    bool nv_external_memory_capabilities_enabled;
-};
-
 // String returned by string_VkStructureType for an unrecognized type.
 const std::string UnsupportedStructureTypeString = "Unhandled VkStructureType";
 
@@ -103,9 +82,12 @@ const std::string UnsupportedResultString = "Unhandled VkResult";
 // See Appendix C.10 "Assigning Extension Token Values" from the Vulkan specification
 const uint32_t ExtEnumBaseValue = 1000000000;
 
+// The value of all VK_xxx_MAX_ENUM tokens
+const uint32_t MaxEnumValue = 0x7FFFFFFF;
+
 template <typename T>
 bool is_extension_added_token(T value) {
-    return (static_cast<uint32_t>(std::abs(static_cast<int32_t>(value))) >= ExtEnumBaseValue);
+    return (value != MaxEnumValue) && (static_cast<uint32_t>(std::abs(static_cast<int32_t>(value))) >= ExtEnumBaseValue);
 }
 
 // VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE token is a special case that was converted from a core token to an
@@ -113,8 +95,8 @@ bool is_extension_added_token(T value) {
 // the base value that other extension added tokens use, and it does not fall within the enum's begin/end range.
 template <>
 bool is_extension_added_token(VkSamplerAddressMode value) {
-    bool result = (static_cast<uint32_t>(std::abs(static_cast<int32_t>(value))) >= ExtEnumBaseValue);
-    return (result || (value == VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE));
+    bool result = is_extension_added_token(static_cast<uint32_t>(value));
+    return result || (value == VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE);
 }
 
 /**
@@ -135,8 +117,9 @@ bool ValidateGreaterThan(debug_report_data *report_data, const char *api_name, c
     bool skip_call = false;
 
     if (value <= lower_bound) {
-        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, LayerName,
-                             "%s: parameter %s must be greater than %d", api_name, parameter_name.get_name().c_str(), lower_bound);
+        skip_call |=
+            log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, 1, LayerName,
+                    "%s: parameter %s must be greater than %d", api_name, parameter_name.get_name().c_str(), lower_bound);
     }
 
     return skip_call;
@@ -491,12 +474,17 @@ static bool validate_struct_pnext(debug_report_data *report_data, const char *ap
                                   const char *allowed_struct_names, const void *next, size_t allowed_type_count,
                                   const VkStructureType *allowed_types, uint32_t header_version) {
     bool skip_call = false;
+    std::unordered_set<const void *> cycle_check;
+    std::unordered_set<VkStructureType, std::hash<int>> unique_stype_check;
+
     const char disclaimer[] =
         "This warning is based on the Valid Usage documentation for version %d of the Vulkan header.  It "
         "is possible that you are using a struct from a private extension or an extension that was added "
         "to a later version of the Vulkan header, in which case your use of %s is perfectly valid but "
         "is not guaranteed to work correctly with validation enabled";
 
+    // TODO: The valid pNext structure types are not recursive. Each structure has its own list of valid sTypes for pNext.
+    // Codegen a map of vectors containing the allowable pNext types for each struct and use that here -- also simplifies parms.
     if (next != NULL) {
         if (allowed_type_count == 0) {
             std::string message = "%s: value of %s must be NULL.  ";
@@ -509,10 +497,31 @@ static bool validate_struct_pnext(debug_report_data *report_data, const char *ap
             const VkStructureType *end = allowed_types + allowed_type_count;
             const GenericHeader *current = reinterpret_cast<const GenericHeader *>(next);
 
-            while (current != NULL) {
-                if (std::find(start, end, current->sType) == end) {
-                    std::string type_name = string_VkStructureType(current->sType);
+            cycle_check.insert(next);
 
+
+            while (current != NULL) {
+                if (cycle_check.find(current->pNext) != cycle_check.end()) {
+                    std::string message = "%s: %s chain contains a cycle -- pNext pointer " PRIx64 " is repeated.";
+                    skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                         __LINE__, INVALID_STRUCT_PNEXT, LayerName, message.c_str(), api_name,
+                                         parameter_name.get_name().c_str(), reinterpret_cast<uint64_t>(next));
+                    break;
+                } else {
+                    cycle_check.insert(current->pNext);
+                }
+
+                std::string type_name = string_VkStructureType(current->sType);
+                if (unique_stype_check.find(current->sType) != unique_stype_check.end()) {
+                    std::string message = "%s: %s chain contains duplicate structure types: %s appears multiple times.";
+                    skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                         __LINE__, INVALID_STRUCT_PNEXT, LayerName, message.c_str(), api_name,
+                                         parameter_name.get_name().c_str(), type_name.c_str());
+                } else {
+                    unique_stype_check.insert(current->sType);
+                }
+
+                if (std::find(start, end, current->sType) == end) {
                     if (type_name == UnsupportedStructureTypeString) {
                         std::string message =
                             "%s: %s chain includes a structure with unexpected VkStructureType (%d); Allowed "
@@ -532,7 +541,6 @@ static bool validate_struct_pnext(debug_report_data *report_data, const char *ap
                                              header_version, parameter_name.get_name().c_str());
                     }
                 }
-
                 current = reinterpret_cast<const GenericHeader *>(current->pNext);
             }
         }
@@ -808,12 +816,16 @@ static std::string get_result_description(VkResult result) {
 *
 * @param report_data debug_report_data object for routing validation messages.
 * @param apiName Name of API call being validated.
+* @param ignore vector of VkResult return codes to be ignored
 * @param value VkResult value to validate.
 */
-static void validate_result(debug_report_data *report_data, const char *apiName, VkResult result) {
+static void validate_result(debug_report_data *report_data, const char *apiName, std::vector<VkResult> const &ignore,
+                            VkResult result) {
     if (result < 0 && result != VK_ERROR_VALIDATION_FAILED_EXT) {
+        if (std::find(ignore.begin(), ignore.end(), result) != ignore.end()) {
+            return;
+        }
         std::string resultName = string_VkResult(result);
-
         if (resultName == UnsupportedResultString) {
             // Unrecognized result code
             log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,

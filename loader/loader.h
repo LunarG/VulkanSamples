@@ -1,8 +1,8 @@
 /*
  *
- * Copyright (c) 2014-2016 The Khronos Group Inc.
- * Copyright (c) 2014-2016 Valve Corporation
- * Copyright (c) 2014-2016 LunarG, Inc.
+ * Copyright (c) 2014-2017 The Khronos Group Inc.
+ * Copyright (c) 2014-2017 Valve Corporation
+ * Copyright (c) 2014-2017 LunarG, Inc.
  * Copyright (C) 2015 Google Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -58,10 +58,10 @@
 #define MAX_NUM_UNKNOWN_EXTS 250
 #endif
 
-enum layer_type {
-    VK_LAYER_TYPE_INSTANCE_EXPLICIT = 0x1,
-    VK_LAYER_TYPE_INSTANCE_IMPLICIT = 0x2,
-    VK_LAYER_TYPE_META_EXPLICT = 0x4,
+enum layer_type_flags {
+    VK_LAYER_TYPE_FLAG_INSTANCE_LAYER = 0x1,  // If not set, indicates Device layer
+    VK_LAYER_TYPE_FLAG_EXPLICIT_LAYER = 0x2,  // If not set, indicates Implicit layer
+    VK_LAYER_TYPE_FLAG_META_LAYER = 0x4,      // If not set, indicates standard layer
 };
 
 typedef enum VkStringErrorFlagBits {
@@ -80,10 +80,6 @@ static const char UTF8_THREE_BYTE_CODE = 0xF0;
 static const char UTF8_THREE_BYTE_MASK = 0xF8;
 static const char UTF8_DATA_BYTE_CODE = 0x80;
 static const char UTF8_DATA_BYTE_MASK = 0xC0;
-
-static const char std_validation_names[6][VK_MAX_EXTENSION_NAME_SIZE] = {
-    "VK_LAYER_GOOGLE_threading",     "VK_LAYER_LUNARG_parameter_validation", "VK_LAYER_LUNARG_object_tracker",
-    "VK_LAYER_LUNARG_core_validation",      "VK_LAYER_LUNARG_swapchain", "VK_LAYER_GOOGLE_unique_objects"};
 
 struct VkStructureHeader {
     VkStructureType sType;
@@ -133,7 +129,7 @@ struct loader_layer_functions {
 
 struct loader_layer_properties {
     VkLayerProperties info;
-    enum layer_type type;
+    enum layer_type_flags type_flags;
     uint32_t interface_version;  // PFN_vkNegotiateLoaderLayerInterfaceVersion
     char lib_name[MAX_STRING_SIZE];
     loader_platform_dl_handle lib_handle;
@@ -142,6 +138,8 @@ struct loader_layer_properties {
     struct loader_device_extension_list device_extension_list;
     struct loader_name_value disable_env_var;
     struct loader_name_value enable_env_var;
+    uint32_t num_component_layers;
+    char (*component_layer_names)[MAX_STRING_SIZE];
 };
 
 struct loader_layer_list {
@@ -182,7 +180,13 @@ struct loader_device {
     VkDevice icd_device;    // device object from the icd
     struct loader_physical_device_term *phys_dev_term;
 
-    struct loader_layer_list activated_layer_list;
+    // List of activated layers.
+    //  app_      is the version based on exactly what the application asked for.
+    //            This is what must be returned to the application on Enumerate calls.
+    //  expanded_ is the version based on expanding meta-layers into their
+    //            individual component layers.  This is what is used internally.
+    struct loader_layer_list app_activated_layer_list;
+    struct loader_layer_list expanded_activated_layer_list;
 
     VkAllocationCallbacks alloc_callbacks;
 
@@ -223,11 +227,22 @@ struct loader_instance_dispatch_table {
 struct loader_instance {
     struct loader_instance_dispatch_table *disp;  // must be first entry in structure
 
+    // We need to manually track physical devices over time.  If the user
+    // re-queries the information, we don't want to delete old data or
+    // create new data unless necessary.
     uint32_t total_gpu_count;
     uint32_t phys_dev_count_term;
     struct loader_physical_device_term **phys_devs_term;
     uint32_t phys_dev_count_tramp;
     struct loader_physical_device_tramp **phys_devs_tramp;
+
+    // We also need to manually track physical device groups, but we don't need
+    // loader specific structures since we have that content in the physical
+    // device stored internal to the public structures.
+    uint32_t phys_dev_group_count_term;
+    struct VkPhysicalDeviceGroupPropertiesKHX **phys_dev_groups_term;
+    uint32_t phys_dev_group_count_tramp;
+    struct VkPhysicalDeviceGroupPropertiesKHX **phys_dev_groups_tramp;
 
     struct loader_instance *next;
 
@@ -241,8 +256,15 @@ struct loader_instance {
     struct loader_msg_callback_map_entry *icd_msg_callback_map;
 
     struct loader_layer_list instance_layer_list;
-    struct loader_layer_list activated_layer_list;
-    bool activated_layers_are_std_val;
+
+    // List of activated layers.
+    //  app_      is the version based on exactly what the application asked for.
+    //            This is what must be returned to the application on Enumerate calls.
+    //  expanded_ is the version based on expanding meta-layers into their
+    //            individual component layers.  This is what is used internally.
+    struct loader_layer_list app_activated_layer_list;
+    struct loader_layer_list expanded_activated_layer_list;
+
     VkInstance instance;  // layers/ICD instance returned to trampoline
 
     struct loader_extension_list ext_list;  // icds and loaders extensions
@@ -359,7 +381,6 @@ extern THREAD_LOCAL_DECL struct loader_instance *tls_instance;
 extern LOADER_PLATFORM_THREAD_ONCE_DEFINITION(once_init);
 extern loader_platform_thread_mutex loader_lock;
 extern loader_platform_thread_mutex loader_json_lock;
-extern const char *std_validation_str;
 
 struct loader_msg_callback_map_entry {
     VkDebugReportCallbackEXT icd_obj;
@@ -410,18 +431,11 @@ void loader_destroy_layer_list(const struct loader_instance *inst, struct loader
                                struct loader_layer_list *layer_list);
 void loader_delete_layer_properties(const struct loader_instance *inst, struct loader_layer_list *layer_list);
 bool loader_find_layer_name_array(const char *name, uint32_t layer_count, const char layer_list[][VK_MAX_EXTENSION_NAME_SIZE]);
-VkResult loader_expand_layer_names(struct loader_instance *inst, const char *key_name, uint32_t expand_count,
-                                   const char expand_names[][VK_MAX_EXTENSION_NAME_SIZE], uint32_t *layer_count,
-                                   char const *const **ppp_layer_names);
-void loader_init_std_validation_props(struct loader_layer_properties *props);
-void loader_delete_shadow_dev_layer_names(const struct loader_instance *inst, const VkDeviceCreateInfo *orig,
-                                          VkDeviceCreateInfo *ours);
-void loader_delete_shadow_inst_layer_names(const struct loader_instance *inst, const VkInstanceCreateInfo *orig,
-                                           VkInstanceCreateInfo *ours);
 VkResult loader_add_to_layer_list(const struct loader_instance *inst, struct loader_layer_list *list, uint32_t prop_list_count,
                                   const struct loader_layer_properties *props);
-void loader_find_layer_name_add_list(const struct loader_instance *inst, const char *name, const enum layer_type type,
-                                     const struct loader_layer_list *search_list, struct loader_layer_list *found_list);
+void loader_find_layer_name_add_list(const struct loader_instance *inst, const char *name, const enum layer_type_flags type_flags,
+                                     const struct loader_layer_list *source_list, struct loader_layer_list *target_list,
+                                     struct loader_layer_list *expanded_target_list);
 void loader_scanned_icd_clear(const struct loader_instance *inst, struct loader_icd_tramp_list *icd_tramp_list);
 VkResult loader_icd_scan(const struct loader_instance *inst, struct loader_icd_tramp_list *icd_tramp_list);
 void loader_layer_scan(const struct loader_instance *inst, struct loader_layer_list *instance_layers);
@@ -443,21 +457,18 @@ void loader_add_logical_device(const struct loader_instance *inst, struct loader
                                struct loader_device *found_dev);
 void loader_remove_logical_device(const struct loader_instance *inst, struct loader_icd_term *icd_term,
                                   struct loader_device *found_dev, const VkAllocationCallbacks *pAllocator);
-// NOTE: Outside of loader, this entry-point is only proivided for error
+// NOTE: Outside of loader, this entry-point is only provided for error
 // cleanup.
 void loader_destroy_logical_device(const struct loader_instance *inst, struct loader_device *dev,
                                    const VkAllocationCallbacks *pAllocator);
 
 VkResult loader_enable_instance_layers(struct loader_instance *inst, const VkInstanceCreateInfo *pCreateInfo,
                                        const struct loader_layer_list *instance_layers);
-void loader_deactivate_instance_layers(struct loader_instance *instance);
 
 VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo, const VkAllocationCallbacks *pAllocator,
                                       struct loader_instance *inst, VkInstance *created_instance);
 
 void loader_activate_instance_layer_extensions(struct loader_instance *inst, VkInstance created_inst);
-VkResult loader_enable_device_layers(const struct loader_instance *inst, struct loader_layer_list *activated_layer_list,
-                                     const VkDeviceCreateInfo *pCreateInfo, const struct loader_layer_list *device_layers);
 
 VkResult loader_create_device_chain(const struct loader_physical_device_tramp *pd, const VkDeviceCreateInfo *pCreateInfo,
                                     const VkAllocationCallbacks *pAllocator, const struct loader_instance *inst,
@@ -472,4 +483,4 @@ VkResult setupLoaderTermPhysDevs(struct loader_instance *inst);
 
 VkStringErrorFlags vk_string_validate(const int max_length, const char *char_array);
 
-#endif // LOADER_H
+#endif  // LOADER_H

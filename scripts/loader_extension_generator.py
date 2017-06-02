@@ -103,7 +103,7 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
         self.CommandParam = namedtuple('CommandParam', ['type', 'name', 'cdecl'])
         self.CommandData = namedtuple('CommandData', ['name', 'ext_name', 'ext_type', 'protect', 'return_type', 'handle_type', 'params', 'cdecl'])
         self.instanceExtensions = []
-        self.ExtensionData = namedtuple('ExtensionData', ['name', 'type', 'protect', 'num_commands'])
+        self.ExtensionData = namedtuple('ExtensionData', ['name', 'type', 'protect', 'define', 'num_commands'])
 
     #
     # Called once at the beginning of each run
@@ -158,6 +158,7 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
             preamble += '#include <vulkan/vk_icd.h>\n'
             preamble += '#include "wsi.h"\n'
             preamble += '#include "debug_report.h"\n'
+            preamble += '#include "extension_manual.h"\n'
 
         elif self.genOpts.filename == 'vk_layer_dispatch_table.h':
             preamble += '#pragma once\n'
@@ -203,10 +204,17 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
         # Start processing in superclass
         OutputGenerator.beginFeature(self, interface, emit)
 
+        enums = interface[0].findall('enum')
         self.currentExtension = ''
+        self.name_definition = ''
+
+        for item in enums:
+            name_definition = item.get('name')
+            if 'EXTENSION_NAME' in name_definition:
+                self.name_definition = name_definition
+
         self.type = interface.get('type')
         self.num_commands = 0
-
         name = interface.get('name')
         self.currentExtension = name 
 
@@ -230,6 +238,7 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
             self.instanceExtensions.append(self.ExtensionData(name=self.currentExtension,
                                                               type=self.type,
                                                               protect=self.featureExtraProtect,
+                                                              define=self.name_definition,
                                                               num_commands=self.num_commands))
 
         # Finish processing in superclass
@@ -678,7 +687,6 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
                 tables += '                                                             VkDevice dev) {\n'
                 tables += '    VkLayerDispatchTable *table = &dev_table->core_dispatch;\n'
                 tables += '    for (uint32_t i = 0; i < MAX_NUM_UNKNOWN_EXTS; i++) dev_table->ext_dispatch.dev_ext[i] = (PFN_vkDevExt)vkDevExtError;\n'
-                tables += '\n'
 
             elif x == 1:
                 cur_type = 'device'
@@ -689,7 +697,6 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
                 tables += 'VKAPI_ATTR void VKAPI_CALL loader_init_device_extension_dispatch_table(struct loader_dev_dispatch_table *dev_table,\n'
                 tables += '                                                                       PFN_vkGetDeviceProcAddr gpa, VkDevice dev) {\n'
                 tables += '    VkLayerDispatchTable *table = &dev_table->core_dispatch;\n'
-                tables += '\n'
 
             elif x == 2:
                 cur_type = 'instance'
@@ -731,7 +738,14 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
                     if cur_cmd.protect is not None:
                         tables += '#ifdef %s\n' % cur_cmd.protect
 
-                    tables += '    table->%s = (PFN_%s)gpa(%s, "%s");\n' % (base_name, cur_cmd.name, gpa_param, cur_cmd.name)
+                    # If we're looking for the proc we are passing in, just point the table to it.  This fixes the issue where
+                    # a layer overrides the function name for the loader.
+                    if (x <= 1 and base_name == 'GetDeviceProcAddr'):
+                        tables += '    table->GetDeviceProcAddr = gpa;\n'
+                    elif (x > 1 and base_name == 'GetInstanceProcAddr'):
+                        tables += '    table->GetInstanceProcAddr = gpa;\n'
+                    else:
+                        tables += '    table->%s = (PFN_%s)gpa(%s, "%s");\n' % (base_name, cur_cmd.name, gpa_param, cur_cmd.name)
 
                     if cur_cmd.protect is not None:
                         tables += '#endif // %s\n' % cur_cmd.protect
@@ -812,179 +826,6 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
         return tables
 
     #
-    # Several functions need a manual trampoline/terminator
-    def AddManualTrampTermFuncs(self):
-        funcs = ''
-
-        # vkEnumeratePhysicalDeviceGroupsKHX
-        funcs += '\n// ---- Manually added trampoline/terminator functison\n\n'
-        funcs += 'VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDeviceGroupsKHX(\n'
-        funcs += '    VkInstance instance, uint32_t *pPhysicalDeviceGroupCount,\n'
-        funcs += '    VkPhysicalDeviceGroupPropertiesKHX *pPhysicalDeviceGroupProperties) {\n'
-        funcs += '    VkResult res = VK_SUCCESS;\n'
-        funcs += '    struct loader_instance *inst = NULL;\n'
-        funcs += '\n'
-        funcs += '    loader_platform_thread_lock_mutex(&loader_lock);\n'
-        funcs += '\n'
-        funcs += '    inst = loader_get_instance(instance);\n'
-        funcs += '    if (NULL == inst) {\n'
-        funcs += '        res = VK_ERROR_INITIALIZATION_FAILED;\n'
-        funcs += '        goto out;\n'
-        funcs += '    }\n'
-        funcs += '\n'
-        funcs += '    if (pPhysicalDeviceGroupProperties == NULL || 0 == inst->total_gpu_count) {\n'
-        funcs += '        VkResult setup_res = setupLoaderTrampPhysDevs(instance);\n'
-        funcs += '        if (VK_SUCCESS != setup_res) {\n'
-        funcs += '            res = setup_res;\n'
-        funcs += '            goto out;\n'
-        funcs += '        }\n'
-        funcs += '    }\n'
-        funcs += '\n'
-        funcs += '    res = inst->disp->layer_inst_disp.EnumeratePhysicalDeviceGroupsKHX(\n'
-        funcs += '        instance, pPhysicalDeviceGroupCount, pPhysicalDeviceGroupProperties);\n'
-        funcs += '    if ((VK_SUCCESS != res && VK_INCOMPLETE != res) ||\n'
-        funcs += '        NULL == pPhysicalDeviceGroupProperties) {\n'
-        funcs += '        goto out;\n'
-        funcs += '    }\n'
-        funcs += '\n'
-        funcs += '    for (uint32_t group = 0; group < *pPhysicalDeviceGroupCount; group++) {\n'
-        funcs += '        for (uint32_t dev = 0;'
-        funcs += ' dev < pPhysicalDeviceGroupProperties[group].physicalDeviceCount; dev++) {\n'
-        funcs += '            for (uint32_t tramp = 0; tramp < inst->total_gpu_count; tramp++) {\n'
-        funcs += '                if (inst->phys_devs_tramp[tramp]->phys_dev ==\n'
-        funcs += '                        pPhysicalDeviceGroupProperties[group].physicalDevices[dev]) {\n'
-        funcs += '                    pPhysicalDeviceGroupProperties[group].physicalDevices[dev] =\n'
-        funcs += '                        (VkPhysicalDevice)inst->phys_devs_tramp[tramp];\n'
-        funcs += '                }\n'
-        funcs += '            }\n'
-        funcs += '        }\n'
-        funcs += '    }\n'
-        funcs += '\n'
-        funcs += 'out:\n'
-        funcs += '\n'
-        funcs += '    loader_platform_thread_unlock_mutex(&loader_lock);\n'
-        funcs += '    return res;\n'
-        funcs += '}\n\n'
-        funcs += 'VKAPI_ATTR VkResult VKAPI_CALL terminator_EnumeratePhysicalDeviceGroupsKHX(\n'
-        funcs += '    VkInstance instance, uint32_t *pPhysicalDeviceGroupCount,\n'
-        funcs += '    VkPhysicalDeviceGroupPropertiesKHX *pPhysicalDeviceGroupProperties) {\n'
-        funcs += '    struct loader_instance *inst = loader_get_instance(instance);\n'
-        funcs += '    VkResult res = VK_SUCCESS;\n'
-        funcs += '    uint32_t total_group_count = 0;\n'
-        funcs += '    uint32_t max_group_count = *pPhysicalDeviceGroupCount;\n'
-        funcs += '    uint32_t i = 0;\n'
-        funcs += '\n'
-        funcs += '    // We have to loop through all ICDs which may be capable of handling this\n'
-        funcs += '    // call and sum all the possible physical device groups together.\n'
-        funcs += '    struct loader_icd_term *icd_term = inst->icd_terms;\n'
-        funcs += '    while (NULL != icd_term) {\n'
-        funcs += '        if (NULL != icd_term->dispatch.EnumeratePhysicalDeviceGroupsKHX) {\n'
-        funcs += '            uint32_t cur_group_count = 0;\n'
-        funcs += '            res = icd_term->dispatch.EnumeratePhysicalDeviceGroupsKHX(\n'
-        funcs += '                icd_term->instance, &cur_group_count, NULL);\n'
-        funcs += '            if (res != VK_SUCCESS) {\n'
-        funcs += '                break;\n'
-        funcs += '            } else if (NULL != pPhysicalDeviceGroupProperties && max_group_count > total_group_count) {\n'
-        funcs += '\n'
-        funcs += '                uint32_t remain_count = max_group_count - total_group_count;\n'
-        funcs += '                res = icd_term->dispatch.EnumeratePhysicalDeviceGroupsKHX(\n'
-        funcs += '                    icd_term->instance, &remain_count,\n'
-        funcs += '                    &pPhysicalDeviceGroupProperties[total_group_count]);\n'
-        funcs += '                if (res != VK_SUCCESS) {\n'
-        funcs += '                    break;\n'
-        funcs += '                }\n'
-        funcs += '            }\n'
-        funcs += '            total_group_count += cur_group_count;\n'
-        funcs += '        } else {\n'
-        funcs += '            // For ICDs which don\'t directly support this, create a group for each physical device\n'
-        funcs += '            for (uint32_t j = 0; j < inst->total_gpu_count; j++) {\n'
-        funcs += '                if (inst->phys_devs_term[j]->icd_index == i) {\n'
-        funcs += '                    if (NULL != pPhysicalDeviceGroupProperties && max_group_count > total_group_count) {\n'
-        funcs += '                        pPhysicalDeviceGroupProperties[total_group_count].physicalDeviceCount = 1;\n'
-        funcs += '                        pPhysicalDeviceGroupProperties[total_group_count].physicalDevices[0] =\n'
-        funcs += '                            inst->phys_devs_term[j]->phys_dev;\n'
-        funcs += '                    }\n'
-        funcs += '                    total_group_count++;\n'
-        funcs += '                }\n'
-        funcs += '            }\n'
-        funcs += '        }\n'
-        funcs += '        icd_term = icd_term->next;\n'
-        funcs += '        i++;\n'
-        funcs += '    }\n'
-        funcs += '\n'
-        funcs += '    *pPhysicalDeviceGroupCount = total_group_count;\n'
-        funcs += '\n'
-        funcs += '    // Replace the physical devices with the value from the loader terminator\n'
-        funcs += '    // so we can de-reference them if needed.\n'
-        funcs += '    if (NULL != pPhysicalDeviceGroupProperties) {\n'
-        funcs += '        for (uint32_t group = 0; group < max_group_count; group++) {\n'
-        funcs += '            VkPhysicalDeviceGroupPropertiesKHX *cur_props = &pPhysicalDeviceGroupProperties[group];\n'
-        funcs += '            for (i = 0; i < cur_props->physicalDeviceCount; i++) {\n'
-        funcs += '                for (uint32_t term = 0; term < inst->total_gpu_count; term++) {\n'
-        funcs += '                    if (inst->phys_devs_term[term]->phys_dev == cur_props->physicalDevices[i]) {\n'
-        funcs += '                        cur_props->physicalDevices[i] = (VkPhysicalDevice)inst->phys_devs_term[term];\n'
-        funcs += '                    }\n'
-        funcs += '                }\n'
-        funcs += '            }\n'
-        funcs += '        }\n'
-        funcs += '\n'
-        funcs += '        if (VK_SUCCESS == res && max_group_count < total_group_count) {\n'
-        funcs += '            res = VK_INCOMPLETE;\n'
-        funcs += '        }\n'
-        funcs += '    }\n'
-        funcs += '\n'
-        funcs += '    return res;\n'
-        funcs += '}\n\n'
-        funcs += 'VKAPI_ATTR VkResult VKAPI_CALL\n'
-        funcs += 'vkGetPhysicalDeviceExternalImageFormatPropertiesNV(\n'
-        funcs += '    VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type,\n'
-        funcs += '    VkImageTiling tiling, VkImageUsageFlags usage, VkImageCreateFlags flags,\n'
-        funcs += '    VkExternalMemoryHandleTypeFlagsNV externalHandleType,\n'
-        funcs += '    VkExternalImageFormatPropertiesNV *pExternalImageFormatProperties) {\n'
-        funcs += '    const VkLayerInstanceDispatchTable *disp;\n'
-        funcs += '    VkPhysicalDevice unwrapped_phys_dev = loader_unwrap_physical_device(physicalDevice);\n'
-        funcs += '    disp = loader_get_instance_layer_dispatch(physicalDevice);\n'
-        funcs += '\n'
-        funcs += '    return disp->GetPhysicalDeviceExternalImageFormatPropertiesNV(\n'
-        funcs += '        unwrapped_phys_dev, format, type, tiling, usage, flags,\n'
-        funcs += '        externalHandleType, pExternalImageFormatProperties);\n'
-        funcs += '}\n'
-        funcs += '\n'
-        funcs += 'VKAPI_ATTR VkResult VKAPI_CALL\n'
-        funcs += 'terminator_GetPhysicalDeviceExternalImageFormatPropertiesNV(\n'
-        funcs += '    VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type,\n'
-        funcs += '    VkImageTiling tiling, VkImageUsageFlags usage, VkImageCreateFlags flags,\n'
-        funcs += '    VkExternalMemoryHandleTypeFlagsNV externalHandleType,\n'
-        funcs += '    VkExternalImageFormatPropertiesNV *pExternalImageFormatProperties) {\n'
-        funcs += '    struct loader_physical_device_term *phys_dev_term =\n'
-        funcs += '        (struct loader_physical_device_term *)physicalDevice;\n'
-        funcs += '    struct loader_icd_term *icd_term = phys_dev_term->this_icd_term;\n'
-        funcs += '\n'
-        funcs += '    if (!icd_term->dispatch.GetPhysicalDeviceExternalImageFormatPropertiesNV) {\n'
-        funcs += '        if (externalHandleType) {\n'
-        funcs += '            return VK_ERROR_FORMAT_NOT_SUPPORTED;\n'
-        funcs += '        }\n'
-        funcs += '\n'
-        funcs += '        if (!icd_term->dispatch.GetPhysicalDeviceImageFormatProperties) {\n'
-        funcs += '            return VK_ERROR_INITIALIZATION_FAILED;\n'
-        funcs += '        }\n'
-        funcs += '\n'
-        funcs += '        pExternalImageFormatProperties->externalMemoryFeatures = 0;\n'
-        funcs += '        pExternalImageFormatProperties->exportFromImportedHandleTypes = 0;\n'
-        funcs += '        pExternalImageFormatProperties->compatibleHandleTypes = 0;\n'
-        funcs += '\n'
-        funcs += '        return icd_term->dispatch.GetPhysicalDeviceImageFormatProperties(\n'
-        funcs += '            phys_dev_term->phys_dev, format, type, tiling, usage, flags,\n'
-        funcs += '            &pExternalImageFormatProperties->imageFormatProperties);\n'
-        funcs += '    }\n'
-        funcs += '\n'
-        funcs += '    return icd_term->dispatch.GetPhysicalDeviceExternalImageFormatPropertiesNV(\n'
-        funcs += '        phys_dev_term->phys_dev, format, type, tiling, usage, flags,\n'
-        funcs += '        externalHandleType, pExternalImageFormatProperties);\n'
-        funcs += '}\n\n'
-        return funcs
-
-    #
     # Create the appropriate trampoline (and possibly terminator) functinos
     def CreateTrampTermFuncs(self):
         entries = []
@@ -994,7 +835,14 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
         # Some extensions have to be manually added.  Skip those in the automatic
         # generation.  They will be manually added later.
         manual_ext_commands = ['vkEnumeratePhysicalDeviceGroupsKHX',
-                               'vkGetPhysicalDeviceExternalImageFormatPropertiesNV']
+                               'vkGetPhysicalDeviceExternalImageFormatPropertiesNV',
+                               'vkGetPhysicalDeviceFeatures2KHR',
+                               'vkGetPhysicalDeviceProperties2KHR',
+                               'vkGetPhysicalDeviceFormatProperties2KHR',
+                               'vkGetPhysicalDeviceImageFormatProperties2KHR',
+                               'vkGetPhysicalDeviceQueueFamilyProperties2KHR',
+                               'vkGetPhysicalDeviceMemoryProperties2KHR',
+                               'vkGetPhysicalDeviceSparseImageFormatProperties2KHR']
 
         for ext_cmd in self.ext_commands:
             if (ext_cmd.ext_name in WSI_EXT_NAMES or
@@ -1012,23 +860,47 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
             if ext_cmd.protect is not None:
                 funcs += '#ifdef %s\n' % ext_cmd.protect
 
-            tramp_header = ext_cmd.cdecl.replace(";", " {\n")
+            func_header = ext_cmd.cdecl.replace(";", " {\n")
+            tramp_header = func_header.replace("VKAPI_CALL vk", "VKAPI_CALL ")
             return_prefix = '    '
             base_name = ext_cmd.name[2:]
             has_surface = 0
+            update_structure_surface = 0
+            update_structure_string = ''
             requires_terminator = 0
             surface_var_name = ''
             phys_dev_var_name = ''
             has_return_type = False
+            always_use_param_name = True
+            surface_type_to_replace = ''
+            surface_name_replacement = ''
+            physdev_type_to_replace = ''
+            physdev_name_replacement = ''
 
             for param in ext_cmd.params:
                 if param.type == 'VkSurfaceKHR':
                     has_surface = 1
                     surface_var_name = param.name
                     requires_terminator = 1
+                    always_use_param_name = False
+                    surface_type_to_replace = 'VkSurfaceKHR'
+                    surface_name_replacement = 'icd_surface->real_icd_surfaces[icd_index]'
+                if param.type == 'VkPhysicalDeviceSurfaceInfo2KHR':
+                    has_surface = 1
+                    surface_var_name = param.name + '->surface'
+                    requires_terminator = 1
+                    update_structure_surface = 1
+                    update_structure_string = '        VkPhysicalDeviceSurfaceInfo2KHR info_copy = *pSurfaceInfo;\n'
+                    update_structure_string += '        info_copy.surface = icd_surface->real_icd_surfaces[icd_index];\n'
+                    always_use_param_name = False
+                    surface_type_to_replace = 'VkPhysicalDeviceSurfaceInfo2KHR'
+                    surface_name_replacement = '&info_copy'
                 if param.type == 'VkPhysicalDevice':
                     requires_terminator = 1
                     phys_dev_var_name = param.name
+                    always_use_param_name = False
+                    physdev_type_to_replace = 'VkPhysicalDevice'
+                    physdev_name_replacement = 'phys_dev_term->phys_dev'
 
             if (ext_cmd.return_type != None):
                 return_prefix += 'return '
@@ -1039,7 +911,7 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
                 requires_terminator = 1
 
             if requires_terminator == 1:
-                term_header = tramp_header.replace("VKAPI_CALL vk", "VKAPI_CALL terminator_")
+                term_header = tramp_header.replace("VKAPI_CALL ", "VKAPI_CALL terminator_")
 
                 funcs += tramp_header
 
@@ -1093,9 +965,14 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
                     funcs += '    }\n'
 
                     if has_surface == 1:
-                        funcs += '    VkIcdSurface *icd_surface = (VkIcdSurface *)(surface);\n'
+                        funcs += '    VkIcdSurface *icd_surface = (VkIcdSurface *)(%s);\n' % (surface_var_name)
                         funcs += '    uint8_t icd_index = phys_dev_term->icd_index;\n'
                         funcs += '    if (NULL != icd_surface->real_icd_surfaces && NULL != (void *)icd_surface->real_icd_surfaces[icd_index]) {\n'
+
+                        # If there's a structure with a surface, we need to update its internals with the correct surface for the ICD
+                        if update_structure_surface == 1:
+                            funcs += update_structure_string
+
                         funcs += '    ' + return_prefix + 'icd_term->dispatch.'
                         funcs += base_name
                         funcs += '('
@@ -1104,10 +981,13 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
                             if count != 0:
                                 funcs += ', '
 
-                            if param.type == 'VkPhysicalDevice':
-                                funcs += 'phys_dev_term->phys_dev'
-                            elif param.type == 'VkSurfaceKHR':
-                                funcs += 'icd_surface->real_icd_surfaces[icd_index]'
+                            if not always_use_param_name:
+                                if surface_type_to_replace and surface_type_to_replace == param.type:
+                                    funcs += surface_name_replacement
+                                elif physdev_type_to_replace and physdev_type_to_replace == param.type:
+                                    funcs += physdev_name_replacement
+                                else:
+                                    funcs += param.name
                             else:
                                 funcs += param.name
 
@@ -1240,7 +1120,6 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
             if ext_cmd.protect is not None:
                 funcs += '#endif // %s\n' % ext_cmd.protect
 
-        funcs += self.AddManualTrampTermFuncs()
         return funcs
 
 
@@ -1268,18 +1147,20 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
             if cur_cmd.protect is not None:
                 gpa_func += '#ifdef %s\n' % cur_cmd.protect
 
+            base_name = cur_cmd.name[2:]
+
             if (cur_cmd.ext_type == 'instance'):
                 gpa_func += '    if (!strcmp("%s", name)) {\n' % (cur_cmd.name)
                 gpa_func += '        *addr = (ptr_instance->enabled_known_extensions.'
                 gpa_func += cur_cmd.ext_name[3:].lower()
                 gpa_func += ' == 1)\n'
-                gpa_func += '                     ? (void *)%s\n' % (cur_cmd.name)
+                gpa_func += '                     ? (void *)%s\n' % (base_name)
                 gpa_func += '                     : NULL;\n'
                 gpa_func += '        return true;\n'
                 gpa_func += '    }\n'
             else:
                 gpa_func += '    if (!strcmp("%s", name)) {\n' % (cur_cmd.name)
-                gpa_func += '        *addr = (void *)%s;\n' % (cur_cmd.name)
+                gpa_func += '        *addr = (void *)%s;\n' % (base_name)
                 gpa_func += '        return true;\n'
                 gpa_func += '    }\n'
 
@@ -1320,12 +1201,7 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
             else:
                 create_func += '        } else if (0 == strcmp(pCreateInfo->ppEnabledExtensionNames[i], '
 
-            if 'VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES2' == ext.name.upper():
-                create_func += 'VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME)) {\n'
-            else:
-                create_func += ext.name.upper()
-                create_func += '_EXTENSION_NAME)) {\n'
-
+            create_func += ext.define + ')) {\n'
             create_func += '            ptr_instance->enabled_known_extensions.'
             create_func += ext.name[3:].lower()
             create_func += ' = 1;\n'
@@ -1405,7 +1281,7 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
                 commands = self.ext_commands
 
             for cur_cmd in commands:
-                if cur_cmd.ext_type == 'instance':
+                if cur_cmd.ext_type == 'instance' or (cur_cmd.ext_type == 'device' and cur_cmd.handle_type == 'VkPhysicalDevice'):
                     if cur_cmd.ext_name != cur_extension_name:
                         if 'VK_VERSION_' in cur_cmd.ext_name:
                             table += '\n    // ---- Core %s commands\n' % cur_cmd.ext_name[11:]
@@ -1453,12 +1329,7 @@ class LoaderExtensionOutputGenerator(OutputGenerator):
             if ext.protect is not None:
                 table += '#ifdef %s\n' % ext.protect
             table += '                                                  '
-
-            if 'VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES2' == ext.name.upper():
-                table += 'VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,\n'
-            else:
-                table += ext.name.upper()
-                table += '_EXTENSION_NAME,\n'
+            table += ext.define + ',\n'
 
             if ext.protect is not None:
                 table += '#endif // %s\n' % ext.protect

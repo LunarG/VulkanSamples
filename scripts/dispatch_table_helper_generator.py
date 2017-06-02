@@ -190,7 +190,16 @@ class DispatchTableHelperOutputGenerator(OutputGenerator):
 
             if item[1] is not None:
                 table += '#ifdef %s\n' % item[1]
-            table += '    table->%s = (PFN_%s) gpa(%s, "%s");\n' % (base_name, item[0], table_type, item[0])
+
+            # If we're looking for the proc we are passing in, just point the table to it.  This fixes the issue where
+            # a layer overrides the function name for the loader.
+            if (table_type == 'device' and base_name == 'GetDeviceProcAddr'):
+                table += '    table->GetDeviceProcAddr = gpa;\n'
+            elif (table_type != 'device' and base_name == 'GetInstanceProcAddr'):
+                table += '    table->GetInstanceProcAddr = gpa;\n'
+            else:
+                table += '    table->%s = (PFN_%s) gpa(%s, "%s");\n' % (base_name, item[0], table_type, item[0])
+
             if item[1] is not None:
                 table += '#endif // %s\n' % item[1]
         table += '}'

@@ -44,9 +44,6 @@ static const char *normalVertShaderText =
     "layout (location = 0) in vec4 pos;\n"
     "layout (location = 1) in vec4 inColor;\n"
     "layout (location = 0) out vec4 outColor;\n"
-    "out gl_PerVertex { \n"
-    "    vec4 gl_Position;\n"
-    "};\n"
     "void main() {\n"
     "   outColor = inColor;\n"
     "   gl_Position = myBufferVals.mvp * pos;\n"
@@ -58,9 +55,6 @@ static const char *fullscreenVertShaderText =
     "#extension GL_ARB_separate_shader_objects : enable\n"
     "#extension GL_ARB_shading_language_420pack : enable\n"
     "layout (location = 0) out vec4 outColor;\n"
-    "out gl_PerVertex { \n"
-    "    vec4 gl_Position;\n"
-    "};\n"
     "void main() {\n"
     "   outColor = vec4(1.0f, 0.1f, 0.1f, 0.5f);\n"
     "   const vec4 verts[4] = vec4[4](vec4(-1.0, -1.0, 0.5, 1.0),\n"
@@ -644,7 +638,7 @@ int sample_main(int argc, char *argv[]) {
 
     wait_seconds(1);
     /* VULKAN_KEY_END */
-    if (info.save_images) write_ppm(info, "drawsubpasses");
+    if (info.save_images) write_ppm(info, "draw_subpasses");
 
     for (uint32_t i = 0; i < info.swapchainImageCount; i++) vkDestroyFramebuffer(info.device, stencil_framebuffers[i], NULL);
     free(stencil_framebuffers);

@@ -83,6 +83,9 @@ class HelperFileOutputGenerator(OutputGenerator):
         self.structNames = []                             # List of Vulkan struct typenames
         self.structTypes = dict()                         # Map of Vulkan struct typename to required VkStructureType
         self.structMembers = []                           # List of StructMemberData records for all Vulkan structs
+        self.object_types = []                            # List of all handle types
+        self.debug_report_object_types = []               # Handy copy of debug_report_object_type enum data
+
         # Named tuples to store struct and command data
         self.StructType = namedtuple('StructType', ['name', 'value'])
         self.CommandParam = namedtuple('CommandParam', ['type', 'name', 'ispointer', 'isstaticarray', 'isconst', 'iscount', 'len', 'extstructs', 'cdecl'])
@@ -151,6 +154,11 @@ class HelperFileOutputGenerator(OutputGenerator):
                     value_list.append(item_name)
             if value_list is not None:
                 self.enum_output += self.GenerateEnumStringConversion(groupName, value_list)
+        elif self.helper_file_type == 'object_types_header' and groupName == 'VkDebugReportObjectTypeEXT':
+            for elem in groupElem.findall('enum'):
+                if elem.get('supported') != 'disabled':
+                    item_name = elem.get('name')
+                    self.debug_report_object_types.append(item_name)
     #
     # Called for each type -- if the type is a struct/union, grab the metadata
     def genType(self, typeinfo, name):
@@ -159,7 +167,9 @@ class HelperFileOutputGenerator(OutputGenerator):
         # If the type is a struct type, traverse the imbedded <member> tags generating a structure.
         # Otherwise, emit the tag text.
         category = typeElem.get('category')
-        if (category == 'struct' or category == 'union'):
+        if category == 'handle':
+            self.object_types.append(name)
+        elif (category == 'struct' or category == 'union'):
             self.structNames.append(name)
             self.genStruct(typeinfo, name)
     #
@@ -209,7 +219,15 @@ class HelperFileOutputGenerator(OutputGenerator):
             if not match or match.group(1) != match.group(4):
                 raise 'Unrecognized latexmath expression'
             name = match.group(2)
-            decoratedName = '{}/{}'.format(*match.group(2, 3))
+            # Need to add 1 for ceiling function; otherwise, the allocated packet
+            # size will be less than needed during capture for some title which use
+            # this in VkPipelineMultisampleStateCreateInfo. based on ceiling function
+            # definition,it is '{0}%{1}?{0}/{1} + 1:{0}/{1}'.format(*match.group(2, 3)),
+            # its value <= '{}/{} + 1'.
+            if match.group(1) == 'ceil':
+                decoratedName = '{}/{} + 1'.format(*match.group(2, 3))
+            else:
+                decoratedName = '{}/{}'.format(*match.group(2, 3))
         else:
             # Matches expressions similar to 'latexmath : [dataSize \over 4]'
             match = re.match(r'latexmath\s*\:\s*\[\s*(\w+)\s*\\over\s*(\d+)\s*\]', source)
@@ -437,7 +455,7 @@ class HelperFileOutputGenerator(OutputGenerator):
                                 checked_type = member.type
                                 if checked_type == 'void':
                                     checked_type = 'void*'
-                                struct_size_body += '        struct_size += struct_ptr->%s * sizeof(%s);\n' % (member.len, checked_type)
+                                struct_size_body += '        struct_size += (struct_ptr->%s ) * sizeof(%s);\n' % (member.len, checked_type)
             struct_size_body += '    }\n'
             struct_size_body += '    return struct_size;\n'
             struct_size_body += '}\n'
@@ -502,6 +520,66 @@ class HelperFileOutputGenerator(OutputGenerator):
                 if item.ifdef_protect != None:
                     safe_struct_header += '#endif // %s\n' % item.ifdef_protect
         return safe_struct_header
+    #
+    # Combine object types helper header file preamble with body text and return
+    def GenerateObjectTypesHelperHeader(self):
+        object_types_helper_header = '\n'
+        object_types_helper_header += '#pragma once\n'
+        object_types_helper_header += '\n'
+        object_types_helper_header += '#include <vulkan/vulkan.h>\n\n'
+        object_types_helper_header += self.GenerateObjectTypesHeader()
+        return object_types_helper_header
+    #
+    # Object types header: create object enum type header file
+    def GenerateObjectTypesHeader(self):
+        object_types_header = '// Object Type enum for validation layer internal object handling\n'
+        object_types_header += 'typedef enum VulkanObjectType {\n'
+        object_types_header += '    kVulkanObjectTypeUnknown = 0,\n'
+        enum_num = 1
+        type_list = [];
+
+        # Output enum definition as each handle is processed, saving the names to use for the conversion routine
+        for item in self.object_types:
+            fixup_name = item[2:]
+            enum_entry = 'kVulkanObjectType%s' % fixup_name
+            object_types_header += '    ' + enum_entry
+            object_types_header += ' = %d,\n' % enum_num
+            enum_num += 1
+            type_list.append(enum_entry)
+        object_types_header += '    kVulkanObjectTypeMax = %d,\n' % enum_num
+        object_types_header += '} VulkanObjectType;\n\n'
+
+        # Output name string helper
+        object_types_header += '// Array of object name strings for OBJECT_TYPE enum conversion\n'
+        object_types_header += 'static const char * const object_string[kVulkanObjectTypeMax] = {\n'
+        object_types_header += '    "Unknown",\n'
+        for item in self.object_types:
+            fixup_name = item[2:]
+            object_types_header += '    "%s",\n' % fixup_name
+        object_types_header += '};\n'
+
+        # Output a conversion routine from the layer object definitions to the debug report definitions
+        object_types_header += '\n'
+        object_types_header += '// Helper array to get Official Vulkan object type enum from the internal layers version\n'
+        object_types_header += 'const VkDebugReportObjectTypeEXT get_debug_report_enum[] = {\n'
+        for object_type in type_list:
+            done = False
+            search_type = object_type.replace("kVulkanObjectType", "").lower()
+            for vk_object_type in self.debug_report_object_types:
+                target_type = vk_object_type.replace("VK_DEBUG_REPORT_OBJECT_TYPE_", "").lower()
+                target_type = target_type[:-4]
+                target_type = target_type.replace("_", "")
+                if search_type == target_type:
+                    object_types_header += '    %s,   // %s\n' % (vk_object_type, object_type)
+                    done = True
+                    break
+            if done == False:
+                if object_type == 'kVulkanObjectTypeDebugReportCallbackEXT':
+                    object_types_header += '    VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT, // kVulkanObjectTypeDebugReportCallbackEXT\n'
+                else:
+                    object_types_header += '    VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT; // No Match\n'
+        object_types_header += '};\n'
+        return object_types_header
     #
     # Determine if a structure needs a safe_struct helper function
     # That is, it has an sType or one of its members is a pointer
@@ -691,6 +769,8 @@ class HelperFileOutputGenerator(OutputGenerator):
             return self.GenerateSafeStructHelperHeader()
         elif self.helper_file_type == 'safe_struct_source':
             return self.GenerateSafeStructHelperSource()
+        elif self.helper_file_type == 'object_types_header':
+            return self.GenerateObjectTypesHelperHeader()
         else:
             return 'Bad Helper File Generator Option %s' % self.helper_file_type
 

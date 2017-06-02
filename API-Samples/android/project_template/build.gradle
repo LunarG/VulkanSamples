@@ -14,15 +14,26 @@
 
 apply plugin: 'com.android.application'
 
-Properties properties = new Properties()
-properties.load(project.rootProject.file('local.properties').newDataInputStream())
-def ndkDir = properties.getProperty('ndk.dir')
+def ndkDir
+if (project.rootProject.file('local.properties').exists()) {
+    Properties properties = new Properties()
+    properties.load(project.rootProject.file('local.properties').newDataInputStream())
+    ndkDir = properties.getProperty('ndk.dir')
+}
+if (!ndkDir) {
+    ndkDir=System.getenv("ANDROID_NDK_HOME")
+}
+
+if(!ndkDir || ndkDir.empty) {
+   throw new GradleException('Environment Variable ANDROID_NDK_HOME for NDK path need to be setup')
+}
+
 
 def stlType = 'gnustl_static'
 
 android {
     compileSdkVersion  24
-    buildToolsVersion '23.0.2'
+    buildToolsVersion '25.0.0'
 
     defaultConfig {
         applicationId 'com.google.vulkan.samples.@PACKAGE_NAME@'

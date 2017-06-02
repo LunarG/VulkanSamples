@@ -49,9 +49,6 @@ static const char *vertShaderText =
     "layout (location = 0) in vec4 pos;\n"
     "layout (location = 1) in vec4 inColor;\n"
     "layout (location = 0) out vec4 outColor;\n"
-    "out gl_PerVertex { \n"
-    "    vec4 gl_Position;\n"
-    "};\n"
     "void main() {\n"
     "   outColor = inColor;\n"
     "   gl_Position = myBufferVals.mvp * pos;\n"
@@ -357,7 +354,7 @@ int sample_main(int argc, char *argv[]) {
 
     wait_seconds(1);
     /* VULKAN_KEY_END */
-    if (info.save_images) write_ppm(info, "dynamicuniform");
+    if (info.save_images) write_ppm(info, "dynamic_uniform");
 
     vkDestroySemaphore(info.device, imageAcquiredSemaphore, NULL);
     vkDestroyFence(info.device, drawFence, NULL);

@@ -34,8 +34,7 @@ build() {
 }
 
 install() {
-	adb uninstall com.example.Smoke
-	adb install build/outputs/apk/android-fat-debug.apk
+	adb install -r build/outputs/apk/android-debug.apk
 }
 
 run() {

@@ -50,6 +50,8 @@
 #include "vulkan/vulkan.h"
 #include "vk_validation_error_messages.h"
 #include "vk_layer_logging.h"
+#include "vk_object_types.h"
+#include "device_extensions.h"
 #include <atomic>
 #include <functional>
 #include <map>
@@ -92,7 +94,7 @@ struct COMMAND_POOL_NODE : public BASE_NODE {
 // Generic wrapper for vulkan objects
 struct VK_OBJECT {
     uint64_t handle;
-    VkDebugReportObjectTypeEXT type;
+    VulkanObjectType type;
 };
 
 inline bool operator==(VK_OBJECT a, VK_OBJECT b) NOEXCEPT { return a.handle == b.handle && a.type == b.type; }
@@ -133,7 +135,7 @@ struct DESCRIPTOR_POOL_STATE : BASE_NODE {
     uint32_t maxSets;        // Max descriptor sets allowed in this pool
     uint32_t availableSets;  // Available descriptor sets in this pool
 
-    VkDescriptorPoolCreateInfo createInfo;
+    safe_VkDescriptorPoolCreateInfo createInfo;
     std::unordered_set<cvdescriptorset::DescriptorSet *> sets;  // Collection of all sets in this pool
     std::vector<uint32_t> maxDescriptorTypeCount;               // Max # of descriptors of each type in this pool
     std::vector<uint32_t> availableDescriptorTypeCount;         // Available # of descriptors of each type in this pool
@@ -142,29 +144,16 @@ struct DESCRIPTOR_POOL_STATE : BASE_NODE {
         : pool(pool),
           maxSets(pCreateInfo->maxSets),
           availableSets(pCreateInfo->maxSets),
-          createInfo(*pCreateInfo),
+          createInfo(pCreateInfo),
           maxDescriptorTypeCount(VK_DESCRIPTOR_TYPE_RANGE_SIZE, 0),
           availableDescriptorTypeCount(VK_DESCRIPTOR_TYPE_RANGE_SIZE, 0) {
-        if (createInfo.poolSizeCount) {  // Shadow type struct from ptr into local struct
-            size_t poolSizeCountSize = createInfo.poolSizeCount * sizeof(VkDescriptorPoolSize);
-            createInfo.pPoolSizes = new VkDescriptorPoolSize[poolSizeCountSize];
-            memcpy((void *)createInfo.pPoolSizes, pCreateInfo->pPoolSizes, poolSizeCountSize);
-            // Now set max counts for each descriptor type based on count of that type times maxSets
-            uint32_t i = 0;
-            for (i = 0; i < createInfo.poolSizeCount; ++i) {
-                uint32_t typeIndex = static_cast<uint32_t>(createInfo.pPoolSizes[i].type);
-                // Same descriptor types can appear several times
-                maxDescriptorTypeCount[typeIndex] += createInfo.pPoolSizes[i].descriptorCount;
-                availableDescriptorTypeCount[typeIndex] = maxDescriptorTypeCount[typeIndex];
-            }
-        } else {
-            createInfo.pPoolSizes = NULL;  // Make sure this is NULL so we don't try to clean it up
+        // Collect maximums per descriptor type.
+        for (uint32_t i = 0; i < createInfo.poolSizeCount; ++i) {
+            uint32_t typeIndex = static_cast<uint32_t>(createInfo.pPoolSizes[i].type);
+            // Same descriptor types can appear several times
+            maxDescriptorTypeCount[typeIndex] += createInfo.pPoolSizes[i].descriptorCount;
+            availableDescriptorTypeCount[typeIndex] = maxDescriptorTypeCount[typeIndex];
         }
-    }
-    ~DESCRIPTOR_POOL_STATE() {
-        delete[] createInfo.pPoolSizes;
-        // TODO : pSets are currently freed in deletePools function which uses freeShadowUpdateTree function
-        //  need to migrate that struct to smart ptrs for auto-cleanup
     }
 };
 
@@ -221,12 +210,27 @@ class BUFFER_STATE : public BINDABLE {
     VkBuffer buffer;
     VkBufferCreateInfo createInfo;
     BUFFER_STATE(VkBuffer buff, const VkBufferCreateInfo *pCreateInfo) : buffer(buff), createInfo(*pCreateInfo) {
+        if ((createInfo.sharingMode == VK_SHARING_MODE_CONCURRENT) && (createInfo.queueFamilyIndexCount > 0)) {
+            uint32_t *pQueueFamilyIndices = new uint32_t[createInfo.queueFamilyIndexCount];
+            for (uint32_t i = 0; i < createInfo.queueFamilyIndexCount; i++) {
+                pQueueFamilyIndices[i] = pCreateInfo->pQueueFamilyIndices[i];
+            }
+            createInfo.pQueueFamilyIndices = pQueueFamilyIndices;
+        }
+
         if (createInfo.flags & VK_BUFFER_CREATE_SPARSE_BINDING_BIT) {
             sparse = true;
         }
     };
 
     BUFFER_STATE(BUFFER_STATE const &rh_obj) = delete;
+
+    ~BUFFER_STATE() {
+        if ((createInfo.sharingMode == VK_SHARING_MODE_CONCURRENT) && (createInfo.queueFamilyIndexCount > 0)) {
+            delete createInfo.pQueueFamilyIndices;
+            createInfo.pQueueFamilyIndices = nullptr;
+        }
+    };
 };
 
 class BUFFER_VIEW_STATE : public BASE_NODE {
@@ -250,14 +254,31 @@ class IMAGE_STATE : public BINDABLE {
     VkImageCreateInfo createInfo;
     bool valid;     // If this is a swapchain image backing memory track valid here as it doesn't have DEVICE_MEM_INFO
     bool acquired;  // If this is a swapchain image, has it been acquired by the app.
+    bool shared_presentable;  // True for a front-buffered swapchain image
+    bool layout_locked;       // A front-buffered image that has been presented can never have layout transitioned
     IMAGE_STATE(VkImage img, const VkImageCreateInfo *pCreateInfo)
-        : image(img), createInfo(*pCreateInfo), valid(false), acquired(false) {
+        : image(img), createInfo(*pCreateInfo), valid(false), acquired(false), shared_presentable(false), layout_locked(false) {
+        if ((createInfo.sharingMode == VK_SHARING_MODE_CONCURRENT) && (createInfo.queueFamilyIndexCount > 0)) {
+            uint32_t *pQueueFamilyIndices = new uint32_t[createInfo.queueFamilyIndexCount];
+            for (uint32_t i = 0; i < createInfo.queueFamilyIndexCount; i++) {
+                pQueueFamilyIndices[i] = pCreateInfo->pQueueFamilyIndices[i];
+            }
+            createInfo.pQueueFamilyIndices = pQueueFamilyIndices;
+        }
+
         if (createInfo.flags & VK_IMAGE_CREATE_SPARSE_BINDING_BIT) {
             sparse = true;
         }
     };
 
     IMAGE_STATE(IMAGE_STATE const &rh_obj) = delete;
+
+    ~IMAGE_STATE() {
+        if ((createInfo.sharingMode == VK_SHARING_MODE_CONCURRENT) && (createInfo.queueFamilyIndexCount > 0)) {
+            delete createInfo.pQueueFamilyIndices;
+            createInfo.pQueueFamilyIndices = nullptr;
+        }
+    };
 };
 
 class IMAGE_VIEW_STATE : public BASE_NODE {
@@ -323,18 +344,9 @@ class SWAPCHAIN_NODE {
     VkSwapchainKHR swapchain;
     std::vector<VkImage> images;
     bool replaced = false;
+    bool shared_presentable = false;
     SWAPCHAIN_NODE(const VkSwapchainCreateInfoKHR *pCreateInfo, VkSwapchainKHR swapchain)
         : createInfo(pCreateInfo), swapchain(swapchain) {}
-};
-
-enum DRAW_TYPE {
-    DRAW = 0,
-    DRAW_INDEXED = 1,
-    DRAW_INDIRECT = 2,
-    DRAW_INDEXED_INDIRECT = 3,
-    DRAW_BEGIN_RANGE = DRAW,
-    DRAW_END_RANGE = DRAW_INDEXED_INDIRECT,
-    NUM_DRAW_TYPES = (DRAW_END_RANGE - DRAW_BEGIN_RANGE + 1),
 };
 
 class IMAGE_CMD_BUF_LAYOUT_NODE {
@@ -443,6 +455,15 @@ enum CBStatusFlagBits {
     // clang-format on
 };
 
+struct TEMPLATE_STATE {
+    VkDescriptorUpdateTemplateKHR desc_update_template;
+    safe_VkDescriptorUpdateTemplateCreateInfoKHR create_info;
+
+    TEMPLATE_STATE(VkDescriptorUpdateTemplateKHR update_template, safe_VkDescriptorUpdateTemplateCreateInfoKHR *pCreateInfo)
+        : desc_update_template(update_template), create_info(*pCreateInfo) {}
+};
+
+
 struct QueryObject {
     VkQueryPool pool;
     uint32_t index;
@@ -520,7 +541,6 @@ class PIPELINE_STATE : public BASE_NODE {
     std::unordered_map<uint32_t, std::map<uint32_t, descriptor_req>> active_slots;
     // Vtx input info (if any)
     std::vector<VkVertexInputBindingDescription> vertexBindingDescriptions;
-    std::vector<VkVertexInputAttributeDescription> vertexAttributeDescriptions;
     std::vector<VkPipelineColorBlendAttachmentState> attachments;
     bool blendConstantsEnabled;  // Blend constants enabled for any attachments
     // Store RPCI b/c renderPass may be destroyed after Pipeline creation
@@ -536,7 +556,6 @@ class PIPELINE_STATE : public BASE_NODE {
           duplicate_shaders(0),
           active_slots(),
           vertexBindingDescriptions(),
-          vertexAttributeDescriptions(),
           attachments(),
           blendConstantsEnabled(false),
           render_pass_ci(),
@@ -557,11 +576,6 @@ class PIPELINE_STATE : public BASE_NODE {
             if (pVICI->vertexBindingDescriptionCount) {
                 this->vertexBindingDescriptions = std::vector<VkVertexInputBindingDescription>(
                     pVICI->pVertexBindingDescriptions, pVICI->pVertexBindingDescriptions + pVICI->vertexBindingDescriptionCount);
-            }
-            if (pVICI->vertexAttributeDescriptionCount) {
-                this->vertexAttributeDescriptions = std::vector<VkVertexInputAttributeDescription>(
-                    pVICI->pVertexAttributeDescriptions,
-                    pVICI->pVertexAttributeDescriptions + pVICI->vertexAttributeDescriptionCount);
             }
         }
         if (pCreateInfo->pColorBlendState) {
@@ -612,8 +626,7 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     VkCommandBufferBeginInfo beginInfo;
     VkCommandBufferInheritanceInfo inheritanceInfo;
     VkDevice device;                     // device this CB belongs to
-    uint64_t numCmds;                    // number of cmds in this CB
-    uint64_t drawCount[NUM_DRAW_TYPES];  // Count of each type of draw in this CB
+    bool hasDrawCmd;
     CB_STATE state;                      // Track cmd buffer update state
     uint64_t submitCount;                // Number of times CB has been submitted
     CBStatusFlags status;                // Track status of various bindings on cmd buffer
@@ -645,7 +658,6 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     std::unordered_set<QueryObject> activeQueries;
     std::unordered_set<QueryObject> startedQueries;
     std::unordered_map<ImageSubresourcePair, IMAGE_CMD_BUF_LAYOUT_NODE> imageLayoutMap;
-    std::unordered_map<VkImage, std::vector<ImageSubresourcePair>> imageSubresourceMap;
     std::unordered_map<VkEvent, VkPipelineStageFlags> eventToStageMap;
     std::vector<DRAW_DATA> drawData;
     DRAW_DATA currentDrawData;
@@ -654,9 +666,9 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     // Track images and buffers that are updated by this CB at the point of a draw
     std::unordered_set<VkImageView> updateImages;
     std::unordered_set<VkBuffer> updateBuffers;
-    // If cmd buffer is primary, track secondary command buffers pending
-    // execution
-    std::unordered_set<VkCommandBuffer> secondaryCommandBuffers;
+    // If primary, the secondary command buffers we will call.
+    // If secondary, the primary command buffers we will be called by.
+    std::unordered_set<GLOBAL_CB_NODE *> linkedCommandBuffers;
     // MTMTODO : Scrub these data fields and merge active sets w/ lastBound as appropriate
     std::vector<std::function<bool()>> validate_functions;
     std::unordered_set<VkDeviceMemory> memObjs;
@@ -720,6 +732,8 @@ struct CHECK_DISABLED {
     bool get_query_pool_results;
     bool destroy_buffer;
     bool shader_validation;         // Skip validation for shaders
+
+    void SetAll(bool value) { std::fill(&command_buffer_state, &shader_validation + 1, value); }
 };
 
 struct MT_FB_ATTACHMENT_INFO {
@@ -751,13 +765,13 @@ DEVICE_MEM_INFO *GetMemObjInfo(const layer_data *, VkDeviceMemory);
 BUFFER_VIEW_STATE *GetBufferViewState(const layer_data *, VkBufferView);
 SAMPLER_STATE *GetSamplerState(const layer_data *, VkSampler);
 IMAGE_VIEW_STATE *GetImageViewState(const layer_data *, VkImageView);
-VkSwapchainKHR GetSwapchainFromImage(const layer_data *, VkImage);
 SWAPCHAIN_NODE *GetSwapchainNode(const layer_data *, VkSwapchainKHR);
 GLOBAL_CB_NODE *GetCBNode(layer_data const *my_data, const VkCommandBuffer cb);
 RENDER_PASS_STATE *GetRenderPassState(layer_data const *my_data, VkRenderPass renderpass);
 FRAMEBUFFER_STATE *GetFramebufferState(const layer_data *my_data, VkFramebuffer framebuffer);
 COMMAND_POOL_NODE *GetCommandPoolNode(layer_data *dev_data, VkCommandPool pool);
 const PHYS_DEV_PROPERTIES_NODE *GetPhysDevProperties(const layer_data *device_data);
+const VkPhysicalDeviceFeatures *GetEnabledFeatures(const layer_data *device_data);
 
 void invalidateCommandBuffers(const layer_data *, std::unordered_set<GLOBAL_CB_NODE *> const &, VK_OBJECT);
 bool ValidateMemoryIsBoundToBuffer(const layer_data *, const BUFFER_STATE *, const char *, UNIQUE_VALIDATION_ERROR_CODE);
@@ -771,7 +785,9 @@ bool ValidateObjectNotInUse(const layer_data *dev_data, BASE_NODE *obj_node, VK_
 void invalidateCommandBuffers(const layer_data *dev_data, std::unordered_set<GLOBAL_CB_NODE *> const &cb_nodes, VK_OBJECT obj);
 void RemoveImageMemoryRange(uint64_t handle, DEVICE_MEM_INFO *mem_info);
 void RemoveBufferMemoryRange(uint64_t handle, DEVICE_MEM_INFO *mem_info);
-bool ClearMemoryObjectBindings(layer_data *dev_data, uint64_t handle, VkDebugReportObjectTypeEXT type);
+bool ClearMemoryObjectBindings(layer_data *dev_data, uint64_t handle, VulkanObjectType type);
+bool ValidateCmdQueueFlags(layer_data *dev_data, GLOBAL_CB_NODE *cb_node, const char *caller_name, VkQueueFlags flags,
+                           UNIQUE_VALIDATION_ERROR_CODE error_code);
 bool ValidateCmd(layer_data *my_data, GLOBAL_CB_NODE *pCB, const CMD_TYPE cmd, const char *caller_name);
 bool insideRenderPass(const layer_data *my_data, GLOBAL_CB_NODE *pCB, const char *apiName, UNIQUE_VALIDATION_ERROR_CODE msgCode);
 void SetImageMemoryValid(layer_data *dev_data, IMAGE_STATE *image_state, bool valid);
@@ -794,15 +810,17 @@ const VkFormatProperties *GetFormatProperties(core_validation::layer_data *devic
 const VkImageFormatProperties *GetImageFormatProperties(core_validation::layer_data *device_data, VkFormat format,
                                                         VkImageType image_type, VkImageTiling tiling, VkImageUsageFlags usage,
                                                         VkImageCreateFlags flags);
-const debug_report_data *GetReportData(layer_data *);
+const debug_report_data *GetReportData(const layer_data *);
 const VkPhysicalDeviceProperties *GetPhysicalDeviceProperties(layer_data *);
 const CHECK_DISABLED *GetDisables(layer_data *);
 std::unordered_map<VkImage, std::unique_ptr<IMAGE_STATE>> *GetImageMap(core_validation::layer_data *);
 std::unordered_map<VkImage, std::vector<ImageSubresourcePair>> *GetImageSubresourceMap(layer_data *);
 std::unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> *GetImageLayoutMap(layer_data *);
+std::unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> const *GetImageLayoutMap(layer_data const *);
 std::unordered_map<VkBuffer, std::unique_ptr<BUFFER_STATE>> *GetBufferMap(layer_data *device_data);
 std::unordered_map<VkBufferView, std::unique_ptr<BUFFER_VIEW_STATE>> *GetBufferViewMap(layer_data *device_data);
 std::unordered_map<VkImageView, std::unique_ptr<IMAGE_VIEW_STATE>> *GetImageViewMap(layer_data *device_data);
+const DeviceExtensions *GetDeviceExtensions(const layer_data *);
 }
 
 #endif  // CORE_VALIDATION_TYPES_H_

@@ -44,9 +44,6 @@ const char *vertShaderText =
     "layout (location = 0) in vec4 pos;\n"
     "layout (location = 1) in vec2 inTexCoords;\n"
     "layout (location = 0) out vec2 outTexCoords;\n"
-    "out gl_PerVertex { \n"
-    "    vec4 gl_Position;\n"
-    "};\n"
     "void main() {\n"
     "   outTexCoords = inTexCoords;\n"
     "   gl_Position = ubuf.mvp * pos;\n"
@@ -116,7 +113,7 @@ int sample_main(int argc, char *argv[]) {
 
     info.texture_data.image_info.sampler = 0;
     info.texture_data.image_info.imageView = info.textures[0].view;
-    info.texture_data.image_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    info.texture_data.image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
     // Create our separate sampler
     VkSampler separateSampler = {};

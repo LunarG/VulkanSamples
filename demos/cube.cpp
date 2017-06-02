@@ -434,13 +434,13 @@ struct Demo {
     }
 
     void draw() {
-        // Ensure no more than FRAME_LAG presentations are outstanding
+        // Ensure no more than FRAME_LAG renderings are outstanding
         device.waitForFences(1, &fences[frame_index], VK_TRUE, UINT64_MAX);
         device.resetFences(1, &fences[frame_index]);
 
         // Get the index of the next available swapchain image:
-        auto result = device.acquireNextImageKHR(swapchain, UINT64_MAX, image_acquired_semaphores[frame_index], fences[frame_index],
-                                                 &current_buffer);
+        auto result = device.acquireNextImageKHR(swapchain, UINT64_MAX, image_acquired_semaphores[frame_index],
+                                                 vk::Fence(), &current_buffer);
         if (result == vk::Result::eErrorOutOfDateKHR) {
             // swapchain is out of date (e.g. the window was resized) and
             // must be recreated:
@@ -471,7 +471,7 @@ struct Demo {
                                      .setSignalSemaphoreCount(1)
                                      .setPSignalSemaphores(&draw_complete_semaphores[frame_index]);
 
-        result = graphics_queue.submit(1, &submit_info, vk::Fence());
+        result = graphics_queue.submit(1, &submit_info, fences[frame_index]);
         VERIFY(result == vk::Result::eSuccess);
 
         if (separate_present_queue) {
@@ -1339,6 +1339,9 @@ struct Demo {
         // Note: destroying the swapchain also cleans up all its associated
         // presentable images once the platform is done with them.
         if (oldSwapchain) {
+            // AMD driver times out waiting on fences used in AcquireNextImage on
+            // a swapchain that is subsequently destroyed before the wait.
+            device.waitForFences(FRAME_LAG, fences, VK_TRUE, UINT64_MAX);
             device.destroySwapchainKHR(oldSwapchain, nullptr);
         }
 
@@ -2677,6 +2680,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
     bool done;  // flag saying when app is complete
     int argc;
     char **argv;
+
+    // Ensure wParam is initialized.
+    msg.wParam = 0;
 
     // Use the CommandLine functions to get the command line arguments.
     // Unfortunately, Microsoft outputs

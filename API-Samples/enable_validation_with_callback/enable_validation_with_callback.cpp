@@ -80,6 +80,7 @@ int sample_main(int argc, char *argv[]) {
         info.instance_layer_names.push_back("VK_LAYER_GOOGLE_unique_objects");
 
         if (!demo_check_layers(info.instance_layer_properties, info.instance_layer_names)) {
+            std::cout << "Set the environment variable VK_LAYER_PATH to point to the location of your layers" << std::endl;
             exit(1);
         }
     }

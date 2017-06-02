@@ -132,7 +132,7 @@ void ShellXcb::create_window() {
 }
 
 PFN_vkGetInstanceProcAddr ShellXcb::load_vk() {
-    const char filename[] = "libvulkan.so";
+    const char filename[] = "libvulkan.so.1";
     void *handle, *symbol;
 
 #ifdef UNINSTALLED_LOADER

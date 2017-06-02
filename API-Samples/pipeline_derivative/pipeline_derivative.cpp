@@ -53,9 +53,6 @@ const char *vertShaderText =
     "layout (location = 0) in vec4 pos;\n"
     "layout (location = 1) in vec2 inTexCoords;\n"
     "layout (location = 0) out vec2 texcoord;\n"
-    "out gl_PerVertex { \n"
-    "    vec4 gl_Position;\n"
-    "};\n"
     "void main() {\n"
     "   texcoord = inTexCoords;\n"
     "   gl_Position = ubuf.mvp * pos;\n"
@@ -151,7 +148,7 @@ int sample_main(int argc, char *argv[]) {
     rs.polygonMode = VK_POLYGON_MODE_FILL;
     rs.cullMode = VK_CULL_MODE_BACK_BIT;
     rs.frontFace = VK_FRONT_FACE_CLOCKWISE;
-    rs.depthClampEnable = include_depth;
+    rs.depthClampEnable = VK_FALSE;
     rs.rasterizerDiscardEnable = VK_FALSE;
     rs.depthBiasEnable = VK_FALSE;
     rs.depthBiasConstantFactor = 0;

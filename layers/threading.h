@@ -77,6 +77,9 @@ class counter {
     std::mutex counter_lock;
     std::condition_variable counter_condition;
     void startWrite(debug_report_data *report_data, T object) {
+        if (object == VK_NULL_HANDLE) {
+            return;
+        }
         bool skipCall = false;
         loader_platform_thread_id tid = loader_platform_get_thread_id();
         std::unique_lock<std::mutex> lock(counter_lock);
@@ -147,6 +150,9 @@ class counter {
     }
 
     void finishWrite(T object) {
+        if (object == VK_NULL_HANDLE) {
+            return;
+        }
         // Object is no longer in use
         std::unique_lock<std::mutex> lock(counter_lock);
         uses[object].writer_count -= 1;
@@ -159,6 +165,9 @@ class counter {
     }
 
     void startRead(debug_report_data *report_data, T object) {
+        if (object == VK_NULL_HANDLE) {
+            return;
+        }
         bool skipCall = false;
         loader_platform_thread_id tid = loader_platform_get_thread_id();
         std::unique_lock<std::mutex> lock(counter_lock);
@@ -193,6 +202,9 @@ class counter {
         }
     }
     void finishRead(T object) {
+        if (object == VK_NULL_HANDLE) {
+            return;
+        }
         std::unique_lock<std::mutex> lock(counter_lock);
         uses[object].reader_count -= 1;
         if ((uses[object].reader_count == 0) && (uses[object].writer_count == 0)) {

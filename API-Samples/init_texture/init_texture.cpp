@@ -236,7 +236,8 @@ int sample_main(int argc, char *argv[]) {
     samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     samplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     samplerCreateInfo.mipLodBias = 0.0;
-    samplerCreateInfo.anisotropyEnable = VK_FALSE, samplerCreateInfo.maxAnisotropy = 0;
+    samplerCreateInfo.anisotropyEnable = VK_FALSE;
+    samplerCreateInfo.maxAnisotropy = 1;
     samplerCreateInfo.compareEnable = VK_FALSE;
     samplerCreateInfo.compareOp = VK_COMPARE_OP_NEVER;
     samplerCreateInfo.minLod = 0.0;

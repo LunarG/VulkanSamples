@@ -2,10 +2,10 @@
   - This repository is a collection of Vulkan C++ sample applications.
   - Run the following script to obtain a short description of all or a 
     specific sample:
-    `$ src/get-short-descripts.sh`
+    `$ API-Samples/get-short-descripts.sh`
   - Run the following script to obtain a more detailed description of all
     samples with a long description set:
-    `$ src/get-descripts.sh`
+    `$ API-Samples/get-descripts.sh`
 
 ## CI Build Status
 | Platform | Build Status |
@@ -59,11 +59,17 @@ cd dbuild
 make
 ```
 ## Android:
-
+- Build shaderc source code inside NDK
+```java
+$ cd ${ndk_root}/sources/third_party/shaderc
+$ ../../../ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=Android.mk APP_STL:=gnustl_static APP_ABI=all NDK_TOOLCHAIN_VERSION:=clang libshaderc_combined -j16
 ```
+- Generate Android Studio Projects
+```java
+$ cd YOUR_DEV_DIRECTORY/VulkanSamples/API-Samples
 $ cmake -DANDROID=ON
 ```
-And import VulkanSamples/API-Samples/android/build.gradle in Android Studio.
+- Import VulkanSamples/API-Samples/android/build.gradle into Android Studio 2.3.0+.
 
 ## Windows System Requirements
 

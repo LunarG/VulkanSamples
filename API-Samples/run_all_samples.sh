@@ -13,11 +13,11 @@ while test $# -gt 0; do
         case "$1" in
         --save-images)
                 SAVEIMAGES="true"
-		ARGS="$ARGS --save-images"
+		ARGS="--save-images $ARGS"
                 ;;
         --compare-images)
                 COMPAREIMAGES="true"
-		ARGS="$ARGS --save-images"
+		ARGS="--save-images $ARGS"
                 ;;
         -)
                 echo "error: unknown option"
@@ -58,7 +58,7 @@ do
    echo ""
    if ! test -z $COMPAREIMAGES; then
        GOLDNAME="golden/${RNAME}.ppm"
-       if test -f $GOLDNAME; then
+        if test -f $GOLDNAME; then
            THISNAME="${RNAME}.ppm"
 	   CMDRES=`compare -metric AE -fuzz 3% $THISNAME $GOLDNAME ${RNAME}-diff.ppm 2>&1` 
            if [ $CMDRES == "0" ]; then
@@ -68,7 +68,12 @@ do
                $SAVEIMAGES="true"
 	       RETVAL=1
            fi
-       fi
+        else
+            if test -f ${RNAME}.ppm; then
+                >&2 echo -e "${RED}${RNAME} FAIL${NOCOLOR} : Missing Golden Image"
+                RETVAL=1
+            fi
+        fi
     fi
     if test -z $SAVEIMAGES; then
         `rm ${RNAME}.ppm > /dev/null 2>&1`

@@ -25,6 +25,7 @@ py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml vk_safe_st
 py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml vk_struct_size_helper.h
 py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml vk_struct_size_helper.c
 py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml vk_enum_string_helper.h
+py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml vk_object_types.h
 py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml vk_dispatch_table_helper.h
 py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml thread_check.h
 py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml parameter_validation.h
@@ -32,29 +33,3 @@ py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml unique_obj
 py -3 ../../../scripts/lvl_genvk.py -registry ../../../scripts/vk.xml vk_layer_dispatch_table.h
 cd ../..
 
-copy /Y ..\layers\vk_layer_config.cpp   generated\common\
-copy /Y ..\layers\vk_layer_extension_utils.cpp  generated\common\
-copy /Y ..\layers\vk_layer_utils.cpp    generated\common\
-copy /Y ..\layers\vk_layer_table.cpp    generated\common\
-copy /Y ..\layers\descriptor_sets.cpp   generated\common\
-copy /Y ..\layers\buffer_validation.cpp generated\common\
-
-REM create build-script root directory
-mkdir generated\gradle-build
-cd generated\gradle-build
-mkdir  core_validation object_tracker parameter_validation swapchain threading unique_objects
-cd ..\..
-mkdir generated\layer-src
-cd generated\layer-src
-mkdir  core_validation object_tracker parameter_validation swapchain threading unique_objects
-cd ..\..
-xcopy /s gradle-templates\*   generated\gradle-build\
-for %%G in (core_validation object_tracker parameter_validation swapchain threading unique_objects) Do (
-    copy ..\layers\%%G.cpp   generated\layer-src\%%G
-    echo apply from: "../common.gradle"  > generated\gradle-build\%%G\build.gradle
-)
-copy generated\common\descriptor_sets.cpp generated\layer-src\core_validation\descriptor_sets.cpp
-copy generated\common\buffer_validation.cpp generated\layer-src\core_validation\buffer_validation.cpp
-copy generated\include\vk_safe_struct.cpp generated\layer-src\core_validation\vk_safe_struct.cpp
-move generated\include\vk_safe_struct.cpp generated\layer-src\unique_objects\vk_safe_struct.cpp
-echo apply from: "../common.gradle"  > generated\gradle-build\unique_objects\build.gradle

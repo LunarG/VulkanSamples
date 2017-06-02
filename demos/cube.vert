@@ -29,10 +29,6 @@ layout(std140, binding = 0) uniform buf {
 
 layout (location = 0) out vec4 texcoord;
 
-out gl_PerVertex {
-        vec4 gl_Position;
-};
-
 void main() 
 {
    texcoord = ubuf.attr[gl_VertexIndex];

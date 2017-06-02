@@ -852,6 +852,21 @@ void init_swap_chain(struct sample_info &info, VkImageUsageFlags usageFlags) {
         preTransform = surfCapabilities.currentTransform;
     }
 
+    // Find a supported composite alpha mode - one of these is guaranteed to be set
+    VkCompositeAlphaFlagBitsKHR compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    VkCompositeAlphaFlagBitsKHR compositeAlphaFlags[4] = {
+        VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+        VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR,
+        VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
+        VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR,
+    };
+    for (uint32_t i = 0; i < sizeof(compositeAlphaFlags); i++) {
+        if (surfCapabilities.supportedCompositeAlpha & compositeAlphaFlags[i]) {
+            compositeAlpha = compositeAlphaFlags[i];
+            break;
+        }
+    }
+
     VkSwapchainCreateInfoKHR swapchain_ci = {};
     swapchain_ci.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     swapchain_ci.pNext = NULL;
@@ -861,7 +876,7 @@ void init_swap_chain(struct sample_info &info, VkImageUsageFlags usageFlags) {
     swapchain_ci.imageExtent.width = swapchainExtent.width;
     swapchain_ci.imageExtent.height = swapchainExtent.height;
     swapchain_ci.preTransform = preTransform;
-    swapchain_ci.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    swapchain_ci.compositeAlpha = compositeAlpha;
     swapchain_ci.imageArrayLayers = 1;
     swapchain_ci.presentMode = swapchainPresentMode;
     swapchain_ci.oldSwapchain = VK_NULL_HANDLE;
@@ -1455,7 +1470,7 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth, VkBool32 in
     rs.polygonMode = VK_POLYGON_MODE_FILL;
     rs.cullMode = VK_CULL_MODE_BACK_BIT;
     rs.frontFace = VK_FRONT_FACE_CLOCKWISE;
-    rs.depthClampEnable = include_depth;
+    rs.depthClampEnable = VK_FALSE;
     rs.rasterizerDiscardEnable = VK_FALSE;
     rs.depthBiasEnable = VK_FALSE;
     rs.depthBiasConstantFactor = 0;
@@ -1585,7 +1600,8 @@ void init_sampler(struct sample_info &info, VkSampler &sampler) {
     samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     samplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     samplerCreateInfo.mipLodBias = 0.0;
-    samplerCreateInfo.anisotropyEnable = VK_FALSE, samplerCreateInfo.maxAnisotropy = 0;
+    samplerCreateInfo.anisotropyEnable = VK_FALSE;
+    samplerCreateInfo.maxAnisotropy = 1;
     samplerCreateInfo.compareOp = VK_COMPARE_OP_NEVER;
     samplerCreateInfo.minLod = 0.0;
     samplerCreateInfo.maxLod = 0.0;
@@ -1863,7 +1879,7 @@ void init_texture(struct sample_info &info, const char *textureName, VkImageUsag
     /* track a description of the texture */
     info.texture_data.image_info.imageView = info.textures.back().view;
     info.texture_data.image_info.sampler = info.textures.back().sampler;
-    info.texture_data.image_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    info.texture_data.image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 }
 
 void init_viewports(struct sample_info &info) {

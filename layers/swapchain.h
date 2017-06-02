@@ -59,12 +59,6 @@ enum SWAPCHAIN_ERROR {
     SWAPCHAIN_WRONG_STYPE,    // The sType for a struct has the wrong value
     SWAPCHAIN_WRONG_NEXT,     // The pNext for a struct is not NULL
     SWAPCHAIN_ZERO_VALUE,     // A value should be non-zero
-    SWAPCHAIN_DID_NOT_QUERY_QUEUE_FAMILIES,      // A function using a queueFamilyIndex was called before
-                                                 // vkGetPhysicalDeviceQueueFamilyProperties() was called
-    SWAPCHAIN_QUEUE_FAMILY_INDEX_TOO_LARGE,      // A queueFamilyIndex value is not less than pQueueFamilyPropertyCount returned by
-                                                 // vkGetPhysicalDeviceQueueFamilyProperties()
-    SWAPCHAIN_SURFACE_NOT_SUPPORTED_WITH_QUEUE,  // A surface is not supported by a given queueFamilyIndex, as seen by
-                                                 // vkGetPhysicalDeviceSurfaceSupportKHR()
     SWAPCHAIN_GET_SUPPORTED_DISPLAYS_WITHOUT_QUERY,  // vkGetDisplayPlaneSupportedDisplaysKHR should be called after querying
                                                      // device display plane properties
     SWAPCHAIN_PLANE_INDEX_TOO_LARGE,  // a planeIndex value is larger than what vkGetDisplayPlaneSupportedDisplaysKHR returns
@@ -114,16 +108,6 @@ struct SwpSurface {
     // When vkCreateSwapchainKHR is called, the VkSwapchainKHR's are
     // remembered:
     std::unordered_map<VkSwapchainKHR, SwpSwapchain *> swapchains;
-
-    // Value of pQueueFamilyPropertyCount that was returned by the
-    // vkGetPhysicalDeviceQueueFamilyProperties() function:
-    uint32_t numQueueFamilyIndexSupport;
-    // Array of VkBool32's that is intialized by the
-    // vkGetPhysicalDeviceSurfaceSupportKHR() function.  First call for a given
-    // surface allocates and initializes this array to false for all
-    // queueFamilyIndex's (and sets numQueueFamilyIndexSupport to non-zero).
-    // All calls set the entry for a given queueFamilyIndex:
-    VkBool32 *pQueueFamilyIndexSupport;
 };
 
 // Create one of these for each VkPhysicalDevice within a VkInstance:
@@ -136,15 +120,6 @@ struct SwpPhysicalDevice {
 
     // VkInstance that this VkPhysicalDevice is associated with:
     SwpInstance *pInstance;
-
-    // Records results of vkGetPhysicalDeviceQueueFamilyProperties()'s
-    // numOfQueueFamilies parameter when pQueueFamilyProperties is NULL:
-    bool gotQueueFamilyPropertyCount;
-    uint32_t numOfQueueFamilies;
-
-    // Record all surfaces that vkGetPhysicalDeviceSurfaceSupportKHR() was
-    // called for:
-    std::unordered_map<VkSurfaceKHR, SwpSurface *> supportedSurfaces;
 
     // Count returned by vkGetPhysicalDeviceDisplayPlanePropertiesKHR():
     uint32_t displayPlanePropertyCount;

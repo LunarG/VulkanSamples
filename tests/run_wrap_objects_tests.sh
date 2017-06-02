@@ -2,9 +2,12 @@
 
 pushd $(dirname "$0") > /dev/null
 
+vk_layer_path=$VK_LAYER_PATH:`pwd`/layers:../layers
+ld_library_path=$LD_LIBRARY_PATH:`pwd`/layers:../layers
+
 # Check for insertion of wrap-objects layer.
-output=$(VK_LAYER_PATH=$VK_LAYER_PATH:`pwd`/layers \
-   LD_LIBRARY_PATH=$LD_LIBRARY_PATH:`pwd`/layers \
+output=$(VK_LAYER_PATH=$vk_layer_path \
+   LD_LIBRARY_PATH=$ld_library_path \
    VK_INSTANCE_LAYERS=VK_LAYER_LUNARG_wrap_objects \
    VK_LOADER_DEBUG=all \
    GTEST_FILTER=WrapObjects.Insert \
@@ -30,8 +33,8 @@ fi
 echo "Insertion test PASSED"
 
 # Check for insertion of wrap-objects layer in front.
-output=$(VK_LAYER_PATH=$VK_LAYER_PATH:`pwd`/layers \
-   LD_LIBRARY_PATH=$LD_LIBRARY_PATH:`pwd`/layers \
+output=$(VK_LAYER_PATH=$vk_layer_path \
+   LD_LIBRARY_PATH=$ld_library_path \
    VK_INSTANCE_LAYERS=VK_LAYER_LUNARG_parameter_validation:VK_LAYER_LUNARG_wrap_objects \
    VK_LOADER_DEBUG=all \
    GTEST_FILTER=WrapObjects.Insert \
@@ -57,8 +60,8 @@ fi
 echo "Front insertion test PASSED"
 
 # Check for insertion of wrap-objects layer in back.
-output=$(VK_LAYER_PATH=$VK_LAYER_PATH:`pwd`/layers \
-   LD_LIBRARY_PATH=$LD_LIBRARY_PATH:`pwd`/layers \
+output=$(VK_LAYER_PATH=$vk_layer_path \
+   LD_LIBRARY_PATH=$ld_library_path \
    VK_INSTANCE_LAYERS=VK_LAYER_LUNARG_wrap_objects:VK_LAYER_LUNARG_parameter_validation \
    VK_LOADER_DEBUG=all \
    GTEST_FILTER=WrapObjects.Insert \
@@ -84,8 +87,8 @@ fi
 echo "Back insertion test PASSED"
 
 # Check for insertion of wrap-objects layer in middle.
-output=$(VK_LAYER_PATH=$VK_LAYER_PATH:`pwd`/layers \
-   LD_LIBRARY_PATH=$LD_LIBRARY_PATH:`pwd`/layers \
+output=$(VK_LAYER_PATH=$vk_layer_path \
+   LD_LIBRARY_PATH=$ld_library_path \
    VK_INSTANCE_LAYERS=VK_LAYER_LUNARG_core_validation:VK_LAYER_LUNARG_wrap_objects:VK_LAYER_LUNARG_parameter_validation \
    VK_LOADER_DEBUG=all \
    GTEST_FILTER=WrapObjects.Insert \
@@ -110,13 +113,29 @@ then
 fi
 echo "Middle insertion test PASSED"
 
+# Run a sanity check to make sure the validation tests can be run in the current environment.
+GTEST_PRINT_TIME=0 \
+   VK_LAYER_PATH=$vk_layer_path \
+   LD_LIBRARY_PATH=$ld_library_path \
+   GTEST_FILTER=VkLayerTest.ReservedParameter \
+   ./vk_layer_validation_tests > /dev/null
+ec=$?
+
+if [ $ec -ne 0 ]
+then
+   echo "Execution test FAILED - there may be a problem executing the layer validation tests" >&2
+   exit 1
+fi
+
 # Run the layer validation tests with and without the wrap-objects layer. Diff the results.
 # Filter out the "Unexpected:" lines because they contain varying object handles.
 GTEST_PRINT_TIME=0 \
+   VK_LAYER_PATH=$vk_layer_path \
+   LD_LIBRARY_PATH=$ld_library_path \
    ./vk_layer_validation_tests | grep -v "^Unexpected: " > unwrapped.out
 GTEST_PRINT_TIME=0 \
-   VK_LAYER_PATH=$VK_LAYER_PATH:`pwd`/layers \
-   LD_LIBRARY_PATH=$LD_LIBRARY_PATH:`pwd`/layers \
+   VK_LAYER_PATH=$vk_layer_path \
+   LD_LIBRARY_PATH=$ld_library_path \
    VK_INSTANCE_LAYERS=VK_LAYER_LUNARG_wrap_objects \
    ./vk_layer_validation_tests | grep -v "^Unexpected: " > wrapped.out
 diff unwrapped.out wrapped.out

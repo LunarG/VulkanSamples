@@ -43,9 +43,6 @@ const char *vertShaderText =
     "layout (location = 0) in vec4 pos;\n"
     "layout (location = 1) in vec2 inTexCoords;\n"
     "layout (location = 0) out vec2 texcoord;\n"
-    "out gl_PerVertex { \n"
-    "    vec4 gl_Position;\n"
-    "};\n"
     "void main() {\n"
     "   texcoord = inTexCoords;\n"
     "   gl_Position = ubuf.mvp * pos;\n"
@@ -348,7 +345,7 @@ int sample_main(int argc, char *argv[]) {
     assert(res == VK_SUCCESS);
 
     wait_seconds(1);
-    if (info.save_images) write_ppm(info, "secondarycmd");
+    if (info.save_images) write_ppm(info, "secondary_command_buffer");
 
     vkFreeCommandBuffers(info.device, info.cmd_pool, 4, secondary_cmds);
 
