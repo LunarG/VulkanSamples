@@ -49,7 +49,6 @@ struct instance_layer_data {
     VkDebugReportCallbackCreateInfoEXT *tmp_dbg_create_infos = nullptr;
     VkDebugReportCallbackEXT *tmp_callbacks = nullptr;
     InstanceExtensions extensions = {};
-    std::unordered_set<std::string> enabled_extensions;
     VkLayerInstanceDispatchTable dispatch_table = {};
 };
 
@@ -62,7 +61,6 @@ struct layer_data {
     VkPhysicalDevice physical_device = VK_NULL_HANDLE;
     VkDevice device = VK_NULL_HANDLE;
     DeviceExtensions extensions;
-    std::unordered_set<std::string> enabled_extensions;
 
     VkLayerDispatchTable dispatch_table = {};
 };

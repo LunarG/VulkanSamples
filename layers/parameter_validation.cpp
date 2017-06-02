@@ -228,11 +228,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateInstance(const VkInstanceCreateInfo *pCreat
         auto my_instance_data = GetLayerDataPtr(get_dispatch_key(*pInstance), instance_layer_data_map);
         assert(my_instance_data != nullptr);
 
-        // Save enabled instance extension names for validation extension APIs
-        for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-            my_instance_data->enabled_extensions.emplace(pCreateInfo->ppEnabledExtensionNames[i]);
-        }
-
         layer_init_instance_dispatch_table(*pInstance, &my_instance_data->dispatch_table, fpGetInstanceProcAddr);
         my_instance_data->instance = *pInstance;
         my_instance_data->report_data =
@@ -591,14 +586,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physicalDevice, con
 
             my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
             layer_init_device_dispatch_table(*pDevice, &my_device_data->dispatch_table, fpGetDeviceProcAddr);
-
-            // Save enabled device AND instance extension names for validation extension APIs
-            for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-                my_device_data->enabled_extensions.emplace(pCreateInfo->ppEnabledExtensionNames[i]);
-            }
-            for (const auto &inst_ext : my_instance_data->enabled_extensions) {
-                my_device_data->enabled_extensions.emplace(inst_ext);
-            }
 
             my_device_data->extensions.InitFromDeviceCreateInfo(&my_instance_data->extensions, pCreateInfo);
 
