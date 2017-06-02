@@ -19446,6 +19446,24 @@ TEST_F(VkLayerTest, ExecuteUnrecordedPrimaryCB) {
     m_errorMonitor->VerifyFound();
 }
 
+TEST_F(VkLayerTest, ExtensionNotEnabled) {
+    TEST_DESCRIPTION("Validate that using an API from an unenabled extension returns an error");
+
+    // Do NOT enable VK_KHR_maintenance1
+    ASSERT_NO_FATAL_FAILURE(Init());
+    // Find address of extension API
+    PFN_vkTrimCommandPoolKHR vkTrimCommandPoolKHR =
+        (PFN_vkTrimCommandPoolKHR)vkGetDeviceProcAddr(m_device->handle(), "vkTrimCommandPoolKHR");
+    if (vkTrimCommandPoolKHR == nullptr) {
+        printf("             Maintenance1 not supported by device; skipped.\n");
+        return;
+    }
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "but its required extension VK_KHR_maintenance1 has not been enabled");
+    vkTrimCommandPoolKHR(m_device->handle(), m_commandPool->handle(), (VkCommandPoolTrimFlagsKHR)0);
+    m_errorMonitor->VerifyFound();
+}
+
 // WSI Enabled Tests
 //
 #if 0
