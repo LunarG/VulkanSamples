@@ -3514,7 +3514,7 @@ static bool ValidateImageBounds(const debug_report_data *report_data, const IMAG
     return skip;
 }
 
-static inline bool ValidtateBufferBounds(const debug_report_data *report_data, IMAGE_STATE *image_state, BUFFER_STATE *buff_state,
+static inline bool ValidateBufferBounds(const debug_report_data *report_data, IMAGE_STATE *image_state, BUFFER_STATE *buff_state,
                                          uint32_t regionCount, const VkBufferImageCopy *pRegions, const char *func_name,
                                          UNIQUE_VALIDATION_ERROR_CODE msg_code) {
     bool skip = false;
@@ -3562,7 +3562,7 @@ static inline bool ValidtateBufferBounds(const debug_report_data *report_data, I
         // Either depth or layerCount may be greater than 1 (not both). This is the number of 'slices' to copy
         uint32_t z_copies = std::max(copy_extent.depth, pRegions[i].imageSubresource.layerCount);
         if (IsExtentSizeZero(&copy_extent) || (0 == z_copies)) {
-            // TODO: Issure warning here? Already warned in ValidateImageBounds()...
+            // TODO: Issue warning here? Already warned in ValidateImageBounds()...
         } else {
             // Calculate buffer offset of final copied byte, + 1.
             VkDeviceSize max_buffer_offset = (z_copies - 1) * buffer_height * buffer_width;      // offset to slice
@@ -3611,7 +3611,7 @@ bool PreCallValidateCmdCopyImageToBuffer(layer_data *device_data, VkImageLayout 
     }
     skip |= ValidateImageBounds(report_data, src_image_state, regionCount, pRegions, "vkCmdCopyBufferToImage()",
                                 VALIDATION_ERROR_1920016c);
-    skip |= ValidtateBufferBounds(report_data, src_image_state, dst_buffer_state, regionCount, pRegions, "vkCmdCopyImageToBuffer()",
+    skip |= ValidateBufferBounds(report_data, src_image_state, dst_buffer_state, regionCount, pRegions, "vkCmdCopyImageToBuffer()",
                                   VALIDATION_ERROR_1920016e);
 
     skip |= ValidateImageSampleCount(device_data, src_image_state, VK_SAMPLE_COUNT_1_BIT, "vkCmdCopyImageToBuffer(): srcImage",
@@ -3688,7 +3688,7 @@ bool PreCallValidateCmdCopyBufferToImage(layer_data *device_data, VkImageLayout 
     }
     skip |= ValidateImageBounds(report_data, dst_image_state, regionCount, pRegions, "vkCmdCopyBufferToImage()",
                                 VALIDATION_ERROR_18e00158);
-    skip |= ValidtateBufferBounds(report_data, dst_image_state, src_buffer_state, regionCount, pRegions, "vkCmdCopyBufferToImage()",
+    skip |= ValidateBufferBounds(report_data, dst_image_state, src_buffer_state, regionCount, pRegions, "vkCmdCopyBufferToImage()",
                                   VALIDATION_ERROR_18e00156);
     skip |= ValidateImageSampleCount(device_data, dst_image_state, VK_SAMPLE_COUNT_1_BIT, "vkCmdCopyBufferToImage(): dstImage",
                                      VALIDATION_ERROR_18e00166);
