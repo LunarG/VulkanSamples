@@ -910,7 +910,7 @@ VkResult loader_add_to_dev_ext_list(const struct loader_instance *inst, struct l
         ext_list->capacity *= 2;
     }
 
-    memcpy(&ext_list->list[idx].props, props, sizeof(struct loader_dev_ext_props));
+    memcpy(&ext_list->list[idx].props, props, sizeof(*props));
     ext_list->list[idx].entrypoint_count = entry_count;
     ext_list->list[idx].entrypoints =
         loader_instance_heap_alloc(inst, sizeof(char *) * entry_count, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
