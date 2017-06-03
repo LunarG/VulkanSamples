@@ -121,7 +121,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
 
     layer_debug_report_destroy_instance(my_data->report_data);
     delete my_data->instance_dispatch_table;
-    layer_data_map.erase(key);
+    FreeLayerDataPtr(key, layer_data_map);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo *pCreateInfo,
@@ -168,7 +168,9 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
     } else {
         finishMultiThread();
     }
-    layer_data_map.erase(key);
+
+    delete dev_data->device_dispatch_table;
+    FreeLayerDataPtr(key, layer_data_map);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pSwapchainImageCount,

@@ -463,11 +463,12 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
     }
 
     layer_debug_report_destroy_instance(instance_data->report_data);
-    layer_data_map.erase(key);
+    FreeLayerDataPtr(key, layer_data_map);
 
     instanceExtMap.erase(pInstanceTable);
     lock.unlock();
     ot_instance_table_map.erase(key);
+    delete pInstanceTable;
 }
 
 VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCallbacks *pAllocator) {
@@ -514,6 +515,9 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
     VkLayerDispatchTable *pDisp = get_dispatch_table(ot_device_table_map, device);
     pDisp->DestroyDevice(device, pAllocator);
     ot_device_table_map.erase(key);
+    delete pDisp;
+
+    FreeLayerDataPtr(key, layer_data_map);
 }
 
 VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceFeatures(VkPhysicalDevice physicalDevice, VkPhysicalDeviceFeatures *pFeatures) {
