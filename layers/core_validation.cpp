@@ -42,6 +42,7 @@
 #include <iostream>
 #include <list>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <set>
 #include <sstream>
@@ -153,7 +154,7 @@ struct layer_data {
     unordered_map<VkCommandPool, COMMAND_POOL_NODE> commandPoolMap;
     unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_STATE *> descriptorPoolMap;
     unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> setMap;
-    unordered_map<VkDescriptorSetLayout, cvdescriptorset::DescriptorSetLayout *> descriptorSetLayoutMap;
+    unordered_map<VkDescriptorSetLayout, std::unique_ptr<cvdescriptorset::DescriptorSetLayout>> descriptorSetLayoutMap;
     unordered_map<VkPipelineLayout, PIPELINE_LAYOUT_NODE> pipelineLayoutMap;
     unordered_map<VkDeviceMemory, unique_ptr<DEVICE_MEM_INFO>> memObjMap;
     unordered_map<VkFence, FENCE_NODE> fenceMap;
@@ -1844,7 +1845,7 @@ cvdescriptorset::DescriptorSetLayout const *GetDescriptorSetLayout(layer_data co
     if (it == dev_data->descriptorSetLayoutMap.end()) {
         return nullptr;
     }
-    return it->second;
+    return it->second.get();
 }
 
 static PIPELINE_LAYOUT_NODE const *getPipelineLayout(layer_data const *dev_data, VkPipelineLayout pipeLayout) {
@@ -3647,9 +3648,6 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
     deletePools(dev_data);
     // All sets should be removed
     assert(dev_data->setMap.empty());
-    for (auto del_layout : dev_data->descriptorSetLayoutMap) {
-        delete del_layout.second;
-    }
     dev_data->descriptorSetLayoutMap.clear();
     dev_data->imageViewMap.clear();
     dev_data->imageMap.clear();
@@ -6072,8 +6070,8 @@ static bool PreCallValidateCreateDescriptorSetLayout(layer_data *dev_data, const
 
 static void PostCallRecordCreateDescriptorSetLayout(layer_data *dev_data, const VkDescriptorSetLayoutCreateInfo *create_info,
                                                     VkDescriptorSetLayout set_layout) {
-    // TODO: Convert this to unique_ptr to avoid leaks
-    dev_data->descriptorSetLayoutMap[set_layout] = new cvdescriptorset::DescriptorSetLayout(create_info, set_layout);
+    dev_data->descriptorSetLayoutMap[set_layout] = std::unique_ptr<cvdescriptorset::DescriptorSetLayout>(
+        new cvdescriptorset::DescriptorSetLayout(create_info, set_layout));
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateDescriptorSetLayout(VkDevice device, const VkDescriptorSetLayoutCreateInfo *pCreateInfo,
