@@ -3020,15 +3020,15 @@ static void freeDescriptorSet(layer_data *dev_data, cvdescriptorset::DescriptorS
 // Free all DS Pools including their Sets & related sub-structs
 // NOTE : Calls to this function should be wrapped in mutex
 static void deletePools(layer_data *dev_data) {
-    if (dev_data->descriptorPoolMap.size() <= 0) return;
-    for (auto ii = dev_data->descriptorPoolMap.begin(); ii != dev_data->descriptorPoolMap.end(); ++ii) {
+    for (auto ii = dev_data->descriptorPoolMap.begin(); ii != dev_data->descriptorPoolMap.end();) {
         // Remove this pools' sets from setMap and delete them
-        for (auto ds : (*ii).second->sets) {
+        for (auto ds : ii->second->sets) {
             freeDescriptorSet(dev_data, ds);
         }
-        (*ii).second->sets.clear();
+        ii->second->sets.clear();
+        delete ii->second;
+        ii = dev_data->descriptorPoolMap.erase(ii);
     }
-    dev_data->descriptorPoolMap.clear();
 }
 
 static void clearDescriptorPool(layer_data *dev_data, const VkDevice device, const VkDescriptorPool pool,
@@ -5396,6 +5396,7 @@ static void PostCallRecordDestroyDescriptorPool(layer_data *dev_data, VkDescript
         freeDescriptorSet(dev_data, ds);
     }
     dev_data->descriptorPoolMap.erase(descriptorPool);
+    delete desc_pool_state;
 }
 
 VKAPI_ATTR void VKAPI_CALL DestroyDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool,
