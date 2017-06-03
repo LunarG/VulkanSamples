@@ -398,6 +398,16 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
     // TODO: The instance handle can not be validated here. The loader will likely have to validate it.
     ValidateObject(instance, instance, kVulkanObjectTypeInstance, true, VALIDATION_ERROR_2580bc01, VALIDATION_ERROR_UNDEFINED);
 
+    // Destroy physical devices
+    for (auto iit = instance_data->object_map[kVulkanObjectTypePhysicalDevice].begin();
+         iit != instance_data->object_map[kVulkanObjectTypePhysicalDevice].end();) {
+        OBJTRACK_NODE *pNode = iit->second;
+
+        VkPhysicalDevice physical_device = reinterpret_cast<VkPhysicalDevice>(pNode->handle);
+        DestroyObject(instance, physical_device, kVulkanObjectTypePhysicalDevice, nullptr, VALIDATION_ERROR_UNDEFINED, VALIDATION_ERROR_UNDEFINED);
+        iit = instance_data->object_map[kVulkanObjectTypePhysicalDevice].begin();
+    }
+
     DestroyObject(instance, instance, kVulkanObjectTypeInstance, pAllocator, VALIDATION_ERROR_258004ec, VALIDATION_ERROR_258004ee);
     // Report any remaining objects in LL
 
