@@ -2,7 +2,10 @@
 
 import sys
 import xml.etree.ElementTree as etree
-import urllib2
+try:
+    import urllib.request as urllib2
+except ImportError:
+    import urllib2
 from bs4 import BeautifulSoup
 import json
 

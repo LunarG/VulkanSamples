@@ -1,7 +1,10 @@
 #!/usr/bin/python -i
 
 import sys
-import urllib2
+try:
+    import urllib.request as urllib2
+except ImportError:
+    import urllib2
 from bs4 import BeautifulSoup
 import json
 import vuid_mapping
@@ -106,9 +109,10 @@ class Specification:
         """Read in JSON file"""
         if json_filename is not None:
             with open(json_filename) as jsf:
-                self.json_data = json.load(jsf)
+                self.json_data = json.load(jsf, encoding='utf-8')
         else:
-            self.json_data = json.load(urllib2.urlopen(json_url))
+            response = urllib2.urlopen(json_url).read().decode('utf-8')
+            self.json_data = json.loads(response)
 
     def parseJSON(self):
         """Parse JSON VUIDs into data struct"""
