@@ -115,29 +115,32 @@ class Specification:
         # Format of JSON file is:
         # "API": { "core|EXT": [ {"vuid": "<id>", "text": "<VU txt>"}]},
         # "VK_KHX_external_memory" & "VK_KHX_device_group" - extension case (vs. "core")
-        for api in sorted(self.json_data):
-            for ext in sorted(self.json_data[api]):
-                for vu_txt_dict in self.json_data[api][ext]:
-                    vuid = vu_txt_dict['vuid']
-                    vutxt = vu_txt_dict['text']
-                    #print ("%s:%s:%s:%s" % (api, ext, vuid, vutxt))
-                    #print ("VUTXT orig:%s" % (vutxt))
-                    just_txt = BeautifulSoup(vutxt, 'html.parser')
-                    #print ("VUTXT only:%s" % (just_txt.get_text()))
-                    num_vuid = vuid_mapping.convertVUID(vuid)
-                    self.json_db[vuid] = {}
-                    self.json_db[vuid]['ext'] = ext
-                    self.json_db[vuid]['number_vuid'] = num_vuid
-                    self.json_db[vuid]['struct_func'] = api
-                    just_txt = just_txt.get_text().strip()
-                    unicode_map = {
-                    u"\u2019" : "'",
-                    u"\u2192" : "->",
-                    }
-                    for um in unicode_map:
-                        just_txt = just_txt.replace(um, unicode_map[um])
-                    self.json_db[vuid]['vu_txt'] = just_txt.replace("\\", "")
-                    print ("Spec vu txt:%s" % (self.json_db[vuid]['vu_txt']))
+        for top_level in sorted(self.json_data):
+            if "validation" == top_level:
+                for api in sorted(self.json_data[top_level]):
+                    for ext in sorted(self.json_data[top_level][api]):
+                        for vu_txt_dict in self.json_data[top_level][api][ext]:
+                            print ("Looking at dict for api:ext entry %s:%s" % (api, ext))
+                            vuid = vu_txt_dict['vuid']
+                            vutxt = vu_txt_dict['text']
+                            #print ("%s:%s:%s:%s" % (api, ext, vuid, vutxt))
+                            #print ("VUTXT orig:%s" % (vutxt))
+                            just_txt = BeautifulSoup(vutxt, 'html.parser')
+                            #print ("VUTXT only:%s" % (just_txt.get_text()))
+                            num_vuid = vuid_mapping.convertVUID(vuid)
+                            self.json_db[vuid] = {}
+                            self.json_db[vuid]['ext'] = ext
+                            self.json_db[vuid]['number_vuid'] = num_vuid
+                            self.json_db[vuid]['struct_func'] = api
+                            just_txt = just_txt.get_text().strip()
+                            unicode_map = {
+                            u"\u2019" : "'",
+                            u"\u2192" : "->",
+                            }
+                            for um in unicode_map:
+                                just_txt = just_txt.replace(um, unicode_map[um])
+                            self.json_db[vuid]['vu_txt'] = just_txt.replace("\\", "")
+                            print ("Spec vu txt:%s" % (self.json_db[vuid]['vu_txt']))
         #sys.exit()
 
     def compareJSON(self):
@@ -176,7 +179,7 @@ class Specification:
                 spec_link = "%s#%s" % (core_url, extra_vuid)
             else:
                 spec_link = "%s#%s" % (ext_url, extra_vuid)
-            error_enum = "VALIDATION_ERROR_%d" % (self.json_db[extra_vuid]['number_vuid'])
+            error_enum = "%s%s" % (validation_error_enum_name, get8digithex(self.json_db[extra_vuid]['number_vuid']))
             self.error_db_dict[error_enum] = {}
             self.error_db_dict[error_enum]['check_implemented'] = 'N'
             self.error_db_dict[error_enum]['testname'] = 'None'
@@ -185,6 +188,14 @@ class Specification:
             self.error_db_dict[error_enum]['error_msg'] = "%s'%s' (%s)" % (error_msg_prefix, self.json_db[extra_vuid]['vu_txt'], spec_link)
             self.error_db_dict[error_enum]['note'] = ''
             self.error_db_dict[error_enum]['ext'] = self.json_db[extra_vuid]['ext']
+            implicit = False
+            last_segment = extra_vuid.split("-")[-1]
+            if last_segment in vuid_mapping.implicit_type_map:
+                implicit = True
+            elif not last_segment.isdigit(): # Explicit ids should only have digits in last segment
+                print ("ERROR: Found last segment of val error ID that isn't in implicit map and doesn't have numbers in last segment: %s" % (last_segment))
+                sys.exit()
+            self.error_db_dict[error_enum]['implicit'] = implicit
 
     def genHeader(self, header_file):
         """Generate a header file based on the contents of a parsed spec"""
@@ -243,6 +254,7 @@ class Specification:
         db_lines.append("# errormsg: The unique error message for this check that includes spec language and link")
         db_lines.append("# note: Free txt field with any custom notes related to the check in question")
         for enum in sorted(self.error_db_dict):
+            print ("Gen DB for enum %s" % (enum))
             implicit = self.error_db_dict[enum]['implicit']
             implemented = self.error_db_dict[enum]['check_implemented']
             testname = self.error_db_dict[enum]['testname']
@@ -291,7 +303,7 @@ class Specification:
                 if last_segment in vuid_mapping.implicit_type_map:
                     implicit = True
                 elif not last_segment.isdigit(): # Explicit ids should only have digits in last segment
-                    print ("ERROR: Found last segment of val error ID that isn't in implicit map and doesn't numbers in last segment: %s" % (last_segment))
+                    print ("ERROR: Found last segment of val error ID that isn't in implicit map and doesn't have numbers in last segment: %s" % (last_segment))
                     sys.exit()
                 self.error_db_dict[error_enum]['implicit'] = implicit
 if __name__ == "__main__":
