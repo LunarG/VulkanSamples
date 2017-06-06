@@ -141,7 +141,7 @@ struct layer_data {
     debug_report_data *report_data = nullptr;
     VkLayerDispatchTable dispatch_table;
 
-    DeviceExtensions device_extensions = {};
+    DeviceExtensions extensions = {};
     unordered_set<VkQueue> queues;  // All queues under given device
     // Layer specific data
     unordered_map<VkSampler, unique_ptr<SAMPLER_STATE>> samplerMap;
@@ -2227,7 +2227,7 @@ static bool validate_shader_capabilities(layer_data *dev_data, shader_module con
                     skip |= require_feature(report_data, enabledFeatures.*(it->second.feature), it->second.name);
                 }
                 if (it->second.extension) {
-                    skip |= require_extension(report_data, dev_data->device_extensions.*(it->second.extension), it->second.name);
+                    skip |= require_extension(report_data, dev_data->extensions.*(it->second.extension), it->second.name);
                 }
             }
         }
@@ -3605,7 +3605,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu, const VkDevice
     device_data->physical_device = gpu;
 
     device_data->report_data = layer_debug_report_create_device(instance_data->report_data, *pDevice);
-    device_data->device_extensions.InitFromDeviceCreateInfo(&instance_data->extensions, pCreateInfo);
+    device_data->extensions.InitFromDeviceCreateInfo(&instance_data->extensions, pCreateInfo);
 
     // Get physical device limits for this device
     instance_data->dispatch_table.GetPhysicalDeviceProperties(gpu, &(device_data->phys_dev_properties.properties));
@@ -5807,7 +5807,7 @@ const VkPhysicalDeviceFeatures *GetEnabledFeatures(const layer_data *device_data
     return &device_data->enabled_features;
 }
 
-const DeviceExtensions *GetDeviceExtensions(const layer_data *device_data) { return &device_data->device_extensions; }
+const DeviceExtensions *GetDeviceExtensions(const layer_data *device_data) { return &device_data->extensions; }
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo,
                                            const VkAllocationCallbacks *pAllocator, VkImage *pImage) {
@@ -8788,7 +8788,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateShaderModule(VkDevice device, const VkShade
     spv_result_t spv_valid = SPV_SUCCESS;
 
     if (!GetDisables(dev_data)->shader_validation) {
-        if (!dev_data->device_extensions.vk_nv_glsl_shader && (pCreateInfo->codeSize % 4)) {
+        if (!dev_data->extensions.vk_nv_glsl_shader && (pCreateInfo->codeSize % 4)) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
                             __LINE__, VALIDATION_ERROR_12a00ac0, "SC",
                             "SPIR-V module not valid: Codesize must be a multiple of 4 but is " PRINTF_SIZE_T_SPECIFIER ". %s",
@@ -8801,7 +8801,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateShaderModule(VkDevice device, const VkShade
 
             spv_valid = spvValidate(ctx, &binary, &diag);
             if (spv_valid != SPV_SUCCESS) {
-                if (!dev_data->device_extensions.vk_nv_glsl_shader || (pCreateInfo->pCode[0] == spv::MagicNumber)) {
+                if (!dev_data->extensions.vk_nv_glsl_shader || (pCreateInfo->pCode[0] == spv::MagicNumber)) {
                     skip |= log_msg(dev_data->report_data,
                         spv_valid == SPV_WARNING ? VK_DEBUG_REPORT_WARNING_BIT_EXT : VK_DEBUG_REPORT_ERROR_BIT_EXT,
                         VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, SHADER_CHECKER_INCONSISTENT_SPIRV, "SC",
@@ -10280,7 +10280,7 @@ static bool PreCallValidateCreateSwapchainKHR(layer_data *dev_data, const char *
     // Validate state for shared presentable case
     if (VK_PRESENT_MODE_SHARED_DEMAND_REFRESH_KHR == pCreateInfo->presentMode ||
         VK_PRESENT_MODE_SHARED_CONTINUOUS_REFRESH_KHR == pCreateInfo->presentMode) {
-        if (!dev_data->device_extensions.vk_khr_shared_presentable_image) {
+        if (!dev_data->extensions.vk_khr_shared_presentable_image) {
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                         HandleToUint64(dev_data->device), __LINE__, DRAWSTATE_EXTENSION_NOT_ENABLED, "DS",
                         "%s called with presentMode %s which requires the VK_KHR_shared_presentable_image extension, which has not "
@@ -10472,7 +10472,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
                 if (FindLayouts(dev_data, image, layouts)) {
                     for (auto layout : layouts) {
                         if ((layout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) &&
-                            (!dev_data->device_extensions.vk_khr_shared_presentable_image ||
+                            (!dev_data->extensions.vk_khr_shared_presentable_image ||
                              (layout != VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR))) {
                             skip |=
                                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT,
@@ -11798,13 +11798,13 @@ static PFN_vkVoidFunction intercept_device_extension_command(const char *name, V
         bool enabled;
     } device_extension_commands[] = {
         {"vkCreateDescriptorUpdateTemplateKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateDescriptorUpdateTemplateKHR),
-         device_data->device_extensions.vk_khr_descriptor_update_template},
+         device_data->extensions.vk_khr_descriptor_update_template},
         {"vkDestroyDescriptorUpdateTemplateKHR", reinterpret_cast<PFN_vkVoidFunction>(DestroyDescriptorUpdateTemplateKHR),
-         device_data->device_extensions.vk_khr_descriptor_update_template},
+         device_data->extensions.vk_khr_descriptor_update_template},
         {"vkUpdateDescriptorSetWithTemplateKHR", reinterpret_cast<PFN_vkVoidFunction>(UpdateDescriptorSetWithTemplateKHR),
-         device_data->device_extensions.vk_khr_descriptor_update_template},
+         device_data->extensions.vk_khr_descriptor_update_template},
         {"vkCmdPushDescriptorSetWithTemplateKHR", reinterpret_cast<PFN_vkVoidFunction>(CmdPushDescriptorSetWithTemplateKHR),
-         device_data->device_extensions.vk_khr_descriptor_update_template},
+         device_data->extensions.vk_khr_descriptor_update_template},
     };
 
     if (!device_data) return nullptr;
@@ -11832,7 +11832,7 @@ static PFN_vkVoidFunction intercept_khr_swapchain_command(const char *name, VkDe
 
     if (dev) {
         dev_data = GetLayerDataPtr(get_dispatch_key(dev), layer_data_map);
-        if (!dev_data->device_extensions.vk_khr_swapchain) return nullptr;
+        if (!dev_data->extensions.vk_khr_swapchain) return nullptr;
     }
 
     for (size_t i = 0; i < ARRAY_SIZE(khr_swapchain_commands); i++) {
@@ -11840,7 +11840,7 @@ static PFN_vkVoidFunction intercept_khr_swapchain_command(const char *name, VkDe
     }
 
     if (dev_data) {
-        if (!dev_data->device_extensions.vk_khr_display_swapchain) return nullptr;
+        if (!dev_data->extensions.vk_khr_display_swapchain) return nullptr;
     }
 
     if (!strcmp("vkCreateSharedSwapchainsKHR", name)) return reinterpret_cast<PFN_vkVoidFunction>(CreateSharedSwapchainsKHR);
