@@ -256,7 +256,7 @@ bool validate_array(debug_report_data *report_data, const char *apiName, const P
                                  countName.get_name().c_str());
         }
     } else {
-        skip_call |= validate_array(report_data, apiName, countName, arrayName, (*count), array, countValueRequired, arrayRequired);
+        skip_call |= validate_array(report_data, apiName, countName, arrayName, array ? (*count) : 0, array, countValueRequired, arrayRequired);
     }
 
     return skip_call;

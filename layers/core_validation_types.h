@@ -622,7 +622,7 @@ struct LAST_BOUND_STATE {
 // Cmd Buffer Wrapper Struct - TODO : This desperately needs its own class
 struct GLOBAL_CB_NODE : public BASE_NODE {
     VkCommandBuffer commandBuffer;
-    VkCommandBufferAllocateInfo createInfo;
+    VkCommandBufferAllocateInfo createInfo = {};
     VkCommandBufferBeginInfo beginInfo;
     VkCommandBufferInheritanceInfo inheritanceInfo;
     VkDevice device;                     // device this CB belongs to
