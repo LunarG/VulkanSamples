@@ -167,7 +167,7 @@ class ValidationSource:
     def __init__(self, source_file_list):
         self.source_files = source_file_list
         self.enum_count_dict = {} # dict of enum values to the count of how much they're used, and location of where they're used
-        # 1790 is a special case that provides an exception when an extension is enabled. No specific error is flagged, but the exception is handled so add it here
+        # 1500099c is a special case that provides an exception when an extension is enabled. No specific error is flagged, but the exception is handled so add it here
         self.enum_count_dict['VALIDATION_ERROR_1500099c'] = {}
         self.enum_count_dict['VALIDATION_ERROR_1500099c']['count'] = 1
         self.enum_count_dict['VALIDATION_ERROR_1500099c']['file_line'] = []
