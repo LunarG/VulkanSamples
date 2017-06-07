@@ -20,6 +20,8 @@
 
 #if defined(VK_USE_PLATFORM_XLIB_KHR) || defined(VK_USE_PLATFORM_XCB_KHR)
 #include <X11/Xutil.h>
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+#include <linux/input.h>
 #endif
 
 #include <cassert>
@@ -399,12 +401,101 @@ static void handle_popup_done(void *data, wl_shell_surface *shell_surface) {}
 
 static const wl_shell_surface_listener shell_surface_listener = {handle_ping, handle_configure, handle_popup_done};
 
-static void handle_announce_global_object(void *data, struct wl_registry *wl_registry, uint32_t name, const char *interface,
-                                          uint32_t version) {}
+static void pointer_handle_enter(void *data, struct wl_pointer *pointer, uint32_t serial, struct wl_surface *surface, wl_fixed_t sx,
+                                 wl_fixed_t sy) {}
 
-static void handle_announce_global_object_remove(void *data, struct wl_registry *wl_registry, uint32_t name) {}
+static void pointer_handle_leave(void *data, struct wl_pointer *pointer, uint32_t serial, struct wl_surface *surface) {}
 
-static const wl_registry_listener registry_listener = {handle_announce_global_object, handle_announce_global_object_remove};
+static void pointer_handle_motion(void *data, struct wl_pointer *pointer, uint32_t time, wl_fixed_t sx, wl_fixed_t sy) {}
+
+static void pointer_handle_button(void *data, struct wl_pointer *wl_pointer, uint32_t serial, uint32_t time, uint32_t button,
+                                  uint32_t state) {
+    Demo *demo = (Demo *)data;    
+    if (button == BTN_LEFT && state == WL_POINTER_BUTTON_STATE_PRESSED) {
+        wl_shell_surface_move(demo->shell_surface, demo->seat, serial);
+    }
+}
+
+static void pointer_handle_axis(void *data, struct wl_pointer *wl_pointer, uint32_t time, uint32_t axis, wl_fixed_t value) {}
+
+static const struct wl_pointer_listener pointer_listener = {
+    pointer_handle_enter, pointer_handle_leave, pointer_handle_motion, pointer_handle_button, pointer_handle_axis,
+};
+
+static void keyboard_handle_keymap(void *data, struct wl_keyboard *keyboard, uint32_t format, int fd, uint32_t size) {}
+
+static void keyboard_handle_enter(void *data, struct wl_keyboard *keyboard, uint32_t serial, struct wl_surface *surface,
+                                  struct wl_array *keys) {}
+
+static void keyboard_handle_leave(void *data, struct wl_keyboard *keyboard, uint32_t serial, struct wl_surface *surface) {}
+
+static void keyboard_handle_key(void *data, struct wl_keyboard *keyboard, uint32_t serial, uint32_t time, uint32_t key,
+                                uint32_t state) {
+    if (state != WL_KEYBOARD_KEY_STATE_RELEASED) return;
+    Demo *demo = (Demo *)data;
+    switch (key) {
+        case KEY_ESC:  // Escape
+            demo->quit = true;
+            break;
+        case KEY_LEFT:  // left arrow key
+            demo->spin_angle -= demo->spin_increment;
+            break;
+        case KEY_RIGHT:  // right arrow key
+            demo->spin_angle += demo->spin_increment;
+            break;
+        case KEY_SPACE:  // space bar
+            demo->pause = !demo->pause;
+            break;
+    }
+}
+
+static void keyboard_handle_modifiers(void *data, wl_keyboard *keyboard, uint32_t serial, uint32_t mods_depressed,
+                                      uint32_t mods_latched, uint32_t mods_locked, uint32_t group) {}
+
+static const struct wl_keyboard_listener keyboard_listener = {
+    keyboard_handle_keymap, keyboard_handle_enter, keyboard_handle_leave, keyboard_handle_key, keyboard_handle_modifiers,
+};
+
+static void seat_handle_capabilities(void *data, wl_seat *seat, uint32_t caps) {
+    // Subscribe to pointer events
+    Demo *demo = (Demo *)data;
+    if ((caps & WL_SEAT_CAPABILITY_POINTER) && !demo->pointer) {
+        demo->pointer = wl_seat_get_pointer(seat);
+        wl_pointer_add_listener(demo->pointer, &pointer_listener, demo);
+    } else if (!(caps & WL_SEAT_CAPABILITY_POINTER) && demo->pointer) {
+        wl_pointer_destroy(demo->pointer);
+        demo->pointer = NULL;
+    }
+    // Subscribe to keyboard events
+    if (caps & WL_SEAT_CAPABILITY_KEYBOARD) {
+        demo->keyboard = wl_seat_get_keyboard(seat);
+        wl_keyboard_add_listener(demo->keyboard, &keyboard_listener, demo);
+    } else if (!(caps & WL_SEAT_CAPABILITY_KEYBOARD)) {
+        wl_keyboard_destroy(demo->keyboard);
+        demo->keyboard = NULL;
+    }
+}
+
+static const wl_seat_listener seat_listener = {
+    seat_handle_capabilities,
+};
+
+static void registry_handle_global(void *data, wl_registry *registry, uint32_t id, const char *interface, uint32_t version) {
+    Demo *demo = (Demo *)data;
+    // pickup wayland objects when they appear
+    if (strcmp(interface, "wl_compositor") == 0) {
+        demo->compositor = (wl_compositor *)wl_registry_bind(registry, id, &wl_compositor_interface, 1);
+    } else if (strcmp(interface, "wl_shell") == 0) {
+        demo->shell = (wl_shell *)wl_registry_bind(registry, id, &wl_shell_interface, 1);
+    } else if (strcmp(interface, "wl_seat") == 0) {
+        demo->seat = (wl_seat *)wl_registry_bind(registry, id, &wl_seat_interface, 1);
+        wl_seat_add_listener(demo->seat, &seat_listener, demo);
+    }
+}
+
+static void registry_handle_global_remove(void *data, wl_registry *registry, uint32_t name) {}
+
+static const wl_registry_listener registry_listener = {registry_handle_global, registry_handle_global_remove};
 #elif defined(VK_USE_PLATFORM_MIR_KHR)
 #endif
 
@@ -570,6 +661,9 @@ Demo::Demo()
         xcb_disconnect(connection);
         free(atom_wm_delete_window);
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+        wl_keyboard_destroy(keyboard);
+        wl_pointer_destroy(pointer);
+        wl_seat_destroy(seat);
         wl_shell_surface_destroy(shell_surface);
         wl_surface_destroy(window);
         wl_shell_destroy(shell);
