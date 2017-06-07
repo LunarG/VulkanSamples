@@ -5744,36 +5744,28 @@ VKAPI_ATTR void VKAPI_CALL SetHdrMetadataEXT(VkDevice device, uint32_t swapchain
     }
 }
 
-static inline PFN_vkVoidFunction layer_intercept_proc(const char *name) {
-    for (unsigned int i = 0; i < sizeof(procmap) / sizeof(procmap[0]); i++) {
-        if (!strcmp(name, procmap[i].name)) return procmap[i].pFunc;
-    }
-    return NULL;
-}
-
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, const char *funcName) {
-    assert(device);
+    const auto item = name_to_funcptr_map.find(funcName);
+    if (item != name_to_funcptr_map.end()) {
+        return reinterpret_cast<PFN_vkVoidFunction>(item->second);
+    }
 
-    PFN_vkVoidFunction addr = layer_intercept_proc(funcName);
-    if (addr) return addr;
-
-    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-
-    if (!dev_data->dispatch_table.GetDeviceProcAddr) return nullptr;
-    return dev_data->dispatch_table.GetDeviceProcAddr(device, funcName);
+    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+    const auto &table = device_data->dispatch_table;
+    if (!table.GetDeviceProcAddr) return nullptr;
+    return table.GetDeviceProcAddr(device, funcName);
 }
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance, const char *funcName) {
-
-    PFN_vkVoidFunction addr = layer_intercept_proc(funcName);
-    if (addr) return addr;
-
-    assert(instance);
+    const auto item = name_to_funcptr_map.find(funcName);
+    if (item != name_to_funcptr_map.end()) {
+        return reinterpret_cast<PFN_vkVoidFunction>(item->second);
+    }
 
     auto instance_data = GetLayerDataPtr(get_dispatch_key(instance), instance_layer_data_map);
-
-    if (!instance_data->dispatch_table.GetInstanceProcAddr) return nullptr;
-    return instance_data->dispatch_table.GetInstanceProcAddr(instance, funcName);
+    auto &table = instance_data->dispatch_table;
+    if (!table.GetInstanceProcAddr) return nullptr;
+    return table.GetInstanceProcAddr(instance, funcName);
 }
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance instance, const char *funcName) {

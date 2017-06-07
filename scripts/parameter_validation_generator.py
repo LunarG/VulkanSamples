@@ -220,8 +220,8 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         # Output declarations and record intercepted procedures
         write('// Declarations', file=self.outFile)
         write('\n'.join(self.declarations), file=self.outFile)
-        write('// Intercepts', file=self.outFile)
-        write('struct { const char* name; PFN_vkVoidFunction pFunc;} procmap[] = {', file=self.outFile)
+        write('// Map of all APIs to be intercepted by this layer', file=self.outFile)
+        write('static const std::unordered_map<std::string, void*> name_to_funcptr_map = {', file=self.outFile)
         write('\n'.join(self.intercepts), file=self.outFile)
         write('};\n', file=self.outFile)
         self.newline()
@@ -437,7 +437,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
             if (self.featureExtraProtect != None):
                 self.declarations += [ '#ifdef %s' % self.featureExtraProtect ]
                 self.intercepts += [ '#ifdef %s' % self.featureExtraProtect ]
-            self.intercepts += [ '    {"%s", reinterpret_cast<PFN_vkVoidFunction>(%s)},' % (name,name[2:]) ]
+            self.intercepts += [ '    {"%s", (void*)%s},' % (name,name[2:]) ]
             decls = self.makeCDecls(cmdinfo.elem)
             # Strip off 'vk' from API name
             self.declarations += [ '%s' % decls[0].replace("VKAPI_CALL vk", "VKAPI_CALL ") ]
