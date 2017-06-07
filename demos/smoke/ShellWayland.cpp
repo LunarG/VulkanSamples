@@ -24,6 +24,7 @@
 #include "ShellWayland.h"
 #include <stdio.h>
 #include <string.h>
+#include <linux/input.h>
 
 /* Unused attribute / variable MACRO.
    Some methods of classes' heirs do not need all fuction parameters.
@@ -69,34 +70,121 @@ class PosixTimer {
 
 }  // namespace
 
-const struct wl_registry_listener ShellWayland::registry_listener_ = {ShellWayland::handle_global,
-                                                                      ShellWayland::handle_global_remove};
-
-const struct wl_shell_surface_listener ShellWayland::shell_surface_listener_ = {
-    ShellWayland::handle_ping, ShellWayland::handle_configure, ShellWayland::handle_popup_done};
-
-void ShellWayland::handle_global(void *data, struct wl_registry *registry, uint32_t id, const char *interface,
-                                 uint32_t version UNUSED) {
-    ShellWayland *_this = static_cast<ShellWayland *>(data);
-
-    if (!strcmp(interface, "wl_compositor"))
-        _this->compositor_ = static_cast<struct wl_compositor *>(wl_registry_bind(registry, id, &wl_compositor_interface, 3));
-    /* Todo: When xdg_shell protocol has stablized, we should move wl_shell tp
-     * xdg_shell */
-    else if (!strcmp(interface, "wl_shell"))
-        _this->shell_ = static_cast<struct wl_shell *>(wl_registry_bind(registry, id, &wl_shell_interface, 1));
-}
-
-void ShellWayland::handle_global_remove(void *data UNUSED, struct wl_registry *registry UNUSED, uint32_t name UNUSED) {}
-
-void ShellWayland::handle_ping(void *data UNUSED, struct wl_shell_surface *shell_surface, uint32_t serial) {
+void ShellWayland::handle_ping(void *data, wl_shell_surface *shell_surface, uint32_t serial) {
     wl_shell_surface_pong(shell_surface, serial);
 }
 
-void ShellWayland::handle_configure(void *data UNUSED, struct wl_shell_surface *shell_surface UNUSED, uint32_t edges UNUSED,
-                                    int32_t width UNUSED, int32_t height UNUSED) {}
+void ShellWayland::handle_configure(void *data, wl_shell_surface *shell_surface, uint32_t edges, int32_t width, int32_t height) {}
 
-void ShellWayland::handle_popup_done(void *data UNUSED, struct wl_shell_surface *shell_surface UNUSED) {}
+void ShellWayland::handle_popup_done(void *data, wl_shell_surface *shell_surface) {}
+
+const wl_shell_surface_listener ShellWayland::shell_surface_listener = {handle_ping, handle_configure, handle_popup_done};
+
+void ShellWayland::pointer_handle_enter(void *data, struct wl_pointer *pointer, uint32_t serial, struct wl_surface *surface,
+                                        wl_fixed_t sx, wl_fixed_t sy) {}
+
+void ShellWayland::pointer_handle_leave(void *data, struct wl_pointer *pointer, uint32_t serial, struct wl_surface *surface) {}
+
+void ShellWayland::pointer_handle_motion(void *data, struct wl_pointer *pointer, uint32_t time, wl_fixed_t sx, wl_fixed_t sy) {}
+
+void ShellWayland::pointer_handle_button(void *data, struct wl_pointer *wl_pointer, uint32_t serial, uint32_t time, uint32_t button,
+                                         uint32_t state) {
+    if (button == BTN_LEFT && state == WL_POINTER_BUTTON_STATE_PRESSED) {
+        ShellWayland *shell = (ShellWayland *)data;
+        wl_shell_surface_move(shell->shell_surface_, shell->seat_, serial);
+    }
+}
+
+void ShellWayland::pointer_handle_axis(void *data, struct wl_pointer *wl_pointer, uint32_t time, uint32_t axis, wl_fixed_t value) {}
+
+const wl_pointer_listener ShellWayland::pointer_listener = {
+    pointer_handle_enter, pointer_handle_leave, pointer_handle_motion, pointer_handle_button, pointer_handle_axis,
+};
+
+void ShellWayland::keyboard_handle_keymap(void *data, struct wl_keyboard *keyboard, uint32_t format, int fd, uint32_t size) {}
+
+void ShellWayland::keyboard_handle_enter(void *data, struct wl_keyboard *keyboard, uint32_t serial, struct wl_surface *surface,
+                                         struct wl_array *keys) {}
+
+void ShellWayland::keyboard_handle_leave(void *data, struct wl_keyboard *keyboard, uint32_t serial, struct wl_surface *surface) {}
+
+void ShellWayland::keyboard_handle_key(void *data, struct wl_keyboard *keyboard, uint32_t serial, uint32_t time, uint32_t key,
+                                       uint32_t state) {
+    if (state != WL_KEYBOARD_KEY_STATE_RELEASED) return;
+    ShellWayland *shell = (ShellWayland *)data;
+    Game::Key game_key;
+    switch (key) {
+        case KEY_ESC:  // Escape
+#undef KEY_ESC
+            game_key = Game::KEY_ESC;
+            break;
+        case KEY_UP:  // up arrow key
+#undef KEY_UP
+            game_key = Game::KEY_UP;
+            break;
+        case KEY_DOWN:  // right arrow key
+#undef KEY_DOWN
+            game_key = Game::KEY_DOWN;
+            break;
+        case KEY_SPACE:  // space bar
+#undef KEY_SPACE
+            game_key = Game::KEY_SPACE;
+            break;
+        default:
+#undef KEY_UNKNOWN
+            game_key = Game::KEY_UNKNOWN;
+            break;
+    }
+    shell->game_.on_key(game_key);
+}
+
+void ShellWayland::keyboard_handle_modifiers(void *data, wl_keyboard *keyboard, uint32_t serial, uint32_t mods_depressed,
+                                             uint32_t mods_latched, uint32_t mods_locked, uint32_t group) {}
+
+const wl_keyboard_listener ShellWayland::keyboard_listener = {
+    keyboard_handle_keymap, keyboard_handle_enter, keyboard_handle_leave, keyboard_handle_key, keyboard_handle_modifiers,
+};
+
+void ShellWayland::seat_handle_capabilities(void *data, wl_seat *seat, uint32_t caps) {
+    // Subscribe to pointer events
+    ShellWayland *shell = (ShellWayland *)data;
+    if ((caps & WL_SEAT_CAPABILITY_POINTER) && !shell->pointer_) {
+        shell->pointer_ = wl_seat_get_pointer(seat);
+        wl_pointer_add_listener(shell->pointer_, &pointer_listener, shell);
+    } else if (!(caps & WL_SEAT_CAPABILITY_POINTER) && shell->pointer_) {
+        wl_pointer_destroy(shell->pointer_);
+        shell->pointer_ = NULL;
+    }
+    // Subscribe to keyboard events
+    if (caps & WL_SEAT_CAPABILITY_KEYBOARD) {
+        shell->keyboard_ = wl_seat_get_keyboard(seat);
+        wl_keyboard_add_listener(shell->keyboard_, &keyboard_listener, shell);
+    } else if (!(caps & WL_SEAT_CAPABILITY_KEYBOARD)) {
+        wl_keyboard_destroy(shell->keyboard_);
+        shell->keyboard_ = NULL;
+    }
+}
+
+const wl_seat_listener ShellWayland::seat_listener = {
+    seat_handle_capabilities,
+};
+
+void ShellWayland::registry_handle_global(void *data, wl_registry *registry, uint32_t id, const char *interface, uint32_t version) {
+    // pickup wayland objects when they appear
+    ShellWayland *shell = (ShellWayland *)data;
+    if (strcmp(interface, "wl_compositor") == 0) {
+        shell->compositor_ = (wl_compositor *)wl_registry_bind(registry, id, &wl_compositor_interface, 1);
+    } else if (strcmp(interface, "wl_shell") == 0) {
+        shell->shell_ = (wl_shell *)wl_registry_bind(registry, id, &wl_shell_interface, 1);
+    } else if (strcmp(interface, "wl_seat") == 0) {
+        shell->seat_ = (wl_seat *)wl_registry_bind(registry, id, &wl_seat_interface, 1);
+        wl_seat_add_listener(shell->seat_, &seat_listener, shell);
+    }
+}
+
+void ShellWayland::registry_handle_global_remove(void *data, wl_registry *registry, uint32_t name) {}
+
+const wl_registry_listener ShellWayland::registry_listener = {registry_handle_global, registry_handle_global_remove};
 
 ShellWayland::ShellWayland(Game &game) : Shell(game) {
     if (game.settings().validate) instance_layers_.push_back("VK_LAYER_LUNARG_standard_validation");
@@ -110,6 +198,9 @@ ShellWayland::~ShellWayland() {
     cleanup_vk();
     dlclose(lib_handle_);
 
+    if (keyboard_) wl_keyboard_destroy(keyboard_);
+    if (pointer_) wl_pointer_destroy(pointer_);
+    if (seat_) wl_seat_destroy(seat_);
     if (shell_surface_) wl_shell_surface_destroy(shell_surface_);
     if (surface_) wl_surface_destroy(surface_);
     if (shell_) wl_shell_destroy(shell_);
@@ -126,19 +217,15 @@ void ShellWayland::init_connection() {
         registry_ = wl_display_get_registry(display_);
         if (!registry_) throw std::runtime_error("failed to get registry");
 
-        wl_registry_add_listener(registry_, &registry_listener_, this);
+        wl_registry_add_listener(registry_, &ShellWayland::registry_listener, this);
         wl_display_roundtrip(display_);
 
         if (!compositor_) throw std::runtime_error("failed to bind compositor");
 
         if (!shell_) throw std::runtime_error("failed to bind shell");
-    } catch (...) {
-        if (shell_) wl_shell_destroy(shell_);
-        if (compositor_) wl_compositor_destroy(compositor_);
-        if (registry_) wl_registry_destroy(registry_);
-        if (display_) wl_display_disconnect(display_);
-
-        throw;
+    } catch (const std::exception &e) {
+        std::cerr << "Could not initialize Wayland: " << e.what() << std::endl;
+        exit(-1);
     }
 }
 
@@ -149,7 +236,7 @@ void ShellWayland::create_window() {
     shell_surface_ = wl_shell_get_shell_surface(shell_, surface_);
     if (!shell_surface_) throw std::runtime_error("failed to shell_surface");
 
-    wl_shell_surface_add_listener(shell_surface_, &shell_surface_listener_, this);
+    wl_shell_surface_add_listener(shell_surface_, &ShellWayland::shell_surface_listener, this);
     // set title
     wl_shell_surface_set_title(shell_surface_, settings_.name.c_str());
     wl_shell_surface_set_toplevel(shell_surface_);
@@ -202,6 +289,8 @@ void ShellWayland::loop_wait() {
     while (true) {
         if (quit_) break;
 
+        wl_display_dispatch_pending(display_);
+
         acquire_back_buffer();
         present_back_buffer();
     }
@@ -216,6 +305,8 @@ void ShellWayland::loop_poll() {
 
     while (true) {
         if (quit_) break;
+
+        wl_display_dispatch_pending(display_);
 
         acquire_back_buffer();
 
