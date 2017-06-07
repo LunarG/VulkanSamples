@@ -3276,11 +3276,6 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumerateDeviceExtensionProperties(VkPhysicalDevi
     return pTable->EnumerateDeviceExtensionProperties(physicalDevice, NULL, pCount, pProperties);
 }
 
-static inline PFN_vkVoidFunction InterceptMsgCallbackGetProcAddrCommand(const char *name, VkInstance instance) {
-    layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(instance), layer_data_map);
-    return debug_report_get_instance_proc_addr(instance_data->report_data, name);
-}
-
 VKAPI_ATTR VkResult VKAPI_CALL CreateDisplayPlaneSurfaceKHR(VkInstance instance, const VkDisplaySurfaceCreateInfoKHR *pCreateInfo,
                                                             const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface);
 
@@ -5318,25 +5313,6 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance in
 }
 
 }  // namespace object_tracker
-
-// vk_layer_logging.h expects these to be defined
-VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackEXT(VkInstance instance,
-                                                              const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
-                                                              const VkAllocationCallbacks *pAllocator,
-                                                              VkDebugReportCallbackEXT *pMsgCallback) {
-    return object_tracker::CreateDebugReportCallbackEXT(instance, pCreateInfo, pAllocator, pMsgCallback);
-}
-
-VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT msgCallback,
-                                                           const VkAllocationCallbacks *pAllocator) {
-    object_tracker::DestroyDebugReportCallbackEXT(instance, msgCallback, pAllocator);
-}
-
-VKAPI_ATTR void VKAPI_CALL vkDebugReportMessageEXT(VkInstance instance, VkDebugReportFlagsEXT flags,
-                                                   VkDebugReportObjectTypeEXT objType, uint64_t object, size_t location,
-                                                   int32_t msgCode, const char *pLayerPrefix, const char *pMsg) {
-    object_tracker::DebugReportMessageEXT(instance, flags, objType, object, location, msgCode, pLayerPrefix, pMsg);
-}
 
 // Loader-layer interface v0, just wrappers since there is only a layer
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount,
