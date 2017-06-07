@@ -73,41 +73,6 @@ struct OT_QUEUE_INFO {
 // Layer name string to be logged with validation messages.
 const char LayerName[] = "ObjectTracker";
 
-struct instance_extension_enables {
-    bool wsi_enabled;
-    bool xlib_enabled;
-    bool xcb_enabled;
-    bool wayland_enabled;
-    bool mir_enabled;
-    bool android_enabled;
-    bool win32_enabled;
-    bool display_enabled;
-};
-
-struct device_extension_enables{
-    bool wsi;
-    bool wsi_display_swapchain;
-    bool wsi_display_extension;
-    bool objtrack_extensions;
-    bool khr_descriptor_update_template;
-    bool khr_maintenance1;
-    bool khr_push_descriptor;
-    bool khx_device_group;
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-    bool khx_external_memory_win32;
-#endif // VK_USE_PLATFORM_WIN32_KHR
-    bool khx_external_memory_fd;
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-    bool khx_external_semaphore_win32;
-#endif // VK_USE_PLATFORM_WIN32_KHR
-    bool khx_external_semaphore_fd;
-    bool ext_display_control;
-    bool ext_discard_rectangles;
-    bool nv_clip_space_w_scaling;
-    bool nvx_device_generated_commands;
-    bool google_display_timing;
-};
-
 typedef std::unordered_map<uint64_t, OBJTRACK_NODE *> object_map_type;
 
 struct layer_data {
@@ -124,8 +89,6 @@ struct layer_data {
     uint32_t num_tmp_callbacks;
     VkDebugReportCallbackCreateInfoEXT *tmp_dbg_create_infos;
     VkDebugReportCallbackEXT *tmp_callbacks;
-
-    device_extension_enables enables;
 
     std::vector<VkQueueFamilyProperties> queue_family_properties;
 
@@ -150,11 +113,9 @@ struct layer_data {
           object_map{},
           dispatch_table{} {
         object_map.resize(kVulkanObjectTypeMax + 1);
-        memset(&enables, 0, sizeof(enables));
     }
 };
 
-static std::unordered_map<void *, struct instance_extension_enables> instanceExtMap;
 static std::unordered_map<void *, layer_data *> layer_data_map;
 static device_table_map ot_device_table_map;
 static instance_table_map ot_instance_table_map;

@@ -475,7 +475,6 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
     layer_debug_report_destroy_instance(instance_data->report_data);
     FreeLayerDataPtr(key, layer_data_map);
 
-    instanceExtMap.erase(pInstanceTable);
     lock.unlock();
     ot_instance_table_map.erase(key);
     delete pInstanceTable;
@@ -3285,113 +3284,6 @@ static inline PFN_vkVoidFunction InterceptMsgCallbackGetProcAddrCommand(const ch
 VKAPI_ATTR VkResult VKAPI_CALL CreateDisplayPlaneSurfaceKHR(VkInstance instance, const VkDisplaySurfaceCreateInfoKHR *pCreateInfo,
                                                             const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface);
 
-static void CheckDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo, VkDevice device) {
-    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-
-    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DISPLAY_EXTENSION_NAME) == 0) {
-            device_data->enables.wsi_display_extension = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME) == 0) {
-            device_data->enables.wsi_display_swapchain = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME) == 0) {
-            device_data->enables.khr_descriptor_update_template = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_MAINTENANCE1_EXTENSION_NAME) == 0) {
-            device_data->enables.khr_maintenance1 = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME) == 0) {
-            device_data->enables.khr_push_descriptor = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
-            device_data->enables.wsi = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], "OBJTRACK_EXTENSIONS") == 0) {
-            device_data->enables.objtrack_extensions = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHX_DEVICE_GROUP_EXTENSION_NAME) == 0) {
-            device_data->enables.khx_device_group = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHX_EXTERNAL_MEMORY_FD_EXTENSION_NAME) == 0) {
-            device_data->enables.khx_external_memory_fd = true;
-        }
-#ifdef VK_USE_PLATFORM_WIN32_KHX
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHX_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME) == 0) {
-            device_data->enables.khx_external_memory_win32 = true;
-        }
-#endif  // VK_USE_PLATFORM_WIN32_KHX
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHX_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME) == 0) {
-            device_data->enables.khx_external_semaphore_fd = true;
-        }
-#ifdef VK_USE_PLATFORM_WIN32_KHX
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHX_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME) == 0) {
-            device_data->enables.khx_external_semaphore_win32 = true;
-        }
-#endif  // VK_USE_PLATFORM_WIN32_KHX
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_DISCARD_RECTANGLES_EXTENSION_NAME) == 0) {
-            device_data->enables.ext_discard_rectangles = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_DISPLAY_CONTROL_EXTENSION_NAME) == 0) {
-            device_data->enables.ext_display_control = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_NV_CLIP_SPACE_W_SCALING_EXTENSION_NAME) == 0) {
-            device_data->enables.nv_clip_space_w_scaling = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_NVX_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME) == 0) {
-            device_data->enables.nvx_device_generated_commands = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_GOOGLE_DISPLAY_TIMING_EXTENSION_NAME) == 0) {
-            device_data->enables.google_display_timing = true;
-        }
-    }
-}
-
-static void CheckInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateInfo, VkInstance instance) {
-    VkLayerInstanceDispatchTable *pDisp = get_dispatch_table(ot_instance_table_map, instance);
-
-    instanceExtMap[pDisp] = {};
-
-    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-#ifdef VK_USE_PLATFORM_ANDROID_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_ANDROID_SURFACE_EXTENSION_NAME) == 0) {
-            instanceExtMap[pDisp].android_enabled = true;
-        }
-#endif
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DISPLAY_EXTENSION_NAME) == 0) {
-            instanceExtMap[pDisp].display_enabled = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SURFACE_EXTENSION_NAME) == 0) {
-            instanceExtMap[pDisp].wsi_enabled = true;
-        }
-#ifdef VK_USE_PLATFORM_MIR_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_MIR_SURFACE_EXTENSION_NAME) == 0) {
-            instanceExtMap[pDisp].mir_enabled = true;
-        }
-#endif
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME) == 0) {
-            instanceExtMap[pDisp].wayland_enabled = true;
-        }
-#endif
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_WIN32_SURFACE_EXTENSION_NAME) == 0) {
-            instanceExtMap[pDisp].win32_enabled = true;
-        }
-#endif
-#ifdef VK_USE_PLATFORM_XCB_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XCB_SURFACE_EXTENSION_NAME) == 0) {
-            instanceExtMap[pDisp].xcb_enabled = true;
-        }
-#endif
-#ifdef VK_USE_PLATFORM_XLIB_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XLIB_SURFACE_EXTENSION_NAME) == 0) {
-            instanceExtMap[pDisp].xlib_enabled = true;
-        }
-#endif
-    }
-}
-
 VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo *pCreateInfo,
                                             const VkAllocationCallbacks *pAllocator, VkDevice *pDevice) {
     std::lock_guard<std::mutex> lock(global_lock);
@@ -3423,7 +3315,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physicalDevice, con
 
     initDeviceTable(*pDevice, fpGetDeviceProcAddr, ot_device_table_map);
 
-    CheckDeviceRegisterExtensions(pCreateInfo, *pDevice);
     CreateObject(*pDevice, *pDevice, kVulkanObjectTypeDevice, pAllocator);
 
     return result;
@@ -3488,7 +3379,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateInstance(const VkInstanceCreateInfo *pCreat
                                                               pCreateInfo->ppEnabledExtensionNames);
 
     InitObjectTracker(instance_data, pAllocator);
-    CheckInstanceRegisterExtensions(pCreateInfo, *pInstance);
 
     CreateObject(*pInstance, *pInstance, kVulkanObjectTypeInstance, pAllocator);
 
