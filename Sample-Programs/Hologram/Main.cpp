@@ -45,6 +45,21 @@ int main(int argc, char **argv) {
     return 0;
 }
 
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+
+#include "ShellWayland.h"
+
+int main(int argc, char **argv) {
+    Game *game = create_game(argc, argv);
+    {
+        ShellWayland shell(*game);
+        shell.run();
+    }
+    delete game;
+
+    return 0;
+}
+
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
 
 #include <android/log.h>
