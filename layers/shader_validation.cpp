@@ -34,6 +34,7 @@
 #include "core_validation.h"
 #include "core_validation_types.h"
 #include "shader_validation.h"
+#include "spirv-tools/libspirv.h"
 
 enum FORMAT_TYPE {
     FORMAT_TYPE_FLOAT = 1,  // UNORM, SNORM, FLOAT, USCALED, SSCALED, SRGB -- anything we consider float in the shader
@@ -1508,4 +1509,44 @@ bool validate_compute_pipeline(layer_data *dev_data, PIPELINE_STATE *pPipeline) 
     spirv_inst_iter entrypoint;
 
     return validate_pipeline_shader_stage(dev_data, &pCreateInfo->stage, pPipeline, &module, &entrypoint);
+}
+
+bool PreCallValidateCreateShaderModule(layer_data *dev_data, VkShaderModuleCreateInfo const *pCreateInfo, bool *spirv_valid) {
+    bool skip = false;
+    spv_result_t spv_valid = SPV_SUCCESS;
+    auto report_data = GetReportData(dev_data);
+
+    if (GetDisables(dev_data)->shader_validation) {
+        return false;
+    }
+
+    auto have_glsl_shader = GetEnabledExtensions(dev_data)->vk_nv_glsl_shader;
+
+    if (!have_glsl_shader && (pCreateInfo->codeSize % 4)) {
+        skip |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                        __LINE__, VALIDATION_ERROR_12a00ac0, "SC",
+                        "SPIR-V module not valid: Codesize must be a multiple of 4 but is " PRINTF_SIZE_T_SPECIFIER ". %s",
+                        pCreateInfo->codeSize, validation_error_map[VALIDATION_ERROR_12a00ac0]);
+    } else {
+        // Use SPIRV-Tools validator to try and catch any issues with the module itself
+        spv_context ctx = spvContextCreate(SPV_ENV_VULKAN_1_0);
+        spv_const_binary_t binary{ pCreateInfo->pCode, pCreateInfo->codeSize / sizeof(uint32_t) };
+        spv_diagnostic diag = nullptr;
+
+        spv_valid = spvValidate(ctx, &binary, &diag);
+        if (spv_valid != SPV_SUCCESS) {
+            if (!have_glsl_shader || (pCreateInfo->pCode[0] == spv::MagicNumber)) {
+                skip |= log_msg(report_data,
+                                spv_valid == SPV_WARNING ? VK_DEBUG_REPORT_WARNING_BIT_EXT : VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, SHADER_CHECKER_INCONSISTENT_SPIRV, "SC",
+                                "SPIR-V module not valid: %s", diag && diag->error ? diag->error : "(no error text)");
+            }
+        }
+
+        spvDiagnosticDestroy(diag);
+        spvContextDestroy(ctx);
+    }
+
+    *spirv_valid = (spv_valid == SPV_SUCCESS);
+    return skip;
 }

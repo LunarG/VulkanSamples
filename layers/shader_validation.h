@@ -103,5 +103,6 @@ struct shader_module {
 bool validate_and_capture_pipeline_shader_state(layer_data *dev_data, PIPELINE_STATE *pPipeline);
 bool validate_compute_pipeline(layer_data *dev_data, PIPELINE_STATE *pPipeline);
 typedef std::pair<unsigned, unsigned> descriptor_slot_t;
+bool PreCallValidateCreateShaderModule(layer_data *dev_data, VkShaderModuleCreateInfo const *pCreateInfo, bool *spirv_valid);
 
 #endif //VULKAN_SHADER_VALIDATION_H

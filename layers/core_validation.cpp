@@ -36,7 +36,6 @@
 // Allow use of STL min and max functions in Windows
 #define NOMINMAX
 
-#include <SPIRV/spirv.hpp>
 #include <algorithm>
 #include <assert.h>
 #include <iostream>
@@ -50,7 +49,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <string>
-#include <tuple>
 #include <inttypes.h>
 
 #include "vk_loader_platform.h"
@@ -69,7 +67,6 @@
 #include "vk_layer_data.h"
 #include "vk_layer_extension_utils.h"
 #include "vk_layer_utils.h"
-#include "spirv-tools/libspirv.h"
 
 #if defined __ANDROID__
 #include <android/log.h>
@@ -7240,44 +7237,17 @@ static bool CreatePassDAG(const layer_data *dev_data, const VkRenderPassCreateIn
 VKAPI_ATTR VkResult VKAPI_CALL CreateShaderModule(VkDevice device, const VkShaderModuleCreateInfo *pCreateInfo,
                                                   const VkAllocationCallbacks *pAllocator, VkShaderModule *pShaderModule) {
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-    bool skip = false;
-    spv_result_t spv_valid = SPV_SUCCESS;
+    bool spirv_valid;
 
-    if (!GetDisables(dev_data)->shader_validation) {
-        if (!dev_data->extensions.vk_nv_glsl_shader && (pCreateInfo->codeSize % 4)) {
-            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                            __LINE__, VALIDATION_ERROR_12a00ac0, "SC",
-                            "SPIR-V module not valid: Codesize must be a multiple of 4 but is " PRINTF_SIZE_T_SPECIFIER ". %s",
-                            pCreateInfo->codeSize, validation_error_map[VALIDATION_ERROR_12a00ac0]);
-        } else {
-            // Use SPIRV-Tools validator to try and catch any issues with the module itself
-            spv_context ctx = spvContextCreate(SPV_ENV_VULKAN_1_0);
-            spv_const_binary_t binary{ pCreateInfo->pCode, pCreateInfo->codeSize / sizeof(uint32_t) };
-            spv_diagnostic diag = nullptr;
-
-            spv_valid = spvValidate(ctx, &binary, &diag);
-            if (spv_valid != SPV_SUCCESS) {
-                if (!dev_data->extensions.vk_nv_glsl_shader || (pCreateInfo->pCode[0] == spv::MagicNumber)) {
-                    skip |= log_msg(dev_data->report_data,
-                        spv_valid == SPV_WARNING ? VK_DEBUG_REPORT_WARNING_BIT_EXT : VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                        VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, SHADER_CHECKER_INCONSISTENT_SPIRV, "SC",
-                        "SPIR-V module not valid: %s", diag && diag->error ? diag->error : "(no error text)");
-                }
-            }
-
-            spvDiagnosticDestroy(diag);
-            spvContextDestroy(ctx);
-        }
-
-        if (skip) return VK_ERROR_VALIDATION_FAILED_EXT;
-    }
+    if (PreCallValidateCreateShaderModule(dev_data, pCreateInfo, &spirv_valid))
+        return VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkResult res = dev_data->dispatch_table.CreateShaderModule(device, pCreateInfo, pAllocator, pShaderModule);
 
     if (res == VK_SUCCESS) {
         std::lock_guard<std::mutex> lock(global_lock);
-        const auto new_shader_module = (SPV_SUCCESS == spv_valid ? new shader_module(pCreateInfo) : new shader_module());
-        dev_data->shaderModuleMap[*pShaderModule] = unique_ptr<shader_module>(new_shader_module);
+        unique_ptr<shader_module> new_shader_module(spirv_valid ? new shader_module(pCreateInfo) : new shader_module());
+        dev_data->shaderModuleMap[*pShaderModule] = std::move(new_shader_module);
     }
     return res;
 }
