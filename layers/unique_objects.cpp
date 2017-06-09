@@ -61,11 +61,8 @@ static void initUniqueObjects(instance_layer_data *instance_data, const VkAlloca
     layer_debug_actions(instance_data->report_data, instance_data->logging_callback, pAllocator, "google_unique_objects");
 }
 
-
-// Hey, we need to codegen in the debug helper functions into the procmap LUGMAL
-
-// Handle CreateInstance Extensions
-static void checkInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateInfo, VkInstance instance) {
+// Check enabled instance extensions against supported instance extension whitelist
+static void InstanceExtensionWhitelist(const VkInstanceCreateInfo *pCreateInfo, VkInstance instance) {
     instance_layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(instance), instance_layer_data_map);
 
     for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
@@ -80,8 +77,8 @@ static void checkInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateI
     }
 }
 
-// Handle CreateDevice Extensions
-static void createDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo, VkDevice device) {
+// Check enabled device extensions against supported device extension whitelist
+static void DeviceExtensionWhitelist(const VkDeviceCreateInfo *pCreateInfo, VkDevice device) {
     layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
 
     for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
@@ -137,6 +134,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateInstance(const VkInstanceCreateInfo *pCreat
     }
 
     initUniqueObjects(instance_data, pAllocator);
+    InstanceExtensionWhitelist(pCreateInfo, *pInstance);
 
     // Disable and free tmp callbacks, no longer necessary
     if (instance_data->num_tmp_callbacks > 0) {
@@ -192,9 +190,9 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu, const VkDevice
     // Setup layer's device dispatch table
     layer_init_device_dispatch_table(*pDevice, &my_device_data->dispatch_table, fpGetDeviceProcAddr);
 
-    createDeviceRegisterExtensions(pCreateInfo, *pDevice);
-    // Set gpu for this device in order to get at any objects mapped at instance level
+    DeviceExtensionWhitelist(pCreateInfo, *pDevice);
 
+    // Set gpu for this device in order to get at any objects mapped at instance level
     my_device_data->instance_data = my_instance_data;
 
     return result;
