@@ -383,7 +383,6 @@ class VkLayerTest : public VkRenderFramework {
         m_instance_layer_names.push_back("VK_LAYER_LUNARG_parameter_validation");
         m_instance_layer_names.push_back("VK_LAYER_LUNARG_object_tracker");
         m_instance_layer_names.push_back("VK_LAYER_LUNARG_core_validation");
-        m_instance_layer_names.push_back("VK_LAYER_LUNARG_swapchain");
         m_instance_layer_names.push_back("VK_LAYER_GOOGLE_unique_objects");
 
         if (m_enableWSI) {
