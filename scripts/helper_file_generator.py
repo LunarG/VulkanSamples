@@ -558,6 +558,9 @@ class HelperFileOutputGenerator(OutputGenerator):
         extension_helper_header += '#ifndef VK_EXTENSION_HELPER_H_\n'
         extension_helper_header += '#define VK_EXTENSION_HELPER_H_\n'
         struct  = '\n'
+        extension_helper_header += '#include <vulkan/vulkan.h>\n'
+        extension_helper_header += '#include <utility>\n'
+        extension_helper_header += '\n'
         extension_dict = dict()
         for type in ['Instance', 'Device']:
             if type == 'Instance':
