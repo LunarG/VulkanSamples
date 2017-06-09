@@ -1891,7 +1891,7 @@ static bool loader_add_legacy_std_val_layer(const struct loader_instance *inst, 
     const char std_validation_names[6][VK_MAX_EXTENSION_NAME_SIZE] = {
         "VK_LAYER_GOOGLE_threading",      "VK_LAYER_LUNARG_parameter_validation",
         "VK_LAYER_LUNARG_object_tracker", "VK_LAYER_LUNARG_core_validation",
-        "VK_LAYER_LUNARG_swapchain",      "VK_LAYER_GOOGLE_unique_objects"};
+        "VK_LAYER_GOOGLE_unique_objects"};
     uint32_t layer_count = sizeof(std_validation_names) / sizeof(std_validation_names[0]);
 
     loader_log(inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0,
