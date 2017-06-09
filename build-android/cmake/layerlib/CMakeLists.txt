@@ -64,6 +64,7 @@ add_library(VkLayer_core_validation SHARED
         ${SRC_DIR}/layers/core_validation.cpp
         ${SRC_DIR}/layers/descriptor_sets.cpp
         ${SRC_DIR}/layers/buffer_validation.cpp
+        ${SRC_DIR}/layers/shader_validation.cpp
         ${SRC_DIR}/layers/vk_layer_table.cpp)
 target_include_directories(VkLayer_core_validation PRIVATE
         ${SRC_DIR}/include

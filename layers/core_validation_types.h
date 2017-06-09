@@ -751,6 +751,9 @@ public:
         : framebuffer(fb), createInfo(pCreateInfo), renderPassCreateInfo(pRPCI) {};
 };
 
+struct shader_module;
+struct DeviceExtensions;
+
 // Fwd declarations of layer_data and helpers to look-up/validate state from layer_data maps
 namespace core_validation {
 struct layer_data;
@@ -768,8 +771,10 @@ GLOBAL_CB_NODE *GetCBNode(layer_data const *my_data, const VkCommandBuffer cb);
 RENDER_PASS_STATE *GetRenderPassState(layer_data const *my_data, VkRenderPass renderpass);
 FRAMEBUFFER_STATE *GetFramebufferState(const layer_data *my_data, VkFramebuffer framebuffer);
 COMMAND_POOL_NODE *GetCommandPoolNode(layer_data *dev_data, VkCommandPool pool);
+shader_module const *GetShaderModuleState(layer_data const *dev_data, VkShaderModule module);
 const PHYS_DEV_PROPERTIES_NODE *GetPhysDevProperties(const layer_data *device_data);
 const VkPhysicalDeviceFeatures *GetEnabledFeatures(const layer_data *device_data);
+const DeviceExtensions *GetEnabledExtensions(const layer_data *device_data);
 
 void invalidateCommandBuffers(const layer_data *, std::unordered_set<GLOBAL_CB_NODE *> const &, VK_OBJECT);
 bool ValidateMemoryIsBoundToBuffer(const layer_data *, const BUFFER_STATE *, const char *, UNIQUE_VALIDATION_ERROR_CODE);

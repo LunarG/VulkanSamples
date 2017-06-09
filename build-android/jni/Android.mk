@@ -36,6 +36,7 @@ LOCAL_MODULE := VkLayer_core_validation
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/core_validation.cpp
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/descriptor_sets.cpp
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/buffer_validation.cpp
+LOCAL_SRC_FILES += $(SRC_DIR)/layers/shader_validation.cpp
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_table.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include \
                     $(SRC_DIR)/layers \
