@@ -121,7 +121,6 @@ endif()
 add_dependencies(vk_layer_validation_tests
    VkLayer_core_validation
    VkLayer_object_tracker
-   VkLayer_swapchain
    VkLayer_threading
    VkLayer_unique_objects
    VkLayer_parameter_validation

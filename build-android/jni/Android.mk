@@ -111,21 +111,6 @@ LOCAL_LDFLAGS   += -Wl,-Bsymbolic
 LOCAL_LDFLAGS   += -Wl,--exclude-libs,ALL
 include $(BUILD_SHARED_LIBRARY)
 
-include $(CLEAR_VARS)
-LOCAL_MODULE := VkLayer_swapchain
-LOCAL_SRC_FILES += $(SRC_DIR)/layers/swapchain.cpp
-LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_table.cpp
-LOCAL_C_INCLUDES += $(SRC_DIR)/include \
-                    $(SRC_DIR)/layers \
-                    $(LAYER_DIR)/include \
-                    $(SRC_DIR)/loader
-LOCAL_STATIC_LIBRARIES += layer_utils
-LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR -fvisibility=hidden
-LOCAL_LDLIBS    := -llog
-LOCAL_LDFLAGS   += -Wl,-Bsymbolic
-LOCAL_LDFLAGS   += -Wl,--exclude-libs,ALL
-include $(BUILD_SHARED_LIBRARY)
-
 # Pull in prebuilt shaderc
 include $(CLEAR_VARS)
 LOCAL_MODULE := shaderc-prebuilt

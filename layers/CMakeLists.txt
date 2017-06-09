@@ -30,7 +30,6 @@ set(LAYER_JSON_FILES_WITH_DEPENDENCIES
     VkLayer_object_tracker
     VkLayer_unique_objects
     VkLayer_parameter_validation
-    VkLayer_swapchain
     VkLayer_threading
     )
 
@@ -170,7 +169,6 @@ add_dependencies(VkLayer_utils generate_helper_files)
 
 add_vk_layer(core_validation core_validation.cpp vk_layer_table.cpp descriptor_sets.cpp buffer_validation.cpp shader_validation.cpp)
 add_vk_layer(object_tracker object_tracker.cpp vk_layer_table.cpp)
-add_vk_layer(swapchain swapchain.cpp vk_layer_table.cpp)
 # generated
 add_vk_layer(threading threading.cpp thread_check.h vk_layer_table.cpp)
 add_vk_layer(unique_objects unique_objects.cpp unique_objects_wrappers.h vk_layer_table.cpp)
