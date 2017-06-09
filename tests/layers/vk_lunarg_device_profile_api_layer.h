@@ -33,20 +33,9 @@ extern "C" {
 
 // API functions
 
-typedef VkResult(VKAPI_PTR *PFN_vkSetPhysicalDeviceLimitsEXT)(VkPhysicalDevice physicalDevice,
-                                                              const VkPhysicalDeviceLimits *newLimits);
-typedef VkResult(VKAPI_PTR *PFN_vkGetOriginalPhysicalDeviceLimitsEXT)(VkPhysicalDevice physicalDevice,
-                                                                      const VkPhysicalDeviceLimits *orgLimits);
-
-#ifdef VK_PROTOTYPES
-
-// Device Profile Api Layer extension entrypoints
-VKAPI_ATTR VkResult VKAPI_CALL vkLayerDeviceProfileApiEXT(VkPhysicalDevice physicalDevice);
-VKAPI_ATTR VkResult VKAPI_CALL vkSetPhysicalDeviceLimitsEXT(VkPhysicalDevice physicalDevice,
-                                                            const VkPhysicalDeviceLimits *newLimits);
-
-#endif  // VK_PROTOTYPES
-
+typedef void(VKAPI_PTR *PFN_vkSetPhysicalDeviceLimitsEXT)(VkPhysicalDevice physicalDevice, const VkPhysicalDeviceLimits *newLimits);
+typedef void(VKAPI_PTR *PFN_vkGetOriginalPhysicalDeviceLimitsEXT)(VkPhysicalDevice physicalDevice,
+                                                                  const VkPhysicalDeviceLimits *orgLimits);
 #ifdef __cplusplus
 }  // extern "C"
 #endif  // __cplusplus
