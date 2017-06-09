@@ -201,4 +201,36 @@ enum IMAGE_ERROR {
     IMAGE_INVALID_FORMAT_LIMITS_VIOLATION,
     IMAGE_ZERO_AREA_SUBREGION,
 };
+
+enum SWAPCHAIN_ERROR {
+    SWAPCHAIN_INVALID_HANDLE,              // Handle used that isn't currently valid
+    SWAPCHAIN_NULL_POINTER,                // Pointer set to NULL, instead of being a valid pointer
+    SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,    // Did not enable WSI extension, but called WSI function
+    SWAPCHAIN_DEL_OBJECT_BEFORE_CHILDREN,  // Called vkDestroyDevice() before vkDestroySwapchainKHR()
+    SWAPCHAIN_CREATE_UNSUPPORTED_SURFACE,  // Called vkCreateSwapchainKHR() with a pCreateInfo->surface that wasn't supported
+    SWAPCHAIN_CREATE_SWAP_WITHOUT_QUERY,  // Called vkCreateSwapchainKHR() without calling a query
+    SWAPCHAIN_CREATE_SWAP_OUT_OF_BOUNDS_EXTENTS, // Called vkCreateSwapchainKHR() with out-of-bounds imageExtent
+    SWAPCHAIN_CREATE_SWAP_EXTENTS_NO_MATCH_WIN,  // Called vkCreateSwapchainKHR w/imageExtent that doesn't match window's extent
+    SWAPCHAIN_CREATE_SWAP_BAD_PRE_TRANSFORM,     // Called vkCreateSwapchainKHR() with a non-supported preTransform
+    SWAPCHAIN_CREATE_SWAP_BAD_COMPOSITE_ALPHA,   // Called vkCreateSwapchainKHR() with a non-supported compositeAlpha
+    SWAPCHAIN_CREATE_SWAP_BAD_IMG_ARRAY_LAYERS,  // Called vkCreateSwapchainKHR() with a non-supported imageArrayLayers
+    SWAPCHAIN_CREATE_SWAP_BAD_IMG_USAGE_FLAGS,   // Called vkCreateSwapchainKHR() with a non-supported imageUsageFlags
+    SWAPCHAIN_CREATE_SWAP_BAD_IMG_COLOR_SPACE,   // Called vkCreateSwapchainKHR() with a non-supported imageColorSpace
+    SWAPCHAIN_CREATE_SWAP_BAD_IMG_FORMAT,        // Called vkCreateSwapchainKHR() with a non-supported imageFormat
+    SWAPCHAIN_CREATE_SWAP_BAD_IMG_FMT_CLR_SP,    // Called vkCreateSwapchainKHR() with a non-supported imageColorSpace
+    SWAPCHAIN_CREATE_SWAP_BAD_PRESENT_MODE,      // Called vkCreateSwapchainKHR() with a non-supported presentMode
+    SWAPCHAIN_CREATE_SWAP_BAD_SHARING_MODE,      // Called vkCreateSwapchainKHR() with a non-supported imageSharingMode
+    SWAPCHAIN_CREATE_SWAP_BAD_SHARING_VALUES,    // Called vkCreateSwapchainKHR() with bad values when imageSharingMode is
+                                                 // VK_SHARING_MODE_CONCURRENT
+    SWAPCHAIN_BAD_BOOL,       // VkBool32 that doesn't have value of VK_TRUE or VK_FALSE (e.g. is a non-zero form of true)
+    SWAPCHAIN_PRIOR_COUNT,    // Query must be called first to get value of pCount, then called second time
+    SWAPCHAIN_INVALID_COUNT,  // Second time a query called, the pCount value didn't match first time
+    SWAPCHAIN_WRONG_STYPE,    // The sType for a struct has the wrong value
+    SWAPCHAIN_WRONG_NEXT,     // The pNext for a struct is not NULL
+    SWAPCHAIN_ZERO_VALUE,     // A value should be non-zero
+    SWAPCHAIN_GET_SUPPORTED_DISPLAYS_WITHOUT_QUERY,  // vkGetDisplayPlaneSupportedDisplaysKHR should be called after querying
+                                                     // device display plane properties
+    SWAPCHAIN_PLANE_INDEX_TOO_LARGE,  // a planeIndex value is larger than what vkGetDisplayPlaneSupportedDisplaysKHR returns
+};
+
 #endif  // CORE_VALIDATION_ERROR_ENUMS_H_

@@ -70,6 +70,12 @@ class DescriptorSet;
 
 struct GLOBAL_CB_NODE;
 
+enum CALL_STATE {
+    UNCALLED,       // Function has not been called
+    QUERY_COUNT,    // Function called once to query a count
+    QUERY_DETAILS,  // Function called w/ a count to query details
+};
+
 class BASE_NODE {
    public:
     // Track when object is being used by an in-flight command buffer
@@ -345,6 +351,8 @@ class SWAPCHAIN_NODE {
     std::vector<VkImage> images;
     bool replaced = false;
     bool shared_presentable = false;
+    CALL_STATE vkGetSwapchainImagesKHRState = UNCALLED;
+    uint32_t get_swapchain_image_count = 0;
     SWAPCHAIN_NODE(const VkSwapchainCreateInfoKHR *pCreateInfo, VkSwapchainKHR swapchain)
         : createInfo(pCreateInfo), swapchain(swapchain) {}
 };

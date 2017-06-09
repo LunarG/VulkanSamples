@@ -8803,50 +8803,92 @@ VKAPI_ATTR void VKAPI_CALL DestroySwapchainKHR(VkDevice device, VkSwapchainKHR s
     if (!skip) dev_data->dispatch_table.DestroySwapchainKHR(device, swapchain, pAllocator);
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pCount,
-                                                     VkImage *pSwapchainImages) {
-    layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->dispatch_table.GetSwapchainImagesKHR(device, swapchain, pCount, pSwapchainImages);
-
-    if ((result == VK_SUCCESS || result == VK_INCOMPLETE) && pSwapchainImages != nullptr) {
-        // This should never happen and is checked by param checker.
-        if (!pCount) return result;
+static bool PreCallValidateGetSwapchainImagesKHR(layer_data *device_data, SWAPCHAIN_NODE *swapchain_state, VkDevice device,
+                                                 uint32_t *pSwapchainImageCount, VkImage *pSwapchainImages) {
+    bool skip = false;
+    if (swapchain_state && pSwapchainImages) {
         std::lock_guard<std::mutex> lock(global_lock);
-        auto swapchain_node = GetSwapchainNode(dev_data, swapchain);
+        // Compare the preliminary value of *pSwapchainImageCount with the value this time:
+        if (swapchain_state->vkGetSwapchainImagesKHRState == UNCALLED) {
+            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                            HandleToUint64(device), __LINE__, SWAPCHAIN_PRIOR_COUNT, "DS",
+                            "vkGetSwapchainImagesKHR() called with non-NULL pSwapchainImageCount; but no prior positive "
+                            "value has been seen for pSwapchainImages.");
+        } else if (*pSwapchainImageCount > swapchain_state->get_swapchain_image_count) {
+            skip |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                            HandleToUint64(device), __LINE__, SWAPCHAIN_INVALID_COUNT, "DS",
+                            "vkGetSwapchainImagesKHR() called with non-NULL pSwapchainImageCount, and with "
+                            "pSwapchainImages set to a value (%d) that is greater than the value (%d) that was returned when "
+                            "pSwapchainImageCount was NULL.",
+                            *pSwapchainImageCount, swapchain_state->get_swapchain_image_count);
+        }
+    }
+    return skip;
+}
 
-        if (*pCount > swapchain_node->images.size())
-            swapchain_node->images.resize(*pCount);
+static void PostCallRecordGetSwapchainImagesKHR(layer_data *device_data, SWAPCHAIN_NODE *swapchain_state, VkDevice device,
+                                                uint32_t *pSwapchainImageCount, VkImage *pSwapchainImages) {
+    std::lock_guard<std::mutex> lock(global_lock);
 
-        for (uint32_t i = 0; i < *pCount; ++i) {
-            if (swapchain_node->images[i] != VK_NULL_HANDLE)
-                continue;   // Already retrieved this.
+    if (*pSwapchainImageCount > swapchain_state->images.size()) swapchain_state->images.resize(*pSwapchainImageCount);
+
+    if (pSwapchainImages) {
+        if (swapchain_state->vkGetSwapchainImagesKHRState < QUERY_DETAILS) {
+            swapchain_state->vkGetSwapchainImagesKHRState = QUERY_DETAILS;
+        }
+        for (uint32_t i = 0; i < *pSwapchainImageCount; ++i) {
+            if (swapchain_state->images[i] != VK_NULL_HANDLE) continue;  // Already retrieved this.
 
             IMAGE_LAYOUT_NODE image_layout_node;
             image_layout_node.layout = VK_IMAGE_LAYOUT_UNDEFINED;
-            image_layout_node.format = swapchain_node->createInfo.imageFormat;
+            image_layout_node.format = swapchain_state->createInfo.imageFormat;
             // Add imageMap entries for each swapchain image
             VkImageCreateInfo image_ci = {};
             image_ci.flags = 0;
             image_ci.imageType = VK_IMAGE_TYPE_2D;
-            image_ci.format = swapchain_node->createInfo.imageFormat;
-            image_ci.extent.width = swapchain_node->createInfo.imageExtent.width;
-            image_ci.extent.height = swapchain_node->createInfo.imageExtent.height;
+            image_ci.format = swapchain_state->createInfo.imageFormat;
+            image_ci.extent.width = swapchain_state->createInfo.imageExtent.width;
+            image_ci.extent.height = swapchain_state->createInfo.imageExtent.height;
             image_ci.extent.depth = 1;
             image_ci.mipLevels = 1;
-            image_ci.arrayLayers = swapchain_node->createInfo.imageArrayLayers;
+            image_ci.arrayLayers = swapchain_state->createInfo.imageArrayLayers;
             image_ci.samples = VK_SAMPLE_COUNT_1_BIT;
             image_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
-            image_ci.usage = swapchain_node->createInfo.imageUsage;
-            image_ci.sharingMode = swapchain_node->createInfo.imageSharingMode;
-            dev_data->imageMap[pSwapchainImages[i]] = unique_ptr<IMAGE_STATE>(new IMAGE_STATE(pSwapchainImages[i], &image_ci));
-            auto &image_state = dev_data->imageMap[pSwapchainImages[i]];
+            image_ci.usage = swapchain_state->createInfo.imageUsage;
+            image_ci.sharingMode = swapchain_state->createInfo.imageSharingMode;
+            device_data->imageMap[pSwapchainImages[i]] = unique_ptr<IMAGE_STATE>(new IMAGE_STATE(pSwapchainImages[i], &image_ci));
+            auto &image_state = device_data->imageMap[pSwapchainImages[i]];
             image_state->valid = false;
             image_state->binding.mem = MEMTRACKER_SWAP_CHAIN_IMAGE_KEY;
-            swapchain_node->images[i] = pSwapchainImages[i];
+            swapchain_state->images[i] = pSwapchainImages[i];
             ImageSubresourcePair subpair = {pSwapchainImages[i], false, VkImageSubresource()};
-            dev_data->imageSubresourceMap[pSwapchainImages[i]].push_back(subpair);
-            dev_data->imageLayoutMap[subpair] = image_layout_node;
+            device_data->imageSubresourceMap[pSwapchainImages[i]].push_back(subpair);
+            device_data->imageLayoutMap[subpair] = image_layout_node;
         }
+    }
+
+    if (*pSwapchainImageCount) {
+        if (swapchain_state->vkGetSwapchainImagesKHRState < QUERY_COUNT) {
+            swapchain_state->vkGetSwapchainImagesKHRState = QUERY_COUNT;
+        }
+        swapchain_state->get_swapchain_image_count = *pSwapchainImageCount;
+    }
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pSwapchainImageCount,
+                                                     VkImage *pSwapchainImages) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    layer_data *device_data = GetLayerDataPtr(get_dispatch_key(device), layer_data_map);
+
+    auto swapchain_state = GetSwapchainNode(device_data, swapchain);
+    bool skip = PreCallValidateGetSwapchainImagesKHR(device_data, swapchain_state, device, pSwapchainImageCount, pSwapchainImages);
+
+    if (!skip) {
+        result = device_data->dispatch_table.GetSwapchainImagesKHR(device, swapchain, pSwapchainImageCount, pSwapchainImages);
+    }
+
+    if ((result == VK_SUCCESS || result == VK_INCOMPLETE)) {
+        PostCallRecordGetSwapchainImagesKHR(device_data, swapchain_state, device, pSwapchainImageCount, pSwapchainImages);
     }
     return result;
 }
@@ -9399,14 +9441,15 @@ VKAPI_ATTR void VKAPI_CALL DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR s
     std::unique_lock<std::mutex> lock(global_lock);
     auto surface_state = GetSurfaceState(instance_data, surface);
 
-    if (surface_state) {
-        // TODO: track swapchains created from this surface.
-        instance_data->surface_map.erase(surface);
+    if ((surface_state) && (surface_state->swapchain)) {
+        skip |= log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+            HandleToUint64(instance), __LINE__, VALIDATION_ERROR_26c009e4, "DS",
+            "vkDestroySurfaceKHR() called before its associated VkSwapchainKHR was destroyed. %s",
+            validation_error_map[VALIDATION_ERROR_26c009e4]);
     }
+    instance_data->surface_map.erase(surface);
     lock.unlock();
-
     if (!skip) {
-        // Call down the call chain:
         instance_data->dispatch_table.DestroySurfaceKHR(instance, surface, pAllocator);
     }
 }
@@ -10000,6 +10043,105 @@ VKAPI_ATTR void VKAPI_CALL CmdPushDescriptorSetWithTemplateKHR(VkCommandBuffer c
     dev_data->dispatch_table.CmdPushDescriptorSetWithTemplateKHR(commandBuffer, descriptorUpdateTemplate, layout, set, pData);
 }
 
+static void PostCallRecordGetPhysicalDeviceDisplayPlanePropertiesKHR(instance_layer_data *instanceData,
+                                                                     VkPhysicalDevice physicalDevice, uint32_t *pPropertyCount,
+                                                                     VkDisplayPlanePropertiesKHR *pProperties) {
+    std::unique_lock<std::mutex> lock(global_lock);
+    auto physical_device_state = GetPhysicalDeviceState(instanceData, physicalDevice);
+
+    if (*pPropertyCount) {
+        if (physical_device_state->vkGetPhysicalDeviceSurfaceFormatsKHRState < QUERY_COUNT) {
+            physical_device_state->vkGetPhysicalDeviceSurfaceFormatsKHRState = QUERY_COUNT;
+        }
+        physical_device_state->display_plane_property_count = *pPropertyCount;
+    }
+    if (pProperties) {
+        if (physical_device_state->vkGetPhysicalDeviceSurfaceFormatsKHRState < QUERY_DETAILS) {
+            physical_device_state->vkGetPhysicalDeviceSurfaceFormatsKHRState = QUERY_DETAILS;
+        }
+    }
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceDisplayPlanePropertiesKHR(VkPhysicalDevice physicalDevice, uint32_t *pPropertyCount,
+                                                                          VkDisplayPlanePropertiesKHR *pProperties) {
+    VkResult result = VK_SUCCESS;
+    instance_layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
+
+    result = instance_data->dispatch_table.GetPhysicalDeviceDisplayPlanePropertiesKHR(physicalDevice, pPropertyCount, pProperties);
+
+    if (result == VK_SUCCESS || result == VK_INCOMPLETE) {
+        PostCallRecordGetPhysicalDeviceDisplayPlanePropertiesKHR(instance_data, physicalDevice, pPropertyCount, pProperties);
+    }
+
+    return result;
+}
+
+static bool ValidateGetPhysicalDeviceDisplayPlanePropertiesKHRQuery(instance_layer_data *instance_data,
+                                                                    VkPhysicalDevice physicalDevice, uint32_t planeIndex,
+                                                                    const char *api_name) {
+    bool skip = false;
+    auto physical_device_state = GetPhysicalDeviceState(instance_data, physicalDevice);
+    if (physical_device_state->vkGetPhysicalDeviceSurfaceFormatsKHRState == UNCALLED) {
+        skip |= log_msg(
+            instance_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+            HandleToUint64(physicalDevice), __LINE__, SWAPCHAIN_GET_SUPPORTED_DISPLAYS_WITHOUT_QUERY, "DL",
+            "Potential problem with calling %s() without first querying vkGetPhysicalDeviceDisplayPlanePropertiesKHR.", api_name);
+    } else {
+        if (planeIndex >= physical_device_state->display_plane_property_count) {
+            skip |= log_msg(
+                instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                HandleToUint64(physicalDevice), __LINE__, VALIDATION_ERROR_29c009c2, "DL",
+                "%s(): planeIndex must be in the range [0, %d] that was returned by vkGetPhysicalDeviceDisplayPlanePropertiesKHR. "
+                "Do you have the plane index hardcoded? %s",
+                api_name, physical_device_state->display_plane_property_count - 1, validation_error_map[VALIDATION_ERROR_29c009c2]);
+        }
+    }
+    return skip;
+}
+
+static bool PreCallValidateGetDisplayPlaneSupportedDisplaysKHR(instance_layer_data *instance_data, VkPhysicalDevice physicalDevice,
+                                                               uint32_t planeIndex) {
+    bool skip = false;
+    std::lock_guard<std::mutex> lock(global_lock);
+    skip |= ValidateGetPhysicalDeviceDisplayPlanePropertiesKHRQuery(instance_data, physicalDevice, planeIndex,
+                                                                    "vkGetDisplayPlaneSupportedDisplaysKHR");
+    return skip;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneSupportedDisplaysKHR(VkPhysicalDevice physicalDevice, uint32_t planeIndex,
+                                                                   uint32_t *pDisplayCount, VkDisplayKHR *pDisplays) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    instance_layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
+    bool skip = PreCallValidateGetDisplayPlaneSupportedDisplaysKHR(instance_data, physicalDevice, planeIndex);
+    if (!skip) {
+        result =
+            instance_data->dispatch_table.GetDisplayPlaneSupportedDisplaysKHR(physicalDevice, planeIndex, pDisplayCount, pDisplays);
+    }
+    return result;
+}
+
+static bool PreCallValidateGetDisplayPlaneCapabilitiesKHR(instance_layer_data *instance_data, VkPhysicalDevice physicalDevice,
+                                                          uint32_t planeIndex) {
+    bool skip = false;
+    std::lock_guard<std::mutex> lock(global_lock);
+    skip |= ValidateGetPhysicalDeviceDisplayPlanePropertiesKHRQuery(instance_data, physicalDevice, planeIndex,
+                                                                    "vkGetDisplayPlaneCapabilitiesKHR");
+    return skip;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL GetDisplayPlaneCapabilitiesKHR(VkPhysicalDevice physicalDevice, VkDisplayModeKHR mode,
+                                                              uint32_t planeIndex, VkDisplayPlaneCapabilitiesKHR *pCapabilities) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    instance_layer_data *instance_data = GetLayerDataPtr(get_dispatch_key(physicalDevice), instance_layer_data_map);
+    bool skip = PreCallValidateGetDisplayPlaneCapabilitiesKHR(instance_data, physicalDevice, planeIndex);
+
+    if (!skip) {
+        result = instance_data->dispatch_table.GetDisplayPlaneCapabilitiesKHR(physicalDevice, mode, planeIndex, pCapabilities);
+    }
+
+    return result;
+}
+
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, const char *funcName);
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetPhysicalDeviceProcAddr(VkInstance instance, const char *funcName);
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance, const char *funcName);
@@ -10179,6 +10321,9 @@ static const std::unordered_map<std::string, void*> name_to_funcptr_map = {
     {"vkCreateDebugReportCallbackEXT", (void*)CreateDebugReportCallbackEXT},
     {"vkDestroyDebugReportCallbackEXT", (void*)DestroyDebugReportCallbackEXT},
     {"vkDebugReportMessageEXT", (void*)DebugReportMessageEXT},
+    {"vkGetPhysicalDeviceDisplayPlanePropertiesKHR", (void*)GetPhysicalDeviceDisplayPlanePropertiesKHR},
+    {"GetDisplayPlaneSupportedDisplaysKHR", (void*)GetDisplayPlaneSupportedDisplaysKHR},
+    {"GetDisplayPlaneCapabilitiesKHR", (void*)GetDisplayPlaneCapabilitiesKHR},
 };
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, const char *funcName) {
