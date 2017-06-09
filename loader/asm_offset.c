@@ -28,6 +28,8 @@ int main(int argc, char **argv) {
     for (int i = 0; i < argc; ++i) {
         if (!strcmp(argv[i], "MASM")) {
             assembler = "MASM";
+        } else if (!strcmp(argv[i], "GAS")) {
+            assembler = "GAS";
         }
     }
     if (assembler == NULL) {
@@ -39,7 +41,18 @@ int main(int argc, char **argv) {
 
     FILE *file = fopen("gen_defines.asm", "w");
     if (!strcmp(assembler, "MASM")) {
+#if !defined(_MSC_VER) || (_MSC_VER >= 1900)
+        fprintf(file, "\nPHYS_DEV_DISP_OFFSET equ %zu\n", offset);
+#else
         fprintf(file, "\nPHYS_DEV_DISP_OFFSET equ %lu\n", offset);
+#endif
+    } else if (!strcmp(assembler, "GAS")) {
+#if !defined(_MSC_VER)
+        fprintf(file, "\n.set PHYS_DEV_DISP_OFFSET, %zu\n", offset);
+#ifdef __x86_64__
+        fprintf(file, ".set X86_64, 1\n");
+#endif // __x86_64__
+#endif // _MSC_VER
     }
     return fclose(file);
 }
