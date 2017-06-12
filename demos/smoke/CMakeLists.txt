@@ -88,5 +88,7 @@ target_include_directories(smoketest ${includes})
 target_link_libraries(smoketest ${libraries})
 
 if(UNIX)
-    install(TARGETS smoketest DESTINATION ${CMAKE_INSTALL_BINDIR})
+    if(INSTALL_LVL_FILES)
+        install(TARGETS smoketest DESTINATION ${CMAKE_INSTALL_BINDIR})
+    endif()
 endif()

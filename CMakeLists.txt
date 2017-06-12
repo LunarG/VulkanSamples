@@ -43,6 +43,12 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     if (BUILD_WSI_MIR_SUPPORT)
         find_package(Mir REQUIRED)
     endif()
+
+    # This option can be used to suppress the installation of artifacts from the
+    # Vulkan-LoaderAndValidationLayers repo while running "make install" for the
+    # VulkanTools and VulkanSamples repos.  This can be used to prevent the
+    # overwriting of LVL artifacts when installing these downstream repos.
+    option(INSTALL_LVL_FILES "Install content from LoaderAndValidationLayers repo" ON)
 endif()
 
 set(SCRIPTS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripts")
@@ -310,7 +316,9 @@ if(NOT WIN32)
 endif()
 
 if(UNIX)
-    install(DIRECTORY "${PROJECT_SOURCE_DIR}/include/vulkan" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+    if(INSTALL_LVL_FILES)
+        install(DIRECTORY "${PROJECT_SOURCE_DIR}/include/vulkan" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+    endif()
 
 # uninstall target
 configure_file(

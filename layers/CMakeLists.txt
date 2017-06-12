@@ -87,16 +87,18 @@ endforeach(config_file)
 # Add targets for JSON file install on Linux.
 # Need to remove the "./" from the library path before installing to /etc.
 if(UNIX)
-    foreach (config_file ${LAYER_JSON_FILES})
-        add_custom_target(${config_file}-staging-json ALL
-            COMMAND mkdir -p ${CMAKE_CURRENT_BINARY_DIR}/staging-json
-            COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/linux/${config_file}.json ${CMAKE_CURRENT_BINARY_DIR}/staging-json
-            COMMAND sed -i -e "/\"library_path\":/s$./libVkLayer$libVkLayer$" ${CMAKE_CURRENT_BINARY_DIR}/staging-json/${config_file}.json
-            VERBATIM
-            DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/linux/${config_file}.json
-            )
-        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/staging-json/${config_file}.json DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/vulkan/explicit_layer.d)
-    endforeach(config_file)
+    if(INSTALL_LVL_FILES)
+        foreach (config_file ${LAYER_JSON_FILES})
+            add_custom_target(${config_file}-staging-json ALL
+                COMMAND mkdir -p ${CMAKE_CURRENT_BINARY_DIR}/staging-json
+                COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/linux/${config_file}.json ${CMAKE_CURRENT_BINARY_DIR}/staging-json
+                COMMAND sed -i -e "/\"library_path\":/s$./libVkLayer$libVkLayer$" ${CMAKE_CURRENT_BINARY_DIR}/staging-json/${config_file}.json
+                VERBATIM
+                DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/linux/${config_file}.json
+                )
+            install(FILES ${CMAKE_CURRENT_BINARY_DIR}/staging-json/${config_file}.json DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/vulkan/explicit_layer.d)
+        endforeach(config_file)
+    endif()
 endif()
 
 if (WIN32)
@@ -117,7 +119,9 @@ else()
     target_link_Libraries(VkLayer_${target} VkLayer_utils)
     add_dependencies(VkLayer_${target} generate_helper_files VkLayer_utils)
     set_target_properties(VkLayer_${target} PROPERTIES LINK_FLAGS "-Wl,-Bsymbolic,--exclude-libs,ALL")
-    install(TARGETS VkLayer_${target} DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    if(INSTALL_LVL_FILES)
+        install(TARGETS VkLayer_${target} DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    endif()
     endmacro()
 endif()
 
@@ -163,7 +167,9 @@ if (WIN32)
     add_library(VkLayer_utils STATIC vk_layer_config.cpp vk_layer_extension_utils.cpp vk_layer_utils.cpp vk_format_utils.cpp)
 else()
     add_library(VkLayer_utils SHARED vk_layer_config.cpp vk_layer_extension_utils.cpp vk_layer_utils.cpp vk_format_utils.cpp)
-    install(TARGETS VkLayer_utils DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    if(INSTALL_LVL_FILES)
+        install(TARGETS VkLayer_utils DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    endif()
 endif()
 add_dependencies(VkLayer_utils generate_helper_files)
 
