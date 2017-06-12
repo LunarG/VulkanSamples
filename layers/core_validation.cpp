@@ -6581,24 +6581,27 @@ VKAPI_ATTR void VKAPI_CALL CmdResetQueryPool(VkCommandBuffer commandBuffer, VkQu
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
     GLOBAL_CB_NODE *cb_state = GetCBNode(dev_data, commandBuffer);
-    if (cb_state) {
-        for (uint32_t i = 0; i < queryCount; i++) {
-            QueryObject query = {queryPool, firstQuery + i};
-            cb_state->waitedEventsBeforeQueryReset[query] = cb_state->waitedEvents;
-            std::function<bool(VkQueue)> query_update =
-                std::bind(setQueryState, std::placeholders::_1, commandBuffer, query, false);
-            cb_state->queryUpdates.push_back(query_update);
-        }
+        skip |= insideRenderPass(dev_data, cb_state, "vkCmdResetQueryPool()", VALIDATION_ERROR_1c600017);
+        skip |= ValidateCmd(dev_data, cb_state, CMD_RESETQUERYPOOL, "VkCmdResetQueryPool()");
         skip |= ValidateCmdQueueFlags(dev_data, cb_state, "VkCmdResetQueryPool()", VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT,
                                       VALIDATION_ERROR_1c602415);
-        skip |= ValidateCmd(dev_data, cb_state, CMD_RESETQUERYPOOL, "VkCmdResetQueryPool()");
-        UpdateCmdBufferLastCmd(cb_state, CMD_RESETQUERYPOOL);
-        skip |= insideRenderPass(dev_data, cb_state, "vkCmdResetQueryPool()", VALIDATION_ERROR_1c600017);
-        addCommandBufferBinding(&GetQueryPoolNode(dev_data, queryPool)->cb_bindings,
-                                {HandleToUint64(queryPool), kVulkanObjectTypeQueryPool}, cb_state);
-    }
     lock.unlock();
-    if (!skip) dev_data->dispatch_table.CmdResetQueryPool(commandBuffer, queryPool, firstQuery, queryCount);
+
+    if (skip) return;
+
+    dev_data->dispatch_table.CmdResetQueryPool(commandBuffer, queryPool, firstQuery, queryCount);
+
+    lock.lock();
+    for (uint32_t i = 0; i < queryCount; i++) {
+        QueryObject query = {queryPool, firstQuery + i};
+        cb_state->waitedEventsBeforeQueryReset[query] = cb_state->waitedEvents;
+        std::function<bool(VkQueue)> query_update =
+            std::bind(setQueryState, std::placeholders::_1, commandBuffer, query, false);
+        cb_state->queryUpdates.push_back(query_update);
+    }
+    UpdateCmdBufferLastCmd(cb_state, CMD_RESETQUERYPOOL);
+    addCommandBufferBinding(&GetQueryPoolNode(dev_data, queryPool)->cb_bindings,
+                            {HandleToUint64(queryPool), kVulkanObjectTypeQueryPool}, cb_state);
 }
 
 bool validateQuery(VkQueue queue, GLOBAL_CB_NODE *pCB, VkQueryPool queryPool, uint32_t queryCount, uint32_t firstQuery) {
