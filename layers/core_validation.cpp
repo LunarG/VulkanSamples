@@ -6508,7 +6508,7 @@ VKAPI_ATTR void VKAPI_CALL CmdPipelineBarrier(VkCommandBuffer commandBuffer, VkP
     }
 }
 
-bool setQueryState(VkQueue queue, VkCommandBuffer commandBuffer, QueryObject object, bool value) {
+static bool setQueryState(VkQueue queue, VkCommandBuffer commandBuffer, QueryObject object, bool value) {
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(commandBuffer), layer_data_map);
     GLOBAL_CB_NODE *pCB = GetCBNode(dev_data, commandBuffer);
     if (pCB) {
@@ -6527,20 +6527,25 @@ VKAPI_ATTR void VKAPI_CALL CmdBeginQuery(VkCommandBuffer commandBuffer, VkQueryP
     std::unique_lock<std::mutex> lock(global_lock);
     GLOBAL_CB_NODE *pCB = GetCBNode(dev_data, commandBuffer);
     if (pCB) {
-        QueryObject query = {queryPool, slot};
-        pCB->activeQueries.insert(query);
-        if (!pCB->startedQueries.count(query)) {
-            pCB->startedQueries.insert(query);
-        }
         skip |= ValidateCmdQueueFlags(dev_data, pCB, "vkCmdBeginQuery()", VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT,
                                       VALIDATION_ERROR_17802415);
         skip |= ValidateCmd(dev_data, pCB, CMD_BEGINQUERY, "vkCmdBeginQuery()");
+    }
+    lock.unlock();
+
+    if (skip) return;
+
+    dev_data->dispatch_table.CmdBeginQuery(commandBuffer, queryPool, slot, flags);
+
+    lock.lock();
+    if (pCB) {
+        QueryObject query = {queryPool, slot};
+        pCB->activeQueries.insert(query);
+        pCB->startedQueries.insert(query);
         UpdateCmdBufferLastCmd(pCB, CMD_BEGINQUERY);
         addCommandBufferBinding(&GetQueryPoolNode(dev_data, queryPool)->cb_bindings,
                                 {HandleToUint64(queryPool), kVulkanObjectTypeQueryPool}, pCB);
     }
-    lock.unlock();
-    if (!skip) dev_data->dispatch_table.CmdBeginQuery(commandBuffer, queryPool, slot, flags);
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdEndQuery(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t slot) {
