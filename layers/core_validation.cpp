@@ -10062,14 +10062,14 @@ static void PostCallRecordGetPhysicalDeviceDisplayPlanePropertiesKHR(instance_la
     auto physical_device_state = GetPhysicalDeviceState(instanceData, physicalDevice);
 
     if (*pPropertyCount) {
-        if (physical_device_state->vkGetPhysicalDeviceSurfaceFormatsKHRState < QUERY_COUNT) {
-            physical_device_state->vkGetPhysicalDeviceSurfaceFormatsKHRState = QUERY_COUNT;
+        if (physical_device_state->vkGetPhysicalDeviceDisplayPlanePropertiesKHRState < QUERY_COUNT) {
+            physical_device_state->vkGetPhysicalDeviceDisplayPlanePropertiesKHRState = QUERY_COUNT;
         }
         physical_device_state->display_plane_property_count = *pPropertyCount;
     }
     if (pProperties) {
-        if (physical_device_state->vkGetPhysicalDeviceSurfaceFormatsKHRState < QUERY_DETAILS) {
-            physical_device_state->vkGetPhysicalDeviceSurfaceFormatsKHRState = QUERY_DETAILS;
+        if (physical_device_state->vkGetPhysicalDeviceDisplayPlanePropertiesKHRState < QUERY_DETAILS) {
+            physical_device_state->vkGetPhysicalDeviceDisplayPlanePropertiesKHRState = QUERY_DETAILS;
         }
     }
 }
@@ -10093,7 +10093,7 @@ static bool ValidateGetPhysicalDeviceDisplayPlanePropertiesKHRQuery(instance_lay
                                                                     const char *api_name) {
     bool skip = false;
     auto physical_device_state = GetPhysicalDeviceState(instance_data, physicalDevice);
-    if (physical_device_state->vkGetPhysicalDeviceSurfaceFormatsKHRState == UNCALLED) {
+    if (physical_device_state->vkGetPhysicalDeviceDisplayPlanePropertiesKHRState == UNCALLED) {
         skip |= log_msg(
             instance_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
             HandleToUint64(physicalDevice), __LINE__, SWAPCHAIN_GET_SUPPORTED_DISPLAYS_WITHOUT_QUERY, "DL",
