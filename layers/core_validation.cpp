@@ -6604,30 +6604,27 @@ VKAPI_ATTR void VKAPI_CALL CmdResetQueryPool(VkCommandBuffer commandBuffer, VkQu
                             {HandleToUint64(queryPool), kVulkanObjectTypeQueryPool}, cb_state);
 }
 
-bool validateQuery(VkQueue queue, GLOBAL_CB_NODE *pCB, VkQueryPool queryPool, uint32_t firstQuery, uint32_t queryCount) {
+static bool IsQueryInvalid(layer_data *dev_data, QUEUE_STATE *queue_data, VkQueryPool queryPool, uint32_t queryIndex) {
+    QueryObject query = {queryPool, queryIndex};
+    auto query_data = queue_data->queryToStateMap.find(query);
+    if (query_data != queue_data->queryToStateMap.end()) {
+        if (!query_data->second) return true;
+    } else {
+        auto it = dev_data->queryToStateMap.find(query);
+        if (it == dev_data->queryToStateMap.end() || !it->second)
+            return true;
+    }
+
+    return false;
+}
+
+static bool validateQuery(VkQueue queue, GLOBAL_CB_NODE *pCB, VkQueryPool queryPool, uint32_t firstQuery, uint32_t queryCount) {
     bool skip = false;
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(pCB->commandBuffer), layer_data_map);
-    auto queue_data = dev_data->queueMap.find(queue);
-    if (queue_data == dev_data->queueMap.end()) return false;
+    auto queue_data = GetQueueState(dev_data, queue);
+    if (!queue_data) return false;
     for (uint32_t i = 0; i < queryCount; i++) {
-        QueryObject query = {queryPool, firstQuery + i};
-        auto query_data = queue_data->second.queryToStateMap.find(query);
-        bool fail = false;
-        if (query_data != queue_data->second.queryToStateMap.end()) {
-            if (!query_data->second) {
-                fail = true;
-            }
-        } else {
-            auto global_query_data = dev_data->queryToStateMap.find(query);
-            if (global_query_data != dev_data->queryToStateMap.end()) {
-                if (!global_query_data->second) {
-                    fail = true;
-                }
-            } else {
-                fail = true;
-            }
-        }
-        if (fail) {
+        if (IsQueryInvalid(dev_data, queue_data, queryPool, firstQuery + i)) {
             skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             HandleToUint64(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
                             "Requesting a copy from query to buffer with invalid query: queryPool 0x%" PRIx64 ", index %d",
