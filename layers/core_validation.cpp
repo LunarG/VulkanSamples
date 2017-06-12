@@ -6108,9 +6108,7 @@ VKAPI_ATTR void VKAPI_CALL CmdSetEvent(VkCommandBuffer commandBuffer, VkEvent ev
         if (!pCB->waitedEvents.count(event)) {
             pCB->writeEventsBeforeWait.push_back(event);
         }
-        std::function<bool(VkQueue)> eventUpdate =
-            std::bind(setEventStageMask, std::placeholders::_1, commandBuffer, event, stageMask);
-        pCB->eventUpdates.push_back(eventUpdate);
+        pCB->eventUpdates.emplace_back([=](VkQueue q){return setEventStageMask(q, commandBuffer, event, stageMask);});
     }
     lock.unlock();
     if (!skip) dev_data->dispatch_table.CmdSetEvent(commandBuffer, event, stageMask);
@@ -6139,9 +6137,7 @@ VKAPI_ATTR void VKAPI_CALL CmdResetEvent(VkCommandBuffer commandBuffer, VkEvent 
             pCB->writeEventsBeforeWait.push_back(event);
         }
         // TODO : Add check for VALIDATION_ERROR_32c008f8
-        std::function<bool(VkQueue)> eventUpdate =
-            std::bind(setEventStageMask, std::placeholders::_1, commandBuffer, event, VkPipelineStageFlags(0));
-        pCB->eventUpdates.push_back(eventUpdate);
+        pCB->eventUpdates.emplace_back([=](VkQueue q){return setEventStageMask(q, commandBuffer, event, VkPipelineStageFlags(0));});
     }
     lock.unlock();
     if (!skip) dev_data->dispatch_table.CmdResetEvent(commandBuffer, event, stageMask);
@@ -6434,9 +6430,9 @@ VKAPI_ATTR void VKAPI_CALL CmdWaitEvents(VkCommandBuffer commandBuffer, uint32_t
             cb_state->waitedEvents.insert(pEvents[i]);
             cb_state->events.push_back(pEvents[i]);
         }
-        std::function<bool(VkQueue)> event_update =
-            std::bind(validateEventStageMask, std::placeholders::_1, cb_state, eventCount, first_event_index, sourceStageMask);
-        cb_state->eventUpdates.push_back(event_update);
+        cb_state->eventUpdates.emplace_back([=](VkQueue q){
+            return validateEventStageMask(q, cb_state, eventCount, first_event_index, sourceStageMask);
+        });
         skip |= ValidateCmdQueueFlags(dev_data, cb_state, "vkCmdWaitEvents()", VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT,
                                       VALIDATION_ERROR_1e602415);
         skip |= ValidateCmd(dev_data, cb_state, CMD_WAITEVENTS, "vkCmdWaitEvents()");
@@ -6562,8 +6558,7 @@ VKAPI_ATTR void VKAPI_CALL CmdEndQuery(VkCommandBuffer commandBuffer, VkQueryPoo
         } else {
             cb_state->activeQueries.erase(query);
         }
-        std::function<bool(VkQueue)> query_update = std::bind(setQueryState, std::placeholders::_1, commandBuffer, query, true);
-        cb_state->queryUpdates.push_back(query_update);
+        cb_state->queryUpdates.emplace_back([=](VkQueue q){return setQueryState(q, commandBuffer, query, true);});
         skip |= ValidateCmdQueueFlags(dev_data, cb_state, "VkCmdEndQuery()", VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT,
                                       VALIDATION_ERROR_1ae02415);
         skip |= ValidateCmd(dev_data, cb_state, CMD_ENDQUERY, "VkCmdEndQuery()");
@@ -6595,9 +6590,7 @@ VKAPI_ATTR void VKAPI_CALL CmdResetQueryPool(VkCommandBuffer commandBuffer, VkQu
     for (uint32_t i = 0; i < queryCount; i++) {
         QueryObject query = {queryPool, firstQuery + i};
         cb_state->waitedEventsBeforeQueryReset[query] = cb_state->waitedEvents;
-        std::function<bool(VkQueue)> query_update =
-            std::bind(setQueryState, std::placeholders::_1, commandBuffer, query, false);
-        cb_state->queryUpdates.push_back(query_update);
+        cb_state->queryUpdates.emplace_back([=](VkQueue q){return setQueryState(q, commandBuffer, query, false);});
     }
     UpdateCmdBufferLastCmd(cb_state, CMD_RESETQUERYPOOL);
     addCommandBufferBinding(&GetQueryPoolNode(dev_data, queryPool)->cb_bindings,
@@ -6656,9 +6649,9 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyQueryPoolResults(VkCommandBuffer commandBuffer
             return false;
         };
         cb_node->validate_functions.push_back(function);
-        std::function<bool(VkQueue)> query_update =
-            std::bind(validateQuery, std::placeholders::_1, cb_node, queryPool, firstQuery, queryCount);
-        cb_node->queryUpdates.push_back(query_update);
+        cb_node->queryUpdates.emplace_back([=](VkQueue q) {
+            return validateQuery(q, cb_node, queryPool, firstQuery, queryCount);
+        });
         skip |= ValidateCmdQueueFlags(dev_data, cb_node, "vkCmdCopyQueryPoolResults()",
                                       VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT, VALIDATION_ERROR_19402415);
         skip |= ValidateCmd(dev_data, cb_node, CMD_COPYQUERYPOOLRESULTS, "vkCmdCopyQueryPoolResults()");
@@ -6729,8 +6722,7 @@ VKAPI_ATTR void VKAPI_CALL CmdWriteTimestamp(VkCommandBuffer commandBuffer, VkPi
     GLOBAL_CB_NODE *cb_state = GetCBNode(dev_data, commandBuffer);
     if (cb_state) {
         QueryObject query = {queryPool, slot};
-        std::function<bool(VkQueue)> query_update = std::bind(setQueryState, std::placeholders::_1, commandBuffer, query, true);
-        cb_state->queryUpdates.push_back(query_update);
+        cb_state->queryUpdates.emplace_back([=](VkQueue q) {return setQueryState(q, commandBuffer, query, true);});
         skip |= ValidateCmdQueueFlags(dev_data, cb_state, "vkCmdWriteTimestamp()", VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT,
                                       VALIDATION_ERROR_1e802415);
         skip |= ValidateCmd(dev_data, cb_state, CMD_WRITETIMESTAMP, "vkCmdWriteTimestamp()");
