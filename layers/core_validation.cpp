@@ -6604,7 +6604,7 @@ VKAPI_ATTR void VKAPI_CALL CmdResetQueryPool(VkCommandBuffer commandBuffer, VkQu
                             {HandleToUint64(queryPool), kVulkanObjectTypeQueryPool}, cb_state);
 }
 
-bool validateQuery(VkQueue queue, GLOBAL_CB_NODE *pCB, VkQueryPool queryPool, uint32_t queryCount, uint32_t firstQuery) {
+bool validateQuery(VkQueue queue, GLOBAL_CB_NODE *pCB, VkQueryPool queryPool, uint32_t firstQuery, uint32_t queryCount) {
     bool skip = false;
     layer_data *dev_data = GetLayerDataPtr(get_dispatch_key(pCB->commandBuffer), layer_data_map);
     auto queue_data = dev_data->queueMap.find(queue);
@@ -6660,7 +6660,7 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyQueryPoolResults(VkCommandBuffer commandBuffer
         };
         cb_node->validate_functions.push_back(function);
         std::function<bool(VkQueue)> query_update =
-            std::bind(validateQuery, std::placeholders::_1, cb_node, queryPool, queryCount, firstQuery);
+            std::bind(validateQuery, std::placeholders::_1, cb_node, queryPool, firstQuery, queryCount);
         cb_node->queryUpdates.push_back(query_update);
         skip |= ValidateCmdQueueFlags(dev_data, cb_node, "vkCmdCopyQueryPoolResults()",
                                       VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT, VALIDATION_ERROR_19402415);
