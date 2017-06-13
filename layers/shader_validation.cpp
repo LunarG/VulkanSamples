@@ -455,18 +455,19 @@ static spirv_inst_iter get_struct_type(shader_module const *src, spirv_inst_iter
     }
 }
 
-static void collect_interface_block_members(shader_module const *src, std::map<location_t, interface_var> *out,
+static bool collect_interface_block_members(shader_module const *src, std::map<location_t, interface_var> *out,
                                             std::unordered_map<unsigned, unsigned> const &blocks, bool is_array_of_verts,
-                                            uint32_t id, uint32_t type_id, bool is_patch) {
+                                            uint32_t id, uint32_t type_id, bool is_patch, int /*first_location*/) {
     // Walk down the type_id presented, trying to determine whether it's actually an interface block.
     auto type = get_struct_type(src, src->get_def(type_id), is_array_of_verts && !is_patch);
     if (type == src->end() || blocks.find(type.word(1)) == blocks.end()) {
         // This isn't an interface block.
-        return;
+        return false;
     }
 
     std::unordered_map<unsigned, unsigned> member_components;
     std::unordered_map<unsigned, unsigned> member_relaxed_precision;
+    std::unordered_map<unsigned, unsigned> member_patch;
 
     // Walk all the OpMemberDecorate for type's result id -- first pass, collect components.
     for (auto insn : *src) {
@@ -481,8 +482,14 @@ static void collect_interface_block_members(shader_module const *src, std::map<l
             if (insn.word(3) == spv::DecorationRelaxedPrecision) {
                 member_relaxed_precision[member_index] = 1;
             }
+
+            if (insn.word(3) == spv::DecorationPatch) {
+                member_patch[member_index] = 1;
+            }
         }
     }
+
+    // TODO: correctly handle location assignment from outside
 
     // Second pass -- produce the output, from Location decorations
     for (auto insn : *src) {
@@ -496,6 +503,7 @@ static void collect_interface_block_members(shader_module const *src, std::map<l
                 auto component_it = member_components.find(member_index);
                 unsigned component = component_it == member_components.end() ? 0 : component_it->second;
                 bool is_relaxed_precision = member_relaxed_precision.find(member_index) != member_relaxed_precision.end();
+                bool member_is_patch = is_patch || member_patch.count(member_index)>0;
 
                 for (unsigned int offset = 0; offset < num_locations; offset++) {
                     interface_var v = {};
@@ -503,7 +511,7 @@ static void collect_interface_block_members(shader_module const *src, std::map<l
                     // TODO: member index in interface_var too?
                     v.type_id = member_type_id;
                     v.offset = offset;
-                    v.is_patch = is_patch;
+                    v.is_patch = member_is_patch;
                     v.is_block_member = true;
                     v.is_relaxed_precision = is_relaxed_precision;
                     (*out)[std::make_pair(location + offset, component)] = v;
@@ -511,6 +519,8 @@ static void collect_interface_block_members(shader_module const *src, std::map<l
             }
         }
     }
+
+    return true;
 }
 
 static std::map<location_t, interface_var> collect_interface_by_location(shader_module const *src, spirv_inst_iter entrypoint,
@@ -587,7 +597,8 @@ static std::map<location_t, interface_var> collect_interface_by_location(shader_
             // this path for the interface block case, as the individual members of the type are decorated, rather than
             // variable declarations.
 
-            if (location != -1) {
+            if (builtin != -1) continue;
+            else if (!collect_interface_block_members(src, &out, blocks, is_array_of_verts, id, type, is_patch, location)) {
                 // A user-defined interface variable, with a location. Where a variable occupied multiple locations, emit
                 // one result for each.
                 unsigned num_locations = get_locations_consumed_by_type(src, type, is_array_of_verts && !is_patch);
@@ -600,9 +611,6 @@ static std::map<location_t, interface_var> collect_interface_by_location(shader_
                     v.is_relaxed_precision = is_relaxed_precision;
                     out[std::make_pair(location + offset, component)] = v;
                 }
-            } else if (builtin == -1) {
-                // An interface block instance
-                collect_interface_block_members(src, &out, blocks, is_array_of_verts, id, type, is_patch);
             }
         }
     }
