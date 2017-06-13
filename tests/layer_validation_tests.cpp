@@ -14556,6 +14556,73 @@ TEST_F(VkLayerTest, CreatePipelineVertexOutputNotConsumed) {
     m_errorMonitor->VerifyFound();
 }
 
+TEST_F(VkPositiveLayerTest, CreatePipelineComplexTypes) {
+    TEST_DESCRIPTION("Smoke test for complex types across VS/FS boundary");
+    ASSERT_NO_FATAL_FAILURE(Init());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    if (!m_device->phy().features().tessellationShader) {
+        printf("             Device does not support tessellation shaders; skipped.\n");
+        return;
+    }
+
+    m_errorMonitor->ExpectSuccess();
+
+    char const *vsSource =
+        "#version 450\n"
+        "void main() {}";
+    char const *tcsSource =
+        "#version 450\n"
+        "layout(vertices=3) out;"
+        "struct S { int x; };\n"
+        "layout(location=2) patch out B { S s; } b;\n"
+        "void main() {\n"
+        "   gl_TessLevelOuter[0] = gl_TessLevelOuter[1] = gl_TessLevelOuter[2] = 1;\n"
+        "   gl_TessLevelInner[0] = 1;\n"
+        "   b.s.x = 1;\n"
+        "}\n";
+
+    char const *tesSource =
+        "#version 450\n"
+        "layout(triangles, equal_spacing, cw) in;\n"
+        "struct S { int x; };\n"
+        "layout(location=2) patch in B { S s; } b;\n"
+        "void main() { gl_Position = vec4(b.s.x); }\n";
+
+    char const *fsSource =
+        "#version 450\n"
+        "layout(location=0) out vec4 c;\n"
+        "void main() { c = vec4(1); }\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj tcs(m_device, tcsSource, VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, this);
+    VkShaderObj tes(m_device, tesSource, VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineInputAssemblyStateCreateInfo iasci{VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO, nullptr, 0,
+                                                 VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, VK_FALSE};
+
+    VkPipelineTessellationStateCreateInfo tsci{VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO, nullptr, 0, 3};
+
+    VkPipelineObj pipe(m_device);
+
+    pipe.AddColorAttachment();
+    pipe.AddShader(&vs);
+    pipe.AddShader(&tcs);
+    pipe.AddShader(&tes);
+    pipe.AddShader(&fs);
+    pipe.SetInputAssembly(&iasci);
+    pipe.SetTessellation(&tsci);
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendDummy();
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+
+    m_errorMonitor->VerifyNotFound();
+}
+
 TEST_F(VkLayerTest, CreatePipelineCheckShaderBadSpecialization) {
     TEST_DESCRIPTION("Challenge core_validation with shader validation issues related to vkCreateGraphicsPipelines.");
 
